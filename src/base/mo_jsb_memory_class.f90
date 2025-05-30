@@ -93,11 +93,12 @@ MODULE mo_jsb_memory_class
   ! Note: argument "mem" needs to have the TARGET attribute so that we can point to individual variables
   !       (of class t_jsb_var) contained in the memory structure.
   ABSTRACT INTERFACE
-    SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids, model_id)
+    SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
       IMPORT :: t_jsb_memory
       CLASS(t_jsb_memory), INTENT(inout), TARGET :: mem
       CHARACTER(LEN=*),    INTENT(in)    :: prefix, suffix
       INTEGER,             INTENT(in)    :: lct_ids(:)     !< Primary lct (1) and lcts of descendant tiles
+      INTEGER,             INTENT(in)    :: lib_id         !< id of primary lct in lctlib
       INTEGER,             INTENT(in)    :: model_id
     END SUBROUTINE Init_memory
   END INTERFACE
@@ -111,7 +112,7 @@ CONTAINS
     loutput, lcontainer,                                        &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, l_aggregate_all,              &
-    output_level, verbose                                       &
+    output_level, output_groups, verbose                        &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
@@ -134,7 +135,8 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
     REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
-    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
+    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of standard output groups this var belongs to
+    CHARACTER(len=*),     INTENT(in), OPTIONAL :: output_groups(:)    ! vector of additional output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
 ! 1d list elements are not supported with ECHAM streams
@@ -149,8 +151,8 @@ CONTAINS
     INTEGER           :: ldims(1), gdims(1)
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
-    INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
-    INTEGER           :: out_level, igroup                   ! loop variables
+    INTEGER           :: no_groups, no_add_groups            ! number of standard/additional groups this variable belongs to
+    INTEGER           :: out_level, igroup, add_group        ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r1d'
@@ -180,15 +182,24 @@ CONTAINS
 
     IF (PRESENT(output_level)) THEN
       IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
-        no_groups = 2 * (4 - output_level)
+        no_groups = 2 * (4 - output_level)         ! Number of standard output groups: 2 groups per output_level:
+                                                   ! jsb_all_<output_level> and jsb_<process>_<output_level>
+                                                   ! e.g. 6 groups for BASIC(output_level=1), 2 for FULL(output_level=3)
       ELSE
         no_groups = 0
       END IF
     ELSE
       no_groups = 0
     END IF
+
+    IF (PRESENT(output_groups)) THEN
+      no_add_groups = SIZE(output_groups)
+    ELSE
+      no_add_groups = 0
+    END IF
+
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
-      ALLOCATE(groups(3 + no_groups))
+      ALLOCATE(groups(3 + no_groups + no_add_groups))
       ! All variables are put into these three catch-all groups
       groups(1) = 'ALL'
       groups(2) = 'jsb_all'
@@ -203,6 +214,10 @@ CONTAINS
           igroup = igroup + 2
         END DO
       END IF
+      DO add_group = 1, no_add_groups
+        igroup = 3 + no_groups + add_group
+        groups(igroup)  = 'jsb_'//TRIM(output_groups(add_group))  ! e.g. group jsb_mon for monitoring output
+      END DO
     ELSE
       ALLOCATE(groups(1))
       groups(1) = 'ALL'
@@ -258,7 +273,7 @@ CONTAINS
     END IF
 
     !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr1d) ASYNC(1)
+    !$ACC UPDATE DEVICE(var%ptr1d)
     __acc_attach(var%ptr1d)
     __acc_attach(var%ptr)
 
@@ -269,7 +284,7 @@ CONTAINS
     loutput, lcontainer, l_conserve_quan, cons_quan_type_id,    &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, l_aggregate_all,              &
-    output_level, verbose                                       &
+    output_level, output_groups, verbose                        &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
@@ -295,7 +310,8 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
     REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
-    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
+    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of standard output groups this var belongs to
+    CHARACTER(len=*),     INTENT(in), OPTIONAL :: output_groups(:)    ! vector of additional output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
@@ -309,8 +325,8 @@ CONTAINS
     INTEGER           :: ldims(2), gdims(2)
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
-    INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
-    INTEGER           :: out_level, igroup                   ! loop variables
+    INTEGER           :: no_groups, no_add_groups            ! number of standard/additional groups this variable belongs to
+    INTEGER           :: out_level, igroup, add_group        ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r2d'
@@ -341,15 +357,24 @@ CONTAINS
 
     IF (PRESENT(output_level)) THEN
       IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
-        no_groups = 2 * (4 - output_level)
+        no_groups = 2 * (4 - output_level)         ! Number of standard output groups: 2 groups per output_level:
+                                                   ! jsb_all_<output_level> and jsb_<process>_<output_level>
+                                                   ! e.g. 6 groups for BASIC(output_level=1), 2 for FULL(output_level=3)
       ELSE
         no_groups = 0
       END IF
     ELSE
       no_groups = 0
     END IF
+
+    IF (PRESENT(output_groups)) THEN
+      no_add_groups = SIZE(output_groups)
+    ELSE
+      no_add_groups = 0
+    END IF
+
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
-      ALLOCATE(groups(3 + no_groups))
+      ALLOCATE(groups(3 + no_groups + no_add_groups))
       ! All variables are put into these three catch-all groups
       groups(1) = 'ALL'
       groups(2) = 'jsb_all'
@@ -364,6 +389,10 @@ CONTAINS
           igroup = igroup + 2
         END DO
       END IF
+      DO add_group = 1, no_add_groups
+        igroup = 3 + no_groups + add_group
+        groups(igroup)  = 'jsb_'//TRIM(output_groups(add_group))  ! var group jsb_<group>
+      END DO
     ELSE
       ALLOCATE(groups(1))
       groups(1) = 'ALL'
@@ -418,7 +447,7 @@ CONTAINS
     END IF
 
     !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr2d) ASYNC(1)
+    !$ACC UPDATE DEVICE(var%ptr2d)
     __acc_attach(var%ptr2d)
     __acc_attach(var%ptr)
 
@@ -430,7 +459,7 @@ CONTAINS
     l_conserve_quan, cons_quan_type_id,                          &
     lrestart, lrestart_cont, initval_r, isteptype,               &
     resetval_r, lmiss, missval_r, l_aggregate_all,               &
-    output_level, verbose                                        &
+    output_level, output_groups, verbose                         &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
@@ -456,7 +485,9 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
     REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
-    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
+    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of standard output groups this var belongs to
+    CHARACTER(len=*),     INTENT(in), OPTIONAL :: output_groups(:)    ! vector of additional output groups this var belongs to
+
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
@@ -470,8 +501,9 @@ CONTAINS
     INTEGER           :: ldims(3), gdims(3)
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
-    INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
-    INTEGER           :: out_level, igroup                   ! loop variables
+    INTEGER           :: no_groups, no_add_groups            ! number of standard/additional groups this variable belongs to
+    INTEGER           :: out_level, igroup, add_group        ! loop variables
+
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
 
 
@@ -519,15 +551,24 @@ CONTAINS
 
     IF (PRESENT(output_level)) THEN
       IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
-        no_groups = 2 * (4 - output_level)
+        no_groups = 2 * (4 - output_level)         ! Number of standard output groups: 2 groups per output_level:
+                                                   ! jsb_all_<output_level> and jsb_<process>_<output_level>
+                                                   ! e.g. 6 groups for BASIC(output_level=1), 2 for FULL(output_level=3)
       ELSE
         no_groups = 0
       END IF
     ELSE
       no_groups = 0
     END IF
+
+    IF (PRESENT(output_groups)) THEN
+      no_add_groups = SIZE(output_groups)
+    ELSE
+      no_add_groups = 0
+    END IF
+
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
-      ALLOCATE(groups(3 + no_groups))
+      ALLOCATE(groups(3 + no_groups + no_add_groups))
       ! All variables are put into these three catch-all groups
       groups(1) = 'ALL'
       groups(2) = 'jsb_all'
@@ -542,6 +583,10 @@ CONTAINS
           igroup = igroup + 2
         END DO
       END IF
+      DO add_group = 1, no_add_groups
+        igroup = 3 + no_groups + add_group
+        groups(igroup)  = 'jsb_'//TRIM(output_groups(add_group))  ! var group jsb_<group>
+      END DO
     ELSE
       ALLOCATE(groups(1))
       groups(1) = 'ALL'
@@ -595,7 +640,7 @@ CONTAINS
     END IF
 
     !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr3d) ASYNC(1)
+    !$ACC UPDATE DEVICE(var%ptr3d)
     __acc_attach(var%ptr3d)
     __acc_attach(var%ptr)
 
@@ -788,7 +833,7 @@ CONTAINS
 
       __acc_attach(var%ptr2d)
 
-      !$acc update device(var%ptr2d)
+      !$ACC UPDATE DEVICE(var%ptr2d)
       var%ptr => var%ptr2d
       __acc_attach(var%ptr)
       var%name = TRIM(name)

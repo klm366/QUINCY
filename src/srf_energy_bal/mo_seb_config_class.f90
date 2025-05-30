@@ -34,6 +34,7 @@ MODULE mo_seb_config_class
      REAL(wp)                    :: coef_ril_tp1           !< ... the drag coefficient at time t, but helps to maintain stability.
      LOGICAL                     :: l_ice_on_lakes         !< Whether to use ice on lakes
      INTEGER                     :: niter_tmx              !< For tmx: number of iterations in seb solver
+     LOGICAL                     :: l_skin_temp            !< Activate skin-temperature formulation.
    CONTAINS
      PROCEDURE :: Init => Init_seb_config
   END type t_seb_config
@@ -54,6 +55,7 @@ CONTAINS
     REAL(wp)                    :: lake_mixed_layer_depth, lake_min_ice_depth, coef_ril_tm1, coef_ril_t, coef_ril_tp1
     LOGICAL                     :: l_ice_on_lakes
     INTEGER                     :: niter_tmx
+    LOGICAL                     :: l_skin_temp
 
     NAMELIST /jsb_seb_nml/         &
       active,                      &
@@ -66,7 +68,8 @@ CONTAINS
       coef_ril_t,                  &
       coef_ril_tp1,                &
       l_ice_on_lakes,              &
-      niter_tmx
+      niter_tmx,                   &
+      l_skin_temp
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -80,13 +83,14 @@ CONTAINS
     ic_filename     = 'ic_land_srf.nc'
     bc_filename     = 'bc_land_srf.nc'
     scheme_albedo   = 'echam5'
-    coef_ril_tm1    = 0.50_wp
-    coef_ril_t      = 0.25_wp
-    coef_ril_tp1    = 0.25_wp
+    coef_ril_tm1    = 0.15_wp
+    coef_ril_t      = 0.70_wp
+    coef_ril_tp1    = 0.15_wp
     lake_mixed_layer_depth = 10._wp
     lake_min_ice_depth     = 0.05_wp
     l_ice_on_lakes  = .TRUE.
     niter_tmx       = 0
+    l_skin_temp     = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -105,8 +109,13 @@ CONTAINS
     config%coef_ril_tp1              = coef_ril_tp1
     config%l_ice_on_lakes            = l_ice_on_lakes
     config%niter_tmx                 = niter_tmx
+    config%l_skin_temp               = l_skin_temp
 
     CALL close_nml(nml_handler)
+
+    IF (l_skin_temp) THEN
+      CALL message(TRIM(routine), 'Skin temperature formulation is activated')
+    END IF
 
   END SUBROUTINE Init_seb_config
 

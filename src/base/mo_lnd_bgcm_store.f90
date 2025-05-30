@@ -1,4 +1,4 @@
-!> Summary: defines methods for collecting, storing and providing bgc materials
+!> Defines methods for collecting, storing and providing bgc materials
 !>
 !> ICON-Land
 !>

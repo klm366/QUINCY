@@ -195,10 +195,10 @@ CONTAINS
       END DO
 
       !$ACC UPDATE &
-      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,hd_mask), dsl4jsb_var2D_onDomain(HD_,nsplit))               &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,hd_mask), dsl4jsb_var2D_onDomain(HD_,nsplit)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,ret_overlflow), dsl4jsb_var2D_onDomain(HD_,nres_overlflow)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,ret_riverflow), dsl4jsb_var2D_onDomain(HD_,nres_riverflow)) &
-      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,ret_baseflow), dsl4jsb_var2D_onDomain(HD_,nres_baseflow))   &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HD_,ret_baseflow), dsl4jsb_var2D_onDomain(HD_,nres_baseflow)) &
       !$ACC   DEVICE(dsl4jsb_memory(HD_)%bidx_upstream%ptr(:,:,:)) &
       !$ACC   DEVICE(dsl4jsb_memory(HD_)%nidx_upstream%ptr(:,:,:)) &
       !$ACC   ASYNC(1)

@@ -104,6 +104,10 @@ macros = {
         re.compile(r"dsl4jsb_Lctlib_param *\((.*?)\)", re.IGNORECASE),
         r"model%lctlib(tile%lcts(1)%lib_id)%\1",
     ],
+    "lctlib_param_tile": [
+        re.compile(r"dsl4jsb_Lctlib_param_tile *\((.*?), *(.*?)\)", re.IGNORECASE),
+        r"model%lctlib(\2%lcts(1)%lib_id)%\1",
+    ],
     "real2d_onchunk": [
         re.compile(r"dsl4jsb_Real2D_onChunk", re.IGNORECASE),
         r"REAL(wp), POINTER, DIMENSION(:)",

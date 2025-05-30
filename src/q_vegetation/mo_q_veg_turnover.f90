@@ -344,8 +344,9 @@ CONTAINS
     & veg_litterfall_mt           , &
     & net_growth                  )
 
-    USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, ITREE
-    USE mo_q_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial, &
+    USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, icrop, ITREE
+    USE mo_q_agr_constants,       ONLY: crop_planting_mass, fstore_seed_max
+    USE mo_q_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial, icrop_phenology, &
       &                                 ipheno_type_cold_deciduous, ipheno_type_drought_deciduous, ipheno_type_cbalance_deciduous
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                           !< dimensions
@@ -396,6 +397,8 @@ CONTAINS
     !>
     ! flat rate for evergreens, dual rates for deciduous (senescence after the growing season)
     SELECT CASE (lctlib_phenology_type)
+    CASE (icrop_phenology)
+      fturn_leaf(:) = 0.0_wp
     CASE (ievergreen)
       fturn_leaf(:) = 1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime
     CASE (iraingreen, isummergreen)
@@ -452,7 +455,7 @@ CONTAINS
     SELECT CASE (lctlib_growthform)
     CASE (ITREE)
       fturn(:) = 1.0_wp / lctlib_tau_fine_root / one_day / one_year * dtime
-    CASE (igrass)
+    CASE (igrass, icrop)
       DO ic = 1,nc
         ! during growing season, constant turnover
         IF (growing_season(ic) > test_false_true) THEN
@@ -500,7 +503,7 @@ CONTAINS
     SELECT CASE (lctlib_growthform)
     CASE (ITREE)
       fturn(:) = 1.0_wp / lctlib_tau_branch / one_day / one_year * dtime
-    CASE (igrass) ! for grases follows leaf phenology
+    CASE (igrass, icrop) ! for grasses and crops follow leaf phenology
       fturn(:) = fturn_leaf(:)
     ENDSELECT
     ! loop over bgcm elements
@@ -554,9 +557,23 @@ CONTAINS
     END DO
     net_growth(:) = net_growth(:) - veg_pool_mt(ix_fruit, ixC, :) * fturn(:)
 
-    !>6.0 seed-bed turnover to litter
+    !>6.0 seed-bed turnover to litter (for natural vegetation types, for croptype the
+    !     seed-bed is not subject to natural decay. Instead, only if seed-bed becomes large
+    !     relative to the planting mass, it is assumed to turnover as litter)
     !>
-    fturn(:) = 1.0_wp / lctlib_tau_seed_litter / one_day / one_year * dtime
+    SELECT CASE (lctlib_growthform)
+    CASE (itree, igrass)
+      fturn(:) = 1.0_wp / lctlib_tau_seed_litter / one_day / one_year * dtime
+    CASE (icrop)
+      DO ic = 1,nc
+        IF (veg_pool_mt(ix_seed_bed, ixC, ic) > crop_planting_mass * fstore_seed_max) THEN
+          fturn(ic) = (veg_pool_mt(ix_seed_bed, ixC, ic) - crop_planting_mass * fstore_seed_max) &
+            &          / veg_pool_mt(ix_seed_bed, ixC, ic)
+        ELSE
+          fturn(ic) = 0.0_wp
+        END IF
+      END DO
+    END SELECT
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN
@@ -565,6 +582,7 @@ CONTAINS
           &                                          + veg_pool_mt(ix_seed_bed, ix_elem, :) * fturn(:)
       END IF
     END DO
+
   END SUBROUTINE calc_turnover
 
   ! ======================================================================================================= !

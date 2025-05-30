@@ -51,7 +51,8 @@ MODULE mo_sb_constants
       kmr_hsc, &              !< scaling factor for the sensitivity of half-saturation constant to moisture limitation
       kmr_sorption, &         !< scaling factor for the sensitivity of surface adsorption to moisture limitation
       kmr_decomposition, &    !< minimum water potential for decomposition
-      kmr_asymb_bnf           !< minimum water potential for nfixation
+      kmr_asymb_bnf, &        !< minimum water potential for nfixation
+      min_rmm_gasdiffusion    !< minimum scaling factor on gas diffusion induced by soil moisture changes
 
     ! temperature response
   REAL(wp), SAVE :: &
@@ -187,6 +188,8 @@ MODULE mo_sb_constants
       f_plant_carrier_n, &        !< ratio between plant N transport and fine root biomass, []
       vmax_nitrification_nh4, &   !< maximum nitrification capacity of nitrifiers [mol N / mol biomass C / s]
       vmax_denitrification_no3, & !< maximum nitrification capacity of denitrifiers [mol N / mol biomass C / s]
+      c_limit_on_nitrification_min, & !< minimal C limitation ratio on nitrification rates [-]
+      c_limit_on_denitrification_min, & !< minimal C limitation ratio on denitrification rates [-]
       km_nitrification_nh4, &     !< half-saturation concentration of nitrification [mol N / m3]
       km_denit_no3, &             !< half-saturation concentration of denitrification [mol N / m3]
       k_nit_carrier_n, &          !< ratio between N de/nitrifiers and microial biomass, [-]
@@ -365,6 +368,7 @@ CONTAINS
     kmr_sorption          = 0.001_wp                        ! Thum et al. 2019, GMD ???
     kmr_decomposition     = -2.0_wp                         ! Thum et al. 2019, GMD
     kmr_asymb_bnf         = -1.5_wp                         ! set to correspond to the permanent wilting point, SZ, 21/01/22
+    min_rmm_gasdiffusion  = 0.01_wp                         ! tuned to avoid no gas diffusion in water-saturated soil
 
     ! temperature response
     temp_freeze_thres_bio  = 2.0_wp           !< tuned for biological processes being not/active in frozen soils at about Tzero
@@ -398,7 +402,7 @@ CONTAINS
     ! fast and slow parameters for simple_1d SB model
     k_fast_som_cn_max       = 13._wp * molar_mass_N / molar_mass_C   ! Manzoni et al. 2008, slightly tighter than than (was 13)
     k_fast_som_cn_min       = 5._wp * molar_mass_N / molar_mass_C    ! Manzoni et al. 2008
-    f_fast_som_cn           = 51000.0_wp                             ! calibrated to correspond to CENTURY (minimum reached at 2gN/m2)
+    f_fast_som_cn           = 100000.0_wp                            ! tuned to make fast som C:N vary from minimum to maximum
     k_slow_som_cn           = 9._wp * molar_mass_N / molar_mass_C    ! textbook knowledge
     k_fast_som_np           = 14._wp * molar_mass_P / molar_mass_N   ! textbook knowledge
     kref_fast_som_np        = 0.1_wp                                 ! an average value chosen as reference level (SZ)
@@ -495,6 +499,8 @@ CONTAINS
                                 molar_mass_N / one_day * molar_mass_C
     vmax_denitrification_no3  = 54._wp / &                              ! micro-mol / mol / s , Kemp and Dodds 2002
                                 molar_mass_N / one_day * molar_mass_C
+    c_limit_on_nitrification_min = 0.05_wp                               ! unitless, educated guess to avoid zero denitrification at depth
+    c_limit_on_denitrification_min = 0.05_wp                             ! unitless, educated guess to avoid zero denitrification at depth
     km_nitrification_nh4      = 0.019_wp / molar_mass_N                 ! mol / m3 , Kemp and Dodds 2002
     km_denit_no3              = 0.3_wp / molar_mass_N                   ! mol / m3 , Kemp and Dodds 2002
     k_nit_carrier_n           = 0.001_wp / 1000._wp                     ! estimated

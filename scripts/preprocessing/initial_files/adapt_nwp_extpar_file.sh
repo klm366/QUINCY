@@ -33,7 +33,9 @@ bc_soil=${bc_file_dir}/bc_land_soil.nc
 
 icon_grid=${icon_grid}
 
-cdo="cdo -s -f nc4"
+cdo="$cdo -f nc4"
+
+
 
 tmpdir=${work_dir}/extpar_tmp
 mkdir -p ${tmpdir}; rm -f ${tmpdir}/*.nc

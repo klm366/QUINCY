@@ -51,7 +51,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_process_class,     ONLY: SB_, VEG_, SPQ_, A2L_
+    USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_veg_constants,         ONLY: ITREE
@@ -61,7 +61,8 @@ CONTAINS
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -109,7 +110,8 @@ CONTAINS
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! VEG_ 2D
@@ -119,14 +121,15 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
     ! A2L_ 2D
     dsl4jsb_Real2D_onChunk :: p_deposition
-    ! SPQ_ 2D
+    ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
-    ! SPQ_ 3D
+    ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk :: percolation_sl
     dsl4jsb_Real3D_onChunk :: frac_w_lat_loss_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
+    ! SSE_ 3D
+    dsl4jsb_Real3D_onChunk :: bulk_dens_sl
     ! SB_ 2D
     dsl4jsb_Real2D_onChunk :: leaching_nh4_solute
     dsl4jsb_Real2D_onChunk :: leaching_nh4_n15_solute
@@ -269,7 +272,8 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ALLOCATE(apparent_fast_som_cn(nc, nsoil_sb))
@@ -309,14 +313,15 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_,      unit_uptake_p_pot)
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onChunk(SPQ_,      num_sl_above_bedrock)        ! in
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onChunk(SPQ_,      soil_depth_sl)
-    dsl4jsb_Get_var3D_onChunk(SPQ_,      bulk_dens_sl)
-    dsl4jsb_Get_var3D_onChunk(SPQ_,      percolation_sl)
-    dsl4jsb_Get_var3D_onChunk(SPQ_,      frac_w_lat_loss_sl)
-    dsl4jsb_Get_var3D_onChunk(SPQ_,      w_soil_sl)                   ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    num_sl_above_bedrock)        ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    percolation_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    frac_w_lat_loss_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)                 ! in
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onChunk(SSE_,      bulk_dens_sl)                ! in
     ! SB_ 2D
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute)
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute)
@@ -450,8 +455,9 @@ CONTAINS
       & num_sl_above_bedrock(:), &
       & soil_depth_sl(:,:), &
       & bulk_dens_sl(:,:), &
-      & w_soil_sl(:,:), &
+      & wtr_soil_sl(:,:), &
       & nh4_solute(:,:), &
+      & no3_solute(:,:), &
       & rtm_hsc(:,:), &
       & rmm_hsc(:,:), &
       & rtm_sorption(:,:), &
@@ -1059,8 +1065,9 @@ CONTAINS
     & num_sl_above_bedrock, &
     & soil_depth_sl, &
     & bulk_dens_sl, &
-    & w_soil_sl, &
+    & wtr_soil_sl, &
     & nh4_solute, &
+    & no3_solute, &
     & rtm_hsc, &
     & rmm_hsc, &
     & rtm_sorption, &
@@ -1103,8 +1110,9 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)  :: &
                                                                 soil_depth_sl, &             !< soil depth of a layer [m]
                                                                 bulk_dens_sl, &              !< bulk density of a layer [kg m-3]
-                                                                w_soil_sl, &                 !< water content of a layer [m]
+                                                                wtr_soil_sl, &               !< water content of a layer [m]
                                                                 nh4_solute, &                !< NH4 content of a layer [mol m-3]
+                                                                no3_solute, &                !< NO3 content of a layer [mol m-3]
                                                                 rtm_hsc, &                   !< temperature response scalar for half-saturation constants
                                                                 rmm_hsc, &                   !< moisture response scalar for half-saturation constants
                                                                 rtm_sorption, &              !< temperature response scalar for po4 sorption
@@ -1172,19 +1180,20 @@ CONTAINS
         km1_uptake_nh4_act(ic, is) = km1_up_nh4 / hlp1
         km1_uptake_no3_act(ic, is) = km1_up_no3 / hlp1
         km1_uptake_po4_act(ic, is) = km1_up_po4 / hlp1 &
-          &                          / 1000._wp / (w_soil_sl(ic, is) / soil_depth_sl(ic, is))
+          &                          / 1000._wp / (wtr_soil_sl(ic, is) / soil_depth_sl(ic, is))
         km2_uptake_nh4_act(ic, is) = km2_up_nh4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km2_uptake_no3_act(ic, is) = km2_up_no3 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km2_uptake_po4_act(ic, is) = km2_up_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is) &
-          &                          * 1000._wp * (w_soil_sl(ic, is) / soil_depth_sl(ic, is))
+          &                          * 1000._wp * (wtr_soil_sl(ic, is) / soil_depth_sl(ic, is))
         km_uptake_org_act(ic, is)          = km_up_org  * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km_mic_uptake_nh4_act(ic, is)      = km_mic_uptake_nh4 / hlp1
         km_mic_uptake_no3_act(ic, is)      = km_mic_uptake_no3 / hlp1
         km_dip_biochem_po4_act(ic, is)     = km_dip_biochem_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km_denitrification_c_act(ic, is)   = km_denitrification_c
         km_denitrification_no3_act(ic, is) = km_denitrification_no3
-        apparent_fast_som_cn(ic, is) = MAX(k_fast_som_cn_max - f_fast_som_cn * nh4_solute(ic, is) / bulk_dens_sl(ic, is), &
-          &                         k_fast_som_cn_min)
+        apparent_fast_som_cn(ic, is) = MAX(k_fast_som_cn_max - f_fast_som_cn &
+          &                            * (nh4_solute(ic, is) + no3_solute(ic, is)) / bulk_dens_sl(ic, is), &
+          &                            k_fast_som_cn_min)
         apparent_fast_som_np(ic, is) = k_fast_som_np &
           &                            * MAX(k_fast_som_cn_max - f_fast_som_cn * kref_fast_som_np / bulk_dens_sl(ic, is), &
           &                            k_fast_som_cn_min) / apparent_fast_som_cn(ic, is)
@@ -1194,8 +1203,8 @@ CONTAINS
         p_deposition_act(ic, is)  = 0.0_wp
         ! only for the 1st soil layer
         p_deposition_act(ic,1)  = p_deposition(ic) / 1.e6_wp / soil_depth_sl(ic,1) * dtime
-      ENDDO
-    ENDDO
+      END DO
+    END DO
   END SUBROUTINE calc_local_soil_profile_values
 
   !-----------------------------------------------------------------------------------------------------
@@ -1492,7 +1501,8 @@ CONTAINS
                                                                nitrification_no3, &               ! out
                                                                denitrification_n2)
 
-    USE mo_sb_constants,     ONLY: vmax_nitrification, vmax_denitrification
+    USE mo_sb_constants,     ONLY: vmax_nitrification, vmax_denitrification, &
+                                   c_limit_on_nitrification_min, c_limit_on_denitrification_min
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1527,14 +1537,14 @@ CONTAINS
       DO is = 1,INT(num_sl_above_bedrock(ic))
         ! potential nitrification rate from NH4 to NO3 [mol/m3/timestep]
         nitrification_no3(ic,is)   = vmax_nitrification * rtm_nitrification(ic,is) * rmm_nitrification(ic,is) * &
-                                   sb_pool_microbial_carbon(ic,is) / &
-                                   (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is))  * &
+                                   MAX(c_limit_on_nitrification_min, sb_pool_microbial_carbon(ic,is) / &
+                                   (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is)))  * &
                                    (1._wp - anaerobic_volume_fraction(ic,is)) * nh4_solute(ic,is) * dtime / 1.e6_wp
 
         ! potential denitrification rate from NO3 to N2 [mol/m3/timestep]
         denitrification_n2(ic,is)  = vmax_denitrification * rtm_denitrification(ic,is) * &
-                                   sb_pool_microbial_carbon(ic,is) / &
-                                   (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is))  * &
+                                   MAX(c_limit_on_denitrification_min, sb_pool_microbial_carbon(ic,is) / &
+                                   (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is)))  * &
                                    anaerobic_volume_fraction(ic,is) * no3_solute(ic,is) / &
                                    (km_denitrification_no3_act(ic,is) + no3_solute(ic,is)) * dtime / 1.e6_wp
       ENDDO

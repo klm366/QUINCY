@@ -90,7 +90,7 @@ MODULE mo_hd_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_hd_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_hd_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     TSTEP_CONSTANT, tables
@@ -101,6 +101,7 @@ CONTAINS
     CHARACTER(len=*),   INTENT(in)    :: prefix
     CHARACTER(len=*),   INTENT(in)    :: suffix
     INTEGER,            INTENT(in)    :: lct_ids(:)
+    INTEGER,            INTENT(in)    :: lib_id     !< id of primary lct in lctlib
     INTEGER,            INTENT(in)    :: model_id
 
     !dsl4jsb_Def_config(HD_)
@@ -303,8 +304,7 @@ CONTAINS
         & t_cf('hd_water_error_gsum', 'm3', 'Total HD water imbalance during time step'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
-        & lrestart=.FALSE.,                                                                &
-        & initval_r=0.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
     ENDIF
 
   END SUBROUTINE Init_hd_memory

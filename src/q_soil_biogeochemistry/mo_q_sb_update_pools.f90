@@ -59,7 +59,7 @@ CONTAINS
     USE mo_quincy_model_config,    ONLY: QLAND, QSOIL
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
-    USE mo_jsb_process_class,      ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, Q_ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,      ONLY: A2L_, SEB_, TURB_, HYDRO_, HYDRO_, VEG_, SSE_, Q_ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_jsb_math_constants,     ONLY: eps1, eps8
@@ -73,9 +73,10 @@ CONTAINS
     dsl4jsb_Use_config(SB_)
 
     ! Use of process memory
-    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
-    dsl4jsb_Use_memory(SPQ_)       !  USE mo_spq_memory_class,     ONLY: t_spq_memory
-    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_spq_memory
+    dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.1 InOut
@@ -122,9 +123,10 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
-    dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
-    dsl4jsb_Def_memory(SPQ_)                             ! TYPE(t_spq_memory),     POINTER :: spq__mem
-    dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_spq_memory),     POINTER :: spq__mem
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(A2L_)
     ! Declare pointers to variables in memory
     ! A2L
@@ -143,20 +145,16 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: biological_n_fixation
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
-    ! SPQ_ 2D
+    ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
-    ! SPQ_ 3D
+    ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk :: percolation_sl
-    dsl4jsb_Real3D_onChunk :: qmax_org_min_sl
-    dsl4jsb_Real3D_onChunk :: qmax_po4_min_sl
-    dsl4jsb_Real3D_onChunk :: qmax_nh4_min_sl
-    dsl4jsb_Real3D_onChunk :: qmax_po4_om_sl
+    ! SSE_ 3D
+    dsl4jsb_Real3D_onChunk :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk :: sand_sl
     dsl4jsb_Real3D_onChunk :: silt_sl
     dsl4jsb_Real3D_onChunk :: clay_sl
-    dsl4jsb_Real3D_onChunk :: volume_min_sl
     ! SB_ 2D
     dsl4jsb_Real2D_onChunk :: total_flux_carbon
     dsl4jsb_Real2D_onChunk :: total_flux_nitrogen
@@ -188,6 +186,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: sb_pool_total_ag_litter_c13
     dsl4jsb_Real2D_onChunk :: sb_pool_total_ag_litter_c14
     dsl4jsb_Real2D_onChunk :: sb_pool_total_ag_litter_n15
+    dsl4jsb_Real2D_onChunk :: fertiliser_nh4
+    dsl4jsb_Real2D_onChunk :: fertiliser_nh4_n15
+    dsl4jsb_Real2D_onChunk :: fertiliser_no3
+    dsl4jsb_Real2D_onChunk :: fertiliser_no3_n15
+    dsl4jsb_Real2D_onChunk :: fertiliser_po4
     ! SB_ 3D
     dsl4jsb_Real3D_onChunk :: het_respiration
     dsl4jsb_Real3D_onChunk :: het_respiration_c13
@@ -336,6 +339,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_mineral_assoc_c
     dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_mineral_assoc_n
     dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_mineral_assoc_p											
+    dsl4jsb_Real3D_onChunk :: qmax_org_min_sl
+    dsl4jsb_Real3D_onChunk :: qmax_po4_min_sl
+    dsl4jsb_Real3D_onChunk :: qmax_nh4_min_sl
+    dsl4jsb_Real3D_onChunk :: qmax_po4_om_sl
+    dsl4jsb_Real3D_onChunk :: volume_min_sl
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -359,7 +367,8 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(A2L_)
 
@@ -419,20 +428,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_,   biological_n_fixation)          ! out
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)               ! in
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onChunk(SPQ_,     num_sl_above_bedrock)        ! in
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onChunk(SPQ_,     soil_depth_sl)               ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,     bulk_dens_sl)                ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,     percolation_sl)              ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,     qmax_org_min_sl)             ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,     qmax_po4_min_sl)             ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,     qmax_nh4_min_sl)             ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,     qmax_po4_om_sl)              ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,     sand_sl)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,     silt_sl)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,     clay_sl)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,     volume_min_sl)               ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,   num_sl_above_bedrock)        ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   percolation_sl)              ! in
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onChunk(SSE_,     bulk_dens_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     sand_sl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     silt_sl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     clay_sl)                     ! in
     ! SB_ 2D
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon)           ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen)         ! out
@@ -464,6 +469,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_ag_litter_c13) ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_ag_litter_c14) ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_ag_litter_n15) ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_nh4)              ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_nh4_n15)          ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_no3)              ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_no3_n15)          ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_po4)              ! in
     ! SB_ 3D
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! out
@@ -614,6 +624,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_c)
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_n)
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_p)															
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org_min_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4_min_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_nh4_min_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4_om_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       volume_min_sl)               ! in
     !------------------------------------------------------------------------------------------------------ !
 
     !> 1.0 correct the plant uptake of nh4, no3 and po4 for soil model
@@ -883,15 +898,17 @@ CONTAINS
     CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
       &                                    km_adsorpt_OM_nh4, km_adsorpt_mineral_nh4, km_adsorpt_nh4_sl(:,:))
 
-    !> 9.0 atmospheric deposition
+    !> 9.0 atmospheric deposition and fertiliser
     !!
-    no3_solute(:,1)      = no3_solute(:,1)     + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
-    no3_n15_solute(:,1)  = no3_n15_solute(:,1) + noy_n15_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    no3_solute(:,1)      = no3_solute(:,1)     + (noy_deposition(:) + fertiliser_no3(:)) &
+      &                                          / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    no3_n15_solute(:,1)  = no3_n15_solute(:,1) + (noy_n15_deposition(:) + fertiliser_no3_n15(:)) &
+      &                                          / 1.e6_wp / soil_depth_sl(:,1) * dtime
 
     !>10.0 update of mineral NH4 & P pools
     !>
     p_deposition_sl(:,:) = 0._wp
-    p_deposition_sl(:,1) = p_deposition(:) / soil_depth_sl(:,1) ! micro-mol P / m3 / s
+    p_deposition_sl(:,1) = (p_deposition(:) + fertiliser_po4(:)) / soil_depth_sl(:,1) ! micro-mol P / m3 / s
     !> 10.1 init vertical variables
     !>
     k_adsorpt_po4_act(:,:)    = rtm_sorption(:,:)   * rmm_sorption(:,:)   * k_adsorpt_po4
@@ -912,7 +929,8 @@ CONTAINS
                    nitrification_no3(:,:) - nitrification_noy(:,:) - nitrification_n2o(:,:) - &
                    volatilisation_nh4(:,:) + transport_nh4_assoc(:,:) - &
                    lateral_loss_nh4_solute_sl(:,:) ) * dtime / 1.e6_wp
-      hlp1(:,1) = hlp1(:,1) + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+      hlp1(:,1) = hlp1(:,1) + (nhx_deposition(:) + fertiliser_nh4(:)) &
+        &                     / 1.e6_wp / soil_depth_sl(:,1) * dtime
       hlp2(:,:) = -transport_nh4_assoc(:,:) * dtime / 1.e6_wp
 
       CALL calc_langmuir_kinetics(dtime, hlp1(:,:), nh4_solute(:,:),nh4_assoc(:,:), &
@@ -928,7 +946,8 @@ CONTAINS
                    plant_uptake_nh4_n15_sl(:,:) - mycorrhiza_uptake_nh4_n15_sl(:,:) - &
                    nitrification_no3_n15(:,:) - nitrification_noy_n15(:,:) - nitrification_n2o_n15(:,:) - &
                    volatilisation_nh4_n15(:,:) + transport_nh4_n15_assoc(:,:)) * dtime / 1.e6_wp
-      hlp2(:,1) = hlp2(:,1) + nhx_n15_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+      hlp2(:,1) = hlp2(:,1) + (nhx_n15_deposition(:) + fertiliser_nh4_n15(:)) &
+        &                     / 1.e6_wp / soil_depth_sl(:,1) * dtime
 
       WHERE ((nh4_n15_solute(:,:) + nh4_n15_assoc(:,:)) < -hlp2(:,:))
         hlp2(:,:) = -(nh4_n15_solute(:,:) + nh4_n15_assoc(:,:))
@@ -1046,6 +1065,7 @@ CONTAINS
     total_flux_nitrogen(:) = SUM(veg_litterfall_mt(:,ixN,:), DIM=1)                            &
       & + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp                &
       & + (nhx_deposition(:) + noy_deposition(:)) * dtime/1.e6_wp                              &
+      & + (fertiliser_nh4(:) + fertiliser_no3(:)) * dtime / 1.e6_wp                            &
       & + veg_exudation_mt(ixN, :)                                                             &
       & - SUM(sb_mycorrhiza_export_mt(ixN,:,:) * soil_depth_sl(:,:), DIM=2)                    &
       & - SUM(lateral_loss_dom_nitrogen_sl(:,:) * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_wp &
@@ -1057,7 +1077,7 @@ CONTAINS
       & + SUM(plant_uptake_no3_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp
 
     total_flux_phosphorus(:) = SUM(veg_litterfall_mt(:,ixP,:), DIM=1) + p_deposition(:) * dtime/1.e6_wp &
-      & + veg_exudation_mt(ixP,:)                                                                       &
+      & + veg_exudation_mt(ixP,:) + fertiliser_po4(:) * dtime / 1.e6_wp                                 &
       & - SUM(sb_mycorrhiza_export_mt(ixP,:,:) * soil_depth_sl(:,:), DIM=2)                             &
       & - SUM(lateral_loss_dom_phosphorus_sl(:,:) * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_wp        &
       & - SUM(lateral_loss_po4_solute_sl(:,:) * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_wp            &
@@ -1077,6 +1097,7 @@ CONTAINS
       & + SUM(asymb_n_fixation_n15(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp              &
       & + (nhx_deposition(:) + noy_deposition(:))                                                &
       &    / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) *dtime/1.e6_wp                  &
+      & + (fertiliser_nh4_n15(:) + fertiliser_no3_n15(:)) * dtime / 1.e6_wp                      &
       & + veg_exudation_mt(ixN15, :)                                                             &
       & - SUM(sb_mycorrhiza_export_mt(ixN15,:,:) * soil_depth_sl(:,:), DIM=2)                    &
       & - SUM(lateral_loss_dom_nitrogen15_sl(:,:) * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_wp &
@@ -1151,6 +1172,7 @@ CONTAINS
           IF (slow_sb_pool_accelerator_execute(ic) == 1.0_wp) THEN
             IF (debug_on() .AND. iblk == 1 .AND. ic == 1) &
               & CALL message(TRIM(routine), 'Accelerate spin up for '//TRIM(tile%name)//' ...')
+
             IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
               ! fasten the spinup for residual pool
               CALL calc_accelerated_slow_soil_pool_spinup(nsoil_sb, dtime, soil_depth_sl(ic,:),&
@@ -1529,12 +1551,12 @@ CONTAINS
     REAL(wp), INTENT(inout) :: pool_slow_sl(:,:)         !< slow soil pool with all elements [mol m-3]
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.2 Local
-    REAL, DIMENSION(nsoil_sb) :: c13c_slow_sl, nc_slow_sl, n15n_slow_sl,pn_slow_sl !< stiochiometry factors [mol / mol]
-    REAL, DIMENSION(nsoil_sb) :: ratio_sl, ratio_c14_sl !< slow soil pool distributions across all soil layers[unitless]
-    REAL                      :: tau_slow !< slow soil pool turnover rate [timestep]
-    REAL                      :: pool_c_slow, pool_c14_slow !< the total slow soil pool [mol m-2]
-    REAL                      :: formation_c_mavg, formation_c14_mavg, loss_c_mavg ! formation and loss rates of the total slow soil pool [mol m-2 timestep-1]
-    INTEGER                   :: ilength, i_soil !counter for loops
+    REAL(wp), DIMENSION(nsoil_sb) :: c13c_slow_sl, nc_slow_sl, n15n_slow_sl,pn_slow_sl !< stiochiometry factors [mol / mol]
+    REAL(wp), DIMENSION(nsoil_sb) :: ratio_sl, ratio_c14_sl !< slow soil pool distributions across all soil layers[unitless]
+    REAL(wp)                      :: tau_slow !< slow soil pool turnover rate [timestep]
+    REAL(wp)                      :: pool_c_slow, pool_c14_slow !< the total slow soil pool [mol m-2]
+    REAL(wp)                      :: formation_c_mavg, formation_c14_mavg, loss_c_mavg ! formation and loss rates of the total slow soil pool [mol m-2 timestep-1]
+    INTEGER                       :: ilength, i_soil !counter for loops
     ! ------------------------------------------------------------------------------------------------------------
     !> accelerating the spin-up of slow pool
     !!

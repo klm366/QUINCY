@@ -133,7 +133,7 @@ CONTAINS
   ! ======================================================================================================= !
   !> initialize memory (variables) for the process: phenology
   !>
-  SUBROUTINE Init_pheno_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_pheno_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -145,6 +145,7 @@ CONTAINS
     CHARACTER(len=*),      INTENT(in)            :: prefix
     CHARACTER(len=*),      INTENT(in)            :: suffix
     INTEGER,               INTENT(in)            :: lct_ids(:)
+    INTEGER,               INTENT(in)            :: lib_id     !< id of primary lct in lctlib
     INTEGER,               INTENT(in)            :: model_id
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(PHENO_)
@@ -389,14 +390,14 @@ CONTAINS
           & t_cf('lai_ta_gmean', '1', 'Global land mean leaf_area_index'),            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
           & prefix, suffix,                                                           &
-          & lrestart=.FALSE., initval_r=0.0_wp )
+          & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
 
         CALL mem%Add_var( 'fract_fpc_gmean', mem%fract_fpc_gmean,                     &
           & hgrid, surface,                                                           &
           & t_cf('fract_fpc_gmean', '1', 'Global land mean foilage projected cover'), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
           & prefix, suffix,                                                           &
-          & lrestart=.FALSE., initval_r=0.0_wp )
+          & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
 
       END IF
     END IF !  VEG / LAND

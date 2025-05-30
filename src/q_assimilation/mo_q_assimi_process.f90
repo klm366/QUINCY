@@ -20,7 +20,7 @@ MODULE mo_q_assimi_process
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_math_constants,    ONLY: eps4, eps8
-  USE mo_jsb_control,           ONLY: debug_on
+  USE mo_jsb_control,           ONLY: debug_on, jsbach_runs_standalone
   USE mo_exception,             ONLY: message, message_text, finish
 
   IMPLICIT NONE
@@ -42,7 +42,7 @@ CONTAINS
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
-    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, SPQ_
+    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, HYDRO_, SSE_, TURB_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_atmland_constants,      ONLY: min_wind, max_wind
@@ -50,13 +50,16 @@ CONTAINS
     USE mo_isotope_util,           ONLY: calc_fractionation
     USE mo_phy_schemes             ! e.g., heat_transfer_coef
     USE mo_q_assimi_parameters,    ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
+    USE mo_q_assimi_constants,     ONLY: min_aerodyn_cond
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(Q_ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
-    dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_memory(TURB_)
+    dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -70,7 +73,7 @@ CONTAINS
     REAL(wp)                              :: hlp                      !< helper variable
     INTEGER                               :: iblk, ics, ice, nc       !< dimensions
     INTEGER                               :: ic, isoil                !< loop counter
-    REAL(wp)                              :: steplen                  !< step length
+    REAL(wp)                              :: dtime                    !< step length
     REAL(wp)                              :: alpha                    !< implicitness factor
 
     CHARACTER(len=1024)                   :: canopy_cond_scheme       !< canopy_conductance_scheme: medlyn / ballberry
@@ -78,6 +81,8 @@ CONTAINS
     REAL(wp)                              :: lctlib_phi_leaf_min, lctlib_gmin, lctlib_g0
     REAL(wp)                              :: lctlib_t_jmax_omega, lctlib_t_jmax_opt
     INTEGER                               :: lctlib_phenology_type, lctlib_ps_pathway
+    REAL(wp), ALLOCATABLE                 :: drag_srf_local(:)        !< surface drag, provided by atmosphere or TURB_
+    LOGICAL                               :: jsb_standalone           !< standalone / coupled simulation
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -85,7 +90,9 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
@@ -98,6 +105,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C14
     dsl4jsb_Real2D_onChunk      :: swvis_srf_down
     dsl4jsb_Real2D_onChunk      :: swnir_srf_down
+    dsl4jsb_Real2D_onChunk      :: drag_srf
     ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
@@ -127,13 +135,16 @@ CONTAINS
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
-    ! SPQ_ 2D
-    dsl4jsb_Real2D_onChunk      :: spq_drag_srf
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk      :: matric_pot_root
+    ! HYDRO_ 3D
+    dsl4jsb_Real3D_onChunk      :: wtr_soil_pwp_sl
+    dsl4jsb_Real3D_onChunk      :: wtr_soil_fc_sl
+    dsl4jsb_Real3D_onChunk      :: matric_pot_sl
+    ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
-    dsl4jsb_Real3D_onChunk      :: w_soil_pwp_sl
-    dsl4jsb_Real3D_onChunk      :: w_soil_fc_sl
-    dsl4jsb_Real3D_onChunk      :: w_soil_pot_sl
+    ! TURB_ 2D
+    dsl4jsb_Real2D_onChunk      :: drag_srf_stdalone
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
@@ -153,7 +164,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    steplen = options%steplen
+    dtime   = options%dtime
     alpha   = options%alpha
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(Q_ASSIMI_)) RETURN
@@ -163,6 +174,7 @@ CONTAINS
     ncanopy                =  vgrid_canopy_q_assimi%n_levels
     vgrid_soil_sb          => Get_vgrid('soil_layer_sb')
     nsoil_sb               =  vgrid_soil_sb%n_levels
+    jsb_standalone         =  jsbach_runs_standalone()
     ! ----------------------------------------------------------------------------------------------------- !
     IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -171,7 +183,9 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                          ! in
@@ -183,6 +197,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)                 ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)                       ! in
+    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation)        ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation_C13)    ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation_C14)    ! out
@@ -199,6 +215,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs)              ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_ps)              ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, t_jmax_opt)                ! out
+    ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, net_assimilation_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, gross_assimilation_cl)     ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, maint_respiration_leaf_cl) ! out
@@ -207,18 +224,25 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, jmax_cl)                   ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, vcmax_cl)                  ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, chlfl_yield_cl)            ! out
+    ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
-    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
-    dsl4jsb_Get_var2D_onChunk(SPQ_, spq_drag_srf)                   ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, t_soil_sl)                      ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_pwp_sl)                  ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_fc_sl)                   ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_pot_sl)                  ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, matric_pot_root)              ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, matric_pot_sl)                ! in
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                      ! in
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(TURB_, drag_srf_stdalone)             ! in
+    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                            ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tacclim_mavg)   ! in
+    ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)                ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! in
@@ -256,13 +280,18 @@ CONTAINS
         lctlib_g1 = dsl4jsb_Lctlib_param(g1_bberry)
     END SELECT
 
+    !>0.9.3 allocate local 2D
+    !>
+    ALLOCATE(drag_srf_local(nc))
+    !$ACC ENTER DATA CREATE(drag_srf_local)
+
     !> 1.0 calculate the moisture scaling factor for photosynthesis
     !>
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_air(ic), q_air(ic), press_srf(ic))
-      beta_soil_ps(ic) = calc_soil_moisture_stress(w_soil_root_pot(ic), lctlib_phi_leaf_min)
-      beta_soil_gs(ic) = calc_soil_moisture_stress(w_soil_root_pot(ic), lctlib_phi_leaf_min)
+      beta_soil_ps(ic) = calc_soil_moisture_stress(matric_pot_root(ic), lctlib_phi_leaf_min)
+      beta_soil_gs(ic) = calc_soil_moisture_stress(matric_pot_root(ic), lctlib_phi_leaf_min)
 
       ! catch beta_soil_ps getting zero
       !  with "beta_soil_ps=0" calc_photosynthesis() does get a runtime error, because n1 & n2 become zero,
@@ -278,8 +307,8 @@ CONTAINS
     DO ic = 1, nc
       DO isoil = 1, nsoil_sb
         ftranspiration_sl(ic,isoil) = 0.0_wp
-        IF ((w_soil_fc_sl(ic,isoil) - w_soil_pwp_sl(ic,isoil)) > eps8 .AND. t_soil_sl(ic,isoil) > Tzero) THEN
-          hlp = calc_soil_moisture_stress(w_soil_pot_sl(ic, isoil), lctlib_phi_leaf_min)
+        IF ((wtr_soil_fc_sl(ic,isoil) - wtr_soil_pwp_sl(ic,isoil)) > eps8 .AND. t_soil_sl(ic,isoil) > Tzero) THEN
+          hlp = calc_soil_moisture_stress(matric_pot_sl(ic, isoil), lctlib_phi_leaf_min)
           ftranspiration_sl(ic,isoil) = root_fraction_sl(ic,isoil) * hlp
         END IF
       END DO
@@ -298,9 +327,26 @@ CONTAINS
 
     !> 1.2 determine aerodynamic conductance
     !>
+    ! use drag_srf from A2L_ or TURB_ - differ between standalone and coupled simulations
+    IF (jsb_standalone) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        drag_srf_local(ic) = drag_srf_stdalone(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        drag_srf_local(ic) = drag_srf(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
+
+    ! calc aerodynamic conductance
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      aerodyn_cond(ic) = heat_transfer_coef(spq_drag_srf(ic), steplen, alpha) * MIN( MAX(wind_10m(ic), min_wind), max_wind)
+      aerodyn_cond(ic) = MAX(min_aerodyn_cond, &
+        &                heat_transfer_coef(drag_srf_local(ic), dtime, alpha) * MIN( MAX(wind_10m(ic), min_wind), max_wind))
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -453,6 +499,9 @@ CONTAINS
     ENDIF
 
     !$ACC WAIT(1)
+
+    !$ACC EXIT DATA DELETE(drag_srf_local)
+    DEALLOCATE(drag_srf_local)
 
   END SUBROUTINE update_canopy_fluxes
 

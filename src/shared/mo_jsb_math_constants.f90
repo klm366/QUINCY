@@ -23,7 +23,8 @@ MODULE mo_jsb_math_constants
 
   ! QUINCY simplified time control
   REAL(wp), PARAMETER   :: one_year  = 365._wp                !< length of one year in days
-  REAL(wp), PARAMETER   :: one_day   = 86400._wp              !< length of one day in seconds
+  REAL(wp), PARAMETER   :: one_month = 30._wp                 !< length of one month in days (rounded value of '365/12')
+  REAL(wp), PARAMETER   :: one_day   = 86400._wp              !< length of one day in seconds (identical with 'seconds_per_day')
   ! conversion of degree to radians
   REAL(wp), PARAMETER   :: degcircle = 360._wp                !< degrees per circle
 

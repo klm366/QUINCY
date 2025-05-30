@@ -95,7 +95,7 @@ CONTAINS
     roughness_bare             = 0.005_wp
     roughness_water            = 0.0002_wp   ! Claussen, 1991: Estimation of areally-averaged surface fluxes
     roughness_lai_saturation   = 0.4_wp
-    roughness_momentum_to_heat = 3._wp
+    roughness_momentum_to_heat = 10._wp      ! FAO, 1998; but in reality shouldn't be constant but depend on surface features
     max_ini_rough_m            = -1._wp      ! No limit
     l_roughness_lai            = .TRUE.
 

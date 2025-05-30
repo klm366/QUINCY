@@ -489,7 +489,6 @@ CONTAINS
 	dsl4jsb_Aggregate_onChunk(SB_,  fact_mic_c_uptake_rescal_mavg      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  fact_mic_n_uptake_rescal_mavg      , weighted_by_fract)
 	dsl4jsb_Aggregate_onChunk(SB_,  fact_mic_p_uptake_rescal_mavg      , weighted_by_fract)
-	
     ! SB_BGCM_ 3D
     dsl4jsb_Aggregate_onChunk(SB_,  sb_bgcm_pool_microbial_c        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_,  sb_bgcm_pool_microbial_n        , weighted_by_fract)
@@ -536,6 +535,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, het_respiration              , weighted_by_fract)
     ! 2D
     dsl4jsb_Aggregate_onChunk(SB_, ecosystem_total_n_loss       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, fertiliser_nh4               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, fertiliser_no3               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, fertiliser_po4               , weighted_by_fract)
     ! 3D
     ! 3D
     dsl4jsb_Aggregate_onChunk(SB_, noy                          , weighted_by_fract)

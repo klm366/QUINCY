@@ -235,7 +235,7 @@ MODULE mo_carbon_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_carbon_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_carbon_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -246,6 +246,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)    :: model_id
 
     dsl4jsb_Def_config(PHENO_)    ! needed for l_forestRegrowth
@@ -1076,49 +1077,49 @@ CONTAINS
       & t_cf('C_sum_veg_gsum', 'PgC', 'Global sum of all vegetation C pools.'),                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
     CALL mem%Add_var('c_sum_litter_ag_gsum', mem%C_sum_litter_ag_gsum,                         &
       & hgrid, surface,                                                                        &
       & t_cf('C_sum_litter_ag_gsum', 'PgC', 'Global sum of all above ground litter C pools'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
     CALL mem%Add_var('c_sum_litter_bg_gsum', mem%C_sum_litter_bg_gsum,                         &
       & hgrid, surface,                                                                        &
       & t_cf('C_sum_litter_bg_gsum', 'PgC', 'Global sum of all below ground litter C pools.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
     CALL mem%Add_var('c_sum_humus_gsum', mem%C_sum_humus_gsum,                                 &
       & hgrid, surface,                                                                        &
       & t_cf('C_sum_humus_gsum', 'PgC', 'Global sum of all humus C pools.'),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
     CALL mem%Add_var('c_sum_natural_gsum', mem%C_sum_natural_gsum,                             &
       & hgrid, surface,                                                                        &
       & t_cf('C_sum_natural_gsum', 'PgC', 'Global sum of all natural C pools.'),               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
     CALL mem%Add_var('npp_act_ydaymean_gsum', mem%NPP_act_yDayMean_gsum,                       &
       & hgrid, surface,                                                                        &
       & t_cf('NPP_act_yDayMean_gsum', 'PgC yr-1', 'Global actual NPP rate of the previous day'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
     CALL mem%Add_var('gpp_ydaymean_gsum', mem%GPP_yDayMean_gsum,                               &
       & hgrid, surface,                                                                        &
       & t_cf('GPP_yDayMean_gsum', 'PgC yr-1', 'Global GPP rate of the previous day'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
     CALL mem%Add_var('soil_respiration_gsum', mem%soil_respiration_gsum,                       &
       & hgrid, surface,                                                                        &
       & t_cf('soil_respiration_gsum', 'PgC yr-1', 'Global soil respiration rate'),             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
 
   END SUBROUTINE Init_carbon_memory
 
