@@ -54,6 +54,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':turb_init'
 
+#ifdef __QUINCY_STANDALONE__
+#else
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL turb_read_init_vars(tile)
     END IF
@@ -64,9 +66,11 @@ CONTAINS
     IF (tile%Is_last_process_tile(TURB_)) THEN
       CALL turb_finalize_init_vars()
     END IF
-
+#endif
   END SUBROUTINE turb_init
 
+#ifdef __QUINCY_STANDALONE__
+#else
   SUBROUTINE turb_finalize_init_vars
 
     DEALLOCATE( &
@@ -177,15 +181,16 @@ CONTAINS
       ! Needed for tmx
       dsl4jsb_var2D_onDomain(TURB_,rough_h) = turb_init_vars%rough_m / dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
       dsl4jsb_var2D_onDomain(TURB_,rough_h_star) = 1._wp / LOG(dsl4jsb_Config(TURB_)%blending_height / &
-        & (turb_init_vars%rough_m / dsl4jsb_Config(TURB_)%roughness_momentum_to_heat))**2
+        & (turb_init_vars%rough_m / dsl4jsb_Config(TURB_)%roughness_momentum_to_heat)) ** 2
 
       !$ACC UPDATE ASYNC(1) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_m), dsl4jsb_var2D_onDomain(TURB_,rough_m_star)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_h), dsl4jsb_var2D_onDomain(TURB_,rough_h_star))
+      !$ACC WAIT(1)
 
     END IF
 
   END SUBROUTINE turb_init_ic
-
+#endif
 #endif
 END MODULE mo_turb_init

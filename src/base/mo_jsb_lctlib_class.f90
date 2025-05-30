@@ -276,7 +276,7 @@ CONTAINS
     ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
     USE mo_jsb_math_constants,      ONLY: one_day, one_year
     USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero
-    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
+    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree, icrop
 #else
     USE mo_util_string, ONLY: tolower
 #endif
@@ -438,6 +438,9 @@ CONTAINS
     LOGICAL            :: exists_k_som_slow_init = .FALSE.
     LOGICAL            :: exists_AlbedoLitterVIS = .FALSE.
     LOGICAL            :: exists_AlbedoLitterNIR = .FALSE.
+    LOGICAL            :: exists_VegRoughness = .FALSE.
+    LOGICAL            :: exists_MinVegRoughness = .FALSE.
+    LOGICAL            :: exists_MaxVegRoughness = .FALSE.
     ! quincy model - end
 
     !> Read lctlib data and eventually allocate also memory for lctlib data on io-processor
@@ -757,7 +760,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values don't add up to 1 carbon is not conserved
-                IF (SUM(lctlib(i)%LitVeg_coef(:)) .NE. 1.) &
+                IF (ABS(SUM(lctlib(i)%LitVeg_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
                      CALL finish('init_lctlib','invalid value for LitVeg_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_litveg_coef = .TRUE.
@@ -769,7 +772,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values dont add up to 1 carbon is not conserved
-                IF (SUM(lctlib(i)%LeafLit_coef(:)) .NE. 1.) &
+                IF (SUM(ABS(lctlib(i)%LeafLit_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
                      CALL finish('init_lctlib','invalid value for LeafLit_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_leaflit_coef = .TRUE.
@@ -781,7 +784,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values dont add up to 1 carbon is not conserved
-                IF (SUM(lctlib(i)%WoodLit_coef(:)) .NE. 1.) &
+                IF (ABS(SUM(lctlib(i)%WoodLit_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
                      CALL finish('init_lctlib','invalid value for WoodLit_coef_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_woodlit_coef = .TRUE.
@@ -1006,6 +1009,18 @@ CONTAINS
           CASE ('albedolitternir')
             READ(line(pos:length),*) lctlib(1:nlct)%AlbedoLitterNIR
             exists_AlbedoLitterNIR = .TRUE.
+          ! jsbach parameter
+          CASE ('vegroughness')
+            READ(line(pos:length),*) lctlib(1:nlct)%VegRoughness
+            exists_VegRoughness = .TRUE.
+          ! jsbach parameter
+          CASE ('minvegroughness')
+            READ(line(pos:length),*) lctlib(1:nlct)%MinVegRoughness
+            exists_MinVegRoughness = .TRUE.
+          ! jsbach parameter
+          CASE ('maxvegroughness')
+            READ(line(pos:length),*) lctlib(1:nlct)%MaxVegRoughness
+            exists_MaxVegRoughness = .TRUE.
           CASE default
             ! nothing to do
           END SELECT
@@ -1309,10 +1324,16 @@ CONTAINS
           CALL finish('init_lctlib','No data for k_som_fast_init found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_k_som_slow_init) &
           CALL finish('init_lctlib','No data for k_som_slow_init found in '//TRIM(lctlib_file_name))
-        IF(.NOT. exists_AlbedoLitterVIS) &
-          CALL finish('init_lctlib','No data for AlbedoLitterVIS found in '//TRIM(lctlib_file_name))
-        IF(.NOT. exists_AlbedoLitterNIR) &
-          CALL finish('init_lctlib','No data for AlbedoLitterNIR found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_AlbedoLitterVIS) &
+          & CALL finish('init_lctlib','No data for AlbedoLitterVIS found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_AlbedoLitterNIR) &
+          & CALL finish('init_lctlib','No data for AlbedoLitterNIR found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_VegRoughness) &
+          & CALL finish('init_lctlib','No data for VegRoughness found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_MinVegRoughness) &
+          & CALL finish('init_lctlib','No data for MinVegRoughness found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_MaxVegRoughness) &
+          & CALL finish('init_lctlib','No data for MaxVegRoughness found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
 #endif
@@ -1389,13 +1410,14 @@ CONTAINS
          END DO
         ! k_rtos
          DO i = 1,nlct
-           IF(lctlib(i)%growthform /= igrass) THEN
-              lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
-              !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
-              !     lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
-           ELSE
-              lctlib(i)%k_rtos = 0.5_wp / sm2lm_grass
-           END IF
+          SELECT CASE (lctlib(i)%growthform)
+          CASE (itree)
+            lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
+            !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
+            !     lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
+          CASE (igrass,icrop)
+            lctlib(i)%k_rtos = 0.5_wp / sm2lm_grass
+          END SELECT
          END DO
          ! c0_allom
          DO i = 1,nlct
@@ -1648,6 +1670,9 @@ CONTAINS
         CALL p_bcast(lctlib(:)%k_som_slow_init, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterVIS, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterNir, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%VegRoughness, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%MinVegRoughness, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%MaxVegRoughness, p_io, mpi_comm)
       END IF
 #endif
     END IF
@@ -1659,7 +1684,7 @@ CONTAINS
     SELECT CASE (usecase)
 #ifndef __NO_QUINCY__
     ! quincy model with 8 / 11 PFT tiles
-    CASE ('quincy_eight_pfts', 'quincy_11_pfts', 'quincy_11_pfts_for_coupling')
+    CASE ('quincy_eight_pfts', 'quincy_11_pfts', 'quincy_13_pfts_for_coupling', 'quincy_13_pfts')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
 #endif

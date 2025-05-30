@@ -23,16 +23,30 @@ MODULE mo_sb_init
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_jsb_math_constants,    ONLY: eps4, eps8
 
+  USE mo_jsb_class,             ONLY: Get_model
+  USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+  USE mo_jsb_model_class,       ONLY: t_jsb_model
+  USE mo_jsb_grid_class,        ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,              ONLY: Get_grid, Get_vgrid
+
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store, get_bgcm_idx
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID
 
-  USE mo_jsb_process_class,       ONLY: SB_, SPQ_, VEG_
+  USE mo_jsb_process_class,       ONLY: SB_, HYDRO_, SSE_, VEG_, A2L_
+  USE mo_sb_config_class,         ONLY: CONST_DEP, REFYEAR_DEP, TRANS_DEP
+
+#ifndef __QUINCY_STANDALONE__
+  USE mo_jsb_time,              ONLY: get_year, get_month
+#endif
 
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC :: sb_init
+#ifndef __QUINCY_STANDALONE__
+  PUBLIC :: provide_n_and_p_deposition
+#endif
 
   TYPE t_sb_init_vars
     REAL(wp), POINTER :: &
@@ -55,15 +69,17 @@ MODULE mo_sb_init
 
 CONTAINS
 
-  ! ======================================================================================================= !
+  ! ======================================================================================================= !tile
   !> Intialize SB_ process
   !>
   SUBROUTINE sb_init(tile)
 
-    USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
+    USE mo_jsb_parallel,       ONLY: Get_omp_thread
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+    INTEGER :: no_omp_thread
+    TYPE(t_jsb_model),  POINTER :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sb_init'
 
 #ifdef __QUINCY_STANDALONE__
@@ -71,6 +87,9 @@ CONTAINS
     CALL sb_init_ic_bc(tile)
     CALL sb_finalize_init_vars()
 #else
+    model => Get_model(tile%owner_model_id)
+    no_omp_thread = Get_omp_thread()
+
     ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL sb_read_init_vars(tile)
@@ -82,18 +101,14 @@ CONTAINS
       CALL sb_finalize_init_vars()
     END IF
 #endif
+
   END SUBROUTINE sb_init
 
   ! ======================================================================================================= !
   !> Intialize SB_ process from ic and bc input files
   !>
   SUBROUTINE sb_init_ic_bc(tile)
-    USE mo_jsb_class,                     ONLY: Get_model
-    USE mo_jsb_tile_class,                ONLY: t_jsb_tile_abstract
-    USE mo_jsb_model_class,               ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,              ONLY: t_lctlib_element
-    USE mo_jsb_grid_class,                ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,                      ONLY: Get_grid, Get_vgrid
     USE mo_q_assimi_constants,            ONLY: IC3PHOT
     USE mo_q_assimi_process,              ONLY: discrimination_ps
     USE mo_q_assimi_parameters,           ONLY: CiCa_default_C3, CiCa_default_C4
@@ -105,7 +120,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -129,27 +145,24 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! VEG_ 3D
     dsl4jsb_Real3D_onDomain :: root_fraction_sl
-    ! SPQ_ 2D
+    ! HYDRO_ 2D
     dsl4jsb_Real2D_onDomain :: num_sl_above_bedrock
-    ! SPQ_ 3D
-    dsl4jsb_Real3D_onDomain :: bulk_dens_sl
-    dsl4jsb_Real3D_onDomain :: w_soil_sl
-    dsl4jsb_Real3D_onDomain :: soil_depth_sl             ! (soil_depth_sl == soil_lay_width_sl)
+    ! HYDRO_ 3D
+    dsl4jsb_Real3D_onDomain :: soil_depth_sl
     dsl4jsb_Real3D_onDomain :: soil_lay_width_sl
     dsl4jsb_Real3D_onDomain :: soil_lay_depth_center_sl
     dsl4jsb_Real3D_onDomain :: soil_lay_depth_ubound_sl
-    dsl4jsb_Real3D_onDomain :: qmax_org_min_sl
-    dsl4jsb_Real3D_onDomain :: qmax_po4_min_sl
-    dsl4jsb_Real3D_onDomain :: qmax_nh4_min_sl
-    dsl4jsb_Real3D_onDomain :: qmax_po4_om_sl
+    dsl4jsb_Real3D_onDomain :: wtr_soil_sl
+    ! SSE_ 3D
+    dsl4jsb_Real3D_onDomain :: bulk_dens_sl
     dsl4jsb_Real3D_onDomain :: silt_sl
     dsl4jsb_Real3D_onDomain :: clay_sl
-    dsl4jsb_Real3D_onDomain :: volume_min_sl
     ! SB_ 3D
     dsl4jsb_Real3D_onDomain :: nh4_assoc
     dsl4jsb_Real3D_onDomain :: nh4_solute
@@ -191,6 +204,11 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: fact_n_status_mic_c_growth
     dsl4jsb_Real3D_onDomain :: fact_p_status_mic_c_growth
     dsl4jsb_Real3D_onDomain :: enzyme_frac_AP
+    dsl4jsb_Real3D_onDomain :: qmax_org_min_sl
+    dsl4jsb_Real3D_onDomain :: qmax_po4_min_sl
+    dsl4jsb_Real3D_onDomain :: qmax_nh4_min_sl
+    dsl4jsb_Real3D_onDomain :: qmax_po4_om_sl
+    dsl4jsb_Real3D_onDomain :: volume_min_sl
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -206,7 +224,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -214,22 +233,18 @@ CONTAINS
     sb_pool_mt_domain => bgcm_store%store_2l_3d_bgcms(bgcm_store%idx_in_store(sb_pool_idx))%mt_2l_3d_bgcm(:,:,:,:,:)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onDomain(VEG_,   root_fraction_sl)
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onDomain(SPQ_,   num_sl_above_bedrock)     ! in
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   bulk_dens_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   w_soil_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   soil_depth_sl)            ! in  (soil_depth_sl == soil_lay_width_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   soil_lay_width_sl)        ! in
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   soil_lay_depth_center_sl) ! in
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   soil_lay_depth_ubound_sl) ! in
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   qmax_org_min_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   qmax_po4_min_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   qmax_nh4_min_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   qmax_po4_om_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   silt_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   clay_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_,   volume_min_sl)
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, num_sl_above_bedrock)     ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)            ! in
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_lay_width_sl)        ! in
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_lay_depth_center_sl) ! in
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_lay_depth_ubound_sl) ! in
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, wtr_soil_sl)
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onDomain(SSE_,   bulk_dens_sl)             ! in
+    dsl4jsb_Get_var3D_onDomain(SSE_,   silt_sl)
+    dsl4jsb_Get_var3D_onDomain(SSE_,   clay_sl)
     ! ---------------------------
     dsl4jsb_Get_var3D_onDomain(SB_,    nh4_assoc)
     dsl4jsb_Get_var3D_onDomain(SB_,    nh4_solute)
@@ -271,6 +286,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SB_,    fact_n_status_mic_c_growth)
     dsl4jsb_Get_var3D_onDomain(SB_,    fact_p_status_mic_c_growth)
     dsl4jsb_Get_var3D_onDomain(SB_,    enzyme_frac_AP)
+    dsl4jsb_Get_var3D_onDomain(SB_,    qmax_org_min_sl)
+    dsl4jsb_Get_var3D_onDomain(SB_,    qmax_po4_min_sl)
+    dsl4jsb_Get_var3D_onDomain(SB_,    qmax_nh4_min_sl)
+    dsl4jsb_Get_var3D_onDomain(SB_,    qmax_po4_om_sl)
+    dsl4jsb_Get_var3D_onDomain(SB_,    volume_min_sl)
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.9 init bgcm with zero
@@ -382,7 +402,7 @@ CONTAINS
         & root_fraction_sl(:,:,:), &
         & clay_sl(:,:,:), &
         & silt_sl(:,:,:), &
-        & w_soil_sl(:,:,:), &
+        & wtr_soil_sl(:,:,:), &
         & bulk_dens_sl(:,:,:), &                      ! in
         & ph_sl(:,:,:), &                             ! inout
         & bulk_soil_carbon_sl(:,:,:), &
@@ -447,7 +467,7 @@ CONTAINS
         & root_fraction_sl(:,:,:), &
         & clay_sl(:,:,:), &
         & silt_sl(:,:,:), &
-        & w_soil_sl(:,:,:), &
+        & wtr_soil_sl(:,:,:), &
         & bulk_dens_sl(:,:,:), &                      ! in
         & ph_sl(:,:,:), &                             ! inout
         & qmax_po4_min_sl(:,:,:), &
@@ -504,7 +524,7 @@ CONTAINS
     END IF
 
     ! IN
-    !$ACC UPDATE DEVICE(root_fraction_sl(:,:,:), num_sl_above_bedrock(:,:), bulk_dens_sl(:,:,:), w_soil_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(root_fraction_sl(:,:,:), num_sl_above_bedrock(:,:), bulk_dens_sl(:,:,:), wtr_soil_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_center_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:)) ASYNC(1)
 
@@ -531,7 +551,7 @@ CONTAINS
   END SUBROUTINE sb_init_ic_bc
 
   ! ======================================================================================================= !
-  !> de-allocate SPQ_ init vars
+  !> de-allocate SB_ init vars
   !>
   SUBROUTINE sb_finalize_init_vars
     DEALLOCATE( &
@@ -549,11 +569,6 @@ CONTAINS
 
 #ifdef __QUINCY_STANDALONE__
   SUBROUTINE sb_qs_read_init_vars(tile)
-    USE mo_jsb_model_class,    ONLY: t_jsb_model
-    USE mo_jsb_class,          ONLY: get_model
-    USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
     USE mo_jsb_io,             ONLY: missval
 
     dsl4jsb_Use_config(SB_)
@@ -643,11 +658,6 @@ CONTAINS
   !> read SB_ init vars from input file
   !>
   SUBROUTINE sb_read_init_vars(tile)
-    USE mo_jsb_model_class,    ONLY: t_jsb_model
-    USE mo_jsb_class,          ONLY: get_model
-    USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_jsb_io,             ONLY: missval
 
@@ -798,7 +808,7 @@ CONTAINS
     & root_fraction_sl, &
     & clay_sl, &
     & silt_sl, &
-    & w_soil_sl, &
+    & wtr_soil_sl, &
     & bulk_dens_sl, &
     & ph_sl, &
     & bulk_soil_carbon_sl, &
@@ -880,7 +890,7 @@ CONTAINS
     REAL(wp),                   INTENT(in)    :: root_fraction_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: clay_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: silt_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: w_soil_sl(:,:,:)
+    REAL(wp),                   INTENT(in)    :: wtr_soil_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: ph_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: bulk_soil_carbon_sl(:,:,:)
@@ -1078,7 +1088,7 @@ CONTAINS
             & flag_sb_double_langmuir, &          ! in
             & clay_sl(ic, is, iblk), &
             & silt_sl(ic, is, iblk), &
-            & w_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk) * 1000._wp, &
+            & wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk) * 1000._wp, &
             & ph_sl(ic, is, iblk), &
             & bulk_soil_carbon_sl(ic, is, iblk), &
             & soil_litter_carbon_sl(ic, is, iblk), &
@@ -1132,7 +1142,7 @@ CONTAINS
     DO iblk = 1,nblks
       DO ic = 1,nproma
         DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
-          qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * w_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk)
+          qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk)
         ENDDO
       ENDDO
     ENDDO
@@ -1311,7 +1321,7 @@ CONTAINS
     & root_fraction_sl, &
     & clay_sl, &
     & silt_sl, &
-    & w_soil_sl, &
+    & wtr_soil_sl, &
     & bulk_dens_sl, &
     & ph_sl, &
     & qmax_po4_min_sl, &
@@ -1390,7 +1400,7 @@ CONTAINS
     REAL(wp),                   INTENT(in)    :: root_fraction_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: clay_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: silt_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: w_soil_sl(:,:,:)
+    REAL(wp),                   INTENT(in)    :: wtr_soil_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: ph_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: qmax_po4_min_sl(:,:,:)
@@ -1686,7 +1696,7 @@ CONTAINS
             & flag_sb_double_langmuir, &          ! in
             & clay_sl(ic, is, iblk), &
             & silt_sl(ic, is, iblk), &
-            & w_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk) * 1000._wp, &
+            & wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk) * 1000._wp, &
             & ph_sl(ic, is, iblk), &
             & bulk_soil_carbon_sl(ic, is, iblk), &
             & soil_litter_carbon_sl(ic, is, iblk), &
@@ -1739,7 +1749,7 @@ CONTAINS
         & qmax_nh4_min_sl(:,:,iblk), &       ! in
         & qmax_nh4(:,:,iblk) )               ! out
     END DO
-    qmax_nh4(:,:,:) = qmax_nh4(:,:,:) * w_soil_sl(:,:,:) / soil_depth_sl(:,:,:)
+    qmax_nh4(:,:,:) = qmax_nh4(:,:,:) * wtr_soil_sl(:,:,:) / soil_depth_sl(:,:,:)
     DO iblk = 1,nblks
       CALL calc_qmax_bulk_density_correction( &
         & bulk_soil_carbon_sl(:,:,iblk), &   ! in
@@ -2063,5 +2073,159 @@ CONTAINS
     ENDDO
   END SUBROUTINE init_soil_p_pools
 
+#ifndef __QUINCY_STANDALONE__
+  ! ====================================================================================================== !
+  !
+  !> Provide n and p deposition depending on the deposition configuration and the time of the year - for IQ
+  !
+  SUBROUTINE provide_n_and_p_deposition(model_id, current_datetime, dtime)
+
+    USE mo_jsb_time_iface,         ONLY: t_datetime
+    USE mo_jsb_time,               ONLY: is_newyear, get_year, get_month, is_time_experiment_start
+    USE mo_io_units,               ONLY: filename_max
+    USE mo_jsb_parallel,           ONLY: Get_omp_thread
+    USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_jsb_physical_constants, ONLY: molar_mass_N, molar_mass_P
+    USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
+    dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_config(SB_)
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER,                   INTENT(in) :: model_id
+    TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
+    REAL(wp),                  INTENT(in) :: dtime
+    ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),           POINTER :: model
+    TYPE(t_jsb_grid),            POINTER :: hgrid
+    CLASS(t_jsb_tile_abstract),  POINTER :: tile
+
+    dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(SB_)
+
+    dsl4jsb_Real2D_onDomain :: nhx_deposition
+    dsl4jsb_Real2D_onDomain :: noy_deposition
+    dsl4jsb_Real2D_onDomain :: nhx_n15_deposition
+    dsl4jsb_Real2D_onDomain :: noy_n15_deposition
+    dsl4jsb_Real2D_onDomain :: p_deposition
+
+    dsl4jsb_Real3D_onDomain :: nhx_deposition_monthly
+    dsl4jsb_Real3D_onDomain :: noy_deposition_monthly
+    dsl4jsb_Real3D_onDomain :: p_deposition_monthly
+
+    REAL(wp),       POINTER :: ptr_3D(:,:,:)  ! tmp pointer
+
+    INTEGER :: current_year, current_month, no_omp_thread, nproma, nblks, i_month
+    LOGICAL :: is_experiment_start, read_deposition_data
+    TYPE(t_input_file)          :: input_file
+    CHARACTER(len=filename_max) :: filename_deposition_data
+    CHARACTER(len=*), PARAMETER :: routine = modname//':provide_n_and_p_deposition'
+    ! -------------------------------------------------------------------------------------------------- !
+    model => Get_model(model_id)
+    CALL model%Get_top_tile(tile)
+    no_omp_thread = Get_omp_thread()
+    hgrid => Get_grid(model%grid_id)
+
+    nproma = hgrid%nproma
+    nblks  = hgrid%nblks
+
+    is_experiment_start = is_time_experiment_start(current_datetime)
+    ! -------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_var2D_onDomain(A2L_, nhx_deposition)
+    dsl4jsb_Get_var2D_onDomain(A2L_, noy_deposition)
+    dsl4jsb_Get_var2D_onDomain(A2L_, nhx_n15_deposition)
+    dsl4jsb_Get_var2D_onDomain(A2L_, noy_n15_deposition)
+    dsl4jsb_Get_var2D_onDomain(A2L_, p_deposition)
+    dsl4jsb_Get_var3D_onDomain(SB_, nhx_deposition_monthly)
+    dsl4jsb_Get_var3D_onDomain(SB_, noy_deposition_monthly)
+    dsl4jsb_Get_var3D_onDomain(SB_, p_deposition_monthly)
+    ! -------------------------------------------------------------------------------------------------- !
+
+    IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+
+    ! In case that constants are to be used for the n and p deposition they are initialised here
+    IF (dsl4jsb_Config(SB_)%deposition_scheme == CONST_DEP) THEN
+      IF (is_experiment_start) THEN
+        ! set constants ...
+        ! SZ: "background N deposition is 2 kg N / ha / yr = 6.3419e-12 kg / m2 / s (2/365/24/3600/10000)
+        !      the background N deposition is the sum of NHx and NOy, therefore "/ 2._wp"
+        ! ...  and convert from kg/m2/s -> mumol/m2/s
+        ! -- 1 kg/m2/s = 1 * 1000 / molar_mass_N / 1e-06 [mu mol/m2/s]
+        nhx_deposition(:,:) = 6.3419E-12_wp / 2._wp * 1000._wp / molar_mass_N / 1.e-6_wp
+        noy_deposition(:,:) = 6.3419E-12_wp / 2._wp * 1000._wp / molar_mass_N / 1.e-6_wp
+        ! SZ: "Default P deposition is assumed to be stoichmetrically balanced (which would be higher than typical background values.)
+        !      Thus, total N deposition to total P deposition = 14 g N/ g P -> 14 / molar_mass_N * molar_mass_P"
+        !      (Sterner & Elser, Ecological Stoichmetry, 2002, Princeton University Press)
+        p_deposition(:,:) =  6.3419E-12 / (14.0_wp / molar_mass_N * molar_mass_P) * 1000._wp / molar_mass_N / 1.e-6_wp
+        ! SZ: NHX_deposition_N15 = NOY_deposition_N15 = NOY_deposition f(delta_n15=0.0)
+        nhx_n15_deposition(:,:) = nhx_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+        noy_n15_deposition(:,:) = noy_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+      END IF
+
+    ELSE
+      ! Check if data needs to be read
+      IF (is_experiment_start &
+          & .OR. (is_newyear(current_datetime, dtime) .AND. (dsl4jsb_Config(SB_)%deposition_scheme == TRANS_DEP))) THEN
+        read_deposition_data = .TRUE.
+      ELSE
+        read_deposition_data = .FALSE.
+      END IF
+
+      IF (read_deposition_data) THEN
+        IF (.NOT. is_experiment_start) THEN
+          ! In this case we search a file ending on the current year
+          current_year  = get_year(current_datetime)
+
+          !>
+          !> Assertion: routine currently expects filenames with 4 digits
+          !>
+          IF (( current_year > 9999) .OR. (current_year < 1000)) THEN
+            CALL finish(TRIM(routine), 'Violation of assertion: this routine currently expects filenames with 4 digits.')
+          END IF
+          WRITE (filename_deposition_data,'(a,a,I4.4,a)') &
+            & TRIM(dsl4jsb_Config(SB_)%deposition_filename_prefix), '_', current_year, ".nc"
+        ELSE
+          ! else we expect a file name without a year
+          WRITE (filename_deposition_data,'(a,a)') TRIM(dsl4jsb_Config(SB_)%deposition_filename_prefix), ".nc"
+        END IF
+
+        input_file = jsb_netcdf_open_input(TRIM(filename_deposition_data), model%grid_id)
+        ptr_3D => input_file%Read_2d_time(variable_name=TRIM("NHx_deposition")) !, start_time_step=1, end_time_step=12)
+        DO i_month = 1,12
+          nhx_deposition_monthly(:,i_month,:) = ptr_3D(:,:,i_month)
+        END DO
+        ptr_3D => input_file%Read_2d_time(variable_name=TRIM("NOy_deposition")) !, start_time_step=1, end_time_step=12)
+        DO i_month = 1,12
+          noy_deposition_monthly(:,i_month,:) = ptr_3D(:,:,i_month)
+        END DO
+        ptr_3D => input_file%Read_2d_time(variable_name=TRIM("pdep")) !, start_time_step=1, end_time_step=12)
+        DO i_month = 1,12
+          p_deposition_monthly(:,i_month,:) = ptr_3D(:,:,i_month)
+        END DO
+
+        CALL input_file%Close()
+      END IF
+
+      ! Assign the deposition values of this month to the A2L variables
+      current_month = get_month(current_datetime)
+
+      ! ... convert from kg/m2/s -> mumol/m2/s
+      ! -- 1 kg/m2/s = 1 * 1000 / molar_mass_N / 1e-06 [mu mol/m2/s]
+      nhx_deposition(:,:) = nhx_deposition_monthly(:,current_month,:) * 1000._wp / molar_mass_N / 1.e-6_wp
+      noy_deposition(:,:) = noy_deposition_monthly(:,current_month,:) * 1000._wp / molar_mass_N / 1.e-6_wp
+      p_deposition  (:,:) = p_deposition_monthly  (:,current_month,:) * 1000._wp / molar_mass_P / 1.e-6_wp
+
+      ! SZ: NHX_deposition_N15 = NOY_deposition_N15 = NOY_deposition f(delta_n15=0.0)
+      nhx_n15_deposition(:,:) = nhx_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+      noy_n15_deposition(:,:) = noy_deposition(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+    END IF
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
+
+  END SUBROUTINE provide_n_and_p_deposition
+#endif
 #endif
 END MODULE mo_sb_init

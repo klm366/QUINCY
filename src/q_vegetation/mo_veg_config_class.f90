@@ -65,7 +65,7 @@ MODULE mo_veg_config_class
     LOGICAL          :: flag_dynamic_roots         !< roots across soil layers: fixed after init or dynamic over time
                                                    !! for the models QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION fixed roots are used
                                                    !! by default; this is hard-coded in SPQ_ init
-    LOGICAL          :: l_use_product_pools        !< enable product pools (required for harvest process); default: FALSE
+    LOGICAL          :: l_use_product_pools        !< enable product pools (required for crop/ and wood harvest processes); default: FALSE
     LOGICAL          :: flag_dynroots_h2o_n_limit  !< root growth across layers limited/affected by H2O and Nitrogen availability (needs flag_dynamic_roots="T")
     LOGICAL          :: flag_herbivory             !< whether herbivory (on grass PFT) is enabled
 

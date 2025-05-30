@@ -1,4 +1,4 @@
-!> declare and define indices for bgc material
+!> Declare and define indices for QUINCY bgc material
 !>
 !> ICON-Land
 !>

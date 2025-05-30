@@ -1,4 +1,4 @@
-!> lper routines for assimilation
+!> QUINCY helper routines for assimilation
 !>
 !> ICON-Land
 !>
