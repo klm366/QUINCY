@@ -23,17 +23,14 @@ MODULE mo_interface_hd_ocean
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
   USE mo_coupling_config,     ONLY: is_coupled_run
-#ifdef YAC_coupling
-  USE yac,                    ONLY: yac_fdef_field, yac_fput, &
-       &                            yac_fdef_mask,            &
-       &                            YAC_LOCATION_CELL,        &
-       &                            YAC_TIME_UNIT_ISO_FORMAT, &
-       &                            YAC_ACTION_PUT_FOR_RESTART
+  USE mo_coupling_utils,      ONLY: cpl_def_cell_field_mask, &
+                                    cpl_def_field, &
+                                    cpl_put_field
   USE mo_time_config,         ONLY: time_config
   USE mtime,                  ONLY: timedeltaToString, MAX_TIMEDELTA_STR_LEN
-#endif
 
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
+  USE mo_jsb_control,        ONLY: acc_stream
 
   dsl4jsb_Use_processes HYDRO_, HD_
   dsl4jsb_Use_config(HD_)
@@ -43,30 +40,25 @@ MODULE mo_interface_hd_ocean
   IMPLICIT NONE
   PRIVATE
 
-#ifdef YAC_coupling
   PUBLIC :: jsb_fdef_hd_fields
-#endif
   PUBLIC :: interface_hd_ocean
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_interface_hd_ocean'
 
-  INTEGER :: yac_river_runoff_field_id
+  INTEGER :: field_id_river_runoff
 
 CONTAINS
 
-#ifdef YAC_coupling
-  SUBROUTINE jsb_fdef_hd_fields(comp_id, cell_point_ids, grid_id, n_patch_cells)
+  SUBROUTINE jsb_fdef_hd_fields(comp_id, cell_point_id, grid_id)
 
     USE mo_jsb_model_class,    ONLY: t_jsb_model
     USE mo_jsb_class,          ONLY: Get_model
     USE mo_jsb_grid_class,     ONLY: t_jsb_grid
     USE mo_jsb_grid,           ONLY: Get_grid
 
-    INTEGER, INTENT(in) :: comp_id           ! yac component id
-    INTEGER, INTENT(in) :: cell_point_ids(:) ! yac point is
-    INTEGER, INTENT(in) :: grid_id           ! yac grid id
-    INTEGER, INTENT(in) :: n_patch_cells     ! number of cells (compute + halo)
-                                            ! n_patch_cells is <= nproma*nblks
+    INTEGER, INTENT(in) :: comp_id       ! yac component id
+    INTEGER, INTENT(in) :: cell_point_id ! yac point is
+    INTEGER, INTENT(in) :: grid_id       ! yac grid id
     ! Local variables
     !
     TYPE(t_jsb_grid),  POINTER    :: grid
@@ -74,12 +66,14 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), POINTER :: tile
 
-    INTEGER :: cell_mask_ids(1)
+    INTEGER :: cell_mask_id
     INTEGER :: model_id
     INTEGER :: jb, jc
     INTEGER :: nproma, nblks
     LOGICAL,  ALLOCATABLE :: is_valid(:)
     CHARACTER(len=MAX_TIMEDELTA_STR_LEN) :: modelTimeStep
+
+    CHARACTER(LEN=*), PARAMETER :: routine = modname // ':jsb_fdef_hd_fields'
 
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
@@ -122,28 +116,15 @@ CONTAINS
       END DO
     END DO
 
-    CALL yac_fdef_mask (       &
-      & grid_id,               &
-      & n_patch_cells,         &
-      & YAC_LOCATION_CELL,     &
-      & is_valid,              &
-      & cell_mask_ids(1) )
-
-    CALL yac_fdef_field_mask ( &
-      & 'river_runoff',        &
-      & comp_id,               &
-      & cell_point_ids,        &
-      & cell_mask_ids(1),      &
-      & 1,                     &
-      & 1,                     &
-      & modelTimeStep,         &
-      & YAC_TIME_UNIT_ISO_FORMAT, &
-      & yac_river_runoff_field_id )
+    CALL cpl_def_cell_field_mask(routine, grid_id, is_valid, cell_mask_id)
 
     DEALLOCATE(is_valid)
 
+    CALL cpl_def_field( &
+      & comp_id, cell_point_id, cell_mask_id, modelTimeStep, &
+      & 'river_runoff', 1, field_id_river_runoff)
+
   END SUBROUTINE jsb_fdef_hd_fields
-#endif
 
   SUBROUTINE interface_hd_ocean(tile, options)
 
@@ -168,12 +149,8 @@ CONTAINS
 
     ! Local variables
 
-    LOGICAL               :: write_coupler_restart
-    INTEGER               :: nbr_hor_cells
-    REAL(wp), ALLOCATABLE :: buffer(:,:)
-    INTEGER               :: collection_size, nbr_pointsets, nbr_subdomains
-    INTEGER               :: info, ierror !< return values form cpl_put/get calls
-    INTEGER               :: iblk, n, nn, nlen
+    LOGICAL :: write_coupler_restart
+    INTEGER :: n
 
     n =options%nc ! only to avoid compiler warnings
 
@@ -184,7 +161,8 @@ CONTAINS
     dsl4jsb_Get_config(HD_)
     IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
 
-    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'HD model works on root tile only!')
+    IF (ASSOCIATED(tile%parent)) &
+      & CALL finish(routine, 'HD model works on root tile only!')
 
     grid => Get_grid(model%grid_id)
 
@@ -196,51 +174,16 @@ CONTAINS
     ! Send river discharge
     ! --------------------
 
-    write_coupler_restart = .FALSE.
+    !$ACC UPDATE HOST(discharge_ocean)
 
-    ALLOCATE(buffer(grid%nproma * grid%nblks, 1))
-    !$ACC DATA CREATE(buffer)
-!$OMP PARALLEL
-    CALL init(buffer(:,:), lacc=.TRUE.)
-!$OMP END PARALLEL
+    CALL cpl_put_field( &
+      & routine, field_id_river_runoff, 'river_runoff', grid%ntotal, &
+      & discharge_ocean, write_restart=write_coupler_restart)
 
-!$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP SEQ
-    DO iblk = 1, grid%nblks
-      nn = (iblk - 1) * grid%nproma
-      IF (iblk /= grid%nblks) THEN
-       nlen = grid%nproma
-      ELSE
-       nlen = grid%npromz
-      END IF
-      !$ACC LOOP GANG VECTOR
-      DO n = 1, nlen
-        buffer(nn+n,1) = discharge_ocean(n,iblk)
-      END DO
-    END DO
-    !$ACC END PARALLEL
-    !$ACC UPDATE HOST(buffer) ASYNC(1)
-    !$ACC WAIT(1)
-!$OMP END PARALLEL DO
-
-    nbr_hor_cells = grid%ntotal
-    collection_size = 1
-    nbr_pointsets   = 1
-    nbr_subdomains  = 1
-#ifdef YAC_coupling
-    CALL yac_fput(yac_river_runoff_field_id, nbr_hor_cells, collection_size, buffer, info, ierror)
-    IF ( info == YAC_ACTION_PUT_FOR_RESTART ) write_coupler_restart = .TRUE.
-#endif
-
-    IF ( write_coupler_restart ) THEN
-       CALL message(TRIM(routine), 'YAC says it is put for restart')
-    ENDIF
-
-    !$ACC END DATA
-    DEALLOCATE(buffer)
+    IF ( write_coupler_restart ) &
+      & CALL message(routine, 'YAC says it is put for restart')
 
   END SUBROUTINE interface_hd_ocean
-
 #endif
+
 END MODULE mo_interface_hd_ocean

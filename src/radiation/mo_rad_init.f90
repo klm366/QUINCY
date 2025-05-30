@@ -370,6 +370,7 @@ CONTAINS
 #endif
 
     END IF
+    !$ACC WAIT(1)
 
   END SUBROUTINE rad_init_ic
 

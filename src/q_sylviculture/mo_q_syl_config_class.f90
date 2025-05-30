@@ -1,4 +1,4 @@
-!> QUINCY simple harvest process config
+!> QUINCY sylviculture process config
 !>
 !> ICON-Land
 !>
@@ -13,9 +13,9 @@
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
-!>#### define simple harvest config structure, read simple harvest namelist and init configuration parameters
+!>#### define sylviculture config structure, read sylviculture namelist and init configuration parameters
 !>
-MODULE mo_q_sh_config_class
+MODULE mo_q_syl_config_class
 #ifndef __NO_QUINCY__
 
   USE mo_exception,         ONLY: message, message_text, finish
@@ -27,15 +27,18 @@ MODULE mo_q_sh_config_class
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_q_sh_config
+  PUBLIC :: t_q_syl_config, CONST_HARV, REF_HARV, TRANS_HARV
 
   ! ======================================================================================================= !
-  !> Q_SH_ configuration parameters
+  !> Q_SYL_ configuration parameters
   !>
-  TYPE, EXTENDS(t_jsb_config) :: t_q_sh_config
-    LOGICAL   :: l_daily_harvest          !< determines if harvest is to be applied on a daily (TRUE) or annual (FALSE) basis
-    LOGICAL   :: l_read_harvest_map       !< determines if harvest is to be read from a file (default FALSE), ignored in QS)
-    REAL(wp)  :: harvest_fraction         !< default fraction used if not read from a map (annual change, relative to whole gridcell)
+  TYPE, EXTENDS(t_jsb_config) :: t_q_syl_config
+    CHARACTER(len=filename_max) :: harvest_filename_prefix !< IQ. Note: should NOT include an ending "_"
+
+    LOGICAL   :: l_daily_harvest   !< determines if harvest is to be applied on a daily (TRUE) or annual (FALSE) basis
+    INTEGER   :: harvest_scheme    !< one of: CONST_HARV=1, REF_HARV=2, TRANS_HARV=3
+                                   !< - in case of REF_HARV and TRANS_HARV the data is read from an external file (IQ only)
+    REAL(wp)  :: harvest_fraction  !< default fraction used if not read from a map (annual change, relative to whole gridcell)
       !< for stand replacing harvest events, in QS, this is ignored and will be set to 1.0 instead
 
     ! QS specific configurations
@@ -44,31 +47,42 @@ MODULE mo_q_sh_config_class
     INTEGER   :: stand_replacing_year     !< QS: site specific stand replacing harvest year
     LOGICAL   :: flag_stand_harvest_event !< QS: if a site specific stand replacing harvest happened in this timestep
   CONTAINS
-    PROCEDURE :: Init => Init_q_sh_config
-  END TYPE t_q_sh_config
+    PROCEDURE :: Init => Init_q_syl_config
+  END TYPE t_q_syl_config
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sh_config_class'
+  !> harvest schemes (possible values for harvest_scheme)
+  ENUM, BIND(C)
+    ENUMERATOR ::       &
+      & CONST_HARV = 1, &  !< use global constant grid harvest fraction
+      & REF_HARV,       &  !< initially read one map with grid harvest fractions to be used each year (IQ)
+      & TRANS_HARV         !< read a map with grid harvest fractions in each simulation year (IQ)
+  END ENUM
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_syl_config_class'
 
 CONTAINS
 
   ! ======================================================================================================= !
-  !> read Q_SH_ namelist and init configuration parameters
+  !> read Q_SYL_ namelist and init configuration parameters
   !>
-  SUBROUTINE Init_q_sh_config(config)
+  SUBROUTINE Init_q_syl_config(config)
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_util_string,           ONLY: tolower
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,              ONLY: Register_vgrid
     USE mo_jsb_io,                ONLY: ZAXIS_GENERIC
     USE mo_jsb_math_constants,    ONLY: eps4
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_q_sh_config), INTENT(inout) :: config
+    CLASS(t_q_syl_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active
+    LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
+    CHARACTER(len=filename_max) :: harvest_filename_prefix
+    CHARACTER(9)                :: harvest_scheme           !< one of constant, reference, transient
 
     LOGICAL   :: l_daily_harvest          !< determines if harvest is to be applied on a daily (TRUE) or annual (FALSE) basis
-    LOGICAL   :: l_read_harvest_map       !< determines if harvest is to be read from a file (default FALSE), ignored in QS)
     REAL(wp)  :: harvest_fraction         !< default fraction used if not read from a map (annual change, relative to whole gridcell)
       !< for stand replacing harvest events, in QS, this is ignored and will be set to 1.0 instead
 
@@ -78,15 +92,17 @@ CONTAINS
     INTEGER   :: stand_replacing_year     !< QS: site specific stand replacing harvest year
 
 #ifdef __QUINCY_STANDALONE__
-    NAMELIST /q_sh_ctl/  &
+    NAMELIST /q_syl_ctl/  &
 #else
-    NAMELIST /q_sh_nml/  &
+    NAMELIST /q_syl_nml/  &
 #endif
       & active,                   &
+      & lrestart_cont,            &
       & ic_filename,              &
       & bc_filename,              &
+      & harvest_filename_prefix,  &
       & l_daily_harvest,          &
-      & l_read_harvest_map,       &
+      & harvest_scheme,           &
       & harvest_fraction,         &
       & harvest_active_in_qs,     &
       & flag_stand_harvest,       &
@@ -94,17 +110,19 @@ CONTAINS
 
 
     INTEGER                     :: nml_handler, nml_unit, istat
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_q_sh_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_q_syl_config'
     ! ----------------------------------------------------------------------------------------------------- !
     CALL message(TRIM(routine), 'Starting sh configuration')
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
     active                        = .FALSE.
-    bc_filename                   = 'bc_land_sh.nc'
-    ic_filename                   = 'ic_land_sh.nc'
+    lrestart_cont                 = .TRUE.          ! TRUE: Continue even if Q_SYL_ variables are missing in restart file
+    bc_filename                   = 'bc_land_use_static.nc'
+    ic_filename                   = 'ic_land_syl.nc'
     !
+    harvest_filename_prefix       = 'bc_land_use_quincy'
+    harvest_scheme                = 'constant'  ! possible varlues: constant, reference or transient
     l_daily_harvest               = .TRUE.  ! determines if harvest is to be applied on a daily (TRUE) or annual (FALSE) basis
-    l_read_harvest_map            = .FALSE. ! determines if harvest is to be read from a file (default FALSE, ignored in QS)
     ! for now arbitrary default fraction used if not read from a map (annual change, relative to whole gridcell)
     harvest_fraction              = 0.05_wp
 
@@ -116,20 +134,21 @@ CONTAINS
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
 #ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('q_sh_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, q_sh_ctl)
+    nml_unit = position_nml('q_syl_ctl', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, q_syl_ctl)
 #else
-    nml_unit = position_nml('q_sh_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, q_sh_nml)
+    nml_unit = position_nml('q_syl_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, q_syl_nml)
 #endif
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                    = active
+    config%lrestart_cont             = lrestart_cont
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
+    config%harvest_filename_prefix   = harvest_filename_prefix
     config%l_daily_harvest           = l_daily_harvest
-    config%l_read_harvest_map        = l_read_harvest_map
     config%harvest_fraction          = harvest_fraction
     config%harvest_active_in_qs      = harvest_active_in_qs
     config%flag_stand_harvest        = flag_stand_harvest
@@ -140,7 +159,22 @@ CONTAINS
 
     CALL close_nml(nml_handler)
 
-  END SUBROUTINE Init_q_sh_config
+    ! Set harvest scheme
+    SELECT CASE (tolower(TRIM(harvest_scheme)))
+    CASE ("constant")
+      CALL message(TRIM(routine), 'Running with constant global harvest.')
+      config%harvest_scheme = CONST_HARV
+    CASE ("reference")
+      CALL message(TRIM(routine), 'Running with harvest from a reference file.')
+      config%harvest_scheme = REF_HARV
+    CASE ("transient")
+      CALL message(TRIM(routine), 'Running with transient harvest.')
+      config%harvest_scheme = TRANS_HARV
+    CASE DEFAULT
+      CALL finish(TRIM(routine), 'harvest_scheme == '//tolower(TRIM(harvest_scheme))//' not available.')
+    END SELECT
+
+  END SUBROUTINE Init_q_syl_config
 
 #endif
-END MODULE mo_q_sh_config_class
+END MODULE mo_q_syl_config_class

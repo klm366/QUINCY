@@ -13,7 +13,7 @@
 #
 set -e
 #
-cdo="cdo -s -f nc4"
+cdo="$cdo -f nc4"
 ISLM=2     # Choice of land seamask variable: 1=slm, 2=cell_sea_land_mask
 
 export LD_LIBRARY_PATH="/sw/spack-levante/netcdf-fortran-4.5.3-l2ulgp/lib":${LD_LIBRARY_PATH}

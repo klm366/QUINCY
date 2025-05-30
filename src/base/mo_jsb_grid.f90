@@ -103,6 +103,7 @@ CONTAINS
 
     !$ACC ENTER DATA CREATE(vgrid, vgrid%levels, vgrid%lbounds, vgrid%ubounds, vgrid%dz)
     !$ACC UPDATE DEVICE(vgrid%levels, vgrid%lbounds, vgrid%ubounds, vgrid%dz) ASYNC(1)
+    !$ACC WAIT(1)
   END SUBROUTINE Register_vgrid
 
   FUNCTION Get_grid(id) RESULT(grid)

@@ -25,7 +25,8 @@ MODULE mo_q_pheno_parameters
   PUBLIC
 
   REAL(wp), SAVE :: &
-    & gdd_t_air_threshold = def_parameters      !< temperature threshold for the accumulation of growing degree days [deg K]
+    & gdd_t_air_threshold = def_parameters, &   !< temperature threshold for the accumulation of growing degree days [deg K]
+    & mavg_period_daylength = def_parameters    !< averaging period for daylength calculation [days]
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_pheno_parameters'
 
@@ -44,6 +45,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_q_pheno_parameters'
 
     gdd_t_air_threshold       = 5.0_wp + Tzero              !< citation or source ....  [ ? ]
+    mavg_period_daylength     = 7._wp                       !< assume weekly timescale
 
     !$ACC UPDATE DEVICE(gdd_t_air_threshold) ASYNC(1)
 

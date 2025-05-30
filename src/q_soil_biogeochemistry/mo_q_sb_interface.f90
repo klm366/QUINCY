@@ -533,6 +533,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, het_respiration              , weighted_by_fract)
     ! 2D
     dsl4jsb_Aggregate_onChunk(SB_, ecosystem_total_n_loss       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, fertiliser_nh4               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, fertiliser_no3               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, fertiliser_po4               , weighted_by_fract)
     ! 3D
     ! 3D
     dsl4jsb_Aggregate_onChunk(SB_, noy                          , weighted_by_fract)
