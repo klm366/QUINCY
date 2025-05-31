@@ -330,7 +330,7 @@ CONTAINS
     ! optional
     & dsoil, ws_max, matric_pot, bclapp,  &
     & wtr, ice, le_phase_change_res,      &
-    & frozen, melt, liquid_max            &
+    & liquid_max, frozen, melt            &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi
@@ -369,10 +369,10 @@ CONTAINS
     REAL(wp), INTENT(inout), OPTIONAL ::  wtr(:,:)          !! Water storage [m]
     REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
     REAL(wp), INTENT(inout), OPTIONAL ::  le_phase_change_res(:) !! Energy available for or required from phase change
+    REAL(wp), INTENT(inout), OPTIONAL ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
                                                                  !! in top layer [W m-2]
     REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
     REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
-    REAL(wp), INTENT(out), OPTIONAL   ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
 
     !------------------------------------------------------------------
     !  local Variables
@@ -423,7 +423,6 @@ CONTAINS
         DO ic = 1, nc
           frozen    (ic,is)  = 0._wp
           melt      (ic,is)  = 0._wp
-          liquid_max(ic,is)  = 0._wp
           freeze_mass(ic,is) = 0._wp
           melt_mass(ic,is)   = 0._wp
           wtr_old(ic,is)     = wtr(ic,is)
@@ -482,29 +481,6 @@ CONTAINS
           t_soil_sl(ic,1) = t_soil_sl(ic,1) + le_phase(ic) / heat_cap(ic,1) * delta_time
         END DO
         !$ACC END PARALLEL LOOP
-
-        IF (l_supercool) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
-          DO is=1,nsoil
-            DO ic=1,nc
-              liquid_max(ic,is) = Get_liquid_max( &
-                & t_soil_sl (ic,is), &
-                & ws_max    (ic,is), &
-                & matric_pot(ic,is), &
-                & bclapp    (ic,is)  &
-                & )
-            END DO
-          END DO
-          !$ACC END PARALLEL LOOP
-        ELSE
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
-          DO is=1,nsoil
-            DO ic=1,nc
-              liquid_max(ic,is) = 0._wp
-            END DO
-          END DO
-          !$ACC END PARALLEL LOOP
-        END IF
 
         ! Compute mass of feezing water or melting ice using the available energy
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
@@ -597,6 +573,18 @@ CONTAINS
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO ic = 1, nc
             le_phase_change_res(ic) = le_phase(ic)
+          END DO
+          !$ACC END PARALLEL LOOP
+        END IF
+
+        ! Update supercooled water based on actual soil temperature.
+        IF (l_supercool) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+          DO is=1,nsoil
+            DO ic=1,nc
+              liquid_max(ic,is) = Get_liquid_max( &
+                & t_soil_sl (ic,is), ws_max(ic,is), matric_pot(ic,is), bclapp(ic,is))
+            END DO
           END DO
           !$ACC END PARALLEL LOOP
         END IF

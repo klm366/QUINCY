@@ -586,10 +586,10 @@ CONTAINS
         & wtr_soil_sl                         (:,:), &
         & ice_soil_sl                         (:,:), &
         & le_phase_change_res                 (:  ), &
+        & wtr_soil_pot_scool_sl               (:,:), &
         ! optional, out
         & wtr_freeze_sl                       (:,:), &
-        & ice_melt_sl                         (:,:), &
-        & wtr_soil_pot_scool_sl               (:,:)  &
+        & ice_melt_sl                         (:,:)  &
         & )
       !$ACC EXIT DATA DELETE(ws_max_sl) ASYNC(acc_stream)
       DEALLOCATE(ws_max_sl)
