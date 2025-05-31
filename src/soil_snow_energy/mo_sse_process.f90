@@ -369,8 +369,8 @@ CONTAINS
     REAL(wp), INTENT(inout), OPTIONAL ::  wtr(:,:)          !! Water storage [m]
     REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
     REAL(wp), INTENT(inout), OPTIONAL ::  le_phase_change_res(:) !! Energy available for or required from phase change
-    REAL(wp), INTENT(inout), OPTIONAL ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
                                                                  !! in top layer [W m-2]
+    REAL(wp), INTENT(inout), OPTIONAL ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
     REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
     REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
 
@@ -583,7 +583,7 @@ CONTAINS
           DO is=1,nsoil
             DO ic=1,nc
               liquid_max(ic,is) = Get_liquid_max( &
-                & t_soil_sl (ic,is), ws_max(ic,is), matric_pot(ic,is), bclapp(ic,is))
+                & t_soil_sl(ic,is), ws_max(ic,is), matric_pot(ic,is), bclapp(ic,is))
             END DO
           END DO
           !$ACC END PARALLEL LOOP
