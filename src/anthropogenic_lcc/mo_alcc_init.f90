@@ -520,7 +520,7 @@ CONTAINS
       END IF
 
       DEALLOCATE(total_sum)
-      !----------------------------------------------------------------------------------!
+      !--------------------------------------------------------------------------------!
       
     CASE DEFAULT 
       CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )   
