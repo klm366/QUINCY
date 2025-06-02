@@ -677,7 +677,6 @@ CONTAINS
   !!
   SUBROUTINE update_energy_balance(tile, options)
 
-    USE mo_jsb_physical_constants, ONLY: alf
     USE mo_jsb_grid,               ONLY: Get_grid
     USE mo_jsb_grid_class,         ONLY: t_jsb_grid
 
@@ -732,7 +731,7 @@ CONTAINS
     INTEGER  :: error_idx(options%nc)
 
     REAL(wp) :: dtime
-    LOGICAL  :: is_experiment_start, tile_contains_soil
+    LOGICAL  :: is_experiment_start
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_energy_balance'
     CHARACTER(len=5000)         :: message_text_long
@@ -752,8 +751,6 @@ CONTAINS
     tile_fract => tile%fract(ics:ice, iblk)
     lat        => grid%lat(ics:ice, iblk)
     lon        => grid%lon(ics:ice, iblk)
-
-    tile_contains_soil = tile%contains_soil .OR. tile%is_glacier
 
     dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(A2L_)
@@ -781,7 +778,7 @@ CONTAINS
 
     !$ACC DATA CREATE(lw_srf_up, sw_srf_up, sw_srf_down, delta_t_srf, t_energy)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
     !$ACC LOOP GANG(STATIC: 1) &
     !$ACC & VECTOR PRIVATE(lw_srf_up, sw_srf_up, sw_srf_down, delta_t_srf, t_energy)
@@ -793,12 +790,13 @@ CONTAINS
 
       ! Compute temperature change
       delta_t_srf(ic) = t(ic) - t_old(ic)
+      ! This one is only valid for land surface without skin temperature scheme
       t_energy(ic)    =  -heat_cap(ic) * (delta_t_srf(ic) / dtime)
 
       IF (.NOT. is_experiment_start .AND. tile_fract(ic) > EPSILON(1.0_wp)) THEN
-        ! Compute energy flux residual
+        ! Compute energy flux residual without surface temperature change
         energy_balance_res(ic) = rad_srf_net(ic) + sensible_hflx(ic) + latent_hflx(ic) &
-          &                    + forc_hflx(ic) + t_energy(ic)
+          &                    + forc_hflx(ic)
       END IF
 
 #ifndef _OPENACC
@@ -815,28 +813,25 @@ CONTAINS
     !$ACC END DATA
 
 #ifndef _OPENACC
-    IF (tile%name /= 'box') THEN
-      DO ie = 1, n_errors
-        ic = error_idx(ie)
+    DO ie = 1, n_errors
+      ic = error_idx(ie)
 
-        WRITE (message_text_long,*) 'Energy balance flux residual [W m-2]',            NEW_LINE('a'), &
-          & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E',            NEW_LINE('a'), &
-          & '(ic: ',ic,' iblk: ',iblk, ' tile_fract: ',tile_fract(ic),'):',            NEW_LINE('a'), &
-          & 'Energy balance residual: ', energy_balance_res(ic),                       NEW_LINE('a'), &
-          & 'Longwave downwards:      ', lw_srf_down(ic),                              NEW_LINE('a'), &
-          & 'Longwave upwards:        ', lw_srf_up(ic),                                NEW_LINE('a'), &
-          & 'Shortwave downwards:     ', sw_srf_down(ic),                              NEW_LINE('a'), &
-          & 'Shortwave upwards:       ', sw_srf_up(ic),                                NEW_LINE('a'), &
-          & 'Net surface radiation:   ', rad_srf_net(ic),                              NEW_LINE('a'), &
-          & 'Sensible heat flux:      ', sensible_hflx(ic),                            NEW_LINE('a'), &
-          & 'Latent heat flux:        ', latent_hflx(ic),                              NEW_LINE('a'), &
-          & 'Ground heat flux:        ', forc_hflx(ic) - le_phase_change(ic),          NEW_LINE('a'), &
-          & 'Phase change flux:       ', le_phase_change(ic),                          NEW_LINE('a'), &
-          & 'Surface temp. change:    ', t_energy(ic),                                 NEW_LINE('a'), &
-          & 'Temperature change [K]:  ', delta_t_srf(ic)
-        CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
-      END DO
-    END IF
+      WRITE (message_text_long,*) 'Energy balance flux residual [W m-2]',            NEW_LINE('a'), &
+        & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E',            NEW_LINE('a'), &
+        & '(ic: ',ic,' iblk: ',iblk, ' tile_fract: ',tile_fract(ic),'):',            NEW_LINE('a'), &
+        & 'Energy balance residual: ', energy_balance_res(ic),                       NEW_LINE('a'), &
+        & 'Longwave downwards:      ', lw_srf_down(ic),                              NEW_LINE('a'), &
+        & 'Longwave upwards:        ', lw_srf_up(ic),                                NEW_LINE('a'), &
+        & 'Shortwave downwards:     ', sw_srf_down(ic),                              NEW_LINE('a'), &
+        & 'Shortwave upwards:       ', sw_srf_up(ic),                                NEW_LINE('a'), &
+        & 'Net surface radiation:   ', rad_srf_net(ic),                              NEW_LINE('a'), &
+        & 'Sensible heat flux:      ', sensible_hflx(ic),                            NEW_LINE('a'), &
+        & 'Latent heat flux:        ', latent_hflx(ic),                              NEW_LINE('a'), &
+        & 'Ground heat flux:        ', forc_hflx(ic) - le_phase_change(ic),          NEW_LINE('a'), &
+        & 'Phase change flux:       ', le_phase_change(ic),                          NEW_LINE('a'), &
+        & 'Temperature change [K]:  ', delta_t_srf(ic)
+      CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+    END DO
 #endif
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
