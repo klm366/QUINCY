@@ -299,6 +299,15 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN/OUT (coupled/standalone)
     END IF
 
+  SELECT CASE (model%config%model_scheme)
+#ifndef __NO_QUINCY__
+  CASE (MODEL_QUINCY)
+    dsl4jsb_Get_var2D_onChunk(VEG_,   height)       ! in
+#endif
+  CASE DEFAULT
+    height => NULL()
+  END SELECT
+
     !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(s_old, s_srf, t_srf_old, dQdT, t2s_conv, t_star) &
     !$ACC   CREATE(has_snow_layer, is_glacier, tile_fract_zero, has_pond_storage, frozen_fract, t_radref)
