@@ -389,8 +389,8 @@ CONTAINS
     REAL(wp)              :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_substrate_rate_modifier'
 
-    IF(param>eps8 .AND. w_soil_fc_sl>eps8 .AND. w_soil_sl>eps8) THEN
-       hlp1 = (w_soil_sl / w_soil_fc_sl) ** k2_afps
+    IF(param>eps8 .AND. wtr_soil_fc_sl>eps8 .AND. wtr_soil_sl>eps8) THEN
+       hlp1 = (wtr_soil_sl / wtr_soil_fc_sl) ** k2_afps
        IF(hlp1 > param) THEN
           rate_modifier = 1._wp / hlp1
        ELSE
