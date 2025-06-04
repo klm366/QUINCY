@@ -339,7 +339,9 @@ CONTAINS
       ch(ic) = wind_air(ic) * rho_srf(ic) * kh(ic)
     END DO
     !$ACC END PARALLEL LOOP
-
+#if defined(_CRAYFTN) && _RELEASE_MAJOR <= 19
+    !$ACC WAIT ASYNC(acc_stream)
+#endif
     !$ACC END DATA
 
   END SUBROUTINE update_exchange_coefficients
