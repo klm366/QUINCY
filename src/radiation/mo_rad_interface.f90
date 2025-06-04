@@ -1509,7 +1509,7 @@ CONTAINS
 
       !> 5.1  simple calculation of alb_vis_lnd / alb_nir_lnd
       !!
-      !! TRUE for jsbach_lite, FALSE for jsbach_pfts
+      !! TRUE for jsbach_lite, FALSE for jsbach_pfts and jsbach_12pfts
       IF (use_alb_veg_simple) THEN
 #ifndef __QUINCY_STANDALONE__
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
