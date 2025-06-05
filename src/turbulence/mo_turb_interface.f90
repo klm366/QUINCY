@@ -340,7 +340,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 #if defined(_CRAYFTN) && _RELEASE_MAJOR <= 19
-    !$ACC WAIT ASYNC(acc_stream)
+    !$ACC WAIT(acc_stream)
 #endif
     !$ACC END DATA
 
