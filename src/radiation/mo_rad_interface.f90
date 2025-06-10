@@ -26,7 +26,7 @@ MODULE mo_rad_interface
   ! Use of basic structures
   USE mo_jsb_control,         ONLY: debug_on, acc_stream
   USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: message, finish
+  USE mo_exception,           ONLY: message, message_text, finish
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_class,           ONLY: Get_model
@@ -495,7 +495,7 @@ CONTAINS
     USE mo_rad_parameters,        ONLY: rad2ppfd
     USE mo_jsb_math_constants,    ONLY: eps8
     USE mo_jsb_control,           ONLY: debug_on
-    USE mo_exception,             ONLY: message, message_text
+    USE mo_exception,             ONLY: message
     USE mo_rad_process,           ONLY: calc_canopy_radiation_budget
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(A2L_)
