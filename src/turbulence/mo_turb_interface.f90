@@ -931,6 +931,7 @@ CONTAINS
           ch_tmp(ic) = pch(ic)
         END DO
         !$ACC END PARALLEL LOOP
+#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         ! use for: QUINCY SPQ_ standalone
         IF (jsb_standalone .AND. .NOT. model%config%use_soil_phys_jsbach) THEN
@@ -949,6 +950,7 @@ CONTAINS
           END DO
           !$ACC END PARALLEL LOOP
         END IF
+#endif
       END SELECT
     END IF
     dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)            ! in
@@ -1077,6 +1079,7 @@ CONTAINS
           weq_wres_sl1 = vol_wres_sl(ic,1) * soil_depth_sl(ic,1)
           weq_wsat_sl1 = vol_porosity_sl(ic,1) * soil_depth_sl(ic,1)
           rel_hum      = relative_humidity_soil(wtr_soil_sl(ic,1), weq_wres_sl1, weq_wsat_sl1)
+#ifndef __NO_QUINCY__
         CASE (MODEL_QUINCY)
           IF (model%config%use_soil_phys_jsbach) THEN
             ! TODO develop improved calc of rel_hum using quincy-vegetation soil-water stress
@@ -1086,6 +1089,7 @@ CONTAINS
           ELSE
             rel_hum = MIN(1.0_wp, (wtr_soil_sl(ic,1) - wtr_soil_pwp_sl(ic,1)) / (wtr_soil_fc_sl(ic,1) - wtr_soil_pwp_sl(ic,1)))
           END IF
+#endif
         END SELECT
         IF (qsat_star(ic) * rel_hum > q_air(ic) .AND. rel_hum > 1.e-10_wp) THEN
           fact_qsat_soil(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * &
