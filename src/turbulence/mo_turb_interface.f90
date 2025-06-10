@@ -971,6 +971,7 @@ CONTAINS
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_depth_sl)          ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_porosity_sl)        ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_wres_sl)            ! in
+#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (model%config%use_soil_phys_jsbach) THEN
           dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_depth_sl)          ! in
@@ -980,6 +981,7 @@ CONTAINS
           dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_fc_sl)         ! in
           dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_pwp_sl)        ! in
         END IF
+#endif
       END SELECT
     END IF
 
