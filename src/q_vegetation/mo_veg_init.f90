@@ -454,8 +454,8 @@ CONTAINS
         DO ic = 1,nproma
           ! soil layer 1
           IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, 1, iblk)) THEN
-            root_fraction_sl(:, 1, :) = (1._wp - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:, 1, :))) &
-              &                         / (1._wp - EXP(-lctlib%k_root_dist * root_depth(:,:)))
+            root_fraction_sl(ic, 1, iblk) = (1._wp - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, 1, iblk))) &
+              &                             / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
           ELSE
             root_fraction_sl(ic, 1, iblk) = 0.0_wp
           END IF
