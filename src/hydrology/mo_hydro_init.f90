@@ -402,7 +402,8 @@ CONTAINS
     USE mo_hydro_constants,       ONLY: &
       &                           k_pwp_s, k_pwp_c, k_pwp_sc, k_pwp_a, k_pwp_at, k_pwp_bt, &
       &                           k_fc_s, k_fc_c, k_fc_sc, k_fc_a, k_fc_at, k_fc_bt, k_fc_ct, &
-      &                           k_sat_s, k_sat_c, k_sat_sc, k_sat_a, k_sat_at, k_sat_bt, k_sat_ct, k_sat_dt
+      &                           k_sat_s, k_sat_c, k_sat_sc, k_sat_a, k_sat_at, k_sat_bt, k_sat_ct, k_sat_dt, &
+      &                           root_depth_min
     USE mo_jsb_math_constants,    ONLY: eps8
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -614,6 +615,12 @@ CONTAINS
         END DO
       END DO
     END DO
+
+    ! Constrain root depth min avoiding potential division by zero
+    root_depth(:,:) = MAX(root_depth(:,:), root_depth_min)
+
+    ! Constrain root depth max because in the bc file it may be larger then soil depth
+    root_depth(:,:) = MIN(root_depth(:,:), soil_depth(:,:))
 
     !> Root depth within the soil layers:
     !> calculated from the total root depth and the layer thicknesses

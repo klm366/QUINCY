@@ -185,7 +185,8 @@ MODULE mo_hydro_constants
   REAL(wp), PARAMETER :: &
     & frac_wtr_vertical_transport_up_max    = -0.75_wp, &   !< maximum upwards   directed material transport across soil layers, i.e., 'frac_wtr_vertical_transport_sl'; parameter value: pure assumption
     & frac_wtr_vertical_transport_down_max  = 0.75_wp, &    !< maximum downwards directed material transport across soil layers, i.e., 'frac_wtr_vertical_transport_sl'; parameter value: pure assumption
-    & frac_w_lat_loss_max                   = 0.75_wp       !< maximum of 'frac_w_lat_loss_sl', i.e., fraction of lateral (horizontal) water loss; parameter value: identical with frac_wtr_vertical_transport_down_max
+    & frac_w_lat_loss_max                   = 0.75_wp, &    !< maximum of 'frac_w_lat_loss_sl', i.e., fraction of lateral (horizontal) water loss; parameter value: identical with frac_wtr_vertical_transport_down_max
+    & root_depth_min                        = 0.01_wp       !< minimum root depth to avoid potential division by zero, arbitrary value [m]
 
 #endif
 END MODULE mo_hydro_constants
