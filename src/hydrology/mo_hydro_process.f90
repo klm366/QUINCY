@@ -2145,14 +2145,14 @@ CONTAINS
           END IF
           ! modified calculation with QUINCY
           !   with QUINCY, we do not need this redistribution and deficit calculation
-          !   slight excess transpiration below the wilting point is tolerated, in which case the transpiration function 
+          !   slight excess transpiration below the wilting point is tolerated, in which case the transpiration function
           !   will then be zero for this layer in the next time step, so that there is no excess transpiration possible
           !   ftranspiration_sl is calculated in q_assimilation/mo_q_assimi_process
 #ifndef __NO_QUINCY__
           IF (model_scheme == MODEL_QUINCY) THEN
             transpiration_sl(ic,is) = transpiration_in_m(ic) * ftranspiration_sl(ic,is)
           END IF
-#endif          
+#endif
         END IF ! (root_depth(ic) > 0._wp .AND. transpiration_in_m(ic) < 0._wp)
       END DO
     END DO

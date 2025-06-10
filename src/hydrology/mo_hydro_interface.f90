@@ -1551,7 +1551,7 @@ CONTAINS
       ! optional in
 #ifndef __NO_QUINCY__
       & , ftranspiration_sl = ftranspiration_sl                 &
-#endif      
+#endif
       & )
 
 #ifndef __NO_QUINCY__
@@ -1568,7 +1568,7 @@ CONTAINS
         DO  ic = 1, nc
           IF (wtr_soil_old_sl(ic, is) > eps8) THEN
             ! calculation of the two fractions
-            frac_wtr_vertical_transport_sl(ic, is) = & 
+            frac_wtr_vertical_transport_sl(ic, is) = &
               &  MIN( MAX( wtr_transp_down(ic, is) / wtr_soil_old_sl(ic, is), frac_wtr_vertical_transport_up_max), &
               &       frac_wtr_vertical_transport_down_max) * 1000._wp / dtime
             frac_w_lat_loss_sl(ic, is) = &
