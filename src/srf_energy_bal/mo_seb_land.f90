@@ -1332,7 +1332,7 @@ CONTAINS
         & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, jsb_standalone)
 
       ! Determine potential energy sinks / sources due to phase change at the surface
-      ! for reaching a target temperature of 0 deg C.
+      ! while not exceeding the freezing/melting point
       CALL phase_change_pot(                                  & ! in
         & alpha, dtime, t2s_conv(ic),                       & ! in
         & t_acoef_local(ic), t_bcoef_local(ic), q_acoef_local(ic), q_bcoef_local(ic), & ! in
@@ -1377,8 +1377,6 @@ CONTAINS
     !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: &
-      !& cpd, &
-      !& cpvd1, &
       & zemiss_def, &
       & stbo, &
       & alv,  &
@@ -1386,12 +1384,6 @@ CONTAINS
 
     REAL(wp), INTENT(in)    :: alpha
     REAL(wp), INTENT(in)    :: dtime
-    ! REAL(wp), INTENT(in)    :: pcp(:), pfscoe(:), pescoe(:), pfqcoe(:), peqcoe(:)
-    ! REAL(wp), INTENT(in)    :: psold(:), pqsold(:), pdqsold(:)
-    ! REAL(wp), INTENT(in)    :: pnetrad(:), pgrdfl(:)
-    ! REAL(wp), INTENT(in)    :: pcfh(:), pcair(:), pcsat(:), pfracsu(:)
-    ! REAL(wp), INTENT(in)    :: pgrdcap(:)
-    ! REAL(wp), INTENT(out)   :: psnew(:)
     REAL(wp), INTENT(in)    :: pcp, pfscoe, pescoe, pfqcoe, peqcoe
     REAL(wp), INTENT(in)    :: psold, pqsold, pdqsold
     REAL(wp), INTENT(in)    :: pnetrad, pgrdfl
@@ -1401,48 +1393,25 @@ CONTAINS
         !
     REAL(wp) :: zcolin, zcohfl, zcoind, zicp, zca, zcs
     REAL(wp) :: pdt
-    !INTEGER :: nc, ic
-    !REAL(wp) :: pc16
-
-    ! nc = SIZE(psold)
 
     pdt     = alpha * dtime
-    !pc16    = cpd * cpvd1
 
-    ! DO ic=1,nc
-      ! zicp = 1._wp / pcp(ic)
-      ! !
-      ! zca = als * pfracsu(ic) +  alv * (pcair(ic) - pfracsu(ic))
-      ! zcs = als * pfracsu(ic) +  alv * (pcsat(ic) - pfracsu(ic))
-      ! !
-      ! zcolin = pgrdcap(ic)*zicp +                                                      &
-      !   &      pdt * (zicp * 4._wp * zemiss_def * stbo * ((zicp * psold(ic))**3)  -    &
-      !   &      pcfh(ic) * (zca * peqcoe(ic) - zcs) *                                    &
-      !   &      zicp * pdqsold(ic))
-      ! !
-      ! zcohfl = -pdt * pcfh(ic) * (pescoe(ic) - 1._wp)
-      ! !
-      ! zcoind = pdt * (pnetrad(ic) + pcfh(ic) * pfscoe(ic) +  pcfh(ic) *                              &
-      !           &      ((zca * peqcoe(ic) - zcs) * pqsold(ic) + zca * pfqcoe(ic)) + pgrdfl(ic))
-      ! !
-      ! psnew(ic)  = (zcolin * psold(ic) + zcoind) / (zcolin + zcohfl)
-      zicp = 1._wp / pcp
-      !
-      zca = als * pfracsu +  alv * (pcair - pfracsu)
-      zcs = als * pfracsu +  alv * (pcsat - pfracsu)
-      !
-      zcolin = pgrdcap*zicp +                                                      &
-        &      pdt * (zicp * 4._wp * zemiss_def * stbo * ((zicp * psold)**3)  -    &
-        &      pcfh * (zca * peqcoe - zcs) *                                    &
-        &      zicp * pdqsold)
-      !
-      zcohfl = -pdt * pcfh * (pescoe - 1._wp)
-      !
-      zcoind = pdt * (pnetrad + pcfh * pfscoe +  pcfh *                              &
-                &      ((zca * peqcoe - zcs) * pqsold + zca * pfqcoe) + pgrdfl)
-      !
-      psnew  = (zcolin * psold + zcoind) / (zcolin + zcohfl)
-    ! END DO
+    zicp = 1._wp / pcp
+
+    zca = als * pfracsu +  alv * (pcair - pfracsu)
+    zcs = als * pfracsu +  alv * (pcsat - pfracsu)
+
+    zcolin = pgrdcap*zicp +                                                      &
+      &      pdt * (zicp * 4._wp * zemiss_def * stbo * ((zicp * psold)**3)  -    &
+      &      pcfh * (zca * peqcoe - zcs) *                                    &
+      &      zicp * pdqsold)
+
+    zcohfl = -pdt * pcfh * (pescoe - 1._wp)
+
+    zcoind = pdt * (pnetrad + pcfh * pfscoe +  pcfh *                              &
+              &      ((zca * peqcoe - zcs) * pqsold + zca * pfqcoe) + pgrdfl)
+
+    psnew  = (zcolin * psold + zcoind) / (zcolin + zcohfl)
 
   END SUBROUTINE surface_temp_implicit
 

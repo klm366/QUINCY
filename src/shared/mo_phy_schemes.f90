@@ -587,28 +587,28 @@ CONTAINS
     REAL(wp) :: zcolin, zcohfl, zcoind, zicp, zca, zcs
     REAL(wp) :: pdt
 
-      pdt     = alpha * steplen
+    pdt     = alpha * steplen
 
-      zicp = 1._wp / pcp
-      !
-      zca = als * pfracsu +  alv * (pcair - pfracsu)
-      zcs = als * pfracsu +  alv * (pcsat - pfracsu)
+    zicp = 1._wp / pcp
 
-     zcolin = pgrdcap*zicp +                                                      &
-        &      pdt * (zicp * 4._wp * zemiss_def * stbo * ((zicp * psold)**3)  -   &
-        &      pcfh * (zca * peqcoe - zcs) *                                      &
-        &      zicp * pdqsold)
-      !
-      zcohfl = -pdt * pcfh * (pescoe - 1._wp)
+    zca = als * pfracsu +  alv * (pcair - pfracsu)
+    zcs = als * pfracsu +  alv * (pcsat - pfracsu)
 
-      ! Energy released / required by / for phase changes to reach the freezing point
-      phase_change_zero =                                            &
-        &    + ps_zero * (zcolin + zcohfl) / pdt                     &
-        &    - zcolin * psold / pdt                                  &
-        &    - pnetrad                                               &
-        &    - pcfh * pfscoe                                         &
-        &    - pcfh * ((zca * peqcoe - zcs) * pqsold + zca * pfqcoe) &
-        &    - pgrdfl
+    colin = pgrdcap*zicp +                                                      &
+      &      pdt * (zicp * 4._wp * zemiss_def * stbo * ((zicp * psold)**3)  -   &
+      &      pcfh * (zca * peqcoe - zcs) *                                      &
+      &      zicp * pdqsold)
+
+    zcohfl = -pdt * pcfh * (pescoe - 1._wp)
+
+    ! Energy released for / required by phase changes to remain at the freezing point
+    phase_change_zero =                                            &
+      &    + ps_zero * (zcolin + zcohfl) / pdt                     &
+      &    - zcolin * psold / pdt                                  &
+      &    - pnetrad                                               &
+      &    - pcfh * pfscoe                                         &
+      &    - pcfh * ((zca * peqcoe - zcs) * pqsold + zca * pfqcoe) &
+      &    - pgrdfl
 
   END SUBROUTINE phase_change_pot
 
