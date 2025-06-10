@@ -180,6 +180,11 @@ MODULE mo_hydro_constants
     & k_sat_bt        = 0.6360_wp, &
     & k_sat_ct        = 0.097_wp, &
     & k_sat_dt        = 0.043_wp
+
+  REAL(wp), PARAMETER :: &
+    & frac_wtr_vertical_transport_up_max    = -0.75_wp, &   !< maximum upwards   directed material transport across soil layers, i.e., 'frac_wtr_vertical_transport_sl'; parameter value: pure assumption
+    & frac_wtr_vertical_transport_down_max  = 0.75_wp, &    !< maximum downwards directed material transport across soil layers, i.e., 'frac_wtr_vertical_transport_sl'; parameter value: pure assumption
+    & frac_w_lat_loss_max                   = 0.75_wp       !< maximum of 'frac_w_lat_loss_sl', i.e., fraction of lateral (horizontal) water loss; parameter value: identical with frac_wtr_vertical_transport_down_max
 #endif
 
 #endif

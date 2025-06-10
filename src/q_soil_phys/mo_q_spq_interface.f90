@@ -306,16 +306,16 @@ CONTAINS
     ! HYDRO_ 2D
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_skin                 , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_rel       , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, matric_pot_root        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_root_pot      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, transpiration          , weighted_by_fract)
     ! HYDRO_ 3D
-    dsl4jsb_Aggregate_onChunk(HYDRO_, soil_depth_sl          , weighted_by_fract)  ! NOTE determined in SPQ_ init
-    dsl4jsb_Aggregate_onChunk(HYDRO_, percolation_sl         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, frac_w_lat_loss_sl     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, ice_soil_sl            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, matric_pot_sl          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, soil_depth_sl                   , weighted_by_fract)  ! NOTE determined in SPQ_ init
+    dsl4jsb_Aggregate_onChunk(HYDRO_, frac_wtr_vertical_transport_sl  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, frac_w_lat_loss_sl              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, ice_soil_sl                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, matric_pot_sl                   , weighted_by_fract)
 
     ! ---------------------------
     ! 2D

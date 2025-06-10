@@ -109,7 +109,7 @@ CONTAINS
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: lai_max
     ! HYDRO_ 2D
-    dsl4jsb_Real2D_onChunk      :: matric_pot_root
+    dsl4jsb_Real2D_onChunk      :: wtr_soil_root_pot
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
@@ -183,7 +183,7 @@ CONTAINS
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai_max)                    ! in
     ! HYDRO_ 2D
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, matric_pot_root)              ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soil_root_pot)            ! in
     ! RAD_ 3D
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
@@ -291,7 +291,7 @@ CONTAINS
         mean_leaf_age(ic) = 0.0_wp
       END IF
 
-      dphi(ic) = matric_pot_root(ic) - lctlib_phi_leaf_min - grav * rhoh2o * height(ic) * 1.e-6_wp
+      dphi(ic) = wtr_soil_root_pot(ic) - lctlib_phi_leaf_min - grav * rhoh2o * height(ic) * 1.e-6_wp
     END DO
     !$ACC END PARALLEL LOOP
 

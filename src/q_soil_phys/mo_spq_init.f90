@@ -153,7 +153,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain    :: w_soil_root_fc
     dsl4jsb_Real2D_onDomain    :: w_skin
     dsl4jsb_Real2D_onDomain    :: wtr_rootzone_rel
-    dsl4jsb_Real2D_onDomain    :: matric_pot_root
+    dsl4jsb_Real2D_onDomain    :: wtr_soil_root_pot
     dsl4jsb_Real2D_onDomain    :: wtr_rootzone
     dsl4jsb_Real2D_onDomain    :: root_depth
     ! HYDRO_ 3D
@@ -226,7 +226,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_soil_root_fc)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_skin)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_rootzone_rel)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_,   matric_pot_root)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_soil_root_pot)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_rootzone)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   root_depth)
     ! HYDRO_ 3D
@@ -460,7 +460,7 @@ CONTAINS
     wtr_rootzone_rel(:,:)   = dsl4jsb_Config(SPQ_)%soil_theta_prescribe
     wtr_rootzone(:,:)       = w_soil_root_pwp(:,:) &
       &                       + dsl4jsb_Config(SPQ_)%soil_theta_prescribe * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:))
-    matric_pot_root(:,:)    = saxtonA(:, 1, :) * (MIN(w_soil_root_fc,wtr_rootzone(:,:)) / root_depth(:,:)) &
+    wtr_soil_root_pot(:,:)  = saxtonA(:, 1, :) * (MIN(w_soil_root_fc,wtr_rootzone(:,:)) / root_depth(:,:)) &
       &                       ** saxtonB(:, 1, :)
 
     !>   5.3 root fraction
@@ -517,7 +517,7 @@ CONTAINS
     !$ACC UPDATE DEVICE(soil_depth(:,:), root_depth(:,:), t_old(:,:), t(:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(temp_srf_eff_4(:,:), qsat_star(:,:), s_star(:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(w_skin(:,:), wtr_rootzone(:,:), w_soil_root_pwp(:,:), w_soil_root_fc(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(wtr_rootzone_rel(:,:), matric_pot_root(:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(wtr_rootzone_rel(:,:), wtr_soil_root_pot(:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_center_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:), bulk_dens_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(heat_capa_sl(:,:,:), therm_cond_sl(:,:,:), wtr_soil_pwp_sl(:,:,:), wtr_soil_fc_sl(:,:,:)) ASYNC(1)

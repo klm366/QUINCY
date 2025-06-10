@@ -382,8 +382,8 @@ CONTAINS
 
     !> set to arbitrary value - not relevant for quincy standalone
     !>
-    hydro_init_vars%fract_pond_max (:,:)   = 0.1_wp   !< maximum pond fraction []
-    hydro_init_vars%depth_pond_max (:,:)   = 0.1_wp   !< maximum pond depth [m]
+    hydro_init_vars%fract_pond_max (:,:)   = 0.0_wp   !< maximum pond fraction []
+    hydro_init_vars%depth_pond_max (:,:)   = 0.0_wp   !< maximum pond depth [m]
 
     !> Soil organic carbon fractions for each soil layer []
     !>
@@ -437,7 +437,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain    :: elevation
     dsl4jsb_Real2D_onDomain    :: fract_pond_max
     dsl4jsb_Real2D_onDomain    :: weq_pond_max
-    dsl4jsb_Real2D_onDomain    :: matric_pot_root
+    dsl4jsb_Real2D_onDomain    :: wtr_soil_root_pot
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onDomain    :: soil_depth_sl
     dsl4jsb_Real3D_onDomain    :: soil_lay_width_sl
@@ -484,7 +484,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   elevation)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   fract_pond_max)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   weq_pond_max)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_,   matric_pot_root)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_soil_root_pot)
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_depth_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_width_sl)
@@ -631,8 +631,8 @@ CONTAINS
     wtr_rootzone_rel(:,:)   = hydro_init_vars%soil_theta_prescribe(:,:)
     wtr_rootzone(:,:)       = w_soil_root_pwp(:,:) &
       &                       + hydro_init_vars%soil_theta_prescribe(:,:) * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:))
-    ! NOTE matri potential of root zone is calculated below; here outcommented the SPQ_ version using saxton
-    ! matric_pot_root(:,:)    = saxtonA(:, 1, :) * (MIN(w_soil_root_fc,wtr_rootzone(:,:)) / root_depth(:,:)) &
+    ! NOTE var init below; here outcommented the SPQ_ version using saxton
+    ! wtr_soil_root_pot(:,:)  = saxtonA(:, 1, :) * (MIN(w_soil_root_fc,wtr_rootzone(:,:)) / root_depth(:,:)) &
     !   &                       ** saxtonB(:, 1, :)
 
     !> soil water and ice pwp, fc and sat per layer depth
@@ -685,10 +685,10 @@ CONTAINS
     !>
     ! Calculate volumetric soil porosity of mineral soil
     CALL soil_init_from_texture( &
-      & porosity_sand, porosity_silt, porosity_clay, porosity_oc,                                                &
-      & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
-      & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-      & hydro_init_vars%vol_porosity(:,:))
+      & porosity_sand, porosity_silt, porosity_clay, porosity_oc,                                                &  ! in
+      & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &  ! in
+      & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &  ! in
+      & hydro_init_vars%vol_porosity(:,:))                                                                          ! out
 
     ! Calculate saturated hydraulic conductivity of mineral soil
     CALL soil_init_from_texture( &
@@ -696,7 +696,7 @@ CONTAINS
       & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
       & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
       & hydro_init_vars%hyd_cond_sat(:,:))
-        hydro_init_vars%hyd_cond_sat(:,:) = hydro_init_vars%hyd_cond_sat(:,:) * hyd_cond_sat_profile
+    hydro_init_vars%hyd_cond_sat(:,:) = hydro_init_vars%hyd_cond_sat(:,:) * hyd_cond_sat_profile
 
     ! Calculate volumetric field capacity [m/m] of mineral soil
     CALL soil_init_from_texture( &
@@ -759,9 +759,9 @@ CONTAINS
     END DO
 
     ! TODO
-    ! improve later: calculate below using average across soil layer of matric_pot_sl weighted with root_fraction_sl
+    ! improve later: calculate below using average across soil layer of matric_pot_sl weighted with root_fraction_sl ?
     !
-    matric_pot_root(:,:) = dsl4jsb_var_ptr(HYDRO_, matric_pot)
+    wtr_soil_root_pot(:,:) = 0.0_wp
 
     !> Set maximum root zone soil moisture (water plus ice)
     !>
@@ -824,10 +824,10 @@ CONTAINS
     !       This assumes that plants retract/extents their roots immediately if the soil freezes/thaws.
     DO iblk = 1,SIZE(dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max), 2)
         CALL get_amount_in_rootzone( &
-        & dsl4jsb_var_ptr(HYDRO_, wtr_soil_fc_sl)   (:,:,iblk), &
-        & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)    (:,:,iblk), &
-        & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,iblk), &
-        & dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max) (:,  iblk)  )
+        & dsl4jsb_var_ptr(HYDRO_, wtr_soil_fc_sl)   (:,:,iblk), &   ! in
+        & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)    (:,:,iblk), &   ! in
+        & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,iblk), &   ! in
+        & dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max) (:,  iblk)  )   ! inout
     END DO
     ! Set maximum root zone moisture to 0.2 for glacier and ocean areas (where wpi_rootzone_max == 0)
     dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) = MERGE(       &
@@ -846,19 +846,15 @@ CONTAINS
     DEALLOCATE(theta_pwp_sl)
     DEALLOCATE(theta_fc_sl)
 
-    ! TODO  improve and update GPU statement for all avove calculated variables
-    !
-    !$ACC UPDATE DEVICE(soil_depth(:,:), root_depth(:,:), t_old(:,:), t(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(temp_srf_eff_4(:,:), qsat_star(:,:), s_star(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(w_skin(:,:), wtr_rootzone(:,:), w_soil_root_pwp(:,:), w_soil_root_fc(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(wtr_rootzone_rel(:,:), matric_pot_root(:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_center_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:), bulk_dens_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(heat_capa_sl(:,:,:), therm_cond_sl(:,:,:), wtr_soil_pwp_sl(:,:,:), wtr_soil_fc_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(wtr_soil_sat_sl(:,:,:), wtr_soil_sl(:,:,:), matric_pot_sl(:,:,:), ice_soil_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(saxtonA(:,:,:), saxtonB(:,:,:), saxtonC(:,:,:), kdiff_sat_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(t_snow_snl(:,:,:), t_soil_sl(:,:,:), elevation(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(soil_depth(:,:), soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_center_sl(:,:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(w_soil_root_pwp(:,:), w_soil_root_fc(:,:), root_depth(:,:), root_depth_sl(:,:,:), w_skin(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(wtr_rootzone_rel(:,:), wtr_rootzone(:,:), wtr_soil_pwp_sl(:,:,:), wtr_soil_fc_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(wtr_soil_sat_sl(:,:,:), wtr_soil_sl(:,:,:), oro_stddev(:,:), weq_snow_soil(:,:), elevation(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(fract_pond_max(:,:), weq_pond_max(:,:), fract_org_sl(:,:,:), steepness(:,:), vol_porosity(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(hyd_cond_sat(:,:), vol_field_cap(:,:), vol_p_wilt(:,:), vol_wres(:,:), matric_pot(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(pore_size_index(:,:), bclapp(:,:), wtr_soil_res_sl(:,:,:), wtr_soil_root_pot(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(wpi_rootzone_max(:,:), ice_soil_sl(:,:,:)) ASYNC(1)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Done with tile '//TRIM(tile%name)//' ...')
 

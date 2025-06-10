@@ -78,7 +78,7 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb        !< Vertical grid
     INTEGER                               :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     INTEGER                               :: ic                   !< looping over points
-    INTEGER                               :: isoil                !< looping over soil layers
+    INTEGER                               :: isoil, is            !< looping over soil layers
     REAL(wp)                              :: hlp1                 !< helper
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp1             !< helper, Dimension: (nc, nsoil_sb)
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp2             !< helper, Dimension: (nc, nsoil_sb)
@@ -117,7 +117,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: percolation_sl
+    dsl4jsb_Real3D_onChunk :: frac_wtr_vertical_transport_sl
     dsl4jsb_Real3D_onChunk :: frac_w_lat_loss_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     ! SSE_ 3D
@@ -343,10 +343,10 @@ CONTAINS
     ! HYDRO_ 2D
     dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)         ! in
     ! HYDRO_ 3D
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, percolation_sl)               ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)           ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)                  ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                  ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_vertical_transport_sl) ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)                    ! in
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_,   bulk_dens_sl)                 ! inout
     ! A2L_ 2D
@@ -657,7 +657,7 @@ CONTAINS
       & soil_depth_sl(:,:), &
       & rtm_gasdiffusion(:,:), &
       & rmm_gasdiffusion(:,:), &
-      & percolation_sl(:,:), &
+      & frac_wtr_vertical_transport_sl(:,:), &
       & frac_w_lat_loss_sl(:,:), &
       & nh4_solute(:,:), &
       & no3_solute(:,:), &
@@ -752,10 +752,21 @@ CONTAINS
 
     !>  6.1 PO4
     !>
+    DO ic = 1,nc
+      DO is = 1, INT(num_sl_above_bedrock(ic))
+        IF (wtr_soil_sl(ic, is) > eps8) THEN
+          km1_uptake_act(ic,is) = km1_up_po4 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._wp / (wtr_soil_sl(ic,is) &
+            &                     / soil_depth_sl(ic,is))
+          km2_uptake_act(ic,is) = km2_up_po4 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._wp * (wtr_soil_sl(ic,is) &
+            &                     / soil_depth_sl(ic,is))
+        ELSE
+          km1_uptake_act(ic,is) = 0.0_wp
+          km2_uptake_act(ic,is) = 0.0_wp
+        END IF
+      END DO
+    END DO
     arr_hlp1(:,:)        = po4_solute(:,:) + po4_assoc_fast(:,:)
     arr_hlp2(:,:)        = 1._wp
-    km1_uptake_act(:,:)  = km1_up_po4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (wtr_soil_sl(:,:) / soil_depth_sl(:,:))
-    km2_uptake_act(:,:)  = km2_up_po4 *  rtm_hsc(:,:) * rmm_hsc(:,:)  * 1000._wp * (wtr_soil_sl(:,:) / soil_depth_sl(:,:))
     km_array(:,:)        = km_adsorpt_po4_sl(:,:)
     avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._wp, qmax_po4(:,:) - po4_assoc_fast(:,:))
     CALL calc_sinking_flux(dtime, lctlib%vmax_uptake_p, "po4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                ! in
@@ -781,10 +792,21 @@ CONTAINS
 
     !>  6.2 NH4 - Microbial and plant N uptake, nitrification/denitrification
     !>
+    DO ic = 1,nc
+      DO is = 1, INT(num_sl_above_bedrock(ic))
+        IF (wtr_soil_sl(ic, is) > eps8) THEN
+          km1_uptake_act(ic,is) = km1_up_nh4 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._wp / (wtr_soil_sl(ic,is) &
+            &                     / soil_depth_sl(ic,is))
+          km2_uptake_act(ic,is) = km2_up_nh4 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._wp * (wtr_soil_sl(ic,is) &
+            &                     / soil_depth_sl(ic,is))
+        ELSE
+          km1_uptake_act(ic,is) = 0.0_wp
+          km2_uptake_act(ic,is) = 0.0_wp
+        END IF
+      END DO
+    END DO
     arr_hlp1(:,:)        = nh4_solute(:,:) + nh4_assoc(:,:)
     arr_hlp2(:,:)        = 1._wp - anaerobic_volume_fraction_sl(:,:)
-    km1_uptake_act(:,:)  = km1_up_nh4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (wtr_soil_sl(:,:) / soil_depth_sl(:,:))
-    km2_uptake_act(:,:)  = km2_up_nh4 *  rtm_hsc(:,:) * rmm_hsc(:,:)  * 1000._wp * (wtr_soil_sl(:,:) / soil_depth_sl(:,:))
     km_array(:,:)        = km_adsorpt_nh4_sl(:,:)
     avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._wp, qmax_nh4(:,:) - nh4_assoc(:,:))
     CALL calc_sinking_flux(dtime, lctlib%vmax_uptake_n, "nh4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                ! in
@@ -813,9 +835,20 @@ CONTAINS
 
     !>  6.3 NO3
     !>
+    DO ic = 1,nc
+      DO is = 1, INT(num_sl_above_bedrock(ic))
+        IF (wtr_soil_sl(ic, is) > eps8) THEN
+          km1_uptake_act(ic,is) = km1_up_no3 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._wp / (wtr_soil_sl(ic,is) &
+            &                     / soil_depth_sl(ic,is))
+          km2_uptake_act(ic,is) = km2_up_no3 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._wp * (wtr_soil_sl(ic,is) &
+            &                     / soil_depth_sl(ic,is))
+        ELSE
+          km1_uptake_act(ic,is) = 0.0_wp
+          km2_uptake_act(ic,is) = 0.0_wp
+        END IF
+      END DO
+    END DO
     arr_hlp1(:,:)        = 1._wp
-    km1_uptake_act(:,:)  = km1_up_no3 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (wtr_soil_sl(:,:) / soil_depth_sl(:,:))
-    km2_uptake_act(:,:)  = km2_up_no3 *  rtm_hsc(:,:) * rmm_hsc(:,:)  * 1000._wp * (wtr_soil_sl(:,:) / soil_depth_sl(:,:))
     km_array(:,:)        = 1._wp
     avail_soil_surface_sorption_capacity_sl(:,:) = 1._wp
     CALL calc_sinking_flux(dtime, lctlib%vmax_uptake_n, "no3", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                  ! in

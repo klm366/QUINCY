@@ -932,13 +932,15 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       CASE (MODEL_QUINCY)
-        IF (jsb_standalone) THEN
+        ! use for: QUINCY SPQ_ standalone
+        IF (jsb_standalone .AND. .NOT. model%config%use_soil_phys_jsbach) THEN
           dsl4jsb_Get_var2D_onChunk(TURB_,   pch_stdalone)     ! in
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             ch_tmp(ic) = pch_stdalone(ic)
           END DO
           !$ACC END PARALLEL LOOP
+        ! use for: QUINCY SPQ_ coupled and QUINCY with JSBACH-physic coupled & standalone
         ELSE
           dsl4jsb_Get_var2D_onChunk(A2L_,   pch)               ! in
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -968,8 +970,14 @@ CONTAINS
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_porosity_sl)        ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_wres_sl)            ! in
       CASE (MODEL_QUINCY)
-        dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_fc_sl)         ! in
-        dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_pwp_sl)        ! in
+        IF (model%config%use_soil_phys_jsbach) THEN
+          dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_depth_sl)          ! in
+          dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_porosity_sl)        ! in
+          dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_wres_sl)            ! in
+        ELSE
+          dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_fc_sl)         ! in
+          dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_pwp_sl)        ! in
+        END IF
       END SELECT
     END IF
 
@@ -1070,7 +1078,14 @@ CONTAINS
           weq_wsat_sl1 = vol_porosity_sl(ic,1) * soil_depth_sl(ic,1)
           rel_hum      = relative_humidity_soil(wtr_soil_sl(ic,1), weq_wres_sl1, weq_wsat_sl1)
         CASE (MODEL_QUINCY)
-          rel_hum = MIN(1.0_wp, (wtr_soil_sl(ic,1) - wtr_soil_pwp_sl(ic,1)) / (wtr_soil_fc_sl(ic,1) - wtr_soil_pwp_sl(ic,1)))
+          IF (model%config%use_soil_phys_jsbach) THEN
+            ! TODO develop improved calc of rel_hum using quincy-vegetation soil-water stress
+            weq_wres_sl1 = vol_wres_sl(ic,1) * soil_depth_sl(ic,1)
+            weq_wsat_sl1 = vol_porosity_sl(ic,1) * soil_depth_sl(ic,1)
+            rel_hum      = relative_humidity_soil(wtr_soil_sl(ic,1), weq_wres_sl1, weq_wsat_sl1)
+          ELSE
+            rel_hum = MIN(1.0_wp, (wtr_soil_sl(ic,1) - wtr_soil_pwp_sl(ic,1)) / (wtr_soil_fc_sl(ic,1) - wtr_soil_pwp_sl(ic,1)))
+          END IF
         END SELECT
         IF (qsat_star(ic) * rel_hum > q_air(ic) .AND. rel_hum > 1.e-10_wp) THEN
           fact_qsat_soil(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * &

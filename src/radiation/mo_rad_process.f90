@@ -1364,7 +1364,6 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER   :: vgrid_canopy_q_assimi  !< Vertical grid
     TYPE(t_jsb_vgrid),      POINTER   :: vgrid_snow_spq         !< Vertical grid
     INTEGER                           :: ncanopy                !< number of canopy layers
-    INTEGER                           :: nsnow                  !< number of snow layers
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
     INTEGER                           :: ic                     !< looping
     REAL(wp)                          :: dtime                  !< timestep
@@ -1430,8 +1429,6 @@ CONTAINS
     lctlib                => model%lctlib(tile%lcts(1)%lib_id)
     vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
     ncanopy               =  vgrid_canopy_q_assimi%n_levels
-    vgrid_snow_spq        => Get_vgrid('snow_layer_spq')
-    nsnow                 =  vgrid_snow_spq%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
