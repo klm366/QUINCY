@@ -251,10 +251,6 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting hydro configuration')
 
-    ! quincy variables for soil layer calculations
-    k_soil_profile  = 0.25_wp
-    min_layer_depth = 0.065_wp
-
     !>
     !> Default values are defined for all namelist parameters.
     !
@@ -492,6 +488,10 @@ CONTAINS
 #else
     ! quincy standalone
     nsoil = qs_nsoil_water
+
+    ! quincy variables for soil layer calculations
+    k_soil_profile  = 0.25_wp
+    min_layer_depth = 0.065_wp
 
     ALLOCATE(ubounds_soil_lay_water(nsoil))
     ALLOCATE(dz_water(nsoil))

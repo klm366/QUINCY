@@ -495,7 +495,7 @@ CONTAINS
     USE mo_rad_parameters,        ONLY: rad2ppfd
     USE mo_jsb_math_constants,    ONLY: eps8
     USE mo_jsb_control,           ONLY: debug_on
-    USE mo_exception,             ONLY: message
+    USE mo_exception,             ONLY: message, message_text
     USE mo_rad_process,           ONLY: calc_canopy_radiation_budget
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(A2L_)
@@ -1121,9 +1121,12 @@ CONTAINS
     IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
       & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
       & .NOT. jsbach_runs_standalone()) THEN
-      IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Update albedo only at experiment start, ', &
-        &                                  'if model runs standalone or one time step before the radiation time step ', &
-        &                                  'RETURN')
+      IF (debug_on() .AND. iblk == 1) THEN
+        WRITE (message_text,*) 'Update albedo only at experiment start, ', &
+          &                    'if model runs standalone or one time step before the radiation time step ', &
+          &                    'RETURN'
+        CALL message(TRIM(routine), message_text)
+      END IF
       RETURN
     END IF
 #endif
