@@ -123,7 +123,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: lost_dynamic(:), gained_dynamic(:), area_dynamic(:)
     REAL(wp), DIMENSION(options%nc) :: cf_diff, current_fract
 
-    dsl4jsb_Real3D_onChunk :: cf_current_year, cf_day_delta
+    dsl4jsb_Real3D_onChunk :: cf_current_year, cf_day_delta, cf_transition_gain, cf_transition_loss !mingyue zhang: add transition gain and loss
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_alcc'
     ! -------------------------------------------------------------------------------------------------- !
@@ -342,6 +342,36 @@ CONTAINS
           current_fract(:) = initial_area(:, i_tile) + cf_diff(:)
         END IF ! IF (.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc)
 
+        ! Mingyue Zhang: addd here an CASE for trans and maps scheme (to replace the following do loop:line375-381)
+        SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
+        CASE ('maps')
+          ! In case of maps scheme, the area changes are directly applied to the current fractions
+          ! and the initial area is set to the current fractions
+          DO ic = 1,nc
+            IF (cf_diff(ic) >= 0.0_wp) THEN
+              gained_area(ic, i_tile) = cf_diff(ic)
+              lost_area(ic, i_tile) = 0.0_wp
+            ELSE
+              gained_area(ic, i_tile) = 0.0_wp
+              lost_area(ic, i_tile) = -1.0_wp * cf_diff(ic)
+            END IF
+          END DO
+        
+        CASE  (trans)
+          ! In case of transitions scheme, the area changes are directly applied to the current fractions
+          ! and the initial area is set to the current fractions
+          DO ic = 1,nc
+            
+              gained_area(ic, i_tile) = cf_transition_gain(ic,i_tile)
+              lost_area(ic, i_tile) = cf_transition_loss(ic,i_tile)
+
+          END DO
+
+        CASE DEFAULT
+          CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )   
+        END SELECT
+        !Mingyue Zhang: added here an seldect case finished
+
         DO ic = 1,nc
           IF(cf_diff(ic) >= 0.0_wp) THEN
             gained_area(ic, i_tile) = cf_diff(ic)
@@ -350,6 +380,8 @@ CONTAINS
           END IF
         END DO
         
+
+
         ! Assert: if the gained area is bigger than the intial area, then gained area is set to initial area Mingyue Zhang
         DO ic = 1,nc
           !Assert: if the lost area is bigger than the intial area, then lost area is set to initial area Mingyue Zhang
