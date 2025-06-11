@@ -438,6 +438,7 @@ CONTAINS
     IF (dsl4jsb_Config(VEG_)%flag_dynamic_roots) THEN
       !>     - dynamic root fractions (see mo_q_veg_growth)
       !>
+      ! all roots are in the first soil layer
       root_fraction_sl(:, 1, :)          = 1.0_wp
       root_fraction_sl(:, 2:nsoil_sb, :) = 0.0_wp
     ELSE
@@ -453,31 +454,42 @@ CONTAINS
       DO iblk = 1,nblks
         DO ic = 1,nproma
           ! soil layer 1
-          IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, 1, iblk)) THEN
-            root_fraction_sl(ic, 1, iblk) = (1._wp - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, 1, iblk))) &
-              &                             / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
+          !
+          ! if root_depth is less than eps8 all roots are in the first soil layer
+          IF (root_depth(ic, iblk) < eps8) THEN
+            root_fraction_sl(ic, :, iblk) = 0.0_wp
+            root_fraction_sl(ic, 1, iblk) = 1.0_wp
           ELSE
-            root_fraction_sl(ic, 1, iblk) = 0.0_wp
-          END IF
-          ! soil layers 2 to x
-          DO is = 2,INT(num_sl_above_bedrock(ic, iblk))
-            IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is-1, iblk)) THEN
-              IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is, iblk)) THEN
-                root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
-                  &                                - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is, iblk))) &
-                  &                                / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
-              ELSE
-                root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
-                  &                                - EXP(-lctlib%k_root_dist * root_depth(ic, iblk))) &
-                  &                                / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
-              ENDIF
+            ! root depth larger than thickness of first soil layer
+            IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, 1, iblk)) THEN
+              root_fraction_sl(ic, 1, iblk) = (1._wp - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, 1, iblk))) &
+                &                             / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
+              ! soil layers 2 to x
+              !
+              DO is = 2,INT(num_sl_above_bedrock(ic, iblk))
+                IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is-1, iblk)) THEN
+                  IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is, iblk)) THEN
+                    root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
+                      &                                - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is, iblk))) &
+                      &                                / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
+                  ELSE
+                    root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
+                      &                                - EXP(-lctlib%k_root_dist * root_depth(ic, iblk))) &
+                      &                                / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
+                  END IF
+                ELSE
+                  root_fraction_sl(ic, is, iblk) = 0.0_wp
+                END IF
+              END DO              
+            ! root depth lower than / equal thickness of first soil layer
             ELSE
-              root_fraction_sl(ic, is, iblk) = 0.0_wp
-            ENDIF
-          ENDDO
-        ENDDO
-      ENDDO
-    ENDIF  ! flag_dynamic_roots
+              root_fraction_sl(ic, :, iblk) = 0.0_wp
+              root_fraction_sl(ic, 1, iblk) = 1.0_wp
+            END IF
+          END IF
+        END DO
+      END DO
+    END IF  ! flag_dynamic_roots
 
     !>   2.1 set root fraction to zero for tiles such as bare soil and urban area
     !>
