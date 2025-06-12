@@ -154,7 +154,8 @@ CONTAINS
      & t_star,                          &
      & liquid_max,                      &
      & frozen_fract,                    & !< Frozen surface fraction (snow and frozen surface water ponds)
-     & t_radref
+     & t_radref,                        &
+     & veg_height                         !< Vegetation height
 
     LOGICAL, DIMENSION(options%nc) :: &
      & is_glacier,                    &
@@ -315,18 +316,27 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN/OUT (coupled/standalone)
     END IF
 
-  SELECT CASE (model%config%model_scheme)
-#ifndef __NO_QUINCY__
-  CASE (MODEL_QUINCY)
-    dsl4jsb_Get_var2D_onChunk(VEG_,   height)       ! in
-#endif
-  CASE DEFAULT
-    height => NULL()
-  END SELECT
-
     !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(s_old, s_srf, t_srf_old, dQdT, t2s_conv, t_star, liquid_max) &
+    !$ACC   CREATE(s_old, s_srf, t_srf_old, dQdT, t2s_conv, t_star, liquid_max, veg_height) &
     !$ACC   CREATE(has_snow_layer, is_glacier, tile_fract_zero, has_pond_storage, frozen_fract, t_radref)
+
+    SELECT CASE (model%config%model_scheme)
+#ifndef __NO_QUINCY__
+    CASE (MODEL_QUINCY)
+      dsl4jsb_Get_var2D_onChunk(VEG_,   height)       ! in
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        veg_height(ic) = height(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+#endif
+    CASE DEFAULT
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        veg_height(ic) = 0._wp
+      END DO
+      !$ACC END PARALLEL LOOP
+    END SELECT
 
     ! @todo: currently, fraction of glacier has to be either zero or one!
     IF (use_tmx) THEN
@@ -465,10 +475,9 @@ CONTAINS
       CALL update_surface_temperature_standalone ( &
           & tile, options, lstart, tile_fract_zero(:), t_air(:), q_air(:), wind_air(:), rad_srf_net(:), press_srf(:), &
           & t2s_conv(:), t(:), t_unfilt(:), frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), &
-          & heat_cap(:), skin_conductivity, height, &                               ! optional arguments come without '(:)'
-          & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), drag_srf(:), &
-          & richardson(:), s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:) &
-        )
+          & heat_cap(:), veg_height(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), drag_srf(:), &
+          & richardson(:), s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:), &
+          & skin_conductivity = skin_conductivity)
     ELSE IF (use_tmx) THEN
 
       IF (l_skin_temp) &
@@ -477,16 +486,16 @@ CONTAINS
       ! Modifies TURB:ch and SEB:t_unfilt.
       CALL update_surface_temperature_tmx ( &
           & tile, options, lstart, tile_fract_zero(:), is_glacier(:), t2s_conv(:), t(:), press_srf(:), rad_srf_net(:), &
-          & fract_snow(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), heat_cap(:), skin_conductivity, t_acoef(:), &
+          & fract_snow(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), heat_cap(:), t_acoef(:), &
           & t_bcoef(:), q_acoef(:), q_bcoef(:), s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), &
-          & t_radref(:) &
+          & t_radref(:), skin_conductivity = skin_conductivity &
         )
     ELSE
       CALL update_surface_temperature_oneshot ( &
           & nc, alpha, dtime, lstart, l_skin_temp, tile_fract_zero(:), t2s_conv(:), t(:), press_srf(:), &
           & rad_srf_net(:), fract_snow(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), heat_cap(:), &
-          & skin_conductivity, t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), drag_srf(:), s_star(:), &
-          & s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:) &
+          & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), drag_srf(:), s_star(:), &
+          & s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:), skin_conductivity = skin_conductivity &
         )
     END IF
 
@@ -607,9 +616,9 @@ CONTAINS
 
   SUBROUTINE update_surface_temperature_standalone ( &
         & tile, options, lstart, tile_fract_zero, t_air, q_air, wind_air, rad_srf_net, press_srf, t2s_conv, t, &
-        & t_unfilt, frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, skin_conductivity, height, &
+        & t_unfilt, frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, veg_height, &
         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, drag_srf, richardson, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, &
-        & t_radref &
+        & t_radref, skin_conductivity &
       )
 
     USE mo_jsb4_forcing, ONLY: forcing_options
@@ -640,8 +649,8 @@ CONTAINS
     REAL(wp), INTENT(IN) :: fact_qsat_srf(:)
     REAL(wp), INTENT(IN) :: forc_hflx(:)
     REAL(wp), INTENT(IN) :: heat_cap(:)
+    REAL(wp), INTENT(IN) :: veg_height(:)
     REAL(wp), OPTIONAL, INTENT(IN) :: skin_conductivity(:)
-    REAL(wp), OPTIONAL, INTENT(IN) :: height(:)
 
     REAL(wp), INTENT(OUT) :: t_acoef(:)
     REAL(wp), INTENT(OUT) :: t_bcoef(:)
@@ -711,7 +720,7 @@ CONTAINS
           ! INTENT out
           & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
           ! optional (INTENT(IN)) argument
-          & height = height) ! vegetation height (quincy specific)
+          & veg_height = veg_height(:)) ! vegetation height (quincy specific)
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
@@ -754,7 +763,7 @@ CONTAINS
             ! INTENT out
             & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
             ! optional (INTENT(IN)) argument
-            & height = height) ! vegetation height (quincy specific)
+            & veg_height = veg_height(:)) ! vegetation height (land specific; used with quincy)
 
           !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream) &
           !$ACC   NO_CREATE(skin_conductivity) PRIVATE(heat_tcoef, dheat_tcoef, rad_net_star, s_ref)
@@ -817,7 +826,7 @@ CONTAINS
           ! INTENT out
         & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
           ! optional (INTENT(IN)) argument
-        & height = height) ! vegetation height (quincy specific)
+        & veg_height = veg_height(:)) ! vegetation height (land specific; used with quincy)
 
       ! Get Asselin filter coefficient
       eps = get_asselin_coef()
@@ -867,7 +876,7 @@ CONTAINS
           ! INTENT out
         & drag_srf(:), ddrag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), &
           ! optional (INTENT(IN)) argument
-        & height = height, & ! vegetation height (quincy specific)
+        & veg_height = veg_height(:), & ! vegetation height (land specific; used with quincy)
           ! Optional variables for filtering
         & t_srf_upd=t_star(:), zril_old=richardson(:))
 
@@ -908,8 +917,8 @@ CONTAINS
 
   SUBROUTINE update_surface_temperature_oneshot ( &
         & nc, alpha, dtime, lstart, l_skin_temp, tile_fract_zero, t2s_conv, t, press_srf, rad_srf_net, fract_snow, &
-        & fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, skin_conductivity, t_acoef, t_bcoef, q_acoef, q_bcoef, &
-        & drag_srf, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref &
+        & fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, t_acoef, t_bcoef, q_acoef, q_bcoef, &
+        & drag_srf, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref, skin_conductivity &
       )
 
     USE mo_phy_schemes, ONLY: qsat_water, heat_transfer_coef
@@ -1022,8 +1031,8 @@ CONTAINS
 
   SUBROUTINE update_surface_temperature_tmx ( &
         & tile, options, lstart, tile_fract_zero, is_glacier, t2s_conv, t, press_srf, rad_srf_net, fract_snow, &
-        & fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, skin_conductivity, t_acoef, t_bcoef, q_acoef, &
-        & q_bcoef, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref &
+        & fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, t_acoef, t_bcoef, q_acoef, &
+        & q_bcoef, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref, skin_conductivity &
       )
 
     USE mo_jsb_physical_constants, ONLY: stbo, zemiss_def

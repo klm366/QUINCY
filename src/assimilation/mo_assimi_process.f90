@@ -40,7 +40,7 @@ CONTAINS
     USE mo_jsb_math_constants, ONLY: deg2rad
 
     ! Arguments
-    REAL(wp), INTENT(in) :: &
+    REAL(wp), INTENT(inout) :: & ! inout needed for lumi GPU
       & declination,        & ! Solar Declination angle
       & canopy_bound_lai
     REAL(wp), INTENT(in), DIMENSION(:) :: &
