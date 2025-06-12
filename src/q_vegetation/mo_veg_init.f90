@@ -480,7 +480,7 @@ CONTAINS
                 ELSE
                   root_fraction_sl(ic, is, iblk) = 0.0_wp
                 END IF
-              END DO              
+              END DO
             ! root depth lower than / equal thickness of first soil layer
             ELSE
               root_fraction_sl(ic, :, iblk) = 0.0_wp
