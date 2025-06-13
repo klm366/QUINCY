@@ -297,7 +297,7 @@ CONTAINS
     ! Set initial leaf area index from climatology (read in pheno_init_bc)
     CALL cache_time_interpolation_weights()
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, wgt2, nmw1, nmw2) GANG VECTOR ASYNC(1) COLLAPSE(2)
     DO ib=1,nblks
       DO ic=1,nc
         lai(ic,ib) = wgt1 * lai_mon(ic,ib,nmw1) + wgt2 * lai_mon(ic,ib,nmw2)
@@ -307,7 +307,7 @@ CONTAINS
 
     IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
         & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: general vegetation tile, no specific PFT
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, wgt2, nmw1, nmw2) GANG VECTOR ASYNC(1) COLLAPSE(2)
       DO ib=1,nblks
         DO ic=1,nc
           fract_fpc(ic,ib) = wgt1 * fract_fpc_mon(ic,ib,nmw1) + wgt2 * fract_fpc_mon(ic,ib,nmw2)
