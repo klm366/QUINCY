@@ -149,6 +149,8 @@ CONTAINS
      & t_star,                          &
      & frozen_fract,                    & !< Frozen surface fraction (snow and frozen surface water ponds)
      & t_radref,                        &
+     & le_freeze_pot,                   & !< Latent energy flux released if all available water freezes [W m-2]
+     & le_melt_pot,                     & !< Latent energy flux required if all available ice melts [W m-2]
      & veg_height                         !< Vegetation height
 
     LOGICAL, DIMENSION(options%nc) :: &
@@ -267,7 +269,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_star)         ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   heat_cap)       ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   forc_hflx)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB_,   le_phase_change)! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,   le_phase_change)! OUT
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_q_air)     ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_srf)  ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   rad_srf_net)    ! in
@@ -302,7 +304,7 @@ CONTAINS
 
     !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(s_old, s_srf, t_srf_old, dQdT, t2s_conv, t_star, veg_height) &
-    !$ACC   CREATE(is_glacier, tile_fract_zero, frozen_fract, t_radref)
+    !$ACC   CREATE(is_glacier, tile_fract_zero, frozen_fract, t_radref, le_freeze_pot, le_melt_pot)
 
     SELECT CASE (model%config%model_scheme)
 #ifndef __NO_QUINCY__
@@ -452,35 +454,24 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    IF (lstart) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO ic = 1, nc
-        le_phase_change(ic) = 0._wp
-      END DO
-      !$ACC END PARALLEL LOOP
-    ELSE
-      CALL update_ground_heat_flux(                                                                                      &
-        ! In
-        & tile, options, jsb_standalone, use_tmx, l_skin_temp, l_freeze_config, l_supercool_config, &
-        & dtime, alpha, cpd_or_cvd, &
-        & t(:), press_srf(:), t_air(:), q_air(:), wind_air(:), rad_srf_net(:), &
-        & wtr_soil_sl(:,1), wtr_soil_pot_scool_sl(:,1), ice_soil_sl(:,1), wtr_pond(:), ice_pond(:), weq_snow_soil(:), &
-        & heat_cap(:), frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), &
-        & s_srf(:), t2s_conv(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), drag_srf(:), &
-        ! Inout
-        & forc_hflx(:), &
-        ! Out
-        & le_phase_change(:))
-    END IF
+    ! Compute the energy released/required to freeze/melt all water/ice
+    CALL get_phasechange_energy_limits(                                 &
+      ! In
+      & tile, options, l_freeze_config, l_supercool_config, dtime,      &
+      & wtr_soil_sl(:,1), wtr_soil_pot_scool_sl(:,1), ice_soil_sl(:,1), &
+      & wtr_pond(:), ice_pond(:), weq_snow_soil(:),                     &
+      ! Out
+      & le_freeze_pot(:), le_melt_pot(:))
 
     ! Compute surface drag, exchange coefficients and temperatures for standalone simulation
     IF (jsb_standalone) THEN
       CALL update_surface_temperature_standalone ( &
-          & tile, options, lstart, tile_fract_zero(:), t_air(:), q_air(:), wind_air(:), rad_srf_net(:), press_srf(:), &
-          & t2s_conv(:), t(:), t_unfilt(:), frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), &
-          & heat_cap(:), veg_height(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), drag_srf(:), &
+          & tile, options, lstart, cpd_or_cvd, tile_fract_zero(:), t_air(:), q_air(:), wind_air(:), rad_srf_net(:), &
+          & press_srf(:), t2s_conv(:), t(:), t_unfilt(:), frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), &
+          & forc_hflx(:), heat_cap(:), le_freeze_pot(:), le_melt_pot(:), veg_height(:), &
+          & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), drag_srf(:), &
           & richardson(:), s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:), &
-          & skin_conductivity = skin_conductivity)
+          & le_phase_change(:), skin_conductivity = skin_conductivity)
     ELSE IF (use_tmx) THEN
 
       IF (l_skin_temp) &
@@ -489,18 +480,30 @@ CONTAINS
       ! Modifies TURB:ch and SEB:t_unfilt.
       CALL update_surface_temperature_tmx ( &
           & tile, options, lstart, tile_fract_zero(:), is_glacier(:), t2s_conv(:), t(:), press_srf(:), rad_srf_net(:), &
-          & frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), heat_cap(:), t_acoef(:), &
-          & t_bcoef(:), q_acoef(:), q_bcoef(:), s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), &
-          & t_radref(:), skin_conductivity = skin_conductivity &
+          & frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), heat_cap(:), le_freeze_pot(:), le_melt_pot(:), &
+          & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), &
+          & t_radref(:), le_phase_change(:), skin_conductivity = skin_conductivity &
         )
     ELSE
       CALL update_surface_temperature_oneshot ( &
           & nc, alpha, dtime, lstart, l_skin_temp, tile_fract_zero(:), t2s_conv(:), t(:), press_srf(:), &
           & rad_srf_net(:), frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), heat_cap(:), &
-          & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), drag_srf(:), s_star(:), &
-          & s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:), skin_conductivity = skin_conductivity &
+          & le_freeze_pot(:), le_melt_pot(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), drag_srf(:), &
+          & s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:), &
+          & le_phase_change(:), skin_conductivity = skin_conductivity &
         )
     END IF
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic=1,nc
+      ! Switch sign of phase change flux. From the energy balance perspective, ice melting
+      !   is an energy sink (therefore negative) and freezing a source (therefore positive).
+      !   However, from the hydrology perspective melting occures when enough energy is
+      !   available (positive sign) and freezing if energy is required (therefore negative).
+      !   Thus, we switch the sign now to make the hydrology equations more intuitive.
+      le_phase_change(ic) = -1._wp * le_phase_change(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
@@ -554,15 +557,15 @@ CONTAINS
 
 
   SUBROUTINE update_surface_temperature_standalone ( &
-        & tile, options, lstart, tile_fract_zero, t_air, q_air, wind_air, rad_srf_net, press_srf, t2s_conv, t, &
-        & t_unfilt, frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, veg_height, &
+        & tile, options, lstart, cpd_or_cvd, tile_fract_zero, t_air, q_air, wind_air, rad_srf_net, press_srf, t2s_conv, t, &
+        & t_unfilt, frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, le_freeze_pot, le_melt_pot, veg_height, &
         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, drag_srf, richardson, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, &
-        & t_radref, skin_conductivity &
+        & t_radref, le_phase_change, skin_conductivity &
       )
 
     USE mo_jsb4_forcing, ONLY: forcing_options
-    USE mo_phy_schemes, ONLY: heat_transfer_coef, qsat_water, update_drag
-    USE mo_jsb_physical_constants, ONLY: stbo, zemiss_def
+    USE mo_phy_schemes, ONLY: heat_transfer_coef, qsat_water, update_drag, q_effective, surface_dry_static_energy
+    USE mo_jsb_physical_constants, ONLY: stbo, zemiss_def, tmelt
 
     INTEGER, PARAMETER :: NUM_ITERS = 10
     REAL(wp), PARAMETER :: LIMIT_DELTAT = 10._wp
@@ -570,8 +573,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile
     TYPE(t_jsb_task_options), INTENT(IN) :: options
 
-    LOGICAL, INTENT(IN) :: lstart
-    LOGICAL, INTENT(IN) :: tile_fract_zero(:)
+    LOGICAL,  INTENT(IN) :: lstart
+    REAL(wp), INTENT(IN) :: cpd_or_cvd
+    LOGICAL,  INTENT(IN) :: tile_fract_zero(:)
 
     REAL(wp), INTENT(IN) :: t_air(:)
     REAL(wp), INTENT(IN) :: q_air(:)
@@ -588,6 +592,8 @@ CONTAINS
     REAL(wp), INTENT(IN) :: fact_qsat_srf(:)
     REAL(wp), INTENT(IN) :: forc_hflx(:)
     REAL(wp), INTENT(IN) :: heat_cap(:)
+    REAL(wp), INTENT(IN) :: le_freeze_pot(:)
+    REAL(wp), INTENT(IN) :: le_melt_pot(:)
     REAL(wp), INTENT(IN) :: veg_height(:)
     REAL(wp), OPTIONAL, INTENT(IN) :: skin_conductivity(:)
 
@@ -606,6 +612,7 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: qsat_star(:)
     REAL(wp), INTENT(OUT) :: dQdT(:)
     REAL(wp), INTENT(OUT) :: t_radref(:)
+    REAL(wp), INTENT(OUT) :: le_phase_change(:)
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -622,7 +629,7 @@ CONTAINS
     LOGICAL :: l_skin_temp
 
     REAL(wp) :: ddrag_srf(options%nc), t_star(options%nc), s_srf_in(options%nc)
-    REAL(wp) :: s_ref, heat_tcoef, dheat_tcoef, eps, rad_net_star
+    REAL(wp) :: s_ref, s_melt, heat_tcoef, dheat_tcoef, eps, rad_net_star
 
     model => Get_model(tile%owner_model_id)
 
@@ -705,7 +712,7 @@ CONTAINS
             & veg_height = veg_height(:)) ! vegetation height (land specific; used with quincy)
 
           !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream) &
-          !$ACC   NO_CREATE(skin_conductivity) PRIVATE(heat_tcoef, dheat_tcoef, rad_net_star, s_ref)
+          !$ACC   NO_CREATE(skin_conductivity) PRIVATE(heat_tcoef, dheat_tcoef, rad_net_star, s_ref, s_melt)
           DO ic = 1, nc
             IF (.NOT. tile_fract_zero(ic)) THEN
               heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)
@@ -718,6 +725,9 @@ CONTAINS
               dQdT(ic) = (qsat_water(t_star(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
 
               s_ref = t2s_conv(ic) * t_star(ic)
+              s_melt = surface_dry_static_energy(tmelt, &
+                & q_effective(qsat_star(ic), q_air(ic),   &
+                & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .TRUE.)
 
               ! Reset to old surface temperature.
               s_srf(ic) = s_srf_in(ic)
@@ -772,25 +782,31 @@ CONTAINS
 
       ! Compute the updated surface temperature to be used for a filtered drag computation
       ! @Todo This doubles the code executed after this loop. Consider an additional subroutine for these code blocks
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(s_ref)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(s_ref, s_melt)
       DO ic = 1, nc
         heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)
 
         IF (lstart) THEN
           s_star(ic) = t2s_conv(ic) * t(ic)
+          le_phase_change(ic) = 0._wp
         ELSE IF (tile_fract_zero(ic)) THEN
           ! Fix needed for numerical reasons on grid cells without real land fraction
           s_star(ic) = 280._wp * t2s_conv(ic)
+          le_phase_change(ic) = 0._wp
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
-          CALL surface_temp_implicit( dtime, alpha,             & ! in
+          s_melt = surface_dry_static_energy(tmelt, &
+            & q_effective(qsat_star(ic), q_air(ic),   &
+            & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .TRUE.)
+          CALL surface_temp_implicit( dtime, alpha,               & ! in
             & t2s_conv(ic),                                       & ! in
             & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-            & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
+            & s_ref, s_melt, qsat_star(ic), dQdT(ic),             & ! in
             & rad_srf_net(ic), forc_hflx(ic), heat_tcoef,         & ! in
             & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
             & frozen_fract(ic), heat_cap(ic),                     & ! in
-            & s_star(ic))                                           ! out
+            & le_freeze_pot(ic), le_melt_pot(ic),                 & ! in
+            & s_star(ic), le_phase_change(ic))                      ! out
         END IF
 
         ! New unfiltered surface temperature
@@ -825,19 +841,25 @@ CONTAINS
 
         IF (lstart) THEN
           s_star(ic) = t2s_conv(ic) * t(ic)
+          le_phase_change(ic) = 0._wp
         ELSE IF (tile_fract_zero(ic)) THEN
           ! Fix needed for numerical reasons on grid cells without real land fraction
           s_star(ic) = 280._wp * t2s_conv(ic)
+          le_phase_change(ic) = 0._wp
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
-          CALL surface_temp_implicit( dtime, alpha,             & ! in
+          s_melt = surface_dry_static_energy(tmelt, &
+            & q_effective(qsat_star(ic), q_air(ic),   &
+            & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .TRUE.)
+          CALL surface_temp_implicit( dtime, alpha,               & ! in
             & t2s_conv(ic),                                       & ! in
             & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-            & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
+            & s_ref, s_melt, qsat_star(ic), dQdT(ic),             & ! in
             & rad_srf_net(ic), forc_hflx(ic), heat_tcoef,         & ! in
             & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
             & frozen_fract(ic), heat_cap(ic),                     & ! in
-            & s_star(ic))                                           ! out
+            & le_freeze_pot(ic), le_melt_pot(ic),                 & ! in
+            & s_star(ic), le_phase_change(ic))                      ! out
         END IF
 
         s_srf(ic) = s_star(ic)
@@ -857,11 +879,12 @@ CONTAINS
 
   SUBROUTINE update_surface_temperature_oneshot ( &
         & nc, alpha, dtime, lstart, l_skin_temp, tile_fract_zero, t2s_conv, t, press_srf, rad_srf_net, frozen_fract, &
-        & fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, t_acoef, t_bcoef, q_acoef, q_bcoef, &
-        & drag_srf, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref, skin_conductivity &
+        & fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, le_freeze_pot, le_melt_pot, t_acoef, t_bcoef, q_acoef, q_bcoef, &
+        & drag_srf, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref, le_phase_change, skin_conductivity &
       )
 
     USE mo_phy_schemes, ONLY: qsat_water, heat_transfer_coef
+    USE mo_jsb_physical_constants, ONLY: tmelt
 
     INTEGER, INTENT(IN) :: nc
     REAL(wp), INTENT(IN) :: alpha
@@ -880,6 +903,8 @@ CONTAINS
     REAL(wp), INTENT(IN) :: fact_qsat_srf(:)
     REAL(wp), INTENT(IN) :: forc_hflx(:)
     REAL(wp), INTENT(IN) :: heat_cap(:)
+    REAL(wp), INTENT(IN) :: le_freeze_pot(:)
+    REAL(wp), INTENT(IN) :: le_melt_pot(:)
     REAL(wp), INTENT(IN), OPTIONAL :: skin_conductivity(:)
 
     REAL(wp), INTENT(IN) :: t_acoef(:)
@@ -895,10 +920,12 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: qsat_star(:)
     REAL(wp), INTENT(OUT) :: dQdT(:)
     REAL(wp), INTENT(OUT) :: t_radref(:)
+    REAL(wp), INTENT(OUT) :: le_phase_change(:)
 
     INTEGER :: ic
 
     REAL(wp) :: s_ref
+    REAL(wp) :: s_melt
     REAL(wp) :: heat_tcoef
 
     IF (lstart) THEN
@@ -913,7 +940,8 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) NO_CREATE(skin_conductivity) PRIVATE(s_ref, heat_tcoef)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+      !$ACC   NO_CREATE(skin_conductivity) PRIVATE(s_ref, s_melt, heat_tcoef)
       DO ic = 1, nc
         IF (tile_fract_zero(ic)) THEN
           s_star(ic) = t2s_conv(ic) * 280._wp
@@ -930,7 +958,7 @@ CONTAINS
           dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
 
           s_ref = t2s_conv(ic) * t(ic)
-
+          s_melt = t2s_conv(ic) * tmelt  ! Temporary
           IF (l_skin_temp) THEN
             CALL skin_temp_implicit(                                & ! in
               & alpha,                                              & ! in
@@ -951,11 +979,12 @@ CONTAINS
               & dtime,                                              & ! in
               & t2s_conv(ic),                                       & ! in
               & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-              & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
+              & s_ref, s_melt, qsat_star(ic), dQdT(ic),             & ! in
               & rad_srf_net(ic), forc_hflx(ic), heat_tcoef,         & ! in
               & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
               & frozen_fract(ic), heat_cap(ic),                     & ! in
-              & s_star(ic))                                           ! out
+              & le_freeze_pot(ic), le_melt_pot(ic),                 & ! in
+              & s_star(ic), le_phase_change(ic))                      ! out
             s_srf(ic) = s_star(ic)
             dt_sk_dt_srf(ic) = 1._wp
           END IF
@@ -971,11 +1000,11 @@ CONTAINS
 
   SUBROUTINE update_surface_temperature_tmx ( &
         & tile, options, lstart, tile_fract_zero, is_glacier, t2s_conv, t, press_srf, rad_srf_net, frozen_fract, &
-        & fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, t_acoef, t_bcoef, q_acoef, &
-        & q_bcoef, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref, skin_conductivity &
+        & fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, le_freeze_pot, le_melt_pot, t_acoef, t_bcoef, q_acoef, &
+        & q_bcoef, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref, le_phase_change, skin_conductivity &
       )
 
-    USE mo_jsb_physical_constants, ONLY: stbo, zemiss_def
+    USE mo_jsb_physical_constants, ONLY: stbo, zemiss_def, tmelt
     USE mo_turb_interface, ONLY: update_exchange_coefficients
     USE mo_phy_schemes, ONLY: qsat_ice, qsat_water
 
@@ -995,6 +1024,8 @@ CONTAINS
     REAL(wp), INTENT(IN) :: fact_qsat_srf(:)
     REAL(wp), INTENT(IN) :: forc_hflx(:)
     REAL(wp), INTENT(IN) :: heat_cap(:)
+    REAL(wp), INTENT(IN) :: le_freeze_pot(:)
+    REAL(wp), INTENT(IN) :: le_melt_pot(:)
     REAL(wp), OPTIONAL, INTENT(IN) :: skin_conductivity(:)
 
     REAL(wp), INTENT(IN) :: t_acoef(:)
@@ -1008,6 +1039,7 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: qsat_star(:)
     REAL(wp), INTENT(OUT) :: dQdT(:)
     REAL(wp), INTENT(OUT) :: t_radref(:)
+    REAL(wp), INTENT(OUT) :: le_phase_change(:)
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -1022,7 +1054,7 @@ CONTAINS
     REAL(wp) :: alpha, dtime
 
     LOGICAL :: l_skin_temp
-    REAL(wp) :: s_ref, rad_net_star
+    REAL(wp) :: s_ref, s_melt, rad_net_star
     REAL(wp) :: s_srf_in(options%nc), t_star(options%nc)
 
     model => Get_model(tile%owner_model_id)
@@ -1087,7 +1119,8 @@ CONTAINS
 
       ! For consistency with previous implementation, 1 is added to the iteration count.
       DO iter = 1, niter + 1
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) NO_CREATE(skin_conductivity) PRIVATE(s_ref)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+        !$ACC   NO_CREATE(skin_conductivity) PRIVATE(s_ref, s_melt)
         DO ic = 1, nc
           IF (.NOT. tile_fract_zero(ic)) THEN
             t_radref(ic) = t_star(ic)
@@ -1102,6 +1135,7 @@ CONTAINS
             END IF
 
             s_ref = t2s_conv(ic) * t_star(ic)
+            s_melt = t2s_conv(ic) * tmelt  ! Temporary
 
             IF (l_skin_temp) THEN
               s_srf(ic) = s_srf_in(ic)
@@ -1124,11 +1158,12 @@ CONTAINS
                 & dtime,                                              & ! in
                 & t2s_conv(ic),                                       & ! in
                 & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-                & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
+                & s_ref, s_melt, qsat_star(ic), dQdT(ic),             & ! in
                 & rad_net_star, forc_hflx(ic), ch(ic),                & ! in
                 & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
-                & frozen_fract(ic), heat_cap(ic),                       & ! in
-                & s_star(ic))                                           ! out
+                & frozen_fract(ic), heat_cap(ic),                     & ! in
+                & le_freeze_pot(ic), le_melt_pot(ic),                 & ! in
+                & s_star(ic), le_phase_change(ic))                      ! out
               s_srf(ic) = s_star(ic)
               dt_sk_dt_srf(ic) = 1._wp
             END IF
@@ -1150,103 +1185,38 @@ CONTAINS
 
   END SUBROUTINE update_surface_temperature_tmx
 
+  !> Diagnose the total potential energy source/sink if all available water/ice
+  !> freezes/melts.
+  SUBROUTINE get_phasechange_energy_limits(tile, options, &
+    & l_freeze_config, l_supercool_config, dtime,         &
+    & wtr_soil_top, wtr_soil_pot_scool_top, ice_soil_top, &
+    & wtr_pond, ice_pond, weq_snow_soil,                  &
+    & le_freeze_pot, le_melt_pot)
 
-  SUBROUTINE update_ground_heat_flux(tile, options, jsb_standalone, use_tmx, l_skin_temp, &
-    & l_freeze_config, l_supercool_config, &
-    & dtime, alpha, cpd_or_cvd, &
-    & t, press_srf, t_air, q_air, wind_air, rad_srf_net, &
-    & wtr_soil_top, wtr_soil_pot_scool_top, ice_soil_top, wtr_pond, ice_pond, weq_snow_soil, &
-    & heat_cap, frozen_fract, fact_q_air, fact_qsat_srf, &
-    & s_srf, t2s_conv, t_acoef, t_bcoef, q_acoef, q_bcoef, drag_srf, &
-    & forc_hflx, le_phase_change)
-
-    USE mo_jsb4_forcing, ONLY: forcing_options
-    USE mo_phy_schemes, ONLY: qsat_ice, qsat_water, qsat_ice, heat_transfer_coef, q_effective, &
-      & surface_dry_static_energy, update_drag, phase_change_pot
-    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi, alf, tmelt
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi, alf
 
     CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile
     TYPE(t_jsb_task_options), INTENT(IN) :: options
 
-    LOGICAL, INTENT(IN) :: jsb_standalone
-    LOGICAL, INTENT(IN) :: use_tmx
-    LOGICAL, INTENT(IN) :: l_skin_temp
     LOGICAL, INTENT(IN) :: l_freeze_config
     LOGICAL, INTENT(IN) :: l_supercool_config
     REAL(wp), INTENT(IN) :: dtime
-    REAL(wp), INTENT(IN) :: alpha
-    REAL(wp), INTENT(IN) :: cpd_or_cvd
-    REAL(wp), INTENT(IN) :: t(:)
-    REAL(wp), INTENT(IN) :: press_srf(:)
-    REAL(wp), INTENT(IN) :: t_air(:)
-    REAL(wp), INTENT(IN) :: q_air(:)
-    REAL(wp), INTENT(IN) :: wind_air(:)
-    REAL(wp), INTENT(IN) :: rad_srf_net(:)
     REAL(wp), INTENT(IN) :: wtr_soil_top(:)
     REAL(wp), INTENT(IN) :: wtr_soil_pot_scool_top(:)
     REAL(wp), INTENT(IN) :: ice_soil_top(:)
     REAL(wp), INTENT(IN) :: wtr_pond(:)
     REAL(wp), INTENT(IN) :: ice_pond(:)
     REAL(wp), INTENT(IN) :: weq_snow_soil(:)
-    REAL(wp), INTENT(IN) :: heat_cap(:)
-    REAL(wp), INTENT(IN) :: frozen_fract(:)
-    REAL(wp), INTENT(IN) :: fact_q_air(:)
-    REAL(wp), INTENT(IN) :: fact_qsat_srf(:)
-    REAL(wp), INTENT(IN) :: s_srf(:)
-    REAL(wp), INTENT(IN) :: t2s_conv(:)
-    REAL(wp), INTENT(IN) :: t_acoef(:)
-    REAL(wp), INTENT(IN) :: t_bcoef(:)
-    REAL(wp), INTENT(IN) :: q_acoef(:)
-    REAL(wp), INTENT(IN) :: q_bcoef(:)
-    REAL(wp), INTENT(IN) :: drag_srf(:)
 
-    REAL(wp), INTENT(INOUT) :: forc_hflx(:)
-    REAL(wp), INTENT(OUT)   :: le_phase_change(:)
+    REAL(wp), INTENT(OUT) :: le_freeze_pot(:)
+    REAL(wp), INTENT(OUT) :: le_melt_pot(:)
 
-    TYPE(t_jsb_model), POINTER :: model
-
-    INTEGER  :: iblk, ics, ice, nc, ic
-
-    dsl4jsb_Def_config(SEB_)
-    dsl4jsb_Def_memory(TURB_)
-
-    dsl4jsb_Real2D_onChunk :: rough_h
-    dsl4jsb_Real2D_onChunk :: rough_m
+    INTEGER  :: nc, ic
 
     ! Locally defined variables
-    INTEGER  :: model_scheme
-
-    REAL(wp), DIMENSION(options%nc) :: &
-      & le_freeze_pot,     &
-      & le_melt_pot,       &
-      & qsat_star,         &
-      & dQdT,              &
-      & ddrag_srf_local,   &
-      & drag_srf_local,    &
-      & t_acoef_local,     &
-      & t_bcoef_local,     &
-      & q_acoef_local,     &
-      & q_bcoef_local,     &
-      & pch
-
-    REAL(wp) :: heat_tcoef, s_ref, s_trgt, phase_change_trgt
     REAL(wp) :: hlp1, hlp2, hlp3
 
-    model => Get_model(tile%owner_model_id)
-
-    iblk = options%iblk
-    ics = options%ics
-    ice = options%ice
     nc = options%nc
-
-    dsl4jsb_Get_config(SEB_)
-    dsl4jsb_Get_memory(TURB_)
-
-    model_scheme = model%config%model_scheme
-
-    ! Get surface roughness
-    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)  ! in
-    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)  ! in
 
     ! Determine potential energy sinks / sources due to phase change at the surface
     ! as limited by the avaiablity of water / ice.
@@ -1285,94 +1255,26 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic = 1, nc
-      IF (use_tmx) THEN
-        IF (tile%is_glacier) THEN
-            qsat_star(ic) = qsat_ice(t(ic), press_srf(ic), use_convect_tables=.FALSE.)
-            dQdT(ic) = (qsat_ice(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.FALSE.) - qsat_star(ic)) * 1000._wp
-          ELSE
-            qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.FALSE.)
-            dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.FALSE.) - qsat_star(ic)) * 1000._wp
-          END IF
-      ELSE
-        qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.TRUE.)
-        dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
-      END IF
-    END DO
-    !$ACC END PARALLEL LOOP
+    !   ! Compute energy sink (ice melting, negative) / source (water freezing, positive) due to phase change
+    !   IF (phase_change_trgt < 0._wp) THEN
+    !     le_phase_change(ic) = MAX(le_melt_pot(ic), phase_change_trgt)
+    !   ELSE IF (phase_change_trgt > 0._wp) THEN
+    !     le_phase_change(ic) = MIN(le_freeze_pot(ic), phase_change_trgt)
+    !   ELSE
+    !     le_phase_change(ic) = 0._wp
+    !   END IF
+    !   ! Modify the ground heat flux to account for the phase change
+    !   forc_hflx(ic) = forc_hflx(ic) + le_phase_change(ic)
+    !   ! Switch sign of phase change flux. From the energy balance perspective, ice melting
+    !   !   is an energy sink (therefore negative) and freezing a source (therefore positive).
+    !   !   However, from the hydrology perspective melting occures when enough energy is
+    !   !   available (positive sign) and freezing if energy is required (therefore negative).
+    !   !   Thus, we switch the sign now to make the hydrology equations more intuitive.
+    !   le_phase_change(ic) = -1._wp * le_phase_change(ic)
+    ! END DO
+    ! !$ACC END PARALLEL LOOP
 
-    IF (jsb_standalone) THEN
-      ! Update drag and exchange coefficients based on external forcing data
-      CALL update_drag( &
-        ! INTENT in
-        & nc, dtime, model_scheme, t_air(:), press_srf(:), q_air(:), wind_air(:), &
-        & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
-        & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
-        & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
-        ! INTENT out
-        & drag_srf_local(:), ddrag_srf_local(:), t_acoef_local(:), t_bcoef_local(:), q_acoef_local(:), q_bcoef_local(:), pch(:))
-    ELSE
-      !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
-      DO ic = 1, nc
-        drag_srf_local(ic) = drag_srf(ic)
-        t_acoef_local(ic)  = t_acoef(ic)
-        t_bcoef_local(ic)  = t_bcoef(ic)
-        q_acoef_local(ic)  = q_acoef(ic)
-        q_bcoef_local(ic)  = q_bcoef(ic)
-      END DO
-      !$ACC END PARALLEL LOOP
-    END IF
-
-    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1) PRIVATE(heat_tcoef, s_ref, s_trgt, phase_change_trgt)
-    DO ic = 1, nc
-      heat_tcoef = heat_transfer_coef(drag_srf_local(ic), dtime, alpha)
-
-      ! Get dry static energy at actual temperature as well as melting/freezing point
-      IF (l_skin_temp) THEN
-        ! The skin temperature scheme needs the surface temperature as reference
-        s_ref  = s_srf(ic)
-      ELSE
-        ! Without skin scheme there is only surface temperature
-        s_ref  = t2s_conv(ic) * t(ic)
-      END IF
-      s_trgt = surface_dry_static_energy( tmelt, &
-        & q_effective(qsat_star(ic), q_air(ic),   &
-        & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, jsb_standalone)
-
-      ! Determine potential energy sinks / sources due to phase change at the surface
-      ! while not exceeding the freezing/melting point
-      CALL phase_change_pot(                                  & ! in
-        & alpha, dtime, t2s_conv(ic),                       & ! in
-        & t_acoef_local(ic), t_bcoef_local(ic), q_acoef_local(ic), q_bcoef_local(ic), & ! in
-        & s_trgt, s_ref,                                      & ! in
-        & qsat_star(ic), dQdT(ic),                            & ! in
-        & rad_srf_net(ic), forc_hflx(ic), heat_tcoef,         & ! in
-        & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
-        & frozen_fract(ic), heat_cap(ic),                     & ! in
-        & phase_change_trgt                                   & ! out
-        & )
-
-      ! Compute energy sink (ice melting, negative) / source (water freezing, positive) due to phase change
-      IF (phase_change_trgt < 0._wp) THEN
-        le_phase_change(ic) = MAX(le_melt_pot(ic), phase_change_trgt)
-      ELSE IF (phase_change_trgt > 0._wp) THEN
-        le_phase_change(ic) = MIN(le_freeze_pot(ic), phase_change_trgt)
-      ELSE
-        le_phase_change(ic) = 0._wp
-      END IF
-      ! Modify the ground heat flux to account for the phase change
-      forc_hflx(ic) = forc_hflx(ic) + le_phase_change(ic)
-      ! Switch sign of phase change flux. From the energy balance perspective, ice melting
-      !   is an energy sink (therefore negative) and freezing a source (therefore positive).
-      !   However, from the hydrology perspective melting occures when enough energy is
-      !   available (positive sign) and freezing if energy is required (therefore negative).
-      !   Thus, we switch the sign now to make the hydrology equations more intuitive.
-      le_phase_change(ic) = -1._wp * le_phase_change(ic)
-    END DO
-    !$ACC END PARALLEL LOOP
-
-  END SUBROUTINE update_ground_heat_flux
+  END SUBROUTINE get_phasechange_energy_limits
 
 
   !> Updates surface dry static energy using an implicit surface energy balance scheme
@@ -1380,11 +1282,12 @@ CONTAINS
   SUBROUTINE surface_temp_implicit(                     &
     & timestep_len, alpha, heat_capacity,               &
     & t_acoef, t_bcoef, q_acoef, q_bcoef,               &
-    & s_old, qsat_old, dqsat_dT,                        &
+    & s_old, s_melt, qsat_old, dqsat_dT,                &
     & net_radiation, ground_heat_flux, heat_trans_coef, &
     & q_air, q_sat,                                     &
     & snow_fraction, ground_capacity,                   &
-    & s_new)
+    & le_freeze_pot, le_melt_pot,                       &
+    & s_new, le_phase_change)
 
     !$ACC ROUTINE SEQ
 
@@ -1402,6 +1305,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: q_acoef           !< A coefficient for moisture
     REAL(wp), INTENT(in)  :: q_bcoef           !< B coefficient for moisture
     REAL(wp), INTENT(in)  :: s_old             !< Previous surface dry static energy [J kg-1]
+    REAL(wp), INTENT(in)  :: s_melt            !< Surface dry static energy at freezing/melting point [J kg-1]
     REAL(wp), INTENT(in)  :: qsat_old          !< Previous surface specific humidity [kg kg-1]
     REAL(wp), INTENT(in)  :: dqsat_dT          !< Change in qsat with temperature [K-1]
     REAL(wp), INTENT(in)  :: net_radiation     !< Net radiation [W m-2]
@@ -1411,7 +1315,10 @@ CONTAINS
     REAL(wp), INTENT(in)  :: q_sat             !< Surface saturation specific humidity [kg kg-1]
     REAL(wp), INTENT(in)  :: snow_fraction     !< Snow cover fraction [-]
     REAL(wp), INTENT(in)  :: ground_capacity   !< Ground heat capacity [J m-2 K-1)]
+    REAL(wp), INTENT(IN)  :: le_freeze_pot     !< Energy flux released if all available water freezes [W m-2]
+    REAL(wp), INTENT(IN)  :: le_melt_pot       !< Energy flux required if all available ice melts [W m-2]
     REAL(wp), INTENT(out) :: s_new             !< New surface dry static energy [J kg-1]
+    REAL(wp), INTENT(out) :: le_phase_change   !< Latent energy flux used for phase change [W m-2]
 
     ! Local variables
     REAL(wp) :: dt                     !< Effective timestep = alpha * timestep_len
@@ -1421,6 +1328,7 @@ CONTAINS
     REAL(wp) :: thermal_response_term  !< Energy needed to change temperature including radiation feedback
     REAL(wp) :: sensible_heat_term     !< Sensible heat flux contribution
     REAL(wp) :: energy_flux_term       !< Accumulated energy fluxes
+    REAL(wp) :: avail_phc_energy       !< Energy flux available for phase change [W m-2]
 
     !> The surface energy balance equation in terms of dry static energy s = cp*T is:
     !> ds/dt = cp * dT/dt = R_net + H + LE + G
@@ -1467,9 +1375,27 @@ CONTAINS
       ! Ground heat flux
       & ground_heat_flux)
 
-    ! Solve for new dry static energy
+    ! Solve for new dry static energy without considering phase change
     s_new = (thermal_response_term * s_old + energy_flux_term) / &
           & (thermal_response_term + sensible_heat_term)
+
+    ! Compute energy flux available for phase change
+    avail_phc_energy = (s_melt - s_new) * (thermal_response_term + sensible_heat_term) / dt
+
+    ! Compute energy sink (ice melting, negative) / source (water freezing, positive) due to phase change
+    IF (avail_phc_energy < 0._wp) THEN
+      le_phase_change = MAX(le_melt_pot, avail_phc_energy)
+    ELSE IF (avail_phc_energy > 0._wp) THEN
+      le_phase_change = MIN(le_freeze_pot, avail_phc_energy)
+    ELSE
+      le_phase_change = 0._wp
+    END IF
+
+    ! Recompute new dry static energy while considering phase change
+    IF (ABS(le_phase_change) > 0._wp) THEN
+      s_new = (thermal_response_term * s_old + energy_flux_term + le_phase_change * dt) / &
+            & (thermal_response_term + sensible_heat_term)
+    END IF
 
   END SUBROUTINE surface_temp_implicit
 
