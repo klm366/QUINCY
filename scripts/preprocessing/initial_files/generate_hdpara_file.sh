@@ -23,7 +23,7 @@ tmpdir=${work_dir}/hd_tmp
 mkdir -p ${tmpdir}; rm -f ${tmpdir}/*.nc
 cd ${tmpdir}
 
-cdo="cdo -s"
+cdo="$cdo"
 
 echo "=============================================================="
 echo "===  Generation of the HD parameter file"
@@ -31,7 +31,7 @@ echo "=============================================================="
 
 # Currently only working for low atmospheric model resolutions (R02B06 or lower)
 if [[   $(echo ${atmRes} | cut -c2-3 ) -gt 2  \
-     || $(echo ${atmRes} | cut -c5-6 ) -gt 4 ]]; then
+     || $(echo ${atmRes} | cut -c5-6 ) -gt 6 ]]; then
   echo "$0: ERROR: "
   echo "$0: HD parameter file generation currently not possible for grid resolution greater then R02B06"
   echo " "

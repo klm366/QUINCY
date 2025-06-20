@@ -29,7 +29,8 @@ MODULE mo_veg_util
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, VEG_BGCM_LITTERFALL_ID, &
-    &                                   VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_RESERVE_USE_ID
+    &                                   VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_RESERVE_USE_ID, &
+    &                                   VEG_BGCM_HARVEST_LITTER_ID, VEG_BGCM_HARVEST_TO_PROD_ID
 
   IMPLICIT NONE
   PRIVATE
@@ -49,20 +50,26 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_SYL_, Q_AGR_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)    :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER   :: model                  !< the model
     TYPE(t_lnd_bgcm_store), POINTER   :: bgcm_store             !< the bgcm store of this tile
+    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_soil_sb          !< Vertical grid
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
+    INTEGER                           :: nsoil_sb               !< number of soil layers
     INTEGER                           :: nr_of_veg_compartments !< number of compartments in veg bgcms
     INTEGER                           :: nr_of_elements         !< number of elements in veg bgcms
-    INTEGER                           :: ic, id_elem
+    INTEGER                           :: ic, id_elem, i_soil
     INTEGER                           :: ix_comp, ix_elem       !< loop index
+    LOGICAL                           :: config_l_use_pp
 
     dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
     dsl4jsb_Real2D_onChunk      :: maint_respiration
@@ -76,6 +83,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c13
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c14
+    dsl4jsb_Real2D_onChunk      :: herbivory_leaf_resp
+    dsl4jsb_Real2D_onChunk      :: herbivory_leaf_resp_c13
+    dsl4jsb_Real2D_onChunk      :: herbivory_leaf_resp_c14
+    dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp
+    dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c13
+    dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c14
     dsl4jsb_Real2D_onChunk      :: npp
     dsl4jsb_Real2D_onChunk      :: npp_c13
     dsl4jsb_Real2D_onChunk      :: npp_c14
@@ -97,9 +110,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n15
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
     dsl4jsb_Real2D_onChunk      :: net_biosphere_production
+    dsl4jsb_Real2D_onChunk      :: net_biosphere_production_c13
+    dsl4jsb_Real2D_onChunk      :: net_biosphere_production_c14
     dsl4jsb_Real2D_onChunk      :: biological_n_fixation
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: unit_transpiration
+    dsl4jsb_Real3D_onChunk      :: delta_root_fraction_sl
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_veg_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -108,8 +124,11 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
     dsl4jsb_Def_mt1L2D :: veg_reserve_use_mt
+    dsl4jsb_Def_mt2L2D :: veg_litter_flux_harvest_mt
+    dsl4jsb_Def_mt1L2D :: veg_pp_flux_harvest_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -119,11 +138,15 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     IF (model%lctlib(tile%lcts(1)%lib_id)%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_config(VEG_)
+    config_l_use_pp     = dsl4jsb_Config(VEG_)%l_use_product_pools
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
@@ -131,6 +154,15 @@ CONTAINS
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
+
+    IF (tile%Is_process_calculated(Q_SYL_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
+      dsl4jsb_Get_mt2L2D(VEG_BGCM_HARVEST_LITTER_ID, veg_litter_flux_harvest_mt)
+
+      IF (config_l_use_pp) THEN
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_HARVEST_TO_PROD_ID, veg_pp_flux_harvest_mt)
+      END IF
+
+    END IF
     nr_of_veg_compartments = SIZE(veg_litterfall_mt,1)
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -145,6 +177,9 @@ CONTAINS
           DO ic = 1, nc
             veg_growth_mt(ix_comp,ix_elem,ic)      = zero
             veg_litterfall_mt(ix_comp,ix_elem,ic)  = zero
+            IF (tile%Is_process_calculated(Q_SYL_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
+              veg_litter_flux_harvest_mt(ix_comp,ix_elem,ic)      = zero
+            END IF
           END DO
         END DO
         !$ACC END PARALLEL
@@ -153,6 +188,12 @@ CONTAINS
           veg_establishment_mt(ix_elem,ic) = zero
           veg_exudation_mt(ix_elem,ic)     = zero
           veg_reserve_use_mt(ix_elem,ic)   = zero
+
+          IF (config_l_use_pp) THEN
+            IF (tile%Is_process_calculated(Q_SYL_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
+              veg_pp_flux_harvest_mt(ix_elem,ic)      = zero
+            END IF
+          END IF
         END DO
         !$ACC END PARALLEL
       END IF
@@ -174,6 +215,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp)
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp)
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c14)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_c13)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_c14)
@@ -195,9 +242,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c14)
     dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation)
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)
+    dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
@@ -213,6 +263,12 @@ CONTAINS
       n_processing_respiration(ic) = zero
       n_processing_respiration_c13(ic) = zero
       n_processing_respiration_c14(ic) = zero
+      herbivory_leaf_resp(ic) = zero
+      herbivory_leaf_resp_c13(ic) = zero
+      herbivory_leaf_resp_c14(ic) = zero
+      herbivory_fruit_resp(ic) = zero
+      herbivory_fruit_resp_c13(ic) = zero
+      herbivory_fruit_resp_c14(ic) = zero
       npp(ic) = zero
       npp_c13(ic) = zero
       npp_c14(ic) = zero
@@ -234,11 +290,22 @@ CONTAINS
       recycling_heart_wood_n15(ic) = zero
       recycling_heart_wood_p(ic) = zero
       net_biosphere_production(ic) = zero
+      net_biosphere_production_c13(ic) = zero
+      net_biosphere_production_c14(ic) = zero
       biological_n_fixation(ic) = zero
       delta_dens_ind(ic) = zero
       unit_transpiration(ic) = zero
     END DO
     !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO i_soil = 1, nsoil_sb
+      DO ic = 1, nc
+        delta_root_fraction_sl(ic, i_soil) = zero
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
 
   END SUBROUTINE reset_veg_fluxes
 
@@ -257,15 +324,16 @@ CONTAINS
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
+    dsl4jsb_Use_processes A2L_, Q_ASSIMI_, VEG_, Q_PHENO_, HYDRO_, SSE_
     !------------------------------------------------------------------------------------------------------ !
-    dsl4jsb_Use_processes A2L_, Q_ASSIMI_, VEG_, Q_PHENO_, SPQ_
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(Q_ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -297,7 +365,8 @@ CONTAINS
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: t_air
@@ -420,10 +489,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_dacc_cl
-    ! SPQ_ 2D
-    dsl4jsb_Real2D_onChunk      :: transpiration
-    dsl4jsb_Real2D_onChunk      :: w_soil_root
+    ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_fc
+    dsl4jsb_Real2D_onChunk      :: wtr_rootzone
+    dsl4jsb_Real2D_onChunk      :: transpiration
+    ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -449,7 +519,8 @@ CONTAINS
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -576,11 +647,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_dacc_cl)
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onChunk(SPQ_, transpiration)
-    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root)
-    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_fc)
-    dsl4jsb_Get_var3D_onChunk(SPQ_, t_soil_sl)
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_fc)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, transpiration)
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                      ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     lctlib_tau_mycorrhiza = dsl4jsb_Lctlib_param(tau_mycorrhiza)
@@ -851,7 +923,7 @@ CONTAINS
     DO ic = 1, nc
       ! avoid division by zero
       IF (w_soil_root_fc(ic) > eps8) THEN
-        hlp_r = w_soil_root(ic) / w_soil_root_fc(ic)
+        hlp_r = wtr_rootzone(ic) / w_soil_root_fc(ic)
       ELSE
         hlp_r = 0._wp
       END IF
@@ -1028,12 +1100,12 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, SB_, SPQ_, L2A_
+    USE mo_jsb_process_class,     ONLY: VEG_, SB_, HYDRO_, L2A_
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(L2A_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(SB_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -1042,14 +1114,14 @@ CONTAINS
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
     REAL(wp)                          :: dtime                  !< timestep length
-    REAL(wp), DIMENSION(options%nc)   :: new_total_c            !< helper variable
+    REAL(wp), DIMENSION(options%nc)   :: q_total_c_new          !< helper variable
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':test_carbon_conservation'
     ! ----------------------------------------------------------------------------------------------------- !
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(L2A_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(SB_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real2D_onChunk :: veg_pool_total_c
@@ -1075,7 +1147,7 @@ CONTAINS
     dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c)
@@ -1083,16 +1155,19 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(L2A_, q_c_conservation_test)
     dsl4jsb_Get_var2D_onChunk(L2A_, q_total_c)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_pool_total_c)
-    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
     ! ----------------------------------------------------------------------------------------------------- !
-    new_total_c(:) = veg_pool_total_c(:) + SUM(sb_pool_total_c(:,:) * soil_depth_sl(:,:), DIM = 2)
+
+    ! vegetation and soil carbon
+    q_total_c_new(:) = veg_pool_total_c(:) + SUM(sb_pool_total_c(:,:) * soil_depth_sl(:,:), DIM = 2)
+
     IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
       dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_c)
-      new_total_c(:) = new_total_c(:) + veg_products_total_c(:)
+      q_total_c_new(:) = q_total_c_new(:) + veg_products_total_c(:)
     END IF
 
-    q_c_conservation_test(:) = new_total_c - q_total_c - (net_biosphere_production * dtime / 1000000.0_wp)
-    q_total_c(:) = new_total_c(:)
+    q_c_conservation_test(:) = q_total_c_new - q_total_c - (net_biosphere_production * dtime / 1000000.0_wp)
+    q_total_c(:) = q_total_c_new(:)
 
   END SUBROUTINE test_carbon_conservation
 

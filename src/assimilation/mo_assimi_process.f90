@@ -14,7 +14,8 @@
 MODULE mo_assimi_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_jsb_control,  ONLY: acc_stream
+  USE mo_kind,         ONLY: wp
 
   IMPLICIT NONE
   PRIVATE
@@ -39,7 +40,7 @@ CONTAINS
     USE mo_jsb_math_constants, ONLY: deg2rad
 
     ! Arguments
-    REAL(wp), INTENT(in) :: &
+    REAL(wp), INTENT(inout) :: & ! inout needed for lumi GPU
       & declination,        & ! Solar Declination angle
       & canopy_bound_lai
     REAL(wp), INTENT(in), DIMENSION(:) :: &
@@ -58,7 +59,9 @@ CONTAINS
 
     nc = SIZE(lai)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    ! NB: present(declination) is required here, because defaul(present) doesn't affect scalars
+    !
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(declination) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(cos_zenith_noon, k12)
     DO ic=1,nc
 
@@ -493,7 +496,7 @@ CONTAINS
 
     nc = SIZE(apar_per_lai_cl)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
     !$ACC LOOP GANG VECTOR
     DO ic=1,nc
@@ -762,7 +765,7 @@ CONTAINS
 
     nc = SIZE(gross_assimilation_ca)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(growthRespiration, maintenanceRespiration)
     DO ic=1,nc
       maintenanceRespiration = dark_respiration_ca(ic) / f_aut_leaf
@@ -787,7 +790,7 @@ CONTAINS
     LOGICAL,  INTENT(in)    :: new_year           ! first time step in a year
     REAL(wp), INTENT(in)    :: delta_time         ! time step length [s]
     REAL(wp), INTENT(in)    :: NPP                ! potential NPP [mol(C)m-2(canopy)s-1]
-    REAL(wp), INTENT(inout) :: seconds_year       ! sum of seconds till new_year
+    REAL(wp), INTENT(in)    :: seconds_year       ! number of seconds in previous year
     REAL(wp), INTENT(inout) :: NPP_sum_year       !
     REAL(wp), INTENT(inout) :: NPP_mean_5year     ! NPP
 
@@ -806,10 +809,6 @@ CONTAINS
          NPP_mean_5year = (NPP_mean_5year * 4._wp + prev_year_mean_NPP) / 5._wp
       END IF
    ENDIF
-
-   ! count time in seconds that has passed till summing of NPP started
-   seconds_year = seconds_year + delta_time
-   IF (new_year) seconds_year = delta_time
 
   END SUBROUTINE calc_NPPbuf
 

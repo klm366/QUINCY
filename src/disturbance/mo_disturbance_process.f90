@@ -11,6 +11,10 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+
+!NEC$ options "-finline-functions"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
+
 MODULE mo_disturb_process
 #ifndef __NO_JSBACH__
 

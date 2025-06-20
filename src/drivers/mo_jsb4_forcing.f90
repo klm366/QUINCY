@@ -15,6 +15,10 @@
 !>
 !> current implementation only for daily, timestep or constant data
 !>
+
+!NEC$ options "-finline-functions"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
+
 MODULE mo_jsb4_forcing
 #ifndef __NO_JSBACH__
 
@@ -45,6 +49,7 @@ MODULE mo_jsb4_forcing
 
   USE mo_jsb_class,              ONLY: get_model
   USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
+  USE mo_atmland_constants,      ONLY: def_co2_deltaC13, def_co2_deltaC14
 
   IMPLICIT NONE
   PRIVATE
@@ -52,7 +57,7 @@ MODULE mo_jsb4_forcing
   PUBLIC :: get_standalone_driver, setup_forcing, init_forcing, finalize_external_forcing, &
     &       forcing_options
 
-  REAL(wp), SAVE :: delta_time, time_step_len
+  REAL(wp), SAVE :: delta_time
   INTEGER,  SAVE :: time_steps_per_day
 
   LOGICAL, SAVE :: lstart, lresume
@@ -104,18 +109,15 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: longwave_varname = 'longwave'
   CHARACTER(len=*), PARAMETER :: CO2_varname = 'CO2'
   CHARACTER(len=*), PARAMETER :: wspeed_varname = 'wspeed'
-  ! ... and deposition for QUINCY
-  CHARACTER(len=*), PARAMETER :: nhxdep_varname = 'NHx_deposition'
-  CHARACTER(len=*), PARAMETER :: noydep_varname = 'NOy_deposition'
-  CHARACTER(len=*), PARAMETER :: pdep_varname = 'pdep'
-
+  ! ... c13 and c14 for QUINCY
+  CHARACTER(len=*), PARAMETER :: C13_varname = 'C13'
+  CHARACTER(len=*), PARAMETER :: C14_varname = 'C14'
   ! expected units in forcing files (units of precipitation and co2 are specified in the namelist parameters)
   CHARACTER(len=*), PARAMETER :: exp_unit_temperature = 'degC'
   CHARACTER(len=*), PARAMETER :: exp_unit_radiation = 'W/m2'
   CHARACTER(len=*), PARAMETER :: exp_unit_qair = 'g/g'
   CHARACTER(len=*), PARAMETER :: exp_unit_wspeed = 'm/s'
   CHARACTER(len=*), PARAMETER :: unit_kg_m2_s = 'kg/m2/s'
-  CHARACTER(len=*), PARAMETER :: exp_unit_deposition = unit_kg_m2_s
   CHARACTER(len=*), PARAMETER :: unit_precip_mm_day = 'mm/day'
   CHARACTER(len=*), PARAMETER :: unspecified_exp_unit = ''
 
@@ -195,9 +197,9 @@ MODULE mo_jsb4_forcing
      TYPE(input_variable_type) :: rel_humidity  !! relative humidity [%]
      TYPE(input_variable_type) :: qair          !! specific humidity [kg/kg]
      ! ... required for Quincy
-     TYPE(input_variable_type) :: nhx_dep       !! NHx deposition (dry+wet) [kg/m2/s]
-     TYPE(input_variable_type) :: noy_dep       !! NOy deposition (dry+wet) [kg/m2/s]
-     TYPE(input_variable_type) :: p_dep         !! P deposition [kg/m2/s]
+     TYPE(input_variable_type) :: C13_concentr  !! relative difference from the standard ratio
+     TYPE(input_variable_type) :: C14_concentr  !! relative difference from the standard ratio
+
   END TYPE forcing_input_type
   TYPE(forcing_input_type), ALLOCATABLE, SAVE :: forcing_input(:)
 
@@ -221,9 +223,7 @@ CONTAINS
     & CO2_air,                                                                             &  ! out
     & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down,           &
     & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf,                        &
-    & nhx_deposition, noy_deposition, nhx_n15_deposition, noy_n15_deposition,              & ! out optional
-    & p_deposition                                                                         &
-    & )
+    & co2_air_dc13, co2_air_Dc14                                                           )
 
     INTEGER,  INTENT(IN)  :: model_id
     INTEGER,  INTENT(IN)  :: model_scheme
@@ -253,11 +253,8 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: swpar_srf_down(:,:)
     REAL(wp), INTENT(OUT) :: fract_par_diffuse(:,:)
     REAL(wp), INTENT(OUT) :: press_srf(:,:)
-    REAL(wp), INTENT(OUT), OPTIONAL :: nhx_deposition(:,:)
-    REAL(wp), INTENT(OUT), OPTIONAL :: noy_deposition(:,:)
-    REAL(wp), INTENT(OUT), OPTIONAL :: nhx_n15_deposition(:,:)
-    REAL(wp), INTENT(OUT), OPTIONAL :: noy_n15_deposition(:,:)
-    REAL(wp), INTENT(OUT), OPTIONAL :: p_deposition(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: co2_air_dc13(:,:)
+    REAL(wp), INTENT(OUT), OPTIONAL :: co2_air_Dc14(:,:)
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)              :: hlp_r
     INTEGER               :: nproma, iblk, nblks, ics, ice, ic, it
@@ -274,15 +271,15 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: help2(:,:)
     REAL(wp), ALLOCATABLE :: tmp(:,:)
     REAL(wp) :: argMin, argMax
-    LOGICAL  :: use_quincy, read_deposition
+    LOGICAL  :: use_quincy, force_c_isotopes
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_standalone_driver'
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(model_id)
-    read_deposition = .FALSE.
+    force_c_isotopes = .FALSE.
 #ifndef __NO_QUINCY__
-    read_deposition = (model%config%qmodel_id /= QCANOPY)
+    force_c_isotopes = (model%config%force_c_isotopes)
 #endif
     lstart  = is_time_experiment_start(current_datetime)
     lresume = is_time_restart(current_datetime)
@@ -324,19 +321,16 @@ CONTAINS
 !$OMP END PARALLEL DO
 
     IF (use_quincy) THEN
-     IF ((.NOT. PRESENT(nhx_deposition)) .OR. (.NOT. PRESENT(noy_deposition)) .OR. (.NOT. PRESENT(p_deposition)) ) THEN
-      CALL finish(routine, 'Wrong usage: all deposition vars are expected when running quincy!')
+     IF ((.NOT. PRESENT(co2_air_dc13)) .OR. (.NOT. PRESENT(co2_air_Dc14))) THEN
+      CALL finish(routine, 'Wrong usage: C isotopes are currently expected as arguments when running quincy!')
      END IF
 !$OMP PARALLEL DO PRIVATE(iblk, ic)
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG VECTOR COLLAPSE(2)
       DO iblk = 1, nblks
         DO ic = 1, nproma
-          nhx_deposition(ic, iblk)     = 0._wp
-          noy_deposition(ic, iblk)     = 0._wp
-          nhx_n15_deposition(ic, iblk) = 0._wp
-          noy_n15_deposition(ic, iblk) = 0._wp
-          p_deposition(ic, iblk)       = 0._wp
+          co2_air_dc13(ic, iblk)       = 0._wp
+          co2_air_Dc14(ic, iblk)       = 0._wp
         END DO
       END DO
       !$ACC END PARALLEL
@@ -759,50 +753,31 @@ CONTAINS
 !$OMP END PARALLEL DO
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 9.0 N & P deposition
+    !> 9.0 read isotopes
     !>
     SELECT CASE (model_scheme)
     CASE (MODEL_QUINCY)
-      IF (read_deposition) THEN
+      IF (force_c_isotopes) THEN
         CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
-          & forcing_input(model_id)%nhx_dep, nhx_deposition)
+          & forcing_input(model_id)%C13_concentr, co2_air_dc13)
         CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
-          & forcing_input(model_id)%noy_dep, noy_deposition)
-        CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
-          & forcing_input(model_id)%p_dep, p_deposition)
-        !$ACC UPDATE DEVICE(nhx_deposition, noy_deposition, p_deposition) ASYNC(1)
-
-        ! Convert from kg/m2/s -> mumol/m2/s
-        ! -- This unit should have been tested above if specified correctly using expectedUnit
-        IF(.NOT. (forcing_input(model_id)%nhx_dep%expectedUnit == unit_kg_m2_s)         &
-            & .OR. .NOT. (forcing_input(model_id)%noy_dep%expectedUnit == unit_kg_m2_s) &
-            & .OR. .NOT. (forcing_input(model_id)%p_dep%expectedUnit == unit_kg_m2_s)) THEN
-          WRITE (message_text,*) 'Deposition should be read using the unit "' //TRIM(unit_kg_m2_s)                    &
-            & //'" - a specified expected unit does not match ("'//TRIM(forcing_input(model_id)%nhx_dep%expectedUnit) &
-            & //'","'//TRIM(forcing_input(model_id)%noy_dep%expectedUnit)                                             &
-            & //'","'//TRIM(forcing_input(model_id)%p_dep%expectedUnit)//'").'
-          CALL finish(TRIM(routine), message_text)
-        ENDIF
-
+          & forcing_input(model_id)%C14_concentr, co2_air_Dc14)
+        !$ACC UPDATE DEVICE(co2_air_dc13, co2_air_Dc14) ASYNC(1)
+      ELSE
 !$OMP PARALLEL DO PRIVATE(ic, iblk)
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
           DO ic = 1, nproma
-            ! -- 1 kg/m2/s = 1 * 1000 / molar_mass_N / 1e-06 [mu mol/m2/s]
-            nhx_deposition(ic, iblk) = nhx_deposition(ic, iblk) * 1000._wp / molar_mass_N / 1.e-6_wp
-            noy_deposition(ic, iblk) = noy_deposition(ic, iblk) * 1000._wp / molar_mass_N / 1.e-6_wp
-            p_deposition  (ic, iblk) = p_deposition  (ic, iblk) * 1000._wp / molar_mass_P / 1.e-6_wp
-
-            ! SZ: NHX_deposition_N15 = NOY_deposition_N15 = NOY_deposition f(delta_n15=0.0)
-            nhx_n15_deposition(ic, iblk) = nhx_deposition(ic, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-            noy_n15_deposition(ic, iblk) = noy_deposition(ic, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+            ! dC13
+            co2_air_dc13(ic, iblk) = def_co2_deltaC13
+            ! dC14
+            co2_air_Dc14(ic, iblk) = def_co2_deltaC14
           END DO
         END DO
         !$ACC END PARALLEL LOOP
 !$OMP END PARALLEL DO
-      END IF ! read_deposition (i.e. if quincy scheme /= canopy)
+      END IF ! read isotopes
     END SELECT
-
     ! ----------------------------------------------------------------------------------------------------- !
     !> 10.0 deallocate local variables
     !>
@@ -843,14 +818,14 @@ CONTAINS
   !>
   !> Initialize and configure reading the forcing data (read namelist, set options...)
   !>
-  SUBROUTINE init_forcing(model_id, namelist_filename, dtime, steplen)
+  SUBROUTINE init_forcing(model_id, namelist_filename, dtime)
 
     USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
     USE mo_jsb_io_netcdf_iface, ONLY: t_input_file, netcdf_open_input
 
     INTEGER,  INTENT(in) :: model_id
     CHARACTER(len=*), INTENT(in) :: namelist_filename
-    REAL(wp), INTENT(in) :: dtime, steplen
+    REAL(wp), INTENT(in) :: dtime
 
     TYPE(t_input_file) :: input_file
 
@@ -915,12 +890,16 @@ CONTAINS
     REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
 
-    CHARACTER(NF90_MAX_NAME) :: forcing_dep_file_prefix        !! Prefix for files with NHx, NOy and P deposition data
-    CHARACTER(len=128)     :: forcing_dep_frequ                !! Frequency of deposition data (DAILY/CONST)
-    REAL(wp)               :: forcing_nhx_dep_const            !! Constant value for NHx deposition
-    REAL(wp)               :: forcing_noy_dep_const            !! Constant value for NOy deposition
-    REAL(wp)               :: forcing_p_dep_const              !! Constant value for P deposition
-    CHARACTER(len=128)     :: forcing_dep_unit                 !! Expected unit of deposition input
+    CHARACTER(NF90_MAX_NAME) :: forcing_c13_file_prefix        !! Prefix for files with dc13
+    CHARACTER(len=128)     :: forcing_c13_frequ                !! Frequency of dc13 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
+    REAL(wp)               :: forcing_c13_const_c13            !! Constant value for dc13
+    REAL(wp)               :: forcing_c13_ocean                !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_c13_unit                 !! Unit of dc13 input
+    CHARACTER(NF90_MAX_NAME) :: forcing_c14_file_prefix        !! Prefix for files with Dc14 data
+    CHARACTER(len=128)     :: forcing_c14_frequ                !! Frequency of Dc14 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
+    REAL(wp)               :: forcing_c14_const_c14            !! Constant value for Dc14
+    REAL(wp)               :: forcing_c14_ocean                !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_c14_unit                 !! Unit of Dc14 input
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
@@ -935,8 +914,9 @@ CONTAINS
       & forcing_co2_file_prefix, forcing_co2_frequ, forcing_co2_const_co2, forcing_co2_ocean, forcing_co2_unit,               &
       & forcing_wind_file_prefix, forcing_wind_frequ, forcing_wind_const_wspeed, forcing_wind_ocean, forcing_wind_unit,       &
       & forcing_qair_file_prefix, forcing_qair_frequ, forcing_qair_type, forcing_qair_const_rh, forcing_qair_ocean,           &
-      & forcing_qair_unit, forcing_dep_file_prefix, forcing_dep_frequ, forcing_nhx_dep_const,                                 &
-      & forcing_noy_dep_const, forcing_p_dep_const, forcing_dep_unit
+      & forcing_qair_unit,                                                                                                    &
+      & forcing_c13_file_prefix, forcing_c13_frequ, forcing_c13_const_c13, forcing_c13_ocean, forcing_c13_unit,               &
+      & forcing_c14_file_prefix, forcing_c14_frequ, forcing_c14_const_c14, forcing_c14_ocean, forcing_c14_unit
 
     TYPE(t_jsb_model), POINTER :: model
     INTEGER:: nml_handler, read_status, f_unit
@@ -944,7 +924,6 @@ CONTAINS
     !------------------------------------------------------------------------------------
     model => Get_model(model_id)
     delta_time    = dtime
-    time_step_len = steplen
     time_steps_per_day = 86400/INT(delta_time)
     ! Assertion: delta_time needs to be smaller or equal 86400
     IF ((delta_time > 86400._wp)) CALL finish(TRIM(routine), &
@@ -1006,18 +985,18 @@ CONTAINS
       forcing_qair_ocean = 1.0e-05
       forcing_qair_unit = exp_unit_qair
 
-      ! N and P deposition required for QUINCY
-      forcing_dep_file_prefix = 'deposition_'
-      forcing_dep_frequ       = 'DAILY' ! 'CONST'
-      ! SZ: "background N deposition is 2 kg N / ha / yr = 6.3419e-12 kg / m2 / s (2/365/24/3600/10000)
-      !      the background N deposition is the sum of NHx and NOy, therefore "/ 2._wp"
-      forcing_nhx_dep_const   = 6.3419e-12_wp / 2._wp
-      forcing_noy_dep_const   = 6.3419e-12_wp / 2._wp
-      ! SZ: "Default P deposition is assumed to be stoichmetrically balanced (which would be higher than typical background values.)
-      !      Thus, total N deposition to total P deposition = 14 g N/ g P -> 14 / molar_mass_N * molar_mass_P"
-      !      (Sterner & Elser, Ecological Stoichmetry, 2002, Princeton University Press)
-      forcing_p_dep_const     = 6.3419e-12 / (14.0_wp / molar_mass_N * molar_mass_P)
-      forcing_dep_unit        = exp_unit_deposition
+      ! c13 and c14 isotopes required for QUINCY
+      forcing_c13_file_prefix = 'climate_'
+      forcing_c13_frequ = 'DAILY'
+      forcing_c13_const_c13 = -7.5e+0_wp
+      forcing_c13_unit = unspecified_exp_unit
+      forcing_c13_ocean = -7.5e+0_wp
+
+      forcing_c14_file_prefix = 'climate_'
+      forcing_c14_frequ = 'DAILY'
+      forcing_c14_const_c14 = -1.49e+1_wp
+      forcing_c14_unit = unspecified_exp_unit
+      forcing_c14_ocean = -1.49e+1_wp
 
       ! ----- read the namelist
 
@@ -1106,11 +1085,28 @@ CONTAINS
           CALL message(TRIM(routine),'CO2 forcing set to a globally constant value')
         ELSE
           CALL finish(TRIM(routine),'Dimensions in GHG file differ from expectations')
-        ENDIF
+        END IF
         CALL input_file%Close()
-      ENDIF
-    ENDIF
-
+      END IF
+      IF (frequency_key_to_constant_val(C13_varname, forcing_c13_frequ) == GHG_SCENARIO_) THEN
+        input_file =  netcdf_open_input(TRIM(forcing_c13_file_prefix))
+        IF (input_file%get_dimlen('lon') == 1 .AND. input_file%get_dimlen('lat') == 1) THEN
+          CALL message(TRIM(routine),'C13 forcing set to a globally constant value')
+        ELSE
+          CALL finish(TRIM(routine),'Dimensions in GHG file differ from expectations')
+        END IF
+        CALL input_file%Close()
+      END IF
+      IF (frequency_key_to_constant_val(C14_varname, forcing_c14_frequ) == GHG_SCENARIO_) THEN
+        input_file =  netcdf_open_input(TRIM(forcing_c14_file_prefix))
+        IF (input_file%get_dimlen('lon') == 1 .AND. input_file%get_dimlen('lat') == 1) THEN
+          CALL message(TRIM(routine),'C14 forcing set to a globally constant value')
+        ELSE
+          CALL finish(TRIM(routine),'Dimensions in GHG file differ from expectations')
+        END IF
+        CALL input_file%Close()
+      END IF
+    END IF
     ! ----- broadcast information
     IF (my_process_is_mpi_parallel()) THEN
       ! forcing options
@@ -1157,6 +1153,18 @@ CONTAINS
       CALL p_bcast(forcing_co2_ocean, p_io, mpi_comm)
       CALL p_bcast(forcing_co2_unit, p_io, mpi_comm)
 
+      CALL p_bcast(forcing_c13_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_c13_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_c13_const_c13, p_io, mpi_comm)
+      CALL p_bcast(forcing_c13_ocean, p_io, mpi_comm)
+      CALL p_bcast(forcing_c13_unit, p_io, mpi_comm)
+
+      CALL p_bcast(forcing_c14_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_c14_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_c14_const_c14, p_io, mpi_comm)
+      CALL p_bcast(forcing_c14_ocean, p_io, mpi_comm)
+      CALL p_bcast(forcing_c14_unit, p_io, mpi_comm)
+
       CALL p_bcast(forcing_wind_file_prefix, p_io, mpi_comm)
       CALL p_bcast(forcing_wind_frequ, p_io, mpi_comm)
       CALL p_bcast(forcing_wind_const_wspeed, p_io, mpi_comm)
@@ -1168,13 +1176,6 @@ CONTAINS
       CALL p_bcast(forcing_qair_const_rh, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_ocean, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_unit, p_io, mpi_comm)
-
-      CALL p_bcast(forcing_dep_file_prefix, p_io, mpi_comm)
-      CALL p_bcast(forcing_dep_frequ, p_io, mpi_comm)
-      CALL p_bcast(forcing_nhx_dep_const, p_io, mpi_comm)
-      CALL p_bcast(forcing_noy_dep_const, p_io, mpi_comm)
-      CALL p_bcast(forcing_p_dep_const, p_io, mpi_comm)
-      CALL p_bcast(forcing_dep_unit, p_io, mpi_comm)
     ENDIF
 
     ! ----- init forcing_input
@@ -1216,15 +1217,13 @@ CONTAINS
     ! --- Wind
     CALL init_forcing_input_variable(wspeed_varname, forcing_wind_frequ, forcing_wind_ocean, &
       & forcing_wind_file_prefix, forcing_wind_unit, forcing_wind_const_wspeed, forcing_input(model_id)%wind_speed)
-    ! --- deposition variables required for quincy
+    ! --- isotope variables required for quincy
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
-      CALL init_forcing_input_variable(nhxdep_varname, forcing_dep_frequ, forcing_nhx_dep_const, &
-        & forcing_dep_file_prefix, forcing_dep_unit, forcing_nhx_dep_const, forcing_input(model_id)%nhx_dep)
-      CALL init_forcing_input_variable(noydep_varname, forcing_dep_frequ, forcing_noy_dep_const, &
-        & forcing_dep_file_prefix, forcing_dep_unit, forcing_noy_dep_const, forcing_input(model_id)%noy_dep)
-      CALL init_forcing_input_variable(pdep_varname, forcing_dep_frequ, forcing_p_dep_const, &
-        & forcing_dep_file_prefix, forcing_dep_unit, forcing_p_dep_const, forcing_input(model_id)%p_dep)
+      CALL init_forcing_input_variable(C13_varname, forcing_c13_frequ, forcing_c13_ocean, &
+        & forcing_c13_file_prefix, forcing_c13_unit, forcing_c13_const_c13, forcing_input(model_id)%C13_concentr)
+      CALL init_forcing_input_variable(C14_varname, forcing_c14_frequ, forcing_c14_ocean, &
+        & forcing_c14_file_prefix, forcing_c14_unit, forcing_c14_const_c14, forcing_input(model_id)%C14_concentr)
     END SELECT
 
   END SUBROUTINE init_forcing
@@ -1308,8 +1307,8 @@ CONTAINS
         & int(86400._wp/forcing_options(model_id)%forcing_steps_per_day) + 1 !+1 because 00:00/X => 0; and 1 based vector
     END IF
 
-    ! ----- CO2 ghg_scenario exception: in case of ghg_scenario a single file is used, which contains one CO2 value per year
-    IF ((TRIM(forcing_input_variable%variable_name) == CO2_varname) .AND. (frequency == GHG_SCENARIO_)) THEN
+    ! ----- ghg_scenario exception: in case of ghg_scenario a single file is used, which contains one value per year
+    IF (frequency == GHG_SCENARIO_) THEN
       IF (lstart .OR. lresume) THEN
         IF (my_process_is_stdio()) THEN
         ! in case of ghg_scenario the forcing_input_variable%file_name_prefix is expected to contain the whole filename
@@ -1345,8 +1344,9 @@ CONTAINS
 
           forcing_input_variable%input_file = &
             & jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)))
-          ! Read globally constant CO2 value
-          CALL nf(nf90_inq_varid(forcing_input_variable%input_file%file_id, CO2_varname, nc_var_id), routine)
+          ! Read globally constant value
+          CALL nf(nf90_inq_varid(forcing_input_variable%input_file%file_id, &
+            & TRIM(forcing_input_variable%variable_name), nc_var_id), routine)
           CALL nf(nf90_get_var(forcing_input_variable%input_file%file_id, nc_var_id, hlp_r, &
             & (/1,1,currentTimeStep/), (/1,1,1/)), routine)
           CALL forcing_input_variable%input_file%Close()
@@ -1356,15 +1356,14 @@ CONTAINS
           CALL p_bcast(hlp_r, p_io, mpi_comm)
         ENDIF
         forcing_input_variable%data_read(:,:,1) = hlp_r(1)
-        WRITE (message_text,*) 'Global GHG scenario CO2 value: ', &
+        WRITE (message_text,*) 'Global GHG scenario value: ', &
           & forcing_input_variable%data_read(1,1,1)
         CALL message('----- ', message_text)
-
       ENDIF
 
       current_forcing_array(:,:) = forcing_input_variable%data_read(:,:,1)
       RETURN
-    ENDIF ! forcing_input_variable%variable_name == CO2_varname .AND. frequency == GHG_SCENARIO_
+    END IF ! frequency == GHG_SCENARIO_
 
     ! ----- For all other variables and frequencies:
     !Assertion: Rest of the routine only implemented for daily, subdaily or timestep frequency
@@ -1555,8 +1554,9 @@ CONTAINS
     CASE("timestep")
       frequency_key_to_constant_val = TIMESTEP_
     CASE default
-      ! Test for ghg scenario exception for CO2
-      IF ((variable_name == CO2_varname) .AND. (TRIM(tolower(forcing_frequ_keyword)) == "ghg_scenario")) THEN
+      ! Test for ghg scenario exception for CO2, C13 and C14
+      IF (((variable_name == CO2_varname) .OR. (variable_name == C13_varname) .OR. &
+          & (variable_name == C14_varname)) .AND. (TRIM(tolower(forcing_frequ_keyword)) == "ghg_scenario")) THEN
         frequency_key_to_constant_val = GHG_SCENARIO_
       ELSE
         CALL finish(TRIM(routine), 'Please specify a valid reading frequency for the variable '//TRIM(variable_name))
@@ -1702,11 +1702,9 @@ CONTAINS
 
       IF (forcing_input(jg)%CO2_concentr%input_file%is_open) CALL forcing_input(jg)%CO2_concentr%input_file%Close()
 
-      IF (forcing_input(jg)%nhx_dep%input_file%is_open) CALL forcing_input(jg)%nhx_dep%input_file%Close()
+      IF (forcing_input(jg)%C13_concentr%input_file%is_open) CALL forcing_input(jg)%C13_concentr%input_file%Close()
 
-      IF (forcing_input(jg)%noy_dep%input_file%is_open) CALL forcing_input(jg)%noy_dep%input_file%Close()
-
-      IF (forcing_input(jg)%p_dep%input_file%is_open) CALL forcing_input(jg)%p_dep%input_file%Close()
+      IF (forcing_input(jg)%C14_concentr%input_file%is_open) CALL forcing_input(jg)%C14_concentr%input_file%Close()
 
     END DO
 

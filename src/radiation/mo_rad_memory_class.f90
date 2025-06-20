@@ -20,15 +20,9 @@ MODULE mo_rad_memory_class
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
 
-#ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_processes SEB_, HYDRO_
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(HYDRO_)
-#endif
-#ifndef __NO_QUINCY__
-  dsl4jsb_Use_processes SPQ_
-  dsl4jsb_Use_config(SPQ_)
-#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -51,6 +45,8 @@ MODULE mo_rad_memory_class
                                  !< Note, alb_background is ONLY used for FUNCTION get_surface_albedo_simple
       & alb_vis,               & !< Albedo of the whole tile in the VIS (visible) range [unitless]
       & alb_nir,               & !< Albedo of the whole tile in the NIR (near-infrared) range [unitless]
+      & alb_vis_noon,          & !< Albedo of the whole tile in the VIS (visible) range at noon [unitless]
+      & alb_nir_noon,          & !< Albedo of the whole tile in the NIR (near-infrared) range at noon [unitless]
       & alb_vis_snow,          & !< Albedo of snow in the VIS range [unitless]
       & alb_nir_snow,          & !< Albedo of snow in the NIR range [unitless]
       & alb_vis_pond,          & !< Albedo of ponds in the VIS range [unitless]
@@ -72,6 +68,8 @@ MODULE mo_rad_memory_class
                                 !            regression to project the albedo when fapar=0 (LAI/Canopy =0) (for details see
                                 !            JSBACH3 documentation 4.1.1 or ask Thomas Raddatz).
       & alb_nir_soil,         & ! Same as alb_vis_soil but for NIR.
+      & alb_vis_soil_and_snow,& ! Soil albedo alb_vis_soil including snow
+      & alb_nir_soil_and_snow,& ! Soil albedo alb_nir_soil including snow
       ! R: Albedo of mineral soil is needed when Freya scheme is used. Not in the bc_lnd_phy.nc file yet!
       & alb_vis_mineralsoil,  & !< Albedo of soil without carbon or litter.
                                 !! from bc_land_phys.nc file, necessary when use_albedo_soil_scheme = .TRUE.
@@ -96,7 +94,7 @@ MODULE mo_rad_memory_class
                                 !< If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyNIR)
       & sky_view_fract,       & ! Fraction of bare ground below vegetation (without accounting for stems) that is "visible" for the sun
       & sky_view_fract_stem,  & ! Fraction of soil below vegetation which is (for the sun) covered by stems but not by LAI
-      & snow_age,             &
+      & snow_age,             & ! Factor used to calculate snow ageing [-]
       !
       & par,                  & ! sw_par_down from atmosphere in [W/m^2]
       & par_down_mol,         & ! Downward PAR flux in mol(photons)/(m^2 s) but only for current time step/"delta_time"
@@ -173,8 +171,8 @@ CONTAINS
   ! ======================================================================================================= !
   !> initialize memory (variables) for the process: radiation
   !>
-  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id)
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
+  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL, NONE
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -189,15 +187,11 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)            :: prefix
     CHARACTER(len=*),    INTENT(in)            :: suffix
     INTEGER,             INTENT(in)            :: lct_ids(:)
+    INTEGER,             INTENT(in)            :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)            :: model_id
 
-#ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(HYDRO_)
-#endif
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_config(SPQ_)
-#endif
 
     TYPE(t_jsb_model), POINTER  :: model                        !< model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        !< Horizontal grid
@@ -205,7 +199,6 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_spectral               !< Vertical grid used to display the sprectal bands of light
     INTEGER                     :: table                        !< ...
     LOGICAL                     :: l_ponds
-    LOGICAL                     :: l_ice_on_lakes_local         !< use for jsbach & quincy, as helper variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_memory'
 
@@ -229,19 +222,9 @@ CONTAINS
     vgrid_spectral => Get_vgrid('spectral_bands')
 #endif
 
-    SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-    CASE (MODEL_JSBACH)
-      dsl4jsb_Get_config(SEB_)
-      dsl4jsb_Get_config(HYDRO_)
-      l_ponds = dsl4jsb_Config(HYDRO_)%l_ponds
-#endif
-#ifndef __NO_QUINCY__
-    CASE (MODEL_QUINCY)
-      dsl4jsb_Get_config(SPQ_)
-      l_ponds = dsl4jsb_Config(SPQ_)%l_ponds
-#endif
-    END SELECT
+    dsl4jsb_Get_config(SEB_)
+    dsl4jsb_Get_config(HYDRO_)
+    l_ponds = dsl4jsb_Config(HYDRO_)%l_ponds
 
     CALL mem%Add_var( 'sw_srf_net', mem%sw_srf_net,                        &
       & hgrid, surface,                                                    &
@@ -434,9 +417,10 @@ CONTAINS
 
       CALL mem%Add_var( 'snow_age', mem%snow_age,                            &
         & hgrid, surface,                                                    &
-        & t_cf('snow_age', '', ''),                                          &
+        & t_cf('snow_age', '-', 'Factor used to calculate snow ageing'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL mem%Add_var( 'sky_view_fract', mem%sky_view_fract,                &
@@ -568,23 +552,7 @@ CONTAINS
         & output_level=MEDIUM,                                                &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
 
-      l_ice_on_lakes_local = .FALSE.
-      SELECT CASE (model%config%model_scheme)
-#ifndef __QUINCY_STANDALONE__
-      CASE (MODEL_JSBACH)
-        IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-          l_ice_on_lakes_local = .TRUE.
-        END IF
-#endif
-#ifndef __NO_QUINCY__
-      CASE (MODEL_QUINCY)
-        IF (dsl4jsb_Config(SPQ_)%l_ice_on_lakes) THEN
-          l_ice_on_lakes_local = .TRUE.
-        END IF
-#endif
-      END SELECT
-
-      IF (l_ice_on_lakes_local) THEN
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         CALL mem%Add_var( 'rad_net_lice', mem%rad_net_lice,                     &
           & hgrid, surface,                                                     &
           & t_cf('rad_net_lice', '', 'Net surface radiation over lake ice'),    &
@@ -608,6 +576,46 @@ CONTAINS
 #ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
+
+      ! Additional variables for QUINCY
+      CALL mem%Add_var( 'alb_vis_noon', mem%alb_vis_noon,                    &
+        & hgrid, surface,                                                    &
+        & t_cf('gridcell_surface_albedo_visible_at_noon', unitless, 'surface albedo in visible band at noon'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=FULL,                                                 &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var( 'alb_nir_noon', mem%alb_nir_noon,                    &
+        & hgrid, surface,                                                    &
+        & t_cf('gridcell_surface_albedo_nir_at_noon', unitless, 'surface albedo in NIR band at noon'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=FULL,                                                 &
+        & initval_r=0.0_wp )
+
+      ! Additional variables for soil
+      IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0 &
+          &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0)                               &
+          & ) THEN
+
+        CALL mem%Add_var( 'alb_vis_soil_and_snow', mem%alb_vis_soil_and_snow,&
+          & hgrid, surface,                                                    &
+          & t_cf('soil_albedo_includes_snow', unitless, 'soil albedo in visible band including snow'),  &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & output_level=NONE,                                               &
+          & initval_r=0.0_wp )
+
+        CALL mem%Add_var( 'alb_nir_soil_and_snow', mem%alb_nir_soil_and_snow,  &
+          & hgrid, surface,                                                    &
+          & t_cf('soil_albedo_includes_snow', unitless, 'soil albedo in NIR band including snow'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & output_level=NONE,                                               &
+          & initval_r=0.0_wp )
+      END IF
+
       ! Additional variables for QUINCY vegetation
       IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
         & ) THEN

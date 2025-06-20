@@ -20,7 +20,7 @@ MODULE mo_seb_interface
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_jsb_control,     ONLY: debug_on
+  USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_jsb_time,        ONLY: is_time_experiment_start
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish, message_text
@@ -47,7 +47,14 @@ MODULE mo_seb_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: Register_seb_tasks, global_seb_diagnostics, seb_check_temperature_range
+  PUBLIC :: Register_seb_tasks, seb_check_temperature_range
+#ifndef __QUINCY_STANDALONE__
+  PUBLIC :: global_seb_diagnostics
+#endif
+#ifdef __QUINCY_STANDALONE__
+  ! USEd by the mo_qs_model_interface
+  PUBLIC :: update_surface_energy, update_snowmelt_correction, update_asselin, update_surface_fluxes
+#endif
 
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy
   CONTAINS
@@ -249,6 +256,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(SEB_, t,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_old,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt,      weighted_by_fract)
@@ -270,6 +279,8 @@ CONTAINS
       END IF
     END IF
 
+    CALL weighted_by_fract%EndAggregate()
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_surface_energy
@@ -277,7 +288,7 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !> Implementation of "update" for task "snowmelt_correction"
-  !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting,
+  !! Task "snowmelt_correction" applies a correction for t_srf due to snow and ice melting,
   !! surface water freezing and thawing and soil moisture freezing and thawing.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -301,6 +312,8 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
+    dsl4jsb_Real2D_onChunk :: t_srf
+    dsl4jsb_Real2D_onChunk :: dt_sk_dt_srf
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real2D_onChunk :: pond_freeze
     dsl4jsb_Real2D_onChunk :: pond_melt
@@ -312,7 +325,7 @@ CONTAINS
 
 
     INTEGER  :: iblk , ics, ice, nc, ic
-    REAL(wp) :: dtime, dz1
+    REAL(wp) :: dtime, dz1, delta_temp
 
     LOGICAL :: &
       & l_freeze_config, &
@@ -355,6 +368,8 @@ CONTAINS
     ELSE IF (tile%contains_soil .OR. tile%is_glacier) THEN
 
       dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)         ! inout
+      dsl4jsb_Get_var2D_onChunk(SEB_,      t_srf)            ! inout
+      dsl4jsb_Get_var2D_onChunk(SEB_,      dt_sk_dt_srf)     ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)         ! in
       dsl4jsb_Get_var2D_onChunk(SSE_,      hcap_grnd_old)    ! in
       IF (dsl4jsb_Config(SSE_)%l_snow) THEN
@@ -369,37 +384,38 @@ CONTAINS
       END IF
 
       IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
-        !$ACC DATA CREATE(heat_cap) ASYNC(1)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC DATA CREATE(heat_cap) ASYNC(acc_stream)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(delta_temp)
         DO ic=1,nc
 
           ! Correction for snowmelt and pond melting/freezing
-          t_unfilt(ic) = t_unfilt(ic) - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
+          delta_temp = - snowmelt(ic)    * dtime * alf / hcap_grnd_old(ic)
           IF (.NOT. tile%is_glacier) THEN
-            t_unfilt(ic) = t_unfilt(ic) - pond_melt(ic)   * dtime * alf / hcap_grnd_old(ic)
-            t_unfilt(ic) = t_unfilt(ic) + pond_freeze(ic) * dtime * alf / hcap_grnd_old(ic)
+            delta_temp = delta_temp - pond_melt(ic)   * dtime * alf / hcap_grnd_old(ic)
+            delta_temp = delta_temp + pond_freeze(ic) * dtime * alf / hcap_grnd_old(ic)
 
             IF (l_freeze_config) THEN
               heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
               IF (l_snow_config) THEN
                 IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
                   ! Correction for melting of ice in soil layers
-                  t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-                  t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                  delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                  delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
                 END IF
               ELSE   ! No snow layers present
                 IF (heat_cap(ic) > 0._wp) THEN
                   ! Correction for melting of ice in soil layers
-                  t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
-                  t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                  delta_temp = delta_temp - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                  delta_temp = delta_temp + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
                 END IF
               END IF
             END IF
           END IF
 
+          t_unfilt(ic) = t_unfilt(ic) + dt_sk_dt_srf(ic) * delta_temp
+          t_srf(ic) = t_srf(ic) + delta_temp
         END DO
         !$ACC END PARALLEL LOOP
-        !$ACC WAIT(1)
         !$ACC END DATA
       END IF
 
@@ -442,7 +458,11 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt, weighted_by_fract)
+    CALL weighted_by_fract%BeginAggregate()
+
+    dsl4jsb_Aggregate_onChunk(SEB_, t_srf, weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -516,11 +536,15 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(SEB_, t,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_filt, weighted_by_fract)
     IF (model%config%use_tmx) THEN
       dsl4jsb_Aggregate_onChunk(SEB_, t_rad4, weighted_by_fract)
     END IF
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -595,6 +619,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx,      weighted_by_fract)
 
@@ -606,6 +632,8 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_ice,    weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
     END IF
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -648,13 +676,16 @@ CONTAINS
     lon   => grid%lon(:,:)
 
     !vg no_omp_thread = Get_omp_thread()
-
+#ifndef __QUINCY_STANDALONE__
     CALL model%Get_top_tile(tile)
     DO WHILE (ASSOCIATED(tile))
-      IF (tile%visited(no_omp_thread) .OR. .NOT. tile%Is_process_active(SEB_)) THEN
+      IF ((tile%Has_children() .AND. .NOT. tile%visited(no_omp_thread)) .OR. .NOT. tile%Is_process_active(SEB_)) THEN
         CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
+#endif
+
+      ! We're on a leaf or on the way up.
 
       dsl4jsb_Get_memory(SEB_)
       dsl4jsb_Get_var2D_onDomain(SEB_, t)
@@ -673,10 +704,10 @@ CONTAINS
           END DO
         END DO
       END IF
-
+#ifndef __QUINCY_STANDALONE__
       CALL model%Goto_next_tile(tile)
     ENDDO
-
+#endif
   END SUBROUTINE seb_check_temperature_range
 
   !-----------------------------------------------------------------------------------------------------
@@ -685,6 +716,7 @@ CONTAINS
   !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
   !!
   !-----------------------------------------------------------------------------------------------------
+#ifndef __QUINCY_STANDALONE__
   SUBROUTINE global_seb_diagnostics(tile)
 
     USE mo_sync,                  ONLY: global_sum_array
@@ -754,6 +786,7 @@ CONTAINS
     END IF
 
   END SUBROUTINE global_seb_diagnostics
+#endif
 
   !
   ! ================================================================================================================================

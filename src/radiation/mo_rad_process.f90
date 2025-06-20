@@ -14,7 +14,8 @@
 MODULE mo_rad_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_jsb_control, ONLY: acc_stream
+  USE mo_kind,        ONLY: wp
 
   IMPLICIT NONE
   PRIVATE
@@ -22,9 +23,9 @@ MODULE mo_rad_process
   PUBLIC ::                        &
     & calc_radiation_surface_net,  &
     & calc_par,                    &
-    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation,              &
+    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation, calc_snow_age,                 &
     & calc_soil_albedo, calc_pond_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos_of_vegtile, &
-    & get_surface_albedo_simple
+    & get_surface_albedo_simple, get_litter_carbon, get_soil_carbon
 #ifndef __NO_QUINCY__
   PUBLIC :: calc_surface_radiation_quincy, calc_canopy_radiation_budget
 #endif
@@ -77,7 +78,7 @@ CONTAINS
 
     nc = SIZE(swvis_down)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(zswvis_net, zswnir_net, zsw_net, zlw_net)
     DO ic=1,nc
 
@@ -435,6 +436,51 @@ CONTAINS
 
   END SUBROUTINE calc_par
 
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Compute non-dimensional snow age
+  !!
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_snow_age( &
+    & dtime,                & ! in
+    & temperature_surface,  & ! in
+    & snow,                 & ! in
+    & fract_snow_soil,      & ! in
+    & snow_age              & ! inout
+    & )
+
+    !$ACC ROUTINE SEQ
+
+    USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
+
+    REAL(wp), INTENT(in)    :: dtime,               & !< model time step [s]
+      &                        temperature_surface, & !< surface temperature [K]
+      &                        snow,                & !< snowfall [kg m-2 s-1]
+      &                        fract_snow_soil        !< Fraction of snow covered ground [-]
+
+    REAL(wp), INTENT(inout) :: snow_age               !< non-dimensional age of snow
+
+    REAL(wp)                :: hlp1                   !< temporary variable
+
+    ! ---------------------------
+    ! Update snow age where ever there is snow on the ground
+    ! Snow age increases with time and temperatures closer to the melting point
+    ! It decreases with new snowfall or resets to zero in case all snow is melted
+
+    IF (fract_snow_soil > EPSILON(1.0_wp)) THEN
+      hlp1     = MIN(1._wp, EXP(5000._wp * ((1._wp / tmelt) - (1._wp / temperature_surface))))
+      snow_age = MAX(0.0_wp, (snow_age +                          &
+        & ((hlp1**10._wp + hlp1 + 0.3_wp) * dtime * 1.e-06_wp)) * &
+        & (1._wp - (snow * dtime * 0.5_wp)))
+    ELSE
+      snow_age = 0._wp
+    END IF
+
+  END SUBROUTINE calc_snow_age
+
+  !--------------------------------------------------------------------------------------------------------------------------------
   !
 #ifndef _OPENACC
   ELEMENTAL PURE &
@@ -606,10 +652,11 @@ CONTAINS
     & use_alb_mineralsoil_const, &
     & use_alb_soil_organic_int,  &
     & use_alb_soil_litter,       &
-    & c_ag_sum_1,                &
-    & c_bg_sum,                  &
+    & litter_carbon,             &
+    & soil_carbon,               &
     & SpecificLeafArea_C,        &
     & AlbedoLitterVIS,           &
+    & AlbedoLitterNIR,           &
     & alb_background,            &
     & alb_vis_mineralsoil,       & ! InOut
     & alb_nir_mineralsoil,       & ! InOut
@@ -630,11 +677,12 @@ CONTAINS
     INTEGER,          INTENT(in)  :: use_alb_soil_organic_int
     LOGICAL,          INTENT(in)  :: use_alb_soil_litter
     REAL(wp),         INTENT(in)  :: &
-      & c_ag_sum_1,         &
-      & c_bg_sum
+      & litter_carbon,               &  ! Amount of litter carbon [mol(C)/m2(canopy)], used with use_alb_soil_litter
+      & soil_carbon                     ! Amount of soil carbon [mol(C)/m2(canopy)], used with use_alb_soil_organic_C
     REAL(wp),         INTENT(in)  :: &
       & SpecificLeafArea_C, &
-      & AlbedoLitterVIS
+      & AlbedoLitterVIS,    &
+      & AlbedoLitterNIR
     REAL(wp),         INTENT(in)  :: &
       & alb_background
     REAL(wp),         INTENT(inout) :: &
@@ -686,11 +734,11 @@ CONTAINS
     !    However, the variable was also used inconsistent in the scheme and senseless for glacier.
 
     IF(use_alb_soil_organic_int .eq. 1) THEN ! linear
-      alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(c_bg_sum,Soil_C_min)
-      alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(c_bg_sum,Soil_C_min)
+      alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(soil_carbon,Soil_C_min)
+      alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(soil_carbon,Soil_C_min)
     ELSE IF(use_alb_soil_organic_int .eq. 2) THEN ! log
-      alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + c_bg_sum)),0.1_wp)
-      alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + c_bg_sum)),0.2_wp)
+      alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + soil_carbon)),0.1_wp)
+      alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + soil_carbon)),0.2_wp)
     ELSE
       alb_vis_soil_nolitter = alb_vis_mineralsoil ! R: This is Rainers approximation, because in JSBACH3
                                                   !    the result was set to albedo_desert_dry_vis,
@@ -705,8 +753,9 @@ CONTAINS
 
     ! albedo of litter on soil
     IF(use_alb_soil_litter) THEN
-      litter_area = c_ag_sum_1 * specificLeafArea_C
+      litter_area = litter_carbon * specificLeafArea_C
       alb_vis_litter = litter_area * AlbedoLitterVIS
+      alb_nir_litter = litter_area * AlbedoLitterNIR
 
       IF (litter_area <= EPSILON(1._wp)) THEN
         alb_vis_litter = 0.1_wp
@@ -1222,6 +1271,59 @@ CONTAINS
 
   END FUNCTION Has_minimal_radiation_1
 
+  ! ================================================================================================================== !
+  !>
+  !> Calculate the sums of below ground C pools - relevant for soil albedo schemes
+  !!
+  FUNCTION get_soil_carbon(c_acid_bg1, c_water_bg1, c_ethanol_bg1, c_nonsoluble_bg1,  &
+    &                      c_acid_bg2, c_water_bg2, c_ethanol_bg2, c_nonsoluble_bg2,  &
+    &                      c_humus_1, c_humus_2)     RESULT(soil_carbon)
+
+    !$ACC ROUTINE SEQ
+
+    REAL(wp), INTENT(in) :: &
+      & c_acid_bg1,         &
+      & c_water_bg1,        &
+      & c_ethanol_bg1,      &
+      & c_nonsoluble_bg1,   &
+      & c_acid_bg2,         &
+      & c_water_bg2,        &
+      & c_ethanol_bg2,      &
+      & c_nonsoluble_bg2,   &
+      & c_humus_1,          &
+      & c_humus_2
+
+    REAL(wp) :: soil_carbon  ! Amount of soil carbon relevant for soil albedo
+
+    soil_carbon =  c_acid_bg1 + c_water_bg1 + c_ethanol_bg1 + c_nonsoluble_bg1  &
+      &          + c_acid_bg2 + c_water_bg2 + c_ethanol_bg2 + c_nonsoluble_bg2  &
+      &          + c_humus_1  + c_humus_2
+
+  END FUNCTION get_soil_carbon
+
+  ! ================================================================================================================== !
+  !>
+  !> Calculate the sums of above ground green litter and green humus C pools - relevant for soil albedo schemes
+  !!
+  FUNCTION get_litter_carbon(c_acid_ag1, c_water_ag1, c_ethanol_ag1, c_nonsoluble_ag1,  &
+    &                        c_humus_1)     RESULT(ag_green_litter_carbon)
+
+    !$ACC ROUTINE SEQ
+
+    REAL(wp), INTENT(in) :: &
+      & c_acid_ag1,         &
+      & c_water_ag1,        &
+      & c_ethanol_ag1,      &
+      & c_nonsoluble_ag1,   &
+      & c_humus_1
+
+    REAL(wp) :: ag_green_litter_carbon  ! Amount of litter carbon relevant for soil albedo
+
+    ag_green_litter_carbon =  c_acid_ag1 + c_water_ag1 + c_ethanol_ag1 + c_nonsoluble_ag1  &
+      &                     + c_humus_1
+
+  END FUNCTION get_litter_carbon
+
 
   ! ======================================================================================================= !
   !>
@@ -1239,19 +1341,19 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, RAD_, SPQ_, VEG_
+    USE mo_jsb_process_class,     ONLY: A2L_, RAD_, HYDRO_, VEG_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
 
-    USE mo_spq_constants,         ONLY: w_snow_min
     USE mo_jsb_math_constants,    ONLY: eps8, eps1, seconds_per_day
     USE mo_jsb_control,           ONLY: debug_on
     USE mo_exception,             ONLY: message
+    USE mo_rad_constants,         ONLY: AlbedoCanopySnow_simple
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -1270,7 +1372,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! RAD_ 2D
@@ -1278,6 +1380,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: alb_nir_lnd
     dsl4jsb_Real2D_onChunk :: alb_vis_soil
     dsl4jsb_Real2D_onChunk :: alb_nir_soil
+    dsl4jsb_Real2D_onChunk :: alb_vis_soil_and_snow
+    dsl4jsb_Real2D_onChunk :: alb_nir_soil_and_snow
     dsl4jsb_Real2D_onChunk :: alb_vis_can
     dsl4jsb_Real2D_onChunk :: alb_nir_can
     dsl4jsb_Real2D_onChunk :: arad_vis_soil
@@ -1300,8 +1404,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
     dsl4jsb_Real2D_onChunk :: local_time_day_seconds
-    ! SPQ_ 3D
-    dsl4jsb_Real3D_onChunk :: w_snow_snl
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk :: fract_snow_can
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: sai
@@ -1333,7 +1437,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, fract_par_diffuse)        ! in
@@ -1347,6 +1451,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_lnd)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil)             ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil)             ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil_and_snow)    ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil_and_snow)    ! in
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_can)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_can)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_soil)            ! out
@@ -1364,8 +1470,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_nir_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_nir_cl)      ! out
     ! ---------------------------
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_snow_snl)               ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_can)         ! in
     ! ---------------------------
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                      ! in
@@ -1379,23 +1485,29 @@ CONTAINS
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
 
     !$ACC UPDATE HOST(swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:)) &
-    !$ACC   HOST(lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), alb_vis_soil(:)) &
+    !$ACC   HOST(lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), alb_vis_soil_and_snow(:)) &
+    !$ACC   HOST(fract_snow_can(:)) &
     !$ACC   HOST(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
     !$ACC   HOST(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
-    !$ACC   HOST(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC   HOST(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(acc_stream)
+    !$ACC WAIT(acc_stream)
     CALL calc_canopy_radiation_budget(nc, ncanopy, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "vis", &
                      swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
-                     lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:),&
-                     alb_vis_soil(:), &
-                     arad_sunlit_vis_cl(:,:),arad_shaded_vis_cl(:,:),fleaf_sunlit_vis_cl(:,:), &
-                     arad_vis_can(:),arad_vis_soil(:), &
-                     alb_vis_can(:),alb_vis_lnd(:))
+                     lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), &
+                     alb_vis_soil_and_snow(:), fract_snow_can(:), &
+                     arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:), fleaf_sunlit_vis_cl(:,:), &
+                     arad_vis_can(:), arad_vis_soil(:), &
+                     alb_vis_can(:), alb_vis_lnd(:))
+    ! correct canopy albedo by fraction covered with snow
+    DO ic=1,nc
+      alb_vis_lnd(ic) = alb_vis_lnd(ic) * (1._wp - fract_snow_can(ic)) + AlbedoCanopySnow_simple * fract_snow_can(ic)
+    END DO
+
     !$ACC UPDATE DEVICE(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
     !$ACC   DEVICE(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
-    !$ACC   DEVICE(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
+    !$ACC   DEVICE(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(acc_stream)
 
     !> 2.0 calculate NIR radiation budget (absorbed radiation on canopy layers and soil + albedo)
     !!
@@ -1403,27 +1515,32 @@ CONTAINS
     !! diffuse radiation are very similar
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
 
-    !$ACC UPDATE HOST(swnir_srf_down(:), alb_nir_soil(:)) &
+    !$ACC UPDATE HOST(swnir_srf_down(:), alb_nir_soil_and_snow(:)) &
+    !$ACC   HOST(fract_snow_can(:)) &
     !$ACC   HOST(arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:)) &
     !$ACC   HOST(fleaf_sunlit_nir_cl(:,:), arad_nir_can(:), arad_nir_soil(:)) &
-    !$ACC   HOST(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC   HOST(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(acc_stream)
+    !$ACC WAIT(acc_stream)
     CALL calc_canopy_radiation_budget(nc, ncanopy, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "nir", &
                      swnir_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
                      lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), &
-                     alb_nir_soil(:), &
-                     arad_sunlit_nir_cl(:,:),arad_shaded_nir_cl(:,:),fleaf_sunlit_nir_cl(:,:), &
-                     arad_nir_can(:),arad_nir_soil(:), &
-                     alb_nir_can(:),alb_nir_lnd(:))
+                     alb_nir_soil_and_snow(:), fract_snow_can(:), &
+                     arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:), fleaf_sunlit_nir_cl(:,:), &
+                     arad_nir_can(:), arad_nir_soil(:), &
+                     alb_nir_can(:), alb_nir_lnd(:))
+                     ! correct canopy albedo by fraction covered with snow
+    DO ic=1,nc
+      alb_nir_lnd(ic) = alb_nir_lnd(ic) * (1._wp - fract_snow_can(ic)) + AlbedoCanopySnow_simple * fract_snow_can(ic)
+    END DO
     !$ACC UPDATE DEVICE(arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:)) &
     !$ACC   DEVICE(fleaf_sunlit_nir_cl(:,:), arad_nir_can(:), arad_nir_soil(:)) &
-    !$ACC   DEVICE(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(1)
+    !$ACC   DEVICE(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(acc_stream)
 
     !> 3.0 calculate albedo and net radiation for total shortwave radiation
     !!
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       IF ((swvis_srf_down(ic) + swnir_srf_down(ic)) > eps8) THEN
         albedo(ic) = ( alb_vis_lnd(ic) * swvis_srf_down(ic) + alb_nir_lnd(ic) * swnir_srf_down(ic) ) &
@@ -1485,6 +1602,7 @@ CONTAINS
                               lai_cl              , &   ! in
                               cumm_lai_cl         , &   ! in
                               alb_surface         , &   ! in
+                              fract_snow_can      , &   ! in   ! NOTE: not used so far !
                               arad_sunlit_cl      , &   ! out
                               arad_shaded_cl      , &   ! out
                               fleaf_sunlit_cl     , &   ! out
@@ -1515,6 +1633,7 @@ CONTAINS
     REAL(wp), DIMENSION(:,:)               , INTENT(in)  :: lai_cl             !< leaf area index of canopy layer (m-2 m-2)
     REAL(wp), DIMENSION(:,:)               , INTENT(in)  :: cumm_lai_cl        !< cummulative leaf area index above centre of canopy layer
     REAL(wp), DIMENSION(:)                 , INTENT(in)  :: alb_surface        !< merged soil and snow albedo
+    REAL(wp), DIMENSION(:)                 , INTENT(in)  :: fract_snow_can     !< fraction of snow on canopy ?
     REAL(wp), DIMENSION(:,:)               , INTENT(out) :: arad_sunlit_cl     !< absorbed radiation on sunlit leaves (W m-2)
     REAL(wp), DIMENSION(:,:)               , INTENT(out) :: arad_shaded_cl     !< absorbed radiation of shaded leaves (W m-2)
     REAL(wp), DIMENSION(:,:)               , INTENT(out) :: fleaf_sunlit_cl    !< fraction of leaves that is sunlit (--)

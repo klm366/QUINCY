@@ -17,8 +17,10 @@
 MODULE mo_hydro_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message, finish, message_text
+  USE mo_kind,        ONLY: wp
+  USE mo_exception,   ONLY: message, finish, message_text
+  USE mo_jsb_impl_constants, ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
+  USE mo_jsb_control, ONLY: acc_stream
 
   IMPLICIT NONE
   PRIVATE
@@ -46,8 +48,10 @@ CONTAINS
   !! @param [in]     lstart                T: Start of experiment
   !! @param [in]     dtime                 Time step
   !! @param [in]     l_dynsnow             T: Compute density of snow dynamically
+  !! @param [in]     l_latflow_to_streamflow  T: Outflow of intermediary storage goes to streamflow
   !! @param [in]     snow_depth_max        Snow depth limit [m water equivalent]; -1. for no limit
-  !! @param [in]     t_unfilt              Surface tempemperature [K] (unfiltered)
+  !! @param [in]     flowlag               lag factor determening the outflow of intermediary storage [1/s]
+  !! @param [in]     t_srf                 Surface tempemperature [K] (unfiltered)
   !! @param [in]     wind_10m              wind speed at 10m height [m/s]
   !! @param [in]     t_air                 lowest layer atmosphere temperature [K]
   !! @param [in]     skinres_canopy_max    Capacity of the canopy skin reservoir (also used to limit snow on canopy) [m]
@@ -64,6 +68,7 @@ CONTAINS
   !! @param [in,out] weq_snow_soil         snow depth at the ground [m water equivalent]
   !! @param [in,out] weq_snow_can          snow depth on the canopy [m water equivalent]
   !! @param [in,out] snow_soil_dens        snow density on soil at non-glacier points [m water equivalent]
+  !! @param [in,out] wtr_latflow_res_srf   Intermediary storage of surface runoff [m water equivalent]
   !! @param [out]    q_snocpymlt           Heating due to snow melt on canopy [W m-2]
   !! @param [out]    snow_accum            snow budget change within time step [m water equivalent]
   !! @param [out]    snowmelt_soil         snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
@@ -72,46 +77,51 @@ CONTAINS
   !! @param [out]    evapo_snow            evaporation from snow [kg m-2 s-1]
   !! @param [out]    water_to_soil         Water available for infiltration into the soil [m water equivalent]
   !! @param [out]    evapo_deficit         amount of evaporation extracted from different storage then intented [m]
+  !! @param [out]    wtr_latflow_srf       Outflow from intermediary storage [m water equivalent]
   !
 #ifndef _OPENACC
   PURE &
 #endif
   SUBROUTINE calc_surface_hydrology_land (                          &
     & lstart, dtime, ltpe_closed, hydro_scale, l_dynsnow,           &
-    & l_infil_subzero, snow_depth_max, steepness, t_soil_sl1,       &
-    & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,   &
-    & weq_pond_max, fract_snow, fract_skin, fract_pond,             &
+    & l_infil_subzero, l_latflow_to_streamflow,                     &
+    & snow_depth_max, steepness, flowlag, t_soil_sl1,               &
+    & t_srf, wind_10m, t_air, skinres_canopy_max, skinres_max,      &
+    & weq_pond_max, fract_snow, fract_skin, fract_pond, fract_pond_max, &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
-    & weq_rootzone, weq_rootzone_max, weq_soil, hyd_cond_sat_sl1,   &
+    & wpi_rootzone, wpi_rootzone_max, wtr_soil, hyd_cond_sat_sl1,   &
     & ice_impedance, wtr_skin, weq_snow_soil, weq_snow_can,         &
-    & snow_soil_dens, wtr_pond, ice_pond, q_snocpymlt,              &
-    & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
+    & snow_soil_dens, wtr_pond, ice_pond, wtr_latflow_res_srf,      &
+    & q_snocpymlt, snow_accum, snowmelt_soil, pond_freeze, pond_melt, &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
     & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt,       &
-    & runoff, runoff_horton)
+    & runoff, runoff_horton, wtr_latflow_srf)
 
+    USE mo_jsb_math_constants,     ONLY: pi
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency, Semi_Distributed_, Uniform_
     USE mo_sse_constants,          ONLY: snow_depth_min
 
-    LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero
+    LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero, &
+      &                     l_latflow_to_streamflow
     INTEGER,  INTENT(in) :: hydro_scale
     REAL(wp), INTENT(in) :: dtime, snow_depth_max
-    REAL(wp), INTENT(in) ::                                                 &
-      & steepness(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
-      & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:),             &
-      & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:),          &
-      & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),     &
-      & weq_rootzone(:), weq_rootzone_max(:), weq_soil(:),                  &
+    REAL(wp), INTENT(in) ::                                                     &
+      & steepness(:), flowlag(:),                                               &
+      & t_soil_sl1(:), t_srf(:), wind_10m(:), t_air(:),                         &
+      & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:), fract_snow(:),  &
+      & fract_skin(:), fract_pond(:), fract_pond_max(:), hcap_grnd(:),          &
+      & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),         &
+      & wpi_rootzone(:), wpi_rootzone_max(:), wtr_soil(:),                      &
       & hyd_cond_sat_sl1(:), ice_impedance(:)
-    REAL(wp), INTENT(inout) :: &
-      & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
-      & wtr_pond(:), ice_pond(:)
-    REAL(wp), INTENT(out)   ::                                              &
-      & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),    &
-      & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
-      & evapo_pond(:), wtr_pond_net_flx(:), water_to_soil(:),               &
-      & evapo_deficit(:), infilt(:), runoff(:), runoff_horton(:)
+    REAL(wp), INTENT(inout) ::                                                  &
+      & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),      &
+      & wtr_pond(:), ice_pond(:), wtr_latflow_res_srf(:)
+    REAL(wp), INTENT(out) ::                                                    &
+      & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),        &
+      & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),         &
+      & evapo_pond(:), wtr_pond_net_flx(:), water_to_soil(:), evapo_deficit(:), &
+      & infilt(:), runoff(:), runoff_horton(:), wtr_latflow_srf(:)
     !
     !  local variables
     !
@@ -141,7 +151,8 @@ CONTAINS
       & wtr_skin_pre_rain,    & !< amount of water in the skin reservoir prior to the update [m]
       & t_pond,               & !< surface pond water temperature [K]
       & wtr_pond_inflow,      & !< pond inflow [m]
-      & wtr_pond_outflow,     & !< pond outflow [m]
+      & fract_pond_infil,     & !< approximation of pond fraction for infiltration (with inflow included) [/]
+      & wtr_pond_infilt,      & !< pond water infiltration into the soil [m]
       & wtr_pond_overflow,    & !< water exceeding the maximum allowed pond water content (liquid + ice) [m]
       & pond_change_pot         !< amount of water that could potentially be frozen or thawed [m]
 
@@ -156,13 +167,13 @@ CONTAINS
 
     nc = SIZE(snowmelt_soil)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG VECTOR &
-    !$ACC   PRIVATE(rain_in_m, new_snow, weq_snow_soil_old)                                  &
+    !$ACC   PRIVATE(rain_in_m, new_snow, weq_snow_soil_old) &
     !$ACC   PRIVATE(evapotrans_in_m, evapotrans_soil_in_m, evapo_soil_in_m, evapo_skin_in_m) &
-    !$ACC   PRIVATE(transpiration_in_m, evapo_snow_in_m, snowmelt_can, snowmelt_pot_in_m)    &
-    !$ACC   PRIVATE(new_snow_can, new_snow_soil, exp_t, exp_w, snow_blown, canopy_pre_snow)  &
-    !$ACC   PRIVATE(evapotrans_no_snow, evapo_snow_pot_in_m, evapo_skin_pot_in_m)            &
+    !$ACC   PRIVATE(transpiration_in_m, evapo_snow_in_m, snowmelt_can, snowmelt_pot_in_m) &
+    !$ACC   PRIVATE(new_snow_can, new_snow_soil, exp_t, exp_w, snow_blown, canopy_pre_snow) &
+    !$ACC   PRIVATE(evapotrans_no_snow, evapo_snow_pot_in_m, evapo_skin_pot_in_m) &
     !$ACC   PRIVATE(evapo_pond_pot_in_m, rain_to_skinres, wtr_skin_pre_rain)
 
     DO ic = 1, nc
@@ -177,6 +188,7 @@ CONTAINS
       water_to_soil(ic)     = 0._wp
       evapo_deficit(ic)     = 0._wp
       wtr_pond_net_flx(ic)  = 0._wp
+      wtr_latflow_srf(ic)   = 0._wp
 
       !-----------------------------------------------------------------
       ! Convert water fluxes to m water equivalent within the time step
@@ -236,8 +248,8 @@ CONTAINS
       !  Snow melt
       !------------------------
       IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
-        IF (t_unfilt(ic) > tmelt .AND. weq_snow_soil(ic) > 0._wp) THEN
-          snowmelt_pot_in_m = hcap_grnd(ic) * (t_unfilt(ic)-tmelt)/(alf*rhoh2o)      ! potential snow and ice melt [m]
+        IF (t_srf(ic) > tmelt .AND. weq_snow_soil(ic) > 0._wp) THEN
+          snowmelt_pot_in_m = hcap_grnd(ic) * (t_srf(ic)-tmelt)/(alf*rhoh2o)         ! potential snow and ice melt [m]
           snowmelt_soil(ic) = MAX(MIN(snowmelt_pot_in_m, weq_snow_soil(ic)), 0._wp)  ! snow melt limited by actual snow depth
           weq_snow_soil(ic) = weq_snow_soil(ic) - snowmelt_soil(ic)                  ! reduce snow depth according to melting
           ! surface temperature correction for snow/ice melt is applied in task "snowmelt_correction"
@@ -262,7 +274,7 @@ CONTAINS
       !       and move to sse routine. Also use ice density for ice fluxes
       !------------------------
       ! 1.) Potential melting:
-      t_pond = t_unfilt(ic) - snowmelt_soil(ic) / hcap_grnd(ic) * (alf*rhoh2o)
+      t_pond = t_srf(ic) - snowmelt_soil(ic) / hcap_grnd(ic) * (alf*rhoh2o)
       IF (t_pond > tmelt .AND. ice_pond(ic) > 0._wp) THEN
         pond_change_pot      = hcap_grnd(ic) * (t_pond-tmelt)/(alf*rhoh2o)
         pond_melt(ic)        = MAX(MIN(pond_change_pot, ice_pond(ic)), 0._wp)
@@ -300,10 +312,10 @@ CONTAINS
 
       ! Update evaporation required from the soil
       evapotrans_soil_in_m = evapotrans_no_snow - evapo_skin_in_m - evapo_pond_in_m
-      IF (weq_soil(ic) + evapotrans_soil_in_m < 0._wp) THEN
+      IF (wtr_soil(ic) + evapotrans_soil_in_m < 0._wp) THEN
         ! If the soil does not contain enough moisture, evaporate from ponds instead if possible
         evapo_pond_in_m  = MAX(-(wtr_pond(ic) + ice_pond(ic)), &
-          &                    evapo_pond_in_m + (weq_soil(ic) + evapotrans_soil_in_m))
+          &                    evapo_pond_in_m + (wtr_soil(ic) + evapotrans_soil_in_m))
         evapotrans_soil_in_m = evapotrans_no_snow - evapo_skin_in_m - evapo_pond_in_m
       END IF
       evapo_soil_in_m = evapotrans_soil_in_m - transpiration_in_m
@@ -352,7 +364,7 @@ CONTAINS
       !> Surface water, infiltration and surface runoff
       !---------------------
       !> Runoff is either set to zero for Terraplanet setup, is computed via the
-      !! ARNO Scheme (default for large grid cells) or via point scale equations.
+      !! ARNO Scheme (default for large grid cells) or via uniform scale equations.
       !! Note that infiltration, runoff, and pond storage are further
       !! modified in the soil hydrology routine.
 
@@ -363,59 +375,74 @@ CONTAINS
         runoff_horton(ic) = 0._wp
 
       ELSE
-        ! Lateral water flows from ponds are connected to the choice of the surface runoff
-        ! and infiltration scheme. The following pond flow scheme is based on the WEED
-        ! scheme (see https://doi.org/10.5194/tc-15-1097-2021) and is modified to work
-        ! with the assumptions for the ARNO and point scale scheme.
+        ! Infiltration and lateral water flows from ponds are connected to the choice
+        ! of the surface runoff and infiltration scheme. The following pond flow scheme
+        ! is based on the WEED scheme (see https://doi.org/10.5194/tc-15-1097-2021) and
+        ! is modified to work with the assumptions for the semi_distributed (ARNO) and
+        ! the uniform (e.g. point scale or very high resolution) scale scheme.
 
+        wtr_pond_inflow = 0._wp
         IF (hydro_scale == Semi_Distributed_) THEN
-          ! The lateral inflow into ponds originates from the whole grid cell
-          ! and flows towards the depressions. Thus, most of the available water
-          ! is expected to end up in ponds even if not the whole cell is flooded.
+          ! The lateral inflow into ponds originates from the whole grid cell and flows towards the
+          ! depressions. Thus, most of the available water is expected to end up in ponds even if not
+          ! the whole cell is flooded.
           wtr_pond_inflow = water_to_soil(ic) * fract_pond(ic)**(1.0_wp/3.0_wp)
+          ! As ponds form in depressions, no lateral outflow is assumed but rather infiltration into the soil.
+          ! Here we use several assumptions:
+          ! - ponds usually correspond to clay rich soils --> sat_hyd_con for clay is used as infiltration
+          !   limitation and is scaled with pond fraction as only a part of the cell is covered by ponds
+          ! - infiltration is only allowed for ponds without ice (used as proxy for frozen ground)
+          IF (ice_pond(ic) > 0._wp) THEN
+            wtr_pond_infilt = 0._wp
+          ELSE
+            wtr_pond_infilt = MIN(wtr_pond(ic) + 0.5_wp * wtr_pond_inflow, &
+            & k_sat_clay * dtime * fract_pond(ic))
+          END IF
 
         ELSE IF (hydro_scale == Uniform_) THEN
           ! Compute inflow into ponds. If any potential pond fraction exists for the
           ! actual grid cell / tile it goes into the pond storage first.
-          IF (fract_pond(ic) > 1.0e-10_wp) THEN
-            wtr_pond_inflow = water_to_soil(ic)
+          IF (weq_pond_max(ic) > 1.0e-10_wp) THEN
+            wtr_pond_inflow  = water_to_soil(ic) * fract_pond_max(ic)**(1.0_wp/3.0_wp)
+            fract_pond_infil = MIN(1._wp, ((wtr_pond(ic) + wtr_pond_inflow) / weq_pond_max(ic))**0.5_wp) &
+              &              * fract_pond_max(ic)
+            ! For the uniform scale no assumption on subgrid scale distribution of soil textures is made
+            ! and infiltration is only limited by ice_impedance and not cut in case of pond ice
+            wtr_pond_infilt = MIN(wtr_pond(ic) + wtr_pond_inflow, &
+              & ice_impedance(ic) * hyd_cond_sat_sl1(ic) * dtime * fract_pond_infil)
           ELSE
-            wtr_pond_inflow = 0._wp
+            wtr_pond_inflow  = 0._wp
+            wtr_pond_infilt  = 0._wp
           END IF
 
         END IF
 
-        ! As ponds form in depressions, no lateral outflow is assumed but
-        ! rather infiltration into the soil. Here we use several assumptions:
-        ! - ponds usually correspond to clay rich soils --> sat_hyd_con for clay is used as infiltration
-        !   limitation and is scaled with pond fraction as only a part of the cell is covered by ponds
-        ! - infiltration is only allowed for ponds without ice (used as proxy for frozen ground)
-        IF (ice_pond(ic) > 0._wp) THEN
-          wtr_pond_outflow = 0._wp
-        ELSE IF (hydro_scale == Semi_Distributed_) THEN
-          wtr_pond_outflow = MIN(wtr_pond(ic) + 0.5_wp * wtr_pond_inflow, &
-          & k_sat_clay * dtime * fract_pond(ic))
-        ELSE IF (hydro_scale == Uniform_) THEN
-          wtr_pond_outflow = MIN(wtr_pond(ic) + wtr_pond_inflow, &
-          & ice_impedance(ic) * hyd_cond_sat_sl1(ic) * dtime)
-        END IF
-        ! Update pond storages
-        wtr_pond(ic)        = wtr_pond(ic) + wtr_pond_inflow - wtr_pond_outflow
-
-        ! If pond water (+ ice storage) exceeds the maximum allowed pond content, compute
-        ! overflow to be added to water_to_soil
+        ! Update pond storages and handle overflow
+        wtr_pond(ic) = wtr_pond(ic) + wtr_pond_inflow - wtr_pond_infilt
         IF (wtr_pond(ic) + ice_pond(ic) > weq_pond_max(ic)) THEN
           wtr_pond_overflow = MAX(0._wp, wtr_pond(ic) + ice_pond(ic) - weq_pond_max(ic))
-          wtr_pond(ic)      = MAX(0._wp, weq_pond_max(ic) - ice_pond(ic))
+          wtr_pond(ic)      = weq_pond_max(ic) - ice_pond(ic)
+          IF (wtr_pond(ic) < 0.0_wp) THEN
+            ice_pond(ic) = ice_pond(ic) + wtr_pond(ic)
+            wtr_pond(ic) = 0._wp
+          END IF
         ELSE
           wtr_pond_overflow = 0._wp
         END IF
         wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) + wtr_pond_inflow  &
-          &                  - wtr_pond_outflow - wtr_pond_overflow
+          &                  - wtr_pond_infilt - wtr_pond_overflow
 
-        ! Update amount of water available for runoff and infiltration
-        water_to_soil(ic) = water_to_soil(ic) - wtr_pond_inflow + wtr_pond_outflow &
-          &               + wtr_pond_overflow
+        IF (hydro_scale == Semi_Distributed_) THEN
+          ! Update amount of water available for runoff and infiltration
+          water_to_soil(ic) = water_to_soil(ic) - wtr_pond_inflow + wtr_pond_infilt &
+            &               + wtr_pond_overflow
+        ELSE IF (hydro_scale == Uniform_) THEN
+          ! Update amount of water available for runoff and infiltration
+          ! Here the assumption is that outflow from ponds does not uniformly inundate the sourrounding surfacese
+          ! and can infiltrate into the soil, but rather that it runs of as surface runoff into the stream
+          ! or the connected downstream tile.
+          water_to_soil(ic) = water_to_soil(ic) - wtr_pond_inflow + wtr_pond_infilt
+        END IF
 
         ! Compute fluxes based on ARNO scheme (semi-distributed scale approach)
         IF (hydro_scale == Semi_Distributed_) THEN
@@ -425,18 +452,30 @@ CONTAINS
           ! 1) Orographic runoff which depends only on steepness (Horton runoff)
           ! 2) Excess water which exceeds the water holding capacity of the root zone
           CALL arno_scheme(l_infil_subzero, t_soil_sl1(ic),        &
-            &              water_to_soil(ic), weq_rootzone(ic),    &
-            &              steepness(ic), weq_rootzone_max(ic),    &
+            &              water_to_soil(ic), wpi_rootzone(ic),    &
+            &              steepness(ic), wpi_rootzone_max(ic),    &
             &              runoff(ic), infilt(ic))
           runoff_horton(ic) = 0._wp
 
-        ! Compute fluxes based on uniform scale approach. Currently, all surface runoff is computed either as infiltration
-        ! or saturation excess (in `calc_soil_hydrology`). This will soon be replaced with code coming from the
-        ! Q-Arctic project. The following is rather a placeholder than a real implementation.
+        ! Compute fluxes based on uniform scale approach:
+        ! After a short period (which is being ignored) when rates for dry soil may be higher,
+        ! infiltration convereges to either precip. or saturation hydraulic conductivity.
+        ! After runoff is generated a simple reservoir is used to accounting for the lag between
+        ! runoff generation and water reaching the river / downstream tile
         ELSE IF (hydro_scale == Uniform_) THEN
-          infilt(ic) = MIN(ice_impedance(ic) * hyd_cond_sat_sl1(ic) * dtime, water_to_soil(ic))
-          runoff(ic) = MAX(water_to_soil(ic) - infilt(ic), 0._wp)
+          infilt(ic) = MIN(water_to_soil(ic), &
+            & ice_impedance(ic) * hyd_cond_sat_sl1(ic) * (1.0_wp - SIN(steepness(ic)*pi/2._wp)) * dtime)
+          runoff(ic) = MAX(water_to_soil(ic) - infilt(ic), 0._wp) + wtr_pond_overflow
           runoff_horton(ic) = runoff(ic)
+
+          ! Handling of quasi lateral fluxes and respective reservoirs in case of uniform scale calculations
+          CALL surfhyd_lat(flowlag(ic), runoff(ic), &
+            &              wtr_latflow_res_srf(ic), wtr_latflow_srf(ic))
+
+          IF (l_latflow_to_streamflow) THEN
+            runoff(ic)          = wtr_latflow_srf(ic)
+            wtr_latflow_srf(ic) = 0._wp
+          END IF
 
         END IF
 
@@ -452,12 +491,11 @@ CONTAINS
       evapo_snow(ic)       = evapo_snow_in_m      * rhoh2o / dtime
       evapo_pond(ic)       = evapo_pond_in_m      * rhoh2o / dtime
       wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) * rhoh2o / dtime
+      wtr_latflow_srf(ic)  = wtr_latflow_srf(ic)  * rhoh2o / dtime
 
     END DO
     !$ACC END LOOP
     !$ACC END PARALLEL
-
-    !$ACC WAIT(1)
 
   END SUBROUTINE calc_surface_hydrology_land
 
@@ -589,21 +627,25 @@ CONTAINS
   !
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
-    & nc, l_fract, lat, lon, nsoil, dtime, ltpe_closed, ltpe_open, enforce_water_budget, &
+    & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime,                                    &
+    & ltpe_closed, ltpe_open, enforce_water_budget, l_latflow_to_streamflow,             &
     & soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,                       &
     & soil_depth_sl, root_depth_sl,                                                      &
     & hyd_cond_sat_sl, matric_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
-    & vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl,               &
-    & fract_pond_max, evapotrans_soil, transpiration, ice_pond, weq_pond_max,            &
+    & vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl,  slope,       &
+    & flowlag, fract_pond_max, evapotrans_soil, transpiration, ice_pond, weq_pond_max,   &
     ! inout
     & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, wtr_pond_net_flx,              &
-    & tpe_overflow, evapo_deficit,                                                       &
+    & tpe_overflow, evapo_deficit, wtr_latflow_res_srf, wtr_latflow_res_sl,              &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, runoff_dunne, drainage, &
-    & drainage_sl, wtr_transp_down, wtr_soilhyd_res                                      &
+    & drainage_sl, wtr_transp_down, wtr_soilhyd_res, wtr_latflow_sl                      &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
+
+    USE mo_hydro_constants,    ONLY: Uniform_
+
 
     INTEGER,  INTENT(in) :: &
       & nc, nsoil
@@ -612,44 +654,45 @@ CONTAINS
     REAL(wp), INTENT(in) :: dtime, w_soil_wilt_fract
     LOGICAL, INTENT(in)  :: ltpe_closed
     LOGICAL, INTENT(in)  :: ltpe_open
-    LOGICAL, INTENT(in), DIMENSION(:) :: l_fract      ! Tile fraction > 0
+    LOGICAL, INTENT(in)  :: l_latflow_to_streamflow
+    LOGICAL, INTENT(in), DIMENSION(:) :: l_fract, l_pf_soil  ! Tile fraction > 0, Permafrost within the soil above bedrock
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_sl, root_depth_sl, hyd_cond_sat_sl, matric_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
       & lat, lon,                                       &
-      & fract_pond_max, evapotrans_soil, transpiration, &
-      & ice_pond, weq_pond_max
+      & slope, flowlag, fract_pond_max, evapotrans_soil,&
+      & transpiration, ice_pond, weq_pond_max
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond, wtr_pond_net_flx
+      & tpe_overflow, infilt, runoff, evapo_deficit,    &
+      & wtr_pond, wtr_pond_net_flx, wtr_latflow_res_srf
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
-      & wtr_soil_sl, ice_soil_sl
+      & wtr_soil_sl, ice_soil_sl, wtr_latflow_res_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
       & runoff_dunne, drainage, wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, &
-      & wtr_transp_down, drainage_sl
+      & wtr_transp_down, drainage_sl, wtr_latflow_sl
 
     ! Local variables
     REAL(wp) ::                       &
       & evapo_soil_in_m(nc),          & !< evaporation from the soil (without transpiration) [m]
       & transpiration_in_m(nc),       & !< transpiration within time step [m]
       & drain_bot(nc),                & !< drainage towards bedrock [m]
-      & wtr_pond_corr(nc)               !< correction term for ponds fluxes due to saturated soils [m]
-
+      & wtr_pond_corr(nc),            & !< correction term for ponds fluxes due to saturated soils [m]
+      & hyd_cond_bot(nc)                !< hydraulic conductivity of the bottom soil layer [m/s]
     INTEGER :: ic, is
 
     INTEGER, PARAMETER :: ilog = 0 ! Switch for debugging output
-    !$ACC DECLARE COPYIN(ilog)
 
-    !$ACC DATA &
-    !$ACC   CREATE(evapo_soil_in_m, transpiration_in_m, wtr_pond_corr, drain_bot)
+    !$ACC DATA ASYNC(acc_stream) &
+    !$ACC   CREATE(evapo_soil_in_m, transpiration_in_m, wtr_pond_corr, drain_bot, hyd_cond_bot)
 
     !
     !> Calculation of soil saturation, field capacity and wilting point
     !
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG VECTOR COLLAPSE(2)
     DO is = 1, nsoil
       DO ic = 1, nc
@@ -663,12 +706,12 @@ CONTAINS
           wtr_p_wilt_sl(ic,is)    = 0._wp
           wtr_wres_sl(ic,is)      = 0._wp
         END IF
+      wtr_latflow_sl(ic,is) = 0._wp
       END DO
     END DO
     !$ACC END PARALLEL
-    !$ACC WAIT(1)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       ! Initialize diagnostic runoff and drainage variables
       runoff_dunne(ic) = 0._wp
@@ -682,18 +725,40 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     ! Calculation of vertical soil water movement for multiple soil layers
-    CALL soilhyd(nc, l_fract, lat, lon, nsoil, dtime, enforce_water_budget,          &
-      &    soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,              &
-      &    soil_depth_sl, wtr_wres_sl, wtr_p_wilt_sl, wtr_field_cap_sl, wtr_wsat_sl, &
-      &    hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,        &
-      &    vol_wres_sl, bclapp_sl, matric_pot_sl, pore_size_index_sl,                &
-      &    wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                          &
-      &    transpiration_in_m, evapo_soil_in_m, root_depth_sl,                       &
-      &    infilt, runoff_dunne, drain_bot, drainage_sl, wtr_transp_down,            &
-      &    tpe_overflow, evapo_deficit, wtr_soilhyd_res,                             &
+    CALL soilhyd( &
+      &    nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, enforce_water_budget,       &
+      &    slope, soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,         &
+      &    soil_depth_sl, wtr_wres_sl, wtr_p_wilt_sl, wtr_field_cap_sl, wtr_wsat_sl,   &
+      &    hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,          &
+      &    vol_wres_sl, bclapp_sl, matric_pot_sl, pore_size_index_sl,                  &
+      &    wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                            &
+      &    transpiration_in_m, evapo_soil_in_m, root_depth_sl,                         &
+      &    infilt, runoff_dunne, drain_bot, drainage_sl, wtr_transp_down,              &
+      &    tpe_overflow, evapo_deficit, wtr_soilhyd_res, hyd_cond_bot,                 &
       &    ltpe_closed, ltpe_open)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    IF (hydro_scale == Uniform_) THEN
+      ! Handling of quasi lateral fluxes and respective reservoirs in case of uniform scale calculations
+      CALL calc_soilhyd_lateral( &
+        &    l_pf_soil, nc, nsoil, dtime,                    &
+        &    flowlag, hyd_cond_bot,                          &
+        &    soil_depth_sl, vol_field_cap_sl,                &
+        &    ice_soil_sl, wtr_soil_sl,                       &
+        &    wtr_latflow_res_sl, drainage_sl, drain_bot,     &
+        &    wtr_latflow_sl)
+      IF (l_latflow_to_streamflow) THEN
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+        DO is = 1, nsoil
+          DO ic = 1, nc
+            drainage_sl(ic,is)    = wtr_latflow_sl(ic,is)
+            wtr_latflow_sl(ic,is) = 0._wp
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
+      END IF
+    END IF
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
     ! Aggregate or distribute the different runoff flux components
     !$ACC LOOP SEQ
@@ -705,7 +770,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       drainage(ic)  = drainage(ic) + drain_bot(ic)
 
@@ -724,10 +789,16 @@ CONTAINS
       ELSE
         runoff(ic)    = runoff(ic) + runoff_dunne(ic)
       END IF
+      IF (hydro_scale == Uniform_) THEN
+        ! Adding overflow to lateral surface flow reservoir
+        ! (outflow from the reservoir is claculated in update_surface_hydrology)
+        wtr_latflow_res_srf(ic) = wtr_latflow_res_srf(ic) + runoff_dunne(ic)
+        runoff(ic)              = runoff(ic)              - runoff_dunne(ic)
+      END IF
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       infilt(ic)        = infilt       (ic) * rhoh2o / dtime
       runoff(ic)        = runoff       (ic) * rhoh2o / dtime
@@ -737,16 +808,16 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 1, nsoil
       DO ic = 1, nc
         wtr_transp_down(ic,is) = wtr_transp_down(ic,is) * rhoh2o / dtime
         drainage_sl(ic,is)     = drainage_sl(ic,is)     * rhoh2o / dtime
+        wtr_latflow_sl(ic,is)  = wtr_latflow_sl(ic,is)  * rhoh2o / dtime
       END DO
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE calc_soil_hydrology
@@ -782,7 +853,7 @@ CONTAINS
 
     ! Compute steepness parameter
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       steepness(ic) = MAX(0._wp, oro_stddev(ic) - sigma_0) / (oro_stddev(ic) + sigma_max)
       ! Limit parameter to realistic bounds
@@ -801,8 +872,8 @@ CONTAINS
 #ifndef _OPENACC
   ELEMENTAL &
 #endif
-  SUBROUTINE arno_scheme(l_infil_subzero, t_soil_sl1, water_to_soil, weq_rootzone, &
-    &                    steepness, weq_rootzone_max,                              &
+  SUBROUTINE arno_scheme(l_infil_subzero, t_soil_sl1, water_to_soil, wpi_rootzone, &
+    &                    steepness, wpi_rootzone_max,                              &
     &                    runoff, infilt)
 
   !$ACC ROUTINE SEQ
@@ -814,9 +885,9 @@ CONTAINS
     REAL(wp), INTENT(in) ::        &
       & t_soil_sl1,                & !< temperature of uppermost soil layer               [K]
       & water_to_soil,             & !< amount of water going into the soil               [m]
-      & weq_rootzone,              & !< liquid water + ice within the root zone           [m]
+      & wpi_rootzone,              & !< liquid water + ice within the root zone           [m]
       & steepness,                 & !< parameter defining the subgrid slope distribution [/]
-      & weq_rootzone_max             !< maximum water holding capacity (liquid + ice) of the root zone [m]
+      & wpi_rootzone_max             !< maximum water holding capacity (liquid + ice) of the root zone [m]
 
     REAL(wp), INTENT(out) ::       &
       & runoff,                    & !< surface runoff                                    [m]
@@ -831,7 +902,7 @@ CONTAINS
     ! todo: parameters should be defined as parameters
     zb1    = 1._wp + steepness
     zbm    = 1._wp / zb1
-    zconw1 = weq_rootzone_max * zb1
+    zconw1 = wpi_rootzone_max * zb1
 
     !>  Surface runoff and infiltration
     !   -----------------------------------
@@ -839,7 +910,7 @@ CONTAINS
 
     ! No drainage is possible below a certain minimum amount of water (zwdmin). This corresponds
     ! to the layered bucket scheme, and has nothing to do with field capacity or wilting point.
-    ws_min_drain = zwdmin * weq_rootzone_max
+    ws_min_drain = zwdmin * wpi_rootzone_max
 
     ! Temperature dependence of infiltration should not be included when using the 5-layer snow scheme because:
     !     when tsurf == 0.C and T_soil < 0.C --> all snow melt is going to surface runoff
@@ -848,14 +919,14 @@ CONTAINS
       infilt = 0._wp
 
     ELSE
-      IF (water_to_soil > 0._wp .AND. weq_rootzone > ws_min_drain) THEN    ! soilwater content above limit for drainage
+      IF (water_to_soil > 0._wp .AND. wpi_rootzone > ws_min_drain) THEN    ! soilwater content above limit for drainage
         ! compare jsbach3 documentation section 2.3.2.2
-        ws_rel = MIN(1._wp, weq_rootzone / weq_rootzone_max)               ! relative rootzone soil moisture
+        ws_rel = MIN(1._wp, wpi_rootzone / wpi_rootzone_max)               ! relative rootzone soil moisture
         zvol   = (1._wp - ws_rel)**zbm - water_to_soil / zconw1            ! factor taking account subgrid scale
                                                                            ! inhomogeneity and steepness
 
-        runoff = water_to_soil - (weq_rootzone_max - weq_rootzone)         ! > 0: water exceeding soil capacity
-        IF (zvol > 0._wp) runoff = runoff + weq_rootzone_max * zvol**zb1
+        runoff = water_to_soil - (wpi_rootzone_max - wpi_rootzone)         ! > 0: water exceeding soil capacity
+        IF (zvol > 0._wp) runoff = runoff + wpi_rootzone_max * zvol**zb1
         runoff = MAX(MIN(runoff, water_to_soil), 0._wp)                    ! no runoff < 0, limited by available water
         infilt = water_to_soil - runoff                                    ! water not going into runoff is infiltrated
 
@@ -876,25 +947,28 @@ CONTAINS
   !!   Revised by Tobias Stacke (MPI-M) in September 2022
 
   SUBROUTINE soilhyd(                                                &
-    & nc, l_fract, lat, lon, nsoil, dtime, enforce_water_budget,     &
-    & soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,   &
-    & dsoil, wtr_wres_sl, wtr_p_wilt_sl,                             &
-    & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,                &
-    & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,              &
-    & vol_wres_sl,                                                   &
-    & bclapp_sl, matric_pot_sl, pore_size_index_sl,                  &
-    & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,               &
-    & transpiration_in_m, evapo_soil_in_m, root_depth_sl,            &
-    & infilt, runoff_dunne, drain_bot, drainage_sl, wtr_transp_down, &
-    & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                  &
+    & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, enforce_water_budget,  &
+    &  slope, soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,   &
+    & dsoil, wtr_wres_sl, wtr_p_wilt_sl,                                     &
+    & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,                        &
+    & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,                      &
+    & vol_wres_sl,                                                           &
+    & bclapp_sl, matric_pot_sl, pore_size_index_sl,                          &
+    & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                       &
+    & transpiration_in_m, evapo_soil_in_m, root_depth_sl,                    &
+    & infilt, runoff_dunne, drain_bot, drainage_sl, wtr_transp_down,         &
+    & tpe_overflow, evapo_deficit, wtr_soilhyd_res, hyd_cond_bot,            &
     & ltpe_closed, ltpe_open)
 
-    USE mo_jsb_impl_constants, ONLY: WB_LOGGING, WB_ERROR
-    USE mo_hydro_constants,    ONLY: Semi_Distributed_, Uniform_, &
-      & drain_min, drain_max, drain_exp
+    USE mo_jsb_math_constants,     ONLY: pi
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
+    USE mo_jsb_impl_constants,     ONLY: WB_LOGGING, WB_ERROR
+    USE mo_hydro_constants,        ONLY: Semi_Distributed_, Uniform_, &
+      & drain_min, drain_max, drain_exp, k_brock
 
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
     LOGICAL,  INTENT(IN)            :: l_fract(:)                 ! Tile fraction > 0
+    LOGICAL,  INTENT(IN)            :: l_pf_soil(:)               ! permafrost within the soil
     REAL(wp), INTENT(IN)            :: lat(:)                     ! Grid cell latitudes
     REAL(wp), INTENT(IN)            :: lon(:)                     ! Grid cell longitudes
     INTEGER,  INTENT(IN)            :: nsoil                      ! number of soil layers
@@ -904,6 +978,7 @@ CONTAINS
     INTEGER,  INTENT(in)            :: hydro_scale                !< hydrology scale scheme
     REAL(wp), INTENT(in)            :: w_soil_wilt_fract          !< fractional plant wilting point [/]
     REAL(wp), INTENT(IN)            :: dtime                      ! model time step legth [s]
+    REAL(wp), INTENT(IN)            :: slope(:)                   ! slope of gridcell / tile [/]
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
     REAL(wp), INTENT(IN)            :: wtr_wres_sl(:,:)           !< residual water content of soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: wtr_p_wilt_sl(:,:)         !< wilting point of the soil layer (reduced by ice) [m]
@@ -931,6 +1006,7 @@ CONTAINS
     REAL(wp), INTENT(OUT)           :: drainage_sl(:,:)           !< subsurface drainage on soil layers [m]
     REAL(wp), INTENT(OUT)           :: wtr_transp_down(:,:)       !< Vertical water transport into the next deeper soil layer [m]
     REAL(wp), INTENT(OUT)           :: wtr_soilhyd_res(:)         ! Residual error of the vertical transport scheme
+    REAL(wp), INTENT(OUT)           :: hyd_cond_bot(:)            ! hydraulic conductivity of the bottom soil layer [m/s]
 
     LOGICAL, INTENT(IN) :: ltpe_closed
     LOGICAL, INTENT(IN) :: ltpe_open
@@ -940,10 +1016,10 @@ CONTAINS
     INTEGER  :: last_soil_layer(nc)          ! deepest soil layer index (above the bedrock boundary)
     CHARACTER(len=4096) :: message_text_long ! long string for soil hydrology checks
 
-    REAL(wp) :: weq_soil(nc)                 ! total column soil moisture (water + ice)
+    REAL(wp) :: weq_soil(nc)                 ! total column soil moisture (water + ice) [weq m]
     REAL(wp) :: ws_inter_sl(nc,nsoil)        ! soil moisture with infiltration added to first layer
     REAL(wp) :: wtr_soil_sl_t0(nc,nsoil)     ! soil moisture state prior to vertical transport [m]
-    REAL(wp) :: ws_vol_sl(nc,nsoil)          ! volumetric soil mositure
+    REAL(wp) :: ws_vol_sl(nc,nsoil)          ! volumetric soil moisture
     REAL(wp) :: ice_impedance_sl(nc,nsoil)   ! ice impedance factor on all soil layers
     REAL(wp) :: hyd_cond_sl(nc,nsoil)        ! hydraulic conductivity of a layer [m/s]
     REAL(wp) :: diffus_sl(nc,nsoil)          ! diffusivity at mid-depth of the layer[m2/s]
@@ -955,10 +1031,10 @@ CONTAINS
     REAL(wp) :: deficit_trans(nc)            ! transpiration that could not be extracted from the soil [m]
     REAL(wp) :: deficit_sevap(nc)            ! soil evaporation that could not be extracted from the soil [m]
     REAL(wp) :: remoist(nc)                  ! for TPE
-    REAL(wp) :: weq_wsat_sl(nc,nsoil)        ! Maximum storage in each soil layer (porosity) (not reduced by ice) [m]
-    REAL(wp) :: weq_field_cap_sl(nc,nsoil)   ! field capacity of the soil layer (not reduced by ice) [m]
-    REAL(wp) :: weq_p_wilt_sl(nc,nsoil)      ! wilting point - not reduced relative to soil ice fraction [m]
-    REAL(wp) :: weq_wres_sl(nc,nsoil)        ! residual water content - not reduced relative to soil ice fraction [m]
+    REAL(wp) :: wpi_wsat_sl(nc,nsoil)        ! Maximum storage in each soil layer (porosity) (not reduced by ice) [m]
+    REAL(wp) :: wpi_field_cap_sl(nc,nsoil)   ! field capacity of the soil layer (not reduced by ice) [m]
+    REAL(wp) :: wpi_p_wilt_sl(nc,nsoil)      ! wilting point - not reduced relative to soil ice fraction [m]
+    REAL(wp) :: wpi_wres_sl(nc,nsoil)        ! residual water content - not reduced relative to soil ice fraction [m]
     REAL(wp) :: wtr_transp_residual(nc)      ! numerical error caused by the vertical transport scheme [m]
     REAL(wp) :: wtr_transp_corr(nc)          ! uncorrected part of the transport residual [m]
     REAL(wp) :: wtr_residual_sl(nc,nsoil)    ! immobile soil water (supercooled or below residual water content) [m]
@@ -968,43 +1044,68 @@ CONTAINS
     REAL(wp) :: hlp1(nc,nsoil), hlp4(nc,nsoil)
     REAL(wp) :: hlp2(nc), hlp3(nc), hlp5
     REAL(wp) :: wtr_flux_top                 ! water flux entering a soil layer from above [m]
+    REAL(wp) :: drain_excess                 ! additional drainage due to soil oversaturation [m]
+    REAL(wp) :: ice2weq, weq2ice             ! conversion factors between ice and water equivalent volumns
 
-    !$ACC DATA &
+    ! Temporary index lists for error detection
+    INTEGER :: ie             !< Error cell index
+    INTEGER :: n_errors       !< Number of error cells
+    INTEGER :: error_idx(nc)  !< Cell indices of error cells
+    LOGICAL :: error_flag(nc) !< Flag that given cell index is already in list (to suppress double-counting)
+
+    !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(weq_soil, ws_inter_sl, wtr_soil_sl_t0, ws_vol_sl, ice_impedance_sl, hyd_cond_sl, diffus_sl) &
-    !$ACC   CREATE(hyd_cond_li, diffus_li, evapo_soil_sl1, transpiration_sl, drain_slow_sl, drain_fast_sl)     &
+    !$ACC   CREATE(hyd_cond_li, diffus_li, evapo_soil_sl1, transpiration_sl, drain_slow_sl, drain_fast_sl) &
     !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, storage_change_sl) &
-    !$ACC   CREATE(wtr_residual_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, weq_wres_sl)                 &
+    !$ACC   CREATE(wtr_residual_sl, wpi_wsat_sl, wpi_field_cap_sl, wpi_p_wilt_sl, wpi_wres_sl) &
     !$ACC   CREATE(wtr_transp_residual, wtr_transp_corr, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
+
+    ice2weq = rhoi / rhoh2o
+    weq2ice = rhoh2o / rhoi
 
     !> Finish in case of negative soil moisture
     !
 #ifndef _OPENACC
-    DO is = 1, nsoil
-      DO ic = 1, nc
-        IF (wtr_soil_sl(ic,is) < 0._wp .AND. l_fract(ic)) THEN
-          WRITE (message_text,*) 'negative soil moisture (routine start) at ', &
-            & lat(ic),'N and ',lon(ic),'E, layer ', is, ':', NEW_LINE('a'), &
-            & 'Soil moisture:    ', wtr_soil_sl(ic,is)
-          IF (enforce_water_budget == WB_ERROR) THEN
-            CALL finish ('soilhyd', message_text)
-          ELSE IF (enforce_water_budget == WB_LOGGING) THEN
-            CALL message ('soilhyd', message_text, all_print=.TRUE.)
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      n_errors = 0
+      error_flag(:) = .FALSE.
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          ! Check for negative soil moisture (in cells with a relevant tile fraction
+          ! that had not yet been counted)
+          IF (wtr_soil_sl(ic,is) < 0._wp .AND. l_fract(ic) .AND. .NOT. error_flag(ic)) THEN
+            n_errors = n_errors + 1    ! count the soil moisture errors
+            error_idx(n_errors) = ic   ! keep the respective cell indices
+            error_flag(ic) = .TRUE.
           END IF
+        END DO
+      END DO
+
+      ! Write error messages in case errors have been found.
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
+        WRITE (message_text,*) 'negative soil moisture (routine start) at ', &
+          & lat(ic), 'N and ', lon(ic), 'E:', NEW_LINE('a'), &
+          & 'Soil moisture:    ', wtr_soil_sl(ic,:)
+        IF (enforce_water_budget == WB_ERROR) THEN
+          CALL finish ('soilhyd', message_text)
+        ELSE IF (enforce_water_budget == WB_LOGGING) THEN
+          CALL message ('soilhyd', message_text, all_print=.TRUE.)
         END IF
       END DO
-    END DO
+    END IF
 #endif
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 1, nsoil
       DO ic = 1, nc
 
-        !> Calculation of soil water equivalent content at saturation, field capacity, wilting point and residual
+        !> Calculation of soil water + ice content at saturation, field capacity, wilting point and residual
         !
-        weq_wsat_sl     (ic,is) = vol_porosity_sl (ic,is) * dsoil(ic,is)
-        weq_field_cap_sl(ic,is) = vol_field_cap_sl(ic,is) * dsoil(ic,is)
-        weq_p_wilt_sl   (ic,is) = vol_p_wilt_sl(ic,is)    * dsoil(ic,is)
-        weq_wres_sl     (ic,is) = vol_wres_sl(ic,is)      * dsoil(ic,is)
+        wpi_wsat_sl     (ic,is) = vol_porosity_sl (ic,is) * dsoil(ic,is)
+        wpi_field_cap_sl(ic,is) = vol_field_cap_sl(ic,is) * dsoil(ic,is)
+        wpi_p_wilt_sl   (ic,is) = vol_p_wilt_sl(ic,is)    * dsoil(ic,is)
+        wpi_wres_sl     (ic,is) = vol_wres_sl(ic,is)      * dsoil(ic,is)
 
         !> Supercooled soil water and water below the residual water content
         !>   should not be available for vertical water movement.
@@ -1013,13 +1114,15 @@ CONTAINS
 
         !> Subsurface drainage, storage change term and vertical water transport initialization
         drainage_sl(ic,is)       = 0._wp
+        drain_slow_sl(ic,is)     = 0._wp
+        drain_fast_sl(ic,is)     = 0._wp
         storage_change_sl(ic,is) = 0._wp
         wtr_transp_down(ic,is)   = 0._wp
       END DO
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       !> Initialize different runoff and drainage components
       runoff_dunne(ic) = 0._wp
@@ -1029,7 +1132,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
       !$ACC LOOP GANG VECTOR
@@ -1043,12 +1146,12 @@ CONTAINS
     IF (ANY(last_soil_layer(:) < 1)) CALL finish('soilhyd', 'Problem with no. of active soil layers (=0)')
 #endif
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       ws_inter_sl(ic,1) = wtr_soil_sl(ic,1) + infilt(ic)
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 2, nsoil
       DO ic = 1, nc
         ws_inter_sl(ic,is) = wtr_soil_sl(ic,is)
@@ -1072,7 +1175,7 @@ CONTAINS
           & soilhydmodel, interpol_mean,                                    &
           & nc, nsoil, dsoil(:,:),                                          &
           & ws_inter_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:), &
-          & weq_wsat_sl(:,:), weq_wres_sl(:,:), hyd_cond_sat_sl(:,:),       &
+          & wpi_wsat_sl(:,:), wpi_wres_sl(:,:), hyd_cond_sat_sl(:,:),       &
           & matric_pot_sl(:,:), bclapp_sl(:,:), pore_size_index_sl(:,:),    &
           & dt=dtime, last_soil_layer=last_soil_layer(:),                   &
           & ice_impedance=ice_impedance_sl(:,:),                            &
@@ -1082,22 +1185,22 @@ CONTAINS
 
     !> Compute subsurface drainage from each layer - only for semi-distributed scale parametrization
     IF (hydro_scale == Semi_Distributed_) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
-          IF (weq_wsat_sl(ic,is)      > weq_field_cap_sl(ic,is) .AND. &
-            & weq_field_cap_sl(ic,is) > wtr_residual_sl(ic,is)) THEN
+          IF (wpi_wsat_sl(ic,is)      > wpi_field_cap_sl(ic,is) .AND. &
+            & wpi_field_cap_sl(ic,is) > wtr_residual_sl(ic,is)) THEN
             ! Slow drainage resulting from water between residual and field capacity fractions
             drain_slow_sl(ic,is) = (drain_min * dtime)                                     &
               & * MIN(1._wp, MAX(0._wp, (wtr_soil_sl(ic,is) - wtr_residual_sl(ic,is)))) &
-              & / (weq_field_cap_sl(ic,is) - wtr_residual_sl(ic,is))
+              & / (wpi_field_cap_sl(ic,is) - wtr_residual_sl(ic,is))
             ! Fast drainage resulting from water above the field capacity
             drain_fast_sl(ic,is) = (drain_max - drain_min) * dtime                                &
               & * (MIN(1._wp, MAX(0._wp, (                                                  &
-              &    wtr_soil_sl(ic,is) - wtr_residual_sl(ic,is) - weq_field_cap_sl(ic,is)))) &
-              & / (weq_wsat_sl(ic,is) - weq_field_cap_sl(ic,is)))**drain_exp
+              &    wtr_soil_sl(ic,is) - wpi_field_cap_sl(ic,is)))) &
+              & / (wpi_wsat_sl(ic,is) - wpi_field_cap_sl(ic,is)))**drain_exp
             drain_fast_sl(ic,is) = MAX(0._wp, MIN(drain_fast_sl(ic,is), &
-              & wtr_soil_sl(ic,is) - wtr_residual_sl(ic,is) - weq_field_cap_sl(ic,is)))
+              & wtr_soil_sl(ic,is) - wpi_field_cap_sl(ic,is)))
             ! Add drainage components and apply ice impedance
             drainage_sl(ic,is) = ice_impedance_sl(ic,is) * (drain_slow_sl(ic,is) + drain_fast_sl(ic,is))
           END IF
@@ -1105,33 +1208,63 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
+    !> Compute subsurface drainage from each layer and
     !> Compute bottom drainage from lowest layer - only for uniform scale parametrization
     ELSE IF (hydro_scale == Uniform_) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO ic = 1, nc
-        ! Prescribe drainage from hydraulic conductivity of the lowest layer [m s-1] --> [m]
-        drain_bot(ic) = hyd_cond_sl(ic,last_soil_layer(ic)) * dtime
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          IF (is < last_soil_layer(ic)) THEN
+            ! Caluclate drainage for all soil layers above lowest hydrologically active layer
+            drainage_sl(ic,is) = MIN(hyd_cond_sl(ic,is) * SIN(slope(ic)*pi/2._wp) * dtime, &
+                               &     MAX(0._wp, wtr_soil_sl(ic,is)-wtr_residual_sl(ic,is)))
+          ELSE IF (is == last_soil_layer(ic)) THEN
+            ! Prescribe drainage from hydraulic conductivity of the lowest layer [m s-1] --> [m]
+            ! or assumed hydraulic conductivity of (fractured) bedrock
+            IF (l_pf_soil(ic)) THEN
+              drain_bot(ic) = 0._wp
+            ELSE
+              drain_bot(ic) = MIN(k_brock, hyd_cond_sl(ic,last_soil_layer(ic))) * dtime
+            END IF
+          END IF
+        END DO
       END DO
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
+    ! Store actual soil water state, infiltration (upper boundary condition) and evaporation
+    ! to compute the residual transport error.
+    ! With that we are able to correct for computational precision erros later.
+
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
-      ! Store soil moisture state for later diagnosis of vertical water fluxes
-      wtr_soil_sl_t0(ic,:) = wtr_soil_sl(ic,:)
-      !> store actual soil water state, infiltration (upper boundary condition) and evaporation
-      !>  to compute the residual transport error
-      !>  so we are able to correct for computational precision erros later
-      wtr_transp_residual(ic) = SUM(wtr_soil_sl(ic,:)) + infilt(ic) + evapo_soil_sl1(ic) &
-        &                     + SUM(transpiration_sl(ic,:)) - SUM(drainage_sl(ic,:))
+      ! Initialize water transport residual with surface fluxes
+      wtr_transp_residual(ic) = infilt(ic) + evapo_soil_sl1(ic)
+      ! Compute hydrological conductivity of the lowest soil layer
+      hyd_cond_bot(ic) = hyd_cond_sl(ic,last_soil_layer(ic))
     END DO
-    !$ACC END PARALLEL LOOP
+
+    !$ACC LOOP SEQ
+    DO is = 1, nsoil
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        ! Store soil moisture state for later diagnosis of vertical water fluxes
+        wtr_soil_sl_t0(ic,is) = wtr_soil_sl(ic,is)
+
+        ! Calculate current soil water state to calculate transport residual below
+        ! i.e. current amount of soil water plus fluxes of this time step
+        wtr_transp_residual(ic) = wtr_transp_residual(ic) + &
+            & wtr_soil_sl(ic,is) + transpiration_sl(ic,is) - drainage_sl(ic,is)
+      END DO
+    END DO
+    !$ACC END PARALLEL
 
     ! Determination of Vertical movement of mobile water through the soil.
     !   Note that normalized storage values (volumetric soil moisture and storage change) are
     !   needed for the transport and immobile water is temporarily removed from the soil.
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
     DO is = 1, nsoil
       DO ic = 1, nc
         IF (dsoil(ic,is) > 0._wp) THEN
@@ -1143,9 +1276,8 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       hlp2(ic) = (infilt(ic) + evapo_soil_sl1(ic)) / dtime ! Upper boundary condition
       hlp3(ic) = drain_bot(ic) / dtime                     ! Lower boundary condition
@@ -1169,7 +1301,7 @@ CONTAINS
                         & )
 
     ! Converting back to absolute water content
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
     DO is = 1, nsoil
       DO ic = 1, nc
         IF (dsoil(ic,is) > 0._wp) THEN
@@ -1182,46 +1314,68 @@ CONTAINS
     !> If lowest soil layer becomes negative, reduce bottom drainage
     !   In rare cases - when the bottom layer is very thin - also above layers might get negative.
     !   Generally, this only happens right after initialization.
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+
+#ifndef _OPENACC
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      n_errors = 0
+      error_flag(:) = .FALSE.
+      DO is = nsoil, 1, -1
+        DO ic = 1, nc
+          ! Check for negative soil moisture in lowest and above soil layer (in cells with a
+          ! relevant land fraction that had not been counted before) and count affected cells.
+          IF (wtr_soil_sl(ic, last_soil_layer(ic)) < 0._wp .AND. l_fract(ic) .AND. .NOT. error_flag(ic)) THEN
+            IF (is <= last_soil_layer(ic) .AND. wtr_soil_sl(ic,is) < 0._wp) THEN
+              n_errors = n_errors + 1
+              error_idx(n_errors) = ic
+              error_flag(ic) = .TRUE.
+            END IF
+          END IF
+        END DO
+      END DO
+
+      ! Write error messages in case cells with negative soil moisture have been found.
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
+
+        WRITE (message_text_long,*) 'Soil moisture correction needed at ',   &
+          &  lat(ic), 'N and ', lon(ic), 'E:' ,      NEW_LINE('a'),          &
+          &  'Soil moisture:   ', wtr_soil_sl(ic,:), NEW_LINE('a'),          &
+          &  'Bottom drainage: ', drain_bot(ic)
+        CALL message('soilhyd', message_text_long, all_print=.TRUE.)
+      END DO
+    END IF
+#endif
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is = nsoil, 1, -1
       !$ACC LOOP GANG VECTOR
       DO ic = 1, nc
         IF (wtr_soil_sl(ic, last_soil_layer(ic)) < 0._wp .AND. l_fract(ic)) THEN
           IF (is <= last_soil_layer(ic) .AND. wtr_soil_sl(ic,is) < 0._wp) THEN
-#ifndef _OPENACC
-            WRITE (message_text_long,*) 'Soil moisture correction needed at ',   &
-              &  lat(ic),'N and ',lon(ic),'E:' ,         NEW_LINE('a'),          &
-              &  'Soil moisture:   ', wtr_soil_sl(ic,:), NEW_LINE('a'),          &
-              &  'Bottom drainage: ', drain_bot(ic)
-            IF (enforce_water_budget == WB_ERROR .OR. enforce_water_budget == WB_LOGGING) THEN
-              CALL message('soilhyd', message_text_long, all_print=.TRUE.)
-            END IF
-#endif
             drain_bot(ic) = MAX((drain_bot(ic) + wtr_soil_sl(ic,is)), 0._wp)
             wtr_soil_sl(ic,is) = 0._wp
-#ifndef _OPENACC
-            WRITE (message_text_long,*) 'After correction: wtr_soil_sl(ic,:): ', &
-              &  lat(ic),'N and ',lon(ic),'E:' ,         NEW_LINE('a'),          &
-              &  'Soil moisture:   ', wtr_soil_sl(ic,:), NEW_LINE('a'),          &
-              &  'Bottom drainage: ', drain_bot(ic)
-            IF (enforce_water_budget == WB_ERROR .OR. enforce_water_budget == WB_LOGGING) THEN
-              CALL message('soilhyd', message_text_long, all_print=.TRUE.)
-            END IF
-#endif
           END IF
         END IF
       END DO
     END DO
     !$ACC END PARALLEL
-    !$ACC WAIT(1)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
-    !> Subtract new soil state and bottom drainage (lower boundary condition) from water balance
+    ! Subtract new soil state and bottom drainage (lower boundary condition) from water balance
+
+    !$ACC LOOP SEQ
+    DO is = 1, nsoil
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        wtr_transp_residual(ic) = wtr_transp_residual(ic) - wtr_soil_sl(ic,is)
+      END DO
+    END DO
+
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
-      wtr_transp_residual(ic) = wtr_transp_residual(ic) - (SUM(wtr_soil_sl(ic,:)) + drain_bot(ic))
+      wtr_transp_residual(ic) = wtr_transp_residual(ic) - drain_bot(ic)
       wtr_soilhyd_res(ic) = wtr_transp_residual(ic)
     END DO
 
@@ -1229,10 +1383,19 @@ CONTAINS
 
 #ifndef _OPENACC
     !< 1. Complain if the overall transport error is too large
-    DO ic = 1, nc
-      IF (ABS(wtr_transp_residual(ic)) > 1.0e-10_wp .AND. l_fract(ic)) THEN
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      n_errors = 0
+      DO ic = 1, nc
+        IF (ABS(wtr_transp_residual(ic)) > 1.0e-10_wp .AND. l_fract(ic)) THEN
+          n_errors = n_errors + 1
+          error_idx(n_errors) = ic
+        END IF
+      END DO
+
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
         WRITE (message_text_long,*) 'Soil water transport residual too large at ', &
-          & lat(ic),'N and ',lon(ic),'E:',                   NEW_LINE('a'), &
+          & lat(ic), 'N and ', lon(ic), 'E:',                NEW_LINE('a'), &
           & 'Transport residual: ', wtr_transp_residual(ic), NEW_LINE('a'), &
           & 'Infiltration:       ', infilt(ic),              NEW_LINE('a'), &
           & 'Soil evaporation:   ', evapo_soil_sl1(ic),      NEW_LINE('a'), &
@@ -1245,8 +1408,8 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('soilhyd', message_text_long, all_print=.TRUE.)
         END IF
-      END IF
-    END DO
+      END DO
+    END IF
 #endif
 
     !> 2. Modify lower boundary condition (drainage) as much as possible
@@ -1262,7 +1425,7 @@ CONTAINS
     !$ACC END PARALLEL
 
     !> 3. Modify soil layers if necessary
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is = nsoil, 1, -1
       !$ACC LOOP GANG VECTOR
@@ -1281,8 +1444,17 @@ CONTAINS
 
 #ifndef _OPENACC
     !> 4. Complain if correction is not sufficient
-    DO ic = 1, nc
-      IF (ABS(wtr_transp_residual(ic)) > 1.0e-10_wp .AND. l_fract(ic)) THEN
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      n_errors = 0
+      DO ic = 1, nc
+        IF (ABS(wtr_transp_residual(ic)) > 1.0e-10_wp .AND. l_fract(ic)) THEN
+          n_errors = n_errors + 1
+          error_idx(n_errors) = ic
+        END IF
+      END DO
+
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
         WRITE (message_text_long,*) 'Cannot correct soil water transport residual at ', &
           & lat(ic),'N and ',lon(ic),'E:',                   NEW_LINE('a'), &
           & 'Transport residual: ', wtr_transp_residual(ic), NEW_LINE('a'), &
@@ -1297,12 +1469,12 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('soilhyd', message_text_long, all_print=.TRUE.)
         END IF
-      END IF
-    END DO
+      END DO
+    END IF
 #endif
 
     ! Diagnose vertical water transport
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
       !$ACC LOOP GANG VECTOR PRIVATE(wtr_flux_top)
@@ -1319,11 +1491,11 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
     ! Extract remaining bare soil evaporation from top layer (mobile and immoble soil water,
     ! because this has to be consistent with the computation of the upper soil layer relative humidity
     ! in sse_processes:relative_humidity_soil)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       IF (deficit_sevap(ic) < 0._wp) THEN                              ! remaining soil evaporation demand
@@ -1345,52 +1517,104 @@ CONTAINS
     !       term is needed for this, if no better solution can be found to avoid the evaporation deficit.
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
+      weq_soil(ic) = 0._wp
       deficit_evapotrans(ic) = deficit_sevap(ic) + deficit_trans(ic)
-      weq_soil(ic) = SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:))  ! water and ice within the column
-#ifndef _OPENACC
-      IF (weq_soil(ic) + deficit_evapotrans(ic) < -EPSILON(1.0_wp) .AND. l_fract(ic)) THEN
-        WRITE (message_text,*) 'ET deficit cannot be compensated with the soil moisture storage'
-        IF (enforce_water_budget == WB_ERROR .OR. enforce_water_budget == WB_LOGGING) THEN
-          CALL message ('soilhyd', message_text, all_print=.TRUE.)
-        END IF
-      END IF
-#endif
     END DO
 
+    !$ACC LOOP SEQ
+    DO is = 1, nsoil
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        weq_soil(ic) = weq_soil(ic) + wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) * ice2weq
+      END DO
+    END DO
     !$ACC END PARALLEL
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+#ifndef _OPENACC
+    IF (ANY(weq_soil(:) + deficit_evapotrans(:) < -EPSILON(1.0_wp) .AND. l_fract(:))) THEN
+      IF (enforce_water_budget == WB_ERROR .OR. enforce_water_budget == WB_LOGGING) THEN
+        WRITE (message_text,*) 'ET deficit cannot be compensated with the soil moisture storage'
+        CALL message ('soilhyd', message_text, all_print=.TRUE.)
+      END IF
+    END IF
+#endif
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
       !$ACC LOOP GANG VECTOR
       DO ic = 1, nc
         IF (deficit_evapotrans(ic) < 0._wp .AND. weq_soil(ic) > 0._wp) THEN
           ! reduce soil moisture and ice relative to the water content of each layer
-          wtr_soil_sl(ic,is) = MAX(0._wp, wtr_soil_sl(ic,is) + deficit_evapotrans(ic) * wtr_soil_sl(ic,is) / weq_soil(ic))
-          ice_soil_sl(ic,is) = MAX(0._wp, ice_soil_sl(ic,is) + deficit_evapotrans(ic) * ice_soil_sl(ic,is) / weq_soil(ic))
+          wtr_soil_sl(ic,is) = MAX(0._wp, wtr_soil_sl(ic,is) + &
+            & deficit_evapotrans(ic) * wtr_soil_sl(ic,is) / weq_soil(ic))
+          ice_soil_sl(ic,is) = MAX(0._wp, ice_soil_sl(ic,is) + &
+            & (deficit_evapotrans(ic) * (ice_soil_sl(ic,is) * ice2weq) / weq_soil(ic)) * weq2ice )
         END IF
       END DO
     END DO
     !$ACC END PARALLEL
 
     ! Additional corrections for excess soil moisture
-    ! In case of over-saturation water would not have infiltrated in the first place --> pile
-    ! water upwards
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+
+    IF (hydro_scale == Uniform_) THEN
+      ! Initial estimate of layered drainage are too low if soils were dry at the beginning of time step.
+      ! Hence, add water to layered drainage according to k_sat - k_act
+      ! In case of last soil layer only k_sat since no layered drainage was calculated before
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO ic = 1, nc
+          ! If saturation moisture is exceeded, add exess water to layered drainage (according to ksat)
+          IF (wtr_soil_sl(ic,is) > wtr_wsat_sl(ic,is)) THEN
+            IF (is < last_soil_layer(ic)) THEN
+              drainage_sl(ic,is) = drainage_sl(ic,is)                                                   &
+                & + MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
+                & * MAX(0._wp,(hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is) - hyd_cond_sl(ic,is))))
+              wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is)                                                   &
+                & - MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
+                & * MAX(0._wp,(hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is) - hyd_cond_sl(ic,is))))
+            ELSE
+              drainage_sl(ic,is) = drainage_sl(ic,is)                                                   &
+                & + MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
+                & * hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is))
+              wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is)                                                   &
+                & - MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), SIN(slope(ic)*pi/2._wp) * dtime        &
+                & * hyd_cond_sat_sl(ic,is) * ice_impedance_sl(ic,is))
+            END IF
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL
+    END IF
+
+    ! In case of over-saturation, increase layer drainage to maximum and, if needed,
+    ! pile water upwards
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is = nsoil, 2, -1
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
-        ! If saturation moisture is exceeded, add the excess water to next higher soil layer
+        ! If saturation moisture is exceeded, then ...
         IF (wtr_soil_sl(ic,is) > wtr_wsat_sl(ic,is)) THEN
-          wtr_soil_sl(ic,is-1) = wtr_soil_sl(ic,is-1) + (wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is))
-          wtr_soil_sl(ic,is)   = wtr_wsat_sl(ic,is)
+          ! first compute additional drainage as if soil was already saturated from the start
+          drain_excess = MIN(wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is), MAX(0._wp, &
+            &  ((drain_max - drain_min) * dtime - drain_fast_sl(ic,is)) * ice_impedance_sl(ic,is)))
+          wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is) - drain_excess
+          drainage_sl(ic,is) = drainage_sl(ic,is) + drain_excess
+          IF (wtr_soil_sl(ic,is) > wtr_wsat_sl(ic,is)) THEN
+            ! and if the soil is still oversaturated, pile moisture upwards, as it should not
+            ! have percolated in the first place
+            wtr_soil_sl(ic,is-1) = wtr_soil_sl(ic,is-1) + (wtr_soil_sl(ic,is) - wtr_wsat_sl(ic,is))
+            wtr_soil_sl(ic,is)   = wtr_wsat_sl(ic,is)
+          END IF
         END IF
       END DO
     END DO
     !$ACC END PARALLEL
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       ! Top layer saturation excess is added to the surface runoff (Dunne runoff)
       IF (wtr_soil_sl(ic,1) > wtr_wsat_sl(ic,1)) THEN
@@ -1402,7 +1626,7 @@ CONTAINS
 
     ! Modification for TPE (open)
     IF (ltpe_open) THEN
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP SEQ
       DO is = 1, nsoil
         !$ACC LOOP GANG VECTOR
@@ -1419,16 +1643,19 @@ CONTAINS
       !$ACC END PARALLEL
 
     ELSE IF (ltpe_closed) THEN
-      !$ACC LOOP GANG VECTOR
       ! no drainage for TPE closed case --> redirect overflow from drainage to overflow pool
-      DO ic = 1, nc
-        tpe_overflow(ic) = tpe_overflow(ic) + SUM(drainage_sl(ic,:))
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO ic = 1, nc
+          tpe_overflow(ic) = tpe_overflow(ic) + drainage_sl(ic,is)
+        END DO
       END DO
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP SEQ
       DO is = nsoil, 1, -1
-        !$ACC LOOP GANG VECTOR
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO ic = 1, nc
           ! refill soil moisture from overflow pool
           remoist(ic)        = MIN(tpe_overflow(ic), wtr_field_cap_sl(ic,is) - wtr_soil_sl(ic,is))
@@ -1441,8 +1668,28 @@ CONTAINS
 
 #ifndef _OPENACC
     ! Check value range for soil moisture
-    DO ic = 1, nc
-      IF (ANY(wtr_soil_sl(ic,:) < -EPSILON(1.0_wp)) .AND. l_fract(ic)) THEN
+
+    n_errors = 0
+    error_flag(:) = .FALSE.
+
+    DO is = 1, nsoil
+      DO ic = 1, nc
+        IF (wtr_soil_sl(ic,is) < -EPSILON(1.0_wp) .AND. l_fract(ic)) THEN
+          IF (.NOT. error_flag(ic)) THEN
+            n_errors = n_errors + 1
+            error_idx(n_errors) = ic
+            error_flag(ic) = .TRUE.
+          END IF
+        ELSE IF (wtr_soil_sl(ic,is) < 0._wp .AND. l_fract(ic)) THEN
+          wtr_soil_sl(ic,is) = 0._wp
+        END IF
+      END DO
+    END DO
+
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
+
         WRITE (message_text_long,*) 'negative soil moisture (routine end) at ', &
           & lat(ic),'N and ',lon(ic),'E:',                NEW_LINE('a'), &
           & 'Infiltration:     ', infilt(ic),             NEW_LINE('a'), &
@@ -1456,16 +1703,25 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('soilhyd', message_text_long, all_print=.TRUE.)
         END IF
-      ELSE IF (ANY(wtr_soil_sl(ic,:) < 0.0_wp) .AND. l_fract(ic)) THEN
-        ! WRITE (message_text,*) 'setting negative soil moisture (routine end) to zero at ', &
-        !   & lat(ic),'N and ',lon(ic),'E:', NEW_LINE('a'), &
-        !   & 'Soil moisture:    ', wtr_soil_sl(ic,:)
-        ! Enable for debugging purpose, otherwise it fills up the logfile
-        ! CALL message ('soilhyd', message_text)
-        wtr_soil_sl(ic,:) = MAX(wtr_soil_sl(ic,:), 0.0_wp)
-      END IF
+      END DO
+    END IF
 
-      IF (ANY(wtr_soil_sl(ic,:) > wtr_wsat_sl(ic,:) + EPSILON(1.0_wp)) .AND. l_fract(ic)) THEN
+    n_errors = 0
+    error_flag(:) = .FALSE.
+
+    DO is = 1, nsoil
+      DO ic = 1, nc
+        IF (wtr_soil_sl(ic,is) > wtr_wsat_sl(ic,is) + EPSILON(1.0_wp) .AND. l_fract(ic) .AND. .NOT. error_flag(ic)) THEN
+          n_errors = n_errors + 1
+          error_idx(n_errors) = ic
+        END IF
+      END DO
+    END DO
+
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
+
         WRITE (message_text_long,*) 'soil moisture exceeds saturation capacity(routine end) at ', &
           &  lat(ic),'N and ',lon(ic),'E:',                 NEW_LINE('a'), &
           & 'Infiltration:       ', infilt(ic),             NEW_LINE('a'), &
@@ -1480,10 +1736,10 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('soilhyd', message_text_long, all_print=.TRUE.)
         END IF
-      END IF
-    END DO
+      END DO
+    END IF
 #else
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is=1,nsoil
       DO ic=1,nc
         IF (wtr_soil_sl(ic,is) < 0._wp) THEN
@@ -1494,10 +1750,128 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 #endif
 
-    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE soilhyd
+
+  !----------------------------------------------------------------------------------------------
+
+  SUBROUTINE calc_soilhyd_lateral(                                          &
+    & l_pf_soil, nc, nsoil, delta_time,                                     &
+    & flowlag, hyd_cond_bot, soil_depth_sl, vol_field_cap_sl,               &
+    & ice_soil_sl, wtr_soil_sl, wtr_latflow_res_sl, drainage_sl, drain_bot, &
+    & wtr_latflow_sl)
+
+    USE mo_hydro_constants,    ONLY: k_brock
+
+    LOGICAL, INTENT(IN)             :: l_pf_soil(:)               !> Permafrost within the soil above bedrock
+    INTEGER,  INTENT(IN)            :: nc                         !> number of cells
+    INTEGER,  INTENT(IN)            :: nsoil                      !> number of soil layers
+    REAL(wp), INTENT(IN)            :: delta_time                 !> time step length
+    REAL(wp), INTENT(IN)            :: flowlag(:)                 !> lag factor determining the outflow [/]
+    REAL(wp), INTENT(IN)            :: hyd_cond_bot(:)            !> hydraulic conductivity of the bottom soil layer [m/s]
+    REAL(wp), INTENT(IN)            :: soil_depth_sl(:,:)         !> thicknesses of soil layers until edrock [m]
+    REAL(wp), INTENT(IN)            :: vol_field_cap_sl(:,:)      !> volumetric field capacity
+    REAL(wp), INTENT(IN)            :: ice_soil_sl(:,:)           !> ice content [m]
+    REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           !> soil moisture of each layer [m]
+    REAL(wp), INTENT(INOUT)         :: wtr_latflow_res_sl(:,:)    !> water content in lateral flow reservoir [m]
+    REAL(wp), INTENT(INOUT)         :: drainage_sl(:,:)           !> drainage on layers [m]
+    REAL(wp), INTENT(INOUT)         :: drain_bot(:)               !> bottom layer drainge [m]
+    REAL(wp), INTENT(OUT)           :: wtr_latflow_sl(:,:)        !> lateral flux to downstream unit / river
+
+    ! local variables
+
+    INTEGER  :: ic, is
+    REAL(wp) :: drain_bot_act                ! contribution of layer to bottom layer drainage [m]
+    REAL(wp) :: drain_bot_pot(nc)            ! potential bottom layer drainage from column [m]
+    REAL(wp) :: weq_sl(nc,nsoil)             ! total water content of soil layer [m]
+    REAL(wp) :: field_cap_sl(nc,nsoil)       ! field capacity of soil layer [m]
+
+    !$ACC DATA ASYNC(acc_stream) &
+    !$ACC   CREATE(drain_bot_pot, weq_sl, field_cap_sl)
+
+    drain_bot_act = 0._wp
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+    DO is = 1, nsoil
+      DO ic = 1, nc
+        wtr_latflow_sl(ic,is) = 0._wp
+        weq_sl(ic,is)         = ice_soil_sl(ic,is) + wtr_soil_sl(ic,is)
+        field_cap_sl(ic,is)   = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
+
+    ! Determining the potential loss from the intermediate storage from the bottom of the soil column
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      IF (l_pf_soil(ic)) THEN
+        drain_bot_pot(ic) = 0._wp
+      ELSE
+        drain_bot_pot(ic) = MIN(k_brock, hyd_cond_bot(ic)) * delta_time
+      END IF
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+    !$ACC LOOP SEQ
+    DO is=1,nsoil
+      !$ACC LOOP GANG VECTOR
+      DO ic=1,nc
+        ! Adding layered drainage to storage reservoir and setting drainage to 0.
+        wtr_latflow_res_sl(ic,is)     = wtr_latflow_res_sl(ic,is) + drainage_sl(ic,is)
+        drainage_sl(ic,is)            = 0._wp
+        ! Allowing to remoist the soil in case ws + ice < fldcap
+        IF (weq_sl(ic,is) < field_cap_sl(ic,is)) THEN
+          wtr_soil_sl(ic,is)          = wtr_soil_sl(ic,is)        &
+            &                         + MIN(field_cap_sl(ic,is) - weq_sl(ic,is), wtr_latflow_res_sl(ic,is))
+          wtr_latflow_res_sl(ic,is)   = wtr_latflow_res_sl(ic,is) &
+            &                         - MIN(field_cap_sl(ic,is) - weq_sl(ic,is), wtr_latflow_res_sl(ic,is))
+        END IF
+        ! Calculating additional bottom layer drainage assuming water can redily move to the bedrock-boundary
+        IF (drain_bot_pot(ic) > 0._wp .AND.  wtr_latflow_res_sl(ic,is) > 0._wp) THEN
+          drain_bot_act               = MIN(drain_bot_pot(ic), wtr_latflow_res_sl(ic,is))
+          drain_bot_pot(ic)           = drain_bot_pot(ic) - drain_bot_act
+          wtr_latflow_res_sl(ic,is)   = wtr_latflow_res_sl(ic,is) - drain_bot_act
+          drain_bot(ic)               = drain_bot(ic) + drain_bot_act
+        END IF
+        ! Calculating the lateral flux to downstream unit / river
+          IF (wtr_latflow_res_sl(ic,is) > 0._wp) THEN
+            wtr_latflow_sl(ic,is)     = wtr_latflow_res_sl(ic,is) * flowlag(ic)
+            ! Removing outflow from reservoir
+            wtr_latflow_res_sl(ic,is) = wtr_latflow_res_sl(ic,is) - wtr_latflow_sl(ic,is)
+          END IF
+      END DO
+    END DO
+    !$ACC END PARALLEL
+
+    !$ACC END DATA
+
+  END SUBROUTINE calc_soilhyd_lateral
+
+  !----------------------------------------------------------------------------------------------
+
+#ifndef _OPENACC
+  ELEMENTAL &
+#endif
+  SUBROUTINE surfhyd_lat(flowlag, runoff, wtr_latflow_res_srf, wtr_latflow_srf)
+
+  !$ACC ROUTINE SEQ
+
+    REAL(wp), INTENT(IN)            :: flowlag               !> Outflow coefficient from reservoir      [-]
+    REAL(wp), INTENT(INOUT)         :: runoff                !> Surface runoff                          [m]
+    REAL(wp), INTENT(INOUT)         :: wtr_latflow_res_srf   !> water content in lateral flow reservoir [m]
+    REAL(wp), INTENT(OUT)           :: wtr_latflow_srf       !> lateral flux to downstream unit / river [m]
+
+    ! Adding surface runoff to storage reservoir and setting runoff to 0.
+    wtr_latflow_res_srf = wtr_latflow_res_srf + runoff
+    runoff              = 0._wp
+    ! Calculating the lateral flux to downstream unit / river
+    wtr_latflow_srf     = wtr_latflow_res_srf * flowlag
+    wtr_latflow_res_srf = wtr_latflow_res_srf - wtr_latflow_srf
+
+  END SUBROUTINE surfhyd_lat
 
   !----------------------------------------------------------------------------------------------
 
@@ -1534,8 +1908,6 @@ CONTAINS
     !! The routine is based on routine soilchange by Stefan Hagemann.
     !----------------------------------------------------------------------------------------------
 
-    USE mo_jsb_impl_constants, ONLY: WB_LOGGING, WB_ERROR
-
     ! arguments
 
     INTEGER,  INTENT(in)     :: nc                      ! vector length
@@ -1559,7 +1931,7 @@ CONTAINS
 
     ! local variables
 
-    INTEGER  :: ic, is
+    INTEGER  :: ic, is, ie, n_errors
     CHARACTER(len=4096) :: message_text_long ! long string for soil hydrology checks
     REAL(wp) :: dummy_wtr_soil(nc, nsoil)    ! dummy soil moisture storage [m]
     REAL(wp) :: deficit                      ! water deficit within the actual soil layer [m]
@@ -1568,16 +1940,34 @@ CONTAINS
     REAL(wp) :: fixed                        ! amount of water below the wilting point, not available for plants [m]
     REAL(wp) :: root_depth(nc)               ! Total depth of rootzone [m]
 
+    INTEGER :: error_idx(nc)
+    LOGICAL :: error_flag(nc)
+    REAL(wp) :: transpiration_sum(nc)
+
     !----------------------------------------------------------------------------------------------
     !  diagnose evaporation and transpiration fluxes
     !----------------------------------------------------------------------------------------------
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(dummy_wtr_soil, root_depth)
 
 #ifndef _OPENACC
-    DO ic = 1, nc
-      IF (ANY(wtr_soil_sl(ic,:) < 0._wp) .AND. l_fract(ic)) THEN
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      n_errors = 0
+      error_flag(:) = .FALSE.
+
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          IF (wtr_soil_sl(ic,is) < 0._wp .AND. l_fract(ic) .AND. .NOT. error_flag(ic)) THEN
+            n_errors = n_errors + 1
+            error_idx(n_errors) = ic
+            error_flag(ic) = .TRUE.
+          END IF
+        END DO
+      END DO
+
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
         WRITE (message_text,*) 'negative soil moisture (routine start) at ', &
           & lat(ic),'N and ',lon(ic),'E:', NEW_LINE('a'), &
           & 'Soil moisture: ', wtr_soil_sl(ic,:)
@@ -1586,21 +1976,30 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('diagnose_evapotrans', message_text, all_print=.TRUE.)
         END IF
-      END IF
-    END DO
+      END DO
+    END IF
 #endif
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic=1,nc
-      root_depth(ic) = SUM(droot(ic,:))
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    DO ic = 1, nc
+      root_depth(ic) = 0._wp
     END DO
-    !$ACC END PARALLEL LOOP
+
+    !$ACC LOOP SEQ
+    DO is = 1, nsoil
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        root_depth(ic) = root_depth(ic) + droot(ic,is)
+      END DO
+    END DO
 
     !  bare soil evaporation
     ! -----------------------
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC LOOP SEQ
     DO is = 1, nsoil
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         ! Use dummy soil moisture storage for diagnostics, because the real soil moisture storage
         !   is only to be changed during the vertical transport
@@ -1608,9 +2007,8 @@ CONTAINS
         transpiration_sl(ic,is) = 0._wp
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
 
       evapo_soil_sl1(ic) = 0._wp
@@ -1639,12 +2037,10 @@ CONTAINS
         deficit_trans(ic) = transpiration_in_m(ic)                       ! add transpiration to deficit term
       END IF
     END DO
-    !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
-      !$ACC LOOP GANG VECTOR PRIVATE(deficit, rootfract, fixed, remaining)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(deficit, rootfract, fixed, remaining)
       DO ic = 1, nc
         ! grid cell not sealed and actual transpiration (not dew) takes place
         !    => take water equally from all over the root zone
@@ -1681,21 +2077,18 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$ACC END PARALLEL
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       evapo_deficit(ic) = evapo_deficit(ic) + deficit_trans(ic)
     END DO
-    !$ACC END PARALLEL LOOP
 
     ! If the transpiration deficit can be reduced by redistributing transpiration extraction from different layers,
     !   it should be done already here. The deficit should be taken from layers starting at the
     !   surface to accelerate the feedback on evapotranspiration.
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
-      !$ACC LOOP GANG VECTOR PRIVATE(remaining)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(remaining)
       DO ic = 1, nc
         IF (deficit_trans(ic) < 0._wp .AND. dummy_wtr_soil(ic,is) > wtr_field_cap_sl(ic,is) * w_soil_wilt_fract) THEN
           ! add water that can be still transpired to the transpiration to reduce the overall deficit
@@ -1709,13 +2102,28 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
-    !$ACC WAIT(1)
     !$ACC END DATA
 
 #ifndef _OPENACC
-    DO ic = 1, nc
-      ! make sure there would be no negative soil moisture after applying ET
-      IF (ANY(dummy_wtr_soil(ic,:) < 0._wp) .AND. l_fract(ic)) THEN
+    IF (enforce_water_budget /= WB_IGNORE) THEN
+      n_errors = 0
+      error_flag(:) = .FALSE.
+      transpiration_sum(:) = 0._wp
+
+      ! make sure there will be no negative soil moisture after applying ET
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          IF (dummy_wtr_soil(ic,is) < 0._wp .AND. l_fract(ic) .AND. .NOT. error_flag(ic)) THEN
+            n_errors = n_errors + 1
+            error_idx(n_errors) = ic
+            error_flag(ic) = .TRUE.
+          END IF
+          transpiration_sum(ic) = transpiration_sum(ic) + transpiration_sl(ic,is)
+        END DO
+      END DO
+
+      DO ie = 1, n_errors
+        ic= error_idx(ie)
         WRITE (message_text_long,*) 'negative soil moisture (routine end) at ', &
           & lat(ic),'N and ',lon(ic),'E:',                        NEW_LINE('a'), &
           & 'Soil evaporation:         ', evapo_soil_sl1(ic),     NEW_LINE('a'), &
@@ -1728,11 +2136,21 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('diagnose_evapotrans', message_text_long, all_print=.TRUE.)
         END IF
-      END IF
-      ! check that diagnosed ET and expected ET is still identical
-      IF ( ABS((evapo_soil_sl1(ic) + deficit_sevap(ic) + SUM(transpiration_sl(ic,:)) + deficit_trans(ic)) &
-        &    - (evapo_soil_in_m(ic) + transpiration_in_m(ic)) ) > 1.0e-13_wp &
-        &  .AND. l_fract(ic)) THEN
+      END DO
+
+      ! check that diagnosed ET and expected ET are still identical
+      n_errors = 0
+      DO ic = 1, nc
+        IF ( ABS((evapo_soil_sl1(ic) + deficit_sevap(ic) + transpiration_sum(ic) + deficit_trans(ic)) &
+          &    - (evapo_soil_in_m(ic) + transpiration_in_m(ic)) ) > 1.0e-13_wp &
+          &  .AND. l_fract(ic)) THEN
+            n_errors = n_errors + 1
+            error_idx(n_errors) = ic
+        END IF
+      END DO
+
+      DO ie = 1, n_errors
+        ic = error_idx(ie)
         WRITE (message_text_long,*) 'ET fluxes mismatch at ', &
           & lat(ic),'N and ',lon(ic),'E:',                                  NEW_LINE('a'), &
           & 'Initial mobile soil water:          ', wtr_soil_sl(ic,:),      NEW_LINE('a'), &
@@ -1748,8 +2166,8 @@ CONTAINS
         ELSE IF (enforce_water_budget == WB_LOGGING) THEN
           CALL message ('diagnose_evapotrans', message_text_long, all_print=.TRUE.)
         END IF
-      END IF
-    END DO
+      END DO
+    END IF
 #endif
 
   END SUBROUTINE diagnose_evapotrans
@@ -1841,7 +2259,7 @@ CONTAINS
 
     nc = SIZE(press_srf)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(qsat_srf_old, evapo_pot)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(qsat_srf_old, evapo_pot)
     DO ic=1,nc
 
       ! Snow fraction on canopy
@@ -1898,7 +2316,6 @@ CONTAINS
 
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
   END SUBROUTINE calc_wet_fractions_veg
 
@@ -1963,7 +2380,7 @@ CONTAINS
 
     nc = SIZE(press_srf)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(qsat_srf_old, evapo_pot)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(qsat_srf_old, evapo_pot)
     DO ic=1,nc
 
       IF (skinres_max(ic) > EPSILON(1._wp)) THEN
@@ -2015,8 +2432,6 @@ CONTAINS
 
     END DO
     !$ACC END PARALLEL LOOP
-
-    !$ACC WAIT(1)
 
   END SUBROUTINE calc_wet_fractions_bare
 
@@ -2171,10 +2586,9 @@ CONTAINS
   nc    = SIZE(S,1)
   nsoil = SIZE(S,2)
 
-  !$ACC DATA &
-  !$ACC   CREATE(dzh, matrix)
+  !$ACC DATA CREATE(dzh, matrix) ASYNC(acc_stream)
 
-  !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+  !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
   DO j=1,nsoil
     DO ic=1,nc
       dzh(ic,j) = 0.0                             ! thickness of half levels
@@ -2182,7 +2596,7 @@ CONTAINS
   END DO
   !$ACC END PARALLEL LOOP
 
-  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
   !$ACC LOOP SEQ
   DO j=2,nsoil
     !$ACC LOOP GANG VECTOR
@@ -2194,13 +2608,11 @@ CONTAINS
   END DO
   !$ACC END PARALLEL
 
-  !$ACC WAIT(1)
-
   ! Note that P & Q refer to the inter face above a given lvl not below.
   ! Hence for j == 1, there is no P(j) and Q(j)
   ! Make sure that this is consistent with the definition of input params.
 
-  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
   !$ACC LOOP SEQ
   DO j = 1, nsoil
     !$ACC LOOP GANG VECTOR
@@ -2243,9 +2655,8 @@ CONTAINS
 #endif
 
   CALL tdma_solver_vec(matrix(:,:,1), matrix(:,:,2), matrix(:,:,3), matrix(:,:,4), &
-    &                  1, nsoil, 1, nc, X(:,:))
+    &                  1, nsoil, 1, nc, X(:,:), opt_acc_queue=acc_stream)
 
-  !$ACC WAIT(1)
   !$ACC END DATA
 
   END SUBROUTINE calc_vertical_transport
@@ -2268,8 +2679,8 @@ CONTAINS
     INTEGER,  INTENT(in)            :: nc                 !< vector length
     INTEGER,  INTENT(in)            :: nsoil              !< number of below ground layers
     REAL(wp), INTENT(in)            :: dsoil(:,:)         !< soil depth (until bedrock) per layer
-    REAL(wp), INTENT(in)            :: wtr(:,:)           !< water content
-    REAL(wp), INTENT(in)            :: ice(:,:)           !< ice content
+    REAL(wp), INTENT(in)            :: wtr(:,:)           !< water content [m]
+    REAL(wp), INTENT(in)            :: ice(:,:)           !< ice content [m]
     REAL(wp), INTENT(in)            :: wscools(:,:)       !< potentially supercooled water
     REAL(wp), INTENT(in)            :: wsat(:,:)          !< soil depth (until bedrock) per layer
     REAL(wp), INTENT(in)            :: wres(:,:)          !< residual water content [m]
@@ -2294,13 +2705,13 @@ CONTAINS
              &  ws_range_vol(nc,nsoil), wsat_vol(nc,nsoil), wres_vol(nc,nsoil), &
              &  ws_free_vol(nc,nsoil), ice_imp(nc,nsoil)
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(wtr_vol, ice_vol, scool_vol, nvgn, mvgn, ws_rel_vol, ws_range_vol) &
     !$ACC   CREATE(wsat_vol, wres_vol, ws_free_vol, ice_imp)
 
     ck = 8.0_wp ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
     DO is = 1, nsoil
       DO ic = 1, nc
@@ -2377,13 +2788,13 @@ CONTAINS
     !$ACC END PARALLEL
 
     ! Compute impedance factor due to soil ice (e.g. Hansson et al., 2004)
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         IF (wsat_vol(ic,is) > 1.0e-10_wp) THEN
-          ice_imp(ic,is)  = 10._wp**(-6._wp * (ice_vol(ic,is) + scool_vol(ic,is)) / wsat_vol(ic,is))
+          ice_imp(ic,is)  = 10._wp**(-6._wp * MIN(1._wp, (ice_vol(ic,is) + scool_vol(ic,is)) / wsat_vol(ic,is)))
         ELSE
           ice_imp(ic,is)  = 1._wp
         END IF
@@ -2391,9 +2802,8 @@ CONTAINS
       !$ACC END LOOP
     END DO
     !$ACC END PARALLEL
-    !$ACC WAIT(1)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     IF (PRESENT(ice_impedance)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
@@ -2438,7 +2848,7 @@ CONTAINS
     ! Making sure ws_rel is in the physical range
     ! This is especially important when infiltration is added to the first layer
     IF (soilhydmodel == VanGenuchten_) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
           ws_rel_vol(ic,is) = MIN(0.9999_wp, MAX(0._wp, ws_rel_vol(ic,is))) ! doesn't work for wrel == 1;
@@ -2447,7 +2857,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     ELSE  ! Brooks & Corey; Van Genuchten
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
           ws_rel_vol(ic,is) = MIN(1._wp, MAX(0._wp, ws_rel_vol(ic,is)))
@@ -2459,7 +2869,7 @@ CONTAINS
     ! Compute hydrological conductivity (K) for every layer
     IF (PRESENT(K)) THEN
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
       IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == Campbell_) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
@@ -2496,27 +2906,25 @@ CONTAINS
       !$ACC END LOOP
 
       !$ACC END PARALLEL
-      !$ACC WAIT(1)
 
       ! Make sure percolation from top layer is limited to water content !!!
       IF (PRESENT(dt)) THEN
-        local_dt = dt
+        local_dt = dt ! Optional scalar variables are not treated correctly by NVHPC OpenACC
         IF (local_dt > 0._wp) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             K(ic,1) = MIN(K(ic,1), MAX(0._wp,(wtr(ic,1)-wres(ic,1)) / local_dt))
           END DO
           !$ACC END PARALLEL LOOP
         END IF
       END IF
-
     END IF
 
     ! Compute hydrological diffusivity (D) for every layer
     IF (PRESENT(D)) THEN
 
       IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == Campbell_) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
         DO is = 1, nsoil
           DO ic = 1, nc
             IF (ws_range_vol(ic,is) > 0._wp) THEN
@@ -2535,7 +2943,7 @@ CONTAINS
           CALL finish ('get_soilhyd_properties', message_text)
         END IF
 #endif
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
         DO is = 1, nsoil
           DO ic = 1, nc
             IF (ws_range_vol(ic,is) > 0._wp .AND. ws_rel_vol(ic,is) > 0._wp) THEN
@@ -2551,7 +2959,7 @@ CONTAINS
 
       ! Reduce transport velocity in presence of ice
       ! However, ice seems to attract water --> is this the right approach for diffusivity?
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
           D(ic,is) = D(ic,is) * ice_imp(ic,is)
@@ -2559,7 +2967,6 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     END IF
-    !$ACC WAIT(1)
 
     ! Determining K & D on layer interface
     ! Possibility
@@ -2578,7 +2985,7 @@ CONTAINS
       END IF
 #endif
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP SEQ
       DO is = nsoil, 2, -1
         !$ACC LOOP GANG VECTOR
@@ -2609,7 +3016,7 @@ CONTAINS
         CALL finish ('get_soilhyd_properties', message_text)
       END IF
 #endif
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP SEQ
       DO is = nsoil, 2, -1
         !$ACC LOOP GANG VECTOR
@@ -2631,7 +3038,7 @@ CONTAINS
     ! Formula from Stuurop 2021 (https://doi.org/10.1016/j.coldregions.2021.103456),
     ! adjusted from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
     IF (PRESENT(mpot_act)) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
           IF (ws_rel_vol(ic,is) > 0._wp) THEN
@@ -2649,7 +3056,6 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE get_soilhyd_properties

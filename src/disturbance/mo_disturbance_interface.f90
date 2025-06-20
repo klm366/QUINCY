@@ -248,14 +248,14 @@ CONTAINS
     !$ACC WAIT(1)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG(STATIC :1) VECTOR
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       q_rel_air_climbuf(ic) =  q_rel_air_climbuf(ic) * persist + q_rel_air(ic) * (1._wp - persist)
     END DO
     !$ACC END LOOP
 
     IF (.NOT. newday .OR. exp_start) THEN
-      !$ACC LOOP GANG(STATIC :1) VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         IF (wind_10m(ic) > max_wind_10m_act(ic)) THEN
           max_wind_10m_act(ic) = wind_10m(ic)
@@ -264,7 +264,7 @@ CONTAINS
       !$ACC END LOOP
     ELSE
       ! Update previous day variabes at the beginning of the new day
-      !$ACC LOOP GANG(STATIC :1) VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         q_rel_air_climbuf_yDay(ic) = q_rel_air_climbuf(ic)
         prev_day_max_wind_10m(ic) = max_wind_10m_act(ic)
@@ -395,11 +395,15 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(DISTURB_, burned_fract,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, damaged_fract,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, max_wind_10m_act,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf_yDay,  weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
 
   END SUBROUTINE aggregate_damaged_area
 
@@ -414,9 +418,8 @@ CONTAINS
   SUBROUTINE update_natural_disturbances(tile, options)
 
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
-    USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, calculate_current_c_ag_1_and_bg_sums,  &
-                                      & calculate_current_c_ta_state_sum, check_carbon_conservation, &
-                                      & recalc_carbon_per_tile_vars
+    USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, recalc_carbon_per_tile_vars, &
+                                      & calculate_current_c_ta_state_sum, check_carbon_conservation
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_time,              ONLY: is_newday
 
@@ -585,7 +588,6 @@ CONTAINS
                 & c_humus_2(:)                             & ! inout
                 & )
 
-              CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
               CALL recalc_per_tile_vars(tile, options,                                      &
                 & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
                 & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
@@ -664,7 +666,6 @@ CONTAINS
                 & co2flux_fire_all_2_atm                    & ! out
                 & )
 
-              CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
               CALL recalc_per_tile_vars(tile, options,                                      &
                 & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
                 & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
@@ -743,6 +744,9 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     IF (tile%Is_process_active(CARBON_)) THEN
+
+      CALL weighted_by_fract%BeginAggregate()
+
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_green_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_woods_ta,              weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_reserve_ta,            weighted_by_fract)
@@ -759,6 +763,9 @@ CONTAINS
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_1_ta,            weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_2_ta,            weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  co2flux_fire_all_2_atm_ta, weighted_by_fract)
+
+       CALL weighted_by_fract%EndAggregate()
+
     ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
