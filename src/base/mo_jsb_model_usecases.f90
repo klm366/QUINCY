@@ -977,8 +977,8 @@ CONTAINS
         & fract_varname='equal')
     ELSE
       veg_tile => t_jsb_tile('veg', 'Veg tile', &
-        & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,       HYDRO_,     SPQ_      /), &
-        & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_,  ON_LEAFS_ /), &
+        & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,       SEB_,      HYDRO_,     SPQ_      /), &
+        & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_ /), &
         & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
         & fract_varname='equal')
     END IF
@@ -1129,8 +1129,8 @@ CONTAINS
         & fract_varname='equal')
     ELSE
       veg_tile => t_jsb_tile('veg', 'Veg tile', &
-        & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,       HYDRO_,     SPQ_      /), &
-        & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_,  ON_LEAFS_ /), &
+        & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,       SEB_,      HYDRO_,     SPQ_      /), &
+        & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_ /), &
         & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
         & fract_varname='equal')
     END IF
