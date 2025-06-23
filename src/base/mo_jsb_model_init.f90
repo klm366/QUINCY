@@ -379,13 +379,12 @@ CONTAINS
       ENDIF
 
       !>
-      !> quincy with jsbach soil-physic processes
+      !> quincy with jsbach soil-physic processes (w/o tmx)
       !>
       IF (model%config%use_soil_phys_jsbach) THEN
 
         !-- set flux variables to zero
         CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
-        CALL model%Queue_task(SPQ_, "reset_spq_fluxes")             ! ALL
         CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
         IF(model%config%qmodel_id == QLAND) THEN
           CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
@@ -423,12 +422,24 @@ CONTAINS
         IF (model%config%qmodel_id == QLAND) THEN
           CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
         END IF
-        CALL model%Queue_task(SPQ_, "soil_turbulence")              ! ALL
-        CALL model%Queue_task(RAD_, "surface_radiation")            ! ALL
-        CALL model%Queue_task(Q_PHENO_, "q_phenology")              ! ALL
-        CALL model%Queue_task(RAD_, "radiation_par")                ! ALL
-        CALL model%Queue_task(Q_ASSIMI_, "canopy_fluxes")           ! ALL
-        CALL model%Queue_task(SPQ_, "spq_physics")                  ! ALL
+
+        CALL model%Queue_task(RAD_,       "surface_radiation")
+        CALL model%Queue_task(Q_PHENO_,   "q_phenology")
+        CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
+        CALL model%Queue_task(HYDRO_,     "soil_properties")
+        CALL model%Queue_task(SEB_,       "surface_energy")
+        CALL model%Queue_task(HYDRO_,     "evaporation")
+        CALL model%Queue_task(SEB_,       "surface_fluxes")
+        CALL model%Queue_task(HYDRO_,     "surface_hydrology")
+        CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
+        CALL model%Queue_task(SSE_,       "soil_and_snow_properties")
+        CALL model%Queue_task(SSE_,       "soil_and_snow_temperature")
+        CALL model%Queue_task(HYDRO_,     "soil_hydrology")
+        CALL model%Queue_task(SEB_,       "snowmelt_correction")
+        CALL model%Queue_task(HYDRO_,     "water_stress")
+        CALL model%Queue_task(RAD_,       "radiation_par")
+        CALL model%Queue_task(Q_ASSIMI_,  "canopy_fluxes")
+        CALL model%Queue_task(TURB_,      "humidity_scaling")
 
         IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
           IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
@@ -444,16 +455,14 @@ CONTAINS
 
         CALL model%Queue_task(VEG_, "veg_pools")                    ! ALL
         CALL model%Queue_task(VEG_, "plant_characteristics")        ! ALL - ! required after updating veg pools !
-
         IF (model%config%qmodel_id == QLAND) THEN
           CALL model%Queue_task(SB_, "sb_pools")                    ! LAND ONLY
         END IF
 
-        CALL model%Queue_task(TURB_, "humidity_scaling")            ! ALL
-        IF (.NOT. model%config%use_tmx) THEN
-          CALL model%Queue_task(TURB_, "surface_roughness")         ! ALL
-        END IF
-        CALL model%Queue_task(RAD_, "albedo")                       ! ALL
+        CALL model%Queue_task(TURB_,    "surface_roughness")        ! both update and aggregate run calculations
+        CALL model%Queue_task(RAD_,     "albedo")                   ! ALL
+        CALL model%Queue_task(HYDRO_,   "water_balance")
+        CALL model%Queue_task(SEB_,     "asselin_filter")           ! Should always be the last task
 
         !-- averaging variables in time ------------------------------------------------------------------- !
         CALL model%Queue_task(RAD_, "rad_time_average")             ! ALL
