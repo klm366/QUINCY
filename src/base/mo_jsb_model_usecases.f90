@@ -945,6 +945,7 @@ CONTAINS
     !
     land_tile => t_jsb_tile('land', 'Land tile', &
       ! add processes here only to make model init and jsb4_forcing working
+      & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
       ! none of the tasks of these processes is running via task queue
       & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
       & fract_varname='equal')   ! Fraction of land tile = 1
@@ -955,9 +956,12 @@ CONTAINS
     ! vegetation tile with PFT tiles as leafs
     !   fraction is "equal" because it is the only tile at this level (same as land tile)
     !
+    ! on veg tile:  SSE_ and HYDRO_
+    ! on PFT tiles: Q_ASSIMI_, Q_PHENO_, VEG_, SB_, SPQ_
+    !
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
-      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      SEB_,      HYDRO_,    SPQ_      /), &
-      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_ /), &
+      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_,    SPQ_      /), &
+      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_,  ON_LEAFS_ /), &
       & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
       & fract_varname='equal')
     !$ACC ENTER DATA COPYIN(veg_tile)
@@ -1078,6 +1082,7 @@ CONTAINS
     !
     land_tile => t_jsb_tile('land', 'Land tile', &
       ! add processes here only to make model init and jsb4_forcing working
+      & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
       ! none of the tasks of these processes is running via task queue
       & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
       & fract_varname='equal')   ! Fraction of land tile = 1
@@ -1088,9 +1093,12 @@ CONTAINS
     ! vegetation tile with PFT tiles as leafs
     !   fraction is "equal" because it is the only tile at this level (same as land tile)
     !
+    ! on veg tile:  SSE_ and HYDRO_
+    ! on PFT tiles: Q_ASSIMI_, Q_PHENO_, VEG_, SB_, SPQ_
+    !
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
-      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      SEB_,      HYDRO_,    SPQ_      /), &
-      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_ /), &
+      & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_,    SPQ_      /), &
+      & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_,  ON_LEAFS_ /), &
       & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
       & fract_varname='equal')
     !$ACC ENTER DATA COPYIN(veg_tile)
