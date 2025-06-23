@@ -84,6 +84,7 @@ CONTAINS
       ! jsbach 11 PFTs + forest age-classes
       CALL init_usecase_pfts_with_forest_age_classes(model)
 
+#ifndef __NO_QUINCY__
     ! QUINCY 11 PFTs
     CASE ('quincy_11_pfts')
       CALL init_usecase_quincy_11_pfts(model)
@@ -95,6 +96,7 @@ CONTAINS
     CASE ('quincy_13_pfts_for_coupling')
       ! QUINCY 13 pfts but with SPQ running on the box tile
       CALL init_usecase_quincy_13_pfts_for_coupling(model)
+#endif
 
     ! catch wrong usecase setting
     CASE DEFAULT
@@ -859,6 +861,7 @@ CONTAINS
 
   END SUBROUTINE init_usecase_pfts_with_forest_age_classes
 
+#ifndef __NO_QUINCY__
   ! ======================================================================================================= !
   !> init routine for usecase quincy_11_pfts
   !>
@@ -1292,6 +1295,7 @@ CONTAINS
 
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
   END SUBROUTINE init_usecase_quincy_13_pfts_for_coupling
+#endif
 
 #endif
 END MODULE mo_jsb_model_usecases
