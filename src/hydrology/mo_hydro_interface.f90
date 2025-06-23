@@ -1440,7 +1440,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max)     ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1) ! in
 
-#ifndef __NO_QUINCY__
+    ALLOCATE(ftranspiration_local_sl(nc, nsoil))
+    !$ACC ENTER DATA CREATE(ftranspiration_local_sl) ASYNC(acc_stream)
+
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -1450,6 +1452,7 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
+#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_transp_down_sl)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)
@@ -1466,8 +1469,6 @@ CONTAINS
       !$ACC END PARALLEL
       dsl4jsb_Get_memory(Q_ASSIMI_)
       dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl)  ! in
-      ALLOCATE(ftranspiration_local_sl(nc, nsoil))
-      !$ACC ENTER DATA CREATE(ftranspiration_local_sl) ASYNC(acc_stream)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO is = 1, nsoil
         DO  ic = 1, nc
@@ -1475,8 +1476,8 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-    END SELECT
 #endif
+    END SELECT
 
     !$ACC DATA ASYNC(acc_stream) CREATE(l_fract) &
     !$ACC   CREATE(l_pf_soil, depth_thrsh, slope_used, flowlag_used)
@@ -1632,8 +1633,16 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC EXIT DATA DELETE(wtr_soil_old_sl, ftranspiration_local_sl) ASYNC(acc_stream)
-    DEALLOCATE(wtr_soil_old_sl, ftranspiration_local_sl)
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_JSBACH)
+      !$ACC EXIT DATA DELETE(ftranspiration_local_sl) ASYNC(acc_stream)
+      DEALLOCATE(ftranspiration_local_sl)
+#ifndef __NO_QUINCY__
+    CASE (MODEL_QUINCY)
+      !$ACC EXIT DATA DELETE(wtr_soil_old_sl, ftranspiration_local_sl) ASYNC(acc_stream)
+      DEALLOCATE(wtr_soil_old_sl, ftranspiration_local_sl)
+#endif
+    END SELECT
 
     !$ACC END DATA
 
