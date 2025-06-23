@@ -229,6 +229,29 @@ CONTAINS
       dsl4jsb_Get_config(HYDRO_)
       dsl4jsb_Get_config(PPLCC_)
 
+      ! Make number of vertical layers available from the options type
+      IF (model%Is_process_enabled(HYDRO_)) THEN
+        soil_w => Get_vgrid('soil_depth_water')
+        nsoil_w = soil_w%n_levels
+      END IF
+      IF (model%Is_process_enabled(SSE_)) THEN
+        soil_e => Get_vgrid('soil_depth_energy')
+        nsoil_e = soil_e%n_levels
+        IF (dsl4jsb_Config(SSE_)%l_snow) THEN
+          snow_e => Get_vgrid('snow_depth_energy')
+          nsnow_e = snow_e%n_levels
+        END IF
+      END IF
+      CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
+
+      ! Crosscheck process configs
+      IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
+        & .AND. (nsoil_e /= nsoil_w)) THEN
+        CALL finish(routine, &
+          & 'The number of soil layers used for water and energy currently need to be identical:'  &
+          & //' nsoil_w = '//TRIM(int2string(nsoil_w))//', nsoil_e = '//TRIM(int2string(nsoil_e)))
+      END IF
+
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_config(CARBON_)
@@ -237,29 +260,6 @@ CONTAINS
         dsl4jsb_Get_config(FAGE_)
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
-
-        ! Make number of vertical layers available from the options type
-        IF (model%Is_process_enabled(HYDRO_)) THEN
-          soil_w => Get_vgrid('soil_depth_water')
-          nsoil_w = soil_w%n_levels
-        END IF
-        IF (model%Is_process_enabled(SSE_)) THEN
-          soil_e => Get_vgrid('soil_depth_energy')
-          nsoil_e = soil_e%n_levels
-          IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-            snow_e => Get_vgrid('snow_depth_energy')
-            nsnow_e = snow_e%n_levels
-          END IF
-        END IF
-        CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
-
-        ! Crosscheck process configs
-        IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
-          & .AND. (nsoil_e /= nsoil_w)) THEN
-          CALL finish(routine, &
-            & 'The number of soil layers used for water and energy currently need to be identical:'  &
-            & //' nsoil_w = '//TRIM(int2string(nsoil_w))//', nsoil_e = '//TRIM(int2string(nsoil_e)))
-        END IF
 
       END SELECT
 
@@ -317,24 +317,6 @@ CONTAINS
           dsl4jsb_Config(PPLCC_)%active = .TRUE.
         END IF
 
-        IF (model%config%init_from_ifs) THEN
-          CALL message(TRIM(routine), 'Initialize JSBACH from IFS analysis file '//TRIM(model%config%ifs_filename))
-          IF (dsl4jsb_Config(HYDRO_)%l_read_initial_moist) THEN
-            CALL message(routine, 'Reading initial soil moisture from '//TRIM(dsl4jsb_Config(HYDRO_)%ic_filename))
-          END IF
-        ELSE
-          dsl4jsb_Config(HYDRO_)%l_read_initial_moist = .FALSE.
-        END IF
-
-        IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
-          ! Don't allow infiltration at sub-zero soil temperature for old snow scheme
-          dsl4jsb_Config(HYDRO_)%l_infil_subzero = .FALSE.
-          CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature (l_snow=false)')
-        ELSE IF (.NOT. dsl4jsb_Config(HYDRO_)%l_infil_subzero) THEN
-          ! Print message if infiltration at sub-zero temperature is switched off in namelist
-          CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature')
-        END IF
-
         IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN
           CALL message(TRIM(routine), 'Using canopy albedo from ini file '//TRIM(dsl4jsb_Config(RAD_)%bc_filename)//&
             &                         ' ... therefore no influence of vegetation on albedo')
@@ -376,7 +358,25 @@ CONTAINS
             & 'When FAGE is enabled and disturbances are active, wlcc should be active, too! Please check!')
         END IF
 
-      END SELECT
+      END SELECT  ! jsbach / quincy
+
+      IF (model%config%init_from_ifs) THEN
+        CALL message(TRIM(routine), 'Initialize JSBACH from IFS analysis file '//TRIM(model%config%ifs_filename))
+        IF (dsl4jsb_Config(HYDRO_)%l_read_initial_moist) THEN
+          CALL message(routine, 'Reading initial soil moisture from '//TRIM(dsl4jsb_Config(HYDRO_)%ic_filename))
+        END IF
+      ELSE
+        dsl4jsb_Config(HYDRO_)%l_read_initial_moist = .FALSE.
+      END IF
+
+      IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
+        ! Don't allow infiltration at sub-zero soil temperature for old snow scheme
+        dsl4jsb_Config(HYDRO_)%l_infil_subzero = .FALSE.
+        CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature (l_snow=false)')
+      ELSE IF (.NOT. dsl4jsb_Config(HYDRO_)%l_infil_subzero) THEN
+        ! Print message if infiltration at sub-zero temperature is switched off in namelist
+        CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature')
+      END IF
 
     END DO
 
