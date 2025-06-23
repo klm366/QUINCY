@@ -35,8 +35,8 @@ MODULE mo_spq_constants
     w_skin_max, &                             !< maximum water storage per unit LAI (m)
     drain_frac, &                             !< preferential flow fraction of infiltrating water per meter soil
     fdrain_srf_runoff, &                      !< fraction of surface runoff that goes to drainage (preferential flow)
-    frac_wtr_vertical_transport_up_max, &     !< maximum upwards   directed material transport across soil layers, i.e., 'frac_wtr_vertical_transport_sl'
-    frac_wtr_vertical_transport_down_max, &   !< maximum downwards directed material transport across soil layers, i.e., 'frac_wtr_vertical_transport_sl'
+    frac_wtr_vertical_transport_up_max, &     !< maximum upwards   directed material transport across soil layers, i.e., 'frac_wtr_transp_down_sl'
+    frac_wtr_vertical_transport_down_max, &   !< maximum downwards directed material transport across soil layers, i.e., 'frac_wtr_transp_down_sl'
     frac_w_lat_loss_max, &                    !< maximum of 'frac_w_lat_loss_sl', i.e., fraction of lateral (horizontal) water loss
                                               !!  of 'w_soil_sl_old' (prev. timestep) to limit nutrient loss at extreme rainfall events
 ! constants for water freezing and ice melting

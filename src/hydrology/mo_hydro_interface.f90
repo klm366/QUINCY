@@ -1347,10 +1347,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: vol_weq_soil_sl
-    dsl4jsb_Real3D_onChunk :: frac_wtr_vertical_transport_sl
+    dsl4jsb_Real3D_onChunk :: frac_wtr_transp_down_sl
     dsl4jsb_Real3D_onChunk :: frac_w_lat_loss_sl
     dsl4jsb_Real3D_onChunk :: drainage_sl
-    dsl4jsb_Real3D_onChunk :: wtr_transp_down
+    dsl4jsb_Real3D_onChunk :: wtr_transp_down_sl
 
     dsl4jsb_Real2D_onChunk :: wtr_soilhyd_res
     dsl4jsb_Real2D_onChunk :: wtr_pond
@@ -1386,7 +1386,8 @@ CONTAINS
     REAL(wp) :: ret_macro_blg
     LOGICAL :: l_fract(options%nc)
     LOGICAL :: l_pf_soil(options%nc)
-    REAL(wp), ALLOCATABLE :: wtr_soil_old_sl(:,:) !< wtr_soil_sl of previous timestep
+    REAL(wp), ALLOCATABLE :: wtr_soil_old_sl(:,:)           !< wtr_soil_sl of previous timestep
+    REAL(wp), ALLOCATABLE :: ftranspiration_local_sl(:,:)   !< helper variable for iput ftranspiration_sl
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1442,13 +1443,20 @@ CONTAINS
 #ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
-      ftranspiration_sl => NULL()
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO  ic = 1, nc
+          ftranspiration_local_sl(ic, is) = 0.0_wp
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     CASE (MODEL_QUINCY)
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_vertical_transport_sl)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_transp_down_sl)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, drainage_sl)
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_transp_down)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_transp_down_sl)
       ALLOCATE(wtr_soil_old_sl(nc, nsoil))
+      !$ACC ENTER DATA CREATE(wtr_soil_old_sl) ASYNC(acc_stream)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO is = 1, nsoil
         DO  ic = 1, nc
@@ -1458,6 +1466,15 @@ CONTAINS
       !$ACC END PARALLEL
       dsl4jsb_Get_memory(Q_ASSIMI_)
       dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl)  ! in
+      ALLOCATE(ftranspiration_local_sl(nc, nsoil))
+      !$ACC ENTER DATA CREATE(ftranspiration_local_sl) ASYNC(acc_stream)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO  ic = 1, nc
+          ftranspiration_local_sl(ic, is) = ftranspiration_sl(ic, is)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     END SELECT
 #endif
 
@@ -1526,6 +1543,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, ice_pond          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, weq_pond_max      ),     &
+      & ftranspiration_local_sl(:,:),                           &
       ! inout
       & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
@@ -1545,13 +1563,9 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     & ! dunne component of surface runoff
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & ! subsurface drainage () on each soil layer
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down   ),     & ! vertical downwards transport of water
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down_sl),     & ! vertical downwards transport of water
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_sl    )      &
-      ! optional in
-#ifndef __NO_QUINCY__
-      & , ftranspiration_sl = ftranspiration_sl                 &
-#endif
       & )
 
 #ifndef __NO_QUINCY__
@@ -1568,21 +1582,21 @@ CONTAINS
         DO  ic = 1, nc
           IF (wtr_soil_old_sl(ic, is) > eps8) THEN
             ! calculation of the two fractions
-            frac_wtr_vertical_transport_sl(ic, is) = &
-              &  MIN( MAX( wtr_transp_down(ic, is) / wtr_soil_old_sl(ic, is), frac_wtr_vertical_transport_up_max), &
+            frac_wtr_transp_down_sl(ic, is) = &
+              &  MIN( MAX( wtr_transp_down_sl(ic, is) / wtr_soil_old_sl(ic, is), frac_wtr_vertical_transport_up_max), &
               &       frac_wtr_vertical_transport_down_max) * 1000._wp / dtime
             frac_w_lat_loss_sl(ic, is) = &
               &  MIN( MAX(drainage_sl(ic, is) / wtr_soil_old_sl(ic, is), 0.0_wp), frac_w_lat_loss_max) * 1000._wp / dtime
             ! ensure the sum of the two fractions would not increase beyond frac_w_lat_loss_max
-            IF ((frac_wtr_vertical_transport_sl(ic, is) + frac_w_lat_loss_sl(ic, is)) > frac_w_lat_loss_max) THEN
-              frac_wtr_vertical_transport_sl(ic, is) = frac_wtr_vertical_transport_sl(ic, is) * frac_w_lat_loss_max &
-                &                                      / (frac_wtr_vertical_transport_sl(ic, is) + frac_w_lat_loss_sl(ic, is))
-              frac_w_lat_loss_sl(ic, is)             = frac_w_lat_loss_sl(ic, is) * frac_w_lat_loss_max &
-                &                                      / (frac_wtr_vertical_transport_sl(ic, is) + frac_w_lat_loss_sl(ic, is))
+            IF ((frac_wtr_transp_down_sl(ic, is) + frac_w_lat_loss_sl(ic, is)) > frac_w_lat_loss_max) THEN
+              frac_wtr_transp_down_sl(ic, is) = frac_wtr_transp_down_sl(ic, is) * frac_w_lat_loss_max &
+                &                               / (frac_wtr_transp_down_sl(ic, is) + frac_w_lat_loss_sl(ic, is))
+              frac_w_lat_loss_sl(ic, is)      = frac_w_lat_loss_sl(ic, is) * frac_w_lat_loss_max &
+                &                               / (frac_wtr_transp_down_sl(ic, is) + frac_w_lat_loss_sl(ic, is))
             END IF
           ELSE
-            frac_wtr_vertical_transport_sl(ic, is) = 0.0_wp
-            frac_w_lat_loss_sl(ic, is)             = 0.0_wp
+            frac_wtr_transp_down_sl(ic, is) = 0.0_wp
+            frac_w_lat_loss_sl(ic, is)      = 0.0_wp
           END IF
         END DO
       END DO
@@ -1618,6 +1632,9 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    !$ACC EXIT DATA DELETE(wtr_soil_old_sl, ftranspiration_local_sl) ASYNC(acc_stream)
+    DEALLOCATE(wtr_soil_old_sl, ftranspiration_local_sl)
+
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1638,8 +1655,8 @@ CONTAINS
 
     dsl4jsb_Def_memory(HYDRO_)
 
+    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_hydrology'
 
     INTEGER :: iblk, ics, ice
@@ -1652,6 +1669,7 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
 
+    model             => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     CALL weighted_by_fract%BeginAggregate()
@@ -1673,11 +1691,17 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage_sl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_transp_down,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_transp_down_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_sl,      weighted_by_fract)
-
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, frac_wtr_transp_down_sl,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, frac_w_lat_loss_sl,          weighted_by_fract)
+    END SELECT
+#endif
     CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

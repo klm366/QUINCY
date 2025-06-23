@@ -117,7 +117,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: frac_wtr_vertical_transport_sl
+    dsl4jsb_Real3D_onChunk :: frac_wtr_transp_down_sl
     dsl4jsb_Real3D_onChunk :: frac_w_lat_loss_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     ! SSE_ 3D
@@ -343,10 +343,10 @@ CONTAINS
     ! HYDRO_ 2D
     dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)         ! in
     ! HYDRO_ 3D
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                  ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_vertical_transport_sl) ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)             ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)                    ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_transp_down_sl)      ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)           ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)                  ! in
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_,   bulk_dens_sl)                 ! inout
     ! A2L_ 2D
@@ -657,7 +657,7 @@ CONTAINS
       & soil_depth_sl(:,:), &
       & rtm_gasdiffusion(:,:), &
       & rmm_gasdiffusion(:,:), &
-      & frac_wtr_vertical_transport_sl(:,:), &
+      & frac_wtr_transp_down_sl(:,:), &
       & frac_w_lat_loss_sl(:,:), &
       & nh4_solute(:,:), &
       & no3_solute(:,:), &

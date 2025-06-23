@@ -180,7 +180,7 @@ MODULE mo_hydro_memory_class
       & wtr_freeze_sl,        & !< Freezing water in soil layers                         [kg m-2 s-1]
       & ice_melt_sl,          & !< Melting ice in soil layers                            [kg m-2 s-1]
       & drainage_sl,          & !< Subsurface drainage (horizontal) from soil layers     [kg m-2 s-1]
-      & wtr_transp_down,      & !< Vertical water transport into the below soil layer    [kg m-2 s-1]
+      & wtr_transp_down_sl,   & !< Vertical water transport into the below soil layer    [kg m-2 s-1]
       & wtr_soil_sat_sl,      & !< Soil water content at saturation (calculated from
                                 !< soil porosity, reduced by ice)                        [m]
       & wtr_soil_fc_sl,       & !< Water content at field capacity (reduced by ice)      [m]
@@ -199,8 +199,8 @@ MODULE mo_hydro_memory_class
       & w_soil_root_pwp         !< Water content at permanent wilting point in root zone of the soil  [m]
 
     TYPE(t_jsb_var_real3d) :: &
-      & frac_w_lat_loss_sl, &           !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep) [unitless]
-      & frac_wtr_vertical_transport_sl  !< fraction of material transferred (vertical) to below layer                                  [fraction s-1]
+      & frac_w_lat_loss_sl, &   !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep) [unitless]
+      & frac_wtr_transp_down_sl !< fraction of material transferred (vertical) to below layer                                  [fraction s-1]
 
     ! Additional variables for PFT lct_type
     TYPE(t_jsb_var_real3d) ::   &
@@ -455,9 +455,9 @@ CONTAINS
       & loutput=.TRUE., output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL mem%Add_var( 'wtr_transp_down', mem%wtr_transp_down,                        &
+    CALL mem%Add_var( 'wtr_transp_down_sl', mem%wtr_transp_down_sl,                  &
       & hgrid, soil_w,                                                               &
-      & t_cf('wtr_transp_down', 'kg m-2 s-1',                                        &
+      & t_cf('wtr_transp_down_sl', 'kg m-2 s-1',                                     &
       &      'Downwards transport of water into next deeper soil layer'),            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
@@ -1347,9 +1347,9 @@ CONTAINS
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
 
-        CALL mem%Add_var('frac_wtr_vertical_transport_sl', mem%frac_wtr_vertical_transport_sl, &
+        CALL mem%Add_var('frac_wtr_transp_down_sl', mem%frac_wtr_transp_down_sl, &
           & hgrid, soil_w, &
-          & t_cf('frac_wtr_vertical_transport_sl', 'fraction s-1', 'fraction of mass transferred to below layer'), &
+          & t_cf('frac_wtr_transp_down_sl', 'fraction s-1', 'fraction of mass transferred to below layer'), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &

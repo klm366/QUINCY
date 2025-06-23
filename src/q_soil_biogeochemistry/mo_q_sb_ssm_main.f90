@@ -125,7 +125,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: frac_wtr_vertical_transport_sl
+    dsl4jsb_Real3D_onChunk :: frac_wtr_transp_down_sl
     dsl4jsb_Real3D_onChunk :: frac_w_lat_loss_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     ! SSE_ 3D
@@ -317,7 +317,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    num_sl_above_bedrock)        ! in
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    frac_wtr_vertical_transport_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    frac_wtr_transp_down_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    frac_w_lat_loss_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)                 ! in
     ! SSE_ 3D
@@ -598,7 +598,7 @@ CONTAINS
         & dtime, &
         & num_sl_above_bedrock(:), &
         & soil_depth_sl(:,:), &
-        & frac_wtr_vertical_transport_sl(:,:), &
+        & frac_wtr_transp_down_sl(:,:), &
         & frac_w_lat_loss_sl(:,:), &
         & rtm_gasdiffusion(:,:), &
         & rmm_gasdiffusion(:,:), &
@@ -1568,7 +1568,7 @@ CONTAINS
                                            dtime, &
                                            num_sl_above_bedrock, &
                                            soil_depth_sl, &
-                                           frac_wtr_vertical_transport_sl, &
+                                           frac_wtr_transp_down_sl, &
                                            frac_w_lat_loss_sl, &
                                            rtm_gasdiffusion, &
                                            rmm_gasdiffusion, &
@@ -1622,7 +1622,7 @@ CONTAINS
     REAL(wp),                          INTENT(in)    :: dtime                              !< timestep length
     REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock               !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: soil_depth_sl                      !< soil layer depth [m]
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: frac_wtr_vertical_transport_sl, &  !< fraction of water/material transported [s-1]
+    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: frac_wtr_transp_down_sl, &         !< fraction of water/material transported [s-1]
                                                         frac_w_lat_loss_sl, &              !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep)
                                                         rtm_gasdiffusion, &                !< temperature modifier for gas diffusion
                                                         rmm_gasdiffusion, &                !< moisture modifier for gas diffusion
@@ -1699,23 +1699,23 @@ CONTAINS
     ! For the 1D scheme with multiple soil hydrology layers, use adjection-diffusion scheme of JSM
     ! reduction of layer concentration in mol m-3 timestep-1, leaching rate in mol m-2 timestep-1
     CALL calc_liquid_phase_transport(nc, nsoil_sb, dtime, num_sl_above_bedrock(:), &
-                                     frac_wtr_vertical_transport_sl(:,:), frac_w_lat_loss_sl(:,:), soil_depth_sl(:,:), &
+                                     frac_wtr_transp_down_sl(:,:), frac_w_lat_loss_sl(:,:), soil_depth_sl(:,:), &
                                      nh4_solute(:,:), transport_nh4_solute(:,:), leaching_nh4_solute(:), &
                                      lateral_loss_nh4_solute_sl(:,:))
     CALL calc_liquid_phase_transport(nc, nsoil_sb, dtime, num_sl_above_bedrock(:), &
-                                     frac_wtr_vertical_transport_sl(:,:), frac_w_lat_loss_sl(:,:), soil_depth_sl(:,:), &
+                                     frac_wtr_transp_down_sl(:,:), frac_w_lat_loss_sl(:,:), soil_depth_sl(:,:), &
                                      nh4_n15_solute(:,:), transport_nh4_n15_solute(:,:), leaching_nh4_n15_solute(:), &
                                      lateral_loss_nh4_n15_solute_sl(:,:))
     CALL calc_liquid_phase_transport(nc, nsoil_sb, dtime, num_sl_above_bedrock(:), &
-                                     frac_wtr_vertical_transport_sl(:,:), frac_w_lat_loss_sl(:,:), soil_depth_sl(:,:), &
+                                     frac_wtr_transp_down_sl(:,:), frac_w_lat_loss_sl(:,:), soil_depth_sl(:,:), &
                                      no3_solute(:,:), transport_no3_solute(:,:), leaching_no3_solute(:), &
                                      lateral_loss_no3_solute_sl(:,:))
     CALL calc_liquid_phase_transport(nc, nsoil_sb, dtime, num_sl_above_bedrock(:), &
-                                     frac_wtr_vertical_transport_sl(:,:), frac_w_lat_loss_sl(:,:), soil_depth_sl(:,:), &
+                                     frac_wtr_transp_down_sl(:,:), frac_w_lat_loss_sl(:,:), soil_depth_sl(:,:), &
                                      no3_n15_solute(:,:), transport_no3_n15_solute(:,:), leaching_no3_n15_solute(:), &
                                      lateral_loss_no3_n15_solute_sl(:,:))
     CALL calc_liquid_phase_transport(nc, nsoil_sb, dtime, num_sl_above_bedrock(:), &
-                                     frac_wtr_vertical_transport_sl(:,:), frac_w_lat_loss_sl(:,:), soil_depth_sl(:,:), &
+                                     frac_wtr_transp_down_sl(:,:), frac_w_lat_loss_sl(:,:), soil_depth_sl(:,:), &
                                      po4_solute(:,:), transport_po4_solute(:,:), leaching_po4_solute(:), &
                                      lateral_loss_po4_solute_sl(:,:))
 

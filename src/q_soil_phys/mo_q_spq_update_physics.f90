@@ -187,7 +187,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: soil_depth_sl
     dsl4jsb_Real3D_onChunk                :: soil_lay_depth_ubound_sl
     dsl4jsb_Real3D_onChunk                :: soil_lay_width_sl
-    dsl4jsb_Real3D_onChunk                :: frac_wtr_vertical_transport_sl
+    dsl4jsb_Real3D_onChunk                :: frac_wtr_transp_down_sl
     dsl4jsb_Real3D_onChunk                :: frac_w_lat_loss_sl
     dsl4jsb_Real3D_onChunk                :: ice_soil_sl
     dsl4jsb_Real3D_onChunk                :: wtr_soil_pwp_sl
@@ -321,7 +321,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                  ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_lay_depth_ubound_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_lay_width_sl)              ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_vertical_transport_sl) ! inout
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_transp_down_sl)        ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)             ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)                    ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)                ! in
@@ -463,7 +463,7 @@ CONTAINS
     !$ACC   HOST(kdiff_sat_sl(:,:), root_fraction_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:)) &
     !$ACC   HOST(w_skin(:), wtr_rootzone(:), wtr_rootzone_rel(:), wtr_soil_root_pot(:), srf_runoff(:)) &
     !$ACC   HOST(drainage(:), gw_runoff(:), drainage_fraction(:), wtr_soil_sl(:,:), matric_pot_sl(:,:)) &
-    !$ACC   HOST(drainage_sl(:,:), frac_wtr_vertical_transport_sl(:,:), gw_runoff_sl(:,:), t_soil_sl(:,:), ice_soil_sl(:,:)) &
+    !$ACC   HOST(drainage_sl(:,:), frac_wtr_transp_down_sl(:,:), gw_runoff_sl(:,:), t_soil_sl(:,:), ice_soil_sl(:,:)) &
     !$ACC   HOST(frac_w_lat_loss_sl(:,:), ftranspiration_sl(:,:)) ASYNC(1)
     !$ACC WAIT(1)
     CALL calc_soil_hydrology(nc, nsoil_sb, dtime, &
@@ -478,7 +478,7 @@ CONTAINS
                              w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:), &                                              ! in
                              w_skin(:), wtr_rootzone(:), wtr_rootzone_rel(:), wtr_soil_root_pot(:), &                       ! inout
                              srf_runoff(:), drainage(:), gw_runoff(:), drainage_fraction(:), &                              ! inout
-                             wtr_soil_sl(:,:), matric_pot_sl(:,:), drainage_sl(:,:), frac_wtr_vertical_transport_sl(:,:), & ! inout
+                             wtr_soil_sl(:,:), matric_pot_sl(:,:), drainage_sl(:,:), frac_wtr_transp_down_sl(:,:), &        ! inout
                              gw_runoff_sl(:,:), t_soil_sl(:,:), ice_soil_sl(:,:), &                                         ! inout
                              frac_w_lat_loss_sl(:,:))                                                                       ! out
     !$ACC UPDATE DEVICE(num_sl_above_bedrock(:), soil_lay_depth_ubound_sl(:,:), rain(:), snow(:), interception(:)) &
@@ -488,7 +488,7 @@ CONTAINS
     !$ACC   DEVICE(kdiff_sat_sl(:,:), root_fraction_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:)) &
     !$ACC   DEVICE(w_skin(:), wtr_rootzone(:), wtr_rootzone_rel(:), wtr_soil_root_pot(:), srf_runoff(:)) &
     !$ACC   DEVICE(drainage(:), gw_runoff(:), drainage_fraction(:), wtr_soil_sl(:,:), matric_pot_sl(:,:)) &
-    !$ACC   DEVICE(drainage_sl(:,:), frac_wtr_vertical_transport_sl(:,:), gw_runoff_sl(:,:), t_soil_sl(:,:), ice_soil_sl(:,:)) &
+    !$ACC   DEVICE(drainage_sl(:,:), frac_wtr_transp_down_sl(:,:), gw_runoff_sl(:,:), t_soil_sl(:,:), ice_soil_sl(:,:)) &
     !$ACC   DEVICE(frac_w_lat_loss_sl(:,:), ftranspiration_sl(:,:)) ASYNC(1)
 #ifdef _OPENACC
     wtr_rootzone(:) = -1.0E+21; frac_w_lat_loss_sl(:,:) = -2.0E+14
@@ -1098,7 +1098,7 @@ CONTAINS
                                  w_skin, wtr_rootzone, wtr_rootzone_rel, wtr_soil_root_pot, &      ! inout
                                  srf_runoff, drainage, gw_runoff, drainage_fraction, &             ! inout
                                  wtr_soil_sl, matric_pot_sl, drainage_sl, &                        ! inout
-                                 frac_wtr_vertical_transport_sl, &                                 ! inout
+                                 frac_wtr_transp_down_sl, &                                        ! inout
                                  gw_runoff_sl, t_soil_sl, ice_soil_sl, &                           ! inout
                                  frac_w_lat_loss_sl)                                               ! out
 
@@ -1154,7 +1154,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(inout) :: wtr_soil_sl, &                     !< soil moisture per layer [m]
                                                                        matric_pot_sl, &                   !< soil water potential per layer [MPa]
                                                                        drainage_sl, &                     !< drainage per layer [kg / m2 / s]
-                                                                       frac_wtr_vertical_transport_sl, &  !< fractional water loss [1000/s]
+                                                                       frac_wtr_transp_down_sl, &         !< fractional water loss [1000/s]
                                                                        gw_runoff_sl, &                    !< groundwater runoff per layer [kg / m2 /s]
                                                                        t_soil_sl, &                       !< soil layer temperature
                                                                        ice_soil_sl                        !< ice content of soil layer [m]
@@ -1435,10 +1435,10 @@ CONTAINS
     gw_runoff(:) = SUM(gw_runoff_sl(:,1:nsoil_sb), DIM=2)
     ! Layer one: water balance of surface layer
     WHERE(wtr_soil_sl(:,1) > eps8)
-      frac_wtr_vertical_transport_sl(:,1) = MIN( MAX((drainage_sl(:,1) / 1000._wp * dtime) / &
+      frac_wtr_transp_down_sl(:,1) = MIN( MAX((drainage_sl(:,1) / 1000._wp * dtime) / &
         &                                   (w_soil_sl_old(:,1)), -0.75_wp), 0.75_wp) * 1000._wp / dtime
     ELSEWHERE
-      frac_wtr_vertical_transport_sl(:,1) = 0.0_wp
+      frac_wtr_transp_down_sl(:,1) = 0.0_wp
     ENDWHERE
 
     ! layer 1 to nsoil_sb
@@ -1447,15 +1447,15 @@ CONTAINS
     !   of the previous timestep
     DO isoil = 1,nsoil_sb
       WHERE(wtr_soil_sl(:,isoil) > eps8)
-        frac_wtr_vertical_transport_sl(:,isoil) = MIN( MAX((drainage_sl(:,isoil) / 1000._wp * dtime) &
-          &                                           / (w_soil_sl_old(:,isoil)), frac_wtr_vertical_transport_up_max), &
-          &                                           frac_wtr_vertical_transport_down_max) &
-          &                                       * 1000._wp / dtime
+        frac_wtr_transp_down_sl(:,isoil) = MIN( MAX((drainage_sl(:,isoil) / 1000._wp * dtime) &
+          &                                     / (w_soil_sl_old(:,isoil)), frac_wtr_vertical_transport_up_max), &
+          &                                frac_wtr_vertical_transport_down_max) &
+          &                                * 1000._wp / dtime
         frac_w_lat_loss_sl(:,isoil) = MIN( MAX((gw_runoff_sl(:,isoil) / 1000._wp * dtime) / &
           &                           (w_soil_sl_old(:,isoil)), 0.0_wp), frac_w_lat_loss_max) * 1000._wp / dtime
       ELSEWHERE
-        frac_wtr_vertical_transport_sl(:,isoil) = 0.0_wp
-        frac_w_lat_loss_sl(:,isoil)             = 0.0_wp
+        frac_wtr_transp_down_sl(:,isoil) = 0.0_wp
+        frac_w_lat_loss_sl(:,isoil)      = 0.0_wp
       ENDWHERE
     ENDDO
 
