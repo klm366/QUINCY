@@ -1096,16 +1096,26 @@ CONTAINS
     END IF
 
     !------------------------------------------------------------------------------------------------------ !
-    ! land tile
+    ! land and lake tile
     !
     IF (model%config%use_soil_phys_jsbach) THEN
-      land_tile => t_jsb_tile('land', 'Land tile', &
-        ! add processes here only to make model init and jsb4_forcing working
-        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-        ! none of the tasks of these processes is running via task queue
-        & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
-        & fract_varname='equal')   ! Fraction of land tile = 1
-                                   ! "equal" specifically means, no fraction input file is read and all tiles have the same fraction
+      IF (model%config%use_lakes) THEN
+        lake_tile => t_jsb_tile('lake', 'Lake tile', &
+          & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
+          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+        !$ACC ENTER DATA COPYIN(lake_tile)
+      ELSE
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          ! add processes here only to make model init and jsb4_forcing working
+          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+          ! none of the tasks of these processes is running via task queue
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+          & fract_varname='equal')   ! Fraction of land tile = 1
+                                     ! "equal" specifically means, no fraction input file is read and all tiles have the same fraction
+      END IF
     ELSE
       land_tile => t_jsb_tile('land', 'Land tile', &
         ! add processes here only to make model init and jsb4_forcing working
@@ -1115,6 +1125,20 @@ CONTAINS
                                    ! "equal" specifically means, no fraction input file is read and all tiles have the same fraction
     END IF
     !$ACC ENTER DATA COPYIN(land_tile)
+
+    !------------------------------------------------------------------------------------------------------ !
+    ! glacier tile
+    !
+    IF (model%config%use_soil_phys_jsbach) THEN
+      IF (model%config%use_glacier) THEN
+        glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
+          & processes = (/HYDRO_, SSE_/), &
+          & process_actions = (/ON_TILE_, ON_TILE_/), &
+          & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
+          ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+        !$ACC ENTER DATA COPYIN(glacier_tile)
+      END IF
+    END IF
 
     !------------------------------------------------------------------------------------------------------ !
     ! vegetation tile with PFT tiles as leafs
@@ -1163,6 +1187,8 @@ CONTAINS
     ! ! Next line only to avoid compiler warnings about pointers not being dereferenced
     ! IF (ASSOCIATED(pft_tile)) CONTINUE
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
+    IF (model%config%use_lakes)   NULLIFY(lake_tile)
+    IF (model%config%use_glacier) NULLIFY(glacier_tile)
   END SUBROUTINE init_usecase_quincy_13_pfts
 
   ! ======================================================================================================= !
