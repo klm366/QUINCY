@@ -1026,7 +1026,8 @@ CONTAINS
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model                    !< model instance
 
     CLASS(t_jsb_tile), POINTER    :: box_tile, land_tile, &
-      &                              veg_tile, pft_tile                   !< tiles used with this usecase
+      &                              veg_tile, pft_tile, &
+      &                              lake_tile, glacier_tile              !< tiles used with this usecase
     INTEGER                       :: i                                    !< for looping
     ! number of pft
     INTEGER, PARAMETER            :: npft = 13
