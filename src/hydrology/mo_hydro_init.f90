@@ -33,7 +33,7 @@ MODULE mo_hydro_init
   USE mo_exception,          ONLY: message, message_text, warning, finish
   USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -1405,8 +1405,9 @@ CONTAINS
   !
   SUBROUTINE hydro_init_bc(tile)
 
-    USE mo_util,          ONLY: soil_depth_to_layers_2d
-    USE mo_hydro_process, ONLY: calc_orographic_features
+    USE mo_util,                ONLY: soil_depth_to_layers_2d
+    USE mo_hydro_process,       ONLY: calc_orographic_features
+    USE mo_jsb_math_constants,  ONLY: eps8
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
@@ -1419,22 +1420,46 @@ CONTAINS
     INTEGER                    :: nsoil               !< Number of soil layers
 
     INTEGER :: i                                      !< Looping index
+    INTEGER :: nblks, nproma                          !< dimensions
+    INTEGER :: iblk, ic, is                           !< Looping indices
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_bc'
+
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onDomain    :: num_sl_above_bedrock
+    ! HYDRO_ 3D
+    dsl4jsb_Real3D_onDomain    :: soil_lay_width_sl
+    dsl4jsb_Real3D_onDomain    :: soil_lay_depth_lbound_sl
+    dsl4jsb_Real3D_onDomain    :: soil_lay_depth_ubound_sl
+    dsl4jsb_Real3D_onDomain    :: soil_lay_depth_center_sl
 
     ! Do nothing if hydrology process is not active on this tile
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
     IF (debug_on()) CALL message(routine, 'Setting hydrology boundary conditions for tile '//TRIM(tile%name))
 
-    model => Get_model(tile%owner_model_id)
-
+    model  => Get_model(tile%owner_model_id)
     grid   => Get_grid(model%grid_id)
     soil_w => Get_vgrid('soil_depth_water')
-    nsoil = soil_w%n_levels
+    nsoil  = soil_w%n_levels
+    nblks  = grid%nblks
+    nproma = grid%nproma
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(HYDRO_)
+
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      ! HYDRO_ 2D
+      dsl4jsb_Get_var2D_onDomain(HYDRO_,   num_sl_above_bedrock)
+      ! HYDRO_ 3D
+      dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_width_sl)
+      dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_lbound_sl)
+      dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_ubound_sl)
+      dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_center_sl)
+    END SELECT
+#endif
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -1496,6 +1521,57 @@ CONTAINS
         & dsl4jsb_var2D_onDomain(HYDRO_, soil_depth), & ! Total soil depth until bedrock
         & soil_w%dz(:))                                 ! Fixed soil layer thicknesses from vertical grid
       !>
+
+#ifndef __NO_QUINCY__
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        ! pass these values to a HYDRO_ variable with an improved name
+        soil_lay_width_sl(:,:,:) = dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)
+
+        !>  calc more metrics of the soil layers
+        !>
+        ! i)  lower & upper boundary
+        ! ii) depth at the center of each layer
+        DO iblk = 1,nblks
+          DO is = 1,nsoil
+            ! lower & upper boundary
+            IF (is == 1) THEN
+              soil_lay_depth_lbound_sl(:, is, iblk) = 0.0_wp
+              soil_lay_depth_ubound_sl(:, is, iblk) = soil_lay_width_sl(:, is, iblk)
+            ELSE
+              soil_lay_depth_lbound_sl(:, is, iblk) = soil_lay_depth_lbound_sl(:, is-1, iblk) &
+                &                                     + soil_lay_width_sl(:, is-1, iblk)
+              soil_lay_depth_ubound_sl(:, is, iblk) = soil_lay_depth_ubound_sl(:, is-1, iblk) &
+                &                                     + soil_lay_width_sl(:, is, iblk)
+            ENDIF
+            ! soil-layer center
+            soil_lay_depth_center_sl(:, is, iblk) = (soil_lay_depth_lbound_sl(:, is, iblk) &
+              &                                     + soil_lay_depth_ubound_sl(:, is, iblk)) &
+              &                                     * 0.5_wp
+          END DO
+        END DO
+
+        !> get number of soil layers above bedrock for each gridcell
+        !>
+        !>    use this variable in quincy for looping over soil layers,
+        !>    excluding soil layers with a width smaller/equal eps8
+        !>
+        DO iblk = 1,nblks
+          DO ic = 1,nproma
+            DO is = 1,nsoil
+              IF (soil_lay_width_sl(ic, is, iblk) > eps8) THEN
+                num_sl_above_bedrock(ic, iblk) = REAL(is, wp)
+              ELSE
+                EXIT  ! stop looping over further soil layers with thickness < eps8
+              END IF
+            END DO
+          END DO
+        END DO
+      END SELECT
+
+      !$ACC UPDATE DEVICE(soil_lay_width_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:)) ASYNC(1)
+      !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_center_sl(:,:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
+#endif
 
       ! -------------------------------------------------------------------------------------------------- !
       !>

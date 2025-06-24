@@ -1974,6 +1974,15 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_p_pools'
 
 
+    !> 0.8 init local variables
+    !!
+    soil_p_weight(:)    = eps8
+    soil_p_layer(:)     = 1.0_wp
+    hlp1(:)             = 0.0_wp
+    hlp2(:)             = 0.0_wp
+    aflag(:)            = .TRUE.
+    soil_weight_sl(:,:) = 0.0_wp
+
     !> 0.9 init output variables
     !!
     po4_solute(:,:)     = 0._wp
@@ -1984,9 +1993,7 @@ CONTAINS
 
     !> 1.0 calculate the total soil weight up to the soil_p_depth,
     !! and the soil weight per soil layer
-    hlp1(:)  = 0._wp
-    hlp2(:)  = 0._wp
-    aflag(:) = .TRUE.
+    !!
     !> NOTE at the moment the soil_p_* values are identical across soil layers, hence, using the value from sl 1
     rhlp1(:) = soil_p_slow(:,1) + soil_p_labile(:,1) + soil_p_occluded(:,1) + soil_p_primary(:,1)
     DO ic = 1,nc

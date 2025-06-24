@@ -18,7 +18,7 @@ MODULE mo_sse_init
   USE mo_exception,          ONLY: message
   USE mo_jsb_control,        ONLY: debug_on
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -399,17 +399,32 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init_bc'
 
+    ! SSE_ 3D
+    dsl4jsb_Real3D_onDomain :: sand_sl
+    dsl4jsb_Real3D_onDomain :: silt_sl
+    dsl4jsb_Real3D_onDomain :: clay_sl
+    dsl4jsb_Real3D_onDomain :: bulk_dens_sl
+
     model => get_model(tile%owner_model_id)
+
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting soil energy boundary conditions for tile '//TRIM(tile%name))
 
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
-
-    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
-
-    IF (debug_on()) CALL message(TRIM(routine), 'Setting soil energy boundary conditions for tile '//TRIM(tile%name))
-
     ! Get soil memory of the tile
     dsl4jsb_Get_memory(SSE_)
+
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      ! SSE_ 3D
+      dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)
+      dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)
+      dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)
+      dsl4jsb_Get_var3D_onDomain(SSE_, bulk_dens_sl)
+    END SELECT
+#endif
 
     ! Volumetric heat capacity of dry soil [J/(m^3*K)]
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. dsl4jsb_Config(SSE_)%l_soil_texture) THEN
@@ -432,6 +447,27 @@ CONTAINS
         & dsl4jsb_var2D_onDomain(SSE_, vol_heat_cap) * dsl4jsb_var2D_onDomain(SSE_, thermal_diffusivity)
       !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SSE_,thermal_diffusivity)) ASYNC(1)
     END IF
+
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      !> sand
+      !>
+      sand_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_soil_sand
+      !> silt
+      !>
+      silt_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_soil_silt
+      !> clay
+      !>
+      clay_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_soil_clay
+      !> bulk density
+      !>
+      bulk_dens_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_bulk_density
+
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), bulk_dens_sl(:,:,:))
+    END SELECT
+#endif
 
     !$ACC UPDATE ASYNC(1) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap)) &
