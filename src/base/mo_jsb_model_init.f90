@@ -674,8 +674,10 @@ CONTAINS
 
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
-        IF (tile%Is_process_active(SPQ_)) THEN
-          CALL spq_init(tile)
+        IF (.NOT. model%config%use_soil_phys_jsbach) THEN
+          IF (tile%Is_process_active(SPQ_)) THEN
+            CALL spq_init(tile)
+          END IF
         END IF
         IF (tile%Is_process_active(VEG_)) THEN
           CALL veg_init(tile)
