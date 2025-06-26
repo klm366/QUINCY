@@ -482,12 +482,14 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
-    SELECT CASE (model_scheme)
-#ifndef __NO_QUINCY__
-    CASE (MODEL_QUINCY)
-      dsl4jsb_Get_memory(VEG_)
-#endif
-    END SELECT
+!     SELECT CASE (model_scheme)
+! #ifndef __NO_QUINCY__
+!     CASE (MODEL_QUINCY)
+!       IF (tile%contains_vegetation) THEN
+!         dsl4jsb_Get_memory(VEG_)
+!       END IF
+! #endif
+!     END SELECT
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)         ! out
@@ -502,33 +504,22 @@ CONTAINS
 
     ! set logical (vegetated, bare and glacier tiles) model specific to TRUE/FALSE
     l_veg_bare_glac_tile = .FALSE.
-    SELECT CASE (model_scheme)
 #ifndef __QUINCY_STANDALONE__
-    CASE (MODEL_JSBACH)
-      ! icon-land
-      IF (tile%Has_process_memory(SSE_)) THEN  ! Should catch all vegetated, bare and glacier tiles
-        l_veg_bare_glac_tile = .TRUE.
-      END IF
+    ! icon-land
+    IF (tile%Has_process_memory(SSE_)) THEN  ! Should catch all vegetated, bare and glacier tiles
+      l_veg_bare_glac_tile = .TRUE.
+    END IF
+#else
+    ! quincy-standalone
+    IF (tile%contains_vegetation .OR. tile%contains_bare .OR. tile%contains_land) THEN
+      l_veg_bare_glac_tile = .TRUE.
+    END IF    
 #endif
-#ifndef __NO_QUINCY__
-    CASE (MODEL_QUINCY)
-      ! quincy-standalone, and IQ w/o SSE_
-      IF (tile%contains_vegetation .OR. tile%contains_bare .OR. tile%contains_land) THEN
-        l_veg_bare_glac_tile = .TRUE.
-      END IF
-#endif
-    END SELECT
 
     ! all vegetated, bare and glacier tiles
     IF (l_veg_bare_glac_tile) THEN
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil) ! in
-      SELECT CASE (model_scheme)
-#ifndef __NO_QUINCY__
-      CASE (MODEL_QUINCY)
-        dsl4jsb_Get_var2D_onChunk(VEG_,   rough_veg_star)          ! in
-#endif
-      END SELECT
 
       config_rough_bare                 = dsl4jsb_Config(TURB_)%roughness_bare
       config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
@@ -556,6 +547,7 @@ CONTAINS
 #ifndef __NO_QUINCY__
         CASE (MODEL_QUINCY)
           dsl4jsb_Get_memory(VEG_)
+          dsl4jsb_Get_var2D_onChunk(VEG_, rough_veg_star)    ! in
           dsl4jsb_Get_var2D_onChunk(VEG_, fract_fpc)         ! in
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
@@ -911,8 +903,10 @@ CONTAINS
 #endif
 #ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
-      dsl4jsb_Get_memory(VEG_)
-      dsl4jsb_Get_memory(Q_ASSIMI_)
+      IF (tile%contains_vegetation) THEN
+        dsl4jsb_Get_memory(VEG_)
+        dsl4jsb_Get_memory(Q_ASSIMI_)
+      END IF
 #endif
     END SELECT
 
