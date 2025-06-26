@@ -677,6 +677,7 @@ CONTAINS
           t_radref(ic) = t(ic)
           qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.TRUE.)
           dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
+          le_phase_change(ic) = 0._wp
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
@@ -694,6 +695,7 @@ CONTAINS
             t_radref(ic) = 280._wp
             qsat_star(ic) = qsat_water(280._wp, press_srf(ic), use_convect_tables=.TRUE.)
             dQdT(ic) = (qsat_water(280._wp + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
+            le_phase_change(ic) = 0._wp
           END IF
         END DO
         !$ACC END PARALLEL LOOP
@@ -737,14 +739,17 @@ CONTAINS
                 & dtime,                                              & ! in
                 & t2s_conv(ic),                                       & ! in
                 & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-                & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
+                & s_ref, s_melt, qsat_star(ic), dQdT(ic),             & ! in
                 & rad_net_star, forc_hflx(ic), heat_tcoef,            & ! in
                 & dheat_tcoef,                                        & ! in
                 & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
-                & frozen_fract(ic), heat_cap(ic), skin_conductivity(ic),& ! in
+                & frozen_fract(ic), heat_cap(ic),                     & ! in
+                & le_freeze_pot(ic), le_melt_pot(ic),                 & ! in
+                & skin_conductivity(ic),                              & ! in
                 & s_srf(ic),                                          & ! inout
                 & s_star(ic),                                         & ! out
-                & dt_sk_dt_srf(ic), limit_dt=LIMIT_DELTAT)              ! out
+                & dt_sk_dt_srf(ic), le_phase_change(ic),              & ! out
+                & limit_dt=LIMIT_DELTAT)                                ! out
 
               t_star(ic) = s_star(ic) / t2s_conv(ic)
 
@@ -965,14 +970,16 @@ CONTAINS
               & dtime,                                              & ! in
               & t2s_conv(ic),                                       & ! in
               & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-              & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
+              & s_ref, s_melt, qsat_star(ic), dQdT(ic),             & ! in
               & rad_srf_net(ic), forc_hflx(ic), heat_tcoef,         & ! in
               & 0._wp,                                              & ! in (dheat_tcoef/dtsk)
               & fact_q_air(ic), fact_qsat_srf(ic), frozen_fract(ic),& ! in
-              & heat_cap(ic), skin_conductivity(ic),                & ! in
+              & heat_cap(ic), le_freeze_pot(ic), le_melt_pot(ic),   & ! in
+              & skin_conductivity(ic),                              & ! in
               & s_srf(ic),                                          & ! inout
               & s_star(ic),                                         & ! out
-              & dt_sk_dt_srf(ic))                                     ! out
+              & dt_sk_dt_srf(ic),                                   & ! out
+              & le_phase_change(ic))                                  ! out
           ELSE
             CALL surface_temp_implicit(                             & ! in
               & alpha,                                              & ! in
@@ -1144,14 +1151,17 @@ CONTAINS
                 & dtime,                                              & ! in
                 & t2s_conv(ic),                                       & ! in
                 & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-                & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
+                & s_ref, s_melt, qsat_star(ic), dQdT(ic),             & ! in
                 & rad_net_star, forc_hflx(ic), ch(ic),                & ! in
                 & 0._wp,                                              & ! in (dheat_tcoef/dtsk)
                 & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
-                & frozen_fract(ic), heat_cap(ic), skin_conductivity(ic),& ! in
+                & frozen_fract(ic), heat_cap(ic),                     & ! in
+                & le_freeze_pot(ic), le_melt_pot(ic),                 & ! in
+                & skin_conductivity(ic),                              & ! in
                 & s_srf(ic),                                          & ! inout
                 & s_star(ic),                                         & ! out
-                & dt_sk_dt_srf(ic))                                     ! out
+                & dt_sk_dt_srf(ic),                                   & ! out
+                & le_phase_change(ic))                                  ! out
             ELSE
               CALL surface_temp_implicit(                             & ! in
                 & alpha,                                              & ! in
@@ -1254,25 +1264,6 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     END IF
-
-    !   ! Compute energy sink (ice melting, negative) / source (water freezing, positive) due to phase change
-    !   IF (phase_change_trgt < 0._wp) THEN
-    !     le_phase_change(ic) = MAX(le_melt_pot(ic), phase_change_trgt)
-    !   ELSE IF (phase_change_trgt > 0._wp) THEN
-    !     le_phase_change(ic) = MIN(le_freeze_pot(ic), phase_change_trgt)
-    !   ELSE
-    !     le_phase_change(ic) = 0._wp
-    !   END IF
-    !   ! Modify the ground heat flux to account for the phase change
-    !   forc_hflx(ic) = forc_hflx(ic) + le_phase_change(ic)
-    !   ! Switch sign of phase change flux. From the energy balance perspective, ice melting
-    !   !   is an energy sink (therefore negative) and freezing a source (therefore positive).
-    !   !   However, from the hydrology perspective melting occures when enough energy is
-    !   !   available (positive sign) and freezing if energy is required (therefore negative).
-    !   !   Thus, we switch the sign now to make the hydrology equations more intuitive.
-    !   le_phase_change(ic) = -1._wp * le_phase_change(ic)
-    ! END DO
-    ! !$ACC END PARALLEL LOOP
 
   END SUBROUTINE get_phasechange_energy_limits
 
@@ -1400,9 +1391,10 @@ CONTAINS
   END SUBROUTINE surface_temp_implicit
 
   SUBROUTINE skin_temp_implicit ( &
-        & alpha, dtime, t2s_conv, t_acoef, t_bcoef, q_acoef, q_bcoef, s_old, qsat_srf_old, &
-        & dQdT, rad_srf_net, forc_hflx, heat_tcoef, dheat_tcoef, fact_q_air, fact_qsat_srf, &
-        & fract_snow, heat_cap, lambda_sk, s_srf, s_star, dT_sk_dT_srf, limit_dt &
+        & alpha, dtime, t2s_conv, t_acoef, t_bcoef, q_acoef, q_bcoef, s_old, s_melt, qsat_srf_old,  &
+        & dQdT, rad_srf_net, forc_hflx, heat_tcoef, dheat_tcoef, fact_q_air, fact_qsat_srf,         &
+        & fract_snow, heat_cap, le_freeze_pot, le_melt_pot, lambda_sk, s_srf, s_star,               &
+        & dT_sk_dT_srf, le_phase_change, limit_dt                                                   &
       )
 
     !$ACC ROUTINE SEQ
@@ -1421,6 +1413,7 @@ CONTAINS
     REAL(wp), INTENT(IN) :: q_acoef
     REAL(wp), INTENT(IN) :: q_bcoef
     REAL(wp), INTENT(IN) :: s_old
+    REAL(wp), INTENT(IN) :: s_melt            !< Surface dry static energy at freezing/melting point [J kg-1]
     REAL(wp), INTENT(IN) :: qsat_srf_old
     REAL(wp), INTENT(IN) :: dQdT
     REAL(wp), INTENT(IN) :: rad_srf_net
@@ -1431,10 +1424,13 @@ CONTAINS
     REAL(wp), INTENT(IN) :: fact_qsat_srf
     REAL(wp), INTENT(IN) :: fract_snow
     REAL(wp), INTENT(IN) :: heat_cap
+    REAL(wp), INTENT(IN) :: le_freeze_pot     !< Energy flux released if all available water freezes [W m-2]
+    REAL(wp), INTENT(IN) :: le_melt_pot       !< Energy flux required if all available ice melts [W m-2]
     REAL(wp), INTENT(IN) :: lambda_sk
     REAL(wp), INTENT(INOUT) :: s_srf
     REAL(wp), INTENT(OUT) :: s_star
     REAL(wp), INTENT(OUT) :: dT_sk_dT_srf
+    REAL(wp), INTENT(OUT) :: le_phase_change  !< Latent energy flux used for phase change [W m-2]
 
     REAL(wp), OPTIONAL, INTENT(IN) :: limit_dt
 
@@ -1449,6 +1445,8 @@ CONTAINS
 
     REAL(wp) :: dcond_sen !< Differential sensible heat conductivity [W/(m^2 K)].
     REAL(wp) :: dcond_lat !< Differential latent heat conductivity [W/(m^2 K)].
+
+    REAL(wp) :: avail_phc_energy !< Energy flux available for phase change [W m-2]
 
     !> Skin conductivity for snow-covered surface [W/(m^2 K)].
     REAL(wp), PARAMETER :: LAMBDA_SK_SNOW = 1e5_wp
@@ -1536,6 +1534,36 @@ CONTAINS
     END IF
 
     s_srf = t_tl_acoef * s_star + t2s_conv * t_tl_bcoef
+
+    ! Compute the energy available for phase change at the surface
+    avail_phc_energy = (s_melt - s_srf) / (t2s_conv * tl_impedance)
+
+    ! Compute energy sink (ice melting, negative) / source (water freezing, positive) due to phase change
+    IF (avail_phc_energy < 0._wp) THEN
+      le_phase_change = MAX(le_melt_pot, avail_phc_energy)
+    ELSE IF (avail_phc_energy > 0._wp) THEN
+      le_phase_change = MIN(le_freeze_pot, avail_phc_energy)
+    ELSE
+      le_phase_change = 0._wp
+    END IF
+
+    ! Recompute t_tl_bcoef, s_star and s_srf to account for phase change
+    IF (ABS(le_phase_change) > 0._wp) THEN
+      t_tl_bcoef = (s_srf / t2s_conv + tl_impedance * (forc_hflx + le_phase_change)) &
+        &        / (1._wp + tl_impedance * lambda_sk_eff)
+
+      s_star = s_old + t2s_conv / denom * ( &
+          & rad_srf_net &
+          & + heat_tcoef * ((t_acoef - 1) * s_old + t_bcoef) &
+          & + heat_tcoef * (L_a * q_bcoef + (L_a * q_acoef - L_s) * qsat_srf_old) &
+          & - lambda_sk_eff * ((1 - t_tl_acoef) * t_old - t_tl_bcoef))
+
+      IF (PRESENT(limit_dt)) THEN
+        s_star = MIN(MAX(s_old - limit_dt * t2s_conv, s_star), s_old + limit_dt * t2s_conv)
+      END IF
+
+      s_srf = t_tl_acoef * s_star + t2s_conv * t_tl_bcoef
+    END IF
 
     dT_sk_dT_srf = lambda_sk_eff / (lambda_sk_eff + 4._wp * stbo * zemiss_def * t_old**3 - dcond_sen - dcond_lat)
   END SUBROUTINE
