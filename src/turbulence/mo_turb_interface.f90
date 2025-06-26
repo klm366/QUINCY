@@ -482,14 +482,6 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
-!     SELECT CASE (model_scheme)
-! #ifndef __NO_QUINCY__
-!     CASE (MODEL_QUINCY)
-!       IF (tile%contains_vegetation) THEN
-!         dsl4jsb_Get_memory(VEG_)
-!       END IF
-! #endif
-!     END SELECT
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)         ! out
@@ -513,7 +505,7 @@ CONTAINS
     ! quincy-standalone
     IF (tile%contains_vegetation .OR. tile%contains_bare .OR. tile%contains_land) THEN
       l_veg_bare_glac_tile = .TRUE.
-    END IF    
+    END IF
 #endif
 
     ! all vegetated, bare and glacier tiles
