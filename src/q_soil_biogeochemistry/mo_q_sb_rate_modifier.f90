@@ -304,7 +304,7 @@ CONTAINS
     REAL(wp)              :: hlp                   !< helper var
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_oxygen_rate_modifier'
 
-    IF (param>eps8) THEN
+    IF (param > eps8 .AND. wtr_soil_fc_sl > eps8 .AND. wtr_soil_sl > eps8) THEN
        IF (wtr_soil_fc_sl > eps8) THEN
           air_filled_pore_space = (wtr_soil_fc_sl - (wtr_soil_sl + ice_soil_sl * w_density / ice_density) ) / wtr_soil_fc_sl
           IF (air_filled_pore_space < 0.005_wp) air_filled_pore_space = 0.005_wp
@@ -389,7 +389,7 @@ CONTAINS
     REAL(wp)              :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_substrate_rate_modifier'
 
-    IF (param > eps8 .AND. wtr_soil_fc_sl > eps8) THEN
+    IF (param > eps8 .AND. wtr_soil_fc_sl > eps8 .AND. wtr_soil_sl > eps8) THEN
        hlp1 = (wtr_soil_sl / wtr_soil_fc_sl) ** k2_afps
        IF (hlp1 > param) THEN
           rate_modifier = 1._wp / hlp1
