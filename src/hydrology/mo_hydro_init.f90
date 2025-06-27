@@ -387,7 +387,13 @@ CONTAINS
 
     !> Soil organic carbon fractions for each soil layer []
     !>
-    hydro_init_vars%fract_org_sl(:,:,:) = 0.50_wp   ! estimated from icon-land input file
+    !>   NOTE, needs improvment / proper parameterization
+    !>   IQ uses fract_org_sl data from bc_land_soil.nc (rawdata = "GLOBCOVER2009, HWSD, GLOBE, Lake Database")
+    !>
+    hydro_init_vars%fract_org_sl(:,:,:) = 0.0_wp      ! all soil layers
+    hydro_init_vars%fract_org_sl(:,1,:) = 0.1_wp      ! 1st soil layer
+    hydro_init_vars%fract_org_sl(:,2,:) = 0.01_wp     ! 2nd soil layer
+    hydro_init_vars%fract_org_sl(:,3,:) = 0.01_wp     ! 3rd soil layer
 
   END SUBROUTINE qs_hydro_read_init_vars
 
