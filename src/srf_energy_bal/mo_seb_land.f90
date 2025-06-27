@@ -945,6 +945,7 @@ CONTAINS
         t_radref(ic) = t(ic)
         qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.TRUE.)
         dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
+        le_phase_change(ic) = 0._wp
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
@@ -958,6 +959,7 @@ CONTAINS
           t_radref(ic) = 280._wp
           qsat_star(ic) = qsat_water(280._wp, press_srf(ic), use_convect_tables=.TRUE.)
           dQdT(ic) = (qsat_water(280._wp + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
+          le_phase_change(ic) = 0._wp
         ELSE
           heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)
 
@@ -1111,6 +1113,7 @@ CONTAINS
           qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.FALSE.)
           dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.FALSE.) - qsat_star(ic)) * 1000._wp
         END IF
+        le_phase_change(ic) = 0._wp
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
@@ -1129,6 +1132,7 @@ CONTAINS
           t_radref(ic) = 280._wp
           qsat_star(ic) = qsat_water(280._wp, press_srf(ic), use_convect_tables=.FALSE.)
           dQdT(ic) = (qsat_water(280._wp + 0.001_wp, press_srf(ic), use_convect_tables=.FALSE.) - qsat_star(ic)) * 1000._wp
+          le_phase_change(ic) = 0._wp
         END IF
       END DO
       !$ACC END PARALLEL LOOP
