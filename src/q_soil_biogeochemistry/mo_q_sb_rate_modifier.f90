@@ -434,13 +434,13 @@ CONTAINS
                                                    !< that is not filled by liquid water or ice [-]
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_anaerobic_volume_fraction'
 
-    air_filled_pore_space = (wtr_soil_sat_sl - (wtr_soil_sl + ice_soil_sl * w_density / ice_density)) / wtr_soil_sat_sl
-    IF (air_filled_pore_space > eps4) THEN
-       rate_modifier = 1.0_wp - EXP(-(lambda * (1.0_wp - air_filled_pore_space)) ** k)
-    ELSE
-       rate_modifier = 1._wp - EXP(-(lambda * (1.0_wp - eps4)) ** k)
-    END IF
-
+    ! calc air-filled pore space
+    ! ensure a value between eps4 and '1-eps4'
+    air_filled_pore_space = MAX(eps4, MIN(1.0_wp - eps4, &
+      &                                   (wtr_soil_sat_sl - (wtr_soil_sl + ice_soil_sl * w_density / ice_density)) &
+      &                                   / wtr_soil_sat_sl))
+    ! calc rate modifier
+    rate_modifier = 1.0_wp - EXP(-(lambda * (1.0_wp - air_filled_pore_space)) ** k)
   END FUNCTION calc_anaerobic_volume_fraction
 
   !-----------------------------------------------------------------------------------------------------
