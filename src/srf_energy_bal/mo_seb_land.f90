@@ -466,11 +466,11 @@ CONTAINS
     ! Compute surface drag, exchange coefficients and temperatures for standalone simulation
     IF (jsb_standalone) THEN
       CALL update_surface_temperature_standalone ( &
-          & tile, options, lstart, cpd_or_cvd, tile_fract_zero(:), t_air(:), q_air(:), wind_air(:), rad_srf_net(:), &
-          & press_srf(:), t2s_conv(:), t(:), t_unfilt(:), frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), &
-          & forc_hflx(:), heat_cap(:), le_freeze_pot(:), le_melt_pot(:), veg_height(:), &
-          & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), drag_srf(:), &
-          & richardson(:), s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:), &
+          & tile, options, cpd_or_cvd, lstart, tile_fract_zero(:), t_air(:), q_air(:), wind_air(:), rad_srf_net(:), &
+          & press_srf(:), t2s_conv(:), t(:), t_unfilt(:), frozen_fract(:), fact_q_air(:), fact_qsat_srf(:),         &
+          & forc_hflx(:), heat_cap(:), le_freeze_pot(:), le_melt_pot(:), veg_height(:),                             &
+          & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), drag_srf(:),                                    &
+          & richardson(:), s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:),                &
           & le_phase_change(:), skin_conductivity = skin_conductivity)
     ELSE IF (use_tmx) THEN
 
@@ -479,18 +479,19 @@ CONTAINS
 
       ! Modifies TURB:ch and SEB:t_unfilt.
       CALL update_surface_temperature_tmx ( &
-          & tile, options, lstart, tile_fract_zero(:), is_glacier(:), t2s_conv(:), t(:), press_srf(:), rad_srf_net(:), &
-          & frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), heat_cap(:), le_freeze_pot(:), le_melt_pot(:), &
-          & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), &
-          & t_radref(:), le_phase_change(:), skin_conductivity = skin_conductivity &
+          & tile, options, cpd_or_cvd, lstart, tile_fract_zero(:), is_glacier(:), t2s_conv(:), t(:), q_air(:), press_srf(:),   &
+          & rad_srf_net(:), frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), heat_cap(:),           &
+          & le_freeze_pot(:), le_melt_pot(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), s_star(:), s_srf(:), &
+          & dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:), le_phase_change(:),                               &
+          & skin_conductivity = skin_conductivity &
         )
     ELSE
       CALL update_surface_temperature_oneshot ( &
-          & nc, alpha, dtime, lstart, l_skin_temp, tile_fract_zero(:), t2s_conv(:), t(:), press_srf(:), &
-          & rad_srf_net(:), frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), heat_cap(:), &
-          & le_freeze_pot(:), le_melt_pot(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), drag_srf(:), &
-          & s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:), &
-          & le_phase_change(:), skin_conductivity = skin_conductivity &
+          & nc, alpha, dtime, cpd_or_cvd, lstart, l_skin_temp, tile_fract_zero(:), t2s_conv(:), t(:), q_air(:), press_srf(:), &
+          & rad_srf_net(:), frozen_fract(:), fact_q_air(:), fact_qsat_srf(:), forc_hflx(:), heat_cap(:),          &
+          & le_freeze_pot(:), le_melt_pot(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), drag_srf(:),        &
+          & s_star(:), s_srf(:), dt_sk_dt_srf(:), qsat_star(:), dQdT(:), t_radref(:),                             &
+          & le_phase_change(:), skin_conductivity = skin_conductivity                                             &
         )
     END IF
 
@@ -557,7 +558,7 @@ CONTAINS
 
 
   SUBROUTINE update_surface_temperature_standalone ( &
-        & tile, options, lstart, cpd_or_cvd, tile_fract_zero, t_air, q_air, wind_air, rad_srf_net, press_srf, t2s_conv, t, &
+        & tile, options, cpd_or_cvd, lstart, tile_fract_zero, t_air, q_air, wind_air, rad_srf_net, press_srf, t2s_conv, t, &
         & t_unfilt, frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, le_freeze_pot, le_melt_pot, veg_height, &
         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, drag_srf, richardson, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, &
         & t_radref, le_phase_change, skin_conductivity &
@@ -573,8 +574,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile
     TYPE(t_jsb_task_options), INTENT(IN) :: options
 
-    LOGICAL,  INTENT(IN) :: lstart
     REAL(wp), INTENT(IN) :: cpd_or_cvd
+    LOGICAL,  INTENT(IN) :: lstart
     LOGICAL,  INTENT(IN) :: tile_fract_zero(:)
 
     REAL(wp), INTENT(IN) :: t_air(:)
@@ -883,17 +884,18 @@ CONTAINS
 
 
   SUBROUTINE update_surface_temperature_oneshot ( &
-        & nc, alpha, dtime, lstart, l_skin_temp, tile_fract_zero, t2s_conv, t, press_srf, rad_srf_net, frozen_fract, &
-        & fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, le_freeze_pot, le_melt_pot, t_acoef, t_bcoef, q_acoef, q_bcoef, &
-        & drag_srf, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref, le_phase_change, skin_conductivity &
-      )
+        & nc, alpha, dtime, cpd_or_cvd, lstart, l_skin_temp, tile_fract_zero, t2s_conv, t, q_air, press_srf, rad_srf_net, &
+        & frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, le_freeze_pot, le_melt_pot, t_acoef, t_bcoef,     &
+        & q_acoef, q_bcoef, drag_srf, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref, le_phase_change,            &
+        & skin_conductivity)
 
-    USE mo_phy_schemes, ONLY: qsat_water, heat_transfer_coef
+    USE mo_phy_schemes, ONLY: qsat_water, heat_transfer_coef, q_effective, surface_dry_static_energy
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     INTEGER, INTENT(IN) :: nc
     REAL(wp), INTENT(IN) :: alpha
     REAL(wp), INTENT(IN) :: dtime
+    REAL(wp), INTENT(IN) :: cpd_or_cvd
 
     LOGICAL, INTENT(IN) :: lstart
     LOGICAL, INTENT(IN) :: l_skin_temp
@@ -901,6 +903,7 @@ CONTAINS
 
     REAL(wp), INTENT(IN) :: t2s_conv(:)
     REAL(wp), INTENT(IN) :: t(:)
+    REAL(wp), INTENT(IN) :: q_air(:)
     REAL(wp), INTENT(IN) :: press_srf(:)
     REAL(wp), INTENT(IN) :: rad_srf_net(:)
     REAL(wp), INTENT(IN) :: frozen_fract(:)
@@ -963,7 +966,10 @@ CONTAINS
           dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
 
           s_ref = t2s_conv(ic) * t(ic)
-          s_melt = t2s_conv(ic) * tmelt  ! Temporary
+          s_melt = surface_dry_static_energy(tmelt, &
+            & q_effective(qsat_star(ic), q_air(ic),   &
+            & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .FALSE.)
+
           IF (l_skin_temp) THEN
             CALL skin_temp_implicit(                                & ! in
               & alpha,                                              & ! in
@@ -1006,17 +1012,19 @@ CONTAINS
 
 
   SUBROUTINE update_surface_temperature_tmx ( &
-        & tile, options, lstart, tile_fract_zero, is_glacier, t2s_conv, t, press_srf, rad_srf_net, frozen_fract, &
-        & fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, le_freeze_pot, le_melt_pot, t_acoef, t_bcoef, q_acoef, &
-        & q_bcoef, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref, le_phase_change, skin_conductivity &
+        & tile, options, cpd_or_cvd, lstart, tile_fract_zero, is_glacier, t2s_conv, t, q_air, press_srf, rad_srf_net, &
+        & frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, le_freeze_pot, le_melt_pot, t_acoef, t_bcoef, &
+        & q_acoef, q_bcoef, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref, le_phase_change, skin_conductivity &
       )
 
     USE mo_jsb_physical_constants, ONLY: stbo, zemiss_def, tmelt
     USE mo_turb_interface, ONLY: update_exchange_coefficients
-    USE mo_phy_schemes, ONLY: qsat_ice, qsat_water
+    USE mo_phy_schemes, ONLY: qsat_ice, qsat_water, q_effective, surface_dry_static_energy
 
     CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile
     TYPE(t_jsb_task_options), INTENT(IN) :: options
+
+    REAL(wp), INTENT(IN) :: cpd_or_cvd
 
     LOGICAL, INTENT(IN) :: lstart
     LOGICAL, INTENT(IN) :: tile_fract_zero(:)
@@ -1024,6 +1032,7 @@ CONTAINS
 
     REAL(wp), INTENT(IN) :: t2s_conv(:)
     REAL(wp), INTENT(IN) :: t(:)
+    REAL(wp), INTENT(IN) :: q_air(:)
     REAL(wp), INTENT(IN) :: press_srf(:)
     REAL(wp), INTENT(IN) :: rad_srf_net(:)
     REAL(wp), INTENT(IN) :: frozen_fract(:)
@@ -1142,7 +1151,9 @@ CONTAINS
             END IF
 
             s_ref = t2s_conv(ic) * t_star(ic)
-            s_melt = t2s_conv(ic) * tmelt  ! Temporary
+            s_melt = surface_dry_static_energy(tmelt, &
+              & q_effective(qsat_star(ic), q_air(ic),   &
+              & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .FALSE.)
 
             IF (l_skin_temp) THEN
               s_srf(ic) = s_srf_in(ic)
