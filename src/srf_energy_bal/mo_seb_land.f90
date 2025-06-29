@@ -425,6 +425,8 @@ CONTAINS
         t_old(ic)        = 280._wp
       ELSE
         t_unfilt_old(ic) = t_unfilt(ic)
+        ! Note: t_srf is not in restart file with tmx (skin temp not implemented yet and not needed without skin temp)
+        !       s_srf below, which depends on t_srf through t_srf_old, is also not needed with tmx without skin temp
         t_srf_old(ic)    = t_srf(ic)
         t_old(ic)        = t(ic)
       END IF
