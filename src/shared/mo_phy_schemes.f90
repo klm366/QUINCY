@@ -29,7 +29,7 @@ MODULE mo_phy_schemes
     & update_drag, tlucua, jptlucu1, jptlucu2, &
     & q_effective, surface_dry_static_energy, heat_transfer_coef, &
     & thermal_radiation, lwnet_from_lwdown, potential_temperature, &
-    & sfc_exchange_coefficients, phase_change_pot
+    & sfc_exchange_coefficients
 #ifndef __NO_QUINCY__
   PUBLIC :: calc_peaked_arrhenius_function
 #endif
