@@ -930,7 +930,7 @@ CONTAINS
 
       ! run always but not with "quincy and SPQ_"
 #ifndef __NO_QUINCY__
-      IF (model%config%use_soil_phys_jsbach) THEN
+      IF (model%config%model_scheme == MODEL_JSBACH .OR. model%config%use_soil_phys_jsbach) THEN
 #endif
         dsl4jsb_Get_memory(HYDRO_)
         dsl4jsb_Get_var2d_onDomain(HYDRO_, evapotrans)
