@@ -928,8 +928,10 @@ CONTAINS
       ALLOCATE(evapo_act2pot(nproma, nblks))
       !$ACC ENTER DATA CREATE(evapo_act2pot)
 
-      ! if jsbach or quincy with jsbach-soil-physic processes
-      IF (model%config%model_scheme == MODEL_JSBACH .OR. model%config%use_soil_phys_jsbach) THEN
+      ! run always but not with "quincy and SPQ_"
+#ifndef __NO_QUINCY__
+      IF (model%config%use_soil_phys_jsbach) THEN
+#endif
         dsl4jsb_Get_memory(HYDRO_)
         dsl4jsb_Get_var2d_onDomain(HYDRO_, evapotrans)
         dsl4jsb_Get_var2d_onDomain(HYDRO_, evapopot)
@@ -956,7 +958,9 @@ CONTAINS
           !$ACC END PARALLEL LOOP
 
         END IF
-      END IF
+#ifndef __NO_QUINCY__
+      END IF  ! use_soil_phys_jsbach
+
       ! if quincy
       IF (model%config%model_scheme == MODEL_QUINCY) THEN
        ! Allocate and enter data for C13 and C14 based on configuration flags
@@ -978,6 +982,7 @@ CONTAINS
           !$ACC END PARALLEL LOOP
         END IF
       END IF
+#endif
 
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_forcing(model%id))
 
