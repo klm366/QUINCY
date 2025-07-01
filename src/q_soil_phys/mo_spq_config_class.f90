@@ -34,6 +34,7 @@ MODULE mo_spq_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_spq_config
+    LOGICAL                     :: spq_deactivate_spq   !< only used with quincy-standalone: deactivate SPQ_ consistently with use_soil_phys_jsbach
     LOGICAL                     :: flag_snow            !< on/off snow accumulation
     INTEGER                     :: nsoil_energy         !< number of soil layers for soil energy calculations   ! depreciated feature, but needed for now, see ticket #521
     INTEGER                     :: nsoil_water          !< number of soil layers for soil moisture calculations ! depreciated feature, but needed for now, see ticket #521
@@ -82,6 +83,7 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
+    LOGICAL                     :: spq_deactivate_spq
     LOGICAL                     :: lrestart_cont
     LOGICAL                     :: flag_snow
     INTEGER                     :: spq_nsoil_energy    , &
@@ -122,6 +124,7 @@ CONTAINS
     NAMELIST /jsb_spq_nml/   &
 #endif
                           active                  , &
+                          spq_deactivate_spq      , &
                           lrestart_cont           , &
                           ic_filename             , &
                           bc_filename             , &
@@ -160,6 +163,7 @@ CONTAINS
 
     ! Set defaults
     active                        = .TRUE.
+    spq_deactivate_spq            = .FALSE.  ! may need to be consistent with namelist option "use_soil_phys_jsbach" from model config
     lrestart_cont                 = .FALSE.  ! TRUE: Continue although SPQ variables are missing in restart file
     ic_filename                   = 'ic_land_spq.nc'
     bc_filename                   = 'bc_land_spq.nc'
@@ -242,6 +246,7 @@ CONTAINS
 
     ! pass values as read from file
     config%active                    = active
+    config%spq_deactivate_spq        = spq_deactivate_spq
     config%lrestart_cont             = lrestart_cont
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
@@ -261,6 +266,16 @@ CONTAINS
     !config%soil_clay                = not using the input value, as soil_clay must be calculated from soil_sand & soil_silt to guarantee: 1=sand+silt+clay
     config%soil_clay                 = 1.0_wp - spq_soil_sand - spq_soil_silt
     config%bulk_density              = spq_bulk_density
+
+#ifdef __QUINCY_STANDALONE__
+    ! de-activate SPQ_ process
+    ! is used consistently with namelist option "use_soil_phys_jsbach"
+    IF (config%spq_deactivate_spq) THEN
+      config%active = .FALSE.
+    ELSE
+      config%active = .TRUE.
+    END IF
+#endif
 
     ! check for an error in clay content of soil
     IF(config%soil_clay < eps8) THEN
