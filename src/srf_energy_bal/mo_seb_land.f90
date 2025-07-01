@@ -455,9 +455,12 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     ! Compute the energy released/required to freeze/melt all water/ice
+#ifdef NFORT_BROKEN_INLINES
+    !NEC$ noinline
+#endif
     CALL get_phasechange_energy_limits(                                 &
       ! In
-      & tile, options, l_freeze_config, l_supercool_config, dtime,      &
+      & tile, options, l_freeze_config, l_supercool_config,             &
       & wtr_soil_sl(:,1), wtr_soil_pot_scool_sl(:,1), ice_soil_sl(:,1), &
       & wtr_pond(:), ice_pond(:), weq_snow_soil(:),                     &
       ! Out
@@ -1213,9 +1216,9 @@ CONTAINS
   !> Diagnose the total potential energy source/sink if all available water/ice
   !> freezes/melts.
   SUBROUTINE get_phasechange_energy_limits(tile, options, &
-    & l_freeze_config, l_supercool_config, dtime,         &
-    & wtr_soil_top, wtr_soil_pot_scool_top, ice_soil_top, &
-    & wtr_pond, ice_pond, weq_snow_soil,                  &
+    & l_freeze_config, l_supercool_config, wtr_soil_top,  &
+    & wtr_soil_pot_scool_top, ice_soil_top, wtr_pond,     &
+    & ice_pond, weq_snow_soil,                            &
     & le_freeze_pot, le_melt_pot)
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi, alf
@@ -1225,7 +1228,6 @@ CONTAINS
 
     LOGICAL, INTENT(IN) :: l_freeze_config
     LOGICAL, INTENT(IN) :: l_supercool_config
-    REAL(wp), INTENT(IN) :: dtime
     REAL(wp), INTENT(IN) :: wtr_soil_top(:)
     REAL(wp), INTENT(IN) :: wtr_soil_pot_scool_top(:)
     REAL(wp), INTENT(IN) :: ice_soil_top(:)
@@ -1245,7 +1247,7 @@ CONTAINS
 
     ! Determine potential energy sinks / sources due to phase change at the surface
     ! as limited by the avaiablity of water / ice.
-    hlp3 = rhoh2o * alf / dtime
+    hlp3 = rhoh2o * alf
 
     IF (.NOT. tile%is_glacier) THEN
       ! Compute the amount of water/ice that is available for freezing/melting
@@ -1320,7 +1322,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: q_air             !< Air specific humidity [kg kg-1]
     REAL(wp), INTENT(in)  :: q_sat             !< Surface saturation specific humidity [kg kg-1]
     REAL(wp), INTENT(in)  :: snow_fraction     !< Snow cover fraction [-]
-    REAL(wp), INTENT(in)  :: ground_capacity   !< Ground heat capacity [J m-2 K-1)]
+    REAL(wp), INTENT(in)  :: ground_capacity   !< Ground heat capacity [J m-2 K-1]
     REAL(wp), INTENT(IN)  :: le_freeze_pot     !< Energy flux released if all available water freezes [W m-2]
     REAL(wp), INTENT(IN)  :: le_melt_pot       !< Energy flux required if all available ice melts [W m-2]
     REAL(wp), INTENT(out) :: s_new             !< New surface dry static energy [J kg-1]
@@ -1331,10 +1333,12 @@ CONTAINS
     REAL(wp) :: cp_inv                 !< 1/cp for convenience
     REAL(wp) :: latent_heat            !< Effective latent heat (snow-weighted vap/subl)
     REAL(wp) :: latent_heat_air        !< Latent heat for air layer
-    REAL(wp) :: thermal_response_term  !< Energy needed to change temperature including radiation feedback
-    REAL(wp) :: sensible_heat_term     !< Sensible heat flux contribution
-    REAL(wp) :: energy_flux_term       !< Accumulated energy fluxes
-    REAL(wp) :: avail_phc_energy       !< Energy flux available for phase change [W m-2]
+    REAL(wp) :: ground_hcap_s          !< Ground heat capacity in units of surface dry static energy [J m-2 DSE-1].
+    REAL(wp) :: thermal_response_term  !< Radiation feedback term [J m-2 DSE-1].
+    REAL(wp) :: sensible_heat_term     !< Sensible heat flux contribution [J m-2 DSE-1].
+    REAL(wp) :: energy_flux_term       !< Accumulated energy fluxes [J m-2].
+    REAL(wp) :: avail_phc_energy       !< Energy available for phase change [J m-2].
+    REAL(wp) :: s_melt_star            !< Mixed-time melting point DSE [J kg-1].
 
     !> The surface energy balance equation in terms of dry static energy s = cp*T is:
     !> ds/dt = cp * dT/dt = R_net + H + LE + G
@@ -1352,13 +1356,15 @@ CONTAINS
 
     ! For convenience in equations
     cp_inv = 1.0_wp / heat_capacity
+    ground_hcap_s = ground_capacity * cp_inv
+    s_melt_star = alpha * s_melt + (1._wp - alpha) * s_old
 
     ! Get effective latent heat based on snow fraction
     latent_heat     = als * snow_fraction + alv * (q_sat - snow_fraction)
     latent_heat_air = als * snow_fraction + alv * (q_air - snow_fraction)
 
-    ! Calculate thermal inertia term including radiation feedback
-    thermal_response_term = ground_capacity * cp_inv + &
+    ! Calculate radiation feedback
+    thermal_response_term = &
       & dt * ( &
       ! Thermal radiation feedback
       & cp_inv * 4.0_wp * zemiss_def * stbo * ((cp_inv * s_old)**3) - &
@@ -1381,12 +1387,10 @@ CONTAINS
       ! Ground heat flux
       & ground_heat_flux)
 
-    ! Solve for new dry static energy without considering phase change
-    s_new = (thermal_response_term * s_old + energy_flux_term) / &
-          & (thermal_response_term + sensible_heat_term)
-
-    ! Compute energy flux available for phase change
-    avail_phc_energy = (s_melt - s_new) * (thermal_response_term + sensible_heat_term) / dt
+    ! Compute energy flux available for phase change: energy needed to get to melting point minus incoming fluxes.
+    avail_phc_energy = ground_hcap_s * (s_melt_star - s_old) - &
+      & (thermal_response_term * (s_old - s_melt_star) &
+      &  - sensible_heat_term * s_melt_star + energy_flux_term) / alpha
 
     ! Compute energy sink (ice melting, negative) / source (water freezing, positive) due to phase change
     IF (avail_phc_energy < 0._wp) THEN
@@ -1398,9 +1402,16 @@ CONTAINS
     END IF
 
     ! Recompute new dry static energy while considering phase change
-    IF (ABS(le_phase_change) > 0._wp) THEN
-      s_new = (thermal_response_term * s_old + energy_flux_term + le_phase_change * dt) / &
-            & (thermal_response_term + sensible_heat_term)
+    IF (ABS(le_phase_change) > 0._wp .AND. ABS(le_phase_change) < ABS(avail_phc_energy)) THEN
+      s_new = ((ground_hcap_s + thermal_response_term) * s_old + energy_flux_term + alpha * le_phase_change) / &
+            & (ground_hcap_s + thermal_response_term + sensible_heat_term)
+    ELSE IF (ABS(le_phase_change) > 0._wp .AND. ABS(le_phase_change) >= ABS(avail_phc_energy)) THEN
+      ! More phase change potential than available energy. Temperature stays at freezing.
+      s_new = s_melt_star
+    ELSE
+      ! No phase change.
+      s_new = ((ground_hcap_s + thermal_response_term) * s_old + energy_flux_term) / &
+            & (ground_hcap_s + thermal_response_term + sensible_heat_term)
     END IF
 
   END SUBROUTINE surface_temp_implicit
@@ -1418,6 +1429,7 @@ CONTAINS
       & als, &
       & alv, &
       & stbo, &
+      & tmelt, &
       & zemiss_def
 
     REAL(wp), INTENT(IN) :: alpha
@@ -1439,8 +1451,8 @@ CONTAINS
     REAL(wp), INTENT(IN) :: fact_qsat_srf
     REAL(wp), INTENT(IN) :: fract_snow
     REAL(wp), INTENT(IN) :: heat_cap
-    REAL(wp), INTENT(IN) :: le_freeze_pot     !< Energy flux released if all available water freezes [W m-2]
-    REAL(wp), INTENT(IN) :: le_melt_pot       !< Energy flux required if all available ice melts [W m-2]
+    REAL(wp), INTENT(IN) :: le_freeze_pot     !< Energy released if all available water freezes [J m-2]
+    REAL(wp), INTENT(IN) :: le_melt_pot       !< Energy required if all available ice melts [J m-2]
     REAL(wp), INTENT(IN) :: lambda_sk
     REAL(wp), INTENT(INOUT) :: s_srf
     REAL(wp), INTENT(OUT) :: s_star
@@ -1457,6 +1469,10 @@ CONTAINS
     REAL(wp) :: denom
     REAL(wp) :: L_a
     REAL(wp) :: L_s
+    REAL(wp) :: t_srf_old !< Initial surface temperature [K].
+    REAL(wp) :: t_star_melt !< Skin temperature for surface temperature @ 0C [K].
+    REAL(wp) :: tmelt_star !< Mixed-time surface temperature such that t_srf(t+1) = tmelt [K].
+
 
     REAL(wp) :: dcond_sen !< Differential sensible heat conductivity [W/(m^2 K)].
     REAL(wp) :: dcond_lat !< Differential latent heat conductivity [W/(m^2 K)].
@@ -1519,13 +1535,15 @@ CONTAINS
     !   - heat_tcoef (L_a q_acoef - L_s) dQdT - dheat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old]}
 
     t_old = s_old / t2s_conv
+    t_srf_old = s_srf / t2s_conv
+    tmelt_star = alpha * tmelt + (1._wp - alpha) * t_srf_old
 
     ! This modification effectively deactivates the skin when the cell is snow-covered, ensuring s_star ~= s_srf.
     lambda_sk_eff = lambda_sk + fract_snow * (LAMBDA_SK_SNOW - lambda_sk)
 
     tl_impedance = alpha * dtime / heat_cap
     t_tl_acoef = (tl_impedance * lambda_sk_eff) / (1._wp + tl_impedance * lambda_sk_eff)
-    t_tl_bcoef = (s_srf / t2s_conv + tl_impedance * forc_hflx) / (1._wp + tl_impedance * lambda_sk_eff)
+    t_tl_bcoef = (t_srf_old + tl_impedance * forc_hflx) / (1._wp + tl_impedance * lambda_sk_eff)
 
     L_a = fract_snow * als + (1._wp - fract_snow) * fact_q_air * alv
     L_s = fract_snow * als + (1._wp - fract_snow) * fact_qsat_srf * alv
@@ -1544,14 +1562,18 @@ CONTAINS
         & + heat_tcoef * (L_a * q_bcoef + (L_a * q_acoef - L_s) * qsat_srf_old) &
         & - lambda_sk_eff * ((1 - t_tl_acoef) * t_old - t_tl_bcoef))
 
-    IF (PRESENT(limit_dt)) THEN
-      s_star = MIN(MAX(s_old - limit_dt * t2s_conv, s_star), s_old + limit_dt * t2s_conv)
-    END IF
+    t_star_melt = s_old / t2s_conv + ( &
+        & rad_srf_net &
+        & + heat_tcoef * ((t_acoef - 1) * s_old + t_bcoef) &
+        & + heat_tcoef * (L_a * q_bcoef + (L_a * q_acoef - L_s) * qsat_srf_old) &
+        & - lambda_sk_eff * (t_old - tmelt_star) &
+        & ) / (lambda_sk_eff + 4._wp * stbo * zemiss_def * t_old**3 - dcond_sen - dcond_lat)
 
-    s_srf = t_tl_acoef * s_star + t2s_conv * t_tl_bcoef
-
-    ! Compute the energy available for phase change at the surface
-    avail_phc_energy = (s_melt - s_srf) / (t2s_conv * tl_impedance)
+    ! Compute the energy available for phase change at the surface. This is the difference between the
+    ! energy needed to heat the surface to 0C and the incoming heat flux. If negative, there is energy available
+    ! for melting; if positive, water can freeze.
+    avail_phc_energy = heat_cap * (tmelt - t_srf_old) - &
+        & dtime * (lambda_sk_eff * (t_star_melt - tmelt_star) + forc_hflx)
 
     ! Compute energy sink (ice melting, negative) / source (water freezing, positive) due to phase change
     IF (avail_phc_energy < 0._wp) THEN
@@ -1562,9 +1584,11 @@ CONTAINS
       le_phase_change = 0._wp
     END IF
 
-    ! Recompute t_tl_bcoef, s_star and s_srf to account for phase change
-    IF (ABS(le_phase_change) > 0._wp) THEN
-      t_tl_bcoef = (s_srf / t2s_conv + tl_impedance * (forc_hflx + le_phase_change)) &
+    IF (ABS(le_phase_change) > 0._wp .AND. ABS(le_phase_change) < ABS(avail_phc_energy)) THEN
+      ! Recompute t_tl_bcoef, s_star and s_srf to account for incomplete consumption of energy for phase change.
+      ! For simplicity, this formulation assumes that the heat flux during the melting phase is `Lambda_sk *
+      ! (T_sk - T_soil,new)` instead of `Lambda_sk (T_sk - Tmelt)`. This removes the nonlinearities in T_soil(T_sk).
+      t_tl_bcoef = (t_srf_old + tl_impedance * (forc_hflx + le_phase_change / dtime)) &
         &        / (1._wp + tl_impedance * lambda_sk_eff)
 
       s_star = s_old + t2s_conv / denom * ( &
@@ -1573,12 +1597,22 @@ CONTAINS
           & + heat_tcoef * (L_a * q_bcoef + (L_a * q_acoef - L_s) * qsat_srf_old) &
           & - lambda_sk_eff * ((1 - t_tl_acoef) * t_old - t_tl_bcoef))
 
-      IF (PRESENT(limit_dt)) THEN
-        s_star = MIN(MAX(s_old - limit_dt * t2s_conv, s_star), s_old + limit_dt * t2s_conv)
-      END IF
+    ELSE IF (ABS(le_phase_change) > 0._wp .AND. ABS(le_phase_change) >= ABS(avail_phc_energy)) THEN
+      ! More potential than available energy. Surface temperature is fixed at tmelt.
+      t_tl_acoef = 0._wp
+      t_tl_bcoef = tmelt_star
+      s_star = t_star_melt * t2s_conv
 
-      s_srf = t_tl_acoef * s_star + t2s_conv * t_tl_bcoef
+    ELSE
+      ! le_phase_change == 0. No phase change due to lack of water/ice.
+
     END IF
+
+    IF (PRESENT(limit_dt)) THEN
+      s_star = MIN(MAX(s_old - limit_dt * t2s_conv, s_star), s_old + limit_dt * t2s_conv)
+    END IF
+
+    s_srf = t_tl_acoef * s_star + t2s_conv * t_tl_bcoef
 
     dT_sk_dT_srf = lambda_sk_eff / (lambda_sk_eff + 4._wp * stbo * zemiss_def * t_old**3 - dcond_sen - dcond_lat)
   END SUBROUTINE
