@@ -249,8 +249,8 @@ CONTAINS
       !------------------------
       IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
         IF (le_phase_change_res(ic) > 0._wp .AND. weq_snow_soil(ic) > 0._wp) THEN
-          snowmelt_soil(ic)       = MIN(le_phase_change_res(ic) * dtime / (rhoh2o * alf), weq_snow_soil(ic))
-          le_phase_change_res(ic) = le_phase_change_res(ic) - snowmelt_soil(ic) * rhoh2o * alf / dtime
+          snowmelt_soil(ic)       = MIN(le_phase_change_res(ic) / (rhoh2o * alf), weq_snow_soil(ic))
+          le_phase_change_res(ic) = le_phase_change_res(ic) - snowmelt_soil(ic) * rhoh2o * alf
           weq_snow_soil(ic)       = weq_snow_soil(ic) - snowmelt_soil(ic) ! reduce snow depth according to melting
         END IF
       END IF
@@ -272,15 +272,15 @@ CONTAINS
       !------------------------
       ! 1.) Potential melting:
       IF (le_phase_change_res(ic) > 0._wp .AND. ice_pond(ic) > 0._wp) THEN
-        pond_melt(ic)           = MIN(le_phase_change_res(ic) * dtime / (rhoh2o * alf), ice_pond(ic))
-        le_phase_change_res(ic) = le_phase_change_res(ic) - pond_melt(ic) * rhoh2o * alf / dtime
+        pond_melt(ic)           = MIN(le_phase_change_res(ic) / (rhoh2o * alf), ice_pond(ic))
+        le_phase_change_res(ic) = le_phase_change_res(ic) - pond_melt(ic) * rhoh2o * alf
         ice_pond(ic)            = ice_pond(ic) - pond_melt(ic)
         wtr_pond(ic)            = wtr_pond(ic) + pond_melt(ic)
         wtr_pond_net_flx(ic)    = wtr_pond_net_flx(ic) + pond_melt(ic)
       ! 1.) Potential freezing:
       ELSE IF (le_phase_change_res(ic) < 0._wp .AND. wtr_pond(ic) > 0._wp) THEN
-        pond_freeze(ic)         = MIN(ABS(le_phase_change_res(ic) * dtime / (rhoh2o * alf)), wtr_pond(ic))
-        le_phase_change_res(ic) = le_phase_change_res(ic) + pond_freeze(ic) * rhoh2o * alf / dtime
+        pond_freeze(ic)         = MIN(ABS(le_phase_change_res(ic) / (rhoh2o * alf)), wtr_pond(ic))
+        le_phase_change_res(ic) = le_phase_change_res(ic) + pond_freeze(ic) * rhoh2o * alf
         wtr_pond(ic)            = wtr_pond(ic) - pond_freeze(ic)
         ice_pond(ic)            = ice_pond(ic) + pond_freeze(ic)
         wtr_pond_net_flx(ic)    = wtr_pond_net_flx(ic) - pond_freeze(ic)
@@ -585,7 +585,7 @@ CONTAINS
     le_phase_change_res = le_phase_change
     IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
       IF (le_phase_change > 0._wp) THEN
-        snowmelt_in_m     = le_phase_change * dtime / (rhoh2o * alf) ! there is an unlimited amount of snow
+        snowmelt_in_m     = le_phase_change / (rhoh2o * alf)         ! there is an unlimited amount of snow
         weq_glac          = weq_glac - snowmelt_in_m                 ! reduce glacier depth according to melting
         runoff_glac_in_m  = runoff_glac_in_m + snowmelt_in_m         ! add melt water to the runoff
         le_phase_change_res = le_phase_change_res - le_phase_change  ! Substract accounted energy flux

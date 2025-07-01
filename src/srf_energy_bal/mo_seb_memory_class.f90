@@ -202,8 +202,8 @@ CONTAINS
 
     CALL mem%Add_var( 'le_phase_change', mem%le_phase_change,                        &
       & hgrid, surface,                                                              &
-      & t_cf('le_phase_change', 'W m-2',                                             &
-      &      'Heat flux due to phase changes at land surface'),                      &
+      & t_cf('le_phase_change', 'J m-2',                                             &
+      &      'Heat energy due to phase changes at land surface'),                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.TRUE., output_level=BASIC,                                         &

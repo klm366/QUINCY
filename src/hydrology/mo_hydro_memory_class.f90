@@ -416,8 +416,8 @@ CONTAINS
 
     CALL mem%Add_var( 'le_phase_change_res', mem%le_phase_change_res,                &
       & hgrid, surface,                                                              &
-      & t_cf('le_phase_change_res', 'W m-2',                                         &
-      &      'Residual energy flux due to surface water phase change'),              &
+      & t_cf('le_phase_change_res', 'J m-2',                                         &
+      &      'Residual energy due to surface water phase change'),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE., output_level=BASIC,                                        &

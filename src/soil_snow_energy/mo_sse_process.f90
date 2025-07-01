@@ -478,7 +478,7 @@ CONTAINS
         ! The residual remains in the top layer soil temperature state.
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
-          t_soil_sl(ic,1) = t_soil_sl(ic,1) + le_phase(ic) / heat_cap(ic,1) * delta_time
+          t_soil_sl(ic,1) = t_soil_sl(ic,1) + le_phase(ic) / heat_cap(ic,1)
         END DO
         !$ACC END PARALLEL LOOP
 
@@ -503,7 +503,7 @@ CONTAINS
         ! to be included in the energy balance check.
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic=1,nc
-          le_phase(ic) = le_phase(ic) - (freeze_mass(ic,1) - melt_mass(ic,1)) * alf / delta_time
+          le_phase(ic) = le_phase(ic) - (freeze_mass(ic,1) - melt_mass(ic,1)) * alf
         END DO
         !$ACC END PARALLEL LOOP
 
