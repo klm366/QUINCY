@@ -1218,7 +1218,7 @@ CONTAINS
     & s_old, qsat_old, dqsat_dT,                        &
     & net_radiation, ground_heat_flux, heat_trans_coef, &
     & q_air, q_sat,                                     &
-    & snow_fraction, ground_capacity,                   &
+    & snow_fraction, ground_heat_capacity,              &
     & s_new)
 
     !$ACC ROUTINE SEQ
@@ -1229,24 +1229,24 @@ CONTAINS
       & alv,        &  ! Latent heat of vaporization [J kg-1]
       & als            ! Latent heat of sublimation [J kg-1]
 
-    REAL(wp), INTENT(in)  :: dtime             !< Timestep length [s]
-    REAL(wp), INTENT(in)  :: alpha             !< Implicit scheme factor [-]
-    REAL(wp), INTENT(in)  :: heat_capacity     !< Specific heat capacity at surface [J kg-1 K-1]
-    REAL(wp), INTENT(in)  :: t_acoef           !< A coefficient for temperature
-    REAL(wp), INTENT(in)  :: t_bcoef           !< B coefficient for temperature
-    REAL(wp), INTENT(in)  :: q_acoef           !< A coefficient for moisture
-    REAL(wp), INTENT(in)  :: q_bcoef           !< B coefficient for moisture
-    REAL(wp), INTENT(in)  :: s_old             !< Previous surface dry static energy [J kg-1]
-    REAL(wp), INTENT(in)  :: qsat_old          !< Previous surface specific humidity [kg kg-1]
-    REAL(wp), INTENT(in)  :: dqsat_dT          !< Change in qsat with temperature [K-1]
-    REAL(wp), INTENT(in)  :: net_radiation     !< Net radiation [W m-2]
-    REAL(wp), INTENT(in)  :: ground_heat_flux  !< Ground heat flux [W m-2]
-    REAL(wp), INTENT(in)  :: heat_trans_coef   !< Heat transfer coefficient [W m-2 K-1]
-    REAL(wp), INTENT(in)  :: q_air             !< Air specific humidity [kg kg-1]
-    REAL(wp), INTENT(in)  :: q_sat             !< Surface saturation specific humidity [kg kg-1]
-    REAL(wp), INTENT(in)  :: snow_fraction     !< Snow cover fraction [-]
-    REAL(wp), INTENT(in)  :: ground_capacity   !< Ground heat capacity [J m-2 K-1)]
-    REAL(wp), INTENT(out) :: s_new             !< New surface dry static energy [J kg-1]
+    REAL(wp), INTENT(in)  :: dtime                !< Timestep length [s]
+    REAL(wp), INTENT(in)  :: alpha                !< Implicit scheme factor [-]
+    REAL(wp), INTENT(in)  :: heat_capacity        !< Specific heat capacity at surface [J kg-1 K-1]
+    REAL(wp), INTENT(in)  :: t_acoef              !< A coefficient for temperature
+    REAL(wp), INTENT(in)  :: t_bcoef              !< B coefficient for temperature
+    REAL(wp), INTENT(in)  :: q_acoef              !< A coefficient for moisture
+    REAL(wp), INTENT(in)  :: q_bcoef              !< B coefficient for moisture
+    REAL(wp), INTENT(in)  :: s_old                !< Previous surface dry static energy [J kg-1]
+    REAL(wp), INTENT(in)  :: qsat_old             !< Previous surface specific humidity [kg kg-1]
+    REAL(wp), INTENT(in)  :: dqsat_dT             !< Change in qsat with temperature [K-1]
+    REAL(wp), INTENT(in)  :: net_radiation        !< Net radiation [W m-2]
+    REAL(wp), INTENT(in)  :: ground_heat_flux     !< Ground heat flux [W m-2]
+    REAL(wp), INTENT(in)  :: heat_trans_coef      !< Heat transfer coefficient [W m-2 K-1]
+    REAL(wp), INTENT(in)  :: q_air                !< Air specific humidity [kg kg-1]
+    REAL(wp), INTENT(in)  :: q_sat                !< Surface saturation specific humidity [kg kg-1]
+    REAL(wp), INTENT(in)  :: snow_fraction        !< Snow cover fraction [-]
+    REAL(wp), INTENT(in)  :: ground_heat_capacity !< Ground heat capacity [J m-2 K-1)]
+    REAL(wp), INTENT(out) :: s_new                !< New surface dry static energy [J kg-1]
 
     ! Local variables
     REAL(wp) :: dt                     !< Effective timestep = alpha * dtime
@@ -1255,18 +1255,20 @@ CONTAINS
     REAL(wp) :: latent_heat_air        !< Latent heat for air layer
     REAL(wp) :: thermal_response_term  !< Energy needed to change temperature including radiation feedback
     REAL(wp) :: sensible_heat_term     !< Sensible heat flux contribution
-    REAL(wp) :: energy_flux_term       !< Accumulated energy fluxes
+    REAL(wp) :: energy_flux_term       !< Total energy fluxes
 
     !> The surface energy balance equation in terms of dry static energy s = cp*T is:
-    !> ds/dt = cp * dT/dt = R_net + H + LE + G
+    !> C * ds/dt = (C / cp) * dT/dt = R_net + H + LE + G
     !> where:
     !> - R_net is net radiation
     !> - H is sensible heat flux
     !> - LE is latent heat flux
     !> - G is ground heat flux
+    !> - C is the surface (top soil layer) heat capacity
     !>
     !> The implicit scheme solves this by linearizing the fluxes around the previous state
-    !> and solving the resulting system for s(t+dt).
+    !> and solving the resulting system for s(t+dt). The equations follow the recipe provided
+    !> by Schulz et al. (2001, https://doi.org/10.1175/1520-0450(2001)040<0642:OTLSAC>2.0.CO;2)
 
     ! Calculate effective timestep
     dt = alpha * dtime
@@ -1279,14 +1281,14 @@ CONTAINS
     latent_heat_air = als * snow_fraction + alv * (q_air - snow_fraction)
 
     ! Calculate thermal inertia term including radiation feedback
-    thermal_response_term = &
-      ! Energy required to change temperature
-      & ground_capacity * cp_inv + dt * ( &
+    thermal_response_term = dt * ( &
       ! Thermal radiation feedback
-      & cp_inv * 4.0_wp * zemiss_def * stbo * ((cp_inv * s_old)**3) - &
+      & (cp_inv * 4.0_wp * zemiss_def * stbo * ((cp_inv * s_old)**3) - &
       ! Latent heat feedback
       & heat_trans_coef * (latent_heat_air * q_acoef - latent_heat) * &
-      & cp_inv * dqsat_dT )
+      & cp_inv * dqsat_dT )) &
+      ! Heat storage term
+      & + ground_heat_capacity * cp_inv
 
     ! Calculate sensible heat flux term
     sensible_heat_term = -dt * heat_trans_coef * (t_acoef - 1.0_wp)
