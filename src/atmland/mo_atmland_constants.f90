@@ -48,7 +48,11 @@ MODULE mo_atmland_constants
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_atmland_constants'
 
-  !$ACC DECLARE CREATE(eps_vpd, def_co2_deltaC13, def_co2_deltaC14)
+  !$ACC DECLARE CREATE(frac_vis_swtot_srf, frac_par_swvis_srf)
+  !$ACC DECLARE CREATE(min_wind, max_wind, def_wind, standard_press_srf, eps_vpd)
+  !$ACC DECLARE CREATE(def_t_air, def_vpd, def_swdown, def_fdiffuse, def_cos_angle)
+  !$ACC DECLARE CREATE(def_co2_mixing_ratio, def_co2_deltaC13, def_co2_mixing_ratio_C13)
+  !$ACC DECLARE CREATE(def_co2_deltaC14, def_co2_mixing_ratio_C14)
 
 CONTAINS
 
