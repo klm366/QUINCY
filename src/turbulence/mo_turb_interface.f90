@@ -848,8 +848,9 @@ CONTAINS
       ch_tmp(options%nc)                      !< local variable for pch / kh from jsbach, quincy, A2L_, TURB_
     LOGICAL :: &
       mask(options%nc)
-    REAL(wp), ALLOCATABLE      :: canopy_conductance(:)    !< use for jsbach & quincy, as helper variable
-    LOGICAL                    :: jsb_standalone           !< model runs standalone?
+    REAL(wp), ALLOCATABLE      :: canopy_conductance(:)       !< use for jsbach & quincy, as helper variable
+    LOGICAL                    :: jsb_standalone              !< model runs standalone?
+    LOGICAL                    :: use_soil_phys_jsbach_local  !< use quincy with jsbach soil-physic processes
 
     INTEGER :: iblk, ics, ice, nc, ic
     INTEGER :: model_scheme
@@ -875,6 +876,7 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
 
     !$ACC DATA ASYNC(acc_stream) &
+    !$ACC   CREATE(use_soil_phys_jsbach_local) &
     !$ACC   CREATE(fact_qsat_veg, fact_qsat_trans, fact_qsat_soil) &
     !$ACC   CREATE(fact_qair_veg, fact_qair_soil, zfract_fpc, mask, ch_tmp)
 
@@ -895,6 +897,7 @@ CONTAINS
 #endif
 #ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
+      use_soil_phys_jsbach_local = model%config%use_soil_phys_jsbach
       IF (tile%contains_vegetation) THEN
         dsl4jsb_Get_memory(VEG_)
         dsl4jsb_Get_memory(Q_ASSIMI_)
@@ -922,7 +925,7 @@ CONTAINS
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         ! use for: QUINCY SPQ_ standalone
-        IF (jsb_standalone .AND. .NOT. model%config%use_soil_phys_jsbach) THEN
+        IF (jsb_standalone .AND. .NOT. use_soil_phys_jsbach_local) THEN
           dsl4jsb_Get_var2D_onChunk(TURB_,   pch_stdalone)     ! in
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
@@ -961,7 +964,7 @@ CONTAINS
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_wres_sl)            ! in
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
-        IF (model%config%use_soil_phys_jsbach) THEN
+        IF (use_soil_phys_jsbach_local) THEN
           dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_depth_sl)          ! in
           dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_porosity_sl)        ! in
           dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_wres_sl)            ! in
@@ -1005,7 +1008,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(VEG_,      fract_fpc)                     ! in
         dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, canopy_cond)                   ! in
         ! use with quincy SPQ_
-        IF (.NOT. model%config%use_soil_phys_jsbach) THEN
+        IF (.NOT. use_soil_phys_jsbach_local) THEN
           dsl4jsb_Get_var2D_onChunk(SEB_,      q_sat_srf)                   ! in (only calculated in SPQ_)
         END IF
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -1016,7 +1019,7 @@ CONTAINS
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
-          IF (model%config%use_soil_phys_jsbach) THEN
+          IF (use_soil_phys_jsbach_local) THEN
             mask(ic) = canopy_conductance(ic) > eps8 .AND. (qsat_star(ic) - q_air(ic)) > 0.0_wp
           ELSE
             mask(ic) = canopy_conductance(ic) > eps8 .AND. (q_sat_srf(ic) - q_air(ic)) > 0.0_wp
@@ -1071,7 +1074,7 @@ CONTAINS
           rel_hum      = relative_humidity_soil(wtr_soil_sl(ic,1), weq_wres_sl1, weq_wsat_sl1)
 #ifndef __NO_QUINCY__
         CASE (MODEL_QUINCY)
-          IF (model%config%use_soil_phys_jsbach) THEN
+          IF (use_soil_phys_jsbach_local) THEN
             ! TODO develop improved calc of rel_hum using quincy-vegetation soil-water stress
             weq_wres_sl1 = vol_wres_sl(ic,1) * soil_depth_sl(ic,1)
             weq_wsat_sl1 = vol_porosity_sl(ic,1) * soil_depth_sl(ic,1)

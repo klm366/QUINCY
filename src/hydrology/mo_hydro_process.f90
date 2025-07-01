@@ -1974,6 +1974,7 @@ CONTAINS
 
     INTEGER :: error_idx(nc)
     LOGICAL :: error_flag(nc)
+    LOGICAL :: model_scheme_quincy
     REAL(wp) :: transpiration_sum(nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':diagnose_evapotrans'
@@ -1983,7 +1984,14 @@ CONTAINS
     !----------------------------------------------------------------------------------------------
 
     !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(dummy_wtr_soil, root_depth)
+    !$ACC   CREATE(dummy_wtr_soil, root_depth, model_scheme_quincy)
+
+#ifndef __NO_QUINCY__
+    model_scheme_quincy = .FALSE.
+    IF (model_scheme == MODEL_QUINCY) THEN
+      model_scheme_quincy = .TRUE.
+    END IF
+#endif
 
 #ifndef _OPENACC
     IF (enforce_water_budget /= WB_IGNORE) THEN
@@ -2086,7 +2094,7 @@ CONTAINS
         !   will then be zero for this layer in the next time step, so that there is no excess transpiration possible
         !   ftranspiration_local_sl (ftranspiration_sl) is calculated in q_assimilation/mo_q_assimi_process
 #ifndef __NO_QUINCY__
-        IF (model_scheme == MODEL_QUINCY) THEN
+        IF (model_scheme_quincy) THEN
           transpiration_sl(ic,is) = transpiration_in_m(ic) * ftranspiration_local_sl(ic,is)
         ELSE
 #endif
