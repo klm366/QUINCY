@@ -241,7 +241,7 @@ CONTAINS
     ! Q_ASSIMI_ 2D
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C13      , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C14      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C14      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, canopy_cond                 , weighted_by_fract)
     ! Q_ASSIMI_ 3D
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, ftranspiration_sl           , weighted_by_fract)
