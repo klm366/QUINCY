@@ -706,7 +706,7 @@ CONTAINS
       & sensible_hflx,      &               !< Sensible heat flux                                  [W m-2]
       & latent_hflx,        &               !< Latent heat flux                                    [W m-2]
       & forc_hflx,          &               !< Ground heat flux                                    [W m-2]
-      & le_phase_change,    &               !< Latent energy required/released due to phase change [W m-2]
+      & le_phase_change,    &               !< Latent energy required/released due to phase change [J m-2]
       & heat_cap,           &               !< Surface heat capacity                           [J m-2 K-1]
       & t,                  &               !< Current time steps temperature                          [K]
       & t_old,              &               !< Previous time steps temperature                         [K]

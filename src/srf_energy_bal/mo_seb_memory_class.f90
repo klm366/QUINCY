@@ -58,7 +58,7 @@ MODULE mo_seb_memory_class
       & forc_hflx,              & !< Additional heat flux at surface                                 [W m-2]
                                   !! (additional to radiative fluxes and latent and sensible
                                   !!  heat fluxes, e.g. ground heat flux)
-      & le_phase_change,        & !< Heat flux due to phase changes at land surface                  [W m-2]
+      & le_phase_change,        & !< Heat energy due to phase changes at land surface                [J m-2]
       & energy_balance_res,     & !< Residual of all land surface energy balance fluxes              [W m-2]
       & richardson                !< Richardson number (standalone model)                            []
     !

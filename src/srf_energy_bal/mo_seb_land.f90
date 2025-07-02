@@ -1320,10 +1320,10 @@ CONTAINS
     REAL(wp), INTENT(in)  :: q_sat             !< Surface saturation specific humidity [kg kg-1]
     REAL(wp), INTENT(in)  :: snow_fraction     !< Snow cover fraction [-]
     REAL(wp), INTENT(in)  :: ground_capacity   !< Ground heat capacity [J m-2 K-1]
-    REAL(wp), INTENT(IN)  :: le_freeze_pot     !< Energy flux released if all available water freezes [W m-2]
-    REAL(wp), INTENT(IN)  :: le_melt_pot       !< Energy flux required if all available ice melts [W m-2]
+    REAL(wp), INTENT(IN)  :: le_freeze_pot     !< Energy flux released if all available water freezes [J m-2]
+    REAL(wp), INTENT(IN)  :: le_melt_pot       !< Energy flux required if all available ice melts [J m-2]
     REAL(wp), INTENT(out) :: s_new             !< New surface dry static energy [J kg-1]
-    REAL(wp), INTENT(out) :: le_phase_change   !< Latent energy flux used for phase change [W m-2]
+    REAL(wp), INTENT(out) :: le_phase_change   !< Latent energy flux used for phase change [J m-2]
 
     ! Local variables
     REAL(wp) :: dt                     !< Effective timestep = alpha * timestep_len
@@ -1455,7 +1455,7 @@ CONTAINS
     REAL(wp), INTENT(INOUT) :: s_srf
     REAL(wp), INTENT(OUT) :: s_star
     REAL(wp), INTENT(OUT) :: dT_sk_dT_srf
-    REAL(wp), INTENT(OUT) :: le_phase_change  !< Latent energy flux used for phase change [W m-2]
+    REAL(wp), INTENT(OUT) :: le_phase_change  !< Latent energy used for phase change [J m-2]
 
     REAL(wp), OPTIONAL, INTENT(IN) :: limit_dt
 

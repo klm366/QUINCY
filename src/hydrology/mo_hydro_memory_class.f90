@@ -74,7 +74,7 @@ MODULE mo_hydro_memory_class
       & weq_snow,             & !< Snow amount (including snow on canopy)                [m water equivalent]
       & evapo_snow,           & !< Evaporation from snow                                 [kg m-2 s-1]
       & snowmelt,             & !< Snow melt                                             [kg m-2 s-1]
-      & le_phase_change_res,  & !< Residual energy flux due to surface water phase change [W m-2]
+      & le_phase_change_res,  & !< Residual energy due to surface water phase change     [J m-2]
       & evapopot,             & !< Potential evaporation                                 [kg m-2 s-1]
       & evapotrans,           & !< Evapotranspiration                                    [kg m-2 s-1]
       & fract_pond,           & !< Inudated area fraction (area of temporary ponds)      []
