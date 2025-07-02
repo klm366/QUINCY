@@ -718,7 +718,7 @@ CONTAINS
             & veg_height = veg_height(:)) ! vegetation height (land specific; used with quincy)
 
           !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream) &
-          !$ACC   NO_CREATE(skin_conductivity) PRIVATE(heat_tcoef, dheat_tcoef, rad_net_star, s_ref, s_melt)
+          !$ACC   NO_CREATE(skin_conductivity) PRIVATE(heat_tcoef, dheat_tcoef, rad_net_star, s_ref)
           DO ic = 1, nc
             IF (.NOT. tile_fract_zero(ic)) THEN
               heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)
