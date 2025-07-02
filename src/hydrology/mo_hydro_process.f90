@@ -2560,7 +2560,7 @@ CONTAINS
 
   SUBROUTINE calc_vertical_transport(dt, alpha, n_act, dzf, top_bound, bot_bound, S, C, P, Q, X)
 
-    USE mo_util, ONLY: tdma_solver_vec ! OpenACC-enabled solver for tridiagonal matrix (Thomas algorithm)
+    USE mo_math_utilities, ONLY: tdma_solver_vec ! OpenACC-enabled solver for tridiagonal matrix (Thomas algorithm)
 
   ! INPUT
   INTEGER, INTENT(in) :: n_act(:)
