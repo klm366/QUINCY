@@ -804,7 +804,7 @@ CONTAINS
           s_melt = surface_dry_static_energy(tmelt, &
             & q_effective(qsat_star(ic), q_air(ic),   &
             & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .TRUE.)
-          CALL surface_temp_implicit( dtime, alpha,               & ! in
+          CALL surface_temp_implicit(alpha, dtime,                & ! in
             & t2s_conv(ic),                                       & ! in
             & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
             & s_ref, s_melt, qsat_star(ic), dQdT(ic),             & ! in
@@ -857,7 +857,7 @@ CONTAINS
           s_melt = surface_dry_static_energy(tmelt, &
             & q_effective(qsat_star(ic), q_air(ic),   &
             & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .TRUE.)
-          CALL surface_temp_implicit( dtime, alpha,               & ! in
+          CALL surface_temp_implicit(alpha, dtime,                & ! in
             & t2s_conv(ic),                                       & ! in
             & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
             & s_ref, s_melt, qsat_star(ic), dQdT(ic),             & ! in
@@ -1285,7 +1285,7 @@ CONTAINS
   !> Updates surface dry static energy using an implicit surface energy balance scheme
   !>
   SUBROUTINE surface_temp_implicit(                     &
-    & timestep_len, alpha, heat_capacity,               &
+    & alpha, dtime, heat_capacity,                      &
     & t_acoef, t_bcoef, q_acoef, q_bcoef,               &
     & s_old, s_melt, qsat_old, dqsat_dT,                &
     & net_radiation, ground_heat_flux, heat_trans_coef, &
@@ -1302,8 +1302,8 @@ CONTAINS
       & alv,        &  ! Latent heat of vaporization [J kg-1]
       & als            ! Latent heat of sublimation [J kg-1]
 
-    REAL(wp), INTENT(in)  :: timestep_len      !< Timestep length [s]
     REAL(wp), INTENT(in)  :: alpha             !< Implicit scheme factor [-]
+    REAL(wp), INTENT(in)  :: dtime             !< Timestep length [s]
     REAL(wp), INTENT(in)  :: heat_capacity     !< Specific heat capacity at surface [J kg-1 K-1]
     REAL(wp), INTENT(in)  :: t_acoef           !< A coefficient for temperature
     REAL(wp), INTENT(in)  :: t_bcoef           !< B coefficient for temperature
@@ -1326,7 +1326,7 @@ CONTAINS
     REAL(wp), INTENT(out) :: le_phase_change   !< Latent energy flux used for phase change [J m-2]
 
     ! Local variables
-    REAL(wp) :: dt                     !< Effective timestep = alpha * timestep_len
+    REAL(wp) :: dt                     !< Effective timestep = alpha * dtime
     REAL(wp) :: cp_inv                 !< 1/cp for convenience
     REAL(wp) :: latent_heat            !< Effective latent heat (snow-weighted vap/subl)
     REAL(wp) :: latent_heat_air        !< Latent heat for air layer
@@ -1349,7 +1349,7 @@ CONTAINS
     !> and solving the resulting system for s(t+dt).
 
     ! Calculate effective timestep
-    dt = alpha * timestep_len
+    dt = alpha * dtime
 
     ! For convenience in equations
     cp_inv = 1.0_wp / heat_capacity
