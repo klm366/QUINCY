@@ -731,9 +731,6 @@ CONTAINS
               dQdT(ic) = (qsat_water(t_star(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
 
               s_ref = t2s_conv(ic) * t_star(ic)
-              s_melt = surface_dry_static_energy(tmelt, &
-                & q_effective(qsat_star(ic), q_air(ic),   &
-                & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .TRUE.)
 
               ! Reset to old surface temperature.
               s_srf(ic) = s_srf_in(ic)
@@ -743,7 +740,7 @@ CONTAINS
                 & dtime,                                              & ! in
                 & t2s_conv(ic),                                       & ! in
                 & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-                & s_ref, s_melt, qsat_star(ic), dQdT(ic),             & ! in
+                & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
                 & rad_net_star, forc_hflx(ic), heat_tcoef,            & ! in
                 & dheat_tcoef,                                        & ! in
                 & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
@@ -844,7 +841,7 @@ CONTAINS
           ! Optional variables for filtering
         & t_srf_upd=t_star(:), zril_old=richardson(:))
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(heat_tcoef, s_ref)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(heat_tcoef, s_ref, s_melt)
       DO ic = 1, nc
         heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)
 
@@ -971,9 +968,6 @@ CONTAINS
           dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
 
           s_ref = t2s_conv(ic) * t(ic)
-          s_melt = surface_dry_static_energy(tmelt, &
-            & q_effective(qsat_star(ic), q_air(ic),   &
-            & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .FALSE.)
 
           IF (l_skin_temp) THEN
             CALL skin_temp_implicit(                                & ! in
@@ -981,7 +975,7 @@ CONTAINS
               & dtime,                                              & ! in
               & t2s_conv(ic),                                       & ! in
               & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-              & s_ref, s_melt, qsat_star(ic), dQdT(ic),             & ! in
+              & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
               & rad_srf_net(ic), forc_hflx(ic), heat_tcoef,         & ! in
               & 0._wp,                                              & ! in (dheat_tcoef/dtsk)
               & fact_q_air(ic), fact_qsat_srf(ic), frozen_fract(ic),& ! in
@@ -992,6 +986,9 @@ CONTAINS
               & dt_sk_dt_srf(ic),                                   & ! out
               & le_phase_change(ic))                                  ! out
           ELSE
+            s_melt = surface_dry_static_energy(tmelt, &
+              & q_effective(qsat_star(ic), q_air(ic),   &
+              & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .FALSE.)
             CALL surface_temp_implicit(                             & ! in
               & alpha,                                              & ! in
               & dtime,                                              & ! in
@@ -1158,9 +1155,6 @@ CONTAINS
             END IF
 
             s_ref = t2s_conv(ic) * t_star(ic)
-            s_melt = surface_dry_static_energy(tmelt, &
-              & q_effective(qsat_star(ic), q_air(ic),   &
-              & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .FALSE.)
 
             IF (l_skin_temp) THEN
               s_srf(ic) = s_srf_in(ic)
@@ -1169,7 +1163,7 @@ CONTAINS
                 & dtime,                                              & ! in
                 & t2s_conv(ic),                                       & ! in
                 & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
-                & s_ref, s_melt, qsat_star(ic), dQdT(ic),             & ! in
+                & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
                 & rad_net_star, forc_hflx(ic), ch(ic),                & ! in
                 & 0._wp,                                              & ! in (dheat_tcoef/dtsk)
                 & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
@@ -1181,6 +1175,9 @@ CONTAINS
                 & dt_sk_dt_srf(ic),                                   & ! out
                 & le_phase_change(ic))                                  ! out
             ELSE
+              s_melt = surface_dry_static_energy(tmelt, &
+                & q_effective(qsat_star(ic), q_air(ic),   &
+                & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .FALSE.)
               CALL surface_temp_implicit(                             & ! in
                 & alpha,                                              & ! in
                 & dtime,                                              & ! in
@@ -1331,6 +1328,7 @@ CONTAINS
     ! Local variables
     REAL(wp) :: dt                     !< Effective timestep = alpha * timestep_len
     REAL(wp) :: cp_inv                 !< 1/cp for convenience
+    REAL(wp) :: alpha_inv              !< 1/alpha for convenience
     REAL(wp) :: latent_heat            !< Effective latent heat (snow-weighted vap/subl)
     REAL(wp) :: latent_heat_air        !< Latent heat for air layer
     REAL(wp) :: ground_hcap_s          !< Ground heat capacity in units of surface dry static energy [J m-2 DSE-1].
@@ -1355,9 +1353,10 @@ CONTAINS
     dt = alpha * timestep_len
 
     ! For convenience in equations
+    alpha_inv = 1.0_wp / alpha
     cp_inv = 1.0_wp / heat_capacity
     ground_hcap_s = ground_capacity * cp_inv
-    s_melt_star = alpha * s_melt + (1._wp - alpha) * s_old
+    s_melt_star = alpha_inv * s_melt + (1.0_wp - alpha_inv) * s_old
 
     ! Get effective latent heat based on snow fraction
     latent_heat     = als * snow_fraction + alv * (q_sat - snow_fraction)
@@ -1417,10 +1416,10 @@ CONTAINS
   END SUBROUTINE surface_temp_implicit
 
   SUBROUTINE skin_temp_implicit ( &
-        & alpha, dtime, t2s_conv, t_acoef, t_bcoef, q_acoef, q_bcoef, s_old, s_melt, qsat_srf_old,  &
-        & dQdT, rad_srf_net, forc_hflx, heat_tcoef, dheat_tcoef, fact_q_air, fact_qsat_srf,         &
-        & fract_snow, heat_cap, le_freeze_pot, le_melt_pot, lambda_sk, s_srf, s_star,               &
-        & dT_sk_dT_srf, le_phase_change, limit_dt                                                   &
+        & alpha, dtime, t2s_conv, t_acoef, t_bcoef, q_acoef, q_bcoef, s_old, qsat_srf_old,  &
+        & dQdT, rad_srf_net, forc_hflx, heat_tcoef, dheat_tcoef, fact_q_air, fact_qsat_srf, &
+        & fract_snow, heat_cap, le_freeze_pot, le_melt_pot, lambda_sk, s_srf, s_star,       &
+        & dT_sk_dT_srf, le_phase_change, limit_dt                                           &
       )
 
     !$ACC ROUTINE SEQ
@@ -1440,7 +1439,6 @@ CONTAINS
     REAL(wp), INTENT(IN) :: q_acoef
     REAL(wp), INTENT(IN) :: q_bcoef
     REAL(wp), INTENT(IN) :: s_old
-    REAL(wp), INTENT(IN) :: s_melt            !< Surface dry static energy at freezing/melting point [J kg-1]
     REAL(wp), INTENT(IN) :: qsat_srf_old
     REAL(wp), INTENT(IN) :: dQdT
     REAL(wp), INTENT(IN) :: rad_srf_net
@@ -1461,6 +1459,7 @@ CONTAINS
 
     REAL(wp), OPTIONAL, INTENT(IN) :: limit_dt
 
+    REAL(wp) :: alpha_inv !< 1/alpha for convenience
     REAL(wp) :: lambda_sk_eff !< Effective skin conductivity for partially snow-covered surfaces [W/(m^2 K)].
     REAL(wp) :: tl_impedance !< Pseudo impedance of top layer [K/W].
     REAL(wp) :: t_old !< Skin temperature at previous time step [K].
@@ -1536,7 +1535,8 @@ CONTAINS
 
     t_old = s_old / t2s_conv
     t_srf_old = s_srf / t2s_conv
-    tmelt_star = alpha * tmelt + (1._wp - alpha) * t_srf_old
+    alpha_inv = 1.0_wp / alpha
+    tmelt_star = alpha_inv * tmelt + (1._wp - alpha_inv) * t_srf_old
 
     ! This modification effectively deactivates the skin when the cell is snow-covered, ensuring s_star ~= s_srf.
     lambda_sk_eff = lambda_sk + fract_snow * (LAMBDA_SK_SNOW - lambda_sk)
