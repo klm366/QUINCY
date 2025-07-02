@@ -1328,7 +1328,6 @@ CONTAINS
     ! Local variables
     REAL(wp) :: dt                     !< Effective timestep = alpha * timestep_len
     REAL(wp) :: cp_inv                 !< 1/cp for convenience
-    REAL(wp) :: alpha_inv              !< 1/alpha for convenience
     REAL(wp) :: latent_heat            !< Effective latent heat (snow-weighted vap/subl)
     REAL(wp) :: latent_heat_air        !< Latent heat for air layer
     REAL(wp) :: ground_hcap_s          !< Ground heat capacity in units of surface dry static energy [J m-2 DSE-1].
@@ -1353,10 +1352,9 @@ CONTAINS
     dt = alpha * timestep_len
 
     ! For convenience in equations
-    alpha_inv = 1.0_wp / alpha
     cp_inv = 1.0_wp / heat_capacity
     ground_hcap_s = ground_capacity * cp_inv
-    s_melt_star = alpha_inv * s_melt + (1.0_wp - alpha_inv) * s_old
+    s_melt_star = alpha * s_melt + (1._wp - alpha) * s_old
 
     ! Get effective latent heat based on snow fraction
     latent_heat     = als * snow_fraction + alv * (q_sat - snow_fraction)
@@ -1459,7 +1457,6 @@ CONTAINS
 
     REAL(wp), OPTIONAL, INTENT(IN) :: limit_dt
 
-    REAL(wp) :: alpha_inv !< 1/alpha for convenience
     REAL(wp) :: lambda_sk_eff !< Effective skin conductivity for partially snow-covered surfaces [W/(m^2 K)].
     REAL(wp) :: tl_impedance !< Pseudo impedance of top layer [K/W].
     REAL(wp) :: t_old !< Skin temperature at previous time step [K].
@@ -1535,8 +1532,7 @@ CONTAINS
 
     t_old = s_old / t2s_conv
     t_srf_old = s_srf / t2s_conv
-    alpha_inv = 1.0_wp / alpha
-    tmelt_star = alpha_inv * tmelt + (1._wp - alpha_inv) * t_srf_old
+    tmelt_star = alpha * tmelt + (1._wp - alpha) * t_srf_old
 
     ! This modification effectively deactivates the skin when the cell is snow-covered, ensuring s_star ~= s_srf.
     lambda_sk_eff = lambda_sk + fract_snow * (LAMBDA_SK_SNOW - lambda_sk)
