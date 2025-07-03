@@ -844,7 +844,7 @@ CONTAINS
           s_star(ic) = 280._wp * t2s_conv(ic)
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
-          CALL surface_temp_implicit( dtime, alpha,             & ! in
+          CALL surface_temp_implicit(alpha, dtime,                & ! in
             & t2s_conv(ic),                                       & ! in
             & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
             & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
@@ -891,7 +891,7 @@ CONTAINS
           s_star(ic) = 280._wp * t2s_conv(ic)
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
-          CALL surface_temp_implicit( dtime, alpha,             & ! in
+          CALL surface_temp_implicit(alpha, dtime,                & ! in
             & t2s_conv(ic),                                       & ! in
             & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
             & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
@@ -1213,7 +1213,7 @@ CONTAINS
   !> Updates surface dry static energy using an implicit surface energy balance scheme
   !>
   SUBROUTINE surface_temp_implicit(                     &
-    & dtime, alpha, heat_capacity,                      &
+    & alpha, dtime, heat_capacity,                      &
     & t_acoef, t_bcoef, q_acoef, q_bcoef,               &
     & s_old, qsat_old, dqsat_dT,                        &
     & net_radiation, ground_heat_flux, heat_trans_coef, &
@@ -1229,8 +1229,8 @@ CONTAINS
       & alv,        &  ! Latent heat of vaporization [J kg-1]
       & als            ! Latent heat of sublimation [J kg-1]
 
-    REAL(wp), INTENT(in)  :: dtime                !< Timestep length [s]
     REAL(wp), INTENT(in)  :: alpha                !< Implicit scheme factor [-]
+    REAL(wp), INTENT(in)  :: dtime                !< Timestep length [s]
     REAL(wp), INTENT(in)  :: heat_capacity        !< Specific heat capacity at surface [J kg-1 K-1]
     REAL(wp), INTENT(in)  :: t_acoef              !< A coefficient for temperature
     REAL(wp), INTENT(in)  :: t_bcoef              !< B coefficient for temperature
