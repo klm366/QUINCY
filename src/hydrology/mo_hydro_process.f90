@@ -771,17 +771,13 @@ CONTAINS
       END IF
     END IF
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-
-    ! Aggregate or distribute the different runoff flux components
-    !$ACC LOOP SEQ
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 1, nsoil
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
-        drainage(ic) = drainage(ic) + drainage_sl(ic,is)
+        drainage(ic) = drainage(ic) + drainage_sl(ic, is)
       END DO
     END DO
-    !$ACC END PARALLEL
+    !$ACC END PARALLEL LOOP
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc

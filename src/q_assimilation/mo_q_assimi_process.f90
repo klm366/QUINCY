@@ -82,8 +82,9 @@ CONTAINS
     REAL(wp)                              :: lctlib_phi_leaf_min, lctlib_gmin, lctlib_g0
     REAL(wp)                              :: lctlib_t_jmax_omega, lctlib_t_jmax_opt
     INTEGER                               :: lctlib_phenology_type, lctlib_ps_pathway
-    REAL(wp), ALLOCATABLE                 :: drag_srf_local(:)        !< surface drag, provided by atmosphere or TURB_
-    LOGICAL                               :: jsb_standalone           !< standalone / coupled simulation
+    REAL(wp), ALLOCATABLE                 :: drag_srf_local(:)            !< surface drag, provided by atmosphere or TURB_
+    REAL(wp), ALLOCATABLE                 :: ftranspiration_sum_local(:)  !< sum of ftranspiration_sl over soil layers
+    LOGICAL                               :: jsb_standalone               !< standalone / coupled simulation
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -284,7 +285,8 @@ CONTAINS
     !>0.9.3 allocate local 2D
     !>
     ALLOCATE(drag_srf_local(nc))
-    !$ACC ENTER DATA CREATE(drag_srf_local)
+    ALLOCATE(ftranspiration_sum_local(nc))
+    !$ACC ENTER DATA CREATE(drag_srf_local, ftranspiration_sum_local)
 
     !> 1.0 calculate the moisture scaling factor for photosynthesis
     !>
@@ -309,6 +311,8 @@ CONTAINS
     ELSE
       fact_unit_conv = 1.0_wp
     END IF
+
+    ! calc transpiration per soil layer
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) &
     !$ACC   PRIVATE(hlp)
     DO ic = 1, nc
@@ -322,13 +326,30 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    ! re-calc transpiration as fraction of transpiration per soil layer
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      IF (SUM(ftranspiration_sl(ic,:)) > eps8) THEN
-        ftranspiration_sl(ic,:) = ftranspiration_sl(ic,:) / SUM(ftranspiration_sl(ic,:))
-      ELSE
-        ftranspiration_sl(ic,:) = 0.0_wp
-      END IF
+      ftranspiration_sum_local(ic) = 0.0_wp
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO isoil = 1, nsoil_sb
+      DO ic = 1, nc
+        ftranspiration_sum_local(ic) = ftranspiration_sum_local(ic) + ftranspiration_sl(ic, isoil)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO isoil = 1, nsoil_sb
+      DO ic = 1, nc
+        IF (ftranspiration_sum_local(ic) > eps8) THEN
+          ftranspiration_sl(ic, isoil) = ftranspiration_sl(ic, isoil) / ftranspiration_sum_local(ic)
+        ELSE
+          ftranspiration_sl(ic, isoil) = 0.0_wp
+        END IF
+      END DO
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -510,8 +531,9 @@ CONTAINS
 
     !$ACC WAIT(1)
 
-    !$ACC EXIT DATA DELETE(drag_srf_local)
+    !$ACC EXIT DATA DELETE(drag_srf_local, ftranspiration_sum_local)
     DEALLOCATE(drag_srf_local)
+    DEALLOCATE(ftranspiration_sum_local)
 
   END SUBROUTINE update_canopy_fluxes
 
