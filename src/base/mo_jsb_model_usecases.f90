@@ -346,7 +346,7 @@ CONTAINS
           & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
           & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
           & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-          & fract_varname='fract_veg')
+          & fract_varname='fract_veg')   ! assumes that this usecase always runs with glacier tile (see also init_usecase_lite)
         !$ACC ENTER DATA COPYIN(veg_tile)
 
         IF (model%processes(ALCC_)%p%config%active) THEN
@@ -1147,17 +1147,25 @@ CONTAINS
     !
     IF (model%config%use_soil_phys_jsbach) THEN
       ! on veg tile:  SSE_ and HYDRO_
-      veg_tile => t_jsb_tile('veg', 'Veg tile', &
-        & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_,    SPQ_      /), &
-        & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_,  ON_LEAFS_ /), &
-        & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-        & fract_varname='equal')
+      IF (model%config%use_glacier) THEN
+        veg_tile => t_jsb_tile('veg', 'Veg tile', &
+          & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_,    SPQ_      /), &
+          & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_,  ON_LEAFS_ /), &
+          & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+          & fract_varname='fract_veg')  ! fraction of land tile shared with glacier tile
+      ELSE
+        veg_tile => t_jsb_tile('veg', 'Veg tile', &
+          & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_,    SPQ_      /), &
+          & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_,  ON_LEAFS_ /), &
+          & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+          & fract_varname='equal')    ! fraction = 1.0
+      END IF
     ELSE
       veg_tile => t_jsb_tile('veg', 'Veg tile', &
         & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,       SEB_,      HYDRO_,     SPQ_      /), &
         & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_ /), &
         & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-        & fract_varname='equal')
+        & fract_varname='equal')      ! fraction = 1.0
     END IF
     !$ACC ENTER DATA COPYIN(veg_tile)
 
@@ -1342,17 +1350,25 @@ CONTAINS
     !
     IF (model%config%use_soil_phys_jsbach) THEN
       ! on veg tile:  SSE_ and HYDRO_
-      veg_tile => t_jsb_tile('veg', 'Veg tile', &
-        & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_   /), &
-        & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_ /), &
-        & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-        & fract_varname='equal')
+      IF (model%config%use_glacier) THEN
+        veg_tile => t_jsb_tile('veg', 'Veg tile', &
+          & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_   /), &
+          & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_ /), &
+          & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+          & fract_varname='fract_veg')  ! fraction of land tile shared with glacier tile
+      ELSE
+        veg_tile => t_jsb_tile('veg', 'Veg tile', &
+          & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_   /), &
+          & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_ /), &
+          & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+          & fract_varname='equal')    ! fraction = 1.0
+      END IF
     ELSE
       veg_tile => t_jsb_tile('veg', 'Veg tile', &
         & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_,    SEB_      /), &
         & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_ /), &
         & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-        & fract_varname='equal')
+        & fract_varname='equal')    ! fraction = 1.0
     END IF
     !$ACC ENTER DATA COPYIN(veg_tile)
 
