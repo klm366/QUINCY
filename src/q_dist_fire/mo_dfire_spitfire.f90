@@ -233,7 +233,6 @@ CONTAINS
     TYPE(t_sf_spitfire)                   :: sf_spitfire
 
     INTEGER                               :: nr_of_children
-    TYPE(t_sf_bgcm_2L3D_p), ALLOCATABLE   :: sb_loss_stores(:) !< Reference to each sb_loss pft pools (#npfts)
     ! ----------------------------------------------------------------------------------------------------- !
     !dsl4jsb_Def_mt2L2D :: veg_pool_mt
     !dsl4jsb_Def_mt2L3D :: sb_loss_mt
@@ -432,9 +431,6 @@ CONTAINS
 
     !< Init variables
     fract_fpc => veg__mem%collect_var_real2d(ics, ice, iblk, no_children, veg__mem%fract_fpc)
-
-    ! gather children's bgcm stores from specific flux pool
-    sb_loss_stores = Get_childrens_bgcm_stores_2l_3d(SB_BGCM_LOSS_ID, ics, ice, iblk, tile)
 
     ! rebuild fuel variables
     dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp ! dead fuel
@@ -734,34 +730,6 @@ CONTAINS
                                           (spitfire % i_surface >= const_i_surface_thd)
 
   END SUBROUTINE calc_spitfire
-
-
-  ! ======================================================================================================= !
-  !>
-  !> Gather children's bgcm stores from specific flux pool
-  !> Todo: remove (obsolete)
-  !>
-  FUNCTION Get_childrens_bgcm_stores_2l_3d(pool_id, ics, ice, iblk, tile) RESULT (bgcm_stores)
-    INTEGER, INTENT(in) :: pool_id
-    INTEGER, INTENT(in) :: ics, ice, iblk
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< one tile with data structure for one lct
-    TYPE(t_sf_bgcm_2L3D_p), ALLOCATABLE   :: bgcm_stores(:) ! output
-
-    INTEGER :: i_tile, no_children
-    CLASS(t_jsb_tile_abstract),  POINTER  :: current_tile
-
-    no_children = tile%Get_no_of_children()
-    ! gather children's bgcm stores from specific flux pool
-    ALLOCATE(bgcm_stores(no_children)) !< move to spitfire_init, own function
-    current_tile => tile%Get_first_child_tile()
-    i_tile = 0
-    DO WHILE (ASSOCIATED(current_tile))
-      i_tile = i_tile + 1
-      !write(*,*) "update_spitfire:: name tile=", current_tile%name
-      bgcm_stores(i_tile)%p => current_tile%bgcm_store%Get_matrix_from_store_2l_3d(pool_id, ics, ice, iblk, current_tile%name)
-      current_tile => current_tile%Get_next_sibling_tile()
-    ENDDO
-  END FUNCTION Get_childrens_bgcm_stores_2l_3d
 
 
   ! ======================================================================================================= !
