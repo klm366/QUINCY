@@ -730,7 +730,7 @@ CONTAINS
                                                 spitfire % fc_dead_cls(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
                                                 mask=has_fire_conditions)
 
-    spitfire % is_fire_intense_enough = has_fire_conditions .EQV. &
+    spitfire % is_fire_intense_enough = has_fire_conditions .AND. &
                                           (spitfire % i_surface >= const_i_surface_thd)
 
   END SUBROUTINE calc_spitfire
