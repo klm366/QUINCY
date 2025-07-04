@@ -405,7 +405,7 @@ CONTAINS
 
     USE mo_hydro_process,          ONLY: get_soilhyd_properties, calc_surface_hydrology_land, &
       &                                  calc_surface_hydrology_glacier
-    USE mo_jsb_physical_constants, ONLY: dens_snow
+    USE mo_jsb_physical_constants, ONLY: dens_snow, grav
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -675,7 +675,7 @@ CONTAINS
 #ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-        dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_pot_sl)  ! out
+        dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_pot_sl)  ! out  [MPa]
       END SELECT
 #endif
 
@@ -852,11 +852,13 @@ CONTAINS
 #ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
-      ! Update soil water potential
+      ! Update soil water potential based on "soil matric potential"
+      !   includes unit conversion from: m -> J/N -> MPa
+      !
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO is = 1, nsoil
         DO  ic = 1, nc
-          wtr_soil_pot_sl(ic, is) = mpot_act_sl(ic, is)
+          wtr_soil_pot_sl(ic, is) = mpot_act_sl(ic, is) * grav / 1000.0_wp
         END DO
       END DO
       !$ACC END PARALLEL
@@ -978,6 +980,7 @@ CONTAINS
 
     dsl4jsb_Def_memory(HYDRO_)
 
+    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_hydrology'
@@ -992,6 +995,7 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
 
+    model             => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     CALL weighted_by_fract%BeginAggregate()
@@ -1022,6 +1026,12 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_net_flx,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_srf,     weighted_by_fract)
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pot_sl,     weighted_by_fract)
+    END SELECT
+#endif
 
     CALL weighted_by_fract%EndAggregate()
 
@@ -1523,8 +1533,6 @@ CONTAINS
       & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
       & dsl4jsb_Config(HYDRO_)%hydro_scale,                     & ! choice of hydrological scale scheme
       & model%config%model_scheme,                              &
-      & MODEL_JSBACH,                                           &
-      & MODEL_QUINCY,                                           &
       & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
@@ -1850,7 +1858,6 @@ CONTAINS
     ! Used variables
     USE mo_hydro_process,           ONLY: get_water_stress_factor
     USE mo_hydro_util,              ONLY: get_amount_in_rootzone
-    USE mo_jsb_physical_constants,  ONLY: grav, rhoh2o
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1937,7 +1944,7 @@ CONTAINS
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_memory(VEG_)
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_soil_root_pot)         ! out   [MPa]
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pot_sl)           ! in    [m]
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pot_sl)           ! in    [MPa]
       dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)          ! in
     END SELECT
 #endif
@@ -2014,8 +2021,7 @@ CONTAINS
       DO is = 1, nsoil
         !$ACC LOOP GANG VECTOR
         DO  ic = 1, nc
-          ! calc includes unit conversion from: m -> J/N -> MPa
-          wtr_soil_root_pot(ic) = wtr_soil_root_pot(ic) + (root_fraction_sl(ic, is) * wtr_soil_pot_sl(ic, is) * grav / rhoh2o)
+          wtr_soil_root_pot(ic) = wtr_soil_root_pot(ic) + (root_fraction_sl(ic, is) * wtr_soil_pot_sl(ic, is))
         END DO
       END DO
       !$ACC END PARALLEL

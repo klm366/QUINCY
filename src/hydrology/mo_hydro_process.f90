@@ -633,7 +633,7 @@ CONTAINS
     & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime,                                    &
     & ltpe_closed, ltpe_open, enforce_water_budget, l_latflow_to_streamflow,             &
     & soilhydmodel, interpol_mean, hydro_scale,                                          &
-    & model_scheme, MODEL_JSBACH, MODEL_QUINCY,                                          &
+    & model_scheme,                                                                      &
     & w_soil_wilt_fract,                                                                 &
     & soil_depth_sl, root_depth_sl,                                                      &
     & hyd_cond_sat_sl, matric_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
@@ -658,8 +658,6 @@ CONTAINS
     INTEGER, INTENT(in)  :: &
       & enforce_water_budget, soilhydmodel, interpol_mean, hydro_scale
     INTEGER,  INTENT(IN) :: model_scheme               !< from model config
-    INTEGER,  INTENT(IN) :: MODEL_JSBACH               !< enumerator with value 1
-    INTEGER,  INTENT(IN) :: MODEL_QUINCY               !< enumerator with value 2
     REAL(wp), INTENT(in) :: dtime, w_soil_wilt_fract
     LOGICAL, INTENT(in)  :: ltpe_closed
     LOGICAL, INTENT(in)  :: ltpe_open
@@ -739,7 +737,7 @@ CONTAINS
     CALL soilhyd( &
       &    nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, enforce_water_budget,       &
       &    slope, soilhydmodel, interpol_mean, hydro_scale,                            &
-      &    model_scheme, MODEL_JSBACH, MODEL_QUINCY,                                   &
+      &    model_scheme,                                                               &
       &    w_soil_wilt_fract,                                                          &
       &    soil_depth_sl, wtr_wres_sl, wtr_p_wilt_sl, wtr_field_cap_sl, wtr_wsat_sl,   &
       &    hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,          &
@@ -962,7 +960,7 @@ CONTAINS
   SUBROUTINE soilhyd(                                                &
     & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, enforce_water_budget,  &
     & slope, soilhydmodel, interpol_mean, hydro_scale,                       &
-    & model_scheme, MODEL_JSBACH, MODEL_QUINCY,                              &
+    & model_scheme,                                                          &
     & w_soil_wilt_fract,   &
     & dsoil, wtr_wres_sl, wtr_p_wilt_sl,                                     &
     & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,                        &
@@ -993,8 +991,6 @@ CONTAINS
     INTEGER,  INTENT(in)            :: interpol_mean              ! vertical interpolation scheme
     INTEGER,  INTENT(in)            :: hydro_scale                !< hydrology scale scheme
     INTEGER,  INTENT(IN)            :: model_scheme               !< from model config
-    INTEGER,  INTENT(IN)            :: MODEL_JSBACH               !< enumerator with value 1
-    INTEGER,  INTENT(IN)            :: MODEL_QUINCY               !< enumerator with value 2
     REAL(wp), INTENT(in)            :: w_soil_wilt_fract          !< fractional plant wilting point [/]
     REAL(wp), INTENT(IN)            :: dtime                      ! model time step legth [s]
     REAL(wp), INTENT(IN)            :: slope(:)                   ! slope of gridcell / tile [/]
@@ -1185,7 +1181,7 @@ CONTAINS
     !>  computation. Besides the assumptions on inaccessible water amounts (below wilting point
     !>  or supercooled), this also comprises the treatment of soil ice.
     CALL diagnose_evapotrans(nc, l_fract, lat, lon, nsoil, enforce_water_budget,        &
-      &                      model_scheme, MODEL_QUINCY,                                &
+      &                      model_scheme,                                              &
       &                      w_soil_wilt_fract, root_depth_sl, dsoil, wtr_field_cap_sl, &
       &                      transpiration_in_m, evapo_soil_in_m, wtr_soil_sl,          &
       &                      ftranspiration_local_sl,                                   & ! in
@@ -1907,7 +1903,6 @@ CONTAINS
     & nsoil,                      &
     & enforce_water_budget,       &
     & model_scheme,               &
-    & MODEL_QUINCY,               &
     & w_soil_wilt_fract,          &
     & droot,                      &
     & dsoil,                      &
@@ -1935,6 +1930,8 @@ CONTAINS
     !! The routine is based on routine soilchange by Stefan Hagemann.
     !----------------------------------------------------------------------------------------------
 
+    USE mo_jsb_model_class,    ONLY: MODEL_QUINCY
+
     ! arguments
 
     INTEGER,  INTENT(in)     :: nc                      ! vector length
@@ -1944,7 +1941,6 @@ CONTAINS
     INTEGER,  INTENT(in)     :: nsoil                   ! number of soil layers
     INTEGER,  INTENT(in)     :: enforce_water_budget    ! Water balance check setting
     INTEGER,  INTENT(IN)     :: model_scheme            !< from model config
-    INTEGER,  INTENT(IN)     :: MODEL_QUINCY            !< enumerator with value 2
     REAL(wp), INTENT(in)     :: w_soil_wilt_fract       ! fractional plant wilting point [/]
     REAL(wp), INTENT(in)     :: droot(:,:)              ! root depth within layer [m]
     REAL(wp), INTENT(in)     :: dsoil(:,:)              ! soil depth until bedrock within layer [m]
@@ -1985,6 +1981,7 @@ CONTAINS
     !$ACC   CREATE(dummy_wtr_soil, root_depth, model_scheme_quincy)
 
 #ifndef __NO_QUINCY__
+    ! set a local LOGICAL for the below GPU loop
     model_scheme_quincy = .FALSE.
     IF (model_scheme == MODEL_QUINCY) THEN
       model_scheme_quincy = .TRUE.
@@ -2731,7 +2728,8 @@ CONTAINS
             )
 
     USE mo_hydro_constants,    ONLY: BrooksCorey_, Campbell_, VanGenuchten_, &
-      &                              Upstream_, Arithmetic_
+      &                              Upstream_, Arithmetic_, &
+      &                              matric_pot_min
 
     INTEGER,  INTENT(in)            :: soilhydmodel       !< Model to determine conductivites & diffusivities (KD)
     INTEGER,  INTENT(in)            :: interpol_mean      !< and how to derive values at layer interface (AVG scheme)
@@ -3107,9 +3105,9 @@ CONTAINS
             ELSE
               mpot_act(ic,is) = mpot_sat(ic,is) * (ws_rel_vol(ic,is)**(-1._wp/mvgn(ic,is)) - 1._wp)**(1._wp/nvgn(ic,is))
             END IF
-            mpot_act(ic,is) = MAX(-100._wp, mpot_act(ic,is) * ((1._wp + ck * ice_vol(ic,is))**2._wp))
+            mpot_act(ic,is) = MAX(matric_pot_min, mpot_act(ic,is) * ((1._wp + ck * ice_vol(ic,is))**2._wp))
           ELSE
-            mpot_act(ic,is) = -100._wp
+            mpot_act(ic,is) = matric_pot_min
           END IF
         END DO
       END DO

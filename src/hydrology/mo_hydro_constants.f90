@@ -156,6 +156,9 @@ MODULE mo_hydro_constants
     ! Parameter for bedrock
     & k_brock                 = 1.E-6_wp         !< Hydraulic conductivity of fractured bedrock [m/s] (Freeze & Cherry, 1979)
 
+  REAL(wp), PARAMETER :: &
+    & matric_pot_min          = -1000.0_wp       !< min value of matric potential ('mpot_act'), tuned [m]
+
 #ifdef __QUINCY_STANDALONE__
   ! quincy standalone
   REAL(wp), PARAMETER :: &

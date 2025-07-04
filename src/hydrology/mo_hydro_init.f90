@@ -768,7 +768,8 @@ CONTAINS
     END DO
 
     ! TODO
-    ! improve later: calculate below using average across soil layer of matric_pot_sl weighted with root_fraction_sl ?
+    ! improve later: calculate below using average across soil layer of wtr_soil_pot_sl weighted with root_fraction_sl ?
+    !                see SPQ_ init
     !
     wtr_soil_root_pot(:,:) = 0.0_wp
 

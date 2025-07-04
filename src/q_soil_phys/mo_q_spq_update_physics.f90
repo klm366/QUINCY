@@ -193,7 +193,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: wtr_soil_pwp_sl
     dsl4jsb_Real3D_onChunk                :: wtr_soil_fc_sl
     dsl4jsb_Real3D_onChunk                :: wtr_soil_sat_sl
-    dsl4jsb_Real3D_onChunk                :: matric_pot_sl
+    dsl4jsb_Real3D_onChunk                :: wtr_soil_pot_sl
     dsl4jsb_Real3D_onChunk                :: wtr_soil_sl
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -327,7 +327,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)                 ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sat_sl)                ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, matric_pot_sl)                  ! inout
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_sl)                ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)                    ! inout
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -462,7 +462,7 @@ CONTAINS
     !$ACC   HOST(wtr_soil_fc_sl(:,:), wtr_soil_pwp_sl(:,:), saxtonA(:,:), saxtonB(:,:), saxtonC(:,:)) &
     !$ACC   HOST(kdiff_sat_sl(:,:), root_fraction_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:)) &
     !$ACC   HOST(w_skin(:), wtr_rootzone(:), wtr_rootzone_rel(:), wtr_soil_root_pot(:), srf_runoff(:)) &
-    !$ACC   HOST(drainage(:), gw_runoff(:), drainage_fraction(:), wtr_soil_sl(:,:), matric_pot_sl(:,:)) &
+    !$ACC   HOST(drainage(:), gw_runoff(:), drainage_fraction(:), wtr_soil_sl(:,:), wtr_soil_pot_sl(:,:)) &
     !$ACC   HOST(drainage_sl(:,:), frac_wtr_transp_down_sl(:,:), gw_runoff_sl(:,:), t_soil_sl(:,:), ice_soil_sl(:,:)) &
     !$ACC   HOST(frac_w_lat_loss_sl(:,:), ftranspiration_sl(:,:)) ASYNC(1)
     !$ACC WAIT(1)
@@ -478,7 +478,7 @@ CONTAINS
                              w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:), &                                              ! in
                              w_skin(:), wtr_rootzone(:), wtr_rootzone_rel(:), wtr_soil_root_pot(:), &                       ! inout
                              srf_runoff(:), drainage(:), gw_runoff(:), drainage_fraction(:), &                              ! inout
-                             wtr_soil_sl(:,:), matric_pot_sl(:,:), drainage_sl(:,:), frac_wtr_transp_down_sl(:,:), &        ! inout
+                             wtr_soil_sl(:,:), wtr_soil_pot_sl(:,:), drainage_sl(:,:), frac_wtr_transp_down_sl(:,:), &      ! inout
                              gw_runoff_sl(:,:), t_soil_sl(:,:), ice_soil_sl(:,:), &                                         ! inout
                              frac_w_lat_loss_sl(:,:))                                                                       ! out
     !$ACC UPDATE DEVICE(num_sl_above_bedrock(:), soil_lay_depth_ubound_sl(:,:), rain(:), snow(:), interception(:)) &
@@ -487,7 +487,7 @@ CONTAINS
     !$ACC   DEVICE(wtr_soil_fc_sl(:,:), wtr_soil_pwp_sl(:,:), saxtonA(:,:), saxtonB(:,:), saxtonC(:,:)) &
     !$ACC   DEVICE(kdiff_sat_sl(:,:), root_fraction_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:)) &
     !$ACC   DEVICE(w_skin(:), wtr_rootzone(:), wtr_rootzone_rel(:), wtr_soil_root_pot(:), srf_runoff(:)) &
-    !$ACC   DEVICE(drainage(:), gw_runoff(:), drainage_fraction(:), wtr_soil_sl(:,:), matric_pot_sl(:,:)) &
+    !$ACC   DEVICE(drainage(:), gw_runoff(:), drainage_fraction(:), wtr_soil_sl(:,:), wtr_soil_pot_sl(:,:)) &
     !$ACC   DEVICE(drainage_sl(:,:), frac_wtr_transp_down_sl(:,:), gw_runoff_sl(:,:), t_soil_sl(:,:), ice_soil_sl(:,:)) &
     !$ACC   DEVICE(frac_w_lat_loss_sl(:,:), ftranspiration_sl(:,:)) ASYNC(1)
 #ifdef _OPENACC
@@ -1097,7 +1097,7 @@ CONTAINS
                                  w_soil_freeze_flux, w_soil_melt_flux, &                           ! in
                                  w_skin, wtr_rootzone, wtr_rootzone_rel, wtr_soil_root_pot, &      ! inout
                                  srf_runoff, drainage, gw_runoff, drainage_fraction, &             ! inout
-                                 wtr_soil_sl, matric_pot_sl, drainage_sl, &                        ! inout
+                                 wtr_soil_sl, wtr_soil_pot_sl, drainage_sl, &                      ! inout
                                  frac_wtr_transp_down_sl, &                                        ! inout
                                  gw_runoff_sl, t_soil_sl, ice_soil_sl, &                           ! inout
                                  frac_w_lat_loss_sl)                                               ! out
@@ -1152,7 +1152,7 @@ CONTAINS
                                                                        gw_runoff, &            !< sum of lateral runoff across all soil layers [kg / m2 /s]
                                                                        drainage_fraction       !< fraction of soil column lost to drainage [1/s]
     REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(inout) :: wtr_soil_sl, &                     !< soil moisture per layer [m]
-                                                                       matric_pot_sl, &                   !< soil water potential per layer [MPa]
+                                                                       wtr_soil_pot_sl, &                 !< soil water potential per layer [MPa]
                                                                        drainage_sl, &                     !< drainage per layer [kg / m2 / s]
                                                                        frac_wtr_transp_down_sl, &         !< fractional water loss [1000/s]
                                                                        gw_runoff_sl, &                    !< groundwater runoff per layer [kg / m2 /s]
@@ -1382,7 +1382,7 @@ CONTAINS
     ELSEWHERE
        hlp1_2d(:,:) = EXP(LOG(wpot_min/saxtonA(:,:)) /saxtonB(:,:))
     ENDWHERE
-    matric_pot_sl(:,:) = saxtonA(:,:) * (hlp1_2d(:,:) ** saxtonB(:,:))
+    wtr_soil_pot_sl(:,:) = saxtonA(:,:) * (hlp1_2d(:,:) ** saxtonB(:,:))
     ! compute diffusive fluxes and limit them by field capacity
     DO ic = 1,nc
       DO is = 2,INT(num_sl_above_bedrock(ic))
@@ -1392,7 +1392,7 @@ CONTAINS
         ! flux resulting from the pressure gradient between the centres of the soil layer
         ! note that matrix potential is converted to pressure head MPa -> J/N = m
         hlp1(ic) = hlp1(ic) * dtime * &
-                  (matric_pot_sl(ic,is-1) - matric_pot_sl(ic,is)) * &
+                  (wtr_soil_pot_sl(ic,is-1) - wtr_soil_pot_sl(ic,is)) * &
                   1000.0_wp / grav / &
                   (0.5_wp * (soil_depth_sl(ic,is-1) + soil_depth_sl(ic,is)))
 
@@ -1508,7 +1508,7 @@ CONTAINS
     ELSEWHERE
        hlp1_2d(:,:) = exp(log(wpot_min/saxtonA(:,:))/saxtonB(:,:))
     ENDWHERE
-    matric_pot_sl(:,:) = saxtonA(:,:) * (hlp1_2d(:,:) ** saxtonB(:,:))
+    wtr_soil_pot_sl(:,:) = saxtonA(:,:) * (hlp1_2d(:,:) ** saxtonB(:,:))
 
     !> 3.4 Diagnose "soil root water potential"
     !>
@@ -1519,7 +1519,7 @@ CONTAINS
     !>
     !>   the soil root water potential is thus weighted by the fraction of roots per layer
     !>
-    wtr_soil_root_pot(:) = SUM(matric_pot_sl(:,:) * root_fraction_sl(:,:), DIM=2)
+    wtr_soil_root_pot(:) = SUM(wtr_soil_pot_sl(:,:) * root_fraction_sl(:,:), DIM=2)
 
     !> 3.5 Diagnostic fraction of water mass lost from the soil colum per second
     !!

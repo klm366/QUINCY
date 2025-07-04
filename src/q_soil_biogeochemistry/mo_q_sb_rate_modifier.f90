@@ -100,7 +100,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_sat_sl
-    dsl4jsb_Real3D_onChunk :: matric_pot_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_sl
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk :: t_soil_sl
     ! ----------------------------------------------------------------------------------------------------- !
@@ -151,7 +151,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_sl)                 ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_fc_sl)              ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_sat_sl)             ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,   matric_pot_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_pot_sl)             ! in
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)                    ! in
     ! ----------------------------------------------------------------------------------------------------- !
@@ -167,7 +167,7 @@ CONTAINS
           &                                                          ea_decomposition, &
           &                                                          ed_decomposition, &
           &                                                          t_ref_decomposition)
-        rmm_decomposition(ic, is)    = MAX(1._wp - matric_pot_sl(ic, is) / kmr_decomposition, 0.0_wp)
+        rmm_decomposition(ic, is)    = MAX(1._wp - wtr_soil_pot_sl(ic, is) / kmr_decomposition, 0.0_wp)
         !>  1.2 JSM
         !>
         rtm_depolymerisation(ic, is) = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_depolymerisation, &
@@ -205,13 +205,13 @@ CONTAINS
         !>
         rtm_asymb_bnf(ic, is) = calc_peaked_arrhenius_function(t_soil_sl(ic, is), ea_symb_bnf, &
           &                                                    ed_symb_bnf, t_opt_symb_bnf)
-        rmm_asymb_bnf(ic, is) = MAX(1._wp - matric_pot_sl(ic, is) / kmr_asymb_bnf, 0.0_wp)
+        rmm_asymb_bnf(ic, is) = MAX(1._wp - wtr_soil_pot_sl(ic, is) / kmr_asymb_bnf, 0.0_wp)
 
         !>3.0 root model
         !>
         rtm_plant_uptake(ic, is) = calc_peaked_arrhenius_function(t_soil_sl(ic, is), ea_decomposition, &
           &                        ed_decomposition, t_ref_decomposition)
-        rmm_plant_uptake(ic, is) = MAX(1._wp - matric_pot_sl(ic, is) / lctlib%phi_leaf_min, 0.0_wp)
+        rmm_plant_uptake(ic, is) = MAX(1._wp - wtr_soil_pot_sl(ic, is) / lctlib%phi_leaf_min, 0.0_wp)
       ENDDO
     ENDDO
   END SUBROUTINE update_sb_rate_modifier

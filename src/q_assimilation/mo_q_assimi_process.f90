@@ -46,7 +46,7 @@ CONTAINS
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_atmland_constants,      ONLY: min_wind, max_wind
-    USE mo_jsb_physical_constants, ONLY: r_gas, Tzero, grav, rhoh2o
+    USE mo_jsb_physical_constants, ONLY: r_gas, Tzero
     USE mo_isotope_util,           ONLY: calc_fractionation
     USE mo_phy_schemes             ! e.g., heat_transfer_coef
     USE mo_q_assimi_parameters,    ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
@@ -75,7 +75,6 @@ CONTAINS
     INTEGER                               :: ic, isoil                !< loop counter
     REAL(wp)                              :: dtime                    !< step length
     REAL(wp)                              :: alpha                    !< implicitness factor
-    REAL(wp)                              :: fact_unit_conv           !< factor for unit conversion from: m -> J/N -> MPa
 
     CHARACTER(len=1024)                   :: canopy_cond_scheme       !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp)                              :: lctlib_g1                !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
@@ -142,7 +141,7 @@ CONTAINS
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: wtr_soil_pwp_sl
     dsl4jsb_Real3D_onChunk      :: wtr_soil_fc_sl
-    dsl4jsb_Real3D_onChunk      :: matric_pot_sl
+    dsl4jsb_Real3D_onChunk      :: wtr_soil_pot_sl
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     ! TURB_ 2D
@@ -234,7 +233,7 @@ CONTAINS
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)              ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)               ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, matric_pot_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_sl)              ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                      ! in
     ! ---------------------------
@@ -305,13 +304,6 @@ CONTAINS
 
     !> 1.1 determine fraction of transpiration per soil layer
     !>
-    ! calc factor for unit conversion of matric_pot_sl (from: m -> J/N -> MPa)
-    IF (model%config%use_soil_phys_jsbach) THEN
-      fact_unit_conv = grav * rhoh2o
-    ELSE
-      fact_unit_conv = 1.0_wp
-    END IF
-
     ! calc transpiration per soil layer
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) &
     !$ACC   PRIVATE(hlp)
@@ -319,7 +311,7 @@ CONTAINS
       DO isoil = 1, nsoil_sb
         ftranspiration_sl(ic,isoil) = 0.0_wp
         IF ((wtr_soil_fc_sl(ic,isoil) - wtr_soil_pwp_sl(ic,isoil)) > eps8 .AND. t_soil_sl(ic,isoil) > Tzero) THEN
-          hlp = calc_soil_moisture_stress(matric_pot_sl(ic, isoil) / fact_unit_conv, lctlib_phi_leaf_min)
+          hlp = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, isoil), lctlib_phi_leaf_min)
           ftranspiration_sl(ic,isoil) = root_fraction_sl(ic,isoil) * hlp
         END IF
       END DO

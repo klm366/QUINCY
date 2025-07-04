@@ -315,7 +315,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, frac_w_lat_loss_sl       , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_soil_sl              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, matric_pot_sl            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pot_sl          , weighted_by_fract)
 
     ! ---------------------------
     ! 2D

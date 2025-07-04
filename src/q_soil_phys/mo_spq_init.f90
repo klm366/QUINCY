@@ -166,7 +166,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain    :: wtr_soil_pwp_sl
     dsl4jsb_Real3D_onDomain    :: wtr_soil_fc_sl
     dsl4jsb_Real3D_onDomain    :: wtr_soil_sat_sl
-    dsl4jsb_Real3D_onDomain    :: matric_pot_sl
+    dsl4jsb_Real3D_onDomain    :: wtr_soil_pot_sl
     dsl4jsb_Real3D_onDomain    :: wtr_soil_sl
     ! SPQ_ 2D
     dsl4jsb_Real2D_onDomain    :: elevation
@@ -239,7 +239,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(HYDRO_,   wtr_soil_pwp_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_,   wtr_soil_fc_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_,   wtr_soil_sat_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_,   matric_pot_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   wtr_soil_pot_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_,   wtr_soil_sl)
     ! SPQ_ 2D
     dsl4jsb_Get_var2D_onDomain(SPQ_, elevation)
@@ -495,9 +495,9 @@ CONTAINS
     !>
     WHERE(soil_depth_sl(:,:,:) > eps8)
       hlp1(:,:,:)          = MIN(wtr_soil_fc_sl(:,:,:), wtr_soil_sl(:,:,:)) / soil_depth_sl(:,:,:)
-      matric_pot_sl(:,:,:) = saxtonA(:,:,:) * hlp1(:,:,:) ** saxtonB(:,:,:)
+      wtr_soil_pot_sl(:,:,:) = saxtonA(:,:,:) * hlp1(:,:,:) ** saxtonB(:,:,:)
     ELSEWHERE
-      matric_pot_sl(:,:,:) = 0.0_wp
+      wtr_soil_pot_sl(:,:,:) = 0.0_wp
     ENDWHERE
 
     !> get elevation
@@ -521,7 +521,7 @@ CONTAINS
     !$ACC UPDATE DEVICE(soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_center_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:), bulk_dens_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(heat_capa_sl(:,:,:), therm_cond_sl(:,:,:), wtr_soil_pwp_sl(:,:,:), wtr_soil_fc_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(wtr_soil_sat_sl(:,:,:), wtr_soil_sl(:,:,:), matric_pot_sl(:,:,:), ice_soil_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(wtr_soil_sat_sl(:,:,:), wtr_soil_sl(:,:,:), wtr_soil_pot_sl(:,:,:), ice_soil_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(saxtonA(:,:,:), saxtonB(:,:,:), saxtonC(:,:,:), kdiff_sat_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(t_snow_snl(:,:,:), t_soil_sl(:,:,:), elevation(:,:)) ASYNC(1)
