@@ -227,21 +227,25 @@ MODULE mo_jsb_lctlib_class
       & k_som_slow_init
 
     ! --- Parameters used in Quincy SPITFIRE (mo_dfire_spitfire.f90) -------------------------------------------------------------
-    REAL(wp) :: q_fuel_bulk_density          , &
-                q_moisture_extinction        , &
-                q_fwd_wind_factor            , &
-                q_crown_damage_r_ck          , &
+    REAL(wp) :: q_emissions_co2_mol          , &
+                q_emissions_co_mol           , &
+                q_emissions_ch4_mol          , &
+                !q_emissions_voc             , &
+                !q_emissions_tpm             , &
+                !q_emissions_nox             , &
+                q_emissions_nh3_mol          , &
+                q_emissions_n2o_mol          , &
+                q_emissions_n2_mol
+    ! Fire disturbance
+    REAL(wp) :: q_crown_damage_r_ck          , &
                 q_crown_damage_p             , &
                 q_crown_length               , &
                 q_bark_thickness_par1        , &
                 q_bark_thickness_par2        , &
                 q_F_scorch_height            , &
-                q_emissions_co2_mol          , &
-                q_emissions_co_mol           , &
-                q_emissions_ch4_mol          , &
-                q_emissions_nh3_mol          , &
-                q_emissions_n2o_mol          , &
-                q_emissions_n2_mol
+                q_fuel_bulk_density          , &
+                q_fwd_wind_factor            , &
+                q_moisture_extinction        , &
 
 
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
