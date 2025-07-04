@@ -396,7 +396,7 @@ CONTAINS
     !-----------------------------------------------------------------------------------------------
     !  Computation of useful constants
 
-    !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, heat_cap, wtr_old, ice_old, freeze_mass, melt_mass) ASYNC(acc_stream)
+    !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, heat_cap, wtr_old, ice_old, freeze_mass, melt_mass, le_phase) ASYNC(acc_stream)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO is = 1,nsoil-1
