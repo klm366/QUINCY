@@ -455,16 +455,28 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     ! Compute the energy released/required to freeze/melt all water/ice
+    IF (tile%is_glacier) THEN
 #ifdef NFORT_BROKEN_INLINES
     !NEC$ noinline
 #endif
-    CALL get_phasechange_energy_limits(                                 &
-      ! In
-      & tile, options, l_freeze_config, l_supercool_config,             &
-      & wtr_soil_sl(:,1), wtr_soil_pot_scool_sl(:,1), ice_soil_sl(:,1), &
-      & wtr_pond(:), ice_pond(:), weq_snow_soil(:),                     &
-      ! Out
-      & le_freeze_pot(:), le_melt_pot(:))
+      CALL get_phasechange_energy_limits(                                 &
+        ! In
+        & tile, options, l_freeze_config, l_supercool_config,             &
+        ! Out
+        & le_freeze_pot(:), le_melt_pot(:))
+    ELSE
+#ifdef NFORT_BROKEN_INLINES
+    !NEC$ noinline
+#endif
+      CALL get_phasechange_energy_limits(                                 &
+        ! In
+        & tile, options, l_freeze_config, l_supercool_config,             &
+        ! Out
+        & le_freeze_pot(:), le_melt_pot(:),                               &
+        ! Optional in
+        & wtr_soil_sl(:,1), wtr_soil_pot_scool_sl(:,1), ice_soil_sl(:,1), &
+        & wtr_pond(:), ice_pond(:), weq_snow_soil(:))
+    END IF
 
     ! Compute surface drag, exchange coefficients and temperatures for standalone simulation
     IF (jsb_standalone) THEN
@@ -1213,10 +1225,10 @@ CONTAINS
   !> Diagnose the total potential energy source/sink if all available water/ice
   !> freezes/melts.
   SUBROUTINE get_phasechange_energy_limits(tile, options, &
-    & l_freeze_config, l_supercool_config, wtr_soil_top,  &
-    & wtr_soil_pot_scool_top, ice_soil_top, wtr_pond,     &
-    & ice_pond, weq_snow_soil,                            &
-    & le_freeze_pot, le_melt_pot)
+    & l_freeze_config, l_supercool_config,                &
+    & le_freeze_pot, le_melt_pot,                         &
+    & wtr_soil_top, wtr_soil_pot_scool_top, ice_soil_top, &
+    & wtr_pond, ice_pond, weq_snow_soil)
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi, alf
 
@@ -1225,15 +1237,16 @@ CONTAINS
 
     LOGICAL, INTENT(IN) :: l_freeze_config
     LOGICAL, INTENT(IN) :: l_supercool_config
-    REAL(wp), INTENT(IN) :: wtr_soil_top(:)
-    REAL(wp), INTENT(IN) :: wtr_soil_pot_scool_top(:)
-    REAL(wp), INTENT(IN) :: ice_soil_top(:)
-    REAL(wp), INTENT(IN) :: wtr_pond(:)
-    REAL(wp), INTENT(IN) :: ice_pond(:)
-    REAL(wp), INTENT(IN) :: weq_snow_soil(:)
 
     REAL(wp), INTENT(OUT) :: le_freeze_pot(:)
     REAL(wp), INTENT(OUT) :: le_melt_pot(:)
+
+    REAL(wp), INTENT(IN), OPTIONAL :: wtr_soil_top(:)
+    REAL(wp), INTENT(IN), OPTIONAL :: wtr_soil_pot_scool_top(:)
+    REAL(wp), INTENT(IN), OPTIONAL :: ice_soil_top(:)
+    REAL(wp), INTENT(IN), OPTIONAL :: wtr_pond(:)
+    REAL(wp), INTENT(IN), OPTIONAL :: ice_pond(:)
+    REAL(wp), INTENT(IN), OPTIONAL :: weq_snow_soil(:)
 
     INTEGER  :: nc, ic
 
