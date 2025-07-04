@@ -333,13 +333,15 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
     DO isoil = 1, nsoil_sb
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         ftranspiration_sum_local(ic) = ftranspiration_sum_local(ic) + ftranspiration_sl(ic, isoil)
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END PARALLEL
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO isoil = 1, nsoil_sb
