@@ -1095,6 +1095,10 @@ CONTAINS
       & fract_varname='equal')
     !$ACC ENTER DATA COPYIN(veg_tile)
 
+    IF (model%processes(ALCC_)%p%config%active) THEN
+      CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
+    END IF
+
     ! create PFT tiles 1:npft
     DO i = 1,npft
       ! via constructor of t_jsb_tile
