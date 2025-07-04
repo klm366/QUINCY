@@ -46,21 +46,22 @@ CONTAINS
   !>
   !> Intialize disturbance fire process (after memory has been set up)
   !>
-  SUBROUTINE dfire_fuel_init(tile)
+  SUBROUTINE dfire_fuel_init(tile, options)
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: DFIRE_FUEL_
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,         ONLY: t_jsb_model
 
-    !dsl4jsb_Use_config(DFIRE_FUEL_)
     dsl4jsb_Use_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib !< land-cover-type library - parameter across pfts
     INTEGER                                      :: iblk, ics, ice, nc
+    REAL(wp)                                     :: dtime
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':dfire_fuel_init'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
@@ -119,12 +120,17 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_FUEL_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    dtime   = options%dtime
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model  => get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    !dsl4jsb_Get_config(DFIRE_FUEL_)
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_1hr_dfp)

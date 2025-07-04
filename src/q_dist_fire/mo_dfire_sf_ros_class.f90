@@ -34,10 +34,12 @@ MODULE mo_dfire_sf_ros_class
   USE mo_exception,             ONLY: message, finish
   !< Total number of sigmas (1,10,100) hours,  Pfeiffer el al. (2013), Eq. A18 - Used to calculate fuel bulk density
   USE mo_dfire_constants,       ONLY: df_sf_sigma_nr, df_sf_fuel_class_factors
+  !<
+  USE mo_dfire_constants,       ONLY: df_sf_fire_duration_thd
   !<  Rate of spread constants
   USE mo_dfire_constants,       ONLY: df_sf_oven_dry_part_dens, df_sigmas, &
-      df_sf_mineral_fract, df_sf_mineral_damp_coeff, &
-      df_sf_fuel_heat_content
+                                      df_sf_mineral_fract, df_sf_mineral_damp_coeff, &
+                                      df_sf_fuel_heat_content
   USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
 
   USE mo_quincy_stats,          ONLY: stats_average_weight
@@ -49,9 +51,9 @@ MODULE mo_dfire_sf_ros_class
   PUBLIC :: t_sf_ros, t_sf_veget_cover_frac, sf_calc_rate_of_spread
 
   PUBLIC :: calc_fbd, calc_sigma, &
-      calc_opt_react_velocity, calc_moist_damp_coeff, &
-      calc_prop_flux_ratio, calc_wind_factor, &
-      calc_length_to_breadth_ratio, calc_mean_fire_area
+            calc_opt_react_velocity, calc_moist_damp_coeff, &
+            calc_prop_flux_ratio, calc_wind_factor, &
+            calc_length_to_breadth_ratio, calc_mean_fire_area
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_sf_ros_class'
 
@@ -82,7 +84,7 @@ MODULE mo_dfire_sf_ros_class
     REAL(wp), ALLOCATABLE :: wind_factor(:)        !< wind_factor is a multiplier that accounts for the effect of wind in increasing the effective value of prop_flux_ratio[-]
     REAL(wp), ALLOCATABLE :: fbd(:)                !< Weighted average across PFT for fuel bulk density [kg m−3]
     REAL(wp), ALLOCATABLE :: eff_heating_number(:) !< the proportion of a fuel particle that is heated to ...
-    !< the proportion of a fuel particle that is heated to [-]
+                                                   !< the proportion of a fuel particle that is heated to [-]
     REAL(wp), ALLOCATABLE :: pre_ign_heat(:)       !< the amount of heat required to ignite a given mass of fuel [kJ kg−1]
 
     REAL(wp), ALLOCATABLE :: opt_react_velo(:)     !< Optimum reaction velocity [min-1]
@@ -105,7 +107,7 @@ CONTAINS
   !> Do the science
   !>
   FUNCTION sf_calc_rate_of_spread(nc, nfuels, fuel_bulk_density, fwd_wind_factor, wind, moist_extinction, fdi, &
-      veg_cover_frac, w_oi, omega_o, mask) RESULT(ros)
+                                        veg_cover_frac, w_oi, omega_o, mask) RESULT(ros)
     INTEGER, INTENT(in)                  :: nc
     INTEGER, INTENT(in)                  :: nfuels                      !< 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)                 :: fuel_bulk_density(nc)       !< [kg m-3]
@@ -160,8 +162,8 @@ CONTAINS
 
         !< (Eq. A1 from Thonicke et al. (2010))
         ros%reaction_intensity(inc) = ros%opt_react_velo(inc) * &
-            ros%net_fuel_load(inc) * df_sf_fuel_heat_content * &
-            ros%moist_damp_coeff(inc) * df_sf_mineral_damp_coeff !< [kJ m−2 min−1]
+                                      ros%net_fuel_load(inc) * df_sf_fuel_heat_content * &
+                                      ros%moist_damp_coeff(inc) * df_sf_mineral_damp_coeff !< [kJ m−2 min−1]
 
         ros%prop_flux_ratio(inc) = calc_prop_flux_ratio(sigma(inc), beta(inc)) !< Eq. A2 from Thonicke et al. (2010) [-]
         ros%wind_factor(inc) = calc_wind_factor(u_f_wind(inc), sigma(inc), beta(inc), beta_op(inc)) !< Eq. A5 from Thonicke et al. (2010) [-]
@@ -170,19 +172,22 @@ CONTAINS
 
         !< ( Eq. 9 from Thonicke et al. (2010))
         ros%ros_forward(inc) = ( ros%reaction_intensity(inc)  * ros%prop_flux_ratio(inc) * &
-            (1 + ros%wind_factor(inc)) ) / &
-            ( ros%fbd(inc) * ros%eff_heating_number(inc) * ros%pre_ign_heat(inc) ) !< [m min-1]
+                                (1 + ros%wind_factor(inc)) ) / &
+                                ( ros%fbd(inc) * ros%eff_heating_number(inc) * ros%pre_ign_heat(inc) ) !< [m min-1]
         !< ( Eq. 10 from Thonicke et al. (2010))
         ros%ros_backwards(inc) = ros%ros_forward(inc) * exp(-0.012_wp * u_f_wind(inc)) !< [m min-1]
 
         !< (Eqs. A38, A39, A40 from Pfeiffer et al. (2013))
         ros%l2b_ratio(inc) = calc_length_to_breadth_ratio(u_f_wind(inc), &
-            veg_cover_frac%tree(inc), &
-            veg_cover_frac%grass(inc))
+                                                          veg_cover_frac%tree(inc), &
+                                                          veg_cover_frac%grass(inc))
 
         ros%fire_duration(inc) = 241._wp / (1._wp + 240._wp * exp(-11.06_wp * fdi(inc))) !< Eq. 14 from Thonicke et al. (2010) [min]
+        IF (ros%fire_duration(inc) > df_sf_fire_duration_thd) THEN
+          ros%fire_duration(inc) = df_sf_fire_duration_thd
+        END IF
         ros%distance_travelled(inc) = (ros%ros_forward(inc) + ros%ros_backwards(inc)) * &
-            ros%fire_duration(inc) !< (Eq. A42 from Pfeiffer et al. (2013)) [m]
+                                        ros%fire_duration(inc) !< (Eq. A42 from Pfeiffer et al. (2013)) [m]
         !< mean fire area (Eq. 11 from Thonicke et al. (2010))
         ros%mean_fire_area(inc) = calc_mean_fire_area(ros%l2b_ratio(inc), ros%distance_travelled(inc)) !< [ha]
       END IF ! IF (mask(inc)) THEN

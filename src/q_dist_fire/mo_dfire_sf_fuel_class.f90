@@ -38,20 +38,24 @@ MODULE mo_dfire_sf_fuel_class
   USE mo_dfire_constants,       ONLY: df_sf_fc_full_nr
   !< Total number of spitfire dead fuel pools, polymeric fuel pool index within spitfire, same for woody litter
   USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, t_sf_fuel_dead_fuel_polymeric_ix, &
-                                      t_sf_fuel_dead_fuel_woody_ix
+                                    t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_dom_assoc_ix, &
+                                    t_sf_fuel_dead_fuel_dom_ix, t_sf_fuel_dead_fuel_soluable_ix, &
+                                    t_sf_fuel_dead_fuel_res_ix, t_sf_fuel_dead_fuel_res_assoc_ix
   !< Total number of live fuel pools within spitfire, live fuel pool indices from spitfire
   USE mo_dfire_constants,       ONLY: sf_fuel_live_fuel_nr, t_sf_fuel_live_fuel_sap_wood_ix, &
-      t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
-      t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix, &
-      t_sf_fuel_live_fuel_leaf_ix
+                                        t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
+                                        t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix, &
+                                        t_sf_fuel_live_fuel_leaf_ix
   !< Dead fuel pool indices from spitfire (live grass)
   USE mo_dfire_constants, ONLY: t_sf_fuel_dead_fuel_grass_leaf_ix, t_sf_fuel_dead_fuel_grass_sap_ix, &
-      t_sf_fuel_dead_fuel_grass_labile_ix, t_sf_fuel_dead_fuel_grass_reserve_ix, &
-      t_sf_fuel_dead_fuel_grass_fruit_ix
+                                      t_sf_fuel_dead_fuel_grass_labile_ix, t_sf_fuel_dead_fuel_grass_reserve_ix, &
+                                      t_sf_fuel_dead_fuel_grass_fruit_ix
+  USE mo_dfire_constants, ONLY: t_sf_litter_ratios
   !< Quincy sb_pool_mt pool indices
   USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter, ix_leaf, ix_fruit, &
-      ix_sap_wood, ix_heart_wood, ix_labile, ix_reserve
-
+                                      ix_sap_wood, ix_heart_wood, ix_labile, ix_reserve, &
+                                      ix_dom_assoc, ix_dom, ix_soluable_litter, ix_residue, ix_residue_assoc
+  
   IMPLICIT NONE
 
 
@@ -71,7 +75,7 @@ MODULE mo_dfire_sf_fuel_class
   TYPE :: t_sf_fuel_class
     INTEGER :: nc
     INTEGER, ALLOCATABLE :: growth_form(:)    !< itree, igrass
-    REAL(wp) :: ratio_polymeric_litter        !< Ratio of polymeric litter to account as dead fuel [0 to 1]
+    TYPE(t_sf_litter_ratios) :: litter_ratios !< Litter ratio [0 to 1]
     INTEGER :: ndeadpools                     !< Total number of dead pools
 
     !< Available pools
@@ -93,7 +97,7 @@ MODULE mo_dfire_sf_fuel_class
     PROCEDURE :: Count_dead_fuel_pools
   END TYPE t_sf_fuel_class
 
-
+  
   INTERFACE t_sf_fuel_class
     MODULE PROCEDURE :: create_fuel_class
   END INTERFACE t_sf_fuel_class
@@ -108,20 +112,20 @@ CONTAINS
   !> Either tree or grass is allocated according to "growth_form"
   !>
   FUNCTION create_fuel_class(nc, growth_form, dead_fuel_frac, live_fuel_frac, &
-      dead_fuel_mt, live_fuel_mt, ratio_polymeric_litter) &
-      RESULT (fuel)
+                                  dead_fuel_mt, live_fuel_mt, litter_ratios) &
+                                  RESULT (fuel)
     INTEGER, INTENT(in)           :: nc
     INTEGER, INTENT(in)           :: growth_form(:)                  !< itree, igrass (#nc)
     REAL(wp), INTENT(in)          :: dead_fuel_frac(:,:)             !< Allocation of fuel from sb_pool_mt [0 to 1]
     REAL(wp), INTENT(in)          :: live_fuel_frac(:,:)             !< Allocation of fuel from veg_pool_mt [0 to 1]
     REAL(wp), INTENT(in)          :: live_fuel_mt(:,:)               !< bgcm live fuel (#pool, #nc) [g DM m-2]
     REAL(wp), INTENT(in)          :: dead_fuel_mt(:,:)               !< bgcm dead fuel (#pool, #nc) [g DM m-2]
-    REAL(wp), INTENT(in)          :: ratio_polymeric_litter          !< Ratio of polymeric litter to account as dead fuel [0 to 1]
+    TYPE(t_sf_litter_ratios), INTENT(in) :: litter_ratios            !< Litter ratios for sb_pool [0 to 1]
     TYPE(t_sf_fuel_class)         :: fuel                            !< output [gDM m-2]
 
     fuel%nc = nc
     ALLOCATE(fuel%growth_form, source = growth_form)
-    fuel%ratio_polymeric_litter = ratio_polymeric_litter
+    fuel%litter_ratios = litter_ratios
 
     fuel%ndeadpools = sf_fuel_dead_fuel_nr !< woody litter + live grass pools (+ polymeric litter, won't be used if woody litter only)
 
@@ -135,7 +139,12 @@ CONTAINS
 
     !< Select sb_pool_mt pools as dead fuel
     fuel%dead(:,t_sf_fuel_dead_fuel_woody_ix) = dead_fuel_mt(ix_woody_litter, :)
-    fuel%dead(:,t_sf_fuel_dead_fuel_polymeric_ix) = dead_fuel_mt(ix_polymeric_litter, :) * ratio_polymeric_litter
+    fuel%dead(:,t_sf_fuel_dead_fuel_polymeric_ix) = dead_fuel_mt(ix_polymeric_litter, :) * fuel%litter_ratios%polymeric
+    fuel%dead(:,t_sf_fuel_dead_fuel_dom_assoc_ix) = dead_fuel_mt(ix_dom_assoc,:) * fuel%litter_ratios%dom_assoc
+    fuel%dead(:,t_sf_fuel_dead_fuel_dom_ix) = dead_fuel_mt(ix_dom,:) * fuel%litter_ratios%dom
+    fuel%dead(:,t_sf_fuel_dead_fuel_soluable_ix) = dead_fuel_mt(ix_soluable_litter,:) * fuel%litter_ratios%soluable
+    fuel%dead(:,t_sf_fuel_dead_fuel_res_ix) = dead_fuel_mt(ix_residue,:) * fuel%litter_ratios%residue
+    fuel%dead(:,t_sf_fuel_dead_fuel_res_assoc_ix) = dead_fuel_mt(ix_residue_assoc,:) * fuel%litter_ratios%residue_assoc
 
     !< Select veg_pool_mt pools as live fuel
     fuel%live(:,t_sf_fuel_live_fuel_leaf_ix) = live_fuel_mt(ix_leaf,:)
@@ -168,23 +177,33 @@ CONTAINS
     grass_fuel = this % Calc_live_grass_fuel()
 
     DO ifuel=1, df_sf_fc_full_nr !< iterate over fuel classes (1,10,100,1000 hours)
-      !< woody litter
+      !< woody litter, polymeric, dom_assoc, dom, soluable litter, residue, residue_assoc
       dead_fuel(:,t_sf_fuel_dead_fuel_woody_ix,ifuel) = this%dead(:,t_sf_fuel_dead_fuel_woody_ix) * &
-          this%dead_frac(ifuel,t_sf_fuel_dead_fuel_woody_ix)
+                              this%dead_frac(ifuel,t_sf_fuel_dead_fuel_woody_ix)
       dead_fuel(:,t_sf_fuel_dead_fuel_polymeric_ix,ifuel) = this%dead(:,t_sf_fuel_dead_fuel_polymeric_ix) * &
-          this%dead_frac(ifuel,t_sf_fuel_dead_fuel_polymeric_ix)
+                              this%dead_frac(ifuel,t_sf_fuel_dead_fuel_polymeric_ix)
+      dead_fuel(:,t_sf_fuel_dead_fuel_dom_assoc_ix,ifuel) = this%dead(:,t_sf_fuel_dead_fuel_dom_assoc_ix) * &
+                              this%dead_frac(ifuel,t_sf_fuel_dead_fuel_dom_assoc_ix)
+      dead_fuel(:,t_sf_fuel_dead_fuel_dom_ix,ifuel) = this%dead(:,t_sf_fuel_dead_fuel_dom_ix) * &
+                              this%dead_frac(ifuel,t_sf_fuel_dead_fuel_dom_ix)
+      dead_fuel(:,t_sf_fuel_dead_fuel_soluable_ix,ifuel) = this%dead(:,t_sf_fuel_dead_fuel_soluable_ix) * &
+                              this%dead_frac(ifuel,t_sf_fuel_dead_fuel_soluable_ix)
+      dead_fuel(:,t_sf_fuel_dead_fuel_res_ix,ifuel) = this%dead(:,t_sf_fuel_dead_fuel_res_ix) * &
+                              this%dead_frac(ifuel,t_sf_fuel_dead_fuel_res_ix)
+      dead_fuel(:,t_sf_fuel_dead_fuel_res_assoc_ix,ifuel) = this%dead(:,t_sf_fuel_dead_fuel_res_assoc_ix) * &
+                              this%dead_frac(ifuel,t_sf_fuel_dead_fuel_res_assoc_ix)
 
       !< livegrass: leaf, sap wood, labile, reserve, fruit
       dead_fuel(:,t_sf_fuel_dead_fuel_grass_leaf_ix,ifuel) = grass_fuel(:,t_sf_fuel_live_fuel_leaf_ix,ifuel) * &
-          this%live_frac(ifuel,t_sf_fuel_live_fuel_leaf_ix)
+                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_leaf_ix)
       dead_fuel(:,t_sf_fuel_dead_fuel_grass_sap_ix,ifuel) = grass_fuel(:,t_sf_fuel_live_fuel_sap_wood_ix,ifuel) * &
-          this%live_frac(ifuel,t_sf_fuel_live_fuel_sap_wood_ix)
+                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_sap_wood_ix)
       dead_fuel(:,t_sf_fuel_dead_fuel_grass_labile_ix,ifuel) = grass_fuel(:,t_sf_fuel_live_fuel_labile_ix,ifuel) * &
-          this%live_frac(ifuel,t_sf_fuel_live_fuel_labile_ix)
+                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_labile_ix)
       dead_fuel(:,t_sf_fuel_dead_fuel_grass_reserve_ix,ifuel) = grass_fuel(:,t_sf_fuel_live_fuel_reserve_ix,ifuel) * &
-          this%live_frac(ifuel,t_sf_fuel_live_fuel_leaf_ix)
+                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_leaf_ix)
       dead_fuel(:,t_sf_fuel_dead_fuel_grass_fruit_ix,ifuel) = grass_fuel(:,t_sf_fuel_live_fuel_fruit_ix,ifuel) * &
-          this%live_frac(ifuel,t_sf_fuel_live_fuel_fruit_ix)
+                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_fruit_ix)
     END DO
 
   END FUNCTION Calc_dead_fuel

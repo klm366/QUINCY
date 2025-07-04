@@ -32,6 +32,9 @@ MODULE mo_dfire_init
   USE mo_exception,               ONLY: message
   USE mo_jsb_control,             ONLY: debug_on
 
+  USe mo_dfire_constants,         ONLY: df_sf_fire_duration_thd
+  USE mo_dfire_constants,         ONLY: ratio_as_dead_fuel
+
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: dfire_init
@@ -44,7 +47,7 @@ CONTAINS
   !>
   !> Intialize disturbance fire process (after memory has been set up)
   !>
-  SUBROUTINE dfire_init(tile)
+  SUBROUTINE dfire_q_init(tile, options)
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_process_class,       ONLY: DFIRE_
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
@@ -58,9 +61,11 @@ CONTAINS
     dsl4jsb_Use_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER              :: model
     INTEGER                                      :: iblk, ics, ice, nc, npft
+    REAL(wp)                                     :: dtime
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':dfire_init'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
@@ -118,6 +123,13 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: l2b_ratio
 
     dsl4jsb_Real3D_onDomain      :: frac_consump_fcl
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN
     !IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -221,6 +233,8 @@ CONTAINS
     l2b_ratio = 0._wp
     frac_consump_fcl = 0._wp
 
+    df_sf_fire_duration_thd = dtime / 60._wp ! convert seconds to minutes
+
     !< Chose daily precipitation. Those are calculated in 3 different ways.
     dfire_pm_id = dsl4jsb_Config(DFIRE_)%dfire_precip_method_id
     IF (dfire_pm_id == DFIRE_PRECIP_METHOD_DAYTIME) THEN
@@ -234,6 +248,13 @@ CONTAINS
       dsl4jsb_var_ptr(DFIRE_,precip_daily) => dsl4jsb_var_ptr(DFIRE_,precip_qc_mavg)
     ENDIF
 
+    !< Initialize ratio of sb pools to dead fuel
+    ratio_as_dead_fuel % polymeric      = dsl4jsb_Config(DFIRE_)%ratio_polymeric_litter_to_dead_fuel
+    ratio_as_dead_fuel % dom_assoc      = dsl4jsb_Config(DFIRE_)%ratio_dom_assoc_to_dead_fuel
+    ratio_as_dead_fuel % dom            = dsl4jsb_Config(DFIRE_)%ratio_dom_to_dead_fuel
+    ratio_as_dead_fuel % soluable       = dsl4jsb_Config(DFIRE_)%ratio_soluable_litter_to_dead_fuel
+    ratio_as_dead_fuel % residue        = dsl4jsb_Config(DFIRE_)%ratio_residue_to_dead_fuel
+    ratio_as_dead_fuel % residue_assoc  = dsl4jsb_Config(DFIRE_)%ratio_residue_assoc_to_dead_fuel
   END SUBROUTINE dfire_init
 #endif
 END MODULE mo_dfire_init

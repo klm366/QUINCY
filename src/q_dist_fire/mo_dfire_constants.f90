@@ -39,6 +39,11 @@ MODULE mo_dfire_constants
   !>
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_dfire_constants'
 
+  !< sb pool to dead fuel ratios (polymoric is not included as it is fundamental)
+  TYPE :: t_sf_litter_ratios
+    REAL(wp) :: polymeric, dom_assoc, dom, soluable, residue, residue_assoc
+  END TYPE t_sf_litter_ratios
+
   !> soil top layers to consider in spitfire
   INTEGER, PARAMETER :: df_sf_spq_layer_top_sl = 1
 
@@ -197,12 +202,17 @@ MODULE mo_dfire_constants
   REAL(wp), PARAMETER :: df_sf_isurface_extinc_th = 50._wp !< Fires extinguishes below this threshold [kW m-1]
                                                            !< below eq. 15, Thonicke et al. (2010)
 
+  REAL(wp), SAVE      :: df_sf_fire_duration_thd           !< Maximum fire duration allowed, capped to timestep length [min]
+                                                           !< This is an adaptation from daily to 30 min TS as Thonicke et al. (2010) runs at a daily TS
+
   ! todo: smarter way to do it? 
   LOGICAL, PARAMETER :: dfire_pft_mask(13) = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
                                               .TRUE., .TRUE., &                                 ! grass pfts
                                               .FALSE., .FALSE., &                               ! pasture pfts , 13 pfts only
                                               .FALSE., .FALSE., &                               ! crop pfts
                                               .FALSE.]                                          ! Bar soil
+
+  TYPE(t_sf_litter_ratios), SAVE :: ratio_as_dead_fuel                                 !< sb_pool ratios to dead fuel pools [0 to 1]
 CONTAINS
 
   ! ======================================================================================================= !
@@ -235,6 +245,11 @@ CONTAINS
     df_sf_dead_frac = 0._wp !< default to 0
     df_sf_dead_frac(:,t_sf_fuel_dead_fuel_woody_ix) =         df_sf_fuel_frac_slow
     df_sf_dead_frac(:,t_sf_fuel_dead_fuel_polymeric_ix) =     df_sf_fuel_frac_fast
+    df_sf_dead_frac(:,t_sf_fuel_dead_fuel_dom_assoc_ix) =     df_sf_fuel_frac_fast
+    df_sf_dead_frac(:,t_sf_fuel_dead_fuel_dom_ix) =           df_sf_fuel_frac_fast
+    df_sf_dead_frac(:,t_sf_fuel_dead_fuel_soluable_ix) =      df_sf_fuel_frac_fast
+    df_sf_dead_frac(:,t_sf_fuel_dead_fuel_res_ix) =           df_sf_fuel_frac_fast
+    df_sf_dead_frac(:,t_sf_fuel_dead_fuel_res_assoc_ix) =     df_sf_fuel_frac_fast
     df_sf_dead_frac(:,t_sf_fuel_dead_fuel_grass_leaf_ix) =    df_sf_fuel_frac_fast
     df_sf_dead_frac(:,t_sf_fuel_dead_fuel_grass_sap_ix) =     df_sf_fuel_frac_fast
     df_sf_dead_frac(:,t_sf_fuel_dead_fuel_grass_labile_ix) =  df_sf_fuel_frac_fast
