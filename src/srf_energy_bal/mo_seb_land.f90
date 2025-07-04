@@ -425,6 +425,9 @@ CONTAINS
         t_old(ic)        = 280._wp
       ELSE
         t_unfilt_old(ic) = t_unfilt(ic)
+        ! Note: t_srf is only in restart file if skin temperature scheme is used or for the atm/lnd
+        !       coupled model without tmx. In all other cases, t_srf and t_srf_old are not needed
+        !       at the beginning of a (restarted) experiment (see also s_srf below).
         t_srf_old(ic)    = t_srf(ic)
         t_old(ic)        = t(ic)
       END IF
