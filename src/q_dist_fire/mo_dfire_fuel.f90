@@ -52,6 +52,7 @@ MODULE mo_dfire_fuel
   USE mo_dfire_constants,       ONLY: df_sf_fuel_class_factors !< Fuel bulk density factors for each spreading fuel class (1 to 100 hours)
   USE mo_dfire_constants,       ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx, &
                                         df_sf_fc_spread_nr !< Spread fuel classes: 1, 10 and 100 hours
+  USE mo_dfire_constants,         ONLY: ratio_as_dead_fuel !< variable sb pool ratios to dead fuel
 
   USE mo_lnd_bgcm_idx,          ONLY: ixC
   USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter

@@ -45,7 +45,7 @@ CONTAINS
   !> - omega_n,l: 1 hour dead fuel + live grass
   !>
   FUNCTION sf_calc_fuel_moisture(nc, nalphas, nfuels, alphas, nesterov_index, litter_moisture, w_oi, live_fuel_lvg) &
-      RESULT (fuel_moisture)
+                                      RESULT (fuel_moisture)
     INTEGER, INTENT(in)                 :: nc, nalphas, nfuels        !< Number of gridcells, number of alpha params, number of fuels used to calc fuel moisture
     REAL(wp), INTENT(in)                :: alphas(nalphas)            !< Drying parameter for 1, 10 and 100 hours fuel class [Celsius-2]
     REAL(wp), INTENT(in)                :: nesterov_index(nc)         !< Nesterov index = Dryness index [Celsius^2]
@@ -140,8 +140,8 @@ CONTAINS
 
     !< Mixed 1 hour fuel class and livegrass
     omegas(df_sf_omega_nl_idx) = stats_average_weight(nr_fine_fuels, &
-        [omega_lvg, omega_1hr], &
-        [live_fuel_lvg, dead_fuel_1hr] )
+                                                        [omega_lvg, omega_1hr], &
+                                                        [live_fuel_lvg, dead_fuel_1hr] )
 
     !< Calculate omega_o (1, 10, 100 and 1000 hours dead fuel + live grass)
     !< According to Thonicke et al. (2010), Eq.6 the ALPHAS must be weighted in order to compule omega_o

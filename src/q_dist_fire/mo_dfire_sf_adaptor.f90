@@ -159,7 +159,7 @@ CONTAINS
     INTEGER, OPTIONAL, INTENT(in)   :: nc_dim_opt
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp), ALLOCATABLE           :: var_m2(:,:), var_g_m2(:,:) !< tmp variables
-    INTEGER :: inc, nc_dim
+    INTEGER                         :: nc_dim
     ! ----------------------------------------------------------------------------------------------------- !
     nc_dim = 1 !< default, first dimension of array
     IF (PRESENT(nc_dim_opt)) THEN

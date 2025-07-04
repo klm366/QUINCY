@@ -138,7 +138,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: vgrid_elements
     TYPE(t_jsb_vgrid), POINTER :: vgrid_species
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_dfire_fuel_memory'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_q_dfire_fuel_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     model                 => Get_model(model_id)
     table                 =  tables(1)
