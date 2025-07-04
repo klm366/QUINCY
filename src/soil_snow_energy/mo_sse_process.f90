@@ -22,9 +22,9 @@ MODULE mo_sse_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: relative_humidity_soil, init_soil_temperature, &
-    & calc_vol_heat_capacity, calc_thermal_conductivity, calc_soil_temperature, calc_snow_temperature, &
-    & calc_snow_abcoeff, calc_soiltemp_old, Get_liquid_max
+  PUBLIC :: relative_humidity_soil, init_soil_temperature,                       &
+    & calc_vol_heat_capacity, calc_thermal_conductivity, add_heat_capacity_pond, &
+    & calc_snow_abcoeff, calc_soil_temperature, calc_snow_temperature, calc_soiltemp_old, Get_liquid_max
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_process'
 
@@ -71,6 +71,40 @@ CONTAINS
     END IF
 
   END FUNCTION calc_vol_heat_capacity
+
+! --------------------------------------------------------------------------------------------------------- !
+!>
+!> Includes surface water heat capacity in top soil layer heat capacity.
+!>
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  FUNCTION  add_heat_capacity_pond( &
+    & dz,                                 &
+    & wtr_pond,                           &
+    & ice_pond,                           &
+    & vol_heat_cap                        &
+    & ) RESULT(vol_heat_cap_eff)
+
+    !$ACC ROUTINE SEQ
+
+    USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
+
+    REAL(wp), INTENT(in)  :: dz,          &   !< Layer thickness [m]
+      &                      wtr_pond,    &   !< Water content of surface reservoir [m]
+      &                      ice_pond,    &   !< Ice content of surface reservoir [m]
+      &                      vol_heat_cap     !< Volumetric heat capacity of top soil layer [J m-3 K-1]
+    REAL(wp)              :: vol_heat_cap_eff !< Effective volumetric heat capacity of top soil layer [J m-3 K-1]
+
+    !> Since ponds do not have an actual energy content, their effect on surface and soil temperatures
+    !> is not accounted for. We approximate the potential energy storage by calculating an effective heat
+    !> capacity of the top soil layer that includes the additional heat capacity of the surface reservoir.
+
+    vol_heat_cap_eff = vol_heat_cap &
+      &              + (wtr_pond * vol_hcap_water + ice_pond * rhoh2o / rhoi * vol_hcap_ice) / dz
+
+  END FUNCTION add_heat_capacity_pond
 
   ! --------------------------------------------------------------------------------------------------------- !
   !>

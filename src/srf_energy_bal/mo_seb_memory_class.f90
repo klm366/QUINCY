@@ -334,7 +334,8 @@ CONTAINS
         & t_cf('sfc_temp', 'K', 'soil or snow surface temperature'),                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
-        & lrestart=.TRUE.,                                                                  &
+        & lrestart=(    (.NOT. model%config%use_tmx .AND. .NOT. jsbach_runs_standalone())    &
+        &           .OR. dsl4jsb_Config(SEB_)%l_skin_temp),                                  &
         & initval_r=280.0_wp )
 
       CALL mem%Add_var( 'dt_sk_dt_srf', mem%dt_sk_dt_srf,                                    &

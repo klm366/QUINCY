@@ -409,6 +409,9 @@ CONTAINS
         t_old(ic)        = 280._wp
       ELSE
         t_unfilt_old(ic) = t_unfilt(ic)
+        ! Note: t_srf is only in restart file if skin temperature scheme is used or for the atm/lnd
+        !       coupled model without tmx. In all other cases, t_srf and t_srf_old are not needed
+        !       at the beginning of a (restarted) experiment (see also s_srf below).
         t_srf_old(ic)    = t_srf(ic)
         t_old(ic)        = t(ic)
       END IF
@@ -1303,7 +1306,7 @@ CONTAINS
     & s_old, s_melt, qsat_old, dqsat_dT,                &
     & net_radiation, ground_heat_flux, heat_trans_coef, &
     & q_air, q_sat,                                     &
-    & snow_fraction, ground_capacity,                   &
+    & snow_fraction, ground_heat_capacity,              &
     & le_freeze_pot, le_melt_pot,                       &
     & s_new, le_phase_change)
 
@@ -1315,58 +1318,60 @@ CONTAINS
       & alv,        &  ! Latent heat of vaporization [J kg-1]
       & als            ! Latent heat of sublimation [J kg-1]
 
-    REAL(wp), INTENT(in)  :: alpha             !< Implicit scheme factor [-]
-    REAL(wp), INTENT(in)  :: dtime             !< Timestep length [s]
-    REAL(wp), INTENT(in)  :: heat_capacity     !< Specific heat capacity at surface [J kg-1 K-1]
-    REAL(wp), INTENT(in)  :: t_acoef           !< A coefficient for temperature
-    REAL(wp), INTENT(in)  :: t_bcoef           !< B coefficient for temperature
-    REAL(wp), INTENT(in)  :: q_acoef           !< A coefficient for moisture
-    REAL(wp), INTENT(in)  :: q_bcoef           !< B coefficient for moisture
-    REAL(wp), INTENT(in)  :: s_old             !< Previous surface dry static energy [J kg-1]
-    REAL(wp), INTENT(in)  :: s_melt            !< Surface dry static energy at freezing/melting point [J kg-1]
-    REAL(wp), INTENT(in)  :: qsat_old          !< Previous surface specific humidity [kg kg-1]
-    REAL(wp), INTENT(in)  :: dqsat_dT          !< Change in qsat with temperature [K-1]
-    REAL(wp), INTENT(in)  :: net_radiation     !< Net radiation [W m-2]
-    REAL(wp), INTENT(in)  :: ground_heat_flux  !< Ground heat flux [W m-2]
-    REAL(wp), INTENT(in)  :: heat_trans_coef   !< Heat transfer coefficient [W m-2 K-1]
-    REAL(wp), INTENT(in)  :: q_air             !< Air specific humidity [kg kg-1]
-    REAL(wp), INTENT(in)  :: q_sat             !< Surface saturation specific humidity [kg kg-1]
-    REAL(wp), INTENT(in)  :: snow_fraction     !< Snow cover fraction [-]
-    REAL(wp), INTENT(in)  :: ground_capacity   !< Ground heat capacity [J m-2 K-1]
-    REAL(wp), INTENT(IN)  :: le_freeze_pot     !< Energy flux released if all available water freezes [J m-2]
-    REAL(wp), INTENT(IN)  :: le_melt_pot       !< Energy flux required if all available ice melts [J m-2]
-    REAL(wp), INTENT(out) :: s_new             !< New surface dry static energy [J kg-1]
-    REAL(wp), INTENT(out) :: le_phase_change   !< Latent energy flux used for phase change [J m-2]
+    REAL(wp), INTENT(in)  :: alpha                !< Implicit scheme factor [-]
+    REAL(wp), INTENT(in)  :: dtime                !< Timestep length [s]
+    REAL(wp), INTENT(in)  :: heat_capacity        !< Specific heat capacity at surface [J kg-1 K-1]
+    REAL(wp), INTENT(in)  :: t_acoef              !< A coefficient for temperature
+    REAL(wp), INTENT(in)  :: t_bcoef              !< B coefficient for temperature
+    REAL(wp), INTENT(in)  :: q_acoef              !< A coefficient for moisture
+    REAL(wp), INTENT(in)  :: q_bcoef              !< B coefficient for moisture
+    REAL(wp), INTENT(in)  :: s_old                !< Previous surface dry static energy [J kg-1]
+    REAL(wp), INTENT(in)  :: s_melt               !< Surface dry static energy at freezing/melting point [J kg-1]
+    REAL(wp), INTENT(in)  :: qsat_old             !< Previous surface specific humidity [kg kg-1]
+    REAL(wp), INTENT(in)  :: dqsat_dT             !< Change in qsat with temperature [K-1]
+    REAL(wp), INTENT(in)  :: net_radiation        !< Net radiation [W m-2]
+    REAL(wp), INTENT(in)  :: ground_heat_flux     !< Ground heat flux [W m-2]
+    REAL(wp), INTENT(in)  :: heat_trans_coef      !< Heat transfer coefficient [W m-2 K-1]
+    REAL(wp), INTENT(in)  :: q_air                !< Air specific humidity [kg kg-1]
+    REAL(wp), INTENT(in)  :: q_sat                !< Surface saturation specific humidity [kg kg-1]
+    REAL(wp), INTENT(in)  :: snow_fraction        !< Snow cover fraction [-]
+    REAL(wp), INTENT(in)  :: ground_heat_capacity !< Ground heat capacity [J m-2 K-1]
+    REAL(wp), INTENT(IN)  :: le_freeze_pot        !< Energy flux released if all available water freezes [J m-2]
+    REAL(wp), INTENT(IN)  :: le_melt_pot          !< Energy flux required if all available ice melts [J m-2]
+    REAL(wp), INTENT(out) :: s_new                !< New surface dry static energy [J kg-1]
+    REAL(wp), INTENT(out) :: le_phase_change      !< Latent energy flux used for phase change [J m-2]
 
     ! Local variables
     REAL(wp) :: dt                     !< Effective timestep = alpha * dtime
     REAL(wp) :: cp_inv                 !< 1/cp for convenience
     REAL(wp) :: latent_heat            !< Effective latent heat (snow-weighted vap/subl)
     REAL(wp) :: latent_heat_air        !< Latent heat for air layer
-    REAL(wp) :: ground_hcap_s          !< Ground heat capacity in units of surface dry static energy [J m-2 DSE-1].
-    REAL(wp) :: thermal_response_term  !< Radiation feedback term [J m-2 DSE-1].
-    REAL(wp) :: sensible_heat_term     !< Sensible heat flux contribution [J m-2 DSE-1].
-    REAL(wp) :: energy_flux_term       !< Accumulated energy fluxes [J m-2].
+    REAL(wp) :: ground_hcap_s          !< Ground heat capacity in units of surface dry static energy [J m-2 DSE-1]
+    REAL(wp) :: thermal_response_term  !< Radiation feedback term [J m-2 DSE-1]
+    REAL(wp) :: sensible_heat_term     !< Sensible heat flux contribution [J m-2 DSE-1]
+    REAL(wp) :: energy_flux_term       !< Total energy fluxes [J m-2]
     REAL(wp) :: avail_phc_energy       !< Energy available for phase change [J m-2].
     REAL(wp) :: s_melt_star            !< Mixed-time melting point DSE [J kg-1].
 
     !> The surface energy balance equation in terms of dry static energy s = cp*T is:
-    !> ds/dt = cp * dT/dt = R_net + H + LE + G
+    !> C * ds/dt = (C / cp) * dT/dt = R_net + H + LE + G
     !> where:
     !> - R_net is net radiation
     !> - H is sensible heat flux
     !> - LE is latent heat flux
     !> - G is ground heat flux
+    !> - C is the surface (top soil layer) heat capacity
     !>
     !> The implicit scheme solves this by linearizing the fluxes around the previous state
-    !> and solving the resulting system for s(t+dt).
+    !> and solving the resulting system for s(t+dt). The equations follow the recipe provided
+    !> by Schulz et al. (2001, https://doi.org/10.1175/1520-0450(2001)040<0642:OTLSAC>2.0.CO;2)
 
     ! Calculate effective timestep
     dt = alpha * dtime
 
     ! For convenience in equations
     cp_inv = 1.0_wp / heat_capacity
-    ground_hcap_s = ground_capacity * cp_inv
+    ground_hcap_s = ground_heat_capacity * cp_inv
     s_melt_star = alpha * s_melt + (1._wp - alpha) * s_old
 
     ! Get effective latent heat based on snow fraction
@@ -1374,8 +1379,7 @@ CONTAINS
     latent_heat_air = als * snow_fraction + alv * (q_air - snow_fraction)
 
     ! Calculate radiation feedback
-    thermal_response_term = &
-      & dt * ( &
+    thermal_response_term = dt * ( &
       ! Thermal radiation feedback
       & cp_inv * 4.0_wp * zemiss_def * stbo * ((cp_inv * s_old)**3) - &
       ! Latent heat feedback
