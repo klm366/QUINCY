@@ -1468,6 +1468,8 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, drainage_sl)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_transp_down_sl)
+      ! save the soil-water state at the beginning of the time step
+      !   for the calculation of fractional water transport in the water column
       ALLOCATE(wtr_soil_old_sl(nc, nsoil))
       !$ACC ENTER DATA CREATE(wtr_soil_old_sl) ASYNC(acc_stream)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -1579,9 +1581,9 @@ CONTAINS
 
 #ifndef __NO_QUINCY__
     ! QUINCY
-    ! calculate vertical and horizontal fraction of water transport (and with it the bgcm transport)
-    !   using the soil water content of the previous timestep here (wtr_soil_old_sl) because
-    !   the frac_w_lat_loss_sl is applied to the material (elements / nutrients) concentration of the previous timestep
+    ! calculate vertical and horizontal fraction of water transport for the use in BGCM soil transport calculations
+    !   (using the soil water content of the previous timestep here (wtr_soil_old_sl) because the frac_w_lat_loss_sl
+    !    is used for BGCM soil transport calculations of the material (elements / nutrients) from the previous timestep)
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)

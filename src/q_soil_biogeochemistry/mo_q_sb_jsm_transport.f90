@@ -765,19 +765,22 @@ CONTAINS
     leaching(:)                 = 0.0_wp
     lateral_loss_material(:,:)  = 0.0_wp
 
-    !>1.0 advective transport in the vertical axis of the soil (i.e. down)
+    !>1.0 advective transport in the vertical axis of the soil (i.e., down, but see below TODO)
     !>
     ! loop over soil layers
     ! we can do '1,n-1' here, because by definition, there cannot be any upward transport from the uppermost layer
     DO ic = 1,nc
       DO is = 1,(INT(num_sl_above_bedrock(ic)) - 1)
+        ! downward transport
         IF (frac_wtr_transp_down_sl(ic,is) > 0.0_wp) THEN
           hlp1(ic) = frac_wtr_transp_down_sl(ic,is) * dtime / 1000._wp * pool(ic,is) * soil_depth_sl(ic,is)
-        !! @TODO BLARPP for now no upward transport - need to properly think about this in update_spq_physics
+        ! upward transport - @TODO for now no upward transport - need to properly think about this in update_spq_physics
         ELSE
           hlp1(ic) = 0.0_wp ! frac_wtr_transp_down_sl(:,is) * dtime/1000._wp * pool(:,is+1) * soil_depth_sl(:,is+1)
         END IF
+        ! remove from current soil layer is
         transport(ic,is)   = transport(ic,is)   - hlp1(ic) / soil_depth_sl(ic,is)
+        ! add to below soil layer is+1
         transport(ic,is+1) = transport(ic,is+1) + hlp1(ic) / soil_depth_sl(ic,is+1)
       ENDDO
     ENDDO

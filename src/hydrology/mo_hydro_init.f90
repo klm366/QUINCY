@@ -621,7 +621,7 @@ CONTAINS
       END DO
     END DO
 
-    ! Constrain root depth max because in the bc file it may be larger then soil depth
+    ! Constrain root depth max to soil depth
     root_depth(:,:) = MIN(root_depth(:,:), soil_depth(:,:))
 
     !> Root depth within the soil layers:

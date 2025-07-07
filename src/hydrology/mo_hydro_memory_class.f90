@@ -181,6 +181,7 @@ MODULE mo_hydro_memory_class
       & ice_melt_sl,          & !< Melting ice in soil layers                            [kg m-2 s-1]
       & drainage_sl,          & !< Subsurface drainage (horizontal) from soil layers     [kg m-2 s-1]
       & wtr_transp_down_sl,   & !< Vertical water transport into the below soil layer    [kg m-2 s-1]
+                                !< negative values refer to upwards transport accordingly
       & wtr_soil_sat_sl,      & !< Soil water content at saturation (calculated from
                                 !< soil porosity, reduced by ice)                        [m]
       & wtr_soil_fc_sl,       & !< Water content at field capacity (reduced by ice)      [m]
@@ -200,7 +201,8 @@ MODULE mo_hydro_memory_class
 
     TYPE(t_jsb_var_real3d) :: &
       & frac_w_lat_loss_sl, &   !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep) [unitless]
-      & frac_wtr_transp_down_sl !< fraction of material transferred (vertical) to below layer                                  [fraction s-1]
+      & frac_wtr_transp_down_sl !< fraction of material transferred (vertical) to below layer                                  [unitless]
+                                !< negative values refer to upwards transport accordingly
 
     ! Additional variables for PFT lct_type
     TYPE(t_jsb_var_real3d) ::   &
