@@ -72,7 +72,7 @@ CONTAINS
     INTEGER                               :: icanopy                  !< for looping across ncanopy layers
     REAL(wp)                              :: hlp                      !< helper variable
     INTEGER                               :: iblk, ics, ice, nc       !< dimensions
-    INTEGER                               :: ic, isoil                !< loop counter
+    INTEGER                               :: ic, is                   !< loop counter
     REAL(wp)                              :: dtime                    !< step length
     REAL(wp)                              :: alpha                    !< implicitness factor
 
@@ -137,6 +137,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     ! HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk      :: num_sl_above_bedrock
     dsl4jsb_Real2D_onChunk      :: wtr_soil_root_pot
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: wtr_soil_pwp_sl
@@ -229,6 +230,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
     ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soil_root_pot)            ! in
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)              ! in
@@ -305,14 +307,21 @@ CONTAINS
     !> 1.1 determine fraction of transpiration per soil layer
     !>
     ! calc transpiration per soil layer
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO is = 1, nsoil_sb
+      DO ic = 1, nc
+        ftranspiration_sl(ic, is) = 0.0_wp
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) &
     !$ACC   PRIVATE(hlp)
     DO ic = 1, nc
-      DO isoil = 1, nsoil_sb
-        ftranspiration_sl(ic,isoil) = 0.0_wp
-        IF ((wtr_soil_fc_sl(ic,isoil) - wtr_soil_pwp_sl(ic,isoil)) > eps8 .AND. t_soil_sl(ic,isoil) > Tzero) THEN
-          hlp = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, isoil), lctlib_phi_leaf_min)
-          ftranspiration_sl(ic,isoil) = root_fraction_sl(ic,isoil) * hlp
+      DO is = 1,INT(num_sl_above_bedrock(ic))
+        IF (t_soil_sl(ic, is) > Tzero) THEN
+          hlp                       = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, is), lctlib_phi_leaf_min)
+          ftranspiration_sl(ic, is) = root_fraction_sl(ic, is) * hlp
         END IF
       END DO
     END DO
@@ -327,21 +336,21 @@ CONTAINS
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
-    DO isoil = 1, nsoil_sb
+    DO is = 1, nsoil_sb
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
-        ftranspiration_sum_local(ic) = ftranspiration_sum_local(ic) + ftranspiration_sl(ic, isoil)
+        ftranspiration_sum_local(ic) = ftranspiration_sum_local(ic) + ftranspiration_sl(ic, is)
       END DO
     END DO
     !$ACC END PARALLEL
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-    DO isoil = 1, nsoil_sb
+    DO is = 1, nsoil_sb
       DO ic = 1, nc
         IF (ftranspiration_sum_local(ic) > eps8) THEN
-          ftranspiration_sl(ic, isoil) = ftranspiration_sl(ic, isoil) / ftranspiration_sum_local(ic)
+          ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum_local(ic)
         ELSE
-          ftranspiration_sl(ic, isoil) = 0.0_wp
+          ftranspiration_sl(ic, is) = 0.0_wp
         END IF
       END DO
     END DO
