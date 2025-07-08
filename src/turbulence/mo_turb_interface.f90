@@ -187,7 +187,7 @@ CONTAINS
 
   END SUBROUTINE Register_turb_Tasks
 
-#ifdef __QUINCY_STANDALONE__
+#if defined(__QUINCY_STANDALONE__) || defined(__NO_AES__)
   ! necessary to compile QUINCY-standalone
   SUBROUTINE update_exchange_coefficients(tile, options)
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile

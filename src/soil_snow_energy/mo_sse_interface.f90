@@ -747,7 +747,7 @@ CONTAINS
                                        & hcond_ice, hcond_snow, hcond_snow_min, &
                                        & hcond_org_top, hcond_dry_org_top, hcond_org_below, hcond_dry_org_below !, vol_hcap_snow_min
     USE mo_hydro_constants,        ONLY: vol_porosity_org_top, vol_porosity_org_below
-    USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity
+    USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity, add_heat_capacity_pond
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -764,7 +764,9 @@ CONTAINS
       & vol_heat_cap,         &
       & heat_cond,            &
       & vol_heat_cap_snow,    &
-      & heat_cond_snow
+      & heat_cond_snow,       &
+      & wtr_pond,             &
+      & ice_pond
     dsl4jsb_Real3D_onChunk :: &
       & soil_depth_sl,        &
       & fract_org_sl,         &
@@ -793,6 +795,8 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, nsoil, ic, is
     REAL(wp), POINTER :: soil_e_dz(:)
+
+    REAL(wp) :: hlp1
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_and_snow_properties'
 
@@ -851,6 +855,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
@@ -930,6 +936,21 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     ENDIF
+
+    IF (dsl4jsb_Config(SSE_)%l_heat_cap_pond) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+      !$ACC   PRIVATE(hlp1)
+      DO ic = 1, nc
+        hlp1 = vol_heat_cap_sl(ic,1)
+        vol_heat_cap_sl(ic,1) = add_heat_capacity_pond( &
+          & soil_e_dz(1),                               &
+          & wtr_pond(ic),                               &
+          & ice_pond(ic),                               &
+          & hlp1                                        &
+          & )
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
 
