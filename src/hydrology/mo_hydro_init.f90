@@ -1742,18 +1742,13 @@ CONTAINS
 
     model  => Get_model(tile%owner_model_id)
 
-    ! TODO for use with QUIINCY replace PHENO_ variables with something avaialble in QUINCY
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_JSBACH)
-
     soil_w => Get_vgrid('soil_depth_water')
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(HYDRO_)
-    IF (tile%contains_vegetation) THEN
+    IF (tile%contains_vegetation .AND. model%config%model_scheme == MODEL_JSBACH) THEN
       dsl4jsb_Get_memory(PHENO_)
     END IF
-
 
     IF (tile%contains_soil) THEN ! tile contains soil, i.e. non-glacier land
 
@@ -1830,28 +1825,33 @@ CONTAINS
 
       IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN        ! Explicitly represent organic soil fractions
 
-        IF (.NOT. dsl4jsb_Config(HYDRO_)%l_socmap) THEN ! Not using organic soil fractions from a map
+        SELECT CASE (model%config%model_scheme)
+        CASE (MODEL_JSBACH)
+          IF (.NOT. dsl4jsb_Config(HYDRO_)%l_socmap) THEN ! Not using organic soil fractions from a map
 
-          ! Initialize with zero
-          dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
+            ! Initialize with zero
+            dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
 
-          ! A forest fraction can only be calculated on vegetation tiles
-          IF (tile%is_vegetation) THEN          ! This is a vegetation tile
-            IF (tile%lcts(1)%lib_id /= 0)  THEN ! lctlib is only defined for PFTs
-              ! PFT tile
-              ! Note: in current setup hydrology does not run on PFTs
-              ! TODO: call finish unless it is approved we want to get the organic soil fraction of PFT tiles
-              !       from the maximum vegetation fraction (and not from the forest fraction).
-              IF (dsl4jsb_Lctlib_param(ForestFlag)) THEN
-                dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max)
+            ! A forest fraction can only be calculated on vegetation tiles
+            IF (tile%is_vegetation) THEN          ! This is a vegetation tile
+              IF (tile%lcts(1)%lib_id /= 0)  THEN ! lctlib is only defined for PFTs
+                ! PFT tile
+                ! Note: in current setup hydrology does not run on PFTs
+                ! TODO: call finish unless it is approved we want to get the organic soil fraction of PFT tiles
+                !       from the maximum vegetation fraction (and not from the forest fraction).
+                IF (dsl4jsb_Lctlib_param(ForestFlag)) THEN
+                  dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max)
+                END IF
+              ELSE
+                ! non-PFT vegetation tile (typically 'veg')
+                ! Define the organic fraction of the uppermost soil layer from the forest fraction.
+                dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_forest)
               END IF
-            ELSE
-              ! non-PFT vegetation tile (typically 'veg')
-              ! Define the organic fraction of the uppermost soil layer from the forest fraction.
-              dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_forest)
-            END IF
-          END IF ! is_vegetation
-        END IF ! l_socmap
+            END IF ! is_vegetation
+          END IF ! l_socmap
+        CASE (MODEL_QUINCY)
+          CALL finish(TRIM(routine), 'Error: init of HYDRO_ fract_org_sl from PHENO_ variables is not yet available with QUINCY')
+        END SELECT
 
         ! Soils with minimum field capacity do not have organic fractions (numerical reasons)
         WHERE (dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl) <= 1.0E-10_wp)
@@ -1989,7 +1989,6 @@ CONTAINS
       !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel)) ASYNC(1)
 
     END IF ! Tile with vegetation
-    END SELECT ! MODEL_JSBACH
   END SUBROUTINE hydro_init_ic
 #endif
 
