@@ -288,10 +288,10 @@ CONTAINS
         END IF
 
         IF (model%Do_fractions_change()) THEN
-          IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
+          IF (.NOT. model%Is_process_enabled(PPLCC_) .AND. TRIM(model%config%usecase) /= 'jsbach_jedi') THEN
             CALL message(TRIM(routine), 'Activating PPLCC_ process since some process changes fractions')
+            dsl4jsb_Config(PPLCC_)%active = .TRUE.
           END IF
-          dsl4jsb_Config(PPLCC_)%active = .TRUE.
         END IF
 
         IF (model%config%init_from_ifs) THEN
