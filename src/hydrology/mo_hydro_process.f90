@@ -645,7 +645,8 @@ CONTAINS
     & tpe_overflow, evapo_deficit, wtr_latflow_res_srf, wtr_latflow_res_sl,              &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, runoff_dunne, drainage, &
-    & drainage_sl, wtr_transp_down_sl, wtr_soilhyd_res, wtr_latflow_sl                   &
+    & drainage_sl, wtr_transp_down_sl, wtr_soilhyd_res, drainage_lowest_soil_layer,      &
+    & wtr_latflow_sl                                                                     &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -678,7 +679,8 @@ CONTAINS
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl, wtr_latflow_res_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
-      & runoff_dunne, drainage, wtr_soilhyd_res
+      & runoff_dunne, drainage, wtr_soilhyd_res, &
+      & drainage_lowest_soil_layer
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, &
       & wtr_transp_down_sl, drainage_sl, wtr_latflow_sl
@@ -715,7 +717,7 @@ CONTAINS
           wtr_p_wilt_sl(ic,is)    = 0._wp
           wtr_wres_sl(ic,is)      = 0._wp
         END IF
-      wtr_latflow_sl(ic,is) = 0._wp
+        wtr_latflow_sl(ic,is)     = 0._wp
       END DO
     END DO
     !$ACC END PARALLEL
@@ -726,6 +728,7 @@ CONTAINS
       runoff_dunne(ic) = 0._wp
       drain_bot(ic)    = 0._wp
       drainage(ic)     = 0._wp
+      drainage_lowest_soil_layer(ic) = 0._wp      !< output variable, equals drain_bot
       ! Note: any dew is removed from these fluxes, as dew is already applied
       !       during the surface hydrology computation
       evapo_soil_in_m(ic)    = MIN(0._wp, evapotrans_soil(ic) - transpiration(ic)) * dtime / rhoh2o
@@ -742,11 +745,14 @@ CONTAINS
       &    soil_depth_sl, wtr_wres_sl, wtr_p_wilt_sl, wtr_field_cap_sl, wtr_wsat_sl,   &
       &    hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,          &
       &    vol_wres_sl, bclapp_sl, matric_pot_sl, pore_size_index_sl,                  &
-      &    wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                            &
-      &    transpiration_in_m, evapo_soil_in_m, root_depth_sl,                         &
-      &    infilt, runoff_dunne, drain_bot, drainage_sl, wtr_transp_down_sl,           &
-      &    tpe_overflow, evapo_deficit, wtr_soilhyd_res, hyd_cond_bot,                 &
-      &    ltpe_closed, ltpe_open, ftranspiration_local_sl)
+      &    wtr_soil_pot_scool_sl,                                                      &  ! in
+      &    ice_soil_sl, wtr_soil_sl,                                                   &  ! inout
+      &    transpiration_in_m, evapo_soil_in_m, root_depth_sl,                         &  ! in
+      &    infilt, runoff_dunne,                                                       &  ! inout
+      &    drain_bot, drainage_sl, wtr_transp_down_sl,                                 &  ! out
+      &    tpe_overflow, evapo_deficit,                                                &  ! inout
+      &    wtr_soilhyd_res, hyd_cond_bot,                                              &  ! out
+      &    ltpe_closed, ltpe_open, ftranspiration_local_sl)                               ! in
 
     IF (hydro_scale == Uniform_) THEN
       ! Handling of quasi lateral fluxes and respective reservoirs in case of uniform scale calculations
@@ -824,6 +830,13 @@ CONTAINS
         drainage_sl(ic,is)        = drainage_sl(ic,is)     * rhoh2o / dtime
         wtr_latflow_sl(ic,is)     = wtr_latflow_sl(ic,is)  * rhoh2o / dtime
       END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    ! output variable that equals drain_bot incl. unit conversion consistent with drainage_sl
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      drainage_lowest_soil_layer(ic) = drain_bot(ic) * rhoh2o / dtime
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -1145,7 +1158,7 @@ CONTAINS
       !> Initialize different runoff and drainage components
       runoff_dunne(ic) = 0._wp
       drain_bot(ic)    = 0._wp
-      !> Initialize active layers
+      !> Initialize variable that stores the number of active layers
       last_soil_layer(ic) = 0
     END DO
     !$ACC END PARALLEL LOOP

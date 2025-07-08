@@ -1361,6 +1361,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: frac_w_lat_loss_sl
     dsl4jsb_Real3D_onChunk :: drainage_sl
     dsl4jsb_Real3D_onChunk :: wtr_transp_down_sl
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
 
     dsl4jsb_Real2D_onChunk :: wtr_soilhyd_res
     dsl4jsb_Real2D_onChunk :: wtr_pond
@@ -1389,15 +1390,18 @@ CONTAINS
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
+    INTEGER :: last_soil_layer(options%nc)                  !< deepest active soil layer index (above the bedrock boundary)
     REAL(wp), POINTER :: area(:), lat(:), lon(:), tile_fract(:)
     REAL(wp) :: slope_used(options%nc)
     REAL(wp) :: flowlag_used(options%nc)
     REAL(wp) :: depth_thrsh(options%nc)
+    REAL(wp) :: drainage_lowest_soil_layer(options%nc)      !< equals drain_bot
     REAL(wp) :: ret_macro_blg
+    REAL(wp) :: wtr_flux_in_m                               !< helper variable
     LOGICAL :: l_fract(options%nc)
     LOGICAL :: l_pf_soil(options%nc)
     REAL(wp), ALLOCATABLE :: wtr_soil_old_sl(:,:)           !< wtr_soil_sl of previous timestep
-    REAL(wp), ALLOCATABLE :: ftranspiration_local_sl(:,:)   !< helper variable for iput ftranspiration_sl
+    REAL(wp), ALLOCATABLE :: ftranspiration_local_sl(:,:)   !< helper variable for input ftranspiration_sl
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1440,6 +1444,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)      ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)      ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_weq_soil_sl)  ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)    ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, soil_depth)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, steepness)        ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soilhyd_res)  ! out
@@ -1451,7 +1456,30 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1) ! in
 
     ALLOCATE(ftranspiration_local_sl(nc, nsoil))
-    !$ACC ENTER DATA CREATE(ftranspiration_local_sl) ASYNC(acc_stream)
+    !$ACC ENTER DATA CREATE(ftranspiration_local_sl, drainage_lowest_soil_layer, last_soil_layer) ASYNC(acc_stream)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      !> Initialize variable that stores the number of active layers
+      last_soil_layer(ic) = 0
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+    !$ACC LOOP SEQ
+    DO is = 1, nsoil
+      !$ACC LOOP GANG VECTOR
+      DO ic = 1, nc
+        IF (soil_depth_sl(ic, is) > 0._wp) THEN
+          last_soil_layer(ic) = is
+        END IF
+      END DO
+    END DO
+    !$ACC END PARALLEL
+
+#ifndef _OPENACC
+    IF (ANY(last_soil_layer(:) < 1)) CALL finish('soilhyd', 'Problem with no. of active soil layers (=0)')
+#endif
 
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
@@ -1576,6 +1604,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & ! subsurface drainage () on each soil layer
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down_sl),     & ! vertical downwards transport of water
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
+      & drainage_lowest_soil_layer(:),                          & ! equals drain_bot(:)
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_sl    )      &
       & )
 
@@ -1589,17 +1618,22 @@ CONTAINS
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP SEQ
       DO is = 1, nsoil
-        !$ACC LOOP GANG VECTOR
+        !$ACC LOOP GANG VECTOR PRIVATE(wtr_flux_in_m)
         DO  ic = 1, nc
           IF (wtr_soil_old_sl(ic, is) > eps8) THEN
             ! calculation of the two fractions
-            ! vertical (across soil layers) (unit info: wtr_transp_down_sl [kg m-2 s-1]; is compatible with m/s water fluxes)
+            ! vertical (across soil layers)
+            wtr_flux_in_m = wtr_transp_down_sl(ic, is) * dtime / rhoh2o
             frac_wtr_transp_down_sl(ic, is) = &
-              &  MIN( MAX( wtr_transp_down_sl(ic, is) / wtr_soil_old_sl(ic, is), frac_wtr_vertical_transport_up_max), &
+              &  MIN( MAX( wtr_flux_in_m / wtr_soil_old_sl(ic, is), frac_wtr_vertical_transport_up_max), &
               &       frac_wtr_vertical_transport_down_max) * 1000._wp / dtime
-            ! lateral (i.e., horizontal) (unit info: drainage_sl [kg m-2 s-1]; is compatible with m/s water fluxes)
+            ! lateral (i.e., horizontal)
+            wtr_flux_in_m = drainage_sl(ic, is) * dtime / rhoh2o
+            IF (is == last_soil_layer(ic)) THEN
+              wtr_flux_in_m = wtr_flux_in_m + drainage_lowest_soil_layer(ic) * dtime / rhoh2o
+            END IF
             frac_w_lat_loss_sl(ic, is) = &
-              &  MIN( MAX(drainage_sl(ic, is) / wtr_soil_old_sl(ic, is), 0.0_wp), frac_w_lat_loss_max) * 1000._wp / dtime
+              &  MIN( MAX(wtr_flux_in_m / wtr_soil_old_sl(ic, is), 0.0_wp), frac_w_lat_loss_max) * 1000._wp / dtime
             ! ensure the sum of the two fractions would not increase beyond frac_w_lat_loss_max
             IF ((frac_wtr_transp_down_sl(ic, is) + frac_w_lat_loss_sl(ic, is)) > frac_w_lat_loss_max) THEN
               frac_wtr_transp_down_sl(ic, is) = frac_wtr_transp_down_sl(ic, is) * frac_w_lat_loss_max &
