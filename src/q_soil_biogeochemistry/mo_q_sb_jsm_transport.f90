@@ -749,8 +749,8 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: frac_w_lat_loss_sl             !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep)
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: soil_depth_sl                  !< depth of each soil layer [m]
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: pool                           !< current state of material (bgcm) to be transported [mol m-3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: transport                      !< transport between layers per timestep [mol m-3]
-    REAL(wp), DIMENSION(nc),            INTENT(out)   :: leaching                       !< transport through the lower surface of the lowest
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: transport                      !< transport between layers per timestep [mol m-3 timestep-1]
+    REAL(wp), DIMENSION(nc),            INTENT(out)   :: leaching                       !< transport through the lower surface of the lowest ..  per timestep
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(out)   :: lateral_loss_material          !< lateral loss flux of material
                                                                                         !! layer per timestep [mol m-3 timestep-1]
     ! ----------------------------------------------------------------------------------------------------- !
@@ -768,10 +768,13 @@ CONTAINS
     !>1.0 advective transport in the vertical axis of the soil (i.e., down, but see below TODO)
     !>
     ! loop over soil layers
-    ! we can do '1,n-1' here, because by definition, there cannot be any upward transport from the uppermost layer
+    !   we can do '1,n-1' here, because by definition, there cannot be any upward transport from the uppermost layer
+    !
+    ! the calculation: incl. unit conversion of from s-1 to timestep-1 considering frac_wtr_transp_down_sl
     DO ic = 1,nc
       DO is = 1,(INT(num_sl_above_bedrock(ic)) - 1)
         ! downward transport
+        ! (incl. unit conversion of from s-1 to timestep-1 considering frac_wtr_transp_down_sl)
         IF (frac_wtr_transp_down_sl(ic,is) > 0.0_wp) THEN
           hlp1(ic) = frac_wtr_transp_down_sl(ic,is) * dtime / 1000._wp * pool(ic,is) * soil_depth_sl(ic,is)
         ! upward transport - @TODO for now no upward transport - need to properly think about this in update_spq_physics
@@ -789,6 +792,8 @@ CONTAINS
     !>
     !  based on the assumption that there is no upward flux from below,
     !  and that all other material is lost
+    !
+    ! the calculation: incl. unit conversion of from s-1 to timestep-1 considering frac_wtr_transp_down_sl
     DO ic = 1,nc
       IF (frac_wtr_transp_down_sl(ic, INT(num_sl_above_bedrock(ic))) > 0.0_wp) THEN
         hlp1(ic) = frac_wtr_transp_down_sl(ic, INT(num_sl_above_bedrock(ic))) * dtime / 1000._wp &
@@ -807,6 +812,8 @@ CONTAINS
     !>  lateral_loss material flux =
     !>    "fraction water lateral_loss" * material_pool (mol m-3) * soil_depth (m) * dtime / 1000._wp
     !>
+    !
+    ! the calculation: incl. unit conversion of from s-1 to timestep-1 considering frac_w_lat_loss_sl
     DO ic = 1,nc
       DO is = 1,INT(num_sl_above_bedrock(ic))
         IF (frac_w_lat_loss_sl(ic, is) > 0.0_wp) THEN

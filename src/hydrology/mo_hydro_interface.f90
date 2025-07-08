@@ -1593,9 +1593,11 @@ CONTAINS
         DO  ic = 1, nc
           IF (wtr_soil_old_sl(ic, is) > eps8) THEN
             ! calculation of the two fractions
+            ! vertical (across soil layers) (unit info: wtr_transp_down_sl [kg m-2 s-1]; is compatible with m/s water fluxes)
             frac_wtr_transp_down_sl(ic, is) = &
               &  MIN( MAX( wtr_transp_down_sl(ic, is) / wtr_soil_old_sl(ic, is), frac_wtr_vertical_transport_up_max), &
               &       frac_wtr_vertical_transport_down_max) * 1000._wp / dtime
+            ! lateral (i.e., horizontal) (unit info: drainage_sl [kg m-2 s-1]; is compatible with m/s water fluxes)
             frac_w_lat_loss_sl(ic, is) = &
               &  MIN( MAX(drainage_sl(ic, is) / wtr_soil_old_sl(ic, is), 0.0_wp), frac_w_lat_loss_max) * 1000._wp / dtime
             ! ensure the sum of the two fractions would not increase beyond frac_w_lat_loss_max
