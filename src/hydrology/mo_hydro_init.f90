@@ -1850,7 +1850,10 @@ CONTAINS
             END IF ! is_vegetation
           END IF ! l_socmap
         CASE (MODEL_QUINCY)
-          CALL finish(TRIM(routine), 'Error: init of HYDRO_ fract_org_sl from PHENO_ variables is not yet available with QUINCY')
+          ! Not using organic soil fractions from a map
+          IF (.NOT. dsl4jsb_Config(HYDRO_)%l_socmap) THEN
+            CALL finish(TRIM(routine), 'Error: init of HYDRO_ fract_org_sl from PHENO_ variables is not yet working with QUINCY')
+          END IF
         END SELECT
 
         ! Soils with minimum field capacity do not have organic fractions (numerical reasons)
