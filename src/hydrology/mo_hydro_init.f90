@@ -1863,6 +1863,10 @@ CONTAINS
       END IF ! l_organic
 
       !> - Update the soil properties according to boundary and initial conditions just set
+      !>
+      ! output variables:
+      !     hyd_cond_sat_sl,    vol_porosity_sl,  bclapp_sl,     matric_pot_sl,
+      !     pore_size_index_sl, vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl
       CALL init_soil_properties(tile)
 
       ! Make sure the soil water and ice content is not larger than the pore volume given by the volumetric soil
