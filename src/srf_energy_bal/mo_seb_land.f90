@@ -1284,14 +1284,14 @@ CONTAINS
     latent_heat_air = als * snow_fraction + alv * (q_air - snow_fraction)
 
     ! Calculate thermal inertia term including radiation feedback
-    thermal_response_term = dt * ( &
+    thermal_response_term = &
+      ! Heat storage term
+      & ground_heat_capacity * cp_inv + ( &
       ! Thermal radiation feedback
-      & (cp_inv * 4.0_wp * zemiss_def * stbo * ((cp_inv * s_old)**3) - &
+      & cp_inv * 4.0_wp * zemiss_def * stbo * ((cp_inv * s_old)**3) - &
       ! Latent heat feedback
       & heat_trans_coef * (latent_heat_air * q_acoef - latent_heat) * &
-      & cp_inv * dqsat_dT )) &
-      ! Heat storage term
-      & + ground_heat_capacity * cp_inv
+      & cp_inv * dqsat_dT ) * dt
 
     ! Calculate sensible heat flux term
     sensible_heat_term = -dt * heat_trans_coef * (t_acoef - 1.0_wp)
