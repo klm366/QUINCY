@@ -1373,6 +1373,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: steepness
     dsl4jsb_Real2D_onChunk :: soil_depth
 
+    ! quincy
+    dsl4jsb_Real3D_onChunk :: ftranspiration_sl
+
     ! Locally allocated vectors
 
     TYPE(t_jsb_model), POINTER :: model
@@ -1393,6 +1396,7 @@ CONTAINS
     REAL(wp) :: flowlag_used(options%nc)
     REAL(wp) :: depth_thrsh(options%nc)
     REAL(wp) :: drainage_lowest_soil_layer(options%nc)      !< equals drain_bot
+    REAL(wp) :: ftranspiration_sum(options%nc)              !< SUM(ftranspiration_sl) across soil layers
     REAL(wp) :: ret_macro_blg
     REAL(wp) :: wtr_flux_in_m                               !< helper variable
     LOGICAL :: l_fract(options%nc)
@@ -1453,7 +1457,7 @@ CONTAINS
 
     !$ACC DATA ASYNC(acc_stream) CREATE(l_fract) &
     !$ACC   CREATE(l_pf_soil, depth_thrsh, slope_used, flowlag_used) &
-    !$ACC   CREATE(drainage_lowest_soil_layer, last_soil_layer)
+    !$ACC   CREATE(drainage_lowest_soil_layer, last_soil_layer, ftranspiration_sum)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
@@ -1589,6 +1593,36 @@ CONTAINS
 #ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_memory(Q_ASSIMI_)
+      dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl)     ! in
+
+      !
+      ! temporary correction to ensure ftranspiration_sl sums up to 1.0 across soil layers
+      !
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        ftranspiration_sum(ic) = 0.0_wp
+      END DO
+      !$ACC END PARALLEL LOOP
+      ! calc ftranspiration_sum
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil
+        !$ACC LOOP GANG VECTOR
+        DO  ic = 1, nc
+          ftranspiration_sum(ic) = ftranspiration_sum(ic) + ftranspiration_sl(ic, is)
+        END DO
+      END DO
+      !$ACC END PARALLEL
+      ! scale ftranspiration_sl
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO  ic = 1, nc
+          IF (ftranspiration_sum(ic) > eps8) THEN
+            ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum(ic)
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
 
       CALL calc_soil_hydrology( &
         ! in
@@ -1648,8 +1682,8 @@ CONTAINS
         & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
         & drainage_lowest_soil_layer(:),                          & ! equals drain_bot(:)
         & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_sl    ),     &
-        ! optional: only used with QUINCY
-        & dsl4jsb_var3D_onChunk (Q_ASSIMI_, ftranspiration_sl)    &
+        ! optional in: only used with QUINCY
+        & ftranspiration_sl(:,:)                                  & ! in
         & )
 
       ! calculate vertical and horizontal fraction of water transport for the use in BGCM soil transport calculations
