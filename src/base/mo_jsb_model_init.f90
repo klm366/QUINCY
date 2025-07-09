@@ -372,11 +372,11 @@ CONTAINS
       dsl4jsb_Get_config(VEG_)
 
       !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
-      IF(.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
+      IF (.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
                 .OR. (model%config%qmodel_id == QCANOPY))) THEN
         CALL finish(TRIM(routine), &
           & 'Unexpected / not yet implemented Quincy model mode: '//TRIM(model%config%quincy_model))
-      ENDIF
+      END IF
 
       !>
       !> quincy with jsbach soil-physic processes (w/o tmx)
@@ -386,9 +386,9 @@ CONTAINS
         !-- set flux variables to zero
         CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
         CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
-        IF(model%config%qmodel_id == QLAND) THEN
+        IF (model%config%qmodel_id == QLAND) THEN
           CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
-        ENDIF
+        END IF
 
         !-- science ----------------------------------------------------------------------------------------- !
         ! --------------- Any tasks that might change the land cover need to come first in the timestep
@@ -450,7 +450,7 @@ CONTAINS
         CALL model%Queue_task(TURB_,      "humidity_scaling")
 
         IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
-          IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+          IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
             CALL model%Queue_task(VEG_, "products_decay")           ! LAND or PLANT; if with l_use_product_pools
           END IF
           CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
@@ -489,9 +489,9 @@ CONTAINS
         CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
         CALL model%Queue_task(SPQ_, "reset_spq_fluxes")             ! ALL
         CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
-        IF(model%config%qmodel_id == QLAND) THEN
+        IF (model%config%qmodel_id == QLAND) THEN
           CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
-        ENDIF
+        END IF
 
         !-- science ----------------------------------------------------------------------------------------- !
         ! --------------- Any tasks that might change the land cover need to come first in the timestep
@@ -524,7 +524,7 @@ CONTAINS
             END IF
             IF (model%processes(Q_AGR_)%p%config%active) THEN
               CALL model%Queue_task(Q_AGR_, "cropland_process")     ! LAND ONLY; if Q_AGR_ active
-            END If
+            END IF
             CALL model%Queue_task(VEG_, "pools_on_harvest")         ! LAND ONLY; if Q_SYL_ or Q_AGR_ active
             CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND ONLY; if Q_SYL_ or Q_AGR_ active
           END IF
@@ -541,7 +541,7 @@ CONTAINS
         CALL model%Queue_task(SPQ_, "spq_physics")                  ! ALL
 
         IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
-          IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+          IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
             CALL model%Queue_task(VEG_, "products_decay")           ! LAND or PLANT; if with l_use_product_pools
           END IF
           CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
@@ -699,12 +699,12 @@ CONTAINS
         IF (tile%Is_process_active(VEG_)) THEN
           CALL veg_init(tile)
         END IF
-        IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT .OR. model%config%qmodel_id == QSOIL) THEN
+        IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT .OR. model%config%qmodel_id == QSOIL) THEN
           IF (tile%Is_process_active(SB_)) THEN
             CALL sb_init(tile)
           END IF
-        ENDIF
-        IF(model%config%qmodel_id == QLAND) THEN
+        END IF
+        IF (model%config%qmodel_id == QLAND) THEN
           IF (tile%Is_process_active(Q_SYL_)) THEN
             CALL q_syl_init(tile)
           END IF
@@ -948,7 +948,7 @@ CONTAINS
       END SELECT
 
       CALL model%Goto_next_tile(tile)
-    ENDDO
+    END DO
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -1046,8 +1046,8 @@ CONTAINS
           jcs = grid%get_col_start(blk)
           jce = grid%get_col_end  (blk)
           CALL tile%bgcm_store%Store_bgcms_in_matrices(tile%name, jcs, jce, blk)
-        ENDDO
-      ENDIF
+        END DO
+      END IF
 #endif
 
       ! Indicate to the weighted average aggregator that tile fractions might have changed after restart

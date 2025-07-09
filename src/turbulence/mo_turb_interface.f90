@@ -876,7 +876,6 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
 
     !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(use_soil_phys_jsbach_local) &
     !$ACC   CREATE(fact_qsat_veg, fact_qsat_trans, fact_qsat_soil) &
     !$ACC   CREATE(fact_qair_veg, fact_qair_soil, zfract_fpc, mask, ch_tmp)
 

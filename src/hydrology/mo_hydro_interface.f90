@@ -776,7 +776,7 @@ CONTAINS
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
-        DO  ic = 1, nc
+        DO ic = 1, nc
           wpi_wsat_soil_sl_tmp(ic,is)      = vol_porosity_sl(ic,is)  * soil_depth_sl(ic,is)
           wpi_wres_soil_sl_tmp(ic,is)      = vol_wres_sl(ic,is)      * soil_depth_sl(ic,is)
           ! @todo There should be no water in cells with field_cap == 0. Still, this is currently
@@ -791,7 +791,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO  ic = 1, nc
+      DO ic = 1, nc
         wtr_soil(ic) = 0._wp
       END DO
       !$ACC END PARALLEL LOOP
@@ -800,7 +800,7 @@ CONTAINS
       !$ACC LOOP SEQ
       DO is = 1, nsoil
         !$ACC LOOP GANG VECTOR
-        DO  ic = 1, nc
+        DO ic = 1, nc
           wtr_soil(ic) = wtr_soil(ic) + wtr_soil_sl(ic,is)
         END DO
       END DO
@@ -857,7 +857,7 @@ CONTAINS
       !
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO is = 1, nsoil
-        DO  ic = 1, nc
+        DO ic = 1, nc
           wtr_soil_pot_sl(ic, is) = mpot_act_sl(ic, is) * grav / 1000.0_wp
         END DO
       END DO
@@ -1491,7 +1491,7 @@ CONTAINS
       !$ACC ENTER DATA CREATE(wtr_soil_old_sl) ASYNC(acc_stream)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO is = 1, nsoil
-        DO  ic = 1, nc
+        DO ic = 1, nc
           wtr_soil_old_sl(ic, is) = wtr_soil_sl(ic, is)
         END DO
       END DO
@@ -1578,7 +1578,7 @@ CONTAINS
         & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_res_sl   ),     & ! residual soil water content
         & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     & ! dunne component of surface runoff
         & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
-        & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & ! subsurface drainage () on each soil layer
+        & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & ! subsurface drainage on each soil layer
         & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down_sl),     & ! vertical downwards transport of water
         & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
         & drainage_lowest_soil_layer(:),                          & ! equals drain_bot(:)
@@ -1642,7 +1642,7 @@ CONTAINS
         & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_res_sl   ),     & ! residual soil water content
         & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     & ! dunne component of surface runoff
         & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
-        & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & ! subsurface drainage () on each soil layer
+        & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & ! subsurface drainage on each soil layer
         & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down_sl),     & ! vertical downwards transport of water
         & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
         & drainage_lowest_soil_layer(:),                          & ! equals drain_bot(:)
@@ -1659,7 +1659,7 @@ CONTAINS
       !$ACC LOOP SEQ
       DO is = 1, nsoil
         !$ACC LOOP GANG VECTOR PRIVATE(wtr_flux_in_m)
-        DO  ic = 1, nc
+        DO ic = 1, nc
           IF (wtr_soil_old_sl(ic, is) > eps8) THEN
             ! calculation of the two fractions
             ! vertical (across soil layers)
@@ -2047,7 +2047,7 @@ CONTAINS
     ! (replacing the one used for the ARNO scheme (surface hydrology) based on porosity)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 1, nsoil
-      DO  ic = 1, nc
+      DO ic = 1, nc
         wpi_fcap_soil_sl(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
       END DO
     END DO
@@ -2089,12 +2089,17 @@ CONTAINS
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       ! set to zero
-      wtr_soil_root_pot(:) = 0.0_wp
+      wtr_soil_root_pot(:)    = 0.0_wp
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        wtr_soil_root_pot(ic) = 0.0_wp
+      END DO
+      !$ACC END PARALLEL LOOP
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP SEQ
       DO is = 1, nsoil
         !$ACC LOOP GANG VECTOR
-        DO  ic = 1, nc
+        DO ic = 1, nc
           wtr_soil_root_pot(ic) = wtr_soil_root_pot(ic) + (root_fraction_sl(ic, is) * wtr_soil_pot_sl(ic, is))
         END DO
       END DO

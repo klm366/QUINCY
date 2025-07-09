@@ -1992,7 +1992,7 @@ CONTAINS
     !----------------------------------------------------------------------------------------------
 
     !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(dummy_wtr_soil, root_depth, model_scheme_quincy)
+    !$ACC   CREATE(dummy_wtr_soil, root_depth)
 
 #ifndef __NO_QUINCY__
     ! set a local LOGICAL for the below GPU loop

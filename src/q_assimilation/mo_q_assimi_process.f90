@@ -128,11 +128,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: gross_assimilation_cl
     dsl4jsb_Real3D_onChunk      :: maint_respiration_leaf_cl
     dsl4jsb_Real3D_onChunk      :: canopy_cond_cl
-    dsl4jsb_Real3D_onChunk      :: ftranspiration_sl
     dsl4jsb_Real3D_onChunk      :: co2_conc_leaf_cl
     dsl4jsb_Real3D_onChunk      :: jmax_cl
     dsl4jsb_Real3D_onChunk      :: vcmax_cl
     dsl4jsb_Real3D_onChunk      :: chlfl_yield_cl
+    dsl4jsb_Real3D_onChunk      :: ftranspiration_sl
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
@@ -209,7 +209,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, maint_respiration_leaf)    ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, aerodyn_cond)              ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, canopy_cond)               ! out
-    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl)         ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, co2_conc_leaf)             ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_air)                  ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soa)                  ! out
@@ -226,6 +225,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, jmax_cl)                   ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, vcmax_cl)                  ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, chlfl_yield_cl)            ! out
+    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl)         ! out
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
