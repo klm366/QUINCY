@@ -1495,6 +1495,7 @@ CONTAINS
           wtr_soil_old_sl(ic, is) = wtr_soil_sl(ic, is)
         END DO
       END DO
+      !$ACC END PARALLEL LOOP
 #endif
     END SELECT
 
