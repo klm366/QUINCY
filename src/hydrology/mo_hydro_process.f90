@@ -639,14 +639,16 @@ CONTAINS
     & hyd_cond_sat_sl, matric_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl,  slope,       &
     & flowlag, fract_pond_max, evapotrans_soil, transpiration, ice_pond, weq_pond_max,   &
-    & ftranspiration_local_sl,                                                           &
     ! inout
     & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, wtr_pond_net_flx,              &
     & tpe_overflow, evapo_deficit, wtr_latflow_res_srf, wtr_latflow_res_sl,              &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, runoff_dunne, drainage, &
     & drainage_sl, wtr_transp_down_sl, wtr_soilhyd_res, drainage_lowest_soil_layer,      &
-    & wtr_latflow_sl                                                                     &
+    & wtr_latflow_sl,                                                                    &
+    ! optional: only used with QUINCY
+    & ftranspiration_sl                                                                  &
+
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -671,8 +673,6 @@ CONTAINS
       & lat, lon,                                       &
       & slope, flowlag, fract_pond_max, evapotrans_soil,&
       & transpiration, ice_pond, weq_pond_max
-    REAL(wp), INTENT(in), DIMENSION(:,:) ::             &
-      & ftranspiration_local_sl
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & tpe_overflow, infilt, runoff, evapo_deficit,    &
       & wtr_pond, wtr_pond_net_flx, wtr_latflow_res_srf
@@ -684,6 +684,8 @@ CONTAINS
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, &
       & wtr_transp_down_sl, drainage_sl, wtr_latflow_sl
+    REAL(wp), OPTIONAL, INTENT(in), DIMENSION(:,:) :: &
+      & ftranspiration_sl
 
     ! Local variables
     REAL(wp) ::                       &
@@ -752,7 +754,7 @@ CONTAINS
       &    drain_bot, drainage_sl, wtr_transp_down_sl,                                 &  ! out
       &    tpe_overflow, evapo_deficit,                                                &  ! inout
       &    wtr_soilhyd_res, hyd_cond_bot,                                              &  ! out
-      &    ltpe_closed, ltpe_open, ftranspiration_local_sl)                               ! in
+      &    ltpe_closed, ltpe_open, ftranspiration_sl)                                     ! in
 
     IF (hydro_scale == Uniform_) THEN
       ! Handling of quasi lateral fluxes and respective reservoirs in case of uniform scale calculations
@@ -984,7 +986,7 @@ CONTAINS
     & transpiration_in_m, evapo_soil_in_m, root_depth_sl,                    &
     & infilt, runoff_dunne, drain_bot, drainage_sl, wtr_transp_down_sl,      &
     & tpe_overflow, evapo_deficit, wtr_soilhyd_res, hyd_cond_bot,            &
-    & ltpe_closed, ltpe_open, ftranspiration_local_sl                        &  ! in
+    & ltpe_closed, ltpe_open, ftranspiration_sl                              &  ! in
     & )
 
     USE mo_jsb_math_constants,     ONLY: pi
@@ -1038,7 +1040,7 @@ CONTAINS
 
     LOGICAL, INTENT(IN) :: ltpe_closed
     LOGICAL, INTENT(IN) :: ltpe_open
-    REAL(wp), INTENT(IN)            :: ftranspiration_local_sl(:,:)
+    REAL(wp), OPTIONAL, INTENT(IN)  :: ftranspiration_sl(:,:)
 
     ! Local variables
     INTEGER  :: ic, is                       ! looping index (cells index and soil layer))
@@ -1197,9 +1199,8 @@ CONTAINS
       &                      model_scheme,                                              &
       &                      w_soil_wilt_fract, root_depth_sl, dsoil, wtr_field_cap_sl, &
       &                      transpiration_in_m, evapo_soil_in_m, wtr_soil_sl,          &
-      &                      ftranspiration_local_sl,                                   & ! in
       &                      evapo_deficit, evapo_soil_sl1, transpiration_sl,           &
-      &                      deficit_sevap, deficit_trans)
+      &                      deficit_sevap, deficit_trans, ftranspiration_sl)
 
     ! Determining hydraulic conductivity and diffusivity on layers and at layer interfaces
     !   Note that the indexing uses the upper interface -> interface Ii = I(i,i-1)
@@ -1923,12 +1924,12 @@ CONTAINS
     & transpiration_in_m,         &
     & evapo_soil_in_m,            &
     & wtr_soil_sl,                &
-    & ftranspiration_local_sl,    &
     & evapo_deficit,              &
     & evapo_soil_sl1,             &
     & transpiration_sl,           &
     & deficit_sevap,              &
-    & deficit_trans               &
+    & deficit_trans,              &
+    & ftranspiration_sl           &
     & )
 
     !----------------------------------------------------------------------------------------------
@@ -1961,12 +1962,12 @@ CONTAINS
     REAL(wp), INTENT(in)     :: transpiration_in_m(:)   ! transpiration [m]
     REAL(wp), INTENT(in)     :: evapo_soil_in_m(:)      ! bare soil evaporation [m]
     REAL(wp), INTENT(in)     :: wtr_soil_sl(:,:)        ! water content of the soil layer [m]
-    REAL(wp), INTENT(in)     :: ftranspiration_local_sl(:,:)
     REAL(wp), INTENT(inout)  :: evapo_deficit(:)        ! evaporation from unintented sources [m]
     REAL(wp), INTENT(OUT)    :: evapo_soil_sl1(:)       ! Soil evaporation from the top soil layer [m]
     REAL(wp), INTENT(OUT)    :: transpiration_sl(:,:)   ! Transpiration from soil layers [m]
     REAL(wp), INTENT(OUT)    :: deficit_trans(:)        ! Unaccounted transpiration [m]
     REAL(wp), INTENT(OUT)    :: deficit_sevap(:)        ! Unaccounted soil evaporation [m]
+    REAL(wp), OPTIONAL, INTENT(in) :: ftranspiration_sl(:,:) ! TODO Jan: describe
 
     ! local variables
 
@@ -2100,10 +2101,10 @@ CONTAINS
         !   with QUINCY, we do not need the redistribution and deficit calculation
         !   slight excess transpiration below the wilting point is tolerated, in which case the transpiration function
         !   will then be zero for this layer in the next time step, so that there is no excess transpiration possible
-        !   ftranspiration_local_sl (ftranspiration_sl) is calculated in q_assimilation/mo_q_assimi_process
+        !   ftranspiration_sl is calculated in q_assimilation/mo_q_assimi_process
 #ifndef __NO_QUINCY__
-        IF (model_scheme_quincy) THEN
-          transpiration_sl(ic,is) = transpiration_in_m(ic) * ftranspiration_local_sl(ic,is)
+        IF (model_scheme_quincy .AND. PRESENT(ftranspiration_sl)) THEN
+          transpiration_sl(ic,is) = transpiration_in_m(ic) * ftranspiration_sl(ic,is)
         ELSE
 #endif
           ! grid cell not sealed and actual transpiration (not dew) takes place
