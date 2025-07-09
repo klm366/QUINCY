@@ -1455,8 +1455,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max)     ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1) ! in
 
+    !$ACC DATA ASYNC(acc_stream) CREATE(l_fract) &
+    !$ACC   CREATE(l_pf_soil, depth_thrsh, slope_used, flowlag_used) &
+    !$ACC   CREATE(drainage_lowest_soil_layer, last_soil_layer)
+
     ALLOCATE(ftranspiration_local_sl(nc, nsoil))
-    !$ACC ENTER DATA CREATE(ftranspiration_local_sl, drainage_lowest_soil_layer, last_soil_layer) ASYNC(acc_stream)
+    !$ACC ENTER DATA CREATE(ftranspiration_local_sl) ASYNC(acc_stream)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
@@ -1518,9 +1522,6 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 #endif
     END SELECT
-
-    !$ACC DATA ASYNC(acc_stream) CREATE(l_fract) &
-    !$ACC   CREATE(l_pf_soil, depth_thrsh, slope_used, flowlag_used)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
