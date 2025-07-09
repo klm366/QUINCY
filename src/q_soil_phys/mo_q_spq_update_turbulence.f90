@@ -187,7 +187,7 @@ CONTAINS
         & drag_srf_stdalone(:), ddrag_srf(:), t_acoef_stdalone(:), t_bcoef_stdalone(:), &
         & q_acoef_stdalone(:), q_bcoef_stdalone(:), pch_stdalone(:), &
         ! optional (INTENT(IN)) argument
-        & height = height) ! vegetation height (quincy specific)
+        & veg_height = height) ! vegetation height (quincy specific)
     END IF
 
     !$ACC WAIT(1)

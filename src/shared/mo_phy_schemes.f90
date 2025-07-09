@@ -19,7 +19,9 @@ MODULE mo_phy_schemes
   USE mo_kind, ONLY: wp
   USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
   USE mo_jsb_thermo_iface, ONLY: specific_humidity, sat_pres_water, sat_pres_ice, potential_temperature
+#ifndef __NO_AES__
   USE mo_jsb_surface_exchange_iface, ONLY: sfc_exchange_coefficients
+#endif
   USE mo_jsb_control, ONLY: acc_stream
 
   IMPLICIT NONE
@@ -28,8 +30,10 @@ MODULE mo_phy_schemes
   PUBLIC :: specific_humidity, qsat_water, qsat_ice, sat_pres_water, &
     & update_drag, tlucua, jptlucu1, jptlucu2, &
     & q_effective, surface_dry_static_energy, heat_transfer_coef, &
-    & thermal_radiation, lwnet_from_lwdown, potential_temperature, &
-    & sfc_exchange_coefficients
+    & thermal_radiation, lwnet_from_lwdown, potential_temperature
+#ifndef __NO_AES__
+    PUBLIC :: sfc_exchange_coefficients
+#endif
 #ifndef __NO_QUINCY__
   PUBLIC :: calc_peaked_arrhenius_function
 #endif
@@ -348,7 +352,7 @@ CONTAINS
       & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
       & height_wind, height_humidity, coef_ril_tm1, coef_ril_t, coef_ril_tp1, &
       & drag_srf, ddrag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, &
-      & height, t_srf_upd, zril_old)
+      & veg_height, t_srf_upd, zril_old)
 
     USE mo_jsb_model_class,        ONLY: MODEL_QUINCY, MODEL_JSBACH
     USE mo_jsb_physical_constants, ONLY: grav, rd, cpd, rvd1, cpvd1, von_karman, rd_o_cpd
@@ -380,11 +384,12 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: pch     (:)
 
     ! Optional variable for QUINCY
-    REAL(wp), OPTIONAL, INTENT(IN)    :: height(:)     !< vegetation height
+    REAL(wp), OPTIONAL, INTENT(IN)    :: veg_height(:)     !< vegetation height
     ! Optional variables for the computation of a filtered Richardson number
     REAL(wp), OPTIONAL, INTENT(IN)    :: t_srf_upd(:)  !< Updated surface temperature
     REAL(wp), OPTIONAL, INTENT(inout) :: zril_old(:)   !< Richardson number at previous time step
 
+    REAL(wp) :: height(nc)
     INTEGER  :: ic
     LOGICAL  :: l_zril_filter
     REAL(wp) :: zcons9, zcons11, zcons12, zsigma
@@ -399,6 +404,9 @@ CONTAINS
     REAL(wp), PARAMETER :: cc = 5._wp
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_drag'
 
+    !$ACC DATA ASYNC(acc_stream) &
+    !$ACC   CREATE(height)
+
     ! in jsb3: rd = GasConstantDryAir; cpd = SpecificHeatDryAirConstPressure; grav = Gravity
     ! zcons8  = 2._wp * cb  ! quincy specific
     zcons9  = 3._wp * cb
@@ -410,6 +418,19 @@ CONTAINS
       l_zril_filter = .TRUE.
     ELSE
       l_zril_filter = .FALSE.
+    END IF
+    IF (PRESENT(veg_height)) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        height(ic) = veg_height(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        height(ic) = 0._wp
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
@@ -550,6 +571,7 @@ CONTAINS
 
     END DO
     !$ACC END PARALLEL LOOP
+    !$ACC END DATA
 
   END SUBROUTINE update_drag
 

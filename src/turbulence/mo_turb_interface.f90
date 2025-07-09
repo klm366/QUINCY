@@ -187,7 +187,7 @@ CONTAINS
 
   END SUBROUTINE Register_turb_Tasks
 
-#ifdef __QUINCY_STANDALONE__
+#if defined(__QUINCY_STANDALONE__) || defined(__NO_AES__)
   ! necessary to compile QUINCY-standalone
   SUBROUTINE update_exchange_coefficients(tile, options)
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -339,7 +339,9 @@ CONTAINS
       ch(ic) = wind_air(ic) * rho_srf(ic) * kh(ic)
     END DO
     !$ACC END PARALLEL LOOP
-
+#if defined(_CRAYFTN) && _RELEASE_MAJOR <= 19
+    !$ACC WAIT(acc_stream)
+#endif
     !$ACC END DATA
 
   END SUBROUTINE update_exchange_coefficients

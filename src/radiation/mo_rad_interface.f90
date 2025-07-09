@@ -958,18 +958,19 @@ CONTAINS
   SUBROUTINE update_albedo(tile, options)
 
     ! Use declarations
-    USE mo_jsb_lctlib_class,  ONLY: t_lctlib_element
-    USE mo_rad_process,       ONLY: &
+    USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element
+    USE mo_rad_process,         ONLY: &
       & get_surface_albedo_simple, calc_soil_albedo, calc_pond_albedo, calc_alb_lwtr, calc_alb_lice, &
       & calc_glacier_albedo, calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
       & Has_minimal_radiation, calc_snow_age, get_litter_carbon, get_soil_carbon
 #ifndef __NO_QUINCY__
-    USE mo_rad_process,       ONLY: calc_surface_radiation_quincy
+    USE mo_rad_process,         ONLY: calc_surface_radiation_quincy
 #endif
-    USE mo_jsb_time,          ONLY: is_time_experiment_start, is_time_ltrig_rad_m1
-    USE mo_jsb_control,       ONLY: jsbach_runs_standalone
-    USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid
-    USE mo_jsb_grid,          ONLY: Get_vgrid
+    USE mo_jsb_time,            ONLY: is_time_experiment_start, is_time_ltrig_rad_m1
+    USE mo_jsb_math_constants,  ONLY: eps8, eps1, seconds_per_day
+    USE mo_jsb_control,         ONLY: jsbach_runs_standalone
+    USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,            ONLY: Get_vgrid
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -981,6 +982,7 @@ CONTAINS
     INTEGER                         :: nsoil_sb         !< number of soil layers as used/defined by the SB_ process
     INTEGER                         :: iblk, ic, is
     INTEGER                         :: ics, ice, nc
+    INTEGER                         :: model_scheme
     LOGICAL, ALLOCATABLE            :: l_day(:)
     REAL(wp)                        :: dtime                     !< timestep
     REAL(wp)                        :: lctlib_specific_leaf_area !< use for jsbach & quincy, as helper variable
@@ -1024,12 +1026,17 @@ CONTAINS
       & snow,                  &
       & alb_vis,               &
       & alb_nir,               &
+      & alb_vis_noon,          &
+      & alb_nir_noon,          &
+      & local_time_day_seconds,&
       & alb_vis_lnd,           &
       & alb_nir_lnd,           &
       & alb_vis_can,           &
       & alb_nir_can,           &
       & alb_vis_soil,          &
       & alb_nir_soil,          &
+      & alb_vis_soil_and_snow, &
+      & alb_nir_soil_and_snow, &
       & alb_vis_snow,          &
       & alb_nir_snow,          &
       & alb_vis_pond,          &
@@ -1108,8 +1115,10 @@ CONTAINS
 
     ! Set model
     model => Get_model(tile%owner_model_id)
+    model_scheme = model%config%model_scheme
+
 #ifndef __NO_QUINCY__
-    SELECT CASE (model%config%model_scheme)
+    SELECT CASE (model_scheme)
     CASE (MODEL_QUINCY)
       vgrid_soil_sb => Get_vgrid('soil_layer_sb')
       nsoil_sb      =  vgrid_soil_sb%n_levels
@@ -1140,7 +1149,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SEB_)
 #ifndef __QUINCY_STANDALONE__
-    SELECT CASE (model%config%model_scheme)
+    SELECT CASE (model_scheme)
     CASE (MODEL_JSBACH)
       IF (tile%contains_vegetation) THEN
         dsl4jsb_Get_memory(PHENO_)
@@ -1174,7 +1183,7 @@ CONTAINS
       ALLOCATE(soil_carbon(nc))
       !$ACC ENTER DATA CREATE(litter_carbon, soil_carbon) ASYNC(acc_stream)
 
-      SELECT CASE (model%config%model_scheme)
+      SELECT CASE (model_scheme)
 #ifndef __QUINCY_STANDALONE__
       CASE (MODEL_JSBACH)
         IF (.NOT. tile%Is_process_calculated(CARBON_)) THEN
@@ -1255,7 +1264,7 @@ CONTAINS
 
     ALLOCATE(temperature_surface(nc))
     !$ACC ENTER DATA CREATE(temperature_surface) ASYNC(acc_stream)
-    SELECT CASE (model%config%model_scheme)
+    SELECT CASE (model_scheme)
 #ifndef __QUINCY_STANDALONE__
     CASE (MODEL_JSBACH)
       dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)              ! in
@@ -1273,6 +1282,9 @@ CONTAINS
         temperature_surface(ic) = t(ic)
       END DO
       !$ACC END PARALLEL LOOP
+
+      dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis_noon)          ! out
+      dsl4jsb_Get_var2D_onChunk(RAD_,   alb_nir_noon)          ! out
 #endif
     END SELECT
 
@@ -1488,7 +1500,7 @@ CONTAINS
     ELSE IF (tile%is_vegetation) THEN
 
       ! TODO: correct indentation >>>
-    SELECT CASE (model%config%model_scheme)
+    SELECT CASE (model_scheme)
 #ifndef __QUINCY_STANDALONE__
     CASE (MODEL_JSBACH)
       dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                   ! in
@@ -1509,7 +1521,7 @@ CONTAINS
 
       !> 5.1  simple calculation of alb_vis_lnd / alb_nir_lnd
       !!
-      !! TRUE for jsbach_lite, FALSE for jsbach_pfts
+      !! TRUE for jsbach_lite, FALSE for jsbach_pfts and jsbach_12pfts
       IF (use_alb_veg_simple) THEN
 #ifndef __QUINCY_STANDALONE__
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -1540,7 +1552,7 @@ CONTAINS
           ! The albedo for bare soil under the canopy of a vegetation tile is the same as for the bare soil tile:
 
           IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
-          SELECT CASE (model%config%model_scheme)
+          SELECT CASE (model_scheme)
 #ifndef __QUINCY_STANDALONE__
           CASE (MODEL_JSBACH)
             specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
@@ -1586,7 +1598,7 @@ CONTAINS
 
 
         ! improve indentation !
-        SELECT CASE (model%config%model_scheme)
+        SELECT CASE (model_scheme)
 #ifndef __QUINCY_STANDALONE__
         CASE (MODEL_JSBACH)
         ! Get the fractions of the vegetation tile that is bare soil from the sky point of view
@@ -1644,13 +1656,15 @@ CONTAINS
 #endif
 #ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_soil_and_snow) ! out
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_soil_and_snow) ! out
       ! for now, prescribed, should be based on JSBACH 4 routines, and include the effect of snow on the
       ! soil's albedo
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        alb_vis_soil(ic) = fract_snow_soil(ic) * alb_vis_snow(ic) &
+        alb_vis_soil_and_snow(ic) = fract_snow_soil(ic) * alb_vis_snow(ic) &
           &                + (1.0_wp - fract_snow_soil(ic)) * alb_vis_soil(ic)
-        alb_nir_soil(ic) = fract_snow_soil(ic) * alb_nir_snow(ic) &
+        alb_nir_soil_and_snow(ic) = fract_snow_soil(ic) * alb_nir_snow(ic) &
           &                + (1.0_wp - fract_snow_soil(ic)) * alb_nir_soil(ic)
       END DO
       !$ACC END PARALLEL LOOP
@@ -1667,11 +1681,25 @@ CONTAINS
     !! this is needed because for lake tiles, the "tile albedo" is calculated directly
     !! but for vegetation, bare and glacier, the "land albedo" is calculated
     !!
+#ifndef __NO_QUINCY__
+    IF (model_scheme == MODEL_QUINCY) THEN
+      dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)         ! in
+    END IF
+#endif
     IF (tile%is_bare .OR. tile%is_glacier .OR. tile%is_vegetation) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         alb_vis(ic) = alb_vis_lnd(ic)
         alb_nir(ic) = alb_nir_lnd(ic)
+#ifndef __NO_QUINCY__
+        IF (model_scheme == MODEL_QUINCY) THEN
+          ! at noon: set albedo_noon to current albedo (noon equals half a day plus one timestep)
+          IF (ABS(local_time_day_seconds(ic) - ((seconds_per_day / 2._wp) + dtime)) < eps1) THEN
+            alb_vis_noon(ic) = alb_vis(ic)
+            alb_nir_noon(ic) = alb_nir(ic)
+          END IF
+        END IF
+#endif
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -1740,6 +1768,11 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, albedo,                 weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo_noon,            weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, snow_age,               weighted_by_fract)
+
+#ifndef __NO_QUINCY__
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_noon,           weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_noon,           weighted_by_fract)
+#endif
 
     CASE (MODEL_JSBACH)
 #ifndef __QUINCY_STANDALONE__
