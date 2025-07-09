@@ -58,7 +58,7 @@ CONTAINS
     USE mo_veg_constants,                   ONLY: fresp_growth, background_mort_rate_tree, &
       &                                           background_mort_rate_grass, w_root_lim_max, rfr_ratio_toc
     USE mo_isotope_util,                    ONLY: calc_fractionation,calc_mixing_ratio_N15N14,calc_mixing_ratio_C14C
-    USE mo_q_assimi_process,                ONLY: discrimination_ps_c13, discrimination_ps_c14
+    USE mo_q_assimi_process,                ONLY: discrimination_ps
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
@@ -316,9 +316,9 @@ CONTAINS
         veg_pool_mt_domain(ix_seed_bed, ixP, :, :) = veg_pool_mt_domain(ix_seed_bed, ixN, :, :) / lctlib%np_leaf
         ! pool%seed_bed%carbon13
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps_c13(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
         ELSE
-          hlp1 = discrimination_ps_c13(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
         ENDIF
         DO ic = 1,nproma
           DO iblk = 1,nblks
@@ -329,9 +329,9 @@ CONTAINS
         ENDDO
         ! pool%seed_bed%carbon14
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps_c14(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
         ELSE
-          hlp1 = discrimination_ps_c14(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
         ENDIF
         DO ic = 1,nproma
           DO iblk = 1,nblks
@@ -351,9 +351,9 @@ CONTAINS
         veg_pool_mt_domain(ix_reserve, ixP, :, :) = veg_pool_mt_domain(ix_reserve, ixN, :, :) / lctlib%np_leaf
         ! pool%reserve%carbon13
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps_c13(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
         ELSE
-          hlp1 = discrimination_ps_c13(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
         ENDIF
         DO ic = 1,nproma
           DO iblk = 1,nblks
@@ -364,9 +364,9 @@ CONTAINS
         ENDDO
         ! pool%reserve%carbon14
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps_c14(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
         ELSE
-          hlp1 = discrimination_ps_c14(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
         ENDIF
         DO ic = 1,nproma
           DO iblk = 1,nblks

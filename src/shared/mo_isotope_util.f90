@@ -137,10 +137,7 @@ CONTAINS
   !!
   !! Based on equation 1-3 in Levin et al. (2010), Tellus 62B, 26-46
   !-----------------------------------------------------------------------------------------------------
-#ifndef _OPENACC
-  PURE ELEMENTAL &
-#endif
-  FUNCTION calc_mixing_ratio_C14C(delta_C13,Delta_C14) RESULT(mixing_ratio)
+  PURE ELEMENTAL FUNCTION calc_mixing_ratio_C14C(delta_C13,Delta_C14) RESULT(mixing_ratio)
 
     !$ACC ROUTINE SEQ
 
