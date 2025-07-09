@@ -1260,18 +1260,21 @@ CONTAINS
     REAL(wp) :: sensible_heat_term     !< Sensible heat flux contribution
     REAL(wp) :: energy_flux_term       !< Total energy fluxes
 
-    !> The surface energy balance equation in terms of dry static energy s = cp*T is:
-    !> C * ds/dt = (C / cp) * dT/dt = R_net + H + LE + G
-    !> where:
-    !> - R_net is net radiation
-    !> - H is sensible heat flux
-    !> - LE is latent heat flux
-    !> - G is ground heat flux
-    !> - C is the surface (top soil layer) heat capacity
-    !>
-    !> The implicit scheme solves this by linearizing the fluxes around the previous state
-    !> and solving the resulting system for s(t+dt). The equations follow the recipe provided
-    !> by Schulz et al. (2001, https://doi.org/10.1175/1520-0450(2001)040<0642:OTLSAC>2.0.CO;2)
+    !> The surface energy balance equation in terms of dry static energy s = cp*T is                                                
+    !> ```                                                                                                                          
+    !> C * ds/dt = (C / cp) * dT/dt = R_net + H + LE + G                                                                            
+    !> ```                                                                                                                          
+    !> where:                                                                                                                       
+    !>                                                                                                                              
+    !> - R_net is net radiation                                                                                                     
+    !> - H is sensible heat flux                                                                                                    
+    !> - LE is latent heat flux                                                                                                     
+    !> - G is ground heat flux                                                                                                      
+    !> - C is the surface (top soil layer) heat capacity                                                                            
+    !>                                                                                                                              
+    !> The implicit scheme solves this by linearizing the fluxes around the previous state                                          
+    !> and solving the resulting system for s(t+dt). The equations follow the recipe provided                                       
+    !> by [Schulz et al. (2001)](https://doi.org/10.1175/1520-0450(2001)040<0642:OTLSAC>2.0.CO;2)                                   
 
     ! Calculate effective timestep
     dt = alpha * dtime
