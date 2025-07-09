@@ -3121,8 +3121,14 @@ CONTAINS
     ALLOCATE (scaling(grid%nproma,grid%nblks))
 
     ! Calculate 1d global land variables, if requested for output
-    global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
-    scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
+    IF (HYDRO__mem%trans_gmean%is_in_output .OR. HYDRO__mem%evapotrans_gmean%is_in_output &
+      & .OR. HYDRO__mem%wtr_rootzone_rel_gmean%is_in_output) THEN
+
+      global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
+      scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
+
+    END IF
+
     IF (HYDRO__mem%trans_gmean%is_in_output)           &
       &  trans_gmean          = global_sum_array(transpiration(:,:)   * scaling(:,:)) / global_land_area
     IF (HYDRO__mem%evapotrans_gmean%is_in_output)      &
