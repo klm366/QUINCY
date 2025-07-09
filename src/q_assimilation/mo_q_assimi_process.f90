@@ -27,7 +27,7 @@ MODULE mo_q_assimi_process
 
   PRIVATE
   PUBLIC :: update_canopy_fluxes, calc_photosynthesis, calc_soil_moisture_stress
-  PUBLIC :: discrimination_ps
+  PUBLIC :: discrimination_ps_c13, discrimination_ps_c14
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_assimi_process'
 
@@ -442,19 +442,17 @@ CONTAINS
 
         IF (gross_assimilation_cl(ic,icanopy) > eps8) THEN
         ! C13 flux associated with photosynthesis
-        hlp                        = discrimination_ps(co2_conc_leaf_cl(ic,icanopy), &
-          &                                             co2_mixing_ratio(ic)       , &
-          &                                             'C13'                      , &
-          &                                             lctlib_ps_pathway)
+        hlp                        = discrimination_ps_c13(co2_conc_leaf_cl(ic,icanopy), &
+          &                                                co2_mixing_ratio(ic)       , &
+          &                                                lctlib_ps_pathway)
         gross_assimilation_C13(ic) = gross_assimilation_C13(ic) &
           &                          + gross_assimilation_cl(ic,icanopy) &
           &                          * lai_cl(ic,icanopy) &
           &                          * calc_fractionation(co2_mixing_ratio(ic), co2_mixing_ratio_C13(ic), hlp)
         ! C14 flux associated with photosynthesis
-        hlp                        = discrimination_ps(co2_conc_leaf_cl(ic,icanopy), &
-          &                                             co2_mixing_ratio(ic)       , &
-          &                                             'C14'                      , &
-          &                                             lctlib_ps_pathway)
+        hlp                        = discrimination_ps_c14(co2_conc_leaf_cl(ic,icanopy), &
+          &                                                co2_mixing_ratio(ic)       , &
+          &                                                lctlib_ps_pathway)
         gross_assimilation_C14(ic) = gross_assimilation_C14(ic) &
           &                          + gross_assimilation_cl(ic,icanopy) &
           &                          * lai_cl(ic,icanopy) &
@@ -1119,44 +1117,60 @@ CONTAINS
   !>
   !>  Output: Discrimination (per mill)
   !>
-  PURE ELEMENTAL FUNCTION discrimination_ps(ci, ca, isotope_name, ps_pathway) RESULT(discrimination)
-
-    !$ACC ROUTINE SEQ
-
+  !
+  ! C13
+  !
+#ifndef _OPENACC
+  PURE ELEMENTAL &
+#endif
+  FUNCTION discrimination_ps_c13(ci, ca, ps_pathway) RESULT(discrimination)
     USE mo_q_assimi_parameters,    ONLY: discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, &
-      &                                  discr_ps_a_C14, discr_ps_b_C14, discr_ps_c_C14, &
       &                                  discr_ps_phi
-    USE mo_q_assimi_constants,     ONLY: ic3phot, ic4phot
+    USE mo_q_assimi_constants,     ONLY: ic3phot !, ic4phot
     !------------------------------------------------------------------------------------------------------ !
     REAL(wp),     INTENT(in) :: ci                     !< leaf internal CO2 concentration (ppm)
     REAL(wp),     INTENT(in) :: ca                     !< atmospheric CO2 concentration (ppm)
-    CHARACTER(3), INTENT(in) :: isotope_name           !< isotope C13 or C14
     INTEGER,      INTENT(in) :: ps_pathway             !< photosynthetic pathway (C3 or C4) from lctlib
     REAL(wp)                 :: discrimination         !< isotopic discrimination (per mill)
     !------------------------------------------------------------------------------------------------------ !
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps_c13'
+
+    !$ACC ROUTINE SEQ
 
     ! SELECT PS pathway C3 C4
-    SELECT CASE(ps_pathway)
-    CASE (ic3phot)
-      ! SELECT isotope C13 C14
-      SELECT CASE(isotope_name)
-        CASE ('C13')
-          discrimination = discr_ps_a_C13 + (discr_ps_b_C13 - discr_ps_a_C13) * ci / ca
-        CASE ('C14')
-          discrimination = discr_ps_a_C14 + (discr_ps_b_C14 - discr_ps_a_C14) * ci / ca
-      END SELECT
-    CASE (ic4phot)
-      ! SELECT isotope C13 C14
-      SELECT CASE(isotope_name)
-        CASE ('C13')
-          discrimination = discr_ps_a_C13 + (discr_ps_c_C13 + discr_ps_phi * discr_ps_b_C13 - discr_ps_a_C13) * ci / ca
-        CASE ('C14')
-          discrimination = discr_ps_a_C14 + (discr_ps_c_C14 + discr_ps_phi * discr_ps_b_C14 - discr_ps_a_C14) * ci / ca
-      END SELECT
-    END SELECT
+    IF (ps_pathway == ic3phot) THEN
+      discrimination = discr_ps_a_C13 + (discr_ps_b_C13 - discr_ps_a_C13) * ci / ca
+    ELSE ! ic4phot
+      discrimination = discr_ps_a_C13 + (discr_ps_c_C13 + discr_ps_phi * discr_ps_b_C13 - discr_ps_a_C13) * ci / ca
+    END IF
+  END FUNCTION discrimination_ps_c13
+  !
+  ! C14
+  !
+#ifndef _OPENACC
+  PURE ELEMENTAL &
+#endif
+  FUNCTION discrimination_ps_c14(ci, ca, ps_pathway) RESULT(discrimination)
+    USE mo_q_assimi_parameters,    ONLY: discr_ps_a_C14, discr_ps_b_C14, discr_ps_c_C14, &
+      &                                  discr_ps_phi
+    USE mo_q_assimi_constants,     ONLY: ic3phot !, ic4phot
+    !------------------------------------------------------------------------------------------------------ !
+    REAL(wp),     INTENT(in) :: ci                     !< leaf internal CO2 concentration (ppm)
+    REAL(wp),     INTENT(in) :: ca                     !< atmospheric CO2 concentration (ppm)
+    INTEGER,      INTENT(in) :: ps_pathway             !< photosynthetic pathway (C3 or C4) from lctlib
+    REAL(wp)                 :: discrimination         !< isotopic discrimination (per mill)
+    !------------------------------------------------------------------------------------------------------ !
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps_c14'
 
-  END FUNCTION discrimination_ps
+    !$ACC ROUTINE SEQ
+
+    ! SELECT PS pathway C3 C4
+    IF (ps_pathway == ic3phot) THEN
+      discrimination = discr_ps_a_C14 + (discr_ps_b_C14 - discr_ps_a_C14) * ci / ca
+    ELSE ! ic4phot
+      discrimination = discr_ps_a_C14 + (discr_ps_c_C14 + discr_ps_phi * discr_ps_b_C14 - discr_ps_a_C14) * ci / ca
+    END IF
+  END FUNCTION discrimination_ps_c14
 
 #endif
 END MODULE mo_q_assimi_process
