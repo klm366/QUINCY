@@ -317,9 +317,9 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) &
     !$ACC   PRIVATE(hlp)
-    DO ic = 1, nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
-        IF (t_soil_sl(ic, is) > Tzero) THEN
+    DO is = 1,nsoil_sb
+      DO ic = 1, nc
+        IF ((is <= num_sl_above_bedrock(ic)) .AND. (t_soil_sl(ic, is) > Tzero)) THEN
           hlp                       = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, is), lctlib_phi_leaf_min)
           ftranspiration_sl(ic, is) = root_fraction_sl(ic, is) * hlp
         END IF
