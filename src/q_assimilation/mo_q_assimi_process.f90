@@ -1183,7 +1183,6 @@ CONTAINS
     & wtr_soil_pot_sl, &
     & ftranspiration_sl)
 
-    ! USE mo_q_assimi_constants, ONLY: phi_inc ! to be set to -0.25 ! increment in loop
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                       !< dimension chunk
     INTEGER,  INTENT(in)    :: nsoil_sb                 !< dimension soil layers
@@ -1196,10 +1195,14 @@ CONTAINS
     INTEGER        :: iwpot                  !< looping [0,10]
     REAL(wp)       :: hlp
     REAL(wp)       :: sum_ftranspiration_sl
-    REAL(wp)       :: phi_inc = -0.25_wp     !< constant used for increment in [0,10] loop
+    REAL(wp)       :: phi_inc                !< constant used for increment in [0,10] loop
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_ftranspiration_sl'
     ! ----------------------------------------------------------------------------------------------------- !
 
+    ! init local var
+    phi_inc = -0.25_wp
+
+    ! loop
     DO ic = 1, nc
       ! set to zero here to ensure executing once
       sum_ftranspiration_sl = 0.0_wp
