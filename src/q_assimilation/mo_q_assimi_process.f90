@@ -1120,10 +1120,7 @@ CONTAINS
   !
   ! C13
   !
-#ifndef _OPENACC
-  PURE ELEMENTAL &
-#endif
-  FUNCTION discrimination_ps_c13(ci, ca, ps_pathway) RESULT(discrimination)
+  PURE ELEMENTAL FUNCTION discrimination_ps_c13(ci, ca, ps_pathway) RESULT(discrimination)
     USE mo_q_assimi_parameters,    ONLY: discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, &
       &                                  discr_ps_phi
     USE mo_q_assimi_constants,     ONLY: ic3phot !, ic4phot
@@ -1147,10 +1144,7 @@ CONTAINS
   !
   ! C14
   !
-#ifndef _OPENACC
-  PURE ELEMENTAL &
-#endif
-  FUNCTION discrimination_ps_c14(ci, ca, ps_pathway) RESULT(discrimination)
+  PURE ELEMENTAL FUNCTION discrimination_ps_c14(ci, ca, ps_pathway) RESULT(discrimination)
     USE mo_q_assimi_parameters,    ONLY: discr_ps_a_C14, discr_ps_b_C14, discr_ps_c_C14, &
       &                                  discr_ps_phi
     USE mo_q_assimi_constants,     ONLY: ic3phot !, ic4phot
