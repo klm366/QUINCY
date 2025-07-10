@@ -365,7 +365,7 @@ CONTAINS
         & nsoil_sb, &
         & lctlib_phi_leaf_min, &
         & num_sl_above_bedrock(:), &
-        & root_fraction_sl(:,:), & 
+        & root_fraction_sl(:,:), &
         & wtr_soil_pot_sl(:,:), &     ! in
         & ftranspiration_sl(:,:) &    ! out
         & )
@@ -1220,7 +1220,7 @@ CONTAINS
       ftranspiration_sum = 0.0_wp
       !$ACC LOOP GANG VECTOR
       DO iwpot = 0, 10
-        IF (ftranspiration_sum == 0.0_wp) THEN      
+        IF (ftranspiration_sum == 0.0_wp) THEN
 
           !> 1.1 determine fraction of transpiration per soil layer
           !>     the first instance of the loop takes the PFT specific minimum
@@ -1232,10 +1232,10 @@ CONTAINS
             ftranspiration_sl(ic, is) = 0.0_wp
             IF ((is <= num_sl_above_bedrock(ic)) .AND. (root_fraction_sl(ic, is) > eps8)) THEN
               hlp = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, is), &
-                &                             lctlib_phi_leaf_min + phi_inc * REAL(iwpot, wp)) ! DBLE(iwpot))
+                &                             lctlib_phi_leaf_min + phi_inc * REAL(iwpot, wp))
               IF (hlp > eps4) THEN
                 ftranspiration_sl(ic, is) = root_fraction_sl(ic, is) * hlp
-                ftranspiration_sum        = ftranspiration_sum + ftranspiration_sl(ic, is)     
+                ftranspiration_sum        = ftranspiration_sum + ftranspiration_sl(ic, is)
               END IF
             END IF
           END DO
