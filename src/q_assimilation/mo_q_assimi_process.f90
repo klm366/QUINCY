@@ -1178,7 +1178,7 @@ CONTAINS
   SUBROUTINE calc_ftranspiration_sl( &
     & nc, &
     & nsoil_sb, &
-    & lctlib_phi_leaf_min, & 
+    & lctlib_phi_leaf_min, &
     & root_fraction_sl, &
     & wtr_soil_pot_sl, &
     & ftranspiration_sl)
@@ -1188,9 +1188,9 @@ CONTAINS
     INTEGER,  INTENT(in)    :: nc                       !< dimension chunk
     INTEGER,  INTENT(in)    :: nsoil_sb                 !< dimension soil layers
     REAL(wp), INTENT(in)    :: lctlib_phi_leaf_min      !< leaf minimum water potential (MPa)
-    REAL(wp), INTENT(in)    :: root_fraction_sl(:,:)    !< fraction of fine roots per layer  
-    REAL(wp), INTENT(in)    :: wtr_soil_pot_sl(:,:)     !< soil water matrix potential (MPa) 
-    REAL(wp), INTENT(out)   :: ftranspiration_sl(:,:)   !< fraction of transpiration from layer  
+    REAL(wp), INTENT(in)    :: root_fraction_sl(:,:)    !< fraction of fine roots per layer
+    REAL(wp), INTENT(in)    :: wtr_soil_pot_sl(:,:)     !< soil water matrix potential (MPa)
+    REAL(wp), INTENT(out)   :: ftranspiration_sl(:,:)   !< fraction of transpiration from layer
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER        :: ic, is                 !< loop over grid cells and soil layers
     INTEGER        :: iwpot                  !< looping [0,10]
@@ -1199,38 +1199,38 @@ CONTAINS
     REAL(wp)       :: phi_inc = -0.25_wp     !< constant used for increment in [0,10] loop
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_ftranspiration_sl'
     ! ----------------------------------------------------------------------------------------------------- !
-    
+
     DO ic = 1, nc
-      ! set to zero here to ensure executing once 
+      ! set to zero here to ensure executing once
       sum_ftranspiration_sl = 0.0_wp
       DO iwpot = 0, 10
         IF (sum_ftranspiration_sl == 0.0_wp) THEN
- 
+
           !> 1.1 determine fraction of transpiration per soil layer
           !>     the first instance of the loop takes the PFT specific minimum
           !>     leaf water potential, all further iterations attempt to distribute
-          !>     residual transpiration (due to min. conductance) across soil layers according 
+          !>     residual transpiration (due to min. conductance) across soil layers according
           !>     to soil moisture
           DO is = 1, nsoil_sb
             ftranspiration_sl(ic, is) = 0.0_wp
             IF (root_fraction_sl(ic, is) > eps8) THEN
-              hlp = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, is), & 
+              hlp = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, is), &
                 &                             lctlib_phi_leaf_min + phi_inc * REAL(iwpot, wp)) ! DBLE(iwpot))
               IF (hlp > eps4) THEN
                 ftranspiration_sl(ic, is) = root_fraction_sl(ic, is) * hlp
-                sum_ftranspiration_sl     = sum_ftranspiration_sl + ftranspiration_sl(ic, is) 
+                sum_ftranspiration_sl     = sum_ftranspiration_sl + ftranspiration_sl(ic, is)
               END IF
             END IF
           END DO
         END IF
       END DO
-        
+
       IF (SUM(ftranspiration_sl(ic,:)) > eps8) THEN
         ftranspiration_sl(ic,:) = ftranspiration_sl(ic,:) / SUM(ftranspiration_sl(ic,:))
       END IF
     END DO
 
-  END SUBROUTINE calc_ftranspiration_sl 
+  END SUBROUTINE calc_ftranspiration_sl
 
 #endif
 END MODULE mo_q_assimi_process
