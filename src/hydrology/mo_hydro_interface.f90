@@ -1608,7 +1608,7 @@ CONTAINS
       ! !$ACC LOOP SEQ
       ! DO is = 1, nsoil
       !   !$ACC LOOP GANG VECTOR
-      !   DO  ic = 1, nc
+      !   DO ic = 1, nc
       !     ftranspiration_sum(ic) = ftranspiration_sum(ic) + ftranspiration_sl(ic, is)
       !   END DO
       ! END DO
@@ -1616,7 +1616,7 @@ CONTAINS
       ! ! scale ftranspiration_sl
       ! !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       ! DO is = 1, nsoil
-      !   DO  ic = 1, nc
+      !   DO ic = 1, nc
       !     IF (ftranspiration_sum(ic) > eps8) THEN
       !       ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum(ic)
       !     END IF
