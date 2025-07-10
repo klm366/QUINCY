@@ -69,16 +69,21 @@ MODULE mo_dfire_constants
   REAL(wp), PARAMETER  :: df_sf_max_density_human_pop = 16._wp    !< Maximum density_human_population (eq. 3)
 
   ! todo: sf_dead_fuel_pools_nr
-  INTEGER, PARAMETER :: sf_fuel_dead_fuel_nr = 7  !< (sb_pool) woody/leaf, (veg_pool grass) sap wood/labile/reserve/fruit/polymeric
+  INTEGER, PARAMETER :: sf_fuel_dead_fuel_nr = 12  !< (sb_pool) woody/leaf, (veg_pool grass) sap wood/labile/reserve/fruit/polymeric
   ENUM, BIND(C)
   !< Ensure how much to remove from each pool
-    ENUMERATOR :: t_sf_fuel_dead_fuel_woody_ix = 1, &             !< from sb_pool_mt
-                  t_sf_fuel_dead_fuel_grass_leaf_ix, &            !< from veg_pool_mt
-                  t_sf_fuel_dead_fuel_grass_sap_ix, &             !< from veg_pool_mt
-                  t_sf_fuel_dead_fuel_grass_labile_ix, &          !< from veg_pool_mt
-                  t_sf_fuel_dead_fuel_grass_reserve_ix, &         !< from veg_pool_mt
-                  t_sf_fuel_dead_fuel_grass_fruit_ix, &           !< from veg_pool_mt
-                  t_sf_fuel_dead_fuel_polymeric_ix                !< from sb_pool_mt ( Optional)
+    ENUMERATOR :: t_sf_fuel_dead_fuel_woody_ix = 1, &     !< from sb_pool_mt
+                  t_sf_fuel_dead_fuel_grass_leaf_ix, &    !< from veg_pool_mt
+                  t_sf_fuel_dead_fuel_grass_sap_ix, &     !< from veg_pool_mt
+                  t_sf_fuel_dead_fuel_grass_labile_ix, &  !< from veg_pool_mt
+                  t_sf_fuel_dead_fuel_grass_reserve_ix, & !< from veg_pool_mt
+                  t_sf_fuel_dead_fuel_grass_fruit_ix, &   !< from veg_pool_mt
+                  t_sf_fuel_dead_fuel_polymeric_ix, &     !< from sb_pool_mt ( Optional)
+                  t_sf_fuel_dead_fuel_dom_assoc_ix, &     !< from sb_pool_mt ( Optional)
+                  t_sf_fuel_dead_fuel_dom_ix, &           !< from sb_pool_mt ( Optional)
+                  t_sf_fuel_dead_fuel_soluable_ix, &      !< from sb_pool_mt ( Optional)
+                  t_sf_fuel_dead_fuel_res_ix, &           !< from sb_pool_mt ( Optional)
+                  t_sf_fuel_dead_fuel_res_assoc_ix        !< from sb_pool_mt ( Optional)
   END ENUM
 
   INTEGER, PARAMETER :: df_sf_elements_nr = 6 !< C, C13, C14, N, N15, P

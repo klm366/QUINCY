@@ -245,7 +245,7 @@ MODULE mo_jsb_lctlib_class
                 q_F_scorch_height            , &
                 q_fuel_bulk_density          , &
                 q_fwd_wind_factor            , &
-                q_moisture_extinction        , &
+                q_moisture_extinction
 
 
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------

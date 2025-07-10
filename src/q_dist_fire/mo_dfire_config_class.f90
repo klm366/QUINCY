@@ -82,6 +82,11 @@ MODULE mo_dfire_config_class
 
     !< flags
     REAL(wp)          :: ratio_polymeric_litter_to_dead_fuel !< Ratio to include polymeric litter as dead fuel
+    REAL(wp)          :: ratio_dom_assoc_to_dead_fuel       !< Ratio to include dom_assoc as dead fuel
+    REAL(wp)          :: ratio_dom_to_dead_fuel             !< Ratio to include dom as dead fuel
+    REAL(wp)          :: ratio_soluable_litter_to_dead_fuel !< Ratio to include soluable as dead fuel
+    REAL(wp)          :: ratio_residue_to_dead_fuel         !< Ratio to include residue as dead fuel
+    REAL(wp)          :: ratio_residue_assoc_to_dead_fuel   !< Ratio to include residue_assoc as dead fuel
 
     !< Dev Flags
     LOGICAL           :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
@@ -135,6 +140,11 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_fuel_moisture
     
     REAL(wp)                      :: ratio_polymeric_litter_to_dead_fuel !< Ratio polymeric litter to include as dead fuels
+    REAL(wp)                      :: ratio_dom_assoc_to_dead_fuel       !< Ratio to include dom_assoc as dead fuel
+    REAL(wp)                      :: ratio_dom_to_dead_fuel             !< Ratio to include dom as dead fuel
+    REAL(wp)                      :: ratio_soluable_litter_to_dead_fuel !< Ratio to include soluable as dead fuel
+    REAL(wp)                      :: ratio_residue_to_dead_fuel         !< Ratio to include residue as dead fuel
+    REAL(wp)                      :: ratio_residue_assoc_to_dead_fuel   !< Ratio to include residue_assoc as dead fuel
     LOGICAL                       :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
     LOGICAL                       :: flag_has_live_feedback      !< Flag to enable live fuel feedback from Spitfire into Quincy
     LOGICAL                       :: flag_has_prob_mort_feedback !< Flag to enable live probability of mortality from Spitfire into Quincy (q_veg_dynamics.f90)
@@ -158,7 +168,12 @@ CONTAINS
       & lightning_frequency,        &         ! 
       & a_nd,                       &         ! 
       &  fract_crown_scorch,        &         ! 
-      & ratio_polymeric_litter_to_dead_fuel, &
+      & ratio_polymeric_litter_to_dead_fuel,  &
+      & ratio_dom_assoc_to_dead_fuel,         & ! spitfire
+      & ratio_dom_to_dead_fuel,               &
+      & ratio_soluable_litter_to_dead_fuel,   &
+      & ratio_residue_to_dead_fuel,           &
+      & ratio_residue_assoc_to_dead_fuel,     &
       & flag_has_dead_feedback,     &
       & flag_has_live_feedback,     &
       & flag_has_prob_mort_feedback, &
@@ -184,6 +199,11 @@ CONTAINS
     a_nd                     = 0.000048           ! 
     fract_crown_scorch       = [1.0, 0.05, 0., 0.]
     ratio_polymeric_litter_to_dead_fuel = 0._wp
+    ratio_dom_assoc_to_dead_fuel        = 0._wp
+    ratio_dom_to_dead_fuel              = 0._wp
+    ratio_soluable_litter_to_dead_fuel  = 0._wp
+    ratio_residue_to_dead_fuel          = 0._wp
+    ratio_residue_assoc_to_dead_fuel    = 0._wp
     flag_has_dead_feedback   = .TRUE.
     flag_has_live_feedback   = .TRUE.
     flag_has_prob_mort_feedback = .TRUE.
@@ -215,6 +235,11 @@ CONTAINS
     config%a_nd                      = a_nd                           ! 
     config%fract_crown_scorch        = fract_crown_scorch             ! 
     config%ratio_polymeric_litter_to_dead_fuel = ratio_polymeric_litter_to_dead_fuel ! spitfire
+    config%ratio_dom_assoc_to_dead_fuel        = ratio_dom_assoc_to_dead_fuel          ! spitfire
+    config%ratio_dom_to_dead_fuel              = ratio_dom_to_dead_fuel                ! spitfire
+    config%ratio_soluable_litter_to_dead_fuel  = ratio_soluable_litter_to_dead_fuel    ! spitfire
+    config%ratio_residue_to_dead_fuel          = ratio_residue_to_dead_fuel            ! spitfire
+    config%ratio_residue_assoc_to_dead_fuel    = ratio_residue_assoc_to_dead_fuel      ! spitfire
     config%flag_has_dead_feedback    = flag_has_dead_feedback         !
     config%flag_has_live_feedback    = flag_has_live_feedback         !
     config%flag_has_prob_mort_feedback = flag_has_prob_mort_feedback  !

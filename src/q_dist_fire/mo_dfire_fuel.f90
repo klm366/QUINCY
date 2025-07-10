@@ -119,7 +119,6 @@ CONTAINS
     REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2?]
     REAL(wp), POINTER                     :: tile_fract_ref(:) ! [%]
     REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:) !< Top soil depth layer [m]
-    REAL(wp)                              :: config_polymeric_litter_fract !< how much polymeric litter account as dead fuel (0 to 1)
 
     REAL(wp), POINTER, CONTIGUOUS         :: live_fuel_frac(:,:) !< live fuel classes allocation from veg_pool (#fuel classes,#live pools)
     REAL(wp), ALLOCATABLE                 :: sb_pool_slim(:,:) !< debug only  (#pools, #nc)
@@ -242,7 +241,6 @@ CONTAINS
     fuel_bulk_density = 0._wp
     top_soil_depth_sl = soil_depth_sl(:,df_sf_spq_layer_top_sl)
     lctlib_growthform(:) = lctlib%growthform
-    config_polymeric_litter_fract = dsl4jsb_Config(DFIRE_)%ratio_polymeric_litter_to_dead_fuel
     moisture_extinction = lctlib%q_moisture_extinction ! aggregation: weighted over tile fraction
     fwd_wind_factor = lctlib%q_fwd_wind_factor ! aggregation: weighted over tile fraction
 
@@ -276,7 +274,7 @@ CONTAINS
     fuel_cls = t_sf_fuel_class(nc, lctlib_growthform, &
                             dead_fuel_frac, live_fuel_frac, &
                             sb_pool_in_gdm, veg_pool_in_gdm, &
-                            config_polymeric_litter_fract)
+                            ratio_as_dead_fuel)
 
     live_grass_fuel_fcl = fuel_cls % calc_live_grass_fuel()
     live_tree_fuel_fcl = fuel_cls % calc_live_tree_fuel()

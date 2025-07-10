@@ -464,10 +464,8 @@ CONTAINS
       CALL model%Queue_task(RAD_, "albedo")                       ! ALL
 
       !-- averaging variables in time
-!      write(*,*) "jsbach_model_init:: jsbach_init:: running..."
       IF(model%config%qmodel_id == QLAND) THEN
         IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
-!          write(*,*) "jsbach_model_init:: jsbach_init:: running tavrg_dist_fire..."
           CALL model%Queue_task(DFIRE_, "tavrg_dist_fire")   ! LAND ONLY
         ENDIF
       ENDIF

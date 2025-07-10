@@ -32,8 +32,11 @@ MODULE mo_dfire_init
   USE mo_exception,               ONLY: message
   USE mo_jsb_control,             ONLY: debug_on
 
-  USe mo_dfire_constants,         ONLY: df_sf_fire_duration_thd
+  USE mo_dfire_constants,         ONLY: df_sf_fire_duration_thd
   USE mo_dfire_constants,         ONLY: ratio_as_dead_fuel
+#ifndef __QUINCY_STANDALONE__
+  USE mo_jsb_time,                ONLY: timestep_in_days
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -47,7 +50,7 @@ CONTAINS
   !>
   !> Intialize disturbance fire process (after memory has been set up)
   !>
-  SUBROUTINE dfire_q_init(tile, options)
+  SUBROUTINE dfire_init(tile)
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_process_class,       ONLY: DFIRE_
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
@@ -61,10 +64,9 @@ CONTAINS
     dsl4jsb_Use_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
-    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER              :: model
-    INTEGER                                      :: iblk, ics, ice, nc, npft
+    !INTEGER                                      :: iblk, ics, ice, nc, npft
     REAL(wp)                                     :: dtime
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':dfire_init'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -125,17 +127,21 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: frac_consump_fcl
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
-    dtime   = options%dtime
+    !iblk    = options%iblk
+    !ics     = options%ics
+    !ice     = options%ice
+    !nc      = options%nc
+    !dtime   = options%dtime
+    dtime=timestep_in_days(model_id=tile%owner_model_id)
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN
     !IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model  => get_model(tile%owner_model_id)
+    !hgrid  => Get_grid(model%grid_id)
+    !nblks  =  hgrid%nblks
+    !nproma =  hgrid%nproma
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_)
