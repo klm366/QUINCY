@@ -2182,6 +2182,7 @@ CONTAINS
 
     dsl4jsb_Def_memory(HYDRO_)
 
+    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_water_stress'
@@ -2196,6 +2197,7 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
 
+    model             => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     ! HYDRO_
@@ -2208,6 +2210,13 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail_max, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,           weighted_by_fract)
+
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_root_pot,    weighted_by_fract)
+    END SELECT
+#endif
 
     CALL weighted_by_fract%EndAggregate()
 
