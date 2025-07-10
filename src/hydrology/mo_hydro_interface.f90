@@ -1595,42 +1595,42 @@ CONTAINS
       dsl4jsb_Get_memory(Q_ASSIMI_)
       dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl)     ! in
 
-      !
-      ! temporary correction to ensure ftranspiration_sl sums up to 1.0 across soil layers
-      !
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic = 1, nc
-        ftranspiration_sum(ic) = 0.0_wp
-      END DO
-      !$ACC END PARALLEL LOOP
-      ! calc ftranspiration_sum
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-      !$ACC LOOP SEQ
-      DO is = 1, nsoil
-        !$ACC LOOP GANG VECTOR
-        DO  ic = 1, nc
-          ftranspiration_sum(ic) = ftranspiration_sum(ic) + ftranspiration_sl(ic, is)
-        END DO
-      END DO
-      !$ACC END PARALLEL
-      ! scale ftranspiration_sl
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO is = 1, nsoil
-        DO  ic = 1, nc
-          IF (ftranspiration_sum(ic) > eps8) THEN
-            ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum(ic)
-          END IF
-        END DO
-      END DO
-      !$ACC END PARALLEL LOOP
-      ! additional temporary fix !
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic = 1, nc
-        IF (ftranspiration_sum(ic) < eps8) THEN
-          ftranspiration_sl(ic, 1) = 1.0_wp
-        END IF
-      END DO
-      !$ACC END PARALLEL LOOP
+      ! !
+      ! ! temporary correction to ensure ftranspiration_sl sums up to 1.0 across soil layers
+      ! !
+      ! !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      ! DO ic = 1, nc
+      !   ftranspiration_sum(ic) = 0.0_wp
+      ! END DO
+      ! !$ACC END PARALLEL LOOP
+      ! ! calc ftranspiration_sum
+      ! !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      ! !$ACC LOOP SEQ
+      ! DO is = 1, nsoil
+      !   !$ACC LOOP GANG VECTOR
+      !   DO  ic = 1, nc
+      !     ftranspiration_sum(ic) = ftranspiration_sum(ic) + ftranspiration_sl(ic, is)
+      !   END DO
+      ! END DO
+      ! !$ACC END PARALLEL
+      ! ! scale ftranspiration_sl
+      ! !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      ! DO is = 1, nsoil
+      !   DO  ic = 1, nc
+      !     IF (ftranspiration_sum(ic) > eps8) THEN
+      !       ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum(ic)
+      !     END IF
+      !   END DO
+      ! END DO
+      ! !$ACC END PARALLEL LOOP
+      ! ! additional temporary fix !
+      ! !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      ! DO ic = 1, nc
+      !   IF (ftranspiration_sum(ic) < eps8) THEN
+      !     ftranspiration_sl(ic, 1) = 1.0_wp
+      !   END IF
+      ! END DO
+      ! !$ACC END PARALLEL LOOP
 
       CALL calc_soil_hydrology( &
         ! in
