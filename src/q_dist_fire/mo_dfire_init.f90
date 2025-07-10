@@ -44,6 +44,14 @@ MODULE mo_dfire_init
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_init'
 
+  TYPE :: t_dfire_init_vars
+    REAL(wp), POINTER ::      &
+        pop_dens( :,:) => NULL(), &
+        lightning_events( :,:) => NULL()
+  END TYPE t_dfire_init_vars
+
+  TYPE(t_dfire_init_vars) :: dfire_init_vars
+
 CONTAINS
 
   ! ======================================================================================================= !
@@ -261,6 +269,145 @@ CONTAINS
     ratio_as_dead_fuel % soluable       = dsl4jsb_Config(DFIRE_)%ratio_soluable_litter_to_dead_fuel
     ratio_as_dead_fuel % residue        = dsl4jsb_Config(DFIRE_)%ratio_residue_to_dead_fuel
     ratio_as_dead_fuel % residue_assoc  = dsl4jsb_Config(DFIRE_)%ratio_residue_assoc_to_dead_fuel
+
+#ifdef __QUINCY_STANDALONE__
+    ! quincy only
+#else
+    ! IQ only
+    ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
+    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+      CALL dfire_read_init_vars(tile)
+    END IF
+
+    !CALL spq_init_ic_bc(tile)
+    ic_population_density(:,:) = SPREAD(dfire_init_vars%pop_dens(:,:), DIM = 2)
+    ic_a_nd(:,:) = ic_population_density * 4._wp
+    ic_lightning_events(:,:) = SPREAD(dfire_init_vars%lightning_events(:,:), DIM = 2)
+
+    IF (tile%Is_last_process_tile(SPQ_)) THEN
+    !  CALL spq_finalize_init_vars()
+    END IF
+#endif
   END SUBROUTINE dfire_init
+#endif
+
+
+#ifdef __QUINCY_STANDALONE__
+  SUBROUTINE dfire_read_init_vars(tile)
+    USE mo_jsb_model_class,    ONLY: t_jsb_model
+    USE mo_jsb_class,          ONLY: get_model
+    USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+    USE mo_jsb_io,             ONLY: missval
+
+    dsl4jsb_Use_config(SPQ_)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    dsl4jsb_Def_config(SPQ_)
+
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: hgrid
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
+    INTEGER                     :: nproma
+    INTEGER                     :: nblks
+    INTEGER                     :: nsoil_sb
+    CHARACTER(len=*), PARAMETER :: routine = modname//':dfire_qs_read_init_vars'
+
+    IF (debug_on()) CALL message(routine, 'Reading/setting DFIRE_ init vars')
+
+    model  => Get_model(tile%owner_model_id)
+    hgrid  => Get_grid(model%grid_id)
+    nproma = hgrid%Get_nproma()
+    nblks  = hgrid%Get_nblks()
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
+
+    ALLOCATE( &
+      & dfire_init_vars%pop_dens               (nproma, nblks),       &
+      & dfire_init_vars%lightning_events       (nproma, nblks),       &
+      & )
+
+    dfire_init_vars%pop_dens              (:,:) = missval
+    dfire_init_vars%lightning_events      (:,:) = missval
+
+    dsl4jsb_Get_config(DFIRE_)
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    dfire_init_vars%pop_dens(:,:) = dsl4jsb_Config(DFIRE_)%pop_dens
+    dfire_init_vars%lightning_events(:,:) = dsl4jsb_Config(DFIRE_)%lightning_events
+  END SUBROUTINE dfire_read_init_vars
+#else
+  ! ======================================================================================================= !
+  !> read SPQ_ init vars from input file
+  !>
+  SUBROUTINE dfire_read_init_vars(tile)
+    USE mo_jsb_model_class,    ONLY: t_jsb_model
+    USE mo_jsb_class,          ONLY: get_model
+    USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+    USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_jsb_io,             ONLY: missval
+
+    dsl4jsb_Use_config(DFIRE_)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    dsl4jsb_Def_config(DFIRE_)
+
+    REAL(wp), POINTER           :: ptr_2D(:, :)
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: hgrid
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
+    TYPE(t_input_file)          :: input_file
+    INTEGER                     :: nproma
+    INTEGER                     :: nblks
+    INTEGER                     :: nsoil_sb
+    CHARACTER(len=*), PARAMETER :: routine = modname//':dfire_read_init_vars'
+
+    IF (debug_on()) CALL message(routine, 'Reading/setting DFIRE_ init vars')
+
+    model  => Get_model(tile%owner_model_id)
+    hgrid  => Get_grid(model%grid_id)
+    nproma = hgrid%Get_nproma()
+    nblks  = hgrid%Get_nblks()
+
+    ALLOCATE( &
+        & dfire_init_vars%pop_dens               (nproma, nblks),       &
+        & dfire_init_vars%lightning_events       (nproma, nblks),       &
+        & )
+
+    dfire_init_vars%pop_dens              (:,:) = missval
+    dfire_init_vars%lightning_events      (:,:) = missval
+
+    dsl4jsb_Get_config(DFIRE_)
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    ! Read data from populations density file
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DFIRE_)%ic_popdens_filename), model%grid_id)
+
+    !> pop dens
+    ptr_2D => input_file%Read_2d(  &
+        & variable_name='Band1', &
+        & fill_array = spq_init_vars%pop_dens)
+    spq_init_vars%pop_dens = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+    CALL input_file%Close()
+
+
+    ! Read data from sso file
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DFIRE_)%ic_lightning_events_filename), model%grid_id)
+
+    !>
+    ptr_2D => input_file%Read_2d(  &
+        & variable_name='HRMC_COM_FR', &
+        & fill_array = dfire_init_vars%lightning_events)
+    dfire_init_vars%lightning_events = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+    CALL input_file%Close()
+
+  END SUBROUTINE dfire_read_init_vars
 #endif
 END MODULE mo_dfire_init
