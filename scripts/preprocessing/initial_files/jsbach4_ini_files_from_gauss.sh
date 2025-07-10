@@ -109,9 +109,9 @@ source_res_dict[11]=T255
 varlist_gauss="glac lake init_moist snow roughness_length albedo
 fao forest_fract lai_clim veg_fract surf_temp veg_ratio_max
 albedo_veg_vis albedo_veg_nir albedo_soil_vis albedo_soil_nir roughness_length_oro
-soil_depth layer_moist cover_fract"
+layer_moist cover_fract"
 varlist_extpar="elevation oromea orostd orosig orogam orothe skin_conductivity"
-varlist_05="bclapp bclapp_mineral heat_capacity heat_capacity_mineral
+varlist_05="soil_depth bclapp bclapp_mineral heat_capacity heat_capacity_mineral
 heat_conductivity heat_conductivity_mineral hyd_cond_sat hyd_cond_sat_mineral
 moisture_pot moisture_pot_mineral pore_size_index pore_size_index_mineral
 residual_water residual_water_mineral soil_field_cap soil_field_cap_mineral
@@ -233,6 +233,10 @@ function prepare_data_from_05_grid {
     echo "Prepare depression data ..."
     ${cdo} splitname ${pool_prepare}/05/depr_stor_cop_05.nc                  reg_05_
   fi
+
+  # Soil depth
+  ${cdo} invertlat -selvar,soildepth ${pool_prepare}/05/soil_parameters_05.nc \
+         reg_05_soil_depth.nc
 
   # Non-glacier-land mask
   ${cdo} setname,land -setmisstoc,0 -ifthenc,1 reg_05_heat_capacity.nc reg_05_non-glac-land.nc
@@ -1070,10 +1074,10 @@ do
 
   crosscheck_vars
 
-  if [[ ${jsb4icon} == true ]]
-  then
-    modify_soil_and_root_depth
-  fi
+  ## if [[ ${jsb4icon} == true ]]
+  ## then
+  ##   modify_soil_and_root_depth
+  ## fi
 
   generate_output_files
 

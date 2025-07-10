@@ -494,7 +494,7 @@ CONTAINS
       DO blk = blks, blke
         jcs = grid%get_col_start(blk)
         jce = grid%get_col_end(blk)
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+        !$ACC PARALLEL DEFAULT(PRESENT) NO_CREATE(nidx_upstream, bidx_upstream) ASYNC(acc_stream)
         !$ACC LOOP SEQ
         DO n = 1, nneigh
           !$ACC LOOP GANG VECTOR PRIVATE(jc_us, blk_us)
@@ -598,14 +598,16 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       ! global integrals
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
-      DO blk = 1, nblks
-        DO jc = 1, nproma
-          ztemp(jc,blk) = discharge(jc,blk) * in_domain(jc,blk)
+      IF (debug_hd) THEN
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
+        DO blk = 1, nblks
+          DO jc = 1, nproma
+            ztemp(jc,blk) = discharge(jc,blk) * in_domain(jc,blk)
+          END DO
         END DO
-      END DO
-      !$ACC END PARALLEL LOOP
-      global_discharge       = global_sum_array(ztemp, lacc=.TRUE.)
+        !$ACC END PARALLEL LOOP
+        global_discharge = global_sum_array(ztemp, lacc=.TRUE.)
+      END IF
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma

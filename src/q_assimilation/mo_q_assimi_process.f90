@@ -50,6 +50,7 @@ CONTAINS
     USE mo_isotope_util,           ONLY: calc_fractionation
     USE mo_phy_schemes             ! e.g., heat_transfer_coef
     USE mo_q_assimi_parameters,    ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
+    USE mo_q_assimi_constants,     ONLY: min_aerodyn_cond
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(Q_ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
@@ -344,7 +345,8 @@ CONTAINS
     ! calc aerodynamic conductance
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      aerodyn_cond(ic) = heat_transfer_coef(drag_srf_local(ic), dtime, alpha) * MIN( MAX(wind_10m(ic), min_wind), max_wind)
+      aerodyn_cond(ic) = MAX(min_aerodyn_cond, &
+        &                heat_transfer_coef(drag_srf_local(ic), dtime, alpha) * MIN( MAX(wind_10m(ic), min_wind), max_wind))
     END DO
     !$ACC END PARALLEL LOOP
 

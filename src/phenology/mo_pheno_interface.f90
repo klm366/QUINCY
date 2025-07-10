@@ -717,7 +717,7 @@ CONTAINS
 
     !$ACC DATA CREATE(wgt1, wgt2, nmw1, nmw2) ASYNC(acc_stream)
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2, acc_stream)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, nmw1, wgt2, nmw2) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       lai(ic) = REAL(wgt1,wp) * lai_mon(ic,nmw1) + REAL(wgt2,wp) * lai_mon(ic,nmw2)
     END DO
@@ -846,7 +846,8 @@ CONTAINS
       fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
       !$ACC DATA CREATE(wgt1, wgt2, nmw1, nmw2) ASYNC(acc_stream)
       CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2, acc_stream)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, nmw1, wgt2, nmw2) GANG VECTOR ASYNC(acc_stream)
+
       DO ic = 1, nc
         fract_fpc(ic) = REAL(wgt1,wp) * fract_fpc_mon(ic,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(ic,nmw2)
       END DO
