@@ -80,6 +80,9 @@ MODULE mo_dfire_config_class
                                                      !< [ignitions indivual-1 d-1]      
     REAL(wp)          :: fract_crown_scorch(4)       !< Fraction of live fuel consumed in crown scorch
 
+    ! input data
+    CHARACTER(len=filename_max) :: ic_popdens_filename, ic_lightning_events_filename
+
     !< flags
     REAL(wp)          :: ratio_polymeric_litter_to_dead_fuel !< Ratio to include polymeric litter as dead fuel
     REAL(wp)          :: ratio_dom_assoc_to_dead_fuel       !< Ratio to include dom_assoc as dead fuel
@@ -133,6 +136,8 @@ CONTAINS
     REAL(wp)                      :: lightning_frequency      !<
     REAL(wp)                      :: a_nd                     !< 
     REAL(wp)                      :: fract_crown_scorch(4)    !< Fraction of live fuel consumption from crown scorch
+    CHARACTER(len=filename_max)   :: ic_popdens_filename
+    CHARACTER(len=filename_max)   :: ic_lightning_events_filename
 
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_dead_fuel_pools
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_live_fuel_pools
@@ -166,8 +171,10 @@ CONTAINS
       & dfire_precip_method_name,   &
       & density_human_population,   &         ! ignition events 
       & lightning_frequency,        &         ! 
-      & a_nd,                       &         ! 
-      &  fract_crown_scorch,        &         ! 
+      & a_nd,                       &         !
+      & ic_popdens_filename,        &
+      & ic_lightning_events_filename, &
+      & fract_crown_scorch,           &
       & ratio_polymeric_litter_to_dead_fuel,  &
       & ratio_dom_assoc_to_dead_fuel,         & ! spitfire
       & ratio_dom_to_dead_fuel,               &
@@ -196,7 +203,9 @@ CONTAINS
     dfire_precip_method_name = TRIM(dfire_cfg_precip_method_mavg)  ! 'mavg'
     density_human_population = 55.0               ! Ignition events 
     lightning_frequency      = 0.000012           ! 
-    a_nd                     = 0.000048           ! 
+    a_nd                     = 0.000048           !
+    ic_popdens_filename      = "ic_popdens_filename.nc"
+    ic_lightning_events_filename = "ic_lightning_evengs_filename.nc"
     fract_crown_scorch       = [1.0, 0.05, 0., 0.]
     ratio_polymeric_litter_to_dead_fuel = 0._wp
     ratio_dom_assoc_to_dead_fuel        = 0._wp
@@ -232,7 +241,9 @@ CONTAINS
     config%dfire_precip_method_name  = TRIM(dfire_precip_method_name)
     config%density_human_population  = density_human_population       ! Ignition events 
     config%lightning_frequency       = lightning_frequency            ! 
-    config%a_nd                      = a_nd                           ! 
+    config%a_nd                      = a_nd                           !
+    config%ic_popdens_filename       = ic_popdens_filename
+    config%ic_lightning_events_filename = ic_lightning_events_filename
     config%fract_crown_scorch        = fract_crown_scorch             ! 
     config%ratio_polymeric_litter_to_dead_fuel = ratio_polymeric_litter_to_dead_fuel ! spitfire
     config%ratio_dom_assoc_to_dead_fuel        = ratio_dom_assoc_to_dead_fuel          ! spitfire
