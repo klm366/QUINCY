@@ -315,55 +315,61 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    ! !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) &
-    ! !$ACC   PRIVATE(hlp)
-    ! DO is = 1,nsoil_sb
-    !   DO ic = 1, nc
-    !     IF ((is <= num_sl_above_bedrock(ic)) .AND. (t_soil_sl(ic, is) > Tzero)) THEN
-    !       hlp                       = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, is), lctlib_phi_leaf_min)
-    !       ftranspiration_sl(ic, is) = root_fraction_sl(ic, is) * hlp
-    !     END IF
-    !   END DO
-    ! END DO
-    ! !$ACC END PARALLEL LOOP
+    ! QUINCY with SPQ_
+    IF (.NOT. model%config%use_soil_phys_jsbach) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) &
+      !$ACC   PRIVATE(hlp)
+      DO is = 1,nsoil_sb
+        DO ic = 1, nc
+          IF ((is <= num_sl_above_bedrock(ic)) .AND. (t_soil_sl(ic, is) > Tzero)) THEN
+            hlp                       = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, is), lctlib_phi_leaf_min)
+            ftranspiration_sl(ic, is) = root_fraction_sl(ic, is) * hlp
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
 
-    ! ! re-calc transpiration as fraction of transpiration per soil layer
-    ! !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    ! DO ic = 1, nc
-    !   ftranspiration_sum_local(ic) = 0.0_wp
-    ! END DO
-    ! !$ACC END PARALLEL LOOP
+      ! re-calc transpiration as fraction of transpiration per soil layer
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        ftranspiration_sum_local(ic) = 0.0_wp
+      END DO
+      !$ACC END PARALLEL LOOP
 
-    ! !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    ! !$ACC LOOP SEQ
-    ! DO is = 1, nsoil_sb
-    !   !$ACC LOOP GANG(STATIC: 1) VECTOR
-    !   DO ic = 1, nc
-    !     ftranspiration_sum_local(ic) = ftranspiration_sum_local(ic) + ftranspiration_sl(ic, is)
-    !   END DO
-    ! END DO
-    ! !$ACC END PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil_sb
+        !$ACC LOOP GANG(STATIC: 1) VECTOR
+        DO ic = 1, nc
+          ftranspiration_sum_local(ic) = ftranspiration_sum_local(ic) + ftranspiration_sl(ic, is)
+        END DO
+      END DO
+      !$ACC END PARALLEL
 
-    ! !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-    ! DO is = 1, nsoil_sb
-    !   DO ic = 1, nc
-    !     IF (ftranspiration_sum_local(ic) > eps8) THEN
-    !       ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum_local(ic)
-    !     ELSE
-    !       ftranspiration_sl(ic, is) = 0.0_wp
-    !     END IF
-    !   END DO
-    ! END DO
-    ! !$ACC END PARALLEL LOOP
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO is = 1, nsoil_sb
+        DO ic = 1, nc
+          IF (ftranspiration_sum_local(ic) > eps8) THEN
+            ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum_local(ic)
+          ELSE
+            ftranspiration_sl(ic, is) = 0.0_wp
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
 
-    CALL calc_ftranspiration_sl( &
-      & nc, &
-      & nsoil_sb, &
-      & lctlib_phi_leaf_min, &
-      & root_fraction_sl(:,:), &  ! in
-      & wtr_soil_pot_sl(:,:), &   ! in
-      & ftranspiration_sl(:,:) &  ! out
-      & )
+    ! QUINCY with jsbach soil-physic processes
+    ELSE
+      CALL calc_ftranspiration_sl( &
+        & nc, &
+        & nsoil_sb, &
+        & lctlib_phi_leaf_min, &
+        & num_sl_above_bedrock(:), &
+        & root_fraction_sl(:,:), & 
+        & wtr_soil_pot_sl(:,:), &     ! in
+        & ftranspiration_sl(:,:) &    ! out
+        & )
+    END IF ! model%config%use_soil_phys_jsbach
 
     !> 1.2 determine aerodynamic conductance
     !>
@@ -1179,6 +1185,7 @@ CONTAINS
     & nc, &
     & nsoil_sb, &
     & lctlib_phi_leaf_min, &
+    & num_sl_above_bedrock, &
     & root_fraction_sl, &
     & wtr_soil_pot_sl, &
     & ftranspiration_sl)
@@ -1187,6 +1194,7 @@ CONTAINS
     INTEGER,  INTENT(in)    :: nc                       !< dimension chunk
     INTEGER,  INTENT(in)    :: nsoil_sb                 !< dimension soil layers
     REAL(wp), INTENT(in)    :: lctlib_phi_leaf_min      !< leaf minimum water potential (MPa)
+    REAL(wp), INTENT(in)    :: num_sl_above_bedrock(:)  !< number of soil layers above bedrock
     REAL(wp), INTENT(in)    :: root_fraction_sl(:,:)    !< fraction of fine roots per layer
     REAL(wp), INTENT(in)    :: wtr_soil_pot_sl(:,:)     !< soil water matrix potential (MPa)
     REAL(wp), INTENT(out)   :: ftranspiration_sl(:,:)   !< fraction of transpiration from layer
@@ -1194,44 +1202,62 @@ CONTAINS
     INTEGER        :: ic, is                 !< loop over grid cells and soil layers
     INTEGER        :: iwpot                  !< looping [0,10]
     REAL(wp)       :: hlp
-    REAL(wp)       :: sum_ftranspiration_sl
+    REAL(wp)       :: ftranspiration_sum     !< sum of ftranspiration_sl(:,:) over soil layers
     REAL(wp)       :: phi_inc                !< constant used for increment in [0,10] loop
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_ftranspiration_sl'
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! init local var
-    phi_inc = -0.25_wp
+    !
+    phi_inc = -0.25_wp    ! value: tuned
 
-    ! loop
+    ! loop over: nc, increment iwpot [0,10], soil layer
+    !
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
     DO ic = 1, nc
-      ! set to zero here to ensure executing once
-      sum_ftranspiration_sl = 0.0_wp
+      ! set to zero here to ensure executing 'DO iwpot' at least once
+      ftranspiration_sum = 0.0_wp
+      !$ACC LOOP GANG VECTOR
       DO iwpot = 0, 10
-        IF (sum_ftranspiration_sl == 0.0_wp) THEN
+        IF (ftranspiration_sum == 0.0_wp) THEN      
 
           !> 1.1 determine fraction of transpiration per soil layer
           !>     the first instance of the loop takes the PFT specific minimum
           !>     leaf water potential, all further iterations attempt to distribute
           !>     residual transpiration (due to min. conductance) across soil layers according
           !>     to soil moisture
+          !$ACC LOOP GANG VECTOR PRIVATE(hlp)
           DO is = 1, nsoil_sb
             ftranspiration_sl(ic, is) = 0.0_wp
-            IF (root_fraction_sl(ic, is) > eps8) THEN
+            IF ((is <= num_sl_above_bedrock(ic)) .AND. (root_fraction_sl(ic, is) > eps8)) THEN
               hlp = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, is), &
                 &                             lctlib_phi_leaf_min + phi_inc * REAL(iwpot, wp)) ! DBLE(iwpot))
               IF (hlp > eps4) THEN
                 ftranspiration_sl(ic, is) = root_fraction_sl(ic, is) * hlp
-                sum_ftranspiration_sl     = sum_ftranspiration_sl + ftranspiration_sl(ic, is)
+                ftranspiration_sum        = ftranspiration_sum + ftranspiration_sl(ic, is)     
               END IF
             END IF
           END DO
         END IF
       END DO
 
-      IF (SUM(ftranspiration_sl(ic,:)) > eps8) THEN
-        ftranspiration_sl(ic,:) = ftranspiration_sl(ic,:) / SUM(ftranspiration_sl(ic,:))
-      END IF
+      ftranspiration_sum = 0.0_wp
+      !$ACC LOOP GANG VECTOR
+      DO is = 1, nsoil_sb
+        IF (is <= num_sl_above_bedrock(ic)) THEN
+          ftranspiration_sum = ftranspiration_sum + ftranspiration_sl(ic, is)
+        END IF
+      END DO
+
+      !$ACC LOOP GANG VECTOR
+      DO is = 1, nsoil_sb
+        IF ((is <= num_sl_above_bedrock(ic)) .AND. (ftranspiration_sum > eps8)) THEN
+          ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum
+        END IF
+      END DO
     END DO
+    !$ACC END PARALLEL
 
   END SUBROUTINE calc_ftranspiration_sl
 
