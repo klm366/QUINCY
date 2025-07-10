@@ -1623,6 +1623,14 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
+      ! additional temporary fix !
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        IF (ftranspiration_sum(ic) < eps8) THEN
+          ftranspiration_sl(ic, 1) = 1.0_wp
+        END IF
+      END DO
+      !$ACC END PARALLEL LOOP
 
       CALL calc_soil_hydrology( &
         ! in
