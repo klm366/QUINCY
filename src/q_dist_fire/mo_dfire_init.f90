@@ -37,6 +37,7 @@ MODULE mo_dfire_init
 #ifndef __QUINCY_STANDALONE__
   USE mo_jsb_time,                ONLY: timestep_in_days
 #endif
+  USE mo_jsb_process_class,     ONLY: DFIRE_
 
   IMPLICIT NONE
   PRIVATE
@@ -60,7 +61,6 @@ CONTAINS
   !>
   SUBROUTINE dfire_init(tile)
     USE mo_jsb_class,               ONLY: get_model
-    USE mo_jsb_process_class,       ONLY: DFIRE_
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,         ONLY: t_jsb_model
 
@@ -272,6 +272,7 @@ CONTAINS
 
 #ifdef __QUINCY_STANDALONE__
     ! quincy only
+    CALL dfire_read_init_vars(tile)
 #else
     ! IQ only
     ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
@@ -280,16 +281,17 @@ CONTAINS
     END IF
 
     !CALL spq_init_ic_bc(tile)
-    ic_population_density(:,:) = SPREAD(dfire_init_vars%pop_dens(:,:), DIM = 2)
-    ic_a_nd(:,:) = ic_population_density * 4._wp
-    ic_lightning_events(:,:) = SPREAD(dfire_init_vars%lightning_events(:,:), DIM = 2)
+!    TODO: add variables to the dfire_memory.f90 process
+!    ic_population_density(:,:) = SPREAD(dfire_init_vars%pop_dens(:,:), DIM = 2)
+!    ic_a_nd(:,:) = ic_population_density * 4._wp
+!    ic_lightning_events(:,:) = SPREAD(dfire_init_vars%lightning_events(:,:), DIM = 2)
 
-    IF (tile%Is_last_process_tile(SPQ_)) THEN
+    IF (tile%Is_last_process_tile(DFIRE_)) THEN
     !  CALL spq_finalize_init_vars()
     END IF
 #endif
+
   END SUBROUTINE dfire_init
-#endif
 
 
 #ifdef __QUINCY_STANDALONE__
@@ -301,11 +303,11 @@ CONTAINS
     USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
     USE mo_jsb_io,             ONLY: missval
 
-    dsl4jsb_Use_config(SPQ_)
+    dsl4jsb_Use_config(DFIRE_)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    dsl4jsb_Def_config(SPQ_)
+    dsl4jsb_Def_config(DFIRE_)
 
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
@@ -340,7 +342,7 @@ CONTAINS
   END SUBROUTINE dfire_read_init_vars
 #else
   ! ======================================================================================================= !
-  !> read SPQ_ init vars from input file
+  !> read DFIRE_ init vars from input file
   !>
   SUBROUTINE dfire_read_init_vars(tile)
     USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -376,7 +378,7 @@ CONTAINS
 
     ALLOCATE( &
         & dfire_init_vars%pop_dens               (nproma, nblks),       &
-        & dfire_init_vars%lightning_events       (nproma, nblks),       &
+        & dfire_init_vars%lightning_events       (nproma, nblks)        &
         & )
 
     dfire_init_vars%pop_dens              (:,:) = missval
@@ -391,8 +393,8 @@ CONTAINS
     !> pop dens
     ptr_2D => input_file%Read_2d(  &
         & variable_name='Band1', &
-        & fill_array = spq_init_vars%pop_dens)
-    spq_init_vars%pop_dens = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+        & fill_array = dfire_init_vars%pop_dens)
+    dfire_init_vars%pop_dens = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
     CALL input_file%Close()
 
@@ -409,5 +411,7 @@ CONTAINS
     CALL input_file%Close()
 
   END SUBROUTINE dfire_read_init_vars
+#endif
+
 #endif
 END MODULE mo_dfire_init
