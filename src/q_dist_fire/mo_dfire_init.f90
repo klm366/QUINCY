@@ -290,13 +290,13 @@ CONTAINS
 
     !CALL spq_init_ic_bc(tile)
     ic_pop_dens = dfire_init_vars%pop_dens
-    write(*,*) "dfire_init.f90:: shape ic_lightning_events_monthly?", SHAPE(ic_lightning_events_monthly)
-    write(*,*) "dfire_init.f90:: shape dfire_init_vars%lightning_events?", SHAPE(dfire_init_vars%lightning_events)
-
+    !write(*,*) "dfire_init.f90:: shape ic_lightning_events_monthly?", SHAPE(ic_lightning_events_monthly)
+    !write(*,*) "dfire_init.f90:: shape dfire_init_vars%lightning_events?", SHAPE(dfire_init_vars%lightning_events)
     DO iproma=1, nproma
       DO iblk=1, nblks
         DO imonth=1, 12
           ! Properly define dimesions (swap them)
+          ! todo: convert units from km-2 to ha-1
           ic_lightning_events_monthly(iproma, imonth, iblk) = dfire_init_vars%lightning_events(iproma,iblk,imonth)
         ENDDO
       ENDDO
