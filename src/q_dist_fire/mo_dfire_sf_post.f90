@@ -39,7 +39,7 @@ MODULE mo_dfire_sf_post
   USE mo_dfire_constants,       ONLY: df_sf_species_nr
   USE mo_dfire_constants,       ONLY: df_sf_elements_nr
 
-  USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix
+  USE mo_dfire_constants,       ONLY: ixs_sf_dead_litter_fuel_pools
 
   USE mo_dfire_constants,       ONLY: df_sf_species_nr, df_sf_species_co2_idx, df_sf_species_co_idx, &
                                         df_sf_species_ch4_idx, &
@@ -483,19 +483,16 @@ CONTAINS
     IF (dsl4jsb_Config(DFIRE_)%flag_has_dead_feedback) THEN
       ! Convert sb_pool related dead fuel pools into m3 to operate with sb_pool related fluxes
       ALLOCATE(emissions_dead_in_m3, source=emissions_dead_el)
+      emissions_dead_in_m3 = 0._wp
+      emissions_dead_in_m3(:,ixs_sf_dead_litter_fuel_pools,:) = sf_convert_units("-/m2", "-/m3", &
+          emissions_dead_el(:,ixs_sf_dead_litter_fuel_pools,:), &
+          soil_depth_sl(:,df_sf_spq_layer_top_sl))
+
       ALLOCATE(residue_dead_in_m3, source=residue_dead_el)
-      emissions_dead_in_m3(:,t_sf_fuel_dead_fuel_woody_ix,:) = sf_convert_units("-/m2", "-/m3", &
-                            emissions_dead_el(:,t_sf_fuel_dead_fuel_woody_ix,:), &
-                            soil_depth_sl(:,df_sf_spq_layer_top_sl))
-      emissions_dead_in_m3(:,t_sf_fuel_dead_fuel_polymeric_ix,:) = sf_convert_units("-/m2", "-/m3", &
-                            emissions_dead_el(:,t_sf_fuel_dead_fuel_polymeric_ix,:), &
-                            soil_depth_sl(:,df_sf_spq_layer_top_sl))
-      residue_dead_in_m3(:,t_sf_fuel_dead_fuel_woody_ix,:) = sf_convert_units("-/m2", "-/m3", &
-                            residue_dead_el(:,t_sf_fuel_dead_fuel_woody_ix,:), &
-                            soil_depth_sl(:,df_sf_spq_layer_top_sl))
-      residue_dead_in_m3(:,t_sf_fuel_dead_fuel_polymeric_ix,:) = sf_convert_units("-/m2", "-/m3", &
-                            residue_dead_el(:,t_sf_fuel_dead_fuel_polymeric_ix,:), &
-                            soil_depth_sl(:,df_sf_spq_layer_top_sl))
+      residue_dead_in_m3 = 0._wp
+      residue_dead_in_m3(:,ixs_sf_dead_litter_fuel_pools,:) = sf_convert_units("-/m2", "-/m3", &
+          residue_dead_el(:,ixs_sf_dead_litter_fuel_pools,:), &
+          soil_depth_sl(:,df_sf_spq_layer_top_sl))
 
       !< Feedback: dead fuel consumption is removed through veg_fire_emissions, sb_fire_emissions_mt for emissions
       !< Residue is transfered through sb_fire_litter_ash and veg_fire_litterfall

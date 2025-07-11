@@ -26,7 +26,10 @@ MODULE mo_dfire_sf_feedback
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
 
-  USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix !< dead fuel pools indices (from sb_pool_mt)
+  USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix, & !< dead fuel pools indices (from sb_pool_mt)
+                                      t_sf_fuel_dead_fuel_dom_assoc_ix, t_sf_fuel_dead_fuel_dom_ix, &
+                                      t_sf_fuel_dead_fuel_res_ix, t_sf_fuel_dead_fuel_res_assoc_ix, &
+                                      t_sf_fuel_dead_fuel_soluable_ix
 
   USE mo_dfire_constants,       ONLY: t_sf_fuel_live_fuel_leaf_ix, t_sf_fuel_live_fuel_sap_wood_ix, & !< live fuel pool indices
                                       t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
@@ -36,7 +39,9 @@ MODULE mo_dfire_sf_feedback
                                       t_sf_fuel_dead_fuel_grass_leaf_ix, t_sf_fuel_dead_fuel_grass_reserve_ix, &
                                       t_sf_fuel_dead_fuel_grass_sap_ix
 
-  USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter, &
+  USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter, ix_soluable_litter, &
+                                      ix_residue_assoc, ix_residue, &
+                                      ix_dom_assoc, ix_dom, &
                                       ix_sap_wood, ix_heart_wood, ix_fruit, ix_labile, &
                                       ix_reserve, ix_leaf, ix_seed_bed
 
@@ -86,6 +91,16 @@ CONTAINS
             emissions(inc,t_sf_fuel_dead_fuel_woody_ix,:)
         sb_fire_emissions_mt(ix_polymeric_litter,:,inc) = sb_fire_emissions_mt(ix_polymeric_litter,:,inc) + &
             emissions(inc,t_sf_fuel_dead_fuel_polymeric_ix,:)
+        sb_fire_emissions_mt(ix_soluable_litter,:,inc) = sb_fire_emissions_mt(ix_soluable_litter,:,inc) + &
+            emissions(inc,t_sf_fuel_dead_fuel_soluable_ix,:)
+        sb_fire_emissions_mt(ix_dom_assoc,:,inc) = sb_fire_emissions_mt(ix_dom_assoc,:,inc) + &
+            emissions(inc,t_sf_fuel_dead_fuel_dom_assoc_ix,:)
+        sb_fire_emissions_mt(ix_dom,:,inc) = sb_fire_emissions_mt(ix_dom,:,inc) + &
+            emissions(inc,t_sf_fuel_dead_fuel_dom_ix,:)
+        sb_fire_emissions_mt(ix_residue,:,inc) = sb_fire_emissions_mt(ix_residue,:,inc) + &
+            emissions(inc,t_sf_fuel_dead_fuel_res_ix,:)
+        sb_fire_emissions_mt(ix_residue_assoc,:,inc) = sb_fire_emissions_mt(ix_residue_assoc,:,inc) + &
+            emissions(inc,t_sf_fuel_dead_fuel_res_assoc_ix,:)
       END IF
     END DO
 
@@ -108,12 +123,20 @@ CONTAINS
     !< Residue is transfered using sb_fire_litter_ash_mt (woody litter to polymeric)
     DO inc=1, SIZE(sb_fire_litter_ash_mt, DIM=3) !< nc dim = 3
       IF (mask(inc)) THEN
-        sb_fire_litter_ash_mt(ix_woody_litter,:,inc) = &
-            sb_fire_litter_ash_mt(ix_woody_litter,:,inc) + &
+        sb_fire_litter_ash_mt(ix_woody_litter,:,inc) = sb_fire_litter_ash_mt(ix_woody_litter,:,inc) + &
                 residue(inc,t_sf_fuel_dead_fuel_woody_ix,:)
-        sb_fire_litter_ash_mt(ix_polymeric_litter,:,inc) = &
-            sb_fire_litter_ash_mt(ix_polymeric_litter,:,inc) + &
+        sb_fire_litter_ash_mt(ix_polymeric_litter,:,inc) = sb_fire_litter_ash_mt(ix_polymeric_litter,:,inc) + &
                 residue(inc,t_sf_fuel_dead_fuel_polymeric_ix,:)
+        sb_fire_litter_ash_mt(ix_soluable_litter,:,inc) = sb_fire_litter_ash_mt(ix_soluable_litter,:,inc) + &
+                residue(inc,t_sf_fuel_dead_fuel_soluable_ix,:)
+        sb_fire_litter_ash_mt(ix_dom_assoc,:,inc) = sb_fire_litter_ash_mt(ix_dom_assoc,:,inc) + &
+                residue(inc,t_sf_fuel_dead_fuel_dom_assoc_ix,:)
+        sb_fire_litter_ash_mt(ix_dom,:,inc) = sb_fire_litter_ash_mt(ix_dom,:,inc) + &
+                residue(inc,t_sf_fuel_dead_fuel_dom_ix,:)
+        sb_fire_litter_ash_mt(ix_residue_assoc,:,inc) = sb_fire_litter_ash_mt(ix_residue_assoc,:,inc) + &
+                residue(inc,t_sf_fuel_dead_fuel_res_assoc_ix,:)
+        sb_fire_litter_ash_mt(ix_residue,:,inc) = sb_fire_litter_ash_mt(ix_residue,:,inc) + &
+                residue(inc,t_sf_fuel_dead_fuel_res_ix,:)
         !< livegrass into veg_litterfall (no units conversion required)
         veg_litterfall_mt(ix_fruit,:,inc) = veg_litterfall_mt(ix_fruit,:,inc) + &
             residue(inc,t_sf_fuel_dead_fuel_grass_fruit_ix,:)

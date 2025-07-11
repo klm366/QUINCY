@@ -86,6 +86,10 @@ MODULE mo_dfire_constants
                   t_sf_fuel_dead_fuel_res_assoc_ix        !< from sb_pool_mt ( Optional)
   END ENUM
 
+  INTEGER, PARAMETER :: ixs_sf_dead_litter_fuel_pools(7) = [t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix, &
+      t_sf_fuel_dead_fuel_dom_assoc_ix, t_sf_fuel_dead_fuel_dom_ix, t_sf_fuel_dead_fuel_soluable_ix, &
+      t_sf_fuel_dead_fuel_res_ix, t_sf_fuel_dead_fuel_res_assoc_ix]
+
   INTEGER, PARAMETER :: df_sf_elements_nr = 6 !< C, C13, C14, N, N15, P
 
   !> Emissions
