@@ -36,7 +36,8 @@ MODULE mo_dfire_memory_class
   USE mo_dfire_constants,       ONLY: df_sf_vgrid_dead_fuel_pools_name, &
                                       df_sf_vgrid_live_fuel_pools_name, &
                                       df_sf_vgrid_fuel_classes_name, &
-                                      df_sf_vgrid_fuel_moisture_name
+                                      df_sf_vgrid_fuel_moisture_name, &
+                                      df_sf_vgrid_months_in_year_name
 
   IMPLICIT NONE
 
@@ -119,6 +120,9 @@ MODULE mo_dfire_memory_class
 
     TYPE(t_jsb_var_real3d)               :: frac_consump_fcl    !< Ratio calculated in eqs. B1, B2, B3 and B4 [0 to 1]
                                                                 !< Intermediate variable used in dead fuel consumption
+
+    TYPE(t_jsb_var_real3d)               :: ic_pop_dens_monthly !< Read data from
+    TYPE(t_jsb_var_real3d)               :: ic_lightning_events_monthly !< Read data from
   CONTAINS
     PROCEDURE :: Init => Init_dfire_memory
   END TYPE t_dfire_memory
@@ -151,7 +155,8 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: vgrid_dead_fuel_pools            !> Dead fuel pools grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_live_fuel_pools            !> Live fuel pools grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_classes               !> Fuel classes grid
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_moisture              !> Fuel fuel moisture 
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_moisture              !> Fuel fuel moisture
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_months_in_year             !> Number of months in a year
     INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_dfire_memory'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -163,6 +168,7 @@ CONTAINS
     vgrid_live_fuel_pools => Get_vgrid(df_sf_vgrid_live_fuel_pools_name)
     vgrid_fuel_classes => Get_vgrid(df_sf_vgrid_fuel_classes_name)
     vgrid_fuel_moisture => Get_vgrid(df_sf_vgrid_fuel_moisture_name)
+    vgrid_months_in_year => Get_vgrid(df_sf_vgrid_months_in_year_name)
     ! ----------------------------------------------------------------------------------------------------- !
     CALL mem%Add_var('nesterov_index', mem%nesterov_index, &
         & hgrid, vgrid_surface, &
@@ -611,6 +617,30 @@ CONTAINS
         & hgrid, vgrid_fuel_moisture, &
         & t_cf('fuel_moisture', '-', &
             'Relative daily fuel moisture per age class (1hr, 10hr, 100hr, 1000hr) for omega_o and omega_nl'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('ic_pop_dens_monthly', mem%ic_pop_dens_monthly, &
+        & hgrid, vgrid_months_in_year, &
+        & t_cf('ic_pop_dens_monthly', '#humans km-2', &
+            'Population density'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('ic_lightning_events_monthly', mem%ic_lightning_events_monthly, &
+        & hgrid, vgrid_months_in_year, &
+        & t_cf('ic_lightning_events_monthly', '#lightnings h-1 d-1', &
+            '# lightning events'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

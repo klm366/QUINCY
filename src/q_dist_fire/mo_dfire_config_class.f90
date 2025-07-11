@@ -38,7 +38,8 @@ MODULE mo_dfire_config_class
   USE mo_jsb_config_class,  ONLY: t_jsb_config
   USE mo_dfire_constants,   ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr
   USE mo_dfire_constants,   ONLY: df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_live_fuel_pools_name, &
-                                  df_sf_vgrid_fuel_classes_name, df_sf_vgrid_fuel_moisture_name
+                                  df_sf_vgrid_fuel_classes_name, df_sf_vgrid_fuel_moisture_name, &
+                                  df_sf_vgrid_months_in_year_name
   USE mo_dfire_constants,   ONLY: df_sf_omegas_nr
 
   IMPLICIT NONE
@@ -143,6 +144,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_live_fuel_pools
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_fuel_classes
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_fuel_moisture
+    TYPE(t_jsb_vgrid), POINTER    :: vgrid_months_in_year
     
     REAL(wp)                      :: ratio_polymeric_litter_to_dead_fuel !< Ratio polymeric litter to include as dead fuels
     REAL(wp)                      :: ratio_dom_assoc_to_dead_fuel       !< Ratio to include dom_assoc as dead fuel
@@ -281,11 +283,15 @@ CONTAINS
     vgrid_fuel_moisture    => new_vgrid(df_sf_vgrid_fuel_moisture_name, zaxis_generic, df_sf_omegas_nr, &
                                         longname='fuel moisture types (omega_o, omega_nl)', &
                                         & units='0 to 1')
+    vgrid_months_in_year   => new_vgrid(df_sf_vgrid_months_in_year_name, zaxis_generic, 12, & ! 12= months in a year
+        longname='Months in a year', &
+        & units='#')
 
     CALL register_vgrid(vgrid_dead_fuel_pools)
     CALL register_vgrid(vgrid_live_fuel_pools)
     CALL register_vgrid(vgrid_fuel_classes)
     CALL register_vgrid(vgrid_fuel_moisture)
+    CALL register_vgrid(vgrid_months_in_year)
   END SUBROUTINE Init_dfire_config
 
 

@@ -133,6 +133,8 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: l2b_ratio
 
     dsl4jsb_Real3D_onDomain      :: frac_consump_fcl
+    dsl4jsb_Real3D_onDomain      :: ic_pop_dens_monthly
+    dsl4jsb_Real3D_onDomain      :: ic_lightning_events_monthly
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
     !iblk    = options%iblk
@@ -203,6 +205,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_, l2b_ratio)
 
     dsl4jsb_Get_var3D_onDomain(DFIRE_, frac_consump_fcl)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_, ic_pop_dens_monthly)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_, ic_lightning_events_monthly)
     ! ----------------------------------------------------------------------------------------------------- !
     nesterov_index = 0._wp
     fdi = 0._wp
@@ -281,10 +285,8 @@ CONTAINS
     END IF
 
     !CALL spq_init_ic_bc(tile)
-!    TODO: add variables to the dfire_memory.f90 process
-!    ic_population_density(:,:) = SPREAD(dfire_init_vars%pop_dens(:,:), DIM = 2)
-!    ic_a_nd(:,:) = ic_population_density * 4._wp
-!    ic_lightning_events(:,:) = SPREAD(dfire_init_vars%lightning_events(:,:), DIM = 2)
+    ic_pop_dens_monthly = dfire_init_vars%pop_dens
+    ic_lightning_events_monthly = dfire_init_vars%lightning_events
 
     IF (tile%Is_last_process_tile(DFIRE_)) THEN
     !  CALL spq_finalize_init_vars()
@@ -395,6 +397,7 @@ CONTAINS
     ptr_2D => input_file%Read_2d(  &
         & variable_name='Band1', &
         & fill_array = dfire_init_vars%pop_dens)
+    ! Clean: set negative values to 0
     dfire_init_vars%pop_dens = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
     CALL input_file%Close()

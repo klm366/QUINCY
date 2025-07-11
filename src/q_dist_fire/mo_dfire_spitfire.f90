@@ -327,6 +327,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: i_surface                 ! out [kW m-1]
 
     dsl4jsb_Real3D_onChunk                :: frac_consump_fcl          ! out [-]
+    dsl4jsb_Real3D_onChunk                :: ic_pop_dens_monthly       ! in [#humans km-2]
+    dsl4jsb_Real3D_onChunk                :: ic_lightning_events_monthly ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -419,7 +421,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_, dead_frac_consumption)     ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, i_surface)                 ! out [kW m-1]
 
-    dsl4jsb_Get_var3D_onChunk(DFIRE_, frac_consump_fcl)          ! out [-]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, frac_consump_fcl)            ! out [-]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, ic_pop_dens_monthly)         ! in [#humans km-2]
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, ic_lightning_events_monthly) ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     !dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -493,13 +497,19 @@ CONTAINS
       END IF
     ENDDO
 
+    ! todo: compute current month
+    !c_month = get_current_month()
+    density_human_population = ic_pop_dens_monthly(:,1) ! 1= use 1st month of the year
+    lightning_frequency = ic_lightning_events_monthly(:,1)
+    a_nd = lightning_frequency * 4._wp
+
     !WRITE(*,*) "spitfire.f90:: me, tile_fract=", moisture_extinction, ", ", tile_fract
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
-                        dsl4jsb_Config(DFIRE_)%density_human_population, & ! ignition events
-                        dsl4jsb_Config(DFIRE_)%a_nd, &
-                        dsl4jsb_Config(DFIRE_)%lightning_frequency, &
+                        density_human_population, & ! ignition events
+                        a_nd, &
+                        lightning_frequency, &
                         df_sf_calorific_heat_content, &
                         df_sf_isurface_extinc_th, &
                         df_sf_alphas, &
@@ -586,9 +596,9 @@ CONTAINS
     REAL(wp), INTENT(in)  :: lctlib_fuel_bulk_density(nc)          !< Fuel bulk density [kg m-3]
     REAL(wp), INTENT(in)  :: lctlib_fwd_wind_factor(nc)            !< Forward wind factor [0 to 1]
 
-    REAL(wp), INTENT(in)  :: config_density_human_population       !< Average human population density in the grid cell [individuals km-2]
-    REAL(wp), INTENT(in)  :: config_a_nd                           !< Propensity of people to produce ignition events [ignitions individual-1 d-1]
-    REAL(wp), INTENT(in)  :: config_lightning_frequency            !< Lightning frequency [ha-1 d-1]
+    REAL(wp), INTENT(in)  :: density_human_population(nc)          !< Average human population density in the grid cell [individuals km-2]
+    REAL(wp), INTENT(in)  :: a_nd(nc)                              !< Propensity of people to produce ignition events [ignitions individual-1 d-1]
+    REAL(wp), INTENT(in)  :: lightning_frequency(nc)               !< Lightning frequency [ha-1 d-1]
 
     REAL(wp), INTENT(in)  :: const_calorific_heat_content          !< Fuel calorific heat content [kJ kg-1]
     REAL(wp), INTENT(in)  :: const_i_surface_thd                   !< Fire intensity threshold [kW m-1] 
@@ -688,8 +698,8 @@ CONTAINS
         mask=has_fire_conditions)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
-    sf_ignitions = calc_sf_ignition(nc, config_density_human_population, &
-                                    config_a_nd, config_lightning_frequency, &
+    sf_ignitions = calc_sf_ignition(nc, density_human_population, &
+                                    a_nd, lightning_frequency, &
                                     df_sf_max_density_human_pop)
     spitfire%e_n_ignitions = sf_ignitions%total * (dtime / one_day)
     spitfire%e_n_humans = sf_ignitions%human * (dtime / one_day)

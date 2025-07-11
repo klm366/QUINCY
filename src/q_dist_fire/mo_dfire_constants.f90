@@ -65,6 +65,7 @@ MODULE mo_dfire_constants
   CHARACTER(*), PARAMETER :: df_sf_vgrid_fuel_moisture_name = "vg_fuel_moist" ! vgrid_fuel_moisture
   CHARACTER(*), PARAMETER :: df_sf_vgrid_species_name = "vg_spec"
   CHARACTER(*), PARAMETER :: df_sf_vgrid_elements_name = "vg_elements"
+  CHARACTER(*), PARAMETER :: df_sf_vgrid_months_in_year_name = "vg_months"
 
   REAL(wp), PARAMETER  :: df_sf_max_density_human_pop = 16._wp    !< Maximum density_human_population (eq. 3)
 
