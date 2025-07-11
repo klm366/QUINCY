@@ -233,6 +233,10 @@ CONTAINS
     TYPE(t_sf_spitfire)                   :: sf_spitfire
 
     INTEGER                               :: nr_of_children
+
+    REAL(wp)                              :: a_nd(options%nc)
+    REAL(wp)                              :: lightning_frequency(options%nc)
+    REAL(wp)                              :: density_human_population(options%nc)
     ! ----------------------------------------------------------------------------------------------------- !
     !dsl4jsb_Def_mt2L2D :: veg_pool_mt
     !dsl4jsb_Def_mt2L3D :: sb_loss_mt
@@ -327,7 +331,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: i_surface                 ! out [kW m-1]
 
     dsl4jsb_Real3D_onChunk                :: frac_consump_fcl          ! out [-]
-    dsl4jsb_Real3D_onChunk                :: ic_pop_dens_monthly       ! in [#humans km-2]
+    dsl4jsb_Real2D_onChunk                :: ic_pop_dens               ! in [#humans km-2]
     dsl4jsb_Real3D_onChunk                :: ic_lightning_events_monthly ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -422,7 +426,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DFIRE_, i_surface)                 ! out [kW m-1]
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_, frac_consump_fcl)            ! out [-]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_, ic_pop_dens_monthly)         ! in [#humans km-2]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, ic_pop_dens)                 ! in [#humans km-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, ic_lightning_events_monthly) ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -499,7 +503,7 @@ CONTAINS
 
     ! todo: compute current month
     !c_month = get_current_month()
-    density_human_population = ic_pop_dens_monthly(:,1) ! 1= use 1st month of the year
+    density_human_population = ic_pop_dens ! 1= use 1st month of the year
     lightning_frequency = ic_lightning_events_monthly(:,1)
     a_nd = lightning_frequency * 4._wp
 
@@ -577,7 +581,7 @@ CONTAINS
   !>
   SUBROUTINE calc_spitfire(nc, nalphas, nfuelclasses, dtime, one_day, & ! in
                   lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
-                  config_density_human_population, config_a_nd, config_lightning_frequency, & ! ignition events
+                  density_human_population, a_nd, lightning_frequency, & ! ignition events
                   const_calorific_heat_content, const_i_surface_thd, &
                   alphas, &
                   moisture_extinction, &

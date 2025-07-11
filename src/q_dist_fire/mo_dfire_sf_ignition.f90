@@ -78,8 +78,9 @@ CONTAINS
     TYPE(t_sf_ignitions) :: sf_ignitions             !< (output)
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sf_ignition'
-    REAL(wp)             :: sel_dens_hum_pop         !< selected average human population density [indiv km-2]
-    REAL(wp)             :: k_pd                     !< Spatial dependence of human-caused ignitions [-]
+    REAL(wp)             :: sel_dens_hum_pop(nc)     !< selected average human population density [indiv km-2]
+    REAL(wp)             :: k_pd(nc)                 !< Spatial dependence of human-caused ignitions [-]
+    INTEGER              :: ic
 
     !< Initialize output to 0
     sf_ignitions = t_sf_ignitions(nc)
@@ -88,7 +89,9 @@ CONTAINS
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
     sel_dens_hum_pop = dens_hum_pop
-    IF (sel_dens_hum_pop > max_dens_hum_pop) sel_dens_hum_pop = max_dens_hum_pop
+    DO ic=1, nc
+      IF (sel_dens_hum_pop(ic) > max_dens_hum_pop) sel_dens_hum_pop(ic) = max_dens_hum_pop
+    ENDDO
 
     !< Calculate how likely a fire is about to ignite due to human population
     !< Section 2.2.1, equations 4 from Thonicke et al. (2010)

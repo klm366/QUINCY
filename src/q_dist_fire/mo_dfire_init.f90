@@ -47,7 +47,7 @@ MODULE mo_dfire_init
 
   TYPE :: t_dfire_init_vars
     REAL(wp), POINTER ::      &
-        pop_dens( :,:) => NULL(), &
+        pop_dens(:,:) => NULL(), &
         lightning_events(:,:,:) => NULL()
   END TYPE t_dfire_init_vars
 
@@ -63,6 +63,8 @@ CONTAINS
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,         ONLY: t_jsb_model
+    USE mo_jsb_grid_class,          ONLY: t_jsb_grid
+    USE mo_jsb_grid,                ONLY: Get_grid
 
     USE mo_dfire_constants,         ONLY: DFIRE_PRECIP_METHOD_DAYTIME, & !< Method to compute precipitation
                                           DFIRE_PRECIP_METHOD_APROX_MAVG, &
@@ -74,7 +76,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER              :: model
-    !INTEGER                                      :: iblk, ics, ice, nc, npft
+    TYPE(t_jsb_grid),       POINTER              :: hgrid              !< Horizontal grid
+    INTEGER                                      :: ic, iblk, imonth, iproma
+    INTEGER :: nblks, nproma
     REAL(wp)                                     :: dtime
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':dfire_init'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -133,7 +137,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: l2b_ratio
 
     dsl4jsb_Real3D_onDomain      :: frac_consump_fcl
-    dsl4jsb_Real3D_onDomain      :: ic_pop_dens_monthly
+    dsl4jsb_Real2D_onDomain      :: ic_pop_dens
     dsl4jsb_Real3D_onDomain      :: ic_lightning_events_monthly
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
@@ -149,9 +153,9 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model  => get_model(tile%owner_model_id)
-    !hgrid  => Get_grid(model%grid_id)
-    !nblks  =  hgrid%nblks
-    !nproma =  hgrid%nproma
+    hgrid  => Get_grid(model%grid_id)
+    nblks  =  hgrid%nblks
+    nproma =  hgrid%nproma
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_)
@@ -205,7 +209,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(DFIRE_, l2b_ratio)
 
     dsl4jsb_Get_var3D_onDomain(DFIRE_, frac_consump_fcl)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_, ic_pop_dens_monthly)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, ic_pop_dens)
     dsl4jsb_Get_var3D_onDomain(DFIRE_, ic_lightning_events_monthly)
     ! ----------------------------------------------------------------------------------------------------- !
     nesterov_index = 0._wp
@@ -285,8 +289,18 @@ CONTAINS
     END IF
 
     !CALL spq_init_ic_bc(tile)
-    ic_pop_dens_monthly = dfire_init_vars%pop_dens
-    ic_lightning_events_monthly = dfire_init_vars%lightning_events
+    ic_pop_dens = dfire_init_vars%pop_dens
+    write(*,*) "dfire_init.f90:: shape ic_lightning_events_monthly?", SHAPE(ic_lightning_events_monthly)
+    write(*,*) "dfire_init.f90:: shape dfire_init_vars%lightning_events?", SHAPE(dfire_init_vars%lightning_events)
+
+    DO iproma=1, nproma
+      DO iblk=1, nblks
+        DO imonth=1, 12
+          ! Properly define dimesions (swap them)
+          ic_lightning_events_monthly(iproma, imonth, iblk) = dfire_init_vars%lightning_events(iproma,iblk,imonth)
+        ENDDO
+      ENDDO
+    ENDDO
 
     IF (tile%Is_last_process_tile(DFIRE_)) THEN
     !  CALL spq_finalize_init_vars()

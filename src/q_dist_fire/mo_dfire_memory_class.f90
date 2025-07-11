@@ -121,7 +121,7 @@ MODULE mo_dfire_memory_class
     TYPE(t_jsb_var_real3d)               :: frac_consump_fcl    !< Ratio calculated in eqs. B1, B2, B3 and B4 [0 to 1]
                                                                 !< Intermediate variable used in dead fuel consumption
 
-    TYPE(t_jsb_var_real3d)               :: ic_pop_dens_monthly !< Read data from
+    TYPE(t_jsb_var_real2d)               :: ic_pop_dens         !< Read data from
     TYPE(t_jsb_var_real3d)               :: ic_lightning_events_monthly !< Read data from
   CONTAINS
     PROCEDURE :: Init => Init_dfire_memory
@@ -625,9 +625,9 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('ic_pop_dens_monthly', mem%ic_pop_dens_monthly, &
-        & hgrid, vgrid_months_in_year, &
-        & t_cf('ic_pop_dens_monthly', '#humans km-2', &
+    CALL mem%Add_var('ic_pop_dens', mem%ic_pop_dens, &
+        & hgrid, vgrid_surface, &
+        & t_cf('ic_pop_dens', '#humans km-2', &
             'Population density'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
