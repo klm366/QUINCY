@@ -48,7 +48,7 @@ MODULE mo_dfire_init
   TYPE :: t_dfire_init_vars
     REAL(wp), POINTER ::      &
         pop_dens( :,:) => NULL(), &
-        lightning_events( :,:) => NULL()
+        lightning_events(:,:,:) => NULL()
   END TYPE t_dfire_init_vars
 
   TYPE(t_dfire_init_vars) :: dfire_init_vars
@@ -315,7 +315,7 @@ CONTAINS
     INTEGER                     :: nproma
     INTEGER                     :: nblks
     INTEGER                     :: nsoil_sb
-    CHARACTER(len=*), PARAMETER :: routine = modname//':dfire_qs_read_init_vars'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':dfire_read_init_vars'
 
     IF (debug_on()) CALL message(routine, 'Reading/setting DFIRE_ init vars')
 
@@ -328,17 +328,17 @@ CONTAINS
 
     ALLOCATE( &
       & dfire_init_vars%pop_dens               (nproma, nblks),       &
-      & dfire_init_vars%lightning_events       (nproma, nblks),       &
+      & dfire_init_vars%lightning_events       (nproma, nblks, 12),   &
       & )
 
     dfire_init_vars%pop_dens              (:,:) = missval
-    dfire_init_vars%lightning_events      (:,:) = missval
+    dfire_init_vars%lightning_events    (:,:,:) = missval
 
     dsl4jsb_Get_config(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
 
     dfire_init_vars%pop_dens(:,:) = dsl4jsb_Config(DFIRE_)%pop_dens
-    dfire_init_vars%lightning_events(:,:) = dsl4jsb_Config(DFIRE_)%lightning_events
+    dfire_init_vars%lightning_events(:,:,:) = dsl4jsb_Config(DFIRE_)%lightning_events
   END SUBROUTINE dfire_read_init_vars
 #else
   ! ======================================================================================================= !
@@ -360,6 +360,7 @@ CONTAINS
     dsl4jsb_Def_config(DFIRE_)
 
     REAL(wp), POINTER           :: ptr_2D(:, :)
+    REAL(wp), POINTER           :: ptr_2D_time(:, :, :)
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
@@ -378,11 +379,11 @@ CONTAINS
 
     ALLOCATE( &
         & dfire_init_vars%pop_dens               (nproma, nblks),       &
-        & dfire_init_vars%lightning_events       (nproma, nblks)        &
+        & dfire_init_vars%lightning_events       (nproma, nblks, 12)    & ! months in 1 year
         & )
 
     dfire_init_vars%pop_dens              (:,:) = missval
-    dfire_init_vars%lightning_events      (:,:) = missval
+    dfire_init_vars%lightning_events    (:,:,:) = missval
 
     dsl4jsb_Get_config(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -403,10 +404,12 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DFIRE_)%ic_lightning_events_filename), model%grid_id)
 
     !>
-    ptr_2D => input_file%Read_2d(  &
+    ptr_2D_time => input_file%Read_2D_time(  &
         & variable_name='HRMC_COM_FR', &
-        & fill_array = dfire_init_vars%lightning_events)
-    dfire_init_vars%lightning_events = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+        & fill_array = dfire_init_vars%lightning_events, &
+        & start_time_step = 1, end_time_step = 12 )
+    ! Clean: set negative values to 0
+    dfire_init_vars%lightning_events = MERGE(ptr_2D_time, 0._wp, ptr_2D_time >= 0._wp)
 
     CALL input_file%Close()
 
