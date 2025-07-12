@@ -1346,7 +1346,7 @@ CONTAINS
           & prefix, suffix, &
           & output_level = NONE, &
           & loutput = .FALSE., &
-          & lrestart = .TRUE., &
+          & lrestart = .FALSE., &
           & initval_r = 0.0_wp)
 
         CALL mem%Add_var('frac_wtr_transp_down_sl', mem%frac_wtr_transp_down_sl, &
@@ -1357,7 +1357,7 @@ CONTAINS
           & prefix, suffix, &
           & output_level = FULL, &
           & loutput = .TRUE., &
-          & lrestart = .TRUE., &
+          & lrestart = .FALSE., &
           & initval_r = 0.0_wp)
       END SELECT
 #endif
