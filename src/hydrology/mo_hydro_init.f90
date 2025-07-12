@@ -855,16 +855,7 @@ CONTAINS
     DEALLOCATE(hlp1)
     DEALLOCATE(theta_pwp_sl)
     DEALLOCATE(theta_fc_sl)
-
-    !$ACC UPDATE DEVICE(soil_depth(:,:), soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_center_sl(:,:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(w_soil_root_pwp(:,:), w_soil_root_fc(:,:), root_depth(:,:), root_depth_sl(:,:,:), w_skin(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(wtr_rootzone_rel(:,:), wtr_rootzone(:,:), wtr_soil_pwp_sl(:,:,:), wtr_soil_fc_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(wtr_soil_sat_sl(:,:,:), wtr_soil_sl(:,:,:), oro_stddev(:,:), weq_snow_soil(:,:), elevation(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(fract_pond_max(:,:), weq_pond_max(:,:), fract_org_sl(:,:,:), steepness(:,:), vol_porosity(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(hyd_cond_sat(:,:), vol_field_cap(:,:), vol_p_wilt(:,:), vol_wres(:,:), matric_pot(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(pore_size_index(:,:), bclapp(:,:), wtr_soil_res_sl(:,:,:), wtr_soil_root_pot(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(wpi_rootzone_max(:,:), ice_soil_sl(:,:,:)) ASYNC(1)
+    DEALLOCATE(theta_sat_sl)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Done with tile '//TRIM(tile%name)//' ...')
 

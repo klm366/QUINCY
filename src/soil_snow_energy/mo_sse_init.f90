@@ -379,13 +379,9 @@ CONTAINS
       &     sand_sl(:,1,:), silt_sl(:,1,:), clay_sl(:,1,:), &
       &     heat_cond(:,:))
 
-    !$ACC UPDATE ASYNC(1) &
-    !$ACC   DEVICE(vol_heat_cap(:,:), heat_cond(:,:)) &
-    !$ACC   DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), bulk_dens_sl(:,:,:))
-    !$ACC WAIT(1)
-
   END SUBROUTINE qs_sse_init_bc
-#else
+#endif
+
   SUBROUTINE sse_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -464,8 +460,7 @@ CONTAINS
       !>
       bulk_dens_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_bulk_density
 
-      !$ACC UPDATE ASYNC(1) &
-      !$ACC   DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), bulk_dens_sl(:,:,:))
+      !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), bulk_dens_sl(:,:,:)) ASYNC(1)
     END SELECT
 #endif
 
@@ -475,7 +470,6 @@ CONTAINS
     !$ACC WAIT(1)
 
   END SUBROUTINE sse_init_bc
-#endif
 
   SUBROUTINE sse_init_ic(tile)
 

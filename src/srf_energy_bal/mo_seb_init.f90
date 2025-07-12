@@ -171,7 +171,6 @@ CONTAINS
     IF (dsl4jsb_Config(SEB_)%l_skin_temp) THEN
       IF (tile%is_land .OR. model%config%use_tmx) THEN
         dsl4jsb_var2D_onDomain(SEB_, skin_conductivity) = 40.0_wp   ! estimated from icon-land input file
-        !$ACC UPDATE ASYNC(1) DEVICE(dsl4jsb_var2D_onDomain(SEB_, skin_conductivity))
       END IF
     END IF
 
