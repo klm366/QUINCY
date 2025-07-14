@@ -32,6 +32,10 @@ MODULE mo_dfire_init
   USE mo_exception,               ONLY: message
   USE mo_jsb_control,             ONLY: debug_on
 
+  USE mo_jsb_model_class,         ONLY: t_jsb_model
+  USE mo_jsb_grid_class,          ONLY: t_jsb_grid
+  USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
+
   USE mo_dfire_constants,         ONLY: df_sf_fire_duration_thd
   USE mo_dfire_constants,         ONLY: ratio_as_dead_fuel
 #ifndef __QUINCY_STANDALONE__
@@ -41,7 +45,7 @@ MODULE mo_dfire_init
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: dfire_init
+  PUBLIC :: dfire_init, provide_lightning_events
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_init'
 
@@ -61,9 +65,6 @@ CONTAINS
   !>
   SUBROUTINE dfire_init(tile)
     USE mo_jsb_class,               ONLY: get_model
-    USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
-    USE mo_jsb_model_class,         ONLY: t_jsb_model
-    USE mo_jsb_grid_class,          ONLY: t_jsb_grid
     USE mo_jsb_grid,                ONLY: Get_grid
 
     USE mo_dfire_constants,         ONLY: DFIRE_PRECIP_METHOD_DAYTIME, & !< Method to compute precipitation
@@ -139,6 +140,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: frac_consump_fcl
     dsl4jsb_Real2D_onDomain      :: ic_pop_dens
     dsl4jsb_Real3D_onDomain      :: ic_lightning_events_monthly
+    dsl4jsb_Real2D_onDomain      :: lightning_events
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
     !iblk    = options%iblk
@@ -319,9 +321,8 @@ CONTAINS
   SUBROUTINE dfire_read_init_vars(tile)
     USE mo_jsb_model_class,    ONLY: t_jsb_model
     USE mo_jsb_class,          ONLY: get_model
-    USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
     USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
     USE mo_jsb_io,             ONLY: missval
 
     dsl4jsb_Use_config(DFIRE_)
@@ -368,9 +369,8 @@ CONTAINS
   SUBROUTINE dfire_read_init_vars(tile)
     USE mo_jsb_model_class,    ONLY: t_jsb_model
     USE mo_jsb_class,          ONLY: get_model
-    USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
     USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_jsb_io,             ONLY: missval
 
@@ -449,6 +449,8 @@ CONTAINS
     USE mo_jsb_time,               ONLY: is_newyear, get_year, get_month
     USE mo_io_units,               ONLY: filename_max
     USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_jsb_grid,               ONLY: Get_grid
+    USE mo_jsb_class,              ONLY: get_model
 
     dsl4jsb_Use_memory(DFIRE_)
     dsl4jsb_Use_config(DFIRE_)
@@ -466,6 +468,7 @@ CONTAINS
     dsl4jsb_Def_memory(DFIRE_)
 
     dsl4jsb_Real3D_onDomain :: ic_lightning_events_monthly
+    dsl4jsb_Real2D_onDomain :: lightning_events
 
     REAL(wp),       POINTER :: ptr_3D(:,:,:)  ! tmp pointer
 
@@ -483,6 +486,7 @@ CONTAINS
     dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_)
     dsl4jsb_Get_var3D_onDomain(DFIRE_, ic_lightning_events_monthly)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, lightning_events)
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
@@ -499,6 +503,8 @@ CONTAINS
       END DO
 
       CALL input_file%Close()
+      WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: loading lightning events...", &
+              ic_lightning_Events_monthly(1,:,1)
 
       ! no need to read the file anymore
       is_read = .TRUE.
@@ -508,6 +514,8 @@ CONTAINS
     current_month = get_month(current_datetime)
 
     lightning_events(:,:) = ic_lightning_events_monthly(:,current_month,:)
+    WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: current_month, lightning_events=", &
+                        current_month, lightning_events(1,1)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
   END SUBROUTINE provide_lightning_events
