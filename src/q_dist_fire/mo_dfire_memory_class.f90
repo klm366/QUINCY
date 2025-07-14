@@ -122,7 +122,8 @@ MODULE mo_dfire_memory_class
                                                                 !< Intermediate variable used in dead fuel consumption
 
     TYPE(t_jsb_var_real2d)               :: ic_pop_dens         !< Read data from
-    TYPE(t_jsb_var_real3d)               :: ic_lightning_events_monthly !< Read data from
+    TYPE(t_jsb_var_real3d)               :: ic_lightning_events_monthly !< Monthly lightning events data [#events ha-1 day-1]
+    TYPE(t_jsb_var_real2d)               :: lightning_events    !< Current monthly timestep data [#events ha-1 day-1]
   CONTAINS
     PROCEDURE :: Init => Init_dfire_memory
   END TYPE t_dfire_memory
@@ -640,6 +641,18 @@ CONTAINS
     CALL mem%Add_var('ic_lightning_events_monthly', mem%ic_lightning_events_monthly, &
         & hgrid, vgrid_months_in_year, &
         & t_cf('ic_lightning_events_monthly', '#lightnings h-1 d-1', &
+            '# lightning events'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('lightning_events', mem%lightning_events, &
+        & hgrid, vgrid_surface, &
+        & t_cf('lightning_events', '#lightnings h-1 d-1', &
             '# lightning events'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &

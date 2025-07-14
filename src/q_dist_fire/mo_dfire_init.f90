@@ -211,6 +211,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(DFIRE_, frac_consump_fcl)
     dsl4jsb_Get_var2D_onDomain(DFIRE_, ic_pop_dens)
     dsl4jsb_Get_var3D_onDomain(DFIRE_, ic_lightning_events_monthly)
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, lightning_events)
     ! ----------------------------------------------------------------------------------------------------- !
     nesterov_index = 0._wp
     fdi = 0._wp
@@ -255,6 +256,10 @@ CONTAINS
     l2b_ratio = 0._wp
     frac_consump_fcl = 0._wp
 
+    ic_pop_dens = 0._wp
+    ic_lightning_events_monthly = 0._wp
+    lightning_events = 0._wp
+
     df_sf_fire_duration_thd = dtime / 60._wp ! convert seconds to minutes
 
     !< Chose daily precipitation. Those are calculated in 3 different ways.
@@ -292,19 +297,19 @@ CONTAINS
     ic_pop_dens = dfire_init_vars%pop_dens
     !write(*,*) "dfire_init.f90:: shape ic_lightning_events_monthly?", SHAPE(ic_lightning_events_monthly)
     !write(*,*) "dfire_init.f90:: shape dfire_init_vars%lightning_events?", SHAPE(dfire_init_vars%lightning_events)
-    DO iproma=1, nproma
-      DO iblk=1, nblks
-        DO imonth=1, 12
+!    DO iproma=1, nproma
+!      DO iblk=1, nblks
+!        DO imonth=1, 12
           ! Properly define dimesions (swap them)
-          ! todo: convert units from km-2 to ha-1
-          ic_lightning_events_monthly(iproma, imonth, iblk) = dfire_init_vars%lightning_events(iproma,iblk,imonth)
-        ENDDO
-      ENDDO
-    ENDDO
+!          ! todo: convert units from km-2 to ha-1
+!          ic_lightning_events_monthly(iproma, imonth, iblk) = dfire_init_vars%lightning_events(iproma,iblk,imonth)
+!        ENDDO
+!      ENDDO
+!    ENDDO
 
-    IF (tile%Is_last_process_tile(DFIRE_)) THEN
+!    IF (tile%Is_last_process_tile(DFIRE_)) THEN
     !  CALL spq_finalize_init_vars()
-    END IF
+!    END IF
 #endif
 
   END SUBROUTINE dfire_init
@@ -418,20 +423,94 @@ CONTAINS
 
 
     ! Read data from sso file
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DFIRE_)%ic_lightning_events_filename), model%grid_id)
+!    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DFIRE_)%ic_lightning_events_filename), model%grid_id)
 
     !>
-    ptr_2D_time => input_file%Read_2D_time(  &
-        & variable_name='HRMC_COM_FR', &
-        & fill_array = dfire_init_vars%lightning_events, &
-        & start_time_step = 1, end_time_step = 12 )
+!    ptr_2D_time => input_file%Read_2D_time(  &
+!        & variable_name='HRMC_COM_FR', &
+!        & fill_array = dfire_init_vars%lightning_events, &
+!        & start_time_step = 1, end_time_step = 12 )
     ! Clean: set negative values to 0
-    dfire_init_vars%lightning_events = MERGE(ptr_2D_time, 0._wp, ptr_2D_time >= 0._wp)
+!    dfire_init_vars%lightning_events = MERGE(ptr_2D_time, 0._wp, ptr_2D_time >= 0._wp)
 
-    CALL input_file%Close()
+!    CALL input_file%Close()
 
   END SUBROUTINE dfire_read_init_vars
 #endif
+
+  ! ====================================================================================================== !
+  !
+  !> Provide lightning events depending on the month
+  !
+
+  SUBROUTINE provide_lightning_events(model_id, current_datetime, dtime)
+
+    USE mo_jsb_time_iface,         ONLY: t_datetime
+    USE mo_jsb_time,               ONLY: is_newyear, get_year, get_month
+    USE mo_io_units,               ONLY: filename_max
+    USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
+
+    dsl4jsb_Use_memory(DFIRE_)
+    dsl4jsb_Use_config(DFIRE_)
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER,                   INTENT(in) :: model_id
+    TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
+    REAL(wp),                  INTENT(in) :: dtime
+    ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),           POINTER :: model
+    TYPE(t_jsb_grid),            POINTER :: hgrid
+    CLASS(t_jsb_tile_abstract),  POINTER :: tile
+    LOGICAL, SAVE                        :: is_read = .FALSE. !< TRUE if forcing file has beed read
+
+    dsl4jsb_Def_config(DFIRE_)
+    dsl4jsb_Def_memory(DFIRE_)
+
+    dsl4jsb_Real3D_onDomain :: ic_lightning_events_monthly
+
+    REAL(wp),       POINTER :: ptr_3D(:,:,:)  ! tmp pointer
+
+    INTEGER :: current_year, current_month, nproma, nblks, i_month
+    TYPE(t_input_file)          :: input_file
+    CHARACTER(len=*), PARAMETER :: routine = modname//':provide_lightning_events'
+    ! -------------------------------------------------------------------------------------------------- !
+    model => Get_model(model_id)
+    CALL model%Get_top_tile(tile)
+    hgrid => Get_grid(model%grid_id)
+
+    nproma = hgrid%nproma
+    nblks  = hgrid%nblks
+    ! -------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(DFIRE_)
+    dsl4jsb_Get_memory(DFIRE_)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_, ic_lightning_events_monthly)
+    ! -------------------------------------------------------------------------------------------------- !
+    IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+
+    IF (.NOT. is_read) THEN
+      ! Read data from sso file
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DFIRE_)%ic_lightning_events_filename), model%grid_id)
+
+      !>
+      ptr_3D => input_file%Read_2D_time(variable_name='HRMC_COM_FR')
+      DO i_month = 1,12
+        ! Data is loaded as #events km-2 day-1 and converted into #events ha-1 day-1
+        ! convert km-2 to ha-1
+        ic_lightning_Events_monthly(:,i_month,:) = ptr_3D(:,:,i_month) / 100._wp
+      END DO
+
+      CALL input_file%Close()
+
+      ! no need to read the file anymore
+      is_read = .TRUE.
+    END IF
+
+    ! Assign the deposition values of this month to the A2L variables
+    current_month = get_month(current_datetime)
+
+    lightning_events(:,:) = ic_lightning_events_monthly(:,current_month,:)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
+  END SUBROUTINE provide_lightning_events
 
 #endif
 END MODULE mo_dfire_init

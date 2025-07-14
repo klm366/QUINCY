@@ -37,7 +37,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_time_experiment_start
   USE mo_jsb_physical_constants, ONLY: cvdifts
 
-  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, DFIRE_
 
   IMPLICIT NONE
   PRIVATE
@@ -695,6 +695,7 @@ CONTAINS
     USE mo_alcc_init,           ONLY : read_land_use_data
 #ifndef __NO_QUINCY__
     USE mo_sb_init,             ONLY : provide_n_and_p_deposition
+    USE mo_dfire_init,          ONLY : provide_lightning_events
     USE mo_q_syl_init,          ONLY : read_harvest_fraction
     USE mo_q_agr_init,          ONLY : read_fertiliser_input
 #endif
@@ -744,9 +745,14 @@ CONTAINS
 
       ! For the SB process data on n and p deposition might have to be read once a year / at the beginning of a simulation
       ! and might need to be updated once a month
-      IF ((is_newmonth(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime)) &
-          & .AND. model%processes(SB_)%p%config%active) THEN
-        CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
+      IF ((is_newmonth(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime))) THEN
+        IF (model%processes(SB_)%p%config%active) THEN
+          CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
+        END IF
+        ! For the DFIRE process, data on lightning events is read at the start of the simulation and updated monthly
+        IF (model%processes(DFIRE_)%p%config%active) THEN
+          CALL provide_lightning_events(model_id, current_datetime, dtime)
+        END IF
       END IF
     END IF
 #endif
