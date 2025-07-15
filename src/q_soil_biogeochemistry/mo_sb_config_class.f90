@@ -30,6 +30,7 @@ MODULE mo_sb_config_class
     &       SB_PART_POLYMERIC_LITTER_IDX, SB_PART_WOODY_LITTER_IDX
   PUBLIC :: SB_PART_FUNGI_IDX, SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX, &
     &       SB_PART_RESIDUE_ASSOC_IDX
+  PUBLIC :: CONST_DEP, REFYEAR_DEP, TRANS_DEP
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the soil_biogeochemistry process, derived from t_jsb_config
@@ -49,6 +50,9 @@ MODULE mo_sb_config_class
                                                         !!              based on Rastaetter et al. 2001, Meyerholt et al. 2016, Kern, 2021
                                                         !! unlimited: asymbiotic N fixation set to satify plant growth demands at any point in time
     CHARACTER(15)         :: sb_adsorp_scheme
+    !!
+    INTEGER :: deposition_scheme !< one of: CONST_DEP=1, REFYEAR_DEP=2, TRANS_DEP=3
+                                 !< - in case of REFYEAR_DEP and TRANS_DEP the data is read from an external file in IQ
     !> flags
     !!
     LOGICAL               :: flag_sb_prescribe_nh4
@@ -76,7 +80,8 @@ MODULE mo_sb_config_class
     REAL(wp)              :: soil_p_primary
     REAL(wp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
 
-    CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< IQ (QUINCY) soil input data
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename    !< IQ (QUINCY) soil input data
+    CHARACTER(len=filename_max) :: deposition_filename_prefix !< IQ. Note: should NOT include an ending "_"
 
    CONTAINS
      PROCEDURE :: Init => Init_sb_config
@@ -98,6 +103,14 @@ MODULE mo_sb_config_class
       & LAST_SB_PART_IDX                 !< last of this ENUM, used to determine the max number of compartments
   END ENUM
 
+  !> deposition schemes (possible values for deposition_scheme)
+  ENUM, BIND(C)
+    ENUMERATOR ::       &
+      & CONST_DEP = 1,      &  !< use global constant nhx, noy and p deposition
+      & REFYEAR_DEP,        &  !< read monthly maps of nhx, noy and p deposition but only initially for reference year (IQ)
+      & TRANS_DEP              !< read monthly maps of nhx, noy and p deposition for each simulation year (IQ)
+  END ENUM
+
   INTEGER, PARAMETER :: simple_1d_compartments(6) = [ SB_PART_SOLUBLE_LITTER_IDX, SB_PART_POLYMERIC_LITTER_IDX, &
     & SB_PART_WOODY_LITTER_IDX, SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX ]
 
@@ -111,24 +124,28 @@ CONTAINS
   !! currently it does only: read parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_sb_config(config)
-#ifdef __QUINCY_STANDALONE__
-    USE mo_namelist,              ONLY: open_nml, POSITIONED, position_nml, close_nml
-#else
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
-#endif
+    USE mo_util_string,           ONLY: tolower
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,              ONLY: Register_vgrid
+    USE mo_jsb_io,                ONLY: ZAXIS_GENERIC
+
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_sb_config), INTENT(inout) :: config    !< config type for sb
     ! ---------------------------
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
+    LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename
+    CHARACTER(len=filename_max) :: deposition_filename_prefix
     CHARACTER(15)               :: sb_model_scheme
     CHARACTER(15)               :: sb_nloss_scheme
     CHARACTER(15)               :: sb_bnf_scheme
     CHARACTER(15)               :: sb_adsorp_scheme
+    CHARACTER(9)                :: deposition_scheme          !< one of constant, refyear, transient
     LOGICAL                     :: flag_sb_prescribe_nh4
     LOGICAL                     :: flag_sb_prescribe_no3
     LOGICAL                     :: flag_sb_prescribe_po4
@@ -155,13 +172,16 @@ CONTAINS
     NAMELIST /jsb_sb_nml/                     &
 #endif
                       active                    , &
+                      lrestart_cont             , &
                       ic_filename               , &
                       bc_filename               , &
                       bc_quincy_soil_filename   , &
+                      deposition_filename_prefix, &
                       sb_model_scheme           , &
                       sb_nloss_scheme           , &
                       sb_bnf_scheme             , &
                       sb_adsorp_scheme          , &
+                      deposition_scheme         , &
                       flag_sb_prescribe_nh4     , &
                       flag_sb_prescribe_no3     , &
                       flag_sb_prescribe_po4     , &
@@ -182,20 +202,25 @@ CONTAINS
                       soil_p_primary            , &
                       qmax_org_fine_particle
 
-    INTEGER  :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
+    TYPE(t_jsb_vgrid), POINTER  :: time_months_vgrid
+    INTEGER :: i_month
+    INTEGER :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_config'
 
     CALL message(TRIM(routine), 'Starting soil_biogeochemistry configuration')
 
     ! Set defaults
     active                      = .TRUE.
+    lrestart_cont               = .FALSE.           ! TRUE: Continue even if SB variables are missing in restart file
     ic_filename                 = 'ic_land_srf.nc'
     bc_filename                 = 'bc_land_srf.nc'
     bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
+    deposition_filename_prefix  = 'bc_land_npdep_quincy'
     sb_model_scheme             = "simple_1d"       ! simple_1d jsm
     sb_nloss_scheme             = "dynamic"         ! none fixed dynamic
     sb_bnf_scheme               = "dynamic"         ! none dynamic unlimited (fixed == dynamic)
     sb_adsorp_scheme            = "eca_full"        ! eca_full; eca_part (only uptake, not for adsorption); eca_none
+    deposition_scheme           = 'constant'
     flag_sb_prescribe_nh4       = .FALSE.
     flag_sb_prescribe_no3       = .FALSE.
     flag_sb_prescribe_po4       = .FALSE.
@@ -230,9 +255,11 @@ CONTAINS
 
     ! pass values as read from file
     config%active                          = active
+    config%lrestart_cont                   = lrestart_cont
     config%ic_filename                     = ic_filename
     config%bc_filename                     = bc_filename
     config%bc_quincy_soil_filename         = bc_quincy_soil_filename
+    config%deposition_filename_prefix      = deposition_filename_prefix
     config%sb_model_scheme                 = TRIM(sb_model_scheme)
     config%sb_nloss_scheme                 = TRIM(sb_nloss_scheme)
     config%bnf_scheme                      = TRIM(sb_bnf_scheme)
@@ -266,6 +293,27 @@ CONTAINS
     CASE DEFAULT
       CALL finish(TRIM(routine),  'No such soil model available: '//TRIM(sb_model_scheme))
     END SELECT
+
+    ! Set deposition scheme
+    SELECT CASE (tolower(TRIM(deposition_scheme)))
+    CASE ("constant")
+      CALL message(TRIM(routine), 'Running with constant deposition.')
+      config%deposition_scheme = CONST_DEP
+    CASE ("refyear")
+      CALL message(TRIM(routine), 'Running with deposition from a refyear.')
+      config%deposition_scheme = REFYEAR_DEP
+    CASE ("transient")
+      CALL message(TRIM(routine), 'Running with transient deposition.')
+      config%deposition_scheme = TRANS_DEP
+    CASE DEFAULT
+      CALL finish(TRIM(routine), 'deposition_scheme == '//tolower(TRIM(deposition_scheme))//' not available.')
+    END SELECT
+
+    ! Create vertical axis
+    ! - this grid might be useful in other contexts, too?
+    time_months_vgrid => new_vgrid('time_months', ZAXIS_GENERIC, 12, &
+      & levels=(/ (REAL(i_month, kind=wp), i_month = 1,12) /), units='')
+    CALL register_vgrid(time_months_vgrid)
 
   END SUBROUTINE Init_sb_config
 

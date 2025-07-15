@@ -39,8 +39,9 @@ MODULE mo_jsb_process_factory_core
 #endif
 #ifndef __NO_QUINCY__
   USE mo_q_assimi_memory_class,ONLY: t_q_assimi_memory
+  USE mo_q_syl_memory_class,   ONLY: t_q_syl_memory
+  USE mo_q_agr_memory_class,   ONLY: t_q_agr_memory
   USE mo_q_pheno_memory_class, ONLY: t_q_pheno_memory
-  USE mo_q_rad_memory_class,   ONLY: t_q_rad_memory
   USE mo_spq_memory_class,     ONLY: t_spq_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
   USE mo_sb_memory_class,      ONLY: t_sb_memory
@@ -85,10 +86,12 @@ MODULE mo_jsb_process_factory_core
   USE mo_nlcc_interface,        ONLY: Register_nlcc_tasks
   USE mo_nlcc_config_class,     ONLY: t_nlcc_config
 #ifndef __NO_QUINCY__
-  USE mo_q_rad_interface,       ONLY: Register_q_rad_tasks
-  USE mo_q_rad_config_class,    ONLY: t_q_rad_config
   USE mo_q_assimi_interface,    ONLY: Register_q_assimi_tasks
   USE mo_q_assimi_config_class, ONLY: t_q_assimi_config
+  USE mo_q_syl_interface,       ONLY: Register_q_syl_tasks
+  USE mo_q_syl_config_class,    ONLY: t_q_syl_config
+  USE mo_q_agr_interface,       ONLY: Register_q_agr_tasks
+  USE mo_q_agr_config_class,    ONLY: t_q_agr_config
   USE mo_q_pheno_interface,     ONLY: Register_q_pheno_tasks
   USE mo_q_pheno_config_class,  ONLY: t_q_pheno_config
   USE mo_q_veg_interface,       ONLY: Register_veg_tasks_quincy
@@ -102,7 +105,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, LEX_, &
-    & Q_PHENO_, Q_ASSIMI_, Q_RAD_
+    & Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
   IMPLICIT NONE
   PRIVATE
@@ -199,12 +202,15 @@ CONTAINS
       CALL Register_lex_tasks(return_ptr, model_id)
       ALLOCATE(t_lex_config::return_ptr%config)
 #ifndef __NO_QUINCY__
-    CASE (Q_RAD_)
-      CALL Register_q_rad_tasks(return_ptr, model_id)
-      ALLOCATE(t_q_rad_config::return_ptr%config)
     CASE (Q_ASSIMI_)
       CALL Register_q_assimi_tasks(return_ptr, model_id)
       ALLOCATE(t_q_assimi_config::return_ptr%config)
+    CASE (Q_SYL_)
+      CALL Register_q_syl_tasks(return_ptr, model_id)
+      ALLOCATE(t_q_syl_config::return_ptr%config)
+    CASE (Q_AGR_)
+      CALL Register_q_agr_tasks(return_ptr, model_id)
+      ALLOCATE(t_q_agr_config::return_ptr%config)
     CASE (Q_PHENO_)
       CALL Register_q_pheno_tasks(return_ptr, model_id)
       ALLOCATE(t_q_pheno_config::return_ptr%config)
@@ -254,8 +260,9 @@ CONTAINS
 #endif
 #ifndef __NO_QUINCY__
     USE mo_q_assimi_memory_class,ONLY: max_no_of_q_assimi_vars => max_no_of_vars
+    USE mo_q_syl_memory_class,   ONLY: max_no_of_q_syl_vars => max_no_of_vars
+    USE mo_q_agr_memory_class,   ONLY: max_no_of_q_agr_vars => max_no_of_vars
     USE mo_q_pheno_memory_class, ONLY: max_no_of_q_pheno_vars => max_no_of_vars
-    USE mo_q_rad_memory_class,   ONLY: max_no_of_q_rad_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
     USE mo_sb_memory_class,      ONLY: max_no_of_sb_vars => max_no_of_vars
     USE mo_spq_memory_class,     ONLY: max_no_of_spq_vars => max_no_of_vars
@@ -324,12 +331,15 @@ CONTAINS
     CASE (Q_ASSIMI_)
       ALLOCATE(t_q_assimi_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_q_assimi_vars
+    CASE (Q_SYL_)
+      ALLOCATE(t_q_syl_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_q_syl_vars
+    CASE (Q_AGR_)
+      ALLOCATE(t_q_agr_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_q_agr_vars
     CASE (Q_PHENO_)
       ALLOCATE(t_q_pheno_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_q_pheno_vars
-    CASE (Q_RAD_)
-      ALLOCATE(t_q_rad_memory::return_ptr)
-      return_ptr%max_no_of_vars = max_no_of_q_rad_vars
     CASE (VEG_)
       ALLOCATE(t_veg_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_veg_vars

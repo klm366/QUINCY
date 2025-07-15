@@ -45,15 +45,12 @@ CONTAINS
   !> read Q_PHENO_ namelist and init configuration parameters
   !>
   SUBROUTINE Init_q_pheno_config(config)
-#ifdef __QUINCY_STANDALONE__
-    USE mo_namelist,              ONLY: open_nml, POSITIONED, position_nml, close_nml
-#else
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_q_pheno_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active
+    LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     REAL(wp)                    :: lai_max         !< init lai_max Q_PHENO_ memory variable
@@ -64,6 +61,7 @@ CONTAINS
     NAMELIST /q_pheno_nml/  &
 #endif
       & active,               &
+      & lrestart_cont,        &
       & ic_filename,          &
       & bc_filename,          &
       & lai_max
@@ -74,6 +72,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
     active      = .TRUE.
+    lrestart_cont = .FALSE.      ! TRUE: Continue although PHENO variables are missing in restart file
     bc_filename = 'bc_land_phenology.nc'
     ic_filename = 'ic_land_phenology.nc'
     lai_max     = -1.0_wp
@@ -91,6 +90,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                     = active
+    config%lrestart_cont              = lrestart_cont
     config%ic_filename                = ic_filename
     config%bc_filename                = bc_filename
     config%lai_max                    = lai_max

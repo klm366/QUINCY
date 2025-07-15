@@ -18,8 +18,8 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, LEX_,  &
-    &                   Q_PHENO_, Q_ASSIMI_, Q_RAD_
+    &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, LEX_, &
+    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -66,18 +66,6 @@ CONTAINS
   !
   SUBROUTINE setup_grid_standalone(nproca, nprocb, npedim, model_id, model_name)
 
-#ifndef __ICON__
-    ! >> TODO: echam
-    USE mo_gaussgrid,            ONLY : inigau
-    USE mo_echam_convect_tables, ONLY : init_convect_tables
-    USE mo_netCDF,               ONLY: add_dim
-    ! <<
-    USE mo_jsb_grid_iface,       ONLY: get_lons_and_lats_from_file, get_nlon_nlat_from_file
-    USE mo_jsb_domain_iface,     ONLY: t_patch, jsbalone_init_decomp
-    USE mo_jsb_grid_class,       ONLY: t_jsb_grid, new_grid
-    USE mo_jsb_grid,             ONLY: Register_grid
-#endif
-
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(in)                    :: nproca !< Number of processors in 1st dimension
                                                      !< of 2-d decomposition
@@ -91,50 +79,13 @@ CONTAINS
         !< Name of model instance
     ! -------------------------------------------------------------------------------------------------- !
 
-#ifndef __ICON__
-    TYPE(t_jsb_model), POINTER  :: model
-    TYPE(t_jsb_grid),  POINTER  :: grid
-    TYPE(t_patch)               :: decomposition
-
-    INTEGER :: nlon, nlat
-#endif
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_standalone'
     ! ---------------------------------------------------------------------------------------------------!
 
-#ifdef __ICON__
     ! avoid compiler warnings about dummy arguments not being used
     IF (.FALSE.) WRITE(*,*) nproca, nprocb, npedim, model_id, model_name
-    CALL finish(TRIM(routine),'This subroutine should not be called with ICON')
-#else
-    model => Get_model(model_id)
 
-    IF (PRESENT(model_name)) THEN
-      IF (ADJUSTL(TRIM(model_name)) /= ADJUSTL(TRIM(model%name))) &
-        CALL finish(TRIM(routine), 'Model ID and name are inconsistent with namelist config.')
-    END IF
-
-    CALL get_nlon_nlat_from_file(model%config%grid_filename, nlon, nlat)
-    CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
-
-    CALL inigau               ! beside others required for get_area, i.e. required before new_grid
-    CALL init_convect_tables
-
-    CALL add_dim("lon", nlon, "longitude", "degrees_east" ) !required to write restart files
-    CALL add_dim("lat", nlat, "latitude", "degrees_north")
-
-    CALL get_lons_and_lats_from_file(model%config%grid_filename, decomposition%nproma, decomposition%ngpblks)
-        ! needs to be done after the decomposition is initialised; required for get_lon and get_lat,
-        ! especially for site-level sims
-    grid => new_grid(decomposition, type='echam')
-
-    CALL register_grid(grid)
-    model%grid_id = grid%id
-
-    ! CALL init_model_common(model)
-
-    NULLIFY(model)
-#endif
+    CALL finish(TRIM(routine),'Not implemented for ICON')
 
   END SUBROUTINE setup_grid_standalone
 
@@ -196,20 +147,22 @@ CONTAINS
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_rad_init,            ONLY: rad_init
+    USE mo_carbon_init,         ONLY: carbon_init
     USE mo_lex_init,            ONLY: lex_init
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
-    USE mo_q_rad_init,          ONLY: q_rad_init
     USE mo_q_assimi_init,       ONLY: q_assimi_init
     USE mo_q_pheno_init,        ONLY: q_pheno_init
+    USE mo_q_syl_init,          ONLY: q_syl_init
+    USE mo_q_agr_init,          ONLY: q_agr_init
     USE mo_spq_init,            ONLY: spq_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
 #endif
     USE mo_fage_init,           ONLY: fage_init
 
-    USE mo_fage_init_lcc,       ONLY: fage_init_lcc
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
+    USE mo_fage_init_lcc,       ONLY: fage_init_lcc
     USE mo_flcc_init_lcc,       ONLY: flcc_init_lcc
     USE mo_wlcc_init_lcc,       ONLY: wlcc_init_lcc
 
@@ -357,7 +310,6 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
       CALL model%Queue_task(HD_,     "hd_local_outflow")
 #endif
-      CALL model%Queue_task(SEB_,    "snowmelt_correction")
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         ! Normally called before update_canopy_cond_unstressed and update_assimilation
         CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors")
@@ -392,6 +344,7 @@ CONTAINS
           ! the SEB remains consistent within this time step.
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
+      CALL model%Queue_task(SEB_,    "energy_balance")
 
       ! Fuel is calculated last in a timestep to be right available in the next timestep
       IF (model%processes(FUEL_)%p%config%active) THEN
@@ -436,18 +389,56 @@ CONTAINS
       ENDIF
 
       !-- science
+
+      ! ------------------------ Any tasks that might change the land cover need to come first in the timestep
+      !
+      ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
+      ! if any process that changes area is active (currently none for QS)
+      ! or if harvest is active because it already now needs information on the forested area
+      !
+      IF (model%processes(PPLCC_)%p%config%active) THEN
+        ! Prepare LCC tasks
+        CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
+
+        ! Here all lcc tasks need to be called
+
+        ! Call alcc for now only in CANOPY mode (i.e. without biogeochemistry enabled)
+        IF (model%config%qmodel_id == QCANOPY) THEN
+          IF (model%processes(ALCC_)%p%config%active) THEN
+            CALL model%Queue_task(ALCC_, "alcc")
+          END IF
+        END IF
+
+        ! Do postprocessing after all LCC tasks were executed
+        CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
+      END IF
+
+      IF (model%config%qmodel_id == QLAND) THEN
+        IF (model%processes(Q_SYL_)%p%config%active .OR. model%processes(Q_AGR_)%p%config%active) THEN
+          IF (model%processes(Q_SYL_)%p%config%active) THEN
+            CALL model%Queue_task(Q_SYL_, "sylviculture")        ! LAND ONLY; if Q_SYL_ active
+          END IF
+          IF (model%processes(Q_AGR_)%p%config%active) THEN
+            CALL model%Queue_task(Q_AGR_, "cropland_process")     ! LAND ONLY; if Q_AGR_ active
+          END If
+          CALL model%Queue_task(VEG_, "pools_on_harvest")         ! LAND ONLY; if Q_SYL_ or Q_AGR_ active
+          CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND ONLY; if Q_SYL_ or Q_AGR_ active
+        END IF
+      END IF
+
       IF(model%config%qmodel_id == QLAND) THEN
         CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
       ENDIF
       CALL model%Queue_task(SPQ_, "soil_turbulence")              ! ALL
-      CALL model%Queue_task(Q_RAD_, "q_radiation")                ! ALL
+      CALL model%Queue_task(RAD_, "surface_radiation")            ! ALL
       CALL model%Queue_task(Q_PHENO_, "q_phenology")              ! ALL
+      CALL model%Queue_task(RAD_, "radiation_par")                ! ALL
       CALL model%Queue_task(Q_ASSIMI_, "canopy_fluxes")           ! ALL
       CALL model%Queue_task(SPQ_, "spq_physics")                  ! ALL
 
       IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
         IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
-          CALL model%Queue_task(VEG_, "products_decay")           ! LAND or PLANT
+          CALL model%Queue_task(VEG_, "products_decay")           ! LAND or PLANT; if with l_use_product_pools
         ENDIF
         CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
         CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
@@ -458,12 +449,20 @@ CONTAINS
       ENDIF
 
       CALL model%Queue_task(VEG_, "veg_pools")                    ! ALL
+      CALL model%Queue_task(VEG_, "plant_characteristics")        ! ALL - ! required after updating veg pools !
+
       IF(model%config%qmodel_id == QLAND) THEN
         CALL model%Queue_task(SB_, "sb_pools")                    ! LAND ONLY
       ENDIF
 
+      CALL model%Queue_task(TURB_, "humidity_scaling")            ! ALL
+      IF (.NOT. model%config%use_tmx) THEN
+        CALL model%Queue_task(TURB_, "surface_roughness")         ! ALL
+      END IF
+      CALL model%Queue_task(RAD_, "albedo")                       ! ALL
+
       !-- averaging variables in time
-      CALL model%Queue_task(Q_RAD_, "tavrg_q_radiation")          ! ALL
+      CALL model%Queue_task(RAD_, "rad_time_average")             ! ALL
       CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")      ! ALL
       CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
       IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
@@ -541,28 +540,17 @@ CONTAINS
 
       ! TBD: Loop over processes instead of explicit
 
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_JSBACH)
-        IF (tile%Is_process_active(RAD_)) THEN
+      IF (tile%Is_process_active(RAD_)) THEN
           CALL rad_init(tile)
-        END IF
-#ifndef __NO_QUINCY__
-      CASE (MODEL_QUINCY)
-        IF (tile%Is_process_active(Q_RAD_)) THEN
-          CALL q_rad_init(tile)
-        END IF
-#endif
-      END SELECT
+      END IF
 
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_JSBACH)
-        IF (tile%Is_process_active(SEB_)) THEN
-          CALL seb_init(tile)
-        END IF
-        IF (tile%Is_process_active(TURB_)) THEN
-          CALL turb_init(tile)
-        END IF
-      END SELECT
+      IF (tile%Is_process_active(SEB_)) THEN
+        CALL seb_init(tile)
+      END IF
+
+      IF (tile%Is_process_active(TURB_)) THEN
+        CALL turb_init(tile)
+      END IF
 
       ! Initialize PHENO_ / Q_PHENO_ before HYDRO_ and VEG_
       SELECT CASE (model%config%model_scheme)
@@ -580,14 +568,14 @@ CONTAINS
 
       ! HYDRO_ & SSE_
       ! SPQ_, SB_
+      IF (tile%Is_process_active(SSE_)) THEN
+        CALL sse_init(tile)
+      END IF
+      IF (tile%Is_process_active(HYDRO_)) THEN
+        CALL hydro_init(tile)
+      END IF
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        IF (tile%Is_process_active(SSE_)) THEN
-          CALL sse_init(tile)
-        END IF
-        IF (tile%Is_process_active(HYDRO_)) THEN
-          CALL hydro_init(tile)
-        END IF
       ! Needs both HYDRO_ and SSE_ to continue soil initialization from IFS
         IF (tile%Is_process_active(SSE_)) THEN
           CALL init_soil_properties(tile)
@@ -606,6 +594,14 @@ CONTAINS
             CALL sb_init(tile)
           END IF
         ENDIF
+        IF(model%config%qmodel_id == QLAND) THEN
+          IF (tile%Is_process_active(Q_SYL_)) THEN
+            CALL q_syl_init(tile)
+          END IF
+          IF (tile%Is_process_active(Q_AGR_)) THEN
+            CALL q_agr_init(tile)
+          END IF
+        END IF
 #endif
       END SELECT
 
@@ -624,6 +620,9 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
+        IF (tile%Is_process_active(CARBON_)) THEN
+          CALL carbon_init(tile)
+        END IF
         IF (tile%Is_process_active(FAGE_)) THEN
           CALL fage_init(tile)
         END IF
@@ -672,6 +671,13 @@ CONTAINS
     END DO
 
     IF (model%config%ifs_input_file%is_open) CALL model%config%ifs_input_file%Close()
+
+#ifndef __NO_QUINCY__
+      ! Write back all values from the matrices to the bgcm variables that have been set
+      ! in the init routines -- this is required when writing the init values to the output
+      ! before the time-loop is started
+      CALL model%Write_back_to_bgcms()
+#endif
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -770,6 +776,8 @@ CONTAINS
 
     END DO
 
+    !$ACC WAIT(1)
+
     DEALLOCATE(fract_tmp)
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -838,14 +846,14 @@ CONTAINS
         CYCLE
       END IF
 
+      IF (tile%Is_process_active(ALCC_)) THEN
+        CALL alcc_init_lcc(tile)
+      END IF
+
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(FAGE_)) THEN
           CALL fage_init_lcc(tile)
-        END IF
-
-        IF (tile%Is_process_active(ALCC_)) THEN
-          CALL alcc_init_lcc(tile)
         END IF
 
         IF (tile%Is_process_active(FLCC_)) THEN

@@ -31,7 +31,7 @@ MODULE mo_jsb_tile
   USE mo_jsb_control,         ONLY: debug_on, get_no_of_models
 
   USE mo_hsm_class,           ONLY: t_State, t_Message
-  USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_process_class,   ONLY: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
@@ -240,13 +240,15 @@ CONTAINS
       IF (j > 0) THEN
         ! Get the ID of the current process i from input argument `processes`
         iproc = processes(j)
-        ! TODO hard coded checks of process dependencies - should not be handled here
-        IF (iproc == SEB_ .AND. ALLOCATED(return_ptr%lcts)) THEN
-          IF (return_ptr%lcts(1)%id /= LAND_TYPE .AND. return_ptr%lcts(1)%id /= LAKE_TYPE) THEN
+        SELECT CASE (model%config%model_scheme)
+        CASE (MODEL_JSBACH)
+          IF (.NOT. return_ptr%model%config%use_tmx .AND. iproc == SEB_ .AND. ALLOCATED(return_ptr%lcts)) THEN
+            ! TODO hard coded checks of process dependencies - should not be handled here
             CALL message(TRIM(routine), &
               & 'Experimental: SEB_ process usually only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')
+            END IF
           END IF
-        END IF
+        END SELECT
         IF (PRESENT(process_actions)) THEN
           ! Use the given `process_actions(j)` for this tile and process `iproc` ...
           CALL return_ptr%Set_process_action(iproc, process_actions(j), action_to_parents=AGGREGATE_)
@@ -389,13 +391,20 @@ CONTAINS
         this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
         this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
         this%mem(iproc)%p%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
+        IF (ASSOCIATED(model%processes(iproc)%p%config)) THEN
+          IF (this%Has_process_memory(iproc)) THEN
+            this%mem(iproc)%p%lrestart_cont = model%processes(iproc)%p%config%lrestart_cont
+          END IF
+        END IF
         !$ACC UPDATE DEVICE(this%mem(iproc)%p) ASYNC(1)
         !$ACC ENTER DATA CREATE(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
           !TODO: check if prefix is still needed ...
-          CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
+          CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), &
+            &     TRIM(suffix), this%lcts(:)%id, this%lcts(1)%lib_id, this%owner_model_id)
         ELSE
-          CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
+          CALL this%mem(iproc)%p%Init(TRIM(process_name), &
+            &     TRIM(suffix), this%lcts(:)%id, this%lcts(1)%lib_id, this%owner_model_id)
         END IF
         !$ACC UPDATE DEVICE(this%mem(iproc)%p%vars) ASYNC(1)
         IF (debug_on()) &
@@ -419,6 +428,7 @@ CONTAINS
 
     END DO
     !$ACC UPDATE DEVICE(this%mem) ASYNC(1)
+    !$ACC WAIT(1)
 
   END SUBROUTINE Init_tile
 
@@ -495,7 +505,7 @@ CONTAINS
       & t_cf('tile_fraction', '',                                                                             &
       &      'fraction of grid box covered by tile '//TRIM(this%name)),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
+      & prefix, suffix, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE.,                               &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
 
     ! Now we need to set the tile component fract pointer to the just allocated memory
@@ -507,7 +517,7 @@ CONTAINS
       & t_cf('tile_fraction_old', '',                                                                          &
       &      'old fraction of grid box covered by tile '//TRIM(this%name)),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions,                                                      &
+      & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE., &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
@@ -617,12 +627,13 @@ CONTAINS
         & t_cf('lct_fraction', '',                                                                                &
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-        & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                       &
+        & prefix, suffix, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE.,                                 &
         & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
       __acc_attach(this%lcts(ilct)%fract)
 
     END DO
 
+    !$ACC WAIT(1)
     DEALLOCATE(tmp_fract)
 
   END SUBROUTINE Init_fractions_on_tile
@@ -689,6 +700,7 @@ CONTAINS
       END DO
 
     END DO
+    !$ACC WAIT(1)
 
   END SUBROUTINE Init_vars_on_tile
 

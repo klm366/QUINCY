@@ -50,7 +50,7 @@ CONTAINS
     & veg_litterfall_mt, &             ! in
     & sb_formation_mt )                ! inout
 
-    USE mo_veg_constants,           ONLY: ITREE, IGRASS
+    USE mo_veg_constants,           ONLY: ITREE, IGRASS, ICROP
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_sb_constants,            ONLY: fc_soluable_max, k_fc_soluable, k_fn_soluable, k_fp_soluable, &
                                           lc_leaf_max, lc_leaf2sla, lc_fine_root, lc_coarse_root, lc_fruit, lc_seed_bed
@@ -304,7 +304,7 @@ CONTAINS
         &           sb_formation_mt(ix_woody_litter, ixN15, :, 1) &
         &           + (veg_litterfall_mt(ix_sap_wood, ixN15, :) + veg_litterfall_mt(ix_heart_wood, ixN15, :)) / soil_depth_sl(:,1)
     ! grass PFT
-    CASE (IGRASS)
+    CASE (IGRASS,ICROP)
       ! soluable litter
       sb_formation_mt(ix_soluable_litter, ixC, :, 1) = &
         &             sb_formation_mt(ix_soluable_litter, ixC, :, 1) &

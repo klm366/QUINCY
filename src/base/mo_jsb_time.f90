@@ -16,11 +16,12 @@ MODULE mo_jsb_time
 
   USE mo_kind,           ONLY: wp
   USE mo_exception,      ONLY: message, message_text, finish
-  USE mo_jsb_time_iface, ONLY: t_datetime, deallocateDatetime, get_time_next, &
+  USE mo_jsb_time_iface, ONLY: t_datetime, deallocateDatetime, get_time_previous, get_time_next, &
                                get_date_components, get_time_start, &
                                get_time_dt, is_time_experiment_start, get_time_experiment_start, is_time_restart, &
                                get_year_length, get_month_length, get_day_length, get_year_day,   &
-                               is_time_ltrig_rad_m1, get_time_interpolation_weights, get_asselin_coef
+                               is_time_ltrig_rad_m1, get_asselin_coef, &
+                               cache_time_interpolation_weights, get_time_interpolation_weights
 
   IMPLICIT NONE
   PRIVATE
@@ -32,8 +33,8 @@ MODULE mo_jsb_time
             is_time_experiment_start, is_time_restart, is_time_ltrig_rad_m1, &
             get_year_length, get_month_length, get_day_length, get_year_day
   PUBLIC :: is_newday, is_newmonth, is_newyear, get_year_at_model_start, get_year_at_experiment_start, &
-            get_year, get_month, get_day, get_secs_of_day
-  PUBLIC :: get_time_interpolation_weights
+            get_year, get_month, get_day, get_secs_of_day, get_previous_month_length, get_previous_year_length
+  PUBLIC :: cache_time_interpolation_weights, get_time_interpolation_weights
   PUBLIC :: get_asselin_coef
   PUBLIC :: timestep_in_days, timesteps_per_day
 
@@ -70,18 +71,11 @@ CONTAINS
     IF (.NOT. time_initialized) THEN
       CALL message(TRIM(routine), 'Initializing JSBACH time')
 
-      ! TODO: remove #ifdef
-#ifdef __ICON__
       IF (PRESENT(restart_jsbach)) CONTINUE ! avoid compiler warnings about dummy arguments not being used
       IF (PRESENT(namelist_filename)) CONTINUE ! avoid compiler warnings about dummy arguments not being used
       ! IF (PRESENT(namelist_filename)) THEN                   ! present only for standalone model
       !   CALL read_time_namelist(TRIM(namelist_filename))     ! already done from mo_util_jsbach.f90 in icon
       ! END IF
-#else
-      IF (PRESENT(namelist_filename) .AND. PRESENT(restart_jsbach)) THEN  ! present only for standalone model
-        CALL read_time_namelist(TRIM(namelist_filename), restart_jsbach)
-      END IF
-#endif
 
       IF (PRESENT(model_shortname)) THEN
         CALL configure_time_and_events(model_shortname)
@@ -114,8 +108,6 @@ CONTAINS
 
   LOGICAL FUNCTION is_newday(current, dt)
 
-    USE mo_jsb_time_iface, ONLY: get_time_previous
-
     TYPE(t_datetime), POINTER, INTENT(in) :: current
     REAL(wp),                  INTENT(in) :: dt
 
@@ -138,8 +130,6 @@ CONTAINS
 
   LOGICAL FUNCTION is_newmonth(current, dt)
 
-    USE mo_jsb_time_iface, ONLY: get_time_previous
-
     TYPE(t_datetime), POINTER, INTENT(in) :: current
     REAL(wp),                  INTENT(in) :: dt
 
@@ -159,8 +149,6 @@ CONTAINS
   END FUNCTION is_newmonth
 
   LOGICAL FUNCTION is_newyear(current, dt)
-
-    USE mo_jsb_time_iface, ONLY: get_time_previous
 
     TYPE(t_datetime), POINTER, INTENT(in) :: current
     REAL(wp),                  INTENT(in) :: dt
@@ -218,17 +206,53 @@ CONTAINS
 
   END FUNCTION get_day
 
-  INTEGER FUNCTION get_secs_of_day(this_datetime)
+  REAL(wp) FUNCTION get_secs_of_day(this_datetime)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: this_datetime
 
-    INTEGER :: hour, minute, second
+    INTEGER :: hour, minute, second, ms
 
-    CALL get_date_components(this_datetime, hour=hour, minute=minute, second=second)
+    CALL get_date_components(this_datetime, hour=hour, minute=minute, second=second, ms=ms)
 
-    get_secs_of_day = NINT(3600._wp * REAL(hour,wp) + 60._wp * REAL(minute,wp) + REAL(second,wp))
+    get_secs_of_day = 3600._wp * REAL(hour,wp) + 60._wp * REAL(minute,wp) + REAL(second,wp) + REAL(ms)/1000._wp
 
   END FUNCTION get_secs_of_day
+
+  ! ======================================================================================================= !
+  !>
+  !> Returns the number of seconds of the previous month
+  !
+  INTEGER FUNCTION get_previous_month_length(this_datetime)
+
+    TYPE(t_datetime), POINTER, INTENT(in) :: this_datetime
+
+    INTEGER :: month, prev_month, year
+
+    CALL get_date_components(this_datetime, month=month, year=year)
+    IF (month == 1) THEN
+      get_previous_month_length = NINT(31._wp * REAL(get_day_length(),wp))
+    ELSE
+      prev_month = month-1
+      get_previous_month_length = NINT(REAL(get_month_length(year,prev_month),wp) * REAL(get_day_length(),wp))
+    END IF
+
+  END FUNCTION get_previous_month_length
+
+  ! ======================================================================================================= !
+  !>
+  !> Returns the number of seconds of the previous year
+  !
+  INTEGER FUNCTION get_previous_year_length(this_datetime)
+
+    TYPE(t_datetime), POINTER, INTENT(in) :: this_datetime
+
+    INTEGER :: year, prev_year
+
+    CALL get_date_components(this_datetime, year=year)
+    prev_year = year - 1
+    get_previous_year_length = NINT(REAL(get_year_length(prev_year),wp) * REAL(get_day_length(),wp))
+
+  END FUNCTION get_previous_year_length
 
   INTEGER FUNCTION get_year_at_model_start()
 
@@ -261,15 +285,19 @@ CONTAINS
     REAL(wp), OPTIONAL, INTENT(in) :: dt
     INTEGER,  OPTIONAL, INTENT(in) :: model_id
 
+    REAL(wp) :: dt_loc
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':timestep_in_days'
 
     IF (PRESENT(dt)) THEN
-      timestep_in_days = dt / 86400._wp
+      dt_loc = dt
     ELSE IF (PRESENT(model_id)) THEN
-      timestep_in_days = get_time_dt(model_id) / 86400._wp
+      dt_loc = get_time_dt(model_id)
     ELSE
       CALL finish(routine, 'Must provide either dt oder model_id')
     END IF
+
+    timestep_in_days = dt_loc / 86400._wp
 
   END FUNCTION timestep_in_days
 
@@ -278,21 +306,21 @@ CONTAINS
     REAL(wp), OPTIONAL, INTENT(in) :: dt
     INTEGER,  OPTIONAL, INTENT(in) :: model_id
 
+    REAL(wp) :: dt_loc
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':timesteps_per_day'
 
     IF (PRESENT(dt)) THEN
-      IF( mod(86400,INT(dt)) /= 0) THEN ! For computing the mean day temperature it is assumed that each day
-                                        ! is computed with a fixed number of time steps. Therefore the program is
-                                        ! stopped wheen day length is not an integer multiple of the time step.
-         CALL finish("timesteps_per_day", 'Day length is not an integer multiple of the time step!')
-      ELSE
-         timesteps_per_day = 86400/INT(dt)
-      END IF
+      dt_loc = dt
     ELSE IF (PRESENT(model_id)) THEN
-      timesteps_per_day = 86400 / INT(get_time_dt(model_id))
+      dt_loc = get_time_dt(model_id)
     ELSE
       CALL finish(routine, 'Must provide either dt oder model_id')
     END IF
+
+    timesteps_per_day = NINT(86400._wp/dt_loc)
+    IF (ABS(timesteps_per_day * dt_loc - 86400._wp) > EPSILON(1._wp)) &
+      & CALL finish(routine, 'Time step must fit into day length')
 
   END FUNCTION timesteps_per_day
 

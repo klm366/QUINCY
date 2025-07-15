@@ -16,10 +16,8 @@ MODULE mo_jsb_physical_constants
 
   USE mo_kind, ONLY: wp
 
-  ! Most constants are USEd from host model (ECHAM/ICON) via mo_physical_constants_iface in
-  ! jsbach4_util_mods.f90 resp. mo_util_jsbach.f90:
-  !   echam/src/echam/jsbach4_util_mods.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90
-  !   src/shared/mo_util_jsbach.f90         -> mo_physical_constants_iface -> mo_physical_constants.f90
+  ! Most constants are USEd from host model (ICON) via mo_physical_constants_iface in mo_util_jsbach.f90:
+  !   src/shared/mo_util_jsbach.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90
   USE mo_physical_constants_iface
 
   IMPLICIT NONE
@@ -50,6 +48,7 @@ MODULE mo_jsb_physical_constants
     & Tzero        = 273.15_wp        ,  &      !< the value of Tzero (QUINCY) is identical with tmelt (ECHAM/ICON/jsbach4)
                                                 !<  but in reality tmelt is not always at Tzero [K]
     & rain_as_snow_temp_thresh = Tzero + 2.5_wp !< threshold below which rain falls as snow - source: OCN-weather generator
+
   REAL(wp), PARAMETER :: &
     & LatentHeatVaporization = alv , &          !< [J/kg]   latent heat for vaporisation
     & LatentHeatSublimation  = als              !< [J/kg]   latent heat for sublimation

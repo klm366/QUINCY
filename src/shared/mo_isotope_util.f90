@@ -13,7 +13,6 @@
 !>
 !>#### Contains functions and subroutines to calculate isotope discrimination
 !>
-
 MODULE mo_isotope_util
 #ifndef __NO_JSBACH__
 
@@ -39,6 +38,8 @@ CONTAINS
   !! Output: delta (per mill)
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_delta_C13(element, isotope) RESULT(delta)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: PDB_STANDARD_C13
 
@@ -71,6 +72,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mixing_ratio_C13C12(delta) RESULT(mixing_ratio)
 
+    !$ACC ROUTINE SEQ
+
     USE mo_jsb_physical_constants, ONLY: PDB_STANDARD_C13
 
     IMPLICIT NONE
@@ -98,6 +101,8 @@ CONTAINS
   !! Based on equation 1-3 in Levin et al. (2010), Tellus 62B, 26-46
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_delta_C14(element, isotope, delta_C13) RESULT(delta)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants,    ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14
 
@@ -134,6 +139,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mixing_ratio_C14C(delta_C13,Delta_C14) RESULT(mixing_ratio)
 
+    !$ACC ROUTINE SEQ
+
     USE mo_jsb_physical_constants,        ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14
 
     IMPLICIT NONE
@@ -163,6 +170,8 @@ CONTAINS
   !! Output: delta (per mill)
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_delta_N15(element, isotope) RESULT(delta)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: ATM_STANDARD_N15
 
@@ -223,6 +232,8 @@ CONTAINS
   !! Output: fraction of the transfer flux that will be the isotope
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_fractionation(source_element,source_isotope,discrimination,source_isotope2) RESULT(fractionation)
+
+    !$ACC ROUTINE SEQ
 
      IMPLICIT NONE
      ! ---------------------------

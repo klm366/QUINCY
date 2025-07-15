@@ -58,7 +58,7 @@ CONTAINS
 
     CLASS(t_turb_config), INTENT(inout) :: config
 
-    LOGICAL                     :: active
+    LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     REAL(wp) :: &
       & blending_height, roughness_snow, roughness_bare, roughness_water, &
@@ -67,6 +67,7 @@ CONTAINS
 
     NAMELIST /jsb_turb_nml/           &
       &   active,                     &
+      &   lrestart_cont,              &
       &   ic_filename,                &
       &   bc_filename,                &
       &   blending_height,            &
@@ -86,6 +87,7 @@ CONTAINS
 
     ! Set defaults
     active                     = .TRUE.
+    lrestart_cont              = .FALSE.     ! TRUE: Continue although TURB variables are missing in restart file
     bc_filename                = 'bc_land_phys.nc'
     ic_filename                = 'ic_land_phys.nc'
     blending_height            = 100._wp
@@ -93,7 +95,7 @@ CONTAINS
     roughness_bare             = 0.005_wp
     roughness_water            = 0.0002_wp   ! Claussen, 1991: Estimation of areally-averaged surface fluxes
     roughness_lai_saturation   = 0.4_wp
-    roughness_momentum_to_heat = 10._wp
+    roughness_momentum_to_heat = 10._wp      ! FAO, 1998; but in reality shouldn't be constant but depend on surface features
     max_ini_rough_m            = -1._wp      ! No limit
     l_roughness_lai            = .TRUE.
 
@@ -105,6 +107,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active                     = active
+    config%lrestart_cont              = lrestart_cont
     config%ic_filename                = ic_filename
     config%bc_filename                = bc_filename
     config%blending_height            = blending_height

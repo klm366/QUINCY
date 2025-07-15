@@ -39,25 +39,24 @@ MODULE mo_sse_config_class
     !
     LOGICAL  :: l_heat_cap_map  !< T: Use soil heat capacity from input map, F: derive from FAO
     LOGICAL  :: l_heat_cond_map !< T: Use soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
-    LOGICAL  :: l_heat_cap_pond !< T: Use effective heat capacity for top soil layer that includes the storage capacity of ponds
+    LOGICAL  :: l_heat_cap_pond !< T: Account for the heat capacity of ponds in the top soil layer heat capacity.
     LOGICAL  :: l_soil_texture  !< T: Deduce mineral soil thermal parameters from soil texture
     LOGICAL  :: l_freeze        !< T: Consider freezing and thawing of soil water
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
     LOGICAL  :: l_uniform_snow  !< T: Temporary bugfix to use zero or one snow fraction for soil temperature computation
     REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
                                 !! temperature for freezing/melting [m water equivalent]
-    !! quincy
-    ! INTEGER       :: nsoil_energy         !< number of soil layers for soil energy calculations   ! depreciated feature, but needed for now, see quincy-trac ticket #521
-    ! INTEGER       :: nsoil_water          !< number of soil layers for soil moisture calculations ! depreciated feature, but needed for now, see quincy-trac ticket #521
-    REAL(wp)      :: soil_depth           !< actual soil and rooting depth
-    REAL(wp)      :: wsr_capacity         !< Water holding capacity of ground skin reservoir [m water equivalent]
-    REAL(wp)      :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
-    REAL(wp)      :: soil_awc_prescribe, &
-                     soil_theta_prescribe
-    REAL(wp)      :: soil_sand            !< soil sand proportion - site specific from forcing info file
-    REAL(wp)      :: soil_silt            !< soil silt proportion - site specific from forcing info file
-    REAL(wp)      :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
-    REAL(wp)      :: bulk_density
+    !! quincy standalone
+    INTEGER  :: qs_nsoil_energy      !< number of soil layers for soil energy calculations (equivalent 'qs_nsoil_water' in HYDRO_)
+    REAL(wp) :: soil_depth           !< actual soil and rooting depth
+    REAL(wp) :: wsr_capacity         !< Water holding capacity of ground skin reservoir [m water equivalent]
+    REAL(wp) :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
+    REAL(wp) :: soil_awc_prescribe   !< ..
+    REAL(wp) :: soil_theta_prescribe !< ..
+    REAL(wp) :: soil_sand            !< soil sand proportion - site specific from forcing info file
+    REAL(wp) :: soil_silt            !< soil silt proportion - site specific from forcing info file
+    REAL(wp) :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
+    REAL(wp) :: bulk_density
 
   CONTAINS
     PROCEDURE :: Init => Init_sse_config
@@ -82,26 +81,38 @@ CONTAINS
 
     CLASS(t_sse_config), INTENT(inout) :: config
 
-    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_heat_cap_pond
+    LOGICAL  :: active, lrestart_cont
+    LOGICAL  :: l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_heat_cap_pond
     LOGICAL  :: l_freeze, l_supercool, l_soil_texture, l_uniform_snow
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
     REAL(wp) :: dz_snow(max_snow_layers)
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
+    ! quincy
+    REAL(wp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< intial estimate of soil profile using the upper bound of each soil layer [m]
+    REAL(wp) :: k_soil_profile  !< for soil layer calculations
+    REAL(wp) :: min_layer_depth !< for soil layer calculations
+    INTEGER  :: isoil           !< loop over soil layers
+    INTEGER  :: qs_nsoil_energy !< quincy-standalone specific number of soil layers consistent with SPQ_
+
     NAMELIST /jsb_sse_nml/                      &
       & active,                                 &
+      & lrestart_cont,                          &
       & nsnow, dz_snow, l_snow, l_dynsnow,      &
       & l_heat_cap_dyn, l_heat_cond_dyn,        &
       & l_heat_cap_map, l_heat_cond_map,        &
-      & l_heat_cap_pond, l_soil_texture,        &
-      & l_uniform_snow, l_freeze, l_supercool,  &
-      & w_soil_critical, ic_filename, bc_filename
+      & l_heat_cap_pond,                        &
+      & l_soil_texture, l_uniform_snow,         &
+      & l_freeze, l_supercool, w_soil_critical, &
+      & ic_filename, bc_filename,               &
+      & qs_nsoil_energy
 
     INTEGER :: nml_handler, nml_unit, istat, i
     TYPE(t_input_file) :: input_file
     REAL(wp), POINTER :: ptr_1D(:)
     REAL(wp), ALLOCATABLE :: depths(:), mids(:)
+    REAL(wp), ALLOCATABLE :: dz_energy(:)  !< thickness of soil layers
     INTEGER :: nsoil
 
     TYPE(t_jsb_vgrid), POINTER :: soil_vgrid, snow_vgrid
@@ -110,8 +121,13 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting soil and snow energy configuration')
 
+    ! quincy variables for soil layer calculations
+    k_soil_profile  = 0.25_wp
+    min_layer_depth = 0.065_wp
+
     ! Set defaults
-    active          = .TRUE.
+    active           = .TRUE.
+    lrestart_cont    = .FALSE.  ! TRUE: Continue although SSE variables are missing in restart file
     nsnow            = 5
     dz_snow(:)       = 0._wp
     dz_snow(1:nsnow) = 0.05_wp
@@ -129,6 +145,7 @@ CONTAINS
     w_soil_critical  = 5.85036E-3_wp
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'
+    qs_nsoil_energy  = 5
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -138,6 +155,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active        = active
+    config%lrestart_cont = lrestart_cont
     config%ic_filename   = ic_filename
     config%bc_filename   = bc_filename
 
@@ -181,7 +199,7 @@ CONTAINS
     END IF
     config%l_heat_cap_pond = l_heat_cap_pond
     IF (l_heat_cap_pond) THEN
-      CALL message(TRIM(routine), 'Using effective heat capacity for top soil layer including the storage capacity of ponds')
+      CALL message(TRIM(routine), 'The heat capacity of ponds is accounted for in top soil layer heat capacity.')
     END IF
     config%l_freeze        = l_freeze
     config%l_supercool     = l_supercool
@@ -194,8 +212,12 @@ CONTAINS
     CALL message(TRIM(routine), 'Critical water/ice content in upper soil layer for correction of '// &
       &                         'surface temperature for freezing/melting: '//TRIM(real2string(w_soil_critical)))
 
+    ! quincy standalone
+    config%qs_nsoil_energy = qs_nsoil_energy
+
     IF (.NOT. active) RETURN
 
+#ifndef __QUINCY_STANDALONE__
     input_file = jsb_netcdf_open_input(ic_filename)
 
     ! @todo: At the moment, the soil layers for the energy calculations are the same as for the hydrology
@@ -209,6 +231,48 @@ CONTAINS
     DEALLOCATE(ptr_1D)
 
     CALL input_file%Close()
+#else
+    ! quincy standalone
+    !
+    ! docu of values used for 5 soil layers
+    !   jsbach:
+    !     soillev = 0.065, 0.319, 1.232, 4.134, 9.834
+    !   quincy:
+    !     src/q_soil_phys/mo_spq_config_class.f90
+    !     dz_energy (1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+
+    ! temporary solution: set consistently with SPQ_ config via namelist
+    nsoil = qs_nsoil_energy
+
+    ALLOCATE(depths(nsoil+1))
+    ALLOCATE(mids(nsoil))
+    depths(1) = 0._wp
+    ALLOCATE(dz_energy(nsoil))
+
+    ! slightly modified copy/paste from SPQ_ config
+    ! If not using 5 layers, estimate soil profile (i.e., dz == layer thicknesses) to mimick standard JSB4 profile
+    !  assuming dz_energy(:) = dz_energy(:)
+    IF (nsoil > 5) THEN
+      ! initial calculation of soil profile (for soil moisture calculations) calculating the upper bound of each layer
+      DO isoil = 1,nsoil
+        soil_layer_profile_ubound_estimate(isoil) = min_layer_depth * &
+          &                                         EXP(k_soil_profile * isoil * REAL(max_soil_layers, wp) / REAL(nsoil, wp)) - &
+          &                                         min_layer_depth
+      END DO
+      ! final calculation of soil profile, calculating the layer thickness (dz(:)) and correcting for minimum soil-layer thickness
+      dz_energy(1) = min_layer_depth
+      DO isoil = 2,nsoil
+        dz_energy(isoil) = MAX(min_layer_depth, &
+          &                    soil_layer_profile_ubound_estimate(isoil) - soil_layer_profile_ubound_estimate(isoil-1))
+      END DO
+      ! temporary: for compatibility with "jsbach new_vgrid('soil_depth_energy', ...)" below
+      depths(2:nsoil+1) = dz_energy(1:nsoil)
+    ELSE
+      depths(2:nsoil+1) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+    END IF
+    mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+    DEALLOCATE(dz_energy)
+#endif
 
     soil_vgrid  => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
       & levels  = mids                 (1:nsoil  ),                              &

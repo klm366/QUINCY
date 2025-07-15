@@ -26,14 +26,16 @@ MODULE mo_q_assimi_constants
   PUBLIC
 
   REAL(wp), SAVE :: &
+    ! Minimum value of aerodynamic conductance
+    min_aerodyn_cond = 0.001_wp, &
     ! ratio of the molecular diffusion constants of water and CO2 in air (Nobel, Plant Phys. 2005, p 380)
-    & Dwv2co2_air  = Dwv / Dco2, &                      !< ratio of diffusion coefficient for H2O and CO2 in air
+    Dwv2co2_air  = Dwv / Dco2, &                      !< ratio of diffusion coefficient for H2O and CO2 in air
     ! ratio of the diffusion constant of water and CO2 in air, accounting for turbulent transfer (Nobel, Plant Phys. 2005, p 380)
     ! ACCWA (nvhpc 21 on daint; fractional exponent doesn't work in module data initialization)
 #if (__NVCOMPILER_MAJOR__ <= 21)
-    & Dwv2co2_turb = EXP((2.0_wp / 3.0_wp) * LOG(Dwv / Dco2)) !< ratio of diffusion coefficient for H2O and CO2 in turbulent air
+    Dwv2co2_turb = EXP((2.0_wp / 3.0_wp) * LOG(Dwv / Dco2)) !< ratio of diffusion coefficient for H2O and CO2 in turbulent air
 #else
-    & Dwv2co2_turb = (Dwv / Dco2) ** (2.0_wp / 3.0_wp)        !< ratio of diffusion coefficient for H2O and CO2 in turbulent air
+    Dwv2co2_turb = (Dwv / Dco2) ** (2.0_wp / 3.0_wp)        !< ratio of diffusion coefficient for H2O and CO2 in turbulent air
 #endif
 
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
@@ -44,6 +46,8 @@ MODULE mo_q_assimi_constants
     & ic4phot   = 2
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_assimi_constants'
+
+  !$ACC DECLARE COPYIN(min_aerodyn_cond, Dwv2co2_turb, Dwv2co2_air, ic3phot, ic4phot)
 
 #endif
 END MODULE mo_q_assimi_constants
