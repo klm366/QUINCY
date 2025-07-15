@@ -173,8 +173,15 @@ CONTAINS
   SUBROUTINE hydro_init(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< current tile
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
+
+    dsl4jsb_Def_config(LEX_)
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(LEX_)
 
     ! Read initial and boundary condition data by the top tile, only.
     ! Note: this requires that the init routines in mo_jsb_model_init:jsbach_init are called starting
@@ -184,8 +191,6 @@ CONTAINS
     CALL hydro_init_ic_bc(tile)
     CALL hydro_finalize_init_vars()
 #else
-    dsl4jsb_Get_config(LEX_)
-
     IF (dsl4jsb_Config(LEX_)%active) THEN
       CALL hydro_read_init_vars(tile)
       CALL hydro_init_bc(tile)
@@ -599,7 +604,7 @@ CONTAINS
         CALL message(routine, 'Running lateral exchange without char_area_ct'//str_conti// &
         & '. Setting value to 10000')
         hydro_init_vars%char_area(:,:) = 10000._wp
-      END IF 
+      END IF
       IF (input_file%Has_var('char_h_srf_ct'//str_conti)) THEN
         ptr_2D => input_file%Read_2d(                  &
         & variable_name='char_h_srf_ct'//str_conti, &
@@ -609,7 +614,7 @@ CONTAINS
         CALL message(routine, 'Running lateral exchange without char_h_srf_ct'//str_conti// &
         & '. Setting value to 0')
         hydro_init_vars%char_h_srf(:,:) = 0._wp
-      END IF         
+      END IF
       IF (input_file%Has_var('char_slope_ct'//str_conti)) THEN
         ptr_2D => input_file%Read_2d(                  &
         & variable_name='char_slope_ct'//str_conti, &
@@ -626,7 +631,7 @@ CONTAINS
         hydro_init_vars%char_slope(:,:) = -9999._wp
       END IF
     END IF
- 
+
     !>     - Maximum fraction and depth of local surface depressions needed with the ponds scheme
     IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. .NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
       IF (input_file%Has_var(pond_fract_name) .AND. input_file%Has_var(pond_depth_name)) THEN
@@ -1223,6 +1228,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
     dsl4jsb_Def_config(HYDRO_)                        !< Configuration of the HYDRO process
+    dsl4jsb_Def_config(LEX_)                          !< Configuration of the LEX process
     dsl4jsb_Def_memory(HYDRO_)                        !< Memory of the HYDRO process
 
     TYPE(t_jsb_model), POINTER :: model               !< Current instance of ICON-Land
@@ -1246,6 +1252,7 @@ CONTAINS
     nsoil = soil_w%n_levels
 
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(LEX_)
     dsl4jsb_Get_memory(HYDRO_)
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -1282,11 +1289,11 @@ CONTAINS
       dsl4jsb_var2D_onDomain(HYDRO_,macro_slope)      = hydro_init_vars%char_slope(:,:)
       ! Assigning macro-slope in case no tile-specific input was provided (init var is -9999.9)
       IF (dsl4jsb_Config(LEX_)%l_noslope_dpr) THEN
-        ! Assuming zero slope on depression tiles (h_surf < 0.0) ... 
+        ! Assuming zero slope on depression tiles (h_surf < 0.0) ...
         WHERE ((dsl4jsb_var2D_onDomain(HYDRO_,macro_slope) < 0.0_wp) .AND. &
           &    (dsl4jsb_var2D_onDomain(HYDRO_,h_surf)      < 0.0_wp))
-          dsl4jsb_var2D_onDomain(HYDRO_,macro_slope)  = 0.0_wp    
-        ! ... and steepness elsehwere      
+          dsl4jsb_var2D_onDomain(HYDRO_,macro_slope)  = 0.0_wp
+        ! ... and steepness elsehwere
         ELSE WHERE (dsl4jsb_var2D_onDomain(HYDRO_,macro_slope) < 0.0_wp)
           dsl4jsb_var2D_onDomain(HYDRO_,macro_slope)  = dsl4jsb_var2D_onDomain(HYDRO_,steepness)
         END WHERE
@@ -1299,7 +1306,7 @@ CONTAINS
     ELSE
         dsl4jsb_var2D_onDomain(HYDRO_,area)           = 10000._wp
         dsl4jsb_var2D_onDomain(HYDRO_,h_surf)         = 0.0_wp
-        dsl4jsb_var2D_onDomain(HYDRO_,macro_slope)    = dsl4jsb_var2D_onDomain(HYDRO_,steepness)     
+        dsl4jsb_var2D_onDomain(HYDRO_,macro_slope)    = dsl4jsb_var2D_onDomain(HYDRO_,steepness)
     END IF
 
     ! Maximum depth and extent of surface water ponds

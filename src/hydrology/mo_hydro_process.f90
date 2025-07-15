@@ -88,11 +88,11 @@ CONTAINS
     & wind_10m, t_air, skinres_canopy_max, skinres_max,             &
     & weq_pond_max, fract_snow, fract_skin, fract_pond,             &
     & fract_pond_max, evapotrans, evapopot,                         &
-    & transpiration, rain, snow, wpi_rootzone, wpi_rootzone_max,    &
+    & transpiration, rain, snow, lex_srf_excess, wpi_rootzone, wpi_rootzone_max,    &
     & wtr_soil, hyd_cond_sat_sl1, ice_impedance, le_phase_change,   &
     & wtr_skin, weq_snow_soil, weq_snow_can,                        &
     & snow_soil_dens, wtr_pond, ice_pond,wtr_latflow_res_srf,       &
-    & le_phase_change_res, q_snocpymlt, snow_accum,                 &
+    & le_phase_change_res, q_snocpymlt, new_snow_soil, snow_accum,  &
     & snowmelt_soil, pond_freeze, pond_melt,                        &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
     & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt,       &
@@ -113,13 +113,13 @@ CONTAINS
       & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:), fract_snow(:),  &
       & fract_skin(:), fract_pond(:), fract_pond_max(:),                        &
       & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),         &
-      & wpi_rootzone(:), wpi_rootzone_max(:), wtr_soil(:),                      &
+      & lex_srf_excess(:), wpi_rootzone(:), wpi_rootzone_max(:), wtr_soil(:),                      &
       & hyd_cond_sat_sl1(:), ice_impedance(:), le_phase_change(:)
     REAL(wp), INTENT(inout) ::                                                  &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),      &
       & wtr_pond(:), ice_pond(:), wtr_latflow_res_srf(:)
     REAL(wp), INTENT(out) ::                                                    &
-      & le_phase_change_res(:), q_snocpymlt(:), snow_accum(:),                  &
+      & le_phase_change_res(:), q_snocpymlt(:), new_snow_soil(:), snow_accum(:),&
       & snowmelt_soil(:), pond_freeze(:),                                       &
       & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),         &
       & evapo_pond(:), wtr_pond_net_flx(:), water_to_soil(:), evapo_deficit(:), &
@@ -633,9 +633,9 @@ CONTAINS
   !
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
-    & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime,                                    &
+    & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, k_brock,                           &
     & ltpe_closed, ltpe_open, enforce_water_budget, l_latflow_to_streamflow,             &
-    & soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,                       &
+    & soilhydmodel, interpol_mean, hydro_scale, bot_drain_mode, w_soil_wilt_fract,       &
     & soil_depth_sl, root_depth_sl,                                                      &
     & hyd_cond_sat_sl, matric_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, vol_wres_sl, wtr_soil_pot_scool_sl,  slope,       &
@@ -644,7 +644,6 @@ CONTAINS
     & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, wtr_pond_net_flx,              &
     & tpe_overflow, evapo_deficit, wtr_latflow_res_srf, wtr_latflow_res_sl,              &
     ! out
-    & wtr_soil_sl_rel, ice_soil_sl_rel, immo_soil_sl_rel,                                &
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, runoff_dunne, drainage, &
     & drainage_sl, wtr_transp_down, wtr_soilhyd_res, wtr_latflow_sl                      &
     & )
@@ -676,9 +675,8 @@ CONTAINS
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl, wtr_latflow_res_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
-      & runoff_dunne, drainage, drain_bot, wtr_soilhyd_res
+      & runoff_dunne, drainage, wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
-      & wtr_soil_sl_rel, ice_soil_sl_rel, immo_soil_sl_rel,        &
       & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, &
       & wtr_transp_down, drainage_sl, wtr_latflow_sl
 
@@ -686,6 +684,7 @@ CONTAINS
     REAL(wp) ::                       &
       & evapo_soil_in_m(nc),          & !< evaporation from the soil (without transpiration) [m]
       & transpiration_in_m(nc),       & !< transpiration within time step [m]
+      & drain_bot(nc),                & !< drainage towards bedrock [m]
       & wtr_pond_corr(nc),            & !< correction term for ponds fluxes due to saturated soils [m]
       & hyd_cond_bot(nc)                !< hydraulic conductivity of the bottom soil layer [m/s]
     INTEGER :: ic, is
@@ -733,8 +732,8 @@ CONTAINS
 
     ! Calculation of vertical soil water movement for multiple soil layers
     CALL soilhyd( &
-      &    nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, enforce_water_budget,       &
-      &    slope, soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,         &
+      &    nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, k_brock, enforce_water_budget,     &
+      &    slope, soilhydmodel, interpol_mean, hydro_scale, bot_drain_mode, w_soil_wilt_fract, &
       &    soil_depth_sl, wtr_wres_sl, wtr_p_wilt_sl, wtr_field_cap_sl, wtr_wsat_sl,   &
       &    hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,          &
       &    vol_wres_sl, bclapp_sl, matric_pot_sl, pore_size_index_sl,                  &
@@ -747,8 +746,8 @@ CONTAINS
     IF (hydro_scale == Uniform_) THEN
       ! Handling of quasi lateral fluxes and respective reservoirs in case of uniform scale calculations
       CALL calc_soilhyd_lateral( &
-        &    l_pf_soil, nc, nsoil, dtime,                    &
-        &    flowlag, hyd_cond_bot,                          &
+        &    l_pf_soil, nc, nsoil, dtime, k_brock,           &
+        &    bot_drain_mode, flowlag, hyd_cond_bot,           &
         &    soil_depth_sl, vol_field_cap_sl,                &
         &    ice_soil_sl, wtr_soil_sl,                       &
         &    wtr_latflow_res_sl, drainage_sl, drain_bot,     &
@@ -825,26 +824,6 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-
-
-    ! Get saturation of the soil
-    !$ACC LOOP SEQ
-    DO is = 1, nsoil
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO ic = 1, nc
-        IF (soil_depth_sl(ic,is) * vol_porosity_sl(ic,is) > 0._wp) THEN        
-          wtr_soil_sl_rel(ic,is) = wtr_soil_sl(ic,is) / (soil_depth_sl(ic,is) * vol_porosity_sl(ic,is))
-          ice_soil_sl_rel(ic,is) = ice_soil_sl(ic,is) / (soil_depth_sl(ic,is) * vol_porosity_sl(ic,is))
-          immo_soil_sl_rel(ic,is) = ice_soil_sl(ic,is) + MIN(wtr_soil_pot_scool_sl(ic,is), wtr_soil_sl(ic,is)) &
-            &                     / (soil_depth_sl(ic,is) * vol_porosity_sl(ic,is))
-        ELSE
-          wtr_soil_sl_rel(ic,is) = -1._wp
-          ice_soil_sl_rel(ic,is) = -1._wp
-          immo_soil_sl_rel(ic,is) = -1._wp
-        END IF
-      END DO
-    END DO
-    !$ACC END PARALLEL
 
     !$ACC END DATA
 
@@ -975,8 +954,8 @@ CONTAINS
   !!   Revised by Tobias Stacke (MPI-M) in September 2022
 
   SUBROUTINE soilhyd(                                                &
-    & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, enforce_water_budget,  &
-    &  slope, soilhydmodel, interpol_mean, hydro_scale, w_soil_wilt_fract,   &
+    & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, k_brock, enforce_water_budget,       &
+    & slope, soilhydmodel, interpol_mean, hydro_scale, bot_drain_mode, w_soil_wilt_fract,   &
     & dsoil, wtr_wres_sl, wtr_p_wilt_sl,                                     &
     & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,                        &
     & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,                      &
@@ -992,7 +971,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
     USE mo_jsb_impl_constants,     ONLY: WB_LOGGING, WB_ERROR
     USE mo_hydro_constants,        ONLY: Semi_Distributed_, Uniform_, &
-      & drain_min, drain_max, drain_exp, k_brock
+      & drain_min, drain_max, drain_exp
 
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
     LOGICAL,  INTENT(IN)            :: l_fract(:)                 ! Tile fraction > 0
@@ -1004,18 +983,20 @@ CONTAINS
     INTEGER,  INTENT(in)            :: soilhydmodel               ! hydrology model scheme
     INTEGER,  INTENT(in)            :: interpol_mean              ! vertical interpolation scheme
     INTEGER,  INTENT(in)            :: hydro_scale                !< hydrology scale scheme
-    INTEGER,  INTENT(in)            :: bot_drain_mode             !< scheme for bottom layer drainage
+    INTEGER,  INTENT(in)            :: bot_drain_mode              !< scheme for bottom layer drainage
     REAL(wp), INTENT(in)            :: w_soil_wilt_fract          !< fractional plant wilting point [/]
     REAL(wp), INTENT(IN)            :: dtime                      ! model time step legth [s]
     REAL(wp), INTENT(IN)            :: k_brock                    ! Hydraulic conductivity of bedrock
     REAL(wp), INTENT(IN)            :: slope(:)                   ! slope of gridcell / tile [/]
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
     REAL(wp), INTENT(IN)            :: wtr_wres_sl(:,:)           !< residual water content of soil layer (reduced by ice) [m]
+    REAL(wp), INTENT(IN)            :: wtr_p_wilt_sl(:,:)         !< wilting point of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: wtr_field_cap_sl(:,:)      ! field capacity of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: wtr_wsat_sl(:,:)           ! saturation capacity of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: hyd_cond_sat_sl(:,:)       ! hydraulic conductivity of saturated soil [m/s]
     REAL(wp), INTENT(IN)            :: vol_porosity_sl(:,:)       ! Volumetric soil porosity [m/m]
     REAL(wp), INTENT(IN)            :: vol_field_cap_sl(:,:)      ! Volumetric field capacity [m/m]
+    REAL(wp), INTENT(IN)            :: vol_p_wilt_sl(:,:)         ! Volumetric permanent wilting point [m/m]
     REAL(wp), INTENT(IN)            :: vol_wres_sl(:,:)           !< Volumetric residual water content [m/m]
     REAL(wp), INTENT(IN)            :: bclapp_sl(:,:)             ! exponent B in Clapp and Hornberger
     REAL(wp), INTENT(IN)            :: matric_pot_sl(:,:)         ! Soil matric potential [m]
@@ -1794,17 +1775,17 @@ CONTAINS
   !----------------------------------------------------------------------------------------------
 
   SUBROUTINE calc_soilhyd_lateral(                                          &
-    & l_pf_soil, nc, nsoil, delta_time,                                     &
+    & l_pf_soil, nc, nsoil, delta_time, k_brock, bot_drain_mode,            &
     & flowlag, hyd_cond_bot, soil_depth_sl, vol_field_cap_sl,               &
     & ice_soil_sl, wtr_soil_sl, wtr_latflow_res_sl, drainage_sl, drain_bot, &
     & wtr_latflow_sl)
 
-    USE mo_hydro_constants,    ONLY: k_brock
-
     LOGICAL, INTENT(IN)             :: l_pf_soil(:)               !> Permafrost within the soil above bedrock
     INTEGER,  INTENT(IN)            :: nc                         !> number of cells
     INTEGER,  INTENT(IN)            :: nsoil                      !> number of soil layers
+    INTEGER,  INTENT(IN)            :: bot_drain_mode
     REAL(wp), INTENT(IN)            :: delta_time                 !> time step length
+    REAL(wp), INTENT(IN)            :: k_brock                    ! Hydraulic conductivity of bedrock
     REAL(wp), INTENT(IN)            :: flowlag(:)                 !> lag factor determining the outflow [/]
     REAL(wp), INTENT(IN)            :: hyd_cond_bot(:)            !> hydraulic conductivity of the bottom soil layer [m/s]
     REAL(wp), INTENT(IN)            :: soil_depth_sl(:,:)         !> thicknesses of soil layers until edrock [m]
@@ -1892,12 +1873,13 @@ CONTAINS
             ! Removing outflow from reservoir
             wtr_latflow_res_sl(ic,is) = wtr_latflow_res_sl(ic,is) - wtr_latflow_sl(ic,is)
           END IF
-        ! Calculating additional bottom layer drainage assuming water can redily move to the bedrock-boundary
-        IF (drain_bot_pot(ic) > 0._wp .AND.  wtr_latflow_res_sl(ic,is) > 0._wp) THEN
-          drain_bot_act               = MIN(drain_bot_pot(ic), wtr_latflow_res_sl(ic,is))
-          drain_bot_pot(ic)           = drain_bot_pot(ic) - drain_bot_act
-          wtr_latflow_res_sl(ic,is)   = wtr_latflow_res_sl(ic,is) - drain_bot_act
-          drain_bot(ic)               = drain_bot(ic) + drain_bot_act
+          ! Calculating additional bottom layer drainage assuming water can redily move to the bedrock-boundary
+          IF (drain_bot_pot(ic) > 0._wp .AND.  wtr_latflow_res_sl(ic,is) > 0._wp) THEN
+            drain_bot_act               = MIN(drain_bot_pot(ic), wtr_latflow_res_sl(ic,is))
+            drain_bot_pot(ic)           = drain_bot_pot(ic) - drain_bot_act
+            wtr_latflow_res_sl(ic,is)   = wtr_latflow_res_sl(ic,is) - drain_bot_act
+            drain_bot(ic)               = drain_bot(ic) + drain_bot_act
+          END IF
         END IF
       END DO
     END DO

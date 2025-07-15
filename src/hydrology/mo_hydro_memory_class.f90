@@ -147,6 +147,7 @@ MODULE mo_hydro_memory_class
       & fract_wet,            & !< Wet tile fraction (skin and ponds; soil and canopy)   []
       & fract_skin,           & !< Wet skin fraction (w/o ponds; soil and canopy)        []
       & wtr_skin,             & !< Water content in skin reservoir (soil and canopy)     [m]
+      & new_snow_soil,        & !< New snow on soil at non-glacier/non-lake land points  [m water equivalent]
       & snow_accum,           & !< Change in snow amount on non-glacier/non-lake land
                                 !< tiles                                   [m water equivalent / (time step)]
       & evapotrans_soil,      & !< Evapotranspiration from soil (w/o snow, skin or pond
@@ -196,8 +197,9 @@ MODULE mo_hydro_memory_class
       & wtr_latflow_res_sl,   & !< Water content of intermediary reservoir representing
                                 !< lateral flow of subsurface runoff (only with
                                 !< [[t_hydro_config:hydro_scale=Uniform]])               [m]
-      & wtr_latflow_sl          !< Outflow from the intermediary reservoir representing
+      & wtr_latflow_sl,       & !< Outflow from the intermediary reservoir representing
                                 !< lateral flow of subsurface runoff                     [kg m-2 s-1]
+      & wtr_lex_net_sl          !< Lateral exchange with connected tiles on soil layers                     [kg m-2 s-1]
 
     TYPE(t_jsb_var_real2d) :: &
       & w_skin,           &     !< Water content in skin reservoir                                    [m]
@@ -348,11 +350,6 @@ CONTAINS
       l_uniform = .FALSE.
     END IF
     l_ponds = dsl4jsb_Config(HYDRO_)%l_ponds
-    IF (dsl4jsb_Config(HYDRO_)%hydro_scale == Uniform_) THEN
-      l_uniform = .TRUE.
-    ELSE
-      l_uniform = .FALSE.
-    END IF
     l_lex = dsl4jsb_Config(LEX_)%active
 
     ! set local lrestart switch to TRUE for the MODEL_QUINCY
@@ -943,7 +940,7 @@ CONTAINS
       CALL mem%Add_var( 'new_snow_soil', mem%new_snow_soil,                         &
         & hgrid, surface,                                                           &
         & t_cf('new_snow_soil', 'm (water equivalent)',                             &
-        &      'Snow budget change on soil within the time step'),                  &
+        &      'Amount of new snow on the soil within the time step'),              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )

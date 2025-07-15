@@ -47,9 +47,9 @@ MODULE mo_lex_memory_class
       & fact_lag_srf,         &  !< effective lag for lateral surface fluxes [s-1]
       & fact_lag_blg,         &  !< effective lag for lateral sub-surface fluxes [s-1]
       & wtr_runoff_in,        &  !< surface runoff received from adjacent tiles [kg m-2 s-1]
-      & weq_snowblow_in,      &  !< snowblow from adjacent tiles [kg m-2 s-1]  
-      & wtr_runoff_out,       &  !< surface runoff received by adjacent tiles [kg m-2 s-1] 
-      & wtr_infil_out,        &  !< infiltration to adjacent tiles [kg m-2 s-1]  
+      & weq_snowblow_in,      &  !< snowblow from adjacent tiles [kg m-2 s-1]
+      & wtr_runoff_out,       &  !< surface runoff received by adjacent tiles [kg m-2 s-1]
+      & wtr_infil_out,        &  !< infiltration to adjacent tiles [kg m-2 s-1]
       & weq_snowblow_out         !< snowblow to adjacent tiles [kg m-2 s-1]
 
     TYPE(t_jsb_var_real3d) :: &
@@ -57,18 +57,18 @@ MODULE mo_lex_memory_class
       & length_scale_ct,      &  !< char. length scale of srf. heterogeneity [m]
       & length_iface_ct,      &  !< char. interface length between adjacent tiles [m m-2]
       & microcon_ctc_ct,      &  !< micro-scale connectivity factors for direct contact [/]
-      & microcon_hfp_srf_ct,      &  !< micro-scale connectivity factors for surface hydrological flow paths [/]
-      & microcon_hfp_blg_ct,      &  !< micro-scale connectivity factors for below-ground hydrological flow paths [/]
-      & macrocon_hfp_srf_ct,      &  !< macro-scale connectivity factors for surface hydrological flow paths [/]
-      & macrocon_hfp_blg_ct,      &  !< macro-scale connectivity factors for below-ground hydrological flow paths [/]
+      & microcon_hfp_srf_ct,  &  !< micro-scale connectivity factors for surface hydrological flow paths [/]
+      & microcon_hfp_blg_ct,  &  !< micro-scale connectivity factors for below-ground hydrological flow paths [/]
+      & macrocon_hfp_srf_ct,  &  !< macro-scale connectivity factors for surface hydrological flow paths [/]
+      & macrocon_hfp_blg_ct,  &  !< macro-scale connectivity factors for below-ground hydrological flow paths [/]
       & fract_latflow_srf_ct, &  !< fraction of lateral (srf) flow to adjacent tile [/]
-      & fract_latflow_blg_ct, &  !< fraction of lateral (below ground) flow to adjacent tile [/]  
+      & fract_latflow_blg_ct, &  !< fraction of lateral (below ground) flow to adjacent tile [/]
       & micro_slope_ct,       &  !< micro-scale slope between connected tiles [/]
-      & wtr_infil_in_sl,      &  !< infiltration from adjacent tiles [kg m-2 s-1]   
-      & wtr_drainage_in_sl,   &  !< drainage received from adjacent tiles [kg m-2 s-1] 
+      & wtr_infil_in_sl,      &  !< infiltration from adjacent tiles [kg m-2 s-1]
+      & wtr_drainage_in_sl,   &  !< drainage received from adjacent tiles [kg m-2 s-1]
       & wtr_diffusion_in_sl,  &  !< diffusion (water) received from adjacent tile [kg m-2 s-1]
-      & wtr_drainage_out_sl,  &  !< drainage received by adjacent tiles [kg m-2 s-1] 
-      & wtr_diffusion_out_sl, &  !< diffusion (water) received by adjacent tile  [kg m-2 s-1] 
+      & wtr_drainage_out_sl,  &  !< drainage received by adjacent tiles [kg m-2 s-1]
+      & wtr_diffusion_out_sl, &  !< diffusion (water) received by adjacent tile  [kg m-2 s-1]
       & nrg_diffusion_in_sl,  &  !< diffusion (energy) received from adjacent tile [J m-2 s-1]
       & nrg_diffusion_out_sl, &  !< diffusion (energy) received by adjacent tile [J m-2 s-1]
       & nrg_convection_in_sl, &  !< convection (energy contained in water) received from adjacent tile [J m-2 s-1]
@@ -82,7 +82,7 @@ MODULE mo_lex_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_lex_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_lex_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -92,6 +92,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)    :: model_id
 
     dsl4jsb_Def_config(LEX_)

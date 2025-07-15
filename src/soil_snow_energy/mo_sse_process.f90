@@ -106,40 +106,6 @@ CONTAINS
 
   END FUNCTION add_heat_capacity_pond
 
-  ! --------------------------------------------------------------------------------------------------------- !
-!>
-!! Includes the additional heat capacity of the surface water storage
-!! 
-#ifndef _OPENACC
-  ELEMENTAL PURE &
-#endif
-  FUNCTION  add_heat_capacity_pond( &
-    & dz,                                 &
-    & wtr_pond,                           &
-    & ice_pond,                           &
-    & vol_heat_cap                        &
-    & ) RESULT(vol_heat_cap_eff)
-
-    !$ACC ROUTINE SEQ
-
-    USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice
-    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
-
-    REAL(wp), INTENT(in)  :: dz,          &   !< Layer thickness [m]
-      &                      wtr_pond,    &   !< water content of surface reservoir [m]
-      &                      ice_pond,    &   !< ice content of surface reservoir [m]
-      &                      vol_heat_cap     !< Volumetric heat capacity of top soil layer [J m-3 K-1]
-    REAL(wp)              :: vol_heat_cap_eff !< Effective volumetric heat capacity of top soil layer [J m-3 K-1]
-
-    ! Since ponds do not have an actual energy content, their effect on surface and soil temperatures
-    ! is not accounted for. One way to approximated the potential energy storage is by using an effective heat
-    ! capacity of the top layer that includes the additional heat capacity of the surface reservoir.
-
-    vol_heat_cap_eff = vol_heat_cap &
-      &              + (wtr_pond * vol_hcap_water + ice_pond * rhoh2o / rhoi * vol_hcap_ice) / dz
-
-  END FUNCTION add_heat_capacity_pond
-
 ! --------------------------------------------------------------------------------------------------------- !
   !>
   !! Calculates the soil thermal conductivity after Johansen 1977.

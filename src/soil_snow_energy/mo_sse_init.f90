@@ -90,6 +90,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
+    dsl4jsb_Def_config(LEX_)
+
 #ifdef __QUINCY_STANDALONE__
 #else
   dsl4jsb_Get_config(LEX_)
@@ -110,7 +112,9 @@ CONTAINS
     IF (tile%Is_last_process_tile(SSE_)) THEN
       CALL sse_finalize_init_vars()
     END IF
+  END IF
 #endif
+
   END SUBROUTINE sse_init
 
   SUBROUTINE sse_finalize_init_vars

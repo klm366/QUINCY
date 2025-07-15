@@ -60,7 +60,13 @@ MODULE mo_seb_memory_class
                                   !!  heat fluxes, e.g. ground heat flux)
       & le_phase_change,        & !< Heat energy due to phase changes at land surface                [J m-2]
       & energy_balance_res,     & !< Residual of all land surface energy balance fluxes              [W m-2]
-      & richardson                !< Richardson number (standalone model)                            []
+      & richardson,             & !< Richardson number (standalone model)                            []
+      & drag_srf              , &
+      & t_acoef               , &
+      & t_bcoef               , &
+      & q_acoef               , &
+      & q_bcoef               , &
+      & pch
     !
     ! Additional variables for LAND lct_type
     TYPE(t_jsb_var_real2d) ::   &

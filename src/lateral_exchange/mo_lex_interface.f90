@@ -239,7 +239,7 @@ CONTAINS
     wtr_lex_net_srf      = 0._wp
     wtr_lex_net_sl       = 0._wp
 
- 
+
     nrg_lex_net_sl       = 0._wp
 
 
@@ -371,7 +371,7 @@ CONTAINS
       &  wtr_incomming_srf(options%nc),                      &  !< Lateral flux (surface) from sibling to tile [kg m-2 s-1]
       &  wtr_incomming_srf_sibl(options%nc)                     !< Lateral flux (surface) from tile to sibling [kg m-2 s-1]
 
-    REAL(wp) ::  &  
+    REAL(wp) ::  &
       &  wtr_latflow_sl_used(options%nc,options%nsoil_w),    &  !< Outflow from latflow res. with water in bedrock-layers on sibling moved to the layer above [m timestep-1]
       &  hyd_cond_sl(options%nc,options%nsoil_w),            &  !< Saturation hydraulic conductivity for tile [m s-1]
       &  hyd_cond_sl_sibl(options%nc,options%nsoil_w),       &  !< Saturation hydraulic conductivity for sibling [m s-1]
@@ -382,7 +382,7 @@ CONTAINS
       &  ice_impedance_sl(options%nc,options%nsoil_w),       &  !< ice impedence factor for tile [/]
       &  ice_impedance_sl_sibl(options%nc,options%nsoil_w),  &  !< ice impedence factor for sibling [/]
       &  weq_wsat_sl(options%nc,options%nsoil_w),            &  !< Soil moisture at saturation for tile [m]
-      &  weq_wsat_sl_sibl(options%nc,options%nsoil_w),       &  !< Soil moisture at saturation for sibling [m] 
+      &  weq_wsat_sl_sibl(options%nc,options%nsoil_w),       &  !< Soil moisture at saturation for sibling [m]
       &  weq_wres_sl(options%nc,options%nsoil_w),            &  !< moisture residual for tile [m]
       &  weq_wres_sl_sibl(options%nc,options%nsoil_w),       &  !< moisture residual for sibling [m]
       &  wtr_incomming_sl(options%nc,options%nsoil_w),       &  !< Lateral flux (soil) from sibling to tile [kg m-2 s-1]
@@ -421,7 +421,7 @@ CONTAINS
       & new_snow_soil,        &
       & snow_soil_dens,       &
       & runoff,               &
-      & drainage             
+      & drainage
 
     dsl4jsb_Real3D_onChunk ::    &
       &  microcon_ctc_ct,        &
@@ -607,7 +607,7 @@ CONTAINS
     ! Get lex_id of tile and the cover fraction
     lex_idt = tile%lcts(1)%lex_id
     CALL tile%Get_fraction(ics, ice, iblk, fract=fract(:))
-  
+
     ! Initialze those variables, where the values at the end of ast time step,
     ! i.e. unmodified by interactions with siblings are needed.
     snow_soil_tle_tm1(:)       = weq_snow_soil
@@ -682,11 +682,11 @@ CONTAINS
 
       CALL sibl%Get_fraction(ics, ice, iblk, fract=fract_sibl(:))
 
-      ! Check if lateral flux fields have been reset 
+      ! Check if lateral flux fields have been reset
       IF (lex_idt == lex_id_first) THEN
         IF (ANY(wtr_lex_net_srf_sibl(:) /= 0._wp)) THEN
           WRITE (message_text_long,*) 'Reset of lateral flux fields did not work', &
-            &                          MAXVAL(wtr_lex_net_srf_sibl(:))    
+            &                          MAXVAL(wtr_lex_net_srf_sibl(:))
           CALL finish(TRIM(routine), message_text_long)
         END IF
       END IF
@@ -698,7 +698,7 @@ CONTAINS
         wtr_incomming_srf_sibl(:)  = 0._wp
         wtr_incomming_sl(:,:)      = 0._wp
         wtr_incomming_sl_sibl(:,:) = 0._wp
-       
+
         ! Incomming later subsurface runoff is adjusted according to differences in soil depth (until bedrock),
         ! and for micro-scale connections, also for differences in surface elevation
         wtr_latflow_sl_used(:,:) = wtr_latflow_sl(:,:)
@@ -811,7 +811,7 @@ CONTAINS
             END DO
           END DO
           !$ACC END PARALLEL LOOP
-   
+
           ! Get hydrological properties on tile
           CALL get_soilhyd_properties(                      &
             & dsl4jsb_Config(HYDRO_)%soilhydmodel,          &
@@ -843,7 +843,7 @@ CONTAINS
                 &                          * soil_depth_sl_sibl(ic,is)
             END DO
           END DO
-          !$ACC END PARALLEL LOOP    
+          !$ACC END PARALLEL LOOP
 
           ! Get hydrological properties on sibling (with updated soil water content)
           CALL get_soilhyd_properties(                      &
@@ -874,7 +874,7 @@ CONTAINS
               hlp1 = length_iface_ct(ic,lex_ids)*fract_pond_max_sibl(ic)
               wtr_incomming_sl(ic,:) = wtr_incomming_sl(ic,:) - wtr_infil_in_sl(ic,:)
 
-              ! Lateral ingress from pond to connected tile 
+              ! Lateral ingress from pond to connected tile
               CALL calc_pond_soil_flux_water(               &
                 &  nsoil, dtime,                            &
                 &  h_offset_ct(ic,lex_ids),                 &
@@ -1043,7 +1043,7 @@ CONTAINS
           ! Remove excess water from soil and surface
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO ic = 1,nc
- 
+
             CALL remove_exess_water(                        &
               & weq_pond_max_sibl(ic),                      &
               & ice_pond_sibl(ic),                          &
@@ -1087,7 +1087,7 @@ CONTAINS
 
             hlp1 = MIN(1._wp, microcon_ctc_ct(ic,lex_ids) / SUM(microcon_ctc_ct(ic,:)))
 
-            ! Snowblow between connected tiles 
+            ! Snowblow between connected tiles
             CALL calc_snow_redistribution(                  &
               & dsl4jsb_Config(SSE_)%l_dynsnow,             &
               & dtime,                                      &
@@ -1127,7 +1127,7 @@ CONTAINS
     ! In case of tiles that are not connected to downstream tiles, the outflow is given to runoff and drainage
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1,nc
-      runoff(ic)     = runoff(ic) & 
+      runoff(ic)     = runoff(ic) &
              &  + wtr_latflow_srf(ic) / dtime * rhoh2o - wtr_runoff_out(ic)
     END DO
     !$ACC END PARALLEL LOOP

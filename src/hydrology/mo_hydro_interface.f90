@@ -715,9 +715,6 @@ CONTAINS
       END IF
     END IF
 
-    ! Set to true, until HydroTiles are implemented
-    l_latflow_to_streamflow = .TRUE.
-
     IF (is_experiment_start) THEN ! Start of experiment
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
@@ -892,6 +889,7 @@ CONTAINS
         & trans_tmp(:),                   & ! transpiration [kg m-2 s-1]
         & rain(:),                        & ! liquid precipitation [kg m-2 s-1]
         & snow(:),                        & ! solid precipitation [kg m-2 s-1]
+        & lex_tmp(:),                     & ! inflow from connected tiles exeeding the pond storage [m]
         & wpi_rootzone(:),                & ! water plus ice content of the rootzone [m]
         & wpi_rootzone_max(:),            & ! maximum water plus ice content of the rootzone [m]
         & wtr_soil(:),                    & ! soil layer aggregated water content until bedrock [m]
@@ -909,7 +907,7 @@ CONTAINS
         ! out
         & le_phase_change_res(:),         & ! Residual energy flux due to phase change [W m-2]
         & q_snocpymlt(:),                 & ! Heating due to snow melt on canopy [W m-2]
-        & new_snow_soil(:),               & ! snow budget change on soil within time step [m water equivalent]
+        & new_snow_soil(:),               & ! new snow on the soil within time step [m water equivalent]
         & snow_accum(:),                  & ! snow budget change within time step [m water equivalent]
         & snowmelt(:),                    & ! snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
         & pond_freeze(:),                 & ! Amount of water freezing within ponds [kg m-2 s-1]
@@ -1515,16 +1513,12 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_latflow_res_srf),    &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_res_sl),     &
       ! out
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl_rel   ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl_rel   ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, immo_soil_sl_rel  ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_res_sl   ),     & ! residual soil water content
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     & ! dunne component of surface runoff
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, drain_bot         ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & ! subsurface drainage on each soil layer
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down   ),     & ! lateral downards transport of water
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
