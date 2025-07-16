@@ -49,7 +49,7 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, RAD_, Q_ASSIMI_, Q_AGR_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,       ONLY: A2L_, SEB_, TURB_, HYDRO_, VEG_, SSE_, RAD_, Q_ASSIMI_, Q_AGR_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_q_veg_respiration,       ONLY: temperature_response_respiration, calc_maintenance_respiration
@@ -65,7 +65,8 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -108,7 +109,8 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
@@ -145,12 +147,13 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: myc_export_p_tlabile_mavg_sl
     dsl4jsb_Real3D_onChunk      :: myc_export_c_tmyc_mavg_sl
     dsl4jsb_Real3D_onChunk      :: myc_export_n_tmyc_mavg_sl
-    ! SPQ_ 2D
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
-    ! SPQ_ 3D
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk      :: wtr_rootzone_rel
+    ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     dsl4jsb_Real3D_onChunk      :: soil_lay_depth_center_sl
-    dsl4jsb_Real3D_onChunk      :: w_soil_pot_sl
+    dsl4jsb_Real3D_onChunk      :: matric_pot_sl
+    ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
@@ -297,7 +300,8 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -344,13 +348,14 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_p_tlabile_mavg_sl)        ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_c_tmyc_mavg_sl)        ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_n_tmyc_mavg_sl)        ! inout
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_theta)                 ! in
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_lay_depth_center_sl)          ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_pot_sl)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, t_soil_sl)                         ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_rootzone_rel)              ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)                 ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_lay_depth_center_sl)      ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   matric_pot_sl)                 ! in
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                          ! in
     ! RAD_ 3D
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                     ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                     ! in
@@ -487,7 +492,7 @@ CONTAINS
 
     !>1.0 calculate potential growth rate relative to labile pool size
     !>
-    kstar_labile(:) = calc_meristem_activity(t_air(:), w_soil_root_theta(:), growing_season(:))
+    kstar_labile(:) = calc_meristem_activity(t_air(:), wtr_rootzone_rel(:), growing_season(:))
 
     !>  1.1 calculate N-based maintenance respiration rate (as potential maitenance rate) and
     !>      update N-specific maintenance respiration rate
@@ -947,7 +952,7 @@ CONTAINS
         & root_limitation_state(:)                       , &
         & soil_depth_sl(:,:)                             , &
         & soil_lay_depth_center_sl(:,:)                  , &
-        & w_soil_pot_sl(:,:)                             , &
+        & matric_pot_sl(:,:)                             , &
         & t_soil_sl(:,:)                                 , &
         & nh4_solute(:,:)                                , &
         & no3_solute(:,:)                                , &
@@ -970,7 +975,7 @@ CONTAINS
   !! (<20\% saturation). \nAdditionally, phenological dormancy is accounted for.
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air, &
-                                                 w_soil_root_theta, &
+                                                 wtr_rootzone_rel, &
                                                  growing_season) &
                                                  RESULT(kstar_labile)
 
@@ -986,7 +991,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp),   INTENT(in)    :: t_air                  !< air temperature (K)
-    REAL(wp),   INTENT(in)    :: w_soil_root_theta      !< soil moisture scalar (fraction of available water holding capacity)
+    REAL(wp),   INTENT(in)    :: wtr_rootzone_rel       !< soil moisture scalar (fraction of available water holding capacity)
     REAL(wp),   INTENT(in)    :: growing_season         !< is the plant growing?
     REAL(wp)                  :: kstar_labile           !< current potential labile pool turnover (1/day)
     ! ---------------------------
@@ -1001,7 +1006,7 @@ CONTAINS
       ELSE
         ftemp = 0.0_wp
     ENDIF
-    fmoist = 1.0_wp - EXP(-(lambda_labile_theta * w_soil_root_theta)**k_labile_theta)
+    fmoist = 1.0_wp - EXP(-(lambda_labile_theta * wtr_rootzone_rel)**k_labile_theta)
     IF(growing_season > test_false_true)THEN
         kstar_labile = ftemp * fmoist / tau_labile
       ELSE
@@ -3235,7 +3240,7 @@ CONTAINS
                                             root_limitation_state            , &
                                             soil_depth_sl                    , &
                                             soil_lay_depth_center_sl         , &
-                                            w_soil_pot_sl                    , &
+                                            matric_pot_sl                    , &
                                             t_soil_sl                        , &
                                             nh4_solute_sl                    , &
                                             no3_solute_sl                    , &
@@ -3262,7 +3267,7 @@ CONTAINS
                                                        root_limitation_state            !< dominating limiting factor affecting root growth
     REAL(wp), DIMENSION(nc,nsoil_sb), INTENT(in)    :: soil_depth_sl                , & !< soil layer thinkness (m)
                                                        soil_lay_depth_center_sl     , & !< soil layer axis (m)
-                                                       w_soil_pot_sl                , & !< soil moisture potential (MPa)
+                                                       matric_pot_sl                , & !< soil moisture potential (MPa)
                                                        t_soil_sl                    , & !< soil temperature (K)
                                                        nh4_solute_sl                , & !< plant available NH4 (mol N / m3)
                                                        no3_solute_sl                , & !< plant available NO3 (mol N / m3)
@@ -3291,9 +3296,9 @@ CONTAINS
         hlp1(ic,:) = 0.0_wp
         IF(root_limitation_state(ic) >= 0.0_wp) THEN
           hlp1(ic,:) = root_limitation_state(ic) * (nh4_solute_sl(ic,:) + no3_solute_sl(ic,:)) &
-            &          + (1._wp - root_limitation_state(ic)) * MAX(w_soil_pot_sl(ic,:) - lctlib_phi_leaf_min, 0.0_wp)
+            &          + (1._wp - root_limitation_state(ic)) * MAX(matric_pot_sl(ic,:) - lctlib_phi_leaf_min, 0.0_wp)
         ELSE ! note sign difference!
-          hlp1(ic,:) = (1._wp + root_limitation_state(ic)) * MAX(w_soil_pot_sl(ic,:) - lctlib_phi_leaf_min, 0.0_wp) &
+          hlp1(ic,:) = (1._wp + root_limitation_state(ic)) * MAX(matric_pot_sl(ic,:) - lctlib_phi_leaf_min, 0.0_wp) &
             &          - root_limitation_state(ic) * po4_solute_sl(ic,:)
         ENDIF
       END DO

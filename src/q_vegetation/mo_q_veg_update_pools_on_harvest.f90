@@ -24,7 +24,7 @@ MODULE mo_q_veg_update_pools_on_harvest
   USE mo_jsb_time,            ONLY: is_newyear, is_newday
 
   USE mo_jsb_math_constants,      ONLY: eps8, eps4, one_day
-  USE mo_jsb_process_class,       ONLY: VEG_, Q_SYL_, Q_AGR_, SB_, SPQ_
+  USE mo_jsb_process_class,       ONLY: VEG_, Q_SYL_, Q_AGR_, SB_, HYDRO_
   USE mo_q_sb_litter_processes,   ONLY: calc_litter_partitioning
 
   USE mo_lnd_bgcm_idx
@@ -34,7 +34,7 @@ MODULE mo_q_veg_update_pools_on_harvest
     &       VEG_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, VEG_BGCM_HARVEST_LITTER_ID
 
 
-  dsl4jsb_use_memory(SPQ_)
+  dsl4jsb_use_memory(HYDRO_)
   dsl4jsb_use_memory(Q_SYL_)
   dsl4jsb_use_memory(VEG_)
   dsl4jsb_use_memory(Q_AGR_)
@@ -106,7 +106,7 @@ CONTAINS
     dsl4jsb_Def_memory_tile(Q_SYL_, box_tile)
     dsl4jsb_Real2D_onChunk :: fract_wood_to_slash
 
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
 
@@ -171,9 +171,9 @@ CONTAINS
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
 
-    dsl4jsb_Get_memory(SPQ_)
-    dsl4jsb_Get_var2D_onChunk(SPQ_, num_sl_above_bedrock)
-    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
 
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)

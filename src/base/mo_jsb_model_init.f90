@@ -163,8 +163,8 @@ CONTAINS
 #endif
     USE mo_fage_init,           ONLY: fage_init
 
-    USE mo_fage_init_lcc,       ONLY: fage_init_lcc
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
+    USE mo_fage_init_lcc,       ONLY: fage_init_lcc
     USE mo_flcc_init_lcc,       ONLY: flcc_init_lcc
     USE mo_wlcc_init_lcc,       ONLY: wlcc_init_lcc
 
@@ -405,6 +405,13 @@ CONTAINS
         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
 
         ! Here all lcc tasks need to be called
+
+        ! Call alcc for now only in CANOPY mode (i.e. without biogeochemistry enabled)
+        IF (model%config%qmodel_id == QCANOPY) THEN
+          IF (model%processes(ALCC_)%p%config%active) THEN
+            CALL model%Queue_task(ALCC_, "alcc")
+          END IF
+        END IF
 
         ! Do postprocessing after all LCC tasks were executed
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
@@ -761,6 +768,8 @@ CONTAINS
 
     END DO
 
+    !$ACC WAIT(1)
+
     DEALLOCATE(fract_tmp)
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -829,14 +838,14 @@ CONTAINS
         CYCLE
       END IF
 
+      IF (tile%Is_process_active(ALCC_)) THEN
+        CALL alcc_init_lcc(tile)
+      END IF
+
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(FAGE_)) THEN
           CALL fage_init_lcc(tile)
-        END IF
-
-        IF (tile%Is_process_active(ALCC_)) THEN
-          CALL alcc_init_lcc(tile)
         END IF
 
         IF (tile%Is_process_active(FLCC_)) THEN

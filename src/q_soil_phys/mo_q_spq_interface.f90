@@ -25,7 +25,7 @@ MODULE mo_q_spq_interface
   USE mo_jsb_model_class,             ONLY: t_jsb_model
   USE mo_jsb_tile_class,              ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
-  USE mo_jsb_process_class,           ONLY: t_jsb_process, SPQ_, TURB_
+  USE mo_jsb_process_class,           ONLY: t_jsb_process, SPQ_, TURB_, SEB_, SSE_, HYDRO_
 
   ! "Integrate" routines
   USE mo_spq_util,                    ONLY: reset_spq_fluxes_real => reset_spq_fluxes
@@ -34,6 +34,9 @@ MODULE mo_q_spq_interface
 
   dsl4jsb_Use_memory(SPQ_)
   dsl4jsb_Use_memory(TURB_)
+  dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(SSE_)
+  dsl4jsb_Use_memory(HYDRO_)
 
   IMPLICIT NONE
   PRIVATE
@@ -266,6 +269,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(TURB_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
@@ -282,27 +288,41 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(HYDRO_)
 
     ! TURB_
     dsl4jsb_Aggregate_onChunk(TURB_, fact_q_air             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, fact_qsat_srf          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, drag_srf_stdalone      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, pch_stdalone           , weighted_by_fract)
+    ! SEB_
+    dsl4jsb_Aggregate_onChunk(SEB_, t                       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_old                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, qsat_star               , weighted_by_fract)
+    ! SSE_
+    dsl4jsb_Aggregate_onChunk(SSE_, t_soil_sl               , weighted_by_fract)
+    ! HYDRO_ 2D
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_skin                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_rel       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, matric_pot_root        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone           , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, transpiration          , weighted_by_fract)
+    ! HYDRO_ 3D
+    dsl4jsb_Aggregate_onChunk(HYDRO_, soil_depth_sl          , weighted_by_fract)  ! NOTE determined in SPQ_ init
+    dsl4jsb_Aggregate_onChunk(HYDRO_, percolation_sl         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, frac_w_lat_loss_sl     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, ice_soil_sl            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, matric_pot_sl          , weighted_by_fract)
 
     ! ---------------------------
     ! 2D
-    dsl4jsb_Aggregate_onChunk(SPQ_, qsat_star               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, s_star                  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, evapotranspiration      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, t_srf_new               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, t_srf_old               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, temp_srf_eff_4          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, zril_old                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, transpiration           , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_root_theta       , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_root_pot         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, w_skin                  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_root             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, evapopot                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, interception            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, evaporation             , weighted_by_fract)
@@ -319,17 +339,12 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SPQ_, snow_melt_to_soil       , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, snow_srf_heat_flux      , weighted_by_fract)
     ! 3D
-    dsl4jsb_Aggregate_onChunk(SPQ_, soil_depth_sl           , weighted_by_fract) ! Note: determined in SPQ_ init
     dsl4jsb_Aggregate_onChunk(SPQ_, heat_capa_sl            , weighted_by_fract)  ! NOTE it is set to a constant with SPQ_ init
     dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_sl               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_fc_sl            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_pot_sl           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, gw_runoff_sl            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, percolation_sl          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, frac_w_lat_loss_sl      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, drainage_sl             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, t_soil_sl               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, w_ice_sl                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_freeze_flux      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_melt_flux        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, w_snow_snl              , weighted_by_fract)

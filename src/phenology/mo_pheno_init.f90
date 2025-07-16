@@ -238,13 +238,14 @@ CONTAINS
       END IF
       !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction)) ASYNC(1)
     END IF
+    !$ACC WAIT(1)
 
   END SUBROUTINE pheno_init_bc
 
   SUBROUTINE pheno_init_ic(tile)
 
     USE mo_pheno_process, ONLY: get_foliage_projected_cover
-    USE mo_jsb_time,      ONLY: get_time_interpolation_weights
+    USE mo_jsb_time,      ONLY: cache_time_interpolation_weights, get_time_interpolation_weights
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -291,9 +292,12 @@ CONTAINS
     lai_mon       => dsl4jsb_memory(PHENO_)%lai_mon
     fract_fpc_mon => dsl4jsb_memory(PHENO_)%fract_fpc_mon
 
+    !$ACC DATA CREATE(wgt1, wgt2, nmw1, nmw2)
+
     ! Set initial leaf area index from climatology (read in pheno_init_bc)
+    CALL cache_time_interpolation_weights()
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, wgt2, nmw1, nmw2) GANG VECTOR ASYNC(1) COLLAPSE(2)
     DO ib=1,nblks
       DO ic=1,nc
         lai(ic,ib) = wgt1 * lai_mon(ic,ib,nmw1) + wgt2 * lai_mon(ic,ib,nmw2)
@@ -303,7 +307,7 @@ CONTAINS
 
     IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
         & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: general vegetation tile, no specific PFT
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, wgt2, nmw1, nmw2) GANG VECTOR ASYNC(1) COLLAPSE(2)
       DO ib=1,nblks
         DO ic=1,nc
           fract_fpc(ic,ib) = wgt1 * fract_fpc_mon(ic,ib,nmw1) + wgt2 * fract_fpc_mon(ic,ib,nmw2)
@@ -340,6 +344,8 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     END IF
+    !$ACC WAIT(1)
+    !$ACC END DATA
 
   END SUBROUTINE pheno_init_ic
 

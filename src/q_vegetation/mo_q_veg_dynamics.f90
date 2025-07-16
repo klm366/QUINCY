@@ -51,8 +51,9 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_AGR_, Q_PHENO_, SPQ_, Q_SYL_, DFIRE_, DFIRE_FUEL_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_AGR_, Q_PHENO_, HYDRO_, Q_SYL_, DFIRE_, DFIRE_FUEL_
     USE mo_veg_constants,         ONLY: itree, rfr_ratio_toc, k_r2fr_chl
+
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(Q_AGR_)
@@ -60,7 +61,7 @@ CONTAINS
     dsl4jsb_Use_config(DFIRE_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -90,13 +91,13 @@ CONTAINS
     dsl4jsb_Def_config(DFIRE_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
-    ! SPQ_ 2D
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk      :: wtr_rootzone_rel
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: diameter
@@ -152,7 +153,7 @@ CONTAINS
     dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store

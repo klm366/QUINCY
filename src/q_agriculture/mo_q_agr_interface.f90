@@ -28,16 +28,14 @@ MODULE mo_q_agr_interface
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_process_class,   ONLY: t_jsb_process
 
-  dsl4jsb_Use_processes Q_AGR_, VEG_, Q_PHENO_, Q_ASSIMI_, SB_, SPQ_, A2L_
+  dsl4jsb_Use_processes Q_AGR_, VEG_, Q_PHENO_, Q_ASSIMI_, SB_, A2L_
   dsl4jsb_Use_config(Q_AGR_)
   dsl4jsb_Use_config(VEG_)
   dsl4jsb_Use_config(Q_PHENO_)
   dsl4jsb_Use_config(Q_ASSIMI_)
   dsl4jsb_Use_config(SB_)
-  dsl4jsb_Use_config(SPQ_)
   dsl4jsb_Use_memory(SB_)
   dsl4jsb_Use_memory(A2L_)
-  dsl4jsb_Use_memory(SPQ_)
   dsl4jsb_Use_memory(Q_PHENO_)
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_memory(Q_AGR_)
@@ -120,7 +118,6 @@ MODULE mo_q_agr_interface
     dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_config(Q_ASSIMI_)
     dsl4jsb_Def_config(Q_PHENO_)
-    dsl4jsb_Def_config(SPQ_)
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_config(VEG_)
 
@@ -199,7 +196,6 @@ MODULE mo_q_agr_interface
     dsl4jsb_Get_config(Q_ASSIMI_)
     dsl4jsb_Get_config(Q_PHENO_)
     dsl4jsb_Get_config(SB_)
-    dsl4jsb_Get_config(SPQ_)
     dsl4jsb_Get_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(Q_AGR_)) RETURN

@@ -42,7 +42,7 @@ CONTAINS
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
-    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, SPQ_, TURB_
+    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, HYDRO_, SSE_, TURB_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_atmland_constants,      ONLY: min_wind, max_wind
@@ -50,12 +50,14 @@ CONTAINS
     USE mo_isotope_util,           ONLY: calc_fractionation
     USE mo_phy_schemes             ! e.g., heat_transfer_coef
     USE mo_q_assimi_parameters,    ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
+    USE mo_q_assimi_constants,     ONLY: min_aerodyn_cond
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(Q_ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(TURB_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -88,7 +90,8 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -132,13 +135,14 @@ CONTAINS
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
-    ! SPQ_ 2D
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
-    ! SPQ_ 3D
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk      :: matric_pot_root
+    ! HYDRO_ 3D
+    dsl4jsb_Real3D_onChunk      :: wtr_soil_pwp_sl
+    dsl4jsb_Real3D_onChunk      :: wtr_soil_fc_sl
+    dsl4jsb_Real3D_onChunk      :: matric_pot_sl
+    ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
-    dsl4jsb_Real3D_onChunk      :: w_soil_pwp_sl
-    dsl4jsb_Real3D_onChunk      :: w_soil_fc_sl
-    dsl4jsb_Real3D_onChunk      :: w_soil_pot_sl
     ! TURB_ 2D
     dsl4jsb_Real2D_onChunk      :: drag_srf_stdalone
     ! VEG_ 2D
@@ -179,7 +183,8 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -222,13 +227,14 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, matric_pot_root)              ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, matric_pot_sl)                ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
-    ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SPQ_, t_soil_sl)                      ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_pwp_sl)                  ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_fc_sl)                   ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_pot_sl)                  ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                      ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(TURB_, drag_srf_stdalone)             ! in
     ! ---------------------------
@@ -284,8 +290,8 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_air(ic), q_air(ic), press_srf(ic))
-      beta_soil_ps(ic) = calc_soil_moisture_stress(w_soil_root_pot(ic), lctlib_phi_leaf_min)
-      beta_soil_gs(ic) = calc_soil_moisture_stress(w_soil_root_pot(ic), lctlib_phi_leaf_min)
+      beta_soil_ps(ic) = calc_soil_moisture_stress(matric_pot_root(ic), lctlib_phi_leaf_min)
+      beta_soil_gs(ic) = calc_soil_moisture_stress(matric_pot_root(ic), lctlib_phi_leaf_min)
 
       ! catch beta_soil_ps getting zero
       !  with "beta_soil_ps=0" calc_photosynthesis() does get a runtime error, because n1 & n2 become zero,
@@ -301,8 +307,8 @@ CONTAINS
     DO ic = 1, nc
       DO isoil = 1, nsoil_sb
         ftranspiration_sl(ic,isoil) = 0.0_wp
-        IF ((w_soil_fc_sl(ic,isoil) - w_soil_pwp_sl(ic,isoil)) > eps8 .AND. t_soil_sl(ic,isoil) > Tzero) THEN
-          hlp = calc_soil_moisture_stress(w_soil_pot_sl(ic, isoil), lctlib_phi_leaf_min)
+        IF ((wtr_soil_fc_sl(ic,isoil) - wtr_soil_pwp_sl(ic,isoil)) > eps8 .AND. t_soil_sl(ic,isoil) > Tzero) THEN
+          hlp = calc_soil_moisture_stress(matric_pot_sl(ic, isoil), lctlib_phi_leaf_min)
           ftranspiration_sl(ic,isoil) = root_fraction_sl(ic,isoil) * hlp
         END IF
       END DO
@@ -339,7 +345,8 @@ CONTAINS
     ! calc aerodynamic conductance
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      aerodyn_cond(ic) = heat_transfer_coef(drag_srf_local(ic), dtime, alpha) * MIN( MAX(wind_10m(ic), min_wind), max_wind)
+      aerodyn_cond(ic) = MAX(min_aerodyn_cond, &
+        &                heat_transfer_coef(drag_srf_local(ic), dtime, alpha) * MIN( MAX(wind_10m(ic), min_wind), max_wind))
     END DO
     !$ACC END PARALLEL LOOP
 

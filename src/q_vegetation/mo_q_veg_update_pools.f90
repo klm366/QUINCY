@@ -51,7 +51,7 @@ CONTAINS
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QCANOPY
-    USE mo_jsb_process_class,               ONLY: SPQ_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, Q_SYL_, DFIRE_
+    USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, Q_SYL_, DFIRE_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14
@@ -67,7 +67,7 @@ CONTAINS
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -114,7 +114,7 @@ CONTAINS
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
@@ -123,7 +123,7 @@ CONTAINS
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
     dsl4jsb_Real2D_onChunk      :: lai_max
-    ! SPQ_ 3D
+    ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
@@ -217,7 +217,7 @@ CONTAINS
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     config_l_use_product_pools = dsl4jsb_Config(VEG_)%l_use_product_pools
     config_active_q_syl = dsl4jsb_Config(Q_SYL_)%active
@@ -496,7 +496,7 @@ CONTAINS
           DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
             IF (model%config%is_element_used(id_elem)) THEN
               ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
-              DO ix_comp = 1, nr_of_veg_bgcm_comp 
+              DO ix_comp = 1, nr_of_veg_bgcm_comp
                 veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
                     veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
               END DO ! ix_comp

@@ -63,7 +63,7 @@ CONTAINS
     USE mo_quincy_model_config,    ONLY: QLAND, QSOIL
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
-    USE mo_jsb_process_class,      ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, Q_ASSIMI_, Q_PHENO_, SB_, DFIRE_
+    USE mo_jsb_process_class,      ONLY: A2L_, SEB_, TURB_, HYDRO_, HYDRO_, VEG_, SSE_, Q_ASSIMI_, Q_PHENO_, SB_, , DFIRE_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_jsb_math_constants,     ONLY: eps1, eps8
@@ -78,9 +78,10 @@ CONTAINS
     dsl4jsb_Use_config(DFIRE_)
 
     ! Use of process memory
-    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
-    dsl4jsb_Use_memory(SPQ_)       !  USE mo_spq_memory_class,     ONLY: t_spq_memory
-    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_spq_memory
+    dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.1 InOut
@@ -130,9 +131,10 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_config(DFIRE_)
-    dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
-    dsl4jsb_Def_memory(SPQ_)                             ! TYPE(t_spq_memory),     POINTER :: spq__mem
-    dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_spq_memory),     POINTER :: spq__mem
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(A2L_)
     ! Declare pointers to variables in memory
     ! A2L
@@ -367,7 +369,8 @@ CONTAINS
     dsl4jsb_Get_config(DFIRE_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(A2L_)
 
