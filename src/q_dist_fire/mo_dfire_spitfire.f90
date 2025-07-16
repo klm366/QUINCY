@@ -182,7 +182,7 @@ CONTAINS
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
-    USE mo_jsb_process_class,       ONLY: VEG_, DFIRE_, SPQ_, DFIRE_FUEL_, A2L_
+    USE mo_jsb_process_class,       ONLY: VEG_, DFIRE_, HYDRO_, DFIRE_FUEL_, A2L_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid, t_jsb_grid
@@ -191,7 +191,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(DFIRE_)
     dsl4jsb_Use_memory(DFIRE_FUEL_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
     !dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(A2L_)
@@ -253,14 +253,14 @@ CONTAINS
     dsl4jsb_Def_memory(DFIRE_FUEL_)
     dsl4jsb_Def_memory(VEG_)
     !dsl4jsb_Def_memory(SB_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
     !dsl4jsb_Real2D_onChunk                :: e_n_ignitions    ! out, Total rate of ignitions events [ha-1 ts-1]
-    dsl4jsb_Real3D_onChunk                :: w_soil_sl        ! soil water content [m]
-    dsl4jsb_Real3D_onChunk                :: w_soil_fc_sl     ! soil water field capacity [m]
+    dsl4jsb_Real3D_onChunk                :: wtr_soil_sl        ! soil water content [m]
+    dsl4jsb_Real3D_onChunk                :: wtr_soil_fc_sl     ! soil water field capacity [m]
 
     !< Ignitions
     dsl4jsb_Real2D_onChunk                :: e_n_ignitions    ! out, Total rate of ignitions events [ha-1 ts-1]
@@ -356,11 +356,11 @@ CONTAINS
     dsl4jsb_Get_memory(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_sl)                ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_fc_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)            ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)         ! in
 
     !< Ignitions
     dsl4jsb_Get_var2D_onChunk(DFIRE_, e_n_ignitions)          ! out
@@ -491,8 +491,8 @@ CONTAINS
     !DBH(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
 
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
-    ab_w_soil_sl(:,:) = w_soil_sl(:, [df_sf_sl_indices])
-    ab_w_soil_fc_sl(:,:) = w_soil_fc_sl(:, [df_sf_sl_indices])
+    ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
+    ab_w_soil_fc_sl(:,:) = wtr_soil_fc_sl(:, [df_sf_sl_indices])
     ! todo: change DO CONCURRENT to DO-IF construct
     DO CONCURRENT(ic=1:nc, is=1:df_sf_sl_dims_nr, (mask_is_tile_enabled(ic) .AND. ab_w_soil_fc_sl(ic,is)>0._wp)) ! should it happen? (ab_w_soil_fc_sl = 0)
       ab_moisture_sl(ic,is) = ab_w_soil_sl(ic,is) / ab_w_soil_fc_sl(ic,is)

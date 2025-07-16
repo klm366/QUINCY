@@ -340,9 +340,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SPQ_, snow_srf_heat_flux      , weighted_by_fract)
     ! 3D
     dsl4jsb_Aggregate_onChunk(SPQ_, heat_capa_sl            , weighted_by_fract)  ! NOTE it is set to a constant with SPQ_ init
-    dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_sl               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_fc_sl            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_pot_sl           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, gw_runoff_sl            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, drainage_sl             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SPQ_, w_soil_freeze_flux      , weighted_by_fract)

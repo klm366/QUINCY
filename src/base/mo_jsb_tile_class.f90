@@ -292,6 +292,8 @@ MODULE mo_jsb_tile_class
     REAL(wp), ALLOCATABLE :: data_sum(:,:)    !< Sum of data*fraction for fraction weighted averaging
   CONTAINS
     !> Functions to make use of the aggregator
+    PROCEDURE :: BeginAggregate   => BeginAggregate_sum !< Start  multi-stream aggregation (useful for OpenACC)
+    PROCEDURE :: EndAggregate     => EndAggregate_sum   !< Finish multi-stream aggregation (useful for OpenACC)
     PROCEDURE :: Aggregate_2d     => Aggregate_sum_2d     !< Specific implementation of sum of 2d vars
     PROCEDURE :: Aggregate_3d     => Aggregate_sum_3d     !< Specific implementation of sum of 3d vars
     FINAL     :: Finalize_aggregator_sum                  !< Destructor to deallocate fields when aggregator is deallocated
@@ -312,6 +314,8 @@ MODULE mo_jsb_tile_class
 !    PROCEDURE :: Set_fractions_1d => Set_fractions_aggregator_1d  !< Set fraction field for chunk. TODO: Rename "1d" to "chunk"
 !    PROCEDURE :: Set_fractions_2d => Set_fractions_aggregator_2d  !< Set fraction field for entire domain. TODO: "2d"=>"domain"
 !    GENERIC   :: Set_fractions    => Set_fractions_1d, Set_fractions_2d !< Generic function to set tile fractions
+    PROCEDURE :: BeginAggregate   => BeginAggregate_average !< Start  multi-stream aggregation (useful for OpenACC)
+    PROCEDURE :: EndAggregate     => EndAggregate_average   !< Finish multi-stream aggregation (useful for OpenACC)
     PROCEDURE :: Aggregate_2d     => Aggregate_average_2d     !< Specific implementation of agg. of 2d vars
     PROCEDURE :: Aggregate_3d     => Aggregate_average_3d     !< Specific implementation of agg. of 3d vars
     FINAL     :: Finalize_aggregator_average            !< Destructor to deallocate fields when aggregator is deallocated
@@ -1497,6 +1501,31 @@ CONTAINS
   END SUBROUTINE Cache_GPU_pointers
 
 
+  SUBROUTINE BeginAggregate_sum(this)
+    CLASS(t_jsb_aggregator_sum),    INTENT(inout), TARGET :: this
+
+!    IF (this%stream /= acc_async_sync) THEN
+!      this%original_stream = acc_stream
+!      this%stream = this%original_stream + 1
+!    END IF
+  END SUBROUTINE BeginAggregate_sum
+  SUBROUTINE EndAggregate_sum(this)
+    CLASS(t_jsb_aggregator_sum),    INTENT(inout), TARGET :: this
+ !   INTEGER :: stream, dummy
+
+ !   IF (this%original_stream /= -1) THEN
+ !     DO stream = this%original_stream + 1, this%stream - 1
+ !       !$ACC WAIT(stream) ASYNC(this%original_stream)
+ !     END DO
+ !     ! Dummy kernel for simpler graph dependency resolution
+ !     !$ACC PARALLEL ASYNC(this%original_stream)
+ !     dummy = 1
+ !     !$ACC END PARALLEL
+ !   END IF
+ !   this%original_stream = -1
+ !   this%stream = acc_stream
+  END SUBROUTINE EndAggregate_sum
+
   ! ====================================================================================================== !
   !>
   !> Aggregation of a 2d variable from the child tiles by sum all 
@@ -1921,6 +1950,30 @@ CONTAINS
   END SUBROUTINE Finalize_aggregator_average
 
 
+  SUBROUTINE BeginAggregate_average(this)
+    CLASS(t_jsb_aggregator_average),    INTENT(inout), TARGET :: this
+
+!    IF (this%stream /= acc_async_sync) THEN
+!      this%original_stream = acc_stream
+!      this%stream = this%original_stream + 1
+!    END IF
+  END SUBROUTINE BeginAggregate_average
+  SUBROUTINE EndAggregate_average(this)
+    CLASS(t_jsb_aggregator_average),    INTENT(inout), TARGET :: this
+!    INTEGER :: stream, dummy
+
+!    IF (this%original_stream /= -1) THEN
+!      DO stream = this%original_stream + 1, this%stream - 1
+!        !$ACC WAIT(stream) ASYNC(this%original_stream)
+!      END DO
+!      ! Dummy kernel for simpler graph dependency resolution
+!      !$ACC PARALLEL ASYNC(this%original_stream)
+!      dummy = 1
+!      !$ACC END PARALLEL
+!    END IF
+!    this%original_stream = -1
+!    this%stream = acc_stream
+  END SUBROUTINE EndAggregate_average
   ! ====================================================================================================== !
   !>
   !> Aggregation of a 2d variable from the child tiles by weighted fractions

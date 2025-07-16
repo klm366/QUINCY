@@ -263,8 +263,8 @@ CONTAINS
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai_max)                    ! in
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                  ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                ! in
     ! VEG 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                  ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, npp)                                  ! out

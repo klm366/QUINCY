@@ -164,8 +164,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)         ! in
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_theta)          ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone_rel)         ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                   ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                   ! in
@@ -329,7 +329,7 @@ CONTAINS
             & model%config%elements_index_map(:)  , &
             & model%config%is_element_used(:)     , &
             & lctlib%tau_seed_est                 , &
-            & w_soil_root_theta(:)                , &
+            & wtr_rootzone_rel(:)                , &
             & growing_season(:)                   , &
             & t_air_week_mavg(:)                  , &
             & fpc(:)                              , &
@@ -783,7 +783,7 @@ CONTAINS
     & elements_index_map          , &
     & is_element_used             , &
     & lctlib_tau_seed_est         , &
-    & w_soil_root_theta           , &
+    & wtr_rootzone_rel           , &
     & growing_season              , &
     & t_air_week_mavg             , &
     & fpc                         , &
@@ -800,7 +800,7 @@ CONTAINS
     INTEGER,                  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
     LOGICAL,                  INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
     REAL(wp),                 INTENT(in)    :: lctlib_tau_seed_est          !< lctlib paramter
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: w_soil_root_theta            !< plant available water [fraction of maximum]
+    REAL(wp), DIMENSION(nc),  INTENT(in)    :: wtr_rootzone_rel            !< plant available water [fraction of maximum]
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: growing_season               !< growing season
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: t_air_week_mavg              !< weekly air temperature [K]
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: fpc                          !< folage projective cover
@@ -839,7 +839,7 @@ CONTAINS
     ELSEWHERE
       flim_temp(:) = 1.0_wp - EXP(-(lambda_est_temp * (t_air_week_mavg(:) - Tzero)) ** k_est_temp)
     END WHERE
-    flim_moist(:)  = 1.0_wp - EXP(-(lambda_est_moist * w_soil_root_theta(:)) ** k_est_moist)
+    flim_moist(:)  = 1.0_wp - EXP(-(lambda_est_moist * wtr_rootzone_rel(:)) ** k_est_moist)
 
     !>  1.3 actual establishment rate and associated matter flux from seed bed to reserve pool
     !>
