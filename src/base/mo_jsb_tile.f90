@@ -246,7 +246,6 @@ CONTAINS
             ! TODO hard coded checks of process dependencies - should not be handled here
             CALL message(TRIM(routine), &
               & 'Experimental: SEB_ process usually only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')
-            END IF
           END IF
         END SELECT
         IF (PRESENT(process_actions)) THEN

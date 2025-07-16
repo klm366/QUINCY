@@ -125,7 +125,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wtr_pond
     dsl4jsb_Real2D_onChunk :: ice_pond
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
-    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
     dsl4jsb_Real2D_onChunk :: wind_air
@@ -135,8 +134,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_bcoef
     dsl4jsb_Real2D_onChunk :: pch
     dsl4jsb_Real2D_onChunk :: richardson
-    dsl4jsb_Real2D_onChunk :: le_phase_change
-
 
     ! VEG_
     dsl4jsb_Real2D_onChunk :: height
@@ -173,14 +170,6 @@ CONTAINS
     LOGICAL  :: l_is_newday, jsb_standalone
     INTEGER  :: ilct
 
-
-    LOGICAL, DIMENSION(options%nc) :: &
-      & l_recalc_seb
-    REAL(wp), DIMENSION(options%nc):: &
-      & s_trgt, phase_change_trgt, le_freeze_pot, le_melt_pot
-
-
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy_land'
 
     iblk = options%iblk
@@ -195,7 +184,6 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
 
-    jsb_standalone = jsbach_runs_standalone()
     use_tmx = model%config%use_tmx
     l_is_newday = is_newday(options%current_datetime, options%dtime)
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
@@ -242,10 +230,18 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)      ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)          ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)       ! IN
-    IF (jsb_standalone) THEN
-      dsl4jsb_Get_var2D_onChunk(A2L_,   pch)            ! -/OUT (coupled/standalone)
-      dsl4jsb_Get_var2D_onChunk(SEB_,   richardson)     ! -/OUT (coupled/standalone)
+    IF (jsb_standalone) THEN ! TODO this does not depend on standalone but rather on tile SEB
+      dsl4jsb_Get_var2D_onChunk(SEB_,   t_acoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   t_bcoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   q_acoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   q_bcoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   pch)          ! -/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   richardson)   ! -/OUT (coupled/standalone)
     ELSE
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef)      ! IN/OUT (coupled/standalone)
       pch => NULL()
       richardson => NULL()
     END IF
@@ -300,8 +296,6 @@ CONTAINS
       wtr_soil_sl => NULL()
       ice_soil_sl => NULL()
     END IF
-
-    dsl4jsb_Get_var2D_onChunk(SEB_, le_phase_change)  ! out
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   grnd_hflx)      ! IN
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! IN
@@ -1764,7 +1758,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: dtime, alpha
-    LOGICAL  :: use_tmx
+    LOGICAL  :: jsb_standalone, use_tmx
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -1974,70 +1968,6 @@ CONTAINS
     pseudo_soil_temp= t_air_in_Celcius / N_pseudo_soil_temp  +  F_pseudo_soil_temp * pseudo_soil_temp
 
   END SUBROUTINE calc_pseudo_soil_temp
-
-
-  ! --- diagnose phase change potential  --------------------------------------------------------------------------------------------------
-  !
-  !
-  SUBROUTINE phase_change_pot(alpha, steplen, pcp,             &
-    &            pescoe, pfscoe, peqcoe, pfqcoe,               &
-    &            ps_zero, psold,                               &
-    &            pqsold, pdqsold,                              &
-    &            pnetrad, pgrdfl,                              &
-    &            pcfh, pcair, pcsat, pfracsu, pgrdcap,         &
-    &            phase_change_zero                             &
-    &            )
-
-    !$ACC ROUTINE SEQ
-
-    USE mo_jsb_physical_constants, ONLY: &
-      & zemiss_def, &
-      & stbo, &
-      & alv,  &
-      & als
-
-    REAL(wp), INTENT(in)    :: alpha
-    REAL(wp), INTENT(in)    :: steplen
-    REAL(wp), INTENT(in)    :: pcp, pfscoe, pescoe, pfqcoe, peqcoe
-    REAL(wp), INTENT(in)    :: ps_zero, psold, pqsold, pdqsold
-    REAL(wp), INTENT(in)    :: pnetrad, pgrdfl
-    REAL(wp), INTENT(in)    :: pcfh, pcair, pcsat, pfracsu
-    REAL(wp), INTENT(in)    :: pgrdcap
-
-    REAL(wp), INTENT(out)   :: phase_change_zero
-        !
-    REAL(wp) :: zcolin, zcohfl, zcoind, zicp, zca, zcs
-    REAL(wp) :: pdt
-
-      pdt     = alpha * steplen
-
-      zicp = 1._wp / pcp
-      !
-      zca = als * pfracsu +  alv * (pcair - pfracsu)
-      zcs = als * pfracsu +  alv * (pcsat - pfracsu)
-      ! 
-
-     zcolin = pgrdcap*zicp +                                                      &
-        &      pdt * (zicp * 4._wp * zemiss_def * stbo * ((zicp * psold)**3)  -   &
-        &      pcfh * (zca * peqcoe - zcs) *                                      &
-        &      zicp * pdqsold)
-      !
-      zcohfl = -pdt * pcfh * (pescoe - 1._wp)
-
-      ! Energy released / required by / for phase changes to reach the freezing point 
-      phase_change_zero =                                            &
-        &    + ps_zero * (zcolin + zcohfl) / pdt                     &
-        &    - zcolin * psold / pdt                                  &
-        &    - pnetrad                                               &
-        &    - pcfh * pfscoe                                         &
-        &    - pcfh * ((zca * peqcoe - zcs) * pqsold + zca * pfqcoe) &
-        &    - pgrdfl
-
-  END SUBROUTINE phase_change_pot
-  !
-  ! ================================================================================================================================
-  !
-
 
 #endif
 END MODULE mo_seb_land

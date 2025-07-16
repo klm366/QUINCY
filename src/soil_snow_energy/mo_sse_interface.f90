@@ -242,7 +242,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, vol_heat_cap_sl)   ! in
     dsl4jsb_Get_var3D_onChunk(SSE_, heat_cond_sl)      ! in
     dsl4jsb_Get_var3D_onChunk(SSE_, nrg_lex_net_sl)    ! in
-
     dsl4jsb_Get_var2D_onChunk(SSE_, vol_heat_cap_snow) ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, heat_cond_snow)    ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, hcap_grnd)         ! out

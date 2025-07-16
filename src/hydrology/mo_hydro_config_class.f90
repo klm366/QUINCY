@@ -417,7 +417,6 @@ CONTAINS
       CALL message(TRIM(routine), 'Bottom drainage is removed before lateral flow is calculated')
     END IF
 
-
     SELECT CASE(TRIM(tolower(soilhydmodel)))
     CASE("vangenuchten")
       config%soilhydmodel = VanGenuchten_

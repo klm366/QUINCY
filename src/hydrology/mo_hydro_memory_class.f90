@@ -199,7 +199,7 @@ MODULE mo_hydro_memory_class
                                 !< [[t_hydro_config:hydro_scale=Uniform]])               [m]
       & wtr_latflow_sl,       & !< Outflow from the intermediary reservoir representing
                                 !< lateral flow of subsurface runoff                     [kg m-2 s-1]
-      & wtr_lex_net_sl          !< Lateral exchange with connected tiles on soil layers                     [kg m-2 s-1]
+      & wtr_lex_net_sl          !< Lateral exchange with connected tiles on soil layers  [kg m-2 s-1]
 
     TYPE(t_jsb_var_real2d) :: &
       & w_skin,           &     !< Water content in skin reservoir                                    [m]
@@ -422,17 +422,7 @@ CONTAINS
       & t_cf('snowmelt', 'kg m-2 s-1', 'Snow melt'),                                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.FALSE., output_level=BASIC,                                        &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-
-    CALL mem%Add_var( 'le_phase_change_res', mem%le_phase_change_res,                &
-      & hgrid, surface,                                                              &
-      & t_cf('le_phase_change_res', 'J m-2',                                         &
-      &      'Residual energy due to surface water phase change'),                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE., output_level=BASIC,                                        &
+      & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'infilt', mem%infilt,                                          &
@@ -642,6 +632,15 @@ CONTAINS
         & prefix, suffix,                                                                                         &
         & lrestart=.FALSE.,                                                                                       &
         & loutput=.TRUE., output_level=BASIC,                                                                     &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'le_phase_change_res', mem%le_phase_change_res,                &
+        & hgrid, surface,                                                              &
+        & t_cf('le_phase_change_res', 'J m-2',                                         &
+        &      'Residual latent energy due to surface water phase change'),            &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & lrestart=.FALSE., output_level=BASIC,                                        &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       IF (.NOT. model%config%use_tmx) THEN

@@ -68,7 +68,6 @@ CONTAINS
   !! @param [in,out] snow_soil_dens        snow density on soil at non-glacier points [m water equivalent]
   !! @param [in,out] wtr_latflow_res_srf   Intermediary storage of surface runoff [m water equivalent]
   !! @param [out]    q_snocpymlt           Heating due to snow melt on canopy [W m-2]
-  !! @param [out]    new_snow_soil,        amount of snowfall to soil within time step [m]
   !! @param [out]    snow_accum            snow budget change within time step [m water equivalent]
   !! @param [out]    snowmelt_soil         snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
   !! @param [out]    evapotrans_soil       evapotranspiration from soil w/o skin and snow reservoirs [kg m-2 s-1]
@@ -954,8 +953,8 @@ CONTAINS
   !!   Revised by Tobias Stacke (MPI-M) in September 2022
 
   SUBROUTINE soilhyd(                                                &
-    & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, k_brock, enforce_water_budget,       &
-    & slope, soilhydmodel, interpol_mean, hydro_scale, bot_drain_mode, w_soil_wilt_fract,   &
+    & nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, k_brock, enforce_water_budget,      &
+    & slope, soilhydmodel, interpol_mean, hydro_scale, bot_drain_mode, w_soil_wilt_fract, &
     & dsoil, wtr_wres_sl, wtr_p_wilt_sl,                                     &
     & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,                        &
     & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,                      &

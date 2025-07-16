@@ -106,7 +106,7 @@ CONTAINS
 
   END FUNCTION add_heat_capacity_pond
 
-! --------------------------------------------------------------------------------------------------------- !
+  ! --------------------------------------------------------------------------------------------------------- !
   !>
   !! Calculates the soil thermal conductivity after Johansen 1977.
   !!
@@ -417,7 +417,7 @@ CONTAINS
     REAL(wp) :: le_phase(nc)
     REAL(wp) :: z1(nc,nsoil)
     REAL(wp) :: zd1(nsoil-1)
-    REAL(wp) :: zdz1(nc,nsoil-1), zdz2(nc,nsoil), zbot(nsoil)
+    REAL(wp) :: zdz1(nc,nsoil-1), zdz2(nc,nsoil)
     REAL(wp) :: heat_cap(nc,nsoil)
     REAL(wp) :: wtr_old(nc,nsoil), ice_old(nc,nsoil)
     REAL(wp) :: freeze_mass(nc,nsoil), melt_mass(nc,nsoil)
@@ -437,7 +437,6 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO is = 1,nsoil-1
        zd1(is) = 1._wp / (mids(is+1) - mids(is))
-       zbot(is+1) = zbot(is)+dz(is+1)
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -506,28 +505,16 @@ CONTAINS
       !$ACC END LOOP
       !$ACC END PARALLEL
 
-      ! Adding top layer energy from phase change (from SEB). 
-      ! Actual freezing and melting is calculated below.
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO ic=1,nc
-        t_soil_sl(ic,1) = t_soil_sl(ic,1) &
-                      & + le_phase(ic) / heat_cap(ic,1) * delta_time
-      END DO
-      !$ACC END PARALLEL LOOP 
-
       ! Adding lateral heat fluxes
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP SEQ
-      DO is = 1, nsoil
-        !$ACC LOOP GANG VECTOR
-        DO ic=1,nc
+      ! TODO check unit, treat similarily to 
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO ic=1,nc
+        DO is = 1, nsoil
           t_soil_sl(ic,is) = t_soil_sl(ic,is) &
                          & + lat_hflx(ic,is) / heat_cap(ic,is) * delta_time
         END DO
-        !$ACC END LOOP
       END DO
-      !$ACC END LOOP
-      !$ACC END PARALLEL
+      !$ACC END PARALLEL LOOP
 
       ! Phase change calculations
       IF (l_freeze .AND. PRESENT(wtr)) THEN

@@ -958,7 +958,6 @@ CONTAINS
 
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(LEX_)
-
     dsl4jsb_Def_memory(HYDRO_)
 
     TYPE(t_jsb_model), POINTER        :: model

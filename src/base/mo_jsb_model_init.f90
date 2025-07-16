@@ -17,7 +17,7 @@ MODULE mo_jsb_model_init
 
 #ifndef __NO_JSBACH__
 
-  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
+  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_,      &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, LEX_, &
     &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
@@ -643,8 +643,8 @@ CONTAINS
     END DO
     ! ---------------------------------------------------------------------------------------------- !
     !>
-    !>     2.4 Iterate over tiles again 
-    !>         Initialize lateral exchange processes on each tile. 
+    !>     2.4 Iterate over tiles again
+    !>         Initialize lateral exchange processes on each tile.
     !>         Tile fractions and Hydro needs to be initialized on all tiles
     !>
     CALL model%Reset_tiles()

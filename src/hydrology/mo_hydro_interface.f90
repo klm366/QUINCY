@@ -24,15 +24,15 @@ MODULE mo_hydro_interface
   ! Used variables of module
 
   ! Use of basic structures
-  USE mo_jsb_control,        ONLY: debug_on, acc_stream
+  USE mo_jsb_control,        ONLY: debug_on, acc_stream, jsbach_runs_standalone
   USE mo_jsb_time,           ONLY: is_time_experiment_start
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, message_text, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
-  USE mo_jsb_grid,           ONLY: Get_grid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -513,7 +513,7 @@ CONTAINS
       & ice_impedance_sl
 
     INTEGER  :: iblk, ics, ice, nc, ic, nsoil, is
-    REAL(wp) :: dtime, hlp1
+    REAL(wp) :: dtime
     ! Variables from configs
     REAL(wp) :: &
       & w_skin_max_config,      &
@@ -527,8 +527,7 @@ CONTAINS
       & l_infil_subzero_config,  &
       & l_latflow_to_streamflow, &
       & ltpe_closed,             &
-      & use_tmx,                 &
-      & l_latflow_to_streamflow
+      & use_tmx
 
     REAL(wp), ALLOCATABLE      :: fract_fol_proj_cov(:)     !< use for jsbach & quincy, as helper variable
 
@@ -1371,7 +1370,6 @@ CONTAINS
     INTEGER  :: nsoil
 
     REAL(wp), POINTER :: area(:), lat(:), lon(:), tile_fract(:)
-    REAL(wp) :: tile_fract(options%nc)
     REAL(wp) :: slope_used(options%nc)
     REAL(wp) :: flowlag_used(options%nc)
     REAL(wp) :: depth_thrsh(options%nc)
@@ -3000,9 +2998,8 @@ CONTAINS
       weq_fluxes(ic) = weq_fluxes(ic) * tile_area / rhoh2o               ! kg m-2 s-1 -> m3/s
 
       IF (tile_contains_soil) THEN
-        weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic)                                       &
-          &          + water_to_soil_lex(ic)  + wtr_latflow_res_srf(ic)                                  &
-          &          + SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:)) + SUM(wtr_latflow_res_sl(ic,:)))  &
+        weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) + weq_soil(ic) &
+          &          + water_to_soil_lex(ic) + wtr_latflow_res_srf(ic) + SUM(wtr_latflow_res_sl(ic,:)))  &
           &          * tile_area          ! m -> m^3
       ELSE
         weq_land_new = 0._wp
@@ -3046,8 +3043,8 @@ CONTAINS
           WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
             & 'Skin reservoir:     ', wtr_skin(ic)           * tile_area,              NEW_LINE('a'), &
             & 'Snow reservoir:     ', weq_snow(ic)           * tile_area,              NEW_LINE('a'), &
-            & 'Lat. inflow srf : ', wtr_lex_net_srf(ic) * tile_area / rhoh2o * dtime,  NEW_LINE('a'), &
-            & 'Lat. inflow sl : ', SUM(wtr_lex_net_sl(ic,:))*tile_area/rhoh2o*dtime
+            & 'Lat. inflow srf:    ', wtr_lex_net_srf(ic) * tile_area / rhoh2o * dtime,NEW_LINE('a'), &
+            & 'Lat. inflow sl:     ', SUM(wtr_lex_net_sl(ic,:))*tile_area/rhoh2o*dtime
           IF (.NOT. tile%is_lake) THEN
             WRITE (message_text_long,*) TRIM(message_text_long),                       NEW_LINE('a'), &
               & 'Pond reservoir:     ', weq_pond(ic)           * tile_area
@@ -3211,8 +3208,14 @@ CONTAINS
     ALLOCATE (scaling(grid%nproma,grid%nblks))
 
     ! Calculate 1d global land variables, if requested for output
-    global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
-    scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
+    IF (HYDRO__mem%trans_gmean%is_in_output .OR. HYDRO__mem%evapotrans_gmean%is_in_output &
+      & .OR. HYDRO__mem%wtr_rootzone_rel_gmean%is_in_output) THEN
+
+      global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
+      scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
+
+    END IF
+
     IF (HYDRO__mem%trans_gmean%is_in_output)           &
       &  trans_gmean          = global_sum_array(transpiration(:,:)   * scaling(:,:)) / global_land_area
     IF (HYDRO__mem%evapotrans_gmean%is_in_output)      &

@@ -870,8 +870,6 @@ CONTAINS
     INTEGER :: iblk, ics, ice, nc, ic
     INTEGER :: model_scheme
 
-    LOGICAL  :: jsb_standalone
-
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_humidity_scaling'
@@ -888,8 +886,6 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
     model_scheme = model%config%model_scheme
-    jsb_standalone = jsbach_runs_standalone()
-
     jsb_standalone = jsbach_runs_standalone()
 
     dsl4jsb_Get_config(HYDRO_)

@@ -20,7 +20,7 @@ MODULE mo_seb_interface
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_jsb_control,     ONLY: debug_on, acc_stream
+  USE mo_jsb_control,     ONLY: debug_on, jsbach_runs_standalone, acc_stream
   USE mo_jsb_time,        ONLY: is_time_experiment_start
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish, message_text
