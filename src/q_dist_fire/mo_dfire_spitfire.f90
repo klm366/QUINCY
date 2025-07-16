@@ -128,6 +128,10 @@ MODULE mo_dfire_spitfire
     MODULE PROCEDURE :: create_sf_spitfire
   END INTERFACE t_sf_spitfire
 
+  ! To debug
+  !INTEGER :: process_Rank
+  !INTEGER, PARAMETER :: igrid=2
+  !INTEGER, PARAMETER :: iproc=116
 
   TYPE t_sf_bgcm_2L3D_p ! todo: remove
     REAL(wp), POINTER :: p(:,:,:,:) !< dims: (part,elem,nc,layer)
@@ -237,6 +241,7 @@ CONTAINS
     REAL(wp)                              :: a_nd(options%nc)
     REAL(wp)                              :: lightning_frequency(options%nc)
     REAL(wp)                              :: density_human_population(options%nc)
+    INTEGER                               :: ierror
     ! ----------------------------------------------------------------------------------------------------- !
     !dsl4jsb_Def_mt2L2D :: veg_pool_mt
     !dsl4jsb_Def_mt2L3D :: sb_loss_mt
@@ -333,6 +338,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: frac_consump_fcl          ! out [-]
     dsl4jsb_Real2D_onChunk                :: ic_pop_dens               ! in [#humans km-2]
     dsl4jsb_Real3D_onChunk                :: ic_lightning_events_monthly ! in [#events ha-1 d-1]
+    dsl4jsb_Real2D_onChunk                :: lightning_events ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -428,6 +434,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_, frac_consump_fcl)            ! out [-]
     dsl4jsb_Get_var2D_onChunk(DFIRE_, ic_pop_dens)                 ! in [#humans km-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_, ic_lightning_events_monthly) ! in [#events ha-1 d-1]
+    dsl4jsb_Get_var2D_onChunk(DFIRE_, lightning_events) ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     !dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -462,11 +469,11 @@ CONTAINS
     ab_moisture_sl = 0._wp
     ab_moisture = 0._wp
     frac_consump_fcl = 0._wp
-    !write(*,*) "update_spitfire:: fract_fpc shape?", SHAPE(fract_fpc)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
+    !call MPI_COMM_RANK(MPI_COMM_WORLD, process_Rank, ierror)
     grid_cell_area => grid % area(ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
 
@@ -501,13 +508,10 @@ CONTAINS
       END IF
     ENDDO
 
-    ! todo: compute current month
-    !c_month = get_current_month()
-    density_human_population = ic_pop_dens ! 1= use 1st month of the year
-    lightning_frequency = ic_lightning_events_monthly(:,1)
-    a_nd = lightning_frequency * 4._wp
-
-    !WRITE(*,*) "spitfire.f90:: me, tile_fract=", moisture_extinction, ", ", tile_fract
+    ! Load input data
+    density_human_population = ic_pop_dens 
+    lightning_frequency = lightning_events 
+    a_nd = density_human_population * 4._wp
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
@@ -568,10 +572,6 @@ CONTAINS
     mineral_damp_coeff(:) = sf_spitfire % ros % mineral_damp_coeff(:)
 
     frac_consump_fcl = sf_spitfire % dead_frac_consump
-    !write(*,*) "(spitfire) I am burning..., iblk, dead_fuel_X=", iblk, dead_fuel(1,t_sf_fuel_dead_fuel_woody_ix)
-    !WRITE(*,*) "(spitfire) t_air_min, t_air_max, forest_fract, grass_fract, area, fbd = ", &
-    !        t_air_min(1), t_air_max(1), forest_fract(1), grass_fract(1), pot_burn_area(1), &
-    !        fuel_bulk_density(1)
   END SUBROUTINE update_dfire_spitfire
 
 
@@ -675,8 +675,6 @@ CONTAINS
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
     !> Eq. 8 from Thonicke et al. (2010)
-    !WRITE(*,*) "(spitfire.f90) calc_spitfire:: nc, me == 0?", nc, COUNT(moisture_extinction == 0._wp)
-    !WRITE(*,*) "(spitfire.f90) calc_spitfire:: idx==0?", pack([(ix,ix=1,size(moisture_extinction))],moisture_extinction==0._wp)
     WHERE(moisture_extinction > 0._wp)
       spitfire % fdi = max(0._wp, 1._wp  - (fuel_moisture(:, df_sf_omega_o_idx) / moisture_extinction))
     ENDWHERE
@@ -686,7 +684,7 @@ CONTAINS
     !< then fire cannot spread and we stop the calculation. The same applies if FDI is low.
     has_dead_fuel = sf_calc_has_any_fuel(dead_fuel(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
     !< It accounts for 1, 10 and 100 hours fuel classes
-    has_fire_conditions(:) = mask_tile_enabled .AND. (has_dead_fuel) .AND. (spitfire % fdi > 1.e-6_wp)
+    has_fire_conditions(:) = mask_tile_enabled .AND. (has_dead_fuel) .AND. (spitfire % fdi > 1.e-6_wp) 
 
     !< If there are no fire conditions, stop calculation and return burned area and fire emissions as zero.
     !< Previously initialized to zero.
@@ -705,9 +703,13 @@ CONTAINS
     sf_ignitions = calc_sf_ignition(nc, density_human_population, &
                                     a_nd, lightning_frequency, &
                                     df_sf_max_density_human_pop)
+    !< From daily to ts
     spitfire%e_n_ignitions = sf_ignitions%total * (dtime / one_day)
     spitfire%e_n_humans = sf_ignitions%human * (dtime / one_day)
     spitfire%e_n_lightning = sf_ignitions%lightning * (dtime / one_day)
+
+    !< no ignitions events, no fire conditions
+    has_fire_conditions = has_fire_conditions .AND. (spitfire%e_n_ignitions > 0._wp)
 
     !< Based on ignitions and fire spread conditions, calculate burned area and its fraction.
     CALL calc_area_burned(nc, spitfire % e_n_ignitions, & !< in

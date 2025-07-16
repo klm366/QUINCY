@@ -121,7 +121,7 @@ MODULE mo_dfire_memory_class
     TYPE(t_jsb_var_real3d)               :: frac_consump_fcl    !< Ratio calculated in eqs. B1, B2, B3 and B4 [0 to 1]
                                                                 !< Intermediate variable used in dead fuel consumption
 
-    TYPE(t_jsb_var_real2d)               :: ic_pop_dens         !< Read data from
+    TYPE(t_jsb_var_real2d)               :: ic_pop_dens         !< Read data from [#events ha-1 day-1]
     TYPE(t_jsb_var_real3d)               :: ic_lightning_events_monthly !< Monthly lightning events data [#events ha-1 day-1]
     TYPE(t_jsb_var_real2d)               :: lightning_events    !< Current monthly timestep data [#events ha-1 day-1]
   CONTAINS

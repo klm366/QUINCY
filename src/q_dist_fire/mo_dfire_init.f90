@@ -485,8 +485,8 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_, ic_lightning_events_monthly)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, lightning_events)
+    dsl4jsb_Get_var3D_onDomain(DFIRE_, ic_lightning_events_monthly) ! yearly lightning events
+    dsl4jsb_Get_var2D_onDomain(DFIRE_, lightning_events) ! lightning events for the current month
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
@@ -497,14 +497,14 @@ CONTAINS
       !>
       ptr_3D => input_file%Read_2D_time(variable_name='HRMC_COM_FR')
       DO i_month = 1,12
-        ! Data is loaded as #events km-2 day-1 and converted into #events ha-1 day-1
-        ! convert km-2 to ha-1
-        ic_lightning_Events_monthly(:,i_month,:) = ptr_3D(:,:,i_month) / 100._wp
+        ! Data is loaded as #events km-2 day-1 
+        ! Units conversion from km-2 to ha-1
+        ic_lightning_Events_monthly(:,i_month,:) = ptr_3D(:,:,i_month) / 100.
       END DO
 
       CALL input_file%Close()
-      WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: loading lightning events...", &
-              ic_lightning_Events_monthly(1,:,1)
+      !WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: current_month, lightning_events=", &
+      !        SHAPE(ic_lightning_Events_monthly)
 
       ! no need to read the file anymore
       is_read = .TRUE.
@@ -514,8 +514,8 @@ CONTAINS
     current_month = get_month(current_datetime)
 
     lightning_events(:,:) = ic_lightning_events_monthly(:,current_month,:)
-    WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: current_month, lightning_events=", &
-                        current_month, lightning_events(1,1)
+    WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: current_month=", &
+                        current_month!, lightning_events(47,:)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
   END SUBROUTINE provide_lightning_events

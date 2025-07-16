@@ -206,8 +206,8 @@ CONTAINS
     density_human_population = 55.0               ! Ignition events 
     lightning_frequency      = 0.000012           ! 
     a_nd                     = 0.000048           !
-    ic_popdens_filename      = "ic_popdens_filename.nc"
-    ic_lightning_events_filename = "ic_lightning_evengs_filename.nc"
+    ic_popdens_filename      = "ic_popdens.nc"
+    ic_lightning_events_filename = "ic_lightning_events.nc"
     fract_crown_scorch       = [1.0, 0.05, 0., 0.]
     ratio_polymeric_litter_to_dead_fuel = 0._wp
     ratio_dom_assoc_to_dead_fuel        = 0._wp
@@ -244,8 +244,8 @@ CONTAINS
     config%density_human_population  = density_human_population       ! Ignition events 
     config%lightning_frequency       = lightning_frequency            ! 
     config%a_nd                      = a_nd                           !
-    config%ic_popdens_filename       = ic_popdens_filename
-    config%ic_lightning_events_filename = ic_lightning_events_filename
+    config%ic_popdens_filename       = TRIM(ic_popdens_filename)
+    config%ic_lightning_events_filename = TRIM(ic_lightning_events_filename)
     config%fract_crown_scorch        = fract_crown_scorch             ! 
     config%ratio_polymeric_litter_to_dead_fuel = ratio_polymeric_litter_to_dead_fuel ! spitfire
     config%ratio_dom_assoc_to_dead_fuel        = ratio_dom_assoc_to_dead_fuel          ! spitfire
