@@ -55,8 +55,7 @@ CONTAINS
     USE mo_jsb_physical_constants,          ONLY: lambda_C14
     USE mo_jsb_math_constants,              ONLY: one_day, one_year, eps4
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14
-    USE mo_veg_constants,                   ONLY: eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy
-    USE mo_q_pheno_constants,               ONLY: ievergreen
+    USE mo_veg_constants,                   ONLY: eta_nfixation, max_leaf_shedding_rate
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(Q_SYL_)
@@ -520,29 +519,15 @@ CONTAINS
       !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
       DO ic = 1, nc
 
-      ! diagnose required change in leaf C given phenology to attain prescribed LAI max
-       IF (growing_season(ic) > test_false_true) THEN
-         veg_growth_mt(ix_leaf, ixC, ic) = lai_max(ic) / lctlib_sla &
-           &                              * (1._wp - exp(-k_leafon_canopy &
-           &                              * (lai_max(ic) - lai(ic)) / lai_max(ic))) &
-           &                              * dtime / one_day
-       ELSE
-         veg_litterfall_mt(ix_leaf, ixC, ic) = MIN(veg_pool_mt(ix_leaf, ixC, ic), &
-           &                                  lai(ic)/lctlib_sla * max_leaf_shedding_rate * dtime / one_day &
-           &                                  * lai_max(ic) &
-           &                                  / MAX(eps4, lai(ic)))
-       END IF
-
-       ! calc leaf turnover for evergreen trees (needed, for e.g. mean_leaf_age, as evergreens are always within growing_season)
-       IF (lctlib_phenology_type == ievergreen) THEN
-         veg_litterfall_mt(ix_leaf, ixC, ic) = veg_pool_mt(ix_leaf, ixC, ic) / lctlib_tau_leaf / one_day / one_year * dtime
-       ENDIF
-
        ! update leaf C:N:P pools
        veg_pool_mt(ix_leaf, ixC, ic) = veg_pool_mt(ix_leaf, ixC, ic) + veg_growth_mt(ix_leaf, ixC, ic) &
          &                            - veg_litterfall_mt(ix_leaf, ixC, ic)
-       veg_pool_mt(ix_leaf, ixN, ic) = veg_pool_mt(ix_leaf, ixC, ic) / lctlib_cn_leaf
-       veg_pool_mt(ix_leaf, ixP, ic) = veg_pool_mt(ix_leaf, ixN, ic) / lctlib_np_leaf
+       veg_pool_mt(ix_leaf, ixN, ic) = veg_pool_mt(ix_leaf, ixN, ic) + veg_growth_mt(ix_leaf, ixN, ic) &
+         &                            - veg_litterfall_mt(ix_leaf, ixN, ic)
+       veg_pool_mt(ix_leaf, ixP, ic) = veg_pool_mt(ix_leaf, ixP, ic) + veg_growth_mt(ix_leaf, ixP, ic) &
+         &                            - veg_litterfall_mt(ix_leaf, ixP, ic)
+  !     veg_pool_mt(ix_leaf, ixN, ic) = veg_pool_mt(ix_leaf, ixC, ic) / lctlib_cn_leaf
+  !     veg_pool_mt(ix_leaf, ixP, ic) = veg_pool_mt(ix_leaf, ixN, ic) / lctlib_np_leaf
 
       END DO
       !$ACC END PARALLEL LOOP
