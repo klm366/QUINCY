@@ -23,6 +23,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_exception,           ONLY: message, finish
 
+  USE mo_jsb_control,         ONLY: jsbach_runs_standalone
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, SPQ_, LEX_, &
@@ -1207,6 +1208,9 @@ CONTAINS
 
         ENDDO
 
+    ! Enable SEB on the topo tiles switch if standalone
+    model%config%use_tile_seb = jsbach_runs_standalone()
+
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
@@ -1538,6 +1542,9 @@ CONTAINS
             END DO
 
         ENDDO
+
+    ! Enable SEB on the topo tiles switch if standalone
+    model%config%use_tile_seb = jsbach_runs_standalone()
 
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
@@ -1873,6 +1880,9 @@ CONTAINS
             END DO
 
         ENDDO
+
+    ! Enable SEB on the topo tiles switch if standalone
+    model%config%use_tile_seb = jsbach_runs_standalone()
 
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)

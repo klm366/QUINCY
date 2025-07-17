@@ -261,7 +261,6 @@ CONTAINS
       & initval_r=0.0_wp)
 
     IF (jsbach_runs_standalone()) THEN
-
       CALL mem%Add_var( 'richardson', mem%richardson,                                &
         & hgrid, surface,                                                            &
         & t_cf('richardson', '-', 'Richardson number'),                              &
@@ -269,6 +268,9 @@ CONTAINS
         & prefix, suffix,                                                            &
         & lrestart=.TRUE.,                                                           &
         & initval_r=0.0_wp )
+    END IF
+
+    IF (model%config%use_tile_seb) THEN
 
       CALL mem%Add_var( 'drag_srf', mem%drag_srf,                              &
         & hgrid, surface,                                                      &
@@ -326,10 +328,9 @@ CONTAINS
     END IF
 
     ! Additional variables for LAND lct
-    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 .OR.          &
-      & One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
+    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
       ! NOTE  temporary solution to run the SPQ_ process with SEB_ variables at PFT tiles
-      & .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+      & .OR. model%config%model_scheme == MODEL_QUINCY .OR. model%config%use_tile_seb) THEN
 
       CALL mem%Add_var( 's_star', mem%s_star,                                                &
         & hgrid, surface,                                                                    &

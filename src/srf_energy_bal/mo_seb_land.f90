@@ -230,7 +230,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)      ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)          ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)       ! IN
-    IF (jsb_standalone) THEN ! TODO this does not depend on standalone but rather on tile SEB
+    IF (model%config%use_tile_seb) THEN
       dsl4jsb_Get_var2D_onChunk(SEB_,   t_acoef)      ! IN/OUT (coupled/standalone)
       dsl4jsb_Get_var2D_onChunk(SEB_,   t_bcoef)      ! IN/OUT (coupled/standalone)
       dsl4jsb_Get_var2D_onChunk(SEB_,   q_acoef)      ! IN/OUT (coupled/standalone)
@@ -242,8 +242,13 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)      ! IN/OUT (coupled/standalone)
       dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef)      ! IN/OUT (coupled/standalone)
       dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef)      ! IN/OUT (coupled/standalone)
-      pch => NULL()
-      richardson => NULL()
+      IF (jsb_standalone) THEN
+        dsl4jsb_Get_var2D_onChunk(A2L_,   pch)            ! -/OUT (coupled/standalone)
+        dsl4jsb_Get_var2D_onChunk(SEB_,   richardson)     ! -/OUT (coupled/standalone)
+      ELSE
+        pch => NULL()
+        richardson => NULL()
+      END IF
     END IF
     dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_mean) ! IN
     dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_sum)           ! INOUT
@@ -303,7 +308,7 @@ CONTAINS
     IF (use_tmx) THEN
       drag_srf => NULL()
     ELSE
-      IF (jsb_standalone) THEN
+      IF (model%config%use_tile_seb) THEN
         dsl4jsb_Get_var2D_onChunk(SEB_,   drag_srf)     ! IN/OUT (coupled/standalone)
       ELSE
         dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN/OUT (coupled/standalone)
@@ -1758,7 +1763,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: dtime, alpha
-    LOGICAL  :: jsb_standalone, use_tmx
+    LOGICAL  :: use_tmx
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -1776,7 +1781,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-    jsb_standalone = jsbach_runs_standalone()
     use_tmx = model%config%use_tmx
 
     ! Get reference to variables for current block
@@ -1785,7 +1789,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
 
-    IF (jsb_standalone) THEN
+    IF (model%config%use_tile_seb) THEN
       dsl4jsb_Get_var2D_onChunk(SEB_,   t_acoef)           ! in
       dsl4jsb_Get_var2D_onChunk(SEB_,   t_bcoef)           ! in
     ELSE
@@ -1810,7 +1814,7 @@ CONTAINS
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_var2D_onChunk(TURB_, ch)                 ! in
     ELSE
-      IF (jsb_standalone) THEN
+      IF (model%config%use_tile_seb) THEN
         dsl4jsb_Get_var2D_onChunk(SEB_, drag_srf)          ! in
       ELSE
         dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)          ! in
