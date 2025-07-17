@@ -262,6 +262,7 @@ CONTAINS
     ic_lightning_events_monthly = 0._wp
     lightning_events = 0._wp
 
+    !< Thonicke's Eq 14 is adapted to 30 minutes timestep. Original implementation runs at daily TS.
     df_sf_fire_duration_thd = dtime / 60._wp ! convert seconds to minutes
 
     !< Chose daily precipitation. Those are calculated in 3 different ways.
