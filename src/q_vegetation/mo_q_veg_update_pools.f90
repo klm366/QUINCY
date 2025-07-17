@@ -51,7 +51,7 @@ CONTAINS
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QCANOPY
-    USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, Q_SYL_, DFIRE_
+    USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, Q_SYL_, DFIRE_, DFIRE_FUEL_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14
@@ -68,6 +68,7 @@ CONTAINS
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -86,6 +87,7 @@ CONTAINS
     REAL(wp) :: hlp
     INTEGER  :: lctlib_phenology_type
     LOGICAL  :: config_l_use_product_pools, lctlib_ForestFlag, lctlib_CropFlag, config_active_q_syl, config_active_q_agr
+    REAL(wp), ALLOCATABLE :: emissions_els_umols(:,:)           !< emissions by elements [#element micro-mols s-1]
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -115,6 +117,7 @@ CONTAINS
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
@@ -125,6 +128,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: lai_max
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
+    ! DFIRE_ 3D
+    dsl4jsb_Real3D_onChunk      :: emissions_els
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: npp
@@ -218,6 +223,7 @@ CONTAINS
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     config_l_use_product_pools = dsl4jsb_Config(VEG_)%l_use_product_pools
     config_active_q_syl = dsl4jsb_Config(Q_SYL_)%active
@@ -265,6 +271,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai_max)                    ! in
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                ! in
+    ! DFIRE_ 3D
+    dsl4jsb_Get_var3D_onChunk(DFIRE_, emissions_els)                      ! in
     ! VEG 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                  ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, npp)                                  ! out
@@ -736,6 +744,19 @@ CONTAINS
       END IF
     END DO
     !$ACC END PARALLEL LOOP
+
+    ! Account for spitfire emissions
+    IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN ! Is spitfire enabled?
+      ALLOCATE(emissions_els_umols, mold=emisssions_els)
+      emissions_els_umols = emissions_els * 1000000._wp / dtime ! mols to micro-mols s-1
+      !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
+      DO ic = 1, nc
+        net_biosphere_production(ic) = net_biosphere_production(ic) + emissions_els_umols(ic,ixC)
+        net_biosphere_production_c13(ic13) = net_biosphere_production_c13(ic) + emissions_els_umols(ic,ixC13)
+        net_biosphere_production_c14(ic14) = net_biosphere_production_c14(ic) + emissions_els_umols(ic,ixC14)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
   END SUBROUTINE update_veg_pools
 
