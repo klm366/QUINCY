@@ -272,7 +272,7 @@ CONTAINS
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                ! in
     ! DFIRE_ 3D
-    dsl4jsb_Get_var3D_onChunk(DFIRE_, emissions_els)                      ! in
+    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, emissions_els)                 ! in
     ! VEG 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                  ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, npp)                                  ! out
@@ -747,13 +747,13 @@ CONTAINS
 
     ! Account for spitfire emissions
     IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN ! Is spitfire enabled?
-      ALLOCATE(emissions_els_umols, mold=emisssions_els)
+      ALLOCATE(emissions_els_umols, mold=emissions_els)
       emissions_els_umols = emissions_els * 1000000._wp / dtime ! mols to micro-mols s-1
       !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
       DO ic = 1, nc
         net_biosphere_production(ic) = net_biosphere_production(ic) + emissions_els_umols(ic,ixC)
-        net_biosphere_production_c13(ic13) = net_biosphere_production_c13(ic) + emissions_els_umols(ic,ixC13)
-        net_biosphere_production_c14(ic14) = net_biosphere_production_c14(ic) + emissions_els_umols(ic,ixC14)
+        net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) + emissions_els_umols(ic,ixC13)
+        net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) + emissions_els_umols(ic,ixC14)
       END DO
       !$ACC END PARALLEL LOOP
     END IF
