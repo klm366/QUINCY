@@ -143,6 +143,9 @@ CONTAINS
     dsl4jsb_Get_memory(ALCC_)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_current_year)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_day_delta)
+    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_transition_gain)   ! Mingyue add dsl4jsb for transition vars
+    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_transition_loss)   ! Mingyue add dsl4jsb for transition vars
+
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(alcc_)) RETURN
@@ -350,14 +353,12 @@ CONTAINS
           DO ic = 1,nc
             IF (cf_diff(ic) >= 0.0_wp) THEN
               gained_area(ic, i_tile) = cf_diff(ic)
-              lost_area(ic, i_tile) = 0.0_wp
             ELSE
-              gained_area(ic, i_tile) = 0.0_wp
               lost_area(ic, i_tile) = -1.0_wp * cf_diff(ic)
             END IF
           END DO
         
-        CASE  (trans)
+        CASE  ('trans')
           ! In case of transitions scheme, the area changes are directly applied to the current fractions
           ! and the initial area is set to the current fractions
           DO ic = 1,nc
