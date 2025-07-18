@@ -304,11 +304,6 @@ CONTAINS
     CASE (MODEL_QUINCY)
       ! set to zero
       wtr_soil_root_pot(:)    = 0.0_wp
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic = 1, nc
-        wtr_soil_root_pot(ic) = 0.0_wp
-      END DO
-      !$ACC END PARALLEL LOOP
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP SEQ
       DO is = 1, nsoil_sb
