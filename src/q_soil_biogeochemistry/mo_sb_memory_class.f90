@@ -954,7 +954,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('n2o_n15', mem%n2o_n15, &
@@ -965,7 +965,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('n2_n15', mem%n2_n15, &
@@ -976,7 +976,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('po4_assoc_fast', mem%po4_assoc_fast, &

@@ -1978,6 +1978,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
 
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(SSE_)
@@ -2015,7 +2016,7 @@ CONTAINS
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
     REAL(wp) :: wtr_soil_pot_scool_sl_min(options%nc, options%nsoil_w)
     REAL(wp) :: wpi_fcap_soil_sl(options%nc, options%nsoil_w)
-
+    REAL(wp), POINTER :: lat(:), lon(:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
     iblk = options%iblk
@@ -2029,7 +2030,9 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-
+    grid => Get_grid(model%grid_id)
+    lat        => grid%lat  (ics:ice, iblk)
+    lon        => grid%lon  (ics:ice, iblk)
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
 
@@ -2123,7 +2126,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-#ifndef __NO_QUINCY__
+#ifdef __NO_QUINCY__
     ! QUINCY
     ! calculate root zone water potential (MPa)
     SELECT CASE (model%config%model_scheme)

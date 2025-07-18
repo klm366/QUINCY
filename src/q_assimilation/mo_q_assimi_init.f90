@@ -40,15 +40,17 @@ CONTAINS
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_process_class,   ONLY: Q_ASSIMI_
     USE mo_q_assimi_parameters, ONLY: t_jmax_opt_min
-    USE mo_jsb_grid_class,      ONLY: t_jsb_grid
-    USE mo_jsb_grid,            ONLY: Get_grid
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
     dsl4jsb_Use_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: nblks, ib, nproma, ic
+    INTEGER                     :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb        !< Vertical grid
     CHARACTER(len=*), PARAMETER :: routine = modname//':q_assimi_init'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(Q_ASSIMI_)
@@ -73,6 +75,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: beta_soil_gs_tfrac_mavg
     dsl4jsb_Real2D_onDomain      :: beta_soil_gs_tcnl_mavg
     dsl4jsb_Real2D_onDomain      :: t_jmax_opt
+    dsl4jsb_Real3D_onDomain      :: ftranspiration_sl
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(Q_ASSIMI_)) RETURN
     IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of assimi memory (quincy) for tile '// &
@@ -80,6 +83,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
     grid  => Get_grid(model%grid_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      = vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -103,6 +108,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(Q_ASSIMI_, beta_soil_gs_tfrac_mavg)
     dsl4jsb_Get_var2D_onDomain(Q_ASSIMI_, beta_soil_gs_tcnl_mavg)
     dsl4jsb_Get_var2D_onDomain(Q_ASSIMI_, t_jmax_opt)
+    dsl4jsb_Get_var3D_onDomain(Q_ASSIMI_, ftranspiration_sl)
     ! ----------------------------------------------------------------------------------------------------- !
     nproma = grid%nproma
     nblks  = grid%nblks
@@ -137,7 +143,8 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-
+    ftranspiration_sl(:, 1, :)          = 1.0_wp
+    ftranspiration_sl(:, 2:nsoil_sb, :) = 0.0_wp
   END SUBROUTINE q_assimi_init
 
 #endif

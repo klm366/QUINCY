@@ -39,9 +39,11 @@ CONTAINS
   SUBROUTINE update_canopy_fluxes(tile, options)
 
     USE mo_jsb_class,              ONLY: Get_model
+    USE mo_jsb_grid,               ONLY: Get_grid
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
+    USE mo_jsb_grid_class,         ONLY: t_jsb_grid
     USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, HYDRO_, SSE_, TURB_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
@@ -51,6 +53,7 @@ CONTAINS
     USE mo_phy_schemes             ! e.g., heat_transfer_coef
     USE mo_q_assimi_parameters,    ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
     USE mo_q_assimi_constants,     ONLY: min_aerodyn_cond
+    USE mo_jsb_model_class,        ONLY: MODEL_QUINCY
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(Q_ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
@@ -65,6 +68,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER       :: model                    !< the model
+    TYPE(t_jsb_grid),       POINTER       :: grid
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy_q_assimi    !< Vertical grid
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb            !< Vertical grid for soil layers
     INTEGER                               :: nsoil_sb                 !< number of soil layers
@@ -80,6 +84,7 @@ CONTAINS
     REAL(wp)                              :: lctlib_g1                !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     REAL(wp)                              :: lctlib_phi_leaf_min, lctlib_gmin, lctlib_g0
     REAL(wp)                              :: lctlib_t_jmax_omega, lctlib_t_jmax_opt
+    REAL(wp),             POINTER         :: lat(:), lon(:)
     INTEGER                               :: lctlib_phenology_type, lctlib_ps_pathway
     REAL(wp), ALLOCATABLE                 :: drag_srf_local(:)            !< surface drag, provided by atmosphere or TURB_
     REAL(wp), ALLOCATABLE                 :: ftranspiration_sum_local(:)  !< sum of ftranspiration_sl over soil layers
@@ -172,6 +177,9 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(Q_ASSIMI_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
     model                  => Get_model(tile%owner_model_id)
+    grid                   => Get_grid(model%grid_id)
+    lat                    => grid%lat  (ics:ice, iblk)
+    lon                    => grid%lon  (ics:ice, iblk)
     vgrid_canopy_q_assimi  => Get_vgrid('q_canopy_layer')
     ncanopy                =  vgrid_canopy_q_assimi%n_levels
     vgrid_soil_sb          => Get_vgrid('soil_layer_sb')
@@ -289,6 +297,29 @@ CONTAINS
     ALLOCATE(ftranspiration_sum_local(nc))
     !$ACC ENTER DATA CREATE(drag_srf_local, ftranspiration_sum_local)
 
+#ifndef __NO_QUINCY__
+    ! QUINCY
+    ! calculate root zone water potential (MPa)
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      ! set to zero
+      wtr_soil_root_pot(:)    = 0.0_wp
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        wtr_soil_root_pot(ic) = 0.0_wp
+      END DO
+      !$ACC END PARALLEL LOOP
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil_sb
+        !$ACC LOOP GANG VECTOR
+        DO ic = 1, nc
+          wtr_soil_root_pot(ic) = wtr_soil_root_pot(ic) + (root_fraction_sl(ic, is) * wtr_soil_pot_sl(ic, is))
+        END DO
+      END DO
+      !$ACC END PARALLEL
+    END SELECT
+#endif
     !> 1.0 calculate the moisture scaling factor for photosynthesis
     !>
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -446,6 +477,11 @@ CONTAINS
           & canopy_cond_cl(ic,icanopy)                                 , & ! out
           & co2_conc_leaf_cl(ic,icanopy)                               , & ! out
           & chlfl_yield_cl = chlfl_yield_cl(ic,icanopy)                   )! out
+        IF(wtr_soil_root_pot(ic) < lctlib_phi_leaf_min)THEN
+          gross_assimilation_cl(ic,icanopy) = 0.0_wp
+          net_assimilation_cl(ic,icanopy) = -1.0_wp * maint_respiration_leaf_cl(ic,icanopy)
+          canopy_cond_cl(ic,icanopy) = 0.0_wp
+        ENDIF
       END DO
       !$ACC END PARALLEL LOOP
 
