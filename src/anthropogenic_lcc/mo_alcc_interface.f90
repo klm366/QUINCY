@@ -379,13 +379,13 @@ CONTAINS
         END SELECT
         !Mingyue Zhang: added here an seldect case finished
 
-        DO ic = 1,nc
-          IF(cf_diff(ic) >= 0.0_wp) THEN
-            gained_area(ic, i_tile) = cf_diff(ic)
-          ELSE
-            lost_area(ic, i_tile) = -1.0_wp * cf_diff(ic)
-          END IF
-        END DO
+        !DO ic = 1,nc
+        !  IF(cf_diff(ic) >= 0.0_wp) THEN
+        !    gained_area(ic, i_tile) = cf_diff(ic)
+        !  ELSE
+        !    lost_area(ic, i_tile) = -1.0_wp * cf_diff(ic)
+        !  END IF
+        !END DO
         
 
 
@@ -483,12 +483,6 @@ CONTAINS
     !>
     !>     Assert: sum of gained area should equal sum of lost area !!!Mingyue Zhang: Comment out this assertion
     !>
-    !cf_diff = SUM(gained_area,DIM=2) - SUM(lost_area,DIM=2)
-    !IF (ANY( cf_diff > min_tolerated_cf_mismatch)) THEN
-    !  WRITE (message_text,*) 'Violation of assertion: gained area does not equal lost area! Please check input data. ' &
-    !    & // 'Max difference of: ', MAXVAL(cf_diff)
-    !  CALL finish(TRIM(routine), TRIM(message_text))
-    !END IF
     !cf_diff = SUM(gained_area,DIM=2) - SUM(lost_area,DIM=2)
     !IF (ANY( cf_diff > max_tolerated_cf_mismatch)) THEN
     !  WRITE (message_text,*) 'Violation of assertion: gained area does not equal lost area! Please check input data. ' &
