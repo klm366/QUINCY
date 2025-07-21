@@ -1,4 +1,4 @@
-!> QUINCY simple harvest process interface
+!> QUINCY sylviculture process interface
 !>
 !> ICON-Land
 !>
@@ -13,9 +13,9 @@
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
-!>#### definition and init of tasks for the quincy simple harvest process
+!>#### definition and init of tasks for the quincy sylviculture process
 !>
-MODULE mo_q_sh_interface
+MODULE mo_q_syl_interface
 #ifndef __NO_QUINCY__
 
   USE mo_kind,                ONLY: wp
@@ -30,10 +30,10 @@ MODULE mo_q_sh_interface
   USE mo_jsb_process_class,   ONLY: t_jsb_process
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes Q_SH_, VEG_
-  dsl4jsb_Use_config(Q_SH_)
+  dsl4jsb_Use_processes Q_SYL_, VEG_
+  dsl4jsb_Use_config(Q_SYL_)
   dsl4jsb_Use_config(VEG_)
-  dsl4jsb_Use_memory(Q_SH_)
+  dsl4jsb_Use_memory(Q_SYL_)
 
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_processes PPLCC_
@@ -42,55 +42,58 @@ MODULE mo_q_sh_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC ::  Register_q_sh_tasks
-  PUBLIC ::  update_simple_harvest
+  PUBLIC ::  Register_q_syl_tasks
+  PUBLIC ::  update_sylviculture
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sh_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_syl_interface'
 
   ! ======================================================================================================= !
-  !> Type definition: simple_harvest task
+  !> Type definition: sylviculture task
   !>
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_simple_harvest
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_sylviculture
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_simple_harvest
-    PROCEDURE, NOPASS :: Aggregate => aggregate_simple_harvest
-  END TYPE tsk_simple_harvest
+    PROCEDURE, NOPASS :: Integrate => update_sylviculture
+    PROCEDURE, NOPASS :: Aggregate => aggregate_sylviculture
+  END TYPE tsk_sylviculture
 
-  !> Constructor interface: update_simple_harvest task
+  !> Constructor interface: update_sylviculture task
   !>
-  INTERFACE tsk_simple_harvest
-    PROCEDURE Create_task_simple_harvest
-  END INTERFACE tsk_simple_harvest
+  INTERFACE tsk_sylviculture
+    PROCEDURE Create_task_sylviculture
+  END INTERFACE tsk_sylviculture
 
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> Register tasks: Q_SH_
+  !> Register tasks: Q_SYL_
   !>
-  SUBROUTINE Register_q_sh_tasks(this, model_id)
+  SUBROUTINE Register_q_syl_tasks(this, model_id)
 
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
-    CALL this%Register_task(tsk_simple_harvest(model_id))
+    CALL this%Register_task(tsk_sylviculture(model_id))
 
-  END SUBROUTINE Register_q_sh_tasks
+  END SUBROUTINE Register_q_syl_tasks
 
   !-----------------------------------------------------------------------------------------------------
-  !> Constructor: update_simple_harvest task
+  !> Constructor: update_sylviculture task
   !>
-  FUNCTION Create_task_simple_harvest(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_sylviculture(model_id) RESULT(return_ptr)
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
     ! ----------------------------------------------------------------------------------------------------- !
-    ALLOCATE(tsk_simple_harvest::return_ptr)
-    CALL return_ptr%Construct(name='simple_harvest', process_id=Q_SH_, owner_model_id=model_id)
-  END FUNCTION Create_task_simple_harvest
+    ALLOCATE(tsk_sylviculture::return_ptr)
+    CALL return_ptr%Construct(name='sylviculture', process_id=Q_SYL_, owner_model_id=model_id)
+  END FUNCTION Create_task_sylviculture
 
   ! ======================================================================================================= !
-  !> Implementation of "update": simple_harvest task
+  !> Implementation of "update": sylviculture task
   !>
-  SUBROUTINE update_simple_harvest(tile, options)
+  SUBROUTINE update_sylviculture(tile, options)
+    USE mo_q_syl_config_class,   ONLY: CONST_HARV
+    USE mo_q_syl_constants,      ONLY: fract_wood_to_pp_fuel, fract_wood_to_pp_paper, fract_wood_to_pp_fiberboard,   &
+      &                                fract_wood_to_pp_oirw, fract_wood_to_pp_pv, fract_wood_to_pp_sawnwood
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -98,22 +101,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), POINTER :: box_tile
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(VEG_)
-    dsl4jsb_Def_config(Q_SH_)
+    dsl4jsb_Def_config(Q_SYL_)
 
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory_tile(PPLCC_, box_tile)
     dsl4jsb_Real2D_onChunk :: tree_fract_box_tile
+
+    dsl4jsb_Def_memory_tile(Q_SYL_, box_tile)
+    dsl4jsb_Real2D_onChunk :: fract_forest_harvest_y_read
 #endif
 
-    dsl4jsb_Def_memory(Q_SH_)
-    dsl4jsb_Real2D_onChunk :: fract_harvest   ! fraction harvested in this timestep (TODO: unit / rel to?)
-    dsl4jsb_Real2D_onChunk :: fract_wood_to_slash
-    dsl4jsb_Real2D_onChunk :: fract_wood_to_pp_fuel
-    dsl4jsb_Real2D_onChunk :: fract_wood_to_pp_paper
-    dsl4jsb_Real2D_onChunk :: fract_wood_to_pp_fiberboard
-    dsl4jsb_Real2D_onChunk :: fract_wood_to_pp_oirw
-    dsl4jsb_Real2D_onChunk :: fract_wood_to_pp_pv
-    dsl4jsb_Real2D_onChunk :: fract_wood_to_pp_sawnwood
+    dsl4jsb_Def_memory(Q_SYL_)
+    dsl4jsb_Real2D_onChunk :: fract_forest_harvest   ! fraction harvested from this tile in this timestep (rel to grid cell)
+
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                         :: ic, iblk, ics, ice, nc !< loop counter / dimensions
     REAL(wp)                        :: dtime                  !< timestep length
@@ -123,19 +123,19 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: cover_fraction         !< cover fraction of given tile
     REAL(wp), DIMENSION(options%nc) :: fact_harvest_share     !< factor to determine the harvest share of this tile
                                                               !< depends on cover fraction and total area with PFTs with trees
-    REAL(wp), DIMENSION(options%nc) :: box_fract_harvest      !< total area relative to grid cell harvest from all forested PFTS
+    REAL(wp), DIMENSION(options%nc) :: fract_harvest_box      !< total area relative to grid cell harvest from all forested PFTS
     TYPE(t_jsb_model), POINTER      :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_simple_harvest'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_sylviculture'
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get pointers to process configs and memory
     model => Get_model(tile%owner_model_id)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
-    dsl4jsb_Get_config(Q_SH_)
+    dsl4jsb_Get_config(Q_SYL_)
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(Q_SH_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(Q_SYL_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
     nc    = options%nc
     ics   = options%ics
@@ -145,57 +145,43 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(Q_SH_)
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_harvest)               ! out
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_slash)         ! in
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fuel)       ! in
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_paper)      ! in
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_fiberboard) ! in
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_oirw)       ! in
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_pv)         ! in
-    dsl4jsb_Get_var2D_onChunk(Q_SH_, fract_wood_to_pp_sawnwood)   ! in
-
+    dsl4jsb_Get_memory(Q_SYL_)
+    dsl4jsb_Get_var2D_onChunk(Q_SYL_, fract_forest_harvest)          ! out
     ! ----------------------------------------------------------------------------------------------------- !
     ! Since harvest only is happening daily or annually (or in QS even just once at the stand replacing year)
     ! the default would be that nothing is harvested in this timestep
-    fract_harvest(:) = 0._wp
-
-    ! TODO: change this later to testing if running quincy standalone (and of course change the message accordingly...)
-    IF (dsl4jsb_Config(Q_SH_)%l_read_harvest_map) THEN
-      CALL finish( routine, 'Reading of harvest maps is not yet implemented. ')
-    END IF
+    fract_forest_harvest(:) = 0._wp
 
     ! Check if some harvest is to be done or if we can RETURN here
-    IF (dsl4jsb_Config(Q_SH_)%flag_stand_harvest) THEN
-      IF (dsl4jsb_Config(Q_SH_)%flag_stand_harvest_event) THEN
-        fract_harvest(:) =  1._wp
+    IF (dsl4jsb_Config(Q_SYL_)%flag_stand_harvest) THEN
+      IF (dsl4jsb_Config(Q_SYL_)%flag_stand_harvest_event) THEN
+        fract_forest_harvest(:) =  1._wp
       ELSE
-        ! If we run QS and use stand replacing harvest, but do not have a harvest event, then we can return
+        ! If we run QS and use stand replacing harvest nothing needs to be done
+        IF (debug_on() .AND. iblk==1) CALL message(routine, 'Returned.')
+        RETURN
       END IF
-    ELSE IF (dsl4jsb_Config(Q_SH_)%l_daily_harvest) THEN
+    ELSE IF (dsl4jsb_Config(Q_SYL_)%l_daily_harvest) THEN
       ! In case of daily harvest we have to check if this is a new day
       IF (.NOT. is_newday(options%current_datetime, dtime)) THEN
         ! If not then we do not have a harvest event and can return
+        IF (debug_on() .AND. iblk==1) CALL message(routine, 'Returned.')
         RETURN
       END IF
     ELSE
       ! In case of annual harvest we have to check if this is a new year
       IF (.NOT. is_newyear(options%current_datetime, dtime)) THEN
         ! If not then we do not have a harvest event and can return
+        IF (debug_on() .AND. iblk==1) CALL message(routine, 'Returned.')
         RETURN
       END IF
     END IF
 
     ! If this is not a stand replacing harvest event in which the whole tile is to be harvested,
     ! the to be harvested area still needs to be determined
-    IF (.NOT. dsl4jsb_Config(Q_SH_)%flag_stand_harvest) THEN
-
-      IF (dsl4jsb_Config(Q_SH_)%l_read_harvest_map) THEN
-        ! TODO: get read maps when implemented
-      ELSE
-        ! If not maps have been read, the to be harvested area is derived from the constant value from the config
-        box_fract_harvest(:) = dsl4jsb_Config(Q_SH_)%harvest_fraction
-      END IF
+    IF (.NOT. dsl4jsb_Config(Q_SYL_)%flag_stand_harvest) THEN
+      ! Init harvested box area with the global constant value from the config (used in QS and in IQ in case of constant harvest)
+      fract_harvest_box(:) = dsl4jsb_Config(Q_SYL_)%harvest_fraction
 
       ! Calculate the factor with which to derive the share to be harvested from this tile
       CALL tile%Get_fraction(ics, ice, iblk, fract=cover_fraction)
@@ -203,90 +189,97 @@ CONTAINS
 
 #ifndef __QUINCY_STANDALONE__
       CALL model%Get_top_tile(box_tile)
+
+      IF (.NOT. dsl4jsb_Config(Q_SYL_)%harvest_scheme == CONST_HARV) THEN
+        dsl4jsb_Get_memory_tile(Q_SYL_, box_tile)
+        dsl4jsb_Get_var2D_onChunk_tile(Q_SYL_, fract_forest_harvest_y_read, box_tile)
+        fract_harvest_box(:) = fract_forest_harvest_y_read(:)
+      END IF
+
       dsl4jsb_Get_memory_tile(PPLCC_, box_tile)
       dsl4jsb_Get_var2d_onChunk_tile_name(PPLCC_, tree_fract, box_tile) ! in
 
       DO ic = 1,nc
-        IF (box_fract_harvest(ic) > tree_fract_box_tile(ic)) THEN
+        IF (fract_harvest_box(ic) > tree_fract_box_tile(ic)) THEN
           IF (debug_on()) THEN
-            WRITE(message_text,*) 'The harvested fraction (', box_fract_harvest(ic), &
-              &                    ') exceeds the tree area, harvesting available area only...'
+            WRITE(message_text,*) 'The to be harvested fraction (', fract_harvest_box(ic), &
+              &                    ') exceeds the current tree area in the grid-cell, harvesting available area only...'
             CALL message(TRIM(routine),message_text)
           END IF
-          box_fract_harvest(ic) = tree_fract_box_tile(ic) - eps8
+          fract_harvest_box(ic) = tree_fract_box_tile(ic) - eps8
         END IF
 
         IF (tree_fract_box_tile(ic) > eps8) THEN
           fact_harvest_share(ic) = cover_fraction(ic) / tree_fract_box_tile(ic)
         ELSE
-          fact_harvest_share(ic) = 0.0_wp ! TODO: think about this
+          fact_harvest_share(ic) = 0.0_wp
         END IF
       END DO
 #endif
 
-      IF (dsl4jsb_Config(Q_SH_)%l_daily_harvest) THEN
+      IF (dsl4jsb_Config(Q_SYL_)%l_daily_harvest) THEN
         ! In case of daily harvest the harvest needs to be distributed over the number of days in this year
         current_year  = get_year(options%current_datetime)
         number_of_days = get_year_length(current_year)
         fact_harvest_share(:) = fact_harvest_share(:) / REAL(number_of_days, wp)
       END IF
 
-      ! If not maps have been read, the to be harvested area is derived from the constant value from the config
-      fract_harvest(:) = box_fract_harvest(:) * fact_harvest_share(:)
+      ! Now the grid-cell fraction of this forest tile can be determinded
+      fract_forest_harvest(:) = fract_harvest_box(:) * fact_harvest_share(:)
 
       ! Assertions
-      DO ic = 1,nc
-        ! Assert: harvest fraction should not be negative
-        IF (fract_harvest(ic) < 0._wp) THEN
-          WRITE(message_text,*) 'The harvested fraction (', fract_harvest(ic), &
-            &                    ') should not be negative. Please check!'
-          CALL finish(TRIM(routine),message_text)
-        END IF
-
+      IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
         ! Assert: sum of allocation fractions to different product pools should sum up to 1._
         !         !NOTE: i.e. not including the slash fraction!
-        fract_sum = fract_wood_to_pp_fuel(ic) + fract_wood_to_pp_paper(ic)        &
-          &         + fract_wood_to_pp_fiberboard(ic) + fract_wood_to_pp_oirw(ic) + fract_wood_to_pp_pv(ic) &
-          &         + fract_wood_to_pp_sawnwood(ic)
+        fract_sum = fract_wood_to_pp_fuel + fract_wood_to_pp_paper + fract_wood_to_pp_fiberboard   &
+          &         + fract_wood_to_pp_oirw + fract_wood_to_pp_pv + fract_wood_to_pp_sawnwood
         IF (ABS(fract_sum - 1._wp) >= eps8) THEN
           WRITE(message_text,*) 'A sum of allocation fractions to different pools does not sum up to one, but was: ', &
             &                    fract_sum,'! Please check!'
+          CALL finish(TRIM(routine),message_text)
+        END IF
+      END IF
+      DO ic = 1,nc
+        ! Assert: harvest fraction should not be negative
+        IF (fract_forest_harvest(ic) < 0._wp) THEN
+          WRITE(message_text,*) 'The harvested fraction (', fract_forest_harvest(ic), &
+            &                    ') should not be negative. Please check!'
           CALL finish(TRIM(routine),message_text)
         END IF
       END DO
 
       ! Assert: harvest fraction is not allowed to exceed the available cover fraction
       DO ic = 1,nc
-        IF (fract_harvest(ic) > cover_fraction(ic)) THEN
-          IF (fract_harvest(ic) - eps8 < cover_fraction(ic)) THEN
-            fract_harvest(ic) = cover_fraction(ic)
+        IF (fract_forest_harvest(ic) > cover_fraction(ic)) THEN
+          IF (fract_forest_harvest(ic) - eps8 < cover_fraction(ic)) THEN
+            fract_forest_harvest(ic) = cover_fraction(ic)
           ELSE
-            WRITE(message_text,*) 'The harvested fraction (', fract_harvest(ic), &
+            WRITE(message_text,*) 'The harvested fraction (', fract_forest_harvest(ic), &
               & ') is not allowed to exceed the actually available fraction in this tile (', &
               & cover_fraction(ic),' in ', TRIM(tile%name),'). Please check!'
             CALL finish(TRIM(routine),message_text)
           END IF
         END IF
       END DO
-    END IF ! .NOT. dsl4jsb_Config(Q_SH_)%flag_stand_harvest
+    END IF ! .NOT. dsl4jsb_Config(Q_SYL_)%flag_stand_harvest
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
 
-  END SUBROUTINE update_simple_harvest
+  END SUBROUTINE update_sylviculture
 
   ! ======================================================================================================= !
-  !> Implementation of "aggregate": simple_harvest task
+  !> Implementation of "aggregate": sylviculture task
   !>
-  SUBROUTINE aggregate_simple_harvest(tile, options)
+  SUBROUTINE aggregate_sylviculture(tile, options)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(Q_SH_)
+    dsl4jsb_Def_memory(Q_SYL_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_simple_harvest'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_sylviculture'
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -296,11 +289,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(Q_SH_)
-    dsl4jsb_Aggregate_onChunk(Q_SH_, fract_harvest, weighted_by_fract)
+    dsl4jsb_Get_memory(Q_SYL_)
+    dsl4jsb_Aggregate_onChunk(Q_SYL_, fract_forest_harvest, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
-  END SUBROUTINE aggregate_simple_harvest
+  END SUBROUTINE aggregate_sylviculture
 
 #endif
-END MODULE mo_q_sh_interface
+END MODULE mo_q_syl_interface

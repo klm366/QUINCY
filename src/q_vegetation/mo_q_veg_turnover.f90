@@ -48,9 +48,10 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_PHENO_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_PHENO_, Q_AGR_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -62,6 +63,7 @@ CONTAINS
     TYPE(t_lctlib_element),   POINTER :: lctlib                 !< land-cover-type library - parameter across pft's
     REAL(wp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
+    LOGICAL                           :: config_active_q_agr
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_turnover'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -70,6 +72,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
+    dsl4jsb_Def_config(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
@@ -108,6 +111,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
+    dsl4jsb_Get_config(Q_AGR_)
+    config_active_q_agr = dsl4jsb_Config(Q_AGR_)%active
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -159,6 +164,7 @@ CONTAINS
     CALL calc_turnover( &
       & nc                                    , & ! in
       & dtime                                 , &
+      & config_active_q_agr                   , &
       & model%config%elements_index_map(:)    , &
       & model%config%is_element_used(:)       , &
       & lctlib%phenology_type                 , &
@@ -317,6 +323,7 @@ CONTAINS
   SUBROUTINE calc_turnover( &
     & nc                          , &
     & dtime                       , &
+    & config_active_q_agr         , &
     & elements_index_map          , &
     & is_element_used             , &
     & lctlib_phenology_type       , &
@@ -344,12 +351,14 @@ CONTAINS
     & veg_litterfall_mt           , &
     & net_growth                  )
 
-    USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, ITREE
-    USE mo_q_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial, &
+    USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, icrop, ITREE
+    USE mo_q_agr_constants,       ONLY: crop_planting_mass, fstore_seed_max
+    USE mo_q_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial, icrop_phenology, &
       &                                 ipheno_type_cold_deciduous, ipheno_type_drought_deciduous, ipheno_type_cbalance_deciduous
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                           !< dimensions
     REAL(wp),                 INTENT(in)    :: dtime                        !< timestep length
+    LOGICAL,                  INTENT(in)    :: config_active_q_agr          !< if Q_AGR_ process is activated
     INTEGER,                  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
     LOGICAL,                  INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
     INTEGER,                  INTENT(in)    :: lctlib_phenology_type        !< lctlib parameter
@@ -408,17 +417,21 @@ CONTAINS
           fturn_leaf(:) = 1.0_wp
         END WHERE
       END WHERE
-    CASE (iperennial)
-      WHERE(growing_season(:) > test_false_true)
-        fturn_leaf(:) = 1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime
-      ELSEWHERE
-        WHERE(lai(:) > eps4)
-          fturn_leaf(:) = MAX(1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime, &
-            &             max_leaf_shedding_rate * dtime / one_day * target_lai(:) / lai(:))
+    CASE (iperennial, icrop_phenology)
+      IF(config_active_q_agr .AND. lctlib_phenology_type == icrop_phenology) THEN
+        fturn_leaf(:) = 0.0_wp
+      ELSE
+        WHERE(growing_season(:) > test_false_true)
+          fturn_leaf(:) = 1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime
         ELSEWHERE
-          fturn_leaf(:) = 1.0_wp
+          WHERE(lai(:) > eps4)
+            fturn_leaf(:) = MAX(1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime, &
+              &             max_leaf_shedding_rate * dtime / one_day * target_lai(:) / lai(:))
+          ELSEWHERE
+            fturn_leaf(:) = 1.0_wp
+          END WHERE
         END WHERE
-      END WHERE
+      END IF
     END SELECT
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
@@ -452,7 +465,7 @@ CONTAINS
     SELECT CASE (lctlib_growthform)
     CASE (ITREE)
       fturn(:) = 1.0_wp / lctlib_tau_fine_root / one_day / one_year * dtime
-    CASE (igrass)
+    CASE (igrass, icrop)
       DO ic = 1,nc
         ! during growing season, constant turnover
         IF (growing_season(ic) > test_false_true) THEN
@@ -500,7 +513,7 @@ CONTAINS
     SELECT CASE (lctlib_growthform)
     CASE (ITREE)
       fturn(:) = 1.0_wp / lctlib_tau_branch / one_day / one_year * dtime
-    CASE (igrass) ! for grases follows leaf phenology
+    CASE (igrass, icrop) ! for grasses and crops follow leaf phenology
       fturn(:) = fturn_leaf(:)
     ENDSELECT
     ! loop over bgcm elements
@@ -554,9 +567,23 @@ CONTAINS
     END DO
     net_growth(:) = net_growth(:) - veg_pool_mt(ix_fruit, ixC, :) * fturn(:)
 
-    !>6.0 seed-bed turnover to litter
+    !>6.0 seed-bed turnover to litter (for natural vegetation types, for croptype the
+    !     seed-bed is not subject to natural decay. Instead, only if seed-bed becomes large
+    !     relative to the planting mass, it is assumed to turnover as litter)
     !>
-    fturn(:) = 1.0_wp / lctlib_tau_seed_litter / one_day / one_year * dtime
+    SELECT CASE (lctlib_growthform)
+    CASE (itree, igrass)
+      fturn(:) = 1.0_wp / lctlib_tau_seed_litter / one_day / one_year * dtime
+    CASE (icrop)
+      DO ic = 1,nc
+        IF (veg_pool_mt(ix_seed_bed, ixC, ic) > crop_planting_mass * fstore_seed_max) THEN
+          fturn(ic) = (veg_pool_mt(ix_seed_bed, ixC, ic) - crop_planting_mass * fstore_seed_max) &
+            &          / veg_pool_mt(ix_seed_bed, ixC, ic)
+        ELSE
+          fturn(ic) = 0.0_wp
+        END IF
+      END DO
+    END SELECT
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN
@@ -565,6 +592,7 @@ CONTAINS
           &                                          + veg_pool_mt(ix_seed_bed, ix_elem, :) * fturn(:)
       END IF
     END DO
+
   END SUBROUTINE calc_turnover
 
   ! ======================================================================================================= !

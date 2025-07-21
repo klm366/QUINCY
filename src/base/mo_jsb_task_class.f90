@@ -36,7 +36,6 @@ MODULE mo_jsb_task_class
 
   TYPE t_jsb_task_options
     REAL(wp)                  :: dtime   = -1._wp
-    REAL(wp)                  :: steplen = -1._wp
     REAL(wp)                  :: alpha   = -1._wp !< Implicitness factor
     TYPE(t_datetime), POINTER :: current_datetime
     INTEGER                   :: iblk    = -1  ! Number of current block (chunk)

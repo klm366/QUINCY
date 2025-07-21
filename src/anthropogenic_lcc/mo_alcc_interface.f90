@@ -99,7 +99,7 @@ CONTAINS
     USE mo_kind,             ONLY: wp, dp 
     USE mo_util,              ONLY: one_of
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, get_year, get_year_length
-    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, min_daily_cf_change, min_annual_cf_change, min_tolerated_cf_mismatch
+    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, min_daily_cf_change, min_annual_cf_change, max_tolerated_cf_mismatch
     USE mo_jsb_lcc,           ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc, transfer_active_to_passive_onChunk
     USE mo_nlcc_process,      ONLY: fract_small
 
@@ -266,7 +266,6 @@ CONTAINS
             ! Prevent numerical issues
             IF(abs(cf_diff(ic)) < min_daily_cf_change) THEN
               cf_diff(ic) = 0.0_wp
-              cf_day_delta(ic, i_cf_tile) = 0.0_wp
             END IF
           END DO
         END IF ! IF(.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc)
@@ -337,12 +336,19 @@ CONTAINS
             ! Prevent numerical issues
             IF(abs(cf_diff(ic)) < min_daily_cf_change) THEN
               cf_diff(ic) = 0.0_wp
-              cf_day_delta(ic, i_cf_tile) = 0.0_wp
+            END IF
+
+            ! determine new cover fractions
+            IF ((cf_diff(ic) < 0.0_wp) .AND. (ABS(cf_diff(ic)) > initial_area(ic, i_tile))) THEN
+              current_fract(ic) = 0.0_wp
+              cf_diff(ic) = -1.0_wp * initial_area(ic, i_tile)
+            ELSE IF ((cf_diff(ic) > 0.0_wp) .AND. (cf_diff(ic) + initial_area(ic, i_tile) > 1.0_wp)) THEN
+              current_fract(ic) = 1.0_wp
+              cf_diff(ic) = 1.0_wp - initial_area(ic, i_tile)
+            ELSE
+              current_fract(ic) = initial_area(ic, i_tile) + cf_diff(ic)
             END IF
           END DO
-
-          ! determine new cover fractions
-          current_fract(:) = initial_area(:, i_tile) + cf_diff(:)
         END IF ! IF (.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc)
 
         ! Mingyue Zhang: addd here an CASE for trans and maps scheme (to replace the following do loop:line375-381)
@@ -483,6 +489,12 @@ CONTAINS
     !    & // 'Max difference of: ', MAXVAL(cf_diff)
     !  CALL finish(TRIM(routine), TRIM(message_text))
     !END IF
+    cf_diff = SUM(gained_area,DIM=2) - SUM(lost_area,DIM=2)
+    IF (ANY( cf_diff > max_tolerated_cf_mismatch)) THEN
+      WRITE (message_text,*) 'Violation of assertion: gained area does not equal lost area! Please check input data. ' &
+        & // 'Max difference of: ', MAXVAL(cf_diff)
+      CALL finish(TRIM(routine), TRIM(message_text))
+    END IF
 
     !>
     !> 3. collect to be transferred matter
@@ -548,7 +560,6 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER  :: iblk, ics, ice
-    !X if necessary: REAL(wp) :: dtime, steplen
     CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
     dsl4jsb_Def_memory(FAGE_)
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_alcc'

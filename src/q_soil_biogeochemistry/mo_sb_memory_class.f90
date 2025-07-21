@@ -321,6 +321,24 @@ MODULE mo_sb_memory_class
       & enzyme_frac_poly_n_mavg, & !< moving average of enzyme_frac_poly_n [unitless]
       & enzyme_frac_poly_p_mavg    !< moving average of enzyme_frac_poly_p [unitless]
 
+    ! soil physical properties
+    TYPE(t_jsb_var_real3d)  :: &
+      & volume_min_sl       , &  !< soil mineral volumetric fraction
+      & qmax_org_min_sl     , &  !< maximum OM sorption capacity of mineral soil, [mol C kg-1 mineral soil]
+      & qmax_po4_min_sl     , &  !< maximum po4 sorption capacity of mineral soil, [mol P kg-1 mineral soil]
+      & qmax_nh4_min_sl     , &  !< maximum nh4 sorption capacity of mineral soil, [mol N kg-1 mineral soil]
+      & qmax_po4_om_sl           !< maximum po4 sorption capacity of SOM, [mol P kg-1 SOM]
+
+    !------------------------------------------------------------------------------------------------------ !
+    !>2D N and P fertiliser input
+    !>
+    TYPE(t_jsb_var_real2d)  :: &
+      & fertiliser_nh4, &     !< NH4 fertiliser application rate [micro mol/m2/s]
+      & fertiliser_nh4_n15, & !< 15NH4 fertiliser application rate [micro mol/m2/s]
+      & fertiliser_no3, &     !< NO3 fertiliser application rate [micro mol/m2/s]
+      & fertiliser_no3_n15, & !< 15NO3 fertiliser application rate [micro mol/m2/s]
+      & fertiliser_po4        !< PO4 fertiliser application rate [micro mol/m2/s]
+
     !------------------------------------------------------------------------------------------------------ !
     !>2D total fluxes for mass balance checks in soil_biogeochemistry model
     !>
@@ -342,6 +360,14 @@ MODULE mo_sb_memory_class
     TYPE(t_jsb_var_real2d)  :: &
       & ecosystem_total_n_loss     !< emission_noy + emission_n2o + emission_n2 + leaching_dom_nitrogen + leaching_nh4_solute + leaching_no3_solute
                                    !<  + lateral_loss_dom_nitrogen_sl + lateral_loss_nh4_solute_sl + lateral_loss_no3_solute_sl [micro-mol m-2 s-1]
+
+    !------------------------------------------------------------------------------------------------------ !
+    !> monthly n and p deposition forcing as read from a depositon bc file
+    !>
+    TYPE(t_jsb_var_real3d)  :: &
+      & nhx_deposition_monthly,  &            !< surface downward reduced nitrogen deposition velocity [kg/m2/s]
+      & noy_deposition_monthly,  &            !< surface downward oxidised nitrogen deposition velocity [kg/m2/s]
+      & p_deposition_monthly                  !< surface downward reduced phosphorus deposition velocity [kg/m2/s]
 
   CONTAINS
     PROCEDURE :: Init => Init_sb_memory
@@ -412,9 +438,9 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Init_sb_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_sb_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,         ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_varlist,         ONLY: BASIC, MEDIUM, FULL, NONE
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
@@ -427,12 +453,14 @@ CONTAINS
     CHARACTER(len=*),     INTENT(in)            :: prefix          !< process name
     CHARACTER(len=*),     INTENT(in)            :: suffix          !< tile name
     INTEGER,              INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
+    INTEGER,              INTENT(in)            :: lib_id          !< id of primary lct in lctlib
     INTEGER,              INTENT(in)            :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),               POINTER :: model                       !< model
     TYPE(t_jsb_grid),                POINTER :: hgrid                       !< Horizontal grid
     TYPE(t_jsb_vgrid),               POINTER :: surface                     !< Vertical grid
     TYPE(t_jsb_vgrid),               POINTER :: vgrid_soil_sb               !< Vertical grid
+    TYPE(t_jsb_vgrid),               POINTER :: vgrid_month                 !< Vertical grid
     CHARACTER(len=30)                        :: unit_sb_pool                !< unit of element var
     CHARACTER(len=30)                        :: unit_sb_flux                !< unit of element var
     INTEGER                                  :: elem_idx_map(LAST_ELEM_ID)  !< element mapper ID -> IND
@@ -446,6 +474,7 @@ CONTAINS
     hgrid         => Get_grid(model%grid_id)
     surface       => Get_vgrid('surface')
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    vgrid_month   => Get_vgrid('time_months')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
 
@@ -453,6 +482,40 @@ CONTAINS
     ! init local variables
     unit_sb_pool = "mol m-3"
     unit_sb_flux = "mol m-3 timestep-1"
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Monthly deposition data is only required on the grid-box level
+    IF (.NOT. ASSOCIATED(mem%parent)) THEN
+      CALL mem%Add_var('nhx_deposition_monthly', mem%nhx_deposition_monthly, &
+        & hgrid, vgrid_month, &
+        & t_cf('nhx_deposition_monthly', 'kg/m2/s', 'surface downward reduced nitrogen deposition velocity'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('noy_deposition_monthly', mem%noy_deposition_monthly, &
+        & hgrid, vgrid_month, &
+        & t_cf('noy_deposition_monthly', 'kg/m2/s', 'surface downward oxidised nitrogen deposition velocity'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('p_deposition_monthly', mem%p_deposition_monthly, &
+        & hgrid, vgrid_month, &
+        & t_cf('p_deposition_monthly', 'kg/m2/s', 'surface downward reduced phosphorus deposition velocity'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+    END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! add memory only for LAND & PFT tiles
@@ -979,7 +1042,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_nh4_assoc', mem%transport_nh4_assoc, &
@@ -990,7 +1053,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_no3_solute', mem%transport_no3_solute, &
@@ -1001,7 +1064,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_noy', mem%transport_noy, &
@@ -1012,7 +1075,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_n2o', mem%transport_n2o, &
@@ -1023,7 +1086,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_n2', mem%transport_n2, &
@@ -1034,7 +1097,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_nh4_n15_solute', mem%transport_nh4_n15_solute, &
@@ -1045,7 +1108,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_nh4_n15_assoc', mem%transport_nh4_n15_assoc, &
@@ -1056,7 +1119,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_no3_n15_solute', mem%transport_no3_n15_solute, &
@@ -1067,7 +1130,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_noy_n15', mem%transport_noy_n15, &
@@ -1078,7 +1141,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_n2o_n15', mem%transport_n2o_n15, &
@@ -1089,7 +1152,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_n2_n15', mem%transport_n2_n15, &
@@ -1100,7 +1163,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_po4_assoc_fast', mem%transport_po4_assoc_fast, &
@@ -1111,7 +1174,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_po4_assoc_slow', mem%transport_po4_assoc_slow, &
@@ -1122,7 +1185,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_po4_occluded', mem%transport_po4_occluded, &
@@ -1133,7 +1196,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_po4_primary', mem%transport_po4_primary, &
@@ -1144,7 +1207,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_po4_solute', mem%transport_po4_solute, &
@@ -1155,7 +1218,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('lateral_loss_dom_carbon_sl', mem%lateral_loss_dom_carbon_sl, &
@@ -1166,7 +1229,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('lateral_loss_dom_nitrogen_sl', mem%lateral_loss_dom_nitrogen_sl, &
@@ -1177,7 +1240,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('lateral_loss_dom_phosphorus_sl', mem%lateral_loss_dom_phosphorus_sl, &
@@ -1188,7 +1251,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('lateral_loss_dom_carbon13_sl', mem%lateral_loss_dom_carbon13_sl, &
@@ -1199,7 +1262,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('lateral_loss_dom_carbon14_sl', mem%lateral_loss_dom_carbon14_sl, &
@@ -1210,7 +1273,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('lateral_loss_dom_nitrogen15_sl', mem%lateral_loss_dom_nitrogen15_sl, &
@@ -1221,7 +1284,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('lateral_loss_nh4_solute_sl', mem%lateral_loss_nh4_solute_sl, &
@@ -1232,7 +1295,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('lateral_loss_no3_solute_sl', mem%lateral_loss_no3_solute_sl, &
@@ -1243,7 +1306,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('lateral_loss_po4_solute_sl', mem%lateral_loss_po4_solute_sl, &
@@ -1254,7 +1317,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('lateral_loss_nh4_n15_solute_sl', mem%lateral_loss_nh4_n15_solute_sl, &
@@ -1265,7 +1328,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('lateral_loss_no3_n15_solute_sl', mem%lateral_loss_no3_n15_solute_sl, &
@@ -1276,7 +1339,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rtm_decomposition', mem%rtm_decomposition, &
@@ -1287,7 +1350,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rtm_depolymerisation', mem%rtm_depolymerisation, &
@@ -1298,7 +1361,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rtm_mic_uptake', mem%rtm_mic_uptake, &
@@ -1309,7 +1372,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rtm_plant_uptake', mem%rtm_plant_uptake, &
@@ -1320,7 +1383,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rtm_sorption', mem%rtm_sorption, &
@@ -1331,7 +1394,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rtm_desorption', mem%rtm_desorption, &
@@ -1342,7 +1405,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rtm_hsc', mem%rtm_hsc, &
@@ -1353,7 +1416,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rtm_nitrification', mem%rtm_nitrification, &
@@ -1364,7 +1427,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rtm_denitrification', mem%rtm_denitrification, &
@@ -1375,7 +1438,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rtm_gasdiffusion', mem%rtm_gasdiffusion, &
@@ -1386,7 +1449,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rtm_asymb_bnf', mem%rtm_asymb_bnf, &
@@ -1397,7 +1460,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rmm_decomposition', mem%rmm_decomposition, &
@@ -1408,7 +1471,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rmm_depolymerisation', mem%rmm_depolymerisation, &
@@ -1419,7 +1482,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rmm_mic_uptake', mem%rmm_mic_uptake, &
@@ -1430,7 +1493,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rmm_plant_uptake', mem%rmm_plant_uptake, &
@@ -1441,7 +1504,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rmm_sorption', mem%rmm_sorption, &
@@ -1452,7 +1515,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rmm_desorption', mem%rmm_desorption, &
@@ -1463,7 +1526,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rmm_hsc', mem%rmm_hsc, &
@@ -1474,7 +1537,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rmm_nitrification', mem%rmm_nitrification, &
@@ -1485,7 +1548,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rmm_gasdiffusion', mem%rmm_gasdiffusion, &
@@ -1496,7 +1559,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rmm_asymb_bnf', mem%rmm_asymb_bnf, &
@@ -1507,7 +1570,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('het_respiration', mem%het_respiration, &
@@ -1518,7 +1581,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('het_respiration_c13', mem%het_respiration_c13, &
@@ -1529,7 +1592,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('het_respiration_c14', mem%het_respiration_c14, &
@@ -1540,7 +1603,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('myc_respiration', mem%myc_respiration, &
@@ -1551,7 +1614,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('myc_respiration_c13', mem%myc_respiration_c13, &
@@ -1562,7 +1625,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('myc_respiration_c14', mem%myc_respiration_c14, &
@@ -1573,7 +1636,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('net_mineralisation_nh4', mem%net_mineralisation_nh4, &
@@ -1584,7 +1647,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('net_mineralisation_nh4_n15', mem%net_mineralisation_nh4_n15, &
@@ -1595,7 +1658,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('net_mineralisation_no3', mem%net_mineralisation_no3, &
@@ -1606,7 +1669,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('net_mineralisation_no3_n15', mem%net_mineralisation_no3_n15, &
@@ -1617,7 +1680,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('net_mineralisation_po4', mem%net_mineralisation_po4, &
@@ -1628,7 +1691,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('plant_uptake_nh4_sl', mem%plant_uptake_nh4_sl, &
@@ -1639,7 +1702,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('plant_uptake_nh4_n15_sl', mem%plant_uptake_nh4_n15_sl, &
@@ -1650,7 +1713,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('plant_uptake_no3_sl', mem%plant_uptake_no3_sl, &
@@ -1661,7 +1724,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('plant_uptake_no3_n15_sl', mem%plant_uptake_no3_n15_sl, &
@@ -1672,7 +1735,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('plant_uptake_po4_sl', mem%plant_uptake_po4_sl, &
@@ -1683,7 +1746,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('microbial_uptake_nh4_sl', mem%microbial_uptake_nh4_sl, &
@@ -1694,7 +1757,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('microbial_uptake_nh4_n15_sl', mem%microbial_uptake_nh4_n15_sl, &
@@ -1705,7 +1768,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('microbial_uptake_no3_sl', mem%microbial_uptake_no3_sl, &
@@ -1716,7 +1779,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('microbial_uptake_no3_n15_sl', mem%microbial_uptake_no3_n15_sl, &
@@ -1727,7 +1790,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('microbial_uptake_po4_sl', mem%microbial_uptake_po4_sl, &
@@ -1738,7 +1801,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('mycorrhiza_uptake_nh4_sl', mem%mycorrhiza_uptake_nh4_sl, &
@@ -1749,7 +1812,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('mycorrhiza_uptake_nh4_n15_sl', mem%mycorrhiza_uptake_nh4_n15_sl, &
@@ -1760,7 +1823,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('mycorrhiza_uptake_no3_sl', mem%mycorrhiza_uptake_no3_sl, &
@@ -1771,7 +1834,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('mycorrhiza_uptake_no3_n15_sl', mem%mycorrhiza_uptake_no3_n15_sl, &
@@ -1782,7 +1845,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('mycorrhiza_uptake_norg_sl', mem%mycorrhiza_uptake_norg_sl, &
@@ -1793,7 +1856,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('mycorrhiza_uptake_norg_n15_sl', mem%mycorrhiza_uptake_norg_n15_sl, &
@@ -1804,7 +1867,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('mycorrhiza_uptake_po4_sl', mem%mycorrhiza_uptake_po4_sl, &
@@ -1815,7 +1878,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('myc_export_n_tlabile_mavg_sl', mem%myc_export_n_tlabile_mavg_sl, &
@@ -1870,7 +1933,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('volatilisation_nh4_n15', mem%volatilisation_nh4_n15, &
@@ -1881,7 +1944,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('nitrification_no3', mem%nitrification_no3, &
@@ -1892,7 +1955,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('nitrification_no3_n15', mem%nitrification_no3_n15, &
@@ -1903,7 +1966,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('nitrification_noy', mem%nitrification_noy, &
@@ -1914,7 +1977,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('nitrification_noy_n15', mem%nitrification_noy_n15, &
@@ -1925,7 +1988,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('nitrification_n2o', mem%nitrification_n2o, &
@@ -1936,7 +1999,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('nitrification_n2o_n15', mem%nitrification_n2o_n15, &
@@ -1947,7 +2010,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('denitrification_noy', mem%denitrification_noy, &
@@ -1958,7 +2021,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('denitrification_n2o_n15', mem%denitrification_n2o_n15, &
@@ -1969,7 +2032,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('denitrification_n2o', mem%denitrification_n2o, &
@@ -1980,7 +2043,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('denitrification_noy_n15', mem%denitrification_noy_n15, &
@@ -1991,7 +2054,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('denitrification_n2', mem%denitrification_n2, &
@@ -2002,7 +2065,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('denitrification_n2_n15', mem%denitrification_n2_n15, &
@@ -2013,7 +2076,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('asymb_n_fixation', mem%asymb_n_fixation, &
@@ -2046,7 +2109,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('occlusion_po4', mem%occlusion_po4, &
@@ -2057,7 +2120,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('slow_exchange_po4', mem%slow_exchange_po4, &
@@ -2068,7 +2131,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fast_exchange_po4', mem%fast_exchange_po4, &
@@ -2079,7 +2142,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fast_exchange_nh4', mem%fast_exchange_nh4, &
@@ -2090,7 +2153,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fast_adsorpt_po4', mem%fast_adsorpt_po4, &
@@ -2101,7 +2164,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fast_adsorpt_nh4', mem%fast_adsorpt_nh4, &
@@ -2112,7 +2175,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('biochem_mineralisation_po4', mem%biochem_mineralisation_po4, &
@@ -2123,7 +2186,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('gross_mineralisation_po4', mem%gross_mineralisation_po4, &
@@ -2134,7 +2197,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_dom_carbon', mem%leaching_dom_carbon, &
@@ -2145,7 +2208,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_dom_nitrogen', mem%leaching_dom_nitrogen, &
@@ -2156,7 +2219,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_dom_phosphorus', mem%leaching_dom_phosphorus, &
@@ -2167,7 +2230,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_dom_carbon13', mem%leaching_dom_carbon13, &
@@ -2178,7 +2241,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_dom_carbon14', mem%leaching_dom_carbon14, &
@@ -2189,7 +2252,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_dom_nitrogen15', mem%leaching_dom_nitrogen15, &
@@ -2200,7 +2263,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_nh4_solute', mem%leaching_nh4_solute, &
@@ -2211,7 +2274,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_no3_solute', mem%leaching_no3_solute, &
@@ -2222,7 +2285,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_po4_solute', mem%leaching_po4_solute, &
@@ -2233,7 +2296,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_nh4_n15_solute', mem%leaching_nh4_n15_solute, &
@@ -2244,7 +2307,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_no3_n15_solute', mem%leaching_no3_n15_solute, &
@@ -2255,7 +2318,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_noy', mem%emission_noy, &
@@ -2266,7 +2329,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_n2o', mem%emission_n2o, &
@@ -2277,7 +2340,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_n2', mem%emission_n2, &
@@ -2288,7 +2351,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_noy_n15', mem%emission_noy_n15, &
@@ -2299,7 +2362,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_n2o_n15', mem%emission_n2o_n15, &
@@ -2310,7 +2373,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_n2_n15', mem%emission_n2_n15, &
@@ -2321,7 +2384,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('qmax_org', mem%qmax_org, &
@@ -2378,7 +2441,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-			
+
       CALL mem%Add_var('qmax_fast_po4', mem%qmax_fast_po4, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('qmax_fast_po4', 'mol P m-3 soil', 'sorption capacity of po4 of the clay(Fe/Al) and SOM pool'), &
@@ -2475,7 +2538,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('anaerobic_volume_fraction_sl', mem%anaerobic_volume_fraction_sl, &
@@ -2854,6 +2917,111 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
+      CALL mem%Add_var('volume_min_sl', mem%volume_min_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('volume_min_sl', '', 'soil mineral volumetric proportion'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('qmax_org_min_sl', mem%qmax_org_min_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('qmax_org_min_sl', 'mol C kg-1 mineral soil', 'maximum OM sorption capacity of mineral soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('qmax_po4_min_sl', mem%qmax_po4_min_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('qmax_po4_min_sl', 'mol P kg-1 mineral soil', 'maximum po4 sorption capacity of mineral soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('qmax_nh4_min_sl', mem%qmax_nh4_min_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('qmax_nh4_min_sl', 'mol N kg-1 mineral soil', 'maximum po4 sorption capacity of mineral soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('qmax_po4_om_sl', mem%qmax_po4_om_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('qmax_po4_om_sl', 'mol P kg-1 SOM', 'maximum po4 sorption capacity of SOM'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fertiliser_nh4', mem%fertiliser_nh4, &
+        & hgrid, surface, &
+        & t_cf('fertiliser_nh4', 'micro mol m-2 s-1', 'NH4 fertiliser application rate'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fertiliser_nh4_n15', mem%fertiliser_nh4_n15, &
+        & hgrid, surface, &
+        & t_cf('fertiliser_nh4_n15', 'micro mol m-2 s-1', '15NH4 fertiliser application rate'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fertiliser_no3', mem%fertiliser_no3, &
+        & hgrid, surface, &
+        & t_cf('fertiliser_no3', 'micro mol m-2 s-1', 'NO3 fertiliser application rate'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fertiliser_no3_n15', mem%fertiliser_no3_n15, &
+        & hgrid, surface, &
+        & t_cf('fertiliser_no3_n15', 'micro mol m-2 s-1', '15NO3 fertiliser application rate'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fertiliser_po4', mem%fertiliser_po4, &
+        & hgrid, surface, &
+        & t_cf('fertiliser_po4', 'micro mol m-2 s-1', 'PO4 fertiliser application rate'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
       CALL mem%Add_var('total_flux_carbon', mem%total_flux_carbon, &
         & hgrid, surface, &
         & t_cf('total_flux_carbon', 'mol C m-2 s-1', 'carbon mass balance checks in soil_biogeochemistry model'), &
@@ -2862,7 +3030,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('total_flux_nitrogen', mem%total_flux_nitrogen, &
@@ -2873,7 +3041,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('total_flux_phosphorus', mem%total_flux_phosphorus, &
@@ -2884,7 +3052,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('total_flux_carbon13', mem%total_flux_carbon13, &
@@ -2895,7 +3063,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('total_flux_carbon14', mem%total_flux_carbon14, &
@@ -2906,7 +3074,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('total_flux_nitrogen15', mem%total_flux_nitrogen15, &
@@ -2917,7 +3085,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('total_soil_n', mem%total_soil_n, &

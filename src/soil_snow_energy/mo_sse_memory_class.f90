@@ -17,7 +17,7 @@ MODULE mo_sse_memory_class
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: finish
 
-  USE mo_jsb_model_class,  ONLY: t_jsb_model
+  USE mo_jsb_model_class,  ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
@@ -33,7 +33,7 @@ MODULE mo_sse_memory_class
 
   PUBLIC :: t_sse_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 25
+  INTEGER, PARAMETER :: max_no_of_vars = 30
 
   TYPE, EXTENDS(t_jsb_memory) :: t_sse_memory
     !
@@ -64,6 +64,13 @@ MODULE mo_sse_memory_class
       & thaw_depth_max,       & !< Maximum thaw depth [m]
       & thaw_depth_max_ym1      !< Last year's maximum thaw depth [m]
 
+    ! soil physical properties
+    TYPE(t_jsb_var_real3d) :: &
+      & bulk_dens_sl        , &  !< soil bulk density [kg m-3]
+      & sand_sl             , &  !< soil sand proportion of mineral soil
+      & silt_sl             , &  !< soil silt proportion of mineral soil
+      & clay_sl                  !< soil clay proportion of mineral soil (re-calculated as: clay = 1.0 -sand -silt)
+
   CONTAINS
     PROCEDURE :: Init => Init_sse_memory
   END TYPE t_sse_memory
@@ -72,9 +79,9 @@ MODULE mo_sse_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: NONE, BASIC, MEDIUM !, FULL
+    USE mo_jsb_varlist,       ONLY: NONE, BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -84,6 +91,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)            :: prefix
     CHARACTER(len=*),    INTENT(in)            :: suffix
     INTEGER,             INTENT(in)            :: lct_ids(:)
+    INTEGER,             INTENT(in)            :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)            :: model_id
 
     dsl4jsb_Def_config(SSE_)
@@ -286,6 +294,54 @@ CONTAINS
       & output_level=NONE, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      CALL mem%Add_var('bulk_dens_sl', mem%bulk_dens_sl, &
+        & hgrid, soil_e, &
+        & t_cf('bulk_dens_sl', 'kg m-3', 'soil bulk density'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('sand_sl', mem%sand_sl, &
+        & hgrid, soil_e, &
+        & t_cf('sand_sl', '', 'soil sand proportion'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('silt_sl', mem%silt_sl, &
+        & hgrid, soil_e, &
+        & t_cf('silt_sl', '', 'soil silt proportion'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('clay_sl', mem%clay_sl, &
+        & hgrid, soil_e, &
+        & t_cf('clay_sl', '', 'soil clay proportion'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+    END SELECT
+#endif
 
   END SUBROUTINE Init_sse_memory
 

@@ -14,7 +14,8 @@
 MODULE mo_rad_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_jsb_control, ONLY: acc_stream
+  USE mo_kind,        ONLY: wp
 
   IMPLICIT NONE
   PRIVATE
@@ -77,7 +78,7 @@ CONTAINS
 
     nc = SIZE(swvis_down)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(zswvis_net, zswnir_net, zsw_net, zlw_net)
     DO ic=1,nc
 
@@ -1340,12 +1341,11 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, RAD_, SPQ_, VEG_
+    USE mo_jsb_process_class,     ONLY: A2L_, RAD_, HYDRO_, VEG_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
 
-    USE mo_spq_constants,         ONLY: w_snow_min
     USE mo_jsb_math_constants,    ONLY: eps8, eps1, seconds_per_day
     USE mo_jsb_control,           ONLY: debug_on
     USE mo_exception,             ONLY: message
@@ -1353,7 +1353,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -1372,7 +1372,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! RAD_ 2D
@@ -1380,6 +1380,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: alb_nir_lnd
     dsl4jsb_Real2D_onChunk :: alb_vis_soil
     dsl4jsb_Real2D_onChunk :: alb_nir_soil
+    dsl4jsb_Real2D_onChunk :: alb_vis_soil_and_snow
+    dsl4jsb_Real2D_onChunk :: alb_nir_soil_and_snow
     dsl4jsb_Real2D_onChunk :: alb_vis_can
     dsl4jsb_Real2D_onChunk :: alb_nir_can
     dsl4jsb_Real2D_onChunk :: arad_vis_soil
@@ -1402,10 +1404,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
     dsl4jsb_Real2D_onChunk :: local_time_day_seconds
-    ! SPQ_ 2D
+    ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk :: fract_snow_can
-    ! SPQ_ 3D
-    dsl4jsb_Real3D_onChunk :: w_snow_snl
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: sai
@@ -1437,7 +1437,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, fract_par_diffuse)        ! in
@@ -1451,6 +1451,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_lnd)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil)             ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil)             ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil_and_snow)    ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil_and_snow)    ! in
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_can)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_can)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_soil)            ! out
@@ -1468,11 +1470,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_nir_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_nir_cl)      ! out
     ! ---------------------------
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onChunk(SPQ_, fract_snow_can)           ! in
-
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_snow_snl)               ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_can)         ! in
     ! ---------------------------
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                      ! in
@@ -1486,18 +1485,18 @@ CONTAINS
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
 
     !$ACC UPDATE HOST(swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:)) &
-    !$ACC   HOST(lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), alb_vis_soil(:)) &
+    !$ACC   HOST(lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), alb_vis_soil_and_snow(:)) &
     !$ACC   HOST(fract_snow_can(:)) &
     !$ACC   HOST(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
     !$ACC   HOST(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
-    !$ACC   HOST(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC   HOST(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(acc_stream)
+    !$ACC WAIT(acc_stream)
     CALL calc_canopy_radiation_budget(nc, ncanopy, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "vis", &
                      swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
                      lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), &
-                     alb_vis_soil(:), fract_snow_can(:), &
+                     alb_vis_soil_and_snow(:), fract_snow_can(:), &
                      arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:), fleaf_sunlit_vis_cl(:,:), &
                      arad_vis_can(:), arad_vis_soil(:), &
                      alb_vis_can(:), alb_vis_lnd(:))
@@ -1508,7 +1507,7 @@ CONTAINS
 
     !$ACC UPDATE DEVICE(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
     !$ACC   DEVICE(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
-    !$ACC   DEVICE(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(1)
+    !$ACC   DEVICE(alb_vis_can(:), alb_vis_lnd(:)) ASYNC(acc_stream)
 
     !> 2.0 calculate NIR radiation budget (absorbed radiation on canopy layers and soil + albedo)
     !!
@@ -1516,18 +1515,18 @@ CONTAINS
     !! diffuse radiation are very similar
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
 
-    !$ACC UPDATE HOST(swnir_srf_down(:), alb_nir_soil(:)) &
+    !$ACC UPDATE HOST(swnir_srf_down(:), alb_nir_soil_and_snow(:)) &
     !$ACC   HOST(fract_snow_can(:)) &
     !$ACC   HOST(arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:)) &
     !$ACC   HOST(fleaf_sunlit_nir_cl(:,:), arad_nir_can(:), arad_nir_soil(:)) &
-    !$ACC   HOST(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC   HOST(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(acc_stream)
+    !$ACC WAIT(acc_stream)
     CALL calc_canopy_radiation_budget(nc, ncanopy, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "nir", &
                      swnir_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
                      lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), &
-                     alb_nir_soil(:), fract_snow_can(:), &
+                     alb_nir_soil_and_snow(:), fract_snow_can(:), &
                      arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:), fleaf_sunlit_nir_cl(:,:), &
                      arad_nir_can(:), arad_nir_soil(:), &
                      alb_nir_can(:), alb_nir_lnd(:))
@@ -1537,11 +1536,11 @@ CONTAINS
     END DO
     !$ACC UPDATE DEVICE(arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:)) &
     !$ACC   DEVICE(fleaf_sunlit_nir_cl(:,:), arad_nir_can(:), arad_nir_soil(:)) &
-    !$ACC   DEVICE(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(1)
+    !$ACC   DEVICE(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(acc_stream)
 
     !> 3.0 calculate albedo and net radiation for total shortwave radiation
     !!
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       IF ((swvis_srf_down(ic) + swnir_srf_down(ic)) > eps8) THEN
         albedo(ic) = ( alb_vis_lnd(ic) * swvis_srf_down(ic) + alb_nir_lnd(ic) * swnir_srf_down(ic) ) &

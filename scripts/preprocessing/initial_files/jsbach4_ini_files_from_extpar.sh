@@ -49,7 +49,7 @@ prog=$(basename $0)
 clean_up=true  # Remove intermediate files
 
 # Tools and commands
-cdo="cdo -s -f nc4 -b F64"
+cdo="$cdo -f nc4 -b F64"
 ncatted="ncatted"
 rm=/usr/bin/rm
 cp=/usr/bin/cp
@@ -291,12 +291,23 @@ ${cdo} -setmisstodis -setmissval,0 -selvar,ROOTDP ${file_extpar}.nc ${file_extpa
 
 # Select soil depth from original bc soil file
 ${cdo} selvar,soil_depth ${file_bc_soil}_orig_glac0.nc ${file_bc_soil}_soil_depth.nc
-# Limit extpar root depth to soil depth
-${cdo} min ${file_extpar}_ROOTDP.nc ${file_bc_soil}_soil_depth.nc ${file_extpar}_ROOTDP_corrected.nc
 # Set minimum root depth - also use this value for glacier and complete ocean cells
+#   Note: minimum root depth of GLCC data used in extpar is 0.3 m!
 ${cdo} -setmisstoc,0. -sub -ifthenc,1 -gtc,0. notsea.nc glac.nc non-glac-land.nc
 ${cdo} -setname,root_depth -setmisstoc,${minimum_root_depth} -ifthen non-glac-land.nc \
-        ${file_extpar}_ROOTDP_corrected.nc ${file_extpar}_root_depth.nc
+      -setrtomiss,0,${minimum_root_depth} ${file_extpar}_ROOTDP.nc ${file_extpar}_root_depth.tmp
+# Set root_depth of glaciers to zero.
+${cdo} -addc,1. -mulc,-1. glac.nc non-glac.nc
+${cdo} -setmisstoc,0. -setmissval,-1 -mul ${file_extpar}_root_depth.tmp non-glac.nc \
+      ${file_extpar}_root_depth.nc
+
+# Soil depth
+# -----------
+# In case soil depth is smaller than root depth it needs to be adapted: As the root depth
+# data set in extpar is more recent than the soil data from echam we rather adapt soildepth
+# to root depth - and not vice versa as we didd in previous versions.
+${cdo} -setmisstoc,0. -ifthen non-glac-land.nc \
+      -max ${file_bc_soil}_soil_depth.nc ${file_extpar}_root_depth.nc ${file_extpar}_soil_depth.nc
 
 # Maxmoist: water content of the rootzone at field capacity
 # --------
@@ -323,7 +334,7 @@ ${cdo} -O merge ${file_extpar}_FR_SAND_CORRECTED.nc     \
                 ${file_extpar}_root_depth.nc \
                 ${file_extpar}_maxmoist.nc \
                 ${file_bc_soil}_orig_glac0.nc   ${file_bc_soil}_extpar.tmp0
-${cdo} replace  ${file_bc_soil}_extpar.tmp0 ${file_bc_soil}_soil_depth.nc ${file_bc_soil}_extpar.tmp
+${cdo} replace  ${file_bc_soil}_extpar.tmp0 ${file_extpar}_soil_depth.nc ${file_bc_soil}_extpar.tmp
 
 ${cdo} --no_history setattribute,history="${history_att}" ${file_bc_soil}_extpar.tmp \
        ${path_bc_new}/${file_bc_soil}.nc
@@ -339,11 +350,11 @@ if [[ ${clean_up} == true ]]; then
   ${rm} ${file_extpar}_SAND_SILT_CLAY_MASK.nc ${file_extpar}_SUB_SAND_SILT_CLAY_MASK.nc
   ${rm} ${file_extpar}_FR_????_0.nc ${file_extpar}_SUB_FR_????_0.nc ${file_extpar}_FR_????_CORRECTED.nc \
         ${file_extpar}_SUB_FR_????_CORRECTED.nc
-  ${rm} ${file_extpar}_ROOTDP.nc ${file_extpar}_ROOTDP_corrected.nc \
-        ${file_extpar}_root_depth.nc ${file_bc_soil}_soil_field_cap.nc \
+  ${rm} ${file_extpar}_ROOTDP.nc ${file_extpar}_soil_depth.nc \
+        ${file_extpar}_root_depth.* ${file_bc_soil}_soil_field_cap.nc \
         ${file_extpar}_maxmoist.nc glac.nc ${file_bc_soil}_soil_depth.nc
   ${rm} ${file_bc_soil}_extpar.tmp* \
-        ${file_bc_soil}_glac0.nc ${file_bc_soil}_no-glac.nc notsea.nc non-glac-land.nc
+        ${file_bc_soil}_glac0.nc ${file_bc_soil}_no-glac.nc notsea.nc non-glac-land.nc non-glac.nc
   ${rm} ${file_bc_soil}_orig.nc ${file_bc_soil}_orig_glac0.nc
 fi
 

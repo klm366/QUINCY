@@ -62,9 +62,14 @@ min_lake=0.01
 # Currently, only 0 or 11 possible
 npfts_list="0 11"
 
-cdo="cdo -s -f nc4 -b F64"
+cdo="$cdo -f nc4 -b F64"
 
 #_____________________________________________________________________________
+# Make sure extpar file exists
+if [[ ! -f ${extpar_file} ]]; then
+  echo "$0: Initial extpar file ${extpar_file} does not exist!"
+  exit 1
+fi
 
 [[ ${coupled} == "true" ]] && grid_label=$atmGridID-$oceGridID || grid_label=$atmGridID
 if [[ ${output_dir} == "" ]]; then
@@ -101,18 +106,18 @@ source_res_dict[11]=T255
 #input_root=/pool/data/JSBACH/input
 
 # Note: glac must be at beginning of varlist
-varlist_gauss="glac lake init_moist snow roughness_length albedo elevation
+varlist_gauss="glac lake init_moist snow roughness_length albedo
 fao forest_fract lai_clim veg_fract surf_temp veg_ratio_max
 albedo_veg_vis albedo_veg_nir albedo_soil_vis albedo_soil_nir roughness_length_oro
-soil_depth layer_moist oromea orostd orosig orogam orothe
-cover_fract"
-varlist_05="bclapp bclapp_mineral heat_capacity heat_capacity_mineral
+layer_moist cover_fract"
+varlist_extpar="elevation oromea orostd orosig orogam orothe skin_conductivity"
+varlist_05="soil_depth bclapp bclapp_mineral heat_capacity heat_capacity_mineral
 heat_conductivity heat_conductivity_mineral hyd_cond_sat hyd_cond_sat_mineral
 moisture_pot moisture_pot_mineral pore_size_index pore_size_index_mineral
 residual_water residual_water_mineral soil_field_cap soil_field_cap_mineral
 soil_porosity soil_porosity_mineral wilting_point wilting_point_mineral
 fract_org_sl surf_depr_fract surf_depr_depth"
-varlist="$varlist_gauss $varlist_05"
+varlist="$varlist_gauss $varlist_extpar $varlist_05"
 
 declare -A sso_dict
 sso_dict[oromea]=topography_c
@@ -125,20 +130,12 @@ sso_dict[orothe]=SSO_THETA
 
 set +u
 . ${MODULESHOME}/init/bash
-module unload cdo nco netcdf nag
+module unload nag
 case $(hostname) in
   levante* | *.lvt.dkrz.de)
-    module unload netcdf-c
-    module load cdo/2.4.0-gcc-11.2.0
-    module load nco/5.0.6-gcc-11.2.0
-    module load netcdf-c/4.8.1-gcc-11.2.0
     module load nag/7.1-gcc-11.2.0
-    module list
     ;;
    *)
-    module load cdo/2.4.0
-    module load nco/5.0.1
-    module load netcdf-c/4.9.0
     module load nag/7.1.7101
     ;;
 esac
@@ -219,6 +216,7 @@ function prepare_data_from_05_grid {
   # - All 05 deg grids are expected to be identical (lon: 0.25 -> 359.75; lat: -89.75 -> 89.75)
   # - The non-glacier-land mask is expected to be identical for all variables (additional
   #   missing values do not matter)
+  # - Depression storage would be available on resultions up to 15 arcsec if needed
 
   # Soil parameters
   echo "Prepare soil parameter ..."
@@ -233,8 +231,12 @@ function prepare_data_from_05_grid {
 
   if [[ $varlist_05 == *"surf_depr_fract"* ]]; then
     echo "Prepare depression data ..."
-    ${cdo} splitname ${pool_prepare}/05/topo_depres_05deg_1.5.nc             reg_05_
+    ${cdo} splitname ${pool_prepare}/05/depr_stor_cop_05.nc                  reg_05_
   fi
+
+  # Soil depth
+  ${cdo} invertlat -selvar,soildepth ${pool_prepare}/05/soil_parameters_05.nc \
+         reg_05_soil_depth.nc
 
   # Non-glacier-land mask
   ${cdo} setname,land -setmisstoc,0 -ifthenc,1 reg_05_heat_capacity.nc reg_05_non-glac-land.nc
@@ -333,10 +335,12 @@ function generate_land_sea_mask {
 function extrapolate_var {
 
   local var=$1     # Variable name
-  if [[ $(echo ${varlist_gauss} | grep  " $var ") == $(echo ${varlist_gauss}) ]]; then
+  if [[ $varlist_gauss == *"${var}"* ]]; then
     local source_tag=gauss_${source_res}
-  else
+  elif [[ $varlist_05 == *"${var}"* ]]; then
     local source_tag=reg_05
+  else
+    local source_tag=extpar
   fi
   local cdo_files="${source_tag}_${var}.nc ${source_tag}_${var}_ext.nc"
 
@@ -427,7 +431,7 @@ function remap_var {
       ;;
     elevation )
       echo "Extracting elevation from EXTPAR file ..."
-      ${cdo} setvar,elevation \
+      ${cdo} setvar,${var} \
             -setgrid,${icon_grid_file} -selvar,topography_c ${extpar_file} \
             ${grid_name}_${var}_remap.nc
       ;;
@@ -437,6 +441,12 @@ function remap_var {
       ${cdo} setvar,${var} \
             -setgrid,${icon_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
             -selvar,${sso_dict[${var}]} ${extpar_file} \
+            ${grid_name}_${var}_remap.nc
+      ;;
+    skin_conductivity )
+      echo "Extracting skin layer conductivity from EXTPAR file ..."
+      ${cdo} setvar,${var} \
+            -setgrid,${icon_grid_file} -selvar,SKC ${extpar_file} \
             ${grid_name}_${var}_remap.nc
       ;;
     cover_fract )
@@ -519,7 +529,7 @@ function remap_var {
          ${cdo} setvar,${var} -setmisstoc,0.05 -ifthen ${grid_name}_notsea_miss.nc ${temp} ${grid_name}_${var}_remap.nc
          ;;
        fract_org_sl )
-         ${cdo} setvar,${var} -setmisstoc,0.5 -ifthen ${grid_name}_notsea_miss.nc ${temp} ${grid_name}_${var}_remap.nc
+         ${cdo} setvar,${var} -setmisstoc,0.0 -ifthen ${grid_name}_notsea_miss.nc ${temp} ${grid_name}_${var}_remap.nc
          ;;
        * )
          ${cdo} setvar,${var} -setmissval,-9.e33 -ifthen ${grid_name}_notsea_miss.nc ${temp} ${grid_name}_${var}_remap.nc
@@ -732,6 +742,7 @@ function generate_output_files {
       ${grid_name}_albedo_soil_vis_remap.nc \
       ${grid_name}_albedo_soil_nir_remap.nc \
       ${grid_name}_forest_fract_remap.nc \
+      ${grid_name}_skin_conductivity_remap.nc \
       ${outfile}
   #ncrename -d cell,ncells ${outfile} >& /dev/null
   copy_uuid ${outfile}
@@ -1063,10 +1074,10 @@ do
 
   crosscheck_vars
 
-  if [[ ${jsb4icon} == true ]]
-  then
-    modify_soil_and_root_depth
-  fi
+  ## if [[ ${jsb4icon} == true ]]
+  ## then
+  ##   modify_soil_and_root_depth
+  ## fi
 
   generate_output_files
 
