@@ -483,12 +483,12 @@ CONTAINS
     !>
     !>     Assert: sum of gained area should equal sum of lost area !!!Mingyue Zhang: Comment out this assertion
     !>
-    !cf_diff = SUM(gained_area,DIM=2) - SUM(lost_area,DIM=2)
-    !IF (ANY( cf_diff > max_tolerated_cf_mismatch)) THEN
-    !  WRITE (message_text,*) 'Violation of assertion: gained area does not equal lost area! Please check input data. ' &
-    !   & // 'Max difference of: ', MAXVAL(cf_diff)
-    ! CALL finish(TRIM(routine), TRIM(message_text))
-    !END IF
+    cf_diff = SUM(gained_area,DIM=2) - SUM(lost_area,DIM=2)
+    IF (ANY( cf_diff > max_tolerated_cf_mismatch)) THEN
+      WRITE (message_text,*) 'Violation of assertion: gained area does not equal lost area! Please check input data. ' &
+       & // 'Max difference of: ', MAXVAL(cf_diff)
+     CALL finish(TRIM(routine), TRIM(message_text))
+    END IF
 
     !>
     !> 3. collect to be transferred matter
