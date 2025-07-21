@@ -650,10 +650,8 @@ CONTAINS
 
     ! For the ALCC process land use data has to be read once a year
     IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
-<<<<<<< HEAD
       CALL read_land_use_data(model_id, current_datetime)   !Mingyue Zhang add options
     ENDIF
-=======
       CALL read_land_use_data(model_id, current_datetime)
     END IF
 
@@ -690,7 +688,6 @@ CONTAINS
     ! Save time interpolation weights for further usage
     ! This simplifies access of the weights in case of CUDA graphs
     CALL cache_time_interpolation_weights()
->>>>>>> land4icon-mpim
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
