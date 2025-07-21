@@ -75,7 +75,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':lex_init'
 
     CLASS(t_jsb_tile_abstract), POINTER :: sibl,       & ! Sibling tile with LEX_ process running
-      &                                    dummy         ! Dummy tile  
+      &                                    dummy         ! Dummy tile
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: connecttiles
@@ -303,7 +303,7 @@ CONTAINS
       IF (has_loop) CALL finish(TRIM(routine), '*** Circular connections detected: cmx_macro_hfp_blg')
 
       ! Second check wether cmx_micro_ctc is consistent with current assumptions on geometric relations
-      test_matrix(:,:) = 0._wp 
+      test_matrix(:,:) = 0._wp
       WHERE(cmx_micro_ctc(:,:) > 0.0)
         test_matrix(:,:) = 1.0_wp
       END WHERE
@@ -321,11 +321,11 @@ CONTAINS
               CALL finish(TRIM(routine), '*** 3-level tile-nesting not implemented')
             END IF
           END IF
-        END IF     
+        END IF
       END DO
 
       CALL tile%Get_fraction(fract=fract(:,:))
-      
+
       fract_micro_hfp_srf(:,:) = 0._wp
       fract_micro_hfp_blg(:,:) = 0._wp
       fract_macro_hfp_srf(:,:) = 0._wp
@@ -354,7 +354,7 @@ CONTAINS
 
         CALL sibl%Get_fraction(fract=fract_sibl(:,:))
         fracts(:,lex_ids,:) = fract_sibl(:,:)
- 
+
         IF (dsl4jsb_Config(LEX_)%l_nested) THEN
 
           dsl4jsb_Get_memory_tile(HYDRO_, sibl)
@@ -375,7 +375,7 @@ CONTAINS
       ALLOCATE(hlp1(nproma, nblks))
       ALLOCATE(hlp2(nproma, nblks))
       DO it = 1, nsibl
- 
+
         IF (it == 1) THEN
           sibl => tile%parent_tile%Get_first_child_tile()
         ELSE
@@ -391,13 +391,13 @@ CONTAINS
 
         CALL sibl%Get_fraction(fract=fract_sibl(:,:))
 
-        ! Setting up fields of micro scale connectivities 
+        ! Setting up fields of micro scale connectivities
         ! corresponding to a direct contact of tiles:
-        ! One possibility is to use cmx_micro_ctc directly, the other is 
+        ! One possibility is to use cmx_micro_ctc directly, the other is
         ! to assume a well-mixed distirbution of tiles, with cmx_micro_ctc
         ! being weighted by the cover fraction of the connected sibing
         ! relative to the cover fractions of all connected siblings.
-       
+
         hlp1(:,:) = 0._wp
         hlp2(:,:) = 0._wp
 
@@ -408,7 +408,7 @@ CONTAINS
             ELSE
               dummy => dummy%Get_next_sibling_tile()
             END IF
-          
+
             lex_idd = dummy%lcts(1)%lex_id
 
             IF (lex_idd == 0 .OR. lex_idd /= lex_idd) CYCLE
@@ -434,7 +434,7 @@ CONTAINS
         ELSE
           hlp1(:,:) = cmx_micro_ctc(lex_idt,lex_ids)
           hlp2(:,:) = cmx_micro_ctc(lex_ids,lex_idt)
-        END IF 
+        END IF
 
         ! Determine the geometric relationship between two connected tiles, i.e.
         ! the offset in surface height (h_offset_ct), the characteric distance between the tile centres (length_scale_ct),
@@ -450,13 +450,13 @@ CONTAINS
           & length_scale_ct(:,lex_ids,:),                       &
           & length_iface_ct(:,lex_ids,:),                       &
           & micro_slope_ct(:,lex_ids,:)                         &
-          & )        
-        
+          & )
+
         ! Check if h_offset_ct is consistant with assumed micro-scale connection.
         ! If not adjust the direction of flow:
         ! For hydrological flow paths, connections are only assumed to be present
         ! for positive differences in surface height (for negative offsets, cmx_micro_hfp_x is inverted
-        ! and for a zero-offset, cmx_micro_x is set to 0). 
+        ! and for a zero-offset, cmx_micro_x is set to 0).
         ! For direct conections, connectivities are reversed in case of negative differences in surface height,
         ! to simplify the call to subroutines in update_lex and the determination of the effective slopes
 
@@ -484,7 +484,7 @@ CONTAINS
         END IF
 
         ! Setting the micro connectivity where initially the connection is asumed to be in other direction
-        ! but is changed due to sign of height offsets 
+        ! but is changed due to sign of height offsets
         IF (cmx_micro_hfp_srf(lex_ids,lex_idt) > 0.0_wp) THEN ! here indexing is sibl/tile
           WHERE (h_offset_ct(:,lex_ids,:) > 0.0_wp) ! h_offset tile/sibl is + so height offset sibl/tile is -
             microcon_hfp_srf_ct(:,lex_ids,:) = cmx_micro_hfp_srf(lex_ids,lex_idt)
@@ -513,7 +513,7 @@ CONTAINS
         fract_macro_hfp_blg(:,:) = fract_macro_hfp_blg(:,:) &
           &                      + fract_sibl(:,:) * macrocon_hfp_blg_ct(:,lex_ids,:)
       END DO
-      
+
       ! Ensuring that sum of microcon_ctc_ct of a given tile still <= 1. after connections have been adjusted
       ! Here microcon_ctc is recalculated based on length_iface_ct calculated above
 
@@ -550,7 +550,7 @@ CONTAINS
         END IF
         lex_ids = sibl%lcts(1)%lex_id
 
-        IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE 
+        IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE
 
         CALL sibl%Get_fraction(fract=fract_sibl(:,:))
 
@@ -614,9 +614,9 @@ CONTAINS
         END IF
         lex_ids = sibl%lcts(1)%lex_id
 
-        IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE 
+        IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE
 
-        ! Determine the fraction of flow from tile to sibling as: 
+        ! Determine the fraction of flow from tile to sibling as:
         ! Ratio of flow lag between tile and sibling and effective lag factor for tile
         WHERE((fract_macro_hfp_srf(:,:) == 0._wp) .AND. (fract_micro_hfp_srf(:,:) == 0._wp))
           fract_latflow_srf_ct(:,lex_ids,:) = 0.0
@@ -630,7 +630,7 @@ CONTAINS
         END WHERE
 
         ! If a tile only partially connected to downstream tiles (cmx_micro_hfp + cmx_macro_hfp < 1.0)
-        ! A fraction of the generated outflow is given to streamflow this is done by scaling 
+        ! A fraction of the generated outflow is given to streamflow this is done by scaling
         ! the fractions lateral flow directed to downstream a downstream tile
         IF (dsl4jsb_Config(LEX_)%l_prtlcon) THEN
           WHERE   (SUM(microcon_hfp_srf_ct(:,:,:), DIM=2) + SUM(macrocon_hfp_srf_ct(:,:,:), DIM=2) < 1._wp)

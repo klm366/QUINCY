@@ -506,7 +506,7 @@ CONTAINS
       !$ACC END PARALLEL
 
       ! Adding lateral heat fluxes
-      ! TODO check unit, treat similarily to 
+      ! TODO check unit, treat similarily to
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO ic=1,nc
         DO is = 1, nsoil

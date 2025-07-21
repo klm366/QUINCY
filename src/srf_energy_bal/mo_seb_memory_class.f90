@@ -292,7 +292,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
-    
+
       CALL mem%Add_var( 't_bcoef', mem%t_bcoef,                                &
         & hgrid, surface,                                                      &
         & t_cf('temperature_acoef', '', ''),                                   &

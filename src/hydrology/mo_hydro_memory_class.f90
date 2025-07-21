@@ -106,7 +106,7 @@ MODULE mo_hydro_memory_class
       & elevation,            & !< Topographic height                                    [m]
       & oro_stddev,           & !< Standard deviation of the orography                   [m]
       & steepness,            & !< Parameter defining sub-grid scale slope               []
-      & area,                 & !< characteristic area of tile                           [m2]               
+      & area,                 & !< characteristic area of tile                           [m2]
       & h_surf,               & !< characteristic surface elevation of tile              [m]
       & macro_slope             !< macro scale slope of tile                             []
 
@@ -168,7 +168,7 @@ MODULE mo_hydro_memory_class
                                 !< [[t_hydro_config:hydro_scale=Uniform]])               [m]
       & wtr_latflow_srf,      & !< Outflow from the intermediary reservoir representing
                                 !< lateral flow of surface runoff                        [kg m-2 s-1]
-      & water_to_soil_lex,    & !< Infiltratable water from connected tile               [m] 
+      & water_to_soil_lex,    & !< Infiltratable water from connected tile               [m]
       & wtr_lex_net_srf         !< Lateral exchange with connected tiles on the surface  [kg m-2 s-1]
 
     TYPE(t_jsb_var_real3d) :: &

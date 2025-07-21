@@ -43,8 +43,8 @@ MODULE mo_lex_config_class
        & l_macrtrns,             &
        & l_micrtrns,             &
        & l_nested,               & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself
-       & l_dpr4ponds,            & !< if no tile-specific pond fraction / depth is provided assume depressions to be ponds  
-       & l_noslope_dpr             !< if no tile-specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero 
+       & l_dpr4ponds,            & !< if no tile-specific pond fraction / depth is provided assume depressions to be ponds
+       & l_noslope_dpr             !< if no tile-specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero
     INTEGER                     :: ncontis !< number of connected tiles used in setup
 
    CONTAINS
@@ -81,11 +81,11 @@ CONTAINS
        & l_prtlcon,                & !< Allowing for tiles to be only partially connected to downstream tiles
        & l_macrtrns,               &
        & l_micrtrns,               &
-       & l_nested,                 & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself 
-       & l_dpr4ponds,              & !< if no tile -specific pond fraction / depth is provided assume depressions to be ponds 
-       & l_noslope_dpr               !< if no tile -specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero  
+       & l_nested,                 & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself
+       & l_dpr4ponds,              & !< if no tile -specific pond fraction / depth is provided assume depressions to be ponds
+       & l_noslope_dpr               !< if no tile -specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero
 
-    TYPE(t_jsb_vgrid), POINTER  :: tile_layer             
+    TYPE(t_jsb_vgrid), POINTER  :: tile_layer
 
     NAMELIST /jsb_lex_nml/      &
          active,                & !< process is active
@@ -101,9 +101,9 @@ CONTAINS
          l_prtlcon,             & !< Allowing for tiles to be only partially connected to downstream tiles
          l_macrtrns,            &
          l_micrtrns,            &
-         l_nested,              & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself 
-         l_dpr4ponds,           & !< if no tile -specific pond fraction / depth is provided assume depressions to be ponds 
-         l_noslope_dpr            !< if no tile -specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero   
+         l_nested,              & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself
+         l_dpr4ponds,           & !< if no tile -specific pond fraction / depth is provided assume depressions to be ponds
+         l_noslope_dpr            !< if no tile -specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero
 
     INTEGER :: nml_handler, nml_unit, istat, i
 
@@ -159,7 +159,7 @@ CONTAINS
     IF (ncontis == 0) THEN
       CALL finish(TRIM(routine), 'Trying to configure lateral exchange between tiles, without connected tiles.')
     ELSE
-      config%ncontis           = ncontis  
+      config%ncontis           = ncontis
     END IF
 
     IF (l_runoff_trns) THEN

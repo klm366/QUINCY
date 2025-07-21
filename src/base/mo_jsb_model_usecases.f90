@@ -944,7 +944,7 @@ CONTAINS
     !   |                       |                         |                         |
     !   |------------           |-------------            |-------------            |--------------
     !   |           |           |            |            |            |            |             |
-    !  pft01_upup  pftXX_upup  pft01_uplow  pftXX_uplow  pft01_lowup  pftXX_lowup  pft01_lowlow  pftXX_lowlow 
+    !  pft01_upup  pftXX_upup  pft01_uplow  pftXX_uplow  pft01_lowup  pftXX_lowup  pft01_lowlow  pftXX_lowlow
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -1114,7 +1114,7 @@ CONTAINS
     !   |                       |                         |                         |
     !   |------------           |-------------            |-------------            |--------------
     !   |           |           |            |            |            |            |             |
-    !  pft01_upup  pftXX_upup  pft01_uplow  pftXX_uplow  pft01_lowup  pftXX_lowup  pft01_lowlow  pftXX_lowlow 
+    !  pft01_upup  pftXX_upup  pft01_uplow  pftXX_uplow  pft01_lowup  pftXX_lowup  pft01_lowlow  pftXX_lowlow
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -1278,10 +1278,10 @@ CONTAINS
     !   |------------------------
     !   |                       |
     !  veg_ct1                 veg_ct2
-    !   |                       |    
+    !   |                       |
     !   |------------           |-------------
-    !   |           |           |            | 
-    !  pft01t_ct1  pftXX_ct1  pft01_ct2  pftXX_ct2 
+    !   |           |           |            |
+    !  pft01t_ct1  pftXX_ct1  pft01_ct2  pftXX_ct2
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -1446,10 +1446,10 @@ CONTAINS
     !   |------------------------
     !   |                       |
     !  veg_ct1                 veg_ct2
-    !   |                       |    
+    !   |                       |
     !   |------------           |-------------
-    !   |           |           |            | 
-    !  pft01t_ct1  pftXX_ct1  pft01_ct2  pftXX_ct2 
+    !   |           |           |            |
+    !  pft01t_ct1  pftXX_ct1  pft01_ct2  pftXX_ct2
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -1615,10 +1615,10 @@ CONTAINS
     !   |-----------------------------------------------
     !   |                       |                       |
     !  veg_ct1                 veg_ct2                 veg_ct3
-    !   |                       |                       |    
+    !   |                       |                       |
     !   |------------           |-------------          |-------------
-    !   |           |           |            |          |            | 
-    !  pft01t_ct1  pftXX_ct1  pft01_ct2  pftXX_ct2  pft01_ct2  pftXX_ct2 
+    !   |           |           |            |          |            |
+    !  pft01t_ct1  pftXX_ct1  pft01_ct2  pftXX_ct2  pft01_ct2  pftXX_ct2
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -1784,10 +1784,10 @@ CONTAINS
     !   |-----------------------------------------------
     !   |                       |                       |
     !  veg_ct1                 veg_ct2                 veg_ct3
-    !   |                       |                       |    
+    !   |                       |                       |
     !   |------------           |-------------          |-------------
-    !   |           |           |            |          |            | 
-    !  pft01t_ct1  pftXX_ct1  pft01_ct2  pftXX_ct2  pft01_ct2  pftXX_ct2 
+    !   |           |           |            |          |            |
+    !  pft01t_ct1  pftXX_ct1  pft01_ct2  pftXX_ct2  pft01_ct2  pftXX_ct2
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &

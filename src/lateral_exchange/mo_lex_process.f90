@@ -77,7 +77,7 @@ CONTAINS
       wtr_lex_runoff_source_acc = wtr_lex_runoff_source_acc               &
         &                       + wtr_latflow_srf * fract_source_2_target &
         &                       * rhoh2o / dtime
-      
+
       wtr_lex_srf_source_acc    = wtr_lex_srf_source_acc                  &
         &                       - wtr_latflow_srf * fract_source_2_target &
         &                       * rhoh2o / dtime
@@ -89,7 +89,7 @@ CONTAINS
       wtr_pond_target           = wtr_pond_target                         &
         &                       + wtr_latflow_srf * fract_source_2_target &
         &                       * (fract_source / fract_target)
- 
+
       wtr_lex_srf_target_acc    = wtr_lex_srf_target_acc                  &
         &                       + wtr_latflow_srf * fract_source_2_target &
         &                       * (fract_source / fract_target) * rhoh2o / dtime
@@ -143,7 +143,7 @@ CONTAINS
       wtr_lex_drain_source_acc = wtr_lex_drain_source_acc               &
         &                      + wtr_latflow_sl * fract_source_2_target &
         &                      * rhoh2o / dtime
-      
+
       wtr_lex_sl_source_acc    = wtr_lex_sl_source_acc                     &
         &                      - wtr_latflow_sl * fract_source_2_target    &
         &                      * rhoh2o / dtime
@@ -224,7 +224,7 @@ CONTAINS
       &                        h,                 &  !< Height of current layer [m]
       &                        a_inter,           &  !< Interface area on current layer [m2 m-2]
       &                        z_rgrd_top,        &  !< Top of current layer on helper grid [m]
-      &                        z_rgrd_bot,        &  !< Bottom of current layer on helper grid [m] 
+      &                        z_rgrd_bot,        &  !< Bottom of current layer on helper grid [m]
       &                        z_rgrd_bot_new,    &  !< New bottom of current layer on helper grid [m]
       &                        z_bot_lvt,         &  !< Bedrock boundary on elevation tile [m]
       &                        wtr_soil_lvt_rgrd, &  !< Soil water content on elevation tile on helper grid layer [m]
@@ -548,19 +548,19 @@ CONTAINS
       &                        k_inter,             &  !< Hydraulic conductivity at interface [m s-1]
       &                        d_mpot,              &  !< Difference in matric potential [m]
       &                        wtr_rel_qlbrm,       &  !< Relative saturation at equilibrium between connected tiles [/]
-      &                        free_space,          &  !< Free pore space on tile on a given layer [m]  
+      &                        free_space,          &  !< Free pore space on tile on a given layer [m]
       &                        wtr_avail,           &  !< Available water on sibling on a given layer [m]
       &                        wtr_2_qlbrm,         &  !< Amount of water moved in order to reach equilibrium state [m]
       &                        wtr_flx_lat,         &  !< potential flux (based on k and mpot) between sibling and tile [m/s]
       &                        wtr_lat,             &  !< actual flux between sibling and tile [m]
       &                        z_rgrd_top,          &  !< Top of current layer on helper grid [m]
-      &                        z_rgrd_bot,          &  !< Bottom of current layer on helper grid [m] 
+      &                        z_rgrd_bot,          &  !< Bottom of current layer on helper grid [m]
       &                        z_tle,               &  !< Layer bottom of current layer on tile [m]
       &                        z_sbl,               &  !< Layer bottom of current layer on sibling [m]
       &                        z_bot_tle,           &  !< Bedrock boundary on tile [m]
       &                        z_bot_sbl,           &  !< Bedrock boundary on sibling [m]
       &                        wtr_soil_tle_rgrd,   &  !< Soil water content on tile on helper grid layer [m]
-      &                        wsat_tle_rgrd,       &  !< Soil moisture at saturation on tile on helper grid layer [m] 
+      &                        wsat_tle_rgrd,       &  !< Soil moisture at saturation on tile on helper grid layer [m]
       &                        field_cap_tle_rgrd,  &  !< Field capacity on tile on helper grid layer [m]
       &                        res_tle_rgrd,        &  !< Residual soil moisture on tile on helper grid layer [m]
       &                        mpot_tle_rgrd,       &  !< Matric potential on tile on helper grid layer [m]
@@ -615,10 +615,10 @@ CONTAINS
 
     z_rgrd_top = 0._wp
     z_rgrd_bot = MIN(z_tle, z_sbl)
-    
+
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
-    DO i = 1, nrgrd     
+    DO i = 1, nrgrd
       IF (z_rgrd_bot <= z_bot_tle .AND. z_rgrd_bot <= z_bot_sbl .AND. & ! Above Bedrock in both tiles
           i_tle      <= nsoil     .AND. i_sbl      <= nsoil) THEN       ! within soil column
 
@@ -948,8 +948,8 @@ CONTAINS
       &                        d_t_wtr_soil_sbl,       &  !< Temperture difference between incomming water and soil on sibling on current layer on helper grid [K]
       &                        h_cap_soil_tle_rgrd,    &  !< Soil heat capacity of tile on current layer on helper grid [J m-3 K-1]
       &                        h_cap_soil_sbl_rgrd,    &  !< Soil heat capacity of sibling on current layer on helper grid [J m-3 K-1]
-      &                        wtr_flx_in_tle_regrid,  &  !< Incomming water on tile (from sibling) on current layer on helper grid [m3 m-2 s] 
-      &                        wtr_flx_in_sbl_regrid,  &  !< Incomming water on sibling (from tile) on current layer on helper grid [m3 m-2 s] 
+      &                        wtr_flx_in_tle_regrid,  &  !< Incomming water on tile (from sibling) on current layer on helper grid [m3 m-2 s]
+      &                        wtr_flx_in_sbl_regrid,  &  !< Incomming water on sibling (from tile) on current layer on helper grid [m3 m-2 s]
       &                        heat_flx_tle,           &  !< Incomming heat flux on tile on current layer on helper grid [J m-3]
       &                        heat_flx_sbl               !< Incomming heat flux on sibling on current layer on helper grid [J m-3]
 
@@ -960,7 +960,7 @@ CONTAINS
 
     ! Start setting up the interpolated helper grid
     ! As ponded water / ice do not have a heat content we only account for energy exchange in the soil:
-    
+
     IF (h_offset < 0._wp) THEN
       i_tle = 0
       i_sbl = 1
@@ -1009,7 +1009,7 @@ CONTAINS
           wtr_flx_in_sbl_regrid = 0._wp
         END IF
 
-        ! Effective heat flux is determined so that: 
+        ! Effective heat flux is determined so that:
         ! t_sl_new = t_wtr + (t_sl-t_wtr) * (h - h_wtr) / h * vol_heat_cap_sl_old / vol_heat_cap_sl_new.
         ! Since there is no way of knowing what vol_heat_cap_sl_new will be, the scheme assumes that
         ! the water content will change according to wtr_flx * dtime:
@@ -1021,10 +1021,10 @@ CONTAINS
 
         heat_flx_tle     = d_t_wtr_soil_tle * vol_hcap_water * wtr_flx_in_tle_regrid
         heat_flx_sbl     = d_t_wtr_soil_sbl * vol_hcap_water * wtr_flx_in_sbl_regrid
-  
+
         ! Soil may not warm above or cool below the temperature of the incomming water
         ! This could happen in the above formulation if wtr_flx_in_tle_regrid * dtime > h
-        ! Here, we use the current soil heat capacities instead of assuming that 
+        ! Here, we use the current soil heat capacities instead of assuming that
         ! the water content will change according to wtr_flx * dtime.
         ! This makes the limits more retrictive, given that these are anyway very large margins.
         IF (     heat_flx_tle < 0._wp) THEN
@@ -1078,7 +1078,7 @@ CONTAINS
     d_t_wtr_soil_sbl = t_soil_tle(1) - t_soil_sbl(1)
     heat_flx_tle = d_t_wtr_soil_tle * vol_hcap_water * wtr_inflx_lat_srf_tle / rhoh2o
     heat_flx_sbl = d_t_wtr_soil_sbl * vol_hcap_water * wtr_inflx_lat_srf_sbl / rhoh2o
-     
+
     IF (     heat_flx_tle < 0._wp) THEN
       heat_flx_tle   = MAX(heat_flx_tle, d_t_wtr_soil_tle * heat_cap_soil_tle(1) * dz(1) / dtime)
     ELSE IF (heat_flx_tle > 0._wp) THEN
@@ -1150,7 +1150,7 @@ CONTAINS
       &                        snow_rdst_out_sbl       !< Snow redistribution outflux at sibling [kg m-2 s-1]
 
     REAL(wp), INTENT(inout) :: &
-      &                        wtr_latflow_tle,     &  !< Netflux (surface) on tile [kg m-2 s-1]  
+      &                        wtr_latflow_tle,     &  !< Netflux (surface) on tile [kg m-2 s-1]
       &                        wtr_latflow_sbl,     &  !< Netflux (surface) on sibling [kg m-2 s-1]
       &                        snow_soil_tle,       &  !< Snow soil (WEQ) on tile [m]
       &                        snow_soil_sbl,       &  !< Snow soil (WEQ) on sibling [m]
@@ -1313,7 +1313,7 @@ CONTAINS
 
   END SUBROUTINE calc_snow_redistribution
 
-  !  
+  !
   ! ===============================================================================================================================
   !>
   !! Limit soil water and pond storage content
@@ -1327,7 +1327,7 @@ CONTAINS
     & wtr_soil_sat_sl,                        &
     & wtr_soil_sl                             &
     )
-     
+
     REAL(wp), INTENT(in)    :: weq_pond_max,  &              !< Maximum pond water storage [m]
       &                        ice_pond                      !< Ice in pond water storage [m]
 
@@ -1342,7 +1342,7 @@ CONTAINS
 
     INTEGER                 :: i                             !< Counter for loop over soil layers
     REAL(wp)                :: wtr_pond_max                  !< Maximum liquid water in pond storage [m]
-    
+
     wtr_pond_max = MAX(0.0_wp, weq_pond_max - ice_pond)
 
     IF (PRESENT(nsoil)) THEN
@@ -1372,7 +1372,7 @@ CONTAINS
 
   END SUBROUTINE remove_exess_water
 
-  !  
+  !
   ! ===============================================================================================================================
   !>
   !! Adjust lateral fluxes according to differences in surface elevation and bedrock boundary
@@ -1383,7 +1383,7 @@ CONTAINS
     & dsoil_lvt, dsoil_dpr,                   &
     & flx_lat_sl                              &
     )
-     
+
 
     INTEGER , INTENT(in)    :: nsoil             !< Number of soil ayers
 
@@ -1443,7 +1443,7 @@ CONTAINS
       ELSE IF (z_rgrd_bot >= SUM(dsoil_dpr(:)) + h_offset) THEN
         z_dpr = z_lvt
       END IF
-      
+
       z_rgrd_top=z_rgrd_bot
       z_rgrd_bot=MIN(z_lvt, z_dpr)
 
@@ -1528,24 +1528,24 @@ CONTAINS
 
     ! Calculate characteristic length scale and interface length between tile and sibling:
     !
-    ! Assumption is that the smaller tile constitutes a circle (C1) which allows the calulation of the 
+    ! Assumption is that the smaller tile constitutes a circle (C1) which allows the calulation of the
     ! interface length as the minor arc whose fraction of the circle's diameter is equal to the connected fraction.
     !
-    ! The smaller circle is encompassed by a larger circle (C2) which contains the areas of both tiles and whose radius is used 
-    ! to approximate the characteristic length scale. 
+    ! The smaller circle is encompassed by a larger circle (C2) which contains the areas of both tiles and whose radius is used
+    ! to approximate the characteristic length scale.
     ! The latter is assumed to be equal to half the distance between circumference of C1 and C2 added to the radius of C1.
     ! The area of C2 is determined so that a segment with a central angle (X/360) equal to the connected fraction contains an area
-    ! equal to that of the larger tile and the area of a segment of C1 with the same central angle. 
+    ! equal to that of the larger tile and the area of a segment of C1 with the same central angle.
     IF ((microcon_ctc_tile == 0._wp .AND. microcon_ctc_sibl == 0._wp) .OR.  &
       &  fract_rel         == 0._wp .OR.  fract_rel_sibl    == 0._wp  .OR.  &
       &  area              == 0._wp .OR.  area_sibl         == 0._wp) THEN
       length_scale = 0._wp
       length_iface = 0._wp
 
-    ! Areas of outer tiles are not used directly, but approximated by: 
+    ! Areas of outer tiles are not used directly, but approximated by:
     ! outer_area    = inner_area * ( 1. / fract_rel_inner - 1.)
     ! combined_area = inner_area *   1. / fract_rel_inner
-    ! this is done to be (at least) consistent with the cover fractions and 
+    ! this is done to be (at least) consistent with the cover fractions and
     ! the assumption of having basic geometry of nested circles.
     !
     ! Interface length is given [as m per m2] relative to the area containing both tiles
@@ -1574,13 +1574,13 @@ CONTAINS
 
         area_fact = 1._wp / fract_rel - 1._wp
 
-        length_iface = ((4._wp * pi * area) ** 0.5_wp) & 
-          &          * microcon_ctc_tile * fract_rel / area 
+        length_iface = ((4._wp * pi * area) ** 0.5_wp) &
+          &          * microcon_ctc_tile * fract_rel / area
 
         rad_in  = (area / pi)**0.5_wp
 
         rad_out = (area *(1._wp + area_fact / microcon_ctc_tile) / pi)**0.5_wp
-               
+
         length_scale = rad_in + (rad_out - rad_in) / 2._wp
       END IF
     ELSE  ! Sibling is encompassed by tile
@@ -1594,8 +1594,8 @@ CONTAINS
 
         area_fact = 1._wp / fract_rel_cmbnd - 1._wp
 
-        length_iface = ((4._wp * pi * area_cmbnd) ** 0.5_wp) & 
-          &          * microcon_ctc_sibl * fract_rel_sibl / area_sibl 
+        length_iface = ((4._wp * pi * area_cmbnd) ** 0.5_wp) &
+          &          * microcon_ctc_sibl * fract_rel_sibl / area_sibl
 
         rad_in  = (area_nclsd_sibl / pi)**0.5_wp
 
@@ -1606,9 +1606,9 @@ CONTAINS
       ELSE   ! Sibling does not enclose other tile
 
         area_fact = 1._wp / fract_rel_sibl - 1._wp
- 
-        length_iface = ((4._wp * pi * area_sibl) ** 0.5_wp) & 
-          &          * microcon_ctc_sibl * fract_rel_sibl / area_sibl 
+
+        length_iface = ((4._wp * pi * area_sibl) ** 0.5_wp) &
+          &          * microcon_ctc_sibl * fract_rel_sibl / area_sibl
 
         rad_in  = (area_sibl / pi)**0.5_wp
 
@@ -1620,7 +1620,7 @@ CONTAINS
     END IF
 
     ! calculate micro-scale slope based on difference in surfce elevation and characteristic length scale
-    ! ... also in case that microcon_ctc_sibl > since the microcon_slp will be reversed later on ...  
+    ! ... also in case that microcon_ctc_sibl > since the microcon_slp will be reversed later on ...
     IF ((microcon_ctc_tile > 0._wp .OR. microcon_ctc_sibl > 0._wp) .AND. &
       &  h_offset > 0._wp .AND. length_scale > 0._wp) THEN
       micro_slope = MIN(0.5_wp, h_offset / length_scale)
@@ -1710,7 +1710,7 @@ CONTAINS
     ! Micro scale lag factors are determined by the (inverse) retention time, the micro-connectivity between tile and sibling,
     ! and the cover fraction of sibling relative to the total connected farction of tile.
     ! Additionally, the lag foctor is decreased accoring to the micro-scale connectivity, assuming that the fractions of the tile
-    ! that have a micro-scale connectivity do not additionally feature macro-scale connections. 
+    ! that have a micro-scale connectivity do not additionally feature macro-scale connections.
     IF ((macro_connect_srf > 0._wp) .AND. (fract > 0._wp)) THEN
 
       fact_lag_macro_srf = 1._wp / ret_macro_srf                       &
@@ -1744,7 +1744,7 @@ CONTAINS
 
   END SUBROUTINE get_flow_lags
 
-  !  
+  !
   ! ===============================================================================================================================
   !>
   !! Check wether matrix contains closed loop
@@ -1754,7 +1754,7 @@ CONTAINS
     & matrix,                                 &
     & has_loop                                &
     )
-     
+
     INTEGER,  INTENT(in)    :: nconti              !< number of connected tiles
 
     REAL(wp), INTENT(inout) :: matrix(:,:)         !< Flow matrix
@@ -1783,7 +1783,7 @@ CONTAINS
                   cntr=0 ! Goind down new branch so counter is reset
                 ELSE
                   matrix(is,it) = 0._wp ! set sibling -> tile conection to 0 (sibling branch has no closed loop)
-                  cntr=nconti-1 ! nothing more to be checked 
+                  cntr=nconti-1 ! nothing more to be checked
                 END IF
               ELSE
                 trgt_id=src_id

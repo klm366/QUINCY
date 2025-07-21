@@ -277,7 +277,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(SEB_, q_bcoef,      weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SEB_, pch,          weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SEB_, drag_srf,     weighted_by_fract)
-    END IF 
+    END IF
 
     IF (model%config%use_lakes) THEN
       dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,     weighted_by_fract)

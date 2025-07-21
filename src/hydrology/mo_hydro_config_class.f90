@@ -401,19 +401,19 @@ CONTAINS
     config%bot_drain_mode = bot_drain_mode
     IF (bot_drain_mode == 2 .OR. bot_drain_mode == 4) THEN
       CALL message(TRIM(routine), 'Bottom drainage in soil column depends on hyd. cond. of bedrock only')
-    ELSE 
+    ELSE
       CALL message(TRIM(routine), 'Bottom drainage in soil column depends on hyd. cond. of bedrock and lowest layer')
     END IF
 
     IF (bot_drain_mode == 1 .OR. bot_drain_mode == 3) THEN
       CALL message(TRIM(routine), 'Bottom drainage in retention storage depends on hyd. cond. of bedrock and lowest layer')
-    ELSE 
+    ELSE
       CALL message(TRIM(routine), 'Bottom drainage in retention storage depends on hyd cond of bedrock only')
     END IF
 
     IF (bot_drain_mode == 1 .OR. bot_drain_mode == 2 .OR. bot_drain_mode == 5) THEN
       CALL message(TRIM(routine), 'Lateral flow is removed before bottom drainage is calculated')
-    ELSE 
+    ELSE
       CALL message(TRIM(routine), 'Bottom drainage is removed before lateral flow is calculated')
     END IF
 
