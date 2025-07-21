@@ -78,7 +78,7 @@ CONTAINS
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
     USE mo_io_units,            ONLY: filename_max
     USE mo_jsb_parallel,        ONLY: Get_omp_thread
-    USE mo_jsb_lcc_class,       ONLY: max_tolerated_cf_mismatch
+    USE mo_jsb_lcc_class,       ONLY: min_tolerated_cf_mismatch,max_tolerated_cf_mismatch
     USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
     
     ! -------------------------------------------------------------------------------------------------- !
