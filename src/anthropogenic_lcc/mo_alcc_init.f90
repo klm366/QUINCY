@@ -78,7 +78,7 @@ CONTAINS
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
     USE mo_io_units,            ONLY: filename_max
     USE mo_jsb_parallel,        ONLY: Get_omp_thread
-    USE mo_jsb_lcc_class,       ONLY: min_tolerated_cf_mismatch,max_tolerated_cf_mismatch
+    USE mo_jsb_lcc_class,       ONLY: max_tolerated_cf_mismatch
     USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
     
     ! -------------------------------------------------------------------------------------------------- !
@@ -506,7 +506,7 @@ CONTAINS
       !Check if the sum along dimension 2 exceeds the threshold and normalize it
       ALLOCATE(total_sum(nproma, nblks))
       total_sum(:,:) = 1.0_wp
-      IF (ANY(SUM(cf_current_year(:,:,:), DIM=2) > 1.0_wp + min_tolerated_cf_mismatch)) THEN
+      IF (ANY(SUM(cf_current_year(:,:,:), DIM=2) > 1.0_wp + max_tolerated_cf_mismatch)) THEN
         CALL message(TRIM(routine), 'Normalizing cf_current_year as the sum exceeds the threshold.')
         
         total_sum(:,:) = MAXVAL(SUM(cf_current_year(:,:,:), DIM=2))  ! Sum along the second dimension (tiles)
