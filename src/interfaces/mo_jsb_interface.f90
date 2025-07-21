@@ -652,8 +652,6 @@ CONTAINS
     IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
       CALL read_land_use_data(model_id, current_datetime)   !Mingyue Zhang add options
     ENDIF
-      CALL read_land_use_data(model_id, current_datetime)
-    END IF
 
 #ifndef __NO_QUINCY__
     IF (model%config%model_scheme == MODEL_QUINCY .AND. model%config%qmodel_id == QLAND) THEN
