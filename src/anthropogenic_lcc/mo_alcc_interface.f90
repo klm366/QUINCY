@@ -96,10 +96,10 @@ CONTAINS
   !
   SUBROUTINE update_alcc(tile, options)
 
-    USE mo_kind,             ONLY: wp, dp 
+    USE mo_kind,              ONLY: wp, dp 
     USE mo_util,              ONLY: one_of
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, get_year, get_year_length
-    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, min_daily_cf_change, min_annual_cf_change, max_tolerated_cf_mismatch
+    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, min_daily_cf_change, min_annual_cf_change ! max_tolerated_cf_mismatch !Mingyue comment out
     USE mo_jsb_lcc,           ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc, transfer_active_to_passive_onChunk
     USE mo_nlcc_process,      ONLY: fract_small
 
