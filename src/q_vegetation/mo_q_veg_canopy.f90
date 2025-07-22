@@ -112,11 +112,11 @@ CONTAINS
     REAL(wp),         INTENT(inout)           :: ppfd_sunlit_cl(:,:)   !< absorbed Photosynthetically Active Photon Flux Density on sunlit leafes (average over time)
     REAL(wp),         INTENT(inout)           :: ppfd_shaded_cl(:,:)   !< absorbed Photosynthetically Active Photon Flux Density on shaded leafes (average over time)
     REAL(wp),         INTENT(inout)           :: fleaf_sunlit_cl(:,:)  !< fraction of sunlit leaves (average over time)
-    REAL(wp),         INTENT(inout)           :: fn_rub_cl(:,:)        !< fraction of N in Rubisco
-    REAL(wp),         INTENT(inout)           :: fn_et_cl(:,:)         !< fraction of N in Electron Transport
-    REAL(wp),         INTENT(inout)           :: fn_pepc_cl(:,:)       !< fraction of N in PepC
+    REAL(wp),         INTENT(out)             :: fn_rub_cl(:,:)        !< fraction of N in Rubisco
+    REAL(wp),         INTENT(out)             :: fn_et_cl(:,:)         !< fraction of N in Electron Transport
+    REAL(wp),         INTENT(out)             :: fn_pepc_cl(:,:)       !< fraction of N in PepC
     REAL(wp),         INTENT(inout)           :: fn_chl_cl(:,:)        !< fraction of N in Chloroplast
-    REAL(wp),         INTENT(inout)           :: fn_oth_cl(:,:)        !< fraction of N not associated with PS
+    REAL(wp),         INTENT(out)             :: fn_oth_cl(:,:)        !< fraction of N not associated with PS
     REAL(wp),         INTENT(out)             :: lai_cl(:,:)           !< LAI of canopy layer
     REAL(wp),         INTENT(out)             :: cumm_lai_cl(:,:)      !< cummlative LAI above canopy layer
     REAL(wp),         INTENT(out)             :: leaf_nitrogen_cl(:,:) !< total N in canopy layer (mmol N/m2)
@@ -1097,11 +1097,11 @@ CONTAINS
                             ppfd_sunlit_cl          = loc_ppfd_sunlit_cl(:,:)     , & ! inout
                             ppfd_shaded_cl          = loc_ppfd_shaded_cl(:,:)     , &
                             fleaf_sunlit_cl         = loc_fleaf_sunlit_cl(:,:)    , &
-                            fn_rub_cl               = fn_rub_new_cl(:,:)          , &
+                            fn_rub_cl               = fn_rub_new_cl(:,:)          , & ! out
                             fn_et_cl                = fn_et_new_cl(:,:)           , &
                             fn_pepc_cl              = fn_pepc_new_cl(:,:)         , &
-                            fn_chl_cl               = fn_chl_new_cl(:,:)          , &
-                            fn_oth_cl               = fn_oth_new_cl(:,:)          , & ! inout
+                            fn_chl_cl               = fn_chl_new_cl(:,:)          , & ! inout (in case of optimality, else out)
+                            fn_oth_cl               = fn_oth_new_cl(:,:)          , & ! out
                             lai_cl                  = lai_new_cl(:,:)             , & ! out
                             cumm_lai_cl             = cumm_lai_new_cl(:,:)        , & ! out
                             leaf_nitrogen_cl        = leaf_nitrogen_new_cl(:,:)   , & ! out

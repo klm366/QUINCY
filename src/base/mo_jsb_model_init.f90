@@ -384,7 +384,10 @@ CONTAINS
         CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
       ENDIF
 
-      !-- science
+      IF (is_time_restart(get_time_start())) THEN
+        !-- derive plant characteristics from restart variables
+        CALL model%Queue_task(VEG_, "plant_characteristics")
+      END IF
 
       ! ------------------------ Any tasks that might change the land cover need to come first in the timestep
       !
