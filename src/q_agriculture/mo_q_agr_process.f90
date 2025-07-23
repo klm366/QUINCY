@@ -25,7 +25,7 @@ MODULE mo_q_agr_process
   PRIVATE
   PUBLIC :: calc_crop_phenology, calc_planting_flux, set_crop_n_fixation_status
   PUBLIC :: update_crop_growth_phase, calc_crop_allocation_factors, calc_fertiliser_application
-  PUBLIC :: calc_crop_harvest_fraction
+  PUBLIC :: calc_crop_harvest_fraction, calc_crop_leaf_mass_change_canopy_mode
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_agr_process'
 
@@ -148,6 +148,7 @@ MODULE mo_q_agr_process
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_crop_phenology'
     ! ----------------------------------------------------------------------------------------------------- !
 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(ix_ct, growing_season_old, hlp1)
     DO ic = 1,nc
       !>  0.9 memorise old growing season state, and update last year's number of growing season if now is
       !>      a new year
@@ -229,8 +230,8 @@ MODULE mo_q_agr_process
         nd_dormance(ic) = 0.0_wp
       END IF
 
-   END DO
-
+    END DO
+    !$ACC END PARALLEL LOOP
   END SUBROUTINE calc_crop_phenology
 
   !-----------------------------------------------------------------------------------------------------
@@ -342,6 +343,7 @@ MODULE mo_q_agr_process
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_crop_growth_phase'
     ! ----------------------------------------------------------------------------------------------------- !
 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(ix_ct, gdd_mat)
     DO ic = 1,nc
 
       !> 0.9  cropindex and GDD requirement for maturity
@@ -408,7 +410,7 @@ MODULE mo_q_agr_process
       END IF
 
     END DO
-
+    !$ACC END PARALLEL LOOP
   END SUBROUTINE update_crop_growth_phase
 
   !-----------------------------------------------------------------------------------------------------
@@ -454,6 +456,7 @@ MODULE mo_q_agr_process
 
     ! ----------------------------------------------------------------------------------------------------- !
 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(ix_ct, gdd_mat, heat_index, fheat_index, hlp1)
     DO ic = 1,nc
 
       !> 0.9  crop type index and other helper variables
@@ -503,7 +506,7 @@ MODULE mo_q_agr_process
       END IF
 
     END DO
-
+    !$ACC END PARALLEL LOOP
   END SUBROUTINE calc_crop_allocation_factors
 
   !-----------------------------------------------------------------------------------------------------
@@ -553,6 +556,7 @@ MODULE mo_q_agr_process
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_fertiliser_application'
     ! ----------------------------------------------------------------------------------------------------- !
 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(is_fertiliser_day, hlp1)
     DO ic = 1,nc
       !> 1.0 determine if today is a fertiliser day (given that this is a FLOOR, this is true for 24h)
       !>     the first application day is forced to be the first day after planting to avoid fertilisation
@@ -581,6 +585,7 @@ MODULE mo_q_agr_process
         fertiliser_po4(ic) = hlp1 * frac_fertil_po4
       END IF
     END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE calc_fertiliser_application
 
@@ -627,6 +632,105 @@ MODULE mo_q_agr_process
     END IF
 
   END FUNCTION calc_crop_harvest_fraction
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task to update_cropland_dynamics
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate leaf growth and litterfall required to simulate LAI change depending on current
+  !! phenological state in QCANOPY mode (i.e. if only fast biogeophysical processes are calculated)
+  !!
+  !!   Input:
+  !!     (1) crop_growth_phase, GDD, leaf carbon pool
+  !!
+  !!   Output: leaf carbon, nitrogen and phosphorus growth and litter fall
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE calc_crop_leaf_mass_change_canopy_mode(   &
+    & nc                            , &
+    & dtime                         , &
+    & lctlib_sla                    , &
+    & lctlib_cn_leaf                , &
+    & lctlib_np_leaf                , &
+    & crop_type_index, &
+    & crop_growth_phase, &
+    & gdd, &
+    & gdd_mavg, &
+    & veg_pool_leaf_carbon          , &
+    & veg_growth_leaf_carbon        , &
+    & veg_growth_leaf_nitrogen      , &
+    & veg_growth_leaf_phosphorus    , &
+    & veg_litterfall_leaf_carbon    , &
+    & veg_litterfall_leaf_nitrogen  , &
+    & veg_litterfall_leaf_phosphorus)
+
+    USE mo_jsb_math_constants,            ONLY: one_day,one_year
+    USE mo_q_agr_constants,               ONLY: cttab_fract_gdd_mat_gp2to3, cttab_lai_max, max_harvesting_rate, &
+      &                                         canopy_mode_correction_factor, &
+      &                                         ix_planting, ix_emergence, ix_grainfilling, ix_harvest
+    !------------------------------------------------------------------------------------------------------ !
+    INTEGER,      INTENT(in)    :: nc                                !< dimensions
+    REAL(wp),     INTENT(in)    :: dtime                             !< timestep length
+    REAL(wp),     INTENT(in)    :: lctlib_sla                        !< lctlib parameter
+    REAL(wp),     INTENT(in)    :: lctlib_cn_leaf                    !< lctlib parameter
+    REAL(wp),     INTENT(in)    :: lctlib_np_leaf                    !< lctlib parameter
+    REAL(wp),     INTENT(in)    :: crop_type_index(:)                !< index of crop-type occupying this tile
+    REAL(wp),     INTENT(in)    :: crop_growth_phase(:)              !< current crop growth phase
+    REAL(wp),     INTENT(in)    :: gdd(:)                            !< current GDD (degC days)
+    REAL(wp),     INTENT(in)    :: gdd_mavg(:)                       !< long-term average of GDD (degC days)
+    REAL(wp),     INTENT(in)    :: veg_pool_leaf_carbon(:)           !< the plant's leaf carbon pool (mol/m2)
+    REAL(wp),     INTENT(inout) :: veg_growth_leaf_carbon(:)         !< the plant's current leaf growth rate (mol/time step)
+    REAL(wp),     INTENT(inout) :: veg_growth_leaf_nitrogen(:)       !< the plant's current leaf growth rate (mol/time step)
+    REAL(wp),     INTENT(inout) :: veg_growth_leaf_phosphorus(:)     !< the plant's current leaf growth rate (mol/time step)
+    REAL(wp),     INTENT(inout) :: veg_litterfall_leaf_carbon(:)     !< the plant's current litter fall rate (mol/time step)
+    REAL(wp),     INTENT(inout) :: veg_litterfall_leaf_nitrogen(:)   !< the plant's current litter fall rate (mol/time step)
+    REAL(wp),     INTENT(inout) :: veg_litterfall_leaf_phosphorus(:) !< the plant's current litter fall rate (mol/time step)
+    !------------------------------------------------------------------------------------------------------ !
+    INTEGER                     :: ic                                !< loop over point of the chunk
+    INTEGER                     :: ix_ct                             !< crop type index
+    REAL(wp)                    :: heat_index,fheat_index,lai_max    !< helper variables
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_crop_leaf_mass_change_canopy_mode'
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    DO ic = 1, nc
+      !>
+      !> 0.9  crop type index
+      !>
+      ix_ct = INT(crop_type_index(ic))
+      !> adjust LAI max from CTTAB maximum (with dynamic carbon) to calibrated value
+      lai_max = canopy_mode_correction_factor * cttab_lai_max(ix_ct)
+
+      !> 1.0 update leaf growth and/or litter fall based on crop growth phase
+      SELECT CASE (INT(crop_growth_phase(ic)))
+        !> 1.1  when the crop is growing, add leaves to meet target LAI
+        !>
+        CASE (ix_planting, ix_emergence, ix_grainfilling )
+          ! Heat index (defined as the fraction of GDD for maturity that induces grain filling)
+          heat_index = cttab_fract_gdd_mat_gp2to3(ix_ct) * get_gdd_mat(ix_ct,gdd_mavg(ic))
+          ! Normalised heat index
+          fheat_index = MIN(gdd(ic) / heat_index, 1._wp)
+          veg_growth_leaf_carbon(ic) = MAX(fheat_index * lai_max / lctlib_sla &
+                                           - veg_pool_leaf_carbon(ic),0.0_wp)
+          ! update growth and litterfall of leaf N:P pools
+          veg_growth_leaf_nitrogen(ic) = veg_growth_leaf_carbon(ic) / lctlib_cn_leaf
+          veg_growth_leaf_phosphorus(ic) = veg_growth_leaf_nitrogen(ic) / lctlib_np_leaf
+
+        !> 1.1  when the crop is harvested, remove leaves to meet target LAI
+        !>
+        CASE (ix_harvest)
+          veg_litterfall_leaf_carbon(ic) = MIN(veg_pool_leaf_carbon(ic), &
+              &       lai_max/lctlib_sla * max_harvesting_rate * dtime / one_day)
+          ! update growth and litterfall of leaf N:P pools
+          veg_litterfall_leaf_nitrogen(ic) = veg_litterfall_leaf_carbon(ic) / lctlib_cn_leaf
+          veg_litterfall_leaf_phosphorus(ic) = veg_litterfall_leaf_nitrogen(ic) / lctlib_np_leaf
+
+        CASE DEFAULT ! nothing to do, wait for reintialisation by crop phenology routine
+
+      END SELECT
+
+    END DO
+
+  END SUBROUTINE calc_crop_leaf_mass_change_canopy_mode
 
 #endif
 END MODULE mo_q_agr_process

@@ -847,7 +847,7 @@ CONTAINS
           s_star(ic) = 280._wp * t2s_conv(ic)
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
-          CALL surface_temp_implicit( dtime, alpha,             & ! in
+          CALL surface_temp_implicit(alpha, dtime,                & ! in
             & t2s_conv(ic),                                       & ! in
             & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
             & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
@@ -894,7 +894,7 @@ CONTAINS
           s_star(ic) = 280._wp * t2s_conv(ic)
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
-          CALL surface_temp_implicit( dtime, alpha,             & ! in
+          CALL surface_temp_implicit(alpha, dtime,                & ! in
             & t2s_conv(ic),                                       & ! in
             & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
             & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
@@ -1213,84 +1213,107 @@ CONTAINS
 
   END SUBROUTINE update_surface_temperature_tmx
 
-
-  SUBROUTINE surface_temp_implicit(alpha, dtime,       &
-    &            pcp,                                  &
-    &            pescoe, pfscoe, peqcoe, pfqcoe,       &
-    &            psold, pqsold, pdqsold,               &
-    &            pnetrad, pgrdfl,                      &
-    &            pcfh, pcair, pcsat, pfracsu, pgrdcap, &
-    &            psnew)
+  !> Updates surface dry static energy using an implicit surface energy balance scheme
+  !>
+  SUBROUTINE surface_temp_implicit(                     &
+    & alpha, dtime, heat_capacity,                      &
+    & t_acoef, t_bcoef, q_acoef, q_bcoef,               &
+    & s_old, qsat_old, dqsat_dT,                        &
+    & net_radiation, ground_heat_flux, heat_trans_coef, &
+    & q_air, q_sat,                                     &
+    & snow_fraction, ground_heat_capacity,              &
+    & s_new)
 
     !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: &
-      !& cpd, &
-      !& cpvd1, &
-      & zemiss_def, &
-      & stbo, &
-      & alv,  &
-      & als
+      & zemiss_def, &  ! Default surface emissivity [-]
+      & stbo,       &  ! Stefan-Boltzmann constant [W m-2 K-4]
+      & alv,        &  ! Latent heat of vaporization [J kg-1]
+      & als            ! Latent heat of sublimation [J kg-1]
 
-    REAL(wp), INTENT(in)    :: alpha
-    REAL(wp), INTENT(in)    :: dtime
-    ! REAL(wp), INTENT(in)    :: pcp(:), pfscoe(:), pescoe(:), pfqcoe(:), peqcoe(:)
-    ! REAL(wp), INTENT(in)    :: psold(:), pqsold(:), pdqsold(:)
-    ! REAL(wp), INTENT(in)    :: pnetrad(:), pgrdfl(:)
-    ! REAL(wp), INTENT(in)    :: pcfh(:), pcair(:), pcsat(:), pfracsu(:)
-    ! REAL(wp), INTENT(in)    :: pgrdcap(:)
-    ! REAL(wp), INTENT(out)   :: psnew(:)
-    REAL(wp), INTENT(in)    :: pcp, pfscoe, pescoe, pfqcoe, peqcoe
-    REAL(wp), INTENT(in)    :: psold, pqsold, pdqsold
-    REAL(wp), INTENT(in)    :: pnetrad, pgrdfl
-    REAL(wp), INTENT(in)    :: pcfh, pcair, pcsat, pfracsu
-    REAL(wp), INTENT(in)    :: pgrdcap
-    REAL(wp), INTENT(out)   :: psnew
-        !
-    REAL(wp) :: zcolin, zcohfl, zcoind, zicp, zca, zcs
-    REAL(wp) :: pdt
-    !INTEGER :: nc, ic
-    !REAL(wp) :: pc16
+    REAL(wp), INTENT(in)  :: alpha                !< Implicit scheme factor []
+    REAL(wp), INTENT(in)  :: dtime                !< Timestep length [s]
+    REAL(wp), INTENT(in)  :: heat_capacity        !< Specific heat capacity at surface [J kg-1 K-1]
+    REAL(wp), INTENT(in)  :: t_acoef              !< A coefficient for temperature
+    REAL(wp), INTENT(in)  :: t_bcoef              !< B coefficient for temperature
+    REAL(wp), INTENT(in)  :: q_acoef              !< A coefficient for moisture
+    REAL(wp), INTENT(in)  :: q_bcoef              !< B coefficient for moisture
+    REAL(wp), INTENT(in)  :: s_old                !< Previous surface dry static energy [J kg-1]
+    REAL(wp), INTENT(in)  :: qsat_old             !< Previous surface specific humidity [kg kg-1]
+    REAL(wp), INTENT(in)  :: dqsat_dT             !< Change in qsat with temperature [K-1]
+    REAL(wp), INTENT(in)  :: net_radiation        !< Net radiation [W m-2]
+    REAL(wp), INTENT(in)  :: ground_heat_flux     !< Ground heat flux [W m-2]
+    REAL(wp), INTENT(in)  :: heat_trans_coef      !< Heat transfer coefficient [W m-2 K-1]
+    REAL(wp), INTENT(in)  :: q_air                !< Air specific humidity [kg kg-1]
+    REAL(wp), INTENT(in)  :: q_sat                !< Surface saturation specific humidity [kg kg-1]
+    REAL(wp), INTENT(in)  :: snow_fraction        !< Snow cover fraction []
+    REAL(wp), INTENT(in)  :: ground_heat_capacity !< Ground heat capacity [J m-2 K-1]
+    REAL(wp), INTENT(out) :: s_new                !< New surface dry static energy [J kg-1]
 
-    ! nc = SIZE(psold)
+    ! Local variables
+    REAL(wp) :: dt                     !< Effective timestep = alpha * dtime
+    REAL(wp) :: cp_inv                 !< 1/cp for convenience
+    REAL(wp) :: latent_heat            !< Effective latent heat (snow-weighted vap/subl)
+    REAL(wp) :: latent_heat_air        !< Latent heat for air layer
+    REAL(wp) :: thermal_response_term  !< Energy needed to change temperature including radiation feedback
+    REAL(wp) :: sensible_heat_term     !< Sensible heat flux contribution
+    REAL(wp) :: energy_flux_term       !< Total energy fluxes
 
-    pdt     = alpha * dtime
-    !pc16    = cpd * cpvd1
+    !> The surface energy balance equation in terms of dry static energy s = cp*T is
+    !> ```
+    !> C * ds/dt = (C / cp) * dT/dt = R_net + H + LE + G
+    !> ```
+    !> where:
+    !>
+    !> - R_net is net radiation
+    !> - H is sensible heat flux
+    !> - LE is latent heat flux
+    !> - G is ground heat flux
+    !> - C is the surface (top soil layer) heat capacity
+    !>
+    !> The implicit scheme solves this by linearizing the fluxes around the previous state
+    !> and solving the resulting system for s(t+dt). The equations follow the recipe provided
+    !> by [Schulz et al. (2001)](https://doi.org/10.1175/1520-0450(2001)040<0642:OTLSAC>2.0.CO;2)
 
-    ! DO ic=1,nc
-      ! zicp = 1._wp / pcp(ic)
-      ! !
-      ! zca = als * pfracsu(ic) +  alv * (pcair(ic) - pfracsu(ic))
-      ! zcs = als * pfracsu(ic) +  alv * (pcsat(ic) - pfracsu(ic))
-      ! !
-      ! zcolin = pgrdcap(ic)*zicp +                                                      &
-      !   &      pdt * (zicp * 4._wp * zemiss_def * stbo * ((zicp * psold(ic))**3)  -    &
-      !   &      pcfh(ic) * (zca * peqcoe(ic) - zcs) *                                    &
-      !   &      zicp * pdqsold(ic))
-      ! !
-      ! zcohfl = -pdt * pcfh(ic) * (pescoe(ic) - 1._wp)
-      ! !
-      ! zcoind = pdt * (pnetrad(ic) + pcfh(ic) * pfscoe(ic) +  pcfh(ic) *                              &
-      !           &      ((zca * peqcoe(ic) - zcs) * pqsold(ic) + zca * pfqcoe(ic)) + pgrdfl(ic))
-      ! !
-      ! psnew(ic)  = (zcolin * psold(ic) + zcoind) / (zcolin + zcohfl)
-      zicp = 1._wp / pcp
-      !
-      zca = als * pfracsu +  alv * (pcair - pfracsu)
-      zcs = als * pfracsu +  alv * (pcsat - pfracsu)
-      !
-      zcolin = pgrdcap*zicp +                                                      &
-        &      pdt * (zicp * 4._wp * zemiss_def * stbo * ((zicp * psold)**3)  -    &
-        &      pcfh * (zca * peqcoe - zcs) *                                    &
-        &      zicp * pdqsold)
-      !
-      zcohfl = -pdt * pcfh * (pescoe - 1._wp)
-      !
-      zcoind = pdt * (pnetrad + pcfh * pfscoe +  pcfh *                              &
-                &      ((zca * peqcoe - zcs) * pqsold + zca * pfqcoe) + pgrdfl)
-      !
-      psnew  = (zcolin * psold + zcoind) / (zcolin + zcohfl)
-    ! END DO
+    ! Calculate effective timestep
+    dt = alpha * dtime
+
+    ! For convenience in equations
+    cp_inv = 1.0_wp / heat_capacity
+
+    ! Get effective latent heat based on snow fraction
+    latent_heat     = als * snow_fraction + alv * (q_sat - snow_fraction)
+    latent_heat_air = als * snow_fraction + alv * (q_air - snow_fraction)
+
+    ! Calculate thermal inertia term including radiation feedback
+    thermal_response_term = &
+      ! Heat storage term
+      & ground_heat_capacity * cp_inv + ( &
+      ! Thermal radiation feedback
+      & cp_inv * 4.0_wp * zemiss_def * stbo * ((cp_inv * s_old)**3) - &
+      ! Latent heat feedback
+      & heat_trans_coef * (latent_heat_air * q_acoef - latent_heat) * &
+      & cp_inv * dqsat_dT ) * dt
+
+    ! Calculate sensible heat flux term
+    sensible_heat_term = -dt * heat_trans_coef * (t_acoef - 1.0_wp)
+
+    ! Calculate energy source terms
+    energy_flux_term = dt * ( &
+      ! Net radiation
+      & net_radiation + &
+      ! Sensible heat flux
+      & heat_trans_coef * t_bcoef + &
+      ! Latent heat flux
+      & heat_trans_coef * ((latent_heat_air * q_acoef - latent_heat) * &
+      & qsat_old + latent_heat_air * q_bcoef) + &
+      ! Ground heat flux
+      & ground_heat_flux)
+
+    ! Solve for new dry static energy
+    s_new = (thermal_response_term * s_old + energy_flux_term) / &
+          & (thermal_response_term + sensible_heat_term)
 
   END SUBROUTINE surface_temp_implicit
 
