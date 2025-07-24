@@ -620,12 +620,14 @@ CONTAINS
 
         ! Determine the fraction of flow from tile to sibling as:
         ! Ratio of flow lag between tile and sibling and effective lag factor for tile
-        WHERE((fract_macro_hfp_srf(:,:) == 0._wp) .AND. (fract_micro_hfp_srf(:,:) == 0._wp))
+        WHERE((fract_macro_hfp_srf(:,:) == 0._wp) .AND. (fract_micro_hfp_srf(:,:) == 0._wp) .OR. &
+          & ABS(fact_lag_srf(:,:)) < EPSILON(1._wp))
           fract_latflow_srf_ct(:,lex_ids,:) = 0.0
         ELSE WHERE
           fract_latflow_srf_ct(:,lex_ids,:) = fact_lag_srf_ct(:,lex_ids,:) / fact_lag_srf(:,:)
         END WHERE
-        WHERE((fract_macro_hfp_blg(:,:) == 0._wp) .AND. (fract_micro_hfp_blg(:,:) == 0._wp))
+        WHERE((fract_macro_hfp_blg(:,:) == 0._wp) .AND. (fract_micro_hfp_blg(:,:) == 0._wp) .OR. &
+          & ABS(fact_lag_blg(:,:)) < EPSILON(1._wp))
           fract_latflow_blg_ct(:,lex_ids,:) = 0.0
         ELSE WHERE
           fract_latflow_blg_ct(:,lex_ids,:) = fact_lag_blg_ct(:,lex_ids,:) / fact_lag_blg(:,:)
