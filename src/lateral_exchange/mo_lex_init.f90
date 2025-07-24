@@ -18,6 +18,7 @@ MODULE mo_lex_init
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, finish
   USE mo_jsb_control,        ONLY: debug_on
+  USE mo_util,               ONLY: int2string
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
@@ -72,8 +73,6 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory_tile(HYDRO_, sibl)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':lex_init'
-
     CLASS(t_jsb_tile_abstract), POINTER :: sibl,       & ! Sibling tile with LEX_ process running
       &                                    dummy         ! Dummy tile
     TYPE(t_jsb_model), POINTER :: model
@@ -101,6 +100,8 @@ CONTAINS
       &        cmx_micro_hfp_blg(:,:), & !< base matrix for micro-scale connectivity via below-ground hydrological flow paths
       &        cmx_macro_hfp_srf(:,:), & !< base matrix for macro-scale connectivity via surface hydrological flow paths
       &        cmx_macro_hfp_blg(:,:)    !< base matrix for macro-scale connectivity via below-ground hydrological flow paths
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':lex_init'
 
     ! Pointers to variables in memory for tile
     dsl4jsb_Real2D_onDomain :: &
@@ -153,6 +154,10 @@ CONTAINS
       & fact_lag_srf_ct,       &
       & fact_lag_blg_ct
 
+    IF (.NOT. tile%Is_process_active(LEX_)) RETURN
+
+    IF (debug_on()) CALL message(routine, 'Initializing variables for lateral exchange on tile ' // &
+      & TRIM(tile%name) // ' (lex_id=' // TRIM(int2string(tile%lcts(1)%lex_id)) // ')')
 
     lex_idt = tile%lcts(1)%lex_id
     IF (lex_idt > 0) THEN
@@ -188,9 +193,6 @@ CONTAINS
       nsibl  = tile%parent_tile%Get_no_of_children()
       connecttiles => Get_vgrid('connecttiles')
       nconti = connecttiles%n_levels
-
-
-      IF (debug_on()) CALL message(routine, 'Initializing variables for lateral exchange')
 
       ALLOCATE(fract(nproma, nblks))
       ALLOCATE(fract_sibl(nproma, nblks))
