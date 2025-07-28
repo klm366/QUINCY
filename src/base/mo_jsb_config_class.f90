@@ -47,6 +47,7 @@ MODULE mo_jsb_config_class
 #ifndef __NO_QUINCY__
     ! Characteristics of bgc material in this model: flags specifying used elements and bookkeeping vector for elements used
     ! Note: no logical for carbon because we presuppose that it is always used!
+    LOGICAL                        :: force_c_isotopes      !< If c isotopes forcing should be used (else use atmland constant)
     LOGICAL                        :: include_nitrogen      !< If bgc materials contain nitrogen as element
     LOGICAL                        :: include_phosphorus    !< If bgc materials contain phosphorus as element
     LOGICAL                        :: include_carbon13      !< If bgc materials contain C13 as element
@@ -66,9 +67,6 @@ MODULE mo_jsb_config_class
 #endif
 
     ! quincy @TODO temporary solution for model%config%options
-    LOGICAL           :: flag_stand_harvest
-    INTEGER           :: stand_replacing_year
-    LOGICAL           :: l_do_stand_replacing_harvest
     LOGICAL           :: l_transient_spinup
     ! quincy - end
     LOGICAL                        :: init_from_ifs    ! Initialize from IFS analysis
@@ -139,6 +137,7 @@ CONTAINS
     CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)
     LOGICAL                       :: relative_fractions_in_file
 #ifndef __NO_QUINCY__
+    LOGICAL :: force_c_isotopes           !< use c isotopes forcing
     LOGICAL :: include_nitrogen           !< element variables in bgc_material (infrastructure)
     LOGICAL :: include_phosphorus         !< element variables in bgc_material (infrastructure)
     LOGICAL :: include_carbon13           !< element variables in bgc_material (infrastructure)
@@ -167,6 +166,7 @@ CONTAINS
       output_tiles, &
       relative_fractions_in_file, &
 #ifndef __NO_QUINCY__
+      force_c_isotopes, &
       include_nitrogen, &
       include_phosphorus, &
       include_carbon13, &
@@ -216,6 +216,7 @@ CONTAINS
     output_tiles(:)            = ''
     relative_fractions_in_file = .TRUE.
 #ifndef __NO_QUINCY__
+    force_c_isotopes           = .TRUE.
     include_nitrogen           = .TRUE.
     include_phosphorus         = .TRUE.
     include_carbon13           = .TRUE.
@@ -277,6 +278,7 @@ CONTAINS
     model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
 #ifndef __NO_QUINCY__
+    model_config%force_c_isotopes           = force_c_isotopes
     ! organise elements
     model_config%include_nitrogen           = include_nitrogen
     model_config%include_phosphorus         = include_phosphorus
@@ -324,9 +326,6 @@ CONTAINS
 #endif
 
     ! quincy - temporary solution @TODO
-    model_config%flag_stand_harvest           = .FALSE.
-    model_config%stand_replacing_year         = 1500
-    model_config%l_do_stand_replacing_harvest = .FALSE.
     model_config%l_transient_spinup           = .FALSE.
     ! quincy - end
     model_config%init_from_ifs              = init_from_ifs

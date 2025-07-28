@@ -15,9 +15,9 @@ MODULE mo_hd_reservoir_cascade
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,                   ONLY: wp
-
-  USE mo_jsb_time,              ONLY: get_day_length
+  USE mo_kind,        ONLY: wp
+  USE mo_jsb_time,    ONLY: get_day_length
+  USE mo_jsb_control, ONLY: acc_stream
 
   IMPLICIT NONE
   PRIVATE
@@ -29,7 +29,7 @@ MODULE mo_hd_reservoir_cascade
 CONTAINS
 
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE reservoir_cascade(inflow, nc, steplen, retention, nres, res_content, outflow)
+  SUBROUTINE reservoir_cascade(inflow, nc, dtime, retention, nres, res_content, outflow)
   !------------------------------------------------------------------------------------------------
   ! routine based on jsbach3 routine kasglob by Stefan Hagemann
   !   cascade of n equal linear reservoirs.
@@ -37,7 +37,7 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
 
     REAL(wp),  INTENT(in)    :: inflow(:)        !< inflow to the cascade [m3/s]
-    REAL(wp),  INTENT(in)    :: steplen          !< time step [s]
+    REAL(wp),  INTENT(in)    :: dtime          !< time step [s]
     INTEGER,   INTENT(in)    :: nc               !< current block size
     REAL(wp),  INTENT(in)    :: retention(:)     !< retention parameter (residence time of water in the reservoir) [day]
     REAL(wp),  INTENT(in)    :: nres(:)          !< number of reservoirs
@@ -60,31 +60,29 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':reservoir_cascade'
 
     day_length = get_day_length()
+    nres_max = SIZE(res_content(1,:))    ! maximum number of reservoirs = 'vertical' dimension of reservoir cascade
 
-    !$ACC DATA CREATE(nres_int, akdiv, inflow_cascade)
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(amod)
+    !$ACC PARALLEL DEFAULT(PRESENT) &
+    !$ACC   CREATE(nres_int, akdiv, inflow_cascade) &
+    !$ACC   ASYNC(acc_stream)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(amod)
     DO ic = 1, nc
       IF (nres(ic) > 0._wp) THEN ! land - without internal drainage cells
         ! unit conversions: [day] -> [seconds]
         amod  = retention(ic) * day_length
-        akdiv(ic) = steplen / (amod + steplen)
+        akdiv(ic) = dtime / (amod + dtime)
       ELSE                       ! ocean and lakes
         akdiv(ic) = 0._wp
       END IF
       ! conversions: [m3/s] -> [m3]
-      inflow_cascade(ic) = inflow(ic) * steplen
+      inflow_cascade(ic) = inflow(ic) * dtime
       !
       nres_int(ic) = NINT(nres(ic))
     END DO
-    !$ACC END PARALLEL LOOP
 
-    nres_max = SIZE(res_content(1,:))    ! maximum number of reservoirs = 'vertical' dimension of reservoir cascade
-
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO res = 1, nres_max
-      !$ACC LOOP GANG VECTOR
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         IF (res <= nres_int(ic)) THEN
           res_content(ic,res) = res_content(ic,res) + inflow_cascade(ic)
@@ -95,20 +93,14 @@ CONTAINS
         END IF
         inflow_cascade(ic) = outflow(ic)
       END DO
-      !$ACC END LOOP
     END DO
-    !$ACC END LOOP
-    !$ACC END PARALLEL
 
     ! conversions: [m3] -> [m3/s]
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
-      outflow(ic) = outflow(ic) / steplen
+      outflow(ic) = outflow(ic) / dtime
     END DO
-    !$ACC END PARALLEL LOOP
-
-    !$ACC END DATA
-    !$ACC WAIT(1)
+    !$ACC END PARALLEL
 
   END SUBROUTINE reservoir_cascade
 

@@ -25,9 +25,12 @@ MODULE mo_q_pheno_parameters
   PUBLIC
 
   REAL(wp), SAVE :: &
-    & gdd_t_air_threshold = def_parameters      !< temperature threshold for the accumulation of growing degree days [deg K]
+    & gdd_t_air_threshold = def_parameters, &   !< temperature threshold for the accumulation of growing degree days [deg K]
+    & k_leafon_canopy = def_parameters          !< scaling coefficient for leaf development rate in CANOPY-only model
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_pheno_parameters'
+
+  !$ACC DECLARE CREATE(gdd_t_air_threshold, k_leafon_canopy)
 
 CONTAINS
 
@@ -42,6 +45,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_q_pheno_parameters'
 
     gdd_t_air_threshold       = 5.0_wp + Tzero              !< citation or source ....  [ ? ]
+    k_leafon_canopy           = 0.2_wp
+
+    !$ACC UPDATE DEVICE(gdd_t_air_threshold, k_leafon_canopy) ASYNC(1)
+
   END SUBROUTINE init_q_pheno_parameters
 
 #endif

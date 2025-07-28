@@ -47,7 +47,8 @@ MODULE mo_spq_constants
     fact_water_supercooled      !< factor to modify the amount of liquid water at soil temperatures below Tzero (supercooled water)  [-]
 
  REAL(wp), SAVE :: &
-    height_wind                 !<
+  &  height_wind, &             !< height at which wind is measured (external forcing) [m]
+  &  height_humidity            !< height at which humidity is measured (external forcing) [m]
 
  ! constants in pedo-transfer functions according to Saxton & Rawls 2006
  REAL(wp) :: &
@@ -102,6 +103,8 @@ MODULE mo_spq_constants
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_spq_constants'
 
+  !$ACC DECLARE CREATE(w_snow_min)
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
@@ -132,7 +135,8 @@ CONTAINS
     percolation_up_max      = -0.75_wp      !< pure assumption
     percolation_down_max    = 0.75_wp       !< pure assumption
     frac_w_lat_loss_max     = 0.75_wp       !< simply following percolation_down_max
-    height_wind             = 10.0_wp       ! JSBACH ?
+    height_wind             = 10.0_wp       !< JSBACH ?
+    height_humidity         = 2.0_wp        !< JSBACH ?
     latent_heat_fusion      = 333550.0_wp   ! chemistry textbook                 [J / kg]
     w_density               = 998.0_wp      ! water density at 20 degrees C (e.g. Tanaka et al., 2001)                 [kg / m3]
     ice_density             = 916.7_wp      ! density of ice, textbook value                                           [kg / m3]
@@ -186,6 +190,8 @@ CONTAINS
     ! surface energy balance
     t_soil_max_increase           = 5.0_wp        !< best guess (https://gitlab.dkrz.de/jsbach/jsbach/-/issues/190#note_204075)
     t_soil_max_decrease           = -5.0_wp       !< best guess (https://gitlab.dkrz.de/jsbach/jsbach/-/issues/190#note_204075)
+
+  !$ACC UPDATE DEVICE(w_snow_min) ASYNC(1)
 
   END SUBROUTINE init_spq_constants
 

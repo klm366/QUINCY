@@ -10,6 +10,7 @@ title: Authors
 - Erich Roeckner
 - Fabrice Lacroix
 - Freja Vamborg
+- Georgii Nerobelov
 - Jan Engel
 - Julia Nabel
 - Karolina Slominska-Durdasiak
@@ -17,9 +18,11 @@ title: Authors
 - Marvin Heidkamp
 - Melanie Thurner
 - Philipp de Vrese
+- Pinhsin Hu
 - Rainer Schneck
 - Reiner Schnur
 - Roland Wirth
+- Sergey Sukov
 - Silvia Caldararu
 - Soenke Zaehle
 - Stefan Hagemann

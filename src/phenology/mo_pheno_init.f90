@@ -26,8 +26,10 @@ MODULE mo_pheno_init
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,              ONLY: missval
 
-  dsl4jsb_Use_processes PHENO_
+  dsl4jsb_Use_processes PHENO_, HYDRO_, RAD_
   dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(RAD_)
   dsl4jsb_Use_memory(PHENO_)
 
   IMPLICIT NONE
@@ -44,6 +46,10 @@ MODULE mo_pheno_init
   END TYPE t_pheno_init_vars
 
   TYPE(t_pheno_init_vars) :: pheno_init_vars
+
+  dsl4jsb_Def_config(PHENO_)
+  dsl4jsb_Def_config(HYDRO_)
+  dsl4jsb_Def_config(RAD_)
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_init'
 
@@ -88,8 +94,6 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    dsl4jsb_Def_config(PHENO_)
-
     REAL(wp), POINTER ::  &
       & ptr_mon(:,:,:),   &
       & ptr_2D(:,:)
@@ -117,6 +121,8 @@ CONTAINS
     pheno_init_vars%fract_fpc_max(:,:)   = missval
 
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(RAD_)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting phenology init vars from ' &
       &                          //TRIM(dsl4jsb_Config(PHENO_)%bc_filename))
@@ -144,12 +150,14 @@ CONTAINS
     DEALLOCATE(ptr_mon)
 
     ! Forest fraction
-    ! @todo: only used for use_alb_veg_simple=.TRUE. and HYDRO_ init if l_organic=.TRUE.
-    IF (debug_on()) CALL message(TRIM(routine), 'reading forest_fract ...')
-    ptr_2D => input_file%Read_2d(      &
-      & variable_name='forest_fract',  &
-      & fill_array = pheno_init_vars%fract_forest)
-    ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+    IF (((dsl4jsb_Config(HYDRO_)%l_organic .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_socmap)) .OR. &
+      &   dsl4jsb_Config(RAD_)%use_alb_veg_simple) THEN
+      IF (debug_on()) CALL message(TRIM(routine), 'reading forest_fract ...')
+      ptr_2D => input_file%Read_2d(      &
+        & variable_name='forest_fract',  &
+        & fill_array = pheno_init_vars%fract_forest)
+      ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+    END IF
 
     CALL input_file%Close()
 
@@ -172,7 +180,6 @@ CONTAINS
 
     TYPE(t_jsb_model),       POINTER :: model
 
-    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc'
@@ -180,6 +187,8 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(RAD_)
     dsl4jsb_Get_memory(PHENO_)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Setting boundary conditions of pheno memory for tile '// &
@@ -198,10 +207,12 @@ CONTAINS
     !$ACC UPDATE DEVICE(dsl4jsb_memory(PHENO_)%fract_fpc_mon) ASYNC(1)
 
     ! Forest fraction
-    ! TODO: only used for use_alb_veg_simple=.TRUE. and HYDRO_ init if l_organic=.TRUE.
-    IF (debug_on()) CALL message(TRIM(routine), 'setting forest_fract ...')
-    dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = pheno_init_vars%fract_forest
-    !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest)) ASYNC(1)
+    IF (((dsl4jsb_Config(HYDRO_)%l_organic .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_socmap)) .OR. &
+      &   dsl4jsb_Config(RAD_)%use_alb_veg_simple) THEN
+      IF (debug_on()) CALL message(TRIM(routine), 'setting forest_fract ...')
+      dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = pheno_init_vars%fract_forest
+      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest)) ASYNC(1)
+    END IF
 
     ! Maximum foliage projected cover
     IF (debug_on()) CALL message(TRIM(routine), 'setting veg_ratio_max ...')
@@ -227,13 +238,14 @@ CONTAINS
       END IF
       !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction)) ASYNC(1)
     END IF
+    !$ACC WAIT(1)
 
   END SUBROUTINE pheno_init_bc
 
   SUBROUTINE pheno_init_ic(tile)
 
     USE mo_pheno_process, ONLY: get_foliage_projected_cover
-    USE mo_jsb_time,      ONLY: get_time_interpolation_weights
+    USE mo_jsb_time,      ONLY: cache_time_interpolation_weights, get_time_interpolation_weights
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -247,7 +259,6 @@ CONTAINS
       & lai_mon(:,:,:), &
       & fract_fpc_mon(:,:,:)
 
-    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
 
     REAL(wp) :: wgt1, wgt2
@@ -281,9 +292,12 @@ CONTAINS
     lai_mon       => dsl4jsb_memory(PHENO_)%lai_mon
     fract_fpc_mon => dsl4jsb_memory(PHENO_)%fract_fpc_mon
 
+    !$ACC DATA CREATE(wgt1, wgt2, nmw1, nmw2)
+
     ! Set initial leaf area index from climatology (read in pheno_init_bc)
+    CALL cache_time_interpolation_weights()
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, wgt2, nmw1, nmw2) GANG VECTOR ASYNC(1) COLLAPSE(2)
     DO ib=1,nblks
       DO ic=1,nc
         lai(ic,ib) = wgt1 * lai_mon(ic,ib,nmw1) + wgt2 * lai_mon(ic,ib,nmw2)
@@ -293,7 +307,7 @@ CONTAINS
 
     IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
         & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: general vegetation tile, no specific PFT
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, wgt2, nmw1, nmw2) GANG VECTOR ASYNC(1) COLLAPSE(2)
       DO ib=1,nblks
         DO ic=1,nc
           fract_fpc(ic,ib) = wgt1 * fract_fpc_mon(ic,ib,nmw1) + wgt2 * fract_fpc_mon(ic,ib,nmw2)
@@ -330,6 +344,8 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     END IF
+    !$ACC WAIT(1)
+    !$ACC END DATA
 
   END SUBROUTINE pheno_init_ic
 

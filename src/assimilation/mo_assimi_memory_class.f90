@@ -18,7 +18,6 @@ MODULE mo_assimi_memory_class
   USE mo_kind,                   ONLY: wp
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   IMPLICIT NONE
@@ -44,7 +43,6 @@ MODULE mo_assimi_memory_class
                                     ! [mol(co2) / (m^2(canopy ground) * s) ]  (mean value)
       dark_respiration,           & ! see above but here on tile area
       NPP_pot_rate_ca,            & ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) * s)]
-      seconds_year,               & ! seconds till beginning of the current year
       NPP_sum_year,               & ! Net primary production sum of the current year
       NPP_mean_5year,             & ! Net primary production running average for 5 years
       land_cover_class,           & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
@@ -120,7 +118,7 @@ CONTAINS
   ! ======================================================================================================= !
   !> initialize memory (variables) for the process: assimilation
   !>
-  SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
@@ -133,6 +131,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)    :: model_id
 
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
@@ -188,14 +187,6 @@ CONTAINS
     CALL mem%Add_var('npp_pot_rate_ca', mem%NPP_pot_rate_ca,                              &
       & hgrid, surface,                                                                   &
       & t_cf('NPP_pot_rate_ca', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_pot_rate_ca'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & output_level=BASIC,                                                               &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var('seconds_year', mem%seconds_year,                                    &
-      & hgrid, surface,                                                                   &
-      & t_cf('seconds_year', 'sum of seconds in year', 'time sum year'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=BASIC,                                                               &

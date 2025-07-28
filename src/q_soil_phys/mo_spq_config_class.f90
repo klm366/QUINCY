@@ -42,6 +42,7 @@ MODULE mo_spq_config_class
     REAL(wp)                    :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
     REAL(wp)                    :: soil_awc_prescribe, &
                                    soil_theta_prescribe
+    REAL(wp)                    :: elevation
     REAL(wp)                    :: soil_sand            !< soil sand proportion - site specific from forcing info file
     REAL(wp)                    :: soil_silt            !< soil silt proportion - site specific from forcing info file
     REAL(wp)                    :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
@@ -65,11 +66,7 @@ CONTAINS
   !! currently it does only: read parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_spq_config(config)
-#ifdef __QUINCY_STANDALONE__
-    USE mo_namelist,              ONLY: open_nml, POSITIONED, position_nml, close_nml
-#else
-    USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
-#endif
+    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
@@ -99,6 +96,7 @@ CONTAINS
                                    soil_depth
     REAL(wp)                    :: soil_awc_prescribe, &
                                    soil_theta_prescribe
+    REAL(wp)                    :: elevation
     REAL(wp)                    :: soil_sand       , &
                                    soil_silt       , &
                                    soil_clay
@@ -139,6 +137,7 @@ CONTAINS
                           soil_depth              , &
                           soil_awc_prescribe      , &
                           soil_theta_prescribe    , &
+                          elevation               , &
                           soil_sand               , &
                           soil_silt               , &
                           soil_clay               , &
@@ -178,6 +177,7 @@ CONTAINS
     soil_depth                    = 9.5_wp
     soil_awc_prescribe            = 300.0_wp
     soil_theta_prescribe          = 1.0_wp
+    elevation                     = 0.0_wp
     soil_sand                     = 0.3_wp
     soil_silt                     = 0.4_wp
     soil_clay                     = 0.3_wp
@@ -252,6 +252,7 @@ CONTAINS
     config%nsoil_water               = nsoil_water      ! depreciated feature, but needed for now, see ticket #521
     config%soil_awc_prescribe        = soil_awc_prescribe
     config%soil_theta_prescribe      = soil_theta_prescribe
+    config%elevation                 = elevation
     config%wsr_capacity              = wsr_capacity
     config%wsn_capacity              = wsn_capacity
     config%soil_depth                = soil_depth

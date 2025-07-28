@@ -44,16 +44,20 @@ if ! hash python3 2>/dev/null; then
 fi
 
 PYTHON_VERSION=3.10
-export UV_TOOL_DIR=./3rdparty/uv
-export UV=${UV_TOOL_DIR}/bin/uv
-export UV_TOOL_BIN_DIR=`pwd`/3rdparty/uv/bin
+export UV_TOOL_DIR=`pwd`/3rdparty/uv
+export UV_TOOL_BIN_DIR=${UV_TOOL_DIR}/bin
+export UV=${UV_TOOL_BIN_DIR}/uv
 export UV_LINK_MODE=symlink
 if [[ ! -f $UV ]]; then
   if [[ $verbose == true ]]; then
-    curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=${UV_TOOL_DIR} INSTALLER_NO_MODIFY_PATH=1 sh 
+    curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=${UV_TOOL_BIN_DIR} INSTALLER_NO_MODIFY_PATH=1 sh 
   else
-    ( curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=${UV_TOOL_DIR} INSTALLER_NO_MODIFY_PATH=1 sh ) &>/dev/null
+    ( curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=${UV_TOOL_BIN_DIR} INSTALLER_NO_MODIFY_PATH=1 sh ) &>/dev/null
   fi
+fi
+if [[ ! -f $UV ]]; then
+  echo "uv not found"
+  exit 1
 fi
 
 #${UV} python install 3.10

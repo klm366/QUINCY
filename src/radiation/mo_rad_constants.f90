@@ -36,6 +36,8 @@ MODULE mo_rad_constants
    & AlbedoSoilConstVis = 0.2_wp,          & ! Albedo constant alternatively usable for alb_vis_mineralsoil
    & AlbedoSoilConstNir = 0.2_wp,          & ! See above, for the nir range
                                 !
+   & albedo_vis_soil_initial = 0.15_wp,    & ! Initial value for soil albedo in the visual range
+   & albedo_nir_soil_initial = 0.3_wp,     & ! Initial value for soil albedo in the near range
    & SkyViewFactor      = 0.5_wp,          & ! Constant in calculating the sky view fractions (only to scale the e-function)
    & ZenithAngleFactor  = 2._wp,           & ! Factor in solar zenith angle dependence of snow albedo
                                 !                                 ! (the increase of snow albedo is the higher this factor

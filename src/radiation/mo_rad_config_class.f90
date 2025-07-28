@@ -76,7 +76,9 @@ CONTAINS
   !> read RAD_ namelist and init configuration parameters
   !>
   SUBROUTINE Init_rad_config(config)
-
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
     CLASS(t_rad_config), INTENT(inout) :: config
@@ -90,6 +92,8 @@ CONTAINS
     LOGICAL                     :: use_alb_soil_scheme
     LOGICAL                     :: use_alb_canopy
     REAL(wp)                    :: albedo_age_weight
+    INTEGER                     :: nspec                    !< number of spectral bands
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_spectral           !< vgrid for 3d var with spectral band
 
     NAMELIST /jsb_rad_nml/            &
          active,                      &
@@ -142,6 +146,23 @@ CONTAINS
     config%use_alb_soil_scheme       = use_alb_soil_scheme
     config%use_alb_canopy            = use_alb_canopy
     config%albedo_age_weight         = albedo_age_weight
+
+    !> Create vertical axis - spectral bands
+    !>   spectral bands of the light for RAD_ variables
+    !>
+#ifdef __QUINCY_STANDALONE__
+    ! number of spectal bands (3rd dimension of 'vgrid_spectral')
+    nspec = 2162
+    ! create vertical grid
+    vgrid_spectral  => new_vgrid('spectral_bands', ZAXIS_GENERIC, nspec, &
+                      longname='Number of spectral bands the light is divided into, for QUINCY radiation') !, &
+                      ! units=''  , &
+                      ! levels=   , &
+                      ! lbounds=  , &
+                      ! ubounds=  , &
+                      ! dz=       )
+    CALL register_vgrid(vgrid_spectral)
+#endif
 
   END SUBROUTINE Init_rad_config
 

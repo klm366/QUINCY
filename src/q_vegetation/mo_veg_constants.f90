@@ -138,8 +138,7 @@ MODULE mo_veg_constants
   REAL(wp), SAVE :: &
       min_lai                , & !< minimum LAI beyond which all leaves are shed
       target_lai_max         , & !< maximum LAI target for reserve use calculations
-      max_leaf_shedding_rate , & !< maximum rate of leaf shedding (1/days)
-      k_leafon_canopy            !< scaling coefficient for leaf on in CANOPY-only model
+      max_leaf_shedding_rate     !< maximum rate of leaf shedding (1/days)
 
   ! vegetation dynamics
   REAL(wp), SAVE :: &
@@ -151,7 +150,6 @@ MODULE mo_veg_constants
       k_est_temp                  , & !< parameter in the Weibull function controlling temperature-limited establishment
       lambda_est_moist            , & !< parameter in the Weibull function controlling moisture-limited establishment
       k_est_moist                 , & !< parameter in the Weibull function controlling moisture-limited establishment
-      wood_extraction_rate        , & !< fraction of wood removed from site after harvesting
       min_greff                   , & !< minimum growth efficiency (mol C / m2 (LAI) / yr)
       k2_mort_greff               , & !< scaling coefficient
       k3_mort_greff               , & !< scaling coefficient in growth efficiency mortality below minimum growth efficiency
@@ -191,6 +189,7 @@ MODULE mo_veg_constants
 
   ! parameters used for product pool decay
   REAL(wp), SAVE :: &
+      tau_pp_crop,       & !< exponential time constants for the decay of the crop harvest product pool
       tau_pp_fuelwood,   & !< exponential time constants for the decay of the fuel product pool
       tau_pp_paper,      & !< exponential time constants for the decay of the paper product pool
       tau_pp_fiberboard, & !< exponential time constants for the decay of the fiberboard product pool
@@ -198,14 +197,39 @@ MODULE mo_veg_constants
       tau_pp_pv,         & !< exponential time constants for the decay of the plywood and veneer product pool
       tau_pp_sawnwood      !< exponential time constants for the decay of the sawnwood product pool
 
+  ! parameters used for herbivory
+  REAL(wp), SAVE :: &
+    & ftroph_loss_herbivory, &            !< carbon respiration associated with herbivory (unitless)
+    & k_herbivory_grass,     &            !< asymptotic daily rate of herbivory in natural grasslands (1/day)
+    & k_herbivory_pasture,   &            !< asymptotic daily rate of herbivory in pasture (1/day)
+    & min_net_growth_herbivory_grass, &   !< minimum long-term average productivity for herbivory to occur in natural grasslands (mol / m2 / yr)
+    & min_net_growth_herbivory_pasture, & !< minimum long-term average productivity for herbivory to occur in pasture (mol / m2 / yr)
+    & min_lai_herbivory                   !< minimum LAI beyond which herbivory can occur
+
+  ! red to far red ratio calculations
+  REAL(wp), SAVE :: &
+    & rfr_ratio_toc, &     !< top of the canopy red:farred ratio  (Kull & Kruij 1998)
+    & k_r2fr_chl           !< extinction of red:farred ratio on leaf chlorophyll (1/mmol N);
+                           !! (Kull & Krujit 1998 for the far red value, tuned to get a R:FR ratio
+                           !! of 0.15 at full canopy closure (a common value)
+
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
   ! need to be parameters (i.e. constant across model runtime)
   INTEGER, PARAMETER ::    &
       itree         = 1,   &
-      igrass        = 2
+      igrass        = 2,   &
+      icrop         = 3
 
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_veg_constants'
+
+  !$ACC DECLARE CREATE(t_maint_k1, t_maint_k2, t_maint_k3, min_height, k_fpc, k_sai2lai)
+  !$ACC DECLARE CREATE(f_resp_acclim, t_acclim_zero, fmaint_rate_base)
+
+  !$ACC DECLARE CREATE(carbon_per_dryweight_leaf, jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc_C4)
+  !$ACC DECLARE CREATE(jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, k0_fn_pepc_C3, kfn_chl)
+
+  !$ACC DECLARE CREATE(rfr_ratio_toc, k_r2fr_chl)
 
 CONTAINS
 
@@ -315,7 +339,6 @@ CONTAINS
       min_lai                     = 0.1_wp
       target_lai_max              = 5.0_wp
       max_leaf_shedding_rate      = 0.05_wp
-      k_leafon_canopy             = 0.2_wp
 
   ! vegetation dynamics
       background_mort_rate_tree   = 0.01_wp
@@ -326,7 +349,6 @@ CONTAINS
       k_est_temp                  = 4.0_wp
       lambda_est_moist            = 10._wp
       k_est_moist                 = 2.0_wp
-      wood_extraction_rate        = 0.8_wp
       k2_mort_greff               = 0.3_wp
       k3_mort_greff               = 25.0_wp
       min_greff                   = 1.0_wp
@@ -356,13 +378,33 @@ CONTAINS
       delta_n_leaf                = 0.0048_wp       ! 0.0001 (changed to account for multiplication with dtime/one_day in the code)
 
     ! parameters used for product pool decay [years] - these need to be > 0.0_wp
-    ! following values are all taken from Nuetzel (2021, LMU master thesis)
-    tau_pp_fuelwood = 0.53
-    tau_pp_paper = 1.50
-    tau_pp_fiberboard = 13.2
-    tau_pp_oirw = 16.5
-    tau_pp_pv = 24.9
-    tau_pp_sawnwood = 49.9
+      tau_pp_crop = 1.0_wp ! made up by SZ
+      ! following values are all taken from Nuetzel (2021, LMU master thesis)
+      tau_pp_fuelwood = 0.53_wp
+      tau_pp_paper = 1.50_wp
+      tau_pp_fiberboard = 13.2_wp
+      tau_pp_oirw = 16.5_wp
+      tau_pp_pv = 24.9_wp
+      tau_pp_sawnwood = 49.9_wp
+
+    ! parameters used for herbivory
+    ! calibrated from data in McNaugton et al. 1989, Nature 341, 142-144, and Cyr and Pace, 1993, Nature 361, 148-150
+      ftroph_loss_herbivory             = 0.9_wp   !< assumuming a typical 90% loss of energy per trophic level
+      k_herbivory_grass                 = 0.01_wp  !< calibrated from Cyr and Pace, Nature 1993, adjusted to daily rate and fraction of accessible NPP
+      k_herbivory_pasture               = 0.015_wp !< calibrated from Cyr and Pace, Nature 1993, adjusted to daily rate and fraction of accessible NPP
+      min_net_growth_herbivory_grass    = 20.8_wp  !< 250 gC/m2/yr converted to mol
+      min_net_growth_herbivory_pasture  = 4.16_wp  !< 50 gC/m2/yr converted to mol
+      min_lai_herbivory                 = 0.1_wp   !< set to min_lai value, needs evaluation
+
+    ! red to far red ratio calculations
+      rfr_ratio_toc           = 1.2_wp                !< Kull & Kruijt 1998
+      k_r2fr_chl              = 0.0012_wp - 0.012_wp  !< Kull & Kruijt 1998
+
+    !$ACC UPDATE DEVICE(t_maint_k1, t_maint_k2, t_maint_k3, min_height) ASYNC(1)
+    !$ACC UPDATE DEVICE(f_resp_acclim, t_acclim_zero, fmaint_rate_base, k_fpc, k_sai2lai) ASYNC(1)
+    !$ACC UPDATE DEVICE(carbon_per_dryweight_leaf, jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc_C4) ASYNC(1)
+    !$ACC UPDATE DEVICE(jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, k0_fn_pepc_C3, kfn_chl) ASYNC(1)
+    !$ACC UPDATE DEVICE(rfr_ratio_toc, k_r2fr_chl)
 
   END SUBROUTINE init_veg_constants
 

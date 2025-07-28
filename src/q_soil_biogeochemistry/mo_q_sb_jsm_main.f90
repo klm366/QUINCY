@@ -45,7 +45,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_process_class,     ONLY: SB_, SPQ_, VEG_, A2L_
+    USE mo_jsb_process_class,     ONLY: SB_, SSE_, HYDRO_, VEG_, A2L_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_jsb_math_constants,    ONLY: eps8
@@ -64,7 +64,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -107,19 +108,20 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! SPQ_ 2D
+    ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
-    ! SPQ_ 3D
+    ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: percolation_sl
     dsl4jsb_Real3D_onChunk :: frac_w_lat_loss_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
+    ! SSE_ 3D
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl
-    dsl4jsb_Real3D_onChunk :: volume_min_sl
     ! A2L_ 2D
     dsl4jsb_Real2D_onChunk :: p_deposition
     ! VEG_ 2D
@@ -289,6 +291,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fact_n_status_mic_c_growth
     dsl4jsb_Real3D_onChunk :: fact_p_status_mic_c_growth
     dsl4jsb_Real3D_onChunk :: enzyme_frac_AP
+    dsl4jsb_Real3D_onChunk :: volume_min_sl
     ! ----------------------------------------------------------------------------------------------------- !
     iblk      = options%iblk
     ics       = options%ics
@@ -308,7 +311,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -336,15 +340,15 @@ CONTAINS
     dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_TRANSPORT_ID, sb_transport_mt)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onChunk(SPQ_,   num_sl_above_bedrock)         ! in
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onChunk(SPQ_,   soil_depth_sl)                ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,   percolation_sl)               ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,   frac_w_lat_loss_sl)           ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,   w_soil_sl)                    ! in
-    dsl4jsb_Get_var3D_onChunk(SPQ_,   bulk_dens_sl)                 ! inout
-    dsl4jsb_Get_var3D_onChunk(SPQ_,   volume_min_sl)                !
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)         ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, percolation_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)           ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)                  ! in
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onChunk(SSE_,   bulk_dens_sl)                 ! inout
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_,   p_deposition)                 ! in
     ! VEG_ 2D
@@ -514,6 +518,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,    fact_n_status_mic_c_growth)       ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,    fact_p_status_mic_c_growth)       ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,    enzyme_frac_AP)                   ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,    volume_min_sl)                    ! in
     !------------------------------------------------------------------------------------------------------ !
 
     !>1.0 calc fine root carbon, used for N & P calculations below, and smooth the plant growth P limitation
@@ -749,8 +754,8 @@ CONTAINS
     !>
     arr_hlp1(:,:)        = po4_solute(:,:) + po4_assoc_fast(:,:)
     arr_hlp2(:,:)        = 1._wp
-    km1_uptake_act(:,:)  = km1_up_po4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    km2_uptake_act(:,:)  = km2_up_po4 *  rtm_hsc(:,:) * rmm_hsc(:,:)  * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km1_uptake_act(:,:)  = km1_up_po4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (wtr_soil_sl(:,:) / soil_depth_sl(:,:))
+    km2_uptake_act(:,:)  = km2_up_po4 *  rtm_hsc(:,:) * rmm_hsc(:,:)  * 1000._wp * (wtr_soil_sl(:,:) / soil_depth_sl(:,:))
     km_array(:,:)        = km_adsorpt_po4_sl(:,:)
     avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._wp, qmax_po4(:,:) - po4_assoc_fast(:,:))
     CALL calc_sinking_flux(dtime, lctlib%vmax_uptake_p, "po4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                ! in
@@ -778,8 +783,8 @@ CONTAINS
     !>
     arr_hlp1(:,:)        = nh4_solute(:,:) + nh4_assoc(:,:)
     arr_hlp2(:,:)        = 1._wp - anaerobic_volume_fraction_sl(:,:)
-    km1_uptake_act(:,:)  = km1_up_nh4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    km2_uptake_act(:,:)  = km2_up_nh4 *  rtm_hsc(:,:) * rmm_hsc(:,:)  * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km1_uptake_act(:,:)  = km1_up_nh4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (wtr_soil_sl(:,:) / soil_depth_sl(:,:))
+    km2_uptake_act(:,:)  = km2_up_nh4 *  rtm_hsc(:,:) * rmm_hsc(:,:)  * 1000._wp * (wtr_soil_sl(:,:) / soil_depth_sl(:,:))
     km_array(:,:)        = km_adsorpt_nh4_sl(:,:)
     avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._wp, qmax_nh4(:,:) - nh4_assoc(:,:))
     CALL calc_sinking_flux(dtime, lctlib%vmax_uptake_n, "nh4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                ! in
@@ -809,8 +814,8 @@ CONTAINS
     !>  6.3 NO3
     !>
     arr_hlp1(:,:)        = 1._wp
-    km1_uptake_act(:,:)  = km1_up_no3 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    km2_uptake_act(:,:)  = km2_up_no3 *  rtm_hsc(:,:) * rmm_hsc(:,:)  * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km1_uptake_act(:,:)  = km1_up_no3 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (wtr_soil_sl(:,:) / soil_depth_sl(:,:))
+    km2_uptake_act(:,:)  = km2_up_no3 *  rtm_hsc(:,:) * rmm_hsc(:,:)  * 1000._wp * (wtr_soil_sl(:,:) / soil_depth_sl(:,:))
     km_array(:,:)        = 1._wp
     avail_soil_surface_sorption_capacity_sl(:,:) = 1._wp
     CALL calc_sinking_flux(dtime, lctlib%vmax_uptake_n, "no3", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                  ! in

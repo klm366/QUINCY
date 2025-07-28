@@ -43,8 +43,6 @@ MODULE mo_nlcc_memory_class
 
     ! Common variables independent of lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & seconds_day, &
-      & seconds_month, &
       & temp_sum_day, &
       & temp_sum_month, &
       & min_mmtemp_of_yr, &
@@ -79,7 +77,7 @@ MODULE mo_nlcc_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_nlcc_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_nlcc_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
@@ -90,6 +88,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)    :: model_id
 
     TYPE(t_jsb_model), POINTER :: model
@@ -106,22 +105,6 @@ CONTAINS
     hgrid     => Get_grid(mem%grid_id)
     surface   => Get_vgrid('surface')
     pft_vgrid => Get_vgrid('pfts')
-
-    CALL mem%Add_var('seconds_day', mem%seconds_day,                          &
-      & hgrid, surface,                                                       &
-      & t_cf('seconds_day', 'sum of seconds in day', 'time sum day'),         &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var('seconds_month', mem%seconds_month,                      &
-      & hgrid, surface,                                                       &
-      & t_cf('seconds_month', 'sum of seconds in month', 'time sum month'),   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=0.0_wp )
 
     CALL mem%Add_var('temp_sum_day', mem%temp_sum_day,                        &
       & hgrid, surface,                                                       &

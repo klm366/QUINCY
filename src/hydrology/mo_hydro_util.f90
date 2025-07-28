@@ -14,8 +14,9 @@
 MODULE mo_hydro_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: finish
+  USE mo_jsb_control, ONLY: acc_stream
+  USE mo_kind,        ONLY: wp
+  USE mo_exception,   ONLY: finish
 
   IMPLICIT NONE
   PRIVATE
@@ -99,9 +100,9 @@ CONTAINS
     nc     = SIZE(ws,1)
     nsoil  = SIZE(dz,2)       ! Number of soil layers
 
-    !$ACC DATA CREATE(bottom, bottom_m1, root_depth)
+    !$ACC DATA CREATE(bottom, bottom_m1, root_depth) ASYNC(acc_stream)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       root_depth(ic) = 0._wp
       bottom(ic)     = 0._wp
@@ -110,7 +111,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
       !$ACC LOOP GANG VECTOR
@@ -121,7 +122,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
       !$ACC LOOP GANG VECTOR
@@ -147,7 +148,6 @@ CONTAINS
     END DO
 #endif
 
-    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE get_amount_in_rootzone_2d
