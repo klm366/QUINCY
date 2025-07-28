@@ -160,7 +160,9 @@ CONTAINS
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk                :: t_soil_sl
     dsl4jsb_Real3D_onChunk                :: bulk_dens_sl
-    ! Q_ASSIMI_
+    ! Q_ASSIMI_ 2D
+    dsl4jsb_Real2D_onChunk                :: wtr_soil_root_pot
+    ! Q_ASSIMI_ 3D
     dsl4jsb_Real3D_onChunk                :: ftranspiration_sl
     ! RAD_
     dsl4jsb_Real2D_onChunk                :: rad_srf_net
@@ -180,7 +182,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: w_skin
     dsl4jsb_Real2D_onChunk                :: wtr_rootzone
     dsl4jsb_Real2D_onChunk                :: wtr_rootzone_rel
-    dsl4jsb_Real2D_onChunk                :: wtr_soil_root_pot
     dsl4jsb_Real2D_onChunk                :: transpiration
     dsl4jsb_Real2D_onChunk                :: root_depth
     ! HYDRO_ 3D
@@ -296,7 +297,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(SSE_, bulk_dens_sl)             ! in
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl) ! in
+    ! Q_ASSIMI_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, wtr_soil_root_pot)   ! out
+    ! Q_ASSIMI_ 3D
+    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl)   ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(RAD_, rad_srf_net)            ! in
     ! ---------------------------
@@ -313,7 +317,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_fc)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_skin)                 ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone_rel)       ! inout
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soil_root_pot)      ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone)           ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, transpiration)          ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, root_depth)             ! in

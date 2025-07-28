@@ -443,7 +443,6 @@ CONTAINS
     dsl4jsb_Real2D_onDomain    :: elevation
     dsl4jsb_Real2D_onDomain    :: fract_pond_max
     dsl4jsb_Real2D_onDomain    :: weq_pond_max
-    dsl4jsb_Real2D_onDomain    :: wtr_soil_root_pot
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onDomain    :: soil_depth_sl
     dsl4jsb_Real3D_onDomain    :: soil_lay_width_sl
@@ -490,7 +489,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   elevation)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   fract_pond_max)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   weq_pond_max)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_soil_root_pot)
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_depth_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_width_sl)
@@ -640,9 +638,6 @@ CONTAINS
     wtr_rootzone_rel(:,:)   = hydro_init_vars%soil_theta_prescribe(:,:)
     wtr_rootzone(:,:)       = w_soil_root_pwp(:,:) &
       &                       + hydro_init_vars%soil_theta_prescribe(:,:) * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:))
-    ! NOTE var init below; here outcommented the SPQ_ version using saxton
-    ! wtr_soil_root_pot(:,:)  = saxtonA(:, 1, :) * (MIN(w_soil_root_fc,wtr_rootzone(:,:)) / root_depth(:,:)) &
-    !   &                       ** saxtonB(:, 1, :)
 
     !> soil water and ice pwp, fc and sat per layer depth
     !>
@@ -766,12 +761,6 @@ CONTAINS
       dsl4jsb_var_ptr(HYDRO_, wtr_soil_res_sl) (:,is,:) = hydro_init_vars%vol_wres(:,:) * &
         & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,is,:)
     END DO
-
-    ! TODO
-    ! improve later: calculate below using average across soil layer of wtr_soil_pot_sl weighted with root_fraction_sl ?
-    !                see SPQ_ init
-    !
-    wtr_soil_root_pot(:,:) = 0.0_wp
 
     !> Set maximum root zone soil moisture (water plus ice)
     !>

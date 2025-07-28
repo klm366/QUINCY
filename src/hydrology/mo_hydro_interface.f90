@@ -1983,9 +1983,6 @@ CONTAINS
     dsl4jsb_Def_config(SSE_)
 
     dsl4jsb_Def_memory(HYDRO_)
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_memory(VEG_)
-#endif
 
     ! HYDRO_ 2D & 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
@@ -2003,13 +2000,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wpi_rootzone_max       !< Maximum possible amount of water and/or ice in the rootzone
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel       !< Relative root zone soil moisture
-
-    ! quincy
-    ! HYDRO_
-    dsl4jsb_Real2D_onChunk :: wtr_soil_root_pot      !< Soil water potential in the root zone
-    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_sl        !< Soil water potential per layer
-    ! VEG_
-    dsl4jsb_Real3D_onChunk :: root_fraction_sl       !< Fractions of root per layer
 
     INTEGER :: iblk, ics, ice, nc, ic, nsoil, is
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
@@ -2052,16 +2042,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail_max) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)       ! out
-
-#ifndef __NO_QUINCY__
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_QUINCY)
-      dsl4jsb_Get_memory(VEG_)
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_soil_root_pot)         ! out   [MPa]
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pot_sl)           ! in    [MPa]
-      dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)          ! in
-    END SELECT
-#endif
 
     ! Get water stress
 
@@ -2122,30 +2102,6 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     END IF
-
-#ifndef __NO_QUINCY__
-    ! QUINCY
-    ! calculate root zone water potential (MPa)
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_QUINCY)
-      ! set to zero
-      wtr_soil_root_pot(:)    = 0.0_wp
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic = 1, nc
-        wtr_soil_root_pot(ic) = 0.0_wp
-      END DO
-      !$ACC END PARALLEL LOOP
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-      !$ACC LOOP SEQ
-      DO is = 1, nsoil
-        !$ACC LOOP GANG VECTOR
-        DO ic = 1, nc
-          wtr_soil_root_pot(ic) = wtr_soil_root_pot(ic) + (root_fraction_sl(ic, is) * wtr_soil_pot_sl(ic, is))
-        END DO
-      END DO
-      !$ACC END PARALLEL
-    END SELECT
-#endif
 
     ! Calculate maximum plant available water
     !   As in the the available water calculation above, water below the wilting point is not
@@ -2221,7 +2177,6 @@ CONTAINS
 
     dsl4jsb_Def_memory(HYDRO_)
 
-    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_water_stress'
@@ -2236,7 +2191,6 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
 
-    model             => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     ! HYDRO_
@@ -2249,13 +2203,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail_max, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,           weighted_by_fract)
-
-#ifndef __NO_QUINCY__
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_QUINCY)
-      dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_root_pot,    weighted_by_fract)
-    END SELECT
-#endif
 
     CALL weighted_by_fract%EndAggregate()
 

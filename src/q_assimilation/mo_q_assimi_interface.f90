@@ -223,6 +223,7 @@ CONTAINS
     dsl4jsb_Def_memory(Q_ASSIMI_)
     ! dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),        POINTER :: model
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_fluxes'
@@ -233,6 +234,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
+    model             => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(Q_ASSIMI_)
@@ -243,6 +245,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C13      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C14      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, canopy_cond                 , weighted_by_fract)
+    IF (model%config%use_soil_phys_jsbach) THEN
+      dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, wtr_soil_root_pot           , weighted_by_fract)
+    END IF
     ! Q_ASSIMI_ 3D
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, ftranspiration_sl           , weighted_by_fract)
 

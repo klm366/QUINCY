@@ -135,7 +135,6 @@ MODULE mo_hydro_memory_class
       & pore_size_index,      & !< Soil pore size distribution index                     []
       & bclapp,               & !< Exponent B in Clapp and Hornberger                    []
       & matric_pot,           & !< Soil matric potential                                 [m]
-      & wtr_soil_root_pot,    & !< Soil water potential in the root zone                 [MPa]
       & hyd_cond_sat            !< Saturated hydraulic conductivity                      [m/s]
 
     TYPE(t_jsb_var_real2d) :: &
@@ -841,17 +840,6 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
-
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_QUINCY)
-        CALL mem%Add_var( 'wtr_soil_root_pot', mem%wtr_soil_root_pot,            &
-          & hgrid, surface,                                                      &
-          & t_cf('wtr_soil_root_pot', 'MPa', 'Soil water potential in the root zone'), &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-          & prefix, suffix,                                                      &
-          & output_level=BASIC,                                                  &
-          & initval_r=0.0_wp)
-      END SELECT
 
       CALL mem%Add_var( 'matric_pot_sl', mem%matric_pot_sl,                    &
         & hgrid, soil_w,                                                       &

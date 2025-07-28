@@ -123,6 +123,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt
+    dsl4jsb_Real2D_onChunk      :: wtr_soil_root_pot
     ! Q_ASSIMI_ 3D
     dsl4jsb_Real3D_onChunk      :: net_assimilation_cl
     dsl4jsb_Real3D_onChunk      :: gross_assimilation_cl
@@ -138,7 +139,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk      :: num_sl_above_bedrock
-    dsl4jsb_Real2D_onChunk      :: wtr_soil_root_pot
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: wtr_soil_pwp_sl
     dsl4jsb_Real3D_onChunk      :: wtr_soil_fc_sl
@@ -216,6 +216,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs)              ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_ps)              ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, t_jmax_opt)                ! out
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, wtr_soil_root_pot)         ! out   (with SPQ_: in)
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, net_assimilation_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, gross_assimilation_cl)     ! out
@@ -231,7 +232,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
     ! HYDRO_ 2D
     dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)         ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soil_root_pot)            ! in
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)              ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)               ! in
@@ -289,7 +289,30 @@ CONTAINS
     ALLOCATE(ftranspiration_sum_local(nc))
     !$ACC ENTER DATA CREATE(drag_srf_local, ftranspiration_sum_local)
 
-    !> 1.0 calculate the moisture scaling factor for photosynthesis
+    !>1.0 calculate root zone water potential (MPa)
+    !>
+    !>  only with jsbach soil-physic processes enabled, otherwise calculated with SPQ_
+    !>
+    IF (model%config%use_soil_phys_jsbach) THEN
+      ! set to zero
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        wtr_soil_root_pot(ic) = 0.0_wp
+      END DO
+      !$ACC END PARALLEL LOOP
+      ! calculate
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil_sb
+        !$ACC LOOP GANG VECTOR
+        DO ic = 1, nc
+          wtr_soil_root_pot(ic) = wtr_soil_root_pot(ic) + (root_fraction_sl(ic, is) * wtr_soil_pot_sl(ic, is))
+        END DO
+      END DO
+      !$ACC END PARALLEL
+    END IF
+
+    !>2.0 calculate the moisture scaling factor for photosynthesis
     !>
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
@@ -304,7 +327,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !> 1.1 determine fraction of transpiration per soil layer
+    !>  2.1 determine fraction of transpiration per soil layer
     !>
     ! calc transpiration per soil layer
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
@@ -371,7 +394,7 @@ CONTAINS
         & )
     END IF ! model%config%use_soil_phys_jsbach
 
-    !> 1.2 determine aerodynamic conductance
+    !>  2.2 determine aerodynamic conductance
     !>
     !> use drag_srf from A2L_ or TURB_ - differ between standalone / coupled simulations / quincy SPQ_ / jsbach soil-physics
     !>
@@ -406,7 +429,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !>2.0 calculate photosynthesis per layer
+    !>3.0 calculate photosynthesis per layer
     !>
     ! calc photosynthesis
     DO icanopy = 1,ncanopy
@@ -446,8 +469,21 @@ CONTAINS
           & canopy_cond_cl(ic,icanopy)                                 , & ! out
           & co2_conc_leaf_cl(ic,icanopy)                               , & ! out
           & chlfl_yield_cl = chlfl_yield_cl(ic,icanopy)                   )! out
-      END DO
+      END DO  ! DO ic = 1, nc
       !$ACC END PARALLEL LOOP
+
+      ! potential correction of assimilation and canopy conductance
+      IF (model%config%use_soil_phys_jsbach) THEN
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic = 1, nc
+          IF (wtr_soil_root_pot(ic) < lctlib_phi_leaf_min) THEN
+            gross_assimilation_cl(ic,icanopy) = 0.0_wp
+            net_assimilation_cl(ic,icanopy)   = -1.0_wp * maint_respiration_leaf_cl(ic,icanopy)
+            canopy_cond_cl(ic,icanopy)        = 0.0_wp
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP
+      END IF
 
       ! gross_assimilation incl. C13 & C14
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
@@ -515,9 +551,9 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-    ENDDO ! DO icanopy = 1,ncanopy
+    END DO ! DO icanopy = 1,ncanopy
 
-    !> 3.0 update mean canopy CO2 concentration in the leaf
+    !>4.0 update mean canopy CO2 concentration in the leaf
     !>   was accumulated from the CO2 concentration per canopy layer above ('co2_conc_leaf_cl(:,icanopy) * lai_cl(:,icanopy)')
     !>
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -528,7 +564,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !> 4.0 uptake optimum temperature for electron transport
+    !>5.0 uptake optimum temperature for electron transport
     !>
     IF (dsl4jsb_Config(Q_ASSIMI_)%flag_t_jmax_acclimation) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)

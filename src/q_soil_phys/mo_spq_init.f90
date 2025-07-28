@@ -22,7 +22,7 @@ MODULE mo_spq_init
   USE mo_exception,               ONLY: message_text, finish, message
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_jsb_math_constants,      ONLY: eps8
-  USE mo_jsb_process_class,       ONLY: SPQ_, SEB_, SSE_, HYDRO_
+  USE mo_jsb_process_class,       ONLY: SPQ_, SEB_, SSE_, HYDRO_, Q_ASSIMI_
 
 #ifdef __QUINCY_STANDALONE__
   USE mo_qs_process_init_util,    ONLY: init_spq_soil_properties_spp1685_sites
@@ -108,6 +108,7 @@ CONTAINS
     dsl4jsb_Use_memory(SEB_)
     dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ----------------------------------------------------------------------------------------------------- !
@@ -136,6 +137,7 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! SEB_ 2D
     dsl4jsb_Real2D_onDomain    :: t
@@ -153,7 +155,6 @@ CONTAINS
     dsl4jsb_Real2D_onDomain    :: w_soil_root_fc
     dsl4jsb_Real2D_onDomain    :: w_skin
     dsl4jsb_Real2D_onDomain    :: wtr_rootzone_rel
-    dsl4jsb_Real2D_onDomain    :: wtr_soil_root_pot
     dsl4jsb_Real2D_onDomain    :: wtr_rootzone
     dsl4jsb_Real2D_onDomain    :: root_depth
     ! HYDRO_ 3D
@@ -181,6 +182,8 @@ CONTAINS
     dsl4jsb_Real3D_onDomain    :: saxtonC
     dsl4jsb_Real3D_onDomain    :: kdiff_sat_sl
     dsl4jsb_Real3D_onDomain    :: t_snow_snl
+    ! Q_ASSIMI_ 2D
+    dsl4jsb_Real2D_onDomain    :: wtr_soil_root_pot
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(SPQ_)) RETURN
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -199,6 +202,7 @@ CONTAINS
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
     ALLOCATE(soil_awc(nproma, nblks))
     ALLOCATE(hlp2(nproma, nblks))
@@ -226,7 +230,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_soil_root_fc)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_skin)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_rootzone_rel)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_soil_root_pot)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_rootzone)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   root_depth)
     ! HYDRO_ 3D
@@ -254,6 +257,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SPQ_, saxtonC)
     dsl4jsb_Get_var3D_onDomain(SPQ_, kdiff_sat_sl)
     dsl4jsb_Get_var3D_onDomain(SPQ_, t_snow_snl)
+    ! Q_ASSIMI_ 2D
+    dsl4jsb_Get_var2D_onDomain(Q_ASSIMI_,   wtr_soil_root_pot)
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.9 snow init
