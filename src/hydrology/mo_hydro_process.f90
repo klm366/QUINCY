@@ -1532,7 +1532,7 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
-      IF (deficit_sevap(ic) <= 0._wp) THEN                             ! remaining soil evaporation demand
+      IF (deficit_sevap(ic) < 0._wp) THEN                              ! remaining soil evaporation demand
         wtr_soil_sl(ic,1) = wtr_soil_sl(ic,1) + deficit_sevap(ic)      ! take water from uppermost soil layer
         IF (wtr_soil_sl(ic,1) < 0._wp) THEN                            ! if there is not enough liquid soil water
           deficit_sevap(ic) = wtr_soil_sl(ic,1)                        ! this is the amount of water missing
