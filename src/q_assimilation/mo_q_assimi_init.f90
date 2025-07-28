@@ -53,6 +53,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
+    ! 2D
     dsl4jsb_Real2D_onDomain      :: beta_air
     dsl4jsb_Real2D_onDomain      :: beta_soa
     dsl4jsb_Real2D_onDomain      :: soa_tsoa_mavg
@@ -73,6 +74,8 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: beta_soil_gs_tfrac_mavg
     dsl4jsb_Real2D_onDomain      :: beta_soil_gs_tcnl_mavg
     dsl4jsb_Real2D_onDomain      :: t_jmax_opt
+    ! 3D
+    dsl4jsb_Real3D_onDomain      :: ftranspiration_sl
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(Q_ASSIMI_)) RETURN
     IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of assimi memory (quincy) for tile '// &
@@ -83,6 +86,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
+    ! 2D
     dsl4jsb_Get_var2D_onDomain(Q_ASSIMI_, beta_air)
     dsl4jsb_Get_var2D_onDomain(Q_ASSIMI_, beta_soa)
     dsl4jsb_Get_var2D_onDomain(Q_ASSIMI_, soa_tsoa_mavg)
@@ -103,6 +107,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(Q_ASSIMI_, beta_soil_gs_tfrac_mavg)
     dsl4jsb_Get_var2D_onDomain(Q_ASSIMI_, beta_soil_gs_tcnl_mavg)
     dsl4jsb_Get_var2D_onDomain(Q_ASSIMI_, t_jmax_opt)
+    ! 3D
+    dsl4jsb_Get_var3D_onDomain(Q_ASSIMI_, ftranspiration_sl)
     ! ----------------------------------------------------------------------------------------------------- !
     nproma = grid%nproma
     nblks  = grid%nblks
@@ -138,6 +144,8 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    ftranspiration_sl(:, :, :)      = 0.0_wp    !< set to zero
+    ftranspiration_sl(:, 1, :)      = 1.0_wp    !< set to one in the 1st soil layer
   END SUBROUTINE q_assimi_init
 
 #endif
