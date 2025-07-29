@@ -364,7 +364,7 @@ CONTAINS
     & thaw_depth,                         &
     ! optional
     & dsoil, ws_max, matric_pot, bclapp,  &
-    & wtr, ice, le_phase_change_res,      &
+    & wtr, ice, le_pc_remain,             &
     & liquid_max, frozen, melt            &
     & )
 
@@ -404,8 +404,8 @@ CONTAINS
     REAL(wp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
     REAL(wp), INTENT(inout), OPTIONAL ::  wtr(:,:)          !! Water storage [m]
     REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
-    REAL(wp), INTENT(inout), OPTIONAL ::  le_phase_change_res(:) !! Energy available for or required from phase change
-                                                                 !! in top layer [J m-2]
+    REAL(wp), INTENT(inout), OPTIONAL ::  le_pc_remain(:)   !! Energy available for or required from phase change
+                                                            !! in top soil layer [J m-2]
     REAL(wp), INTENT(inout), OPTIONAL ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
     REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
     REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
@@ -475,10 +475,10 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    IF (PRESENT(le_phase_change_res)) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    IF (PRESENT(le_pc_remain)) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        le_phase(ic) = le_phase_change_res(ic)
+        le_phase(ic) = le_pc_remain(ic)
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -521,15 +521,16 @@ CONTAINS
 
         ! Adding residual energy from phase change (from SEB) to top layer soil temperature.
         ! Note that there is an unavoidable inconsistency between the phase change energy computed
-        ! in SEB and its use here, because in the mean time the soil heat capacity has changed.
-        ! The residual remains in the top layer soil temperature state.
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        ! in SEB and its use here, because in the mean time the soil heat capacity might have changed
+        ! due to hydrological processes.
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           t_soil_sl(ic,1) = t_soil_sl(ic,1) + le_phase(ic) / heat_cap(ic,1)
         END DO
         !$ACC END PARALLEL LOOP
 
-        ! Compute mass of feezing water or melting ice using the available energy
+        ! Compute mass of freezing water or melting ice using the available energy
+        ! Note: only either freeze_mass or melt_mass is non-zero at any given point
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
         DO ic=1,nc
           DO is=1,nsoil
@@ -544,19 +545,16 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
 
-        ! Due to the above mentioned inconsistency, the phase change energy due to freezing or melting
-        ! does not match exactly with the energy residual and is ! not exactly which is applied
-        ! to the soil temperature, but also needs to be tracked in the le_phase variable
-        ! to be included in the energy balance check.
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        ! Due to the above mentioned inconsistency, the phase change energy from freezing/melting
+        ! (calculated in SEB) does not exactly match the actual amount of freezing/melting water/ice.
+        ! This needs to be tracked in le_phase to be included in the energy balance check.
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
           le_phase(ic) = le_phase(ic) - (freeze_mass(ic,1) - melt_mass(ic,1)) * alf
         END DO
         !$ACC END PARALLEL LOOP
 
         ! Update water/ice storage and soil layer temperature
-        ! Note: only either freeze or melt is non-zero at any given point
-        ! ToDo: Debug message needs to get own loop to be excluded for GPU runs
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
         DO is=1,nsoil
           DO ic=1,nc
@@ -616,10 +614,10 @@ CONTAINS
         !$ACC END PARALLEL LOOP
 
         ! Update the le_phase
-        IF (PRESENT(le_phase_change_res)) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        IF (PRESENT(le_pc_remain)) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
-            le_phase_change_res(ic) = le_phase(ic)
+            le_pc_remain(ic) = le_phase(ic)
           END DO
           !$ACC END PARALLEL LOOP
         END IF

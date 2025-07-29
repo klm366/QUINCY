@@ -528,17 +528,6 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
-      ! Switch sign of phase change flux. From the energy balance perspective, ice melting
-      !   is an energy sink (therefore negative) and freezing a source (therefore positive).
-      !   However, from the hydrology perspective melting occures when enough energy is
-      !   available (positive sign) and freezing if energy is required (therefore negative).
-      !   Thus, we switch the sign now to make the hydrology equations more intuitive.
-      le_phase_change(ic) = -1._wp * le_phase_change(ic)
-    END DO
-    !$ACC END PARALLEL LOOP
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic=1,nc
 
       ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
       IF (use_tmx .OR. jsb_standalone) THEN
@@ -1238,8 +1227,8 @@ CONTAINS
 
   END SUBROUTINE update_surface_temperature_tmx
 
-  !> Diagnose the total potential energy source/sink if all available water/ice
-  !> freezes/melts.
+  !> Determine potential energy sinks/sources due to phase change at the surface
+  !> as limited by the availability of water/ice.
   SUBROUTINE get_phasechange_energy_limits(tile, options, &
     & l_freeze_config, l_supercool_config,                &
     & le_freeze_pot, le_melt_pot,                         &
@@ -1248,38 +1237,37 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi, alf
 
-    CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile
-    TYPE(t_jsb_task_options), INTENT(IN) :: options
+    CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile  !< Current tile
+    TYPE(t_jsb_task_options), INTENT(IN) :: options    !< Runtime options
 
-    LOGICAL, INTENT(IN) :: l_freeze_config
-    LOGICAL, INTENT(IN) :: l_supercool_config
+    LOGICAL, INTENT(IN) :: l_freeze_config             !< Enable freezing and melting of soil water
+    LOGICAL, INTENT(IN) :: l_supercool_config          !< Allow for supercooled soil water
 
-    REAL(wp), INTENT(OUT) :: le_freeze_pot(:)
-    REAL(wp), INTENT(OUT) :: le_melt_pot(:)
+    REAL(wp), INTENT(OUT) :: le_freeze_pot(:)          !< Latent energy released if all surface water was freezing [J m-2]
+    REAL(wp), INTENT(OUT) :: le_melt_pot(:)            !< Latent energy needed if all surface ice was melting [J m-2]
 
-    REAL(wp), INTENT(IN), OPTIONAL :: wtr_soil_top(:)
-    REAL(wp), INTENT(IN), OPTIONAL :: wtr_soil_pot_scool_top(:)
-    REAL(wp), INTENT(IN), OPTIONAL :: ice_soil_top(:)
-    REAL(wp), INTENT(IN), OPTIONAL :: wtr_pond(:)
-    REAL(wp), INTENT(IN), OPTIONAL :: ice_pond(:)
-    REAL(wp), INTENT(IN), OPTIONAL :: weq_snow_soil(:)
-
-    INTEGER  :: nc, ic
+    REAL(wp), INTENT(IN), OPTIONAL :: wtr_soil_top(:)           !< Amount of water in the top soil layer [m]
+    REAL(wp), INTENT(IN), OPTIONAL :: wtr_soil_pot_scool_top(:) !< Potential amount of supercooled water in top soil layer [m]
+    REAL(wp), INTENT(IN), OPTIONAL :: ice_soil_top(:)           !< Amount of ice in the top soil layer [m water equivalent]
+    REAL(wp), INTENT(IN), OPTIONAL :: wtr_pond(:)               !< Amount of water in surface depressions [m]
+    REAL(wp), INTENT(IN), OPTIONAL :: ice_pond(:)               !< Amount of ice in surface depressions [m water equivalent]
+    REAL(wp), INTENT(IN), OPTIONAL :: weq_snow_soil(:)          !< Amount of snow on the soil [m water equivalent]
 
     ! Locally defined variables
-    REAL(wp) :: hlp1, hlp2, hlp3
+    INTEGER  :: nc                  !< Current vector length for grid cells
+    INTEGER  :: ic                  !< Looping index
+
+    REAL(wp) :: hlp1, hlp2, hlp3    !< Temporary helpers
 
     nc = options%nc
 
-    ! Determine potential energy sinks / sources due to phase change at the surface
-    ! as limited by the avaiablity of water / ice.
     hlp3 = rhoh2o * alf
 
     IF (.NOT. tile%is_glacier) THEN
       ! Compute the amount of water/ice that is available for freezing/melting
       !   Note: Snow on canopy is ignored here as it's energy sink due to melting is not
       !   considered in the surface energy balance but given to the atmosphere instead.
-      !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1) PRIVATE(hlp1, hlp2)
+      !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream) PRIVATE(hlp1, hlp2)
       DO ic = 1, nc
         IF (l_freeze_config) THEN
           IF (l_supercool_config) THEN
@@ -1300,7 +1288,7 @@ CONTAINS
     ELSE
       ! Glaciers are currently considered to provide unlimited ice for melting
       ! Setting available snow to 1 m weq should be more than sufficient for one time step
-      !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
       DO ic = 1, nc
         le_freeze_pot(ic) = 0._wp
         le_melt_pot(ic)   = -1.0_wp * hlp3

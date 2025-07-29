@@ -150,6 +150,9 @@ CONTAINS
       CALL q_agr_finalise_init_vars()
     END IF
 
+    !$ACC UPDATE DEVICE(crop_type_index) ASYNC(1)
+    !$ACC WAIT(1)
+
 #endif
   END SUBROUTINE q_agr_init
 
@@ -224,6 +227,9 @@ CONTAINS
       n_fertiliser_c3(:,:) = MAX(iq_background_n_fertiliser_rate, n_fertiliser_c3(:,:) / 10._wp / molar_mass_N)
       n_fertiliser_c4(:,:) = MAX(iq_background_n_fertiliser_rate, n_fertiliser_c4(:,:) / 10._wp / molar_mass_N)
     END IF
+
+    !$ACC UPDATE DEVICE(n_fertiliser_c3, n_fertiliser_c4) ASYNC(1)
+    !$ACC WAIT(1)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
 

@@ -32,11 +32,11 @@ MODULE mo_seb_config_class
      REAL(wp)                    :: coef_ril_tm1           !< Weighting factor for Richardson numbers at different steps ...
      REAL(wp)                    :: coef_ril_t             !< ... used to calculate a drag coefficient that approximates ...
      REAL(wp)                    :: coef_ril_tp1           !< ... the drag coefficient at time t, but helps to maintain stability.
-     REAL(wp)                    :: eb_threshold           !< absolute threshold for energy balance residual printouts
+     REAL(wp)                    :: eb_threshold           !< Energy balance residuals greater than this threshold lead to
+                                                           !< diagnostic logging. Negative threshold: no printing.
      LOGICAL                     :: l_ice_on_lakes         !< Whether to use ice on lakes
      INTEGER                     :: niter_tmx              !< For tmx: number of iterations in seb solver
      LOGICAL                     :: l_skin_temp            !< Activate skin-temperature formulation.
-     INTEGER                     :: le_test                !< Switch for testing the new latent energy formulation
    CONTAINS
      PROCEDURE :: Init => Init_seb_config
   END type t_seb_config
@@ -59,7 +59,6 @@ CONTAINS
     LOGICAL                     :: l_ice_on_lakes
     INTEGER                     :: niter_tmx
     LOGICAL                     :: l_skin_temp
-    INTEGER                     :: le_test
 
     NAMELIST /jsb_seb_nml/         &
       active,                      &
@@ -74,8 +73,7 @@ CONTAINS
       eb_threshold,                &
       l_ice_on_lakes,              &
       niter_tmx,                   &
-      l_skin_temp,                 &
-      le_test
+      l_skin_temp
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -98,7 +96,6 @@ CONTAINS
     l_ice_on_lakes  = .TRUE.
     niter_tmx       = 0
     l_skin_temp     = .FALSE.
-    le_test         = 0
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -119,7 +116,6 @@ CONTAINS
     config%l_ice_on_lakes            = l_ice_on_lakes
     config%niter_tmx                 = niter_tmx
     config%l_skin_temp               = l_skin_temp
-    config%le_test                   = le_test
 
     CALL close_nml(nml_handler)
 

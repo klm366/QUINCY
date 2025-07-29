@@ -58,8 +58,8 @@ MODULE mo_seb_memory_class
       & forc_hflx,              & !< Additional heat flux at surface                                 [W m-2]
                                   !! (additional to radiative fluxes and latent and sensible
                                   !!  heat fluxes, e.g. ground heat flux)
-      & le_phase_change,        & !< Heat energy due to phase changes at land surface                [J m-2]
-      & energy_balance_res,     & !< Residual of all land surface energy balance fluxes              [W m-2]
+      & le_phase_change,        & !< Latent energy due to phase changes at land surface              [J m-2]
+      & net_srf_rad_balance,    & !< Net surface radiation balance                                   [W m-2]
       & richardson,             & !< Richardson number (standalone model)                            []
       & drag_srf              , &
       & t_acoef               , &
@@ -135,7 +135,7 @@ CONTAINS
 
   SUBROUTINE Init_seb_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM !, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -209,15 +209,15 @@ CONTAINS
     CALL mem%Add_var( 'le_phase_change', mem%le_phase_change,                        &
       & hgrid, surface,                                                              &
       & t_cf('le_phase_change', 'J m-2',                                             &
-      &      'Heat energy due to phase changes at land surface'),                    &
+      &      'Latent energy of phase changes at land surface'),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.TRUE., output_level=BASIC,                                         &
+      & lrestart=.FALSE., output_level=MEDIUM,                                       &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'heat_cap', mem%heat_cap,                                      &
       & hgrid, surface,                                                              &
-      & t_cf('sfc_heat_cap', 'J m-2 K-1)', 'surface layer heat capacity'),           &
+      & t_cf('sfc_heat_cap', 'J m-2 K-1', 'surface layer heat capacity'),            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC, &
@@ -250,10 +250,10 @@ CONTAINS
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL mem%Add_var( 'energy_balance_res', mem%energy_balance_res,                  &
+    CALL mem%Add_var( 'net_srf_rad_balance', mem%net_srf_rad_balance,                &
       & hgrid, surface,                                                              &
-      & t_cf('energy_balance_res', 'W m-2',                                          &
-      &      'Residual of energy balance fluxes'),                                   &
+      & t_cf('net_srf_rad_balance', 'W m-2',                                         &
+      &      'Net surface radiation balance'),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &

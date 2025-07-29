@@ -176,7 +176,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
-    dsl4jsb_Real2D_onChunk :: le_phase_change_res
+    dsl4jsb_Real2D_onChunk :: le_pc_remain
 
     ! Locally allocated vectors
     !
@@ -234,7 +234,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, le_phase_change_res)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, le_pc_remain)    ! inout
 
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)         ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_acoef)      ! inout
@@ -589,7 +589,7 @@ CONTAINS
         ! optional, inout
         & wtr_soil_sl                         (:,:), &
         & ice_soil_sl                         (:,:), &
-        & le_phase_change_res                 (:  ), &
+        & le_pc_remain                        (:  ), &
         & wtr_soil_pot_scool_sl               (:,:), &
         ! optional, out
         & wtr_freeze_sl                       (:,:), &
@@ -727,6 +727,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_freeze_sl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_melt_sl,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pot_scool_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, le_pc_remain,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max_ym1,    weighted_by_fract)

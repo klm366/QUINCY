@@ -120,7 +120,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: height
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: sai
-    dsl4jsb_Real2D_onChunk      :: mean_leaf_age
     dsl4jsb_Real2D_onChunk      :: fract_fpc
     dsl4jsb_Real2D_onChunk      :: dphi
     dsl4jsb_Real2D_onChunk      :: t_air_tfrac_mavg
@@ -188,13 +187,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
     ! VEG 2D
-    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                             ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                       ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                             ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, height)                               ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                  ! CASE "plant" & "land": out / other Cases: in
+    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                             ! inout (only calculated for trees)
+    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                             ! inout (only calculated for trees)
+    dsl4jsb_Get_var2D_onChunk(VEG_, height)                               ! inout (only calculated for trees)
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                  ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, sai)                                  ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)                        ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, fract_fpc)                            ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi)                                 ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tfrac_mavg)                     ! in
@@ -207,13 +205,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, rough_veg_star)                       ! out
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)     ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! inout
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)                      ! inout
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)                       ! inout
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)                     ! inout
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! inout
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                      ! inout
-    dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)               ! inout
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)                      ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)                       ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)                     ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! inout (in case of optimality, else out)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                      ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)               ! out
     dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! out
     dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)                    ! out
@@ -268,7 +266,7 @@ CONTAINS
       lai(ic)      = veg_pool_mt(ix_leaf, ixC, ic) * lctlib_sla
 
       IF (lctlib_growthform == itree) THEN
-        dens_ind(ic) = dens_ind(ic) + delta_dens_ind(ic)
+        dens_ind(ic) = MAX(0.0_wp, dens_ind(ic) + delta_dens_ind(ic))
         ! reset delta_dens_ind to zero in cases plant characteristics are updated several times in the timestep
         delta_dens_ind(ic) = 0.0_wp
 
@@ -281,14 +279,6 @@ CONTAINS
             &                                              dens_ind(ic))
           height(ic)    = calc_height_from_diameter(lctlib_allom_k1, lctlib_allom_k2, diameter(ic))
         END IF
-      END IF
-
-      IF (veg_pool_mt(ix_leaf, ixC, ic) > eps8) THEN
-        mean_leaf_age(ic) = (mean_leaf_age(ic) + dtime / one_day) &
-          &                * (1._wp - veg_growth_mt(ix_leaf, ixC, ic) / veg_pool_mt(ix_leaf, ixC, ic)) &
-          &                - mean_leaf_age(ic) * veg_litterfall_mt(ix_leaf, ixC, ic) / veg_pool_mt(ix_leaf, ixC, ic)
-      ELSE
-        mean_leaf_age(ic) = 0.0_wp
       END IF
 
       dphi(ic) = matric_pot_root(ic) - lctlib_phi_leaf_min - grav * rhoh2o * height(ic) * 1.e-6_wp
@@ -372,16 +362,16 @@ CONTAINS
                              lctlib_t_jmax_omega                                      , &
                              flag_optimal_Nfraction                                   , & ! Q_ASSIMI_ config
                              canopy_cond_scheme                                       , & ! Q_ASSIMI_ config (medlyn/ballberry)
-                             leaf_nitrogen(:)                                         , &
+                             leaf_nitrogen(:)                                         , & ! in
                              lai(:)                                                   , &
-                             ppfd_sunlit_tfrac_mavg_cl(:,:)                           , &
+                             ppfd_sunlit_tfrac_mavg_cl(:,:)                           , & ! inout
                              ppfd_shaded_tfrac_mavg_cl(:,:)                           , &
                              fleaf_sunlit_tfrac_mavg_cl(:,:)                          , &
-                             fn_rub_cl(:,:)                                           , &
+                             fn_rub_cl(:,:)                                           , & ! out
                              fn_et_cl(:,:)                                            , &
                              fn_pepc_cl(:,:)                                          , &
-                             fn_chl_cl(:,:)                                           , &
-                             fn_oth_cl(:,:)                                           , & ! in
+                             fn_chl_cl(:,:)                                           , & ! inout (in case of optimality, else out)
+                             fn_oth_cl(:,:)                                           , & ! out
                              lai_cl(:,:)                                              , & ! out
                              cumm_lai_cl(:,:)                                         , & ! out
                              leaf_nitrogen_cl(:,:)                                    , & ! out

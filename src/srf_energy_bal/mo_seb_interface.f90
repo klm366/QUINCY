@@ -263,6 +263,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SEB_, t,               weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_old,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_srf,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_eff4,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, qsat_star,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, s_star,          weighted_by_fract)
@@ -473,7 +474,7 @@ CONTAINS
   !>
   !> Implementation of "update" for task "energy balance"
   !>
-  !> This diagnostic computes the residual in the energy balance fluxes over the land surface.
+  !> This diagnostic computes the balance of the net surface radiation fluxes at the land surface.
   !>
   SUBROUTINE update_energy_balance(tile, options)
 
@@ -507,10 +508,9 @@ CONTAINS
       & latent_hflx,        &               !< Latent heat flux                                    [W m-2]
       & forc_hflx,          &               !< Ground heat flux                                    [W m-2]
       & le_phase_change,    &               !< Latent energy required/released due to phase change [J m-2]
-      & heat_cap,           &               !< Surface heat capacity                           [J m-2 K-1]
       & t,                  &               !< Current time steps temperature                          [K]
       & t_old,              &               !< Previous time steps temperature                         [K]
-      & energy_balance_res                  !< Energy flux balance residual                        [W m-2]
+      & net_srf_rad_balance                 !< Net surface radiation balance                       [W m-2]
 
     REAL(wp), POINTER :: &
       & tile_fract(:), lat(:), lon(:)
@@ -526,8 +526,8 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, ic
 
-    INTEGER  :: n_errors, ie
-    INTEGER  :: error_idx(options%nc)
+    INTEGER  :: n_cells, ie
+    INTEGER  :: cell_idx(options%nc)
 
     REAL(wp) :: dtime
     LOGICAL  :: is_experiment_start
@@ -568,21 +568,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,      sensible_hflx)              ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      forc_hflx)                  ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      le_phase_change)            ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_,      heat_cap)                   ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      t)                          ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      t_old)                      ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_,      energy_balance_res)         ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_,      net_srf_rad_balance)        ! out
 
-    n_errors = 0   ! initialize error counter
+    n_cells = 0   ! initialize counter for cells exceeding energy balance threshold
 
-    !$ACC DATA CREATE(lw_srf_up, sw_srf_up, sw_srf_down, delta_t_srf)
+    !$ACC DATA CREATE(lw_srf_up, sw_srf_up, sw_srf_down, delta_t_srf)  ASYNC(acc_stream)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-
-    !$ACC LOOP GANG(STATIC: 1) &
-    !$ACC & VECTOR PRIVATE(lw_srf_up, sw_srf_up, sw_srf_down, delta_t_srf)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
-      ! Compute upwards fluxes for error message output
+      ! Compute fluxes used in log message
       lw_srf_up(ic)   = lw_srf_net(ic) - lw_srf_down(ic)
       sw_srf_down(ic) = swvis_srf_down(ic) + swnir_srf_down(ic) + swpar_srf_down(ic)
       sw_srf_up(ic)   = sw_srf_net(ic) - sw_srf_down(ic)
@@ -592,48 +588,49 @@ CONTAINS
 
       IF (.NOT. is_experiment_start .AND. tile_fract(ic) > EPSILON(1.0_wp)) THEN
         ! Compute energy flux residual (without surface/skin temperature change)
-        energy_balance_res(ic) = rad_srf_net(ic) + sensible_hflx(ic) + latent_hflx(ic) &
-          &                    + forc_hflx(ic) - le_phase_change(ic) / dtime
+        net_srf_rad_balance(ic) = rad_srf_net(ic) + sensible_hflx(ic) + latent_hflx(ic) &
+          &                     + forc_hflx(ic) + le_phase_change(ic) / dtime
       END IF
+    END DO
+    !$ACC END PARALLEL LOOP
 
-      ! Note that contrary to the water balance, the energy balance just checks the residual
-      ! of the fluxes while ignoring the heat storages. Therefore, a large residual can
-      ! still be acceptable if the heat storage is large enough to compensate for it and
-      ! does not necessarily indicate a problem.
+    ! Note that contrary to the water balance, the net surface radiation balance just
+    ! checks the residual of the fluxes while ignoring the heat storages. Therefore,
+    ! a large residual can still be acceptable if the heat storage is large enough to
+    ! compensate for it, and large values do not necessarily indicate a problem.
 #ifndef _OPENACC
+    DO ic=1,nc
       IF (dsl4jsb_Config(SEB_)%eb_threshold > 0._wp) THEN
-        IF (ABS(energy_balance_res(ic)) > dsl4jsb_Config(SEB_)%eb_threshold .OR. &
-          & (t(ic) > 400._wp .AND. tile_fract(ic) > EPSILON(1.0_wp))) THEN
-          n_errors = n_errors + 1       ! Count number of energy balance issues of this time step
-          error_idx(n_errors) = ic      ! Index of the respective grid cell (on chunk)
+        IF (ABS(net_srf_rad_balance(ic)) > dsl4jsb_Config(SEB_)%eb_threshold .OR. &
+          & ((t(ic) > 400._wp .OR. t(ic) < 50._wp).AND. tile_fract(ic) > EPSILON(1.0_wp))) THEN
+          n_cells = n_cells + 1       ! Count number of cells with energy balance issues of this time step
+          cell_idx(n_cells) = ic      ! Index of the respective grid cell (on chunk)
         END IF
       END IF
-#endif
     END DO
-    !$ACC END PARALLEL
-    !$ACC END DATA
 
-#ifndef _OPENACC
-    DO ie = 1, n_errors
-      ic = error_idx(ie)
+    DO ie = 1, n_cells
+      ic = cell_idx(ie)
 
-      WRITE (message_text_long,*) 'Energy balance flux residual [W m-2]',            NEW_LINE('a'), &
-        & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E',            NEW_LINE('a'), &
-        & '(ic: ',ic,' iblk: ',iblk, ' tile_fract: ',tile_fract(ic),'):',            NEW_LINE('a'), &
-        & 'Energy balance residual: ', energy_balance_res(ic),                       NEW_LINE('a'), &
-        & 'Longwave downwards:      ', lw_srf_down(ic),                              NEW_LINE('a'), &
-        & 'Longwave upwards:        ', lw_srf_up(ic),                                NEW_LINE('a'), &
-        & 'Shortwave downwards:     ', sw_srf_down(ic),                              NEW_LINE('a'), &
-        & 'Shortwave upwards:       ', sw_srf_up(ic),                                NEW_LINE('a'), &
-        & 'Net surface radiation:   ', rad_srf_net(ic),                              NEW_LINE('a'), &
-        & 'Sensible heat flux:      ', sensible_hflx(ic),                            NEW_LINE('a'), &
-        & 'Latent heat flux:        ', latent_hflx(ic),                              NEW_LINE('a'), &
-        & 'Ground heat flux:        ', forc_hflx(ic),                                NEW_LINE('a'), &
-        & 'Phase change flux:       ', -le_phase_change(ic) / dtime,                 NEW_LINE('a'), &
-        & 'Temperature change [K]:  ', delta_t_srf(ic)
+      WRITE (message_text_long,*) 'Net surface radiation balance [W m-2]', NEW_LINE('a'), &
+        & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E',  NEW_LINE('a'), &
+        & '(ic: ',ic,' iblk: ',iblk, ' tile_fract: ',tile_fract(ic),'):',  NEW_LINE('a'), &
+        & 'Net surface radiation balance: ', net_srf_rad_balance(ic),      NEW_LINE('a'), &
+        & 'Longwave downwards:            ', lw_srf_down(ic),              NEW_LINE('a'), &
+        & 'Longwave upwards:              ', lw_srf_up(ic),                NEW_LINE('a'), &
+        & 'Shortwave downwards:           ', sw_srf_down(ic),              NEW_LINE('a'), &
+        & 'Shortwave upwards:             ', sw_srf_up(ic),                NEW_LINE('a'), &
+        & 'Net surface radiation:         ', rad_srf_net(ic),              NEW_LINE('a'), &
+        & 'Sensible heat flux:            ', sensible_hflx(ic),            NEW_LINE('a'), &
+        & 'Latent heat flux:              ', latent_hflx(ic),              NEW_LINE('a'), &
+        & 'Ground heat flux:              ', forc_hflx(ic),                NEW_LINE('a'), &
+        & 'Phase change flux:             ', le_phase_change(ic) / dtime,  NEW_LINE('a'), &
+        & 'Temperature change [K]:        ', delta_t_srf(ic)
       CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
     END DO
 #endif
+
+    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
