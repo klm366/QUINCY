@@ -448,7 +448,6 @@ CONTAINS
         CALL model%Queue_task(SSE_,       "soil_and_snow_properties")
         CALL model%Queue_task(SSE_,       "soil_and_snow_temperature")
         CALL model%Queue_task(HYDRO_,     "soil_hydrology")
-        CALL model%Queue_task(SEB_,       "snowmelt_correction")
         CALL model%Queue_task(HYDRO_,     "water_stress")
         CALL model%Queue_task(RAD_,       "radiation_par")
         CALL model%Queue_task(Q_ASSIMI_,  "canopy_fluxes")
@@ -476,6 +475,7 @@ CONTAINS
         CALL model%Queue_task(RAD_,     "albedo")                   ! ALL
         CALL model%Queue_task(HYDRO_,   "water_balance")
         CALL model%Queue_task(SEB_,     "asselin_filter")           ! Should always be the last task
+        CALL model%Queue_task(SEB_,     "energy_balance")           ! 't' is used here, and 't' is updated in the 'asselin_filter'
 
         !-- averaging variables in time ------------------------------------------------------------------- !
         CALL model%Queue_task(RAD_, "rad_time_average")             ! ALL
