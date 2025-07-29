@@ -306,7 +306,6 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
       CALL model%Queue_task(HD_,     "hd_local_outflow")
 #endif
-      CALL model%Queue_task(SEB_,    "snowmelt_correction")
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         ! Normally called before update_canopy_cond_unstressed and update_assimilation
         CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors")
@@ -341,6 +340,7 @@ CONTAINS
           ! the SEB remains consistent within this time step.
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
+      CALL model%Queue_task(SEB_,    "energy_balance")
 
       ! Fuel is calculated last in a timestep to be right available in the next timestep
       IF (model%processes(FUEL_)%p%config%active) THEN
@@ -390,7 +390,11 @@ CONTAINS
           CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
         END IF
 
-        !-- science ----------------------------------------------------------------------------------------- !
+        IF (is_time_restart(get_time_start())) THEN
+          !-- derive plant characteristics from restart variables
+          CALL model%Queue_task(VEG_, "plant_characteristics")
+        END IF
+
         ! --------------- Any tasks that might change the land cover need to come first in the timestep
         !
         ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
@@ -414,16 +418,17 @@ CONTAINS
           CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
         END IF
 
-        IF (model%config%qmodel_id == QLAND) THEN
+        IF (model%processes(Q_AGR_)%p%config%active) THEN
+          CALL model%Queue_task(Q_AGR_, "cropland_process")         ! ALL; if Q_AGR_ active
+        END IF
+
+        IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
           IF (model%processes(Q_SYL_)%p%config%active .OR. model%processes(Q_AGR_)%p%config%active) THEN
             IF (model%processes(Q_SYL_)%p%config%active) THEN
-              CALL model%Queue_task(Q_SYL_, "sylviculture")        ! LAND ONLY; if Q_SYL_ active
+              CALL model%Queue_task(Q_SYL_, "sylviculture")         ! LAND or PLANT; if Q_SYL_ active
             END IF
-            IF (model%processes(Q_AGR_)%p%config%active) THEN
-              CALL model%Queue_task(Q_AGR_, "cropland_process")     ! LAND ONLY; if Q_AGR_ active
-            END If
-            CALL model%Queue_task(VEG_, "pools_on_harvest")         ! LAND ONLY; if Q_SYL_ or Q_AGR_ active
-            CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND ONLY; if Q_SYL_ or Q_AGR_ active
+            CALL model%Queue_task(VEG_, "pools_on_harvest")         ! LAND or PLANT; if Q_SYL_ or Q_AGR_ active
+            CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND or PLANT; if Q_SYL_ or Q_AGR_ active
           END IF
         END IF
 
@@ -493,7 +498,11 @@ CONTAINS
           CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
         END IF
 
-        !-- science ----------------------------------------------------------------------------------------- !
+        IF (is_time_restart(get_time_start())) THEN
+          !-- derive plant characteristics from restart variables
+          CALL model%Queue_task(VEG_, "plant_characteristics")
+        END IF
+
         ! --------------- Any tasks that might change the land cover need to come first in the timestep
         !
         ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
@@ -517,16 +526,17 @@ CONTAINS
           CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
         END IF
 
-        IF (model%config%qmodel_id == QLAND) THEN
+        IF (model%processes(Q_AGR_)%p%config%active) THEN
+          CALL model%Queue_task(Q_AGR_, "cropland_process")         ! ALL; if Q_AGR_ active
+        END IF
+
+        IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
           IF (model%processes(Q_SYL_)%p%config%active .OR. model%processes(Q_AGR_)%p%config%active) THEN
             IF (model%processes(Q_SYL_)%p%config%active) THEN
-              CALL model%Queue_task(Q_SYL_, "sylviculture")        ! LAND ONLY; if Q_SYL_ active
+              CALL model%Queue_task(Q_SYL_, "sylviculture")         ! LAND or PLANT; if Q_SYL_ active
             END IF
-            IF (model%processes(Q_AGR_)%p%config%active) THEN
-              CALL model%Queue_task(Q_AGR_, "cropland_process")     ! LAND ONLY; if Q_AGR_ active
-            END IF
-            CALL model%Queue_task(VEG_, "pools_on_harvest")         ! LAND ONLY; if Q_SYL_ or Q_AGR_ active
-            CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND ONLY; if Q_SYL_ or Q_AGR_ active
+            CALL model%Queue_task(VEG_, "pools_on_harvest")         ! LAND or PLANT; if Q_SYL_ or Q_AGR_ active
+            CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND or PLANT; if Q_SYL_ or Q_AGR_ active
           END IF
         END IF
 
@@ -704,10 +714,12 @@ CONTAINS
             CALL sb_init(tile)
           END IF
         END IF
-        IF (model%config%qmodel_id == QLAND) THEN
+        IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
           IF (tile%Is_process_active(Q_SYL_)) THEN
             CALL q_syl_init(tile)
           END IF
+        END IF
+        IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT .OR. model%config%qmodel_id == QCANOPY) THEN
           IF (tile%Is_process_active(Q_AGR_)) THEN
             CALL q_agr_init(tile)
           END IF

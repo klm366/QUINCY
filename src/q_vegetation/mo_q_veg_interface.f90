@@ -632,15 +632,13 @@ CONTAINS
 
     ! VEG_ 2D
     dsl4jsb_Aggregate_onChunk(VEG_, net_growth                          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, height                              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, lai                                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, fract_fpc                           , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, rough_veg_star                      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, mean_leaf_age                       , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, npp                                 , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c13        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c14        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, biological_n_fixation               , weighted_by_fract)
+
     ! VEG_ bgcm pools
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_n            , weighted_by_fract)
@@ -696,10 +694,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, height                              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, dens_ind                            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, lai                                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, net_growth                          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, mean_leaf_age                       , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fract_fpc                           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, dphi                                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, rough_veg_star                      , weighted_by_fract)
+
     dsl4jsb_Aggregate_onChunk(VEG_, rough_veg_star                      , weighted_by_fract)
 
     ! VEG_ 3D

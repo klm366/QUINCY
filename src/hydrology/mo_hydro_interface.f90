@@ -427,13 +427,13 @@ CONTAINS
 #endif
 
     ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: t_unfilt
-    dsl4jsb_Real2D_onChunk :: t_srf
     dsl4jsb_Real2D_onChunk :: q_snocpymlt
     dsl4jsb_Real2D_onChunk :: t_air
     dsl4jsb_Real2D_onChunk :: wind_10m
     dsl4jsb_Real2D_onChunk :: rain
     dsl4jsb_Real2D_onChunk :: snow
+    dsl4jsb_Real2D_onChunk :: le_phase_change
+    dsl4jsb_Real2D_onChunk :: le_pc_remain
     dsl4jsb_Real2D_onChunk :: wtr_skin
     dsl4jsb_Real2D_onChunk :: fract_skin
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
@@ -457,7 +457,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: evapo_deficit
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
-    dsl4jsb_Real2D_onChunk :: hcap_grnd
     dsl4jsb_Real2D_onChunk :: evapotrans
     dsl4jsb_Real2D_onChunk :: transpiration
     dsl4jsb_Real2D_onChunk :: evapopot
@@ -618,9 +617,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   wind_10m)       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   rain)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   snow)           ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   le_phase_change)! in
 
-    dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! in
-
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, le_pc_remain)   ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, steepness)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)       ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)  ! out
@@ -637,11 +636,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
 
     IF (tile%is_glacier) THEN
-      dsl4jsb_Get_var2D_onChunk(SEB_,     t_unfilt)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_glac)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   runoff_glac)      ! inout
     ELSE
-      dsl4jsb_Get_var2D_onChunk(SEB_,     t_srf)            ! in
       dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_sl)      ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   ice_soil_sl)      ! in
@@ -728,6 +725,18 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic=1,nc
+      ! Switch sign of phase change flux for the hydrology related processes. From the
+      !   energy balance perspective, ice melting is an energy sink (therefore negative)
+      !   and freezing a source (therefore positive). However, from the hydrology perspective
+      !   melting occures when enough energy is available (positive sign) and freezing if
+      !   energy is required (therefore negative).
+      !   Thus, we switch the sign now to make the hydrology equations more intuitive.
+      le_pc_remain(ic) = -1._wp * le_phase_change(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
+
     IF (tile%is_glacier) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
@@ -737,14 +746,13 @@ CONTAINS
         CALL calc_surface_hydrology_glacier( &
           & is_experiment_start,             & ! in
           & dtime,                           & ! in
-          & t_unfilt(ic),                    & ! in
           & fract_snow(ic),                  & ! in
-          & hcap_grnd(ic),                   & ! in
           & evapotrans(ic),                  & ! in
           & evapopot(ic),                    & ! in
           & rain(ic),                        & ! in
           & snow(ic),                        & ! in
           & weq_glac(ic),                    & ! inout
+          & le_pc_remain(ic),                & ! inout
           & q_snocpymlt(ic),                 & ! out
           & snowmelt(ic),                    & ! out
           & runoff_glac(ic),                 & ! out
@@ -878,7 +886,6 @@ CONTAINS
         & slope_used(:),                  & ! effective slope on tile or steepness for standard scheme    []
         & flowlag_used(:),                & ! lag factor to account for retention in surface runoff luxes    []
         & t_soil_sl(:,1),                 & ! Temperature of the uppermost soil layer [K]
-        & t_srf(:),                       & ! Surface tempemperature [K] (unfiltered)
         & wind_10m(:),                    & ! wind speed at 10m height [m/s]
         & t_air(:),                       & ! lowest layer atmosphere temperature [K]
         & skinres_canopy_max(:),          & ! Capacity of the canopy skin reservoir (also used to limit snow on canopy) [m]
@@ -888,7 +895,6 @@ CONTAINS
         & fract_skin(:),                  & ! skin reservoir fraction []
         & fract_pond(:),                  & ! Actual pond fraction []
         & fract_pond_max(:),              & ! Maximum pond fraction []
-        & hcap_grnd(:),                   & ! heat capacity of the uppermost soil layer [J m-2 K-1]
         & evapotrans(:),                  & ! evapotranspiration (including sublimation) [kg m-2 s-1]
         & evapopot(:),                    & ! potential evaporation (if there was enough water/ice) [kg m-2 s-1]
         & trans_tmp(:),                   & ! transpiration [kg m-2 s-1]
@@ -907,6 +913,7 @@ CONTAINS
         & wtr_pond(:),                    & ! pond reservoir water content [m]
         & ice_pond(:),                    & ! pond reservoir ice content [m]
         & wtr_latflow_res_srf(:),         & ! intermediate storage for surface runoff [m]
+        & le_pc_remain(:),                & ! Remaining latent energy for phase change [J m-2]
         ! out
         & q_snocpymlt(:),                 & ! Heating due to snow melt on canopy [W m-2]
         & snow_accum(:),                  & ! snow budget change within time step [m water equivalent]
@@ -1026,6 +1033,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_net_flx,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_srf,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, le_pc_remain,        weighted_by_fract)
 #ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
