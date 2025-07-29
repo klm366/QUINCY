@@ -416,7 +416,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_anaerobic_volume_fraction(wtr_soil_sl, ice_soil_sl, wtr_soil_sat_sl, lambda, k) RESULT(rate_modifier)
 
-    USE mo_jsb_math_constants,    ONLY: eps4
+    USE mo_jsb_math_constants,    ONLY: eps4, eps8
     USE mo_spq_constants,         ONLY: w_density, ice_density
 
     IMPLICIT NONE
@@ -436,9 +436,13 @@ CONTAINS
 
     ! calc air-filled pore space
     ! ensure a value between eps4 and '1-eps4'
-    air_filled_pore_space = MAX(eps4, MIN(1.0_wp - eps4, &
-      &                                   (wtr_soil_sat_sl - (wtr_soil_sl + ice_soil_sl * w_density / ice_density)) &
-      &                                   / wtr_soil_sat_sl))
+    IF (wtr_soil_sat_sl > eps8) THEN
+      air_filled_pore_space = MAX(eps4, MIN(1.0_wp - eps4, &
+        &                                   (wtr_soil_sat_sl - (wtr_soil_sl + ice_soil_sl * w_density / ice_density)) &
+        &                                   / wtr_soil_sat_sl))
+    ELSE
+      air_filled_pore_space = eps4
+    END IF
     ! calc rate modifier
     rate_modifier = 1.0_wp - EXP(-(lambda * (1.0_wp - air_filled_pore_space)) ** k)
   END FUNCTION calc_anaerobic_volume_fraction
