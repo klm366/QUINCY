@@ -295,13 +295,13 @@ CONTAINS
     !>
     IF (model%config%use_soil_phys_jsbach) THEN
       ! set to zero
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         wtr_soil_root_pot(ic) = 0.0_wp
       END DO
       !$ACC END PARALLEL LOOP
       ! calculate
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP SEQ
       DO is = 1, nsoil_sb
         !$ACC LOOP GANG VECTOR
