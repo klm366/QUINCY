@@ -214,9 +214,14 @@ CONTAINS
   END SUBROUTINE update_canopy_fluxes
 
   ! ======================================================================================================= !
-  !> Implementation of "aggregate": canopy_fluxes task
+  !>Implementation of "aggregate": canopy_fluxes task
+  !>
+  !>  plus: correction of ftranspiration_sl after aggregation
   !>
   SUBROUTINE aggregate_canopy_fluxes(tile, options)
+
+    USE mo_jsb_math_constants,     ONLY: eps8
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
@@ -224,13 +229,20 @@ CONTAINS
     ! dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER :: model
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice
+    CLASS(t_jsb_aggregator),  POINTER :: weighted_by_fract
+    REAL(wp)                          :: ftranspiration_sum(options%nc)           !< SUM(ftranspiration_sl) across soil layers
+    INTEGER                           :: iblk, ics, ice
+    INTEGER                           :: nc, ic, is
+    INTEGER                           :: nsoil
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Real3D_onChunk :: ftranspiration_sl
+    ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
+    nc      = options%nc
     ics     = options%ics
     ice     = options%ice
+    nsoil   = options%nsoil_w
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
@@ -239,6 +251,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(Q_ASSIMI_)
     ! dsl4jsb_Get_memory(A2L_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl)     ! in
+
 
     ! Q_ASSIMI_ 2D
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation          , weighted_by_fract)
@@ -246,10 +261,50 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C14      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, canopy_cond                 , weighted_by_fract)
     IF (model%config%use_soil_phys_jsbach) THEN
+      ! only with jsbach soil-physic processes enabled, otherwise calculated with SPQ_
       dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, wtr_soil_root_pot           , weighted_by_fract)
     END IF
     ! Q_ASSIMI_ 3D
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, ftranspiration_sl           , weighted_by_fract)
+
+    IF (model%config%use_soil_phys_jsbach) THEN
+      !$ACC DATA ASYNC(1) CREATE(ftranspiration_sum)
+
+      ! correction to ensure ftranspiration_sl sums up to 1.0 across soil layers
+      !
+      ! necessary because the aggregation from PFT to upper tiles
+      ! does not ensure that the sum across the soil profile is 1.0
+      !
+      ! TODO  improve aggregate routine
+      !
+      ! init ftranspiration_sum with zero
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        ftranspiration_sum(ic) = 0.0_wp
+      END DO
+      !$ACC END PARALLEL LOOP
+      ! calc ftranspiration_sum across soil layers
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil
+        !$ACC LOOP GANG VECTOR
+        DO ic = 1, nc
+          ftranspiration_sum(ic) = ftranspiration_sum(ic) + ftranspiration_sl(ic, is)
+        END DO
+      END DO
+      !$ACC END PARALLEL
+      ! scale ftranspiration_sl values to sum up to 1.0 across soil layers
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          IF (ftranspiration_sum(ic) > eps8) THEN
+            ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum(ic)
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+      !$ACC END DATA
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
   END SUBROUTINE aggregate_canopy_fluxes
