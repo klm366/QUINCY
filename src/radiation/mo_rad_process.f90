@@ -1388,8 +1388,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: arad_vis_can
     dsl4jsb_Real2D_onChunk :: arad_nir_can
     dsl4jsb_Real2D_onChunk :: appfd
-    dsl4jsb_Real2D_onChunk :: albedo
-    dsl4jsb_Real2D_onChunk :: albedo_noon
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk :: arad_sunlit_vis_cl
     dsl4jsb_Real3D_onChunk :: arad_shaded_vis_cl
@@ -1457,8 +1455,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_can)             ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_can)             ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, appfd)                    ! out
-    dsl4jsb_Get_var2D_onChunk(RAD_, albedo)                   ! out
-    dsl4jsb_Get_var2D_onChunk(RAD_, albedo_noon)              ! out
     ! RAD_ 3D
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_vis_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_vis_cl)       ! out
@@ -1534,25 +1530,6 @@ CONTAINS
     !$ACC UPDATE DEVICE(arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:)) &
     !$ACC   DEVICE(fleaf_sunlit_nir_cl(:,:), arad_nir_can(:), arad_nir_soil(:)) &
     !$ACC   DEVICE(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(acc_stream)
-
-    !> 3.0 calculate albedo and net radiation for total shortwave radiation
-    !!
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic = 1, nc
-      IF ((swvis_srf_down(ic) + swnir_srf_down(ic)) > eps8) THEN
-        albedo(ic) = ( alb_vis_lnd(ic) * swvis_srf_down(ic) + alb_nir_lnd(ic) * swnir_srf_down(ic) ) &
-          &           / (swvis_srf_down(ic) + swnir_srf_down(ic))
-      ELSE
-        ! albedo is not defined when radiation <= 0 and set to zero
-        albedo(ic) = 0.0_wp
-      END IF
-
-      ! at noon: set albedo_noon to current albedo (noon equals half a day plus one timestep)
-      IF (ABS(local_time_day_seconds(ic) - ((seconds_per_day / 2._wp) + dtime)) < eps1) THEN
-        albedo_noon(ic) = albedo(ic)
-      END IF
-    END DO
-    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE calc_surface_radiation_quincy
 
