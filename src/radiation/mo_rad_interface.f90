@@ -1783,17 +1783,25 @@ CONTAINS
 
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
-      ! RAD_ 2D
-
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis,                weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir,                weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_lnd,            weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_lnd,            weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_soil,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_soil,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, snow_age,               weighted_by_fract)
+      
+      ! equivalent to jsbach
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_lnd,         weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_lnd,         weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_soil,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_soil,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_pond,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_pond,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_mineralsoil, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_mineralsoil, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis,             weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir,             weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, snow_age,            weighted_by_fract)
+      IF (.NOT. tile%is_vegetation) THEN
+        dsl4jsb_Aggregate_onChunk(RAD_, albedo_lwtr,         weighted_by_fract)
+        dsl4jsb_Aggregate_onChunk(RAD_, albedo_lice,         weighted_by_fract)
+      ENDIF
 
       ! quincy specific
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_can,            weighted_by_fract)
