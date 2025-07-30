@@ -42,13 +42,15 @@ CONTAINS
     USE mo_q_assimi_parameters, ONLY: t_jmax_opt_min
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid
     USE mo_jsb_grid,            ONLY: Get_grid
+    USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element
     dsl4jsb_Use_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     ! ----------------------------------------------------------------------------------------------------- !
-    INTEGER                     :: nblks, ib, nproma, ic
-    TYPE(t_jsb_model), POINTER  :: model
-    TYPE(t_jsb_grid),  POINTER  :: grid
+    INTEGER                         :: nblks, ib, nproma, ic
+    TYPE(t_jsb_model),      POINTER :: model
+    TYPE(t_jsb_grid),       POINTER :: grid
+    TYPE(t_lctlib_element), POINTER :: lctlib               !< land-cover-type library - parameter across pft's
     CHARACTER(len=*), PARAMETER :: routine = modname//':q_assimi_init'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(Q_ASSIMI_)
@@ -78,11 +80,13 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: ftranspiration_sl
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(Q_ASSIMI_)) RETURN
+    IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
     IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of assimi memory (quincy) for tile '// &
       &                          TRIM(tile%name))
     ! ----------------------------------------------------------------------------------------------------- !
-    model => Get_model(tile%owner_model_id)
-    grid  => Get_grid(model%grid_id)
+    model   => Get_model(tile%owner_model_id)
+    grid    => Get_grid(model%grid_id)
+    lctlib  => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -143,9 +147,11 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-
     ftranspiration_sl(:, :, :)      = 0.0_wp    !< set to zero
-    ftranspiration_sl(:, 1, :)      = 1.0_wp    !< set to one in the 1st soil layer
+    ! init 1st soil layer with 1.0 for all but bare-soil tile
+    IF (.NOT. lctlib%BareSoilFlag) THEN
+      ftranspiration_sl(:, 1, :)    = 1.0_wp
+    END IF
   END SUBROUTINE q_assimi_init
 
 #endif
