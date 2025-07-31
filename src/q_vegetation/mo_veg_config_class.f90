@@ -62,6 +62,7 @@ MODULE mo_veg_config_class
 
     CHARACTER(15)    :: biomass_alloc_scheme       !< select scheme for veg biomass allocation: fixed dynamic optimal
     CHARACTER(15)    :: leaf_stoichom_scheme       !< select scheme for C/N leaf stoichometry:  fixed dynamic optimal
+    LOGICAL          :: read_veg_state             !< TRUE: call veg_read_states (mo_veg_init) after init/restart from file
     LOGICAL          :: flag_dynamic_roots         !< roots across soil layers: fixed after init or dynamic over time
                                                    !! for the models QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION fixed roots are used
                                                    !! by default; this is hard-coded in SPQ_ init
@@ -112,6 +113,7 @@ CONTAINS
     CHARACTER(15)               :: veg_dynamics_scheme
     CHARACTER(15)               :: biomass_alloc_scheme
     CHARACTER(15)               :: leaf_stoichom_scheme
+    LOGICAL                     :: read_veg_state
     LOGICAL                     :: flag_dynamic_roots
     LOGICAL                     :: flag_dynroots_h2o_n_limit
     LOGICAL                     :: flag_herbivory
@@ -132,6 +134,7 @@ CONTAINS
       veg_dynamics_scheme,          &
       biomass_alloc_scheme,         &
       leaf_stoichom_scheme,         &
+      read_veg_state,               &
       flag_dynamic_roots,           &
       flag_dynroots_h2o_n_limit,    &
       flag_herbivory,               &
@@ -144,12 +147,13 @@ CONTAINS
     active                         = .TRUE.
     lrestart_cont                  = .FALSE.  ! TRUE: Continue although VEG variables are missing in restart file
     bc_filename                    = 'bc_land_phys.nc'
-    ic_filename                    = 'ic_land_phys.nc'
+    ic_filename                    = 'ic_land_veg.nc'
     plant_functional_type_id       = 1
     veg_bnf_scheme                 = "dynamic"
     veg_dynamics_scheme            = "population"
     biomass_alloc_scheme           = "dynamic"
     leaf_stoichom_scheme           = "dynamic"
+    read_veg_state                 = .FALSE.
     flag_dynamic_roots             = .TRUE.
     flag_dynroots_h2o_n_limit      = .FALSE.
     flag_herbivory                 = .FALSE.
@@ -177,6 +181,7 @@ CONTAINS
     config%veg_dynamics_scheme           = TRIM(veg_dynamics_scheme)
     config%biomass_alloc_scheme          = TRIM(biomass_alloc_scheme)
     config%leaf_stoichom_scheme          = TRIM(leaf_stoichom_scheme)
+    config%read_veg_state                = read_veg_state
     config%flag_dynamic_roots            = flag_dynamic_roots
     config%flag_dynroots_h2o_n_limit     = flag_dynroots_h2o_n_limit
     config%flag_herbivory                = flag_herbivory
