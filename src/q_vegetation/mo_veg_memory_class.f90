@@ -1150,7 +1150,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('sai', mem%sai, &
@@ -1205,7 +1205,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('rough_veg_star ', mem%rough_veg_star, &
