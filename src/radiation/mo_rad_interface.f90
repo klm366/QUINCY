@@ -1783,7 +1783,7 @@ CONTAINS
 
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
-      
+
       ! equivalent to jsbach
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_lnd,         weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_lnd,         weighted_by_fract)
