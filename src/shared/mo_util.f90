@@ -26,7 +26,7 @@ MODULE mo_util
   PRIVATE
 
   PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, tolower, int2string, real2string, logical2string, &
-    &       report_memory_usage, soil_init_from_texture, tdma_solver_vec
+    &       report_memory_usage, soil_init_from_texture, read_bc_data, tdma_solver_vec
 
   INTERFACE one_of
     MODULE PROCEDURE one_of_str
@@ -174,6 +174,105 @@ CONTAINS
 
   END SUBROUTINE soil_init_from_texture
 
+  !>#### Read boundary conditions for hydrology module
+  !>
+  !> Boundary condition fields for the hydrology module may depend on namelist settings, e.g. l_organic,
+  !> but also on whether specific fields for individual tiles are available. This warrants a separate
+  !> routine to read the boundary conditions and while managing the different cases.
+  !>
+  SUBROUTINE read_bc_data(input_file, varname, tilename, l_organic, datafield, &
+    & default, llimit, ulimit, fallback, ilay, layer_name)
+
+    USE mo_jsb_io_netcdf,      ONLY: t_input_file
+
+    TYPE(t_input_file)           :: input_file     !< File containing input data to be read
+    CHARACTER(len=*), INTENT(IN) :: varname        !< Name of the variable to read
+    CHARACTER(len=*), INTENT(IN) :: tilename       !< Name of the actual tile to read the variable for
+    LOGICAL, INTENT(IN)          :: l_organic      !< Whether to read the '_mineral' version of the variable
+    REAL(wp), INTENT(OUT)        :: datafield(:,:) !< Data field to be filled with boundary condition data
+
+    REAL(wp), INTENT(IN), OPTIONAL :: default      !< Default value for missing values (0 or beyond zero)
+    REAL(wp), INTENT(IN), OPTIONAL :: llimit       !< Set lower bound for the variable to read
+    REAL(wp), INTENT(IN), OPTIONAL :: ulimit       !< Set Upper bound for the variable to read
+    REAL(wp), INTENT(IN), OPTIONAL :: fallback     !< Fallback value to be used globally if variables is not found
+    INTEGER,  INTENT(IN), OPTIONAL :: ilay         !< Layer index to read the variable for
+    CHARACTER(len=*), INTENT(IN), OPTIONAL :: layer_name !< Name of the vertical layer
+
+    REAL(wp), POINTER            :: &
+      & ptr_2D(:,:),                &              !< Pointer to 2d variable
+      & ptr_3D(:,:,:)                              !< Pointer to 3d variable
+    LOGICAL :: read_from_file                      !< T: read data from file, F: use fallback value or fail
+
+    CHARACTER(len=:), ALLOCATABLE:: fullname       !< Full name of the variable to read
+
+    CHARACTER(len=*), PARAMETER  :: routine = modname//':read_bc_data'
+
+    ! Set variable name depending on the use of l_organic.
+    IF (l_organic) THEN
+      ! If soil is modified with organic carbon fraction, read the variable with the '_mineral' suffix.
+      fullname = TRIM(varname) // '_mineral'
+    ELSE
+      ! If soil organic fraction is already included, read the variable without '_mineral' suffix.
+      fullname = TRIM(varname)
+    END IF
+
+    ! Modify file name if a variable with the respective tile name exists in the bc file.
+    IF (input_file%Has_var(TRIM(fullname)//'_'//TRIM(tilename))) THEN
+      ! If the variable with the tile name exists, use it.
+      fullname = TRIM(fullname)//'_'//TRIM(tilename)
+      read_from_file = .TRUE.
+    ELSE IF (input_file%Has_var(TRIM(fullname))) THEN
+      ! Alternatively use the standard variable for this tile if it exists.
+      read_from_file = .TRUE.
+    ELSE IF (PRESENT(fallback)) THEN
+      ! Set datafield to the fallback value
+      datafield(:,:) = fallback
+      read_from_file = .FALSE.
+      ! TODO: write this only for debug output
+      CALL message(routine, 'Set '//TRIM(fullname)//' field for tile '// TRIM(tilename) // &
+        & ' to fallback value '//TRIM(real2string(fallback)))
+    ELSE
+      ! If the fallback value and field variable do not exist, complain
+      CALL finish(routine, 'Variable '//TRIM(fullname)//' not found in input file '//TRIM(input_file%filename) &
+        & // ' and no fallback value given.')
+    END IF
+
+    IF (read_from_file) THEN
+      IF (PRESENT(ilay) .AND. PRESENT(layer_name)) THEN
+        ! Read 1 layer of a 3D field
+        ptr_3D => input_file%Read_2d_extdim( &
+          & variable_name=TRIM(fullname),    &
+          & start_extdim=ilay, end_extdim=ilay, extdim_name=TRIM(layer_name))
+        datafield(:,:) = ptr_3D(:,:,1)
+      ELSE
+        ! Read 2D field
+        ptr_2D => input_file%Read_2d(variable_name=TRIM(fullname))
+        datafield(:,:) = ptr_2D(:,:)
+      END IF
+      IF (PRESENT(default)) THEN
+        ! TODO check whether also values of zero should be set to a default value
+        IF (default >= 0._wp) THEN
+          ! Positive default value: Use it to fill all values < 0.
+          datafield(:,:) = MERGE(datafield(:,:), default, datafield(:,:) >= 0._wp)
+        ELSE
+          ! Negative default value: Use it to fill all values > 0.
+          datafield(:,:) = MERGE(datafield(:,:), default, datafield(:,:) <= 0._wp)
+        END IF
+      END IF
+      IF (PRESENT(llimit)) THEN
+        ! If a lower limit is given, use it to limit the read data.
+        datafield(:,:) = MERGE(datafield(:,:), llimit, datafield(:,:) >= llimit)
+      END IF
+      IF (PRESENT(ulimit)) THEN
+        ! If an upper limit is given, use it to limit the read data.
+        datafield(:,:) = MERGE(datafield(:,:), ulimit, datafield(:,:) <= ulimit)
+      END IF
+
+      ! TODO: write this only for debug output
+      CALL message(routine, 'Read '//TRIM(fullname)//' field for tile '// TRIM(tilename))
+    END IF
+
+  END SUBROUTINE read_bc_data
 
   !-----------------------------------------------------------------------------------------------------
   !> conversion: uppercase -> lowercase

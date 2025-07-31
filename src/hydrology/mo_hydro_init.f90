@@ -41,7 +41,7 @@ MODULE mo_hydro_init
   USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,             ONLY: missval
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
-  USE mo_util,               ONLY: int2string, soil_init_from_texture
+  USE mo_util,               ONLY: int2string, soil_init_from_texture, read_bc_data
 
   dsl4jsb_Use_processes HYDRO_, LEX_
   dsl4jsb_Use_config(HYDRO_)
@@ -556,18 +556,18 @@ CONTAINS
 
     !>    - Orography and its standard deviation
     IF (jsbach_runs_standalone()) THEN
-      CALL read_bc_data(tile, input_file, 'elevation', .FALSE., hydro_init_vars%elevation, llimit=0._wp)
+      CALL read_bc_data(input_file, 'elevation', tile%name, .FALSE., hydro_init_vars%elevation, llimit=0._wp)
     END IF
 
-    CALL read_bc_data(tile, input_file, 'orostd', .FALSE., hydro_init_vars%oro_stddev, llimit=0._wp)
+    CALL read_bc_data(input_file, 'orostd', tile%name, .FALSE., hydro_init_vars%oro_stddev, llimit=0._wp)
 
     !>    - Maximum fraction and depth of local surface depressions needed with the ponds scheme
     IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. .NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
       IF (input_file%Has_var('surf_depr_fract') .AND. input_file%Has_var('surf_depr_depth')) THEN
         ! Use depression area fraction as maximum pond fraction
-        CALL read_bc_data(tile, input_file, 'surf_depr_fract', .FALSE., hydro_init_vars%fract_pond_max, llimit=0._wp)
+        CALL read_bc_data(input_file, 'surf_depr_fract', tile%name, .FALSE., hydro_init_vars%fract_pond_max, llimit=0._wp)
         ! Use depression depth as maximum pond depth (Attention: Values are negative!)
-        CALL read_bc_data(tile, input_file, 'surf_depr_depth', .FALSE., hydro_init_vars%depth_pond_max, ulimit=0._wp)
+        CALL read_bc_data(input_file, 'surf_depr_depth', tile%name, .FALSE., hydro_init_vars%depth_pond_max, ulimit=0._wp)
       ELSE
         CALL finish(TRIM(routine), '*** Error: surf_depr_fract and/or surf_depr_depth not found in bc_sso file. '// &
           & 'Pond scheme cannot run without these fields')
@@ -594,39 +594,40 @@ CONTAINS
       !>
 
       !>     - Soil depth until bedrock
-      CALL read_bc_data(tile, input_file, 'soil_depth', .FALSE., hydro_init_vars%soil_depth, llimit=0.1_wp)
+      CALL read_bc_data(input_file, 'soil_depth', tile%name, .FALSE., hydro_init_vars%soil_depth, llimit=0.1_wp)
 
       !>     - Root depth
       ! TODO root depth should become a function of PFTs eventually, instead of being a soil property
-      CALL read_bc_data(tile, input_file, 'root_depth', .FALSE., hydro_init_vars%root_depth, default=0._wp)
+      CALL read_bc_data(input_file, 'root_depth', tile%name, .FALSE., hydro_init_vars%root_depth, default=0._wp)
 
       IF (.NOT. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
         !>
         !>    B: Soil properties only read if soil textures are ignored
         !>
         !>     - Volumetric soil porosity
-        CALL read_bc_data(tile, input_file, 'soil_porosity', l_organic, hydro_init_vars%vol_porosity, default=0.2_wp)
+        CALL read_bc_data(input_file, 'soil_porosity', tile%name, l_organic, hydro_init_vars%vol_porosity, default=0.2_wp)
 
         !>     - Saturated hydraulic conductivity
-        CALL read_bc_data(tile, input_file, 'hyd_cond_sat', l_organic, hydro_init_vars%hyd_cond_sat, default=4.e-6_wp)
+        CALL read_bc_data(input_file, 'hyd_cond_sat', tile%name, l_organic, hydro_init_vars%hyd_cond_sat, default=4.e-6_wp)
 
         !>     - Volumetric field capacity
-        CALL read_bc_data(tile, input_file, 'soil_field_cap', l_organic, hydro_init_vars%vol_field_cap, default=0._wp)
+        CALL read_bc_data(input_file, 'soil_field_cap', tile%name, l_organic, hydro_init_vars%vol_field_cap, default=0._wp)
 
         !>     - Volumetric permanent wilting point
-        CALL read_bc_data(tile, input_file, 'wilting_point', l_organic, hydro_init_vars%vol_p_wilt, default=0._wp)
+        CALL read_bc_data(input_file, 'wilting_point', tile%name, l_organic, hydro_init_vars%vol_p_wilt, default=0._wp)
 
         !>     - Volumetric residual water content
-        CALL read_bc_data(tile, input_file, 'residual_water', l_organic, hydro_init_vars%vol_wres, default=0._wp)
+        CALL read_bc_data(input_file, 'residual_water', tile%name, l_organic, hydro_init_vars%vol_wres, default=0._wp)
 
         !>     - Soil matric potential
-        CALL read_bc_data(tile, input_file, 'moisture_pot', l_organic, hydro_init_vars%matric_pot, default=-0.2_wp)
+        CALL read_bc_data(input_file, 'moisture_pot', tile%name, l_organic, hydro_init_vars%matric_pot, default=-0.2_wp)
 
         !>     - Exponent B in Clapp and Hornberger
-        CALL read_bc_data(tile, input_file, 'bclapp', l_organic, hydro_init_vars%bclapp, default=6._wp)
+        CALL read_bc_data(input_file, 'bclapp', tile%name, l_organic, hydro_init_vars%bclapp, default=6._wp)
 
         !>     - Pore size distribution index
-        CALL read_bc_data(tile, input_file, 'pore_size_index', l_organic, hydro_init_vars%pore_size_index, default=0.25_wp)
+        CALL read_bc_data(input_file, 'pore_size_index', tile%name, l_organic, hydro_init_vars%pore_size_index, &
+          & default=0.25_wp)
 
       ELSE   ! l_soil_texture
         !>
@@ -634,22 +635,22 @@ CONTAINS
         !>       and then calculate the soil properties from these textures.
         !>
         !>     - Fraction of sand in upper soil
-        CALL read_bc_data(tile, input_file, 'FR_SAND', .FALSE., hydro_init_vars%fr_sand, llimit=0._wp)
+        CALL read_bc_data(input_file, 'FR_SAND', tile%name, .FALSE., hydro_init_vars%fr_sand, llimit=0._wp)
 
         !>     - Fraction of silt in upper soil
-        CALL read_bc_data(tile, input_file, 'FR_SILT', .FALSE., hydro_init_vars%fr_silt, llimit=0._wp)
+        CALL read_bc_data(input_file, 'FR_SILT', tile%name, .FALSE., hydro_init_vars%fr_silt, llimit=0._wp)
 
         !>     - Fraction of clay in upper soil
-        CALL read_bc_data(tile, input_file, 'FR_CLAY', .FALSE., hydro_init_vars%fr_clay, llimit=0._wp)
+        CALL read_bc_data(input_file, 'FR_CLAY', tile%name, .FALSE., hydro_init_vars%fr_clay, llimit=0._wp)
 
         !>     - Fraction of sand in deep soil
-        CALL read_bc_data(tile, input_file, 'SUB_FR_SAND', .FALSE., hydro_init_vars%fr_sand_deep, llimit=0._wp)
+        CALL read_bc_data(input_file, 'SUB_FR_SAND', tile%name, .FALSE., hydro_init_vars%fr_sand_deep, llimit=0._wp)
 
         !>     - Fraction of silt in deep soil
-        CALL read_bc_data(tile, input_file, 'SUB_FR_SILT', .FALSE., hydro_init_vars%fr_silt_deep, llimit=0._wp)
+        CALL read_bc_data(input_file, 'SUB_FR_SILT', tile%name, .FALSE., hydro_init_vars%fr_silt_deep, llimit=0._wp)
 
         !>     - Fraction of clay in deep soil
-        CALL read_bc_data(tile, input_file, 'SUB_FR_CLAY', .FALSE., hydro_init_vars%fr_clay_deep, llimit=0._wp)
+        CALL read_bc_data(input_file, 'SUB_FR_CLAY', tile%name, .FALSE., hydro_init_vars%fr_clay_deep, llimit=0._wp)
 
         ! Calculate the soil properties from soil textures
         !
@@ -717,12 +718,9 @@ CONTAINS
       !>
       !>     - Soil organic carbon fractions for each soil layer
       IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
-        ! CALL read_bc_data(tile, input_file, 'fract_org_sl', .FALSE., hydro_init_vars%fract_org_sl, default=0._wp)
         DO isoil=1,nsoil
-          ptr_3D => input_file%Read_2d_extdim( &
-            & variable_name='fract_org_sl',    &
-            & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
-          hydro_init_vars%fract_org_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+          CALL read_bc_data(input_file, 'fract_org_sl', tile%name, .FALSE., hydro_init_vars%fract_org_sl(:,isoil,:), &
+            &  default=0._wp, ilay=isoil, layer_name='soillev')
         END DO
       END IF
 
@@ -1805,119 +1803,6 @@ CONTAINS
     !$ACC WAIT(1)
 
   END SUBROUTINE hydro_sanitize_state
-  !
-  ! ====================================================================================================== !
-  !
-  !>#### Read boundary conditions for hydrology module
-  !>
-  !> Boundary condition fields for the hydrology module may depend on namelist settings, e.g. l_organic,
-  !> but also on whether specific fields for individual tiles are available. This warrants a separate
-  !> routine to read the boundary conditions and while managing the different cases.
-  !>
-  SUBROUTINE read_bc_data(tile, input_file, varname, l_organic, datafield, default, llimit, ulimit)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-
-    TYPE(t_input_file)           :: input_file     !< File containing input data to be read
-    CHARACTER(len=*), INTENT(IN) :: varname        !< Name of the variable to read
-    LOGICAL, INTENT(IN)          :: l_organic      !< Whether to read the '_mineral' version of the variable
-    REAL(wp), INTENT(OUT)        :: datafield(..)  !< Data field to be filled with boundary condition data
-
-    REAL(wp), INTENT(IN), OPTIONAL :: default      !< Default value for missing values (0 or beyond zero)
-    REAL(wp), INTENT(IN), OPTIONAL :: llimit       !< Set lower bound for the variable to read
-    REAL(wp), INTENT(IN), OPTIONAL :: ulimit       !< Set Upper bound for the variable to read
-
-    ! Locally allocated vectors
-    TYPE(t_jsb_model), POINTER   :: model          !< This instence of ICON-Land
-    TYPE(t_jsb_vgrid), POINTER   :: soil_w         !< Vertical grid for the hydrology
-
-    REAL(wp), POINTER            :: &
-      & ptr_2D(:,  :),              &              !< Pointer to 2d variable
-      & ptr_3D(:,:,:)                              !< Pointer to 3d variable
-
-    INTEGER                      :: isoil, nsoil   !< Looping index for soil levels and number of soil levels
-
-    CHARACTER(len=:), ALLOCATABLE:: fullname       !< Full name of the variable to read
-
-    CHARACTER(len=*), PARAMETER  :: routine = modname//':read_bc_data'
-
-    model => Get_model(tile%owner_model_id)
-
-    soil_w => Get_vgrid('soil_depth_water')
-    nsoil = soil_w%n_levels
-
-    ! Set variable name depending on the use of l_organic.
-    IF (l_organic) THEN
-      ! If soil is modified with organic carbon fraction, read the variable with the '_mineral' suffix.
-      fullname = TRIM(varname) // '_mineral'
-    ELSE
-      ! If soil organic fraction is already included, read the variable without '_mineral' suffix.
-      fullname = TRIM(varname)
-    END IF
-
-    ! Modify file name if a variable with the respective tile name exists in the bc file.
-    IF (input_file%Has_var(TRIM(fullname)//'_'//TRIM(tile%name))) THEN
-      ! If the variable with the tile name exists, use it.
-      fullname = TRIM(fullname)//'_'//TRIM(tile%name)
-    END IF
-
-    SELECT RANK (datafield)
-      RANK (2)
-        ptr_2D => input_file%Read_2d(     &
-          & variable_name=TRIM(fullname), &
-          & fill_array = datafield)
-        IF (PRESENT(default)) THEN
-          IF (default >= 0._wp) THEN
-            ! Positive default value: Use it to fill all values < 0.
-            datafield = MERGE(ptr_2D, default, ptr_2D >= 0._wp)
-          ELSE
-            ! Negative default value: Use it to fill all values > 0.
-            datafield = MERGE(ptr_2D, default, ptr_2D <= 0._wp)
-          END IF
-        ELSE IF (PRESENT(llimit)) THEN
-          ! If a lower limit is given, use it to limit the read data.
-          datafield = MERGE(ptr_2D, llimit, ptr_2D >= llimit)
-        ELSE IF (PRESENT(ulimit)) THEN
-          ! If an upper limit is given, use it to limit the read data.
-          datafield = MERGE(ptr_2D, ulimit, ptr_2D <= ulimit)
-        ELSE
-          ! If no limits are given, just use the read data.
-          datafield = ptr_2D
-        END IF
-        CALL message(routine, 'Read 2D '//TRIM(fullname)//' field for tile '// TRIM(tile%name))
-      RANK (3)
-        ! Currently, this is hardcoded for soil water levels. Probably this should be generalized
-        ! to other 3D variables in the future.
-        DO isoil=1,nsoil
-          ptr_3D => input_file%Read_2d_extdim( &
-            & variable_name=TRIM(fullname),    &
-            & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
-          IF (PRESENT(default)) THEN
-            IF (default >= 0._wp) THEN
-              ! Positive default value: Use it to fill all values < 0.
-              datafield(:,isoil,:) = MERGE(ptr_3D(:,:,1), default, ptr_3D(:,:,1) >= 0._wp)
-            ELSE
-              ! Negative default value: Use it to fill all values > 0.
-              datafield(:,isoil,:) = MERGE(ptr_3D(:,:,1), default, ptr_3D(:,:,1) <= 0._wp)
-            END IF
-          ELSE IF (PRESENT(llimit)) THEN
-            ! If a lower limit is given, use it to limit the read data.
-            datafield(:,isoil,:) = MERGE(ptr_3D(:,:,1), llimit, ptr_3D(:,:,1) >= llimit)
-          ELSE IF (PRESENT(ulimit)) THEN
-            ! If an upper limit is given, use it to limit the read data.
-            datafield(:,isoil,:) = MERGE(ptr_3D(:,:,1), ulimit, ptr_3D(:,:,1) <= ulimit)
-          ELSE
-            ! If no limits are given, just use the read data.
-            datafield(:,isoil,:) = ptr_3D(:,:,1)
-          END IF
-        END DO
-        CALL message(routine, 'Read 3D '//TRIM(fullname)//' field for tile '// TRIM(tile%name))
-      RANK DEFAULT
-        CALL finish(routine, 'Unsupported data field rank for '//TRIM(varname))
-    END SELECT
-
-
-  END SUBROUTINE read_bc_data
   !
   ! ====================================================================================================== !
 
