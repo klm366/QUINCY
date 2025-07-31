@@ -61,6 +61,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER   :: model              !< the model
     TYPE(t_lctlib_element), POINTER   :: lctlib             !< land-cover-type library - parameter across pft's
+    REAL(wp)                          :: soil_state_hlp     !< wtr_soil_sat_sl or vol_porosity_sl*soil_depth_sl of soil layer
     INTEGER                           :: iblk, ics, ice, nc !< dimensions
     INTEGER                           :: is, ic             !< dimensions looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_rate_modifier'
@@ -101,6 +102,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_sat_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_sl
+    dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk :: t_soil_sl
     ! ----------------------------------------------------------------------------------------------------- !
@@ -152,6 +154,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_fc_sl)              ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_sat_sl)             ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_pot_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_porosity_sl)             ! in
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)                    ! in
     ! ----------------------------------------------------------------------------------------------------- !
@@ -197,8 +200,13 @@ CONTAINS
         rmm_nitrification(ic, is)             = calc_moisture_modifier(wtr_soil_sl(ic, is), wtr_soil_fc_sl(ic, is))
         rmm_gasdiffusion(ic, is)              = MAX(min_rmm_gasdiffusion, &
           &                                     1.0_wp - calc_moisture_modifier(wtr_soil_sl(ic, is), wtr_soil_fc_sl(ic,is)))
+        IF (model%config%use_soil_phys_jsbach) THEN
+          soil_state_hlp = vol_porosity_sl(ic, is) * soil_depth_sl(ic, is)
+        ELSE
+          soil_state_hlp = wtr_soil_sat_sl(ic, is)
+        END IF
         anaerobic_volume_fraction_sl(ic, is)  = calc_anaerobic_volume_fraction(wtr_soil_sl(ic, is), ice_soil_sl(ic, is), &
-          &                                     wtr_soil_sat_sl(ic, is), lambda_anvf, k_anvf)
+          &                                     soil_state_hlp, lambda_anvf, k_anvf)
 
         !>  2.1 N fixation model
         !>   Using the symbiotic T-function as no other data available
@@ -414,9 +422,9 @@ CONTAINS
   !!
   !! Output: rate modifier (unitless)
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_anaerobic_volume_fraction(wtr_soil_sl, ice_soil_sl, wtr_soil_sat_sl, lambda, k) RESULT(rate_modifier)
+  ELEMENTAL FUNCTION calc_anaerobic_volume_fraction(wtr_soil_sl, ice_soil_sl, soil_state_hlp, lambda, k) RESULT(rate_modifier)
 
-    USE mo_jsb_math_constants,    ONLY: eps4, eps8
+    USE mo_jsb_math_constants,    ONLY: eps4
     USE mo_spq_constants,         ONLY: w_density, ice_density
 
     IMPLICIT NONE
@@ -424,7 +432,7 @@ CONTAINS
     ! 0.1 InOut
     REAL(wp), INTENT(in)  :: wtr_soil_sl         !< soil moisture [m]
     REAL(wp), INTENT(in)  :: ice_soil_sl         !< soil ice water equivalent [m]
-    REAL(wp), INTENT(in)  :: wtr_soil_sat_sl     !< soil moisture at saturation [m]
+    REAL(wp), INTENT(in)  :: soil_state_hlp      !< wtr_soil_sat_sl or vol_porosity_sl*soil_depth_sl of soil layer
     REAL(wp), INTENT(in)  :: lambda              !< lambda in Weibull function
     REAL(wp), INTENT(in)  :: k                   !< k in Weibull function
     REAL(wp)              :: rate_modifier       !< oxygen availability rate modifier [unitless]
@@ -436,13 +444,9 @@ CONTAINS
 
     ! calc air-filled pore space
     ! ensure a value between eps4 and '1-eps4'
-    IF (wtr_soil_sat_sl > eps8) THEN
-      air_filled_pore_space = MAX(eps4, MIN(1.0_wp - eps4, &
-        &                                   (wtr_soil_sat_sl - (wtr_soil_sl + ice_soil_sl * w_density / ice_density)) &
-        &                                   / wtr_soil_sat_sl))
-    ELSE
-      air_filled_pore_space = eps4
-    END IF
+    air_filled_pore_space = MAX(eps4, MIN(1.0_wp - eps4, &
+      &                                   (soil_state_hlp - (wtr_soil_sl + ice_soil_sl * w_density / ice_density)) &
+      &                                   / soil_state_hlp))
     ! calc rate modifier
     rate_modifier = 1.0_wp - EXP(-(lambda * (1.0_wp - air_filled_pore_space)) ** k)
   END FUNCTION calc_anaerobic_volume_fraction
