@@ -396,7 +396,7 @@ CONTAINS
 
     !>  2.2 determine aerodynamic conductance
     !>
-    !> use drag_srf from A2L_ or TURB_ - differ between standalone / coupled simulations / quincy SPQ_ / jsbach soil-physics
+    !> use drag_srf from A2L_ or SEB_ - differ between standalone / coupled simulations / quincy SPQ_ / jsbach soil-physics
     !>
     ! use for: QUINCY SPQ_ standalone
     IF (jsb_standalone .AND. .NOT. model%config%use_soil_phys_jsbach) THEN
