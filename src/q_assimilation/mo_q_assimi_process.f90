@@ -27,6 +27,7 @@ MODULE mo_q_assimi_process
 
   PRIVATE
   PUBLIC :: update_canopy_fluxes, calc_photosynthesis, calc_soil_moisture_stress
+  PUBLIC :: update_ftranspiration_per_sl
   PUBLIC :: discrimination_ps_c13, discrimination_ps_c14
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_assimi_process'
@@ -381,17 +382,8 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-    ! QUINCY with jsbach soil-physic processes
-    ELSE
-      CALL calc_ftranspiration_sl( &
-        & nc, &
-        & nsoil_sb, &
-        & lctlib_phi_leaf_min, &
-        & num_sl_above_bedrock(:), &
-        & root_fraction_sl(:,:), &
-        & wtr_soil_pot_sl(:,:), &     ! in
-        & ftranspiration_sl(:,:) &    ! out
-        & )
+    ! for QUINCY with jsbach soil-physic processes
+    !  is calculated with an individual task: update_ftranspiration_per_sl
     END IF ! model%config%use_soil_phys_jsbach
 
     !>  2.2 determine aerodynamic conductance
@@ -588,6 +580,90 @@ CONTAINS
     DEALLOCATE(ftranspiration_sum_local)
 
   END SUBROUTINE update_canopy_fluxes
+
+
+  ! ======================================================================================================= !
+  !>Update the fraction of transpiration per soil layer
+  !>
+  !>  used only with QUINCY and jsbach soil-physic processes (not with SPQ_)
+  !>
+  SUBROUTINE update_ftranspiration_per_sl(tile, options)
+    USE mo_jsb_class,              ONLY: Get_model
+    USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,         ONLY: t_jsb_task_options
+    USE mo_jsb_model_class,        ONLY: t_jsb_model
+    USE mo_jsb_process_class,      ONLY: Q_ASSIMI_, VEG_, HYDRO_
+    USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,               ONLY: Get_vgrid
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_memory(Q_ASSIMI_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),      POINTER       :: model                    !< the model
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb            !< Vertical grid for soil layers
+    INTEGER                               :: nsoil_sb                 !< number of soil layers
+    INTEGER                               :: iblk, ics, ice, nc       !< dimensions
+    REAL(wp)                              :: lctlib_phi_leaf_min
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_ftranspiration_per_sl'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(Q_ASSIMI_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Q_ASSIMI_ 3D
+    dsl4jsb_Real3D_onChunk      :: ftranspiration_sl
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk      :: num_sl_above_bedrock
+    ! HYDRO_ 3D
+    dsl4jsb_Real3D_onChunk      :: wtr_soil_pot_sl
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk      :: root_fraction_sl
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. tile%Is_process_calculated(Q_ASSIMI_)) RETURN
+    ! ----------------------------------------------------------------------------------------------------- !
+    model                  => Get_model(tile%owner_model_id)
+    vgrid_soil_sb          => Get_vgrid('soil_layer_sb')
+    nsoil_sb               =  vgrid_soil_sb%n_levels
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(Q_ASSIMI_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Q_ASSIMI_ 3D
+    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl)         ! out
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)         ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_sl)              ! in
+    ! VEG_ 3D
+    dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)               ! in
+    ! ----------------------------------------------------------------------------------------------------- !
+    lctlib_phi_leaf_min = dsl4jsb_Lctlib_param(phi_leaf_min)
+
+
+    CALL calc_ftranspiration_sl( &
+      & nc, &
+      & nsoil_sb, &
+      & lctlib_phi_leaf_min, &
+      & num_sl_above_bedrock(:), &
+      & root_fraction_sl(:,:), &
+      & wtr_soil_pot_sl(:,:), &     ! in
+      & ftranspiration_sl(:,:) &    ! out
+      & )
+  END SUBROUTINE update_ftranspiration_per_sl
+
 
   ! ======================================================================================================= !
   !>Calculation of net photosynthesis and canopy conductance
@@ -1217,6 +1293,12 @@ CONTAINS
     END IF
   END FUNCTION discrimination_ps_c14
 
+
+  ! ======================================================================================================= !
+  !>Calculate the fraction of transpiration per soil layer
+  !>
+  !>  called only with QUINCY and jsbach soil-physic processes (not with SPQ_)
+  !>
   SUBROUTINE calc_ftranspiration_sl( &
     & nc, &
     & nsoil_sb, &

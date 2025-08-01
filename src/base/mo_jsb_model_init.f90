@@ -443,6 +443,7 @@ CONTAINS
         CALL model%Queue_task(SEB_,       "surface_energy")
         CALL model%Queue_task(HYDRO_,     "evaporation")
         CALL model%Queue_task(SEB_,       "surface_fluxes")
+        CALL model%Queue_task(Q_ASSIMI_,  "ftranspiration_per_sl")
         CALL model%Queue_task(HYDRO_,     "surface_hydrology")
         CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
         CALL model%Queue_task(SSE_,       "soil_and_snow_properties")

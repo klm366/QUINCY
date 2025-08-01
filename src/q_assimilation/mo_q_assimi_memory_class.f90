@@ -274,7 +274,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('aerodyn_cond', mem%aerodyn_cond, &
