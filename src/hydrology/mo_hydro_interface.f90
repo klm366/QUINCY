@@ -903,7 +903,6 @@ CONTAINS
         & wtr_latflow_srf(:)              & ! outflow from intermediate storage for surface runoff [kg m-2 s-1]
         & )
 
-      ! PFL TODO
       ! Let ParFlow do the full runoff/infiltration partitioning (without pond storage)
       ! Ponds should only exist in JSBACH and not be mixed up with the ParFlow surface water
       ! water_to_soil = water_to_soil + wtr_pond_inflow - wtr_pond_outflow - wtr_pond_overflow
@@ -1343,7 +1342,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wtr_pond
     dsl4jsb_Real2D_onChunk :: ice_pond
     dsl4jsb_Real2D_onChunk :: weq_pond
-    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_sat_sl
     dsl4jsb_Real2D_onChunk :: fract_parflow
     dsl4jsb_Real3D_onChunk :: change_by_parflow
@@ -1430,7 +1428,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)         ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)         ! out
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sat_sl)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_parflow)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, change_by_parflow)
@@ -1513,7 +1510,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_latflow_res_srf),    &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_res_sl),     &
       ! out
-      &                                wtr_soil_sat_sl(:,:),    &
+      & wtr_soil_sat_sl,                                        &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_res_sl   ),     & ! residual soil water content
@@ -1555,7 +1552,6 @@ CONTAINS
 
     !$ACC END DATA
 
-    ! PFL TODO
     ! If running with ParFlow, copy the values from the ParFlow buffer
     ! (but only within the ParFlow coverage)
     ! and do not overwrite soil water with zeros at the first time step

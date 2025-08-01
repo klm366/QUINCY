@@ -26,6 +26,7 @@ MODULE mo_interface_parflow
   USE mtime,                  ONLY: timedeltaToString, MAX_TIMEDELTA_STR_LEN
 #endif
   USE mo_jsb_task_class,      ONLY: t_jsb_task_options
+  USE mo_jsb_control,         ONLY: acc_stream
 
   dsl4jsb_Use_processes HYDRO_
   dsl4jsb_Use_config(HYDRO_)
@@ -55,7 +56,7 @@ MODULE mo_interface_parflow
 CONTAINS
 
 #ifdef YAC_coupling
-  SUBROUTINE construct_parflow_coupling(p_patch, comp_id, cell_point_ids, grid_id)
+  SUBROUTINE construct_parflow_coupling(p_patch, comp_id, cell_point_id, grid_id)
 
     USE mo_jsb_model_class,    ONLY: t_jsb_model
     USE mo_jsb_class,          ONLY: Get_model
@@ -64,7 +65,7 @@ CONTAINS
 
     TYPE(t_patch), TARGET, INTENT(in) :: p_patch(:)
     INTEGER, INTENT(in)               :: comp_id           ! yac component id
-    INTEGER, INTENT(in)               :: cell_point_ids(:) ! yac point is
+    INTEGER, INTENT(in)               :: cell_point_id     ! yac point is
     INTEGER, INTENT(in)               :: grid_id           ! yac grid id
     ! Local variables
     !
@@ -134,7 +135,7 @@ CONTAINS
       CALL yac_fdef_field (            &
         & TRIM(field_name(jc)),        &
         & comp_id,                     &
-        & cell_point_ids,              &
+        & cell_point_id,               &
         & 1,                           &
         & collection_size(jc),         &
         & modelTimeStep,               &
@@ -214,7 +215,7 @@ CONTAINS
     write_coupler_restart = .FALSE.
 
 !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO iblk = 1, grid%nblks
       nn = (iblk - 1) * grid%nproma
@@ -229,12 +230,12 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL
-    !$ACC UPDATE HOST(buffer(:,1)) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC UPDATE HOST(buffer(:,1)) ASYNC(acc_stream)
+    !$ACC WAIT(acc_stream)
 !$OMP END PARALLEL DO
 
 !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, is, n)
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO iblk = 1, grid%nblks
       nn = (iblk - 1) * grid%nproma
@@ -251,8 +252,8 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL
-    !$ACC UPDATE HOST(buffer(:,2:nsoil)) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC UPDATE HOST(buffer(:,2:nsoil)) ASYNC(acc_stream)
+    !$ACC WAIT(acc_stream)
 !$OMP END PARALLEL DO
 
 #ifdef YAC_coupling
@@ -280,9 +281,9 @@ CONTAINS
 
       IF ( info > 0 ) THEN
 !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)
-        !$ACC UPDATE DEVICE(buffer(1:nbr_hor_cells,1:1)) ASYNC(1)
+        !$ACC UPDATE DEVICE(buffer(1:nbr_hor_cells,1:1)) ASYNC(acc_stream)
         !$ACC DATA COPYOUT(is_valid_parflow)
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) NO_CREATE(is_valid_parflow)
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream) NO_CREATE(is_valid_parflow)
         !$ACC LOOP SEQ
         DO iblk = 1, grid%nblks
           nn = (iblk - 1) * grid%nproma
@@ -297,7 +298,7 @@ CONTAINS
           END DO
         END DO
         !$ACC END PARALLEL
-        !$ACC WAIT(1)
+        !$ACC WAIT(acc_stream)
         !$ACC END DATA
 !$OMP END PARALLEL DO
 
@@ -318,9 +319,9 @@ CONTAINS
 
     IF ( info > 0 ) THEN
 !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, is, n)
-      !$ACC UPDATE DEVICE(buffer(1:nbr_hor_cells,1:nsoil)) ASYNC(1)
+      !$ACC UPDATE DEVICE(buffer(1:nbr_hor_cells,1:nsoil)) ASYNC(acc_stream)
       !$ACC DATA COPYOUT(parflow_buffer)
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1) NO_CREATE(parflow_buffer)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream) NO_CREATE(parflow_buffer)
       !$ACC LOOP SEQ
       DO iblk = 1, grid%nblks
         nn = (iblk - 1) * grid%nproma
@@ -337,7 +338,7 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL
-      !$ACC WAIT(1)
+      !$ACC WAIT(acc_stream)
       !$ACC END DATA
 !$OMP END PARALLEL DO
 

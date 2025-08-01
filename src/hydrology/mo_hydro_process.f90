@@ -724,10 +724,9 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    ! PFL TODO
     ! Calculate evapotrans_to_parflow
     ! (positive contributions are already included in water_to_parflow)
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       IF (SUM(root_depth_sl(ic,:)) > 0.0_wp) THEN
         evapotrans_to_parflow(ic,1) = (MIN(evapo_soil_in_m(ic), 0.0_wp) &
@@ -738,7 +737,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
     
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 2, nsoil
       DO ic = 1, nc
         IF (SUM(root_depth_sl(ic,:)) > 0.0_wp) THEN
