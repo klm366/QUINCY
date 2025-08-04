@@ -1047,6 +1047,7 @@ CONTAINS
     REAL(wp) :: drain_slow_sl(nc,nsoil)      ! slow drainage component (below field capacity) [m]
     REAL(wp) :: drain_fast_sl(nc,nsoil)      ! fast drainage component (above field capacity) [m]
     REAL(wp) :: storage_change_sl(nc,nsoil)  ! soil storage change term used in vertical water transport (m)
+    REAL(wp) :: wtr_mobile_sl(nc,nsoil)      ! mobile soil water (above residual or supercooled water content) [m]
     REAL(wp) :: hlp1(nc,nsoil), hlp4(nc,nsoil)
     REAL(wp) :: hlp2(nc), hlp3(nc), hlp5
     REAL(wp) :: wtr_flux_top                 ! water flux entering a soil layer from above [m]
@@ -1064,7 +1065,7 @@ CONTAINS
     !$ACC   CREATE(hyd_cond_li, diffus_li, evapo_soil_sl1, transpiration_sl, drain_slow_sl, drain_fast_sl) &
     !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, storage_change_sl) &
     !$ACC   CREATE(wtr_residual_sl, wpi_wsat_sl, wpi_field_cap_sl, wpi_p_wilt_sl, wpi_wres_sl) &
-    !$ACC   CREATE(wtr_transp_residual, wtr_transp_corr, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
+    !$ACC   CREATE(wtr_transp_residual, wtr_transp_corr, last_soil_layer, wtr_mobile_sl, hlp1, hlp2, hlp3, hlp4)
 
     ice2weq = rhoi / rhoh2o
     weq2ice = rhoh2o / rhoi
@@ -1154,13 +1155,15 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
-      ws_inter_sl(ic,1) = wtr_soil_sl(ic,1) + infilt(ic)
+      ws_inter_sl(ic,1)   = wtr_soil_sl(ic,1) + infilt(ic)
+      wtr_mobile_sl(ic,1) = MAX(0._wp, wtr_soil_sl(ic,1) - wtr_residual_sl(ic,1) + infilt(ic))
     END DO
     !$ACC END PARALLEL LOOP
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 2, nsoil
       DO ic = 1, nc
-        ws_inter_sl(ic,is) = wtr_soil_sl(ic,is)
+        ws_inter_sl(ic,is)   = wtr_soil_sl(ic,is)
+        wtr_mobile_sl(ic,is) = MAX(0._wp, wtr_soil_sl(ic,is) - wtr_residual_sl(ic,is))
       END DO
     END DO
     !$ACC END PARALLEL LOOP
@@ -1170,7 +1173,7 @@ CONTAINS
     !>  or supercooled), this also comprises the treatment of soil ice.
     CALL diagnose_evapotrans(nc, l_fract, lat, lon, nsoil, enforce_water_budget,        &
       &                      w_soil_wilt_fract, root_depth_sl, dsoil, wtr_field_cap_sl, &
-      &                      transpiration_in_m, evapo_soil_in_m, wtr_soil_sl,          &
+      &                      transpiration_in_m, evapo_soil_in_m, wtr_mobile_sl,        &
       &                      evapo_deficit, evapo_soil_sl1, transpiration_sl,           &
       &                      deficit_sevap, deficit_trans)
 
