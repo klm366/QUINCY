@@ -1104,7 +1104,7 @@ CONTAINS
         ! If data was read in either tile specific or based on avg value ...
         WHERE (hydro_init_vars%fract_pond_max(:,:) > 0.0_wp)
           dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
-          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:)
+          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:) * (-1._wp)
         ! ... else init var was set to -9999.9
         ELSEWHERE (dsl4jsb_var_ptr(HYDRO_,h_surf) < 0.0_wp)
           ! Maximum pond fraction is set to 1 for depressions and 0 for non-depressions.

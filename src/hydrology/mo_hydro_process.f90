@@ -499,7 +499,7 @@ CONTAINS
       evapo_snow(ic)       = evapo_snow_in_m      * rhoh2o / dtime
       evapo_pond(ic)       = evapo_pond_in_m      * rhoh2o / dtime
       wtr_pond_net_flx(ic) = wtr_pond_net_flx(ic) * rhoh2o / dtime
-      wtr_latflow_srf(ic)  = wtr_latflow_srf(ic)  * rhoh2o / dtime
+      ! wtr_latflow_srf(ic)  = wtr_latflow_srf(ic)  * rhoh2o / dtime
 
     END DO
     !$ACC END LOOP
@@ -817,7 +817,7 @@ CONTAINS
       DO ic = 1, nc
         wtr_transp_down(ic,is) = wtr_transp_down(ic,is) * rhoh2o / dtime
         drainage_sl(ic,is)     = drainage_sl(ic,is)     * rhoh2o / dtime
-        wtr_latflow_sl(ic,is)  = wtr_latflow_sl(ic,is)  * rhoh2o / dtime
+        ! wtr_latflow_sl(ic,is)  = wtr_latflow_sl(ic,is)  * rhoh2o / dtime
       END DO
     END DO
     !$ACC END PARALLEL LOOP

@@ -620,81 +620,83 @@ CONTAINS
     !$ACC LOOP SEQ
     DO i = 1, nrgrd
       IF (z_rgrd_bot <= z_bot_tle .AND. z_rgrd_bot <= z_bot_sbl .AND. & ! Above Bedrock in both tiles
-          i_tle      <= nsoil     .AND. i_sbl      <= nsoil) THEN       ! within soil column
+          i_tle      <= nsoil     .AND. i_sbl      <= nsoil     ) THEN  ! within soil column
+        IF (wsat_tle(i_tle) > 0._wp .AND. wsat_sbl(i_sbl) > 0._wp) THEN ! Space for liquid water exists in both tiles
 
-        IF (z_rgrd_bot > abs(h_offset) ) THEN ! Within the soil column of both tiles
-          ! Flux is determined by the difference in matric potential between the two tiles
+          IF (z_rgrd_bot > abs(h_offset) ) THEN ! Within the soil column of both tiles
+            ! Flux is determined by the difference in matric potential between the two tiles
 
-          wtr_lat            = 0._wp
-          h                  = z_rgrd_bot - z_rgrd_top
-          a_inter            = len_inter * h
+            wtr_lat            = 0._wp
+            h                  = z_rgrd_bot - z_rgrd_top
+            a_inter            = len_inter * h
 
-          wtr_soil_tle_rgrd  = wtr_soil_tle(i_tle)   * h / dsoil_tle(i_tle)
-          wsat_tle_rgrd      = wsat_tle(i_tle)       * h / dsoil_tle(i_tle)
-          field_cap_tle_rgrd = field_cap_tle(i_tle)  * h / dsoil_tle(i_tle)
-          res_tle_rgrd       = res_tle(i_tle)        * h / dsoil_tle(i_tle)
-          mpot_tle_rgrd      = mpot_tle(i_tle)
-          k_tle_rgrd         = k_tle(i_tle)
+            wtr_soil_tle_rgrd  = wtr_soil_tle(i_tle)   * h / dsoil_tle(i_tle)
+            wsat_tle_rgrd      = wsat_tle(i_tle)       * h / dsoil_tle(i_tle)
+            field_cap_tle_rgrd = field_cap_tle(i_tle)  * h / dsoil_tle(i_tle)
+            res_tle_rgrd       = res_tle(i_tle)        * h / dsoil_tle(i_tle)
+            mpot_tle_rgrd      = mpot_tle(i_tle)
+            k_tle_rgrd         = k_tle(i_tle)
 
-          wtr_soil_sbl_rgrd  = wtr_soil_sbl(i_sbl)   * h / dsoil_sbl(i_sbl)
-          wsat_sbl_rgrd      = wsat_sbl(i_sbl)       * h / dsoil_sbl(i_sbl)
-          field_cap_sbl_rgrd = field_cap_sbl(i_sbl)  * h / dsoil_sbl(i_sbl)
-          res_sbl_rgrd       = res_sbl(i_sbl)        * h / dsoil_sbl(i_sbl)
-          mpot_sbl_rgrd      = mpot_sbl(i_sbl)
-          k_sbl_rgrd         = k_sbl(i_sbl)
-          k_inter            = (k_sbl_rgrd * k_tle_rgrd)**0.5_wp
-          d_mpot             =  abs(mpot_tle_rgrd) - abs(mpot_sbl_rgrd)
-          wtr_flx_lat        = - k_inter  * d_mpot / length_scale *  a_inter
-          wtr_rel_qlbrm      = MIN(1._wp, (wtr_soil_tle_rgrd * fr_tle_rel  &
-            &                +  wtr_soil_sbl_rgrd * fr_sbl_rel)            &
-            &                / (wsat_tle_rgrd * fr_tle_rel + wsat_sbl_rgrd * fr_sbl_rel ))
-          IF (wtr_flx_lat > 0._wp) THEN ! Flux is going from tile to sibling
+            wtr_soil_sbl_rgrd  = wtr_soil_sbl(i_sbl)   * h / dsoil_sbl(i_sbl)
+            wsat_sbl_rgrd      = wsat_sbl(i_sbl)       * h / dsoil_sbl(i_sbl)
+            field_cap_sbl_rgrd = field_cap_sbl(i_sbl)  * h / dsoil_sbl(i_sbl)
+            res_sbl_rgrd       = res_sbl(i_sbl)        * h / dsoil_sbl(i_sbl)
+            mpot_sbl_rgrd      = mpot_sbl(i_sbl)
+            k_sbl_rgrd         = k_sbl(i_sbl)
+            k_inter            = (k_sbl_rgrd * k_tle_rgrd)**0.5_wp
+            d_mpot             =  abs(mpot_tle_rgrd) - abs(mpot_sbl_rgrd)
+            wtr_flx_lat        = - k_inter  * d_mpot / length_scale *  a_inter
+            wtr_rel_qlbrm      = MIN(1._wp, (wtr_soil_tle_rgrd * fr_tle_rel  &
+              &                +  wtr_soil_sbl_rgrd * fr_sbl_rel)            &
+              &                / (wsat_tle_rgrd * fr_tle_rel + wsat_sbl_rgrd * fr_sbl_rel ))
+            IF (wtr_flx_lat > 0._wp) THEN ! Flux is going from tile to sibling
 
-            wtr_2_qlbrm      = MAX(0._wp, &
-              &               (wtr_rel_qlbrm * wsat_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
-            free_space       = MAX(0._wp,(field_cap_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
-            wtr_avail        = MAX(0._wp,(wtr_soil_tle_rgrd - res_tle_rgrd) * fr_tle_rel)
-            wtr_lat          = MIN(wtr_flx_lat * dtime, free_space, wtr_avail, wtr_2_qlbrm)
-            wtr_lat          = MAX(0._wp, wtr_lat)
+              wtr_2_qlbrm      = MAX(0._wp, &
+                &               (wtr_rel_qlbrm * wsat_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
+              free_space       = MAX(0._wp,(field_cap_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
+              wtr_avail        = MAX(0._wp,(wtr_soil_tle_rgrd - res_tle_rgrd) * fr_tle_rel)
+              wtr_lat          = MIN(wtr_flx_lat * dtime, free_space, wtr_avail, wtr_2_qlbrm)
+              wtr_lat          = MAX(0._wp, wtr_lat)
 
-          ELSE ! Flux is going from sibling to tile
+            ELSE ! Flux is going from sibling to tile
 
-            wtr_2_qlbrm      = MAX(0._wp, &
-              &               (wtr_rel_qlbrm  * wsat_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
-            free_space       = MAX(0._wp, (field_cap_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
-            wtr_avail        = MAX(0._wp, (wtr_soil_sbl_rgrd - res_sbl_rgrd) * fr_sbl_rel)
-            wtr_lat          = MAX(wtr_flx_lat * dtime, -free_space, -wtr_avail, -wtr_2_qlbrm)
-            wtr_lat          = MIN(0._wp, wtr_lat)
+              wtr_2_qlbrm      = MAX(0._wp, &
+                &               (wtr_rel_qlbrm  * wsat_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
+              free_space       = MAX(0._wp, (field_cap_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
+              wtr_avail        = MAX(0._wp, (wtr_soil_sbl_rgrd - res_sbl_rgrd) * fr_sbl_rel)
+              wtr_lat          = MAX(wtr_flx_lat * dtime, -free_space, -wtr_avail, -wtr_2_qlbrm)
+              wtr_lat          = MIN(0._wp, wtr_lat)
 
+            END IF
+            diffus_tle(i_tle)  = diffus_tle(i_tle) - wtr_lat / fr_tle_rel
+            diffus_sbl(i_sbl)  = diffus_sbl(i_sbl) + wtr_lat / fr_sbl_rel
           END IF
-          diffus_tle(i_tle)  = diffus_tle(i_tle) - wtr_lat / fr_tle_rel
-          diffus_sbl(i_sbl)  = diffus_sbl(i_sbl) + wtr_lat / fr_sbl_rel
-        END IF
 
-        IF (z_rgrd_bot == z_tle) THEN
-          i_tle = i_tle + 1
-          IF (i_tle <= nsoil) THEN
-            IF (dsoil_tle(i_tle) > 0._wp) THEN
-              z_tle = z_tle + dsoil_tle(i_tle)
-            ELSE
-              i_tle = nsoil + 1
+          IF (z_rgrd_bot == z_tle) THEN
+            i_tle = i_tle + 1
+            IF (i_tle <= nsoil) THEN
+              IF (dsoil_tle(i_tle) > 0._wp) THEN
+                z_tle = z_tle + dsoil_tle(i_tle)
+              ELSE
+                i_tle = nsoil + 1
+              END IF
             END IF
           END IF
-        END IF
 
-        IF (z_rgrd_bot == z_sbl) THEN
-          i_sbl = i_sbl + 1
-          IF (i_sbl <= nsoil) THEN
-            IF (dsoil_sbl(i_sbl) > 0._wp) THEN
-              z_sbl = z_sbl + dsoil_sbl(i_sbl)
-            ELSE
-              i_sbl = nsoil + 1
+          IF (z_rgrd_bot == z_sbl) THEN
+            i_sbl = i_sbl + 1
+            IF (i_sbl <= nsoil) THEN
+              IF (dsoil_sbl(i_sbl) > 0._wp) THEN
+                z_sbl = z_sbl + dsoil_sbl(i_sbl)
+              ELSE
+                i_sbl = nsoil + 1
+              END IF
             END IF
           END IF
-        END IF
 
-        z_rgrd_top=z_rgrd_bot
-        z_rgrd_bot=MIN(z_tle, z_sbl)
+          z_rgrd_top=z_rgrd_bot
+          z_rgrd_bot=MIN(z_tle, z_sbl)
+        END IF
       END IF
     END DO
     !$ACC END PARALLEL LOOP
