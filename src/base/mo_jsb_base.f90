@@ -49,7 +49,7 @@ CONTAINS
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
 #ifndef __NO_QUINCY__
-    USE mo_quincy_model_config, ONLY: QLAND
+    USE mo_quincy_model_config, ONLY: QLAND, QPLANT
     USE mo_rad_parameters,      ONLY: init_rad_parameters
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_q_assimi_parameters, ONLY: init_q_assimi_parameters
@@ -64,7 +64,7 @@ CONTAINS
 #endif
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, Q_AGR_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -78,7 +78,6 @@ CONTAINS
     dsl4jsb_Use_config(PPLCC_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Use_config(Q_SYL_)
-    dsl4jsb_Use_config(Q_AGR_)
 #endif
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
@@ -95,7 +94,6 @@ CONTAINS
     dsl4jsb_Def_config(PPLCC_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(Q_SYL_)
-    dsl4jsb_Def_config(Q_AGR_)
 #endif
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
@@ -293,13 +291,8 @@ CONTAINS
           dsl4jsb_Config(PPLCC_)%active = .TRUE.
         END IF
 
-        !... assert that syl and agr are only active in land mode
-        dsl4jsb_Get_config(Q_AGR_)
-        IF (model%config%qmodel_id /= QLAND) THEN
-          IF (dsl4jsb_Config(Q_AGR_)%active) THEN
-            CALL message(TRIM(routine), 'Warning: agriculture can currently only be active in land mode, set active to .FALSE.')
-            dsl4jsb_Config(Q_AGR_)%active = .FALSE.
-          END IF
+        !... assert that syl is only active in land or plant mode
+        IF (model%config%qmodel_id /= QLAND .AND. model%config%qmodel_id /= QPLANT) THEN
           IF (dsl4jsb_Config(Q_SYL_)%active) THEN
             CALL message(TRIM(routine), 'Warning: sylviculture can currently only be active in land mode, set active to .FALSE.')
             dsl4jsb_Config(Q_SYL_)%active = .FALSE.

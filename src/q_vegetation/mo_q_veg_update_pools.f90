@@ -53,10 +53,9 @@ CONTAINS
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14
-    USE mo_jsb_math_constants,              ONLY: one_day, one_year, eps4
+    USE mo_jsb_math_constants,              ONLY: one_day, one_year, eps4, eps8
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14
-    USE mo_veg_constants,                   ONLY: eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy
-    USE mo_q_pheno_constants,               ONLY: ievergreen
+    USE mo_veg_constants,                   ONLY: eta_nfixation, max_leaf_shedding_rate
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(Q_SYL_)
@@ -157,6 +156,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c13
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c14
+    dsl4jsb_Real2D_onChunk      :: mean_leaf_age
     dsl4jsb_Real2D_onChunk      :: net_biosphere_production
     dsl4jsb_Real2D_onChunk      :: net_biosphere_production_c13
     dsl4jsb_Real2D_onChunk      :: net_biosphere_production_c14
@@ -294,7 +294,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c13)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c14)             ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)             ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)                        ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)             ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c13)         ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c14)         ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation)                ! out
@@ -470,7 +471,7 @@ CONTAINS
       END DO
 
       ! @TODO
-      !>    1.7.1 quick-fix ensure veg_pool does not become negative
+      !>    1.8.1 quick-fix ensure veg_pool does not become negative
       !>          apply only with IQ as it changes results with QS
       !>
       !   ==> need additional debug code
@@ -489,7 +490,7 @@ CONTAINS
       END DO
 #endif
 
-      !>  1.8 Radioactive decay of C14
+      !>    1.8.2 Radioactive decay of C14
       !>
       DO ic = 1, nc
         ! in living plant tissue
@@ -520,34 +521,33 @@ CONTAINS
       !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
       DO ic = 1, nc
 
-      ! diagnose required change in leaf C given phenology to attain prescribed LAI max
-       IF (growing_season(ic) > test_false_true) THEN
-         veg_growth_mt(ix_leaf, ixC, ic) = lai_max(ic) / lctlib_sla &
-           &                              * (1._wp - exp(-k_leafon_canopy &
-           &                              * (lai_max(ic) - lai(ic)) / lai_max(ic))) &
-           &                              * dtime / one_day
-       ELSE
-         veg_litterfall_mt(ix_leaf, ixC, ic) = MIN(veg_pool_mt(ix_leaf, ixC, ic), &
-           &                                  lai(ic)/lctlib_sla * max_leaf_shedding_rate * dtime / one_day &
-           &                                  * lai_max(ic) &
-           &                                  / MAX(eps4, lai(ic)))
-       END IF
-
-       ! calc leaf turnover for evergreen trees (needed, for e.g. mean_leaf_age, as evergreens are always within growing_season)
-       IF (lctlib_phenology_type == ievergreen) THEN
-         veg_litterfall_mt(ix_leaf, ixC, ic) = veg_pool_mt(ix_leaf, ixC, ic) / lctlib_tau_leaf / one_day / one_year * dtime
-       ENDIF
-
        ! update leaf C:N:P pools
        veg_pool_mt(ix_leaf, ixC, ic) = veg_pool_mt(ix_leaf, ixC, ic) + veg_growth_mt(ix_leaf, ixC, ic) &
          &                            - veg_litterfall_mt(ix_leaf, ixC, ic)
-       veg_pool_mt(ix_leaf, ixN, ic) = veg_pool_mt(ix_leaf, ixC, ic) / lctlib_cn_leaf
-       veg_pool_mt(ix_leaf, ixP, ic) = veg_pool_mt(ix_leaf, ixN, ic) / lctlib_np_leaf
+       veg_pool_mt(ix_leaf, ixN, ic) = veg_pool_mt(ix_leaf, ixN, ic) + veg_growth_mt(ix_leaf, ixN, ic) &
+         &                            - veg_litterfall_mt(ix_leaf, ixN, ic)
+       veg_pool_mt(ix_leaf, ixP, ic) = veg_pool_mt(ix_leaf, ixP, ic) + veg_growth_mt(ix_leaf, ixP, ic) &
+         &                            - veg_litterfall_mt(ix_leaf, ixP, ic)
+  !     veg_pool_mt(ix_leaf, ixN, ic) = veg_pool_mt(ix_leaf, ixC, ic) / lctlib_cn_leaf
+  !     veg_pool_mt(ix_leaf, ixP, ic) = veg_pool_mt(ix_leaf, ixN, ic) / lctlib_np_leaf
 
       END DO
       !$ACC END PARALLEL LOOP
 
     END SELECT
+
+    !> 1.9 update mean leaf age (advance by one timestep), given growth of new and loss of old leaves
+    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
+    DO ic = 1, nc
+      IF (veg_pool_mt(ix_leaf, ixC, ic) > eps8) THEN
+        mean_leaf_age(ic) = (mean_leaf_age(ic) + dtime / one_day) &
+          &                * (1._wp - veg_growth_mt(ix_leaf, ixC, ic) / veg_pool_mt(ix_leaf, ixC, ic)) &
+          &                - mean_leaf_age(ic) * veg_litterfall_mt(ix_leaf, ixC, ic) / veg_pool_mt(ix_leaf, ixC, ic)
+      ELSE
+        mean_leaf_age(ic) = 0.0_wp
+      END IF
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !> 2.0 bgc_material diagnostics
     !>     sum up veg_pool, veg_growth and veg_litterfall across components for each particular element

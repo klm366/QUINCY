@@ -72,7 +72,7 @@ MODULE mo_lnd_bgcm_idx
 CONTAINS
 
   ! ======================================================================================================= !
-  !>set the index variables of bgcm element indicess from "model%config%elements_index_map(:)"
+  !>set the index variables of bgcm element indices from "model%config%elements_index_map(:)"
   !>
   !>  the "model%config%elements_index_map(:)" is set in mo_jsb_config_class:new_model_config
   !>  based on namelist options

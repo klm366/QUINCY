@@ -23,14 +23,26 @@ MODULE mo_veg_init
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_jsb_math_constants,      ONLY: eps8
 
+  USE mo_jsb_process_class,       ONLY: VEG_
+  USE mo_jsb_model_class,         ONLY: t_jsb_model
+  USE mo_jsb_class,               ONLY: get_model
+
+  USE mo_jsb_grid_class,          ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,                ONLY: Get_grid, Get_vgrid
+  USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store, get_bgcm_idx
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID
+
+  dsl4jsb_Use_config(VEG_)
 
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC :: veg_init
+#ifndef __QUINCY_STANDALONE__
+  PUBLIC :: veg_read_states
+#endif
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_init'
 
@@ -47,9 +59,7 @@ CONTAINS
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QSOIL, QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
-    USE mo_jsb_process_class,               ONLY: VEG_, HYDRO_
-    USE mo_jsb_grid_class,                  ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,                        ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_process_class,               ONLY: HYDRO_
     USE mo_q_assimi_parameters,             ONLY: CiCa_default_C3, CiCa_default_C4
     USE mo_q_assimi_constants,              ONLY: ic3phot, ic4phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
@@ -61,7 +71,6 @@ CONTAINS
     USE mo_q_assimi_process,                ONLY: discrimination_ps
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -602,6 +611,84 @@ CONTAINS
     !$ACC   DEVICE(rfr_ratio_boc(:,:), rfr_ratio_boc_tvegdyn_mavg(:,:)) ASYNC(1)
 
   END SUBROUTINE veg_init
+
+#ifndef __QUINCY_STANDALONE__
+  ! ====================================================================================================== !
+  !
+  !> Read vegetation state from file (after init/restart)
+  !> (variables should be in sync with those listed in ./scripts/quincy_sb_and_veg_state_from_restart_file.sh)
+  !
+  ! ======================================================================================================= !
+  SUBROUTINE veg_read_states(tile)
+    USE mo_jsb_io_netcdf,           ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_util,                    ONLY: read_2D_var, read_3D_var
+    USE mo_lnd_bgcm_store,          ONLY: read_bgcm_from_file
+    dsl4jsb_Use_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile             !< one tile with data structure for one lct
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),      POINTER :: model            !< the model
+    TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store       !< the bgcm store of this tile
+    TYPE(t_input_file)              :: input_file       !< file with to be read veg state variables
+    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_sb    !< vertical grid for sl variables
+    INTEGER                         :: isoil            !< soillayer index
+    INTEGER                         :: nsoil_sb         !< number of soil layers as used/defined by the SB_ process
+    REAL(wp),               POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables
+    CHARACTER(len=*), PARAMETER :: routine = modname//':veg_read_states'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Real2D_onDomain :: dens_ind
+    dsl4jsb_Real2D_onDomain :: mean_leaf_age
+    dsl4jsb_Real2D_onDomain :: leaf2root_troot_mavg
+    dsl4jsb_Real2D_onDomain :: unit_npp_troot_mavg
+    dsl4jsb_Real2D_onDomain :: unit_uptake_n_pot_troot_mavg
+    dsl4jsb_Real2D_onDomain :: unit_uptake_p_pot_troot_mavg
+    dsl4jsb_Real2D_onDomain :: net_growth_tvegdyn_mavg
+    dsl4jsb_Real2D_onDomain :: lai_tvegdyn_mavg
+    dsl4jsb_Real3D_onDomain :: root_fraction_sl
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb = vgrid_soil_sb%n_levels
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_var2D_onDomain(VEG_, dens_ind)
+    dsl4jsb_Get_var2D_onDomain(VEG_, mean_leaf_age)
+    dsl4jsb_Get_var2D_onDomain(VEG_, leaf2root_troot_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_, unit_npp_troot_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_, unit_uptake_n_pot_troot_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_, unit_uptake_p_pot_troot_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_, net_growth_tvegdyn_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_, lai_tvegdyn_mavg)
+    dsl4jsb_Get_var3D_onDomain(VEG_, root_fraction_sl)
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on()) CALL message(TRIM(routine), ' for tile '//TRIM(tile%name))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(VEG_)%ic_filename), model%grid_id)
+
+    IF (ASSOCIATED(tile%bgcm_store)) THEN
+      bgcm_store => tile%bgcm_store
+      CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_POOL_ID, "veg", tile%name, routine, input_file)
+    END IF
+
+    CALL read_2D_var(input_file, dens_ind, "veg_dens_ind_"//tile%name)
+    CALL read_2D_var(input_file, mean_leaf_age, "veg_mean_leaf_age_"//tile%name)
+    CALL read_2D_var(input_file, leaf2root_troot_mavg, "veg_leaf2root_troot_mavg_"//tile%name)
+    CALL read_2D_var(input_file, unit_npp_troot_mavg, "veg_unit_npp_troot_mavg_"//tile%name)
+    CALL read_2D_var(input_file, unit_uptake_n_pot_troot_mavg, "veg_unit_uptake_n_pot_troot_mavg_"//tile%name)
+    CALL read_2D_var(input_file, unit_uptake_p_pot_troot_mavg, "veg_unit_uptake_p_pot_troot_mavg_"//tile%name)
+    CALL read_2D_var(input_file, net_growth_tvegdyn_mavg, "veg_net_growth_tvegdyn_mavg_"//tile%name)
+    CALL read_2D_var(input_file, lai_tvegdyn_mavg, "veg_lai_tvegdyn_mavg_"//tile%name)
+
+    CALL read_3D_var(input_file, root_fraction_sl, 'veg_root_fraction_sl_'//tile%name, 'soillev', nsoil_sb)
+
+    CALL input_file%Close()
+
+  END SUBROUTINE veg_read_states
+
+#endif
 
 #endif
 END MODULE mo_veg_init
