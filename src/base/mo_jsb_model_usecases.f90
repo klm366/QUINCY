@@ -88,9 +88,9 @@ CONTAINS
     CASE ('quincy_11_pfts')
       CALL init_usecase_quincy_11_pfts(model)
 
-    ! QUINCY 12 pfts (incl. shrubs)
-    CASE ('quincy_11pS_pfts')
-       CALL init_usecase_quincy_11pS_pfts(model)
+    ! QUINCY 15 pfts (incl. shrubs)
+    CASE ('quincy_13pS_pfts')
+       CALL init_usecase_quincy_13pS_pfts(model)
 
     ! QUINCY 13 PFTs
     CASE ('quincy_13_pfts')
@@ -1005,7 +1005,7 @@ CONTAINS
   !>   the data/lctlib_quincy_nlct14.def is used for this usecase (hardcoded in: mo_jsb_base:jsbach_setup_tiles)
   !>
   
- SUBROUTINE init_usecase_quincy_11pS_pfts(model)
+ SUBROUTINE init_usecase_quincy_13pS_pfts(model)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model                    !< model instance
 
@@ -1013,12 +1013,13 @@ CONTAINS
       &                              veg_tile, pft_tile                   !< tiles used with this usecase
     INTEGER                       :: i                                    !< for looping
     ! number of pft
-    INTEGER, PARAMETER            :: npft = 13
+    INTEGER, PARAMETER            :: npft = 15
     ! pft short names
     CHARACTER(len=5), PARAMETER   :: pft_shortnames(npft) = [character(len=5) :: &
       &                              'pft01', 'pft02', 'pft03', 'pft04', &
       &                              'pft05', 'pft06', 'pft07', 'pft08', &
-      &                              'pft09', 'pft10', 'pft11','pft12', 'pft13'  ]
+      &                              'pft09', 'pft10', 'pft11','pft12',  &
+                                     'pft13','pft14','pft15'  ]
     ! pft long names
     CHARACTER(len=30), PARAMETER  :: pft_longnames(npft) = [character(len=30) ::    &
       &                              'BEM:  moist broadleaved evergreen',           &
@@ -1029,6 +1030,8 @@ CONTAINS
       &                              'NS :  summer green needle-leaved',            &
       &                              'TeH:  C3 grass',                              &
       &                              'TrH:  C4 grass',                              &
+      &                              'TeP:  C3 pasture',                            &
+      &                              'TrP:  C4 pasture',                            & 
       &                              'TeC:  C3 crop',                               &
       &                              'TrC:  C4 crop',                               &
       &                              'BSO:  bare soil',                             &
@@ -1036,8 +1039,8 @@ CONTAINS
       &                              'BSH:  BD shrubs'          ]
     ! index of PFT (columns) in the lctlib file
     ! NOTE 'pft09/10/11' == the index, i.e., position in lctlib file, differs from PFT number (as used in the model)
-    INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,11,12,13,15,16 /)
-    CHARACTER(len=*), PARAMETER   :: routine = modname//':init_usecase_quincy_11pS_pfts'
+    INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,9,10,11,12,13,15,16 /)
+    CHARACTER(len=*), PARAMETER   :: routine = modname//':init_usecase_quincy_13pS_pfts'
 
     ! overview of tile structure:
     !
@@ -1060,7 +1063,7 @@ CONTAINS
     CASE (MODEL_QUINCY)
       CALL message(TRIM(routine), 'Using the model_scheme MODEL_QUINCY')
     CASE DEFAULT
-      CALL finish(TRIM(routine), 'The quincy_11pS_pfts model usecase does work only with the model_scheme MODEL_QUINCY.')
+      CALL finish(TRIM(routine), 'The quincy_13pS_pfts model usecase does work only with the model_scheme MODEL_QUINCY.')
     END SELECT
 
     !------------------------------------------------------------------------------------------------------ !
@@ -1128,7 +1131,7 @@ CONTAINS
     ! ! Next line only to avoid compiler warnings about pointers not being dereferenced
     ! IF (ASSOCIATED(pft_tile)) CONTINUE
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
-  END SUBROUTINE init_usecase_quincy_11pS_pfts
+  END SUBROUTINE init_usecase_quincy_13pS_pfts
 
   ! ======================================================================================================= !
   !> init routine for usecase quincy_13_pfts
