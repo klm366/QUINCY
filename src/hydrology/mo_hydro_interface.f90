@@ -2893,8 +2893,9 @@ CONTAINS
       & weq_land_new
 
     REAL(wp), DIMENSION(options%nc) :: &
-      & weq_soil, &
-      & wtr_latflow_res
+      & weq_soil,                      &
+      & wtr_latflow_res,               &
+      & wtr_latflow_net
 
     INTEGER  :: iblk, ics, ice, nc, ic, is
     INTEGER  :: n_errors, ie
@@ -2949,8 +2950,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_to_soil_lex)   ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_latflow_res_srf) ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_latflow_res_sl)  ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_lex_net_srf) ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_lex_net_sl)  ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_lex_net_srf)     ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_lex_net_sl)      ! in
     END IF
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)            ! out
@@ -2960,13 +2961,14 @@ CONTAINS
 
     n_errors = 0   ! initialize error counter
 
-    !$ACC PARALLEL DEFAULT(PRESENT) CREATE(weq_soil, wtr_latflow_res) ASYNC(acc_stream)
+    !$ACC PARALLEL DEFAULT(PRESENT) CREATE(weq_soil, wtr_latflow_net, wtr_latflow_res) ASYNC(acc_stream)
 
     ! Calculate total amout of soil water (liquid and frozen)
     IF (tile_contains_soil) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         weq_soil(ic)        = 0._wp
+        wtr_latflow_net(ic) = wtr_lex_net_srf(ic)
         wtr_latflow_res(ic) = wtr_latflow_res_srf(ic)
       END DO
 
@@ -2975,6 +2977,7 @@ CONTAINS
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO ic = 1, nc
           weq_soil(ic)        = weq_soil(ic) + wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) * ice2weq
+          wtr_latflow_net(ic) = wtr_latflow_net(ic) + wtr_lex_net_sl(ic,is)
           wtr_latflow_res(ic) = wtr_latflow_res(ic) + wtr_latflow_res_sl(ic,is)
         END DO
       END DO
@@ -2985,8 +2988,7 @@ CONTAINS
       tile_area  = tile_fract(ic) * area(ic)
 
       IF (tile_contains_soil) THEN
-        weq_fluxes(ic) = rain(ic) + snow(ic) + evapotrans(ic)             &
-                    &  + wtr_lex_net_srf(ic) +  SUM(wtr_lex_net_sl(ic,:)) &
+        weq_fluxes(ic) = rain(ic) + snow(ic) + evapotrans(ic) + wtr_latflow_net(ic) &
                     &  - runoff(ic) - drainage(ic)
       ELSE
         weq_fluxes(ic) = rain(ic) + snow(ic) + evapotrans(ic) &
@@ -2997,7 +2999,7 @@ CONTAINS
 
       IF (tile_contains_soil) THEN
         weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) + weq_soil(ic) &
-          &          + water_to_soil_lex(ic) + wtr_latflow_res_srf(ic) + SUM(wtr_latflow_res_sl(ic,:)))  &
+          &          + water_to_soil_lex(ic) + wtr_latflow_res(ic))  &
           &          * tile_area          ! m -> m^3
       ELSE
         weq_land_new = 0._wp
@@ -3039,20 +3041,18 @@ CONTAINS
           & 'Drainage:           ', drainage(ic)   * tile_area / rhoh2o * dtime
         IF (tile%contains_soil) THEN
           WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
-            & 'Skin reservoir:     ', wtr_skin(ic)           * tile_area,              NEW_LINE('a'), &
-            & 'Snow reservoir:     ', weq_snow(ic)           * tile_area,              NEW_LINE('a'), &
-            & 'Lat. inflow srf:    ', wtr_lex_net_srf(ic) * tile_area / rhoh2o * dtime,NEW_LINE('a'), &
-            & 'Lat. inflow sl:     ', SUM(wtr_lex_net_sl(ic,:))*tile_area/rhoh2o*dtime
+            & 'Skin reservoir:     ', wtr_skin(ic)        * tile_area,                 NEW_LINE('a'), &
+            & 'Snow reservoir:     ', weq_snow(ic)        * tile_area,                 NEW_LINE('a'), &
+            & 'Net lateral flow:   ', wtr_latflow_net(ic) * tile_area / rhoh2o * dtime
           IF (.NOT. tile%is_lake) THEN
             WRITE (message_text_long,*) TRIM(message_text_long),                       NEW_LINE('a'), &
-              & 'Pond reservoir:     ', weq_pond(ic)           * tile_area
+              & 'Pond reservoir:     ', weq_pond(ic)  * tile_area
           END IF
           WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
             & 'Soil water:         ', SUM(wtr_soil_sl(ic,:)) * tile_area,              NEW_LINE('a'), &
             & 'Soil ice weq:       ', SUM(ice_soil_sl(ic,:)) * ice2weq * tile_area,    NEW_LINE('a'), &
-            & 'Lat. flow. res. srf: ', wtr_latflow_res_srf(ic) * tile_area,            NEW_LINE('a'), &
-            & 'Lat. flow. res. blg: ', SUM(wtr_latflow_res_sl(ic,:)) * tile_area,      NEW_LINE('a'), &
-            & 'water_to_soil_lex: ' , water_to_soil_lex(ic)         * tile_area,       NEW_LINE('a'), &
+            & 'Lat. flow. res.:    ', wtr_latflow_res(ic)    * tile_area,              NEW_LINE('a'), &
+            & 'water_to_soil_lex: ' , water_to_soil_lex(ic)  * tile_area,              NEW_LINE('a'), &
             & 'Old reservoirs:     ', weq_land(ic),                                    NEW_LINE('a'), &
             & 'ET deficit:         ', evapo_deficit(ic) * tile_area / rhoh2o * dtime
         END IF
