@@ -9,6 +9,7 @@
 !> Authors: AUTHORS.md
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
 !>#### Initialisation and reading of lex (lateral [intertile] exchange) variables.
 !>
