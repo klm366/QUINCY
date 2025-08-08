@@ -1,42 +1,43 @@
+!> Contains the memory class for the soil and snow energy process.
 !>
-!! @brief Contains the memory class for the soil and snow energy process.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_sse_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
-  USE mo_exception,              ONLY: finish
-  USE mo_util,                   ONLY: One_of
-  USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE, BARE_TYPE
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_kind,      ONLY: wp
+  USE mo_exception, ONLY: finish
+
+  USE mo_jsb_model_class,  ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
+  USE mo_jsb_class,        ONLY: Get_model
+  USE mo_jsb_memory_class, ONLY: t_jsb_memory
+  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of prcesses in this module
-  dsl4jsb_Use_processes SSE_
+  dsl4jsb_Use_processes SSE_, LEX_
+
+  ! Use process configurations
+  dsl4jsb_Use_config(SSE_)
+  dsl4jsb_Use_config(LEX_)
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_sse_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 80
+  INTEGER, PARAMETER :: max_no_of_vars = 30
 
-  ! ======================================================================================================= !
-  !>Type definition for soil_snow_energy memory
-  !>
   TYPE, EXTENDS(t_jsb_memory) :: t_sse_memory
-
+    !
     ! Parameters
     TYPE(t_jsb_var_real2d) :: &
       & vol_heat_cap,         & !< Volumetric heat capacity of soil solids (from input file) [J m-3 K-1]
@@ -51,6 +52,7 @@ MODULE mo_sse_memory_class
       & t_soil_sl,            & !< Temperature of soil layers [K]
       & t_soil_acoef,         & !< Soil A coefficient of Richtmeyer and Morton scheme
       & t_soil_bcoef,         & !< Soil B coefficient of Richtmeyer and Morton scheme
+      & nrg_lex_net_sl,       & !< Diffusive heat exchange with adjacent tile [J m-2 s-1]
       & snow_depth_sl,        & !< Depth of snow layers [m]
       & t_snow,               & !< Temperature of snow layers [K]
       & t_snow_acoef,         & !< Snow A coefficient of Richtmeyer and Morton scheme
@@ -62,16 +64,14 @@ MODULE mo_sse_memory_class
       & grnd_hflx_old,        & !< ground heat flux (old)
       & thaw_depth,           & !< Thawing depth [m]
       & thaw_depth_max,       & !< Maximum thaw depth [m]
-      & thaw_depth_max_ym1,   & !< Last year's maximum thaw depth [m]
-      & thaw_depth_diag1,           & !< Thawing depth [m]
-      & thaw_depth_max_diag1,       & !< Maximum thaw depth [m]
-      & thaw_depth_max_ym1_diag1,   & !< Last year's maximum thaw depth [m]
-      & thaw_depth_diag2,           & !< Thawing depth [m]
-      & thaw_depth_max_diag2,       & !< Maximum thaw depth [m]
-      & thaw_depth_max_ym1_diag2,   & !< Last year's maximum thaw depth [m]
-      & thaw_depth_diag3,           & !< Thawing depth [m]
-      & thaw_depth_max_diag3,       & !< Maximum thaw depth [m]
-      & thaw_depth_max_ym1_diag3      !< Last year's maximum thaw depth [m]
+      & thaw_depth_max_ym1      !< Last year's maximum thaw depth [m]
+
+    ! soil physical properties
+    TYPE(t_jsb_var_real3d) :: &
+      & bulk_dens_sl        , &  !< soil bulk density [kg m-3]
+      & sand_sl             , &  !< soil sand proportion of mineral soil
+      & silt_sl             , &  !< soil silt proportion of mineral soil
+      & clay_sl                  !< soil clay proportion of mineral soil (re-calculated as: clay = 1.0 -sand -silt)
 
   CONTAINS
     PROCEDURE :: Init => Init_sse_memory
@@ -81,50 +81,51 @@ MODULE mo_sse_memory_class
 
 CONTAINS
 
-  ! ======================================================================================================= !
-  !>initialize memory (variables) for the process: soil_snow_energy
-  !>
-  SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
+    USE mo_jsb_varlist,       ONLY: NONE, BASIC, MEDIUM, FULL
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
+                                    TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
-    USE mo_jsb_class,         ONLY: Get_model
-    dsl4jsb_Use_config(SSE_)
-    ! ----------------------------------------------------------------------------------------------------- !
+
     CLASS(t_sse_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)            :: prefix
     CHARACTER(len=*),    INTENT(in)            :: suffix
     INTEGER,             INTENT(in)            :: lct_ids(:)
+    INTEGER,             INTENT(in)            :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)            :: model_id
-    ! ----------------------------------------------------------------------------------------------------- !
+
     dsl4jsb_Def_config(SSE_)
-    TYPE(t_jsb_model), POINTER  :: model
-    TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER  :: surface, soil_e, snow_e      ! Vertical grids
-    INTEGER                     :: table
+    dsl4jsb_Def_config(LEX_)
+
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface, soil_e, snow_e      ! Vertical grids
+    INTEGER :: table
+
+    LOGICAL  :: l_lex
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_sse_memory'
-    ! ----------------------------------------------------------------------------------------------------- !
+
     IF (SIZE(lct_ids) < 1) CALL finish(routine, 'lcd_ids not specified')
-    ! ----------------------------------------------------------------------------------------------------- !
-    model         => Get_model(model_id)
+
+    model => Get_model(model_id)
+
     dsl4jsb_Get_Config(SSE_)
-    table         = tables(1)
-    hgrid         => Get_grid(mem%grid_id)
-    surface       => Get_vgrid('surface')
-    soil_e        => Get_vgrid('soil_depth_energy')
+    dsl4jsb_Get_Config(LEX_)
+
+    table = tables(1)
+
+    hgrid => Get_grid(mem%grid_id)
+
+    surface => Get_vgrid('surface')
+    soil_e  => Get_vgrid('soil_depth_energy')
     IF( dsl4jsb_Config(SSE_)%l_snow) THEN
       snow_e  => Get_vgrid('snow_depth_energy')
     END IF
 
-
-    !! !$acc enter data pcreate(mem)
-
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! jsbach4 memory
-    !
+    l_lex = dsl4jsb_Config(LEX_)%active
 
     CALL mem%Add_var( 'vol_heat_cap', mem%vol_heat_cap,                 &
       & hgrid, surface,                                                      &
@@ -174,13 +175,16 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'thermal_diffusivity', mem%thermal_diffusivity,        &
-      & hgrid, surface,                                                      &
-      & t_cf('thermal_diffusivity_soil', 'm2 s-1', ''),                      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+    IF (      .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map                     &
+      & .AND. .NOT. dsl4jsb_Config(SSE_)%l_soil_texture) THEN
+      CALL mem%Add_var( 'thermal_diffusivity', mem%thermal_diffusivity,        &
+        & hgrid, surface,                                                      &
+        & t_cf('thermal_diffusivity_soil', 'm2 s-1', ''),                      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+    END IF
 
     CALL mem%Add_var( 't_soil_sl', mem%t_soil_sl,                            &
       & hgrid, soil_e,                                                       &
@@ -204,7 +208,14 @@ CONTAINS
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    ! snow
+    CALL mem%Add_var('nrg_lex_net_sl', mem%nrg_lex_net_sl,                                   &
+      & hgrid, soil_e,                                                                       &
+      & t_cf('nrg_lex_net_sl', 'J m-2 s-1', 'Diffusive heat exchange with adjacent tile'),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
+      & prefix, suffix,                                                                      &
+      & loutput=l_lex, output_level=MEDIUM,                                                  &
+      & lrestart=.FALSE., initval_r=0.0_wp)
+
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
       CALL mem%Add_var( 'snow_depth_sl', mem%snow_depth_sl,                    &
         & hgrid, snow_e,                                                       &
@@ -278,107 +289,75 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=MEDIUM, &
-      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+      & output_level=NONE, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'thaw_depth_max', mem%thaw_depth_max,                  &
       & hgrid, surface,                                                      &
       & t_cf('thaw_depth_max', 'm', 'Maximum thaw depth'),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
+      & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'thaw_depth_max_ym1', mem%thaw_depth_max_ym1,          &
       & hgrid, surface,                                                      &
-      & t_cf('thaw_depth_max_ym1', 'm', 'Last years maximum thaw depth'), &
+      & t_cf('thaw_depth_max_ym1', 'm', 'Last years maximum thaw depth'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
-      & output_level=BASIC, &
-      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'thaw_depth_diag1', mem%thaw_depth_diag1,              &
-      & hgrid, surface,                                                      &
-      & t_cf('thaw_depth_diag1', 'm', 'Thawing depth'),                      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & output_level=MEDIUM, &
-      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'thaw_depth_max_diag1', mem%thaw_depth_max_diag1,      &
-      & hgrid, surface,                                                      &
-      & t_cf('thaw_depth_max_diag1', 'm', 'Maximum thaw depth'),             &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
-      & output_level=BASIC, &
+      & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
+      & output_level=NONE, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL mem%Add_var( 'thaw_depth_max_ym1_diag1', mem%thaw_depth_max_ym1_diag1, &
-      & hgrid, surface,                                                         &
-      & t_cf('thaw_depth_max_ym1_diag1', 'm', 'Last years maximum thaw depth'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
-      & output_level=BASIC, &
-      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      CALL mem%Add_var('bulk_dens_sl', mem%bulk_dens_sl, &
+        & hgrid, soil_e, &
+        & t_cf('bulk_dens_sl', 'kg m-3', 'soil bulk density'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
 
-    CALL mem%Add_var( 'thaw_depth_diag2', mem%thaw_depth_diag2,              &
-      & hgrid, surface,                                                      &
-      & t_cf('thaw_depth_diag2', 'm', 'Thawing depth'),                      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & output_level=MEDIUM, &
-      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+      CALL mem%Add_var('sand_sl', mem%sand_sl, &
+        & hgrid, soil_e, &
+        & t_cf('sand_sl', '', 'soil sand proportion'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
 
-    CALL mem%Add_var( 'thaw_depth_max_diag2', mem%thaw_depth_max_diag2,      &
-      & hgrid, surface,                                                      &
-      & t_cf('thaw_depth_max_diag2', 'm', 'Maximum thaw depth'),             &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
-      & output_level=BASIC, &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      CALL mem%Add_var('silt_sl', mem%silt_sl, &
+        & hgrid, soil_e, &
+        & t_cf('silt_sl', '', 'soil silt proportion'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
 
-    CALL mem%Add_var( 'thaw_depth_max_ym1_diag2', mem%thaw_depth_max_ym1_diag2, &
-      & hgrid, surface,                                                         &
-      & t_cf('thaw_depth_max_ym1_diag2', 'm', 'Last years maximum thaw depth'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
-      & output_level=BASIC, &
-      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'thaw_depth_diag3', mem%thaw_depth_diag3,              &
-      & hgrid, surface,                                                      &
-      & t_cf('thaw_depth_diag3', 'm', 'Thawing depth'),                      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & output_level=MEDIUM, &
-      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'thaw_depth_max_diag3', mem%thaw_depth_max_diag3,      &
-      & hgrid, surface,                                                      &
-      & t_cf('thaw_depth_max_diag3', 'm', 'Maximum thaw depth'),             &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
-      & output_level=BASIC, &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'thaw_depth_max_ym1_diag3', mem%thaw_depth_max_ym1_diag3, &
-      & hgrid, surface,                                                         &
-      & t_cf('thaw_depth_max_ym1_diag3', 'm', 'Last years maximum thaw depth'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
-      & output_level=BASIC, &
-      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+      CALL mem%Add_var('clay_sl', mem%clay_sl, &
+        & hgrid, soil_e, &
+        & t_cf('clay_sl', '', 'soil clay proportion'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+    END SELECT
+#endif
 
   END SUBROUTINE Init_sse_memory
 

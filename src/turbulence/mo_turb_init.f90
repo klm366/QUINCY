@@ -1,17 +1,16 @@
+!> Initialization of the the turbulence memory.
 !>
-!! @brief Initialization of the the turbulence memory.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_turb_init
 #ifndef __NO_JSBACH__
 
@@ -55,6 +54,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':turb_init'
 
+#ifdef __QUINCY_STANDALONE__
+#else
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL turb_read_init_vars(tile)
     END IF
@@ -62,12 +63,14 @@ CONTAINS
     CALL turb_init_bc(tile)
     CALL turb_init_ic(tile)
 
-    ! IF (tile%Is_last_process_tile(TURB_)) THEN
-    !   CALL turb_finalize_init_vars()
-    ! END IF
-
+    IF (tile%Is_last_process_tile(TURB_)) THEN
+      CALL turb_finalize_init_vars()
+    END IF
+#endif
   END SUBROUTINE turb_init
 
+#ifdef __QUINCY_STANDALONE__
+#else
   SUBROUTINE turb_finalize_init_vars
 
     DEALLOCATE( &
@@ -115,6 +118,10 @@ CONTAINS
       & variable_name='roughness_length',         &
       & fill_array = turb_init_vars%rough_m)
     ptr_2D = MERGE(ptr_2D, 1._wp, ptr_2D > 0._wp)
+    IF (dsl4jsb_Config(TURB_)%max_ini_rough_m > 0._wp) THEN
+      ptr_2D = MIN(ptr_2D, dsl4jsb_Config(TURB_)%max_ini_rough_m)
+                                  ! TODO: rough_m should not be larger than lowest model layer thickness, or even half of that !?
+    END IF
 
     CALL input_file%Close()
 
@@ -162,7 +169,7 @@ CONTAINS
     ! In the standalone model, these exchange parameters are computed in mo_forcing using rough_m and then
     ! passed to the first call of JSBACH. Therefore, we need rough_m from the ini file for the standalone model.
     ! We also need rough_m for runs without PFTs, e.g. jsbach_lite, on vegetation tiles that are not PFTs (e.g. veg_tile)
-    IF (jsbach_runs_standalone() .OR. (tile%is_vegetation .AND. tile%lcts(1)%lib_id == 0)) THEN
+    IF (jsbach_runs_standalone() .OR. (tile%contains_vegetation .AND. tile%lcts(1)%lib_id == 0)) THEN
 
       IF (debug_on()) CALL message(TRIM(routine), &
           'Initializing turb memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))
@@ -171,11 +178,19 @@ CONTAINS
       dsl4jsb_var2D_onDomain(TURB_,rough_m) = turb_init_vars%rough_m
       dsl4jsb_var2D_onDomain(TURB_,rough_m_star) = 1._wp / LOG(dsl4jsb_Config(TURB_)%blending_height / turb_init_vars%rough_m)**2
 
-      !$acc update device(dsl4jsb_var2D_onDomain(TURB_,rough_m), dsl4jsb_var2D_onDomain(TURB_,rough_m_star))
+      ! Needed for tmx
+      dsl4jsb_var2D_onDomain(TURB_,rough_h) = turb_init_vars%rough_m / dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
+      dsl4jsb_var2D_onDomain(TURB_,rough_h_star) = 1._wp / LOG(dsl4jsb_Config(TURB_)%blending_height / &
+        & (turb_init_vars%rough_m / dsl4jsb_Config(TURB_)%roughness_momentum_to_heat)) ** 2
+
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_m), dsl4jsb_var2D_onDomain(TURB_,rough_m_star)) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_h), dsl4jsb_var2D_onDomain(TURB_,rough_h_star))
+      !$ACC WAIT(1)
 
     END IF
 
   END SUBROUTINE turb_init_ic
-
+#endif
 #endif
 END MODULE mo_turb_init

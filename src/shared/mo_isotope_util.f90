@@ -1,31 +1,18 @@
+!> Routines for isotope discrimination (QUINCY)
 !>
-!!  @par Copyright
-!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
-!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
-!!
-!!    This file is part of the QUINCY model.
-!!    The QUINCY model is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License version 3,
-!!    as published by the Free Software Foundation.
-!!
-!!    The QUINCY model is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!!
-!! @brief Contains functions and subroutines to calculate isotope discrimination
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (2016-05-27)
-!! 2nd version: rename mo_shared_isotope to mo_isotope_util by Jan Engel (20190114)
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!>#### Contains functions and subroutines to calculate isotope discrimination
+!>
 MODULE mo_isotope_util
 #ifndef __NO_JSBACH__
 
@@ -51,6 +38,8 @@ CONTAINS
   !! Output: delta (per mill)
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_delta_C13(element, isotope) RESULT(delta)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: PDB_STANDARD_C13
 
@@ -83,6 +72,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mixing_ratio_C13C12(delta) RESULT(mixing_ratio)
 
+    !$ACC ROUTINE SEQ
+
     USE mo_jsb_physical_constants, ONLY: PDB_STANDARD_C13
 
     IMPLICIT NONE
@@ -110,6 +101,8 @@ CONTAINS
   !! Based on equation 1-3 in Levin et al. (2010), Tellus 62B, 26-46
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_delta_C14(element, isotope, delta_C13) RESULT(delta)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants,    ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14
 
@@ -146,6 +139,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mixing_ratio_C14C(delta_C13,Delta_C14) RESULT(mixing_ratio)
 
+    !$ACC ROUTINE SEQ
+
     USE mo_jsb_physical_constants,        ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14
 
     IMPLICIT NONE
@@ -175,6 +170,8 @@ CONTAINS
   !! Output: delta (per mill)
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_delta_N15(element, isotope) RESULT(delta)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: ATM_STANDARD_N15
 
@@ -207,6 +204,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mixing_ratio_N15N14(delta) RESULT(mixing_ratio)
 
+    !$ACC ROUTINE SEQ
+
     USE mo_jsb_physical_constants, ONLY: ATM_STANDARD_N15
 
     IMPLICIT NONE
@@ -233,6 +232,8 @@ CONTAINS
   !! Output: fraction of the transfer flux that will be the isotope
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_fractionation(source_element,source_isotope,discrimination,source_isotope2) RESULT(fractionation)
+
+    !$ACC ROUTINE SEQ
 
      IMPLICIT NONE
      ! ---------------------------

@@ -1,17 +1,16 @@
+!> Contains the memory class for the surface.
 !>
-!! @brief Contains the memory class for the surface.
-!!
-!! @author
-!!  Veronika Gayler, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Veronika Gayler (2015-05-06)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_hd_memory_class
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
@@ -37,6 +36,11 @@ MODULE mo_hd_memory_class
 
   INTEGER, PARAMETER :: max_no_of_vars = 40
 
+  !> Type for integer array; there's no t_jsb_var_ for integers
+  TYPE t_int3d
+    INTEGER, POINTER :: ptr(:,:,:)
+  END TYPE t_int3d
+
   TYPE, EXTENDS(t_jsb_memory) :: t_hd_memory
 
     TYPE(t_jsb_var_real2d) :: &
@@ -55,17 +59,19 @@ MODULE mo_hd_memory_class
       local_budget    , &  !< total HD reservoir content
       local_fluxes    , &  !< grid cell in- and outflow
       local_wbal_error, &  !< grid cell water balance error
-      water_budget    , &
-      water_budget_change, &
-      outflow_resid,    &  !< residual outflow that's not routed to discharge - only used for debugging (see mo_hd_interface.f90)
+      water_budget    , &  !< HD water budget
+      water_budget_change, & !< water budget change within the time step
+      outflow_resid   , &  !< residual outflow that's not routed to discharge - only used for debugging (see mo_hd_interface.f90)
       outflow_count        !< count of outflows from a given cell - only used for debugging (see mo_hd_interface.f90)
 
     TYPE(t_jsb_var_real3d) :: &
-      nidx_upstream,          &  !< 1st dim. of local index of grid cell upstream (nproma)
-      bidx_upstream,          &  !< 2nd dim. of local index of grid cell upstream (nblks)
       overlflow_res,          &  !< content of overland flow reservoir cascade
       baseflow_res,           &  !< content of baseflow reservoir cascade
       riverflow_res              !< content of groundflow reservoir cascade
+
+    TYPE(t_int3d) ::  &
+      nidx_upstream,         &
+      bidx_upstream
 
     ! Diagnostic global land means/sums e.g. for monitoring (only available with ICON)
     TYPE(t_jsb_var_real1d) :: &
@@ -84,7 +90,7 @@ MODULE mo_hd_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_hd_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_hd_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     TSTEP_CONSTANT, tables
@@ -95,6 +101,7 @@ CONTAINS
     CHARACTER(len=*),   INTENT(in)    :: prefix
     CHARACTER(len=*),   INTENT(in)    :: suffix
     INTEGER,            INTENT(in)    :: lct_ids(:)
+    INTEGER,            INTENT(in)    :: lib_id     !< id of primary lct in lctlib
     INTEGER,            INTENT(in)    :: model_id
 
     !dsl4jsb_Def_config(HD_)
@@ -288,7 +295,6 @@ CONTAINS
       & lrestart=.FALSE.,                                                                &
       & initval_r=0.0_wp )
 
-#ifdef __ICON__
     ! Diagnostic 1d global land variables for experiment monitoring
     !       (1d stream variables are not supported with echam)
     !
@@ -298,10 +304,8 @@ CONTAINS
         & t_cf('hd_water_error_gsum', 'm3', 'Total HD water imbalance during time step'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
-        & lrestart=.FALSE.,                                                                &
-        & initval_r=0.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
     ENDIF
-#endif
 
   END SUBROUTINE Init_hd_memory
 

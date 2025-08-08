@@ -1,7 +1,18 @@
+!> Contains the interfaces to the <PROCESS_NAME_LOWER_CASE> process
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 ! ===============================================================================================================================
 ! === THIS IS A TEMPLATE. PLEASE REPLACE ...                                                                                  ===
-! === ... <FIRST NAME LAST NAME>     with your name e.g. "Martin Mustermann"                                                  ===
-! === ... <DATE>                     with the present date in YYYY-MM-DD format, e.g. "2016-04-30"                            ===
 ! === ... <PROCESS_NAME_UPPER_CASE>_ with your process name, e.g. "ALBEDO_"                                                   ===
 ! === ... <PROCESS_NAME_LOWER_CASE>  with your process name, e.g. "albedo"                                                    ===
 ! === ... <TASK>                     with the name of a task of the process, e.g. "snow_albedo"                               ===
@@ -12,25 +23,10 @@
 ! === !X marks lines with examples (e.g:), templates (if necessary:) and implementations points (Implementation:) that you    ===
 ! === have to adapt to your process.                                                                                          ===
 ! ===                                                                                                                         ===
-! === Finally delete this header.                                                                                             ===
+! === Finally delete this header section.                                                                                     ===
 ! ===============================================================================================================================
-
-
-
+!>#### <EXPLANATIION_OF_PROCESS>
 !>
-!! @brief Contains the interfaces to the <PROCESS_NAME_LOWER_CASE> process
-!!
-!! @author
-!!  <FIRST NAME LAST NAME>, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by <FIRST NAME LAST NAME> (<DATE>)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
 MODULE mo_<PROCESS_NAME_LOWER_CASE>_interface
 #ifndef __NO_JSBACH__
 
@@ -122,7 +118,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "<PROCESS_NAME_LOWER_CASE>"
+  !> Implementation of "update" for task "<PROCESS_NAME_LOWER_CASE>"
   !! Task "<PROCESS_NAME_LOWER_CASE>" <EXPLANATIION_OF_PROCESS>.
   !!
   SUBROUTINE update_<PROCESS_NAME_LOWER_CASE>(tile, options)
@@ -135,7 +131,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
 
     TYPE(t_jsb_model), POINTER :: model
-    !X if necessary: REAL(wp) :: dtime, steplen
+    !X if necessary: REAL(wp) :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_<PROCESS_NAME_LOWER_CASE>'
 
 
@@ -151,7 +147,6 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     !X if necessary: dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
 
     ! If process is not active on this tile, do nothing
     !IF (.NOT. tile%Is_process_calculated(<PROCESS_NAME_UPPER_CASE>_)) RETURN
@@ -187,7 +182,7 @@ CONTAINS
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
-    !X if necessary: REAL(wp) :: dtime, steplen
+    !X if necessary: REAL(wp) :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_<PROCESS_NAME_LOWER_CASE>'
 
     ! Get local variables from options argument
@@ -196,7 +191,6 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
     !X if necessary: dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -215,7 +209,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Another task for "<PROCESS_NAME_LOWER_CASE>"
+  !! Another task for "<PROCESS_NAME_LOWER_CASE>"
   !  ....
 
 #endif

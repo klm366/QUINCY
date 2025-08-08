@@ -1,17 +1,16 @@
+!> Initialization of the the radiation memory.
 !>
-!! @brief Initialization of the the radiation memory.
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-10-09)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_rad_init
 #ifndef __NO_JSBACH__
 
@@ -19,7 +18,7 @@ MODULE mo_rad_init
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on
 
-  USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
+  USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid
   USE mo_jsb_grid,          ONLY: Get_grid
   USE mo_jsb_class,         ONLY: Get_model
@@ -64,27 +63,75 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    ! select init routine depending on the model
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_JSBACH)
-      IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
-        CALL rad_read_init_vars(tile)
-      END IF
+#ifdef __QUINCY_STANDALONE__
+    CALL q_rad_init_ic(tile)
+#else
+    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+      CALL rad_read_init_vars(tile)
+    END IF
 
-      CALL rad_init_bc_jsbach(tile)
-      CALL rad_init_ic_jsbach(tile)
+    CALL rad_init_bc(tile)
+    CALL rad_init_ic(tile)
 
-      ! IF (tile%Is_last_process_tile(RAD_)) THEN
-      !   CALL rad_finalize_init_vars()
-      ! END IF
-    CASE (MODEL_QUINCY)
-      IF (tile%contains_vegetation) THEN
-        CALL rad_init_ic_quincy(tile)
-      ENDIF
-    END SELECT
-
+    IF (tile%Is_last_process_tile(RAD_)) THEN
+      CALL rad_finalize_init_vars()
+    END IF
+#endif
   END SUBROUTINE rad_init
 
+#ifdef __QUINCY_STANDALONE__
+  !-----------------------------------------------------------------------------------------------------
+  !> Intialize radiation process (after memory has been set up)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE q_rad_init_ic(tile)
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+    USE mo_rad_constants,         ONLY: AlbedoVisInitial, AlbedoNirInitial, albedo_vis_soil_initial, albedo_nir_soil_initial
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< one tile with data structure for one lct
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':q_rad_init_ic'
+
+    dsl4jsb_Def_memory(RAD_)
+
+    dsl4jsb_Real2D_onDomain      :: alb_vis
+    dsl4jsb_Real2D_onDomain      :: alb_nir
+    dsl4jsb_Real2D_onDomain      :: alb_nir_soil
+    dsl4jsb_Real2D_onDomain      :: alb_vis_soil
+    dsl4jsb_Real3D_onDomain      :: ppfd_sunlit_tfrac_mavg_cl
+    dsl4jsb_Real3D_onDomain      :: ppfd_sunlit_tcnl_mavg_cl
+    dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tfrac_mavg_cl
+    dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tcnl_mavg_cl
+
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
+    IF (debug_on()) CALL message(routine, 'Setting initial conditions of radiation memory (quincy) for tile '// &
+      &                                   TRIM(tile%name))
+
+    dsl4jsb_Get_memory(RAD_)
+
+    dsl4jsb_Get_var2D_onDomain(RAD_, alb_vis)
+    dsl4jsb_Get_var2D_onDomain(RAD_, alb_nir)
+    dsl4jsb_Get_var2D_onDomain(RAD_, alb_vis_soil)
+    dsl4jsb_Get_var2D_onDomain(RAD_, alb_nir_soil)
+    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)
+    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl)
+
+    ppfd_sunlit_tfrac_mavg_cl(:,:,:)    = 150.0_wp
+    ppfd_sunlit_tcnl_mavg_cl(:,:,:)     = 150.0_wp
+
+    ppfd_shaded_tfrac_mavg_cl(:,:,:)    = 10.0_wp
+    ppfd_shaded_tcnl_mavg_cl(:,:,:)     = 10.0_wp
+
+    ! these variables are initialized with the mem%Add_var() routine in addition (same values) !
+    alb_vis(:,:)                        = AlbedoVisInitial
+    alb_nir(:,:)                        = AlbedoNirInitial
+    alb_vis_soil(:,:)                   = albedo_vis_soil_initial
+    alb_nir_soil(:,:)                   = albedo_nir_soil_initial
+  END SUBROUTINE q_rad_init_ic
+#else
   SUBROUTINE rad_finalize_init_vars
 
     DEALLOCATE( &
@@ -188,7 +235,7 @@ CONTAINS
 
   END SUBROUTINE rad_read_init_vars
 
-  SUBROUTINE rad_init_bc_jsbach(tile)
+  SUBROUTINE rad_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -196,7 +243,7 @@ CONTAINS
 
     ! dsl4jsb_Def_memory(RAD_)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_bc_jsbach'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_bc'
 
     IF (.NOT. tile%Is_process_active(RAD_)) RETURN
 
@@ -208,11 +255,11 @@ CONTAINS
 
     ! nothing to do in the moment ...
 
-  END SUBROUTINE rad_init_bc_jsbach
+  END SUBROUTINE rad_init_bc
 
-  SUBROUTINE rad_init_ic_jsbach(tile)
+  SUBROUTINE rad_init_ic(tile)
 
-    USE mo_rad_parameters, ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial, &
+    USE mo_rad_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial, &
       &                          AlbedoGlacierVisMax, AlbedoGlacierNirMax, AlbedoLakeWater
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -224,7 +271,7 @@ CONTAINS
 
     REAL(wp) :: albedo_age_weight
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic_jsbach'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic'
 
     IF (.NOT. tile%Is_process_active(RAD_)) RETURN
 
@@ -257,17 +304,19 @@ CONTAINS
       dsl4jsb_var2D_onDomain(RAD_,alb_nir_lnd) = AlbedoNirInitial
     END IF
 
-    !$acc update device(dsl4jsb_var2D_onDomain(RAD_,alb_vis), &
-    !$acc dsl4jsb_var2D_onDomain(RAD_,alb_nir), &
-    !$acc dsl4jsb_var2D_onDomain(RAD_,alb_vis_lnd), &
-    !$acc dsl4jsb_var2D_onDomain(RAD_,alb_nir_lnd), &
-    !$acc dsl4jsb_var2D_onDomain(RAD_,alb_background))
+    !$ACC UPDATE ASYNC(1) &
+    !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_vis)) &
+    !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_nir)) &
+    !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_vis_lnd)) &
+    !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_nir_lnd)) &
+    !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_background))
 
     ! soil albedo
     IF (tile%contains_soil) THEN
       dsl4jsb_var2D_onDomain(RAD_, alb_vis_soil) = rad_init_vars%alb_vis_soil
       dsl4jsb_var2D_onDomain(RAD_, alb_nir_soil) = rad_init_vars%alb_nir_soil
-      !$acc update device(dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil), dsl4jsb_var2D_onDomain(RAD_, alb_vis_soil))
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil), dsl4jsb_var2D_onDomain(RAD_, alb_vis_soil))
     END IF
 
     ! Note: If use_alb_canopy=FALSE and PFTs are used, alb_vis_can and alb_nir_can will be different on the tiles
@@ -286,12 +335,13 @@ CONTAINS
       ELSE
         dsl4jsb_var2D_onDomain(RAD_, alb_nir_can) = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
       END IF
-      !$acc update device(dsl4jsb_var2D_onDomain(RAD_, alb_nir_can), dsl4jsb_var2D_onDomain(RAD_, alb_vis_can))
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_, alb_nir_can), dsl4jsb_var2D_onDomain(RAD_, alb_vis_can))
 
       ! The albedo of snow on canopy:
       ! R: In the model the albedo of snow is weighted with albedo_age_weight between two albedo schemes (age and temperature).
       !    For snow on soil this is done with calculations of snow age and temperature and with differentiation between vis and nir
-      !    (see mo_jsb_rad_process in subroutine calc_snow_albedo).
+      !    (see mo_rad_process in subroutine calc_snow_albedo).
       !    However, for snow ON CANOPY the albedo from the age scheme and the albedo from the temperature scheme are simply assumed
       !    to be constant (see the following lines).
       !    Therefore as all inputs to this equation are constants, it was not necessary to calculate it for each time step and block
@@ -303,68 +353,27 @@ CONTAINS
       dsl4jsb_Config(RAD_)%AlbedoCanopySnow = &
         & albedo_age_weight * AlbedoCanopySnow_age + (1._wp - albedo_age_weight) * AlbedoCanopySnow_temp
 
+#ifndef __NO_QUINCY__
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)   =  150.0_wp
+        dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)    =  150.0_wp
+        dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)   =  10.0_wp
+        dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl)    =  10.0_wp
+
+        !$ACC UPDATE ASYNC(1) &
+        !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)) &
+        !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)) &
+        !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)) &
+        !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl))
+      END SELECT
+#endif
+
     END IF
+    !$ACC WAIT(1)
 
-  END SUBROUTINE rad_init_ic_jsbach
+  END SUBROUTINE rad_init_ic
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Intialize radiation process (after memory has been set up)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE rad_init_ic_quincy(tile)
-
-    USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
-    !USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_rad_parameters,        ONLY: rfr_ratio_toc
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< one tile with data structure for one lct
-
-    !TYPE(t_jsb_model), POINTER :: model
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic_quincy'
-
-    dsl4jsb_Def_memory(RAD_)
-
-    dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc
-    dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc_tvegdyn_mavg
-    dsl4jsb_Real3D_onDomain      :: ppfd_sunlit_tfrac_mavg_cl
-    dsl4jsb_Real3D_onDomain      :: ppfd_sunlit_tcnl_mavg_cl
-    dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tfrac_mavg_cl
-    dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tcnl_mavg_cl
-
-    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
-
-    IF (debug_on()) CALL message(routine, 'Setting initial conditions of radiation memory (quincy) for tile '// &
-      &                                   TRIM(tile%name))
-
-    !model  => Get_model(tile%owner_model_id)
-
-    !dsl4jsb_Get_config(RAD_)
-
-    dsl4jsb_Get_memory(RAD_)
-
-    dsl4jsb_Get_var2D_onDomain(RAD_, rfr_ratio_boc)
-    dsl4jsb_Get_var2D_onDomain(RAD_, rfr_ratio_boc_tvegdyn_mavg)
-    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)
-    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)
-    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)
-    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl)
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-    rfr_ratio_boc(:,:)                  = rfr_ratio_toc
-    rfr_ratio_boc_tvegdyn_mavg(:,:)     = rfr_ratio_boc(:,:)
-
-    ppfd_sunlit_tfrac_mavg_cl(:,:,:)    = 150.0_wp
-    ppfd_sunlit_tcnl_mavg_cl(:,:,:)     = 150.0_wp
-
-    ppfd_shaded_tfrac_mavg_cl(:,:,:)    = 10.0_wp
-    ppfd_shaded_tcnl_mavg_cl(:,:,:)     = 10.0_wp
-
-  END SUBROUTINE rad_init_ic_quincy
-
+#endif
 #endif
 END MODULE mo_rad_init

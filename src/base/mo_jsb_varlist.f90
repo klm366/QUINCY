@@ -1,30 +1,27 @@
+!> Contains routines for var_lists/streams
 !>
-!! @brief Contains routines for var_lists/streams
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-12-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_varlist
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp, dp
+  USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: finish
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
   USE mo_jsb_varlist_iface, ONLY: t_jsb_varlist => t_var_list,      &
                                   jsb_get_var_list => get_var_list, &
                                   jsb_new_var_list => new_var_list, &
-#ifdef __ICON__
                                   add_var_list_element_r1d,         &
-#endif
                                   add_var_list_element_r2d, add_var_list_element_r3d, &
                                   is_variable_in_output, &
                                   VARNAME_LEN
@@ -42,20 +39,18 @@ MODULE mo_jsb_varlist
   PRIVATE
 
   PUBLIC :: t_jsb_varlist
-#ifdef __ICON__
   PUBLIC :: add_var_list_element_r1d
-#endif
   PUBLIC :: add_var_list_element_r2d, add_var_list_element_r3d
   PUBLIC :: jsb_add_var, Get_varlist, Get_var_group_name
   PUBLIC :: VARNAME_LEN
-  PUBLIC :: BASIC, MEDIUM, FULL
+  PUBLIC :: BASIC, MEDIUM, FULL, NONE
 
   INTERFACE jsb_add_var
     MODULE PROCEDURE jsb_add_var_list_element_r2d
   END INTERFACE jsb_add_var
 
   ENUM, BIND(C)
-    ENUMERATOR :: BASIC=1, MEDIUM, FULL
+    ENUMERATOR :: NONE=0, BASIC, MEDIUM, FULL
   END ENUM
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_varlist'
@@ -105,7 +100,7 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     CHARACTER(LEN=VARNAME_LEN), INTENT(in), OPTIONAL :: groups(:)
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
@@ -115,7 +110,7 @@ CONTAINS
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(dp)          :: missval_r_loc
+    REAL(wp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
     INTEGER           :: n_groups
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups_loc(:)     ! groups to which this variable belongs to

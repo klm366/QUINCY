@@ -1,24 +1,23 @@
+!> Flow simulation of reservoir cascade
 !>
-!! @brief Flow simulation of reservoir cascade
-!!
-!! @author
-!!  Veronika Gayler, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Veronika Gayler (2013-04-20)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_hd_reservoir_cascade
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,                   ONLY: wp
-
-  USE mo_time_base,              ONLY: rdaylen
+  USE mo_kind,        ONLY: wp
+  USE mo_jsb_time,    ONLY: get_day_length
+  USE mo_jsb_control, ONLY: acc_stream
 
   IMPLICIT NONE
   PRIVATE
@@ -30,7 +29,7 @@ MODULE mo_hd_reservoir_cascade
 CONTAINS
 
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE reservoir_cascade(inflow, nc, steplen, retention, nres, res_content, outflow)
+  SUBROUTINE reservoir_cascade(inflow, nc, dtime, retention, nres, res_content, outflow)
   !------------------------------------------------------------------------------------------------
   ! routine based on jsbach3 routine kasglob by Stefan Hagemann
   !   cascade of n equal linear reservoirs.
@@ -38,7 +37,7 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
 
     REAL(wp),  INTENT(in)    :: inflow(:)        !< inflow to the cascade [m3/s]
-    REAL(wp),  INTENT(in)    :: steplen          !< time step [s]
+    REAL(wp),  INTENT(in)    :: dtime          !< time step [s]
     INTEGER,   INTENT(in)    :: nc               !< current block size
     REAL(wp),  INTENT(in)    :: retention(:)     !< retention parameter (residence time of water in the reservoir) [day]
     REAL(wp),  INTENT(in)    :: nres(:)          !< number of reservoirs
@@ -49,39 +48,59 @@ CONTAINS
     ! ---------------
 
     REAL(wp) :: &
-      & amod(nc),          &
+      & day_length,        &
+      & amod,              &
       & akdiv(nc),         &
       & inflow_cascade(nc)   !< inflow into each level of the cascade
+    INTEGER :: nres_int(nc)  !< `nres` as integer
 
     INTEGER :: res, nres_max
+    INTEGER :: ic
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':reservoir_cascade'
 
-    WHERE (nres > 0)       !< land - without internal drainage cells
-      ! unit conversions: [day] -> [seconds]
-      amod(:) = retention(:) * rdaylen
-      akdiv(:) = 1._wp / (amod(:) + steplen) * steplen
-    ELSEWHERE              !< ocean and lakes
-      akdiv(:) = 0._wp
-    END WHERE
-
-    ! conversions: [m3/s] -> [m3]
-    inflow_cascade(:) = inflow(:) * steplen
-
+    day_length = get_day_length()
     nres_max = SIZE(res_content(1,:))    ! maximum number of reservoirs = 'vertical' dimension of reservoir cascade
+
+    !$ACC PARALLEL DEFAULT(PRESENT) &
+    !$ACC   CREATE(nres_int, akdiv, inflow_cascade) &
+    !$ACC   ASYNC(acc_stream)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(amod)
+    DO ic = 1, nc
+      IF (nres(ic) > 0._wp) THEN ! land - without internal drainage cells
+        ! unit conversions: [day] -> [seconds]
+        amod  = retention(ic) * day_length
+        akdiv(ic) = dtime / (amod + dtime)
+      ELSE                       ! ocean and lakes
+        akdiv(ic) = 0._wp
+      END IF
+      ! conversions: [m3/s] -> [m3]
+      inflow_cascade(ic) = inflow(ic) * dtime
+      !
+      nres_int(ic) = NINT(nres(ic))
+    END DO
+
+    !$ACC LOOP SEQ
     DO res = 1, nres_max
-      WHERE (res <= NINT(nres(:)))
-        res_content(:,res) = res_content(:,res) + inflow_cascade(:)
-        outflow(:) = res_content(:,res) * akdiv(:)
-        res_content(:,res) = res_content(:,res) - outflow(:)
-      ELSEWHERE
-        outflow(:) = inflow_cascade(:)
-      ENDWHERE
-      inflow_cascade(:) = outflow(:)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic = 1, nc
+        IF (res <= nres_int(ic)) THEN
+          res_content(ic,res) = res_content(ic,res) + inflow_cascade(ic)
+          outflow(ic) = res_content(ic,res) * akdiv(ic)
+          res_content(ic,res) = res_content(ic,res) - outflow(ic)
+        ELSE
+          outflow(ic) = inflow_cascade(ic)
+        END IF
+        inflow_cascade(ic) = outflow(ic)
+      END DO
     END DO
 
     ! conversions: [m3] -> [m3/s]
-    outflow(:) = outflow(:) / steplen
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    DO ic = 1, nc
+      outflow(ic) = outflow(ic) / dtime
+    END DO
+    !$ACC END PARALLEL
 
   END SUBROUTINE reservoir_cascade
 

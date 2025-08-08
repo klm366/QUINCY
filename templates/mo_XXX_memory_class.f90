@@ -1,31 +1,28 @@
+!> Contains the memory class for the <PROCESS_NAME_LOWER_CASE> process.
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 ! ===============================================================================================================================
 ! === THIS IS A TEMPLATE. PLEASE REPLACE ...                                                                                  ===
-! === ... <FIRST NAME LAST NAME>    with your name e.g. "Martin Mustermann"                                                   ===
-! === ... <DATE>                    with the present date in YYYY-MM-DD format e.g. "2016-04-30"                              ===
 ! === ... <PROCESS_NAME_LOWER_CASE> with your process name e.g. "seb" for surface energy balance                              ===
 ! ===                                                                                                                         ===
 ! === Then go through the code line by line to adapt it to your needs:                                                        ===
 ! === !X marks lines with examples (e.g:), templates (if necessary:) and implementations points (Implementation:) that you    ===
 ! === have to adapt to your process.                                                                                          ===
 ! ===                                                                                                                         ===
-! === Finally delete this header.                                                                                             ===
+! === Finally delete this header section.                                                                                     ===
 ! ===============================================================================================================================
-
-
+!>#### Contains memory definitions for <PROCESS_NAME_LOWER_CASE>
 !>
-!! @brief Contains the memory class for the <PROCESS_NAME_LOWER_CASE> process.
-!!
-!! @author
-!!  <FIRST NAME LAST NAME>, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by <FIRST NAME LAST NAME> (<DATE>)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
 MODULE mo_<PROCESS_NAME_LOWER_CASE>_memory_class
 #ifndef __NO_JSBACH__
 
@@ -72,7 +69,7 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_<PROCESS_NAME_LOWER_CASE>_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_<PROCESS_NAME_LOWER_CASE>_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -82,6 +79,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)    :: model_id
 
     TYPE(t_jsb_model), POINTER :: model

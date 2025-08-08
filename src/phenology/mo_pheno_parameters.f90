@@ -1,17 +1,16 @@
+!> Contains parameters for the phenology processes
 !>
-!! @brief Contains parameters for the phenology processes
-!!
-!! @author
-!!  Jan Engel, MPI-BGC Jena, based on mo_pheno_constants (2023-01-09)
-!!
-!! @par Revision History
-!! see mo_pheno_constants
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_pheno_parameters
 #ifndef __NO_JSBACH__
 
@@ -21,15 +20,6 @@ MODULE mo_pheno_parameters
   IMPLICIT NONE
   PUBLIC
 
-  ! ======================================================================================================= !
-  !> 1.0 general PHENO_ parameters
-  !>
-  ! ..
-
-
-  ! ======================================================================================================= !
-  !> 2.0 JSBACH specific parameters
-  !>
   ! List of phenology types
   ! evergreen   (EG)
   ! summergreen (SG)
@@ -205,27 +195,19 @@ MODULE mo_pheno_parameters
   ! create object
   TYPE(t_PhenologyParameters), SAVE :: pheno_param_jsbach
 
-  !$acc declare create(pheno_param_jsbach%all, pheno_param_jsbach%EG_SG, pheno_param_jsbach%EG, &
-  !$acc pheno_param_jsbach%SG, pheno_param_jsbach%RG, pheno_param_jsbach%GRS, pheno_param_jsbach%CRP,   &
-  !$acc pheno_param_jsbach%FR, pheno_param_jsbach)
-
-  ! ======================================================================================================= !
-  !> 3.0 QUINCY specific parameters
-  !>
-  REAL(wp), SAVE :: &
-    & gdd_t_air_threshold = def_parameters      !< temperature threshold for the accumulation of growing degree days [deg K]
+  !$ACC DECLARE CREATE(pheno_param_jsbach%all, pheno_param_jsbach%EG_SG, pheno_param_jsbach%EG) &
+  !$ACC   CREATE(pheno_param_jsbach%SG, pheno_param_jsbach%RG, pheno_param_jsbach%GRS, pheno_param_jsbach%CRP) &
+  !$ACC   CREATE(pheno_param_jsbach%FR, pheno_param_jsbach)
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_pheno_parameters'
 
 CONTAINS
 
-  ! the init_constants routines are called in mo_jsb_base:jsbach_setup_models()
-
   ! ======================================================================================================= !
   !> initialize JSBACH specific parameters for the process: phenology
   !>
-  SUBROUTINE init_pheno_parameters_jsbach
-    CHARACTER(len=*), PARAMETER :: routine = modname//':init_pheno_parameters_jsbach'
+  SUBROUTINE init_pheno_parameters
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_pheno_parameters'
 
     pheno_param_jsbach%all%LAI_negligible     = 1.0E-05_wp          !< citation or source ....  [-]
     pheno_param_jsbach%all%laiSeed            = 0.40_wp             !< citation or source ....  [-]
@@ -279,18 +261,14 @@ CONTAINS
     pheno_param_jsbach%FR%min_zero            = 1.E-8_wp            !< citation or source ....  [ ? ]
     pheno_param_jsbach%FR%log_maxind          = 9.5_wp              !< citation or source ....  [ ? ]
     pheno_param_jsbach%FR%min_maxLAI          = 0.5_wp              !< citation or source ....  [ ? ]
-  END SUBROUTINE init_pheno_parameters_jsbach
 
-  ! ======================================================================================================= !
-  !> initialize QUINCY specific parameters for the process: phenology
-  !>
-  SUBROUTINE init_pheno_parameters_quincy
-    USE mo_jsb_physical_constants,    ONLY: Tzero
-    ! ----------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = modname//':init_pheno_parameters_quincy'
+    !$ACC UPDATE DEVICE(pheno_param_jsbach) ASYNC(1)
+    !$ACC UPDATE ASYNC(1) &
+    !$ACC   DEVICE(pheno_param_jsbach%all, pheno_param_jsbach%EG_SG, pheno_param_jsbach%EG) &
+    !$ACC   DEVICE(pheno_param_jsbach%SG, pheno_param_jsbach%RG, pheno_param_jsbach%GRS) &
+    !$ACC   DEVICE(pheno_param_jsbach%CRP, pheno_param_jsbach%FR)
 
-    gdd_t_air_threshold       = 5.0_wp + Tzero              !< citation or source ....  [ ? ]
-  END SUBROUTINE init_pheno_parameters_quincy
+  END SUBROUTINE init_pheno_parameters
 
 #endif
 END MODULE mo_pheno_parameters

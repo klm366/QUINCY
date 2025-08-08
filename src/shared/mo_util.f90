@@ -1,28 +1,32 @@
+!> Some utility functions
 !>
-!! @par Copyright
-!!  This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!!  Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-!! @brief diverse subroutines and functions for tile & forcing variables
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2014-03-17)
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!>#### Various helper routines for ICON-Land
+!>
 MODULE mo_util
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish
 
+  USE mo_math_utilities, ONLY: tdma_solver_vec ! TODO from ICON, mo_math_utilities should be replaced once
+                                               !      libmath-support is an external library
+
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, tolower, int2string, real2string, logical2string, &
-    &       report_memory_usage
+    &       report_memory_usage, soil_init_from_texture, read_bc_data, tdma_solver_vec
 
   INTERFACE one_of
     MODULE PROCEDURE one_of_str
@@ -33,14 +37,9 @@ MODULE mo_util
 
 CONTAINS
 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> FUNCTION return the site-specific soil profile as vector of soil-layer thicknesses
-  !!
-  !! in: soil_depth (until bedrock) and soil-layer thicknesses
-  !!
-  !! out: site-specific soil-layer thicknesses, soil_depth_sl as 3D variable "dsl4jsb_var3D_onDomain()"
-  !-----------------------------------------------------------------------------------------------------
+  !
+  !> Compute soil layer depths from (fixed) layer thicknesses and total depth until bedrock
+  !>
   FUNCTION soil_depth_to_layers_2d(depth, dz) RESULT(depth_l)
 
     REAL(wp), INTENT(in) :: depth(:,:)
@@ -49,6 +48,7 @@ CONTAINS
 
     REAL(wp) :: bottom, bottom_m1
     INTEGER  :: nsoil, i
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':soil_depth_to_layer_2d'
 
     nsoil = SIZE(dz)
@@ -68,41 +68,6 @@ CONTAINS
 
   END FUNCTION soil_depth_to_layers_2d
 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> conversion: uppercase -> lowercase
-  !!
-  !! implemented based on mo_util:toupper in jsbach4.1
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION tolower(string) RESULT(stringlower)
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    CHARACTER(len=*), INTENT(in) :: string
-    CHARACTER(len=LEN_TRIM(string)) :: stringlower
-    ! ---------------------------
-    ! 0.2 Local
-    INTEGER, PARAMETER :: idel = ICHAR('a')-ICHAR('A')  ! = 32
-    INTEGER :: i
-
-    DO i = 1, LEN_TRIM(string)
-      IF (ICHAR(string(i:i)) >= ICHAR('A') .AND. ICHAR(string(i:i)) <= ICHAR('Z')) THEN
-        stringlower(i:i) = CHAR( ICHAR(string(i:i)) + idel )
-      ELSE
-        stringlower(i:i) = string(i:i)
-      ENDIF
-    ENDDO
-  END FUNCTION tolower
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> conversion: lowercase -> uppercase
-  !!
-  !! Copied from ICON module shared/mo_util_string
-  !!
-  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE ifs2soil(ifs_3d, ifs_depth, soil_3d, soil_depth, ifs_sfc)
 
     REAL(wp), INTENT(in) :: &
@@ -174,6 +139,167 @@ CONTAINS
     END DO
 
   END SUBROUTINE ifs2soil
+
+  !> Calculate mineral soil parameters fom soil texture.
+  !!
+  !! Input to this routine should conform:
+  !! fraction_sand + fraction_silt + fraction_clay = 1
+  !! fraction_sand_deep + fraction_silt_deep + fraction_clay_deep = 1
+  !! The calculated mineral soil parameters do not have a vertical dimension,
+  !! as calculations are based on averages of the upper and lower soil textures.
+  !! TODO: Calculate layer dependant parameters
+  PURE ELEMENTAL SUBROUTINE soil_init_from_texture(                 &
+    & parameter_sand, parameter_silt, parameter_clay, parameter_oc, &
+    & fraction_sand, fraction_silt, fraction_clay,                  &
+    & fraction_sand_deep, fraction_silt_deep, fraction_clay_deep,   &
+    & parameter_from_texture)
+
+    REAL(wp), INTENT(in)  ::  parameter_sand, parameter_silt, parameter_clay, parameter_oc
+    REAL(wp), INTENT(in)  ::                                      &
+      fraction_sand, fraction_silt, fraction_clay,                &
+      fraction_sand_deep, fraction_silt_deep, fraction_clay_deep
+    REAL(wp), INTENT(out)  ::  parameter_from_texture
+
+    ! Compute texture based soil parameter
+    parameter_from_texture = ((fraction_sand + fraction_sand_deep)         &
+      &                      * 0.5_wp * parameter_sand) +                  &
+      &                      ((fraction_silt + fraction_silt_deep)         &
+      &                      * 0.5_wp * parameter_silt) +                  &
+      &                      ((fraction_clay + fraction_clay_deep)         &
+      &                      * 0.5_wp * parameter_clay)
+
+    ! Ensure the parameter is within the correct bounds
+    parameter_from_texture = MAX(parameter_from_texture, MIN(parameter_sand,parameter_silt,parameter_clay))
+    parameter_from_texture = MIN(parameter_from_texture, MAX(parameter_sand,parameter_silt,parameter_clay))
+
+  END SUBROUTINE soil_init_from_texture
+
+  !>#### Read boundary conditions for hydrology module
+  !>
+  !> Boundary condition fields for the hydrology module may depend on namelist settings, e.g. l_organic,
+  !> but also on whether specific fields for individual tiles are available. This warrants a separate
+  !> routine to read the boundary conditions and while managing the different cases.
+  !>
+  SUBROUTINE read_bc_data(input_file, varname, tilename, l_organic, datafield, &
+    & default, llimit, ulimit, fallback, ilay, layer_name)
+
+    USE mo_jsb_io_netcdf,      ONLY: t_input_file
+
+    TYPE(t_input_file)           :: input_file     !< File containing input data to be read
+    CHARACTER(len=*), INTENT(IN) :: varname        !< Name of the variable to read
+    CHARACTER(len=*), INTENT(IN) :: tilename       !< Name of the actual tile to read the variable for
+    LOGICAL, INTENT(IN)          :: l_organic      !< Whether to read the '_mineral' version of the variable
+    REAL(wp), INTENT(OUT)        :: datafield(:,:) !< Data field to be filled with boundary condition data
+
+    REAL(wp), INTENT(IN), OPTIONAL :: default      !< Default value for missing values (0 or beyond zero)
+    REAL(wp), INTENT(IN), OPTIONAL :: llimit       !< Set lower bound for the variable to read
+    REAL(wp), INTENT(IN), OPTIONAL :: ulimit       !< Set Upper bound for the variable to read
+    REAL(wp), INTENT(IN), OPTIONAL :: fallback     !< Fallback value to be used globally if variables is not found
+    INTEGER,  INTENT(IN), OPTIONAL :: ilay         !< Layer index to read the variable for
+    CHARACTER(len=*), INTENT(IN), OPTIONAL :: layer_name !< Name of the vertical layer
+
+    REAL(wp), POINTER            :: &
+      & ptr_2D(:,:),                &              !< Pointer to 2d variable
+      & ptr_3D(:,:,:)                              !< Pointer to 3d variable
+    LOGICAL :: read_from_file                      !< T: read data from file, F: use fallback value or fail
+
+    CHARACTER(len=:), ALLOCATABLE:: fullname       !< Full name of the variable to read
+
+    CHARACTER(len=*), PARAMETER  :: routine = modname//':read_bc_data'
+
+    ! Set variable name depending on the use of l_organic.
+    IF (l_organic) THEN
+      ! If soil is modified with organic carbon fraction, read the variable with the '_mineral' suffix.
+      fullname = TRIM(varname) // '_mineral'
+    ELSE
+      ! If soil organic fraction is already included, read the variable without '_mineral' suffix.
+      fullname = TRIM(varname)
+    END IF
+
+    ! Modify file name if a variable with the respective tile name exists in the bc file.
+    IF (input_file%Has_var(TRIM(fullname)//'_'//TRIM(tilename))) THEN
+      ! If the variable with the tile name exists, use it.
+      fullname = TRIM(fullname)//'_'//TRIM(tilename)
+      read_from_file = .TRUE.
+    ELSE IF (PRESENT(fallback)) THEN
+      ! Set datafield to the fallback value if provided
+      datafield(:,:) = fallback
+      read_from_file = .FALSE.
+      ! TODO: write this only for debug output
+      CALL message(routine, 'Set '//TRIM(fullname)//' field for tile '// TRIM(tilename) // &
+        & ' to fallback value '//TRIM(real2string(fallback)))
+    ELSE IF (input_file%Has_var(TRIM(fullname))) THEN
+      ! Use the standard variable for this tile if it exists and no fallback value is provided
+      read_from_file = .TRUE.
+    ELSE
+      ! If the fallback value and field variable do not exist, complain
+      CALL finish(routine, 'Variable '//TRIM(fullname)//' not found in input file '//TRIM(input_file%filename) &
+        & // ' and no fallback value given.')
+    END IF
+
+    IF (read_from_file) THEN
+      IF (PRESENT(ilay) .AND. PRESENT(layer_name)) THEN
+        ! Read 1 layer of a 3D field
+        ptr_3D => input_file%Read_2d_extdim( &
+          & variable_name=TRIM(fullname),    &
+          & start_extdim=ilay, end_extdim=ilay, extdim_name=TRIM(layer_name))
+        datafield(:,:) = ptr_3D(:,:,1)
+      ELSE
+        ! Read 2D field
+        ptr_2D => input_file%Read_2d(variable_name=TRIM(fullname))
+        datafield(:,:) = ptr_2D(:,:)
+      END IF
+      IF (PRESENT(default)) THEN
+        ! TODO check whether also values of zero should be set to a default value
+        IF (default >= 0._wp) THEN
+          ! Positive default value: Use it to fill all values < 0.
+          datafield(:,:) = MERGE(datafield(:,:), default, datafield(:,:) >= 0._wp)
+        ELSE
+          ! Negative default value: Use it to fill all values > 0.
+          datafield(:,:) = MERGE(datafield(:,:), default, datafield(:,:) <= 0._wp)
+        END IF
+      END IF
+      IF (PRESENT(llimit)) THEN
+        ! If a lower limit is given, use it to limit the read data.
+        datafield(:,:) = MERGE(datafield(:,:), llimit, datafield(:,:) >= llimit)
+      END IF
+      IF (PRESENT(ulimit)) THEN
+        ! If an upper limit is given, use it to limit the read data.
+        datafield(:,:) = MERGE(datafield(:,:), ulimit, datafield(:,:) <= ulimit)
+      END IF
+
+      ! TODO: write this only for debug output
+      CALL message(routine, 'Read '//TRIM(fullname)//' field for tile '// TRIM(tilename))
+    END IF
+
+  END SUBROUTINE read_bc_data
+
+  !-----------------------------------------------------------------------------------------------------
+  !> conversion: uppercase -> lowercase
+  !!
+  !! implemented based on mo_util:toupper in jsbach4.1
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION tolower(string) RESULT(stringlower)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    CHARACTER(len=*), INTENT(in) :: string
+    CHARACTER(len=LEN_TRIM(string)) :: stringlower
+    ! ---------------------------
+    ! 0.2 Local
+    INTEGER, PARAMETER :: idel = ICHAR('a')-ICHAR('A')  ! = 32
+    INTEGER :: i
+
+    DO i = 1, LEN_TRIM(string)
+      IF (ICHAR(string(i:i)) >= ICHAR('A') .AND. ICHAR(string(i:i)) <= ICHAR('Z')) THEN
+        stringlower(i:i) = CHAR( ICHAR(string(i:i)) + idel )
+      ELSE
+        stringlower(i:i) = string(i:i)
+      ENDIF
+    ENDDO
+  END FUNCTION tolower
   !
   !> Conversion: Lowercase -> Uppercase
   !
@@ -247,11 +373,12 @@ CONTAINS
     END DO
   END FUNCTION one_of_int
 
-  !
-  ! returns integer n as a string (often needed in printing messages)
-  !
-  ! Copied from ICON module shared/mo_util_string
-  !
+  !-----------------------------------------------------------------------------------------------------
+  !> returns integer n as a string (often needed in printing messages)
+  !!
+  !! Copied from ICON module shared/mo\_util\_string
+  !!
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION int2string(n, opt_fmt)
     CHARACTER(len=:), ALLOCATABLE :: int2string ! result
     INTEGER, INTENT(in) :: n
@@ -270,6 +397,10 @@ CONTAINS
     !
   END FUNCTION int2string
 
+  !-----------------------------------------------------------------------------------------------------
+  !> returns real x as a string (often needed in printing messages)
+  !!
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION real2string(x, opt_fmt)
     CHARACTER(len=:), ALLOCATABLE :: real2string ! result
     REAL(wp), INTENT(in) :: x
@@ -300,7 +431,9 @@ CONTAINS
     !
   END FUNCTION logical2string
 
-  SUBROUTINE report_memory_usage()
+  SUBROUTINE report_memory_usage(msg)
+
+    CHARACTER(len=*), INTENT(in), OPTIONAL:: msg     ! Message tag to be added to the origial OOM message
 
     INTEGER           :: size=0, resident=0, share=0, text=0, lib=0, data=0, dt=0, oom_score=0
     INTEGER           :: ierr=0
@@ -315,10 +448,17 @@ CONTAINS
     IF (ierr < 0) THEN
       CALL message('', 'Problem reading /proc/self/statm')
     ELSE
-      CALL message('INFO -- Memory usage in pages and OOM score', ' size='//TRIM(int2string(size))// &
-        &                             ' resident='//TRIM(int2string(resident))// &
-        &                             ' data='//TRIM(int2string(data))// &
-        &                             ' oom_score='//TRIM(int2string(oom_score)))
+      IF (PRESENT(msg)) THEN
+        CALL message('INFO -- Memory usage in pages and OOM score', ' size='//TRIM(int2string(size))// &
+          &                             ' resident='//TRIM(int2string(resident))// &
+          &                             ' data='//TRIM(int2string(data))// &
+          &                             ' oom_score='//TRIM(int2string(oom_score))//' - '//msg)
+      ELSE
+        CALL message('INFO -- Memory usage in pages and OOM score', ' size='//TRIM(int2string(size))// &
+          &                             ' resident='//TRIM(int2string(resident))// &
+          &                             ' data='//TRIM(int2string(data))// &
+          &                             ' oom_score='//TRIM(int2string(oom_score)))
+      END IF
     END IF
 
   END SUBROUTINE report_memory_usage

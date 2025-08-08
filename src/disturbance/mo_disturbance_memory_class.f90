@@ -1,17 +1,16 @@
+!> Contains the memory class for the disturb process.
 !>
-!! @brief Contains the memory class for the disturb process.
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2017-04-6)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_disturb_memory_class
 #ifndef __NO_JSBACH__
 
@@ -55,7 +54,7 @@ MODULE mo_disturb_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_disturb_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_disturb_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -66,6 +65,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)    :: model_id
 
     TYPE(t_jsb_model), POINTER :: model
@@ -145,7 +145,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
         & loutput = .TRUE., lrestart=.FALSE., initval_r=0.0_wp )
-    ENDIF
+    END IF
 
     IF (.NOT. model%processes(FLCC_)%p%config%active) THEN
       CALL mem%Add_var( 'cconservation_fire', mem%cconservation_fire,         &
@@ -155,7 +155,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
         & loutput = .TRUE., lrestart=.FALSE., initval_r=0.0_wp )
-    ENDIF
+    END IF
 
   END SUBROUTINE Init_disturb_memory
 

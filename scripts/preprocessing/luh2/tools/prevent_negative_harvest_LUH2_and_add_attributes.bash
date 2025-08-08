@@ -1,5 +1,18 @@
 #!/bin/bash
-# JN 06.12.16, script to set negative LUH2 harvest to zero 
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
+#----------------------------------------------------------------------
+# JN 06.12.16, script to set negative LUH2 harvest to zero
 # -- i.e. get input required for JSBACH simulations
 # (julia.nabel@mpimet.mpg.de)
 

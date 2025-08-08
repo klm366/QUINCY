@@ -1,31 +1,34 @@
-!> Summary: Contains elem enum and soon common functions for bgc materials; to be integrated with current mo_jsb_pool_class
+!> define indices and helper functions for bgc material
 !>
-!>### Contains enum and methods for bgc materials; to be integrated with current mo_jsb_pool_class
+!> ICON-Land
 !>
-!> Copyright (c) 2022 Julia Nabel
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2022-12-14 - present)
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!>#### License
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>#### define indices (enumerator) and helper functions for bgc material and their components
 !>
 MODULE mo_lnd_bgcm_class
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind,                ONLY: wp
+  USE mo_util,                ONLY: int2string
   USE mo_jsb_pool_class,      ONLY: t_jsb_pool
-  USE mo_exception,           ONLY: message, message_text
+  USE mo_exception,           ONLY: message, message_text, finish
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, LAST_ELEM_ID
+  PUBLIC :: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, FIRST_ELEM_ID, LAST_ELEM_ID
 
-  PUBLIC :: get_name_for_element_id, get_max_number_of_elements
+  PUBLIC :: get_name_for_element_id, get_max_number_of_elements, get_element_index, get_short_name_for_element_id
   PUBLIC :: assert_no_compartment_bgc_materials, get_dimension_of_element_variables
 
   !> IDs of elements (since elements are dynamic these can only be used as idx in arrays with all possible elements)
@@ -37,8 +40,12 @@ MODULE mo_lnd_bgcm_class
       & ELEM_C13_ID,        &
       & ELEM_C14_ID,        &
       & ELEM_N15_ID,        &
-      & LAST_ELEM_ID ! needs to be the last -- it is only used to determine the max number of elements
+      & ONEPLUS_LAST_ELEM_ID  ! needs to be the last -- it is only used to determine the max number of elements
   END ENUM
+
+  !> ID of first and last bgcm elements
+  INTEGER, PARAMETER :: FIRST_ELEM_ID = ELEM_C_ID
+  INTEGER, PARAMETER :: LAST_ELEM_ID  = ONEPLUS_LAST_ELEM_ID - 1
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_lnd_bgcm_class'
 
@@ -53,7 +60,7 @@ CONTAINS
     INTEGER :: last_type_id
     ! -------------------------------------------------------------------------------------------------- !
     ! The elem id enum  starts with 1 to be able to use the ids as indices in arrays with all possible elements
-    last_type_id = LAST_ELEM_ID - 1
+    last_type_id = LAST_ELEM_ID
 
   END FUNCTION get_max_number_of_elements
 
@@ -174,6 +181,28 @@ CONTAINS
     END SELECT
 
   END FUNCTION get_name_for_element_id
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Returns (and checks!) the element index in the index map for the queried id
+  !>
+  FUNCTION get_element_index(element_id, elements_index_map, caller) RESULT(element_idx)
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER,          INTENT(in) :: element_id            !< id of the queried element
+    INTEGER,          INTENT(in) :: elements_index_map(:) !< id-index map
+    CHARACTER(len=*), INTENT(in) :: caller                !< calling routine
+    INTEGER                      :: element_idx           !< index of the queried element
+    ! -------------------------------------------------------------------------------------------------- !
+
+    element_idx = elements_index_map(element_id)
+
+    ! Assert that the model is running with this element
+    IF ( element_idx == 0 ) THEN
+      CALL finish(TRIM(caller), 'Unknown or unused element id: ' // int2string(element_id) &
+        & // ' - element name: "' // get_name_for_element_id(element_id) // '". Please check!' )
+    ENDIF
+  END FUNCTION get_element_index
 
 #endif
 END MODULE mo_lnd_bgcm_class

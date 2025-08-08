@@ -1,4 +1,16 @@
 #!/bin/bash
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
 #############################################################################################################################
 ### This Programm converts the landcover map files (LUH2) readable by JSBACH3 to corresponding files readable by JSBACH4. ###
 ### The Program  gauss_to_icon.ksh  in  jsbach/scripts/preprocessing/attic/  provides other infiles for the model.        ###

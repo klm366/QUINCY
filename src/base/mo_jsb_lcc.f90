@@ -1,25 +1,27 @@
-!> Summary: Methods for lcc processes
+!> Methods for lcc processes
 !>
-!>### Contains methods required to deal with actively or passively relocated conserved quantities upon lcc
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!>#### Contains methods required to deal with actively or passively relocated conserved quantities upon lcc
 !>
 !> NOTE: This is currently only implemented to deal with leaves and down to two layers,
 !>       if something more generic is required this needs to be re-engineered
-!>
-!> Copyright (c) 2021 Julia Nabel
-!>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2021-04-12 - present)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
-!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_jsb_lcc
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,           ONLY: finish, message
+  USE mo_exception,           ONLY: finish, message, message_text
   USE mo_util,                ONLY: int2string, one_of
   USE mo_util_string,         ONLY: tolower
   USE mo_kind,                ONLY: wp
@@ -56,7 +58,6 @@ CONTAINS
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid
     USE mo_jsb_grid,          ONLY: Get_grid
     USE mo_carbon_constants,  ONLY: carbon_potential_active_vars, carbon_required_passive_vars
-    USE mo_tcq_constants,     ONLY: tcq_potential_active_vars, tcq_required_passive_vars
 
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*),  INTENT(in) :: process_name      !< name of the encompassing lcc process
@@ -113,25 +114,25 @@ CONTAINS
 
     ! Iterate over the descendants of the tile to collect the CQ variables of
     ! the actively and passively relocated CQTs
-    IF(tile%Has_children()) THEN
+    IF (tile%Has_children()) THEN
       nr_of_children = tile%Get_no_of_children()
       child => tile%Get_first_child_tile()
     ELSE
       nr_of_children = 1
       child => tile%self_tile
-    ENDIF
+    END IF
 
     i_tile = 0
     DO i_child = 1,nr_of_children !@TODO: no do loop with counter required: do while!
 
       ! check if this is a leave (currently lcc can only run on leaves!) and if not go to the children of this node (i.e. the leaves)
-      IF(child%Has_children()) THEN
+      IF (child%Has_children()) THEN
         leave => child%Get_first_child_tile()
         nr_of_leaves = child%Get_no_of_children()
       ELSE
         leave => child
         nr_of_leaves = 1
-      ENDIF
+      END IF
 
       DO i_leave = 1,nr_of_leaves !@TODO: no do loop with counter required: do while!
 
@@ -142,7 +143,7 @@ CONTAINS
           i_tile = i_tile + 1
           is_involved_tile = .TRUE.
           is_descendant(ind) = .TRUE.
-        ENDIF
+        END IF
 
         ! The lcc structure is created according to active and passive cqs on the first involved tile
         IF (is_involved_tile .AND. (i_tile == 1)) THEN
@@ -152,12 +153,12 @@ CONTAINS
             IF (ANY(leave%conserved_quantities(i_cqt)%p%type_id == active_cqts(:) )) THEN
               nr_of_active_vars = nr_of_active_vars &
                 & + leave%conserved_quantities(i_cqt)%p%no_of_vars
-            ENDIF
+            END IF
             IF (ANY(leave%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
               nr_of_passive_vars = nr_of_passive_vars &
                 & + leave%conserved_quantities(i_cqt)%p%no_of_vars
-            ENDIF
-          ENDDO
+            END IF
+          END DO
 
           lcc_relocations%nr_of_active_vars = nr_of_active_vars
           lcc_relocations%nr_of_passive_vars = nr_of_passive_vars
@@ -189,14 +190,14 @@ CONTAINS
                 IF (.NOT. ANY(active_var_process_ids == this_process_id)) THEN
                   nr_of_procs_with_active_vars = nr_of_procs_with_active_vars + 1
                   active_var_process_ids(nr_of_procs_with_active_vars) = this_process_id
-                ENDIF
+                END IF
 
                 CALL add_cq_to_lcc_structure(nr_of_tiles, nproma, nblks, i_tile, i_cqt, i_var, i_active,                 &
                   & leave%conserved_quantities, lcc_relocations%active_vars_cqt, lcc_relocations%active_vars_process_id, &
                   & lcc_relocations%active_vars, lcc_relocations%active_vars_names)
 
-              ENDDO
-            ENDIF
+              END DO
+            END IF
             ! and separately for the passive cqts
             IF (ANY(leave%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
               nr_of_vars = leave%conserved_quantities(i_cqt)%p%no_of_vars
@@ -207,7 +208,7 @@ CONTAINS
                   & leave%conserved_quantities, lcc_relocations%passive_vars_cqt,  lcc_relocations%passive_vars_process_id, &
                   & lcc_relocations%passive_vars, lcc_relocations%passive_vars_names )
 
-              ENDDO
+              END DO
             ENDIF !... for active or passive CQTs
 
           ENDDO !... for all CQTs
@@ -223,9 +224,9 @@ CONTAINS
                 & = Get_process_name(active_var_process_ids(ind))
             ELSE
               EXIT
-            ENDIF
-          ENDDO
-        ENDIF !... for the first involved tile
+            END IF
+          END DO
+        END IF !... for the first involved tile
 
         ! For all other involved tiles (i.e. other than the first) only the pointers need to be collected
         ! + assert that the demanded active and passive variables are part of all involved tiles
@@ -237,21 +238,21 @@ CONTAINS
           DO i_cqt = 1, leave%nr_of_cqts
             IF (ANY(leave%conserved_quantities(i_cqt)%p%type_id == active_cqts(:) )) THEN
               CALL collect_pointers_for_cqs(i_cqt, i_tile, i_active_this_tile, leave%name, &
-                & TRIM(involved_descendant_tiles(1)), leave%conserved_quantities, &
+                & TRIM(involved_descendant_tiles(1)), leave%conserved_quantities,          &
                 & lcc_relocations%active_vars, lcc_relocations%nr_of_active_vars, 'active')
-            ENDIF
-            IF(ANY(leave%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
+            END IF
+            IF (ANY(leave%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
               CALL collect_pointers_for_cqs(i_cqt, i_tile, i_passive_this_tile, leave%name, &
-                & TRIM(involved_descendant_tiles(1)), leave%conserved_quantities, &
+                & TRIM(involved_descendant_tiles(1)), leave%conserved_quantities,           &
                 & lcc_relocations%passive_vars, lcc_relocations%nr_of_passive_vars, 'passive')
-            ENDIF
-          ENDDO
+            END IF
+          END DO
 
           ! Assertion: all variables found on the first tile need to also be cqs for all other tiles
           IF (.NOT. i_active_this_tile == nr_of_active_vars ) THEN
             CALL finish(TRIM(routine), &
               & 'Violation of assertion: Not all active variables found on first tile '//TRIM(involved_descendant_tiles(1)) &
-              & //' were also active cqs of this tile '//TRIM(involved_descendant_tiles(i_tile))//'. Found ' &
+              & //' were also active cqs of this tile '//TRIM(involved_descendant_tiles(i_tile))//'. Found '                &
               & //int2string(nr_of_active_vars)//' on first and '//int2string(i_active_this_tile)//' on this. Please check.')
           ENDIF
           IF (.NOT. i_passive_this_tile == nr_of_passive_vars ) THEN
@@ -263,7 +264,7 @@ CONTAINS
         ENDIF
 
         leave => leave%Get_next_sibling_tile()
-      ENDDO ! i_leave = 1,nr_of_leaves
+      END DO ! i_leave = 1,nr_of_leaves
 
       child => child%Get_next_sibling_tile()
     ENDDO ! i_child = 1,nr_of_children
@@ -326,9 +327,6 @@ CONTAINS
 
       ! and check them
       SELECT CASE(tolower(this_proc_name))
-      CASE ('tcq')
-        CALL check_active_lcc_vars(lcc_relocations, this_proc_name, active_vars_this_proc, tcq_potential_active_vars)
-        CALL check_passive_lcc_vars(lcc_relocations, this_proc_name, passive_vars_this_proc, tcq_required_passive_vars)
 
       CASE ('carbon')
         CALL check_active_lcc_vars(lcc_relocations, this_proc_name, active_vars_this_proc, carbon_potential_active_vars)
@@ -389,20 +387,20 @@ CONTAINS
 
     ! Collect initial areas of all involved tiles
     on_second_level = .FALSE.
-    IF(tile%Has_children()) THEN
+    IF (tile%Has_children()) THEN
       current_tile => tile%Get_first_child_tile()
     ELSE
       current_tile => tile%self_tile
-    ENDIF
+    END IF
 
     i_tile = 0
     DO WHILE (ASSOCIATED(current_tile) .AND. i_tile < lcc_relocations%nr_of_tiles)
 
-      IF(current_tile%Has_children()) THEN
+      IF (current_tile%Has_children()) THEN
         on_second_level = .TRUE.
         parent => current_tile
         current_tile => parent%Get_first_child_tile()
-      ENDIF
+      END IF
 
       IF (one_of(current_tile%name, lcc_relocations%tile_names) > 0) THEN
         i_tile = i_tile + 1
@@ -412,10 +410,10 @@ CONTAINS
         initial_area(:, i_tile) = current_fract(:)
       ENDIF
 
-      IF(.NOT. ASSOCIATED(current_tile%next_sibling_tile) .AND. on_second_level) THEN
+      IF (.NOT. ASSOCIATED(current_tile%next_sibling_tile) .AND. on_second_level) THEN
         current_tile => parent
         on_second_level = .FALSE.
-      ENDIF
+      END IF
 
       current_tile => current_tile%Get_next_sibling_tile()
     ENDDO
@@ -474,8 +472,11 @@ CONTAINS
     !>
     ! -> JN-TODO: we might want/need to discuss the concept of the e-10 areas here
     IF (ANY((initial_area - lost_area) < -EPSILON(1._wp) )) THEN
-      CALL finish(TRIM(routine), 'Violation of assertion: Lost area exceeds available area ' &
-        & //'for lcc process '// TRIM(lcc_relocations%name) //'! Please check!')
+      CALL message(routine, 'Violation of assertion: Lost area exceeds available area ' &
+        & //'for lcc process '// TRIM(lcc_relocations%name))
+      WRITE (message_text,*) 'MINVAL: ', MINVAL(initial_area-lost_area), ' at ', MINLOC(initial_area-lost_area), &
+        & ' (nc,tile)'
+      CALL finish(routine, message_text)
     ENDIF
 
     !>
@@ -570,7 +571,6 @@ CONTAINS
   !> Attempts to relocate content of active to passive vars by calling functions on the encompassing processes
   !
   SUBROUTINE transfer_active_to_passive_onChunk(lcc_relocations, tile, i_tile, options)
-    USE mo_tcq_interface,       ONLY: tcq_transfer_from_active_to_passive_vars_onChunk
     USE mo_carbon_interface,    ONLY: carbon_transfer_from_active_to_passive_vars_onChunk
 
     IMPLICIT NONE
@@ -613,8 +613,6 @@ CONTAINS
       IF(has_non_zero_active_var) THEN
 
         SELECT CASE(tolower(this_proc_name))
-        CASE ('tcq')
-          CALL tcq_transfer_from_active_to_passive_vars_onChunk(lcc_relocations, tile, i_tile, options)
 
         CASE ('carbon')
           CALL carbon_transfer_from_active_to_passive_vars_onChunk(lcc_relocations, tile, i_tile, options)
@@ -684,7 +682,7 @@ CONTAINS
     current_tile => tile%Get_first_child_tile()
     ind_list = 1
     DO WHILE (ASSOCIATED(current_tile))
-      IF(current_tile%Has_children()) THEN
+      IF (current_tile%Has_children()) THEN
         !>
         !> Only implemented for 1 or two hierarchical layers!
         !>
@@ -692,7 +690,7 @@ CONTAINS
           CALL finish(TRIM(routine), &
             & 'Violation of assertion: number of involved layers exceeds two below given tile '&
             & //TRIM(tile%name)//'. Which is not implemented. Please check.')
-        ENDIF
+        END IF
 
         ind_end = ind_list+current_tile%Get_no_of_children()-1
         CALL current_tile%Get_children_names(descendant_leave_tiles(ind_list:ind_end))
@@ -701,7 +699,7 @@ CONTAINS
         ! Add name of the tile itself
         descendant_leave_tiles(ind_list) = current_tile%name
         ind_list = ind_list + 1
-      ENDIF
+      END IF
       current_tile => current_tile%Get_next_sibling_tile()
     END DO
 

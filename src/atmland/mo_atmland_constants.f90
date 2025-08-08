@@ -1,12 +1,16 @@
+!> Atmosphere-land constants, conversion factors, plus init routine
 !>
-!! @brief atmosphere-land constants, orbital parameters, conversion factors, plus init routine
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (2015-12-04)
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_atmland_constants
 #ifndef __NO_JSBACH__
 
@@ -27,6 +31,7 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: eps_vpd                     !< eps_vpd used for unit conversion Pa -> g g-1
 
   ! default values of model forcing for model testing:
+  !  @TODO some of the 'default values of model forcing' might not be used (and can be removed ?)
   REAL(wp),SAVE :: def_t_air                   !< temperature in deg K
   REAL(wp),SAVE :: def_vpd                     !< vpd in Pa
   REAL(wp),SAVE :: def_swdown                  !< PAR in W m-2
@@ -43,6 +48,8 @@ MODULE mo_atmland_constants
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_atmland_constants'
 
+  !$ACC DECLARE CREATE(eps_vpd, def_co2_deltaC13, def_co2_deltaC14)
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
@@ -54,7 +61,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_atmland_constants
 
-    USE mo_jsb_math_constants,    ONLY: hourday
     USE mo_isotope_util,          ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
 
     IMPLICIT NONE
@@ -93,6 +99,8 @@ CONTAINS
     def_co2_deltaC14          = -14.9_wp
     def_co2_mixing_ratio_C14  = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) * def_co2_mixing_ratio
     def_wind                  = 1.0_wp
+
+    !$ACC UPDATE DEVICE(eps_vpd, def_co2_deltaC14, def_co2_deltaC13) ASYNC(1)
 
   END SUBROUTINE init_atmland_constants
 

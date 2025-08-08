@@ -1,19 +1,25 @@
+!> ICON driver for the JSBACH standalone model
 !>
-!! @brief Main program for the JSBACH standalone model using ICON infrastructure
-!!
-!! @par Revision History
-!!
-!! @par Copyright and License
-!!
-!! This code is subject to the DWD and MPI-M-Software-License-Agreement in
-!! its most recent form.
-!! Please see the file LICENSE in the root of the source tree for this code.
-!! Where software is supplied by third parties, it is indicated in the
-!! headers of the routines.
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!>#### Main routine for running ICON-Land standalone
+!>
+!> `jsbach_model()` is called from the ICON program `src/drivers/icon:icon`
+!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_jsbach_model
 
-#ifdef __ICON__
 #ifndef __NO_JSBACH__
 
   USE mo_exception, ONLY: message, message_text, finish
@@ -28,6 +34,8 @@ MODULE mo_jsbach_model
     &                     timer_model_init, print_timer,                        &
     &                     timer_domain_decomp, timer_compute_coeffs,            &
     &                     timer_read_restart, timer_total
+  USE mo_jsb_model_class, ONLY: t_jsb_model
+  USE mo_jsb_class,       ONLY: get_model
 
   IMPLICIT NONE
 
@@ -43,7 +51,11 @@ MODULE mo_jsbach_model
 
 CONTAINS
 
-  !--------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>
+  !> main routine for running ICON-Land standalone using ICON infrastructure
+  !>
+  !>   'jsbach_model()' is called from the ICON program `src/drivers/icon:icon` (ICON-MPIM repo)
   !>
   SUBROUTINE jsbach_model(jsb_namelist_filename, shr_namelist_filename)
 
@@ -73,10 +85,10 @@ CONTAINS
 
     USE mo_memory_log,              ONLY: memory_log_add
 
-    USE mo_mpi,                     ONLY: stop_mpi, my_process_is_io, my_process_is_work, my_process_is_stdio, &
+    USE mo_mpi,                     ONLY: stop_mpi, my_process_is_io, my_process_is_stdio, &
       &                                   set_mpi_work_communicators, process_mpi_io_size
     USE mo_parallel_config,         ONLY: p_test_run, num_test_pe, l_test_openmp,                              &
-      &                                   update_nproma_on_device, num_io_procs, pio_type,                     &
+      &                                   num_io_procs, pio_type, proc0_shift,                                 &
       &                                   num_prefetch_proc, nproma, proc0_offloading, check_parallel_configuration
 
     USE mo_zaxis_type,              ONLY: zaxisTypeList, t_zaxisTypeList
@@ -85,8 +97,8 @@ CONTAINS
     USE mo_jsb_model_init,          ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
     USE mo_jsb_model_final,         ONLY: jsbach_finalize
     USE mo_jsb_version,             ONLY: jsbach_label_run
-    USE mo_jsb_control,             ONLY: force_from_observations
-    USE mo_jsb4_forcing,            ONLY: init_forcing, finalize_external_forcing
+    USE mo_jsb_control,             ONLY: get_no_of_models, force_from_observations
+    USE mo_jsb4_forcing,            ONLY: setup_forcing, init_forcing, finalize_external_forcing
 
     USE mo_build_decomposition,     ONLY: build_decomposition
 
@@ -109,7 +121,7 @@ CONTAINS
 #endif
     USE mo_name_list_output_config, ONLY: use_async_name_list_io
     USE mo_output_event_types,      ONLY: t_sim_step_info
-    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio, inh_atmosphere
+    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio
     USE mo_memory_log,              ONLY: memory_log_terminate
     USE mo_util_mtime,              ONLY: getElapsedSimTimeInSeconds, is_event_active
 
@@ -134,18 +146,19 @@ CONTAINS
     USE mo_action,                  ONLY: ACTION_RESET, reset_act
     USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
 
-    USE mo_dynamics_config,         ONLY: iequations
     USE mo_jsb_convect_tables_iface,ONLY: init_convect_tables
 
     USE mo_derived_variable_handling, ONLY: update_statistics
-
+    ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(LEN=*), INTENT(in) :: jsb_namelist_filename
     CHARACTER(LEN=*), INTENT(in) :: shr_namelist_filename
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER   :: model
 
     TYPE(t_key_value_store),      POINTER :: restartAttributes
     CLASS(t_RestartDescriptor),   POINTER :: restartDescriptor
     INTEGER :: jstep0, jstep, dedicatedRestartProcs
-    INTEGER :: jg, nblks  !, jgp
+    INTEGER :: no_models, jg
     INTEGER :: i
     CHARACTER(len=MAX_MTIME_ERROR_STR_LEN) :: errstring
     INTEGER                                :: error_status
@@ -178,21 +191,23 @@ CONTAINS
     INTEGER, ALLOCATABLE :: output_jfile(:) ! number of output files
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_model'
+    ! ----------------------------------------------------------------------------------------------------- !
 
-    CALL message('======== ', 'Starting the ICON JSBACH standalone model ...')
+    CALL message('======== ', 'Starting the ICON-Land standalone model ...')
     CALL message('', '')
     CALL message('Namelist files', TRIM(jsb_namelist_filename) // ', ' // TRIM(shr_namelist_filename))
     CALL message('', '')
 
-    iequations = inh_atmosphere
+    IF (n_dom > 1) CALL finish(routine, 'Only one atmospheric domain allowed')
 
-    ! Initialize global registry of lon-lat grids
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 0.1 Initialize global registry of lon-lat grids
+    !>
     CALL lonlat_grids%init()
 
-    !---------------------------------------------------------------------
-    ! 0. If this is a resumed or warm-start run...
-    !---------------------------------------------------------------------
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 0.2 If this is a resumed or warm-start run...
+    !>
     restartAttributes => NULL()
     IF (isRestart()) THEN
       CALL message('','Read restart file meta data ...')
@@ -202,11 +217,14 @@ CONTAINS
       CALL read_restart_header(TRIM(get_my_process_name()))
     ENDIF
 
-    !---------------------------------------------------------------------
-    ! 1.1 Read namelists (newly) specified by the user; fill the
-    !     corresponding sections of the configuration states.
-    !---------------------------------------------------------------------
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 1.0 read namelists
+    !>
 
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 1.1 read namelists required for the ICON infrastructure and fill the
+    !>     corresponding sections of the ICON configuration states
+    !>
     ! Create a new file in which all the namelist variables and their
     ! actual values used in the model run will be stored.
     IF (my_process_is_stdio()) CALL open_nml_output(TRIM(jsb_namelist_filename)//'_output')
@@ -223,123 +241,116 @@ CONTAINS
       CALL log_nml_settings(TRIM(jsb_namelist_filename)//".log")
     END IF
 
-    !---------------------------------------------------------------------
-    ! 1.2 Cross-check namelist setups
-    !---------------------------------------------------------------------
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 1.2 Cross-check namelist setups
+    !>
     CALL check_parallel_configuration()
 
-    ! Set times and events
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 2.0 Set times and events
+    !>
     CALL compute_timestep_settings()
     CALL compute_restart_settings()
     CALL compute_date_settings("jsbach", dt_restart, nsteps)
     CALL initEventManager(time_config%tc_exp_refdate)
 
-    !---------------------------------------------------------------------
-    ! 2. Call configure_run to finish filling the run_config state.
-    !    This needs to be done very early (but anyway after atm_crosscheck)
-    !    because some components of the state, e.g., num_lev, may be
-    !    modified in this subroutine which affects the following CALLs.
-    !---------------------------------------------------------------------
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 3.0 Call configure_run to finish filling the run_config state.
+    !>
+    !>    This needs to be done very early (but anyway after atm_crosscheck)
+    !>    because some components of the state, e.g., num_lev, may be
+    !>    modified in this subroutine which affects the following CALLs.
+    !>
     CALL configure_run( )
 
-    !-------------------------------------------------------------------
-    ! 3.1 Initialize the mpi work groups
-    !-------------------------------------------------------------------
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 4.0 intialization
+    !>
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 4.1 Initialize the mpi work groups
+    !>
     num_prefetch_proc = 0
     CALL restartWritingParameters(opt_dedicatedProcCount = dedicatedRestartProcs)
     CALL set_mpi_work_communicators(p_test_run, l_test_openmp, &
          &                          num_io_procs, dedicatedRestartProcs, &
          &                          jsbach_process, num_prefetch_proc, num_test_pe,      &
-         &                          pio_type, num_dio_procs=0)
-#ifdef _OPENACC
-    CALL update_nproma_on_device( my_process_is_work() )
-#endif
+         &                          pio_type, num_dio_procs=proc0_shift)
 
-    !-------------------------------------------------------------------
-    ! 3.2 Initialize various timers
-    !-------------------------------------------------------------------
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 4.2 Initialize various timers
+    !>
     IF (ltimer) CALL init_timer
     IF (timers_level > 1) CALL timer_start(timer_model_init)
 
-    !-------------------------------------------------------------------
-    ! initialize dynamic list of vertical axes
-    !-------------------------------------------------------------------
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 4.3 initialize dynamic list of vertical axes
+    !>
     zaxisTypeList = t_zaxisTypeList()
 
-    !-------------------------------------------------------------------
-    ! Setup JSBACH: read namelists, configure models for each domain
-    ! This has to be after (!) the ICON zaxes have been created in the above line but
-    ! before (!) the restart PEs are detached a few lines below since JSBACH
-    ! adds its zaxes to zaxisTypeList
-    !-------------------------------------------------------------------
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 5.0 Setup the model in ICON-Land: read namelists, configure models for each domain
+    !>
+    !>   @NOTE This has to be after (!) the ICON zaxes have been created in the above line but
+    !>         before (!) the restart PEs are detached a few lines below since ICON-Land
+    !>         adds its zaxes to zaxisTypeList
+    !>
     CALL jsbach_setup_models(shr_namelist_filename)
+    no_models = get_no_of_models()
 
-    !-------------------------------------------------------------------
-    ! 3.3 I/O initialization
-    !-------------------------------------------------------------------
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 6.0 I/O initialization
+    !>
     ! This won't RETURN on dedicated restart PEs, starting their main loop instead.
     CALL detachRestartProcs(ltimer)
-
     CALL init_io_processes()
 
-    !------------------
-    ! Next, define the horizontal and vertical grids since they are aready
-    ! needed for some derived control parameters. This includes
-    ! - patch import
-    ! - domain decompistion
-    ! - vertical coordinates
-    !-------------------------------------------------------------------
-    ! 4. Import patches, perform domain decomposition
-    !-------------------------------------------------------------------
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 7.0 Import patches, perform domain decomposition
+    !>
+    !>   define the horizontal and vertical grids since they are aready
+    !>   needed for some derived control parameters. This includes
+    !>   - patch import
+    !>   - domain decompistion
+    !>   - vertical coordinates
+    !>
     IF (timers_level > 4) CALL timer_start(timer_domain_decomp)
     CALL build_decomposition(num_lev, nshift, is_ocean_decomposition = .false.)
     IF (timers_level > 4) CALL timer_stop(timer_domain_decomp)
-    nblks  = p_patch(1)%nblks_c
 
-    !--------------------------------------------------------------------------------
-    ! 5. Construct interpolation state, compute interpolation coefficients.
-    !--------------------------------------------------------------------------------
+    p_patch(:)%ldom_active = .TRUE.
 
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 8.0 Construct interpolation state, compute interpolation coefficients.
+    !>
     IF (timers_level > 4) CALL timer_start(timer_compute_coeffs)
     CALL configure_interpolation( n_dom, p_patch(1:)%level, &
                                   p_patch(1:)%geometry_info )
 
     CALL configure_gridref(n_dom, p_patch(1:)%geometry_info%mean_characteristic_length)
 
-
     ! Allocate array for interpolation state
-
     ALLOCATE( p_int_state(n_dom_start:n_dom), &
             & STAT=error_status)
     IF (error_status /= SUCCESS) THEN
       CALL finish(routine, 'allocation for ptr_int_state failed')
     ENDIF
 
-    ! ALLOCATE( p_int_state_local_parent(n_dom_start+1:n_dom), &
-    !   &       STAT=error_status)
-    ! IF (error_status /= SUCCESS) &
-    !   CALL finish(routine, 'allocation for local parents failed')
-
-    ! Construct interpolation state
-    ! Please note that for parallel runs the divided state is constructed here
-    ! CALL construct_2d_interpol_state(p_patch, p_int_state)
-
-    ! Transfer interpolation state to local parent
-    ! jgp = p_patch(1)%parent_id
-    ! CALL transfer_interpol_state(p_patch(jgp),p_patch_local_parent(1), &
-    !   &  p_int_state(jgp), p_int_state_local_parent(1))
-
-    !-------------------------------------------------------------------
-    ! Initialize icon_comm_lib
-    !-------------------------------------------------------------------
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 9.0 Initialize icon_comm_lib
+    !>
     CALL construct_icon_communication(p_patch, n_dom)
 
-    !--------------------------------------------
-    ! Setup the information for the physical patches
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 10.0 Setup the information for the physical patches
+    !>
     CALL setup_phys_patches
+
+    ! Copy needed parts of the patches to GPU
+    DO jg=1,no_models
+      !$ACC ENTER DATA &
+      !$ACC   COPYIN(p_patch(jg)%cells%decomp_info%owner_mask)
+    END DO
 
     ! Constructing data for lon-lat interpolation
     ! CALL compute_lonlat_intp_coeffs(p_patch(1:), p_int_state(1:)) ! inout, inout
@@ -350,45 +361,61 @@ CONTAINS
 
     CALL init_convect_tables ! necessary for FUNCTION qsat
 
-    CALL jsbach_setup_grid( 1, p_patch(1), type='icon') !< in
-    CALL jsbach_setup_tiles(1)
-    CALL jsbach_init(1)
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 11.0 setup and init external forcing
+    !>
+    IF (force_from_observations()) CALL setup_forcing(no_models)  ! @TODO this might always be TRUE with icon-land standalone
+    DO jg=1,no_models
+      model => Get_model(jg)
+      CALL jsbach_setup_grid(jg, p_patch(jg), type='icon')
+      CALL jsbach_setup_tiles(jg)
+      CALL jsbach_init(jg)
+      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, dtime)
+    END DO
     CALL jsbach_label_run(.TRUE.)
 
-    IF (force_from_observations()) CALL init_forcing(1, dtime, dtime)
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 12.0 restart a simulation
+    !>
     IF (isRestart()) THEN
       !
       ! This is a resumed integration. Read model state from restart file(s).
       !
       IF (timers_level > 4) CALL timer_start(timer_read_restart)
-      !
-      CALL read_restart_files( p_patch(1), n_dom)
-      !
+      DO jg = 1,n_dom
+        IF (p_patch(jg)%ldom_active) THEN
+          CALL read_restart_files( p_patch(jg), n_dom)
+        END IF
+      END DO
       CALL message(TRIM(routine),'normal exit from read_restart_files')
-      !
+
       IF (timers_level > 4) CALL timer_stop(timer_read_restart)
-      !
-      CALL jsbach_init_after_restart(1)
+
+      DO jg=1,no_models
+        CALL jsbach_init_after_restart(jg)
+      END DO
 
     END IF
 
-    !------------------------------------------------------------------
-    ! Prepare output
-    !------------------------------------------------------------------
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 13.0 Prepare output
+    !>
     CALL configure_gribout(grid_generatingCenter, grid_generatingSubcenter, n_dom)
-
     CALL configure_io()
 
-    ! Map the variable groups given in the output namelist onto the
-    ! corresponding variable subsets:
-    ! ATTENTION: all add_vars must be finished before calling this routine.
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 13.1 Map the variable groups given in the output namelist onto the corresponding variable subsets:
+    !>
+    !>   @NOTE all add_vars must be finished before calling this routine.
+    !>
     IF (output_mode%l_nml) THEN
       CALL parse_variable_groups()
     END IF
 
-    ! If async IO is in effect, init_name_list_output is a collective call
-    ! with the IO procs and effectively starts async IO
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 13.2 If async IO is in effect, init_name_list_output is a collective call
+    !>      with the IO procs and effectively starts async IO
+    !>
     IF (output_mode%l_nml) THEN
       ! compute sim_start, sim_end
       sim_step_info%sim_start    = time_config%tc_exp_startdate
@@ -409,31 +436,38 @@ CONTAINS
 
     END IF
 
-    ! Initialize reset-Action, i.e. assign variables to action object
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 13.3 Initialize reset-Action, i.e. assign variables to action object
+    !>
     CALL reset_act%initialize(ACTION_RESET)
 
-    !-------------------------------------------------------!
-    !  (Optional) detailed print-out of some variable info  !
-    !-------------------------------------------------------!
-    IF (my_process_is_stdio() .AND. (msg_level >= 15)) CALL vlr_print_groups(idom=1)
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 13.4 Optional: detailed print-out of some variable info  !
+    !>
+    IF (my_process_is_stdio() .AND. (msg_level >= 15)) THEN
+      DO jg=1,n_dom
+        CALL vlr_print_groups(idom=jg)
+      END DO
+    END IF
 
     IF (timers_level > 1) CALL timer_stop(timer_model_init)
 
-    !---------------------------------------------------------------------------------------
-    ! End of model initialization
-    !---------------------------------------------------------------------------------------
+    ! ----------------------------------------------------------------------------------------------------- !
+    !>
+    !> End of model initialization
+    !>
+    ! ----------------------------------------------------------------------------------------------------- !
 
-
-    !------------------------------------------------------------------
-    !  get and write out some of the initial values
-    !------------------------------------------------------------------
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 14.0 get and write out some of the initial values
+    !>
     mtime_current => time_config%tc_current_date
     IF (.NOT. isRestart() .AND. (mtime_current >= time_config%tc_exp_startdate)) THEN
-
-      CALL update_statistics ! R: notwendig siehe Rechnertext
-
+      ! ..
+      CALL update_statistics(lacc=.TRUE.)
+      ! --
       IF (output_mode%l_nml) THEN
-        CALL write_name_list_output(jstep=0)
+          CALL write_name_list_output(jstep=0, lacc=.TRUE.)
       END IF
 
     END IF ! not isRestart()
@@ -459,10 +493,14 @@ CONTAINS
       CALL restartAttributes%get("jstep", jstep0)
     END IF
 
-    ! for debug purposes print var lists: for msg_level >= 13 short and for >= 20 long format
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 14.1 for debug purposes print var lists: for msg_level >= 13 short and for >= 20 long format
+    !>
     IF  (msg_level >= 13) CALL vlr_print_vls(lshort=(msg_level < 20))
 
-    ! set events, group and the events
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 15.0 set events, group and the events
+    !>
     CALL message('','')
     eventStartDate => time_config%tc_exp_startdate
     eventEndDate   => time_config%tc_exp_stopdate
@@ -515,7 +553,9 @@ CONTAINS
     lret = addEventToEventGroup(restartEvent, checkpointEventGroup)
     CALL printEventGroup(checkpointEvents)
 
-    ! set time loop properties
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 16.0 set time loop properties
+    !>
     model_time_step => time_config%tc_dt_model
 
     CALL message('','')
@@ -529,13 +569,15 @@ CONTAINS
 
     jstep = jstep0+1
 
+    ! ----------------------------------------------------------------------------------------------------- !
+    !>
+    !> 17.0 time loop for running ICON-Land
+    !>
     TIME_LOOP: DO
-
       ! optional memory loggin
       CALL memory_log_add
 
       !TODO Compute mtime_forcing
-
       mtime_current = mtime_current + model_time_step
 
       ! store state of output files for restarting purposes
@@ -566,40 +608,47 @@ CONTAINS
       ! set namelist output flag
       l_nml_output = output_mode%l_nml .AND. jstep >= 0 .AND. istime4name_list_output(jstep)
 
-      CALL perform_jsbach_for_timestep(dtime, mtime_current)
+      ! --------------------------------------------------------------------------------------------------- !
+      !> 17.1 run ICON-Land for one timestep
+      !>
+      DO jg = 1,no_models
+        CALL run_one_timestep( &
+          & jg, &                   ! model
+          & p_patch(jg)%nblks_c, &  ! ..
+          & dtime, &                ! length of timestep in seconds
+          & mtime_current)          ! ..
+      END DO
 
-      ! update accumlated values
-      CALL update_statistics
+      ! update accumulated values
+      CALL update_statistics(lacc=.TRUE.)
 
       IF (l_nml_output) THEN
-        CALL write_name_list_output(jstep)
+        CALL write_name_list_output(jstep, lacc=.TRUE.)
       ENDIF
 
       ! re-initialize MAX/MIN fields with 'resetval'
-      ! must be done AFTER output
+      !   @NOTE must be done AFTER output
       CALL reset_act%execute(slack=dtime, mtime_date=mtime_current)
 
-      !--------------------------------------------------------------------------
-      ! Write restart file
-      !--------------------------------------------------------------------------
-      ! check whether time has come for writing restart file
-
-      !
+      ! --------------------------------------------------------------------------------------------------- !
+      !> 17.2 Write restart file
+      !>
+      !>  check whether time has come for writing restart file
+      !>
       ! default is to assume we do not write a checkpoint/restart file
       lwrite_checkpoint = .FALSE.
-      ! if thwe model is not supposed to write output, do not write checkpoints
+      ! if the model is not supposed to write output, do not write checkpoints
       IF (.NOT. output_mode%l_none ) THEN
         ! to clarify the decision tree we use shorter and more expressive names:
-
         l_isStartdate    = (time_config%tc_startdate == mtime_current)
         l_isExpStopdate  = (time_config%tc_exp_stopdate == mtime_current)
         l_isRestart      = is_event_active(restartEvent, mtime_current, proc0_offloading)
         l_isCheckpoint   = is_event_active(checkpointEvent, mtime_current, proc0_offloading)
         l_doWriteRestart = time_config%tc_write_restart
-
+        ! ...
         IF ( &
               !  if normal checkpoint or restart cycle has been reached, i.e. checkpoint+model stop
-              &         (l_isRestart .OR. l_isCheckpoint)           &
+              &         (l_isRestart .OR. l_isCheckpoint)                     &
               &  .AND.                                                        &
               !  and the current date differs from the start date
               &        .NOT. l_isStartdate                                    &
@@ -610,50 +659,45 @@ CONTAINS
           lwrite_checkpoint = .TRUE.
         END IF
       END IF
-
+      ! ..
       IF (lwrite_checkpoint) THEN
-
-        ! For multifile restart (restart_write_mode = "joint procs multifile")
-        ! the domain flag must be set to .TRUE. in order to activate the domain,
-        ! even though we have one currently in the ocean. Without this the
-        ! processes won't write out their data into a the patch restart files.
-        p_patch(1)%ldom_active = .TRUE.
-        !
-        CALL restartDescriptor%updatePatch(p_patch(1), opt_ndom=1)
-
+        DO jg=1,n_dom
+          CALL restartDescriptor%updatePatch(p_patch(jg), opt_ndom=n_dom)
+        END DO
         ! finally write restart file
         CALL restartDescriptor%writeRestart(mtime_current, jstep, opt_output_jfile = output_jfile)
       END IF  ! lwrite_checkpoint
-
+      ! ...
       IF (mtime_current >= time_config%tc_stopdate) THEN
         ! leave time loop
         EXIT TIME_LOOP
       END IF
 
+      ! increase timestep by one
       jstep = jstep + 1
       ! step_in_forcing_file = step_in_forcing_file + 1
       sim_time = getElapsedSimTimeInSeconds(mtime_current)
-
     END DO TIME_LOOP
-    !---------------------------------------------------------------------------------------
-    ! End of time loop
-    !---------------------------------------------------------------------------------------
 
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 18.0  ... @TODO describe
+    !>
     CALL deleteRestartDescriptor(restartDescriptor)
 
+    ! ..
     IF (ltimer) CALL timer_stop(timer_total)
 
+    ! ..
     IF (output_mode%l_nml) THEN
       DEALLOCATE(output_jfile, STAT=error_status)
       IF (error_status /= SUCCESS)  CALL finish (routine, 'DEALLOCATE failed!')
     ENDIF
 
-    ! TODO CALL deallocateDatetime(mtime_forcing)
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 19.0 deallocation of structure and variables
+    !>
+    ! @TODO CALL deallocateDatetime(mtime_forcing)
     CALL deallocateDatetime(mtime_old)
-    ! TODO CALL deallocateDatetime(mtime_old_jsb)
-
-    ! print performance timers:
-    IF (ltimer) CALL print_timer
 
     ! Deallocate global registry for lon-lat grids
     CALL lonlat_grids%finalize()
@@ -662,25 +706,29 @@ CONTAINS
     CALL destruct_comm_patterns( p_patch, p_patch_local_parent )
 
     ! Deallocate grid patches
+    DO jg=1,no_models
+      !$ACC EXIT DATA &
+      !$ACC   DELETE(p_patch(jg)%cells%decomp_info%owner_mask)
+    END DO
     CALL destruct_patches( p_patch )
-    ! CALL destruct_patches( p_patch_local_parent )
-    IF (msg_level>5) CALL message(routine, 'destruct_patches is done')
 
+    ! ..
     DEALLOCATE( p_patch, STAT=error_status )
     IF (error_status/=SUCCESS) THEN
       CALL finish(routine, 'deallocate for patch array failed')
     ENDIF
 
-    ! close memory logging files
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 20.0 close memory logging files and finalize model
+    !>
     CALL memory_log_terminate
-
     CALL destruct_icon_communication()
-
-    CALL finalize_external_forcing()
+    CALL finalize_external_forcing(no_models)
     CALL jsbach_finalize()
 
-    ! Delete variable lists
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 21.0 Delete variable lists
+    !>
     IF (output_mode%l_nml) THEN
       CALL close_name_list_output
     ENDIF
@@ -693,96 +741,116 @@ CONTAINS
     END IF
 #endif
 
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 22.0 finish message and print performance timers
+    !>
     CALL message(routine, 'clean-up finished')
+    IF (ltimer) CALL print_timer
 
   END SUBROUTINE jsbach_model
 
-  SUBROUTINE perform_jsbach_for_timestep(dtime, datetime_new)
+  ! ======================================================================================================= !
+  !>
+  !> run ICON-Land for one timestep
+  !>
+  SUBROUTINE run_one_timestep(model_id, nblks, dtime, datetime_new)
 
     USE mo_jsb_control,               ONLY: jsbach_is_restarted, force_from_observations, &
       &                                     debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
-    USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart
-    USE mo_jsb_model_class,           ONLY: t_jsb_model, MODEL_QUINCY
+    USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart, get_secs_of_day, get_year, is_newyear
+    USE mo_jsb_model_class,           ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
     USE mo_jsb_class,                 ONLY: get_model
     USE mo_jsb_grid,                  ONLY: Get_grid
     USE mo_jsb_grid_class,            ONLY: t_jsb_grid
     USE mo_jsb_tile_class,            ONLY: t_jsb_tile_abstract
     USE mo_jsb_interface,             ONLY: jsbach_start_timestep, jsbach_finish_timestep
-    USE mo_jsb4_forcing,              ONLY: forcing_options, get_interface_variables_from_external_forcing
+    USE mo_jsb4_forcing,              ONLY: forcing_options, get_standalone_driver
     USE mo_orbit_solar,               ONLY: compute_cos_zenith_angle
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
-    USE mo_jsb_math_constants,        ONLY: eps8
 
-    dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_
+#ifndef __NO_QUINCY__
+    USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter, update_slow_sb_pool_accelerator_bookkeeping
+    USE mo_quincy_model_config,       ONLY: QCANOPY
+    USE mo_isotope_util,              ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
+    dsl4jsb_Use_processes A2L_, HYDRO_, SPQ_
+    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_config(SPQ_)
+#else
+    dsl4jsb_Use_processes A2L_, HYDRO_
+#endif
     dsl4jsb_Use_memory(A2L_)
-    dsl4jsb_Use_memory(SEB_)
-    dsl4jsb_Use_memory(TURB_)
     dsl4jsb_Use_memory(HYDRO_)
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER,                INTENT(in)            :: model_id
+    INTEGER,                INTENT(in)            :: nblks
     REAL(wp)              , INTENT(in)            :: dtime          !< time step
     TYPE(datetime)        , POINTER               :: datetime_new   !< date and time at the end of this time step
-
+    ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=max_timedelta_str_len) :: dtime_string     !< time delta as string
     TYPE(timedelta)         , POINTER    :: dtime_mtime      !< time delta as mtime variable
     TYPE(datetime)          , POINTER    :: datetime_old     !< date and time at the beginning of this time step
     TYPE(datetime)          , POINTER    :: datetime_old_old !< date and time one time step before datetime_old
     TYPE(datetime)          , POINTER    :: datetime_forcing
 
-    INTEGER  :: nproma, npromz, nblks
-    INTEGER  :: iblk        !< index of block loop
-    INTEGER  :: ibs, ibe    !< start and end indices of block   loop
-    INTEGER  :: ics, ice    !< start and end indices of columns loop
+    INTEGER  :: nproma
+    INTEGER  :: iblk                           !< index of block loop
+    INTEGER  :: startblk, endblk               !< start and end indices of block   loop
+    INTEGER  :: startidx(nblks), endidx(nblks) !< start and end indices of columns loop
 
     TYPE(t_jsb_model), POINTER           :: model
     TYPE(t_jsb_grid),  POINTER           :: grid       ! Horizontal grid
-    CLASS(t_jsb_tile_abstract), POINTER  :: tile, land_tile, lake_tile
+    CLASS(t_jsb_tile_abstract), POINTER  :: tile
 
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
-
-    dsl4jsb_Def_memory_tile(SEB_, land_tile)
-    dsl4jsb_Real2D_onDomain :: t_land_tile
-    dsl4jsb_Def_memory_tile(TURB_, land_tile)
-    dsl4jsb_Real2D_onDomain :: fact_q_air_land_tile
-    dsl4jsb_Real2D_onDomain :: fact_qsat_srf_land_tile
-    dsl4jsb_Real2D_onDomain :: rough_h_land_tile
-    dsl4jsb_Real2D_onDomain :: rough_m_land_tile
-
-    dsl4jsb_Def_memory_tile(SEB_, lake_tile)
-    dsl4jsb_Real2D_onDomain :: t_lake_tile
-    dsl4jsb_Def_memory_tile(TURB_, lake_tile)
-    dsl4jsb_Real2D_onDomain :: fact_q_air_lake_tile
-    dsl4jsb_Real2D_onDomain :: fact_qsat_srf_lake_tile
-    dsl4jsb_Real2D_onDomain :: rough_h_lake_tile
-    dsl4jsb_Real2D_onDomain :: rough_m_lake_tile
-
+    dsl4jsb_Real2D_onDomain :: evapotrans
+    dsl4jsb_Real2D_onDomain :: evapopot
+    dsl4jsb_Real2D_onDomain :: co2_air
+    dsl4jsb_Real2D_onDomain :: co2_air_mol
+#ifndef __NO_QUINCY__
     ! quincy
-    dsl4jsb_Real2D_onDomain :: swpar_srf_down
-    dsl4jsb_Real2D_onDomain :: prev_one_cos_zenith_angle
-    dsl4jsb_Real2D_onDomain :: prev_two_cos_zenith_angle
-    dsl4jsb_Real2D_onDomain :: prev_three_cos_zenith_angle
-    dsl4jsb_Real2D_onDomain :: daytime_counter
+    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_config(SPQ_)
 
+    dsl4jsb_Real2D_onDomain :: co2_mixing_ratio
+    dsl4jsb_Real2D_onDomain :: CO2_mixing_ratio_c13
+    dsl4jsb_Real2D_onDomain :: CO2_mixing_ratio_c14
+    dsl4jsb_Real2D_onDomain :: swpar_srf_down
+    dsl4jsb_Real2D_onDomain :: daytime_counter
+    dsl4jsb_Real2D_onDomain :: daylength_prev_day
+    dsl4jsb_Real2D_onDomain :: local_time_day_seconds
+    dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execution_counter
+    dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execute
+#endif
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
+    REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:), co2_air_dc13(:,:), co2_air_Dc14(:,:)
 
-    REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
-
-    LOGICAL :: l_force_from_obs
+    REAL(wp) :: hlp1   ! Temporary scalar for mixing ratio calculations
+    LOGICAL :: use_external_forcing               ! use forcing from external forcing (e.g., observation based data)
     LOGICAL :: l_first_forcing_file    = .TRUE.
     LOGICAL :: l_shift_one_timestep    = .TRUE.
     LOGICAL :: l_first_step_in_restart = .FALSE.
 
-    INTEGER :: nc, nt, it, ic
-    INTEGER :: no_omp_thread
+    INTEGER :: nc, ics, ice, ic
+    INTEGER :: global_seconds_day, current_year
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':perform_jsbach_for_timestep'
+    ! IQ spin-up accelerator model configurations
+    INTEGER :: accelerator_max_executions !< bookkeeping configurations for the iq spin-up accelerator: max number of executions
+    INTEGER :: accelerator_frequency      !< bookkeeping configurations for the iq spin-up accelerator: frequency of executions
+    INTEGER :: accelerator_start_year     !< bookkeeping configurations for the iq spin-up accelerator: start year of executions
+    ! IQ: further configuration
+    LOGICAL :: flag_snow = .TRUE. !< quincy boolean indicating if simulations should include snow (else read snow is added to rain)
 
-    l_force_from_obs = force_from_observations()
+    CHARACTER(len=*), PARAMETER :: routine = modname//':run_one_timestep'
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    ! use forcing from external forcing, such as, observation based data (e.g., CRUJRA)
+    !                                             or output from another model simulation
+    ! see namelist 'jsb_control_nml' and 'mo_jsb_control:l_force_from_obs'
+    use_external_forcing = force_from_observations()
 
     IF (jsbach_is_restarted()) THEN
       l_first_forcing_file = .FALSE.
@@ -805,106 +873,154 @@ CONTAINS
 
     datetime_forcing => newDatetime(datetime_old)
     IF (l_first_forcing_file) THEN
-      IF (forcing_options%forcing_steps_per_day == 1  .AND. .NOT. l_force_from_obs ) THEN
+      IF (forcing_options(model_id)%forcing_steps_per_day == 1  .AND. .NOT. use_external_forcing ) THEN
         ! Go to next time step of next file
-        CALL getPTStringFromSeconds(forcing_options%forcing_synchron_factor * dtime, dtime_string)
+        CALL getPTStringFromSeconds(forcing_options(model_id)%forcing_synchron_factor * dtime, dtime_string)
         dtime_mtime  => newTimedelta(dtime_string)
         datetime_forcing  =  datetime_forcing + dtime_mtime
         CALL deallocateTimedelta(dtime_mtime)
       END IF
     ELSE
-      IF (.NOT. l_first_step_in_restart  .AND. .NOT. l_force_from_obs) THEN
+      IF (.NOT. l_first_step_in_restart  .AND. .NOT. use_external_forcing) THEN
         datetime_forcing = datetime_new
       END IF
     END IF
 
-    CALL jsbach_start_timestep(1, datetime_old, dtime)
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> start timestep
+    !>
+    CALL jsbach_start_timestep(model_id, datetime_old, dtime)
 
-    model => get_model(1)
+    model => get_model(model_id)
     grid  => get_grid(model%grid_id)
     nproma = grid%Get_nproma()
-    npromz = grid%Get_npromz()
-    nblks  = grid%Get_nblks()
 
     CALL model%Get_top_tile(tile)
-    IF (tile%contains_lake) THEN
-      ! We need separate variables for the land and the lake tile and cannot use the box tile.
 
-      ! Get pointer to the land tile
-      nt = tile%Get_no_of_children()
-      DO it=1,nt
-        IF (it == 1) THEN
-          land_tile => tile%Get_first_child_tile()
-        ELSE
-          land_tile => land_tile%Get_next_sibling_tile()
-        END IF
-        ! Exit if the land tile was found
-        IF (TRIM(land_tile%name) == 'land') EXIT
-      END DO
-      dsl4jsb_Get_memory_tile(SEB_, land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(SEB_,  t,             land_tile)
-      dsl4jsb_Get_memory_tile(TURB_, land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_q_air,    land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_qsat_srf, land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_h,       land_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       land_tile)
+    startblk = grid%Get_blk_start()
+    endblk   = grid%Get_blk_end()
+    DO iblk = startblk, endblk
+      startidx(iblk) = grid%Get_col_start(iblk)
+      endidx  (iblk) = grid%Get_col_end(iblk)
+    END DO
+    !$ACC DATA COPYIN(startidx, endidx) ASYNC(1)
 
-      ! Get pointer to the lake tile
-      nt = tile%Get_no_of_children()
-      DO it=1,nt
-        IF (it == 1) THEN
-          lake_tile => tile%Get_first_child_tile()
-        ELSE
-          lake_tile => lake_tile%Get_next_sibling_tile()
-        END IF
-        ! Exit if the lake tile was found
-        IF (TRIM(lake_tile%name) == 'lake') EXIT
-      END DO
-      dsl4jsb_Get_memory_tile(SEB_, lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(SEB_,  t,             lake_tile)
-      dsl4jsb_Get_memory_tile(TURB_, lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_q_air,    lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_qsat_srf, lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_h,       lake_tile)
-      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       lake_tile)
-    END IF
-
-    IF (l_force_from_obs) THEN
+    IF (use_external_forcing) THEN
 
       dsl4jsb_Get_memory(A2L_)
-      dsl4jsb_Get_memory(SEB_)
-      dsl4jsb_Get_memory(TURB_)
-      dsl4jsb_Get_memory(HYDRO_)
 
       lon => grid%lon
       lat => grid%lat
       coslat => grid%coslat
       sinlat => grid%sinlat
 
+      dsl4jsb_Get_var2d_onDomain(A2L_, co2_air_mol)
+      dsl4jsb_Get_var2d_onDomain(A2L_, co2_air)
+
       CALL compute_cos_zenith_angle(datetime_old, grid%patch, dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle))
+      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(A2L_, cos_zenith_angle)) ASYNC(1)
       ! Note: inquire_declination should only be called each time step after compute_cos_zenith_angle
 
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
+      ! -> would only be required if no Qair forcing is given and qair needs to be calculated from temperature!
       ALLOCATE(evapo_act2pot(nproma, nblks))
-      IF (is_time_experiment_start(datetime_old)) THEN
-        evapo_act2pot(:,:) = 1._wp
-      ELSE
-        evapo_act2pot(:,:) =    MIN(dsl4jsb_var2D_onDomain(HYDRO_, evapotrans), -EPSILON(1._wp)) &
-          &                   / MIN(dsl4jsb_var2D_onDomain(HYDRO_, evapopot),  -EPSILON(1._wp))
-      END IF
+      !$ACC ENTER DATA CREATE(evapo_act2pot)
+
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_JSBACH)
+        dsl4jsb_Get_memory(HYDRO_)
+        dsl4jsb_Get_var2d_onDomain(HYDRO_, evapotrans)
+        dsl4jsb_Get_var2d_onDomain(HYDRO_, evapopot)
+
+        IF (is_time_experiment_start(datetime_old)) THEN
+
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+              evapo_act2pot(ic, iblk) = 1._wp
+            ENDDO
+          ENDDO
+          !$ACC END PARALLEL LOOP
+
+        ELSE
+
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+              evapo_act2pot(ic, iblk) =   MIN(evapotrans(ic, iblk), -EPSILON(1._wp)) &
+                &                       / MIN(evapopot  (ic, iblk), -EPSILON(1._wp))
+            ENDDO
+          ENDDO
+          !$ACC END PARALLEL LOOP
+
+        END IF
+      CASE (MODEL_QUINCY)
+
+       ! Allocate and enter data for C13 and C14 based on configuration flags
+        ALLOCATE(co2_air_dc13(nproma, nblks))
+        !$ACC ENTER DATA CREATE(co2_air_dc13)
+        ALLOCATE(co2_air_Dc14(nproma, nblks))
+        !$ACC ENTER DATA CREATE(co2_air_Dc14)
+
+        ! Note: if neither qair nor rh are given as forcing (i.e. forcing_options(model_id)%type_of_qair_forcing = NONE,
+        !       which so far never is the case), this would need to be calculated
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            evapo_act2pot(ic, iblk) = 1._wp
+          ENDDO
+        ENDDO
+        !$ACC END PARALLEL LOOP
+      END SELECT
 
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_forcing(model%id))
 
-      IF (model%config%use_lakes) THEN
-        CALL get_interface_variables_from_external_forcing( &
+      ! --------------------------------------------------------------------------------------------------- !
+      !> get variables (that are in the coupled simulation provided via the model interface by the host model)
+      !>   including dimensional data and data from external forcing, i.e., forcing input files
+      !>   see: 'mo_jsb_interface:interface_full'
+      !>
+
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_JSBACH)
+        CALL get_standalone_driver( &
           ! in
-          & 1, 1, nproma, npromz, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
-          & evapo_act2pot,                                                             &
-          & t_land_tile(:,:),                                                          &
-          & fact_q_air_land_tile(:,:),                                                 &
-          & fact_qsat_srf_land_tile(:,:),                                              &
-          & rough_h_land_tile(:,:),                                                    &
-          & rough_m_land_tile(:,:),                                                    &
+          & model_id,                                                                  &
+          & model%config%model_scheme,                                                 &
+          & flag_snow,                                                                 &
+          & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
+          & dsl4jsb_var2D_onDomain(HYDRO_, elevation),                                 &
+          & sinlat, coslat, lon, evapo_act2pot,                                        &
+          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
+          ! out
+          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
+          & dsl4jsb_var2D_onDomain(A2L_, press_srf)                                    &
+          & )
+#ifndef __NO_QUINCY__
+      CASE (MODEL_QUINCY)
+        dsl4jsb_Get_memory(SPQ_)
+        dsl4jsb_Get_config(SPQ_)
+        flag_snow = dsl4jsb_Config(SPQ_)%flag_snow
+
+        CALL get_standalone_driver( &
+          ! in
+          & model_id,                                                                  &
+          & model%config%model_scheme,                                                 &
+          & flag_snow,                                                                 &
+          & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
+          & dsl4jsb_var2D_onDomain(SPQ_, elevation),                                   &
+          & sinlat, coslat, lon, evapo_act2pot,                                        &
           & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
           ! out
           & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
@@ -920,131 +1036,152 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
           & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
           & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
-          & dsl4jsb_var2D_onDomain(A2L_, drag_srf),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, t_acoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, pch),                                         &
-          ! Input for lakes (optional)
-          & t_lake_tile(:,:),                                                          &
-          & fact_q_air_lake_tile(:,:),                                                 &
-          & fact_qsat_srf_lake_tile(:,:),                                              &
-          & rough_h_lake_tile(:,:),                                                    &
-          & rough_m_lake_tile(:,:),                                                    &
-          ! Output for lakes (optional)
-          & dsl4jsb_var2D_onDomain(A2L_, drag_wtr),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, t_acoef_wtr),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef_wtr),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, q_acoef_wtr),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_wtr),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, drag_ice),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, t_acoef_ice),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef_ice),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, q_acoef_ice),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_ice))
-      ELSE
-        CALL get_interface_variables_from_external_forcing( &
-          ! in
-          & 1, 1, nproma, npromz, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
-          & evapo_act2pot,                                                             &
-          & dsl4jsb_var2D_onDomain(SEB_,  t),                                          &
-          & dsl4jsb_var2D_onDomain(TURB_, fact_q_air),                                 &
-          & dsl4jsb_var2D_onDomain(TURB_, fact_qsat_srf),                              &
-          & dsl4jsb_var2D_onDomain(TURB_, rough_h),                                    &
-          & dsl4jsb_var2D_onDomain(TURB_, rough_m),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
-          ! out
-          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
-          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
-          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
-          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
-          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
-          & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
-          & dsl4jsb_var2D_onDomain(A2L_, drag_srf),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, t_acoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, pch))
-      END IF
+          & co2_air_dc13,                                                              &
+          & co2_air_Dc14                                                               &
+          & )
+#endif
+      END SELECT
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
 
       ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
-      dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) = dsl4jsb_var2D_onDomain(A2L_, CO2_air) * molarMassDryAir / molarMassCO2
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO iblk = 1, nblks
+        DO ic = 1, nproma
+          co2_air_mol(ic, iblk) = co2_air(ic, iblk) * molarMassDryAir / molarMassCO2
+        ENDDO
+      ENDDO
+      !$ACC END PARALLEL LOOP
 
-      ! Do QUINCY specific stuff
+      !> Check that the QUINCY code has been compiled (--enable-quincy configure flag)
+      !> if the ICON-Land QUINCY model is selected to run.
+      !>
+#ifdef __NO_QUINCY__
+      IF (model%config%model_scheme == MODEL_QUINCY) &
+        &  CALL finish(routine, 'The ICON-Land QUINCY model requires the --enable-quincy compile flag. Stop.')
+#endif
+#ifndef __NO_QUINCY__
+      ! --------------------------------------------------------------------------------------------------- !
+      !> code specific to the QUINCY model
+      !>
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
+
+#ifdef _OPENACC
+        IF (model%config%qmodel_id /= QCANOPY) &
+          & CALL finish(routine, 'QUINCY is currently only ported to GPU for the CANOPY mode. '//model%config%quincy_model)
+#endif
+
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
-        dsl4jsb_var2D_onDomain(A2L_, CO2_mixing_ratio) = dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) * 1000000._wp
+        dsl4jsb_Get_var2d_onDomain(A2L_, co2_mixing_ratio)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            co2_mixing_ratio(ic, iblk) = co2_air_mol(ic, iblk) * 1000000._wp
+          ENDDO
+        ENDDO
+        !$ACC END PARALLEL LOOP
+        dsl4jsb_Get_var2d_onDomain(A2L_, CO2_mixing_ratio_c13)
+        dsl4jsb_Get_var2d_onDomain(A2L_, CO2_mixing_ratio_c14)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) PRIVATE(hlp1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            hlp1 = calc_mixing_ratio_C13C12(co2_air_dc13(ic, iblk))
+            CO2_mixing_ratio_c13(ic, iblk)  = co2_mixing_ratio(ic, iblk) / (1._wp + 1._wp / hlp1)
+            hlp1 = calc_mixing_ratio_C14C(co2_air_dc13(ic, iblk), co2_air_Dc14(ic, iblk))
+            CO2_mixing_ratio_c14(ic, iblk) = co2_mixing_ratio(ic, iblk) * hlp1
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
 
+        !$ACC WAIT(1)
+        !$ACC EXIT DATA DELETE(co2_air_dc13, co2_air_Dc14)
+        DEALLOCATE(co2_air_dc13, co2_air_Dc14)
+
+        ! Update local time and daytime counter
         dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
-        dsl4jsb_Get_var2d_onDomain(A2L_, prev_one_cos_zenith_angle)
-        dsl4jsb_Get_var2d_onDomain(A2L_, prev_two_cos_zenith_angle)
-        dsl4jsb_Get_var2d_onDomain(A2L_, prev_three_cos_zenith_angle)
-
-        ! the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)7
-        WHERE(prev_one_cos_zenith_angle(:,:) - prev_two_cos_zenith_angle(:,:) > eps8 .AND. &
-            & prev_two_cos_zenith_angle(:,:) - prev_three_cos_zenith_angle(:,:) <= eps8)
-          ! zero the counter for number of accumulated values per day
-          daytime_counter(:,:) = 0.0_wp
-        END WHERE
-
+        dsl4jsb_Get_var2d_onDomain(A2L_, daylength_prev_day)
+        dsl4jsb_Get_var2d_onDomain(A2L_, local_time_day_seconds)
         dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
-        WHERE(swpar_srf_down(:,:) > eps8)
-          ! count number of daytime values
-          daytime_counter(:,:) = daytime_counter(:,:) + 1.0_wp
-        END WHERE
+        global_seconds_day = NINT(get_secs_of_day(datetime_new)) ! TODO time steps w/ fractional seconds not supported by quincy, yet!
 
-        ! shift for cos_zenith_angle tracing for midnight identification
-        prev_three_cos_zenith_angle = prev_two_cos_zenith_angle
-        prev_two_cos_zenith_angle = prev_one_cos_zenith_angle
-        prev_one_cos_zenith_angle = dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            CALL update_local_time_and_daytime_counter( &
+              &     global_seconds_day, dtime, lon(ic, iblk), swpar_srf_down(ic, iblk), &
+              &     daytime_counter(ic, iblk), daylength_prev_day(ic, iblk), local_time_day_seconds(ic, iblk))
+          ENDDO
+        ENDDO
+        !$ACC END PARALLEL LOOP
 
+        IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
+          dsl4jsb_Get_var2d_onDomain(A2L_, slow_sb_pool_accelerator_execute)
+
+          ! in most years the spin-up will not be accelerated
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+              slow_sb_pool_accelerator_execute(ic, iblk) = 0.0_wp
+            ENDDO
+          ENDDO
+          !$ACC END PARALLEL LOOP
+
+          IF(is_newyear(datetime_new, dtime)) THEN
+            current_year = get_year(datetime_new)
+            dsl4jsb_Get_var2d_onDomain(A2L_, slow_sb_pool_accelerator_execution_counter)
+            accelerator_max_executions = model%config%slow_sb_pool_spinup_accelerator_max_executions
+            accelerator_frequency = model%config%slow_sb_pool_spinup_accelerator_frequency
+            accelerator_start_year = model%config%slow_sb_pool_spinup_accelerator_start_year
+
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+            DO iblk = 1, nblks
+              DO ic = 1, nproma
+                CALL update_slow_sb_pool_accelerator_bookkeeping( dtime, current_year, &
+                  & accelerator_max_executions, accelerator_frequency, accelerator_start_year, &
+                  & slow_sb_pool_accelerator_execution_counter(ic, iblk), slow_sb_pool_accelerator_execute(ic, iblk))
+              ENDDO
+            ENDDO
+            !$ACC END PARALLEL LOOP
+          END IF
+        END IF
       END SELECT
+#endif
 
+      !$ACC WAIT(1)
+      !$ACC EXIT DATA DELETE(evapo_act2pot)
       DEALLOCATE(evapo_act2pot)
 
-    END IF
+    END IF ! IF (use_external_forcing) THEN
 
-
-    ibs = grid%Get_blk_start()
-    ibe = grid%Get_blk_end()
-
-!$OMP PARALLEL DO PRIVATE(iblk,ics,ice,nc)
-    DO iblk = ibs,ibe
-
-      ics = grid%Get_col_start(iblk)
-      ice = grid%Get_col_end(iblk)
+!$OMP PARALLEL DO PRIVATE(iblk,ics,ice,nc) IF(nblks > 1)
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> loop over the chunks of the block
+    !>
+    DO iblk = startblk, endblk
+      ! index of gridcell at start of the chunk
+      ics = startidx(iblk)
+      ! index of gridcell at end of the chunk
+      ice = endidx  (iblk)
 
       IF (ics > ice) CYCLE
 
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_jsbach(model%id))
 
-      no_omp_thread = Get_omp_thread()
-
+      ! calc size of chunk, i.e., number of gridcells
       nc = ice - ics + 1
 
       IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
       ! Update options
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
-        &                    dtime=dtime, steplen=dtime, alpha=1._wp)
+        &                    dtime=dtime, alpha=1._wp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
-      CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
-    ! Run tasks in queue
+      ! Run tasks in queue
       CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
 
+      ! @TODO cleanup / remove ?
       !!$    IF (iblk == 1)                                                              &
       !!$      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//          &
       !!$      &                             ' on PE '//int2string(p_pe)//' completed.', &
@@ -1058,17 +1195,19 @@ CONTAINS
     END DO
 !$OMP END PARALLEL DO
 
-    CALL jsbach_finish_timestep(1, datetime_old, dtime)
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> finish timestep
+    !>
+    CALL jsbach_finish_timestep(model_id, datetime_old, dtime)
 
     CALL deallocateDatetime(datetime_old)
     CALL deallocateDatetime(datetime_old_old)
     CALL deallocateDatetime(datetime_forcing)
 
-    IF (l_force_from_obs) THEN
-    END IF
+    !$ACC WAIT(1)
+    !$ACC END DATA
 
-  END SUBROUTINE perform_jsbach_for_timestep
+  END SUBROUTINE run_one_timestep
 
-#endif
 #endif
 END MODULE mo_jsbach_model

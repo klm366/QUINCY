@@ -1,17 +1,16 @@
+!> Contains types for the atmosphere-land interface memory.
 !>
-!! @brief Contains types for the atmosphere-land interface memory.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_l2a_memory_class
 #ifndef __NO_JSBACH__
 
@@ -42,8 +41,6 @@ MODULE mo_l2a_memory_class
       & t_srf                           , &  !< surface temperature [K]
       & t_eff_srf                       , &  !< effective surface temperature [K]
       & qsat_srf                        , &  !< surface saturated specific humidity [g g-1]
-      & fact_q_air                      , &  !< factor representing air at actual water content [unitless]
-      & fact_qsat_srf                   , &  !< factor representing air at saturating water content [unitless]
       & zh_srf                          , &  !< roughnesslength for heat transfer [m]
       & zm_srf                          , &  !< roughnesslength for momentum transfer [m]
       & alb_vis_dif                     , &  !< surface albedo for diffuse radiation in the visible band [unitless]
@@ -51,10 +48,15 @@ MODULE mo_l2a_memory_class
       & alb_vis_dir                     , &  !< surface albedo for direct radiation in the visible band [unitless]
       & alb_nir_dir                          !< surface albedo for direct radiation in the near infrared band [unitless]
 
-    ! CARBON_
+    ! C in jsbach
     TYPE(t_jsb_var_real2d) :: &
-      & carbon_conservation_test        , &  !<
-      & yday_c_state_sum                     !<
+      & carbon_conservation_test        , &  !< difference of change in total C sum and Cflux
+      & yday_c_state_sum                     !< total C sum
+
+    ! C in Quincy
+    TYPE(t_jsb_var_real2d) :: &
+      & q_total_c,            & !< total C, sum of all quincy carbon pools
+      & q_c_conservation_test   !< difference in quincy "total C of last timestep" & "nbp and total C of this timestep" [mol m-2 timestep-1]
 
     ! For lakes
     TYPE(t_jsb_var_real2d) :: &
@@ -67,8 +69,7 @@ MODULE mo_l2a_memory_class
     PROCEDURE :: Init => Init_l2a_memory
   END TYPE t_l2a_memory
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_atmland_memory_class'
-
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_l2a_memory_class'
 
 CONTAINS
 
@@ -76,33 +77,36 @@ CONTAINS
   ! ======================================================================================================= !
   !>initialize memory (variables) for the process: land2atm
   !>
-  SUBROUTINE Init_l2a_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_l2a_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_QUINCY
     USE mo_jsb_class,         ONLY: Get_model
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_l2a_memory), INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),    INTENT(in)            :: prefix
-    CHARACTER(len=*),    INTENT(in)            :: suffix
-    INTEGER,             INTENT(in)            :: lct_ids(:)
-    INTEGER,             INTENT(in)            :: model_id
+    CLASS(t_l2a_memory),       INTENT(inout), TARGET :: mem
+    CHARACTER(len=*),          INTENT(in)            :: prefix          !< process name
+    CHARACTER(len=*),          INTENT(in)            :: suffix          !< tile name
+    INTEGER,                   INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
+    INTEGER,                   INTENT(in)            :: lib_id          !< id of primary lct in lctlib
+    INTEGER,                   INTENT(in)            :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_grid),   POINTER :: hgrid
-    TYPE(t_jsb_vgrid),  POINTER :: surface
-    TYPE(t_jsb_model),  POINTER :: model
-    INTEGER                     :: table
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_l2a_memory'
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    INTEGER                    :: table
+    CHARACTER(len=*),PARAMETER :: routine = TRIM(modname)//':Init_l2a_memory'
     ! ----------------------------------------------------------------------------------------------------- !
-    model        => Get_model(model_id)
-    table        = tables(1)
-    hgrid        => Get_grid(mem%grid_id)
-    surface      => Get_vgrid('surface')
+    model         => Get_model(model_id)
+    table         =  tables(1)
+    hgrid         => Get_grid(mem%grid_id)
+    surface       => Get_vgrid('surface')
 
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    !>add L2A_ variables to memory
+    !>
     CALL mem%Add_var('t_srf', mem%t_srf, &
       & hgrid, surface, &
       & t_cf('t_srf', 'K', 'surface temperature'), &
@@ -126,26 +130,6 @@ CONTAINS
     CALL mem%Add_var('qsat_srf', mem%qsat_srf, &
       & hgrid, surface, &
       & t_cf('qsat_srf', 'g g-1', 'surface saturated specific humidity'), &
-      & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix, &
-      & loutput = .TRUE., &
-      & lrestart = .FALSE., &
-      & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('fact_q_air', mem%fact_q_air, &
-      & hgrid, surface, &
-      & t_cf('fact_q_air', 'unitless', 'factor representing air at actual water content'), &
-      & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix, &
-      & loutput = .TRUE., &
-      & lrestart = .FALSE., &
-      & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('fact_qsat_srf', mem%fact_qsat_srf, &
-      & hgrid, surface, &
-      & t_cf('fact_qsat_srf', 'unitless', 'factor representing air at saturating water content'), &
       & t_grib1(table, 255, grib_bits), &
       & t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix, &
@@ -213,29 +197,54 @@ CONTAINS
       & lrestart = .FALSE., &
       & initval_r = 0.0_wp)
 
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+#ifndef __NO_QUINCY__
+      CALL mem%Add_var('q_total_c', mem%q_total_c, &
+        & hgrid, surface, &
+        & t_cf('q_total_c', '[mol m-2]', 'total C, sum of all quincy carbon pools'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('q_c_conservation_test', mem%q_c_conservation_test, &
+        & hgrid, surface, &
+        & t_cf('q_c_conservation_test', '[mol m-2 timestep-1]', 'difference in change in quincy total C and nbp'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+#endif
+    ELSE
 #ifdef __QUINCY_STANDALONE__
 #else
-    ! carbon
-    IF (model%processes(CARBON_)%p%config%active) THEN
 
-      CALL mem%Add_var( 'carbon_conservation_test', mem%carbon_conservation_test,      &
-        & hgrid, surface,                                                              &
-        & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & loutput = .TRUE., output_level=BASIC, lrestart=.TRUE.,                       &
-        & initval_r=-999.0_wp )
+      ! jsbach carbon
+      IF (model%processes(CARBON_)%p%config%active) THEN
+        CALL mem%Add_var( 'carbon_conservation_test', mem%carbon_conservation_test,      &
+          & hgrid, surface,                                                              &
+          & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & loutput = .TRUE., output_level=BASIC, lrestart=.TRUE., lrestart_cont=.TRUE., &
+          & initval_r=-999.0_wp )
 
-      CALL mem%Add_var( 'yday_c_state_sum', mem%yday_c_state_sum,                                  &
-        & hgrid, surface,                                                                          &
-        & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-        & prefix, suffix,                                                                          &
-        & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE.,                                   &
-        & initval_r=0.0_wp )
-
-    END IF
+        CALL mem%Add_var( 'yday_c_state_sum', mem%yday_c_state_sum,                                  &
+          & hgrid, surface,                                                                          &
+          & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+          & prefix, suffix,                                                                          &
+          & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE., lrestart_cont=.TRUE.,             &
+          & initval_r=0.0_wp )
+      END IF
 #endif
+    END IF
 
     ! lake
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN
@@ -280,7 +289,7 @@ CONTAINS
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
-    END IF
+    END IF ! lake
 
   END SUBROUTINE Init_l2a_memory
 

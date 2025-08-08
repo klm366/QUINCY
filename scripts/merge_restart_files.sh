@@ -1,6 +1,18 @@
 #!/bin/sh
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
 #-------------------------------------------------------------------------------
-# Skript to manipulate an ICON restart file, to importe the land carbon and
+# Script to manipulate an ICON restart file, to import the land carbon and
 # nlcc states of another experiment.
 # All variables of the CARBON, DISTURB, ASSIMI and PPLCC processes, as well as
 # all fraction variables will be replaced.

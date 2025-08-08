@@ -1,22 +1,23 @@
+!> Contains physical constants
 !>
-!! @brief Contains physical constants
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2016-03-18)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_physical_constants
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
 
+  ! Most constants are USEd from host model (ICON) via mo_physical_constants_iface in mo_util_jsbach.f90:
+  !   src/shared/mo_util_jsbach.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90
   USE mo_physical_constants_iface
 
   IMPLICIT NONE
@@ -33,19 +34,11 @@ MODULE mo_jsb_physical_constants
   REAL(wp), PARAMETER :: &
     molarMassDryAir = amd   * 1.e-3_wp, & ! 28.970e-3_wp. Mass [kg] per amount of substance [mol] of dry air
     molarMassCO2    = amco2 * 1.e-3_wp    ! 44.0095e-3_wp. Mass [kg] per amount of substance [mol] of CO2
+  !$ACC DECLARE COPYIN(molarMassDryAir, molarMassCO2)
 
-
-  ! moved here from mo_jsb4_forcing for consistency
-  REAL(wp), PARAMETER :: ckap = 0.4_wp      !< von Karmann constant for evaporation
-                                            !originally from echam mo_physc2.f90 and in jsb3 initialised with jsbalone_iniphy
-  REAL(wp), PARAMETER :: zkappa = rd / cpd  !< specific gas constant for dry air / dry air specific heat at constant pressure
-
+  REAL(wp), PARAMETER :: von_karman = 0.4_wp    !< von Karmann constant for evaporation
 
   !! quincy - physical constants
-  ! most constants from host model (ECHAM/ICON) are defined in jsbach4_util_mods.f90
-  !   e.g. echam/src/echam/jsbach4_util_mods.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90
-  !   ckap & zkappa are defined in drivers/mo_jsb4_forcing
-  !   cpvd1 is defined in mo_physical_constants_iface (pointing to vtmpc2 in mo_physical_constants.f90)
   REAL(wp), PARAMETER :: &
     & r_gas        = argas            ,  &      !< universal gas constant (J / mol / K)
     & r_gas_dryair = rd               ,  &      !< specific gas constant for dry air (J / kg / K)
@@ -54,6 +47,9 @@ MODULE mo_jsb_physical_constants
     & Dco2         = 0.0000151_wp     ,  &      !< diffusion coefficient for CO2 in air (m2 s-1)
     & Tzero        = 273.15_wp        ,  &      !< the value of Tzero (QUINCY) is identical with tmelt (ECHAM/ICON/jsbach4)
                                                 !<  but in reality tmelt is not always at Tzero [K]
+    & rain_as_snow_temp_thresh = Tzero + 2.5_wp !< threshold below which rain falls as snow - source: OCN-weather generator
+
+  REAL(wp), PARAMETER :: &
     & LatentHeatVaporization = alv , &          !< [J/kg]   latent heat for vaporisation
     & LatentHeatSublimation  = als              !< [J/kg]   latent heat for sublimation
   ! molar masses

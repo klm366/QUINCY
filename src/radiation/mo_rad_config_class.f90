@@ -1,17 +1,16 @@
+!> Contains structures and methods for radiation config
 !>
-! @brief Contains structures and methods for radiation config
-!
-! @author
-!  Rainer Schneck, MPI-M Hamburg
-!
-! @par Revision History
-! First version by Rainer Schneck (2015-04-27)
-!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_rad_config_class
 #ifndef __NO_JSBACH__
 
@@ -30,12 +29,6 @@ MODULE mo_rad_config_class
   !> RAD_ configuration parameters
   !>
   TYPE, EXTENDS(t_jsb_config) :: t_rad_config
-    !> common parameters used by all models
-    !>
-    ! ...
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> MODEL_JSBACH
-    !> 
     LOGICAL ::                     &
       & use_alb_veg_simple,        &  !< Use the simplified albedo calculations for vegetation tiles
       & use_alb_soil_scheme,       &  !< For vegetation and bare soil tiles:
@@ -69,12 +62,8 @@ MODULE mo_rad_config_class
                                       ! 0 < albedo_age_weight < 1: snow albedo is calculated by linearly weighting
                                       !                            the snow albedo resulting from both schemes
       & AlbedoCanopySnow              ! Snow albedo for snow on canopy. This configuration value is not read in from
-                                      ! the namelist. It is calcultated in subroutine rad_init_ic, but should nevertheless
+                                      ! the namelist. It is calculated in subroutine rad_init_ic, but should nevertheless
                                       ! placed here!
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> MODEL_QUINCY
-    !> 
-    ! ...
   CONTAINS
     PROCEDURE :: Init => Init_rad_config
   END type t_rad_config
@@ -87,12 +76,14 @@ CONTAINS
   !> read RAD_ namelist and init configuration parameters
   !>
   SUBROUTINE Init_rad_config(config)
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY
-    ! ----------------------------------------------------------------------------------------------------- !
+
     CLASS(t_rad_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
-    LOGICAL                     :: active
+    LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: use_alb_veg_simple
     LOGICAL                     :: use_alb_mineralsoil_const
@@ -101,30 +92,32 @@ CONTAINS
     LOGICAL                     :: use_alb_soil_scheme
     LOGICAL                     :: use_alb_canopy
     REAL(wp)                    :: albedo_age_weight
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /radiation_ctl/ &
-#else
-    NAMELIST /jsb_rad_nml/ &
-#endif
-      & active,                      &
-      & ic_filename,                 &
-      & bc_filename,                 &
-      & use_alb_veg_simple,          &
-      & use_alb_mineralsoil_const,   &
-      & use_alb_soil_organic_C,      &
-      & use_alb_soil_litter,         &
-      & use_alb_soil_scheme,         &
-      & use_alb_canopy,              &
-      & albedo_age_weight
+    INTEGER                     :: nspec                    !< number of spectral bands
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_spectral           !< vgrid for 3d var with spectral band
+
+    NAMELIST /jsb_rad_nml/            &
+         active,                      &
+         lrestart_cont,               &
+         ic_filename,                 &
+         bc_filename,                 &
+         use_alb_veg_simple,          &
+         use_alb_mineralsoil_const,   &
+         use_alb_soil_organic_C,      &
+         use_alb_soil_litter,         &
+         use_alb_soil_scheme,         &
+         use_alb_canopy,              &
+         albedo_age_weight
+
     INTEGER :: nml_handler, nml_unit, istat
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_config'
     ! ----------------------------------------------------------------------------------------------------- !
-    CALL message(TRIM(routine), 'Starting radiation configuration')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting radiation configuration')
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
     active                    = .TRUE.
-    bc_filename               = 'bc_land_rad.nc'  !R: gibts im Moment noch nicht
-    ic_filename               = 'ic_land_rad.nc'  !R: gibts im Moment noch nicht
+    lrestart_cont             = .FALSE.  ! TRUE: Continue although RAD variables are missing in restart file
+    bc_filename               = 'bc_land_rad.nc'
+    ic_filename               = 'ic_land_rad.nc'
     use_alb_veg_simple        = .FALSE.
     use_alb_mineralsoil_const = .FALSE.
     use_alb_soil_organic_C    = ''
@@ -135,17 +128,15 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('radiation_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, radiation_ctl)
-#else
+
     nml_unit = position_nml('jsb_rad_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_rad_nml)
-#endif
+
     CALL close_nml(nml_handler)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                    = active
+    config%lrestart_cont             = lrestart_cont
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
     config%use_alb_veg_simple        = use_alb_veg_simple
@@ -156,9 +147,22 @@ CONTAINS
     config%use_alb_canopy            = use_alb_canopy
     config%albedo_age_weight         = albedo_age_weight
 
-    !> model-specific routines
+    !> Create vertical axis - spectral bands
+    !>   spectral bands of the light for RAD_ variables
     !>
-    ! ...
+#ifdef __QUINCY_STANDALONE__
+    ! number of spectal bands (3rd dimension of 'vgrid_spectral')
+    nspec = 2162
+    ! create vertical grid
+    vgrid_spectral  => new_vgrid('spectral_bands', ZAXIS_GENERIC, nspec, &
+                      longname='Number of spectral bands the light is divided into, for QUINCY radiation') !, &
+                      ! units=''  , &
+                      ! levels=   , &
+                      ! lbounds=  , &
+                      ! ubounds=  , &
+                      ! dz=       )
+    CALL register_vgrid(vgrid_spectral)
+#endif
 
   END SUBROUTINE Init_rad_config
 

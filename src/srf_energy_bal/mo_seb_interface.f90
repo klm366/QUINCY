@@ -1,17 +1,18 @@
+!> Contains the interfaces for the surface energy balance process.
 !>
-!! @brief Contains the interfaces for the surface energy balance process.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version in mo_srf_interface.f90 by Reiner Schnur (2013-04-04)
-!! Separated out the surface energy balance part by Reiner Schnur (2016-03-22)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
 MODULE mo_seb_interface
 #ifndef __NO_JSBACH__
@@ -19,10 +20,10 @@ MODULE mo_seb_interface
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_jsb_control,     ONLY: debug_on
+  USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_jsb_time,        ONLY: is_time_experiment_start
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message, finish
+  USE mo_exception,       ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -32,13 +33,15 @@ MODULE mo_seb_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SEB_, HYDRO_, SSE_
+  dsl4jsb_Use_processes SEB_, HYDRO_, SSE_, A2L_, RAD_
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
 
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
+  dsl4jsb_Use_memory(A2L_)
+  dsl4jsb_Use_memory(RAD_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -46,7 +49,14 @@ MODULE mo_seb_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: Register_seb_tasks, global_seb_diagnostics
+  PUBLIC :: Register_seb_tasks, seb_check_temperature_range
+#ifndef __QUINCY_STANDALONE__
+  PUBLIC :: global_seb_diagnostics
+#endif
+#ifdef __QUINCY_STANDALONE__
+  ! USEd by the mo_qs_model_interface
+  PUBLIC :: update_surface_energy, update_asselin, update_surface_fluxes
+#endif
 
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy
   CONTAINS
@@ -57,16 +67,6 @@ MODULE mo_seb_interface
   INTERFACE tsk_surface_energy
     PROCEDURE Create_task_surface_energy
   END INTERFACE tsk_surface_energy
-
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_snowmelt_correction
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_snowmelt_correction
-    PROCEDURE, NOPASS :: Aggregate => aggregate_snowmelt_correction
-  END TYPE tsk_snowmelt_correction
-
-  INTERFACE tsk_snowmelt_correction
-    PROCEDURE Create_task_snowmelt_correction
-  END INTERFACE tsk_snowmelt_correction
 
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_asselin_filter
   CONTAINS
@@ -87,6 +87,16 @@ MODULE mo_seb_interface
   INTERFACE tsk_surface_fluxes
     PROCEDURE Create_task_surface_fluxes
   END INTERFACE tsk_surface_fluxes
+
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_energy_balance
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_energy_balance
+    PROCEDURE, NOPASS :: Aggregate => aggregate_energy_balance
+  END TYPE tsk_energy_balance
+
+  INTERFACE tsk_energy_balance
+    PROCEDURE Create_task_energy_balance
+  END INTERFACE tsk_energy_balance
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_seb_interface'
 
@@ -110,22 +120,6 @@ CONTAINS
     CALL return_ptr%Construct(name='surface_energy', process_id=SEB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_energy
-
-  ! -------------------------------------------------------------------------------------------------------
-  !> Constructor for snowmelt_correction task
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "snowmelt_correction"
-  !!
-  FUNCTION Create_task_snowmelt_correction(model_id) RESULT(return_ptr)
-
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_snowmelt_correction::return_ptr)
-    CALL return_ptr%Construct(name='snowmelt_correction', process_id=SEB_, owner_model_id=model_id)
-
-  END FUNCTION Create_task_snowmelt_correction
 
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for asselin_filter task
@@ -159,6 +153,22 @@ CONTAINS
 
   END FUNCTION Create_task_surface_fluxes
 
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for energy balance residual computation
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "energy_balance"
+  !!
+  FUNCTION Create_task_energy_balance(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_energy_balance::return_ptr)
+    CALL return_ptr%Construct(name='energy_balance', process_id=SEB_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_energy_balance
+
   ! =======================================================================================================
   !> Register tasks for surface energy process
   !!
@@ -171,15 +181,15 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_surface_energy(model_id))
-    CALL this%Register_task(tsk_snowmelt_correction(model_id))
     CALL this%Register_task(tsk_asselin_filter(model_id))
     CALL this%Register_task(tsk_surface_fluxes(model_id))
+    CALL this%Register_task(tsk_energy_balance(model_id))
 
   END SUBROUTINE Register_seb_tasks
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "surface energy"
+  !> Implementation of "update" for task "surface energy"
   !! Task "update_surface_energy" calculates the new surface temperature from the surface energy balance (sensible and latent heat,
   !! net radiation, ground heat).
   !!
@@ -194,13 +204,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy'
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (tile%is_lake) THEN
       CALL update_surface_energy_lake(tile, options)
-    ELSE IF (tile%is_land .OR. tile%is_vegetation .OR. tile%is_glacier) THEN
+    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+      CALL update_surface_energy_land(tile, options)
+    ELSE IF (model%config%use_tmx .OR. model%config%use_tile_seb) THEN
       CALL update_surface_energy_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type '//TRIM(tile%lcts(1)%name)//' on tile '//TRIM(tile%name))
@@ -242,13 +258,27 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, t_eff,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, qsat_star,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, s_star,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, forc_hflx,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, heat_cap,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, heat_cap_old,  weighted_by_fract)
+    CALL weighted_by_fract%BeginAggregate()
+
+    dsl4jsb_Aggregate_onChunk(SEB_, t,               weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_old,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_srf,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_eff4,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, qsat_star,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, s_star,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, forc_hflx,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, heat_cap,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, le_phase_change, weighted_by_fract)
+
+    IF (model%config%use_tile_seb) THEN
+      dsl4jsb_Aggregate_onChunk(SEB_, t_acoef,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, t_bcoef,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, q_acoef,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, q_bcoef,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, pch,          weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, drag_srf,     weighted_by_fract)
+    END IF
 
     IF (model%config%use_lakes) THEN
       dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,     weighted_by_fract)
@@ -262,187 +292,15 @@ CONTAINS
       END IF
     END IF
 
+    CALL weighted_by_fract%EndAggregate()
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_surface_energy
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "snowmelt_correction"
-  !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting,
-  !! surface water freezing and thawing and soil moisture freezing and thawing.
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     config  Vector of process configurations.
-  !! @param[in]     options Additional run-time parameters.
-  !!
-  SUBROUTINE update_snowmelt_correction(tile, options)
-
-    USE mo_jsb_physical_constants, ONLY: alf
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    ! Local variables
-    !
-    TYPE(t_jsb_model), POINTER :: model
-    dsl4jsb_Def_config(SSE_)
-    dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(SSE_)
-    dsl4jsb_Def_memory(HYDRO_)
-
-    ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: t_unfilt
-    dsl4jsb_Real2D_onChunk :: snowmelt
-    dsl4jsb_Real2D_onChunk :: pond_freeze
-    dsl4jsb_Real2D_onChunk :: pond_melt
-    dsl4jsb_Real2D_onChunk :: hcap_grnd_old
-    dsl4jsb_Real3D_onChunk :: snow_depth_sl
-    dsl4jsb_Real3D_onChunk :: vol_heat_cap_sl
-    dsl4jsb_Real3D_onChunk :: wtr_freeze_sl
-    dsl4jsb_Real3D_onChunk :: ice_melt_sl
-
-
-    INTEGER  :: iblk , ics, ice, i
-    REAL(wp) :: dtime
-
-    REAL(wp), DIMENSION(options%nc) :: &
-      & heat_cap
-
-    TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
-    INTEGER                    :: nsnow !,  nsoil
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_snowmelt_correction'
-
-    IF (.NOT. tile%Is_process_calculated(SEB_) .OR. .NOT. tile%is_land) RETURN
-
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    dtime = options%dtime
-
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
-    dsl4jsb_Get_config(SSE_)
-    dsl4jsb_Get_memory(SEB_)
-    dsl4jsb_Get_memory(HYDRO_)
-    IF (tile%contains_land) THEN
-      dsl4jsb_Get_memory(SSE_)
-    END IF
-
-    soil_e => Get_vgrid('soil_depth_energy')
-    !nsoil = soil_e%n_levels
-    IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      snow_e => Get_vgrid('snow_depth_energy')
-      nsnow = snow_e%n_levels
-    END IF
-
-    IF (tile%contains_lake) THEN
-      ! No correction for lake tile
-
-    ELSE IF (tile%contains_land) THEN
-
-      dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)         ! inout
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)         ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_freeze)      ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_melt)        ! in
-
-      dsl4jsb_Get_var2D_onChunk(SSE_,      hcap_grnd_old)    ! in
-      IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-        dsl4jsb_Get_var3D_onChunk(SSE_,      snow_depth_sl)    ! in
-      END IF
-      dsl4jsb_Get_var3D_onChunk(SSE_,      vol_heat_cap_sl)  ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_freeze_sl) ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_melt_sl) ! in
-
-      IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
-        !$claw acc data create(heat_cap)
-
-        ! Correction for snowmelt and pond melting/freezing
-        !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_0 tile_name=tile%name
-        t_unfilt(:) = t_unfilt(:) - snowmelt(:)    * dtime * alf / hcap_grnd_old(:)
-        t_unfilt(:) = t_unfilt(:) - pond_melt(:)   * dtime * alf / hcap_grnd_old(:)
-        t_unfilt(:) = t_unfilt(:) + pond_freeze(:) * dtime * alf / hcap_grnd_old(:)
-
-        IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
-          !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_1 tile_name=tile%name
-          heat_cap(:) = vol_heat_cap_sl(:,1) * soil_e%dz(1)
-          IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-            !$claw acc data present(t_unfilt,snow_depth_sl,heat_cap,ice_melt_sl,wtr_freeze_sl)
-            !$claw acc parallel loop gang vector
-            DO i = 1,  size(t_unfilt, dim=1)
-              IF (snow_depth_sl(i,nsnow) < EPSILON(1._wp) .AND. heat_cap(i) > 0._wp) THEN  ! No snow layers present
-              ! Correction for melting of ice in soil layers
-                t_unfilt(i) = t_unfilt(i) - ice_melt_sl(i,1)   * dtime * alf / heat_cap(i)
-                t_unfilt(i) = t_unfilt(i) + wtr_freeze_sl(i,1) * dtime * alf / heat_cap(i)
-              END IF
-            END DO
-            !$claw acc end data
-          ELSE   ! No snow layers present
-            !$claw acc data present(t_unfilt,heat_cap,ice_melt_sl,wtr_freeze_sl)
-            !$claw acc parallel loop gang vector
-            DO i = 1, size(t_unfilt,dim=1)
-              IF (heat_cap(i) > 0._wp) THEN
-                ! Correction for melting of ice in soil layers
-                t_unfilt(i) = t_unfilt(i) - ice_melt_sl(i,1)   * dtime * alf / heat_cap(i)
-                t_unfilt(i) = t_unfilt(i) + wtr_freeze_sl(i,1) * dtime * alf / heat_cap(i)
-              END IF
-            END DO
-            !$claw acc end data
-          END IF
-        END IF
-        !$claw acc end data
-      END IF
-
-    ELSE
-
-      CALL finish(TRIM(routine), 'Called for invalid lct_type: '//tile%name)
-
-    END IF
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE update_snowmelt_correction
-
-  ! -------------------------------------------------------------------------------------------------------
-  !>
-  !! Implementation of "aggregate" for task "snowmelt_correction"
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  SUBROUTINE aggregate_snowmelt_correction(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    dsl4jsb_Def_memory(SEB_)
-
-    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_snowmelt_correction'
-
-    INTEGER :: iblk , ics, ice
-
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    dsl4jsb_Get_memory(SEB_)
-
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-
-    dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt, weighted_by_fract)
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggregate_snowmelt_correction
-
-  ! ================================================================================================================================
-  !>
-  !! @brief Implementation of "update" for task "asselin_filter"
+  !> Implementation of "update" for task "asselin_filter"
   !! Task "asselin_filter" calculates applies the Asselin time filter to the new surface temperature, if applicable
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -456,13 +314,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin'
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (tile%contains_lake) THEN
       ! No Asselin filter for lake tile
-    ELSE IF (tile%contains_land .OR. tile%contains_vegetation .OR. tile%contains_glacier) THEN
+    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
+      CALL update_asselin_land(tile, options)
+    ELSE IF (model%config%use_tmx .OR. model%config%use_tile_seb) THEN
       CALL update_asselin_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
@@ -488,6 +352,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_asselin'
 
     INTEGER :: iblk , ics, ice
+    TYPE(t_jsb_model), POINTER :: model
 
     iblk = options%iblk
     ics  = options%ics
@@ -495,12 +360,21 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(SEB_, t,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_filt, weighted_by_fract)
+    IF (model%config%use_tmx) THEN
+      dsl4jsb_Aggregate_onChunk(SEB_, t_rad4, weighted_by_fract)
+    END IF
+
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -508,7 +382,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "surface fluxes"
+  !> Implementation of "update" for task "surface fluxes"
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -521,16 +395,23 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (tile%contains_lake) THEN
       CALL update_surface_fluxes_lake(tile, options)
-    ELSE IF (tile%contains_land .OR. tile%contains_vegetation .OR. tile%contains_glacier) THEN
+    ELSE IF ((tile%is_land .AND. .NOT. model%config%use_tmx) .OR. &
+      &       tile%contains_vegetation .OR. tile%contains_glacier) THEN
+      CALL update_surface_fluxes_land(tile, options)
+    ELSE IF (model%config%use_tmx) THEN
       CALL update_surface_fluxes_land(tile, options)
     ELSE
-      CALL finish(TRIM(routine), 'Called for invalid lct_type'//tile%name)
+      CALL finish(TRIM(routine), 'Called for invalid lct_type')
     END IF
 
   END SUBROUTINE update_surface_fluxes
@@ -569,6 +450,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx,      weighted_by_fract)
 
@@ -581,9 +464,272 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
     END IF
 
+    CALL weighted_by_fract%EndAggregate()
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_surface_fluxes
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !> Implementation of "update" for task "energy balance"
+  !>
+  !> This diagnostic computes the balance of the net surface radiation fluxes at the land surface.
+  !>
+  SUBROUTINE update_energy_balance(tile, options)
+
+    USE mo_jsb_grid,               ONLY: Get_grid
+    USE mo_jsb_grid_class,         ONLY: t_jsb_grid
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
+
+    ! Local variables
+    !
+    TYPE(t_jsb_model), POINTER    :: model
+    TYPE(t_jsb_grid),  POINTER    :: grid
+
+    dsl4jsb_Def_config(SEB_)
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(RAD_)
+
+    ! Pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: &
+      & rad_srf_net,        &               !< Surface net radiation                               [W m-2]
+      & lw_srf_down,        &               !< Longwave downwards radiation                        [W m-2]
+      & swvis_srf_down,     &               !< Shortwave visible downwards radiation               [W m-2]
+      & swnir_srf_down,     &               !< Shortwave near infrared downwards radiation         [W m-2]
+      & swpar_srf_down,     &               !< Shortwave downwards photosynthetic active radiation [W m-2]
+      & lw_srf_net,         &               !< Longwave net radiation on land surface              [W m-2]
+      & sw_srf_net,         &               !< Shortwave net radiation on land surface             [W m-2]
+      & sensible_hflx,      &               !< Sensible heat flux                                  [W m-2]
+      & latent_hflx,        &               !< Latent heat flux                                    [W m-2]
+      & forc_hflx,          &               !< Ground heat flux                                    [W m-2]
+      & le_phase_change,    &               !< Latent energy required/released due to phase change [J m-2]
+      & t,                  &               !< Current time steps temperature                          [K]
+      & t_old,              &               !< Previous time steps temperature                         [K]
+      & net_srf_rad_balance                 !< Net surface radiation balance                       [W m-2]
+
+    REAL(wp), POINTER :: &
+      & tile_fract(:), lat(:), lon(:)
+
+    ! Locally allocated vectors
+    !
+
+    REAL(wp), DIMENSION(options%nc) :: &
+      & lw_srf_up,       &
+      & sw_srf_up,       &
+      & sw_srf_down,     &
+      & delta_t_srf
+
+    INTEGER  :: iblk, ics, ice, nc, ic
+
+    INTEGER  :: n_cells, ie
+    INTEGER  :: cell_idx(options%nc)
+
+    REAL(wp) :: dtime
+    LOGICAL  :: is_experiment_start
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_energy_balance'
+    CHARACTER(len=5000)         :: message_text_long
+
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+    nc    = options%nc
+    dtime = options%dtime
+    is_experiment_start = is_time_experiment_start(options%current_datetime)
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
+    tile_fract => tile%fract(ics:ice, iblk)
+    lat        => grid%lat(ics:ice, iblk)
+    lon        => grid%lon(ics:ice, iblk)
+
+    dsl4jsb_Get_config(SEB_)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(RAD_)
+
+    dsl4jsb_Get_var2D_onChunk(A2L_,      lw_srf_down)                ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      swvis_srf_down)             ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      swnir_srf_down)             ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      swpar_srf_down)             ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,      rad_srf_net)                ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,      lw_srf_net)                 ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,      sw_srf_net)                 ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      latent_hflx)                ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      sensible_hflx)              ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      forc_hflx)                  ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      le_phase_change)            ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t)                          ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t_old)                      ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      net_srf_rad_balance)        ! out
+
+    n_cells = 0   ! initialize counter for cells exceeding energy balance threshold
+
+    !$ACC DATA CREATE(lw_srf_up, sw_srf_up, sw_srf_down, delta_t_srf)  ASYNC(acc_stream)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic=1,nc
+      ! Compute fluxes used in log message
+      lw_srf_up(ic)   = lw_srf_net(ic) - lw_srf_down(ic)
+      sw_srf_down(ic) = swvis_srf_down(ic) + swnir_srf_down(ic) + swpar_srf_down(ic)
+      sw_srf_up(ic)   = sw_srf_net(ic) - sw_srf_down(ic)
+
+      ! Compute surface/skin temperature change
+      delta_t_srf(ic) = t(ic) - t_old(ic)
+
+      IF (.NOT. is_experiment_start .AND. tile_fract(ic) > EPSILON(1.0_wp)) THEN
+        ! Compute energy flux residual (without surface/skin temperature change)
+        net_srf_rad_balance(ic) = rad_srf_net(ic) + sensible_hflx(ic) + latent_hflx(ic) &
+          &                     + forc_hflx(ic) + le_phase_change(ic) / dtime
+      END IF
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    ! Note that contrary to the water balance, the net surface radiation balance just
+    ! checks the residual of the fluxes while ignoring the heat storages. Therefore,
+    ! a large residual can still be acceptable if the heat storage is large enough to
+    ! compensate for it, and large values do not necessarily indicate a problem.
+#ifndef _OPENACC
+    DO ic=1,nc
+      IF (dsl4jsb_Config(SEB_)%eb_threshold > 0._wp) THEN
+        IF (ABS(net_srf_rad_balance(ic)) > dsl4jsb_Config(SEB_)%eb_threshold .OR. &
+          & ((t(ic) > 400._wp .OR. t(ic) < 50._wp).AND. tile_fract(ic) > EPSILON(1.0_wp))) THEN
+          n_cells = n_cells + 1       ! Count number of cells with energy balance issues of this time step
+          cell_idx(n_cells) = ic      ! Index of the respective grid cell (on chunk)
+        END IF
+      END IF
+    END DO
+
+    DO ie = 1, n_cells
+      ic = cell_idx(ie)
+
+      WRITE (message_text_long,*) 'Net surface radiation balance [W m-2]', NEW_LINE('a'), &
+        & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E',  NEW_LINE('a'), &
+        & '(ic: ',ic,' iblk: ',iblk, ' tile_fract: ',tile_fract(ic),'):',  NEW_LINE('a'), &
+        & 'Net surface radiation balance: ', net_srf_rad_balance(ic),      NEW_LINE('a'), &
+        & 'Longwave downwards:            ', lw_srf_down(ic),              NEW_LINE('a'), &
+        & 'Longwave upwards:              ', lw_srf_up(ic),                NEW_LINE('a'), &
+        & 'Shortwave downwards:           ', sw_srf_down(ic),              NEW_LINE('a'), &
+        & 'Shortwave upwards:             ', sw_srf_up(ic),                NEW_LINE('a'), &
+        & 'Net surface radiation:         ', rad_srf_net(ic),              NEW_LINE('a'), &
+        & 'Sensible heat flux:            ', sensible_hflx(ic),            NEW_LINE('a'), &
+        & 'Latent heat flux:              ', latent_hflx(ic),              NEW_LINE('a'), &
+        & 'Ground heat flux:              ', forc_hflx(ic),                NEW_LINE('a'), &
+        & 'Phase change flux:             ', le_phase_change(ic) / dtime,  NEW_LINE('a'), &
+        & 'Temperature change [K]:        ', delta_t_srf(ic)
+      CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+    END DO
+#endif
+
+    !$ACC END DATA
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_energy_balance
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "energy_balance"
+  !!
+  SUBROUTINE aggregate_energy_balance(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_energy_balance'
+
+    INTEGER :: iblk
+
+    iblk = options%iblk
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    ! Don't aggregate, but explicitely compute energy balance on each tile
+    CALL update_energy_balance(tile, options)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_energy_balance
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Make sure temperature is within a realistic range and finish the simulation with a meaningfull
+  !! message if not.
+  !!
+  !! The routine is called at the beginning and at the end of each time step.
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE seb_check_temperature_range(model_id, no_omp_thread)
+
+    USE mo_jsb_grid,            ONLY: Get_grid
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+    USE mo_jsb_parallel,        ONLY: Get_omp_thread
+
+    ! Argument
+    INTEGER, INTENT(in) :: model_id, no_omp_thread
+
+    ! Local variables
+    TYPE(t_jsb_model), POINTER           :: model
+    TYPE(t_jsb_grid),  POINTER           :: grid
+    CLASS(t_jsb_tile_abstract), POINTER  :: tile
+
+    dsl4jsb_Def_memory(SEB_)
+
+    INTEGER                       :: iblk, ic
+    REAL(wp), POINTER             :: lat(:,:), lon(:,:), tile_fract(:,:)
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':seb_check_temperature_range'
+
+    dsl4jsb_Real2D_onDomain :: t
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+    model => Get_model(model_id)
+    grid  => Get_grid(model%grid_id)
+    lat   => grid%lat(:,:)
+    lon   => grid%lon(:,:)
+
+    !vg no_omp_thread = Get_omp_thread()
+#ifndef __QUINCY_STANDALONE__
+    CALL model%Get_top_tile(tile)
+    DO WHILE (ASSOCIATED(tile))
+      IF ((tile%Has_children() .AND. .NOT. tile%visited(no_omp_thread)) .OR. .NOT. tile%Is_process_active(SEB_)) THEN
+        CALL model%Goto_next_tile(tile)
+        CYCLE
+      END IF
+#endif
+
+      ! We're on a leaf or on the way up.
+
+      dsl4jsb_Get_memory(SEB_)
+      dsl4jsb_Get_var2D_onDomain(SEB_, t)
+
+      tile_fract => tile%fract(:,:)
+      IF (ANY(t(:,:) < 50._wp .OR. t(:,:) > 400._wp)) THEN
+        DO iblk = 1, grid%nblks
+          DO ic = 1, grid%nproma
+            IF ((t(ic,iblk) < 50._wp .OR. t(ic,iblk) > 400._wp) .AND. tile_fract(ic,iblk) > 0._wp) THEN
+              WRITE (message_text,*) 'Temperature out of bound: ', t(ic,iblk), 'K',             NEW_LINE('a'), &
+                & 'on ',TRIM(tile%name),' tile at', lat(ic,iblk), 'N and ', lon(ic,iblk), 'E',  NEW_LINE('a'), &
+                & '(ic: ',ic,' iblk: ',iblk, ' tile_fract:', tile_fract(ic,iblk),'):',          NEW_LINE('a'), &
+                & 'One thing to check: consistency of land-sea mask and forcing.'
+              CALL finish(TRIM(routine), TRIM(message_text))
+            END IF
+          END DO
+        END DO
+      END IF
+#ifndef __QUINCY_STANDALONE__
+      CALL model%Goto_next_tile(tile)
+    ENDDO
+#endif
+  END SUBROUTINE seb_check_temperature_range
 
   !-----------------------------------------------------------------------------------------------------
   !> Calculations of diagnostic global land mean output
@@ -591,15 +737,8 @@ CONTAINS
   !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
   !!
   !-----------------------------------------------------------------------------------------------------
+#ifndef __QUINCY_STANDALONE__
   SUBROUTINE global_seb_diagnostics(tile)
-
-#ifndef __ICON__
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_seb_diagnostics'
-    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
-#else
 
     USE mo_sync,                  ONLY: global_sum_array
     USE mo_jsb_grid,              ONLY: Get_grid
@@ -667,8 +806,8 @@ CONTAINS
       DEALLOCATE (scaling, in_domain)
     END IF
 
-#endif
   END SUBROUTINE global_seb_diagnostics
+#endif
 
   !
   ! ================================================================================================================================

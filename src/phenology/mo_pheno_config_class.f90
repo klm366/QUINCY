@@ -1,22 +1,20 @@
+!> Contains structures and methods for phenology config
 !>
-!! @brief Contains structures and methods for phenology config
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-09-09)
-!! Julia Nabel (2018-01-10): added l_forestRegrowth flag for optional functionality: forest regrowth
-!!                          (derive maxLAI from biomass via allometric relationships)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_pheno_config_class
 #ifndef __NO_JSBACH__
 
+  USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -30,17 +28,10 @@ MODULE mo_pheno_config_class
   !> PHENO_ configuration parameters
   !>
   TYPE, EXTENDS(t_jsb_config) :: t_pheno_config
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> MODEL_JSBACH
-    !>
     LOGICAL             :: l_forestRegrowth           !< If TRUE, the maxLAI is derived from biomass via allometric relationships
-    CHARACTER(len=15)   :: scheme_jsbach              !< Phenology scheme to use ('logrop', 'climatology')
+    CHARACTER(len=15)   :: scheme                     !< Phenology scheme to use ('logrop', 'climatology')
     !LOGICAL :: first_call_phenology_this_day         !< TRUE marks if a new day has just started and
     !                                                 !< update_phenology is called for the top tile
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> MODEL_QUINCY
-    !>
-    ! ...
     CONTAINS
       PROCEDURE :: Init => Init_pheno_config
   END type t_pheno_config
@@ -57,12 +48,13 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_pheno_config), INTENT(inout) :: config
     ! ----------------------------------------------------------------------------------------------------- !
-    LOGICAL                     :: active
+    LOGICAL                     :: active, lrestart_cont
     LOGICAL                     :: l_forestRegrowth
-    CHARACTER(len=15)           :: scheme             ! scheme_jsbach
+    CHARACTER(len=15)           :: scheme
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     NAMELIST /jsb_pheno_nml/  &
       & active,               &
+      & lrestart_cont,        &
       & l_forestRegrowth,     &
       & scheme,               &
       & ic_filename,          &
@@ -74,6 +66,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
     active              = .TRUE.
+    lrestart_cont       = .FALSE.      ! TRUE: Continue although PHENO variables are missing in restart file
     l_forestRegrowth    = .FALSE.
     scheme              = 'logrop'
     bc_filename         = 'bc_land_phenology.nc'
@@ -87,16 +80,12 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                     = active
+    config%lrestart_cont              = lrestart_cont
     config%l_forestRegrowth           = l_forestRegrowth
-    config%scheme_jsbach              = TRIM(scheme)
+    config%scheme                     = TRIM(scheme)
     config%ic_filename                = ic_filename
     config%bc_filename                = bc_filename
     CALL close_nml(nml_handler)
-
-    !> model-specific routines
-    !>
-    ! ...
-
   END SUBROUTINE Init_pheno_config
 
 #endif

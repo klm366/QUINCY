@@ -1,4 +1,17 @@
 #!/bin/bash
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
+#----------------------------------------------------------------------
 # JN 13.01.17, script to remap and scale LUH2 states to LUH1 states ("CMIP6 way")
 # (logic based on rewrite_lu_states.csh by SW/TR (?))
 # --> creates two files, a mapped file and then a mapped file scaled such that cover fractions sum up to 1
@@ -32,7 +45,7 @@ while [ $year -le $endYear ]; do
     cdo -s -remap,${cdoGrid},${workPath}tmp_weights.nc ${workPath}${inFilePrefix}${year_char}.nc ${workPath}${prefixMapped}${year_char}.nc
     # Remove lat_bnd from output file
     ncks -C -O -x -v lat_bnds ${workPath}${prefixMapped}${year_char}.nc ${workPath}${prefixMapped}${year_char}.nc
-    # scale: the area fractions in several 0.25 deg cells in LUH do not sum up to 1, 
+    # scale: the area fractions in several 0.25deg cells in LUH do not sum up to 1, 
     #        because water is excluded (sum(area fractions) = 1 - ice - water) [beside accuracy issues this is a static mask in LUH2]
     #           -> this is particularly true for coastline gridcells!
     #        Here the vegetation fractions are scaled up proportionally such that sum(area fractions) = 1 

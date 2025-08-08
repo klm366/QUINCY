@@ -1,19 +1,16 @@
-!> Summary: interface to the fage process (forest age)
+!> interface to the fage process (forest age)
 !>
-!>### Contains the interface to the fage process (forest age)
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2017 and 2022 Julia Nabel
-!>
-!>#### Revision History
-!> - First version    by Julia Nabel (2017-11-21)
-!> - Re-integration   by Julia Nabel (2022-10-06)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>#### Contains the interface to the fage process (forest age)
 !>
 MODULE mo_fage_interface
 #ifndef __NO_JSBACH__
@@ -34,7 +31,7 @@ MODULE mo_fage_interface
   USE mo_fage_process,       ONLY: recalc_fract_per_age_proportionally
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes FAGE_
+  dsl4jsb_Use_processes FAGE_, NLCC_
   dsl4jsb_Use_memory(FAGE_)
 
   IMPLICIT NONE
@@ -109,6 +106,7 @@ CONTAINS
     USE mo_fage_process,       ONLY: recalc_fract_per_age_upon_ageing, synchronise_fracts
 
     dsl4jsb_Use_config(FAGE_)
+    dsl4jsb_Use_config(NLCC_)
 
     IMPLICIT NONE
 
@@ -132,6 +130,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: ac_ubound(:)
 
     dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_memory(FAGE_)
     dsl4jsb_Real3D_onChunk :: fract_per_age
     dsl4jsb_Real2D_onChunk :: mean_age
@@ -150,6 +149,7 @@ CONTAINS
     ac_grid => Get_vgrid('age_classes_grid')
 
     dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_config(NLCC_)
     dsl4jsb_Get_memory(FAGE_)
 
     dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
@@ -171,13 +171,19 @@ CONTAINS
       CALL finish(TRIM(routine), 'Violation of assertion: number of lcc tiles and of age classes ' &
         & // 'are expected to be equal. But number of lcc tiles is ' // int2string(nr_of_tiles)    &
         & // ' as opposed to the number of age classes: ' // int2string(nacs) // '. Please check!')
-    ENDIF
+    END IF
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(FAGE_)) RETURN
 
+    ! Consistency check
+    IF (model%Is_process_enabled(NLCC_)) THEN
+      CALL finish(routine, 'Setup ERROR: FAGE cannot be calculated with natural land cover change age (NLCC) enabled.')
+    END IF
+
+
     ! If not newyear, do nothing
-    IF( .NOT. is_newyear(options%current_datetime,dtime)) RETURN
+    IF (.NOT. is_newyear(options%current_datetime,dtime)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -186,7 +192,7 @@ CONTAINS
     IF (INDEX(tile%name, 'pft') == 0) THEN
       CALL finish(TRIM(routine), 'Violation of precondition: fage processes is expected to run on pft tiles, instead' &
         & //' tried to run on '// trim(tile%name))
-    ENDIF
+    END IF
 
     ! sync to avoid numerical drifts in the fractions on the forest pft tiles and their fract_per_age vector
     current_child => tile%Get_first_child_tile()
@@ -199,7 +205,7 @@ CONTAINS
       CALL current_child%Set_fraction(ics, ice, iblk, fract=current_fract(:))
 
       current_child => current_child%Get_next_sibling_tile()
-    ENDDO
+    END DO
 
     ! Allocate area vectors
     ALLOCATE(initial_area(nc, nr_of_tiles))
@@ -217,9 +223,9 @@ CONTAINS
     DO i = 1,nacs-1
       prev_child => current_child
       current_child => prev_child%Get_next_sibling_tile()
-    ENDDO
+    END DO
     ! Assert that currentChild is last child
-    IF(.NOT. current_child%Is_last_child()) &
+    IF (.NOT. current_child%Is_last_child()) &
       & CALL finish(TRIM(routine), 'Violation of assertion: expected last child after iterating over nacs.')
 
     ! start with oldest age class and iterate down until second age class - the youngest age cohort cannot get area from below
@@ -242,7 +248,7 @@ CONTAINS
         !>     When acs are merged: also merge variables that are no cqs but used for bookkeeping
         CALL merge_pheno_variables_upon_ageing(current_child, prev_child, options, lost_area(:,i-1))
         CALL merge_carbon_vars_upon_ageing(current_child, prev_child, options, lost_area(:,i-1))
-      ENDIF
+      END IF
 
       CALL prev_child%Get_fraction(ics, ice, iblk, fract=current_fract(:))
       current_fract(:) = current_fract(:) - lost_area(:,i-1)
@@ -269,11 +275,11 @@ CONTAINS
         !>
         CALL end_lcc_reloc(lcc_relocations, options, gained_area)
 
-      ENDIF ! ... only to be conducted if there is any area movement
+      END IF ! ... only to be conducted if there is any area movement
 
       ! move further down in the age classes
       current_child => prev_child
-    ENDDO ! i = nacs,2,-1 -- movements from one age-class to the text starting with older classes
+    END DO ! i = nacs,2,-1 -- movements from one age-class to the text starting with older classes
 
     !>
     !> 6. Deallocate area vectors
@@ -316,7 +322,9 @@ CONTAINS
     dsl4jsb_Get_memory(FAGE_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    CALL weighted_by_fract%BeginAggregate()
     dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -363,7 +371,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
     dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)
 
-    IF(ANY(disturbed_area(:) .GT. 0._wp)) THEN
+    IF (ANY(disturbed_area(:) .GT. 0._wp)) THEN
       ! Put into age 0-1
       fract_per_age(:,1) = fract_per_age(:,1) + disturbed_area(:)
 
@@ -374,8 +382,8 @@ CONTAINS
       ELSE
         CALL finish(TRIM(routine), 'Currently only "prop" implemented as disturbance distribution scheme ' &
           & //'but tried '//TRIM(dsl4jsb_Config(FAGE_)%disturbance_fracts_scheme)//'. Please check!' )
-      ENDIF
-    ENDIF
+      END IF
+    END IF
 
     ! recalculate mean age
     mean_age (:) = get_mean_age(fract_per_age(:,:))
@@ -483,15 +491,15 @@ CONTAINS
 
     ! Get the initial area of the forest pft
     CALL tile%Get_fraction(ics, ice, iblk, fract=forest_pft_fract)
-    IF(ANY(cf_loss(:) .GT. forest_pft_fract(:))) THEN
+    IF (ANY(cf_loss(:) .GT. forest_pft_fract(:))) THEN
       WRITE (message_text,*) 'Violation of assertion: more area changed than available ' &
         & // 'for forest pft ', TRIM(tile%name)
       CALL finish (routine, message_text)
-    ENDIF
+    END IF
 
     age_class_tile => tile%Get_first_child_tile()
 
-    IF(ANY(cf_loss .GT. 0._wp)) THEN
+    IF (ANY(cf_loss .GT. 0._wp)) THEN
       IF (dsl4jsb_Config(FAGE_)%alcc_age_fract_scheme == 'prop' ) THEN
         ! ---------------------------------------------------------------------------------------------- !
         ! iterate over each age class - with the prop (proportional scheme)
@@ -508,14 +516,14 @@ CONTAINS
           END WHERE
           ! -------------------------------------------------------------------------------------------- !
           ! adapt the fract_per_age tracing vector accordingly
-          IF(.NOT. age_class_tile%Is_first_child()) THEN
+          IF (.NOT. age_class_tile%Is_first_child()) THEN
             ! then call for this age-class:
             CALL recalc_fract_per_age_proportionally(nc, dsl4jsb_Config(FAGE_)%max_age, &
               & dsl4jsb_Config(FAGE_)%nacs, i_age_class, this_cf_loss(:), ac_grid%ubounds, fract_per_age(:,:))
           ELSE
             ! for the first age class it can directly be subtracted
             fract_per_age(:,1) = fract_per_age(:,1) - this_cf_loss(:)
-          ENDIF
+          END IF
           ! -------------------------------------------------------------------------------------------- !
           ! Also adapt the cover fractions of this age class tile
           current_fract(:) = current_fract(:) - this_cf_loss(:)
@@ -532,11 +540,11 @@ CONTAINS
       ELSE
         CALL finish(TRIM(routine), 'Currently only "prop" implemented as disturbance distribution scheme ' &
           & //'but tried '//TRIM(dsl4jsb_Config(FAGE_)%disturbance_fracts_scheme)//'. Please check!' )
-      ENDIF
+      END IF
 
       ! recalculate mean age
        mean_age(:) = get_mean_age(fract_per_age(:,:))
-    ENDIF
+    END IF
 
   END SUBROUTINE distribute_forest_loss_from_alcc
 

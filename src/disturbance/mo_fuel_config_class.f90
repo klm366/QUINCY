@@ -1,23 +1,23 @@
+!> Contains structures and methods for fuel config
 !>
-!! @brief Contains structures and methods for fuel config
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (06.04.2017)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_fuel_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
   USE mo_exception,         ONLY: message
+  USE mo_jsb_control,       ONLY: debug_on
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
@@ -48,13 +48,14 @@ CONTAINS
 
     CLASS(t_fuel_config), INTENT(inout) :: config
 
-    LOGICAL                     :: active
+    LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     INTEGER                     :: fuel_algorithm
 
     NAMELIST /jsb_fuel_nml/     &
         & active,               &
+        & lrestart_cont,        &
         & ic_filename,          &
         & bc_filename,          &
         & fuel_algorithm
@@ -63,10 +64,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fuel_config'
 
-    CALL message(TRIM(routine), 'Starting fuel configuration')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting fuel configuration')
 
     ! Set defaults
     active                 = .FALSE.
+    lrestart_cont          = .FALSE.    ! TRUE: Continue although FUEL variables are missing in restart file
     bc_filename            = 'bc_land_fuel.nc'
     ic_filename            = 'ic_land_fuel.nc'
     fuel_algorithm         =  1
@@ -81,6 +83,7 @@ CONTAINS
 
     ! Write resulting values in config memory
     config%active                 = active
+    config%lrestart_cont          = lrestart_cont
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
     config%fuel_algorithm         = fuel_algorithm

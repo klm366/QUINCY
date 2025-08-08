@@ -1,17 +1,16 @@
+!> Contains structures and methods for disturbance config
 !>
-!! @brief Contains structures and methods for disturbance config
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (06.04.2017)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_disturb_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
@@ -63,7 +62,7 @@ CONTAINS
 
     CLASS(t_disturb_config), INTENT(inout) :: config
 
-    LOGICAL                     :: active
+    LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     INTEGER                     :: fire_algorithm
@@ -84,6 +83,7 @@ CONTAINS
 
     NAMELIST /jsb_disturb_nml/     &
          active,                   &
+         lrestart_cont,            &
          ic_filename,              &
          bc_filename,              &
          fire_algorithm,           &
@@ -106,6 +106,7 @@ CONTAINS
 
     ! Set defaults
     active                 = .FALSE.
+    lrestart_cont          = .FALSE.    ! TRUE: Continue although DISTURB variables are missing in restart file
     bc_filename            = 'bc_land_disturb.nc'
     ic_filename            = 'ic_land_disturb.nc'
     fire_algorithm         =  1
@@ -134,6 +135,7 @@ CONTAINS
 
     ! Write resulting values in config memory
     config%active                 = active
+    config%lrestart_cont          = lrestart_cont
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
     config%fire_algorithm         = fire_algorithm

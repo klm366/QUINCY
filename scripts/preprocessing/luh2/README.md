@@ -1,4 +1,4 @@
-# LUH2 preprocessing 
+# LUH2 preprocessing
 
 > LUH2 preprocessing is conducted in two steps:
 - in the first step a preprocessing is conducted as was done for **CMIP5**

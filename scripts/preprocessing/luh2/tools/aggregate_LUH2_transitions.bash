@@ -1,4 +1,17 @@
 #!/bin/bash
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
+#----------------------------------------------------------------------
 # JN 23.07.18, script to aggregate LUH2 type transitions to LUH1 type transitions - here with rangelands treated depending
 # on the fstnf value in the staticData_quarterdeg.nc (if 1, i.e. forests in LUH2, there is a conversion i.e. to pasture; if 0: no conversion, i.e. natural vegetation)
 #

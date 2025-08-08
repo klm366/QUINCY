@@ -1,17 +1,17 @@
-!> Summary: alcc (anthropogenic land cover change) memory initialisation
+!> alcc (anthropogenic land cover change) memory initialisation
 !>
-!>### Initialisation and reading of alcc (anthropogenic land cover change) variables
+!> ICON-Land
 !>
-!> Copyright (c) 2021 Julia Nabel
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2021-07-02)
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>#### Initialisation and reading of alcc (anthropogenic land cover change) variables
 !>
 MODULE mo_alcc_init
 #ifndef __NO_JSBACH__
@@ -76,7 +76,7 @@ CONTAINS
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
     USE mo_io_units,            ONLY: filename_max
     USE mo_jsb_parallel,        ONLY: Get_omp_thread
-    USE mo_jsb_lcc_class,       ONLY: min_tolerated_cf_mismatch
+    USE mo_jsb_lcc_class,       ONLY: max_tolerated_cf_mismatch
 
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
@@ -209,7 +209,7 @@ CONTAINS
     DEALLOCATE(cf_correction)
 
     ! Assert: sum of absolute fractions needs to be <=1
-    IF (ANY(SUM(cf_current_year(:,:,:),DIM=2) > 1.0_wp + min_tolerated_cf_mismatch)) THEN
+    IF (ANY(SUM(cf_current_year(:,:,:),DIM=2) > 1.0_wp + max_tolerated_cf_mismatch)) THEN
       CALL finish(TRIM(routine), &
       & 'Violation of assertion: PFT fractions derived from '//TRIM(filename_land_use_data) &
       & //' sum to > 1.0_wp. Please check.')

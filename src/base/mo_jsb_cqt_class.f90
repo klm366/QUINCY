@@ -1,21 +1,23 @@
-!> Summary: Contains conserved quantity types, definitions and methods for to-be-conserved quantities
+!> Contains conserved quantity types, definitions and methods for to-be-conserved quantities
 !>
-!>### Contains conserved quantity types (CQTs) and the type for cqt collection (used on tiles)
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!>#### Contains conserved quantity types (CQTs) and the type for cqt collection (used on tiles)
+!>
 !> NOTE: currently only 2D variables are dealt with -- if also 3D variables need to be conserved,
 !>       these will have to specially be dealt with in the concept and thus need to be
 !>       identified with an onw cqt e.g. distinguish WATER_2D_CQ_TYPE and WATER_3D_CQ_TYPE?
 !>       Furthermore, integration of pool-structure might need some additional work.
-!>
-!> Copyright (c) 2021 Julia Nabel
-!>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2021-01-26 - present)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
 !>
 MODULE mo_jsb_cqt_class
 #ifndef __NO_JSBACH__

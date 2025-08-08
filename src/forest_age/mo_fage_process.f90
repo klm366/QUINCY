@@ -1,19 +1,16 @@
-!> Summary: fage (forest age) process
+!> fage (forest age) process
 !>
-!>### Contains routines info for the fage (forest age) proc
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2017 and 2022 Julia Nabel
-!>
-!>#### Revision History
-!> - First version    by Julia Nabel (2017-11-21)
-!> - Re-integration   by Julia Nabel (2022-10-06)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>#### Contains routines info for the fage (forest age) proc
 !>
 MODULE mo_fage_process
 #ifndef __NO_JSBACH__
@@ -73,7 +70,7 @@ MODULE mo_fage_process
   !
   SUBROUTINE synchronise_fracts(nidx, nage, nacs, i_ac, pftid, age_ubounds, fract, fract_per_age)
 
-    USE mo_jsb_lcc_class,     ONLY: min_tolerated_fract_mismatch
+    USE mo_jsb_lcc_class,     ONLY: max_tolerated_fract_mismatch
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    ::  nidx     !< vector length
     INTEGER,  INTENT(in)    ::  nage     !< number of tracked ages, i.e. years
@@ -97,26 +94,26 @@ MODULE mo_fage_process
         WRITE (message_text,*) 'Violation of assertion: tracked age fraction got negative for age class ', &
           & i_ac, ' of pft ', pftid
         CALL finish (routine, message_text)
-      ENDIF
+      END IF
       fract_per_age(:,thisMinAge:thisMaxAge) = MAX(fract_per_age(:,thisMinAge:thisMaxAge), 0.0_wp)
 
       thisAreaSum = SUM(fract_per_age(:,thisMinAge:thisMaxAge), DIM=2)
 
-      IF(ANY(ABS(thisAreaSum(:) - fract(:)) .GT. min_tolerated_fract_mismatch)) THEN
+      IF (ANY(ABS(thisAreaSum(:) - fract(:)) > max_tolerated_fract_mismatch)) THEN
         DO j = 1,nidx
-          IF(ABS(thisAreaSum(j) - fract(j)) .GT. min_tolerated_fract_mismatch) THEN
+          IF (ABS(thisAreaSum(j) - fract(j)) > max_tolerated_fract_mismatch) THEN
             WRITE (message_text,*) ' fract and fage sum mismatch for age class ', i_ac, &
               & ' of pft ', pftid, ' found e.g. fract ', fract(j), ' and ', thisAreaSum(j)
             CALL finish (routine, message_text)
-          ENDIF
-        ENDDO
-      ENDIF
+          END IF
+        END DO
+      END IF
 
       fract(:) = thisAreaSum(:)
     ELSE
       ! First age class has only 0-1 age
       fract_per_age(:,1) = fract(:)
-    ENDIF
+    END IF
 
   END SUBROUTINE synchronise_fracts
 
@@ -141,7 +138,7 @@ MODULE mo_fage_process
     CHARACTER(len=*), PARAMETER :: routine = modname//':recalc_fract_per_age_proportionally'
     ! -------------------------------------------------------------------------------------------------- !
 
-    IF(i_ac .EQ. 1) RETURN ! area is only re-distributed to the first child - not from
+    IF (i_ac .EQ. 1) RETURN ! area is only re-distributed to the first child - not from
 
     ! lost area is assigned distributed proportionally over all ages in this age class
     thisMinAge = int(age_ubounds(i_ac-1)+1)
@@ -151,19 +148,19 @@ MODULE mo_fage_process
 
     IF (ANY(thisAreaSum(:) .GT. 0._wp)) THEN
       ! Assertion: sum of available area needs to be larger than the disturbed area
-      IF(ANY(this_cf_loss(:) .GT. thisAreaSum(:))) THEN
+      IF (ANY(this_cf_loss(:) .GT. thisAreaSum(:))) THEN
           WRITE (message_text,*) 'Violation of assertion: more area disturbed than available ' &
             & // 'for age class ', i_ac
           CALL finish (routine, message_text)
-      ENDIF
+      END IF
 
       ! Subtract proportionally from all ages within this age class
       DO k = thisMinAge,thisMaxAge
         WHERE(thisAreaSum(:) > 0.0_wp)
           fract_per_age(:,k) = fract_per_age(:,k) - (this_cf_loss(:) * (fract_per_age(:,k) / thisAreaSum(:)))
         END WHERE
-      ENDDO
-    ENDIF
+      END DO
+    END IF
 
   END SUBROUTINE recalc_fract_per_age_proportionally
 
@@ -182,7 +179,7 @@ MODULE mo_fage_process
     ! -------------------------------------------------------------------------------------------------- !
      IF (delta_fract .GT. 0._wp) THEN
       target_var = ((target_var * old_target_fract) + (source_var * delta_fract)) / (old_target_fract + delta_fract)
-     ENDIF
+     END IF
 
      RETURN
 
@@ -214,7 +211,7 @@ MODULE mo_fage_process
       CALL weighted_avg_var_upon_area_movement(old_target_fract, delta_fract, source_var, target_var)
 
       target_per_canopy_var = target_var / veg_fract_corr_target
-     ENDIF
+     END IF
 
      RETURN
 

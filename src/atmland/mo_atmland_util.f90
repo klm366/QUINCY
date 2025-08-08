@@ -1,14 +1,23 @@
+!> functions needed to calculate variables affecting the atm-land interface
 !>
-!! @brief functions needed to calculate variables affecting the atm-land interface
-!!
-!! @author
-!!  Soenke Zaehle, MPI-BGC Jena
-!!
-!! @par Revision History
-!! First version by Soenke Zaehle (2015-12-19)
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+!>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>#### various helper routines for atmland processes A2L_ and L2A_
+!>
 MODULE mo_atmland_util
-#ifndef __NO_JSBACH__
+#ifndef __NO_QUINCY__
 
   USE mo_kind
 
@@ -27,6 +36,8 @@ CONTAINS
   !! from Campell and Norman's Introduction to Environmental Biophysics
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_spec_humidity_sat(t_air, press_srf) RESULT(q_sat)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_atmland_constants,       ONLY: eps_vpd
     USE mo_jsb_physical_constants,  ONLY: Tzero

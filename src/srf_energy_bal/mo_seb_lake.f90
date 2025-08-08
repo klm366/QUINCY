@@ -1,16 +1,19 @@
+!> Contains the routines for the surface energy balance on LAKE lct_type.
 !>
-!! @brief Contains the routines for the surface energy balance on LAKE lct_type.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2016-03-22)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
 
 MODULE mo_seb_lake
 #ifndef __NO_JSBACH__
@@ -22,13 +25,14 @@ MODULE mo_seb_lake
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
-  USE mo_jsb_control,        ONLY: debug_on
+  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone, acc_stream
 
-  dsl4jsb_Use_processes SEB_, RAD_, HYDRO_, A2L_
+  dsl4jsb_Use_processes SEB_, TURB_, RAD_, HYDRO_, A2L_
   dsl4jsb_Use_config(SEB_)
 
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(HYDRO_)
 
@@ -43,7 +47,9 @@ CONTAINS
 
   SUBROUTINE update_surface_energy_lake(tile, options)
 
-    USE mo_phy_schemes,            ONLY: qsat, surface_dry_static_energy
+    USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, surface_dry_static_energy, update_drag
+    USe mo_jsb_physical_constants, ONLY: cpd, cvd
+    USE mo_jsb4_forcing,           ONLY: forcing_options
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -51,20 +57,26 @@ CONTAINS
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(HYDRO_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
       & t,                    &
+      & s_star,               &
+      & t_rad4,               &
+      & t_eff4,               &
       & t_unfilt,             &
       & t_lwtr,               &
       & t_lice,               &
       & qsat_lwtr,            &
       & qsat_lice,            &
+      & qsat_star,            &
       & s_lwtr,               &
       & s_lice,               &
       & heat_cap,             &
+      & forc_hflx,            &
       & press_srf,            &
       & snow,                 &
       & latent_hflx_wtr,      &
@@ -81,14 +93,33 @@ CONTAINS
       & weq_snow_lice,        &
       & weq_snow,             &
       & rad_net_lwtr,         &
-      & rad_net_lice
+      & rad_net_lice,         &
+      & t_air,                &
+      & q_air,                &
+      & wind_air,             &
+      & fact_q_air,           &
+      & fact_qsat_srf,        &
+      & rough_h,              &
+      & rough_m,              &
+      & drag_wtr,             &
+      & t_acoef_wtr,          &
+      & t_bcoef_wtr,          &
+      & q_acoef_wtr,          &
+      & q_bcoef_wtr,          &
+      & drag_ice,             &
+      & t_acoef_ice,          &
+      & t_bcoef_ice,          &
+      & q_acoef_ice,          &
+      & q_bcoef_ice
 
     ! Local variables
-    REAL(wp) ::                     &
-      & hcap_wtr(options%nc),       &
-      & zero(options%nc),           &
-      & lhflx_tmp(options%nc),      &
-      & hflx_tmp(options%nc)
+    REAL(wp), DIMENSION(options%nc) :: &
+      & hcap_wtr,           &
+      & zero,               &
+      & hflx_tmp,           &
+      & pch_wtr,            &
+      & ddrag_wtr
+
     REAL(wp), ALLOCATABLE :: &
       hcap_ice(:)
 
@@ -96,11 +127,14 @@ CONTAINS
       & l_ice(options%nc),           & ! Indicator for ice cover
       & l_ice_formation(options%nc), &
       & l_ice_melting(options%nc)
-    LOGICAL :: config_l_ice_on_lakes
+    LOGICAL :: config_l_ice_on_lakes, use_tmx, jsb_standalone
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice, nc, ic
+    INTEGER  :: model_scheme
     REAL(wp) :: dtime
     REAL(wp) ::         &
+      & cpd_or_cvd,     &
+      & lhflx_tmp,      &
       & ml_depth,       & !< Depth of lake mixed layer
       & min_ice_depth,  & !< Minimum ice thickness to start ice formation
       & min_fract_lice, &
@@ -121,6 +155,14 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    use_tmx = model%config%use_tmx
+    model_scheme = model%config%model_scheme
+
+    IF (use_tmx) THEN
+      cpd_or_cvd = cvd
+    ELSE
+      cpd_or_cvd = cpd
+    END IF
 
     dsl4jsb_Get_config(SEB_)
 
@@ -128,26 +170,50 @@ CONTAINS
     min_ice_depth = dsl4jsb_Config(SEB_)%lake_min_ice_depth
     config_l_ice_on_lakes = dsl4jsb_Config(SEB_)%l_ice_on_lakes
 
+    jsb_standalone = jsbach_runs_standalone()
+
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
 
     dsl4jsb_Get_var2D_onChunk(SEB_, t)              ! out
+    IF (use_tmx) THEN
+      dsl4jsb_Get_var2D_onChunk(SEB_, s_star)       ! out
+      dsl4jsb_Get_var2D_onChunk(SEB_, t_rad4)       ! out
+      dsl4jsb_Get_var2D_onChunk(SEB_, t_eff4)       ! out
+      dsl4jsb_Get_var2D_onChunk(SEB_, qsat_star)    ! out
+    END IF
     dsl4jsb_Get_var2D_onChunk(SEB_, t_unfilt)       ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr)   ! in
     dsl4jsb_Get_var2D_onChunk(SEB_, t_lwtr)         ! inout
     dsl4jsb_Get_var2D_onChunk(SEB_, qsat_lwtr)      ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, s_lwtr)         ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, heat_cap)       ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_, forc_hflx)      ! out
 
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)             ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)             ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, wind_air)          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)        ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)   ! in
     dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr) ! in
     dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! OUT
+    IF (jsb_standalone) THEN
+      dsl4jsb_Get_var2D_onChunk(TURB_, fact_q_air)       ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_srf)    ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_, rough_h)          ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_, rough_m)          ! in
+      dsl4jsb_Get_var2D_onChunk(A2L_, drag_wtr)          ! OUT if standalone
+      dsl4jsb_Get_var2D_onChunk(A2L_, t_acoef_wtr)       ! OUT if standalone
+      dsl4jsb_Get_var2D_onChunk(A2L_, t_bcoef_wtr)       ! OUT if standalone
+      dsl4jsb_Get_var2D_onChunk(A2L_, q_acoef_wtr)       ! OUT if standalone
+      dsl4jsb_Get_var2D_onChunk(A2L_, q_bcoef_wtr)       ! OUT if standalone
+    END IF
 
     IF (config_l_ice_on_lakes) THEN
       dsl4jsb_Get_var2D_onChunk(A2L_, snow)              ! in
@@ -168,167 +234,242 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice)      ! in
 
+      IF (jsb_standalone) THEN
+        dsl4jsb_Get_var2D_onChunk(A2L_, drag_ice)          ! OUT if standalone
+        dsl4jsb_Get_var2D_onChunk(A2L_, t_acoef_ice)       ! OUT if standalone
+        dsl4jsb_Get_var2D_onChunk(A2L_, t_bcoef_ice)       ! OUT if standalone
+        dsl4jsb_Get_var2D_onChunk(A2L_, q_acoef_ice)       ! OUT if standalone
+        dsl4jsb_Get_var2D_onChunk(A2L_, q_bcoef_ice)       ! OUT if standalone
+      END IF
+
       ALLOCATE(hcap_ice(nc))
-      !$claw acc enter data create(hcap_ice)
+      !$ACC ENTER DATA CREATE(hcap_ice) ASYNC(acc_stream)
     ELSE
       ALLOCATE(hflx_form_ice(nc))
-      !$claw acc enter data create(hflx_form_ice)
+      !$ACC ENTER DATA CREATE(hflx_form_ice) ASYNC(acc_stream)
     END IF
 
-    !$claw acc data create(hcap_wtr,zero,l_ice, &
-    !$claw acc l_ice_formation,l_ice_melting,lhflx_tmp,hflx_tmp)
+    !$ACC DATA CREATE(hcap_wtr, zero, l_ice, l_ice_formation, l_ice_melting, hflx_tmp) ASYNC(acc_stream)
 
-    !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_0
-    zero            (:) = 0._wp
-    hcap_wtr        (:) = 0._wp
-    l_ice_formation (:) = .FALSE.
-    l_ice_melting   (:) = .FALSE.
-    hflx_tmp(:) = rad_net_lwtr(:) + latent_hflx_wtr(:) + sensible_hflx_wtr(:)
-    !$claw end expand
-    IF (config_l_ice_on_lakes) THEN
-      !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_1
-      hcap_ice        (:) = 0._wp
-      l_ice           (:) = fract_lice(:) > 0.5_wp
-      !$claw end expand
-    ELSE
-      !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_2
-      fract_lice      (:) = 0._wp
-      l_ice           (:) = .FALSE.
-      hflx_form_ice   (:) = 0._wp
-      !$claw end expand
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic=1,nc
+      zero            (ic) = 0._wp
+      hcap_wtr        (ic) = 0._wp
+      l_ice_formation (ic) = .FALSE.
+      l_ice_melting   (ic) = .FALSE.
+      hflx_tmp(ic) = rad_net_lwtr(ic) + latent_hflx_wtr(ic) + sensible_hflx_wtr(ic)
+      IF (config_l_ice_on_lakes) THEN
+        hcap_ice      (ic) = 0._wp
+        l_ice         (ic) = fract_lice(ic) > 0.5_wp
+      ELSE
+        fract_lice    (ic) = 0._wp
+        l_ice         (ic) = .FALSE.
+        hflx_form_ice (ic) = 0._wp
+      END IF
+      forc_hflx       (ic) = 0._wp ! Always zero for lake
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    ! Compute surface drag and exchange coefficients for the offline model
+    IF (jsb_standalone) THEN
+      !$ACC WAIT
+      !$ACC DATA &
+      !$ACC   CREATE(ddrag_wtr, pch_wtr)
+
+      ! Update drag and exchange coefficients for lake surface based on external forcing data
+      CALL update_drag( &
+      ! INTENT in
+      & nc, dtime, &
+      & model_scheme, &
+      & t_air(:), press_srf(:), q_air(:), wind_air(:), &
+      & t(:), fact_q_air(:), fact_qsat_srf(:), rough_h(:), rough_m(:), &
+      & forcing_options(tile%owner_model_id)%heightWind, forcing_options(tile%owner_model_id)%heightHumidity, &
+      & dsl4jsb_Config(SEB_)%coef_ril_tm1, dsl4jsb_Config(SEB_)%coef_ril_t, dsl4jsb_Config(SEB_)%coef_ril_tp1, &
+      ! INTENT out
+      & drag_wtr(:), ddrag_wtr(:), t_acoef_wtr(:), t_bcoef_wtr(:), q_acoef_wtr(:), q_bcoef_wtr(:), pch_wtr(:))
+
+      IF (config_l_ice_on_lakes) THEN
+        ! As input variables for the lake tile refer to the frozen and unfrozen fractions, we cannot
+        ! provide separate exchange coefficients for water and ice. Both are set to identical values.
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic=1,nc
+          drag_ice(ic)    = drag_wtr(ic)
+          t_acoef_ice(ic) = t_acoef_wtr(ic)
+          t_bcoef_ice(ic) = t_bcoef_wtr(ic)
+          q_acoef_ice(ic) = q_acoef_wtr(ic)
+          q_bcoef_ice(ic) = q_bcoef_wtr(ic)
+        END DO
+        !$ACC END PARALLEL LOOP
+      END IF
+      !$ACC END DATA
     END IF
 
     ! Calculate new water temperature and residual heat flux for ice formation over open water!
-    !$claw sca forward update savepoint=ser_jsb_seb_lake_calc_lake_wtr_temp_1
-    CALL calc_lake_wtr_temp( &
-      & t_lwtr(:),                                      & !< inout; Surface temperature over open water
-      & hflx_tmp(:),                                    & !< in;    Sum of all radiative and turbulent surface heat fluxes
-      & hflx_form_ice(:),                               & !< inout; Residual heat flux for ice formation (realized or unrealized)
-      & hcap_wtr(:),                                    & !< out;   Heat capacity of lake over open water
-      & l_ice_formation(:),                             & !< out;   Indicator for ice formation
-      & l_ice_melting(:),                               & !< inout; Indicator for ice melting = .FALSE.
-      & l_ice(:),                                       & !< in;    Indicator for ice cover
-      & dtime,                                          & !< in;    Time step
-      & ml_depth,                                       & !< in;    Mixed-layer depth
-      & min_ice_depth)                                    !< in;    Minimum ice thickness
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic=1,nc
+      CALL calc_lake_wtr_temp( &
+        & t_lwtr(ic),                                     & !< inout; Surface temperature over open water
+        & hflx_tmp(ic),                                   & !< in;    Sum of all radiative and turbulent surface heat fluxes
+        & hflx_form_ice(ic),                              & !< inout; Residual heat flux for ice formation (realized or unrealized)
+        & hcap_wtr(ic),                                   & !< out;   Heat capacity of lake over open water
+        & l_ice_formation(ic),                            & !< out;   Indicator for ice formation
+        & l_ice_melting(ic),                              & !< inout; Indicator for ice melting = .FALSE.
+        & l_ice(ic),                                      & !< in;    Indicator for ice cover
+        & dtime,                                          & !< in;    Time step
+        & ml_depth,                                       & !< in;    Mixed-layer depth
+        & min_ice_depth)                                    !< in;    Minimum ice thickness
+    END DO
+    !$ACC END PARALLEL LOOP
 
     ! TODO How to put this on GPU? The following block is wrong!
 
-      ! !$claw acc kernels
+      ! !$ACC KERNELS
     ! min_fract_lice = MINVAL(fract_lice)
-    ! !$claw acc end kernels
+    ! !$ACC END KERNELS
 
-    ! !$claw acc kernels
+    ! !$ACC KERNELS
     ! min_hcap_wtr   = MINVAL(hcap_wtr)
-    ! !$claw acc end kernels
+    ! !$ACC END KERNELS
 
     ! IF (min_fract_lice <= 0.5_wp .AND. min_hcap_wtr < EPSILON(1._wp)) THEN
     !   CALL finish(TRIM(routine),'hcap_wtr can"t be zero')
     ! END IF
 
-    !$claw acc update host(fract_lice(:),hcap_wtr(:))
+#ifndef _OPENACC
     IF (ANY(fract_lice(:) <= 0.5_wp .AND. hcap_wtr(:) < EPSILON(1._wp))) THEN
       CALL finish(TRIM(routine),'hcap_wtr can"t be zero')
     END IF
+#endif
 
     IF (config_l_ice_on_lakes) THEN
 
       ! Calculate new ice thickness
       ! Tendency = freezing + conductive heat flux - ice melting + sublimation/deposition
-      !$claw sca forward update savepoint=ser_jsb_seb_lake_calc_lice_thickness_1
-      CALL calc_lice_thickness(                           &
-        & depth_lice(:),                                  & !< inout; Ice thickness [m]
-        & fract_lice(:),                                  & !< inout; Indicator for ice cover
-        & hflx_form_ice(:),                               & !< inout; Heat flux for (complete) ice formation (l_ice_formation = T)
-        & latent_hflx_ice(:),                             & !< in;    Latent heat flux for ice
-        & hflx_cond_ice(:),                               & !< in;    Conductive heat flux for ice
-        & hflx_melt_lice(:),                              & !< inout; Heat flux from unrealized or complete ice melting
-        & l_ice_formation(:),                             & !< in;    Indicator for ice formation
-        & l_ice_melting(:),                               & !< inout; Indicator for ice melting
-        & fract_snow_lice(:),                             & !< in;    Fraction of snow on ice
-        & min_ice_depth,                                  & !< in;    Mininum ice thickness
-        & dtime                                           & !< in;    Time step
-        & )
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        CALL calc_lice_thickness(                           &
+          & depth_lice(ic),                                 & !< inout; Ice thickness [m]
+          & fract_lice(ic),                                 & !< inout; Indicator for ice cover
+          & hflx_form_ice(ic),                              & !< inout; Heat flux for (complete) ice formation (l_ice_formation = T)
+          & latent_hflx_ice(ic),                            & !< in;    Latent heat flux for ice
+          & hflx_cond_ice(ic),                              & !< in;    Conductive heat flux for ice
+          & hflx_melt_lice(ic),                             & !< inout; Heat flux from unrealized or complete ice melting
+          & l_ice_formation(ic),                            & !< in;    Indicator for ice formation
+          & l_ice_melting(ic),                              & !< inout; Indicator for ice melting
+          & fract_snow_lice(ic),                            & !< in;    Fraction of snow on ice
+          & min_ice_depth,                                  & !< in;    Mininum ice thickness
+          & dtime                                           & !< in;    Time step
+          & )
+      END DO
+      !$ACC END PARALLEL LOOP
 
       ! Calculate new water temperature for the case of complete ice melting
-      !$claw sca forward update savepoint=ser_jsb_seb_lake_calc_lake_wtr_temp_2
-      CALL calc_lake_wtr_temp( &
-        & t_lwtr(:),                                      & !< inout; Surface temperature over open water
-        & zero(:),                                        & !< in;    Sum of radiative and turbulent surface heat fluxes (not used)
-        & hflx_melt_lice(:),                              & !< inout; Residual heat flux from unrealized ice melting
-        & hcap_wtr(:),                                    & !< inout; Heat capacity of lake over open water (not changed)
-        & l_ice_formation(:),                             & !< inout; Indicator for ice formation (not changed)
-        & l_ice_melting(:),                               & !< in;    Indicator for ice melting = .TRUE.
-        & l_ice(:),                                       & !< in;    Indicator for ice cover
-        & dtime,                                          & !< in;    Time step
-        & ml_depth,                                       & !< in;    Mixed-layer depth
-        & min_ice_depth)                                    !< in;    Minimum ice thickness
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic=1,nc
+          CALL calc_lake_wtr_temp( &
+            & t_lwtr(ic),                                     & !< inout; Surface temperature over open water
+            & zero(ic),                                       & !< in;    Sum of radiative and turbulent surface heat fluxes (not used)
+            & hflx_melt_lice(ic),                             & !< inout; Residual heat flux from unrealized ice melting
+            & hcap_wtr(ic),                                   & !< inout; Heat capacity of lake over open water (not changed)
+            & l_ice_formation(ic),                            & !< inout; Indicator for ice formation (not changed)
+            & l_ice_melting(ic),                              & !< in;    Indicator for ice melting = .TRUE.
+            & l_ice(ic),                                      & !< in;    Indicator for ice cover
+            & dtime,                                          & !< in;    Time step
+            & ml_depth,                                       & !< in;    Mixed-layer depth
+            & min_ice_depth)                                    !< in;    Minimum ice thickness
+        END DO
+      !$ACC END PARALLEL LOOP
 
       ! Calculate new ice temperature and heat fluxes from melting of snow and ice
 
-      !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_3
-      lhflx_tmp(:) = rad_net_lice(:) + latent_hflx_ice(:) + sensible_hflx_ice(:)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+      !$ACC   PRIVATE(lhflx_tmp)
+      DO ic=1,nc
+        lhflx_tmp = rad_net_lice(ic) + latent_hflx_ice(ic) + sensible_hflx_ice(ic)
 
-      !$claw sca forward update savepoint=ser_jsb_seb_lake_calc_lake_ice_temp_1
-      CALL calc_lake_ice_temp(                            &
-        & t_lice(:),                                      & ! inout
-        & hcap_ice(:),                                    & ! out
-        & hflx_cond_ice(:),                               & ! out
-        & hflx_melt_snow(:),                              & ! out
-        & hflx_melt_lice(:),                              & ! inout
-        & lhflx_tmp(:),                                   & !< in;    Sum of all radiative and turbulent surface heat fluxes
-        & latent_hflx_ice(:),                             & !< in;
-        & snow(:),                                        & !< in; Snow fall
-        & depth_lice(:),                                  &
-        & weq_snow_lice(:),                               &
-        & fract_snow_lice(:),                             &
-        & min_ice_depth,                                  &
-        & dtime)
+        CALL calc_lake_ice_temp(                            &
+          & t_lice(ic),                                     & ! inout
+          & hcap_ice(ic),                                   & ! out
+          & hflx_cond_ice(ic),                              & ! out
+          & hflx_melt_snow(ic),                             & ! out
+          & hflx_melt_lice(ic),                             & ! inout
+          & lhflx_tmp,                                      & !< in;    Sum of all radiative and turbulent surface heat fluxes
+          & latent_hflx_ice(ic),                            & !< in;
+          & snow(ic),                                       & !< in; Snow fall
+          & depth_lice(ic),                                 &
+          & weq_snow_lice(ic),                              &
+          & fract_snow_lice(ic),                            &
+          & min_ice_depth,                                  &
+          & dtime)
+      END DO
+      !$ACC END PARALLEL LOOP
 
     END IF
 
-    !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_4
-    qsat_lwtr(:)  = qsat(t_lwtr(:), press_srf(:))
-    s_lwtr(:)     = surface_dry_static_energy(t_lwtr(:), qsat_lwtr(:))
-    !$claw end expand
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic=1,nc
+      qsat_lwtr(ic)  = qsat_water(t_lwtr(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      s_lwtr(ic)     = surface_dry_static_energy(t_lwtr(ic), qsat_lwtr(ic), cpd_or_cvd, jsb_standalone)
+    END DO
+    !$ACC END PARALLEL LOOP
 
     IF (config_l_ice_on_lakes) THEN
-      !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_5
-      qsat_lice(:) = qsat(t_lice(:), press_srf(:))
-      s_lice(:)    = surface_dry_static_energy(t_lice(:), qsat_lice(:))
-      t(:) = (1._wp - fract_lice(:)) * t_lwtr   (:) + fract_lice(:) * t_lice   (:)
-      heat_cap(:) = (1._wp - fract_lice(:)) * hcap_wtr(:) + fract_lice(:) * hcap_ice(:)
-      weq_snow(:) = fract_lice(:) * weq_snow_lice(:)
-      t_unfilt(:) = t(:)
-      !$claw end expand
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        qsat_lice(ic) = qsat_ice(t_lice(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+        t(ic)         = (1._wp - fract_lice(ic)) * t_lwtr(ic) + fract_lice(ic) * t_lice(ic)
+        t_unfilt(ic)  = t(ic)
+        s_lice(ic)    = surface_dry_static_energy(t_lice(ic), qsat_lice(ic), cpd_or_cvd, jsb_standalone)
+        IF (use_tmx) THEN
+          s_star(ic) = (1._wp - fract_lice(ic)) * s_lwtr(ic)    + fract_lice(ic) * s_lice(ic)
+          t_rad4(ic) = (1._wp - fract_lice(ic)) * t_lwtr(ic)**4 + fract_lice(ic) * t_lice(ic)**4
+          t_eff4(ic) = t_rad4(ic)
+          qsat_star(ic) = (1._wp - fract_lice(ic)) * qsat_lwtr(ic) + fract_lice(ic) * qsat_lice(ic)
+        END IF
+        heat_cap(ic)  = (1._wp - fract_lice(ic)) * hcap_wtr(ic) + fract_lice(ic) * hcap_ice(ic)
+        weq_snow(ic)  = fract_lice(ic) * weq_snow_lice(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
 
-      !$claw acc exit data delete(hcap_ice)
+      !$ACC EXIT DATA DELETE(hcap_ice) ASYNC(acc_stream)
       DEALLOCATE(hcap_ice)
     ELSE
-      !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_6
-      t(:) = t_lwtr(:)
-      heat_cap(:) = hcap_wtr(:)
-      weq_snow(:) = 0._wp
-      t_unfilt(:) = t(:)
-      !$claw end expand
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        t(ic) = t_lwtr(ic)
+        t_unfilt(ic) = t(ic)
+        IF (use_tmx) THEN
+          s_star(ic) = s_lwtr(ic)
+          t_rad4(ic) = t_lwtr(ic)**4
+          t_eff4(ic) = t_rad4(ic)
+          qsat_star(ic) = qsat_lwtr(ic)
+        END IF
+        heat_cap(ic) = hcap_wtr(ic)
+        weq_snow(ic) = 0._wp
+      END DO
+      !$ACC END PARALLEL LOOP
 
-      !$claw acc exit data delete(hflx_form_ice)
+      !$ACC EXIT DATA DELETE(hflx_form_ice) ASYNC(acc_stream)
       DEALLOCATE(hflx_form_ice)
     END IF
 
-    !$claw acc end data
+    !$ACC END DATA
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_surface_energy_lake
 
   ! Calculate new surface water temperature
-  ELEMENTAL PURE SUBROUTINE calc_lake_wtr_temp(t_lwtr, hflx, hflx_resid, hcap, l_ice_formation, l_ice_melting, &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_lake_wtr_temp(t_lwtr, hflx, hflx_resid, hcap, l_ice_formation, l_ice_melting, &
     &                                          l_ice, dtime, ml_depth, min_ice_depth)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, clw, rhoi, alf
 
-    !$claw model-data
     REAL(wp), INTENT(inout) :: t_lwtr            !< Surface temperature over open water
     REAL(wp), INTENT(in)    :: hflx             !< Sum of all radiative and turbulent surface heat fluxes
     REAL(wp), INTENT(inout) :: hflx_resid       !< Heat flux for ice formation or melting
@@ -342,7 +483,6 @@ CONTAINS
     LOGICAL,  INTENT(inout) :: l_ice_formation  !< Indicator for ice formation
     LOGICAL,  INTENT(inout) :: l_ice_melting    !< Indicator for (complete) ice melting
     LOGICAL,  INTENT(in)    :: l_ice            !< Indicator for ice cover
-    !$claw end model-data
 
     REAL(wp), INTENT(in)    :: dtime            !< Time step
     REAL(wp), INTENT(in)    :: ml_depth         !< Mixed-layer depth
@@ -351,8 +491,6 @@ CONTAINS
     REAL(wp) :: &
       & t_star, &
       & t_freeze
-
-    !$claw sca
 
     ! Lake tile is either not covered by ice or completely covered.
     IF (l_ice) RETURN
@@ -391,12 +529,16 @@ CONTAINS
   END SUBROUTINE calc_lake_wtr_temp
 
   ! Calculate new ice temperature, snow depth and heat fluxes
-  ELEMENTAL PURE SUBROUTINE calc_lake_ice_temp(t_lice, hcap_ice, hflx_cond_ice, hflx_melt_snow, hflx_melt_lice, &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_lake_ice_temp(t_lice, hcap_ice, hflx_cond_ice, hflx_melt_snow, hflx_melt_lice, &
     &                                          hflx, lhflx, snowfall, hi, hs, fs, hi_min, dtime)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, rhoi, rhoi, rhos, als, alf, ki, ks, ci, cs !, clw
 
-    !$claw model-data
     REAL(wp), INTENT(inout) :: t_lice
     REAL(wp), INTENT(out)   :: hcap_ice       !< Heat capacity of thin ice surface layer
     REAL(wp), INTENT(out)   :: hflx_cond_ice
@@ -409,7 +551,6 @@ CONTAINS
     REAL(wp), INTENT(in)    :: hi             !< Ice thickness [m]
     REAL(wp), INTENT(inout) :: hs             !< Snow depth [m water equivalent]
     REAL(wp), INTENT(in)    :: fs             !< Fraction of snow on ice
-    !$claw end model-data
     REAL(wp), INTENT(in)    :: hi_min
     REAL(wp), INTENT(in)    :: dtime
 
@@ -417,8 +558,6 @@ CONTAINS
     REAL(wp) :: hflx_melt  !< Excess heat available for melting snow and ice
     REAL(wp) :: delta_hs
     REAL(wp) :: delta_t_lice
-
-    !$claw sca
 
     hcap_ice = rhoi * ci * hi_min + rhoh2o * cs * hs
 
@@ -470,7 +609,10 @@ CONTAINS
   END SUBROUTINE calc_lake_ice_temp
 
   ! Calculation of ice depth and fraction
-  PURE ELEMENTAL SUBROUTINE calc_lice_thickness( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_lice_thickness( &
     & hi,                                        &
     & fi,                                        &
     & hflx_form_ice,                             &
@@ -484,9 +626,10 @@ CONTAINS
     & dtime                                      &
     & )
 
+    !$ACC ROUTINE SEQ
+
     USE mo_jsb_physical_constants, ONLY: rhoi, alf, als
 
-    !$claw model-data
     REAL(wp), INTENT(inout) :: hi              !< Ice thickness [m]
     REAL(wp), INTENT(inout) :: fi              !< Ice fraction  []
     REAL(wp), INTENT(inout) :: hflx_form_ice   !< Residual heat flux from ice formation (complete or unrealized) [W m-2 = J m-2 s-1]
@@ -498,12 +641,9 @@ CONTAINS
     LOGICAL,  INTENT(in)    :: l_ice_formation !< Indicator for ice formation
     LOGICAL,  INTENT(inout) :: l_ice_melting   !< Indicator for complete ice melting
     REAL(wp), INTENT(in)    :: fs              !< Fraction of snow on ice
-    !$claw end model-data
 
     REAL(wp), INTENT(in)    :: hi_min          !< Minimum ice thickness [m]
     REAL(wp), INTENT(in)    :: dtime
-
-    !$claw sca
 
     IF (l_ice_formation) THEN                              ! Formation of a new slab of ice
 
@@ -548,6 +688,7 @@ CONTAINS
     ! Local variables
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
 
@@ -555,6 +696,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: sensible_hflx
     dsl4jsb_Real2D_onChunk :: latent_hflx
     dsl4jsb_Real2D_onChunk :: s_lwtr
+    dsl4jsb_Real2D_onChunk :: t_acoef
+    dsl4jsb_Real2D_onChunk :: t_bcoef
     dsl4jsb_Real2D_onChunk :: t_acoef_wtr
     dsl4jsb_Real2D_onChunk :: t_bcoef_wtr
     dsl4jsb_Real2D_onChunk :: drag_wtr
@@ -569,18 +712,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: sensible_hflx_ice
     dsl4jsb_Real2D_onChunk :: evapo_ice
     dsl4jsb_Real2D_onChunk :: fract_lice
+    dsl4jsb_Real2D_onChunk :: ch                 ! for new turb
 
-    ! Locally allocated vectors
-    !
-    ! REAL(wp) ::                  &
-    !   & s_air      (options%nc), &  !< Dry static energy at lowest atmospheric level
-    !   & heat_tcoef (options%nc)     !< Heat transfer coefficient (rho*C_h*|v|)
-    REAL(wp), ALLOCATABLE ::                  &
-      & s_air      (:), &  !< Dry static energy at lowest atmospheric level
-      & heat_tcoef (:)     !< Heat transfer coefficient (rho*C_h*|v|)
+    REAL(wp) ::                  &
+      & s_air,     &  !< Dry static energy at lowest atmospheric level
+      & heat_tcoef    !< Heat transfer coefficient (rho*C_h*|v|)
 
-    INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: steplen, alpha
+    INTEGER  :: iblk, ics, ice, nc, ic
+    REAL(wp) :: dtime, alpha
+    LOGICAL  :: use_tmx
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -590,7 +730,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    steplen = options%steplen
+    dtime   = options%dtime
     alpha   = options%alpha
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
@@ -599,6 +739,7 @@ CONTAINS
 
     ! Get model
     model => Get_model(tile%owner_model_id)
+    use_tmx = model%config%use_tmx
 
     ! Get reference to variables for current block
     !
@@ -607,10 +748,16 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
 
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef_wtr)       ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef_wtr)       ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   drag_wtr)          ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   drag_ice)          ! IN
+    IF (use_tmx) THEN
+      dsl4jsb_Get_memory(TURB_)
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)       ! IN
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)       ! IN
+      dsl4jsb_Get_var2D_onChunk(TURB_, ch)               ! in
+    ELSE
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef_wtr)       ! IN
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef_wtr)       ! IN
+      dsl4jsb_Get_var2D_onChunk(A2L_,   drag_wtr)        ! in
+    END IF
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_lwtr)            ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,   sensible_hflx)     ! out
@@ -620,79 +767,72 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_wtr)         ! in
 
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-      dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef_ice)       ! IN
-      dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef_ice)       ! IN
+      IF (.NOT. use_tmx) THEN
+        dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef_ice)       ! IN
+        dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef_ice)       ! IN
+        dsl4jsb_Get_var2D_onChunk(A2L_,   drag_ice)      ! in
+      END IF
       dsl4jsb_Get_var2D_onChunk(SEB_,   s_lice)            ! in
       dsl4jsb_Get_var2D_onChunk(SEB_,   sensible_hflx_ice) ! out
       dsl4jsb_Get_var2D_onChunk(SEB_,   latent_hflx_ice)   ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)         ! in
       dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)        ! in
     END IF
-    ! ---------------------------
-    ! Go
-
-    ! TODO which one to use? The first one gave an error
-    !$cla$w acc data create(s_air, heat_tcoef)
-    ALLOCATE(s_air(nc), heat_tcoef(nc))
-    !$claw acc enter data create(s_air,heat_tcoef)
 
     ! ================================================================================================================================
     ! Surface fluxes for lake water
 
-    ! Compute new dry static energy at lowest atmospheric level by back-substitution
-    !
-    !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_fluxes_lake_expand_0
-    s_air(:) = t_acoef_wtr(:) * s_lwtr  (:) + t_bcoef_wtr(:)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+    !$ACC   PRIVATE(s_air, heat_tcoef)
+    DO ic=1,nc
 
-    ! Transfer coefficient
-    heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen, alpha)
+      IF (use_tmx) THEN
+        s_air = t_bcoef(ic)  ! Old dry static energy at lowest atmospheric level
+        heat_tcoef = ch(ic)  ! Transfer coefficient; TODO: distinguish between wtr and ice?
+        sensible_hflx_wtr(ic) = heat_tcoef * (s_air - s_lwtr(ic))      ! Sensible energy flux
+      ELSE
+        s_air = t_acoef_wtr(ic) * s_lwtr(ic) + t_bcoef_wtr(ic)    ! New dry static energy at lowest atmospheric level by backsubstitution
+        heat_tcoef = heat_transfer_coef(drag_wtr(ic), dtime, alpha)  ! Transfer coefficient
+        sensible_hflx_wtr(ic) = heat_tcoef * (s_air - s_lwtr(ic))      ! Sensible heat flux
+      END IF
+      latent_hflx_wtr(ic) = alv * evapo_wtr(ic) ! Latent heat flux
 
-    ! Compute sensible heat flux
-    !
-    sensible_hflx_wtr(:) = heat_tcoef(:) * (s_air(:) - s_lwtr(:))
-
-    ! Compute latent heat flux
-    !
-    latent_hflx_wtr(:) = alv * evapo_wtr(:)
-    !$claw end expand
+    END DO
+    !$ACC END PARALLEL LOOP
 
     ! ================================================================================================================================
     ! Surface fluxes for lake ice
 
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-      !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_fluxes_lake_expand_1
-      !
-      ! Compute new dry static energy at lowest atmospheric level by back-substitution
-      !
-      s_air(:) = t_acoef_ice(:) * s_lice  (:) + t_bcoef_ice(:)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(acc_stream) GANG VECTOR PRIVATE(s_air, heat_tcoef)
+      DO ic=1,nc
 
-      ! Transfer coefficient
-      heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen, alpha)
+        IF (use_tmx) THEN
+          s_air = t_bcoef(ic) ! Old dry static energy at lowest atmospheric level
+          heat_tcoef = ch(ic) ! Transfer coefficient; TODO: distinguish between wtr and ice?
+          sensible_hflx_ice(ic) = heat_tcoef * (s_air - s_lice(ic))      ! Sensible energy flux
+        ELSE
+          s_air = t_acoef_ice(ic) * s_lice(ic) + t_bcoef_ice(ic)    ! New dry static energy at lowest atmospheric level by backsubstitution
+          heat_tcoef = heat_transfer_coef(drag_ice(ic), dtime, alpha)  ! Transfer coefficient
+          sensible_hflx_ice(ic) = heat_tcoef * (s_air - s_lice(ic))      ! Sensible heat flux
+        END IF
+        latent_hflx_ice(ic) = als * evapo_ice(ic) ! Latent heat flux
 
-      ! Compute sensible heat flux
-      !
-      sensible_hflx_ice(:) = heat_tcoef(:) * (s_air(:) - s_lice(:))
+        ! ================================================================================================================================
+        ! Surface fluxes for lake (wtr and ice aggregated)
+        sensible_hflx(ic) = (1._wp - fract_lice(ic)) * sensible_hflx_wtr(ic) + fract_lice(ic) * sensible_hflx_ice(ic)
+        latent_hflx  (ic) = (1._wp - fract_lice(ic)) * latent_hflx_wtr  (ic) + fract_lice(ic) * latent_hflx_ice  (ic)
 
-      ! Compute latent heat flux
-      !
-      latent_hflx_ice(:) = als * evapo_ice(:)
-
-      ! ================================================================================================================================
-      ! Surface fluxes for lake (wtr and ice aggregated)
-
-      sensible_hflx(:) = (1._wp - fract_lice(:)) * sensible_hflx_wtr(:) + fract_lice(:) * sensible_hflx_ice(:)
-      latent_hflx  (:) = (1._wp - fract_lice(:)) * latent_hflx_wtr  (:) + fract_lice(:) * latent_hflx_ice  (:)
-      !$claw end expand
+      END DO
+      !$ACC END PARALLEL LOOP
     ELSE
-      !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_fluxes_lake_expand_2
-      sensible_hflx(:) = sensible_hflx_wtr(:)
-      latent_hflx  (:) = latent_hflx_wtr  (:)
-      !$claw end expand
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        sensible_hflx(ic) = sensible_hflx_wtr(ic)
+        latent_hflx  (ic) = latent_hflx_wtr  (ic)
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
-
-    !$cla$w acc end data
-    !$claw acc exit data delete(s_air,heat_tcoef)
-    DEALLOCATE(s_air, heat_tcoef)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 

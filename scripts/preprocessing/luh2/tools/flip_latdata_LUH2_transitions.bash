@@ -1,4 +1,17 @@
 #!/bin/bash
+
+# ICON-Land
+#
+# ---------------------------------------
+# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+#
+# Contact: icon-model.org
+# Authors: AUTHORS.md
+# See LICENSES/ for license information
+# SPDX-License-Identifier: BSD-3-Clause
+# ---------------------------------------
+
+#----------------------------------------------------------------------
 # JN 21.02.17, script to flip the latdata resulting from the application of the programm 
 # Calculate_relative_transitions_remap_and_flipLats.f90 
 # -- i.e. get input in a format required for JSBACH simulations

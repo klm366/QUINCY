@@ -1,4 +1,15 @@
-!> Summary: Definitions and methods for landcover types.
+!> Contains definitions and methods for landcover types.
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
 !>### Landcover types
 !>
@@ -16,18 +27,6 @@
 !> which variables need to be allocated in process memories (for primary ltc but also for aggregation of
 !> contained lcts); and they might provide an lctlib id as well as fractional shares of a tile.
 !>
-!>
-!> Copyright (c) 2013-2021 Reiner Schnur
-!>
-!>#### Revision History
-!> First version by Reiner Schnur (2016-02-01)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
-!>
 !> @todo currently the constructor does not catch cases where the id is not contained in the enumerator
 !>
 !> @todo clarify language by adding another term and renaming members of t_jsb_lct:
@@ -36,15 +35,17 @@
 !>       => suggestion: call it type_id
 !>
 !> @todo change default id to -1 instead of 0?
+!>
 MODULE mo_jsb_lct_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
+  USE mo_exception, ONLY: message_text, message, finish
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE, UPLAND_TYPE, LOWLAND_TYPE, RIDGE_TYPE, DEPRES_TYPE
+  PUBLIC :: LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
   PUBLIC :: max_no_of_lct, t_jsb_lct, Contains_lct
 
   INTEGER, PARAMETER :: max_no_of_lct = 10
@@ -55,19 +56,16 @@ MODULE mo_jsb_lct_class
       & VEG_TYPE,      & !< Vegetated
       & BARE_TYPE,     & !< Bare soil -- currently not used
       & GLACIER_TYPE,  & !< Glacier
-      & LAKE_TYPE,     & !< Lake
-      & UPLAND_TYPE,   & !< Upland area (source of macro-scale interal water transport)
-      & LOWLAND_TYPE,  & !< Lowland area (sink for macro-scale internal water transport)
-      & RIDGE_TYPE,    & !< Ridge area (source of micro-scale interal water transport)
-      & DEPRES_TYPE      !< Depression area (sink for micro-scale internal water transport)
+      & LAKE_TYPE        !< Lake
   END ENUM
 
-   TYPE t_jsb_lct
+  TYPE t_jsb_lct
     INTEGER           :: id = 0               !< Id for lct, one of enumeration above
     CHARACTER(LEN=5)  :: name = ""            !< Short name for lct
     CHARACTER(LEN=30) :: long_name = ""       !< Long name for lct
     REAL(wp), POINTER :: fract(:,:) => NULL() !< Cover fraction of this lct (relative to tile that owns this lct)
     INTEGER           :: lib_id               !< Id of lct in lctlib
+    INTEGER           :: lex_id               !< Id of lct for lateral exchange between tiles
   CONTAINS
     PROCEDURE :: Get_name     => Get_lct_type_name
     PROCEDURE :: Get_longname => Get_lct_type_longname
@@ -86,12 +84,13 @@ CONTAINS
   !
   !> Constructor for t_jsb_lct
   !
-  FUNCTION Construct_jsb_lct(id, name, long_name, lib_id) RESULT(return_value)
+  FUNCTION Construct_jsb_lct(id, name, long_name, lib_id, lex_id) RESULT(return_value)
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(in)                    :: id            !< the lct type id
     CHARACTER(LEN=*), INTENT(in), OPTIONAL :: name          !< the name of this lct
     CHARACTER(LEN=*), INTENT(in), OPTIONAL :: long_name     !< a long name for this lct
     INTEGER,          INTENT(in), OPTIONAL :: lib_id        !< in case of PFTs the id in the lctlib file
+    INTEGER,          INTENT(in), OPTIONAL :: lex_id        !< (lateral exchange) position in connection matrix
     TYPE(t_jsb_lct)                        :: return_value  !< the new instance
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':Construct_jsb_lct'
@@ -114,6 +113,12 @@ CONTAINS
       return_value%lib_id = lib_id
     ELSE
       return_value%lib_id = 0
+    END IF
+
+    IF (PRESENT(lex_id)) THEN
+      return_value%lex_id = lex_id
+    ELSE
+      return_value%lex_id = 0
     END IF
 
   END FUNCTION Construct_jsb_lct
@@ -181,14 +186,6 @@ CONTAINS
         return_value = 'glac'
       CASE (LAKE_TYPE)
         return_value = 'lake'
-      CASE (UPLAND_TYPE)
-        return_value = 'up'
-      CASE (LOWLAND_TYPE)
-        return_value = 'low'
-      CASE (RIDGE_TYPE)
-        return_value = 'ridge'
-      CASE (DEPRES_TYPE)
-        return_value = 'depres'
       END SELECT
     END IF
 
@@ -219,14 +216,6 @@ CONTAINS
         return_value = 'Glacier'
       CASE (LAKE_TYPE)
         return_value = 'Lake'
-      CASE (UPLAND_TYPE)
-        return_value = 'Upland'
-      CASE (LOWLAND_TYPE)
-        return_value = 'Lowland'
-      CASE (RIDGE_TYPE)
-        return_value = 'Micro-Ridge'
-      CASE (DEPRES_TYPE)
-        return_value = 'Micro-Depression'
       END SELECT
     END IF
 

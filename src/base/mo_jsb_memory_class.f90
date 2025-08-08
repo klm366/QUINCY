@@ -1,27 +1,24 @@
+!> Contains the class and methods for the JSBACH memory structure
 !>
-!! @brief Contains the class and methods for the JSBACH memory structure
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp, dp
+  USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: finish
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist,                         &
-#ifdef __ICON__
     &                             add_var_list_element_r1d,                           &
-#endif
     &                             add_var_list_element_r2d, add_var_list_element_r3d, &
     &                             Get_var_group_name, VARNAME_LEN
   USE mo_jsb_impl_constants,ONLY: SHORT_NAME_LEN
@@ -30,7 +27,7 @@ MODULE mo_jsb_memory_class
     &                             REAL1D, REAL2D, REAL3D
   USE mo_jsb_pool_class,    ONLY: t_jsb_pool
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, &
-    &                             GRID_LONLAT,GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
+    &                             GRID_LONLAT, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
   USE mo_util,              ONLY: int2string
   USE mo_jsb_utils_iface,   ONLY: assign_if_present
@@ -47,47 +44,46 @@ MODULE mo_jsb_memory_class
 
   PUBLIC :: t_jsb_memory_p, t_jsb_memory
 
-  ! This type contains the memory state for each tile for one process
+  !> Abstract type for the memory state of each tile and process (to be extended by each process)
   TYPE, ABSTRACT :: t_jsb_memory
     INTEGER :: id = 0
     INTEGER :: grid_id = 0
     INTEGER :: owner_model_id = 0
     INTEGER :: owner_proc_id = 0
-    CHARACTER(LEN=:), ALLOCATABLE :: owner_proc_name
-    INTEGER :: no_of_children = 0
-    TYPE(t_jsb_memory_p), POINTER :: children(:) => NULL()
-    CLASS(t_jsb_memory) , POINTER :: parent => NULL()
-    INTEGER, ALLOCATABLE :: owner_tile_path(:)
-    CHARACTER(len=SHORT_NAME_LEN) :: owner_tile_name
-    INTEGER :: max_no_of_vars = 0
-    INTEGER :: no_of_vars = 0
+    CHARACTER(LEN=:), ALLOCATABLE  :: owner_proc_name
+    INTEGER                        :: no_of_children = 0      !< counter for the number of children of the tile on which the mem lives
+    TYPE(t_jsb_memory_p), POINTER  :: children(:) => NULL()
+    CLASS(t_jsb_memory) , POINTER  :: parent => NULL()
+    INTEGER, ALLOCATABLE           :: owner_tile_path(:)
+    CHARACTER(len=SHORT_NAME_LEN)  :: owner_tile_name
+    !
+    TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)                 !< collection of variables in a memory
+    INTEGER                        :: max_no_of_vars = 0      !< max number of variables allowed in collection
+    INTEGER                        :: no_of_vars = 0          !< counter for how many variables actually are allocated for this memory
+    !
+    CHARACTER(LEN=:), ALLOCATABLE  :: varlist_name            !< Name of varlist for the variables in memory instance
+    LOGICAL                        :: in_var_groups = .FALSE. !< Whether variables of this memory are in any var group
+    LOGICAL                        :: lrestart_cont = .FALSE. !< TRUE: Continue although variables are missing in restart file
+    !
     LOGICAL :: has_bgc_materials = .FALSE.
     CLASS(t_jsb_pool), POINTER :: pools         => NULL()
-    CLASS(t_jsb_pool), POINTER :: bgc_material  => NULL()   ! TODO t_jsb_memory rename 't_jsb_pool' -> 't_lnd_bgc_material'
-    CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
-    TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
-    LOGICAL :: in_var_groups = .FALSE.
+    CLASS(t_jsb_pool), POINTER :: bgc_material  => NULL()     ! TODO t_jsb_memory rename 't_jsb_pool' -> 't_lnd_bgc_material'
   CONTAINS
     PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init
-    PROCEDURE                                    :: Get_var
-    PROCEDURE                                    :: t_jsb_memory_add_var_r1d
-    PROCEDURE                                    :: t_jsb_memory_add_var_r2d
-    PROCEDURE                                    :: t_jsb_memory_add_var_r3d
-    PROCEDURE                                    :: t_jsb_memory_add_pool
-                                                    !< Add a (hierarchical) pool structure to memory
-                                                    !< (sub-pools and elements)
-    PROCEDURE                                    :: t_jsb_memory_add_pool_var_r2d
-                                                    !< Add a 2d variable to pool (non-elements)
-    GENERIC                                      :: Add_var => t_jsb_memory_add_var_r1d, t_jsb_memory_add_var_r2d, &
-      &                                                        t_jsb_memory_add_var_r3d, &
-      &                                                        t_jsb_memory_add_pool, t_jsb_memory_add_pool_var_r2d
-    PROCEDURE                                    :: Get_var_position
-    PROCEDURE, PUBLIC                            :: Collect_var_real2d  ! Collect var from its child tiles
-                                                                        ! R: Note, we do not want to keep a "var collection" in the memory
-                                                                        !    because we already have all child values in the memory.
-    PROCEDURE, PUBLIC                            :: Collect_var_real3d  ! Collect var from its child tiles
-    PROCEDURE, PUBLIC                            :: HandDown_var_real2d ! Hand back var to child tiles
-    PROCEDURE                                    :: Average_over_children_real2d ! Average var over the child tiles
+    PROCEDURE         :: Get_var
+    PROCEDURE         :: t_jsb_memory_add_var_r1d
+    PROCEDURE         :: t_jsb_memory_add_var_r2d
+    PROCEDURE         :: t_jsb_memory_add_var_r3d
+    PROCEDURE         :: t_jsb_memory_add_pool         !< Add a (hierarchical) pool structure to memory (sub-pools and elements)
+    PROCEDURE         :: t_jsb_memory_add_pool_var_r2d !< Add a 2d variable to pool (non-elements)
+    GENERIC           :: Add_var => t_jsb_memory_add_var_r1d, t_jsb_memory_add_var_r2d, &
+      &                             t_jsb_memory_add_var_r3d, &
+      &                             t_jsb_memory_add_pool, t_jsb_memory_add_pool_var_r2d
+    PROCEDURE         :: Get_var_position
+    PROCEDURE, PUBLIC :: Collect_var_real2d            !< Collect 2d var from its child tiles
+    PROCEDURE, PUBLIC :: Collect_var_real3d            !< Collect 3d var from its child tiles
+    PROCEDURE, PUBLIC :: HandDown_var_real2d           !< Hand back 2d var to child tiles
+    PROCEDURE         :: Average_over_children_real2d  !< Average 2d var over the child tiles
   END TYPE t_jsb_memory
 
   TYPE t_jsb_memory_p
@@ -97,11 +93,12 @@ MODULE mo_jsb_memory_class
   ! Note: argument "mem" needs to have the TARGET attribute so that we can point to individual variables
   !       (of class t_jsb_var) contained in the memory structure.
   ABSTRACT INTERFACE
-    SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids, model_id)
+    SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
       IMPORT :: t_jsb_memory
       CLASS(t_jsb_memory), INTENT(inout), TARGET :: mem
       CHARACTER(LEN=*),    INTENT(in)    :: prefix, suffix
       INTEGER,             INTENT(in)    :: lct_ids(:)     !< Primary lct (1) and lcts of descendant tiles
+      INTEGER,             INTENT(in)    :: lib_id         !< id of primary lct in lctlib
       INTEGER,             INTENT(in)    :: model_id
     END SUBROUTINE Init_memory
   END INTERFACE
@@ -115,7 +112,7 @@ CONTAINS
     loutput, lcontainer,                                        &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, l_aggregate_all,              &
-    output_level, verbose                                       &
+    output_level, output_groups, verbose                        &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
@@ -136,25 +133,26 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
-    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
+    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of standard output groups this var belongs to
+    CHARACTER(len=*),     INTENT(in), OPTIONAL :: output_groups(:)    ! vector of additional output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
 ! 1d list elements are not supported with ECHAM streams
-#ifdef __ICON__
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
     LOGICAL           :: loutput_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(dp)          :: missval_r_loc
+    REAL(wp)          :: missval_r_loc
+    LOGICAL           :: lrestart_cont_loc
     INTEGER           :: ldims(1), gdims(1)
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
-    INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
-    INTEGER           :: out_level, igroup                   ! loop variables
+    INTEGER           :: no_groups, no_add_groups            ! number of standard/additional groups this variable belongs to
+    INTEGER           :: out_level, igroup, add_group        ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r1d'
@@ -171,6 +169,9 @@ CONTAINS
     missval_r_loc = missval
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
+    lrestart_cont_loc = mem%lrestart_cont
+    IF (PRESENT(lrestart_cont)) lrestart_cont_loc = lrestart_cont
+
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
@@ -180,18 +181,31 @@ CONTAINS
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
     IF (PRESENT(output_level)) THEN
-      no_groups = 2 * (4 - output_level)
+      IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
+        no_groups = 2 * (4 - output_level)         ! Number of standard output groups: 2 groups per output_level:
+                                                   ! jsb_all_<output_level> and jsb_<process>_<output_level>
+                                                   ! e.g. 6 groups for BASIC(output_level=1), 2 for FULL(output_level=3)
+      ELSE
+        no_groups = 0
+      END IF
     ELSE
       no_groups = 0
     END IF
+
+    IF (PRESENT(output_groups)) THEN
+      no_add_groups = SIZE(output_groups)
+    ELSE
+      no_add_groups = 0
+    END IF
+
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
-      ALLOCATE(groups(3 + no_groups))
+      ALLOCATE(groups(3 + no_groups + no_add_groups))
       ! All variables are put into these three catch-all groups
       groups(1) = 'ALL'
       groups(2) = 'jsb_all'
       ! var group jsb_<process>_all
       groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
-      IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
+      IF (no_groups > 0) THEN                                    ! Variable specific setting of output level
         igroup = 4
         DO out_level=output_level,3
           out_level_name = Get_var_group_name(out_level)
@@ -200,6 +214,10 @@ CONTAINS
           igroup = igroup + 2
         END DO
       END IF
+      DO add_group = 1, no_add_groups
+        igroup = 3 + no_groups + add_group
+        groups(igroup)  = 'jsb_'//TRIM(output_groups(add_group))  ! e.g. group jsb_mon for monitoring output
+      END DO
     ELSE
       ALLOCATE(groups(1))
       groups(1) = 'ALL'
@@ -225,7 +243,7 @@ CONTAINS
       this_list, TRIM(name_loc), var%ptr1d, GRID_LONLAT, vgrid%ZaxisID,                       &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table,                             &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx,                                &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont_loc, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r,                        &
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups,                             &
       verbose=verbose)
@@ -243,20 +261,21 @@ CONTAINS
     ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
     var%owner_tile_path(:) = mem%owner_tile_path(:)
 
+    ! If we want to add a variable we need to store it in the next position in vars
     pos_of_var = mem%no_of_vars + 1
+    ! Assert that we still have space for another variable
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
-      mem%vars(pos_of_var)%p => var
+      mem%vars(pos_of_var)%p => var ! Collect the pointer to the newly added variable
+      __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$acc enter data copyin(var)
-    !$acc update device(var%ptr1d)
+    !$ACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var%ptr1d)
     __acc_attach(var%ptr1d)
     __acc_attach(var%ptr)
-
-#endif
 
   END SUBROUTINE t_jsb_memory_add_var_r1d
 
@@ -265,7 +284,7 @@ CONTAINS
     loutput, lcontainer, l_conserve_quan, cons_quan_type_id,    &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, l_aggregate_all,              &
-    output_level, verbose                                       &
+    output_level, output_groups, verbose                        &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
@@ -289,9 +308,10 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
-    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
+    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of standard output groups this var belongs to
+    CHARACTER(len=*),     INTENT(in), OPTIONAL :: output_groups(:)    ! vector of additional output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
@@ -300,12 +320,13 @@ CONTAINS
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(dp)          :: missval_r_loc
+    REAL(wp)          :: missval_r_loc
+    LOGICAL           :: lrestart_cont_loc
     INTEGER           :: ldims(2), gdims(2)
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
-    INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
-    INTEGER           :: out_level, igroup                   ! loop variables
+    INTEGER           :: no_groups, no_add_groups            ! number of standard/additional groups this variable belongs to
+    INTEGER           :: out_level, igroup, add_group        ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r2d'
@@ -322,6 +343,9 @@ CONTAINS
     missval_r_loc = missval
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
+    lrestart_cont_loc = mem%lrestart_cont
+    IF (PRESENT(lrestart_cont)) lrestart_cont_loc = lrestart_cont
+
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
@@ -332,18 +356,31 @@ CONTAINS
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
     IF (PRESENT(output_level)) THEN
-      no_groups = 2 * (4 - output_level)
+      IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
+        no_groups = 2 * (4 - output_level)         ! Number of standard output groups: 2 groups per output_level:
+                                                   ! jsb_all_<output_level> and jsb_<process>_<output_level>
+                                                   ! e.g. 6 groups for BASIC(output_level=1), 2 for FULL(output_level=3)
+      ELSE
+        no_groups = 0
+      END IF
     ELSE
       no_groups = 0
     END IF
+
+    IF (PRESENT(output_groups)) THEN
+      no_add_groups = SIZE(output_groups)
+    ELSE
+      no_add_groups = 0
+    END IF
+
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
-      ALLOCATE(groups(3 + no_groups))
+      ALLOCATE(groups(3 + no_groups + no_add_groups))
       ! All variables are put into these three catch-all groups
       groups(1) = 'ALL'
       groups(2) = 'jsb_all'
       ! var group jsb_<process>_all
       groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
-      IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
+      IF (no_groups > 0) THEN                                    ! Variable specific setting of output level
         igroup = 4
         DO out_level=output_level,3
           out_level_name = Get_var_group_name(out_level)
@@ -352,6 +389,10 @@ CONTAINS
           igroup = igroup + 2
         END DO
       END IF
+      DO add_group = 1, no_add_groups
+        igroup = 3 + no_groups + add_group
+        groups(igroup)  = 'jsb_'//TRIM(output_groups(add_group))  ! var group jsb_<group>
+      END DO
     ELSE
       ALLOCATE(groups(1))
       groups(1) = 'ALL'
@@ -361,7 +402,7 @@ CONTAINS
       this_list, TRIM(name_loc), var%ptr2d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont_loc, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, &
@@ -394,16 +435,19 @@ CONTAINS
     ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
     var%owner_tile_path(:) = mem%owner_tile_path(:)
 
+    ! If we want to add a variable we need to store it in the next position in vars
     pos_of_var = mem%no_of_vars + 1
+    ! Assert that we still have space for another variable
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
-      mem%vars(pos_of_var)%p => var
+      mem%vars(pos_of_var)%p => var ! Collect the pointer to the newly added variable
+      __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$acc enter data copyin(var)
-    !$acc update device(var%ptr2d)
+    !$ACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var%ptr2d)
     __acc_attach(var%ptr2d)
     __acc_attach(var%ptr)
 
@@ -415,7 +459,7 @@ CONTAINS
     l_conserve_quan, cons_quan_type_id,                          &
     lrestart, lrestart_cont, initval_r, isteptype,               &
     resetval_r, lmiss, missval_r, l_aggregate_all,               &
-    output_level, verbose                                        &
+    output_level, output_groups, verbose                         &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
@@ -439,9 +483,11 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
-    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
+    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of standard output groups this var belongs to
+    CHARACTER(len=*),     INTENT(in), OPTIONAL :: output_groups(:)    ! vector of additional output groups this var belongs to
+
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
@@ -450,12 +496,14 @@ CONTAINS
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(dp)          :: missval_r_loc
+    REAL(wp)          :: missval_r_loc
+    LOGICAL           :: lrestart_cont_loc
     INTEGER           :: ldims(3), gdims(3)
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
-    INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
-    INTEGER           :: out_level, igroup                   ! loop variables
+    INTEGER           :: no_groups, no_add_groups            ! number of standard/additional groups this variable belongs to
+    INTEGER           :: out_level, igroup, add_group        ! loop variables
+
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
 
 
@@ -472,6 +520,9 @@ CONTAINS
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
     missval_r_loc = missval
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
+
+    lrestart_cont_loc = mem%lrestart_cont
+    IF (PRESENT(lrestart_cont)) lrestart_cont_loc = lrestart_cont
 
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
@@ -499,18 +550,31 @@ CONTAINS
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
     IF (PRESENT(output_level)) THEN
-      no_groups = 2 * (4 - output_level)
+      IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
+        no_groups = 2 * (4 - output_level)         ! Number of standard output groups: 2 groups per output_level:
+                                                   ! jsb_all_<output_level> and jsb_<process>_<output_level>
+                                                   ! e.g. 6 groups for BASIC(output_level=1), 2 for FULL(output_level=3)
+      ELSE
+        no_groups = 0
+      END IF
     ELSE
       no_groups = 0
     END IF
+
+    IF (PRESENT(output_groups)) THEN
+      no_add_groups = SIZE(output_groups)
+    ELSE
+      no_add_groups = 0
+    END IF
+
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
-      ALLOCATE(groups(3 + no_groups))
+      ALLOCATE(groups(3 + no_groups + no_add_groups))
       ! All variables are put into these three catch-all groups
       groups(1) = 'ALL'
       groups(2) = 'jsb_all'
       ! var group jsb_<process>_all
       groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
-      IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
+      IF (no_groups > 0) THEN                                    ! Variable specific setting of output level
         igroup = 4
         DO out_level=output_level,3
           out_level_name = Get_var_group_name(out_level)
@@ -519,6 +583,10 @@ CONTAINS
           igroup = igroup + 2
         END DO
       END IF
+      DO add_group = 1, no_add_groups
+        igroup = 3 + no_groups + add_group
+        groups(igroup)  = 'jsb_'//TRIM(output_groups(add_group))  ! var group jsb_<group>
+      END DO
     ELSE
       ALLOCATE(groups(1))
       groups(1) = 'ALL'
@@ -528,7 +596,7 @@ CONTAINS
       this_list, TRIM(name_loc), var%ptr3d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont_loc, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, verbose=verbose)
@@ -538,7 +606,6 @@ CONTAINS
     var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
     var%type = REAL3D
-    var%len_dim3 = vgrid%n_levels
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
     IF (loutput_loc) THEN
@@ -561,16 +628,19 @@ CONTAINS
     ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
     var%owner_tile_path(:) = mem%owner_tile_path(:)
 
+    ! If we want to add a variable we need to store it in the next position in vars
     pos_of_var = mem%no_of_vars + 1
+    ! Assert that we still have space for another variable
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
-      mem%vars(pos_of_var)%p => var
+      mem%vars(pos_of_var)%p => var ! Collect the pointer to the newly added variable
+      __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$acc enter data copyin(var)
-    !$acc update device(var%ptr3d)
+    !$ACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var%ptr3d)
     __acc_attach(var%ptr3d)
     __acc_attach(var%ptr)
 
@@ -602,7 +672,7 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
     INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
@@ -613,7 +683,7 @@ CONTAINS
     TYPE(t_cf)        :: cf
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lrestart_loc
-    ! REAL(dp)          :: missval_r_loc
+    ! REAL(wp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
     ! INTEGER           :: pos_of_var
     ! CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
@@ -694,7 +764,7 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
     INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
@@ -705,7 +775,7 @@ CONTAINS
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(dp)          :: missval_r_loc
+    REAL(wp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
@@ -763,7 +833,7 @@ CONTAINS
 
       __acc_attach(var%ptr2d)
 
-      !$acc update device(var%ptr2d)
+      !$ACC UPDATE DEVICE(var%ptr2d)
       var%ptr => var%ptr2d
       __acc_attach(var%ptr)
       var%name = TRIM(name)
@@ -837,6 +907,9 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_var_position'
 
+    ! Return in case this tile's memory is empty
+    IF (this%no_of_vars == 0) RETURN
+
     IF (.NOT. ASSOCIATED(this%vars(1)%p)) CALL finish(TRIM(routine), 'Invalid vector of vars')
 
     pos = 0
@@ -867,6 +940,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_var_real2d'
 
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
+
     ALLOCATE(var_collected(ice-ics+1,no_children))
 
     DO i=1,no_children
@@ -888,12 +965,15 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_var_real3d'
 
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
+
     ALLOCATE(var_collected(ice - ics + 1, &
       &                    SIZE(this%children(1)%p%vars(var%child_idx(1))%p%ptr3d, DIM=2), &
       &                    no_children))
 
     DO i=1,no_children
-       ! R: Unterschied zu %ptr(ics:ice,iblk) ???
        var_collected(:,:,i) = this%children(i)%p%vars(var%child_idx(i))%p%ptr3d(ics:ice,:, iblk)
     END DO
 
@@ -912,6 +992,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':HandDown_var_real2d'
 
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
+
     DO i=1,no_children
       this%children(i)%p%vars(var%child_idx(i))%p%ptr2d(ics:ice, iblk) = var_handdown(:,i)
     END DO
@@ -925,7 +1009,6 @@ CONTAINS
     INTEGER,             INTENT(in)     :: ics, ice, iblk
     INTEGER,             INTENT(in)     :: no_children   ! of the parent tile
     CLASS(t_jsb_var),    INTENT(in)     :: var           ! of the parent tile: tile%mem(iproc)%p%var
-                                                         ! R: kann man auf TYPE(t_jsb_var_real2d) setzen
     REAL(wp),            INTENT(in)     :: fract_st(:,:) ! fract_st(:,:) =tile%aggregators(1)%p%fractions(ics:ice,iblk,:)
     REAL(wp), allocatable               :: var_averaged(:)
 
@@ -933,6 +1016,10 @@ CONTAINS
     INTEGER :: i
     REAL(wp), allocatable               :: var_collected(:,:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':Average_over_children'
+
+#ifdef _OPENACC
+    CALL finish(routine, 'GPU port not implemented yet')
+#endif
 
     ALLOCATE(var_collected(ice-ics+1,no_children))
     ! Collect corresponding vars of subtiles

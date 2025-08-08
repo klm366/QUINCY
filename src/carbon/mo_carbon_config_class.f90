@@ -1,17 +1,16 @@
+!> Contains structures and methods for carbon config
 !>
-!! @brief Contains structures and methods for carbon config
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (20.05.2017)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_carbon_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
@@ -58,7 +57,7 @@ CONTAINS
 
     CLASS(t_carbon_config), INTENT(inout) :: config
 
-    LOGICAL                     :: active
+    LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: with_nitrogen
     LOGICAL                     :: read_cpools, diag_humus_fluxes
@@ -67,6 +66,7 @@ CONTAINS
 
     NAMELIST /jsb_carbon_nml/      &
          active,                   &
+         lrestart_cont,            &
          ic_filename,              &
          bc_filename,              &
          with_nitrogen,            &
@@ -82,6 +82,7 @@ CONTAINS
 
     ! Set defaults
     active                 = .FALSE.
+    lrestart_cont          = .FALSE.       ! TRUE: Continue although CARBON variables are missing in restart file
     bc_filename            = 'bc_land_carbon.nc'
     ic_filename            = 'ic_land_carbon.nc'
     with_nitrogen          = .FALSE.
@@ -99,6 +100,7 @@ CONTAINS
 
     ! Write resulting values in config memory
     config%active                 = active
+    config%lrestart_cont          = lrestart_cont
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
     config%with_nitrogen          = with_nitrogen

@@ -1,17 +1,16 @@
+!> Contains methods for JSBACH master control.
 !>
-!! @brief Contains methods for JSBACH master control.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-02-22)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_control
 #ifndef __NO_JSBACH__
 
@@ -25,6 +24,10 @@ MODULE mo_jsb_control
   USE mo_jsb_time_iface,     ONLY: l_timer_host !< timers on in host model?
   USE mo_jsb_io_iface,       ONLY: ldebugio
 
+#ifdef _OPENACC
+  USE openacc, ONLY: acc_async_sync
+#endif
+
   IMPLICIT NONE
   PRIVATE
 
@@ -35,7 +38,11 @@ MODULE mo_jsb_control
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
   PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg, timer_forcing
-  PUBLIC :: max_no_of_models
+  PUBLIC :: max_no_of_models, acc_stream, acc_async_sync
+
+  ! Needed for inlining timer_on and debug_on on NEC.
+  PUBLIC :: debug_level, timer_level
+  PROTECTED :: debug_level, timer_level
 
   LOGICAL,           SAVE :: is_standalone
   LOGICAL,           SAVE :: restart_jsbach
@@ -45,6 +52,11 @@ MODULE mo_jsb_control
   INTEGER,           SAVE :: debug_memory_level
   INTEGER,           SAVE :: timer_level
   LOGICAL,           SAVE :: l_force_from_obs
+  INTEGER,           SAVE :: acc_stream = 1
+
+#ifndef _OPENACC
+  INTEGER, PARAMETER      :: acc_async_sync = -42
+#endif
 
   TYPE t_jsb_model_nml
     INTEGER            :: model_id = 0
@@ -116,12 +128,9 @@ CONTAINS
   END SUBROUTINE init_jsb_master_control
 
   !>
-  !! @brief Reads JSBACH control parameters.
+  !! Reads JSBACH control parameters.
   !!
   !! Reads namelist 'jsb_control_nml' and namelists 'jsb_model_nml' from namelist file.
-  !!
-  !! @par History
-  !! Ideas taken from ICON mo_master_nml.f90 by Rene Redler.
   !!
   SUBROUTINE read_jsb_control_namelist(namelist_filename)
 

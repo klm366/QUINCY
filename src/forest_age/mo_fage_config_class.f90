@@ -1,20 +1,16 @@
-!> Summary: fage (forest age) config
+!> fage (forest age) config
 !>
-!>### Contains namelist info for the fage (forest age) proc
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2017 and 2022 Julia Nabel
-!>
-!>#### Revision History
-!>
-!> - First version    by Julia Nabel (2017-11-20)
-!> - Re-integration   by Julia Nabel (2022-10-05)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>#### Contains namelist info for the fage (forest age) proc
 !>
 MODULE mo_fage_config_class
 #ifndef __NO_JSBACH__
@@ -66,7 +62,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_fage_config), INTENT(inout) :: config !< Configuration type of process (t_fage_config)
     ! -------------------------------------------------------------------------------------------------- !
-    LOGICAL                       :: active
+    LOGICAL                       :: active, lrestart_cont
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
 
     INTEGER            :: nacs, max_age
@@ -77,6 +73,7 @@ CONTAINS
 
     NAMELIST /jsb_fage_nml/         &
       & active,                     &
+      & lrestart_cont,              &
       & ic_filename,                &
       & bc_filename,                &
       & max_age,                    &
@@ -99,6 +96,7 @@ CONTAINS
 
     ! Set defaults
     active            = .FALSE.
+    lrestart_cont     = .FALSE.         ! TRUE: Continue although FAGE variables are missing in restart file
     bc_filename       = 'bc_land_fage.nc'  !JN-TODO do I need it at all?
     ic_filename       = 'ic_land_fage.nc'  !JN-TODO
     max_age           = 150
@@ -115,6 +113,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active              = active
+    config%lrestart_cont       = lrestart_cont
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%max_age             = max_age
@@ -182,12 +181,12 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Assertion: check expected vector dimensions
-    IF(SIZE(age_class_max_age) .NE. (nacs + 1)) THEN
+    IF (SIZE(age_class_max_age) .NE. (nacs + 1)) THEN
       CALL finish(TRIM(routine), 'Assertion: max age vector is assumed to have number of age classes + 1 as dimension!')
-    ENDIF
-    IF(SIZE(age_class_mean_age) .NE. nacs) THEN
+    END IF
+    IF (SIZE(age_class_mean_age) .NE. nacs) THEN
       CALL finish(TRIM(routine), 'Assertion: mean age vector is assumed to have number of age classes as dimension!')
-    ENDIF
+    END IF
 
     ! First class always contains the first year only
     age_class_max_age(1) = 0._wp
@@ -199,7 +198,7 @@ CONTAINS
       DO i = 2,nacs
         age_class_max_age(i + 1) = age_class_max_age (i) + int(age_interval)
       END DO
-    ELSEIF (age_class_scheme == 'shorterYoung' ) THEN
+    ELSE IF (age_class_scheme == 'shorterYoung' ) THEN
       ! Equal intervals distributed unequally such that younger age classes have shorter steps
       ! (1, 1+n, 1+n+2*n, 1+n+2*n+3*n, ...)
       age_interval = 0
@@ -212,22 +211,22 @@ CONTAINS
       END DO
     ELSE
       CALL finish(TRIM(routine), 'Currently only "shorterYoung" and "equal" implemented as forest ageing schemes')
-    ENDIF
+    END IF
 
     ! Last age class is not really restricted to a max age, but set to max_age for compliance with the fract_per_age field
     age_class_max_age(nacs+1) = max_age
 
     ! Assertion (currently this is of course the case - just in case that others want to define distributions themselves)
-    IF(age_class_max_age(2) .NE. 1._wp) THEN
+    IF (age_class_max_age(2) .NE. 1._wp) THEN
       CALL finish(TRIM(routine), 'Assertion: upper boundary of lowest age class always needs to have max_age of 1!')
-    ENDIF
-    IF(ANY(age_class_max_age(:) .GT. max_age)) THEN
+    END IF
+    IF (ANY(age_class_max_age(:) .GT. max_age)) THEN
       CALL finish(TRIM(routine), 'Assertion: no age class should have a max age larger than the total max_age!')
-    ENDIF
+    END IF
 
     DO i = 1,nacs
       age_class_mean_age(i) = (age_class_max_age(i) + age_class_max_age(i+1)) * 0.5_wp
-    ENDDO
+    END DO
 
   END SUBROUTINE derive_age_class_boundaries
 

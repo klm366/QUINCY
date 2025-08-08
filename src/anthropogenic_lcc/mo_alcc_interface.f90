@@ -1,18 +1,21 @@
-!> Summary: interface to the alcc process (anthropogenic land cover change)
+!> interface to the alcc process (anthropogenic land cover change)
 !>
-!>### Contains the interfaces to the alcc process, currently annually moving land and to be conserved matter
+!> ICON-Land
 !>
-!> Copyright (c) 2021 Julia Nabel
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!>#### Revision History
-!> First version and ongoing changes   by Julia Nabel (2021-02-24 - present)
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
-!>#### License
+!>#### Contains the interfaces to the alcc process, currently annually moving area fractions and to-be-conserved matter
 !>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
-!>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_alcc_interface
 #ifndef __NO_JSBACH__
 
@@ -22,16 +25,16 @@ MODULE mo_alcc_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
 !  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes ALCC_, PPLCC_
+  dsl4jsb_Use_processes ALCC_, PPLCC_, FAGE_, NLCC_
 
   ! Use of process configurations
-!  dsl4jsb_Use_config(ALCC_)
+  dsl4jsb_Use_config(ALCC_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(ALCC_)
@@ -41,7 +44,6 @@ MODULE mo_alcc_interface
   PUBLIC :: Register_alcc_tasks
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_interface'
-  CHARACTER(len=*), PARAMETER :: procname = 'alcc'
 
   !> Type definition for alcc pre task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_alcc
@@ -68,7 +70,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "alcc"
     ! -------------------------------------------------------------------------------------------------- !
     ALLOCATE(tsk_alcc::return_ptr)
-    CALL return_ptr%Construct(name=procname, process_id=ALCC_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='alcc', process_id=ALCC_, owner_model_id=model_id)
 
   END FUNCTION Create_task_alcc
 
@@ -95,9 +97,10 @@ CONTAINS
   SUBROUTINE update_alcc(tile, options)
 
     USE mo_util,              ONLY: one_of
-    USE mo_jsb_time,          ONLY: is_newday, is_newyear
-    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, min_cf_change, min_tolerated_cf_mismatch
+    USE mo_jsb_time,          ONLY: is_newday, is_newyear, get_year, get_year_length
+    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, min_daily_cf_change, min_annual_cf_change, max_tolerated_cf_mismatch
     USE mo_jsb_lcc,           ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc, transfer_active_to_passive_onChunk
+    USE mo_nlcc_process,      ONLY: fract_small
 
     IMPLICIT NONE
 
@@ -106,18 +109,20 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(ALCC_)
+    dsl4jsb_Def_config(ALCC_)
 
     CLASS(t_jsb_tile_abstract), POINTER :: current_tile, age_class_tile, forest_pft_tile
     TYPE(t_jsb_model), POINTER          :: model
     TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations
 
-    LOGICAL  :: is_age_class
-    INTEGER  :: i_tile, i_ac_index, i_cf_tile, iblk, ics, ice, nc, nr_of_tiles
+    LOGICAL  :: is_age_class, dynamic_tile
+    INTEGER  :: ic, iblk, ics, ice, nc, i_tile, i_ac_index, i_cf_tile, nr_of_tiles, current_year, number_of_days
     REAL(wp) :: dtime
     REAL(wp), ALLOCATABLE :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
+    REAL(wp), ALLOCATABLE :: lost_dynamic(:), gained_dynamic(:), area_dynamic(:)
     REAL(wp), DIMENSION(options%nc) :: cf_diff, current_fract
 
-    dsl4jsb_Real3D_onChunk :: cf_current_year
+    dsl4jsb_Real3D_onChunk :: cf_current_year, cf_day_delta
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_alcc'
     ! -------------------------------------------------------------------------------------------------- !
@@ -128,11 +133,15 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
+    current_year  = get_year(options%current_datetime)
+    number_of_days = get_year_length(current_year)
 
     model => Get_model(tile%owner_model_id)
 
+    dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_memory(ALCC_)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_current_year)
+    dsl4jsb_Get_var3D_onChunk(ALCC_, cf_day_delta)
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(alcc_)) RETURN
@@ -142,14 +151,14 @@ CONTAINS
     !>
     IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
       CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to be active')
-    ENDIF
+    END IF
 
-    !JN-TODO: as I understand in JSBACH3 cf changes according to luh were done on a daily timestep?!
-!    ! If not newday, do nothing
-!    IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN
-
-    ! However, previous version of Rainer Schneck worked on an annual basis:
-    IF( .NOT. is_newyear(options%current_datetime,dtime)) RETURN
+    ! Redistributions are either only conducted at the start of each year or each day
+    IF(.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
+      IF( .NOT. is_newyear(options%current_datetime,dtime)) RETURN
+    ELSE
+      IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN
+    END IF
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -160,7 +169,7 @@ CONTAINS
     IF (.NOT. tile%name .EQ. 'veg') THEN
       CALL finish(TRIM(routine), 'Violation of precondition: alcc processes is expected to run on the veg tile, instead' &
         & //' tried to run on '// trim(tile%name))
-    ENDIF
+    END IF
 
     !>
     !> 1. Get lcc structure
@@ -180,7 +189,7 @@ CONTAINS
     CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
 
     !>
-    !> 2. Calculate area changes (according to current target cfs)
+    !> 2. Calculate area changes
     !>
     current_tile => tile%Get_first_child_tile()
     i_tile = 0
@@ -190,82 +199,240 @@ CONTAINS
       i_tile = i_tile + 1
       i_cf_tile = i_cf_tile + 1
 
-      ! if running with forest age classes (acs) the forest pfts themselves (i.e. the nodes above the acs)
-      ! are not part of the lcc tiles
-      IF((TRIM(model%config%usecase) == 'jsbach_forest_age_classes') .AND. (current_tile%Has_children())) THEN
-          ! Assertion: age-classes are subsequent parts of the lcc structure
-          !IF(debug_on()) THEN
-          age_class_tile => current_tile%Get_first_child_tile()
-          i_ac_index = i_tile
-          DO WHILE (ASSOCIATED(age_class_tile))
-            IF (.NOT. TRIM(age_class_tile%name) .EQ. TRIM(lcc_relocations%tile_names(i_ac_index))) THEN
-              CALL finish(TRIM(routine), 'Violation of assertion: age class (' //TRIM(age_class_tile%name) &
-                & //') is not listed in the expected place in the alcc lcc-structure. Found ' &
-                & // TRIM(lcc_relocations%tile_names(i_ac_index)) // ' instead. Please check!')
-            ENDIF
-            age_class_tile => age_class_tile%Get_next_sibling_tile()
-            i_ac_index = i_ac_index + 1
-          END DO
-          !ENDIF
+      ! Find out if there are dynamic PFT tiles, whose fractions should not be replaced by the map's fractions.
+      dynamic_tile = .FALSE.
+      IF (model%Is_process_enabled(NLCC_) .AND. dsl4jsb_Lctlib_param_tile(dynamic_PFT, current_tile)) THEN
+        dynamic_tile = .TRUE.
+      END IF
 
-          ! forest pfts are not part of the lcc structure and thus the initial area has not yet been automatically collected
-          CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract)
+      ! Area changes need to be determined differently for forest age classes than for the pft usecase
+      IF ((TRIM(model%config%usecase) == 'jsbach_forest_age_classes') .AND. (current_tile%Has_children())) THEN
+
+        ! Assertion: age-classes are subsequent parts of the lcc structure
+        age_class_tile => current_tile%Get_first_child_tile()
+        i_ac_index = i_tile
+        DO WHILE (ASSOCIATED(age_class_tile))
+          IF (.NOT. TRIM(age_class_tile%name) .EQ. TRIM(lcc_relocations%tile_names(i_ac_index))) THEN
+            CALL finish(TRIM(routine), 'Violation of assertion: age class (' //TRIM(age_class_tile%name) &
+              & //') is not listed in the expected place in the alcc lcc-structure. Found ' &
+              & // TRIM(lcc_relocations%tile_names(i_ac_index)) // ' instead. Please check!')
+          END IF
+          age_class_tile => age_class_tile%Get_next_sibling_tile()
+          i_ac_index = i_ac_index + 1
+        END DO
+
+        ! forest pfts are not part of the lcc structure (i.e. not involved tiles)
+        ! and thus the initial area has not yet been automatically collected above
+        CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract)
+
+        ! derive area changes
+        IF(.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
+          ! In case that area changes are only annually, they can directly be derived from the new cfs and the current cfs
           cf_diff(:) = cf_current_year(:, i_cf_tile) - current_fract(:)
+
           ! Prevent numerical issues
-          WHERE(abs(cf_diff(:)) < min_cf_change)
+          WHERE (abs(cf_diff(:)) < min_annual_cf_change)
             cf_diff(:) = 0.0_wp
             cf_current_year(:, i_cf_tile) = current_fract(:)
           END WHERE
 
-          ! the losses / gains of forest pfts need to be redistributed to the age classes that are its children
-          CALL redistribute_cover_fraction_changes_of_forest_pft(current_tile, options, cf_diff, i_tile, gained_area, lost_area)
-          i_tile = i_tile + current_tile%Get_no_of_children() - 1
+        ELSE
+          !  else land use is to be adjusted on a daily basis
+          IF(is_newyear(options%current_datetime,dtime)) THEN
+            ! if this is the start of a new year, the daily change in cf needs to be determined
+            ! which is required to reach the given cf target at the end of the year
+            DO ic = 1,nc
+              IF (cf_current_year(ic, i_cf_tile) < 0.0_wp) THEN
+                ! This should only happen upon init with -0.1
+                cf_day_delta(ic, i_cf_tile) = 0.0_wp
+              ELSE
+                cf_day_delta(ic, i_cf_tile) = (cf_current_year(ic, i_cf_tile) - current_fract(ic)) / REAL(number_of_days, wp)
+                ! Prevent numerical issues
+                IF(abs(cf_day_delta(ic, i_cf_tile)) < min_daily_cf_change) THEN
+                  cf_day_delta(ic, i_cf_tile) = 0.0_wp
+                  cf_current_year(ic, i_cf_tile) = current_fract(ic)
+                END IF
+              END IF
+            END DO
+          ENDIF !IF(is_newyear(options%current_datetime,dtime))
 
-          ! Finally, update the fraction on the forest pft tile itself
-          CALL current_tile%Set_fraction(ics, ice, iblk, fract=cf_current_year(:, i_cf_tile))
+          ! now cf_day_delta can be used (no matter if just calculated or from earlier in the year or from restart)
+          DO ic = 1,nc
+            cf_diff(ic) = cf_day_delta(ic, i_cf_tile)
+            ! Prevent numerical issues
+            IF(abs(cf_diff(ic)) < min_daily_cf_change) THEN
+              cf_diff(ic) = 0.0_wp
+            END IF
+          END DO
+        END IF ! IF(.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc)
 
+        ! the losses / gains of forest pfts need to be redistributed to the age classes that are its children
+        CALL redistribute_cover_fraction_changes_of_forest_pft(current_tile, options, cf_diff, i_tile, gained_area, lost_area)
+        i_tile = i_tile + current_tile%Get_no_of_children() - 1
+
+        ! Finally, update the fraction on the forest pft tile itself
+        current_fract(:) = current_fract(:) + cf_diff(:)
+        CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
       ELSE
+        ! pft without children (either pft usecase or non forest pfts in fage usecase!)
+        ! in the pft usecase i_cf_tile equals i_tile, however, this is not the case for non forest pfts in fage usecase
+        ! therefore cf_current_year and cf_day_delta are used with pft index (i_cf_tile)
+        ! while the lcc arrays (initial_area, lost_area and gained_area) are used with the current tile index (i_tile)
+
         ! Assert: pft without children
-        IF(current_tile%Has_children()) THEN
-          CALL finish(TRIM(routine), 'Violation of assertion: alcc only expects children of a lcc tile ' &
+        IF (current_tile%Has_children()) THEN
+          CALL finish(TRIM(routine), 'Violation of assertion: alcc only expects children of a lcc tile '  &
             & //'in case of the forest age class usecase, but usecase was '// TRIM(model%config%usecase)  &
             & // '. Tile with children: ' // trim(current_tile%name) // '. Please check.')
-        ENDIF
+        END IF
 
         ! Assert: In mo_alcc_init read_land_use_data assumes that all child tiles of the veg tile
         ! are part of the lcc structure
         IF (one_of(current_tile%name, lcc_relocations%tile_names) <= 0) THEN
           CALL finish(TRIM(routine), 'Violation of assertion: child tile of veg tile(' //TRIM(current_tile%name) &
           & //') is not part of the alcc lcc-structure. Current implementation assumes that all pfts are part of it.')
-        ENDIF
+        END IF
 
-        cf_diff(:) = cf_current_year(:, i_cf_tile) - initial_area(:, i_tile)
-        ! Prevent numerical issues
-        WHERE(abs(cf_diff(:)) < min_cf_change)
-          cf_diff(:) = 0.0_wp
-          cf_current_year(:, i_cf_tile) = initial_area(:, i_tile)
-        END WHERE
-        WHERE(cf_diff(:) >= 0.0_wp)
-          gained_area(:, i_tile) = cf_diff(:)
-        ELSEWHERE
-          lost_area(:, i_tile) = -1.0_wp * cf_diff(:)
-        END WHERE
+        ! derive area changes
+        IF(.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
+          ! In case that area changes are only annually, they can directly be derived from the new cfs and the current cfs
+          DO ic = 1,nc
+            cf_diff(ic) = cf_current_year(ic, i_cf_tile) - initial_area(ic, i_tile)
+            ! Prevent numerical issues
+            IF(abs(cf_diff(ic)) < min_annual_cf_change) THEN
+              cf_diff(ic) = 0.0_wp
+              cf_current_year(ic, i_cf_tile) = initial_area(ic, i_tile)
+            END IF
+            ! determine new cover fractions
+            current_fract(ic) = cf_current_year(ic, i_cf_tile)
+          END DO
+        ELSE
+          ! else land use is to be adjusted on a daily basis
+          IF(is_newyear(options%current_datetime,dtime)) THEN
+            ! if this is the start of a new year, the daily change in cf needs to be determined
+            ! which is required to reach the given cf target at the end of the year
+            DO ic = 1,nc
+              IF (cf_current_year(ic, i_cf_tile) < 0.0_wp) THEN
+                ! This should only happen upon init with -0.1
+                cf_day_delta(ic, i_cf_tile) = 0.0_wp
+              ELSE
+                cf_day_delta(ic, i_cf_tile) = (cf_current_year(ic, i_cf_tile) - initial_area(ic, i_tile)) / REAL(number_of_days, wp)
+                ! Prevent numerical issues
+                IF(abs(cf_day_delta(ic, i_cf_tile)) < min_daily_cf_change) THEN
+                  cf_day_delta(ic, i_cf_tile) = 0.0_wp
+                  cf_current_year(ic, i_cf_tile) = initial_area(ic, i_tile)
+                END IF
+              END IF
+            END DO
+          END IF ! IF(is_newyear(options%current_datetime,dtime))
 
-        CALL current_tile%Set_fraction(ics, ice, iblk, fract=cf_current_year(:, i_cf_tile))
-      ENDIF ! If with jsbach_forest_age_classes usecase and forest pft or pft without leaves
+          ! now cf_day_delta can be used (no matter if just calculated or from earlier in the year or from restart)
+          DO ic = 1,nc
+            cf_diff(ic) = cf_day_delta(ic, i_cf_tile)
+            ! Prevent numerical issues
+            IF(abs(cf_diff(ic)) < min_daily_cf_change) THEN
+              cf_diff(ic) = 0.0_wp
+            END IF
+
+            ! determine new cover fractions
+            IF ((cf_diff(ic) < 0.0_wp) .AND. (ABS(cf_diff(ic)) > initial_area(ic, i_tile))) THEN
+              current_fract(ic) = 0.0_wp
+              cf_diff(ic) = -1.0_wp * initial_area(ic, i_tile)
+            ELSE IF ((cf_diff(ic) > 0.0_wp) .AND. (cf_diff(ic) + initial_area(ic, i_tile) > 1.0_wp)) THEN
+              current_fract(ic) = 1.0_wp
+              cf_diff(ic) = 1.0_wp - initial_area(ic, i_tile)
+            ELSE
+              current_fract(ic) = initial_area(ic, i_tile) + cf_diff(ic)
+            END IF
+          END DO
+        END IF ! IF (.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc)
+
+        DO ic = 1,nc
+          IF(cf_diff(ic) >= 0.0_wp) THEN
+            gained_area(ic, i_tile) = cf_diff(ic)
+          ELSE
+            lost_area(ic, i_tile) = -1.0_wp * cf_diff(ic)
+          END IF
+        END DO
+
+        IF (.NOT. dynamic_tile) THEN
+          CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
+        END IF
+      END IF ! If with jsbach_forest_age_classes usecase and forest pft or pft without leaves
 
       current_tile => current_tile%Get_next_sibling_tile()
     END DO
+
+    !>     Now handle the dynamic PFT tiles
+
+    ! In case natural landcover change (nlcc) is active, the natural PFT fractions should not be
+    ! set to the map's fractions. The fractions of the dynamic PFT tiles need to be rescaled all
+    ! together, corresponding to the changes of the non-dynamic PFTs.
+
+    IF (model%Is_process_enabled(NLCC_)) THEN
+
+      ! Allocate area vectors
+      ALLOCATE(lost_dynamic(nc))
+      ALLOCATE(gained_dynamic(nc))
+      ALLOCATE(area_dynamic(nc))
+      lost_dynamic(:)   = 0.0_wp
+      gained_dynamic(:) = 0.0_wp
+      area_dynamic(:)   = 0.0_wp
+
+      current_tile => tile%Get_first_child_tile()
+      i_tile = 0
+      DO WHILE (ASSOCIATED(current_tile))
+        i_tile = i_tile + 1
+
+        IF (dsl4jsb_Lctlib_param_tile(dynamic_PFT, current_tile)) THEN
+          ! Sum up the total area fraction of the dynamic PFT tiles
+          area_dynamic(:) = area_dynamic(:) + initial_area(:,i_tile)
+        ELSE
+          ! The area losses/gains of the non-dynamic PFTs define the joint gains/losses
+          ! of the dynamic PFTs
+          gained_dynamic(:) = gained_dynamic(:) + lost_area(:,i_tile)
+          lost_dynamic(:)   = lost_dynamic(:)   + gained_area(:,i_tile)
+        END IF
+        current_tile => current_tile%Get_next_sibling_tile()
+      END DO
+
+      current_tile => tile%Get_first_child_tile()
+      i_tile = 0
+      DO WHILE (ASSOCIATED(current_tile))
+        i_tile = i_tile + 1
+
+        IF (dsl4jsb_Lctlib_param_tile(dynamic_PFT, current_tile)) THEN
+          DO ic = 1, nc
+            ! The dynamic PFTs are gaining or losing area proportional to their current area fractions
+            IF (area_dynamic(ic) > fract_small) THEN
+              gained_area(ic,i_tile) = MIN(gained_dynamic(ic) * initial_area(ic,i_tile) / area_dynamic(ic), 1._wp - initial_area(ic,i_tile))
+              lost_area(ic,i_tile)   = MIN(lost_dynamic(ic)   * initial_area(ic,i_tile) / area_dynamic(ic), initial_area(ic,i_tile))
+            ELSE
+              gained_area(ic,i_tile) = 0._wp
+              lost_area(ic,i_tile)   = 0._wp
+            END IF
+
+            current_fract(ic) = initial_area(ic, i_tile) + gained_area(ic,i_tile) - lost_area(ic,i_tile)
+          END DO
+          ! Update the fractions of dynamic PFTs
+          CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
+
+        END IF
+        current_tile => current_tile%Get_next_sibling_tile()
+      END DO
+
+      DEALLOCATE(lost_dynamic, gained_dynamic, area_dynamic)
+    END IF  ! with NLCC
 
     !>
     !>     Assert: sum of gained area should equal sum of lost area
     !>
     cf_diff = SUM(gained_area,DIM=2) - SUM(lost_area,DIM=2)
-    IF (ANY( cf_diff > min_tolerated_cf_mismatch)) THEN
+    IF (ANY( cf_diff > max_tolerated_cf_mismatch)) THEN
       WRITE (message_text,*) 'Violation of assertion: gained area does not equal lost area! Please check input data. ' &
         & // 'Max difference of: ', MAXVAL(cf_diff)
       CALL finish(TRIM(routine), TRIM(message_text))
-    ENDIF
+    END IF
 
     !>
     !> 3. collect to be transferred matter
@@ -281,29 +448,29 @@ CONTAINS
     DO WHILE (ASSOCIATED(current_tile))
 
       ! In case of forest age classes we have to decent one level further
-      IF((TRIM(model%config%usecase) == 'jsbach_forest_age_classes') .AND. (current_tile%Has_children())) THEN
+      IF ((TRIM(model%config%usecase) == 'jsbach_forest_age_classes') .AND. (current_tile%Has_children())) THEN
         is_age_class = .TRUE.
         forest_pft_tile => current_tile
         current_tile => current_tile%Get_first_child_tile()
-      ENDIF
+      END IF
 
       IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN
         i_tile = i_tile + 1
         IF (ANY(lost_area(:, i_tile) > 0.0_wp)) THEN
           CALL transfer_active_to_passive_onChunk(lcc_relocations, current_tile, i_tile, options)
-        ENDIF
-      ENDIF
+        END IF
+      END IF
 
       current_tile => current_tile%Get_next_sibling_tile()
 
       ! In case of forest age classes we have to go up one level and go to the next tile there
-      IF(is_age_class .AND. .NOT. ASSOCIATED(current_tile)) THEN
+      IF (is_age_class .AND. .NOT. ASSOCIATED(current_tile)) THEN
         current_tile => forest_pft_tile
         current_tile => current_tile%Get_next_sibling_tile()
         is_age_class = .FALSE.
-      ENDIF
+      END IF
 
-    ENDDO
+    END DO
 
     !>
     !> 5. make the passive matter transfer
@@ -322,20 +489,28 @@ CONTAINS
   !
   SUBROUTINE aggregate_alcc(tile, options)
 
+    dsl4jsb_Use_memory(FAGE_)
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER  :: iblk
-    !X if necessary: REAL(wp) :: dtime, steplen
+    INTEGER  :: iblk, ics, ice
+    CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
+    dsl4jsb_Def_memory(FAGE_)
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_alcc'
     ! -------------------------------------------------------------------------------------------------- !
 
     iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    !> Currently nothing to do
+    IF(tile%Is_process_active(FAGE_)) THEN
+      weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+      dsl4jsb_Get_memory(FAGE_)
+      dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

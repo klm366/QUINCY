@@ -1,21 +1,20 @@
+!> Definition of Hierarchical State Machine.
 !>
-!! @brief Definition of Hierarchical State Machine.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2015-06-01)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_hsm_class
 
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
-  USE mo_exception,          ONLY: message, message_text, finish, em_warn
+  USE mo_exception,          ONLY: message, message_text, finish, warning
   ! USE mo_util,      ONLY: int2string
 #ifdef _OPENMP
   USE omp_lib,      ONLY: omp_get_max_threads, omp_get_thread_num
@@ -121,9 +120,11 @@ MODULE mo_hsm_class
     TYPE(t_Action),  ALLOCATABLE :: actions(:)         !< List of possible actions (events)
     INTEGER,         ALLOCATABLE :: levels_to_lca(:)   !< Temporary storage
     INTEGER                      :: mode               !< HSM_full or HSM_simple
+    LOGICAL                      :: use_multiple_queues   !< Process messages in multiple OpenACC streams
   CONTAINS
     PROCEDURE :: Init_hsm
     PROCEDURE :: Set_mode          => Set_mode_hsm
+    PROCEDURE :: Set_multi_queues  => Set_multi_queues_hsm
     PROCEDURE :: Get_current       => Get_current_hsm
     PROCEDURE :: Goto              => Goto_state_hsm
     PROCEDURE :: Goto_next         => Goto_next_state_hsm
@@ -573,6 +574,7 @@ CONTAINS
     IF (PRESENT(debug)) l_debug = debug
 
     CALL self%Set_mode('full')
+    CALL self%Set_multi_queues(.TRUE.)
 
     ALLOCATE(self%current(nthreads))
     ALLOCATE(self%next   (nthreads))
@@ -614,6 +616,15 @@ CONTAINS
    END SELECT
 
   END SUBROUTINE Set_mode_hsm
+
+  SUBROUTINE Set_multi_queues_hsm(self, use_multiple_queues)
+
+    CLASS(t_Hsm),  INTENT(inout) :: self
+    LOGICAL,       INTENT(in) :: use_multiple_queues
+
+    self%use_multiple_queues = use_multiple_queues
+
+  END SUBROUTINE Set_multi_queues_hsm
 
   FUNCTION Get_current_hsm(this) RESULT(return_ptr)
 
@@ -864,7 +875,7 @@ CONTAINS
 !!$      &                                                  ' to '//TRIM(that%name))
 
     IF (ASSOCIATED(this%next(no_omp_thread)%p)) &
-      & CALL message(TRIM(routine), 'Transition to '//TRIM(this%next(no_omp_thread)%p%name)//' already in progress', level=em_warn)
+      & CALL warning(TRIM(routine), 'Transition to '//TRIM(this%next(no_omp_thread)%p%name)//' already in progress')
 
     this%next(no_omp_thread)%p => that
 
@@ -928,6 +939,7 @@ CONTAINS
   ! State machine engine
   !
   SUBROUTINE Process_message_hsm(this, msg, debug)
+    USE mo_jsb_control, ONLY: acc_stream
 
     CLASS(t_Hsm),     TARGET, INTENT(inout) :: this
 !!$    CLASS(t_Message), POINTER       :: msg
@@ -943,6 +955,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Process_message_hsm'
 
     INTEGER :: no_omp_thread
+    INTEGER :: original_stream, stream
+    INTEGER :: dummy
 
 #ifdef _OPENMP
     no_omp_thread = omp_get_thread_num() + 1
@@ -959,6 +973,15 @@ CONTAINS
 
     SELECT CASE (this%mode)
     CASE (HSM_simple)
+#ifdef _OPENACC
+      ! Prepare OpenACC streams for multi-stream processing
+      original_stream = acc_stream
+      IF (this%use_multiple_queues) acc_stream = 1
+#endif
+
+      IF (msg%action%name /= "INTEGRATE") THEN
+        CALL finish(TRIM(routine), "routines should start with INTEGRATE")
+      ENDIF
 
       ! Transitions are only taken to parent, next sibling or first child
       ALLOCATE(new_msg, source=msg)
@@ -967,6 +990,29 @@ CONTAINS
       DO WHILE (ASSOCIATED(state))
         ! Process message on current state
         IF (l_debug) CALL message(TRIM(routine), 'State is '//TRIM(state%name))
+
+#ifdef _OPENACC
+        IF (new_msg%action%name /= "INTEGRATE") THEN
+          ! Join all the streams before the first non-integration task
+          IF (this%use_multiple_queues .AND. original_stream /= -1) THEN
+            DO stream = original_stream+1, acc_stream
+              !$ACC WAIT(stream) ASYNC(original_stream)
+            ENDDO
+            ! Dummy kernel for the faster graph dependency resolution
+            !$ACC PARALLEL ASYNC(original_stream)
+            dummy = 1
+            !$ACC END PARALLEL
+            acc_stream = original_stream
+            original_stream = -1
+          ENDIF
+        ELSE
+          ! Use a separate stream for each INTEGRATE task
+          ! QUINCY model doesn't support different streams just yet
+          IF (this%use_multiple_queues) acc_stream = acc_stream + 1
+          !$ACC WAIT(original_stream) ASYNC(acc_stream)
+        ENDIF
+#endif
+
         tmp_msg => state%Process_message(new_msg)
         IF (ASSOCIATED(new_msg)) THEN
           DEALLOCATE(new_msg)
@@ -982,11 +1028,11 @@ CONTAINS
           ! CALL this%Process_entry_to_next()
           IF (this%next(no_omp_thread)%p%level == this%current(no_omp_thread)%p%level) THEN
             ! Goto to a sibling: exit current state
-            this%current(no_omp_thread)%p%visited = .FALSE.   ! Exit current on way up
+            this%current(no_omp_thread)%p%visited(no_omp_thread) = .FALSE.   ! Exit current on way up
           END IF
           this%current(no_omp_thread)%p => this%next(no_omp_thread)%p
           NULLIFY(this%next(no_omp_thread)%p)
-          this%current(no_omp_thread)%p%visited = .TRUE.  ! Enter new state
+          this%current(no_omp_thread)%p%visited(no_omp_thread) = .TRUE.  ! Enter new state
           IF (.NOT. ASSOCIATED(new_msg)) THEN ! Message processed
             EXIT
           ELSE
@@ -994,7 +1040,7 @@ CONTAINS
           END IF
         ELSE                                ! No state transition taken
           IF (ASSOCIATED(new_msg)) THEN
-            state%visited = .FALSE.         ! Exit current state
+            state%visited(no_omp_thread) = .FALSE.         ! Exit current state
             state => state%parent           ! Goto parent
           ELSE
             EXIT
@@ -1002,6 +1048,19 @@ CONTAINS
         END IF
       END DO
 
+#ifdef _OPENACC
+      IF (this%use_multiple_queues .AND. original_stream /= -1) THEN
+        DO stream = original_stream+1, acc_stream
+          !$ACC WAIT(stream) ASYNC(original_stream)
+        ENDDO
+        ! Dummy kernel for the faster graph dependency resolution
+        !$ACC PARALLEL ASYNC(original_stream)
+        dummy = 1
+        !$ACC END PARALLEL
+        acc_stream = original_stream
+        original_stream = -1
+      ENDIF
+#endif
 
     CASE (HSM_full)
 
@@ -1109,7 +1168,7 @@ CONTAINS
 
     SELECT CASE (this%mode)
     CASE (HSM_simple)
-      this%next(no_omp_thread)%p%visited = .TRUE.
+      this%next(no_omp_thread)%p%visited(no_omp_thread) = .TRUE.
     CASE (HSM_full)
       ALLOCATE(t_Message::entry_msg)
       entry_msg%action = this%Get_action('ENTER')

@@ -1,15 +1,21 @@
+!> Contains basic definitions for variable class
 !>
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_jsb_var_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,              ONLY: wp, dp
   USE mo_exception,         ONLY: finish, message
-  USE mo_hermetic,          ONLY: t_hermetic
   USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN
   USE mo_jsb_subset,        ONLY: t_subset, ON_DOMAIN, ON_CHUNK
 
@@ -45,8 +51,6 @@ MODULE mo_jsb_var_class
     CHARACTER(len=VARNAME_LEN)    :: full_name                 ! Full name of variable in varlist, including prefix and suffix
     CHARACTER(len=:), ALLOCATABLE :: unit
     INTEGER                       :: type                      ! REAL1D / REAL2D / REAL3D
-    INTEGER                       :: len_dim3 = -1
-      !< bookkeeping variable for quick access of the size of the third dimension (only /= -1 if there is one)
     INTEGER                       :: subset_type               ! ON_DOMAIN / ON_CHUNK
     CHARACTER(len=:), ALLOCATABLE :: element_name              !
     CHARACTER(len=:), ALLOCATABLE :: element_shortname         ! Short name of element
@@ -54,9 +58,8 @@ MODULE mo_jsb_var_class
     INTEGER                       :: owner_model_id            !
     INTEGER                       :: owner_proc_id = -1        !
     INTEGER, ALLOCATABLE          :: owner_tile_path(:)        !
-    INTEGER, ALLOCATABLE          :: child_idx(:)              ! Position-numbers of same variable for for the child tiles
-                                                               ! (according to mem%vars(:)).
-    !! TYPE(t_subset), POINTER     :: sub  <= not needed; because it is available via: sub = var%Get_subset() !!
+    INTEGER, ALLOCATABLE          :: child_idx(:)
+      !< Position-numbers of the same var (as this var) on the children of the current tile (i.e. within mem%vars(:) of that child).
     REAL(dp)                      :: missval
     LOGICAL                       :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
                                                                ! of those where variable doesn't exist
@@ -67,19 +70,7 @@ MODULE mo_jsb_var_class
   CONTAINS
     PROCEDURE :: Get_subset         => t_jsb_var_get_subset         ! get chunk and block information for the var and thread
     PROCEDURE :: force_finalization => t_jsb_var_force_finalization ! finalization after operator overload avoiding memory leaks
-    PROCEDURE(associate_pointers_iface), DEFERRED :: Associate_pointers
   END TYPE t_jsb_var
-
-  ABSTRACT INTERFACE
-    SUBROUTINE Associate_pointers_iface(this,ic_start,ic_end,iblk_start,iblk_end)
-      IMPORT t_jsb_var
-      CLASS(t_jsb_var), INTENT(inout), TARGET :: this
-      INTEGER,          INTENT(in)    :: ic_start
-      INTEGER,          INTENT(in)    :: ic_end
-      INTEGER,          INTENT(in)    :: iblk_start
-      INTEGER,          INTENT(in)    :: iblk_end
-    END SUBROUTINE
-  END INTERFACE
 
 !#pragma GCC diagnostic push
 !#pragma GCC diagnostic ignored "-Wsurprising"
@@ -89,15 +80,7 @@ MODULE mo_jsb_var_class
   !================================================================================================================================
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real1d
     REAL(wp), POINTER &
-#ifdef __ICON__
       :: ptr(:) => NULL()
-#else
-      ! 1d stream elements are not supported with ECHAM
-      :: ptr(:,:) => NULL()
-#endif
-
-  CONTAINS
-    PROCEDURE               :: Associate_pointers => t_jsb_var_real1d_associate_pointers
   END TYPE t_jsb_var_real1d
 
   !================================================================================================================================
@@ -108,10 +91,8 @@ MODULE mo_jsb_var_class
 #ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
      , CONTIGUOUS &
 #endif
-      :: ptr(:,:) => NULL(), &    ! associated with ptr2d(:,:)
-      &  ptrm1(:) => NULL()       ! points to ptr(ics:ice,iblk) updated each timestep with Associate_pointers
+      :: ptr(:,:) => NULL()    ! associated with ptr2d(:,:)
   CONTAINS
-    PROCEDURE               :: Associate_pointers => t_jsb_var_real2d_associate_pointers
     !! operator overload
     ! +
     PROCEDURE                 :: Add_real2d_and_scalar            !< var_real2d = var_real2d + scalar     | ON_CHUNK & ON_DOMAIN
@@ -172,9 +153,7 @@ MODULE mo_jsb_var_class
   !================================================================================================================================
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real3d
     REAL(wp), POINTER :: ptr(:,:,:) => NULL()     ! associated with ptr3d(:,:,:)
-    REAL(wp), POINTER :: ptrm1(:,:) => NULL()     ! points to ptr(ics:ice,:,iblk) updated each timestep with Associate_pointers
   CONTAINS
-    PROCEDURE :: Associate_pointers => t_jsb_var_real3d_associate_pointers
     !! operator overload
     ! +
     PROCEDURE                 :: Add_real3d_and_scalar            !< var_real3d = var_real3d + scalar     | ON_CHUNK & ON_DOMAIN
@@ -260,60 +239,6 @@ CONTAINS
     ! print*,'GGG ',subset%type,subset%ics,subset%ice,subset%iblk
 
   END FUNCTION t_jsb_var_get_subset
-
-  !================================================================================================================================
-  ! associate "dimension-reduced" pointers ptrm1
-  ! var_real2d & var_real3d
-  ! called for each timestep in the mo_jsb_interface "CALL model%Associate_var_pointers(ics, ice, iblk, iblk)"
-  !================================================================================================================================
-  SUBROUTINE t_jsb_var_real1d_associate_pointers(this,ic_start,ic_end,iblk_start,iblk_end)
-
-    CLASS(t_jsb_var_real1d), INTENT(inout), TARGET :: this
-    INTEGER,                 INTENT(in)    :: ic_start
-    INTEGER,                 INTENT(in)    :: ic_end
-    INTEGER,                 INTENT(in)    :: iblk_start
-    INTEGER,                 INTENT(in)    :: iblk_end
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_var_real1d_associate_pointers'
-
-    ! Do nothing for 1d variables
-
-
-  END SUBROUTINE t_jsb_var_real1d_associate_pointers
-
-  SUBROUTINE t_jsb_var_real2d_associate_pointers(this,ic_start,ic_end,iblk_start,iblk_end)
-
-    CLASS(t_jsb_var_real2d), INTENT(inout), TARGET :: this
-    INTEGER,                 INTENT(in)    :: ic_start
-    INTEGER,                 INTENT(in)    :: ic_end
-    INTEGER,                 INTENT(in)    :: iblk_start
-    INTEGER,                 INTENT(in)    :: iblk_end
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_var_real2d_associate_pointers'
-
-    IF (ASSOCIATED(this%ptrm1)) NULLIFY(this%ptrm1)
-    IF (iblk_start == iblk_end) THEN
-      this%ptrm1 => this%ptr2d(ic_start:ic_end, iblk_start)
-    END IF
-
-  END SUBROUTINE t_jsb_var_real2d_associate_pointers
-
-  SUBROUTINE t_jsb_var_real3d_associate_pointers(this,ic_start,ic_end,iblk_start,iblk_end)
-
-    CLASS(t_jsb_var_real3d), INTENT(inout), TARGET :: this
-    INTEGER,                 INTENT(in)    :: ic_start
-    INTEGER,                 INTENT(in)    :: ic_end
-    INTEGER,                 INTENT(in)    :: iblk_start
-    INTEGER,                 INTENT(in)    :: iblk_end
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_var_real3d_associate_pointers'
-
-    IF (ASSOCIATED(this%ptrm1)) NULLIFY(this%ptrm1)
-    IF (iblk_start == iblk_end) THEN
-      this%ptrm1 => this%ptr3d(ic_start:ic_end, :, iblk_start)
-    END IF
-
-  END SUBROUTINE t_jsb_var_real3d_associate_pointers
 
   !================================================================================================================================
   ! force finalization

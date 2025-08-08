@@ -1,19 +1,16 @@
-!> Summary: fage (forest age) utilities
+!> fage (forest age) utilities
 !>
-!>### Contains utilities for the fage (forest age) proc
+!> ICON-Land
 !>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
 !>
-!> Copyright (c) 2017 and 2022 Julia Nabel
-!>
-!>#### Revision History
-!> - First version    by Julia Nabel (2017-11-21)
-!> - Re-integration   by Julia Nabel (2022-10-05)
-!>
-!>#### License
-!>
-!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
-!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>#### Contains utilities for the fage (forest age) proc
 !>
 MODULE mo_fage_util
 #ifndef __NO_JSBACH__
@@ -55,12 +52,12 @@ CONTAINS
     fract_sum = SUM(fract_per_age)
     n = SIZE(fract_per_age)
 
-    IF(fract_sum >= 0._wp) THEN
+    IF (fract_sum >= 0._wp) THEN
       mean_age = 0._wp
       DO i = 1,n
           mean_age  = mean_age + i * (fract_per_age (i) /  fract_sum)
       END DO
-    ENDIF
+    END IF
   END FUNCTION get_mean_age_1d
 
   ! ====================================================================================================== !
