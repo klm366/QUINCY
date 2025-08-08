@@ -221,16 +221,16 @@ CONTAINS
       ! If the variable with the tile name exists, use it.
       fullname = TRIM(fullname)//'_'//TRIM(tilename)
       read_from_file = .TRUE.
-    ELSE IF (input_file%Has_var(TRIM(fullname))) THEN
-      ! Alternatively use the standard variable for this tile if it exists.
-      read_from_file = .TRUE.
     ELSE IF (PRESENT(fallback)) THEN
-      ! Set datafield to the fallback value
+      ! Set datafield to the fallback value if provided
       datafield(:,:) = fallback
       read_from_file = .FALSE.
       ! TODO: write this only for debug output
       CALL message(routine, 'Set '//TRIM(fullname)//' field for tile '// TRIM(tilename) // &
         & ' to fallback value '//TRIM(real2string(fallback)))
+    ELSE IF (input_file%Has_var(TRIM(fullname))) THEN
+      ! Use the standard variable for this tile if it exists and no fallback value is provided
+      read_from_file = .TRUE.
     ELSE
       ! If the fallback value and field variable do not exist, complain
       CALL finish(routine, 'Variable '//TRIM(fullname)//' not found in input file '//TRIM(input_file%filename) &

@@ -436,6 +436,7 @@ CONTAINS
 
     INTEGER :: isoil                            !< Looping index for soil layers
     LOGICAL :: l_organic                        !< T: read mineral soil properties
+    LOGICAL :: l_dpr4ponds                      !< T: set LEX depression tiles to 100% ponds
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_read_init_vars'
 
@@ -451,6 +452,7 @@ CONTAINS
     IF (tile%Is_process_active(LEX_)) THEN
       ! Get lateral exchange config
       dsl4jsb_Get_config(LEX_)
+      l_dpr4ponds = dsl4jsb_Config(LEX_)%l_dpr4ponds
     END IF
 
     grid   => Get_grid(model%grid_id)
@@ -570,12 +572,14 @@ CONTAINS
           &  llimit=0._wp, fallback=0._wp)
         CALL read_bc_data(input_file, 'char_slope', tile%name, .FALSE., hydro_init_vars%char_slope, &
           &  llimit=0._wp, fallback=-9999._wp)
-        CALL read_bc_data(input_file, 'surf_depr_fract', tile%name, .FALSE., hydro_init_vars%fract_pond_max, &
-          &  llimit=0._wp, fallback=-9999._wp)
-        CALL read_bc_data(input_file, 'surf_depr_depth', tile%name, .FALSE., hydro_init_vars%depth_pond_max, &
-          &  ulimit=0._wp, fallback=-9999._wp)
+        ! Reset LEX l_dpr4ponds switch in case that tile specific depression data is provided
+        IF (input_file%Has_var('surf_depr_fract_'//TRIM(tile%name)) .AND. &
+          & input_file%Has_var('surf_depr_depth_'//TRIM(tile%name))) THEN
+          l_dpr4ponds = .FALSE.
+        END IF
+      END IF
 
-      ELSE IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
+      IF (dsl4jsb_Config(HYDRO_)%l_ponds .OR. tile%Is_process_active(LEX_)) THEN
         ! Use depression area fraction as maximum pond fraction
         CALL read_bc_data(input_file, 'surf_depr_fract', tile%name, .FALSE., hydro_init_vars%fract_pond_max, llimit=0._wp)
         ! Use depression depth as maximum pond depth (Attention: Values are negative!)
@@ -1100,13 +1104,8 @@ CONTAINS
 
     !>     - Maximum depth and extent of surface water ponds
     IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
-      IF (tile%Is_process_active(LEX_)) THEN
-        ! If data was read in either tile specific or based on avg value ...
-        WHERE (hydro_init_vars%fract_pond_max(:,:) > 0.0_wp)
-          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
-          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:) * (-1._wp)
-        ! ... else init var was set to -9999.9
-        ELSEWHERE (dsl4jsb_var_ptr(HYDRO_,h_surf) < 0.0_wp)
+      IF (tile%Is_process_active(LEX_) .AND. dsl4jsb_Config(LEX_)%l_dpr4ponds) THEN
+        WHERE (dsl4jsb_var_ptr(HYDRO_,h_surf) < 0.0_wp)
           ! Maximum pond fraction is set to 1 for depressions and 0 for non-depressions.
           !   Note, surface elevation is given as negative value for depressions, but represent
           !   a storage on top of the soil --> needs to be converted to positive values!
@@ -1116,19 +1115,17 @@ CONTAINS
           dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0.0_wp
           dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0.0_wp
         END WHERE
+      ELSE IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
+        ! Surface depression depth is given as negative value in the data, but represents
+        ! a storage on top of the soil and thus needs to be converted to positive values.
+        dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
+        dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:) * (-1._wp)
       ELSE
-        IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
-          ! Surface depression depth is given as negative value in the data, but represents
-          ! a storage on top of the soil and thus needs to be converted to positive values.
-          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
-          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = hydro_init_vars%depth_pond_max(:,:) * (-1._wp)
-        ELSE
-          ! Note, that ponds are implicitely disabled by setting the maximum allowed pond fraction
-          !   and depth to zero. Thus, we can avoid a large number of l_ponds conditions for surface
-          !   and soil hydrology processes.
-          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0._wp
-          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0._wp
-        END IF
+        ! Note, that ponds are implicitely disabled by setting the maximum allowed pond fraction
+        !   and depth to zero. Thus, we can avoid a large number of l_ponds conditions for surface
+        !   and soil hydrology processes.
+        dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0._wp
+        dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0._wp
       END IF
     END IF
 
