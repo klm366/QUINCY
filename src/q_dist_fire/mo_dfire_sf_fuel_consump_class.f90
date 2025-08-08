@@ -27,14 +27,18 @@ MODULE mo_dfire_sf_fuel_consump_class
   USE mo_exception,           ONLY: message, finish
 
   USE mo_dfire_constants,     ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix, &
-      t_sf_fuel_dead_fuel_grass_leaf_ix, &
-      t_sf_fuel_dead_fuel_grass_sap_ix, t_sf_fuel_dead_fuel_grass_labile_ix, &
-      t_sf_fuel_dead_fuel_grass_reserve_ix, t_sf_fuel_dead_fuel_grass_fruit_ix
+                                      t_sf_fuel_dead_fuel_grass_leaf_ix, &
+                                      t_sf_fuel_dead_fuel_grass_sap_ix, t_sf_fuel_dead_fuel_grass_labile_ix, &
+                                      t_sf_fuel_dead_fuel_grass_reserve_ix, t_sf_fuel_dead_fuel_grass_fruit_ix, &
+                                      t_sf_fuel_dead_fuel_soluable_ix, &
+                                      t_sf_fuel_dead_fuel_dom_ix, t_sf_fuel_dead_fuel_dom_assoc_ix, &
+                                      t_sf_fuel_dead_fuel_res_ix, t_sf_fuel_dead_fuel_res_assoc_ix
   USE mo_dfire_constants,     ONLY: t_sf_fuel_live_fuel_leaf_ix, t_sf_fuel_live_fuel_sap_wood_ix, &
-      t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
-      t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix
+                                      t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
+                                      t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix
   USE mo_lnd_bgcm_idx,        ONLY: ix_woody_litter, ix_sap_wood, ix_heart_wood, ix_labile, ix_reserve, &
-      ix_fruit, ix_polymeric_litter, ix_leaf
+                                      ix_fruit, ix_polymeric_litter, ix_leaf, ix_soluable_litter, &
+                                      ix_dom_assoc, ix_dom, ix_residue, ix_residue_assoc
 
   USE mo_lnd_bgcm_idx,        ONLY: ixC
   USE mo_dfire_sf_adaptor,    ONLY: sf_convert_units
@@ -46,8 +50,8 @@ MODULE mo_dfire_sf_fuel_consump_class
 
   PRIVATE
   PUBLIC :: sf_calc_dead_fuel_consumption, sf_calc_live_fuel_consumption, &
-      sf_calc_dead_fuel_consumption_populate_elements, &
-      sf_calc_live_fuel_consumption_populate_elements
+            sf_calc_dead_fuel_consumption_populate_elements, &
+            sf_calc_live_fuel_consumption_populate_elements
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_sf_fuel_consump_class'
 
@@ -126,9 +130,9 @@ CONTAINS
   !> Apply same C ratio from dead fuel consumption to sb_pool to the remaining elements
   !>
   FUNCTION sf_calc_dead_fuel_consumption_populate_elements(nc, ndeadpools, &
-      nEMelems, &
-      veg_pool_mt, sb_pool_mt, &
-      fc_dead, mask) RESULT (fc_dead_els)
+                  nEMelems, &
+                  veg_pool_mt, sb_pool_mt, &
+                  fc_dead, mask) RESULT (fc_dead_els)
 
     INTEGER, INTENT(in) :: nc, ndeadpools, nEMelems
     REAL(wp), INTENT(in) :: veg_pool_mt(:,:,:)        !< [molX/m2] (#pool, #elements, #nc)
@@ -154,7 +158,7 @@ CONTAINS
       ! woody litter
       IF (sb_pool_mt(ix_woody_litter,ixC,ic) > 0._wp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_woody_ix,:) = sb_pool_mt(ix_woody_litter,:,ic) * &
-            fc_dead(ic,t_sf_fuel_dead_fuel_woody_ix) / sb_pool_mt(ix_woody_litter,ixC,ic)
+                fc_dead(ic,t_sf_fuel_dead_fuel_woody_ix) / sb_pool_mt(ix_woody_litter,ixC,ic)
       ENDIF
 
       ! polymeric litter
@@ -163,34 +167,64 @@ CONTAINS
             fc_dead(ic,t_sf_fuel_dead_fuel_polymeric_ix) / sb_pool_mt(ix_polymeric_litter,ixC,ic)
       END IF
 
+      ! soluable litter
+      IF (sb_pool_mt(ix_soluable_litter,ixC,ic) > 0._wp) THEN
+        fc_dead_els(ic,t_sf_fuel_dead_fuel_soluable_ix,:) = sb_pool_mt(ix_soluable_litter,:,ic) * &
+            fc_dead(ic,t_sf_fuel_dead_fuel_soluable_ix) / sb_pool_mt(ix_soluable_litter,ixC,ic)
+      END IF
+
+      ! residue litter
+      IF (sb_pool_mt(ix_residue,ixC,ic) > 0._wp) THEN
+        fc_dead_els(ic,t_sf_fuel_dead_fuel_res_ix,:) = sb_pool_mt(ix_residue,:,ic) * &
+            fc_dead(ic,t_sf_fuel_dead_fuel_res_ix) / sb_pool_mt(ix_residue,ixC,ic)
+      END IF
+
+      ! residue_assoc litter
+      IF (sb_pool_mt(ix_residue_assoc,ixC,ic) > 0._wp) THEN
+        fc_dead_els(ic,t_sf_fuel_dead_fuel_res_assoc_ix,:) = sb_pool_mt(ix_residue_assoc,:,ic) * &
+            fc_dead(ic,t_sf_fuel_dead_fuel_res_assoc_ix) / sb_pool_mt(ix_residue_assoc,ixC,ic)
+      END IF
+
+      ! dom litter
+      IF (sb_pool_mt(ix_dom,ixC,ic) > 0._wp) THEN
+        fc_dead_els(ic,t_sf_fuel_dead_fuel_dom_ix,:) = sb_pool_mt(ix_dom,:,ic) * &
+            fc_dead(ic,t_sf_fuel_dead_fuel_dom_ix) / sb_pool_mt(ix_dom,ixC,ic)
+      END IF
+
+      ! dom_assoc litter
+      IF (sb_pool_mt(ix_dom_assoc,ixC,ic) > 0._wp) THEN
+        fc_dead_els(ic,t_sf_fuel_dead_fuel_dom_assoc_ix,:) = sb_pool_mt(ix_dom_assoc,:,ic) * &
+            fc_dead(ic,t_sf_fuel_dead_fuel_dom_assoc_ix) / sb_pool_mt(ix_dom_assoc,ixC,ic)
+      END IF
+
       ! leaf
       IF (veg_pool_mt(ix_leaf,ixC,ic) > 0._wp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_grass_leaf_ix,:) = veg_pool_mt(ix_leaf,:,ic) * &
-            fc_dead(ic,t_sf_fuel_dead_fuel_grass_leaf_ix) / veg_pool_mt(ix_leaf,ixC,ic)
+          fc_dead(ic,t_sf_fuel_dead_fuel_grass_leaf_ix) / veg_pool_mt(ix_leaf,ixC,ic)
       ENDIF
 
       !< sap wood
       IF (veg_pool_mt(ix_sap_wood,ixC,ic) > 0._wp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_grass_sap_ix,:) = veg_pool_mt(ix_sap_wood,:,ic) * &
-            fc_dead(ic,t_sf_fuel_dead_fuel_grass_sap_ix) / veg_pool_mt(ix_sap_wood,ixC,ic)
+          fc_dead(ic,t_sf_fuel_dead_fuel_grass_sap_ix) / veg_pool_mt(ix_sap_wood,ixC,ic)
       ENDIF
 
       !< labile
       IF (veg_pool_mt(ix_labile,ixC,ic) > 0._wp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_grass_labile_ix,:) = veg_pool_mt(ix_labile,:,ic) * &
-            fc_dead(ic,t_sf_fuel_dead_fuel_grass_labile_ix) / veg_pool_mt(ix_labile,ixC,ic)
+          fc_dead(ic,t_sf_fuel_dead_fuel_grass_labile_ix) / veg_pool_mt(ix_labile,ixC,ic)
       ENDIF
 
       !< reserve
       IF (veg_pool_mt(ix_reserve,ixC,ic) > 0._wp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_grass_reserve_ix,:) = veg_pool_mt(ix_reserve,:,ic) * &
-            fc_dead(ic,t_sf_fuel_dead_fuel_grass_reserve_ix) / veg_pool_mt(ix_reserve,ixC,ic)
+          fc_dead(ic,t_sf_fuel_dead_fuel_grass_reserve_ix) / veg_pool_mt(ix_reserve,ixC,ic)
       ENDIF
 
       !< fruit
       IF (veg_pool_mt(ix_fruit,ixC,ic) > 0._wp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_grass_fruit_ix,:) = veg_pool_mt(ix_fruit,:,ic) * &
-            fc_dead(ic,t_sf_fuel_dead_fuel_grass_fruit_ix) / veg_pool_mt(ix_fruit,ixC,ic)
+          fc_dead(ic,t_sf_fuel_dead_fuel_grass_fruit_ix) / veg_pool_mt(ix_fruit,ixC,ic)
       ENDIF
     END DO
 
@@ -226,32 +260,32 @@ CONTAINS
       !< leaf
       IF (veg_pool_mt(ix_leaf,ixC,ic) > 0._wp) THEN
         fc_live_els(ic,t_sf_fuel_live_fuel_leaf_ix,:) = veg_pool_mt(ix_leaf,:,ic) * &
-            fc_live(ic,t_sf_fuel_live_fuel_leaf_ix) / veg_pool_mt(ix_leaf,ixC,ic)
+          fc_live(ic,t_sf_fuel_live_fuel_leaf_ix) / veg_pool_mt(ix_leaf,ixC,ic)
       ENDIF
       ! sap wood
       IF (veg_pool_mt(ix_sap_wood,ixC,ic) > 0._wp) THEN
         fc_live_els(ic,t_sf_fuel_live_fuel_sap_wood_ix,:) = veg_pool_mt(ix_sap_wood,:,ic) * &
-            fc_live(ic,t_sf_fuel_live_fuel_sap_wood_ix) / veg_pool_mt(ix_sap_wood,ixC,ic)
+          fc_live(ic,t_sf_fuel_live_fuel_sap_wood_ix) / veg_pool_mt(ix_sap_wood,ixC,ic)
       ENDIF
       ! heart wood
       IF (veg_pool_mt(ix_heart_wood,ixC,ic) > 0._wp) THEN
         fc_live_els(ic,t_sf_fuel_live_fuel_heart_wood_ix,:) = veg_pool_mt(ix_heart_wood,:,ic) * &
-            fc_live(ic,t_sf_fuel_live_fuel_heart_wood_ix) / veg_pool_mt(ix_heart_wood,ixC,ic)
+          fc_live(ic,t_sf_fuel_live_fuel_heart_wood_ix) / veg_pool_mt(ix_heart_wood,ixC,ic)
       ENDIF
       ! labile
       IF (veg_pool_mt(ix_labile,ixC,ic) > 0._wp) THEN
         fc_live_els(ic,t_sf_fuel_live_fuel_labile_ix,:) = veg_pool_mt(ix_labile,:,ic) * &
-            fc_live(ic,t_sf_fuel_live_fuel_labile_ix) / veg_pool_mt(ix_labile,ixC,ic)
+          fc_live(ic,t_sf_fuel_live_fuel_labile_ix) / veg_pool_mt(ix_labile,ixC,ic)
       ENDIF
       ! reserve
       IF (veg_pool_mt(ix_reserve,ixC,ic) > 0._wp) THEN
         fc_live_els(ic,t_sf_fuel_live_fuel_reserve_ix,:) = veg_pool_mt(ix_reserve,:,ic) * &
-            fc_live(ic,t_sf_fuel_live_fuel_reserve_ix) / veg_pool_mt(ix_reserve,ixC,ic)
+          fc_live(ic,t_sf_fuel_live_fuel_reserve_ix) / veg_pool_mt(ix_reserve,ixC,ic)
       ENDIF
       ! fruit
       IF (veg_pool_mt(ix_fruit,ixC,ic) > 0._wp) THEN
         fc_live_els(ic,t_sf_fuel_live_fuel_fruit_ix,:) = veg_pool_mt(ix_fruit,:,ic) * &
-            fc_live(ic,t_sf_fuel_live_fuel_fruit_ix) / veg_pool_mt(ix_fruit,ixC,ic)
+          fc_live(ic,t_sf_fuel_live_fuel_fruit_ix) / veg_pool_mt(ix_fruit,ixC,ic)
       ENDIF
 
     END DO

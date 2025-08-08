@@ -388,7 +388,7 @@ CONTAINS
 
       prob_mort = calc_prob_mortality(nc, df_sf_fc_spread_nr, &
                                       lctlib%q_crown_length, lctlib%q_crown_damage_p, lctlib%q_crown_damage_r_ck, &
-                                      lctlib%q_F_scorch_height, & 
+                                      lctlib%q_scorch_height_f, & 
                                       lctlib%q_bark_thickness_par1, lctlib%q_bark_thickness_par2, &
                                       height * dsl4jsb_Config(DFIRE_)%tree_height_factor, & ! Tree characteristics
                                       dbh * dsl4jsb_Config(DFIRE_)%tree_diameter_factor, &
@@ -420,7 +420,7 @@ CONTAINS
       !< Diagnostics
       r_ck = lctlib%q_crown_damage_r_ck
       ck_p = lctlib%q_crown_damage_p
-      F_scorch_height = lctlib%q_f_scorch_height
+      F_scorch_height = lctlib%q_scorch_height_f
       tree_height = height * dsl4jsb_Config(DFIRE_)%tree_height_factor
 
       If (dsl4jsb_Config(DFIRE_)%flag_has_prob_mort_feedback) THEN
@@ -473,6 +473,12 @@ CONTAINS
                                     emissions_live_spc, & ! [molX/m2]
                                     emissions_live_el, & ! out [molX/m2]
                                     mask=is_fire_intense_enough)
+
+    !< Cap emissions to FC due to excess of matter in emissions.
+    !< This avoids negative pools until it is solved.
+    CALL sf_patch_emissions( fc_dead_el,  emissions_dead_el, mask=is_fire_intense_enough)
+    CALL sf_patch_emissions( fc_live_el,  emissions_live_el, mask=is_fire_intense_enough)
+
 
     !< Is there any C, N and/or P left after Emissions? Calculate residue
     CALL sf_calc_residue(fc_dead_el, & ! in [molX/m2]
@@ -530,9 +536,38 @@ CONTAINS
     overflow_els = SUM(mass_imbalance_emitted_dead_el, DIM=2) + & !< 2 = fuel pool index
                         SUM(mass_imbalance_emitted_live_el, DIM=2)
 
-!    WRITE(*,*) "update_dfire_post:: area, tile_fract=", area(9), tile_fract(9)
-
   END SUBROUTINE update_dfire_sf_post
+
+
+  ! ======================================================================================================= !
+  !>
+  !> This is temporary patch on Emissions until further research is done on this matter.
+  !> Currently, there is an excess of emissions due to the given Emissions factors.
+  !> This results as emitted N is > than its fuel consumption.
+  !> For instance, mass balance is not preserved.
+  !>
+  !> Current patch caps emissions to its max potential value, defined in Fuel consumption.
+  !> However, it breaks CN ratio, as well as other potential issues.
+  !>
+  SUBROUTINE sf_patch_emissions(fc, emissions, mask)
+    REAL(wp), INTENT(in) :: fc(:,:,:)           ! Fuel consumption (nc,pools,elements)
+    REAL(wp), INTENT(inout) :: emissions(:,:,:) ! Emissions (nc,pools,elements)
+    LOGICAL, INTENT(in) :: mask(:)              !
+
+    INTEGER :: ic, ip, iel
+
+    DO iel=1, SIZE(emissions, DIM=3)
+      DO ip=1, SIZE(emissions, DIM=2)
+        DO ic=1, SIZE( emissions, DIM=1)
+          IF ( mask(ic) .AND. fc(ic,ip,iel) < emissions(ic,ip,iel)) THEN !< Mass imabalance found
+            !            WRITE(*,*) "spitfire.f90:: calc:: capping emissions, ic, ip, iel, old, new=", &
+            !            ic, ip, iel, emissions(ic,ip,iel), fc(ic,ip,iel)
+            emissions(ic,ip,iel) = fc(ic,ip,iel)
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+  END SUBROUTINE sf_patch_emissions
 
 
   ! ======================================================================================================= !

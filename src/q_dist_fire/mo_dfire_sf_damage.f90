@@ -125,9 +125,9 @@ CONTAINS
   !> (Tree only)
   !>
   FUNCTION calc_prob_mortality(nc, nfuels, lctlib_crown_length, lctlib_r_ck, lctlib_ck_p, &
-      lctlib_F_scorch_height, lctlib_par1, lctlib_par2, &
-      height, dbh, i_surface, dead_fuel, frac_consump, &
-      mask_opt) RESULT (prob_mort)
+                              lctlib_F_scorch_height, lctlib_par1, lctlib_par2, &
+                              height, dbh, i_surface, dead_fuel, frac_consump, &
+                              mask_opt) RESULT (prob_mort)
     INTEGER, INTENT(in)  :: nc
     INTEGER, INTENT(in)  :: nfuels                          !< Dead fuel classes
     REAL(wp), INTENT(in) :: lctlib_crown_length             !< Crown length of woody PFT [m]
@@ -154,16 +154,13 @@ CONTAINS
     prob_mort = t_sf_prob_mort(nc) !< Initialize outputs to 0
 
     DO inc = 1, nc
-
       IF (mask(inc)) THEN
         !< probability of mortality
         prob_mort % scorch_height(inc) = lctlib_F_scorch_height * (i_surface(inc) ** 0.667) ! (Eq. 16 from Thonicke et al. (2010))
         prob_mort % crown_length(inc) = lctlib_crown_length * height(inc)
-        !WRITE(*,*) "calc_prob_mortality:: inc, height, crown lenght =", inc, height(inc), &
-        !                        prob_mort % crown_length(inc)
         prob_mort % prop_ck(inc) = calc_prop_ck(prob_mort % scorch_height(inc), &
-            height(inc), &
-            prob_mort % crown_length(inc))
+                                                   height(inc), &
+                                                   prob_mort % crown_length(inc))
 
         !< Probability of mortality as a result of the crown scorching (eq. 22 from Thonicke et al. (2010))
         prob_mort % pm_ck(inc) = lctlib_r_ck * (prob_mort % prop_ck(inc) ** lctlib_ck_p)
@@ -178,7 +175,7 @@ CONTAINS
 
         !< Eq. 18 from Thonicke et al. (2010)
         prob_mort%pm_fire(:) = prob_mort % pm_tau(inc) + prob_mort % pm_ck(inc) - &
-            prob_mort % pm_tau(inc) * prob_mort % pm_ck(inc)
+                                    prob_mort % pm_tau(inc) * prob_mort % pm_ck(inc)
         prob_mort%r_ck = lctlib_r_ck
         prob_mort%ck_p = lctlib_ck_p
         prob_mort%F_scorch_height = lctlib_F_scorch_height

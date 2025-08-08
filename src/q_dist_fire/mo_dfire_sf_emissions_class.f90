@@ -37,7 +37,14 @@ MODULE mo_dfire_sf_emissions_class
   USE mo_lnd_bgcm_idx, ONLY: ixC, ixC13, ixC14, ixN, ixN15, ixP
   USE mo_lnd_bgcm_idx, ONLY: ix_woody_litter !< sb_pool
   USE mo_lnd_bgcm_idx, ONLY: ix_fruit, ix_leaf, ix_reserve, ix_labile, ix_sap_wood, ix_heart_wood !< veg_pool
-  USE mo_dfire_constants, ONLY: t_sf_fuel_dead_fuel_woody_ix !< dead fuel (litter)
+  USE mo_dfire_constants, ONLY: t_sf_fuel_dead_fuel_woody_ix, & !< dead fuel (litter)
+                                  t_sf_fuel_dead_fuel_polymeric_ix, &
+                                  t_sf_fuel_dead_fuel_soluable_ix, &
+                                  t_sf_fuel_dead_fuel_res_ix, &
+                                  t_sf_fuel_dead_fuel_res_assoc_ix, &
+                                  t_sf_fuel_dead_fuel_dom_ix, &
+                                  t_sf_fuel_dead_fuel_dom_assoc_ix
+
   USE mo_dfire_constants, ONLY: t_sf_fuel_dead_fuel_grass_leaf_ix, & !< dead fuel (livegrass)
                                   t_sf_fuel_dead_fuel_grass_sap_ix, &
                                   t_sf_fuel_dead_fuel_grass_labile_ix, &
@@ -144,31 +151,42 @@ CONTAINS
     IF (is_type_of_fuel == 1) THEN !< 1 = IS_DEAD_FUEL
       !< Populate emissions_el isotopes at the same ratio as its nutrient
       CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_woody_ix,:), &
-          emissions_el(:,t_sf_fuel_dead_fuel_woody_ix,:), mask_opt)
+                                                  emissions_el(:,t_sf_fuel_dead_fuel_woody_ix,:), mask_opt)
       CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_grass_fruit_ix,:), &
-          emissions_el(:,t_sf_fuel_dead_fuel_grass_fruit_ix,:), mask_opt)
+                                                  emissions_el(:,t_sf_fuel_dead_fuel_grass_fruit_ix,:), mask_opt)
       CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_grass_leaf_ix,:), &
-          emissions_el(:,t_sf_fuel_dead_fuel_grass_leaf_ix,:), mask_opt)
+                                                  emissions_el(:,t_sf_fuel_dead_fuel_grass_leaf_ix,:), mask_opt)
       CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_grass_labile_ix,:), &
-          emissions_el(:,t_sf_fuel_dead_fuel_grass_labile_ix,:), mask_opt)
+                                                  emissions_el(:,t_sf_fuel_dead_fuel_grass_labile_ix,:), mask_opt)
       CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_grass_reserve_ix,:), &
-          emissions_el(:,t_sf_fuel_dead_fuel_grass_reserve_ix,:), mask_opt)
+                                                  emissions_el(:,t_sf_fuel_dead_fuel_grass_reserve_ix,:), mask_opt)
       CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_grass_sap_ix,:), &
-          emissions_el(:,t_sf_fuel_dead_fuel_grass_sap_ix,:), mask_opt)
-
+                                                  emissions_el(:,t_sf_fuel_dead_fuel_grass_sap_ix,:), mask_opt)
+      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_polymeric_ix,:), &
+                                                  emissions_el(:,t_sf_fuel_dead_fuel_polymeric_ix,:), mask_opt)
+      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_soluable_ix,:), &
+                                                  emissions_el(:,t_sf_fuel_dead_fuel_soluable_ix,:), mask_opt)
+      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_res_ix,:), &
+                                                  emissions_el(:,t_sf_fuel_dead_fuel_res_ix,:), mask_opt)
+      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_res_assoc_ix,:), &
+                                                  emissions_el(:,t_sf_fuel_dead_fuel_res_assoc_ix,:), mask_opt)
+      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_dom_ix,:), &
+                                                  emissions_el(:,t_sf_fuel_dead_fuel_dom_ix,:), mask_opt)
+      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_dom_assoc_ix,:), &
+                                                  emissions_el(:,t_sf_fuel_dead_fuel_dom_assoc_ix,:), mask_opt)
     ELSE IF (is_type_of_fuel == 2) THEN !< 2 = IS_LIVE_FUEL
       CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_live_fuel_leaf_ix,:), &
-          emissions_el(:,t_sf_fuel_live_fuel_leaf_ix,:), mask_opt)
+                                                  emissions_el(:,t_sf_fuel_live_fuel_leaf_ix,:), mask_opt)
       CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_live_fuel_sap_wood_ix,:), &
-          emissions_el(:,t_sf_fuel_live_fuel_sap_wood_ix,:), mask_opt)
+                                                  emissions_el(:,t_sf_fuel_live_fuel_sap_wood_ix,:), mask_opt)
       CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_live_fuel_heart_wood_ix,:), &
-          emissions_el(:,t_sf_fuel_live_fuel_heart_wood_ix,:), mask_opt)
+                                                  emissions_el(:,t_sf_fuel_live_fuel_heart_wood_ix,:), mask_opt)
       CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_live_fuel_labile_ix,:), &
-          emissions_el(:,t_sf_fuel_live_fuel_labile_ix,:), mask_opt)
+                                                  emissions_el(:,t_sf_fuel_live_fuel_labile_ix,:), mask_opt)
       CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_live_fuel_reserve_ix,:), &
-          emissions_el(:,t_sf_fuel_live_fuel_reserve_ix,:), mask_opt)
+                                                  emissions_el(:,t_sf_fuel_live_fuel_reserve_ix,:), mask_opt)
       CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_live_fuel_fruit_ix,:), &
-          emissions_el(:,t_sf_fuel_live_fuel_fruit_ix,:), mask_opt)
+                                                  emissions_el(:,t_sf_fuel_live_fuel_fruit_ix,:), mask_opt)
     ELSE
       ! stop!
     END IF

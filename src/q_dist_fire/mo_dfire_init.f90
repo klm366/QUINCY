@@ -47,6 +47,10 @@ MODULE mo_dfire_init
   PRIVATE
   PUBLIC :: dfire_init, provide_lightning_events
 
+#ifndef __QUINCY_STANDALONE__
+  PUBLIC ::  provide_lightning_events
+#endif
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_init'
 
   TYPE :: t_dfire_init_vars
@@ -66,6 +70,7 @@ CONTAINS
   SUBROUTINE dfire_init(tile)
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_grid,                ONLY: Get_grid
+    USE mo_jsb_task_class,          ONLY: t_jsb_task_options ! todo: maybe QS only? (IQ does not deal with options)
 
     USE mo_dfire_constants,         ONLY: DFIRE_PRECIP_METHOD_DAYTIME, & !< Method to compute precipitation
                                           DFIRE_PRECIP_METHOD_APROX_MAVG, &
@@ -75,10 +80,11 @@ CONTAINS
     dsl4jsb_Use_memory(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER              :: model
     TYPE(t_jsb_grid),       POINTER              :: hgrid              !< Horizontal grid
-    INTEGER                                      :: ic, iblk, imonth, iproma
+    INTEGER                                      :: iblk, ics, ice, nc, npft
     INTEGER :: nblks, nproma
     REAL(wp)                                     :: dtime
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':dfire_init'
@@ -147,8 +153,11 @@ CONTAINS
     !ics     = options%ics
     !ice     = options%ice
     !nc      = options%nc
-    !dtime   = options%dtime
+#ifdef __QUINCY_STANDALONE__
+    dtime   = options%dtime
+#else
     dtime=timestep_in_days(model_id=tile%owner_model_id)
+#endif
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN
     !IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -351,7 +360,7 @@ CONTAINS
 
     ALLOCATE( &
       & dfire_init_vars%pop_dens               (nproma, nblks),       &
-      & dfire_init_vars%lightning_events       (nproma, nblks, 12),   &
+      & dfire_init_vars%lightning_events       (nproma, nblks, 12),   & ! 12=months in a year
       & )
 
     dfire_init_vars%pop_dens              (:,:) = missval
@@ -422,22 +431,7 @@ CONTAINS
 
     CALL input_file%Close()
 
-
-    ! Read data from sso file
-!    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DFIRE_)%ic_lightning_events_filename), model%grid_id)
-
-    !>
-!    ptr_2D_time => input_file%Read_2D_time(  &
-!        & variable_name='HRMC_COM_FR', &
-!        & fill_array = dfire_init_vars%lightning_events, &
-!        & start_time_step = 1, end_time_step = 12 )
-    ! Clean: set negative values to 0
-!    dfire_init_vars%lightning_events = MERGE(ptr_2D_time, 0._wp, ptr_2D_time >= 0._wp)
-
-!    CALL input_file%Close()
-
   END SUBROUTINE dfire_read_init_vars
-#endif
 
   ! ====================================================================================================== !
   !
@@ -520,6 +514,7 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
   END SUBROUTINE provide_lightning_events
+#endif
 
 #endif
 END MODULE mo_dfire_init

@@ -67,15 +67,15 @@ CONTAINS
   !> Calculation of total ignitions (lightning + human) based on Section 2.2.1 from Thonicke et al. (2010)
   !>
   FUNCTION calc_sf_ignition(nc, dens_hum_pop, a_nd, n_lightning_ig, max_dens_hum_pop) RESULT (sf_ignitions)
-    INTEGER, INTENT(in)  :: nc                       !< dimensions
-    REAL(wp), INTENT(in) :: dens_hum_pop(nc)         !< average human population density in the grid cell
+    INTEGER, INTENT(in)    :: nc                     !< dimensions
+    REAL(wp), INTENT(in)   :: dens_hum_pop(nc)       !< average human population density in the grid cell
     !< [individuals km-2]
-    REAL(wp), INTENT(in) :: max_dens_hum_pop         !< max human population density allowed per gridcell
+    REAL(wp), INTENT(in)   :: max_dens_hum_pop       !< max human population density allowed per gridcell
     !< [individuals km-2]
-    REAL(wp), INTENT(in) :: n_lightning_ig(nc)       !< average number of flashes per day [ha-1 d-1]
-    REAL(wp), INTENT(in) :: a_nd(nc)                 !< propensity to people to produce ignitions events
-    !< [ignitions individual-1 d-1]
-    TYPE(t_sf_ignitions) :: sf_ignitions             !< (output)
+    REAL(wp), INTENT(in)   :: n_lightning_ig(nc)     !< average number of flashes per day [ha-1 d-1]
+    REAL(wp), INTENT(in)   :: a_nd(nc)               !< propensity to people to produce ignitions events
+                                                     !< [ignitions individual-1 d-1]
+    TYPE(t_sf_ignitions)   :: sf_ignitions           !< (output)
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sf_ignition'
     REAL(wp)             :: sel_dens_hum_pop(nc)     !< selected average human population density [indiv km-2]

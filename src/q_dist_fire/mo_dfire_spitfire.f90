@@ -205,7 +205,6 @@ CONTAINS
     REAL(wp)                              :: dtime      !< timestep
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
 
-    REAL(wp), POINTER                     :: fract_fpc(:,:) ! in
     REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2?]
     REAL(wp), POINTER                     :: tile_fract(:) ! [%]
     REAL(wp), ALLOCATABLE                 :: tile_area(:) ! [m2]
@@ -254,7 +253,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
-    !dsl4jsb_Real2D_onChunk                :: e_n_ignitions    ! out, Total rate of ignitions events [ha-1 ts-1]
     dsl4jsb_Real3D_onChunk                :: wtr_soil_sl        ! soil water content [m]
     dsl4jsb_Real3D_onChunk                :: wtr_soil_fc_sl     ! soil water field capacity [m]
 
@@ -435,7 +433,6 @@ CONTAINS
     no_children = tile%Get_no_of_children()
 
     !< Init variables
-    fract_fpc => veg__mem%collect_var_real2d(ics, ice, iblk, no_children, veg__mem%fract_fpc)
 
     ! rebuild fuel variables
     dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp ! dead fuel
@@ -462,9 +459,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_STANDALONE__
     ALLOCATE(grid_cell_area(options%nc))
+    ALLOCATE(tile_area(options%nc))
     grid_cell_area = 1._wp ! defined as fraction too, QS has site simulations
     grid_cell_area_ha = 1._wp
     mask_is_tile_enabled = .TRUE.
+    tile_area = 1._wp
 #else
     ! IQ
     grid_cell_area => grid % area(ics:ice, iblk)
@@ -503,8 +502,8 @@ CONTAINS
     ENDDO
 
     ! Load input data
-    density_human_population = ic_pop_dens 
-    lightning_frequency = lightning_events 
+    density_human_population = ic_pop_dens  ! todo: directly use ic_pop_dens
+    lightning_frequency = lightning_events  ! todo: same as before
     a_nd = density_human_population * 4._wp
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
@@ -566,6 +565,10 @@ CONTAINS
     mineral_damp_coeff(:) = sf_spitfire % ros % mineral_damp_coeff(:)
 
     frac_consump_fcl = sf_spitfire % dead_frac_consump
+#ifdef __QUINCY_STANDALONE__
+    DEALLOCATE(grid_cell_area)
+    DEALLOCATE(tile_area)
+#endif
   END SUBROUTINE update_dfire_spitfire
 
 

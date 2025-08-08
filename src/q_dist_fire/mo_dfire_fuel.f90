@@ -88,7 +88,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, DFIRE_FUEL_, DFIRE_
+    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, DFIRE_FUEL_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -99,8 +99,6 @@ CONTAINS
     dsl4jsb_Use_memory(DFIRE_FUEL_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_config(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -135,8 +133,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
-    ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(DFIRE_FUEL_)
     dsl4jsb_Def_memory(VEG_)
@@ -187,7 +183,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(DFIRE_)
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)

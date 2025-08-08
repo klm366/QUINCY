@@ -57,9 +57,9 @@ CONTAINS
   !> https://wikifire.wsl.ch/tiki-indexea83.html?page=Nesterov+ignition+index
   !>
   FUNCTION calc_sf_nesterov_index(nc, tmax_daily, tmin_daily, &
-      &  precipitation_daily, nesterov_index_prev, &
-      &  o_precip_thd, o_frost_thd, o_tsfactor) &
-      &  RESULT (nesterov_index)
+                               &  precipitation_daily, nesterov_index_prev, &
+                               &  o_precip_thd, o_frost_thd, o_tsfactor) &
+                               &  RESULT (nesterov_index)
 
     INTEGER, INTENT(in)                 :: nc !< dimenion
     REAL(wp), INTENT(in)                :: tmax_daily(nc)           !< daily max temperature [Celsius]

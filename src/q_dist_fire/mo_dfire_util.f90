@@ -37,6 +37,7 @@ MODULE mo_dfire_util
 
   PRIVATE
   PUBLIC :: calculate_time_average_dist_fire, calculate_daily_weather, calculate_pure_moving_averages
+  PUBLIC :: utils_linspace
   PUBLIC :: dfire_update_pools
 
   PUBLIC :: logical2real, real2logical
@@ -53,7 +54,6 @@ CONTAINS
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
-    !USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -68,7 +68,6 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
-    !TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy         !< Vertical grid
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
@@ -90,14 +89,10 @@ CONTAINS
     nc      = options%nc
     dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
-    !write(*,*) "dfire_util.f90:: calculate_time_avg_dist_fire, maybe?"
-
     IF (.NOT. tile%Is_process_calculated(DFIRE_)) RETURN
-    !IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
-    !lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     vgrid_canopy  => Get_vgrid('q_canopy_layer')
     ncanopy       =  vgrid_canopy%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
@@ -110,7 +105,6 @@ CONTAINS
     ! DFIRE_
     dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_qc_mavg)
     ! ----------------------------------------------------------------------------------------------------- !
-    !write(*,*) "dfire_util.f90:: calculate_time_avg_dist_fire..."
 
     precip_qc_mavg(:) = calc_time_mavg(dtime, precip_qc_mavg(:), (rain(:)+snow(:)), mavg_period_dfire)
 
@@ -135,7 +129,6 @@ CONTAINS
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
-    !USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
 
     ! Use of process memories
     dsl4jsb_Use_processes A2L_, DFIRE_
@@ -150,9 +143,7 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER         :: model              !< instance of the model
-    !TYPE(t_lctlib_element), POINTER         :: lctlib             !< land-cover-type library - parameter across pft's
-    INTEGER                                 :: iblk, ics, ice, nc
-    INTEGER                                 :: ic
+    INTEGER                                 :: iblk, ics, ice, nc, ic
     REAL(wp)                                :: dtime              !< timestep
     LOGICAL, ALLOCATABLE                    :: is_midnight(:)     !< is peak of the day
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_daily_weather'
@@ -181,14 +172,12 @@ CONTAINS
     nc      = options%nc
     dtime   = options%dtime
     ! ---------------------------
-    !write(*,*) "dfire_util.f90:: calculate_daily_weather, maybe?"
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN   ! ask for all processes considered here ?
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
-    !lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     ! Get process config
     !..
     ! Get process memories
@@ -207,9 +196,6 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
-    !write(*,*) "dfire_util.f90:: calculate_daily_weather..., t_air_min(1), t_air_max =", &
-    !        t_air_min(1), t_air_max(1)
 
     !> 1.0 init
     !!
@@ -262,7 +248,6 @@ CONTAINS
         CALL finish("calc_daily_weather", "t_air_min cant be higher than t_air_max")
       ENDIF
     ENDIF
-    !write(*,*) "dfire_util.f90:: (end) calculate_daily_weather, t_air_min(1), t_air_max(1) =", t_air_min(1), t_air_max(1)
 
   END SUBROUTINE calculate_daily_weather
 
@@ -282,7 +267,6 @@ CONTAINS
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
-    !USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_quincy_mavg_class,       ONLY: t_mavg
 
     ! Use of process memories
@@ -298,7 +282,6 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
-    !TYPE(t_lctlib_element), POINTER         :: lctlib              !< land-cover-type library - parameter across pft's
     INTEGER                                 :: iblk, ics, ice, nc, ic
     REAL(wp)                                :: dtime                !< timestep
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_pure_moving_averages'
@@ -320,7 +303,6 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-    !write(*,*) "dfire_util.f90:: calculate_pure_moving_averages, maybe?"
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN   ! ask for all processes considered here ?
@@ -328,7 +310,6 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
-    !lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     ! Get process config
     !..
     ! Get process memories
@@ -339,8 +320,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, snow)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_mavg)
-
-    !write(*,*) "dfire_util.f90:: calculate_pure_moving_averages..."
 
     IF (.NOT. ALLOCATED(precip_mavg_type)) THEN
       ALLOCATE(precip_mavg_type(nc))
@@ -357,6 +336,59 @@ CONTAINS
     END DO
 
   END SUBROUTINE calculate_pure_moving_averages
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Same method as numpy linspace.
+  !> https://gist.github.com/ivan-pi/f4b4741d7ed54ceff787c85d6ba22a5a
+  !>
+  FUNCTION utils_linspace(start,end,num,endpoint,step) RESULT (samples)
+
+    ! PARAMETERS
+    REAL(wp), INTENT(in) :: start
+    !! The starting value of the sequence.
+    REAL(wp), INTENT(in) :: end
+    !! The end value of the sequence, unless `endpoint` is set to `.false.`.
+    !! In that case, the sequence consists of all but the last of `num + 1`
+    !! evenly spaced samples, so that `end` is excluded. Note that the
+    !! step size changes when `endpoint` is `.false.`.
+    INTEGER, INTENT(in), OPTIONAL :: num
+    !! Number of samples to generate. Default value is 50.
+    LOGICAL, INTENT(in), OPTIONAL :: endpoint
+    !! If `.true.`, `end` is the last sample. Otherwise, it is not included. Default is `.true.`.
+    REAL(wp), INTENT(out), OPTIONAL :: step
+    !! If present, `step` is the size of spacing between samples.
+
+    ! RETURNS
+    REAL(wp), ALLOCATABLE :: samples(:)
+    !! There are `num` equally spaced samples in the closed interval `[start, stop]` or
+    !! the half-open interval `[start, stop)` (depending on whether `endpoint` is `.true.` or `.false.`).
+
+    INTEGER :: num_, i
+    LOGICAL :: endpoint_
+    REAL(wp) :: step_
+
+    num_ = 50
+    IF (present(num)) num_ = num
+
+    endpoint_ = .TRUE.
+    IF (present(endpoint)) endpoint_ = endpoint
+
+    ! find step size
+    IF (endpoint_) then
+      step_ = (end - start)/REAL(num_-1,wp)
+    ELSE
+      step_ = (end - start)/REAL(num_,wp)
+    END IF
+
+    IF (present(step)) step = step_
+
+    ALLOCATE(samples(num_))
+    DO i = 1, num_
+      samples(i) = start + (i-1)*step_
+    END DO
+  END FUNCTION utils_linspace
 
 
   ! ======================================================================================================= !
@@ -396,10 +428,11 @@ CONTAINS
   !>
   !> Apply dfire_update_pools
   !> 1. Remove fire emissions from sb_pool
-  !> 2. Transfer woody litter residue into polymeric litter
+  !> 2. Transfer litter pools (residue) into polymeric litter
   !>
   SUBROUTINE dfire_update_pools(sb_fire_emissions, sb_fire_litter_ash, sb_pool)
-    USE mo_lnd_bgcm_idx, ONLY: ix_woody_litter, ix_polymeric_litter
+    USE mo_lnd_bgcm_idx, ONLY: ix_woody_litter, ix_polymeric_litter, ix_soluable_litter, &
+                               ix_residue, ix_residue_assoc, ix_dom, ix_dom_assoc
 
     REAL(wp), INTENT(in) :: sb_fire_emissions(:,:,:)
     REAL(wp), INTENT(in) :: sb_fire_litter_ash(:,:,:)
@@ -415,8 +448,23 @@ CONTAINS
 
     !> 2. Woody litter residue is transformed into polymeric
     CALL pool_transfer(sb_fire_litter_ash(ix_woody_litter,:,:), & ! amount (IN)
-        sb_pool(ix_woody_litter,:,:), & ! pool from (INOUT)
-        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
+                        sb_pool(ix_woody_litter,:,:), & ! pool from (INOUT)
+                        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
+    CALL pool_transfer(sb_fire_litter_ash(ix_soluable_litter,:,:), & ! amount (IN)
+                        sb_pool(ix_soluable_litter,:,:), & ! pool from (INOUT)
+                        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
+    CALL pool_transfer(sb_fire_litter_ash(ix_residue,:,:), & ! amount (IN)
+                        sb_pool(ix_residue,:,:), & ! pool from (INOUT)
+                        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
+    CALL pool_transfer(sb_fire_litter_ash(ix_residue_assoc,:,:), & ! amount (IN)
+                        sb_pool(ix_residue_assoc,:,:), & ! pool from (INOUT)
+                        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
+    CALL pool_transfer(sb_fire_litter_ash(ix_dom,:,:), & ! amount (IN)
+                        sb_pool(ix_dom,:,:), & ! pool from (INOUT)
+                        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
+    CALL pool_transfer(sb_fire_litter_ash(ix_dom_assoc,:,:), & ! amount (IN)
+                        sb_pool(ix_dom_assoc,:,:), & ! pool from (INOUT)
+                        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
   END SUBROUTINE dfire_update_pools
 
 
@@ -432,6 +480,5 @@ CONTAINS
     from = from - amount
     to = to + amount
   END SUBROUTINE pool_transfer
-
 #endif
 END MODULE mo_dfire_util
