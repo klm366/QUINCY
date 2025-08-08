@@ -159,9 +159,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: dead_fuel_1000hr_dfp  ! out [g DM m-2]
 
     dsl4jsb_Real3D_onChunk      :: live_grass_fuel_1hr_lfp    ! out [g DM m-2]
-    dsl4jsb_Real3D_onChunk      :: live_grass_fuel_10hr_lfp   ! out [g DM m-2]
-    dsl4jsb_Real3D_onChunk      :: live_grass_fuel_100hr_lfp  ! out [g DM m-2]
-    dsl4jsb_Real3D_onChunk      :: live_grass_fuel_1000hr_lfp ! out [g DM m-2]
 
     dsl4jsb_Real3D_onChunk      :: live_tree_fuel_1hr_lfp     ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: live_tree_fuel_10hr_lfp    ! out [g DM m-2]
@@ -209,9 +206,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_100hr_lfp)        ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_fuel_1000hr_lfp)       ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_1hr_lfp)    ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_10hr_lfp)   ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_100hr_lfp)  ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_1000hr_lfp) ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_1hr_lfp)     ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_10hr_lfp)    ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_100hr_lfp)   ! out [g DM m-2]
@@ -228,14 +222,12 @@ CONTAINS
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
+#ifndef __QUINCY_STANDALONE__
     CALL tile%Get_fraction(ics, ice, iblk, tile_fract)
     grid_cell_area => grid % area(ics:ice, iblk)
     tile_fract_ref => tile%fract(ics:ice, iblk)
+#endif
 
-    ! todo: deal with tile_frac = 0?
-
-    !WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", ", fraction=", &
-    !             fract(1)
     forest_fract=0._wp
     grass_fract=0._wp
     fuel_bulk_density = 0._wp
@@ -250,12 +242,21 @@ CONTAINS
 
     ! Aggregate fractions by type (Forest, Grass)
     ! todo: move to init (static setup)
+#ifdef __QUINCY_STANDALONE__
+    IF (lctlib%ForestFlag) THEN
+      forest_fract=1._wp
+    ELSE IF (lctlib%GrassFlag) THEN
+      grass_fract = 1._wp
+    !ELSE ! ignore
+    END IF
+#else
     IF (lctlib%ForestFlag) THEN
       forest_fract=tile_fract
     ELSE IF (lctlib%GrassFlag) THEN
       grass_fract=tile_fract
     !ELSE ! ignore
     END IF
+#endif
 
     !< PFT related, todo: no need to redefine at every time step
     IF (lctlib%growthform == itree) THEN
@@ -289,13 +290,11 @@ CONTAINS
     !> Aggregation average's the PFT values
 
     dead_fuel_spread_fcl = SUM(dead_fuel_fcl(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2 = fuel pools dimension index
-    !WRITE(*,*) "fuel.f90:: ic, dead fuel spread =", 1, dead_fuel_spread_fcl(1,:) 
     DO ic = 1, nc
       IF (SUM(dead_fuel_spread_fcl(ic,:)) > 0._wp) THEN
-        fuel_bulk_density(ic) = calc_fbd(3, lctlib%q_fuel_bulk_density, dead_fuel_spread_fcl(ic,:))
+        fuel_bulk_density(ic) = calc_fbd(3, lctlib%q_fuel_bulk_density, dead_fuel_spread_fcl(ic,:)) ! 3=fuel classes (1,10 and 100 hours)
       ENDIF
     END DO
-    !WRITE(*,*) "fuel.f90:: ic, fuel_bulk_density=", 1, lctlib%q_fuel_bulk_density, fuel_bulk_density(1)
 
     dead_fuel_1hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_1hr_idx)
     dead_fuel_10hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_10hr_idx)
@@ -303,9 +302,6 @@ CONTAINS
     dead_fuel_1000hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
     
     live_grass_fuel_1hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx)
-    live_grass_fuel_10hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_10hr_idx)
-    live_grass_fuel_100hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_100hr_idx)
-    live_grass_fuel_1000hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
 
     live_tree_fuel_1hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1hr_idx)
     live_tree_fuel_10hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx)
@@ -316,10 +312,6 @@ CONTAINS
     live_fuel_10hr_lfp = live_fuel_fcl(:,:,df_sf_fc_10hr_idx)
     live_fuel_100hr_lfp = live_fuel_fcl(:,:,df_sf_fc_100hr_idx)
     live_fuel_1000hr_lfp = live_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
-
-    !WRITE(*,*) "update_dfire_fuel:: computing fuel... (growth form=", lctlib%growthform ,")", &
-    !                    ", area, fraction ref, tile func, forest_fract, height=", grid_cell_area(1),  &
-    !                    tile_fract_ref(1), tile_fract(1), forest_fract(1), height(1)
 
     NULLIFY(live_fuel_frac)
   END SUBROUTINE update_dfire_fuel

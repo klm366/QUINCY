@@ -62,7 +62,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':dfire_fuel_init'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
-    !dsl4jsb_Def_config(DFIRE_FUEL_)
     dsl4jsb_Def_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real3D_onDomain      :: dead_fuel_1hr_dfp
@@ -75,9 +74,6 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: live_fuel_100hr_lfp
     dsl4jsb_Real3D_onDomain      :: live_fuel_1000hr_lfp
     dsl4jsb_Real3D_onDomain      :: live_grass_fuel_1hr_lfp
-    dsl4jsb_Real3D_onDomain      :: live_grass_fuel_10hr_lfp
-    dsl4jsb_Real3D_onDomain      :: live_grass_fuel_100hr_lfp
-    dsl4jsb_Real3D_onDomain      :: live_grass_fuel_1000hr_lfp
 
     dsl4jsb_Real3D_onDomain      :: live_tree_fuel_1hr_lfp
     dsl4jsb_Real3D_onDomain      :: live_tree_fuel_10hr_lfp
@@ -121,9 +117,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model  => get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
-    !hgrid  => Get_grid(model%grid_id)
-    !nblks  =  hgrid%nblks
-    !nproma =  hgrid%nproma
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -136,9 +129,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_100hr_lfp)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_1000hr_lfp)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_grass_fuel_1hr_lfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_grass_fuel_10hr_lfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_grass_fuel_100hr_lfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_grass_fuel_1000hr_lfp)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_tree_fuel_1hr_lfp)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_tree_fuel_10hr_lfp)
     dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_tree_fuel_100hr_lfp)
@@ -185,9 +175,6 @@ CONTAINS
     live_fuel_100hr_lfp = 0._wp
     live_fuel_1000hr_lfp = 0._wp
     live_grass_fuel_1hr_lfp = 0._wp
-    live_grass_fuel_10hr_lfp = 0._wp
-    live_grass_fuel_100hr_lfp = 0._wp
-    live_grass_fuel_1000hr_lfp = 0._wp
     live_tree_fuel_1hr_lfp = 0._wp
     live_tree_fuel_10hr_lfp = 0._wp
     live_tree_fuel_100hr_lfp = 0._wp

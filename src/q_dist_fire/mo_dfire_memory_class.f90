@@ -136,7 +136,7 @@ CONTAINS
   !>
   !> initialize memory (variables) for the process: dist_fire
   !>
-  SUBROUTINE Init_dfire_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
+  SUBROUTINE Init_dfire_memory(mem, prefix, suffix, lct_ids, model_id)
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -147,7 +147,6 @@ CONTAINS
     CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
     CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
     INTEGER,              INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
-    INTEGER,              INTENT(in)            :: lib_id          !< id of primary lct in lctlib
     INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
@@ -161,16 +160,17 @@ CONTAINS
     INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_dfire_memory'
     ! ----------------------------------------------------------------------------------------------------- !
-    model         => Get_model(model_id)
-    table         =  tables(1)
-    hgrid         => Get_grid(model%grid_id)
-    vgrid_surface => Get_vgrid('surface')
+    model                 => Get_model(model_id)
+    table                 =  tables(1)
+    hgrid                 => Get_grid(model%grid_id)
+    vgrid_surface         => Get_vgrid('surface')
     vgrid_dead_fuel_pools => Get_vgrid(df_sf_vgrid_dead_fuel_pools_name)
     vgrid_live_fuel_pools => Get_vgrid(df_sf_vgrid_live_fuel_pools_name)
-    vgrid_fuel_classes => Get_vgrid(df_sf_vgrid_fuel_classes_name)
-    vgrid_fuel_moisture => Get_vgrid(df_sf_vgrid_fuel_moisture_name)
+    vgrid_fuel_classes    => Get_vgrid(df_sf_vgrid_fuel_classes_name)
+    vgrid_fuel_moisture   => Get_vgrid(df_sf_vgrid_fuel_moisture_name)
     vgrid_months_in_year => Get_vgrid(df_sf_vgrid_months_in_year_name)
     ! ----------------------------------------------------------------------------------------------------- !
+
     CALL mem%Add_var('nesterov_index', mem%nesterov_index, &
         & hgrid, vgrid_surface, &
         & t_cf('nesterov_index', 'Celsius_2', 'Cumulative function of daily tmax and tdew '), &

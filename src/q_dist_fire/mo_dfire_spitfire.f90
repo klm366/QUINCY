@@ -128,10 +128,6 @@ MODULE mo_dfire_spitfire
     MODULE PROCEDURE :: create_sf_spitfire
   END INTERFACE t_sf_spitfire
 
-  ! To debug
-  !INTEGER :: process_Rank
-  !INTEGER, PARAMETER :: igrid=2
-  !INTEGER, PARAMETER :: iproc=116
 
   TYPE t_sf_bgcm_2L3D_p ! todo: remove
     REAL(wp), POINTER :: p(:,:,:,:) !< dims: (part,elem,nc,layer)
@@ -308,9 +304,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1000hr_dfp       ! in [g DM m-2]
 
     dsl4jsb_Real3D_onChunk                :: live_grass_fuel_1hr_lfp    ! in [g DM m-2]
-    dsl4jsb_Real3D_onChunk                :: live_grass_fuel_10hr_lfp   ! in [g DM m-2]
-    dsl4jsb_Real3D_onChunk                :: live_grass_fuel_100hr_lfp  ! in [g DM m-2]
-    dsl4jsb_Real3D_onChunk                :: live_grass_fuel_1000hr_lfp ! in [g DM m-2]
 
     dsl4jsb_Real3D_onChunk                :: live_tree_fuel_1hr_lfp     ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_tree_fuel_10hr_lfp    ! in [g DM m-2]
@@ -394,9 +387,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, dead_fuel_1000hr_dfp)  ! in [g DM m-2]
 
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_1hr_lfp)    ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_10hr_lfp)   ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_100hr_lfp)  ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_grass_fuel_1000hr_lfp) ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_1hr_lfp)     ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_10hr_lfp)    ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(DFIRE_FUEL_, live_tree_fuel_100hr_lfp)   ! in [g DM m-2]
@@ -453,9 +443,6 @@ CONTAINS
     dead_fuel_fcl(:,:,df_sf_fc_100hr_idx) = dead_fuel_1hr_dfp
     dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1hr_dfp
     live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx) = live_grass_fuel_1hr_lfp ! live grass fuel
-    live_grass_fuel_fcl(:,:,df_sf_fc_10hr_idx) = live_grass_fuel_10hr_lfp
-    live_grass_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_grass_fuel_100hr_lfp
-    live_grass_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = live_grass_fuel_1000hr_lfp
     live_tree_fuel_fcl(:,:,df_sf_fc_1hr_idx) = live_tree_fuel_1hr_lfp ! live tree fuel
     live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx) = live_tree_fuel_10hr_lfp
     live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr_lfp
@@ -473,13 +460,20 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
-    !call MPI_COMM_RANK(MPI_COMM_WORLD, process_Rank, ierror)
+#ifdef __QUINCY_STANDALONE__
+    ALLOCATE(grid_cell_area(options%nc))
+    grid_cell_area = 1._wp ! defined as fraction too, QS has site simulations
+    grid_cell_area_ha = 1._wp
+    mask_is_tile_enabled = .TRUE.
+#else
+    ! IQ
     grid_cell_area => grid % area(ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
-
-    mask_is_tile_enabled = (tile_fract > 0._wp)
-
     tile_area = grid_cell_area * tile_fract
+    grid_cell_area_ha = sf_convert_units("m2", "ha", tile_area)
+    mask_is_tile_enabled = (tile_fract > 0._wp)
+#endif
+    ! diagnostics only
     pot_burn_area = grid_cell_area * (grass_fract + forest_fract)
 
     !> Units conversion
@@ -684,7 +678,7 @@ CONTAINS
     !< then fire cannot spread and we stop the calculation. The same applies if FDI is low.
     has_dead_fuel = sf_calc_has_any_fuel(dead_fuel(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
     !< It accounts for 1, 10 and 100 hours fuel classes
-    has_fire_conditions(:) = mask_tile_enabled .AND. (has_dead_fuel) .AND. (spitfire % fdi > 1.e-6_wp) 
+    has_fire_conditions(:) = mask_tile_enabled .AND. (has_dead_fuel) .AND. (spitfire % fdi > 1.e-6_wp)
 
     !< If there are no fire conditions, stop calculation and return burned area and fire emissions as zero.
     !< Previously initialized to zero.

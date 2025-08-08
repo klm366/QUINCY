@@ -75,7 +75,7 @@ MODULE mo_dfire_config_class
     CHARACTER(len=20) :: dfire_precip_method_name    !< precipitation method name, from namelist
     INTEGER           :: dfire_precip_method_id      !< precipitation method id (1=,2=,3=), internal
 
-    REAL(wp)          :: density_human_population    !< Ignition events
+    REAL(wp)          :: density_human_population    !< average human population density in the grid cell [individuals km-2]
     REAL(wp)          :: lightning_frequency         !< avrg number of all lightnings [ha-1 d-1]
     REAL(wp)          :: a_nd                        !< Propensity of people to produce ignition events (Eq. 3, Thonicke et al. (2010))
                                                      !< [ignitions indivual-1 d-1]      
@@ -165,28 +165,28 @@ CONTAINS
 #else
     NAMELIST /dist_fire_nml/        &
 #endif
-      & active,                     &
-      & ic_filename,                &
-      & bc_filename,                &
-      & flag_dfire,                 &
-      & dfire_modelname,            &
-      & dfire_precip_method_name,   &
-      & density_human_population,   &         ! ignition events 
-      & lightning_frequency,        &         ! 
-      & a_nd,                       &         !
-      & ic_popdens_filename,        &
-      & ic_lightning_events_filename, &
-      & fract_crown_scorch,           &
+      & active,                               &
+      & ic_filename,                          &
+      & bc_filename,                          &
+      & flag_dfire,                           &
+      & dfire_modelname,                      &
+      & dfire_precip_method_name,             &
+      & density_human_population,             &
+      & lightning_frequency,                  &
+      & a_nd,                                 &
+      & ic_popdens_filename,                  &
+      & ic_lightning_events_filename,         &
+      & fract_crown_scorch,                   &
       & ratio_polymeric_litter_to_dead_fuel,  &
       & ratio_dom_assoc_to_dead_fuel,         & ! spitfire
       & ratio_dom_to_dead_fuel,               &
       & ratio_soluable_litter_to_dead_fuel,   &
       & ratio_residue_to_dead_fuel,           &
       & ratio_residue_assoc_to_dead_fuel,     &
-      & flag_has_dead_feedback,     &
-      & flag_has_live_feedback,     &
-      & flag_has_prob_mort_feedback, &
-      & tree_height_factor,         &
+      & flag_has_dead_feedback,               &
+      & flag_has_live_feedback,               &
+      & flag_has_prob_mort_feedback,          &
+      & tree_height_factor,                   &
       & tree_diameter_factor
 
 
@@ -241,7 +241,7 @@ CONTAINS
     config%flag_dfire                = flag_dfire
     config%dfire_modelname           = TRIM(dfire_modelname)
     config%dfire_precip_method_name  = TRIM(dfire_precip_method_name)
-    config%density_human_population  = density_human_population       ! Ignition events 
+    config%density_human_population  = density_human_population       ! spitfire
     config%lightning_frequency       = lightning_frequency            ! 
     config%a_nd                      = a_nd                           !
     config%ic_popdens_filename       = TRIM(ic_popdens_filename)

@@ -44,7 +44,7 @@ MODULE mo_dfire_fuel_interface
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: Register_dfire_fuel_tasks
-  PUBLIC :: update_dfire_fuel
+  PUBLIC :: update_dfire_fuel, update_dfire_sf_post
 
 
   ! ======================================================================================================= !
@@ -161,9 +161,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_fuel_1000hr_lfp , weighted_by_fract)
 
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_grass_fuel_1hr_lfp    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_grass_fuel_10hr_lfp   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_grass_fuel_100hr_lfp  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_grass_fuel_1000hr_lfp , weighted_by_fract)
 
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_tree_fuel_1hr_lfp     , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DFIRE_FUEL_, live_tree_fuel_10hr_lfp    , weighted_by_fract)

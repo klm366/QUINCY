@@ -297,8 +297,14 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! init here
+#ifdef __QUINCY_STANDALONE__
+    ALLOCATE(area(1), tile_fract(1))
+    area = 1._wp
+    tile_fract = 1._wp
+#else
     area => grid %area (ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
+#endif
     is_fire_intense_enough = .FALSE.
     fc_live = 0._wp
     pm_fire = 0._wp
@@ -485,14 +491,14 @@ CONTAINS
       ALLOCATE(emissions_dead_in_m3, source=emissions_dead_el)
       emissions_dead_in_m3 = 0._wp
       emissions_dead_in_m3(:,ixs_sf_dead_litter_fuel_pools,:) = sf_convert_units("-/m2", "-/m3", &
-          emissions_dead_el(:,ixs_sf_dead_litter_fuel_pools,:), &
-          soil_depth_sl(:,df_sf_spq_layer_top_sl))
+                            emissions_dead_el(:,ixs_sf_dead_litter_fuel_pools,:), &
+                            soil_depth_sl(:,df_sf_spq_layer_top_sl))
 
       ALLOCATE(residue_dead_in_m3, source=residue_dead_el)
       residue_dead_in_m3 = 0._wp
       residue_dead_in_m3(:,ixs_sf_dead_litter_fuel_pools,:) = sf_convert_units("-/m2", "-/m3", &
-          residue_dead_el(:,ixs_sf_dead_litter_fuel_pools,:), &
-          soil_depth_sl(:,df_sf_spq_layer_top_sl))
+                            residue_dead_el(:,ixs_sf_dead_litter_fuel_pools,:), &
+                            soil_depth_sl(:,df_sf_spq_layer_top_sl))
 
       !< Feedback: dead fuel consumption is removed through veg_fire_emissions, sb_fire_emissions_mt for emissions
       !< Residue is transfered through sb_fire_litter_ash and veg_fire_litterfall

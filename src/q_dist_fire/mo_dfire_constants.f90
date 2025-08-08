@@ -69,8 +69,9 @@ MODULE mo_dfire_constants
 
   REAL(wp), PARAMETER  :: df_sf_max_density_human_pop = 16._wp    !< Maximum density_human_population (eq. 3)
 
-  ! todo: sf_dead_fuel_pools_nr
-  INTEGER, PARAMETER :: sf_fuel_dead_fuel_nr = 12  !< (sb_pool) woody/leaf, (veg_pool grass) sap wood/labile/reserve/fruit/polymeric
+  !< "Dead" fuel array indices from t_sf_fuel_class
+  INTEGER, PUBLIC, PARAMETER :: sf_fuel_dead_fuel_nr = 12  !< woody, leaf, sap wood, labile, reserve, fruit, polymeric, dom assoc, dom, soluable, res, res assoc
+
   ENUM, BIND(C)
   !< Ensure how much to remove from each pool
     ENUMERATOR :: t_sf_fuel_dead_fuel_woody_ix = 1, &     !< from sb_pool_mt
