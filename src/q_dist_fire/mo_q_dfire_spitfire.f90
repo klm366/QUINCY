@@ -59,7 +59,7 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_dfire_spitfire
+MODULE mo_q_dfire_spitfire
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
@@ -69,42 +69,42 @@ MODULE mo_dfire_spitfire
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_LOSS_ID, SB_BGCM_POOL_ID
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
-  USE mo_dfire_constants,       ONLY: df_sf_sl_dims_nr, df_sf_sl_indices !< Soil related constants: top soil moisture layers 
+  USE mo_q_dfire_constants,     ONLY: df_sf_sl_dims_nr, df_sf_sl_indices !< Soil related constants: top soil moisture layers
 
-  USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix
-  USE mo_dfire_constants,       ONLY: df_sf_max_density_human_pop
-  USE mo_dfire_constants,       ONLY: df_sf_fc_spread_nr
-  USE mo_dfire_constants,       ONLY: df_sf_alpha_nr, df_sf_alphas !< Drying parameters
+  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_dead_fuel_woody_ix
+  USE mo_q_dfire_constants,     ONLY: df_sf_max_density_human_pop
+  USE mo_q_dfire_constants,     ONLY: df_sf_fc_spread_nr
+  USE mo_q_dfire_constants,     ONLY: df_sf_alpha_nr, df_sf_alphas !< Drying parameters
 
-  USE mo_dfire_constants,       ONLY: df_sf_calorific_heat_content, df_sf_isurface_extinc_th
+  USE mo_q_dfire_constants,     ONLY: df_sf_calorific_heat_content, df_sf_isurface_extinc_th
 
-  USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
-                                      df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx !< fuel classes indices
+  USE mo_q_dfire_constants,     ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
+                                    df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx !< fuel classes indices
 
-  USE mo_dfire_constants,       ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
-                                      df_sf_omega_o_idx !< omega_o index from sf_calc_fuel_moisture output (array)
+  USE mo_q_dfire_constants,     ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
+                                    df_sf_omega_o_idx !< omega_o index from sf_calc_fuel_moisture output (array)
 
-  USE mo_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
-  USE mo_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture
-  USE mo_dfire_sf_ignition,     ONLY: calc_sf_ignition, t_sf_ignitions
-  USE mo_dfire_sf_nesterov,     ONLY: calc_sf_nesterov_index
-  USE mo_dfire_sf_ros_class,    ONLY: t_sf_ros, t_sf_veget_cover_frac, sf_calc_rate_of_spread
-  USE mo_dfire_sf_frac_consump_class, ONLY: sf_calc_frac_consump
-  USE mo_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption
+  USE mo_q_dfire_sf_fuel_class, ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
+  USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture
+  USE mo_q_dfire_sf_ignition,   ONLY: calc_sf_ignition, t_sf_ignitions
+  USE mo_q_dfire_sf_nesterov,   ONLY: calc_sf_nesterov_index
+  USE mo_q_dfire_sf_ros_class,  ONLY: t_sf_ros, t_sf_veget_cover_frac, sf_calc_rate_of_spread
+  USE mo_q_dfire_sf_frac_consump_class, ONLY: sf_calc_frac_consump
+  USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption
 
-  USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
-  USE mo_dfire_util,            ONLY: logical2real
+  USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
+  USE mo_q_dfire_util,          ONLY: logical2real
 
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_dfire_spitfire
+  PUBLIC :: update_q_dfire_spitfire
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_spitfire'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_spitfire'
 
   !<
   !< Calculated Spitfire values
-  !< Move spitfire data from calc_spitfire <-> update_dfire_spitfire subroutines
+  !< Move spitfire data from calc_spitfire <-> update_q_dfire_spitfire subroutines
   !<
   TYPE t_sf_spitfire
     REAL(wp), ALLOCATABLE :: e_n_ignitions(:)
@@ -174,7 +174,7 @@ CONTAINS
   !> Compute spitfire for current time step
   !> It links Quincy and Spitfire
   !>
-  SUBROUTINE update_dfire_spitfire(tile, options)
+  SUBROUTINE update_q_dfire_spitfire(tile, options)
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
@@ -569,7 +569,7 @@ CONTAINS
     DEALLOCATE(grid_cell_area)
     DEALLOCATE(tile_area)
 #endif
-  END SUBROUTINE update_dfire_spitfire
+  END SUBROUTINE update_q_dfire_spitfire
 
 
   ! ======================================================================================================= !
@@ -812,4 +812,4 @@ CONTAINS
   END SUBROUTINE calc_area_burned
 
 #endif
-END MODULE mo_dfire_spitfire
+END MODULE mo_q_dfire_spitfire

@@ -19,23 +19,23 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_dfire_sf_feedback
+MODULE mo_q_dfire_sf_feedback
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
 
-  USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix, & !< dead fuel pools indices (from sb_pool_mt)
+  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix, & !< dead fuel pools indices (from sb_pool_mt)
                                       t_sf_fuel_dead_fuel_dom_assoc_ix, t_sf_fuel_dead_fuel_dom_ix, &
                                       t_sf_fuel_dead_fuel_res_ix, t_sf_fuel_dead_fuel_res_assoc_ix, &
                                       t_sf_fuel_dead_fuel_soluable_ix
 
-  USE mo_dfire_constants,       ONLY: t_sf_fuel_live_fuel_leaf_ix, t_sf_fuel_live_fuel_sap_wood_ix, & !< live fuel pool indices
+  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_live_fuel_leaf_ix, t_sf_fuel_live_fuel_sap_wood_ix, & !< live fuel pool indices
                                       t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
                                       t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix
 
-  USE mo_dfire_constants, ONLY: t_sf_fuel_dead_fuel_grass_fruit_ix, t_sf_fuel_dead_fuel_grass_labile_ix, & !< grass dead fuel pools indices (from veg_pool_mt)
+  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_dead_fuel_grass_fruit_ix, t_sf_fuel_dead_fuel_grass_labile_ix, & !< grass dead fuel pools indices (from veg_pool_mt)
                                       t_sf_fuel_dead_fuel_grass_leaf_ix, t_sf_fuel_dead_fuel_grass_reserve_ix, &
                                       t_sf_fuel_dead_fuel_grass_sap_ix
 
@@ -50,7 +50,7 @@ MODULE mo_dfire_sf_feedback
   PRIVATE
   PUBLIC :: calc_sf_feedback_dead, calc_sf_feedback_live
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_sf_feedback'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_feedback'
 
 CONTAINS
 
@@ -217,5 +217,5 @@ CONTAINS
   END SUBROUTINE calc_sf_feedback_live
 #endif
 
-END MODULE mo_dfire_sf_feedback
+END MODULE mo_q_dfire_sf_feedback
 

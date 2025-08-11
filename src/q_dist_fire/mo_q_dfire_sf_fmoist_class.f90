@@ -19,23 +19,23 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_dfire_sf_fmoist_class
+MODULE mo_q_dfire_sf_fmoist_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
-  USE mo_dfire_sf_fuel_class, ONLY: sf_calc_has_any_fuel
+  USE mo_q_dfire_sf_fuel_class, ONLY: sf_calc_has_any_fuel
   USE mo_quincy_stats,        ONLY: stats_average_weight
   !< Total number of fuel moisture(omega_o and omega_nl), omega_o index, omega_nl index
-  USE mo_dfire_constants,     ONLY: df_sf_omegas_nr, df_sf_omega_o_idx, df_sf_omega_nl_idx
+  USE mo_q_dfire_constants,   ONLY: df_sf_omegas_nr, df_sf_omega_o_idx, df_sf_omega_nl_idx
 
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC :: sf_calc_fuel_moisture
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_sf_fmoist_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 
 CONTAINS
 
@@ -174,4 +174,4 @@ CONTAINS
   END FUNCTION calc_omega
 
 #endif
-END MODULE mo_dfire_sf_fmoist_class
+END MODULE mo_q_dfire_sf_fmoist_class

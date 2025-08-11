@@ -28,7 +28,7 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_dfire_config_class
+MODULE mo_q_dfire_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message, finish, message_text
@@ -36,11 +36,11 @@ MODULE mo_dfire_config_class
   USE mo_kind,              ONLY: wp
   USE mo_util,              ONLY: tolower
   USE mo_jsb_config_class,  ONLY: t_jsb_config
-  USE mo_dfire_constants,   ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr
-  USE mo_dfire_constants,   ONLY: df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_live_fuel_pools_name, &
+  USE mo_q_dfire_constants,   ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr
+  USE mo_q_dfire_constants,   ONLY: df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_live_fuel_pools_name, &
                                   df_sf_vgrid_fuel_classes_name, df_sf_vgrid_fuel_moisture_name, &
                                   df_sf_vgrid_months_in_year_name
-  USE mo_dfire_constants,   ONLY: df_sf_omegas_nr
+  USE mo_q_dfire_constants,   ONLY: df_sf_omegas_nr
 
   IMPLICIT NONE
   PRIVATE
@@ -341,4 +341,4 @@ CONTAINS
     END SELECT
   END FUNCTION Get_Precip_Method_id
 #endif
-END MODULE mo_dfire_config_class
+END MODULE mo_q_dfire_config_class

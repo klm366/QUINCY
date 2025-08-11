@@ -25,7 +25,7 @@
 !>
 !> @par Revision History
 !>
-MODULE mo_dfire_init
+MODULE mo_q_dfire_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
@@ -36,30 +36,30 @@ MODULE mo_dfire_init
   USE mo_jsb_grid_class,          ONLY: t_jsb_grid
   USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
 
-  USE mo_dfire_constants,         ONLY: df_sf_fire_duration_thd
-  USE mo_dfire_constants,         ONLY: ratio_as_dead_fuel
+  USE mo_q_dfire_constants,       ONLY: df_sf_fire_duration_thd
+  USE mo_q_dfire_constants,       ONLY: ratio_as_dead_fuel
 #ifndef __QUINCY_STANDALONE__
   USE mo_jsb_time,                ONLY: timestep_in_days
 #endif
-  USE mo_jsb_process_class,     ONLY: DFIRE_
+  USE mo_jsb_process_class,       ONLY: DFIRE_
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: dfire_init, provide_lightning_events
+  PUBLIC :: q_dfire_init, provide_lightning_events
 
 #ifndef __QUINCY_STANDALONE__
   PUBLIC ::  provide_lightning_events
 #endif
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_init'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_init'
 
-  TYPE :: t_dfire_init_vars
+  TYPE :: t_q_dfire_init_vars
     REAL(wp), POINTER ::      &
         pop_dens(:,:) => NULL(), &
         lightning_events(:,:,:) => NULL()
-  END TYPE t_dfire_init_vars
+  END TYPE t_q_dfire_init_vars
 
-  TYPE(t_dfire_init_vars) :: dfire_init_vars
+  TYPE(t_q_dfire_init_vars) :: dfire_init_vars
 
 CONTAINS
 
@@ -67,12 +67,12 @@ CONTAINS
   !>
   !> Intialize disturbance fire process (after memory has been set up)
   !>
-  SUBROUTINE dfire_init(tile)
+  SUBROUTINE q_dfire_init(tile)
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_grid,                ONLY: Get_grid
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options ! todo: maybe QS only? (IQ does not deal with options)
 
-    USE mo_dfire_constants,         ONLY: DFIRE_PRECIP_METHOD_DAYTIME, & !< Method to compute precipitation
+    USE mo_q_dfire_constants,       ONLY: DFIRE_PRECIP_METHOD_DAYTIME, & !< Method to compute precipitation
                                           DFIRE_PRECIP_METHOD_APROX_MAVG, &
                                           DFIRE_PRECIP_METHOD_MAVG
 
@@ -87,7 +87,7 @@ CONTAINS
     INTEGER                                      :: iblk, ics, ice, nc, npft
     INTEGER :: nblks, nproma
     REAL(wp)                                     :: dtime
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':dfire_init'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':q_dfire_init'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(DFIRE_)
@@ -324,7 +324,7 @@ CONTAINS
 !    END IF
 #endif
 
-  END SUBROUTINE dfire_init
+  END SUBROUTINE q_dfire_init
 
 
 #ifdef __QUINCY_STANDALONE__
@@ -376,7 +376,7 @@ CONTAINS
   ! ======================================================================================================= !
   !> read DFIRE_ init vars from input file
   !>
-  SUBROUTINE dfire_read_init_vars(tile)
+  SUBROUTINE q_dfire_read_init_vars(tile)
     USE mo_jsb_model_class,    ONLY: t_jsb_model
     USE mo_jsb_class,          ONLY: get_model
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
@@ -399,7 +399,7 @@ CONTAINS
     INTEGER                     :: nproma
     INTEGER                     :: nblks
     INTEGER                     :: nsoil_sb
-    CHARACTER(len=*), PARAMETER :: routine = modname//':dfire_read_init_vars'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':q_dfire_read_init_vars'
 
     IF (debug_on()) CALL message(routine, 'Reading/setting DFIRE_ init vars')
 
@@ -431,7 +431,7 @@ CONTAINS
 
     CALL input_file%Close()
 
-  END SUBROUTINE dfire_read_init_vars
+  END SUBROUTINE q_dfire_read_init_vars
 
   ! ====================================================================================================== !
   !
@@ -517,4 +517,4 @@ CONTAINS
 #endif
 
 #endif
-END MODULE mo_dfire_init
+END MODULE mo_q_dfire_init

@@ -26,33 +26,33 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_dfire_sf_fuel_class
+MODULE mo_q_dfire_sf_fuel_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: finish, message_text
 
-  USE mo_veg_constants,         ONLY: igrass, itree
+  USE mo_veg_constants,       ONLY: igrass, itree
   !< Top soil layers from sb_pool_mt used by spitfire, Total number of fuel classes
-  USE mo_dfire_constants,       ONLY: df_sf_fc_full_nr
+  USE mo_q_dfire_constants,   ONLY: df_sf_fc_full_nr
   !< Total number of spitfire dead fuel pools, polymeric fuel pool index within spitfire, same for woody litter
-  USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, t_sf_fuel_dead_fuel_polymeric_ix, &
+  USE mo_q_dfire_constants,   ONLY: sf_fuel_dead_fuel_nr, t_sf_fuel_dead_fuel_polymeric_ix, &
                                     t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_dom_assoc_ix, &
                                     t_sf_fuel_dead_fuel_dom_ix, t_sf_fuel_dead_fuel_soluable_ix, &
                                     t_sf_fuel_dead_fuel_res_ix, t_sf_fuel_dead_fuel_res_assoc_ix
   !< Total number of live fuel pools within spitfire, live fuel pool indices from spitfire
-  USE mo_dfire_constants,       ONLY: sf_fuel_live_fuel_nr, t_sf_fuel_live_fuel_sap_wood_ix, &
+  USE mo_q_dfire_constants,   ONLY: sf_fuel_live_fuel_nr, t_sf_fuel_live_fuel_sap_wood_ix, &
                                         t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
                                         t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix, &
                                         t_sf_fuel_live_fuel_leaf_ix
   !< Dead fuel pool indices from spitfire (live grass)
-  USE mo_dfire_constants, ONLY: t_sf_fuel_dead_fuel_grass_leaf_ix, t_sf_fuel_dead_fuel_grass_sap_ix, &
+  USE mo_q_dfire_constants,   ONLY: t_sf_fuel_dead_fuel_grass_leaf_ix, t_sf_fuel_dead_fuel_grass_sap_ix, &
                                       t_sf_fuel_dead_fuel_grass_labile_ix, t_sf_fuel_dead_fuel_grass_reserve_ix, &
                                       t_sf_fuel_dead_fuel_grass_fruit_ix
-  USE mo_dfire_constants, ONLY: t_sf_litter_ratios
+  USE mo_q_dfire_constants,   ONLY: t_sf_litter_ratios
   !< Quincy sb_pool_mt pool indices
-  USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter, ix_leaf, ix_fruit, &
+  USE mo_lnd_bgcm_idx,        ONLY: ix_woody_litter, ix_polymeric_litter, ix_leaf, ix_fruit, &
                                       ix_sap_wood, ix_heart_wood, ix_labile, ix_reserve, &
                                       ix_dom_assoc, ix_dom, ix_soluable_litter, ix_residue, ix_residue_assoc
   
@@ -65,7 +65,7 @@ MODULE mo_dfire_sf_fuel_class
 
   PRIVATE
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_sf_fuel_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fuel_class'
 
   INTERFACE sf_calc_has_any_fuel
     MODULE PROCEDURE :: sf_calc_has_any_fuel_r2, sf_calc_has_any_fuel_r3
@@ -430,4 +430,4 @@ CONTAINS
   END FUNCTION Count_dead_fuel_pools
 
 #endif
-END MODULE mo_dfire_sf_fuel_class
+END MODULE mo_q_dfire_sf_fuel_class

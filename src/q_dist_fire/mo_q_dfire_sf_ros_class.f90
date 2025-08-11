@@ -26,21 +26,21 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_dfire_sf_ros_class
+MODULE mo_q_dfire_sf_ros_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   !< Total number of sigmas (1,10,100) hours,  Pfeiffer el al. (2013), Eq. A18 - Used to calculate fuel bulk density
-  USE mo_dfire_constants,       ONLY: df_sf_sigma_nr, df_sf_fuel_class_factors
+  USE mo_q_dfire_constants,     ONLY: df_sf_sigma_nr, df_sf_fuel_class_factors
   !<
-  USE mo_dfire_constants,       ONLY: df_sf_fire_duration_thd
+  USE mo_q_dfire_constants,     ONLY: df_sf_fire_duration_thd
   !<  Rate of spread constants
-  USE mo_dfire_constants,       ONLY: df_sf_oven_dry_part_dens, df_sigmas, &
+  USE mo_q_dfire_constants,     ONLY: df_sf_oven_dry_part_dens, df_sigmas, &
                                       df_sf_mineral_fract, df_sf_mineral_damp_coeff, &
                                       df_sf_fuel_heat_content
-  USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
+  USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
 
   USE mo_quincy_stats,          ONLY: stats_average_weight
   USE mo_jsb_math_constants,    ONLY: pi
@@ -55,7 +55,7 @@ MODULE mo_dfire_sf_ros_class
             calc_prop_flux_ratio, calc_wind_factor, &
             calc_length_to_breadth_ratio, calc_mean_fire_area
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_sf_ros_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_class'
 
   !< Vegetation cover fraction
   TYPE t_sf_veget_cover_frac
@@ -443,4 +443,4 @@ CONTAINS
   END FUNCTION calc_fbd
 
 #endif
-END MODULE mo_dfire_sf_ros_class
+END MODULE mo_q_dfire_sf_ros_class

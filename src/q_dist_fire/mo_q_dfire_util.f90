@@ -25,7 +25,7 @@
 !!
 !! @par Revision History
 !!
-MODULE mo_dfire_util
+MODULE mo_q_dfire_util
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
@@ -36,20 +36,20 @@ MODULE mo_dfire_util
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: calculate_time_average_dist_fire, calculate_daily_weather, calculate_pure_moving_averages
+  PUBLIC :: calculate_time_average_q_dist_fire, calculate_daily_weather, calculate_pure_moving_averages
   PUBLIC :: utils_linspace
   PUBLIC :: dfire_update_pools
 
   PUBLIC :: logical2real, real2logical
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_util'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_util'
 
 CONTAINS
 
   ! ======================================================================================================= !
   !> calculate time moving averages and daytime averages for DFIRE_
   !>
-  SUBROUTINE calculate_time_average_dist_fire(tile, options)
+  SUBROUTINE calculate_time_average_q_dist_fire(tile, options)
 
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
@@ -72,7 +72,7 @@ CONTAINS
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
     REAL(wp)                                :: dtime                !< timestep
-    CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_dist_fire'
+    CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_q_dist_fire'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(DFIRE_)
@@ -108,7 +108,7 @@ CONTAINS
 
     precip_qc_mavg(:) = calc_time_mavg(dtime, precip_qc_mavg(:), (rain(:)+snow(:)), mavg_period_dfire)
 
-  END SUBROUTINE calculate_time_average_dist_fire
+  END SUBROUTINE calculate_time_average_q_dist_fire
 
 
 
@@ -481,4 +481,4 @@ CONTAINS
     to = to + amount
   END SUBROUTINE pool_transfer
 #endif
-END MODULE mo_dfire_util
+END MODULE mo_q_dfire_util

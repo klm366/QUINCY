@@ -25,7 +25,7 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_dfire_fuel
+MODULE mo_q_dfire_fuel
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
@@ -36,45 +36,45 @@ MODULE mo_dfire_fuel
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
 
   USE mo_veg_constants,         ONLY: ITREE, IGRASS
-  USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix ! dead fuel indices from sb_pool
-  USE mo_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_grass_fruit_ix, t_sf_fuel_dead_fuel_grass_labile_ix, &  ! dead fuel indices from veg_pool
+  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix ! dead fuel indices from sb_pool
+  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_dead_fuel_grass_fruit_ix, t_sf_fuel_dead_fuel_grass_labile_ix, &  ! dead fuel indices from veg_pool
                                       t_sf_fuel_dead_fuel_grass_reserve_ix, t_sf_fuel_dead_fuel_grass_leaf_ix, &
                                       t_sf_fuel_dead_fuel_grass_sap_ix
-  USE mo_dfire_constants,       ONLY: df_sf_spq_layer_top_sl
+  USE mo_q_dfire_constants,     ONLY: df_sf_spq_layer_top_sl
 
-  USE mo_dfire_constants,       ONLY: t_sf_fuel_live_fuel_fruit_ix, t_sf_fuel_live_fuel_leaf_ix, & ! live fuel indices from veg_pool
+  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_live_fuel_fruit_ix, t_sf_fuel_live_fuel_leaf_ix, & ! live fuel indices from veg_pool
                                       t_sf_fuel_live_fuel_labile_ix, t_sf_fuel_live_fuel_reserve_ix, &
                                       t_sf_fuel_live_fuel_sap_wood_ix, t_sf_fuel_live_fuel_heart_wood_ix
 
-  USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr ! total number of fuel pools
-  USE mo_dfire_constants,       ONLY: sf_fuel_classes_nr ! total number of fuel classes
-  USE mo_dfire_constants,       ONLY: sf_slow_fuel, sf_fast_fuel ! Fraction for each fuel class [%]
-  USE mo_dfire_constants,       ONLY: df_sf_fuel_class_factors !< Fuel bulk density factors for each spreading fuel class (1 to 100 hours)
-  USE mo_dfire_constants,       ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx, &
+  USE mo_q_dfire_constants,     ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr ! total number of fuel pools
+  USE mo_q_dfire_constants,     ONLY: sf_fuel_classes_nr ! total number of fuel classes
+  USE mo_q_dfire_constants,     ONLY: sf_slow_fuel, sf_fast_fuel ! Fraction for each fuel class [%]
+  USE mo_q_dfire_constants,     ONLY: df_sf_fuel_class_factors !< Fuel bulk density factors for each spreading fuel class (1 to 100 hours)
+  USE mo_q_dfire_constants,     ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx, &
                                         df_sf_fc_spread_nr !< Spread fuel classes: 1, 10 and 100 hours
-  USE mo_dfire_constants,         ONLY: ratio_as_dead_fuel !< variable sb pool ratios to dead fuel
+  USE mo_q_dfire_constants,     ONLY: ratio_as_dead_fuel !< variable sb pool ratios to dead fuel
 
   USE mo_lnd_bgcm_idx,          ONLY: ixC
   USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter
   USE mo_lnd_bgcm_idx,          ONLY: ix_leaf, ix_fruit, ix_labile, ix_reserve, ix_sap_wood, ix_heart_wood
-  USE mo_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class
-  USE mo_dfire_sf_ros_class,    ONLY: calc_fbd
+  USE mo_q_dfire_sf_fuel_class, ONLY: t_sf_fuel_class
+  USE mo_q_dfire_sf_ros_class,  ONLY: calc_fbd
 
-  !USE mo_dfire_constants,       ONLY: live_fuel_frac => live_frac_allocation !< Live fraction ratio for live fuels
+  !USE mo_q_dfire_constants,       ONLY: live_fuel_frac => live_frac_allocation !< Live fraction ratio for live fuels
 
   !< Live fraction allocation for dead and live fuels
-  USE mo_dfire_constants,       ONLY: df_sf_live_frac_tree, &
+  USE mo_q_dfire_constants,     ONLY: df_sf_live_frac_tree, &
                                         df_sf_live_frac_grass
-  USE mo_dfire_constants,       ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
+  USE mo_q_dfire_constants,     ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
 
-  USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
+  USE mo_q_dfire_sf_adaptor,      ONLY: sf_convert_units
 
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_dfire_fuel
+  PUBLIC :: update_q_dfire_fuel
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_fuel'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel'
 
 CONTAINS
 
@@ -83,7 +83,7 @@ CONTAINS
   !> Compute spitfire for current time step
   !> It links Quincy and Spitfire
   !>
-  SUBROUTINE update_dfire_fuel(tile, options)
+  SUBROUTINE update_q_dfire_fuel(tile, options)
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
@@ -309,9 +309,9 @@ CONTAINS
     live_fuel_1000hr_lfp = live_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
 
     NULLIFY(live_fuel_frac)
-  END SUBROUTINE update_dfire_fuel
+  END SUBROUTINE update_q_dfire_fuel
 
 
 #endif
-END MODULE mo_dfire_fuel
+END MODULE mo_q_dfire_fuel
 

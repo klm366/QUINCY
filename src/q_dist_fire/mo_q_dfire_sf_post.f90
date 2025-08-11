@@ -19,7 +19,7 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_dfire_sf_post
+MODULE mo_q_dfire_sf_post
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
@@ -29,34 +29,34 @@ MODULE mo_dfire_sf_post
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
   USE mo_veg_constants,         ONLY: itree, igrass
-  USE mo_dfire_sf_adaptor,      ONLY: sf_convert_units
+  USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
   USE mo_jsb_grid,              ONLY: Get_grid
 
-  USE mo_dfire_constants,       ONLY: df_sf_spq_layer_top_sl
-  USE mo_dfire_constants,       ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr
-  USE mo_dfire_constants,       ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
-  USE mo_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
-  USE mo_dfire_constants,       ONLY: df_sf_species_nr
-  USE mo_dfire_constants,       ONLY: df_sf_elements_nr
+  USE mo_q_dfire_constants,     ONLY: df_sf_spq_layer_top_sl
+  USE mo_q_dfire_constants,     ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr
+  USE mo_q_dfire_constants,     ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
+  USE mo_q_dfire_constants,     ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
+  USE mo_q_dfire_constants,     ONLY: df_sf_species_nr
+  USE mo_q_dfire_constants,     ONLY: df_sf_elements_nr
 
-  USE mo_dfire_constants,       ONLY: ixs_sf_dead_litter_fuel_pools
+  USE mo_q_dfire_constants,     ONLY: ixs_sf_dead_litter_fuel_pools
 
-  USE mo_dfire_constants,       ONLY: df_sf_species_nr, df_sf_species_co2_idx, df_sf_species_co_idx, &
+  USE mo_q_dfire_constants,     ONLY: df_sf_species_nr, df_sf_species_co2_idx, df_sf_species_co_idx, &
                                         df_sf_species_ch4_idx, &
                                         !df_sf_species_voc_idx, df_sf_species_tpm_idx, & df_sf_species_nox_idx, &
                                         df_sf_species_nh3_idx, df_sf_species_n2o_idx, &
                                         df_sf_species_n2_idx
 
-  USE mo_dfire_sf_damage,       ONLY: t_sf_prob_mort, calc_prob_mortality
-  USE mo_dfire_util,            ONLY: real2logical
+  USE mo_q_dfire_sf_damage,     ONLY: t_sf_prob_mort, calc_prob_mortality
+  USE mo_q_dfire_util,          ONLY: real2logical
 
-  USE mo_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption, &
+  USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption, &
                                             sf_calc_dead_fuel_consumption_populate_elements, &
                                             sf_calc_live_fuel_consumption_populate_elements
 
-  USE mo_dfire_sf_feedback,     ONLY: calc_sf_feedback_dead, calc_sf_feedback_live
+  USE mo_q_dfire_sf_feedback,   ONLY: calc_sf_feedback_dead, calc_sf_feedback_live
 
-  USE mo_dfire_sf_emissions_class,    ONLY: sf_calc_emissions, sf_calc_emissions_elements
+  USE mo_q_dfire_sf_emissions_class,    ONLY: sf_calc_emissions, sf_calc_emissions_elements
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID, &
                                       SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID, &
                                       VEG_BGCM_FIRE_EMISSIONS_ID, VEG_BGCM_FIRE_LITTERFALL_ID
@@ -64,9 +64,9 @@ MODULE mo_dfire_sf_post
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_dfire_sf_post
+  PUBLIC :: update_q_dfire_sf_post
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_sf_post'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_post'
 
 CONTAINS
 
@@ -74,7 +74,7 @@ CONTAINS
   !>
   !>
   !>
-  SUBROUTINE update_dfire_sf_post(tile, options)
+  SUBROUTINE update_q_dfire_sf_post(tile, options)
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_grid_class,          ONLY: t_jsb_grid
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
@@ -536,7 +536,7 @@ CONTAINS
     overflow_els = SUM(mass_imbalance_emitted_dead_el, DIM=2) + & !< 2 = fuel pool index
                         SUM(mass_imbalance_emitted_live_el, DIM=2)
 
-  END SUBROUTINE update_dfire_sf_post
+  END SUBROUTINE update_q_dfire_sf_post
 
 
   ! ======================================================================================================= !
@@ -602,4 +602,4 @@ CONTAINS
   END SUBROUTINE sf_calc_residue
 
 #endif
-END MODULE mo_dfire_sf_post
+END MODULE mo_q_dfire_sf_post

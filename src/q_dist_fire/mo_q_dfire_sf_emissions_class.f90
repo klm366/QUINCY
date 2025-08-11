@@ -23,21 +23,21 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_dfire_sf_emissions_class
+MODULE mo_q_dfire_sf_emissions_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
 
-  USE mo_dfire_sf_adaptor,    ONLY: sf_convert_units
-  USE mo_dfire_constants,     ONLY: df_sf_species_co2_idx, df_sf_species_co_idx, df_sf_species_ch4_idx
-  USE mo_dfire_constants,     ONLY: df_sf_species_nh3_idx, df_sf_species_n2o_idx, df_sf_species_n2_idx
+  USE mo_q_dfire_sf_adaptor,  ONLY: sf_convert_units
+  USE mo_q_dfire_constants,   ONLY: df_sf_species_co2_idx, df_sf_species_co_idx, df_sf_species_ch4_idx
+  USE mo_q_dfire_constants,   ONLY: df_sf_species_nh3_idx, df_sf_species_n2o_idx, df_sf_species_n2_idx
 
   USE mo_lnd_bgcm_idx, ONLY: ixC, ixC13, ixC14, ixN, ixN15, ixP
   USE mo_lnd_bgcm_idx, ONLY: ix_woody_litter !< sb_pool
   USE mo_lnd_bgcm_idx, ONLY: ix_fruit, ix_leaf, ix_reserve, ix_labile, ix_sap_wood, ix_heart_wood !< veg_pool
-  USE mo_dfire_constants, ONLY: t_sf_fuel_dead_fuel_woody_ix, & !< dead fuel (litter)
+  USE mo_q_dfire_constants,   ONLY: t_sf_fuel_dead_fuel_woody_ix, & !< dead fuel (litter)
                                   t_sf_fuel_dead_fuel_polymeric_ix, &
                                   t_sf_fuel_dead_fuel_soluable_ix, &
                                   t_sf_fuel_dead_fuel_res_ix, &
@@ -45,13 +45,13 @@ MODULE mo_dfire_sf_emissions_class
                                   t_sf_fuel_dead_fuel_dom_ix, &
                                   t_sf_fuel_dead_fuel_dom_assoc_ix
 
-  USE mo_dfire_constants, ONLY: t_sf_fuel_dead_fuel_grass_leaf_ix, & !< dead fuel (livegrass)
+  USE mo_q_dfire_constants,   ONLY: t_sf_fuel_dead_fuel_grass_leaf_ix, & !< dead fuel (livegrass)
                                   t_sf_fuel_dead_fuel_grass_sap_ix, &
                                   t_sf_fuel_dead_fuel_grass_labile_ix, &
                                   t_sf_fuel_dead_fuel_grass_reserve_ix, &
                                   t_sf_fuel_dead_fuel_grass_fruit_ix
 
-  USE mo_dfire_constants, ONLY: t_sf_fuel_live_fuel_leaf_ix, t_sf_fuel_live_fuel_sap_wood_ix, & ! live fuel
+  USE mo_q_dfire_constants,   ONLY: t_sf_fuel_live_fuel_leaf_ix, t_sf_fuel_live_fuel_sap_wood_ix, & ! live fuel
                                   t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
                                   t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix
 
@@ -60,7 +60,7 @@ MODULE mo_dfire_sf_emissions_class
   PRIVATE
   PUBLIC :: sf_calc_emissions, sf_calc_emissions_elements
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_sf_emissions_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_emissions_class'
 
 CONTAINS
 
@@ -217,5 +217,5 @@ CONTAINS
   END SUBROUTINE calc_isotopes_same_ratio_as_nutrients
 
 #endif
-END MODULE mo_dfire_sf_emissions_class
+END MODULE mo_q_dfire_sf_emissions_class
 

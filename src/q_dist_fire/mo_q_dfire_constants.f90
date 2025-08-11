@@ -24,7 +24,7 @@
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
 !>
-MODULE mo_dfire_constants
+MODULE mo_q_dfire_constants
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                 ONLY: wp
@@ -269,4 +269,4 @@ CONTAINS
   END SUBROUTINE init_dfire_constants
 
 #endif
-END MODULE mo_dfire_constants
+END MODULE mo_q_dfire_constants

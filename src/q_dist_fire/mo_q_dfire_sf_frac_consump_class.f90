@@ -19,15 +19,15 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_dfire_sf_frac_consump_class
+MODULE mo_q_dfire_sf_frac_consump_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message, finish
 
-  USE mo_dfire_constants,     ONLY: df_sf_omega_o_idx, df_sf_omega_nl_idx !< omega_o and omega_nl indices
-  USE mo_dfire_constants,     ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, & !< fuel consumption indices for each fuel class
+  USE mo_q_dfire_constants,   ONLY: df_sf_omega_o_idx, df_sf_omega_nl_idx !< omega_o and omega_nl indices
+  USE mo_q_dfire_constants,   ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, & !< fuel consumption indices for each fuel class
                                     df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
 
   IMPLICIT NONE
@@ -36,7 +36,7 @@ MODULE mo_dfire_sf_frac_consump_class
   PUBLIC ::  calc_1hr, calc_10hr, calc_100hr, calc_1000hr
   PUBLIC ::  sf_calc_frac_consump
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_sf_frac_consump_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_frac_consump_class'
 
 CONTAINS
 
@@ -178,4 +178,4 @@ CONTAINS
   END FUNCTION calc_1000hr
 
 #endif
-END MODULE mo_dfire_sf_frac_consump_class
+END MODULE mo_q_dfire_sf_frac_consump_class

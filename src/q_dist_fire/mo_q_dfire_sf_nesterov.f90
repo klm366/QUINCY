@@ -19,7 +19,7 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_dfire_sf_nesterov
+MODULE mo_q_dfire_sf_nesterov
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
@@ -34,7 +34,7 @@ MODULE mo_dfire_sf_nesterov
   PRIVATE
   PUBLIC :: calc_sf_nesterov_index
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_sf_fuel'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fuel'
 
 CONTAINS
 
@@ -105,4 +105,4 @@ CONTAINS
   END FUNCTION calc_sf_nesterov_index
 
 #endif
-END MODULE mo_dfire_sf_nesterov
+END MODULE mo_q_dfire_sf_nesterov

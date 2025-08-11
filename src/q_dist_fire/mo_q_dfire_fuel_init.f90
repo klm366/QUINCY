@@ -25,7 +25,7 @@
 !>
 !> @par Revision History
 !>
-MODULE mo_dfire_fuel_init
+MODULE mo_q_dfire_fuel_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
@@ -38,7 +38,7 @@ MODULE mo_dfire_fuel_init
   PRIVATE
   PUBLIC :: dfire_fuel_init
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_fuel_init'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel_init'
 
 CONTAINS
 
@@ -46,7 +46,7 @@ CONTAINS
   !>
   !> Intialize disturbance fire process (after memory has been set up)
   !>
-  SUBROUTINE dfire_fuel_init(tile)
+  SUBROUTINE q_dfire_fuel_init(tile)
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: DFIRE_FUEL_
@@ -59,7 +59,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib !< land-cover-type library - parameter across pfts
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':dfire_fuel_init'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':q_dfire_fuel_init'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(DFIRE_FUEL_)
@@ -210,7 +210,7 @@ CONTAINS
     emissions_els = 0._wp
     residue_els = 0._wp
     overflow_els = 0._wp
-  END SUBROUTINE dfire_fuel_init
+  END SUBROUTINE q_dfire_fuel_init
 
 #endif
-END MODULE mo_dfire_fuel_init
+END MODULE mo_q_dfire_fuel_init

@@ -19,7 +19,7 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_dfire_sf_ignition
+MODULE mo_q_dfire_sf_ignition
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
@@ -31,7 +31,7 @@ MODULE mo_dfire_sf_ignition
   PRIVATE
   PUBLIC :: t_sf_ignitions, calc_sf_ignition
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_sf_ignition'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ignition'
 
 
   TYPE t_sf_ignitions
@@ -107,4 +107,4 @@ CONTAINS
   END FUNCTION calc_sf_ignition
 
 #endif
-END MODULE mo_dfire_sf_ignition
+END MODULE mo_q_dfire_sf_ignition

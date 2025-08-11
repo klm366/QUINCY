@@ -19,7 +19,7 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_dfire_sf_damage
+MODULE mo_q_dfire_sf_damage
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
@@ -56,7 +56,7 @@ MODULE mo_dfire_sf_damage
     MODULE PROCEDURE :: create_t_sf_prob_mort
   END INTERFACE t_sf_prob_mort
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_sf_effects'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_effects'
 
 CONTAINS
 
@@ -273,4 +273,4 @@ CONTAINS
   END FUNCTION calc_tau_l
 
 #endif
-END MODULE mo_dfire_sf_damage
+END MODULE mo_qdfire_sf_damage
