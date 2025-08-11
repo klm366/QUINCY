@@ -27,7 +27,7 @@ MODULE mo_q_dfire_sf_nesterov
   USE mo_exception,           ONLY: message, finish
 
   !< Frost and precipitation thresholds for Nesterov index
-  USE mo_dfire_constants,     ONLY: df_sf_frost_trhd, df_sf_precip_trhd
+  USE mo_q_dfire_constants,     ONLY: df_sf_frost_trhd, df_sf_precip_trhd
 
   IMPLICIT NONE
 

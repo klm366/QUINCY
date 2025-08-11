@@ -59,14 +59,14 @@ CONTAINS
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
     USE mo_spq_constants,       ONLY: init_spq_constants
-    USE mo_dfire_constants,     ONLY: init_dfire_constants
+    USE mo_q_dfire_constants,   ONLY: init_q_dfire_constants
     USE mo_turb_constants,      ONLY: init_turb_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 #endif
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
       &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, Q_AGR_, &
-      &                   DFIRE_
+      &                   Q_DFIRE_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -181,7 +181,7 @@ CONTAINS
            CALL init_spq_constants
            CALL init_turb_constants
            CALL init_sb_constants
-           CALL init_dfire_constants
+           CALL init_q_dfire_constants
            CALL init_q_pheno_parameters
            CALL init_atmland_constants
 #endif

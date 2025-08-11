@@ -19,7 +19,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
-    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, DFIRE_, DFIRE_FUEL_
+    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, Q_DFIRE_, Q_DFIRE_FUEL_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -28,8 +28,8 @@ MODULE mo_jsb_model_init
   dsl4jsb_Use_config(HYDRO_)
 #ifndef __NO_QUINCY__
   dsl4jsb_Use_config(VEG_)
-  dsl4jsb_Use_config(DFIRE_)
-  dsl4jsb_Use_config(DFIRE_FUEL_)
+  dsl4jsb_Use_config(Q_DFIRE_)
+  dsl4jsb_Use_config(Q_DFIRE_FUEL_)
 #endif
 
   USE mo_jsb_class,        ONLY: Get_model
@@ -158,8 +158,8 @@ CONTAINS
     USE mo_spq_init,            ONLY: spq_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
-    USE mo_dfire_init,          ONLY: dfire_init
-    USE mo_dfire_fuel_init,     ONLY: dfire_fuel_init
+    USE mo_q_dfire_init,        ONLY: q_dfire_init
+    USE mo_q_dfire_fuel_init,   ONLY: q_dfire_fuel_init
 #endif
     USE mo_fage_init,           ONLY: fage_init
 
@@ -190,8 +190,8 @@ CONTAINS
     dsl4jsb_Def_config(FAGE_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
-    dsl4jsb_Def_config(DFIRE_)
-    dsl4jsb_Def_config(DFIRE_FUEL_)
+    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_FUEL_)
 #endif
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
@@ -374,8 +374,8 @@ CONTAINS
     !
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_config(VEG_)
-      dsl4jsb_Get_config(DFIRE_)
-      dsl4jsb_Get_config(DFIRE_FUEL_)
+      dsl4jsb_Get_config(Q_DFIRE_)
+      dsl4jsb_Get_config(Q_DFIRE_FUEL_)
 
       !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
       IF(.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
@@ -431,10 +431,10 @@ CONTAINS
       END IF
 
       IF(model%config%qmodel_id == QLAND) THEN
-        IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
-          CALL model%Queue_task(DFIRE_FUEL_, "dfire_fuel")        ! LAND ONLY, todo: rename to dfire_sf_pre, dfire_sf_fire
-          CALL model%Queue_task(DFIRE_, "dfire_spitfire")         ! LAND ONLY
-          CALL model%Queue_task(DFIRE_FUEL_, "dfire_sf_post")     ! LAND ONLY
+        IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+          CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_fuel")        ! LAND ONLY, todo: rename to dfire_sf_pre, dfire_sf_fire
+          CALL model%Queue_task(Q_DFIRE_, "q_dfire_spitfire")         ! LAND ONLY
+          CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_sf_post")     ! LAND ONLY
         ENDIF
         CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
       ENDIF
@@ -472,8 +472,8 @@ CONTAINS
 
       !-- averaging variables in time
       IF(model%config%qmodel_id == QLAND) THEN
-        IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
-          CALL model%Queue_task(DFIRE_, "tavrg_dist_fire")   ! LAND ONLY
+        IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+          CALL model%Queue_task(Q_DFIRE_, "tavrg_dist_fire")   ! LAND ONLY
         ENDIF
       ENDIF
       CALL model%Queue_task(RAD_, "rad_time_average")             ! ALL
@@ -617,9 +617,9 @@ CONTAINS
           END IF
         ENDIF
         IF(model%config%qmodel_id == QLAND) THEN 
-          IF (tile%Is_process_active(DFIRE_FUEL_) .AND. tile%Is_process_active(DFIRE_)) THEN
-            CALL dfire_fuel_init(tile)
-            CALL dfire_init(tile)
+          IF (tile%Is_process_active(Q_DFIRE_FUEL_) .AND. tile%Is_process_active(Q_DFIRE_)) THEN
+            CALL q_dfire_fuel_init(tile)
+            CALL q_dfire_init(tile)
           END IF
         ENDIF
 #endif

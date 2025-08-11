@@ -45,7 +45,7 @@ MODULE mo_q_dfire_config_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_dfire_config
+  PUBLIC :: t_q_dfire_config
   PUBLIC :: DFIRE_MODEL_SF
 
   !>
@@ -67,7 +67,7 @@ MODULE mo_q_dfire_config_class
   !>
   !> config TYPE of the dist_fire process, derived from t_jsb_config
   !>
-  TYPE, EXTENDS(t_jsb_config) :: t_dfire_config
+  TYPE, EXTENDS(t_jsb_config) :: t_q_dfire_config
     LOGICAL           :: flag_dfire                  !< on/off disturbance fire process [boolean]
     CHARACTER(len=20) :: dfire_modelname             !< name of fire model to run
     INTEGER           :: dfire_model_id              !< fire model ID
@@ -100,10 +100,10 @@ MODULE mo_q_dfire_config_class
     REAL(wp)          :: tree_diameter_factor        !< Tree diameter factor for spitfire
 
   CONTAINS
-    PROCEDURE :: Init => Init_dfire_config
-  END type t_dfire_config
+    PROCEDURE :: Init => Init_q_dfire_config
+  END type t_q_dfire_config
   
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_config_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_config_class'
 
 CONTAINS
 
@@ -111,7 +111,7 @@ CONTAINS
   !>
   !> configuration routine of t_dfire_config
   !>
-  SUBROUTINE Init_dfire_config(config)
+  SUBROUTINE Init_q_dfire_config(config)
 #ifdef __QUINCY_STANDALONE__
     USE mo_namelist,            ONLY: open_nml, POSITIONED, position_nml, close_nml
 #else
@@ -122,7 +122,7 @@ CONTAINS
     USE mo_jsb_grid,           ONLY: register_vgrid
 
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_dfire_config), INTENT(inout) :: config    !< config type for dfire
+    CLASS(t_q_dfire_config), INTENT(inout) :: config    !< config type for dfire
     ! ----------------------------------------------------------------------------------------------------- !
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                       :: active
@@ -158,12 +158,12 @@ CONTAINS
     REAL(wp)                      :: tree_height_factor          !< Tree height factor for spitfire
     REAL(wp)                      :: tree_diameter_factor        !< Tree diameter factor for spitfire
 
-    CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dfire_config'
+    CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_q_dfire_config'
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_STANDALONE__
-    NAMELIST /dist_fire_ctl/        &
+    NAMELIST /q_dist_fire_ctl/        &
 #else
-    NAMELIST /dist_fire_nml/        &
+    NAMELIST /q_dist_fire_nml/        &
 #endif
       & active,                               &
       & ic_filename,                          &
@@ -227,11 +227,11 @@ CONTAINS
     nml_handler = open_nml(TRIM(config%namelist_filename))
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('dist_fire_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, dist_fire_ctl)
+    nml_unit = position_nml('q_dist_fire_ctl', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, q_dist_fire_ctl)
 #else
-    nml_unit = position_nml('dist_fire_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, dist_fire_nml)
+    nml_unit = position_nml('q_dist_fire_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, q_dist_fire_nml)
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
     ! pass values as read from file
@@ -292,7 +292,7 @@ CONTAINS
     CALL register_vgrid(vgrid_fuel_classes)
     CALL register_vgrid(vgrid_fuel_moisture)
     CALL register_vgrid(vgrid_months_in_year)
-  END SUBROUTINE Init_dfire_config
+  END SUBROUTINE Init_q_dfire_config
 
 
   ! ====================================================================================================== !
@@ -319,7 +319,7 @@ CONTAINS
   !> Returns the id for this fire precipitation method name
   !>
   FUNCTION Get_Precip_Method_id(name) RESULT(return_value)
-    USE mo_dfire_constants,   ONLY: DFIRE_PRECIP_METHOD_DAYTIME, &
+    USE mo_q_dfire_constants, ONLY: DFIRE_PRECIP_METHOD_DAYTIME, &
                                     DFIRE_PRECIP_METHOD_MAVG, &
                                     DFIRE_PRECIP_METHOD_APROX_MAVG
     ! ----------------------------------------------------------------------------------------------------- !

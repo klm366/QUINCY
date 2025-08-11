@@ -41,11 +41,11 @@ MODULE mo_q_dfire_init
 #ifndef __QUINCY_STANDALONE__
   USE mo_jsb_time,                ONLY: timestep_in_days
 #endif
-  USE mo_jsb_process_class,       ONLY: DFIRE_
+  USE mo_jsb_process_class,       ONLY: Q_DFIRE_
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: q_dfire_init, provide_lightning_events
+  PUBLIC :: q_dfire_init
 
 #ifndef __QUINCY_STANDALONE__
   PUBLIC ::  provide_lightning_events
@@ -70,17 +70,15 @@ CONTAINS
   SUBROUTINE q_dfire_init(tile)
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_grid,                ONLY: Get_grid
-    USE mo_jsb_task_class,          ONLY: t_jsb_task_options ! todo: maybe QS only? (IQ does not deal with options)
 
     USE mo_q_dfire_constants,       ONLY: DFIRE_PRECIP_METHOD_DAYTIME, & !< Method to compute precipitation
                                           DFIRE_PRECIP_METHOD_APROX_MAVG, &
                                           DFIRE_PRECIP_METHOD_MAVG
 
-    dsl4jsb_Use_config(DFIRE_)
-    dsl4jsb_Use_memory(DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_)
+    dsl4jsb_Use_memory(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
-    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER              :: model
     TYPE(t_jsb_grid),       POINTER              :: hgrid              !< Horizontal grid
@@ -90,8 +88,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':q_dfire_init'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(DFIRE_)
-    dsl4jsb_Def_memory(DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_memory(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: dfire_pm_id                                  !< Selected precipitation method
     ! ----------------------------------------------------------------------------------------------------- !
@@ -149,17 +147,13 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: lightning_events
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
-    !iblk    = options%iblk
-    !ics     = options%ics
-    !ice     = options%ice
-    !nc      = options%nc
 #ifdef __QUINCY_STANDALONE__
-    dtime   = options%dtime
+    ! todo: dtime defined as ?
 #else
     dtime=timestep_in_days(model_id=tile%owner_model_id)
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN
+    IF (.NOT. tile%Is_process_active(Q_DFIRE_)) RETURN
     !IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
@@ -168,61 +162,61 @@ CONTAINS
     nblks  =  hgrid%nblks
     nproma =  hgrid%nproma
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(DFIRE_)
-    dsl4jsb_Get_memory(DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_)
+    dsl4jsb_Get_memory(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, nesterov_index)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, fdi)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, ros_f)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, ros_b)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, mean_fire_area)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, fire_duration)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, nesterov_index)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, fdi)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, ros_f)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, ros_b)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, mean_fire_area)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, fire_duration)
 
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, e_n_ignitions)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, e_n_humans)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, e_n_lightning)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, ab_moisture_diag)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, e_n_ignitions)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, e_n_humans)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, e_n_lightning)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, ab_moisture_diag)
 
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, reaction_intensity)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, prop_flux_ratio)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, wind_factor)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, eff_heating_number)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, preig_heat)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, reaction_intensity)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, prop_flux_ratio)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, wind_factor)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, eff_heating_number)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, preig_heat)
 
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, opt_react_velo)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, net_fuel_load)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, moist_damp_coeff)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, mineral_damp_coeff)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, opt_react_velo)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, net_fuel_load)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, moist_damp_coeff)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, mineral_damp_coeff)
 
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, mask_is_fire_intense_enough)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_qc_mavg)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_daily_mmd)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_mavg)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, precip_daytime)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, mask_is_fire_intense_enough)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, precip_qc_mavg)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, precip_daily_mmd)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, precip_mavg)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, precip_daytime)
 
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, t_air_min)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, t_air_max)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, t_air_min)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, t_air_max)
 
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, area_burned)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, area_burned_fract)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_frac_consumption)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, i_surface)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, area_burned)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, area_burned_fract)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, dead_frac_consumption)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, i_surface)
 
-    dsl4jsb_Get_var3D_onDomain(DFIRE_, fuel_moisture)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, fuel_moisture)
 
-    dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_1hr)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_10hr)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_100hr)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_, dead_fuel_consumption_1000hr)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_, live_fuel_consumption_1hr)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, dead_fuel_consumption_1hr)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, dead_fuel_consumption_10hr)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, dead_fuel_consumption_100hr)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, dead_fuel_consumption_1000hr)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, live_fuel_consumption_1hr)
 
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, distance_travelled)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, l2b_ratio)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, distance_travelled)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, l2b_ratio)
 
-    dsl4jsb_Get_var3D_onDomain(DFIRE_, frac_consump_fcl)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, ic_pop_dens)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_, ic_lightning_events_monthly)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, lightning_events)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, frac_consump_fcl)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, ic_pop_dens)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, ic_lightning_events_monthly)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, lightning_events)
     ! ----------------------------------------------------------------------------------------------------- !
     nesterov_index = 0._wp
     fdi = 0._wp
@@ -275,34 +269,34 @@ CONTAINS
     df_sf_fire_duration_thd = dtime / 60._wp ! convert seconds to minutes
 
     !< Chose daily precipitation. Those are calculated in 3 different ways.
-    dfire_pm_id = dsl4jsb_Config(DFIRE_)%dfire_precip_method_id
+    dfire_pm_id = dsl4jsb_Config(Q_DFIRE_)%dfire_precip_method_id
     IF (dfire_pm_id == DFIRE_PRECIP_METHOD_DAYTIME) THEN
       !< daytime
-      dsl4jsb_var_ptr(DFIRE_,precip_daily) => dsl4jsb_var_ptr(DFIRE_,precip_daytime)
+      dsl4jsb_var_ptr(Q_DFIRE_,precip_daily) => dsl4jsb_var_ptr(Q_DFIRE_,precip_daytime)
     ELSE IF (dfire_pm_id == DFIRE_PRECIP_METHOD_MAVG) THEN
       !< moving average
-      dsl4jsb_var_ptr(DFIRE_,precip_daily) => dsl4jsb_var_ptr(DFIRE_,precip_mavg)
+      dsl4jsb_var_ptr(Q_DFIRE_,precip_daily) => dsl4jsb_var_ptr(Q_DFIRE_,precip_mavg)
     ELSE IF (dfire_pm_id == DFIRE_PRECIP_METHOD_APROX_MAVG) THEN
       !< aproximation to moving average (quincy default method)
-      dsl4jsb_var_ptr(DFIRE_,precip_daily) => dsl4jsb_var_ptr(DFIRE_,precip_qc_mavg)
+      dsl4jsb_var_ptr(Q_DFIRE_,precip_daily) => dsl4jsb_var_ptr(Q_DFIRE_,precip_qc_mavg)
     ENDIF
 
     !< Initialize ratio of sb pools to dead fuel
-    ratio_as_dead_fuel % polymeric      = dsl4jsb_Config(DFIRE_)%ratio_polymeric_litter_to_dead_fuel
-    ratio_as_dead_fuel % dom_assoc      = dsl4jsb_Config(DFIRE_)%ratio_dom_assoc_to_dead_fuel
-    ratio_as_dead_fuel % dom            = dsl4jsb_Config(DFIRE_)%ratio_dom_to_dead_fuel
-    ratio_as_dead_fuel % soluable       = dsl4jsb_Config(DFIRE_)%ratio_soluable_litter_to_dead_fuel
-    ratio_as_dead_fuel % residue        = dsl4jsb_Config(DFIRE_)%ratio_residue_to_dead_fuel
-    ratio_as_dead_fuel % residue_assoc  = dsl4jsb_Config(DFIRE_)%ratio_residue_assoc_to_dead_fuel
+    ratio_as_dead_fuel % polymeric      = dsl4jsb_Config(Q_DFIRE_)%ratio_polymeric_litter_to_dead_fuel
+    ratio_as_dead_fuel % dom_assoc      = dsl4jsb_Config(Q_DFIRE_)%ratio_dom_assoc_to_dead_fuel
+    ratio_as_dead_fuel % dom            = dsl4jsb_Config(Q_DFIRE_)%ratio_dom_to_dead_fuel
+    ratio_as_dead_fuel % soluable       = dsl4jsb_Config(Q_DFIRE_)%ratio_soluable_litter_to_dead_fuel
+    ratio_as_dead_fuel % residue        = dsl4jsb_Config(Q_DFIRE_)%ratio_residue_to_dead_fuel
+    ratio_as_dead_fuel % residue_assoc  = dsl4jsb_Config(Q_DFIRE_)%ratio_residue_assoc_to_dead_fuel
 
 #ifdef __QUINCY_STANDALONE__
     ! quincy only
-    CALL dfire_read_init_vars(tile)
+    CALL q_dfire_read_init_vars(tile)
 #else
     ! IQ only
     ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
-      CALL dfire_read_init_vars(tile)
+      CALL q_dfire_read_init_vars(tile)
     END IF
 
     !CALL spq_init_ic_bc(tile)
@@ -319,7 +313,7 @@ CONTAINS
 !      ENDDO
 !    ENDDO
 
-!    IF (tile%Is_last_process_tile(DFIRE_)) THEN
+!    IF (tile%Is_last_process_tile(Q_DFIRE_)) THEN
     !  CALL spq_finalize_init_vars()
 !    END IF
 #endif
@@ -328,18 +322,18 @@ CONTAINS
 
 
 #ifdef __QUINCY_STANDALONE__
-  SUBROUTINE dfire_read_init_vars(tile)
+  SUBROUTINE q_dfire_read_init_vars(tile)
     USE mo_jsb_model_class,    ONLY: t_jsb_model
     USE mo_jsb_class,          ONLY: get_model
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
     USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
     USE mo_jsb_io,             ONLY: missval
 
-    dsl4jsb_Use_config(DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    dsl4jsb_Def_config(DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_)
 
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
@@ -347,7 +341,7 @@ CONTAINS
     INTEGER                     :: nproma
     INTEGER                     :: nblks
     INTEGER                     :: nsoil_sb
-    CHARACTER(len=*), PARAMETER :: routine = modname//':dfire_read_init_vars'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':q_dfire_read_init_vars'
 
     IF (debug_on()) CALL message(routine, 'Reading/setting DFIRE_ init vars')
 
@@ -366,12 +360,12 @@ CONTAINS
     dfire_init_vars%pop_dens              (:,:) = missval
     dfire_init_vars%lightning_events    (:,:,:) = missval
 
-    dsl4jsb_Get_config(DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
 
-    dfire_init_vars%pop_dens(:,:) = dsl4jsb_Config(DFIRE_)%pop_dens
-    dfire_init_vars%lightning_events(:,:,:) = dsl4jsb_Config(DFIRE_)%lightning_events
-  END SUBROUTINE dfire_read_init_vars
+    dfire_init_vars%pop_dens(:,:) = dsl4jsb_Config(Q_DFIRE_)%pop_dens
+    dfire_init_vars%lightning_events(:,:,:) = dsl4jsb_Config(Q_DFIRE_)%lightning_events
+  END SUBROUTINE q_dfire_read_init_vars
 #else
   ! ======================================================================================================= !
   !> read DFIRE_ init vars from input file
@@ -384,11 +378,11 @@ CONTAINS
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_jsb_io,             ONLY: missval
 
-    dsl4jsb_Use_config(DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    dsl4jsb_Def_config(DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_)
 
     REAL(wp), POINTER           :: ptr_2D(:, :)
     REAL(wp), POINTER           :: ptr_2D_time(:, :, :)
@@ -416,11 +410,11 @@ CONTAINS
     dfire_init_vars%pop_dens              (:,:) = missval
     dfire_init_vars%lightning_events    (:,:,:) = missval
 
-    dsl4jsb_Get_config(DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! Read data from populations density file
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DFIRE_)%ic_popdens_filename), model%grid_id)
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(Q_DFIRE_)%ic_popdens_filename), model%grid_id)
 
     !> pop dens
     ptr_2D => input_file%Read_2d(  &
@@ -447,8 +441,8 @@ CONTAINS
     USE mo_jsb_grid,               ONLY: Get_grid
     USE mo_jsb_class,              ONLY: get_model
 
-    dsl4jsb_Use_memory(DFIRE_)
-    dsl4jsb_Use_config(DFIRE_)
+    dsl4jsb_Use_memory(Q_DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_)
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -459,8 +453,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
     LOGICAL, SAVE                        :: is_read = .FALSE. !< TRUE if forcing file has beed read
 
-    dsl4jsb_Def_config(DFIRE_)
-    dsl4jsb_Def_memory(DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_memory(Q_DFIRE_)
 
     dsl4jsb_Real3D_onDomain :: ic_lightning_events_monthly
     dsl4jsb_Real2D_onDomain :: lightning_events
@@ -478,16 +472,16 @@ CONTAINS
     nproma = hgrid%nproma
     nblks  = hgrid%nblks
     ! -------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(DFIRE_)
-    dsl4jsb_Get_memory(DFIRE_)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_, ic_lightning_events_monthly) ! yearly lightning events
-    dsl4jsb_Get_var2D_onDomain(DFIRE_, lightning_events) ! lightning events for the current month
+    dsl4jsb_Get_config(Q_DFIRE_)
+    dsl4jsb_Get_memory(Q_DFIRE_)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, ic_lightning_events_monthly) ! yearly lightning events
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, lightning_events) ! lightning events for the current month
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
     IF (.NOT. is_read) THEN
       ! Read data from sso file
-      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DFIRE_)%ic_lightning_events_filename), model%grid_id)
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(Q_DFIRE_)%ic_lightning_events_filename), model%grid_id)
 
       !>
       ptr_3D => input_file%Read_2D_time(variable_name='HRMC_COM_FR')

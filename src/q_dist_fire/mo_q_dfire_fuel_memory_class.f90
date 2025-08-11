@@ -117,7 +117,7 @@ CONTAINS
     USE mo_jsb_model_class,   ONLY: t_jsb_model
 
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_q_dfire_fuel_memory), INTENT(inout), TARGET  :: mem      !> dfire memory
+    CLASS(t_q_dfire_fuel_memory), INTENT(inout), TARGET  :: mem    !> dfire memory
     CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
     CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
     INTEGER,              INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles

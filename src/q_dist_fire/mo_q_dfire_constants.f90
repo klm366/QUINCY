@@ -37,7 +37,7 @@ MODULE mo_q_dfire_constants
   !>
   !> dfire parameters
   !>
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_dfire_constants'
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_dfire_constants'
 
   !< sb pool to dead fuel ratios (polymoric is not included as it is fundamental)
   TYPE :: t_sf_litter_ratios
@@ -217,7 +217,7 @@ MODULE mo_q_dfire_constants
                                                            !< This is an adaptation from daily to 30 min TS as Thonicke et al. (2010) runs at a daily TS
 
   ! todo: smarter way to do it? 
-  LOGICAL, PARAMETER :: dfire_pft_mask(13) = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
+  LOGICAL, PARAMETER :: q_dfire_pft_mask(13) = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
                                               .TRUE., .TRUE., &                                 ! grass pfts
                                               .FALSE., .FALSE., &                               ! pasture pfts , 13 pfts only
                                               .FALSE., .FALSE., &                               ! crop pfts
@@ -230,8 +230,8 @@ CONTAINS
   !>
   !> Initialize constants used in the dfire process
   !>
-  SUBROUTINE init_dfire_constants
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_dfire_constants'
+  SUBROUTINE init_q_dfire_constants
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_q_dfire_constants'
     ! ----------------------------------------------------------------------------------------------------- !
     df_sf_carbon_to_biomass_factor    = 1._wp / carbon_per_dryweight_leaf
 
@@ -266,7 +266,7 @@ CONTAINS
     df_sf_dead_frac(:,t_sf_fuel_dead_fuel_grass_labile_ix) =  df_sf_fuel_frac_fast
     df_sf_dead_frac(:,t_sf_fuel_dead_fuel_grass_reserve_ix) = df_sf_fuel_frac_fast
     df_sf_dead_frac(:,t_sf_fuel_dead_fuel_grass_fruit_ix) =   df_sf_fuel_frac_fast
-  END SUBROUTINE init_dfire_constants
+  END SUBROUTINE init_q_dfire_constants
 
 #endif
 END MODULE mo_q_dfire_constants

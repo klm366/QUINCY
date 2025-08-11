@@ -257,7 +257,7 @@ CONTAINS
   !>    A units conversion is required
   !>
   FUNCTION calc_tau_l(nfuels, dead_fuel, frac_consump) RESULT (tau_l)
-    USE mo_dfire_constants, ONLY: df_sf_units_m2_to_cm2
+    USE mo_q_dfire_constants, ONLY: df_sf_units_m2_to_cm2
     INTEGER, INTENT(in)  :: nfuels                    !< Number of fuel classes
     REAL(wp), INTENT(in) :: dead_fuel(nfuels)         !< [gDM/m2]
     REAL(wp), INTENT(in) :: frac_consump(nfuels)      !< Fraction of consumption [0 to 1]
@@ -273,4 +273,4 @@ CONTAINS
   END FUNCTION calc_tau_l
 
 #endif
-END MODULE mo_qdfire_sf_damage
+END MODULE mo_q_dfire_sf_damage

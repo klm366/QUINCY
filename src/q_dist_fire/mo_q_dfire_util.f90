@@ -47,7 +47,7 @@ MODULE mo_q_dfire_util
 CONTAINS
 
   ! ======================================================================================================= !
-  !> calculate time moving averages and daytime averages for DFIRE_
+  !> calculate time moving averages and daytime averages for Q_DFIRE_
   !>
   SUBROUTINE calculate_time_average_q_dist_fire(tile, options)
 
@@ -60,9 +60,9 @@ CONTAINS
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_lnd_time_averages,       ONLY: mavg_period_dfire, calc_time_mavg
     !------------------------------------------------------------------------------------------------------ !
-    dsl4jsb_Use_processes A2L_, DFIRE_
+    dsl4jsb_Use_processes A2L_, Q_DFIRE_
     dsl4jsb_Use_memory(A2L_)
-    dsl4jsb_Use_memory(DFIRE_)
+    dsl4jsb_Use_memory(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -75,12 +75,12 @@ CONTAINS
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_q_dist_fire'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(DFIRE_)
+    dsl4jsb_Def_memory(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: rain
     dsl4jsb_Real2D_onChunk      :: snow
-    ! DFIRE_
+    ! Q_DFIRE_
     dsl4jsb_Real2D_onChunk      :: precip_qc_mavg
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -89,7 +89,7 @@ CONTAINS
     nc      = options%nc
     dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(DFIRE_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(Q_DFIRE_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
@@ -97,13 +97,13 @@ CONTAINS
     ncanopy       =  vgrid_canopy%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(DFIRE_)
+    dsl4jsb_Get_memory(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, rain)
     dsl4jsb_Get_var2D_onChunk(A2L_, snow)
-    ! DFIRE_
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_qc_mavg)
+    ! Q_DFIRE_
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, precip_qc_mavg)
     ! ----------------------------------------------------------------------------------------------------- !
 
     precip_qc_mavg(:) = calc_time_mavg(dtime, precip_qc_mavg(:), (rain(:)+snow(:)), mavg_period_dfire)
@@ -131,9 +131,9 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
 
     ! Use of process memories
-    dsl4jsb_Use_processes A2L_, DFIRE_
+    dsl4jsb_Use_processes A2L_, Q_DFIRE_
     dsl4jsb_Use_memory(A2L_)
-    dsl4jsb_Use_memory(DFIRE_)
+    dsl4jsb_Use_memory(Q_DFIRE_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -151,14 +151,14 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(DFIRE_)
+    dsl4jsb_Def_memory(Q_DFIRE_)
     ! Declare pointers to variables in memory
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: rain
     dsl4jsb_Real2D_onChunk      :: snow
     dsl4jsb_Real2D_onChunk      :: local_time_day_seconds
-    ! DFIRE_ 2D
+    ! Q_DFIRE_ 2D
     dsl4jsb_Real2D_onChunk      :: precip_daytime         !<
     dsl4jsb_Real2D_onChunk      :: t_air_max              !<
     dsl4jsb_Real2D_onChunk      :: t_air_min              !<
@@ -173,7 +173,7 @@ CONTAINS
     dtime   = options%dtime
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN   ! ask for all processes considered here ?
+    IF (.NOT. tile%Is_process_active(Q_DFIRE_)) RETURN   ! ask for all processes considered here ?
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
@@ -182,16 +182,16 @@ CONTAINS
     !..
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(DFIRE_)
+    dsl4jsb_Get_memory(Q_DFIRE_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
     dsl4jsb_Get_var2D_onChunk(A2L_, rain)
     dsl4jsb_Get_var2D_onChunk(A2L_, snow)
     dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)         ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_daytime)
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_max)
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, t_air_min)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, precip_daytime)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, t_air_max)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, t_air_min)
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -270,9 +270,9 @@ CONTAINS
     USE mo_quincy_mavg_class,       ONLY: t_mavg
 
     ! Use of process memories
-    dsl4jsb_Use_processes A2L_, DFIRE_
+    dsl4jsb_Use_processes A2L_, Q_DFIRE_
     dsl4jsb_Use_memory(A2L_)
-    dsl4jsb_Use_memory(DFIRE_)
+    dsl4jsb_Use_memory(Q_DFIRE_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -290,12 +290,12 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(DFIRE_)
+    dsl4jsb_Def_memory(Q_DFIRE_)
     ! Declare pointers to variables in memory
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: rain
     dsl4jsb_Real2D_onChunk      :: snow
-    ! DFIRE_ 2D
+    ! Q_DFIRE_ 2D
     dsl4jsb_Real2D_onChunk      :: precip_mavg
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -305,7 +305,7 @@ CONTAINS
     dtime   = options%dtime
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_active(DFIRE_)) RETURN   ! ask for all processes considered here ?
+    IF (.NOT. tile%Is_process_active(Q_DFIRE_)) RETURN   ! ask for all processes considered here ?
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
@@ -314,12 +314,12 @@ CONTAINS
     !..
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(DFIRE_)
+    dsl4jsb_Get_memory(Q_DFIRE_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_, rain)
     dsl4jsb_Get_var2D_onChunk(A2L_, snow)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(DFIRE_, precip_mavg)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, precip_mavg)
 
     IF (.NOT. ALLOCATED(precip_mavg_type)) THEN
       ALLOCATE(precip_mavg_type(nc))

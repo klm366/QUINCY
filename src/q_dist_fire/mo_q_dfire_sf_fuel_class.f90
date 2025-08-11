@@ -412,7 +412,7 @@ CONTAINS
         total_fuel(inc) = sum(fuel(:,:,inc))
       END DO
     CASE DEFAULT
-      WRITE(*,*) "mo_dfire_sf_fuel_class.f90:: sf_calc_aggr_fuels:: NC dim =", nc_idx
+      WRITE(*,*) "mo_q_dfire_sf_fuel_class.f90:: sf_calc_aggr_fuels:: NC dim =", nc_idx
       CALL finish("sf_calc_aggr_fuels","NCDIM argument is not implemented")
     END SELECT
 

@@ -226,7 +226,7 @@ MODULE mo_jsb_lctlib_class
       & k_som_fast_init               , &
       & k_som_slow_init
 
-    ! --- Parameters used in Quincy SPITFIRE (mo_dfire_spitfire.f90) -------------------------------------------------------------
+    ! --- Parameters used in Quincy SPITFIRE (mo_q_dfire_spitfire.f90) -------------------------------------------------------------
     REAL(wp) :: q_emissions_co2_mol          , &
                 q_emissions_co_mol           , &
                 q_emissions_ch4_mol          , &
@@ -242,7 +242,7 @@ MODULE mo_jsb_lctlib_class
                 q_crown_length               , &
                 q_bark_thickness_par1        , &
                 q_bark_thickness_par2        , &
-                q_F_scorch_height            , &
+                q_scorch_height_f            , &
                 q_fuel_bulk_density          , &
                 q_fwd_wind_factor            , &
                 q_moisture_extinction
@@ -472,7 +472,7 @@ CONTAINS
     LOGICAL            :: exists_q_crown_length = .FALSE.
     LOGICAL            :: exists_q_bark_thickness_par1 = .FALSE.
     LOGICAL            :: exists_q_bark_thickness_par2 = .FALSE.
-    LOGICAL            :: exists_q_F_scorch_height = .FALSE.
+    LOGICAL            :: exists_q_scorch_height_f = .FALSE.
     LOGICAL            :: exists_q_emissions_co2_mol = .FALSE.
     LOGICAL            :: exists_q_emissions_co_mol = .FALSE.
     LOGICAL            :: exists_q_emissions_ch4_mol = .FALSE.
@@ -1084,9 +1084,9 @@ CONTAINS
           CASE ('q_bark_thickness_par2')
             READ(line(pos:length),*) lctlib(1:nlct)%q_bark_thickness_par2
             exists_q_bark_thickness_par2 = .TRUE.
-          CASE ('q_f_scorch_height')
-            READ(line(pos:length),*) lctlib(1:nlct)%q_F_scorch_height
-            exists_q_F_scorch_height = .TRUE.
+          CASE ('q_scorch_height_f')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_scorch_height_f
+            exists_q_scorch_height_f = .TRUE.
           CASE ('q_emissions_co2_mol')
             READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_co2_mol
             exists_q_emissions_co2_mol = .TRUE.
@@ -1430,8 +1430,8 @@ CONTAINS
             CALL finish('init_lctlib','No data for q_bark_thickness_par1 found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_q_bark_thickness_par2) &
             CALL finish('init_lctlib','No data for q_bark_thickness_par2 found in '//TRIM(lctlib_file_name))
-        IF(.NOT. exists_q_F_scorch_height) &
-            CALL finish('init_lctlib','No data for q_F_scorch_height found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_scorch_height_f) &
+            CALL finish('init_lctlib','No data for q_scorch_height_f found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_q_emissions_co2_mol) &
             CALL finish('init_lctlib','No data for q_emissions_co2_mol found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_q_emissions_co_mol) &
@@ -1791,7 +1791,7 @@ CONTAINS
         CALL p_bcast(lctlib(:)%q_crown_length, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_bark_thickness_par1, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_bark_thickness_par2, p_io, mpi_comm)
-        CALL p_bcast(lctlib(:)%q_F_scorch_height, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_scorch_height_f, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_emissions_co2_mol, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_emissions_co_mol, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_emissions_ch4_mol, p_io, mpi_comm)

@@ -144,7 +144,7 @@ CONTAINS
         !<  (Table A1, 5th from Thonicke et al. (2010))
         ros%net_fuel_load(inc) = (1._wp - df_sf_mineral_fract) * SUM(w_oi(inc,:))
         ros%net_fuel_load(inc) = sf_convert_units("g", "kg", ros%net_fuel_load(inc))
-        ros%fbd(inc) = fuel_bulk_density(inc) !< fuel bulk density [kg m-3], precomputed at mo_dfire_fuel.f90 + aggregation to         average
+        ros%fbd(inc) = fuel_bulk_density(inc) !< fuel bulk density [kg m-3], precomputed at mo_q_dfire_fuel.f90 + aggregation to         average
 
         sigma(inc) = calc_sigma(df_sf_sigma_nr, nfuels, df_sigmas, w_oi(inc,:)) !< Table A1, 3rd equation [cm-1] from Thonicke et al. (2010)
         !< (Table A1, 3rd from Thonicke et al. (2010))

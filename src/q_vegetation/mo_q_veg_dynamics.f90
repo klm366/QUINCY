@@ -51,18 +51,18 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_AGR_, Q_PHENO_, HYDRO_, Q_SYL_, DFIRE_, DFIRE_FUEL_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_AGR_, Q_PHENO_, HYDRO_, Q_SYL_, Q_DFIRE_, Q_DFIRE_FUEL_
     USE mo_veg_constants,         ONLY: itree, rfr_ratio_toc, k_r2fr_chl
 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_config(Q_SYL_)
-    dsl4jsb_Use_config(DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(HYDRO_)
-    dsl4jsb_Use_memory(DFIRE_FUEL_)
+    dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -88,11 +88,11 @@ CONTAINS
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_config(Q_SYL_)
-    dsl4jsb_Def_config(DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(DFIRE_FUEL_)
+    dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
@@ -130,7 +130,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c13
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c14
-    ! DFIRE_FUEL_ 2D
+    ! Q_DFIRE_FUEL_ 2D
     dsl4jsb_Real2D_onChunk      :: pm_fire
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -150,11 +150,11 @@ CONTAINS
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_config(Q_SYL_)
-    dsl4jsb_Get_config(DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(DFIRE_FUEL_)
+    dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -198,8 +198,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp)       ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c13)   ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c14)   ! out
-    ! DFIRE_FUEL_ 2D
-    dsl4jsb_Get_var2D_onChunk(DFIRE_FUEL_, pm_fire)             ! in
+    ! Q_DFIRE_FUEL_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_fire)           ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     !> 0.9 init local var
@@ -222,14 +222,14 @@ CONTAINS
     ENDSELECT
 
     !> 1.2 Load mortality_rate_fire
-    IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
+    IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
       mortality_rate_fire(:) = pm_fire(:)
     ELSE
       mortality_rate_fire(:) = 0._wp !< no change
     END IF
 
     !> 1.2 Load mortality_rate_fire
-    IF (dsl4jsb_Config(DFIRE_)%flag_dfire) THEN
+    IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
       mortality_rate_fire(:) = pm_fire(:)
     ELSE
       mortality_rate_fire(:) = 0._wp !< no change

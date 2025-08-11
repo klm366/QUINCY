@@ -33,7 +33,7 @@ MODULE mo_q_dfire_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
-  USE mo_dfire_constants,       ONLY: df_sf_vgrid_dead_fuel_pools_name, &
+  USE mo_q_dfire_constants,       ONLY: df_sf_vgrid_dead_fuel_pools_name, &
                                       df_sf_vgrid_live_fuel_pools_name, &
                                       df_sf_vgrid_fuel_classes_name, &
                                       df_sf_vgrid_fuel_moisture_name, &
@@ -136,17 +136,18 @@ CONTAINS
   !>
   !> initialize memory (variables) for the process: dist_fire
   !>
-  SUBROUTINE Init_q_dfire_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_q_dfire_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_dfire_memory), INTENT(inout), TARGET  :: mem           !> dfire memory
+    CLASS(t_q_dfire_memory), INTENT(inout), TARGET  :: mem         !> dfire memory
     CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
     CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
     INTEGER,              INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
+    INTEGER,              INTENT(in)            :: lib_id          !< id of primary lct in lctlib
     INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
@@ -158,7 +159,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_moisture              !> Fuel fuel moisture
     TYPE(t_jsb_vgrid), POINTER :: vgrid_months_in_year             !> Number of months in a year
     INTEGER                    :: table
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_dfire_memory'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_q_dfire_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     model                 => Get_model(model_id)
     table                 =  tables(1)

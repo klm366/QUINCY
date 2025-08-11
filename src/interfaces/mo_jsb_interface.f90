@@ -38,7 +38,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_physical_constants, ONLY: cvdifts
   USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
-  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, DFIRE_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, Q_DFIRE_
 
   IMPLICIT NONE
   PRIVATE
@@ -619,7 +619,7 @@ CONTAINS
     USE mo_alcc_init,           ONLY : read_land_use_data
 #ifndef __NO_QUINCY__
     USE mo_sb_init,             ONLY : provide_n_and_p_deposition
-    USE mo_dfire_init,          ONLY : provide_lightning_events
+    USE mo_q_dfire_init,        ONLY : provide_lightning_events
     USE mo_q_syl_init,          ONLY : read_harvest_fraction
     USE mo_q_agr_init,          ONLY : read_fertiliser_input
 #endif
@@ -673,8 +673,8 @@ CONTAINS
         IF (model%processes(SB_)%p%config%active) THEN
           CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
         END IF
-        ! For the DFIRE process, data on lightning events is read at the start of the simulation and updated monthly
-        IF (model%processes(DFIRE_)%p%config%active) THEN
+        ! For the Q_DFIRE process, data on lightning events is read at the start of the simulation and updated monthly
+        IF (model%processes(Q_DFIRE_)%p%config%active) THEN
           CALL provide_lightning_events(model_id, current_datetime, dtime)
         END IF
       END IF

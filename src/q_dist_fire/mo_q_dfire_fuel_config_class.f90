@@ -48,7 +48,7 @@ MODULE mo_q_dfire_fuel_config_class
     PROCEDURE :: Init => Init_q_dfire_fuel_config
   END type t_q_dfire_fuel_config
   
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dfire_fuel_config_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel_config_class'
 
 CONTAINS
 
@@ -117,11 +117,11 @@ CONTAINS
     nml_handler = open_nml(TRIM(config%namelist_filename))
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('dist_fire_fuel_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, dist_fire_fuel_ctl)
+    nml_unit = position_nml('q_dist_fire_fuel_ctl', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, q_dist_fire_fuel_ctl)
 #else
-    nml_unit = position_nml('dist_fire_fuel_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, dist_fire_fuel_nml)
+    nml_unit = position_nml('q_dist_fire_fuel_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, q_dist_fire_fuel_nml)
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
     ! pass values as read from file

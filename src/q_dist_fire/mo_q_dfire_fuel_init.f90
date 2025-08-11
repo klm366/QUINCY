@@ -36,7 +36,7 @@ MODULE mo_q_dfire_fuel_init
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: dfire_fuel_init
+  PUBLIC :: q_dfire_fuel_init
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel_init'
 
@@ -49,11 +49,11 @@ CONTAINS
   SUBROUTINE q_dfire_fuel_init(tile)
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: DFIRE_FUEL_
+    USE mo_jsb_process_class,       ONLY: Q_DFIRE_FUEL_
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,         ONLY: t_jsb_model
 
-    dsl4jsb_Use_memory(DFIRE_FUEL_)
+    dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ----------------------------------------------------------------------------------------------------- !
@@ -62,7 +62,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':q_dfire_fuel_init'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(DFIRE_FUEL_)
+    dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real3D_onDomain      :: dead_fuel_1hr_dfp
     dsl4jsb_Real3D_onDomain      :: dead_fuel_10hr_dfp
@@ -111,59 +111,59 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: crown_length
     dsl4jsb_Real2D_onDomain      :: tree_height
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_active(DFIRE_FUEL_)) RETURN
+    IF (.NOT. tile%Is_process_active(Q_DFIRE_FUEL_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model  => get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(DFIRE_FUEL_)
+    dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_1hr_dfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_10hr_dfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_100hr_dfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, dead_fuel_1000hr_dfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_1hr_lfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_10hr_lfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_100hr_lfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_fuel_1000hr_lfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_grass_fuel_1hr_lfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_tree_fuel_1hr_lfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_tree_fuel_10hr_lfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_tree_fuel_100hr_lfp)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, live_tree_fuel_1000hr_lfp)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, dead_fuel_1hr_dfp)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, dead_fuel_10hr_dfp)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, dead_fuel_100hr_dfp)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, dead_fuel_1000hr_dfp)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, live_fuel_1hr_lfp)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, live_fuel_10hr_lfp)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, live_fuel_100hr_lfp)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, live_fuel_1000hr_lfp)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp)
 
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, forest_fract)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, grass_fract)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, forest_fract)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, grass_fract)
 
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, fuel_bulk_density)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, moisture_extinction)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, fwd_wind_factor)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, fuel_bulk_density)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, moisture_extinction)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, fwd_wind_factor)
 
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, pm_fire)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, pm_prop_ck)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, pm_tau)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, tau_l)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, tau_c)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, par1_diag)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, par2_diag)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, bark_thickness)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, DBH_diag)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, pm_fire)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, pm_prop_ck)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, pm_tau)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, tau_l)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, tau_c)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, par1_diag)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, par2_diag)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, bark_thickness)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, DBH_diag)
 
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, ck)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, r_ck)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, ck_p)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, scorch_height)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, F_scorch_height)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, crown_length)
-    dsl4jsb_Get_var2D_onDomain(DFIRE_FUEL_, tree_height)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, ck)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, r_ck)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, ck_p)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, scorch_height)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, F_scorch_height)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, crown_length)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, tree_height)
 
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, fuel_consumption_els)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, emissions_spc)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, emissions_els)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, residue_els)
-    dsl4jsb_Get_var3D_onDomain(DFIRE_FUEL_, overflow_els)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, fuel_consumption_els)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, emissions_spc)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, emissions_els)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, residue_els)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, overflow_els)
     ! ----------------------------------------------------------------------------------------------------- !
     !WRITE(*,*) "Computing dfire_fuel_init..."
     dead_fuel_1hr_dfp = 0._wp
