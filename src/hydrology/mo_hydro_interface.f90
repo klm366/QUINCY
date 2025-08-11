@@ -766,7 +766,7 @@ CONTAINS
       !$ACC   CREATE(trans_tmp, wpi_soil_sl_tmp(1:nc,1:nsoil), wtr_soil(1:nc)) &
       !$ACC   CREATE(wpi_wsat_soil_sl_tmp(1:nc,1:nsoil), wpi_wres_soil_sl_tmp(1:nc,1:nsoil)) &
       !$ACC   CREATE(ice_impedance_sl(1:nc,1:nsoil)) &
-      !$ACC   CREATE(slope_used(1:nc), flowlag_used(1:nc)) ASYNC(acc_stream)
+      !$ACC   CREATE(slope_used(1:nc), flowlag_used(1:nc), lex_tmp(1:nc)) ASYNC(acc_stream)
 
       ret_macro_srf = dsl4jsb_Config(HYDRO_)%ret_macro_srf
 

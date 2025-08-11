@@ -17,8 +17,9 @@
 MODULE mo_lex_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message, finish, message_text
+  USE mo_kind,        ONLY: wp
+  USE mo_exception,   ONLY: message, finish, message_text
+  USE mo_jsb_control, ONLY: acc_stream
 
   IMPLICIT NONE
   PRIVATE
@@ -172,11 +173,13 @@ CONTAINS
       &      h_offset, length_scale, len_inter,   &
       &      lvt_fract, dpr_fract, dsoil_lvt,     &
       &      field_cap_lvt,  k_lvt, mpot_lvt,     &
-      &      egress_dpr,                          &
-      &      ingress_lvt,                         &
+      &      egress_dpr, ingress_lvt,             &
+      &      wtr_incoming_sl,                     &
       &      wtr_latflow_dpr, wtr_latflow_lvt,    &
       &      wtr_pond_dpr, wtr_soil_lvt           &
       &      )
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
@@ -198,6 +201,7 @@ CONTAINS
     REAL(wp), INTENT(inout) :: egress_dpr            !< Diffusion flux on depression tile [kg m-2 s-1]
 
     REAL(wp), INTENT(inout) :: ingress_lvt(:),    &  !< Diffusion flux on elevation tile [kg m-2 s-1]
+      &                        wtr_incoming_sl(:),&  !< Lateral flux (soil) from sibling to tile [kg m-2 s-1]
       &                        wtr_soil_lvt(:),   &  !< Soil water storage on elevation tile [m]
       &                        wtr_latflow_lvt(:)    !< Netflux (below ground) on elevation tile [kg m-2 s-1]
 
@@ -207,7 +211,7 @@ CONTAINS
 
     ! Local variables ------------------------------------------------------------------------------------
     INTEGER                 :: nrgrd,             &  !< Number of layers on helper grid determined by layer overlaps
-      &                        i, i_lvt              !< Index variables for layers on helper grid (i) and in elevation (i_lvt)
+      &                        i, is, i_lvt          !< Index variables for layers on helper grid (i), soil level, and in elevation (i_lvt)
 
     REAL(wp)                :: fr_lvt_rel,        &  !< Relative fraction of elevation tile [/]
       &                        fr_dpr_rel,        &  !< Relative fraction of depression tile [/]
@@ -219,8 +223,8 @@ CONTAINS
 
     REAL(wp)                :: diffusion(nsoil)      !< Diffusive flux between depression and elevation on soil layers [m]
 
-
-    REAL(wp)                :: z_lvt,             &  !< Layer bottom of current layer on elevation tile [m]
+    REAL(wp)                :: diffusion_sum,     &  !< Sum of diffusive fluxes on all soil layers [m]
+      &                        z_lvt,             &  !< Layer bottom of current layer on elevation tile [m]
       &                        h,                 &  !< Height of current layer [m]
       &                        a_inter,           &  !< Interface area on current layer [m2 m-2]
       &                        z_rgrd_top,        &  !< Top of current layer on helper grid [m]
@@ -235,91 +239,103 @@ CONTAINS
     nrgrd = 2*nsoil
 
     ! Initilize fields for accumulating regridded output
-    diffusion(:)        = 0._wp
+    diffusion_sum = 0._wp
+    DO is = 1, nsoil
+      diffusion(is)       = 0._wp
+      wtr_incoming_sl(is) = wtr_incoming_sl(is) - ingress_lvt(is)
+    END DO
 
-    IF (lvt_fract < 1.0e-10_wp .OR. dpr_fract < 1.0e-10_wp) RETURN
+    IF (lvt_fract >= 1.0e-10_wp .AND. dpr_fract >= 1.0e-10_wp) THEN
 
-    ! Determine relative fractions from absolute fractions -- don't forget to scale fluxes afterwards
-    fr_lvt_rel = lvt_fract / (lvt_fract+dpr_fract)
-    fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
+      ! Determine relative fractions from absolute fractions -- don't forget to scale fluxes afterwards
+      fr_lvt_rel = lvt_fract / (lvt_fract + dpr_fract)
+      fr_dpr_rel = dpr_fract / (lvt_fract + dpr_fract)
 
-    wtr_pond_dpr_ini = wtr_pond_dpr
+      wtr_pond_dpr_ini = wtr_pond_dpr
 
 
-    IF (h_offset < 1.0e-10_wp .OR. wtr_pond_dpr < 1.0e-10_wp) RETURN
+      IF (h_offset < 1.0e-10_wp .OR. wtr_pond_dpr < 1.0e-10_wp) RETURN
 
-    ! Start setting up the interpolated helper grid
-    i_lvt = 1
-    z_bot_lvt = SUM(dsoil_lvt(:))
-    z_lvt     = dsoil_lvt(i_lvt)
-    z_rgrd_top = 0._wp
+      ! Start setting up the interpolated helper grid
+      i_lvt = 1
+      z_bot_lvt = SUM(dsoil_lvt(:))
+      z_lvt     = dsoil_lvt(i_lvt)
+      z_rgrd_top = 0._wp
 
-    IF (h_offset > wtr_pond_dpr_ini) THEN
-      z_rgrd_bot = MIN(z_lvt, h_offset - wtr_pond_dpr_ini)
-    ELSE
-      z_rgrd_bot = MIN(z_lvt, h_offset)
-    END IF
-
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP SEQ
-    DO i = 1, nrgrd
-      IF (z_rgrd_bot <= z_bot_lvt) THEN ! Within soil of elevation
-        h                     = z_rgrd_bot - z_rgrd_top
-        a_inter               = len_inter * h
-        wtr_soil_lvt_rgrd     = wtr_soil_lvt(i_lvt)  * h / dsoil_lvt(i_lvt)
-        wtr_lat               = 0._wp
-        IF (z_rgrd_bot <= h_offset) THEN ! Above depression surface
-          field_cap_lvt_rgrd  = field_cap_lvt(i_lvt) * h / dsoil_lvt(i_lvt)
-          k_lvt_rgrd          = k_lvt(i_lvt)
-          mpot_lvt_rgrd       = mpot_lvt(i_lvt)
-          IF (z_rgrd_bot > h_offset - wtr_pond_dpr_ini) THEN ! Within the ponded surface water in the depression
-            ! Water flows from the pond reservoir of the depression tile into the soil of the elevation tile
-            wtr_flx_lat       = abs(k_lvt_rgrd  * mpot_lvt_rgrd) / length_scale *  a_inter
-            free_space        = MAX(0._wp,(field_cap_lvt_rgrd - wtr_soil_lvt_rgrd) * fr_lvt_rel)
-            wtr_avail         = MIN(h, wtr_pond_dpr) * fr_dpr_rel
-            wtr_lat           = MIN(wtr_flx_lat * dtime, free_space, wtr_avail)
-          END IF
-        END IF
-        diffusion(i_lvt)      = diffusion(i_lvt) + wtr_lat
+      IF (h_offset > wtr_pond_dpr_ini) THEN
+        z_rgrd_bot = MIN(z_lvt, h_offset - wtr_pond_dpr_ini)
+      ELSE
+        z_rgrd_bot = MIN(z_lvt, h_offset)
       END IF
-      ! Layer bottom was on soil layer
-      IF (z_rgrd_bot == z_lvt) THEN
-        i_lvt = i_lvt + 1
-        IF (i_lvt <= nsoil) THEN
-          IF (dsoil_lvt(i_lvt) > 0._wp) THEN
-            z_lvt = z_lvt + dsoil_lvt(i_lvt)
+
+      DO i = 1, nrgrd
+        IF (z_rgrd_bot <= z_bot_lvt) THEN ! Within soil of elevation
+          h                     = z_rgrd_bot - z_rgrd_top
+          a_inter               = len_inter * h
+          wtr_soil_lvt_rgrd     = wtr_soil_lvt(i_lvt)  * h / dsoil_lvt(i_lvt)
+          wtr_lat               = 0._wp
+          IF (z_rgrd_bot <= h_offset) THEN ! Above depression surface
+            field_cap_lvt_rgrd  = field_cap_lvt(i_lvt) * h / dsoil_lvt(i_lvt)
+            k_lvt_rgrd          = k_lvt(i_lvt)
+            mpot_lvt_rgrd       = mpot_lvt(i_lvt)
+            IF (z_rgrd_bot > h_offset - wtr_pond_dpr_ini) THEN ! Within the ponded surface water in the depression
+              ! Water flows from the pond reservoir of the depression tile into the soil of the elevation tile
+              wtr_flx_lat       = abs(k_lvt_rgrd  * mpot_lvt_rgrd) / length_scale *  a_inter
+              free_space        = MAX(0._wp,(field_cap_lvt_rgrd - wtr_soil_lvt_rgrd) * fr_lvt_rel)
+              wtr_avail         = MIN(h, wtr_pond_dpr) * fr_dpr_rel
+              wtr_lat           = MIN(wtr_flx_lat * dtime, free_space, wtr_avail)
+            END IF
+          END IF
+          diffusion(i_lvt)      = diffusion(i_lvt) + wtr_lat
+        END IF
+        ! Layer bottom was on soil layer
+        IF (z_rgrd_bot == z_lvt) THEN
+          i_lvt = i_lvt + 1
+          IF (i_lvt <= nsoil) THEN
+            IF (dsoil_lvt(i_lvt) > 0._wp) THEN
+              z_lvt = z_lvt + dsoil_lvt(i_lvt)
+            ELSE
+              z_lvt = 10000._wp
+              i_lvt = nsoil + 1
+            END IF
           ELSE
             z_lvt = 10000._wp
             i_lvt = nsoil + 1
           END IF
-        ELSE
-          z_lvt = 10000._wp
-          i_lvt = nsoil + 1
         END IF
-      END IF
 
-      ! Finding new layer Bottom
-      IF (z_rgrd_bot < h_offset - wtr_pond_dpr_ini) THEN ! Still above water level in depression
-        z_rgrd_bot_new = MIN(h_offset - wtr_pond_dpr_ini, z_lvt)
-      ELSE IF (z_rgrd_bot < h_offset ) THEN              ! Within the ponded surface water in the depression
-        z_rgrd_bot_new = MIN(h_offset, z_lvt)
-      ELSE
-        z_rgrd_bot_new = z_lvt
-      END IF
+        ! Finding new layer Bottom
+        IF (z_rgrd_bot < h_offset - wtr_pond_dpr_ini) THEN ! Still above water level in depression
+          z_rgrd_bot_new = MIN(h_offset - wtr_pond_dpr_ini, z_lvt)
+        ELSE IF (z_rgrd_bot < h_offset ) THEN              ! Within the ponded surface water in the depression
+          z_rgrd_bot_new = MIN(h_offset, z_lvt)
+        ELSE
+          z_rgrd_bot_new = z_lvt
+        END IF
 
-      z_rgrd_top=z_rgrd_bot
-      z_rgrd_bot=z_rgrd_bot_new
+        z_rgrd_top = z_rgrd_bot
+        z_rgrd_bot = z_rgrd_bot_new
+      END DO
+
+      DO is = 1, nsoil
+        diffusion_sum = diffusion_sum + diffusion(is)
+      END DO
+
+      DO is = 1, nsoil
+        wtr_soil_lvt(is)    = wtr_soil_lvt(is)    + diffusion(is) / fr_lvt_rel
+        wtr_latflow_lvt(is) = wtr_latflow_lvt(is) + diffusion(is) / fr_lvt_rel * rhoh2o / dtime
+        ingress_lvt(is)     = ingress_lvt(is)     + diffusion(is) / fr_lvt_rel * rhoh2o / dtime
+      END DO
+
+      wtr_pond_dpr    = wtr_pond_dpr    - diffusion_sum / fr_dpr_rel
+      wtr_latflow_dpr = wtr_latflow_dpr - diffusion_sum / fr_dpr_rel * rhoh2o / dtime
+      egress_dpr      = egress_dpr      + diffusion_sum / fr_dpr_rel * rhoh2o / dtime
+
+    END IF
+
+    DO is = 1, nsoil
+      wtr_incoming_sl(is) = wtr_incoming_sl(is) + ingress_lvt(is)
     END DO
-    !$ACC END PARALLEL LOOP
-
-    wtr_soil_lvt     = wtr_soil_lvt    +     diffusion  / fr_lvt_rel
-    wtr_pond_dpr     = wtr_pond_dpr    - SUM(diffusion) / fr_dpr_rel
-
-    wtr_latflow_lvt  = wtr_latflow_lvt +     diffusion  / fr_lvt_rel * rhoh2o / dtime
-    wtr_latflow_dpr  = wtr_latflow_dpr - SUM(diffusion) / fr_dpr_rel * rhoh2o / dtime
-
-    ingress_lvt      = ingress_lvt     + diffusion      / fr_lvt_rel * rhoh2o / dtime
-    egress_dpr       = egress_dpr      + SUM(diffusion) / fr_dpr_rel * rhoh2o / dtime
 
   END SUBROUTINE calc_pond_soil_flux_water
 
@@ -342,6 +358,8 @@ CONTAINS
       &      diffus_in_lvt, diffus_out_lvt,            &
       &      heat_flx_lat_lvt                          &
       &      )
+
+    !$ACC ROUTINE SEQ
 
     USE mo_sse_constants, ONLY: hcond_water, hcond_ice
 
@@ -414,8 +432,6 @@ CONTAINS
 
     h_cond_pond_dpr = (wtr_pond_dpr * hcond_water + ice_pond_dpr * hcond_ice) / weq_pond_dpr
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP SEQ
     DO i = 1, nsoil
       IF (i_lvt <= nsoil .AND.                        &
         & z_rgrd_bot >  h_offset - weq_pond_dpr .AND. &
@@ -472,7 +488,6 @@ CONTAINS
       z_rgrd_top=z_rgrd_bot
       z_rgrd_bot=MIN(z_lvt, h_offset)
     END DO
-    !$ACC END PARALLEL
 
   END SUBROUTINE calc_pond_soil_flux_heat
 
@@ -496,6 +511,8 @@ CONTAINS
       &      wtr_latflow_tle, wtr_latflow_sbl,      &
       &      wtr_soil_tle, wtr_soil_sbl             &
       &      )
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
@@ -616,8 +633,6 @@ CONTAINS
     z_rgrd_top = 0._wp
     z_rgrd_bot = MIN(z_tle, z_sbl)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP SEQ
     DO i = 1, nrgrd
       IF (z_rgrd_bot <= z_bot_tle .AND. z_rgrd_bot <= z_bot_sbl .AND. & ! Above Bedrock in both tiles
           i_tle      <= nsoil     .AND. i_sbl      <= nsoil     ) THEN  ! within soil column
@@ -699,7 +714,6 @@ CONTAINS
         END IF
       END IF
     END DO
-    !$ACC END PARALLEL LOOP
 
     ! Adjusting the water contents and calculating the net- in- and outgoing fluxes for the tiles
     wtr_soil_tle(:)   = wtr_soil_tle(:)              + diffus_tle(:)
@@ -731,6 +745,8 @@ CONTAINS
       &      diffus_out_tle, diffus_out_sbl,           &
       &      heat_flx_lat_tle, heat_flx_lat_sbl        &
       &      )
+
+    !$ACC ROUTINE SEQ
 
     INTEGER, INTENT(in)     :: nsoil                      !< Number of oil layers
 
@@ -815,8 +831,6 @@ CONTAINS
     z_rgrd_top = 0._wp
     z_rgrd_bot = MIN(z_tle, z_sbl)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP SEQ
     DO i = 1, nrgrd
       IF (i_tle <= nsoil .AND. i_sbl <= nsoil) THEN ! Within the soil column of both tiles
 
@@ -884,7 +898,6 @@ CONTAINS
         z_rgrd_bot=MIN(z_tle, z_sbl)
       END IF
     END DO
-    !$ACC END PARALLEL
 
   END SUBROUTINE calc_diffusion_heat
 
@@ -904,6 +917,8 @@ CONTAINS
       &      cnvctv_out_tle, cnvctv_out_sbl,               &
       &      heat_flx_lat_tle, heat_flx_lat_sbl            &
       &      )
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_sse_constants, ONLY: vol_hcap_water
@@ -984,8 +999,6 @@ CONTAINS
     z_rgrd_bot = MIN(z_tle, z_sbl)
 
     ! First determine the lateral heat fluxes for water movements within the soil
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP SEQ
     DO i = 1, nrgrd
       IF (i_tle <= nsoil .AND. i_sbl <= nsoil) THEN ! Within the soil column of both tiles
 
@@ -1073,7 +1086,6 @@ CONTAINS
         z_rgrd_bot=MIN(z_tle, z_sbl)
       END IF
     END DO
-    !$ACC END PARALLEL
 
     ! Add the heat fluxes due to surface runoff / runon
     d_t_wtr_soil_tle = t_soil_sbl(1) - t_soil_tle(1)
@@ -1127,6 +1139,7 @@ CONTAINS
       &      snow_dens_tle, snow_dens_sbl           &
       &      )
 
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o, dens_snow_min, dens_snow_max, dens_snow
 
@@ -1330,6 +1343,8 @@ CONTAINS
     & wtr_soil_sl                             &
     )
 
+    !$ACC ROUTINE SEQ
+
     REAL(wp), INTENT(in)    :: weq_pond_max,  &              !< Maximum pond water storage [m]
       &                        ice_pond                      !< Ice in pond water storage [m]
 
@@ -1348,8 +1363,6 @@ CONTAINS
     wtr_pond_max = MAX(0.0_wp, weq_pond_max - ice_pond)
 
     IF (PRESENT(nsoil)) THEN
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP SEQ
       DO i=nsoil,2, -1
         IF (wtr_soil_sl(i) > wtr_soil_sat_sl(i)) THEN
           wtr_soil_sl(i-1) = wtr_soil_sl(i-1) &
@@ -1357,7 +1370,6 @@ CONTAINS
           wtr_soil_sl(i)   = wtr_soil_sat_sl(i)
         END IF
       END DO
-      !$ACC END PARALLEL
 
       IF (wtr_soil_sl(1) > wtr_soil_sat_sl(1)) THEN
         wtr_pond = wtr_pond &
@@ -1381,16 +1393,18 @@ CONTAINS
   !!
   SUBROUTINE shift_fluxes_sl(                 &
     & nsoil,                                  &
+    & hyd_flow_path,                          &
     & h_offset,                               &
     & dsoil_lvt, dsoil_dpr,                   &
     & flx_lat_sl                              &
     )
 
+    !$ACC ROUTINE SEQ
 
     INTEGER , INTENT(in)    :: nsoil             !< Number of soil ayers
 
-
-    REAL(wp), INTENT(in)    :: h_offset          !< Differece in surface elevation between elevation and depression [m]
+    REAL(wp), INTENT(in)    :: hyd_flow_path, &  !< Connectivity factor for below-ground hydrological flow paths [/]
+      &                        h_offset          !< Difference in surface elevation between elevation and depression [m]
 
     REAL(wp), INTENT(in)    :: dsoil_lvt(:),  &  !< Soil depth on layers of elevation tile [m]
       &                        dsoil_dpr(:)      !< Soil depth on layers of depression tile [m]
@@ -1399,60 +1413,81 @@ CONTAINS
 
 
     INTEGER                 :: nrgrd,         &  !< Number of layers on helper grid determined by layer overlaps
-      &                        i,             &  !< Counter variable
+      &                        i, is,         &  !< Counter variables
       &                        i_lvt, i_dpr      !< Index variables for layers on in elevation (i_lvt) and in depression (i_dpr)
 
     REAL(wp)                :: z_lvt,         &  !< Layer bottom of current layer on elevation tile [m]
       &                        z_dpr,         &  !< Layer bottom of current layer on depression tile [m]
       &                        z_rgrd_top,    &  !< Top of current layer on helper grid [m]
       &                        z_rgrd_bot,    &  !< Bottom of current layer on helper grid [m]
-      &                        h                 !< Height of current layer [m]
+      &                        h,             &  !< Height of current layer [m]
+      &                        dsoil_lvt_sum, &  !< Acc. soil depth on layers of elevation tile [m]
+      &                        dsoil_dpr_sum     !< Acc. soil depth on layers of depression tile + tile height diff [m]
 
 
     REAL(wp)                :: flx_lat_sl_upd(nsoil) !< Updated lateral flux [?]
 
-    flx_lat_sl_upd(:) = 0._wp
+    IF (hyd_flow_path > 0._wp .AND. h_offset > 0._wp) THEN
 
-    nrgrd       = nsoil * 2 + 1
+      nrgrd = nsoil * 2 + 1
 
-    i_lvt = 1
-    z_lvt = dsoil_lvt(1)
+      i_lvt = 1
+      z_lvt = dsoil_lvt(1)
+      i_dpr = 1
+      z_dpr = dsoil_dpr(1) + h_offset
 
-    i_dpr = 1
-    z_dpr = dsoil_dpr(1) + h_offset
+      z_rgrd_top = 0._wp
+      z_rgrd_bot = MIN(z_lvt, z_dpr)
 
-    z_rgrd_top = 0._wp
-    z_rgrd_bot = MIN(z_lvt, z_dpr)
+      dsoil_lvt_sum = 0._wp
+      dsoil_dpr_sum = h_offset
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP SEQ
-    DO i  = 1, nrgrd
-      h                     = z_rgrd_bot-z_rgrd_top
-      flx_lat_sl_upd(i_dpr) = flx_lat_sl_upd(i_dpr) + flx_lat_sl(i_lvt) * h / dsoil_lvt(i_lvt)
+      DO is = 1, nsoil
+        flx_lat_sl_upd(is) = 0._wp
+        dsoil_lvt_sum = dsoil_lvt_sum + dsoil_lvt(is)
+        dsoil_dpr_sum = dsoil_dpr_sum + dsoil_dpr(is)
+      END DO
 
-      IF (z_rgrd_bot == z_lvt .AND. z_lvt < SUM(dsoil_lvt(:))) THEN
-        i_lvt = i_lvt + 1
-        IF (i_lvt <= nsoil) THEN
-          z_lvt = z_lvt + dsoil_lvt(i_lvt)
+      DO i  = 1, nrgrd
+        h                     = z_rgrd_bot - z_rgrd_top
+        flx_lat_sl_upd(i_dpr) = flx_lat_sl_upd(i_dpr) + flx_lat_sl(i_lvt) * h / dsoil_lvt(i_lvt)
+
+        IF (z_rgrd_bot == z_lvt .AND. z_lvt < dsoil_lvt_sum) THEN
+          i_lvt = i_lvt + 1
+          IF (i_lvt <= nsoil) THEN
+            z_lvt = z_lvt + dsoil_lvt(i_lvt)
+          END IF
         END IF
-      END IF
 
-      IF (z_rgrd_bot == z_dpr .AND. z_dpr < SUM(dsoil_dpr(:)) + h_offset) THEN
-        i_dpr = i_dpr + 1
-        IF (i_dpr <= nsoil) THEN
-          z_dpr = z_dpr + dsoil_dpr(i_dpr)
+        IF (z_rgrd_bot == z_dpr .AND. z_dpr < dsoil_dpr_sum) THEN
+          i_dpr = i_dpr + 1
+          IF (i_dpr <= nsoil) THEN
+            z_dpr = z_dpr + dsoil_dpr(i_dpr)
+          END IF
+        ELSE IF (z_rgrd_bot >= dsoil_dpr_sum) THEN
+          z_dpr = z_lvt
         END IF
-      ELSE IF (z_rgrd_bot >= SUM(dsoil_dpr(:)) + h_offset) THEN
-        z_dpr = z_lvt
-      END IF
 
-      z_rgrd_top=z_rgrd_bot
-      z_rgrd_bot=MIN(z_lvt, z_dpr)
+        z_rgrd_top = z_rgrd_bot
+        z_rgrd_bot = MIN(z_lvt, z_dpr)
 
-    END DO
-    !$ACC END PARALLEL
+      END DO
 
-    flx_lat_sl(:) = flx_lat_sl_upd(:)
+      DO is = 1, nsoil
+        flx_lat_sl(is) = flx_lat_sl_upd(is)
+      END DO
+
+    ELSE
+
+      DO is = nsoil, 2, -1
+        IF (dsoil_dpr(is) <= 0._wp) THEN
+          flx_lat_sl(is-1) = flx_lat_sl(is-1) + flx_lat_sl(is)
+          flx_lat_sl(is)   = 0._wp
+        END IF
+      END DO
+
+    END IF
+
 
   END SUBROUTINE shift_fluxes_sl
 
@@ -1478,6 +1513,8 @@ CONTAINS
     & length_iface,                             &
     & micro_slope                               &
     )
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_math_constants,     ONLY: pi
 
@@ -1508,8 +1545,6 @@ CONTAINS
       &                        area_cmbnd,          &  !< Combined area of nested tiles [m2]
       &                        fract_rel_cmbnd,     &  !< Relative fraction of nested tiles [/]
       &                        area_fact               !< Conversion factor to get from area of inner to that of outer tile
-
-    !$ACC ROUTINE SEQ
 
     ! Calculate relative fractions
     IF ((fract + fract_sibl) == 0._wp) THEN

@@ -1246,7 +1246,7 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_org_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_pond_max)), &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, weq_pond_max)), &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, area), &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, area)), &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, h_surf)), &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, macro_slope)), &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)) &
