@@ -36,8 +36,8 @@ MODULE mo_q_dfire_sf_post
   USE mo_q_dfire_constants,     ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr
   USE mo_q_dfire_constants,     ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
   USE mo_q_dfire_constants,     ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
-  USE mo_q_dfire_constants,     ONLY: df_sf_species_nr
   USE mo_q_dfire_constants,     ONLY: df_sf_elements_nr
+  USE mo_q_dfire_constants,     ONLY: df_sf_species_nr
 
   USE mo_q_dfire_constants,     ONLY: ixs_sf_dead_litter_fuel_pools
 
@@ -54,9 +54,9 @@ MODULE mo_q_dfire_sf_post
                                             sf_calc_dead_fuel_consumption_populate_elements, &
                                             sf_calc_live_fuel_consumption_populate_elements
 
-  USE mo_q_dfire_sf_feedback,   ONLY: calc_sf_feedback_dead, calc_sf_feedback_live
+  USE mo_q_dfire_sf_feedback,         ONLY: calc_sf_feedback_dead, calc_sf_feedback_live
 
-  USE mo_q_dfire_sf_emissions_class,    ONLY: sf_calc_emissions, sf_calc_emissions_elements
+  USE mo_q_dfire_sf_emissions_class,  ONLY: sf_calc_emissions, sf_calc_emissions_elements
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID, &
                                       SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID, &
                                       VEG_BGCM_FIRE_EMISSIONS_ID, VEG_BGCM_FIRE_LITTERFALL_ID
@@ -64,7 +64,7 @@ MODULE mo_q_dfire_sf_post
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_q_dfire_sf_post
+  PUBLIC :: update_q_dfire_post, sf_calc_residue
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_post'
 
@@ -379,7 +379,7 @@ CONTAINS
       w_oi = SUM(dead_fuel_fcl, DIM=2) !< 2= dead fuel pools index, fuel class only
 
       dbh(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
-      !WRITE(*,*) "update_dfire_post:: area, tile_fract, height, dbh=", &
+      !WRITE(*,*) "update_q_dfire_post:: area, tile_fract, height, dbh=", &
       !      area(1), tile_fract(1), (tile_fract(1) > 0._wp), height(1), dbh(1)
 
       is_fire_intense_enough = real2logical(mask_is_fire_intense_enough) .AND. &

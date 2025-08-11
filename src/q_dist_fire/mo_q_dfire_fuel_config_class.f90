@@ -17,7 +17,7 @@
 !>    You should have received a copy of the GNU General Public License
 !>    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
 !> 
-!> @brief Contains structures and methods for config of the dist_fire_fuel process
+!> @brief Contains structures and methods for config of the q_dist_fire_fuel process
 !>
 !> @author
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
@@ -54,13 +54,13 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> configuration routine of t_dfire_fuel_config
+  !> configuration routine of t_q_dfire_fuel_config
   !>
   SUBROUTINE Init_q_dfire_fuel_config(config)
 #ifdef __QUINCY_STANDALONE__
-    USE mo_namelist,            ONLY: open_nml, POSITIONED, position_nml, close_nml
-#else
     USE mo_jsb_namelist_iface,  ONLY: open_nml, POSITIONED, position_nml, close_nml
+#else
+    USE mo_namelist,            ONLY: open_nml, POSITIONED, position_nml, close_nml
 #endif
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_io_iface,       ONLY: zaxis_generic
@@ -103,7 +103,7 @@ CONTAINS
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
     ! ----------------------------------------------------------------------------------------------------- !
-    CALL message(TRIM(routine), 'Starting dist_fire_fuel configuration')
+    CALL message(TRIM(routine), 'Starting q_dist_fire_fuel configuration')
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults, see namelist.slm for more details
     active                   = .FALSE.
@@ -113,7 +113,7 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! read the namelist
-    ! &DIST_FIRE_CTL
+    ! &Q_DIST_FIRE_FUEL_CTL
     nml_handler = open_nml(TRIM(config%namelist_filename))
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_STANDALONE__

@@ -37,7 +37,7 @@ MODULE mo_q_dfire_sf_emissions_class
   USE mo_lnd_bgcm_idx, ONLY: ixC, ixC13, ixC14, ixN, ixN15, ixP
   USE mo_lnd_bgcm_idx, ONLY: ix_woody_litter !< sb_pool
   USE mo_lnd_bgcm_idx, ONLY: ix_fruit, ix_leaf, ix_reserve, ix_labile, ix_sap_wood, ix_heart_wood !< veg_pool
-  USE mo_q_dfire_constants,   ONLY: t_sf_fuel_dead_fuel_woody_ix, & !< dead fuel (litter)
+  USE mo_q_dfire_constants, ONLY: t_sf_fuel_dead_fuel_woody_ix, & !< dead fuel (litter)
                                   t_sf_fuel_dead_fuel_polymeric_ix, &
                                   t_sf_fuel_dead_fuel_soluable_ix, &
                                   t_sf_fuel_dead_fuel_res_ix, &
@@ -45,13 +45,13 @@ MODULE mo_q_dfire_sf_emissions_class
                                   t_sf_fuel_dead_fuel_dom_ix, &
                                   t_sf_fuel_dead_fuel_dom_assoc_ix
 
-  USE mo_q_dfire_constants,   ONLY: t_sf_fuel_dead_fuel_grass_leaf_ix, & !< dead fuel (livegrass)
+  USE mo_q_dfire_constants, ONLY: t_sf_fuel_dead_fuel_grass_leaf_ix, & !< dead fuel (livegrass)
                                   t_sf_fuel_dead_fuel_grass_sap_ix, &
                                   t_sf_fuel_dead_fuel_grass_labile_ix, &
                                   t_sf_fuel_dead_fuel_grass_reserve_ix, &
                                   t_sf_fuel_dead_fuel_grass_fruit_ix
 
-  USE mo_q_dfire_constants,   ONLY: t_sf_fuel_live_fuel_leaf_ix, t_sf_fuel_live_fuel_sap_wood_ix, & ! live fuel
+  USE mo_q_dfire_constants, ONLY: t_sf_fuel_live_fuel_leaf_ix, t_sf_fuel_live_fuel_sap_wood_ix, & ! live fuel
                                   t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
                                   t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix
 

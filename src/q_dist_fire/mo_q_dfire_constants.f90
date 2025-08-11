@@ -154,9 +154,9 @@ MODULE mo_q_dfire_constants
 
   !< Methods to compute daily precipitation, as it is not done by the hosting model.
   ENUM, BIND(C)
-    ENUMERATOR :: DFIRE_PRECIP_METHOD_DAYTIME=10    !< Previous day daily precipitation, based on sun movement (sunset vs sunrise)
-    ENUMERATOR :: DFIRE_PRECIP_METHOD_MAVG=20       !< Pure moving average, so it is never approximatted.
-    ENUMERATOR :: DFIRE_PRECIP_METHOD_APROX_MAVG=30 !< Approximation to moving average used by Quincy. Not recommended as it leaks water over time, as it never reaches 0.
+    ENUMERATOR :: Q_DFIRE_PRECIP_METHOD_DAYTIME=10    !< Previous day daily precipitation, based on sun movement (sunset vs sunrise)
+    ENUMERATOR :: Q_DFIRE_PRECIP_METHOD_MAVG=20       !< Pure moving average, so it is never approximatted.
+    ENUMERATOR :: Q_DFIRE_PRECIP_METHOD_APROX_MAVG=30 !< Approximation to moving average used by Quincy. Not recommended as it leaks water over time, as it never reaches 0.
   END ENUM
 
   !< total number of fuel classes per type

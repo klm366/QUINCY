@@ -123,7 +123,7 @@ CONTAINS
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     CLASS(t_jsb_aggregator),  POINTER         :: sum_agg, average_agg
     INTEGER                                   :: iblk, ics, ice, nc
-    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_dfire_fuel'
+    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !

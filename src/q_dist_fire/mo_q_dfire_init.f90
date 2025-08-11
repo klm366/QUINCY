@@ -71,9 +71,9 @@ CONTAINS
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_grid,                ONLY: Get_grid
 
-    USE mo_q_dfire_constants,       ONLY: DFIRE_PRECIP_METHOD_DAYTIME, & !< Method to compute precipitation
-                                          DFIRE_PRECIP_METHOD_APROX_MAVG, &
-                                          DFIRE_PRECIP_METHOD_MAVG
+    USE mo_q_dfire_constants,       ONLY: Q_DFIRE_PRECIP_METHOD_DAYTIME, & !< Method to compute precipitation
+                                          Q_DFIRE_PRECIP_METHOD_APROX_MAVG, &
+                                          Q_DFIRE_PRECIP_METHOD_MAVG
 
     dsl4jsb_Use_config(Q_DFIRE_)
     dsl4jsb_Use_memory(Q_DFIRE_)
@@ -270,13 +270,13 @@ CONTAINS
 
     !< Chose daily precipitation. Those are calculated in 3 different ways.
     dfire_pm_id = dsl4jsb_Config(Q_DFIRE_)%dfire_precip_method_id
-    IF (dfire_pm_id == DFIRE_PRECIP_METHOD_DAYTIME) THEN
+    IF (dfire_pm_id == Q_DFIRE_PRECIP_METHOD_DAYTIME) THEN
       !< daytime
       dsl4jsb_var_ptr(Q_DFIRE_,precip_daily) => dsl4jsb_var_ptr(Q_DFIRE_,precip_daytime)
-    ELSE IF (dfire_pm_id == DFIRE_PRECIP_METHOD_MAVG) THEN
+    ELSE IF (dfire_pm_id == Q_DFIRE_PRECIP_METHOD_MAVG) THEN
       !< moving average
       dsl4jsb_var_ptr(Q_DFIRE_,precip_daily) => dsl4jsb_var_ptr(Q_DFIRE_,precip_mavg)
-    ELSE IF (dfire_pm_id == DFIRE_PRECIP_METHOD_APROX_MAVG) THEN
+    ELSE IF (dfire_pm_id == Q_DFIRE_PRECIP_METHOD_APROX_MAVG) THEN
       !< aproximation to moving average (quincy default method)
       dsl4jsb_var_ptr(Q_DFIRE_,precip_daily) => dsl4jsb_var_ptr(Q_DFIRE_,precip_qc_mavg)
     ENDIF

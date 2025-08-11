@@ -69,26 +69,26 @@ MODULE mo_q_dfire_spitfire
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_LOSS_ID, SB_BGCM_POOL_ID
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
-  USE mo_q_dfire_constants,     ONLY: df_sf_sl_dims_nr, df_sf_sl_indices !< Soil related constants: top soil moisture layers
+  USE mo_q_dfire_constants,       ONLY: df_sf_sl_dims_nr, df_sf_sl_indices !< Soil related constants: top soil moisture layers 
 
-  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_dead_fuel_woody_ix
-  USE mo_q_dfire_constants,     ONLY: df_sf_max_density_human_pop
-  USE mo_q_dfire_constants,     ONLY: df_sf_fc_spread_nr
-  USE mo_q_dfire_constants,     ONLY: df_sf_alpha_nr, df_sf_alphas !< Drying parameters
+  USE mo_q_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix
+  USE mo_q_dfire_constants,       ONLY: df_sf_max_density_human_pop
+  USE mo_q_dfire_constants,       ONLY: df_sf_fc_spread_nr
+  USE mo_q_dfire_constants,       ONLY: df_sf_alpha_nr, df_sf_alphas !< Drying parameters
 
-  USE mo_q_dfire_constants,     ONLY: df_sf_calorific_heat_content, df_sf_isurface_extinc_th
+  USE mo_q_dfire_constants,       ONLY: df_sf_calorific_heat_content, df_sf_isurface_extinc_th
 
-  USE mo_q_dfire_constants,     ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
-                                    df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx !< fuel classes indices
+  USE mo_q_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
+                                      df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx !< fuel classes indices
 
-  USE mo_q_dfire_constants,     ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
-                                    df_sf_omega_o_idx !< omega_o index from sf_calc_fuel_moisture output (array)
+  USE mo_q_dfire_constants,       ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
+                                      df_sf_omega_o_idx !< omega_o index from sf_calc_fuel_moisture output (array)
 
-  USE mo_q_dfire_sf_fuel_class, ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
+  USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
   USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture
-  USE mo_q_dfire_sf_ignition,   ONLY: calc_sf_ignition, t_sf_ignitions
-  USE mo_q_dfire_sf_nesterov,   ONLY: calc_sf_nesterov_index
-  USE mo_q_dfire_sf_ros_class,  ONLY: t_sf_ros, t_sf_veget_cover_frac, sf_calc_rate_of_spread
+  USE mo_q_dfire_sf_ignition_class,   ONLY: calc_q_sf_ignition, t_q_sf_ignitions
+  USE mo_q_dfire_sf_nesterov_class,   ONLY: calc_sf_nesterov_index
+  USE mo_q_dfire_sf_ros_class,    ONLY: t_sf_ros, t_sf_veget_cover_frac, sf_calc_rate_of_spread
   USE mo_q_dfire_sf_frac_consump_class, ONLY: sf_calc_frac_consump
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption
 
@@ -98,7 +98,7 @@ MODULE mo_q_dfire_spitfire
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_q_dfire_spitfire
+  PUBLIC :: update_q_dfire_spitfire, sf_calc_fire_intensity, t_sf_spitfire
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_spitfire'
 
@@ -203,7 +203,7 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc, ic, is
     INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
-    CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
+    CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_q_fdire_sf_spitfire'
 
     REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2?]
     REAL(wp), POINTER                     :: tile_fract(:) ! [%]
@@ -630,7 +630,7 @@ CONTAINS
     LOGICAL :: mask_tile_enabled(nc)
 
     ! locals
-    TYPE(t_sf_ignitions)  :: sf_ignitions
+    TYPE(t_q_sf_ignitions)  :: sf_ignitions
     REAL(wp) :: w_oi(nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
     REAL(wp) :: tot_lvg_fuel(nc)           !< Total livegrass fuel [g DM m-2]
     INTEGER :: ndeadpools
@@ -648,7 +648,7 @@ CONTAINS
       mask_tile_enabled = mask
     ENDIF
 
-    sf_ignitions = t_sf_ignitions(nc)
+    sf_ignitions = t_q_sf_ignitions(nc)
     spitfire = t_sf_spitfire(nc, ndeadpools, sf_fuel_live_fuel_nr)
 
     !> Calculate whether there are conditions for fire based on the Nesterov Index,
@@ -697,7 +697,7 @@ CONTAINS
         mask=has_fire_conditions)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
-    sf_ignitions = calc_sf_ignition(nc, density_human_population, &
+    sf_ignitions = calc_q_sf_ignition(nc, density_human_population, &
                                     a_nd, lightning_frequency, &
                                     df_sf_max_density_human_pop)
     !< From daily to ts

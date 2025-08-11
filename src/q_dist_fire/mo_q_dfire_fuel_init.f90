@@ -165,7 +165,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, residue_els)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, overflow_els)
     ! ----------------------------------------------------------------------------------------------------- !
-    !WRITE(*,*) "Computing dfire_fuel_init..."
+    !WRITE(*,*) "Computing q_dfire_fuel_init..."
     dead_fuel_1hr_dfp = 0._wp
     dead_fuel_10hr_dfp = 0._wp
     dead_fuel_100hr_dfp = 0._wp

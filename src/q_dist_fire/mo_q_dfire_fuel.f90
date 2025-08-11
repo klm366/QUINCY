@@ -67,7 +67,7 @@ MODULE mo_q_dfire_fuel
                                         df_sf_live_frac_grass
   USE mo_q_dfire_constants,     ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
 
-  USE mo_q_dfire_sf_adaptor,      ONLY: sf_convert_units
+  USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
 
   IMPLICIT NONE
 

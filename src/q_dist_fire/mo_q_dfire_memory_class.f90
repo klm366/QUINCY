@@ -33,7 +33,7 @@ MODULE mo_q_dfire_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
-  USE mo_q_dfire_constants,       ONLY: df_sf_vgrid_dead_fuel_pools_name, &
+  USE mo_q_dfire_constants,      ONLY: df_sf_vgrid_dead_fuel_pools_name, &
                                       df_sf_vgrid_live_fuel_pools_name, &
                                       df_sf_vgrid_fuel_classes_name, &
                                       df_sf_vgrid_fuel_moisture_name, &
