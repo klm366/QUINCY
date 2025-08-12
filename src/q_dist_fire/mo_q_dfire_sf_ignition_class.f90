@@ -19,7 +19,7 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_q_dfire_sf_ignition
+MODULE mo_q_dfire_sf_ignition_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
@@ -107,4 +107,4 @@ CONTAINS
   END FUNCTION calc_q_sf_ignition
 
 #endif
-END MODULE mo_q_dfire_sf_ignition
+END MODULE mo_q_dfire_sf_ignition_class

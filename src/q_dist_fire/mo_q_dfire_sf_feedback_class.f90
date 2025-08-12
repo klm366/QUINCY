@@ -19,7 +19,7 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_q_dfire_sf_feedback
+MODULE mo_q_dfire_sf_feedback_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
@@ -217,5 +217,5 @@ CONTAINS
   END SUBROUTINE calc_sf_feedback_live
 #endif
 
-END MODULE mo_q_dfire_sf_feedback
+END MODULE mo_q_dfire_sf_feedback_class
 
