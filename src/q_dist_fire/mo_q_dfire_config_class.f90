@@ -46,7 +46,7 @@ MODULE mo_q_dfire_config_class
   PRIVATE
 
   PUBLIC :: t_q_dfire_config
-  PUBLIC :: DFIRE_MODEL_SF
+  PUBLIC :: Q_DFIRE_MODEL_SF
 
   !>
   !> Fire models
@@ -54,7 +54,7 @@ MODULE mo_q_dfire_config_class
   !>   spitfire, ..
   !>
   ENUM, BIND(C)
-    ENUMERATOR :: DFIRE_MODEL_SF=1
+    ENUMERATOR :: Q_DFIRE_MODEL_SF=1
   END ENUM
 
   !< Precipitation method names for namelist
@@ -118,7 +118,7 @@ CONTAINS
     USE mo_jsb_namelist_iface,  ONLY: open_nml, POSITIONED, position_nml, close_nml
 #endif
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_io_iface,       ONLY: zaxis_generic
+    USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
     USE mo_jsb_grid,           ONLY: register_vgrid
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -223,7 +223,7 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! read the namelist
-    ! &DIST_FIRE_CTL
+    ! &Q_DIST_FIRE_CTL
     nml_handler = open_nml(TRIM(config%namelist_filename))
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_STANDALONE__
@@ -307,7 +307,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     SELECT CASE(tolower(TRIM(name)))
     CASE ('spitfire')
-      return_value = DFIRE_MODEL_SF
+      return_value = Q_DFIRE_MODEL_SF
     CASE DEFAULT
       CALL finish(routine,'Invalid fire model name. Use spitfire.')
     END SELECT
@@ -319,9 +319,9 @@ CONTAINS
   !> Returns the id for this fire precipitation method name
   !>
   FUNCTION Get_Precip_Method_id(name) RESULT(return_value)
-    USE mo_q_dfire_constants, ONLY: DFIRE_PRECIP_METHOD_DAYTIME, &
-                                    DFIRE_PRECIP_METHOD_MAVG, &
-                                    DFIRE_PRECIP_METHOD_APROX_MAVG
+    USE mo_q_dfire_constants,   ONLY: Q_DFIRE_PRECIP_METHOD_DAYTIME, &
+                                      Q_DFIRE_PRECIP_METHOD_MAVG, &
+                                      Q_DFIRE_PRECIP_METHOD_APROX_MAVG
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), INTENT(in) :: name
     INTEGER                      :: return_value
@@ -330,11 +330,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     SELECT CASE(tolower(TRIM(name)))
     CASE (dfire_cfg_precip_method_daytime)
-      return_value = DFIRE_PRECIP_METHOD_DAYTIME
+      return_value = Q_DFIRE_PRECIP_METHOD_DAYTIME
     CASE (dfire_cfg_precip_method_mavg)
-      return_value = DFIRE_PRECIP_METHOD_MAVG
+      return_value = Q_DFIRE_PRECIP_METHOD_MAVG
     CASE (dfire_cfg_precip_method_aprox_mavg)
-      return_value = DFIRE_PRECIP_METHOD_APROX_MAVG
+      return_value = Q_DFIRE_PRECIP_METHOD_APROX_MAVG
     CASE DEFAULT
       CALL finish(routine,"Invalid precipitation method name. "// &
           " Only allowed: "// dfire_cfg_methods)
