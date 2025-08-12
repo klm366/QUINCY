@@ -831,6 +831,8 @@ CONTAINS
 
     dtime = model%options(no_omp_thread)%dtime
 
+#ifndef _OPENACC
+
     ! Carbon conservation test JSBACH
     CALL model%Get_top_tile(tile)
     IF (model%processes(CARBON_)%p%config%active) THEN
@@ -852,6 +854,7 @@ CONTAINS
       CALL seb_check_temperature_range(model_id, no_omp_thread)
     END IF
 
+#endif
 
 #ifndef __NO_JSBACH_HD__
     CALL model%Get_top_tile(tile)
@@ -867,6 +870,8 @@ CONTAINS
 ! #ifdef _OPENACC
 !    CALL model%gpu_to_cpu()
 ! #endif
+
+#ifndef _OPENACC
 
     ! Global diagnostics
     !TODO: go through all processes.
@@ -885,6 +890,8 @@ CONTAINS
     IF (model%processes(PPLCC_)%p%config%active) THEN
       CALL global_pplcc_diagnostics(tile)
     END IF
+
+#endif
 
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())

@@ -655,6 +655,10 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain :: t
 
+#ifdef _OPENACC
+    RETURN
+#endif
+
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
     model => Get_model(model_id)
