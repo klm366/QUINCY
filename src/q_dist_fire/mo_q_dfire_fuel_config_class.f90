@@ -57,11 +57,7 @@ CONTAINS
   !> configuration routine of t_q_dfire_fuel_config
   !>
   SUBROUTINE Init_q_dfire_fuel_config(config)
-#ifdef __QUINCY_STANDALONE__
-    USE mo_jsb_namelist_iface,  ONLY: open_nml, POSITIONED, position_nml, close_nml
-#else
-    USE mo_namelist,            ONLY: open_nml, POSITIONED, position_nml, close_nml
-#endif
+    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_io_iface,       ONLY: zaxis_generic
     USE mo_jsb_grid,           ONLY: register_vgrid
