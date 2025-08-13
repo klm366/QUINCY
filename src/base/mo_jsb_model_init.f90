@@ -432,9 +432,9 @@ CONTAINS
 
       IF(model%config%qmodel_id == QLAND) THEN
         IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
-          CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_fuel")        ! LAND ONLY, todo: rename to dfire_sf_pre, dfire_sf_fire
-          CALL model%Queue_task(Q_DFIRE_, "q_dfire_spitfire")         ! LAND ONLY
-          CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_sf_post")     ! LAND ONLY
+          CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_fuel")    ! LAND ONLY, todo: rename to dfire_sf_pre, dfire_sf_fire
+          CALL model%Queue_task(Q_DFIRE_, "q_dfire_spitfire")     ! LAND ONLY
+          CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_post")    ! LAND ONLY
         ENDIF
         CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
       ENDIF
@@ -473,7 +473,7 @@ CONTAINS
       !-- averaging variables in time
       IF(model%config%qmodel_id == QLAND) THEN
         IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
-          CALL model%Queue_task(Q_DFIRE_, "tavrg_dist_fire")   ! LAND ONLY
+          CALL model%Queue_task(Q_DFIRE_, "tavrg_q_dist_fire")    ! LAND ONLY
         ENDIF
       ENDIF
       CALL model%Queue_task(RAD_, "rad_time_average")             ! ALL
