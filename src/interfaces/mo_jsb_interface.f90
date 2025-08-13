@@ -859,7 +859,9 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
     CALL model%Get_top_tile(tile)
     CALL hd_lateral_flow(tile, model%options(no_omp_thread))
+#ifndef _OPENACC
     CALL hd_check_water_budget(tile, model%options(no_omp_thread))
+#endif
 
     IF (.NOT. linit) THEN
       ! Do not couple to ocean during initialisation step.
