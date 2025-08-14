@@ -332,7 +332,7 @@ CONTAINS
       &                                  calc_convection_heat,            &
       &                                  calc_snow_redistribution,        &
       &                                  shift_fluxes_sl,                 &
-      &                                  remove_exess_water
+      &                                  remove_excess_water
 
     USE mo_hydro_process, ONLY: get_soilhyd_properties
 
@@ -390,9 +390,6 @@ CONTAINS
       &  wtr_incomming_sl_sibl      !< Lateral flux (soil) from tile to sibling [kg m-2 s-1]
 
     REAL(wp) ::  hlp1               !< helper variable
-
-    REAL(wp), DIMENSION(options%nsoil_w) :: &
-      & hlp1_sl, hlp2_sl, hlp3_sl
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_lex'
     CHARACTER(len=5000)         :: message_text_long
@@ -609,9 +606,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_,   nrg_lex_net_sl)         ! inout
 
     !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(fract(1:nc), fract_sibl(1:nc), fract_sibl(1:nc), snow_new_tle_tm1(1:nc))                          &
+    !$ACC   CREATE(fract(1:nc), fract_sibl(1:nc), fract_sibl(1:nc), snow_soil_tle_tm1(1:nc), snow_new_tle_tm1(1:nc)) &
     !$ACC   CREATE(snow_dens_tle_tm1(1:nc), wtr_incomming_srf(1:nc), wtr_incomming_srf_sibl(1:nc))                   &
-    !$ACC   CREATE(hlp1_sl(1:nsoil), hlp2_sl(1:nsoil), hlp3_sl(1:nsoil))                                             &
     !$ACC   CREATE(wtr_latflow_sl_used(1:nc,1:nsoil), hyd_cond_sl(1:nc,1:nsoil), hyd_cond_sl_sibl(1:nc,1:nsoil))     &
     !$ACC   CREATE(diffus_sl(1:nc,1:nsoil), diffus_sl_sibl(1:nc,1:nsoil), mpot_act(1:nc,1:nsoil))                    &
     !$ACC   CREATE(mpot_act_sibl(1:nc,1:nsoil), ice_impedance_sl(1:nc,1:nsoil), ice_impedance_sl_sibl(1:nc,1:nsoil)) &
@@ -624,9 +620,13 @@ CONTAINS
 
     ! Initialze those variables, where the values at the end of ast time step,
     ! i.e. unmodified by interactions with siblings are needed.
-    snow_soil_tle_tm1(:)       = weq_snow_soil
-    snow_new_tle_tm1(:)        = new_snow_soil
-    snow_dens_tle_tm1(:)       = snow_soil_dens
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      snow_soil_tle_tm1(ic) = weq_snow_soil(ic)
+      snow_new_tle_tm1(ic)  = new_snow_soil(ic)
+      snow_dens_tle_tm1(ic) = snow_soil_dens(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
     ! Loop over all tiles on the current tile level
     ! This includes tiles that ma not participate in the lateral exchange, such as glaciers.
@@ -726,35 +726,19 @@ CONTAINS
 
         ! Incomming later subsurface runoff is adjusted according to differences in soil depth (until bedrock),
         ! and for micro-scale connections, also for differences in surface elevation
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          !$ACC LOOP VECTOR
-          DO is = 1, nsoil
-            hlp1_sl(is) = soil_depth_sl(ic,is)
-            hlp2_sl(is) = soil_depth_sl_sibl(ic,is)
-            hlp3_sl(is) = wtr_latflow_sl_used(ic,is)
-          END DO
-
-          CALL shift_fluxes_sl( nsoil,                &
-            &  microcon_hfp_blg_ct(ic,lex_ids),       &
-            &  h_offset_ct(ic,lex_ids),               &
-            &  hlp1_sl(:),                            &
-            &  hlp2_sl(:),                            &
-            &  hlp3_sl(:)                             &
-            )
-
-          !$ACC LOOP VECTOR
-          DO is = 1, nsoil
-            wtr_latflow_sl_used(ic,is) = hlp3_sl(is)
-          END DO
-
-        END DO
-        !$ACC END PARALLEL LOOP
+        CALL shift_fluxes_sl(nc, nsoil,     &
+          & microcon_hfp_blg_ct(:,lex_ids), &
+          & h_offset_ct(:,lex_ids),         &
+          & soil_depth_sl(:,:),             &
+          & soil_depth_sl_sibl(:,:),        &
+          & wtr_latflow_sl_used(:,:)        &
+          )
 
         ! Lateral fluxes of surface runoff.
         ! The outflow from tile is actually calculated in HYDRO_ and here only the distributions on siblings is done
         IF (dsl4jsb_Config(LEX_)%l_runoff_trns) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+          !$ACC   PRIVATE(hlp1)
           DO ic = 1, nc
 
             hlp1 = wtr_latflow_srf(ic) * fos
@@ -781,14 +765,14 @@ CONTAINS
           ! Lateral fluxes of subsurface runoff.
           ! The outflow from tile is actually calculated in HYDRO_ and here only the distributions on siblings is done
           IF (dsl4jsb_Config(LEX_)%l_drainage_trns) THEN
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
-            DO is = 1,nsoil
-              DO ic=1,nc
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream) &
+            !$ACC   PRIVATE(hlp1)
+            DO is = 1, nsoil
+              DO ic = 1, nc
 
+                hlp1 = wtr_latflow_sl_used(ic,is) * fos
                 wtr_incomming_sl_sibl(ic,is) = wtr_incomming_sl_sibl(ic,is) &
                   &                          - wtr_drainage_in_sl_sibl(ic,is)
-                hlp1 = wtr_latflow_sl_used(ic,is)*fos
-
                 CALL calc_drainage_transport( dtime,        &
                   & fract_latflow_blg_ct(ic,lex_ids),       &
                   & fract(ic),                              &
@@ -808,40 +792,24 @@ CONTAINS
             !$ACC END PARALLEL LOOP
 
             ! Remove excess water from soil and surface
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-            DO ic = 1,nc
+            CALL remove_excess_water(nc,                   &
+              & nsoil,                                     &
+              & weq_pond_max_sibl(:),                      &
+              & ice_pond_sibl(:),                          &
+              & wtr_pond_sibl(:),                          &
+              & water_to_soil_lex_sibl(:),                 &
+              & wtr_soil_sat_sl=wtr_soil_sat_sl_sibl(:,:), &
+              & wtr_soil_sl=wtr_soil_sl_sibl(:,:)          &
+              )
 
-              !$ACC LOOP VECTOR
-              DO is = 1, nsoil
-                hlp1_sl(is) = wtr_soil_sat_sl_sibl(ic,is)
-                hlp2_sl(is) = wtr_soil_sl_sibl(ic,is)
-              END DO
-
-              CALL remove_exess_water(                        &
-                & weq_pond_max_sibl(ic),                      &
-                & ice_pond_sibl(ic),                          &
-                & wtr_pond_sibl(ic),                          &
-                & water_to_soil_lex_sibl(ic),                 &
-                & nsoil=nsoil,                                &
-                & wtr_soil_sat_sl=hlp1_sl(:),                 &
-                & wtr_soil_sl=hlp2_sl(:)                      &
-                )
-
-              !$ACC LOOP VECTOR
-              DO is = 1, nsoil
-                wtr_soil_sl_sibl(ic,is) = hlp2_sl(is)
-              END DO
-
-            END DO
-            !$ACC END PARALLEL LOOP
           END IF
 
           ! Calculating wsat, field capacity and mositure residual for tile disregarding soil ice content
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
           DO is = 1, nsoil
-            DO  ic = 1, nc
-              weq_wsat_sl     (ic,is) = vol_porosity_sl (ic,is) * soil_depth_sl(ic,is)
-              weq_wres_sl     (ic,is) = vol_wres_sl(ic,is)      * soil_depth_sl(ic,is)
+            DO ic = 1, nc
+              weq_wsat_sl(ic,is) = vol_porosity_sl (ic,is) * soil_depth_sl(ic,is)
+              weq_wres_sl(ic,is) = vol_wres_sl(ic,is)      * soil_depth_sl(ic,is)
             END DO
           END DO
           !$ACC END PARALLEL LOOP
@@ -900,218 +868,208 @@ CONTAINS
             & mpot_act=mpot_act_sibl(:,:)                   &
             )
 
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-          DO ic = 1,nc
-            IF  (dsl4jsb_Config(LEX_)%l_infil_trns .AND. &
-              & (microcon_ctc_ct(ic,lex_ids) > 0._wp)) THEN
+          IF (dsl4jsb_Config(LEX_)%l_infil_trns) THEN
 
-              ! Lateral ingress from pond to connected tile
-              hlp1 = length_iface_ct(ic,lex_ids) * fract_pond_max_sibl(ic)
-              CALL calc_pond_soil_flux_water(               &
-                &  nsoil, dtime,                            &
-                &  h_offset_ct(ic,lex_ids),                 &
-                &  length_scale_ct(ic,lex_ids),             &
-                &  hlp1,                                    &
-                &  fract(ic),                               &
-                &  fract_sibl(ic),                          &
-                &  soil_depth_sl(ic,:),                     &
-                &  wtr_soil_fc_sl(ic,:),                    &
-                &  hyd_cond_sl(ic,:),                       &
-                &  mpot_act(ic,:),                          &
-                &  wtr_infil_out_sibl(ic),                  &
-                &  wtr_infil_in_sl(ic,:),                   &
-                &  wtr_incomming_sl(ic,:),                  &
-                &  wtr_lex_net_srf_sibl(ic),                &
-                &  wtr_lex_net_sl(ic,:),                    &
-                &  wtr_pond_sibl(ic),                       &
-                &  wtr_soil_sl(ic,:)                        &
-                &  )
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+            DO is = 1, nsoil
+              DO  ic = 1, nc
+                wtr_incomming_sl(ic,is) = wtr_incomming_sl(ic,is) - wtr_infil_in_sl(ic,is)
+              END DO
+            END DO
+            !$ACC END PARALLEL LOOP
 
-            END IF
-          END DO
-          !$ACC END PARALLEL LOOP
+            ! Lateral ingress from pond to connected tile
+            CALL calc_pond_soil_flux_water(              &
+              &  nc, nsoil, dtime,                       &
+              &  microcon_ctc_ct(:,lex_ids),             &
+              &  h_offset_ct(:,lex_ids),                 &
+              &  length_scale_ct(:,lex_ids),             &
+              &  length_iface_ct(:,lex_ids),             &
+              &  fract_pond_max_sibl(:),                 &
+              &  fract(:),                               &
+              &  fract_sibl(:),                          &
+              &  soil_depth_sl(:,:),                     &
+              &  wtr_soil_fc_sl(:,:),                    &
+              &  hyd_cond_sl(:,:),                       &
+              &  mpot_act(:,:),                          &
+              &  wtr_infil_out_sibl(:),                  &
+              &  wtr_infil_in_sl(:,:),                   &
+              &  wtr_lex_net_srf_sibl(:),                &
+              &  wtr_lex_net_sl(:,:),                    &
+              &  wtr_pond_sibl(:),                       &
+              &  wtr_soil_sl(:,:)                        &
+              &  )
 
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-          DO ic = 1,nc
-            IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr .AND. &
-              & (microcon_ctc_ct(ic,lex_ids) > 0._wp)) THEN
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+            DO is = 1, nsoil
+              DO  ic = 1, nc
+                wtr_incomming_sl(ic,is) = wtr_incomming_sl(ic,is) + wtr_infil_in_sl(ic,is)
+              END DO
+            END DO
+            !$ACC END PARALLEL LOOP
 
-              wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
-                &                         - wtr_diffusion_in_sl(ic,:)
-              wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
-                &                         - wtr_diffusion_in_sl_sibl(ic,:)
+          END IF
 
-              ! Diffusion between connected tiles (water)
-              CALL calc_diffusion_water(nsoil, dtime,       &
-                &  h_offset_ct(ic,lex_ids),                 &
-                &  length_scale_ct(ic,lex_ids),             &
-                &  length_iface_ct(ic,lex_ids),             &
-                &  fract(ic),                               &
-                &  fract_sibl(ic),                          &
-                &  soil_depth_sl(ic,:),                     &
-                &  soil_depth_sl_sibl(ic,:),                &
-                &  wtr_soil_fc_sl(ic,:),                    &
-                &  wtr_soil_fc_sl_sibl(ic,:),               &
-                &  wtr_soil_sat_sl(ic,:),                   &
-                &  wtr_soil_sat_sl_sibl(ic,:),              &
-                &  wtr_soil_res_sl(ic,:),                   &
-                &  wtr_soil_res_sl_sibl(ic,:),              &
-                &  hyd_cond_sat_sl(ic,:),                   &
-                &  hyd_cond_sat_sl_sibl(ic,:),              &
-                &  hyd_cond_sl(ic,:),                       &
-                &  hyd_cond_sl_sibl(ic,:),                  &
-                &  mpot_act(ic,:),                          &
-                &  mpot_act_sibl(ic,:),                     &
-                &  wtr_diffusion_in_sl(ic,:),               &
-                &  wtr_diffusion_in_sl_sibl(ic,:),          &
-                &  wtr_diffusion_out_sl(ic,:),              &
-                &  wtr_diffusion_out_sl_sibl(ic,:),         &
-                &  wtr_lex_net_sl(ic,:),                    &
-                &  wtr_lex_net_sl_sibl(ic,:),               &
-                &  wtr_soil_sl(ic,:),                       &
-                &  wtr_soil_sl_sibl(ic,:)                   &
-                &  )
+          IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr) THEN
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+            DO ic = 1, nc
+              IF (microcon_ctc_ct(ic,lex_ids) > 0._wp) THEN
 
-              wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
-                &                         + wtr_diffusion_in_sl(ic,:)
-              wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
-                &                         + wtr_diffusion_in_sl_sibl(ic,:)
+                wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
+                  &                         - wtr_diffusion_in_sl(ic,:)
+                wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
+                  &                         - wtr_diffusion_in_sl_sibl(ic,:)
 
-            END IF
-          END DO
-          !$ACC END PARALLEL LOOP
+                ! Diffusion between connected tiles (water)
+                CALL calc_diffusion_water(nsoil, dtime,       &
+                  &  h_offset_ct(ic,lex_ids),                 &
+                  &  length_scale_ct(ic,lex_ids),             &
+                  &  length_iface_ct(ic,lex_ids),             &
+                  &  fract(ic),                               &
+                  &  fract_sibl(ic),                          &
+                  &  soil_depth_sl(ic,:),                     &
+                  &  soil_depth_sl_sibl(ic,:),                &
+                  &  wtr_soil_fc_sl(ic,:),                    &
+                  &  wtr_soil_fc_sl_sibl(ic,:),               &
+                  &  wtr_soil_sat_sl(ic,:),                   &
+                  &  wtr_soil_sat_sl_sibl(ic,:),              &
+                  &  wtr_soil_res_sl(ic,:),                   &
+                  &  wtr_soil_res_sl_sibl(ic,:),              &
+                  &  hyd_cond_sat_sl(ic,:),                   &
+                  &  hyd_cond_sat_sl_sibl(ic,:),              &
+                  &  hyd_cond_sl(ic,:),                       &
+                  &  hyd_cond_sl_sibl(ic,:),                  &
+                  &  mpot_act(ic,:),                          &
+                  &  mpot_act_sibl(ic,:),                     &
+                  &  wtr_diffusion_in_sl(ic,:),               &
+                  &  wtr_diffusion_in_sl_sibl(ic,:),          &
+                  &  wtr_diffusion_out_sl(ic,:),              &
+                  &  wtr_diffusion_out_sl_sibl(ic,:),         &
+                  &  wtr_lex_net_sl(ic,:),                    &
+                  &  wtr_lex_net_sl_sibl(ic,:),               &
+                  &  wtr_soil_sl(ic,:),                       &
+                  &  wtr_soil_sl_sibl(ic,:)                   &
+                  &  )
 
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-          DO ic = 1,nc
-            IF (dsl4jsb_Config(LEX_)%l_dffsn_nrg .AND. &
-              & (microcon_ctc_ct(ic,lex_ids) > 0._wp)) THEN
+                wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
+                  &                         + wtr_diffusion_in_sl(ic,:)
+                wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
+                  &                         + wtr_diffusion_in_sl_sibl(ic,:)
 
-              ! Diffusion between connected tiles (energy).
-              ! Since an update of the actual soil temperatures outside of the SSE routines is not intended,
-              ! only the lateral heat flux is calculated and passed to the SSE routine as an energy source/sink.
+              END IF
+            END DO
+            !$ACC END PARALLEL LOOP
+          END IF
 
-              IF (h_offset_ct(ic,lex_ids) > 0._wp) THEN
-                hlp1 = length_iface_ct(ic,lex_ids)*fract_pond_max_sibl(ic)
-                CALL calc_pond_soil_flux_heat(              &
-                  &  nsoil, dtime,                          &
-                  &  soil_e%dz(:),                          &
-                  &  h_offset_ct(ic,lex_ids),               &
-                  &  length_scale_ct(ic,lex_ids),           &
-                  &  hlp1,                                  &
-                  &  fract(ic),                             &
-                  &  fract_sibl(ic),                        &
-                  &  t_soil_sl_sibl(ic,1),                  &
-                  &  vol_heat_cap_sl_sibl(ic,1),            &
-                  &  wtr_pond_sibl(ic), ice_pond_sibl(ic),  &
-                  &  t_soil_sl(ic,:),                       &
-                  &  heat_cond_sl(ic,:),                    &
-                  &  vol_heat_cap_sl_sibl(ic,:),            &
-                  &  nrg_diffusion_in_sl_sibl(ic,1),        &
-                  &  nrg_diffusion_out_sl_sibl(ic,1),       &
-                  &  nrg_lex_net_sl_sibl(ic,1),             &
-                  &  nrg_diffusion_in_sl(ic,:),             &
-                  &  nrg_diffusion_out_sl(ic,:),            &
-                  &  nrg_lex_net_sl(ic,:)                   &
+          IF (dsl4jsb_Config(LEX_)%l_dffsn_nrg) THEN
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+            DO ic = 1, nc
+              IF (microcon_ctc_ct(ic,lex_ids) > 0._wp) THEN
+
+                ! Diffusion between connected tiles (energy).
+                ! Since an update of the actual soil temperatures outside of the SSE routines is not intended,
+                ! only the lateral heat flux is calculated and passed to the SSE routine as an energy source/sink.
+
+                IF (h_offset_ct(ic,lex_ids) > 0._wp) THEN
+                  hlp1 = length_iface_ct(ic,lex_ids) * fract_pond_max_sibl(ic)
+                  CALL calc_pond_soil_flux_heat(              &
+                    &  nsoil, dtime,                          &
+                    &  soil_e%dz(:),                          &
+                    &  h_offset_ct(ic,lex_ids),               &
+                    &  length_scale_ct(ic,lex_ids),           &
+                    &  hlp1,                                  &
+                    &  fract(ic),                             &
+                    &  fract_sibl(ic),                        &
+                    &  t_soil_sl_sibl(ic,1),                  &
+                    &  vol_heat_cap_sl_sibl(ic,1),            &
+                    &  wtr_pond_sibl(ic), ice_pond_sibl(ic),  &
+                    &  t_soil_sl(ic,:),                       &
+                    &  heat_cond_sl(ic,:),                    &
+                    &  vol_heat_cap_sl_sibl(ic,:),            &
+                    &  nrg_diffusion_in_sl_sibl(ic,1),        &
+                    &  nrg_diffusion_out_sl_sibl(ic,1),       &
+                    &  nrg_lex_net_sl_sibl(ic,1),             &
+                    &  nrg_diffusion_in_sl(ic,:),             &
+                    &  nrg_diffusion_out_sl(ic,:),            &
+                    &  nrg_lex_net_sl(ic,:)                   &
+                    &  )
+                END IF
+
+                CALL calc_diffusion_heat(nsoil, dtime,        &
+                  &  soil_e%dz(:),                            &
+                  &  h_offset_ct(ic,lex_ids),                 &
+                  &  length_scale_ct(ic,lex_ids),             &
+                  &  length_iface_ct(ic,lex_ids),             &
+                  &  fract(ic),                               &
+                  &  fract_sibl(ic),                          &
+                  &  t_soil_sl(ic,:),                         &
+                  &  t_soil_sl_sibl(ic,:),                    &
+                  &  heat_cond_sl(ic,:),                      &
+                  &  heat_cond_sl_sibl(ic,:),                 &
+                  &  vol_heat_cap_sl(ic,:),                   &
+                  &  vol_heat_cap_sl_sibl(ic,:),              &
+                  &  nrg_diffusion_in_sl(ic,:),               &
+                  &  nrg_diffusion_in_sl_sibl(ic,:),          &
+                  &  nrg_diffusion_out_sl(ic,:),              &
+                  &  nrg_diffusion_out_sl_sibl(ic,:),         &
+                  &  nrg_lex_net_sl(ic,:),                    &
+                  &  nrg_lex_net_sl_sibl(ic,:)                &
                   &  )
               END IF
+            END DO
+            !$ACC END PARALLEL LOOP
+          END IF
 
-              CALL calc_diffusion_heat(nsoil, dtime,        &
-                &  soil_e%dz(:),                            &
-                &  h_offset_ct(ic,lex_ids),                 &
-                &  length_scale_ct(ic,lex_ids),             &
-                &  length_iface_ct(ic,lex_ids),             &
-                &  fract(ic),                               &
-                &  fract_sibl(ic),                          &
-                &  t_soil_sl(ic,:),                         &
-                &  t_soil_sl_sibl(ic,:),                    &
-                &  heat_cond_sl(ic,:),                      &
-                &  heat_cond_sl_sibl(ic,:),                 &
-                &  vol_heat_cap_sl(ic,:),                   &
-                &  vol_heat_cap_sl_sibl(ic,:),              &
-                &  nrg_diffusion_in_sl(ic,:),               &
-                &  nrg_diffusion_in_sl_sibl(ic,:),          &
-                &  nrg_diffusion_out_sl(ic,:),              &
-                &  nrg_diffusion_out_sl_sibl(ic,:),         &
-                &  nrg_lex_net_sl(ic,:),                    &
-                &  nrg_lex_net_sl_sibl(ic,:)                &
-                &  )
-            END IF
-          END DO
-          !$ACC END PARALLEL LOOP
+          IF (dsl4jsb_Config(LEX_)%l_cnvctn_nrg) THEN
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+            DO ic = 1,nc
 
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-          DO ic = 1,nc
-            IF (dsl4jsb_Config(LEX_)%l_cnvctn_nrg) THEN
+                ! Fluxes reulting from the heat contained in the lateral fluxes of water
+                ! Since an update of the actual soil temperatures outside of the SSE routines is not intended,
+                ! only the lateral heat flux is calculated and passed to the SSE routine as an energy source/sink.
+                Call calc_convection_heat(nsoil, dtime,       &
+                  &  soil_e%dz(:),                            &
+                  &  h_offset_ct(ic,lex_ids),                 &
+                  &  fract(ic),                               &
+                  &  fract_sibl(ic),                          &
+                  &  wtr_incomming_srf(ic),                   &
+                  &  wtr_incomming_srf_sibl(ic),              &
+                  &  t_soil_sl(ic,:),                         &
+                  &  t_soil_sl_sibl(ic,:),                    &
+                  &  wtr_incomming_sl(ic,:),                  &
+                  &  wtr_incomming_sl_sibl(ic,:),             &
+                  &  vol_heat_cap_sl(ic,:),                   &
+                  &  vol_heat_cap_sl_sibl(ic,:),              &
+                  &  nrg_convection_in_sl(ic,:),              &
+                  &  nrg_convection_in_sl_sibl(ic,:),         &
+                  &  nrg_convection_out_sl(ic,:),             &
+                  &  nrg_convection_out_sl_sibl(ic,:),        &
+                  &  nrg_lex_net_sl(ic,:),                    &
+                  &  nrg_lex_net_sl_sibl(ic,:)                &
+                  &  )
 
-              ! Fluxes reulting from the heat contained in the lateral fluxes of water
-              ! Since an update of the actual soil temperatures outside of the SSE routines is not intended,
-              ! only the lateral heat flux is calculated and passed to the SSE routine as an energy source/sink.
-              Call calc_convection_heat(nsoil, dtime,       &
-                &  soil_e%dz(:),                            &
-                &  h_offset_ct(ic,lex_ids),                 &
-                &  fract(ic),                               &
-                &  fract_sibl(ic),                          &
-                &  wtr_incomming_srf(ic),                   &
-                &  wtr_incomming_srf_sibl(ic),              &
-                &  t_soil_sl(ic,:),                         &
-                &  t_soil_sl_sibl(ic,:),                    &
-                &  wtr_incomming_sl(ic,:),                  &
-                &  wtr_incomming_sl_sibl(ic,:),             &
-                &  vol_heat_cap_sl(ic,:),                   &
-                &  vol_heat_cap_sl_sibl(ic,:),              &
-                &  nrg_convection_in_sl(ic,:),              &
-                &  nrg_convection_in_sl_sibl(ic,:),         &
-                &  nrg_convection_out_sl(ic,:),             &
-                &  nrg_convection_out_sl_sibl(ic,:),        &
-                &  nrg_lex_net_sl(ic,:),                    &
-                &  nrg_lex_net_sl_sibl(ic,:)                &
-                &  )
-
-            END IF
-          END DO
-          !$ACC END PARALLEL LOOP
+            END DO
+            !$ACC END PARALLEL LOOP
+          END IF
 
           ! Remove excess water from soil and surface
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-          DO ic = 1,nc
-
-            !$ACC LOOP VECTOR
-            DO is = 1, nsoil
-              hlp1_sl(is) = wtr_soil_sat_sl_sibl(ic,is)
-              hlp2_sl(is) = wtr_soil_sl_sibl(ic,is)
-            END DO
-
-            CALL remove_exess_water(                        &
-              & weq_pond_max_sibl(ic),                      &
-              & ice_pond_sibl(ic),                          &
-              & wtr_pond_sibl(ic),                          &
-              & water_to_soil_lex_sibl(ic),                 &
-              & nsoil=nsoil,                                &
-              & wtr_soil_sat_sl=hlp1_sl(:),                 &
-              & wtr_soil_sl=hlp2_sl(:)                      &
-              )
-
-            !$ACC LOOP VECTOR
-            DO is = 1, nsoil
-              wtr_soil_sl_sibl(ic,is) = hlp2_sl(is)
-            END DO
-
-          END DO
-          !$ACC END PARALLEL LOOP
+          CALL remove_excess_water(nc,                   &
+            & nsoil,                                     &
+            & weq_pond_max_sibl(:),                      &
+            & ice_pond_sibl(:),                          &
+            & wtr_pond_sibl(:),                          &
+            & water_to_soil_lex_sibl(:),                 &
+            & wtr_soil_sat_sl=wtr_soil_sat_sl_sibl(:,:), &
+            & wtr_soil_sl=wtr_soil_sl_sibl(:,:)          &
+            )
         ELSE
           ! Remove excess water from surface only
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-          DO ic = 1,nc
-
-            CALL remove_exess_water(                        &
-              & weq_pond_max_sibl(ic),                      &
-              & ice_pond_sibl(ic),                          &
-              & wtr_pond_sibl(ic),                          &
-              & water_to_soil_lex_sibl(ic)                  &
-              )
-
-          END DO
-          !$ACC END PARALLEL LOOP
+          CALL remove_excess_water(nc, 0,                &
+            & weq_pond_max_sibl(:),                      &
+            & ice_pond_sibl(:),                          &
+            & wtr_pond_sibl(:),                          &
+            & water_to_soil_lex_sibl(:)                  &
+            )
         END IF
 
         ! Update total weq_pond on sibling.
@@ -1122,45 +1080,46 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1,nc
-          IF (dsl4jsb_Config(LEX_)%l_snow_trns .AND. &
-            & (microcon_ctc_ct(ic,lex_ids) > 0._wp)) THEN
+        IF (dsl4jsb_Config(LEX_)%l_snow_trns) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+          DO ic = 1,nc
+            IF (microcon_ctc_ct(ic,lex_ids) > 0._wp) THEN
 
-            hlp1 = MIN(1._wp, microcon_ctc_ct(ic,lex_ids) / SUM(microcon_ctc_ct(ic,:)))
+              hlp1 = MIN(1._wp, microcon_ctc_ct(ic,lex_ids) / SUM(microcon_ctc_ct(ic,:)))
 
-            ! Snowblow between connected tiles
-            CALL calc_snow_redistribution(                  &
-              & dsl4jsb_Config(SSE_)%l_dynsnow,             &
-              & dtime,                                      &
-              & hlp1,                                       &
-              & h_offset_ct(ic,lex_ids),                    &
-              & fract(ic),                                  &
-              & fract_sibl(ic),                             &
-              & weq_pond(ic),                               &
-              & weq_pond_sibl(ic),                          &
-              & snow_soil_tle_tm1(ic),                      &
-              & snow_new_tle_tm1(ic),                       &
-              & snow_dens_tle_tm1(ic),                      &
-              & weq_snowblow_in(ic),                        &
-              & weq_snowblow_in_sibl(ic),                   &
-              & weq_snowblow_out(ic),                       &
-              & weq_snowblow_out_sibl(ic),                  &
-              & wtr_lex_net_srf(ic),                        &
-              & wtr_lex_net_srf_sibl(ic),                   &
-              & weq_snow_soil(ic),                          &
-              & weq_snow_soil_sibl(ic),                     &
-              & new_snow_soil(ic),                          &
-              & new_snow_soil_sibl(ic),                     &
-              & weq_snow(ic),                               &
-              & weq_snow_sibl(ic),                          &
-              & snow_soil_dens(ic),                         &
-              & snow_soil_dens_sibl(ic)                     &
-              & )
+              ! Snowblow between connected tiles
+              CALL calc_snow_redistribution(                  &
+                & dsl4jsb_Config(SSE_)%l_dynsnow,             &
+                & dtime,                                      &
+                & hlp1,                                       &
+                & h_offset_ct(ic,lex_ids),                    &
+                & fract(ic),                                  &
+                & fract_sibl(ic),                             &
+                & weq_pond(ic),                               &
+                & weq_pond_sibl(ic),                          &
+                & snow_soil_tle_tm1(ic),                      &
+                & snow_new_tle_tm1(ic),                       &
+                & snow_dens_tle_tm1(ic),                      &
+                & weq_snowblow_in(ic),                        &
+                & weq_snowblow_in_sibl(ic),                   &
+                & weq_snowblow_out(ic),                       &
+                & weq_snowblow_out_sibl(ic),                  &
+                & wtr_lex_net_srf(ic),                        &
+                & wtr_lex_net_srf_sibl(ic),                   &
+                & weq_snow_soil(ic),                          &
+                & weq_snow_soil_sibl(ic),                     &
+                & new_snow_soil(ic),                          &
+                & new_snow_soil_sibl(ic),                     &
+                & weq_snow(ic),                               &
+                & weq_snow_sibl(ic),                          &
+                & snow_soil_dens(ic),                         &
+                & snow_soil_dens_sibl(ic)                     &
+                & )
 
-          END IF
-        END DO
-        !$ACC END PARALLEL LOOP
+            END IF
+          END DO
+          !$ACC END PARALLEL LOOP
+        END IF
 
       END IF
 
@@ -1169,8 +1128,8 @@ CONTAINS
     ! In case of tiles that are not connected to downstream tiles, the outflow is given to runoff and drainage
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1,nc
-      runoff(ic)     = runoff(ic) &
-             &  + wtr_latflow_srf(ic) / dtime * rhoh2o - wtr_runoff_out(ic)
+      runoff(ic) = runoff(ic) &
+        &        + wtr_latflow_srf(ic) / dtime * rhoh2o - wtr_runoff_out(ic)
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -1186,6 +1145,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
+    !$ACC WAIT ASYNC(acc_stream)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
