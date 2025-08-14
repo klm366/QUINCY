@@ -974,8 +974,6 @@ CONTAINS
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & processes       = (/HYDRO_,   SSE_/), &
             & process_actions = (/ON_TILE_, ON_TILE_/), &
-            !& processes       = (/HYDRO_,   MIX_,     SSE_/), &
-            !& process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
           !$ACC ENTER DATA COPYIN(glacier_tile)
@@ -985,14 +983,18 @@ CONTAINS
         DO t=1,ncontis
 
           ! LEX_, HYDRO_ and SSE_ are active at veg tiles
-          veg_tile => t_jsb_tile('veg_'//TRIM(conti_shortnames(t)),                     &
-            & 'Vegetation tile ('//TRIM(conti_longnames(t))//')', &
-            & processes       = (/LEX_,     HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
-            & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+          veg_tile => t_jsb_tile('veg_'//TRIM(conti_shortnames(t)),           &
+            & 'Vegetation tile ('//TRIM(conti_longnames(t))//')',             &
+            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE, lex_id=conti_ids(t)), &
             & parent=land_tile,  &
             & fract_varname='fract_veg_'//TRIM(conti_shortnames(t)))
           !$ACC ENTER DATA COPYIN(veg_tile)
+
+          IF (model%processes(LEX_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(LEX_, ON_TILE_, AGGREGATE_)
+          END IF
 
           IF (model%processes(ALCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
