@@ -55,7 +55,7 @@ MODULE mo_seb_interface
 #endif
 #ifdef __QUINCY_STANDALONE__
   ! USEd by the mo_qs_model_interface
-  PUBLIC :: update_surface_energy, update_asselin, update_surface_fluxes
+  PUBLIC :: update_surface_energy, update_asselin, update_surface_fluxes, update_energy_balance
 #endif
 
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy

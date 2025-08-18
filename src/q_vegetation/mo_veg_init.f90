@@ -68,7 +68,7 @@ CONTAINS
     USE mo_veg_constants,                   ONLY: fresp_growth, background_mort_rate_tree, &
       &                                           background_mort_rate_grass, w_root_lim_max, rfr_ratio_toc
     USE mo_isotope_util,                    ONLY: calc_fractionation,calc_mixing_ratio_N15N14,calc_mixing_ratio_C14C
-    USE mo_q_assimi_process,                ONLY: discrimination_ps
+    USE mo_q_assimi_process,                ONLY: discrimination_ps_c13, discrimination_ps_c14
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(VEG_)
@@ -325,9 +325,9 @@ CONTAINS
         veg_pool_mt_domain(ix_seed_bed, ixP, :, :) = veg_pool_mt_domain(ix_seed_bed, ixN, :, :) / lctlib%np_leaf
         ! pool%seed_bed%carbon13
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+          hlp1 = discrimination_ps_c13(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
         ELSE
-          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+          hlp1 = discrimination_ps_c13(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
         ENDIF
         DO ic = 1,nproma
           DO iblk = 1,nblks
@@ -338,9 +338,9 @@ CONTAINS
         ENDDO
         ! pool%seed_bed%carbon14
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+          hlp1 = discrimination_ps_c14(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
         ELSE
-          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+          hlp1 = discrimination_ps_c14(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
         ENDIF
         DO ic = 1,nproma
           DO iblk = 1,nblks
@@ -360,9 +360,9 @@ CONTAINS
         veg_pool_mt_domain(ix_reserve, ixP, :, :) = veg_pool_mt_domain(ix_reserve, ixN, :, :) / lctlib%np_leaf
         ! pool%reserve%carbon13
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+          hlp1 = discrimination_ps_c13(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
         ELSE
-          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+          hlp1 = discrimination_ps_c13(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
         ENDIF
         DO ic = 1,nproma
           DO iblk = 1,nblks
@@ -373,9 +373,9 @@ CONTAINS
         ENDDO
         ! pool%reserve%carbon14
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+          hlp1 = discrimination_ps_c14(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
         ELSE
-          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+          hlp1 = discrimination_ps_c14(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
         ENDIF
         DO ic = 1,nproma
           DO iblk = 1,nblks
@@ -447,6 +447,7 @@ CONTAINS
     IF (dsl4jsb_Config(VEG_)%flag_dynamic_roots) THEN
       !>     - dynamic root fractions (see mo_q_veg_growth)
       !>
+      ! all roots are in the first soil layer
       root_fraction_sl(:, 1, :)          = 1.0_wp
       root_fraction_sl(:, 2:nsoil_sb, :) = 0.0_wp
     ELSE
@@ -461,32 +462,36 @@ CONTAINS
       !
       DO iblk = 1,nblks
         DO ic = 1,nproma
-          ! soil layer 1
+          ! root depth larger than thickness of first soil layer
           IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, 1, iblk)) THEN
-            root_fraction_sl(:, 1, :) = (1._wp - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:, 1, :))) &
-              &                         / (1._wp - EXP(-lctlib%k_root_dist * root_depth(:,:)))
-          ELSE
-            root_fraction_sl(ic, 1, iblk) = 0.0_wp
-          END IF
-          ! soil layers 2 to x
-          DO is = 2,INT(num_sl_above_bedrock(ic, iblk))
-            IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is-1, iblk)) THEN
-              IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is, iblk)) THEN
-                root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
-                  &                                - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is, iblk))) &
-                  &                                / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
+            root_fraction_sl(ic, 1, iblk) = (1._wp - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, 1, iblk))) &
+              &                             / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
+            ! soil layers 2 to x
+            !
+            DO is = 2,INT(num_sl_above_bedrock(ic, iblk))
+              IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is-1, iblk)) THEN
+                IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is, iblk)) THEN
+                  root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
+                    &                                - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is, iblk))) &
+                    &                                / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
+                ELSE
+                  root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
+                    &                                - EXP(-lctlib%k_root_dist * root_depth(ic, iblk))) &
+                    &                                / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
+                END IF
               ELSE
-                root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
-                  &                                - EXP(-lctlib%k_root_dist * root_depth(ic, iblk))) &
-                  &                                / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
-              ENDIF
-            ELSE
-              root_fraction_sl(ic, is, iblk) = 0.0_wp
-            ENDIF
-          ENDDO
-        ENDDO
-      ENDDO
-    ENDIF  ! flag_dynamic_roots
+                root_fraction_sl(ic, is, iblk) = 0.0_wp
+              END IF
+            END DO
+          ! root depth lower than / equal thickness of first soil layer
+          ! all roots are in the first soil layer
+          ELSE
+            root_fraction_sl(ic, :, iblk) = 0.0_wp
+            root_fraction_sl(ic, 1, iblk) = 1.0_wp
+          END IF
+        END DO
+      END DO
+    END IF  ! flag_dynamic_roots
 
     !>   2.1 set root fraction to zero for tiles such as bare soil and urban area
     !>

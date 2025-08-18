@@ -152,7 +152,7 @@ CONTAINS
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     dsl4jsb_Real3D_onChunk      :: soil_lay_depth_center_sl
-    dsl4jsb_Real3D_onChunk      :: matric_pot_sl
+    dsl4jsb_Real3D_onChunk      :: wtr_soil_pot_sl
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     ! RAD_ 3D
@@ -353,7 +353,7 @@ CONTAINS
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)                 ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_lay_depth_center_sl)      ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,   matric_pot_sl)                 ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_pot_sl)               ! in
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                          ! in
     ! RAD_ 3D
@@ -952,7 +952,7 @@ CONTAINS
         & root_limitation_state(:)                       , &
         & soil_depth_sl(:,:)                             , &
         & soil_lay_depth_center_sl(:,:)                  , &
-        & matric_pot_sl(:,:)                             , &
+        & wtr_soil_pot_sl(:,:)                           , &
         & t_soil_sl(:,:)                                 , &
         & nh4_solute(:,:)                                , &
         & no3_solute(:,:)                                , &
@@ -3240,7 +3240,7 @@ CONTAINS
                                             root_limitation_state            , &
                                             soil_depth_sl                    , &
                                             soil_lay_depth_center_sl         , &
-                                            matric_pot_sl                    , &
+                                            wtr_soil_pot_sl                  , &
                                             t_soil_sl                        , &
                                             nh4_solute_sl                    , &
                                             no3_solute_sl                    , &
@@ -3267,7 +3267,7 @@ CONTAINS
                                                        root_limitation_state            !< dominating limiting factor affecting root growth
     REAL(wp), DIMENSION(nc,nsoil_sb), INTENT(in)    :: soil_depth_sl                , & !< soil layer thinkness (m)
                                                        soil_lay_depth_center_sl     , & !< soil layer axis (m)
-                                                       matric_pot_sl                , & !< soil moisture potential (MPa)
+                                                       wtr_soil_pot_sl              , & !< soil moisture potential (MPa)
                                                        t_soil_sl                    , & !< soil temperature (K)
                                                        nh4_solute_sl                , & !< plant available NH4 (mol N / m3)
                                                        no3_solute_sl                , & !< plant available NO3 (mol N / m3)
@@ -3296,9 +3296,9 @@ CONTAINS
         hlp1(ic,:) = 0.0_wp
         IF(root_limitation_state(ic) >= 0.0_wp) THEN
           hlp1(ic,:) = root_limitation_state(ic) * (nh4_solute_sl(ic,:) + no3_solute_sl(ic,:)) &
-            &          + (1._wp - root_limitation_state(ic)) * MAX(matric_pot_sl(ic,:) - lctlib_phi_leaf_min, 0.0_wp)
+            &          + (1._wp - root_limitation_state(ic)) * MAX(wtr_soil_pot_sl(ic,:) - lctlib_phi_leaf_min, 0.0_wp)
         ELSE ! note sign difference!
-          hlp1(ic,:) = (1._wp + root_limitation_state(ic)) * MAX(matric_pot_sl(ic,:) - lctlib_phi_leaf_min, 0.0_wp) &
+          hlp1(ic,:) = (1._wp + root_limitation_state(ic)) * MAX(wtr_soil_pot_sl(ic,:) - lctlib_phi_leaf_min, 0.0_wp) &
             &          - root_limitation_state(ic) * po4_solute_sl(ic,:)
         ENDIF
       END DO

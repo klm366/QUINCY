@@ -164,6 +164,9 @@ MODULE mo_q_assimi_memory_class
       & beta_soil_gs_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
       & beta_soil_gs_tcnl_mavg         !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
 
+    TYPE(t_jsb_var_real2d) :: &
+      & wtr_soil_root_pot              !< Soil water potential in the root zone                 [MPa]
+
   CONTAINS
     PROCEDURE :: Init => Init_q_assimi_memory
   END TYPE t_q_assimi_memory
@@ -669,6 +672,15 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
         & initval_r = 0.0_wp)
+
+      CALL mem%Add_var( 'wtr_soil_root_pot', mem%wtr_soil_root_pot, &
+        & hgrid, surface, &
+        & t_cf('wtr_soil_root_pot', 'MPa', 'Soil water potential in the root zone'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & lrestart = .TRUE., &
+        & initval_r=0.0_wp)
 
     END IF
   END SUBROUTINE Init_q_assimi_memory
