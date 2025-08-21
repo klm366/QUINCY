@@ -22,9 +22,9 @@ MODULE mo_sse_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: relative_humidity_soil, init_soil_temperature, &
-    & calc_vol_heat_capacity, calc_thermal_conductivity, calc_soil_temperature, calc_snow_temperature, &
-    & calc_snow_abcoeff, calc_soiltemp_old, Get_liquid_max
+  PUBLIC :: relative_humidity_soil, init_soil_temperature,                       &
+    & calc_vol_heat_capacity, calc_thermal_conductivity, add_heat_capacity_pond, &
+    & calc_snow_abcoeff, calc_soil_temperature, calc_snow_temperature, calc_soiltemp_old, Get_liquid_max
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_process'
 
@@ -71,6 +71,40 @@ CONTAINS
     END IF
 
   END FUNCTION calc_vol_heat_capacity
+
+! --------------------------------------------------------------------------------------------------------- !
+!>
+!> Includes surface water heat capacity in top soil layer heat capacity.
+!>
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  FUNCTION  add_heat_capacity_pond( &
+    & dz,                                 &
+    & wtr_pond,                           &
+    & ice_pond,                           &
+    & vol_heat_cap                        &
+    & ) RESULT(vol_heat_cap_eff)
+
+    !$ACC ROUTINE SEQ
+
+    USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
+
+    REAL(wp), INTENT(in)  :: dz,          &   !< Layer thickness [m]
+      &                      wtr_pond,    &   !< Water content of surface reservoir [m]
+      &                      ice_pond,    &   !< Ice content of surface reservoir [m]
+      &                      vol_heat_cap     !< Volumetric heat capacity of top soil layer [J m-3 K-1]
+    REAL(wp)              :: vol_heat_cap_eff !< Effective volumetric heat capacity of top soil layer [J m-3 K-1]
+
+    !> Since ponds do not have an actual energy content, their effect on surface and soil temperatures
+    !> is not accounted for. We approximate the potential energy storage by calculating an effective heat
+    !> capacity of the top soil layer that includes the additional heat capacity of the surface reservoir.
+
+    vol_heat_cap_eff = vol_heat_cap &
+      &              + (wtr_pond * vol_hcap_water + ice_pond * rhoh2o / rhoi * vol_hcap_ice) / dz
+
+  END FUNCTION add_heat_capacity_pond
 
   ! --------------------------------------------------------------------------------------------------------- !
   !>
@@ -329,7 +363,8 @@ CONTAINS
     & thaw_depth,                         &
     ! optional
     & dsoil, ws_max, matric_pot, bclapp,  &
-    & wtr, ice, frozen, melt, liquid_max  &
+    & wtr, ice, le_pc_remain,             &
+    & liquid_max, frozen, melt            &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi
@@ -367,14 +402,17 @@ CONTAINS
     REAL(wp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
     REAL(wp), INTENT(inout), OPTIONAL ::  wtr(:,:)          !! Water storage [m]
     REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
+    REAL(wp), INTENT(inout), OPTIONAL ::  le_pc_remain(:)   !! Energy available for or required from phase change
+                                                            !! in top soil layer [J m-2]
+    REAL(wp), INTENT(inout), OPTIONAL ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
     REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
     REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
-    REAL(wp), INTENT(out), OPTIONAL   ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
 
     !------------------------------------------------------------------
     !  local Variables
 
     INTEGER  :: ic, is
+    REAL(wp) :: le_phase(nc)
     REAL(wp) :: z1(nc,nsoil)
     REAL(wp) :: zd1(nsoil-1)
     REAL(wp) :: zdz1(nc,nsoil-1), zdz2(nc,nsoil)
@@ -392,7 +430,7 @@ CONTAINS
     !-----------------------------------------------------------------------------------------------
     !  Computation of useful constants
 
-    !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, heat_cap, wtr_old, ice_old, freeze_mass, melt_mass) ASYNC(acc_stream)
+    !$ACC DATA CREATE(z1, zd1, zdz1, zdz2, heat_cap, wtr_old, ice_old, freeze_mass, melt_mass, le_phase) ASYNC(acc_stream)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO is = 1,nsoil-1
@@ -419,7 +457,6 @@ CONTAINS
         DO ic = 1, nc
           frozen    (ic,is)  = 0._wp
           melt      (ic,is)  = 0._wp
-          liquid_max(ic,is)  = 0._wp
           freeze_mass(ic,is) = 0._wp
           melt_mass(ic,is)   = 0._wp
           wtr_old(ic,is)     = wtr(ic,is)
@@ -432,8 +469,17 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       thaw_depth(ic) = 0._wp
+      le_phase(ic) = 0._wp
     END DO
     !$ACC END PARALLEL LOOP
+
+    IF (PRESENT(le_pc_remain)) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        le_phase(ic) = le_pc_remain(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     IF (.NOT. lstart) THEN
 
@@ -460,30 +506,18 @@ CONTAINS
       ! Phase change calculations
       IF (l_freeze .AND. PRESENT(wtr)) THEN
 
-        IF (l_supercool) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
-          DO is=1,nsoil
-            DO ic=1,nc
-              liquid_max(ic,is) = Get_liquid_max( &
-                & t_soil_sl (ic,is), &
-                & ws_max    (ic,is), &
-                & matric_pot(ic,is), &
-                & bclapp    (ic,is)  &
-                & )
-            END DO
-          END DO
-          !$ACC END PARALLEL LOOP
-        ELSE
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
-          DO is=1,nsoil
-            DO ic=1,nc
-              liquid_max(ic,is) = 0._wp
-            END DO
-          END DO
-          !$ACC END PARALLEL LOOP
-        END IF
+        ! Adding residual energy from phase change (from SEB) to top layer soil temperature.
+        ! Note that there is an unavoidable inconsistency between the phase change energy computed
+        ! in SEB and its use here, because in the mean time the soil heat capacity might have changed
+        ! due to hydrological processes.
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic=1,nc
+          t_soil_sl(ic,1) = t_soil_sl(ic,1) + le_phase(ic) / heat_cap(ic,1)
+        END DO
+        !$ACC END PARALLEL LOOP
 
-        ! Compute mass of feezing water or melting ice using the available energy
+        ! Compute mass of freezing water or melting ice using the available energy
+        ! Note: only either freeze_mass or melt_mass is non-zero at any given point
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
         DO ic=1,nc
           DO is=1,nsoil
@@ -498,9 +532,16 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
 
+        ! Due to the above mentioned inconsistency, the phase change energy from freezing/melting
+        ! (calculated in SEB) does not exactly match the actual amount of freezing/melting water/ice.
+        ! This needs to be tracked in le_phase to be included in the energy balance check.
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic=1,nc
+          le_phase(ic) = le_phase(ic) - (freeze_mass(ic,1) - melt_mass(ic,1)) * alf
+        END DO
+        !$ACC END PARALLEL LOOP
+
         ! Update water/ice storage and soil layer temperature
-        ! Note: only either freeze or melt is non-zero at any given point
-        ! ToDo: Debug message needs to get own loop to be excluded for GPU runs
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
         DO is=1,nsoil
           DO ic=1,nc
@@ -534,12 +575,12 @@ CONTAINS
           DO ie = 1, n_errors
             ic = error_idx(ie)
             WRITE (message_text_long,*) 'negative soil water or ice content due to phasechange', &
-              & ' at index ', ic,'.:',                       NEW_LINE('a'), &
-              & 'Water content old [m]: ', wtr_old(ic,:),    NEW_LINE('a'), &
-              & 'Ice content old [m]:   ', ice_old(ic,:),    NEW_LINE('a'), &
-              & 'Frozen water [m]:      ', frozen(ic,:),     NEW_LINE('a'), &
-              & 'Melted ice [m]:        ', melt(ic,:),       NEW_LINE('a'), &
-              & 'Water content new [m]: ', wtr(ic,:),        NEW_LINE('a'), &
+              & ' at index ', ic,'.:',                                 NEW_LINE('a'), &
+              & 'Water content old [m]: ', wtr_old(ic,:),              NEW_LINE('a'), &
+              & 'Ice content old [m]:   ', ice_old(ic,:),              NEW_LINE('a'), &
+              & 'Frozen water [m]:      ', freeze_mass(ic,:) / rhoh2o, NEW_LINE('a'), &
+              & 'Melted ice [m]:        ', melt_mass(ic,:)   / rhoi,   NEW_LINE('a'), &
+              & 'Water content new [m]: ', wtr(ic,:),                  NEW_LINE('a'), &
               & 'Ice content new [m]:   ', ice(ic,:)
             IF (enforce_water_budget == WB_ERROR) THEN
               CALL finish ('calc_soil_temperature', message_text_long)
@@ -558,6 +599,28 @@ CONTAINS
           END DO
         END DO
         !$ACC END PARALLEL LOOP
+
+        ! Update the le_phase
+        IF (PRESENT(le_pc_remain)) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+          DO ic = 1, nc
+            le_pc_remain(ic) = le_phase(ic)
+          END DO
+          !$ACC END PARALLEL LOOP
+        END IF
+
+        ! Update supercooled water based on actual soil temperature.
+        IF (l_supercool) THEN
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+          DO is=1,nsoil
+            DO ic=1,nc
+              liquid_max(ic,is) = Get_liquid_max( &
+                & t_soil_sl(ic,is), ws_max(ic,is), matric_pot(ic,is), bclapp(ic,is))
+            END DO
+          END DO
+          !$ACC END PARALLEL LOOP
+        END IF
+
       END IF
 
       ! Thaw depth

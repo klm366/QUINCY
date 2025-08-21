@@ -31,14 +31,14 @@ MODULE mo_spq_constants
     soil_therm_cond, &          !< soil thermal conductivity (W m-1 K-1)
     soil_frozen_therm_cond, &   !< soil thermal conductivity frozen soil(W m-1 K-1)
 ! constants in simple multi-layer soil moisture scheme to describe the
-    InterceptionEfficiency, &   !< Efficiency of interception of precipitation as rain
-    w_skin_max, &               !< maximum water storage per unit LAI (m)
-    drain_frac, &               !< preferential flow fraction of infiltrating water per meter soil
-    fdrain_srf_runoff, &        !< fraction of surface runoff that goes to drainage (preferential flow)
-    percolation_up_max, &       !< maximum upwards   directed material transport across soil layers, i.e., 'percolation_sl'
-    percolation_down_max, &     !< maximum downwards directed material transport across soil layers, i.e., 'percolation_sl'
-    frac_w_lat_loss_max, &      !< maximum of 'frac_w_lat_loss_sl', i.e., fraction of lateral (horizontal) water loss
-                                !!  of 'w_soil_sl_old' (prev. timestep) to limit nutrient loss at extreme rainfall events
+    InterceptionEfficiency, &                 !< Efficiency of interception of precipitation as rain
+    w_skin_max, &                             !< maximum water storage per unit LAI (m)
+    drain_frac, &                             !< preferential flow fraction of infiltrating water per meter soil
+    fdrain_srf_runoff, &                      !< fraction of surface runoff that goes to drainage (preferential flow)
+    frac_wtr_vertical_transport_up_max, &     !< maximum upwards   directed material transport across soil layers, i.e., 'frac_wtr_transp_down_sl'
+    frac_wtr_vertical_transport_down_max, &   !< maximum downwards directed material transport across soil layers, i.e., 'frac_wtr_transp_down_sl'
+    frac_w_lat_loss_max, &                    !< maximum of 'frac_w_lat_loss_sl', i.e., fraction of lateral (horizontal) water loss
+                                              !!  of 'w_soil_sl_old' (prev. timestep) to limit nutrient loss at extreme rainfall events
 ! constants for water freezing and ice melting
     latent_heat_fusion, &       !< latent heat release/uptake for water fusion freezing/thawing [J kg-1]
     w_density, &                !< Density of water   [kg m-3]
@@ -128,20 +128,20 @@ CONTAINS
     soil_therm_cond         = 2.0_wp        ! Text book for wet sandy soil                     [J / K / s]
     soil_frozen_therm_cond  = 1.4_wp        ! Approximation for frozen Siberian soil, should be generally applicable to frozen soil ,Xu et al. (2020)   [J / K / s]
 
-    InterceptionEfficiency  = 0.25_wp       ! JSBACH4
-    w_skin_max              = 0.0002_wp     ! JSBACH4
-    drain_frac              = 0.01_wp       ! tuned
-    fdrain_srf_runoff       = 0.95_wp       ! set from ORCHIDEE
-    percolation_up_max      = -0.75_wp      !< pure assumption
-    percolation_down_max    = 0.75_wp       !< pure assumption
-    frac_w_lat_loss_max     = 0.75_wp       !< simply following percolation_down_max
-    height_wind             = 10.0_wp       !< JSBACH ?
-    height_humidity         = 2.0_wp        !< JSBACH ?
-    latent_heat_fusion      = 333550.0_wp   ! chemistry textbook                 [J / kg]
-    w_density               = 998.0_wp      ! water density at 20 degrees C (e.g. Tanaka et al., 2001)                 [kg / m3]
-    ice_density             = 916.7_wp      ! density of ice, textbook value                                           [kg / m3]
-    water2ice_density_ratio = w_density / ice_density !                                                  [-]
-    fact_water_supercooled  = 1.0_wp        ! fraction of soil water relative to the PWP that remains liquid below 0degC         [-]
+    InterceptionEfficiency                = 0.25_wp       ! JSBACH4
+    w_skin_max                            = 0.0002_wp     ! JSBACH4
+    drain_frac                            = 0.01_wp       ! tuned
+    fdrain_srf_runoff                     = 0.95_wp       ! set from ORCHIDEE
+    frac_wtr_vertical_transport_up_max    = -0.75_wp      !< pure assumption
+    frac_wtr_vertical_transport_down_max  = 0.75_wp       !< pure assumption
+    frac_w_lat_loss_max                   = 0.75_wp       !< simply following the values used for frac_wtr_vertical_transport_down_max
+    height_wind                           = 10.0_wp       !< JSBACH ?
+    height_humidity                       = 2.0_wp        !< JSBACH ?
+    latent_heat_fusion                    = 333550.0_wp   ! chemistry textbook                 [J / kg]
+    w_density                             = 998.0_wp      ! water density at 20 degrees C (e.g. Tanaka et al., 2001)                 [kg / m3]
+    ice_density                           = 916.7_wp      ! density of ice, textbook value                                           [kg / m3]
+    water2ice_density_ratio               = w_density / ice_density ! TODO                                                 [-]
+    fact_water_supercooled                = 1.0_wp        ! fraction of soil water relative to the PWP that remains liquid below 0degC         [-]
                                             ! set to 1.2 for now to be safe
     ! Saxton & Rawls, 2006, includes conversion from fractional to mass% texture
     wpot_pwp        = 1500._wp

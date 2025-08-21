@@ -45,6 +45,8 @@ MODULE mo_rad_memory_class
                                  !< Note, alb_background is ONLY used for FUNCTION get_surface_albedo_simple
       & alb_vis,               & !< Albedo of the whole tile in the VIS (visible) range [unitless]
       & alb_nir,               & !< Albedo of the whole tile in the NIR (near-infrared) range [unitless]
+      & alb_vis_noon,          & !< Albedo of the whole tile in the VIS (visible) range at noon [unitless]
+      & alb_nir_noon,          & !< Albedo of the whole tile in the NIR (near-infrared) range at noon [unitless]
       & alb_vis_snow,          & !< Albedo of snow in the VIS range [unitless]
       & alb_nir_snow,          & !< Albedo of snow in the NIR range [unitless]
       & alb_vis_pond,          & !< Albedo of ponds in the VIS range [unitless]
@@ -66,6 +68,8 @@ MODULE mo_rad_memory_class
                                 !            regression to project the albedo when fapar=0 (LAI/Canopy =0) (for details see
                                 !            JSBACH3 documentation 4.1.1 or ask Thomas Raddatz).
       & alb_nir_soil,         & ! Same as alb_vis_soil but for NIR.
+      & alb_vis_soil_and_snow,& ! Soil albedo alb_vis_soil including snow
+      & alb_nir_soil_and_snow,& ! Soil albedo alb_nir_soil including snow
       ! R: Albedo of mineral soil is needed when Freya scheme is used. Not in the bc_lnd_phy.nc file yet!
       & alb_vis_mineralsoil,  & !< Albedo of soil without carbon or litter.
                                 !! from bc_land_phys.nc file, necessary when use_albedo_soil_scheme = .TRUE.
@@ -168,7 +172,7 @@ CONTAINS
   !> initialize memory (variables) for the process: radiation
   !>
   SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL, NONE
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -572,29 +576,69 @@ CONTAINS
 #ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
-      ! Additional variables for QUINCY vegetation
+
+      ! Additional variables for QUINCY
+      CALL mem%Add_var( 'alb_vis_noon', mem%alb_vis_noon,                    &
+        & hgrid, surface,                                                    &
+        & t_cf('gridcell_surface_albedo_visible_at_noon', unitless, 'surface albedo in visible band at noon'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=FULL,                                                 &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var( 'alb_nir_noon', mem%alb_nir_noon,                    &
+        & hgrid, surface,                                                    &
+        & t_cf('gridcell_surface_albedo_nir_at_noon', unitless, 'surface albedo in NIR band at noon'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=FULL,                                                 &
+        & initval_r=0.0_wp )
+
+      ! Additional variables for soil
+      IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0 &
+          &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0)                               &
+          & ) THEN
+
+        CALL mem%Add_var( 'alb_vis_soil_and_snow', mem%alb_vis_soil_and_snow,&
+          & hgrid, surface,                                                    &
+          & t_cf('soil_albedo_includes_snow', unitless, 'soil albedo in visible band including snow'),  &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & output_level=NONE,                                               &
+          & initval_r=0.0_wp )
+
+        CALL mem%Add_var( 'alb_nir_soil_and_snow', mem%alb_nir_soil_and_snow,  &
+          & hgrid, surface,                                                    &
+          & t_cf('soil_albedo_includes_snow', unitless, 'soil albedo in NIR band including snow'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & output_level=NONE,                                               &
+          & initval_r=0.0_wp )
+      END IF
+
+      ! Additional variables for QUINCY
+      CALL mem%Add_var('albedo', mem%albedo, &
+        & hgrid, surface, &
+        & t_cf('albedo', unitless, 'total surface albedo'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('albedo_noon', mem%albedo_noon, &
+        & hgrid, surface, &
+        & t_cf('albedo_noon', unitless, 'albedo at local solar noon'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
       IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
         & ) THEN
-
-        CALL mem%Add_var('albedo', mem%albedo, &
-          & hgrid, surface, &
-          & t_cf('albedo', unitless, 'total surface albedo'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('albedo_noon', mem%albedo_noon, &
-          & hgrid, surface, &
-          & t_cf('albedo_noon', unitless, 'albedo at local solar noon'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
 
         CALL mem%Add_var('arad_vis_soil', mem%arad_vis_soil, &
           & hgrid, surface, &

@@ -45,7 +45,7 @@ MODULE mo_sb_init
   PRIVATE
   PUBLIC :: sb_init
 #ifndef __QUINCY_STANDALONE__
-  PUBLIC :: provide_n_and_p_deposition
+  PUBLIC :: provide_n_and_p_deposition, sb_read_states
 #endif
 
   TYPE t_sb_init_vars
@@ -110,7 +110,7 @@ CONTAINS
   SUBROUTINE sb_init_ic_bc(tile)
     USE mo_jsb_lctlib_class,              ONLY: t_lctlib_element
     USE mo_q_assimi_constants,            ONLY: IC3PHOT
-    USE mo_q_assimi_process,              ONLY: discrimination_ps
+    USE mo_q_assimi_process,              ONLY: discrimination_ps_c13, discrimination_ps_c14
     USE mo_q_assimi_parameters,           ONLY: CiCa_default_C3, CiCa_default_C4
     USE mo_atmland_constants,             ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
       &                                         def_co2_deltaC13, def_co2_deltaC14
@@ -319,30 +319,26 @@ CONTAINS
     !>
     ! C13
     IF (lctlib%ps_pathway == IC3PHOT) THEN
-      hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, &
-        &                      def_co2_mixing_ratio, &
-        &                      'C13', &
-        &                      lctlib%ps_pathway)
+      hlp1 = discrimination_ps_c13(CiCa_default_C3 * def_co2_mixing_ratio, &
+        &                          def_co2_mixing_ratio, &
+        &                          lctlib%ps_pathway)
     ELSE
-      hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, &
-        &                      def_co2_mixing_ratio, &
-        &                      'C13', &
-        &                      lctlib%ps_pathway)
+      hlp1 = discrimination_ps_c13(CiCa_default_C4 * def_co2_mixing_ratio, &
+        &                          def_co2_mixing_ratio, &
+        &                          lctlib%ps_pathway)
     ENDIF
     hlp_frac_c13 = calc_fractionation(def_co2_mixing_ratio, &
       &                               def_co2_mixing_ratio_C13, &
       &                               hlp1 )
     ! C14
     IF (lctlib%ps_pathway == IC3PHOT) THEN
-      hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, &
-        &                      def_co2_mixing_ratio, &
-        &                      'C14', &
-        &                      lctlib%ps_pathway)
+      hlp1 = discrimination_ps_c14(CiCa_default_C3 * def_co2_mixing_ratio, &
+        &                          def_co2_mixing_ratio, &
+        &                          lctlib%ps_pathway)
     ELSE
-      hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, &
-        &                      def_co2_mixing_ratio, &
-        &                      'C14', &
-        &                      lctlib%ps_pathway)
+      hlp1 = discrimination_ps_c14(CiCa_default_C4 * def_co2_mixing_ratio, &
+        &                          def_co2_mixing_ratio, &
+        &                          lctlib%ps_pathway)
     ENDIF
     hlp_frac_c14 = calc_mixing_ratio_C14C(def_co2_deltaC13, &
       &                                   def_co2_deltaC14 - hlp1)
@@ -1992,6 +1988,15 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_p_pools'
 
 
+    !> 0.8 init local variables
+    !!
+    soil_p_weight(:)    = eps8
+    soil_p_layer(:)     = 1.0_wp
+    hlp1(:)             = 0.0_wp
+    hlp2(:)             = 0.0_wp
+    aflag(:)            = .TRUE.
+    soil_weight_sl(:,:) = 0.0_wp
+
     !> 0.9 init output variables
     !!
     po4_solute(:,:)     = 0._wp
@@ -2002,9 +2007,7 @@ CONTAINS
 
     !> 1.0 calculate the total soil weight up to the soil_p_depth,
     !! and the soil weight per soil layer
-    hlp1(:)  = 0._wp
-    hlp2(:)  = 0._wp
-    aflag(:) = .TRUE.
+    !!
     !> NOTE at the moment the soil_p_* values are identical across soil layers, hence, using the value from sl 1
     rhlp1(:) = soil_p_slow(:,1) + soil_p_labile(:,1) + soil_p_occluded(:,1) + soil_p_primary(:,1)
     DO ic = 1,nc
@@ -2080,6 +2083,75 @@ CONTAINS
   END SUBROUTINE init_soil_p_pools
 
 #ifndef __QUINCY_STANDALONE__
+  ! ====================================================================================================== !
+  !
+  !> Read soil biogeochemistry state from file (after init/restart)
+  !> (variables should be in sync with those listed in ./scripts/quincy_sb_and_veg_state_from_restart_file.sh)
+  !
+  ! ======================================================================================================= !
+  SUBROUTINE sb_read_states(tile)
+    USE mo_jsb_io_netcdf,           ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_util,                    ONLY: read_3D_var
+    USE mo_lnd_bgcm_store,          ONLY: read_bgcm_from_file
+    dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_memory(SB_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),      POINTER :: model            !< the model
+    TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store       !< the bgcm store of this tile
+    TYPE(t_input_file)              :: input_file       !< file with to be read sb state variables
+    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_sb    !< vertical grid for sl variables
+    INTEGER                         :: nsoil_sb         !< number of soil layers as used/defined by the SB_ process
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sb_read_states'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Real3D_onDomain :: microbial_cue_eff_tmic_mavg
+    dsl4jsb_Real3D_onDomain :: microbial_nue_eff_tmic_mavg
+    dsl4jsb_Real3D_onDomain :: microbial_pue_eff_tmic_mavg
+    dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_c_mavg
+    dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_n_mavg
+    dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_p_mavg
+    ! ----------------------------------------------------------------------------------------------------- !
+    model  => Get_model(tile%owner_model_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb = vgrid_soil_sb%n_levels
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_var3D_onDomain(SB_, microbial_cue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onDomain(SB_, microbial_nue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onDomain(SB_, microbial_pue_eff_tmic_mavg)
+    IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == 'jsm') THEN
+      dsl4jsb_Get_var3D_onDomain(SB_, enzyme_frac_poly_c_mavg)
+      dsl4jsb_Get_var3D_onDomain(SB_, enzyme_frac_poly_n_mavg)
+      dsl4jsb_Get_var3D_onDomain(SB_, enzyme_frac_poly_p_mavg)
+    END IF
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on()) CALL message(TRIM(routine), ' for tile '//TRIM(tile%name))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%ic_filename), model%grid_id)
+
+    IF (ASSOCIATED(tile%bgcm_store)) THEN
+      bgcm_store => tile%bgcm_store
+      CALL read_bgcm_from_file(bgcm_store, SB_BGCM_POOL_ID, "sb", tile%name, routine, input_file, 'soillev', nsoil_sb)
+    END IF
+
+    CALL read_3D_var(input_file, microbial_cue_eff_tmic_mavg, 'sb_microbial_cue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_sb)
+    CALL read_3D_var(input_file, microbial_nue_eff_tmic_mavg, 'sb_microbial_nue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_sb)
+    CALL read_3D_var(input_file, microbial_pue_eff_tmic_mavg, 'sb_microbial_pue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_sb)
+
+    IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == 'jsm') THEN
+      CALL read_3D_var(input_file, enzyme_frac_poly_c_mavg, 'sb_enzyme_frac_poly_c_mavg_'//tile%name, 'soillev', nsoil_sb)
+      CALL read_3D_var(input_file, enzyme_frac_poly_n_mavg, 'sb_enzyme_frac_poly_n_mavg_'//tile%name, 'soillev', nsoil_sb)
+      CALL read_3D_var(input_file, enzyme_frac_poly_p_mavg, 'sb_enzyme_frac_poly_p_mavg_'//tile%name, 'soillev', nsoil_sb)
+    END IF
+
+    CALL input_file%Close()
+
+  END SUBROUTINE sb_read_states
+
   ! ====================================================================================================== !
   !
   !> Provide n and p deposition depending on the deposition configuration and the time of the year - for IQ

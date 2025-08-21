@@ -236,7 +236,7 @@ CONTAINS
       CALL tile%Get_fraction(ics, ice, iblk, fract=cover_fraction)
       DO ic = 1,nc
         IF (cover_fraction(ic) > eps8) THEN
-          fract_harvest_rel_to_tile(ic) = fract_forest_harvest(ic) / cover_fraction(ic)
+          fract_harvest_rel_to_tile(ic) = MIN(1.0_wp, fract_forest_harvest(ic) / cover_fraction(ic))
         ELSE
           fract_harvest_rel_to_tile(ic) = 0.0_wp
         END IF
