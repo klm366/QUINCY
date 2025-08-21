@@ -20,6 +20,7 @@ MODULE mo_carbon_config_class
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
+  USE mo_jsb_io_netcdf,     ONLY: t_input_file
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -34,6 +35,8 @@ MODULE mo_carbon_config_class
                             ! overwritten by values from file).
                             ! ATTENTION: The run script has to take care that read_cpools is set to .FALSE.
                             !            in the experiment jobs following the first one! Or re-set it manually!
+    TYPE(t_input_file) :: cpools_input_file
+
     LOGICAL  :: diag_humus_fluxes ! Activate diagnostic carbon fluxes to and from the yasso humus pools
                                   ! required for analytical humus pool equilibration (compare jsb3.2 svn rev 9934)
     REAL(wp) :: fire_fract_wood_2_atmos

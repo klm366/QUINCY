@@ -20,7 +20,6 @@ MODULE mo_carbon_init
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_control,       ONLY: debug_on
 
   dsl4jsb_Use_processes CARBON_
@@ -136,8 +135,6 @@ CONTAINS
     !LOGICAL :: &
     !  read_cpools
 
-    TYPE(t_input_file) :: input_file
-
     INTEGER, PARAMETER :: npools = 21
     INTEGER            :: i
     CHARACTER(len=40)            :: invar_name
@@ -163,8 +160,6 @@ CONTAINS
 
     CALL message(TRIM(routine), 'Reading carbon pools for tile '//TRIM(tile%name)// &
       &                         ' from '//TRIM(dsl4jsb_Config(CARBON_)%ic_filename))
-
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(CARBON_)%ic_filename), model%grid_id)
 
     DO i=1,npools
       invar_name = 'carbon_'//TRIM(Cpool_name(i))//'_'//TRIM(tile%name)
@@ -214,7 +209,7 @@ CONTAINS
         memory_pointer => CARBON__mem%c_humus_2%ptr
       END SELECT
 
-      return_pointer => input_file%Read_2d(        &
+      return_pointer => dsl4jsb_Config(CARBON_)%cpools_input_file%Read_2d(        &
         & variable_name = invar_name,              &
         & fill_array = memory_pointer )
 
@@ -222,8 +217,6 @@ CONTAINS
         & MERGE( memory_pointer(:,:), 0._wp,  memory_pointer(:,:) >= 0._wp)
 
     END DO
-
-    CALL input_file%Close()
 
     ! avoid compiler warnings about pointers not being dereferenced
     IF (ASSOCIATED(return_pointer)) CONTINUE

@@ -35,6 +35,7 @@ MODULE mo_jsb_model_init
   USE mo_jsb_model_class,  ONLY: t_jsb_model
   USE mo_jsb_grid,         ONLY: Get_grid
   USE mo_jsb_grid_class,   ONLY: t_jsb_grid
+  USE mo_jsb_io_netcdf,    ONLY: jsb_netcdf_open_input
 
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: message, finish
@@ -139,7 +140,6 @@ CONTAINS
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, &
       &                               t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_lct_class,       ONLY: Contains_lct
-    USE mo_jsb_io_netcdf,       ONLY: jsb_netcdf_open_input
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
     USE mo_sse_init,            ONLY: sse_init, init_soil_properties
@@ -183,6 +183,7 @@ CONTAINS
     CLASS(t_jsb_aggregator), POINTER    :: weighted_by_fract
 
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(FAGE_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
@@ -202,6 +203,7 @@ CONTAINS
     model => Get_model(model_id)
 
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_config(FAGE_)
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -482,6 +484,13 @@ CONTAINS
       CALL message(routine, 'Tile fractions are fixed over time')
     ELSE
       CALL message(routine, 'Tile fractions vary over time')
+    END IF
+
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      IF (dsl4jsb_Config(CARBON_)%read_cpools) THEN
+        dsl4jsb_Config(CARBON_)%cpools_input_file = &
+          & jsb_netcdf_open_input(TRIM(dsl4jsb_Config(CARBON_)%ic_filename), model%grid_id)
+      END IF
     END IF
 
     CALL model%Reset_tiles()
@@ -950,6 +959,17 @@ CONTAINS
       CALL model%Goto_next_tile(tile)
 
     END DO
+
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_JSBACH)
+      IF (model%processes(CARBON_)%p%config%active) THEN
+        IF (dsl4jsb_Config(CARBON_)%read_cpools) THEN
+          IF (dsl4jsb_Config(CARBON_)%cpools_input_file%is_open) THEN
+            CALL dsl4jsb_Config(CARBON_)%cpools_input_file%Close()
+          END IF
+        END IF
+      END IF
+    END SELECT
 
 #ifdef _OPENACC
     CALL model%cpu_to_gpu()
