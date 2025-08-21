@@ -70,7 +70,7 @@ MODULE mo_fage_process
   !
   SUBROUTINE synchronise_fracts(nidx, nage, nacs, i_ac, pftid, age_ubounds, fract, fract_per_age)
 
-    USE mo_jsb_lcc_class,     ONLY: min_tolerated_fract_mismatch
+    USE mo_jsb_lcc_class,     ONLY: max_tolerated_fract_mismatch
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    ::  nidx     !< vector length
     INTEGER,  INTENT(in)    ::  nage     !< number of tracked ages, i.e. years
@@ -99,9 +99,9 @@ MODULE mo_fage_process
 
       thisAreaSum = SUM(fract_per_age(:,thisMinAge:thisMaxAge), DIM=2)
 
-      IF (ANY(ABS(thisAreaSum(:) - fract(:)) .GT. min_tolerated_fract_mismatch)) THEN
+      IF (ANY(ABS(thisAreaSum(:) - fract(:)) > max_tolerated_fract_mismatch)) THEN
         DO j = 1,nidx
-          IF (ABS(thisAreaSum(j) - fract(j)) .GT. min_tolerated_fract_mismatch) THEN
+          IF (ABS(thisAreaSum(j) - fract(j)) > max_tolerated_fract_mismatch) THEN
             WRITE (message_text,*) ' fract and fage sum mismatch for age class ', i_ac, &
               & ' of pft ', pftid, ' found e.g. fract ', fract(j), ' and ', thisAreaSum(j)
             CALL finish (routine, message_text)

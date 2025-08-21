@@ -55,6 +55,7 @@ MODULE mo_sb_config_class
                                  !< - in case of REFYEAR_DEP and TRANS_DEP the data is read from an external file in IQ
     !> flags
     !!
+    LOGICAL               :: read_sb_state          !< TRUE: call sb_read_states (mo_sb_init) after init/restart from file
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
@@ -66,7 +67,7 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_jsm_transport
     LOGICAL               :: flag_sb_jsm_litter_input
     LOGICAL               :: flag_sb_jsm_OM_sorption
-    ! P sorpion
+    ! P sorption
     LOGICAL               :: flag_sb_double_langmuir
     !> parameter
     !!
@@ -145,7 +146,8 @@ CONTAINS
     CHARACTER(15)               :: sb_nloss_scheme
     CHARACTER(15)               :: sb_bnf_scheme
     CHARACTER(15)               :: sb_adsorp_scheme
-    CHARACTER(9)                :: deposition_scheme          !< one of constant, refyear, transient
+    CHARACTER(9)                :: deposition_scheme         !< one of constant, refyear, transient
+    LOGICAL                     :: read_sb_state
     LOGICAL                     :: flag_sb_prescribe_nh4
     LOGICAL                     :: flag_sb_prescribe_no3
     LOGICAL                     :: flag_sb_prescribe_po4
@@ -182,6 +184,7 @@ CONTAINS
                       sb_bnf_scheme             , &
                       sb_adsorp_scheme          , &
                       deposition_scheme         , &
+                      read_sb_state             , &
                       flag_sb_prescribe_nh4     , &
                       flag_sb_prescribe_no3     , &
                       flag_sb_prescribe_po4     , &
@@ -212,7 +215,7 @@ CONTAINS
     ! Set defaults
     active                      = .TRUE.
     lrestart_cont               = .FALSE.           ! TRUE: Continue even if SB variables are missing in restart file
-    ic_filename                 = 'ic_land_srf.nc'
+    ic_filename                 = 'ic_land_sb.nc'
     bc_filename                 = 'bc_land_srf.nc'
     bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
     deposition_filename_prefix  = 'bc_land_npdep_quincy'
@@ -221,6 +224,7 @@ CONTAINS
     sb_bnf_scheme               = "dynamic"         ! none dynamic unlimited (fixed == dynamic)
     sb_adsorp_scheme            = "eca_part"        ! eca_full; eca_part (only uptake, not for adsorption); eca_none
     deposition_scheme           = 'constant'
+    read_sb_state               = .FALSE.
     flag_sb_prescribe_nh4       = .FALSE.
     flag_sb_prescribe_no3       = .FALSE.
     flag_sb_prescribe_po4       = .FALSE.
@@ -264,6 +268,7 @@ CONTAINS
     config%sb_nloss_scheme                 = TRIM(sb_nloss_scheme)
     config%bnf_scheme                      = TRIM(sb_bnf_scheme)
     config%sb_adsorp_scheme                = TRIM(sb_adsorp_scheme)
+    config%read_sb_state                   = read_sb_state
     config%flag_sb_prescribe_nh4           = flag_sb_prescribe_nh4
     config%flag_sb_prescribe_no3           = flag_sb_prescribe_no3
     config%flag_sb_prescribe_po4           = flag_sb_prescribe_po4

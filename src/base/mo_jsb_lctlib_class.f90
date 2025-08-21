@@ -45,6 +45,8 @@ MODULE mo_jsb_lctlib_class
     LOGICAL  :: LakeFlag             !< "true" for a land surface class that signifies lake or ocean
     LOGICAL  :: GlacierFlag          !< "true" for a land surface class that signifies glaciers
     LOGICAL  :: BareSoilFlag         !< "true" if none of the foregoing landcover classes
+    ! This was a parameter formerly only used in bethy, but during the meantime also used in pplcc!
+    LOGICAL  :: C4flag                !< Photosynthetic pathway: C4=.true or C3=.false.
 
     ! --- Albedo ------------------------------------------------------------------------------------------------------------------
     REAL(wp) :: AlbedoSnowVisMin      !< Minimum snow albedo in the visible range
@@ -60,7 +62,6 @@ MODULE mo_jsb_lctlib_class
 
     ! --- parameters used by bethy ------------------------------------------------------------------------------------------------
     LOGICAL  :: NitrogenScalingFlag   !< Indicates, whether nitrogen scaling shall be applied to that vegetation type
-    LOGICAL  :: C4flag                !< Photosynthetic pathway: C4=.true or C3=.false.
     REAL(wp) :: CarboxRate            !< Maximum carboxilation rate at 25 degrees Celsius [1.E-6 * Mol(CO2)/m^2/s] ...
                                                   !< ... (Table 2.6 in Knorr)
     REAL(wp) :: ETransport            !< Maximum electron transport rate at 25 degrees Celsius [1.E-6 * Mol/m^2/s] ...
@@ -277,6 +278,7 @@ CONTAINS
     USE mo_jsb_math_constants,      ONLY: one_day, one_year
     USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree, icrop
+    USE mo_q_assimi_constants,      ONLY: ic4phot
 #else
     USE mo_util_string, ONLY: tolower
 #endif
@@ -1429,6 +1431,15 @@ CONTAINS
              lctlib(i)%c0_allom = 0.0_wp
            END IF
          END DO
+       ! derive C4flag from ps_pathway
+         DO i = 1,nlct
+            IF ( lctlib(i)%ps_pathway == ic4phot ) THEN
+              lctlib(i)%C4flag = .TRUE.
+            ELSE
+              lctlib(i)%C4flag = .FALSE.
+            END IF
+         END DO
+
        END IF ! (model_scheme_char == "quincy")
 #endif
 
@@ -1529,6 +1540,10 @@ CONTAINS
       CALL p_bcast(lctlib(:)%LakeFlag, p_io, mpi_comm)
       CALL p_bcast(lctlib(:)%GlacierFlag, p_io, mpi_comm)
       CALL p_bcast(lctlib(:)%BareSoilFlag, p_io, mpi_comm)
+      ! The C4flag is used together with the other flags in pplcc, the source is model dependant,
+      ! - for jsbach the C4flag (Photosynthetic pathway (C4: .true.; C3: .false.) is read from the lctlib,
+      ! - for quincy it is derived from the ps_pathway
+      CALL p_bcast(lctlib(:)%C4flag, p_io, mpi_comm)
       ! model scheme: jsbach
       IF (model_scheme_char == "jsbach") THEN
         CALL p_bcast(lctlib(:)%AlbedoSnowVisMin, p_io, mpi_comm)
@@ -1542,7 +1557,6 @@ CONTAINS
         CALL p_bcast(lctlib(:)%AlbedoLitterVis, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterNir, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%NitrogenScalingFlag,p_io, mpi_comm)
-        CALL p_bcast(lctlib(:)%C4flag, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%CarboxRate, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%ETransport, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%VegHeight, p_io, mpi_comm)
