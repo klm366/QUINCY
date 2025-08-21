@@ -224,7 +224,7 @@ CONTAINS
         fact_harvest_share(:) = fact_harvest_share(:) / REAL(number_of_days, wp)
       END IF
 
-      ! Now the grid-cell fraction of this forest tile can be determinded
+      ! Now the grid-cell harvest fraction for this tile can be determined
       fract_forest_harvest(:) = fract_harvest_box(:) * fact_harvest_share(:)
 
       ! Assertions

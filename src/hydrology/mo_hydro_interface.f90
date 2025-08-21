@@ -60,8 +60,9 @@ MODULE mo_hydro_interface
 #endif
 
 #ifndef __NO_QUINCY__
-  dsl4jsb_Use_processes VEG_
+  dsl4jsb_Use_processes VEG_, Q_ASSIMI_
   dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(Q_ASSIMI_)
 #endif
 
   ! -------------------------------------------------------------------------------------------------------
@@ -404,7 +405,7 @@ CONTAINS
 
     USE mo_hydro_process,          ONLY: get_soilhyd_properties, calc_surface_hydrology_land, &
       &                                  calc_surface_hydrology_glacier
-    USE mo_jsb_physical_constants, ONLY: dens_snow
+    USE mo_jsb_physical_constants, ONLY: dens_snow, grav
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -426,13 +427,13 @@ CONTAINS
 #endif
 
     ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: t_unfilt
-    dsl4jsb_Real2D_onChunk :: t_srf
     dsl4jsb_Real2D_onChunk :: q_snocpymlt
     dsl4jsb_Real2D_onChunk :: t_air
     dsl4jsb_Real2D_onChunk :: wind_10m
     dsl4jsb_Real2D_onChunk :: rain
     dsl4jsb_Real2D_onChunk :: snow
+    dsl4jsb_Real2D_onChunk :: le_phase_change
+    dsl4jsb_Real2D_onChunk :: le_pc_remain
     dsl4jsb_Real2D_onChunk :: wtr_skin
     dsl4jsb_Real2D_onChunk :: fract_skin
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
@@ -456,7 +457,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: evapo_deficit
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
-    dsl4jsb_Real2D_onChunk :: hcap_grnd
     dsl4jsb_Real2D_onChunk :: evapotrans
     dsl4jsb_Real2D_onChunk :: transpiration
     dsl4jsb_Real2D_onChunk :: evapopot
@@ -471,7 +471,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: water_to_soil
     dsl4jsb_Real2D_onChunk :: weq_glac
     ! quincy
-    dsl4jsb_Real2d_onChunk :: fract_fpc
+    dsl4jsb_Real2D_onChunk :: fract_fpc
 
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
@@ -484,7 +484,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: pore_size_index_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
-
+    ! quincy
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_sl
 
     dsl4jsb_Real2D_onChunk :: wtr_latflow_res_srf
     dsl4jsb_Real2D_onChunk :: wtr_latflow_srf
@@ -504,7 +505,8 @@ CONTAINS
       & wpi_soil_sl_tmp,           &
       & wpi_wsat_soil_sl_tmp,      &
       & wpi_wres_soil_sl_tmp,      &
-      & ice_impedance_sl
+      & ice_impedance_sl,          &
+      & mpot_act_sl                  !< saturated soil matric potential on each layer at actual soil state [m]
 
     INTEGER  :: iblk, ics, ice, nc, ic, nsoil, is
     REAL(wp) :: dtime
@@ -615,9 +617,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   wind_10m)       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   rain)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   snow)           ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   le_phase_change)! in
 
-    dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! in
-
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, le_pc_remain)   ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, steepness)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)       ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)  ! out
@@ -634,11 +636,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
 
     IF (tile%is_glacier) THEN
-      dsl4jsb_Get_var2D_onChunk(SEB_,     t_unfilt)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_glac)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   runoff_glac)      ! inout
     ELSE
-      dsl4jsb_Get_var2D_onChunk(SEB_,     t_srf)            ! in
       dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_sl)      ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   ice_soil_sl)      ! in
@@ -669,6 +669,13 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   pond_melt)        ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond_net_flx) ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_latflow_srf)  ! out
+#ifndef __NO_QUINCY__
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_pot_sl)  ! out  [MPa]
+      END SELECT
+#endif
+
       IF (tile%contains_vegetation) THEN
 
         ALLOCATE(fract_fol_proj_cov(nc))
@@ -718,6 +725,18 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic=1,nc
+      ! Switch sign of phase change flux for the hydrology related processes. From the
+      !   energy balance perspective, ice melting is an energy sink (therefore negative)
+      !   and freezing a source (therefore positive). However, from the hydrology perspective
+      !   melting occures when enough energy is available (positive sign) and freezing if
+      !   energy is required (therefore negative).
+      !   Thus, we switch the sign now to make the hydrology equations more intuitive.
+      le_pc_remain(ic) = -1._wp * le_phase_change(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
+
     IF (tile%is_glacier) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
@@ -727,14 +746,13 @@ CONTAINS
         CALL calc_surface_hydrology_glacier( &
           & is_experiment_start,             & ! in
           & dtime,                           & ! in
-          & t_unfilt(ic),                    & ! in
           & fract_snow(ic),                  & ! in
-          & hcap_grnd(ic),                   & ! in
           & evapotrans(ic),                  & ! in
           & evapopot(ic),                    & ! in
           & rain(ic),                        & ! in
           & snow(ic),                        & ! in
           & weq_glac(ic),                    & ! inout
+          & le_pc_remain(ic),                & ! inout
           & q_snocpymlt(ic),                 & ! out
           & snowmelt(ic),                    & ! out
           & runoff_glac(ic),                 & ! out
@@ -747,11 +765,13 @@ CONTAINS
         snow_soil_dens(ic) = dens_snow
       END DO
       !$ACC END PARALLEL LOOP
+    ! NOT tile%is_glacier
     ELSE
       !$ACC DATA CREATE(skinres_max, skinres_canopy_max, wpi_rootzone, wpi_rootzone_max) &
       !$ACC   CREATE(trans_tmp, wpi_soil_sl_tmp(1:nc,1:nsoil), wtr_soil(1:nc)) &
       !$ACC   CREATE(wpi_wsat_soil_sl_tmp(1:nc,1:nsoil), wpi_wres_soil_sl_tmp(1:nc,1:nsoil)) &
       !$ACC   CREATE(ice_impedance_sl(1:nc,1:nsoil)) &
+      !$ACC   CREATE(mpot_act_sl(1:nc,1:nsoil)) &
       !$ACC   CREATE(slope_used(1:nc), flowlag_used(1:nc)) ASYNC(acc_stream)
 
       ret_macro_srf = dsl4jsb_Config(HYDRO_)%ret_macro_srf
@@ -764,7 +784,7 @@ CONTAINS
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
-        DO  ic = 1, nc
+        DO ic = 1, nc
           wpi_wsat_soil_sl_tmp(ic,is)      = vol_porosity_sl(ic,is)  * soil_depth_sl(ic,is)
           wpi_wres_soil_sl_tmp(ic,is)      = vol_wres_sl(ic,is)      * soil_depth_sl(ic,is)
           ! @todo There should be no water in cells with field_cap == 0. Still, this is currently
@@ -779,7 +799,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO  ic = 1, nc
+      DO ic = 1, nc
         wtr_soil(ic) = 0._wp
       END DO
       !$ACC END PARALLEL LOOP
@@ -788,7 +808,7 @@ CONTAINS
       !$ACC LOOP SEQ
       DO is = 1, nsoil
         !$ACC LOOP GANG VECTOR
-        DO  ic = 1, nc
+        DO ic = 1, nc
           wtr_soil(ic) = wtr_soil(ic) + wtr_soil_sl(ic,is)
         END DO
       END DO
@@ -834,8 +854,24 @@ CONTAINS
         & wtr_soil_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:),                    &
         & wpi_wsat_soil_sl_tmp(:,:), wpi_wres_soil_sl_tmp(:,:),                              &
         & hyd_cond_sat_sl(:,:), matric_pot_sl(:,:), bclapp_sl(:,:), pore_size_index_sl(:,:), &
-        & ice_impedance=ice_impedance_sl(:,:)                                                &
+        & ice_impedance=ice_impedance_sl(:,:) , mpot_act=mpot_act_sl(:,:)                    &
         )
+
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      ! Update soil water potential based on "soil matric potential"
+      !   includes unit conversion from: m -> J/N -> MPa
+      !
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          wtr_soil_pot_sl(ic, is) = mpot_act_sl(ic, is) * grav / 1000.0_wp
+        END DO
+      END DO
+      !$ACC END PARALLEL
+    END SELECT
+#endif
 
       CALL calc_surface_hydrology_land(   &
         ! in
@@ -850,7 +886,6 @@ CONTAINS
         & slope_used(:),                  & ! effective slope on tile or steepness for standard scheme    []
         & flowlag_used(:),                & ! lag factor to account for retention in surface runoff luxes    []
         & t_soil_sl(:,1),                 & ! Temperature of the uppermost soil layer [K]
-        & t_srf(:),                       & ! Surface tempemperature [K] (unfiltered)
         & wind_10m(:),                    & ! wind speed at 10m height [m/s]
         & t_air(:),                       & ! lowest layer atmosphere temperature [K]
         & skinres_canopy_max(:),          & ! Capacity of the canopy skin reservoir (also used to limit snow on canopy) [m]
@@ -860,7 +895,6 @@ CONTAINS
         & fract_skin(:),                  & ! skin reservoir fraction []
         & fract_pond(:),                  & ! Actual pond fraction []
         & fract_pond_max(:),              & ! Maximum pond fraction []
-        & hcap_grnd(:),                   & ! heat capacity of the uppermost soil layer [J m-2 K-1]
         & evapotrans(:),                  & ! evapotranspiration (including sublimation) [kg m-2 s-1]
         & evapopot(:),                    & ! potential evaporation (if there was enough water/ice) [kg m-2 s-1]
         & trans_tmp(:),                   & ! transpiration [kg m-2 s-1]
@@ -879,6 +913,7 @@ CONTAINS
         & wtr_pond(:),                    & ! pond reservoir water content [m]
         & ice_pond(:),                    & ! pond reservoir ice content [m]
         & wtr_latflow_res_srf(:),         & ! intermediate storage for surface runoff [m]
+        & le_pc_remain(:),                & ! Remaining latent energy for phase change [J m-2]
         ! out
         & q_snocpymlt(:),                 & ! Heating due to snow melt on canopy [W m-2]
         & snow_accum(:),                  & ! snow budget change within time step [m water equivalent]
@@ -906,7 +941,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       !$ACC END DATA
-    END IF
+    END IF ! NOT tile%is_glacier
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     IF (tile%is_glacier) THEN
@@ -952,6 +987,7 @@ CONTAINS
 
     dsl4jsb_Def_memory(HYDRO_)
 
+    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_hydrology'
@@ -966,6 +1002,7 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
 
+    model             => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     CALL weighted_by_fract%BeginAggregate()
@@ -996,6 +1033,13 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_net_flx,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_srf,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, le_pc_remain,        weighted_by_fract)
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pot_sl,     weighted_by_fract)
+    END SELECT
+#endif
 
     CALL weighted_by_fract%EndAggregate()
 
@@ -1301,6 +1345,9 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
+    USE mo_hydro_constants,        ONLY: frac_wtr_vertical_transport_up_max, frac_wtr_vertical_transport_down_max, &
+      &                                  frac_w_lat_loss_max
+    USE mo_jsb_math_constants,     ONLY: eps8
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1310,11 +1357,20 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_memory(Q_ASSIMI_)
+#endif
 
     ! Pointers to variables in memory
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: vol_weq_soil_sl
+    dsl4jsb_Real3D_onChunk :: frac_wtr_transp_down_sl
+    dsl4jsb_Real3D_onChunk :: frac_w_lat_loss_sl
+    dsl4jsb_Real3D_onChunk :: drainage_sl
+    dsl4jsb_Real3D_onChunk :: wtr_transp_down_sl
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+
     dsl4jsb_Real2D_onChunk :: wtr_soilhyd_res
     dsl4jsb_Real2D_onChunk :: wtr_pond
     dsl4jsb_Real2D_onChunk :: ice_pond
@@ -1339,13 +1395,17 @@ CONTAINS
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
+    INTEGER :: last_soil_layer(options%nc)                  !< deepest active soil layer index (above the bedrock boundary)
     REAL(wp), POINTER :: area(:), lat(:), lon(:), tile_fract(:)
     REAL(wp) :: slope_used(options%nc)
     REAL(wp) :: flowlag_used(options%nc)
     REAL(wp) :: depth_thrsh(options%nc)
+    REAL(wp) :: drainage_lowest_soil_layer(options%nc)      !< equals drain_bot
     REAL(wp) :: ret_macro_blg
+    REAL(wp) :: wtr_flux_in_m                               !< helper variable
     LOGICAL :: l_fract(options%nc)
     LOGICAL :: l_pf_soil(options%nc)
+    REAL(wp), ALLOCATABLE :: wtr_soil_old_sl(:,:)           !< wtr_soil_sl of previous timestep
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1385,9 +1445,10 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)      ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)      ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)      ! inout
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)      ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_weq_soil_sl)  ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)    ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, soil_depth)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, steepness)        ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soilhyd_res)  ! out
@@ -1399,7 +1460,53 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1) ! in
 
     !$ACC DATA ASYNC(acc_stream) CREATE(l_fract) &
-    !$ACC   CREATE(l_pf_soil, depth_thrsh, slope_used, flowlag_used)
+    !$ACC   CREATE(l_pf_soil, depth_thrsh, slope_used, flowlag_used) &
+    !$ACC   CREATE(drainage_lowest_soil_layer, last_soil_layer)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      ! Initialize variable that stores the number of active layers
+      last_soil_layer(ic) = 0
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+    !$ACC LOOP SEQ
+    DO is = 1, nsoil
+      !$ACC LOOP GANG VECTOR
+      DO ic = 1, nc
+        IF (soil_depth_sl(ic, is) > 0._wp) THEN
+          last_soil_layer(ic) = is
+        END IF
+      END DO
+    END DO
+    !$ACC END PARALLEL
+
+#ifndef _OPENACC
+    IF (ANY(last_soil_layer(:) < 1)) CALL finish('soilhyd', 'Problem with no. of active soil layers (=0)')
+#endif
+
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, drainage_sl)              ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_transp_down_sl)       ! out
+
+    SELECT CASE (model%config%model_scheme)
+#ifndef __NO_QUINCY__
+    CASE (MODEL_QUINCY)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_transp_down_sl)  ! out
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)       ! out
+      ! save the soil-water state at the beginning of the time step
+      !   for the calculation of fractional water transport in the water column
+      ALLOCATE(wtr_soil_old_sl(nc, nsoil))
+      !$ACC ENTER DATA CREATE(wtr_soil_old_sl) ASYNC(acc_stream)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          wtr_soil_old_sl(ic, is) = wtr_soil_sl(ic, is)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+#endif
+    END SELECT
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
@@ -1426,63 +1533,173 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    CALL calc_soil_hydrology( &
-      ! in
-      & nc, &
-      & l_fract(:), &
-      & l_pf_soil(:), &
-      & lat(:), &
-      & lon(:), &
-      & nsoil, &
-      & dtime, &
-      & ltpe_closed, ltpe_open,                                 &
-      & dsl4jsb_Config(HYDRO_)%enforce_water_budget,            & ! Water balance check setting
-      & l_latflow_to_streamflow,                                &
-      & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
-      & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
-      & dsl4jsb_Config(HYDRO_)%hydro_scale,                     & ! choice of hydrological scale scheme
-      & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
-      & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, matric_pot_sl     ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, bclapp_sl         ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, pore_size_index_sl),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, vol_wres_sl       ),     & ! volumetric residual soil water content [m m-1]
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
-      & slope_used(:),                                          &
-      & flowlag_used(:),                                        &
-      & dsl4jsb_var2D_onChunk (HYDRO_, fract_pond_max    ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, ice_pond          ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, weq_pond_max      ),     &
-      ! inout
-      & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
-      & wtr_soil_sl,                                            &
-      & ice_soil_sl,                                            &
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond          ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond_net_flx  ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit     ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_latflow_res_srf),    &
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_res_sl),     &
-      ! out
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_res_sl   ),     & ! residual soil water content
-      & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     & ! dunne component of surface runoff
-      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & ! subsurface drainage on each soil layer
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down   ),     & ! lateral downards transport of water
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_sl    )      &
-      & )
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_JSBACH)
+      CALL calc_soil_hydrology( &
+        ! in
+        & nc, &
+        & l_fract(:), &
+        & l_pf_soil(:), &
+        & lat(:), &
+        & lon(:), &
+        & nsoil, &
+        & dtime, &
+        & ltpe_closed, ltpe_open,                                 &
+        & dsl4jsb_Config(HYDRO_)%enforce_water_budget,            & ! Water balance check setting
+        & l_latflow_to_streamflow,                                &
+        & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
+        & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
+        & dsl4jsb_Config(HYDRO_)%hydro_scale,                     & ! choice of hydrological scale scheme
+        & model%config%model_scheme,                              &
+        & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
+        & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, matric_pot_sl     ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, bclapp_sl         ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, pore_size_index_sl),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, vol_wres_sl       ),     & ! volumetric residual soil water content [m m-1]
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
+        & slope_used(:),                                          &
+        & flowlag_used(:),                                        &
+        & dsl4jsb_var2D_onChunk (HYDRO_, fract_pond_max    ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, ice_pond          ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, weq_pond_max      ),     &
+        ! inout
+        & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
+        & wtr_soil_sl,                                            &
+        & ice_soil_sl,                                            &
+        & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond          ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond_net_flx  ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit     ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, wtr_latflow_res_srf),    &
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_res_sl),     &
+        ! out
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_res_sl   ),     & ! residual soil water content
+        & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     & ! dunne component of surface runoff
+        & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & ! subsurface drainage on each soil layer
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down_sl),     & ! vertical downwards transport of water
+        & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
+        & drainage_lowest_soil_layer(:),                          & ! equals drain_bot(:)
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_sl    )      &
+        & )
+
+#ifndef __NO_QUINCY__
+    CASE (MODEL_QUINCY)
+      dsl4jsb_Get_memory(Q_ASSIMI_)
+
+      CALL calc_soil_hydrology( &
+        ! in
+        & nc, &
+        & l_fract(:), &
+        & l_pf_soil(:), &
+        & lat(:), &
+        & lon(:), &
+        & nsoil, &
+        & dtime, &
+        & ltpe_closed, ltpe_open,                                 &
+        & dsl4jsb_Config(HYDRO_)%enforce_water_budget,            & ! Water balance check setting
+        & l_latflow_to_streamflow,                                &
+        & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
+        & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
+        & dsl4jsb_Config(HYDRO_)%hydro_scale,                     & ! choice of hydrological scale scheme
+        & model%config%model_scheme,                              &
+        & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
+        & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, matric_pot_sl     ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, bclapp_sl         ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, pore_size_index_sl),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, vol_wres_sl       ),     & ! volumetric residual soil water content [m m-1]
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
+        & slope_used(:),                                          &
+        & flowlag_used(:),                                        &
+        & dsl4jsb_var2D_onChunk (HYDRO_, fract_pond_max    ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, ice_pond          ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, weq_pond_max      ),     &
+        ! inout
+        & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
+        & wtr_soil_sl,                                            &
+        & ice_soil_sl,                                            &
+        & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond          ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond_net_flx  ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit     ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, wtr_latflow_res_srf),    &
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_res_sl),     &
+        ! out
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_res_sl   ),     & ! residual soil water content
+        & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     & ! dunne component of surface runoff
+        & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, drainage_sl       ),     & ! subsurface drainage on each soil layer
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down_sl),     & ! vertical downwards transport of water
+        & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
+        & drainage_lowest_soil_layer(:),                          & ! equals drain_bot(:)
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_sl    ),     &
+        ! optional in
+        & dsl4jsb_var3D_onChunk (Q_ASSIMI_, ftranspiration_sl)    & ! only used with QUINCY
+        & )
+
+      ! calculate vertical and horizontal fraction of water transport for the use in BGCM soil transport calculations
+      !   (using the soil water content of the previous timestep here (wtr_soil_old_sl) because the frac_w_lat_loss_sl
+      !    is used for BGCM soil transport calculations of the material (elements / nutrients) from the previous timestep)
+      !
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil
+        !$ACC LOOP GANG VECTOR PRIVATE(wtr_flux_in_m)
+        DO ic = 1, nc
+          IF (wtr_soil_old_sl(ic, is) > eps8) THEN
+            ! calculation of the two fractions
+            ! vertical (across soil layers)
+            wtr_flux_in_m = wtr_transp_down_sl(ic, is) * dtime / rhoh2o
+            frac_wtr_transp_down_sl(ic, is) = &
+              &  MIN( MAX( wtr_flux_in_m / wtr_soil_old_sl(ic, is), frac_wtr_vertical_transport_up_max), &
+              &       frac_wtr_vertical_transport_down_max) * 1000._wp / dtime
+            ! lateral (i.e., horizontal)
+            wtr_flux_in_m = drainage_sl(ic, is) * dtime / rhoh2o
+            IF (is == last_soil_layer(ic)) THEN
+              wtr_flux_in_m = wtr_flux_in_m + drainage_lowest_soil_layer(ic) * dtime / rhoh2o
+            END IF
+            frac_w_lat_loss_sl(ic, is) = &
+              &  MIN( MAX(wtr_flux_in_m / wtr_soil_old_sl(ic, is), 0.0_wp), frac_w_lat_loss_max) * 1000._wp / dtime
+            ! ensure the sum of the two fractions would not increase beyond frac_w_lat_loss_max
+            IF ((frac_wtr_transp_down_sl(ic, is) + frac_w_lat_loss_sl(ic, is)) > frac_w_lat_loss_max) THEN
+              frac_wtr_transp_down_sl(ic, is) = frac_wtr_transp_down_sl(ic, is) * frac_w_lat_loss_max &
+                &                               / (frac_wtr_transp_down_sl(ic, is) + frac_w_lat_loss_sl(ic, is))
+              frac_w_lat_loss_sl(ic, is)      = frac_w_lat_loss_sl(ic, is) * frac_w_lat_loss_max &
+                &                               / (frac_wtr_transp_down_sl(ic, is) + frac_w_lat_loss_sl(ic, is))
+            END IF
+          ELSE
+            frac_wtr_transp_down_sl(ic, is) = 0.0_wp
+            frac_w_lat_loss_sl(ic, is)      = 0.0_wp
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL
+#endif
+    END SELECT
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
@@ -1511,6 +1728,14 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    SELECT CASE (model%config%model_scheme)
+#ifndef __NO_QUINCY__
+    CASE (MODEL_QUINCY)
+      !$ACC EXIT DATA DELETE(wtr_soil_old_sl) ASYNC(acc_stream)
+      DEALLOCATE(wtr_soil_old_sl)
+#endif
+    END SELECT
+
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1531,8 +1756,8 @@ CONTAINS
 
     dsl4jsb_Def_memory(HYDRO_)
 
+    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_hydrology'
 
     INTEGER :: iblk, ics, ice
@@ -1545,6 +1770,7 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
 
+    model             => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     CALL weighted_by_fract%BeginAggregate()
@@ -1566,11 +1792,17 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage_sl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_transp_down,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_transp_down_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_sl,      weighted_by_fract)
-
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, frac_wtr_transp_down_sl,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, frac_w_lat_loss_sl,          weighted_by_fract)
+    END SELECT
+#endif
     CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1722,7 +1954,7 @@ CONTAINS
 
     dsl4jsb_Def_memory(HYDRO_)
 
-    ! HYDRO_
+    ! HYDRO_ 2D & 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
     dsl4jsb_Real3D_onChunk :: vol_field_cap_sl       !< Volumetric soil field capacity
@@ -1805,7 +2037,7 @@ CONTAINS
     ! (replacing the one used for the ARNO scheme (surface hydrology) based on porosity)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 1, nsoil
-      DO  ic = 1, nc
+      DO ic = 1, nc
         wpi_fcap_soil_sl(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
       END DO
     END DO
@@ -3121,8 +3353,14 @@ CONTAINS
     ALLOCATE (scaling(grid%nproma,grid%nblks))
 
     ! Calculate 1d global land variables, if requested for output
-    global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
-    scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
+    IF (HYDRO__mem%trans_gmean%is_in_output .OR. HYDRO__mem%evapotrans_gmean%is_in_output &
+      & .OR. HYDRO__mem%wtr_rootzone_rel_gmean%is_in_output) THEN
+
+      global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
+      scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
+
+    END IF
+
     IF (HYDRO__mem%trans_gmean%is_in_output)           &
       &  trans_gmean          = global_sum_array(transpiration(:,:)   * scaling(:,:)) / global_land_area
     IF (HYDRO__mem%evapotrans_gmean%is_in_output)      &

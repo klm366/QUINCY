@@ -1362,9 +1362,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER   :: model                  !< the model
     TYPE(t_lctlib_element), POINTER   :: lctlib                 !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER   :: vgrid_canopy_q_assimi  !< Vertical grid
-    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_snow_spq         !< Vertical grid
     INTEGER                           :: ncanopy                !< number of canopy layers
-    INTEGER                           :: nsnow                  !< number of snow layers
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
     INTEGER                           :: ic                     !< looping
     REAL(wp)                          :: dtime                  !< timestep
@@ -1380,6 +1378,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: alb_nir_lnd
     dsl4jsb_Real2D_onChunk :: alb_vis_soil
     dsl4jsb_Real2D_onChunk :: alb_nir_soil
+    dsl4jsb_Real2D_onChunk :: alb_vis_soil_and_snow
+    dsl4jsb_Real2D_onChunk :: alb_nir_soil_and_snow
     dsl4jsb_Real2D_onChunk :: alb_vis_can
     dsl4jsb_Real2D_onChunk :: alb_nir_can
     dsl4jsb_Real2D_onChunk :: arad_vis_soil
@@ -1387,8 +1387,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: arad_vis_can
     dsl4jsb_Real2D_onChunk :: arad_nir_can
     dsl4jsb_Real2D_onChunk :: appfd
-    dsl4jsb_Real2D_onChunk :: albedo
-    dsl4jsb_Real2D_onChunk :: albedo_noon
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk :: arad_sunlit_vis_cl
     dsl4jsb_Real3D_onChunk :: arad_shaded_vis_cl
@@ -1401,7 +1399,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
-    dsl4jsb_Real2D_onChunk :: local_time_day_seconds
     ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk :: fract_snow_can
     ! VEG_ 2D
@@ -1430,8 +1427,6 @@ CONTAINS
     lctlib                => model%lctlib(tile%lcts(1)%lib_id)
     vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
     ncanopy               =  vgrid_canopy_q_assimi%n_levels
-    vgrid_snow_spq        => Get_vgrid('snow_layer_spq')
-    nsnow                 =  vgrid_snow_spq%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
@@ -1442,13 +1437,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)         ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)           ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)   ! in
     ! ---------------------------
     ! RAD_ 2D
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_lnd)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_lnd)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil)             ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil)             ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil_and_snow)    ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil_and_snow)    ! in
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_can)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_can)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_soil)            ! out
@@ -1456,8 +1452,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_can)             ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_can)             ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, appfd)                    ! out
-    dsl4jsb_Get_var2D_onChunk(RAD_, albedo)                   ! out
-    dsl4jsb_Get_var2D_onChunk(RAD_, albedo_noon)              ! out
     ! RAD_ 3D
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_vis_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_vis_cl)       ! out
@@ -1481,7 +1475,7 @@ CONTAINS
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
 
     !$ACC UPDATE HOST(swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:)) &
-    !$ACC   HOST(lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), alb_vis_soil(:)) &
+    !$ACC   HOST(lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), alb_vis_soil_and_snow(:)) &
     !$ACC   HOST(fract_snow_can(:)) &
     !$ACC   HOST(arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:)) &
     !$ACC   HOST(fleaf_sunlit_vis_cl(:,:), arad_vis_can(:), arad_vis_soil(:)) &
@@ -1492,7 +1486,7 @@ CONTAINS
                      "vis", &
                      swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
                      lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), &
-                     alb_vis_soil(:), fract_snow_can(:), &
+                     alb_vis_soil_and_snow(:), fract_snow_can(:), &
                      arad_sunlit_vis_cl(:,:), arad_shaded_vis_cl(:,:), fleaf_sunlit_vis_cl(:,:), &
                      arad_vis_can(:), arad_vis_soil(:), &
                      alb_vis_can(:), alb_vis_lnd(:))
@@ -1511,7 +1505,7 @@ CONTAINS
     !! diffuse radiation are very similar
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
 
-    !$ACC UPDATE HOST(swnir_srf_down(:), alb_nir_soil(:)) &
+    !$ACC UPDATE HOST(swnir_srf_down(:), alb_nir_soil_and_snow(:)) &
     !$ACC   HOST(fract_snow_can(:)) &
     !$ACC   HOST(arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:)) &
     !$ACC   HOST(fleaf_sunlit_nir_cl(:,:), arad_nir_can(:), arad_nir_soil(:)) &
@@ -1522,7 +1516,7 @@ CONTAINS
                      "nir", &
                      swnir_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
                      lai(:), sai(:), lai_cl(:,:), cumm_lai_cl(:,:), &
-                     alb_nir_soil(:), fract_snow_can(:), &
+                     alb_nir_soil_and_snow(:), fract_snow_can(:), &
                      arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:), fleaf_sunlit_nir_cl(:,:), &
                      arad_nir_can(:), arad_nir_soil(:), &
                      alb_nir_can(:), alb_nir_lnd(:))
@@ -1533,25 +1527,6 @@ CONTAINS
     !$ACC UPDATE DEVICE(arad_sunlit_nir_cl(:,:), arad_shaded_nir_cl(:,:)) &
     !$ACC   DEVICE(fleaf_sunlit_nir_cl(:,:), arad_nir_can(:), arad_nir_soil(:)) &
     !$ACC   DEVICE(alb_nir_can(:), alb_nir_lnd(:)) ASYNC(acc_stream)
-
-    !> 3.0 calculate albedo and net radiation for total shortwave radiation
-    !!
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic = 1, nc
-      IF ((swvis_srf_down(ic) + swnir_srf_down(ic)) > eps8) THEN
-        albedo(ic) = ( alb_vis_lnd(ic) * swvis_srf_down(ic) + alb_nir_lnd(ic) * swnir_srf_down(ic) ) &
-          &           / (swvis_srf_down(ic) + swnir_srf_down(ic))
-      ELSE
-        ! albedo is not defined when radiation <= 0 and set to zero
-        albedo(ic) = 0.0_wp
-      END IF
-
-      ! at noon: set albedo_noon to current albedo (noon equals half a day plus one timestep)
-      IF (ABS(local_time_day_seconds(ic) - ((seconds_per_day / 2._wp) + dtime)) < eps1) THEN
-        albedo_noon(ic) = albedo(ic)
-      END IF
-    END DO
-    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE calc_surface_radiation_quincy
 
