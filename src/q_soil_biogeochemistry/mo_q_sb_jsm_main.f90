@@ -949,7 +949,7 @@ CONTAINS
       & nc, &                                 ! in
       & nsoil_sb, &
       & dtime, &
-      & num_sl_above_bedrock(:), &      
+      & num_sl_above_bedrock(:), &
       & rtm_hsc(:,:), &
       & rmm_hsc(:,:), &
       & rtm_depolymerisation(:,:), &
@@ -980,7 +980,7 @@ CONTAINS
       & nc, &                                 ! in
       & nsoil_sb, &
       & dtime, &
-      & num_sl_above_bedrock(:), &        
+      & num_sl_above_bedrock(:), &
       & fact_n_status_mic_c_growth(:,:), &
       & fact_p_status_mic_c_growth(:,:), &
       & sb_pool_mt(ix_microbial,:,:,:), &     ! in
@@ -1022,7 +1022,7 @@ CONTAINS
     CALL calc_microbial_growth(nc, &
       & nsoil_sb, &                               ! in
       & dtime, &
-      & num_sl_above_bedrock(:), &          
+      & num_sl_above_bedrock(:), &
       & TRIM(dsl4jsb_Config(SB_)%bnf_scheme), &
       & rtm_mic_uptake(:,:), &
       & rmm_mic_uptake(:,:), &

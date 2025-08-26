@@ -450,7 +450,7 @@ CONTAINS
   SUBROUTINE calc_particle_transport_wrapper( &
     & nc, &
     & nsoil_sb, &
-    & num_sl_above_bedrock, &         
+    & num_sl_above_bedrock, &
     & soil_depth_sl, &
     & elements_index_map, &
     & is_element_used, &
@@ -483,7 +483,7 @@ CONTAINS
     INTEGER,                            INTENT(in)    :: nc                         !< dimensions
     INTEGER,                            INTENT(in)    :: nsoil_sb                   !< number of soil layers
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: soil_depth_sl              !< thickness of each soil layer [m]
-    REAL(wp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock       !< number of soil layers above bedrock, i.e., with layer thickness > eps8    
+    REAL(wp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock       !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     INTEGER,                            INTENT(in)    :: elements_index_map(:)      !< map bgcm element ID -> IDX
     LOGICAL,                            INTENT(in)    :: is_element_used(:)         !< is element in 'elements_index_map' used
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: particle_fluxrate          !< particle fluxrate (m/timestep)
@@ -672,7 +672,7 @@ CONTAINS
 
     INTEGER,                                          INTENT(in)    :: nc                     !< dimensions
     INTEGER,                                          INTENT(in)    :: nsoil_sb               !< number of soil layers
-    REAL(wp), DIMENSION(nc),                          INTENT(in)    :: num_sl_above_bedrock   !< number of soil layers above bedrock, i.e., with layer thickness > eps8    
+    REAL(wp), DIMENSION(nc),                          INTENT(in)    :: num_sl_above_bedrock   !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_depth_sl          !< depth of each soil layer [m]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: particle_fluxrate      !< fraction of pool transported up or down per timestep
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: pool                   !< current state of pool to be transported
@@ -721,7 +721,7 @@ CONTAINS
       !  based on the assumption that there is no upward flux, and that all other
       !  material is lost
       hlp1(ic)            = 0.0_wp
-      transport(ic,nsoil) = transport(ic, nsoil) - hlp1(ic) / soil_depth_sl(ic, nsoil)      
+      transport(ic,nsoil) = transport(ic, nsoil) - hlp1(ic) / soil_depth_sl(ic, nsoil)
     ENDDO
 
   END SUBROUTINE calc_particle_transport

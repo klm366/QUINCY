@@ -135,7 +135,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_sourcing_flux( &
     & nc, &
-    & nsoil_sb, &  
+    & nsoil_sb, &
     & dtime, &
     & num_sl_above_bedrock, &
     & flag_sb_prescribe_po4, &
@@ -290,7 +290,7 @@ CONTAINS
     !> P is assumed to clevage out from dom associated, residue and residue associated
     !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))	    
+      DO is = 1,INT(num_sl_above_bedrock(ic))
         IF(.NOT. flag_sb_prescribe_po4)THEN
            hlp1 = (dom_assoc_po4(ic,is) + residue_assoc_po4(ic,is) + residue_po4(ic,is) + dom_phosphorus(ic,is))
            !! Biomineralization only occurs when there is available organic P
@@ -355,19 +355,19 @@ CONTAINS
               biochem_min_po4(ic,is) = biochem_min_po4(ic,is) * (dom_assoc_po4(ic,is) * hlp5 + residue_po4(ic,is) * hlp7 + residue_assoc_po4(ic,is) * hlp6) * 1.e6_wp
            ELSE
               biochem_min_po4(ic,is) = 0.0_wp
-           ENDIF     
+           ENDIF
         ELSE
            biochem_min_po4(ic,is) = 0.0_wp
            gross_min_po4(ic,is) = 0._wp
         ENDIF
       ENDDO
-    ENDDO      
+    ENDDO
 
     !> 3.0 Pi fluxes between different mineral P pools
     !> weathering, occlusion and slow exchange between sorbed and labile P pools
     !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))	    
+      DO is = 1,INT(num_sl_above_bedrock(ic))
         hlp3 = fine_root_carbon_sl(ic,is) * f_plant_carrier_po4 + microbial_carbon(ic,is) * f_mic_carrier_po4
         hlp4 = hlp3 / (rtm_hsc(ic,is) * rmm_hsc(ic,is) * km_root_enzyme_weath_po4 + hlp3)
         hlp5 = 0.1_wp ! minimum microbial biomass to exudate bio-weathering enzyme
@@ -384,7 +384,7 @@ CONTAINS
         hlp2 = rtm_sorption(ic,is) * k_adsorpt_po4 * assoc_fast(ic,is)
         slow_exchange_po4(ic,is) = (hlp2 - hlp1) * 1.e6_wp
       ENDDO
-    ENDDO       
+    ENDDO
 
   END SUBROUTINE calc_sourcing_flux
 
@@ -423,7 +423,7 @@ CONTAINS
     USE mo_sb_constants
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                                     INTENT(in)        :: nc                        !< dimensions
-    INTEGER,                                     INTENT(in)        :: nsoil_sb                  !< number of soil layers    
+    INTEGER,                                     INTENT(in)        :: nsoil_sb                  !< number of soil layers
     REAL(wp),                                    INTENT(in)        :: dtime                     !< timestep length
     REAL(wp), DIMENSION(nc),                     INTENT(in)        :: num_sl_above_bedrock      !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     REAL(wp),                                    INTENT(in)        :: lctlib_vmax_uptake        !< lctlib uptake paramter, for eca_none
@@ -456,7 +456,7 @@ CONTAINS
     REAL(wp), OPTIONAL, DIMENSION(nc, nsoil_sb), INTENT(out)       :: fast_adsorpt                             !< fast adsorption flux (micro-mol / m3 / s)
     REAL(wp), OPTIONAL, DIMENSION(nc, nsoil_sb), INTENT(out)       :: flux_nitri_denitri                       !< nitrification or denitrification flux (micro-mol / m3 / s)
     ! ----------------------------------------------------------------------------------------------------- !
-    INTEGER                             :: ic, is       !< loop over dimensions    
+    INTEGER                             :: ic, is       !< loop over dimensions
     REAL(wp)                            :: mic_hlp, plant_hlp, mineral_hlp, nitri_hlp, &
                                            hlp1, hlp2, hlp3
     REAL(wp)                            :: f_mic_carrier, km1_mic_uptake, km2_mic_uptake, &
@@ -464,11 +464,10 @@ CONTAINS
                                            k_mic_uptake, k_plant_uptake, vmax_mic_uptake_sub, vmax_plant_uptake, &
                                            k_desorpt_f, vmax_nit_denit, km_nit_denit, &
                                            k_nit_denit, f_nit_carrier, fast_desorpt
-                                       
-    REAL(wp), DIMENSION(nc, nsoil_sb)   :: reaction_volume                             
+    REAL(wp), DIMENSION(nc, nsoil_sb)   :: reaction_volume
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sinking_flux'
     ! ----------------------------------------------------------------------------------------------------- !
-    
+
     !> init out var
     !>
     plant_uptake(:,:)         = 0.0_wp
@@ -478,8 +477,8 @@ CONTAINS
     ENDIF
     IF (substrate == "nh4" .OR. substrate == "no3") THEN
       flux_nitri_denitri(:,:)   = 0.0_wp
-    ENDIF  
-    
+    ENDIF
+
     !>0.9 init local variables
     !>
     !! assign ECA specific parameter values based on substrate
@@ -545,7 +544,7 @@ CONTAINS
       !!
       CASE("eca_full", "eca_part")
         DO ic = 1,nc
-          DO is = 1,INT(num_sl_above_bedrock(ic))      
+          DO is = 1,INT(num_sl_above_bedrock(ic))
             mic_hlp     = km1_mic_uptake + solute_available(ic,is) + f_mic_carrier * microbial_carbon(ic,is) + &
                           km1_mic_uptake / km_plant_uptake * f_plant_carrier * fine_root_carbon(ic,is)
             plant_hlp   = km_plant_uptake + solute_available(ic,is) + f_plant_carrier * fine_root_carbon(ic,is) + &
@@ -614,13 +613,13 @@ CONTAINS
               ENDIF
             ENDIF
           ENDDO
-        ENDDO 
+        ENDDO
 
       !> 1.2 non-ECA approach
       !! same as simple_1d model
       CASE("eca_none")
         DO ic = 1,nc
-          DO is = 1,INT(num_sl_above_bedrock(ic))       
+          DO is = 1,INT(num_sl_above_bedrock(ic))
             plant_uptake(ic,is)   = rtm_plant_uptake(ic,is) * rmm_plant_uptake(ic,is) * fine_root_carbon(ic,is) * lctlib_vmax_uptake * &
                              solute(ic,is) * (km1_upt(ic,is) + 1._wp / (km2_upt(ic,is) + solute(ic,is)))
             IF (substrate == "po4" .OR. substrate == "nh4") THEN
@@ -635,14 +634,14 @@ CONTAINS
               ! flux_nitri_denitri(ic,is) = flux_nitri_denitri(ic,is) / (km_denitrification + solute(ic,is))
             ! ENDIF
           ENDDO
-        ENDDO         
+        ENDDO
     END SELECT
 
     !> 2.0
     !! check the availability of solute considering all sinking fluxes
 
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic)) 
+      DO is = 1,INT(num_sl_above_bedrock(ic))
         fast_desorpt = (solute_available(ic,is) - solute(ic,is)) * k_desorpt_f * 1.e6_wp
         SELECT CASE (substrate)
           CASE("po4")
@@ -670,7 +669,7 @@ CONTAINS
         ENDIF
         plant_uptake_pot(ic,is) = plant_uptake(ic,is)
       ENDDO
-    ENDDO      
+    ENDDO
   END SUBROUTINE calc_sinking_flux
 
   !-----------------------------------------------------------------------------------------------------
@@ -787,7 +786,7 @@ CONTAINS
     INTEGER,                           INTENT(in)    :: nc                          !< dimensions
     INTEGER,                           INTENT(in)    :: nsoil_sb                    !< number of soil layers
     REAL(wp),                          INTENT(in)    :: dtime                       !< timestep length
-    REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock        !< number of soil layers above bedrock, i.e., with layer thickness > eps8      
+    REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock        !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: fact_n_status_mic_c_growth  !< scalor of N availability on microbial C growth
     REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: fact_p_status_mic_c_growth  !< scalor of P availability on microbial C growth
     REAL(wp),                          INTENT(in)    :: sb_pool_mt_microbial(:,:,:) !< bgcm sb_pool: microbial biomass [mol/m3]
@@ -865,8 +864,8 @@ CONTAINS
           &                                        + (1._wp - f_soluable_residue) * hlp1(ic,is) * n_res2dom(ic,is)
         sb_formation_mt(ix_residue, ixN15, ic, is) = sb_formation_mt(ix_residue, ixN15, ic, is) + (1._wp - f_soluable_residue) &
           &                                        * (1._wp - n_res2dom(ic,is)) * hlp1(ic,is)
-      ENDDO  
-    ENDDO  
+      ENDDO
+    ENDDO
   END SUBROUTINE calc_microbial_turnover
 
   ! ======================================================================================================= !
@@ -918,7 +917,7 @@ CONTAINS
     & nc, &
     & nsoil_sb, &
     & dtime, &
-    & num_sl_above_bedrock, &    
+    & num_sl_above_bedrock, &
     & bnf_scheme, &
     & rtm_mic_uptake, &
     & rmm_mic_uptake, &
@@ -959,7 +958,7 @@ CONTAINS
     INTEGER,                            INTENT(in)    :: nc                           !< dimensions
     INTEGER,                            INTENT(in)    :: nsoil_sb                     !< number of soil layers
     REAL(wp),                           INTENT(in)    :: dtime                        !< timestep length
-    REAL(wp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock        !< number of soil layers above bedrock, i.e., with layer thickness > eps8       
+    REAL(wp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock         !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     CHARACTER(len=*),                   INTENT(in)    :: bnf_scheme                   !< SB_ asymbiotic N fixation scheme
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rtm_mic_uptake               !< temperature rate modifier [-]
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rmm_mic_uptake               !< moisture rate modifier [-]
@@ -1215,8 +1214,8 @@ CONTAINS
           &                                          / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(- eta_nfixation)) &
           &                                          + microbial_uptake_nh4_n15_sl(ic,is) + microbial_uptake_no3_n15_sl(ic,is)) &
           &                                          * dtime / 1000000.0_wp
-      ENDDO  
-    ENDDO       
+      ENDDO
+    ENDDO
   END SUBROUTINE calc_microbial_growth
 
 
@@ -1338,7 +1337,7 @@ CONTAINS
     INTEGER,                           INTENT(in)    :: nc                           !< dimensions
     INTEGER,                           INTENT(in)    :: nsoil_sb                     !< number of soil layers
     REAL(wp),                          INTENT(in)    :: dtime                        !< timestep length
-    REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock         !< number of soil layers above bedrock, i.e., with layer thickness > eps8    
+    REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock         !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: rtm_hsc                      !< temperature rate modifier for half-saturation constants
     REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: rmm_hsc                      !< moisture rate modifier for half-saturation constants
     REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: rtm_depolymerisation         !< temperature rate modifier for depolymerisation
@@ -1519,7 +1518,7 @@ CONTAINS
         enzyme_frac_AP(ic,is)      = MIN( MAX(enzyme_frac_AP(ic,is) * (1._wp - enz_AP_direction(ic,is) / mavg_period_tenzyme / one_day * dtime), &
           &                        min_enzyme_fraction), max_enzyme_fraction)
       ENDDO
-    ENDDO      
+    ENDDO
   END SUBROUTINE calc_depolymerisation_SESAM
 
   ! ======================================================================================================= !
