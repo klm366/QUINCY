@@ -106,8 +106,13 @@ MODULE mo_hydro_config_class
                                 !< 'logging' (1): detailed debugging output,</br>
                                 !< 'error' (2):   debugging output and model stop
 
-    !! quincy standalone
-    INTEGER       :: qs_nsoil_water   !< number of soil layers for soil water calculations (equivalent 'qs_nsoil_energy' in SSE_)
+#ifdef __QUINCY_STANDALONE__
+    ! quincy standalone
+    INTEGER     :: qs_nsoil_water           !< number of soil layers for soil water calculations (equivalent 'qs_nsoil_energy' in SSE_)
+    REAL(wp)    :: qs_soil_depth            !< depth until bedrock
+    REAL(wp)    :: qs_soil_awc_prescribe
+    REAL(wp)    :: qs_soil_theta_prescribe
+#endif
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -181,12 +186,17 @@ CONTAINS
       & l_infil_subzero,      & !< True: infiltration of surface water below zero degC possible
       & l_ponds                 !< True: represent sub-grid scale surface depressions that might
                                 !< form small ponds
-    ! quincy
+#ifdef __QUINCY_STANDALONE__
+    ! quincy standalone
     REAL(wp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< intial estimate of soil profile using the upper bound of each soil layer [m]
     REAL(wp) :: k_soil_profile  !< for soil layer calculations
     REAL(wp) :: min_layer_depth !< for soil layer calculations
     INTEGER  :: isoil           !< loop over soil layers
     INTEGER  :: qs_nsoil_water  !< quincy standalone: number of soil layers consistent with SPQ_
+    REAL(wp) :: qs_soil_depth   !< depth until bedrock
+    REAL(wp) :: qs_soil_awc_prescribe     !< saturated water content
+    REAL(wp) :: qs_soil_theta_prescribe   !< used for calculaton of initial water amount in root zone
+#endif
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -214,8 +224,13 @@ CONTAINS
       & soilhydmodel,               &
       & interpol_mean,              &
       & pond_dynamics,              &
-      & hydro_scale,                &
-      & qs_nsoil_water
+#ifdef __QUINCY_STANDALONE__
+      & qs_nsoil_water, &
+      & qs_soil_depth, &
+      & qs_soil_awc_prescribe, &
+      & qs_soil_theta_prescribe, &
+#endif
+      & hydro_scale
 
     INTEGER :: &
       & nml_handler,                   &  !< Handle to deal with namelist file
@@ -226,18 +241,15 @@ CONTAINS
     REAL(wp), POINTER :: ptr_1D(:)        !< Pointer to a one dimensional variable
     REAL(wp), ALLOCATABLE :: depths(:)    !< Upper/lower bounds of soil layers
     REAL(wp), ALLOCATABLE :: mids(:)      !< Mid soil layer depth
-    REAL(wp), ALLOCATABLE :: dz_water(:)  !< thickness of soil layers
-    INTEGER :: nsoil                      !< Number of soil layers
+    REAL(wp), ALLOCATABLE :: dz_water(:)                !< thickness of soil layers
+    REAL(wp), ALLOCATABLE :: ubounds_soil_lay_water(:)  !< upper bound of soil layers (larger value compared to lower bound)
+    INTEGER :: nsoil                                    !< Number of soil layers
 
     TYPE(t_jsb_vgrid), POINTER :: soil_w  !< Vertical grid used for soil layers of HYDRO process
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hydro_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting hydro configuration')
-
-    ! quincy variables for soil layer calculations
-    k_soil_profile  = 0.25_wp
-    min_layer_depth = 0.065_wp
 
     !>
     !> Default values are defined for all namelist parameters.
@@ -268,7 +280,12 @@ CONTAINS
     soilhydmodel           = "VanGenuchten"
     interpol_mean          = "upstream"
     hydro_scale            = "semi_distributed"
-    qs_nsoil_water         = 5
+#ifdef __QUINCY_STANDALONE__
+    qs_nsoil_water           = 5
+    qs_soil_depth            = 5.7
+    qs_soil_awc_prescribe    = 300.0_wp
+    qs_soil_theta_prescribe  = 1.0_wp
+#endif
 
     ! Open the file containing the hydrology namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -431,8 +448,13 @@ CONTAINS
       CALL finish(TRIM(routine), 'Soil hydrology scale '//TRIM(hydro_scale)//' not implemented')
     END SELECT
 
+#ifdef __QUINCY_STANDALONE__
     ! quincy standalone
-    config%qs_nsoil_water = qs_nsoil_water
+    config%qs_nsoil_water           = qs_nsoil_water
+    config%qs_soil_depth            = qs_soil_depth
+    config%qs_soil_awc_prescribe    = qs_soil_awc_prescribe
+    config%qs_soil_theta_prescribe  = qs_soil_theta_prescribe
+#endif
 
     IF (.NOT. active) RETURN
 
@@ -446,7 +468,7 @@ CONTAINS
       & CALL finish(TRIM(routine), 'At least three soil layers required for using organic soil component')
 
     ! calculate mid-points of each soil layer
-    ALLOCATE(depths(nsoil+1))
+    ALLOCATE(depths(nsoil+1))   ! Upper/lower bounds of soil layers
     ALLOCATE(mids(nsoil))
     depths(1) = 0._wp
     depths(2:nsoil+1) = ptr_1D(1:nsoil)
@@ -454,27 +476,28 @@ CONTAINS
     DEALLOCATE(ptr_1D)
 
     CALL input_file%Close()
+
+    soil_w  => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
+      & levels  = mids                 (1:nsoil  ),                         &
+      & lbounds = depths               (1:nsoil  ),                         &
+      & ubounds = depths               (2:nsoil+1),                         &
+      & units='m')
+    CALL register_vgrid(soil_w)
+
+    DEALLOCATE(depths, mids)
 #else
     ! quincy standalone
-    !
-    ! docu of values used for 5 soil layers
-    !   jsbach:
-    !     soillev = 0.065, 0.319, 1.232, 4.134, 9.834
-    !   quincy:
-    !     src/q_soil_phys/mo_spq_config_class.f90
-    !     dz_water (1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
-
-    ! temporary solution: set consistently with SPQ_ config via namelist
     nsoil = qs_nsoil_water
 
-    ALLOCATE(depths(nsoil+1))
-    ALLOCATE(mids(nsoil))
-    depths(1) = 0._wp
+    ! quincy variables for soil layer calculations
+    k_soil_profile  = 0.25_wp
+    min_layer_depth = 0.065_wp
+
+    ALLOCATE(ubounds_soil_lay_water(nsoil))
     ALLOCATE(dz_water(nsoil))
 
-    ! slightly modified copy/paste from SPQ_ config
-    ! If not using 5 layers, estimate soil profile (i.e., dz == layer thicknesses) to mimick standard JSB4 profile
-    !  assuming dz_water(:) = dz_energy(:)
+    ! if not using 5 layers, estimate soil profile (i.e., dz == layer thicknesses)
+    ! assuming dz_water(:) = dz_energy(:)
     IF (nsoil > 5) THEN
       ! initial calculation of soil profile (for soil moisture calculations) calculating the upper bound of each layer
       DO isoil = 1,nsoil
@@ -488,21 +511,35 @@ CONTAINS
         dz_water(isoil) = MAX(min_layer_depth, &
           &                   soil_layer_profile_ubound_estimate(isoil) - soil_layer_profile_ubound_estimate(isoil-1))
       END DO
-      ! temporary: for compatibility with "jsbach new_vgrid('soil_depth_water', ...)" below
-      depths(2:nsoil+1) = dz_water(1:nsoil)
     ELSE
-      depths(2:nsoil+1) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+      dz_water(1:nsoil) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
     END IF
-    mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+
+    ! calc upper bound of soil layers from layer thickness
+    ! note: upper bound is the larger value compared to lower bound of the same layer
+    ubounds_soil_lay_water(1)        = dz_water(1)
+    DO isoil = 2,nsoil
+      ubounds_soil_lay_water(isoil)  = ubounds_soil_lay_water(isoil-1) + dz_water(isoil)
+    END DO
+
+    ! create vertical soil-layer grid (vgrid)
+    !
+    ! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth"
+    !
+    soil_w => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
+      &                 longname='Soil (water) layers from HYDRO_ config', &
+      &                 units='m', &
+                        ! levels=  , &      ! is calculated from ubounds and dz
+                        ! lbounds=  , &     ! is calculated from ubounds and dz
+      &                 ubounds=ubounds_soil_lay_water(:), &
+      &                 dz=dz_water(:))
+    CALL register_vgrid(soil_w)
+
+    DEALLOCATE(ubounds_soil_lay_water)
     DEALLOCATE(dz_water)
 #endif
 
-    soil_w  => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
-      & levels  = mids                 (1:nsoil  ),                         &
-      & lbounds = depths               (1:nsoil  ),                         &
-      & ubounds = depths               (2:nsoil+1),                         &
-      & units='m')
-    CALL register_vgrid(soil_w)
+    ! info saved to logfile
     WRITE(message_text, *) 'Soil levels in hydrology (upper) [m]: ', soil_w%lbounds
     CALL message(TRIM(routine), message_text)
     WRITE(message_text, *) 'Soil levels in hydrology (mid)   [m]: ', soil_w%levels
@@ -511,7 +548,6 @@ CONTAINS
     CALL message(TRIM(routine), message_text)
     WRITE(message_text, *) 'Soil level depths in hydrology   [m]: ', soil_w%dz
     CALL message(TRIM(routine), message_text)
-    DEALLOCATE(depths, mids)
 
   END SUBROUTINE Init_hydro_config
 

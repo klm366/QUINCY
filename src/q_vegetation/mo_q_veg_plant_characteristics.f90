@@ -43,7 +43,7 @@ CONTAINS
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QCANOPY
-    USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, RAD_, Q_ASSIMI_, Q_PHENO_, TURB_
+    USE mo_jsb_process_class,               ONLY: VEG_, RAD_, Q_ASSIMI_, Q_PHENO_, TURB_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
     USE mo_jsb_physical_constants,          ONLY: rhoh2o, grav
@@ -60,7 +60,6 @@ CONTAINS
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -99,17 +98,15 @@ CONTAINS
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: beta_air_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soa_tphen_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: wtr_soil_root_pot
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: lai_max
-    ! HYDRO_ 2D
-    dsl4jsb_Real2D_onChunk      :: matric_pot_root
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
@@ -167,7 +164,6 @@ CONTAINS
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -179,10 +175,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soa_tphen_mavg)       ! in
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_ps_tfrac_mavg)   ! in
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs_tfrac_mavg)   ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, wtr_soil_root_pot)         ! in
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai_max)                    ! in
-    ! HYDRO_ 2D
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, matric_pot_root)              ! in
     ! RAD_ 3D
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
@@ -281,7 +276,7 @@ CONTAINS
         END IF
       END IF
 
-      dphi(ic) = matric_pot_root(ic) - lctlib_phi_leaf_min - grav * rhoh2o * height(ic) * 1.e-6_wp
+      dphi(ic) = wtr_soil_root_pot(ic) - lctlib_phi_leaf_min - grav * rhoh2o * height(ic) * 1.e-6_wp
     END DO
     !$ACC END PARALLEL LOOP
 

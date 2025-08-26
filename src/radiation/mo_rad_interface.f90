@@ -26,7 +26,7 @@ MODULE mo_rad_interface
   ! Use of basic structures
   USE mo_jsb_control,         ONLY: debug_on, acc_stream
   USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: message, finish
+  USE mo_exception,           ONLY: message, message_text, finish
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_class,           ONLY: Get_model
@@ -1026,9 +1026,6 @@ CONTAINS
       & snow,                  &
       & alb_vis,               &
       & alb_nir,               &
-      & alb_vis_noon,          &
-      & alb_nir_noon,          &
-      & local_time_day_seconds,&
       & alb_vis_lnd,           &
       & alb_nir_lnd,           &
       & alb_vis_can,           &
@@ -1087,10 +1084,15 @@ CONTAINS
       & soil_carbon(:)            ! Amount of soil carbon [mol(C)/m2(canopy)], used with use_alb_soil_organic_C
 
     ! quincy
-    dsl4jsb_Real2D_onChunk ::       &
-      & sb_pool_total_ag_litter_c,  &
-      & t,                          &
-      & num_sl_above_bedrock
+    dsl4jsb_Real2D_onChunk :: &
+      & sb_pool_total_ag_litter_c, &
+      & t, &
+      & num_sl_above_bedrock, &
+      & albedo, &
+      & albedo_noon, &
+      & alb_vis_noon, &
+      & alb_nir_noon, &
+      & local_time_day_seconds
     dsl4jsb_Real3D_onChunk ::       &
       & sb_pool_total_bg_soil_c,    &
       & soil_depth_sl
@@ -1129,7 +1131,15 @@ CONTAINS
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
     IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
       & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
-      & .NOT. jsbach_runs_standalone()) RETURN
+      & .NOT. jsbach_runs_standalone()) THEN
+      IF (debug_on() .AND. iblk == 1) THEN
+        WRITE (message_text,*) 'Update albedo only at experiment start, ', &
+          &                    'if model runs standalone or one time step before the radiation time step ', &
+          &                    'RETURN'
+        CALL message(TRIM(routine), message_text)
+      END IF
+      RETURN
+    END IF
 #endif
 
     ! Enable for debugging:
@@ -1283,6 +1293,8 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
+      dsl4jsb_Get_var2D_onChunk(RAD_,   albedo)                ! out
+      dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_noon)           ! out
       dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis_noon)          ! out
       dsl4jsb_Get_var2D_onChunk(RAD_,   alb_nir_noon)          ! out
 #endif
@@ -1367,8 +1379,7 @@ CONTAINS
         END IF
       END DO
       !$ACC END PARALLEL LOOP
-
-    END IF
+    END IF  ! IF tile%is_bare .OR. tile%is_vegetation
 
     !> 2.0 lakes & lakes with ice
     !!
@@ -1689,20 +1700,39 @@ CONTAINS
     IF (tile%is_bare .OR. tile%is_glacier .OR. tile%is_vegetation) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
+        ! for lake tile, alb_vis/nur are already set above to albedo_lwtr
         alb_vis(ic) = alb_vis_lnd(ic)
         alb_nir(ic) = alb_nir_lnd(ic)
-#ifndef __NO_QUINCY__
-        IF (model_scheme == MODEL_QUINCY) THEN
-          ! at noon: set albedo_noon to current albedo (noon equals half a day plus one timestep)
-          IF (ABS(local_time_day_seconds(ic) - ((seconds_per_day / 2._wp) + dtime)) < eps1) THEN
-            alb_vis_noon(ic) = alb_vis(ic)
-            alb_nir_noon(ic) = alb_nir(ic)
-          END IF
-        END IF
-#endif
       END DO
       !$ACC END PARALLEL LOOP
     END IF
+
+#ifndef __NO_QUINCY__
+    ! calculate albedo and albedo_noon for all tiles
+    !
+    IF (model_scheme == MODEL_QUINCY) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        ! calculate albedo for total shortwave radiation
+        !
+        IF ((swvis_srf_down(ic) + swnir_srf_down(ic)) > eps8) THEN
+          albedo(ic) = ( alb_vis(ic) * swvis_srf_down(ic) + alb_nir(ic) * swnir_srf_down(ic) ) &
+            &           / (swvis_srf_down(ic) + swnir_srf_down(ic))
+        ELSE
+          ! albedo is not defined when radiation <= 0 and set to zero
+          albedo(ic) = 0.0_wp
+        END IF
+        ! at noon: set albedo_noon to current albedo (noon equals half a day plus one timestep)
+        !
+        IF (ABS(local_time_day_seconds(ic) - ((seconds_per_day / 2._wp) + dtime)) < eps1) THEN
+          alb_vis_noon(ic) = alb_vis(ic)
+          alb_nir_noon(ic) = alb_nir(ic)
+          albedo_noon(ic)  = albedo(ic)
+        END IF
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
+#endif
 
     !$ACC EXIT DATA DELETE(l_day, temperature_surface) ASYNC(acc_stream)
     DEALLOCATE(l_day, temperature_surface)
@@ -1753,22 +1783,31 @@ CONTAINS
 
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
-      ! RAD_ 2D
 
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis,                weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir,                weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_lnd,            weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_lnd,            weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_soil,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_soil,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow,           weighted_by_fract)
+      ! equivalent to jsbach
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_lnd,         weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_lnd,         weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_soil,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_soil,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_pond,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_pond,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_mineralsoil, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_mineralsoil, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis,             weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir,             weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, snow_age,            weighted_by_fract)
+      IF (.NOT. tile%is_vegetation) THEN
+        dsl4jsb_Aggregate_onChunk(RAD_, albedo_lwtr,         weighted_by_fract)
+        dsl4jsb_Aggregate_onChunk(RAD_, albedo_lice,         weighted_by_fract)
+      ENDIF
+
+      ! quincy specific
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_can,            weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_can,            weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo,                 weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo_noon,            weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, snow_age,               weighted_by_fract)
-
 #ifndef __NO_QUINCY__
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_noon,           weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_noon,           weighted_by_fract)

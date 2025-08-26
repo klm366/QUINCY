@@ -149,7 +149,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: percolation_sl
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk :: sand_sl
@@ -423,10 +422,9 @@ CONTAINS
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)               ! in
     ! HYDRO_ 2D
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,   num_sl_above_bedrock)        ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,   num_sl_above_bedrock)         ! in
     ! HYDRO_ 3D
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)               ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,   percolation_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)                ! in
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_,     bulk_dens_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(SSE_,     sand_sl)                     ! in

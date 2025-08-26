@@ -156,5 +156,39 @@ MODULE mo_hydro_constants
     ! Parameter for bedrock
     & k_brock                 = 1.E-6_wp         !< Hydraulic conductivity of fractured bedrock [m/s] (Freeze & Cherry, 1979)
 
+  REAL(wp), PARAMETER :: &
+    & matric_pot_min          = -1000.0_wp       !< min value of matric potential ('mpot_act'), tuned [m]
+
+#ifdef __QUINCY_STANDALONE__
+  ! quincy standalone
+  REAL(wp), PARAMETER :: &
+    & k_pwp_a         = 0.031_wp, &
+    & k_pwp_c         = 0.487_wp, &
+    & k_pwp_s         = -0.024_wp, &
+    & k_pwp_sc        = 0.068_wp, &
+    & k_pwp_at        = -0.02_wp, &
+    & k_pwp_bt        = 0.14_wp, &
+    & k_fc_a          = 0.299_wp, &
+    & k_fc_c          = 0.195_wp, &
+    & k_fc_s          = -0.251_wp, &
+    & k_fc_sc         = 0.452_wp, &
+    & k_fc_at         = -0.015_wp, &
+    & k_fc_bt         = -0.373_wp, &
+    & k_fc_ct         = 1.293_wp, &
+    & k_sat_a         = 0.078_wp, &
+    & k_sat_c         = 0.034_wp, &
+    & k_sat_s         = 0.278_wp, &
+    & k_sat_sc        = -0.584_wp, &
+    & k_sat_at        = -0.107_wp, &
+    & k_sat_bt        = 0.6360_wp, &
+    & k_sat_ct        = 0.097_wp, &
+    & k_sat_dt        = 0.043_wp
+#endif
+
+  REAL(wp), PARAMETER :: &
+    & frac_wtr_vertical_transport_up_max    = -0.75_wp, &   !< maximum upwards   directed material transport across soil layers, i.e., 'frac_wtr_transp_down_sl'; parameter value: pure assumption
+    & frac_wtr_vertical_transport_down_max  = 0.75_wp, &    !< maximum downwards directed material transport across soil layers, i.e., 'frac_wtr_transp_down_sl'; parameter value: pure assumption
+    & frac_w_lat_loss_max                   = 0.75_wp       !< maximum of 'frac_w_lat_loss_sl', i.e., fraction of lateral (horizontal) water loss; parameter value: identical with frac_wtr_vertical_transport_down_max
+
 #endif
 END MODULE mo_hydro_constants
