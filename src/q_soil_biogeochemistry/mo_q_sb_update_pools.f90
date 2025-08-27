@@ -744,7 +744,7 @@ CONTAINS
         &                                             sb_pool_mt, sb_pool_prev_timestep_hlp_mt)
       ! particle transport of organic and inorganic pools
       CALL calc_particle_transport_wrapper( &
-        & nc, nsoil_sb, soil_depth_sl(:,:), &                                                 ! in
+        & nc, nsoil_sb, num_sl_above_bedrock(:), soil_depth_sl(:,:), &                        ! in
         & model%config%elements_index_map(:), &
         & model%config%is_element_used(:), &
         & particle_fluxrate(:,:), &
