@@ -450,6 +450,7 @@ CONTAINS
   SUBROUTINE calc_particle_transport_wrapper( &
     & nc, &
     & nsoil_sb, &
+    & num_sl_above_bedrock, &
     & soil_depth_sl, &
     & elements_index_map, &
     & is_element_used, &
@@ -482,6 +483,7 @@ CONTAINS
     INTEGER,                            INTENT(in)    :: nc                         !< dimensions
     INTEGER,                            INTENT(in)    :: nsoil_sb                   !< number of soil layers
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: soil_depth_sl              !< thickness of each soil layer [m]
+    REAL(wp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock       !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     INTEGER,                            INTENT(in)    :: elements_index_map(:)      !< map bgcm element ID -> IDX
     LOGICAL,                            INTENT(in)    :: is_element_used(:)         !< is element in 'elements_index_map' used
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: particle_fluxrate          !< particle fluxrate (m/timestep)
@@ -533,70 +535,70 @@ CONTAINS
         !>  1.1 soluable litter
         !>
         CALL calc_particle_transport( &
-          & nc, nsoil_sb, soil_depth_sl(:,:),  &
+          & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
           & particle_fluxrate(:,:), &
           & sb_pool_mt(ix_soluable_litter, ix_elem, :, :), &
           & sb_transport_mt(ix_soluable_litter, ix_elem, :, :) )
         !>  1.2 polymeric litter
         !>
         CALL calc_particle_transport( &
-          & nc, nsoil_sb, soil_depth_sl(:,:), &
+          & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
           & particle_fluxrate(:,:), &
           & sb_pool_mt(ix_polymeric_litter, ix_elem, :, :), &
           & sb_transport_mt(ix_polymeric_litter, ix_elem, :, :) )
         !>  1.3 woody litter
         !>
         CALL calc_particle_transport( &
-          & nc, nsoil_sb, soil_depth_sl(:,:), &
+          & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
           & particle_fluxrate_woody_sl(:,:), &
           & sb_pool_mt(ix_woody_litter, ix_elem, :, :), &
           & sb_transport_mt(ix_woody_litter, ix_elem, :, :) )
         !>  1.4 DOM
         !>
         CALL calc_particle_transport( &
-          & nc, nsoil_sb, soil_depth_sl(:,:), &
+          & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
           & particle_fluxrate(:,:), &
           & sb_pool_mt(ix_dom, ix_elem, :, :), &
           & sb_transport_mt(ix_dom, ix_elem, :, :) )
         !>  1.5 minerally associated DOM
         !>
         CALL calc_particle_transport( &
-          & nc, nsoil_sb, soil_depth_sl(:,:), &
+          & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
           & particle_fluxrate(:,:), &
           & sb_pool_mt(ix_dom_assoc, ix_elem, :, :), &
           & sb_transport_mt(ix_dom_assoc, ix_elem, :, :) )
         !>  1.6 fungi biomass
         !>
         CALL calc_particle_transport( &
-          & nc, nsoil_sb, soil_depth_sl(:,:), &
+          & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
           & particle_fluxrate(:,:), &
           & sb_pool_mt(ix_fungi, ix_elem, :, :), &
           & sb_transport_mt(ix_fungi, ix_elem, :, :) )
         !>  1.7 mycorrhiza biomass
         !>
         CALL calc_particle_transport( &
-          & nc, nsoil_sb, soil_depth_sl(:,:), &
+          & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
           & particle_fluxrate(:,:), &
           & sb_pool_mt(ix_mycorrhiza, ix_elem, :, :), &
           & sb_transport_mt(ix_mycorrhiza, ix_elem, :, :) )
         !>  1.8 microbial biomass
         !>
         CALL calc_particle_transport( &
-          & nc, nsoil_sb, soil_depth_sl(:,:), &
+          & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
           & particle_fluxrate(:,:), &
           & sb_pool_mt(ix_microbial, ix_elem, :, :), &
           & sb_transport_mt(ix_microbial, ix_elem, :, :) )
         !>  1.9 microbial residue
         !>
         CALL calc_particle_transport( &
-          & nc, nsoil_sb, soil_depth_sl(:,:), &
+          & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
           & particle_fluxrate(:,:), &
           & sb_pool_mt(ix_residue, ix_elem, :, :), &
           & sb_transport_mt(ix_residue, ix_elem, :, :) )
         !>  1.10 minerally associated microbial residue
         !>
         CALL calc_particle_transport( &
-          & nc, nsoil_sb, soil_depth_sl(:,:), &
+          & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
           & particle_fluxrate(:,:), &
           & sb_pool_mt(ix_residue_assoc, ix_elem, :, :), &
           & sb_transport_mt(ix_residue_assoc, ix_elem, :, :) )
@@ -606,47 +608,47 @@ CONTAINS
     !>2.0 inorganic pools
     !>
     CALL calc_particle_transport( &
-      & nc, nsoil_sb, soil_depth_sl(:,:), &
+      & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
       & particle_fluxrate(:,:), &
       & nh4_solute(:,:), transport_nh4_solute(:,:))
     CALL calc_particle_transport( &
-      & nc, nsoil_sb, soil_depth_sl(:,:), &
+      & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
       & particle_fluxrate(:,:), &
       & nh4_assoc(:,:), transport_nh4_assoc(:,:))
     CALL calc_particle_transport( &
-      & nc, nsoil_sb, soil_depth_sl(:,:), &
+      & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
       & particle_fluxrate(:,:), &
       & no3_solute(:,:), transport_no3_solute(:,:))
     CALL calc_particle_transport( &
-      & nc, nsoil_sb, soil_depth_sl(:,:), &
+      & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
       & particle_fluxrate(:,:), &
       & po4_solute(:,:), transport_po4_solute(:,:))
     CALL calc_particle_transport( &
-      & nc, nsoil_sb, soil_depth_sl(:,:), &
+      & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
       & particle_fluxrate(:,:), &
       & po4_assoc_fast(:,:), transport_po4_assoc_fast(:,:))
     CALL calc_particle_transport( &
-      & nc, nsoil_sb, soil_depth_sl(:,:), &
+      & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
       & particle_fluxrate(:,:), &
       & po4_assoc_slow(:,:), transport_po4_assoc_slow(:,:))
     CALL calc_particle_transport( &
-      & nc, nsoil_sb, soil_depth_sl(:,:), &
+      & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
       & particle_fluxrate(:,:), &
       & po4_occluded(:,:), transport_po4_occluded(:,:))
     CALL calc_particle_transport( &
-      & nc, nsoil_sb, soil_depth_sl(:,:), &
+      & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
       & particle_fluxrate(:,:), &
       & po4_primary(:,:), transport_po4_primary(:,:))
     CALL calc_particle_transport( &
-      & nc, nsoil_sb, soil_depth_sl(:,:), &
+      & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
       & particle_fluxrate(:,:), &
       & nh4_n15_solute(:,:), transport_nh4_n15_solute(:,:))
     CALL calc_particle_transport( &
-      & nc, nsoil_sb, soil_depth_sl(:,:), &
+      & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
       & particle_fluxrate(:,:), &
       & nh4_n15_assoc(:,:), transport_nh4_n15_assoc(:,:))
     CALL calc_particle_transport( &
-      & nc, nsoil_sb, soil_depth_sl(:,:), &
+      & nc, nsoil_sb, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
       & particle_fluxrate(:,:), &
       & no3_n15_solute(:,:), transport_no3_n15_solute(:,:))
   END SUBROUTINE calc_particle_transport_wrapper
@@ -663,12 +665,14 @@ CONTAINS
     & nc, &
     & nsoil_sb, &
     & soil_depth_sl, &
+    & num_sl_above_bedrock, &
     & particle_fluxrate, &
     & pool, &
     & transport)
 
     INTEGER,                                          INTENT(in)    :: nc                     !< dimensions
     INTEGER,                                          INTENT(in)    :: nsoil_sb               !< number of soil layers
+    REAL(wp), DIMENSION(nc),                          INTENT(in)    :: num_sl_above_bedrock   !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_depth_sl          !< depth of each soil layer [m]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: particle_fluxrate      !< fraction of pool transported up or down per timestep
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: pool                   !< current state of pool to be transported
@@ -676,7 +680,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp), DIMENSION(nc)     :: hlp1
     REAL(wp), DIMENSION(nc)     :: hlp2
-    INTEGER                     :: ic, isoil, isoil_hlp
+    INTEGER                     :: ic, isoil, isoil_hlp, nsoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_particle_transport'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -684,8 +688,9 @@ CONTAINS
     !>
     ! loop over: soil layers & points in chunk & soil layers limited by the 1st soil layer loop
     ! we can do '1,n-1' here, because by definition, there cannot be any upward transport from the uppermost layer
-    DO isoil = 1,nsoil_sb-1
-      DO ic = 1,nc
+    DO ic = 1,nc
+      nsoil = INT(num_sl_above_bedrock(ic))
+      DO isoil = 1,nsoil-1
         IF (particle_fluxrate(ic, isoil) < 0.0_wp) THEN
           hlp1(ic) = particle_fluxrate(ic, isoil) * pool(ic, isoil + 1)
         ELSE
@@ -711,14 +716,14 @@ CONTAINS
         transport(ic, isoil)     = transport(ic, isoil)     - hlp1(ic) / soil_depth_sl(ic, isoil)
         transport(ic, isoil + 1) = transport(ic, isoil + 1) + hlp1(ic) / soil_depth_sl(ic, isoil + 1)
       ENDDO
+      !>2.0 lower boundary condition, ... ??  @TODO
+      !>
+      !  based on the assumption that there is no upward flux, and that all other
+      !  material is lost
+      hlp1(ic)            = 0.0_wp
+      transport(ic,nsoil) = transport(ic, nsoil) - hlp1(ic) / soil_depth_sl(ic, nsoil)
     ENDDO
 
-    !>2.0 lower boundary condition, ... ??  @TODO
-    !>
-    !  based on the assumption that there is no upward flux, and that all other
-    !  material is lost
-    hlp1(:)               = 0.0_wp
-    transport(:,nsoil_sb) = transport(:, nsoil_sb) - hlp1(:) / soil_depth_sl(:, nsoil_sb)
   END SUBROUTINE calc_particle_transport
 
   ! ======================================================================================================= !

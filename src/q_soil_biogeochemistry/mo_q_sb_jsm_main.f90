@@ -546,7 +546,10 @@ CONTAINS
     !!   NOTE: it is an ELEMENTAL routine, hence, not using a bgcm matrices as argument
     !!
     CALL calc_sourcing_flux( &
+      & nc, &                                   ! in
+      & nsoil_sb, &	
       & dtime, &
+	  & num_sl_above_bedrock(:), &
       & dsl4jsb_Config(SB_)%flag_sb_prescribe_po4, &  ! in
       & sb_pool_mt(ix_microbial, ixC, :, :), &
       & sb_pool_mt(ix_microbial, ixN, :, :), &
@@ -769,7 +772,7 @@ CONTAINS
     arr_hlp2(:,:)        = 1._wp
     km_array(:,:)        = km_adsorpt_po4_sl(:,:)
     avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._wp, qmax_po4(:,:) - po4_assoc_fast(:,:))
-    CALL calc_sinking_flux(dtime, lctlib%vmax_uptake_p, "po4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                ! in
+    CALL calc_sinking_flux(nc, nsoil_sb, dtime, num_sl_above_bedrock(:), lctlib%vmax_uptake_p, "po4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                ! in
       &                    sb_pool_mt(ix_microbial, ixC, :, :), fine_root_carbon_sl(:,:), po4_solute(:,:), &                ! in
       &                    rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &                          ! in
       &                    rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &        ! in
@@ -782,10 +785,10 @@ CONTAINS
       &                    fast_adsorpt     = fast_adsorpt_po4(:,:))                  ! OPTIONAL (out)
     !! calculate potential P uptake (micro-mol P / mol C fine-root / s), weighted by root distribution
     DO ic = 1,nc
-      DO isoil = 1,nsoil_sb
-        IF (fine_root_carbon_sl(ic,isoil) > eps8) THEN
-          unit_uptake_p_pot(ic) = unit_uptake_p_pot(ic) + unit_uptake_p_pot_sl(ic,isoil) &
-            &                     / fine_root_carbon_sl(ic,isoil) * root_fraction_sl(ic,isoil)
+      DO is = 1,INT(num_sl_above_bedrock(ic))
+        IF (fine_root_carbon_sl(ic,is) > eps8) THEN
+          unit_uptake_p_pot(ic) = unit_uptake_p_pot(ic) + unit_uptake_p_pot_sl(ic,is) &
+            &                     / fine_root_carbon_sl(ic,is) * root_fraction_sl(ic,is)
         ENDIF
       ENDDO
     ENDDO
@@ -809,7 +812,7 @@ CONTAINS
     arr_hlp2(:,:)        = 1._wp - anaerobic_volume_fraction_sl(:,:)
     km_array(:,:)        = km_adsorpt_nh4_sl(:,:)
     avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._wp, qmax_nh4(:,:) - nh4_assoc(:,:))
-    CALL calc_sinking_flux(dtime, lctlib%vmax_uptake_n, "nh4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                ! in
+    CALL calc_sinking_flux(nc, nsoil_sb, dtime, num_sl_above_bedrock(:), lctlib%vmax_uptake_n, "nh4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                ! in
       &                    sb_pool_mt(ix_microbial, ixC, :, :), fine_root_carbon_sl(:,:), nh4_solute(:,:), &                ! in
       &                    rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &                          ! in
       &                    rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &        ! in
@@ -825,10 +828,10 @@ CONTAINS
       &                    flux_nitri_denitri = nitrification_no3(:,:))               ! OPTIONAL (out)
     !! update potential N uptake due to nh4 uptake
     DO ic = 1,nc
-      DO isoil = 1,nsoil_sb
-        IF (fine_root_carbon_sl(ic,isoil) > eps8) THEN
-          unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + unit_uptake_n_pot_sl(ic,isoil) &
-            &                     / fine_root_carbon_sl(ic,isoil) * root_fraction_sl(ic,isoil)
+      DO is = 1,INT(num_sl_above_bedrock(ic))
+        IF (fine_root_carbon_sl(ic,is) > eps8) THEN
+          unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + unit_uptake_n_pot_sl(ic,is) &
+            &                     / fine_root_carbon_sl(ic,is) * root_fraction_sl(ic,is)
         ENDIF
       ENDDO
     ENDDO
@@ -851,7 +854,7 @@ CONTAINS
     arr_hlp1(:,:)        = 1._wp
     km_array(:,:)        = 1._wp
     avail_soil_surface_sorption_capacity_sl(:,:) = 1._wp
-    CALL calc_sinking_flux(dtime, lctlib%vmax_uptake_n, "no3", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                  ! in
+    CALL calc_sinking_flux(nc, nsoil_sb, dtime, num_sl_above_bedrock(:), lctlib%vmax_uptake_n, "no3", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                  ! in
       &                    sb_pool_mt(ix_microbial, ixC, :, :), fine_root_carbon_sl(:,:), no3_solute(:,:), &                  ! in
       &                    rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &                            ! in
       &                    rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &          ! in
@@ -866,10 +869,10 @@ CONTAINS
       &                    flux_nitri_denitri = denitrification_n2(:,:))              ! OPTIONAL (out)
     !! update potential N uptake due to no3 uptake
     DO ic = 1,nc
-      DO isoil = 1,nsoil_sb
-        IF (fine_root_carbon_sl(ic,isoil) > eps8) THEN
-          unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + unit_uptake_n_pot_sl(ic,isoil) &
-            &                     / fine_root_carbon_sl(ic,isoil) * root_fraction_sl(ic,isoil)
+      DO is = 1,INT(num_sl_above_bedrock(ic))
+        IF (fine_root_carbon_sl(ic,is) > eps8) THEN
+          unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + unit_uptake_n_pot_sl(ic,is) &
+            &                     / fine_root_carbon_sl(ic,is) * root_fraction_sl(ic,is)
         ENDIF
       ENDDO
     ENDDO
@@ -946,6 +949,7 @@ CONTAINS
       & nc, &                                 ! in
       & nsoil_sb, &
       & dtime, &
+      & num_sl_above_bedrock(:), &
       & rtm_hsc(:,:), &
       & rmm_hsc(:,:), &
       & rtm_depolymerisation(:,:), &
@@ -976,6 +980,7 @@ CONTAINS
       & nc, &                                 ! in
       & nsoil_sb, &
       & dtime, &
+      & num_sl_above_bedrock(:), &
       & fact_n_status_mic_c_growth(:,:), &
       & fact_p_status_mic_c_growth(:,:), &
       & sb_pool_mt(ix_microbial,:,:,:), &     ! in
@@ -1017,6 +1022,7 @@ CONTAINS
     CALL calc_microbial_growth(nc, &
       & nsoil_sb, &                               ! in
       & dtime, &
+      & num_sl_above_bedrock(:), &
       & TRIM(dsl4jsb_Config(SB_)%bnf_scheme), &
       & rtm_mic_uptake(:,:), &
       & rmm_mic_uptake(:,:), &
