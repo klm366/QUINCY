@@ -1150,20 +1150,20 @@ CONTAINS
       IF (model%config%use_glacier) THEN
         veg_tile => t_jsb_tile('veg', 'Veg tile', &
           & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_  , Q_DFIRE_FUEL_, Q_DFIRE_ /), &
-          & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_, ON_TILE_,      ON_TILE_ /), &
+          & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_, ON_LEAFS_,     ON_TILE_ /), &
           & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
           & fract_varname='fract_veg')  ! fraction of land tile shared with glacier tile
       ELSE
         veg_tile => t_jsb_tile('veg', 'Veg tile', &
           & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_  , Q_DFIRE_FUEL_, Q_DFIRE_   /), &
-          & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_, ON_TILE_,      ON_TILE_/), &
+          & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_, ON_LEAFS_,     ON_TILE_/), &
           & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
           & fract_varname='equal')    ! fraction = 1.0
       END IF
     ELSE
       veg_tile => t_jsb_tile('veg', 'Veg tile', &
         & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,       SEB_,      HYDRO_,     SPQ_     , Q_DFIRE_FUEL_, Q_DFIRE_   /), &
-        & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_, ON_TILE_,      ON_TILE_/), &
+        & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_, ON_LEAFS_,     ON_TILE_/), &
         & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
         & fract_varname='equal')      ! fraction = 1.0
     END IF
