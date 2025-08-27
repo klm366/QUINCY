@@ -95,12 +95,15 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real2D_onDomain      :: mask_is_fire_intense_enough 
     dsl4jsb_Real2D_onDomain      :: precip_daytime
+    dsl4jsb_Real2D_onDomain      :: precip_daytime_old
     dsl4jsb_Real2D_onDomain      :: precip_qc_mavg
     dsl4jsb_Real2D_onDomain      :: precip_daily_mmd
     dsl4jsb_Real2D_onDomain      :: precip_mavg
 
     dsl4jsb_Real2D_onDomain      :: t_air_min 
     dsl4jsb_Real2D_onDomain      :: t_air_max
+    dsl4jsb_Real2D_onDomain      :: t_air_min_old
+    dsl4jsb_Real2D_onDomain      :: t_air_max_old
 
     dsl4jsb_Real2D_onDomain      :: nesterov_index
     dsl4jsb_Real2D_onDomain      :: fdi
@@ -193,9 +196,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, precip_daily_mmd)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, precip_mavg)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, precip_daytime)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, precip_daytime_old)
 
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, t_air_min)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, t_air_max)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, t_air_min_old)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, t_air_max_old)
 
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, area_burned)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, area_burned_fract)
@@ -232,12 +238,15 @@ CONTAINS
 
     mask_is_fire_intense_enough = 0._wp !< TRUE=1._wp, FALSE=0._wp
     precip_daytime = 0._wp
+    precip_daytime_old = 0._wp
     precip_qc_mavg = 0._wp
     precip_daily_mmd = 0._wp
     precip_mavg = 0._wp
 
     t_air_min = 0._wp
     t_air_max = 0._wp
+    t_air_min_old = 0._wp
+    t_air_max_old = 0._wp
 
     area_burned = 0._wp
     area_burned_fract = 0._wp
@@ -503,8 +512,8 @@ CONTAINS
     current_month = get_month(current_datetime)
 
     lightning_events(:,:) = ic_lightning_events_monthly(:,current_month,:)
-    WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: current_month=", &
-                        current_month!, lightning_events(47,:)
+!    WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: current_month=", &
+!                        current_month!, lightning_events(47,:)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
   END SUBROUTINE provide_lightning_events

@@ -145,7 +145,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER         :: model              !< instance of the model
     INTEGER                                 :: iblk, ics, ice, nc, ic
     REAL(wp)                                :: dtime              !< timestep
-    LOGICAL, ALLOCATABLE                    :: is_midnight(:)     !< is peak of the day
+    LOGICAL                                 :: is_midnight(options%nc) !< is peak of the day
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_daily_weather'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -162,9 +162,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: precip_daytime         !<
     dsl4jsb_Real2D_onChunk      :: t_air_max              !<
     dsl4jsb_Real2D_onChunk      :: t_air_min              !<
-    REAL(wp), ALLOCATABLE, SAVE :: precip_daytime_old(:)
-    REAL(wp), ALLOCATABLE, SAVE :: t_air_max_old(:)
-    REAL(wp), ALLOCATABLE, SAVE :: t_air_min_old(:)
+    dsl4jsb_Real2D_onChunk      :: precip_daytime_old
+    dsl4jsb_Real2D_onChunk      :: t_air_max_old
+    dsl4jsb_Real2D_onChunk      :: t_air_min_old
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -192,6 +192,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, precip_daytime)
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, t_air_max)
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, t_air_min)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, precip_daytime_old)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, t_air_max_old)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, t_air_min_old)
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -199,20 +202,6 @@ CONTAINS
 
     !> 1.0 init
     !!
-    IF (.NOT. ALLOCATED(precip_daytime_old)) THEN
-      ALLOCATE(precip_daytime_old(nc))
-      precip_daytime_old = 0._wp
-    ENDIF
-    IF (.NOT. ALLOCATED(t_air_max_old)) THEN
-      ALLOCATE(t_air_max_old(nc))
-      t_air_max_old = 0._wp
-    ENDIF
-    IF (.NOT. ALLOCATED(t_air_min_old)) THEN
-      ALLOCATE(t_air_min_old(nc))
-      t_air_min_old = 0._wp
-    ENDIF
-
-    ALLOCATE(is_midnight(nc))
     is_midnight(:) = .FALSE.
 
     ! 1.1 update min/max values
@@ -323,6 +312,7 @@ CONTAINS
 
     IF (.NOT. ALLOCATED(precip_mavg_type)) THEN
       ALLOCATE(precip_mavg_type(nc))
+      !$ACC DATA CREATE(precip_mavg_type)
       precip_mavg_type = t_mavg(dtime, 1) !< daily
     ENDIF
 

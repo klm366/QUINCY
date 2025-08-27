@@ -57,6 +57,8 @@ MODULE mo_q_dfire_memory_class
 
     TYPE(t_jsb_var_real2d)               :: t_air_max           !< Aproximation to daily max temp (from prev day) [k]
     TYPE(t_jsb_var_real2d)               :: t_air_min           !< Aproximation to daily min temp (from prev day) [k]
+    TYPE(t_jsb_var_real2d)               :: t_air_max_old       !< Temp variable to calc daily max temp (from prev day) [k]
+    TYPE(t_jsb_var_real2d)               :: t_air_min_old       !< Temp variable to calc daily min temp (from prev day) [k]
 
     TYPE(t_jsb_var_real2d)               :: pot_burn_area       !< Potential burnable area (forest + grass area only) [m2?]
 
@@ -85,6 +87,7 @@ MODULE mo_q_dfire_memory_class
     !< Multiple methods used to aproximate daily precipitation. Not directly available into IQ.
     TYPE(t_jsb_var_real2d)               :: precip_qc_mavg      !< Precipitation moving average (quincy moving average) [kg m-2 s-1]
     TYPE(t_jsb_var_real2d)               :: precip_daytime      !< Aproximation to daily precipitation (previous daily data, aproximatted by sun movement) [kg m-2 s-1]
+    TYPE(t_jsb_var_real2d)               :: precip_daytime_old  !< Temp variable to calc daily precipitation (previous daily data, aproximatted by sun movement) [kg m-2 s-1]
     TYPE(t_jsb_var_real2d)               :: precip_mavg         !< Precipitation moving average (Pure implementation of moving average) [kg m-2 s-1]
     TYPE(t_jsb_var_real2d)               :: precip_daily        !< Daily precipitation, it links to precip_daytime, precip_mavg or precip_qc_mavg [kg m-2 s-1]
     TYPE(t_jsb_var_real2d)               :: precip_daily_mmd    !< Daily precipitation, same as precip_daily but in spitfire expected units [mm day-1]
@@ -216,6 +219,28 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 9999.0_wp)
 
+    CALL mem%Add_var('t_air_max_old', mem%t_air_max_old, &
+        & hgrid, vgrid_surface, &
+        & t_cf('t_air_max_old', 'K', 'Aux variable to calc Max temperature of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('t_air_min_old', mem%t_air_min_old, &
+        & hgrid, vgrid_surface, &
+        & t_cf('t_air_min_old', 'K', 'Aux variable to calc in temperature of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 9999.0_wp)
+
     CALL mem%Add_var('mask_is_fire_intense_enough', mem%mask_is_fire_intense_enough, &
         & hgrid, vgrid_surface, &
         & t_cf('mask_is_fire_instense_enough', '-', 'True when fire is intense enough to exist'), &
@@ -281,6 +306,17 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('precip_daytime_old', mem%precip_daytime_old, &
+        & hgrid, vgrid_surface, &
+        & t_cf('precip_daytime_old', 'kg m-2 s-1', 'Auxiliary vari to calc daily precipitation from previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('pot_burn_area', mem%pot_burn_area, &
