@@ -616,29 +616,29 @@ CONTAINS
           & initval_r=0.0_wp )
       END IF
 
-      ! Additional variables for QUINCY vegetation
+      ! Additional variables for QUINCY
+      CALL mem%Add_var('albedo', mem%albedo, &
+        & hgrid, surface, &
+        & t_cf('albedo', unitless, 'total surface albedo'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('albedo_noon', mem%albedo_noon, &
+        & hgrid, surface, &
+        & t_cf('albedo_noon', unitless, 'albedo at local solar noon'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
       IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
         & ) THEN
-
-        CALL mem%Add_var('albedo', mem%albedo, &
-          & hgrid, surface, &
-          & t_cf('albedo', unitless, 'total surface albedo'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('albedo_noon', mem%albedo_noon, &
-          & hgrid, surface, &
-          & t_cf('albedo_noon', unitless, 'albedo at local solar noon'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
 
         CALL mem%Add_var('arad_vis_soil', mem%arad_vis_soil, &
           & hgrid, surface, &

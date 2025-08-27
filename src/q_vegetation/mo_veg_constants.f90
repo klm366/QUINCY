@@ -138,8 +138,7 @@ MODULE mo_veg_constants
   REAL(wp), SAVE :: &
       min_lai                , & !< minimum LAI beyond which all leaves are shed
       target_lai_max         , & !< maximum LAI target for reserve use calculations
-      max_leaf_shedding_rate , & !< maximum rate of leaf shedding (1/days)
-      k_leafon_canopy            !< scaling coefficient for leaf on in CANOPY-only model
+      max_leaf_shedding_rate     !< maximum rate of leaf shedding (1/days)
 
   ! vegetation dynamics
   REAL(wp), SAVE :: &
@@ -340,7 +339,6 @@ CONTAINS
       min_lai                     = 0.1_wp
       target_lai_max              = 5.0_wp
       max_leaf_shedding_rate      = 0.05_wp
-      k_leafon_canopy             = 0.2_wp
 
   ! vegetation dynamics
       background_mort_rate_tree   = 0.01_wp

@@ -22,6 +22,7 @@ MODULE mo_lnd_bgcm_store_class
   USE mo_jsb_pool_class,      ONLY: t_jsb_pool
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p
   USE mo_jsb_varlist,         ONLY: VARNAME_LEN
+  USE mo_jsb_impl_constants,  ONLY: MEDIUM_NAME_LEN, SHORT_NAME_LEN
 
   IMPLICIT NONE
   PRIVATE
@@ -77,10 +78,11 @@ MODULE mo_lnd_bgcm_store_class
   !> Type used to collect pointer for a certain 1l bgc material (i.e. only elements, no compartements)
   !>
   TYPE :: t_lnd_1l_bgc_material_collection
-    INTEGER                        :: nr_of_elems   !< number of elements (array size)
-    TYPE(t_jsb_var_p), ALLOCATABLE :: collection_1l_p(:) !< pointer array for access to the vars
-    REAL(wp),              POINTER :: mt_1l_2d_bgcm(:,:,:)   !< if 2d var (elements, nc, nblks)
-    REAL(wp),              POINTER :: mt_1l_3d_bgcm(:,:,:,:) !< if 3d var (elements, nc, nsoil, nblks)
+    INTEGER                                :: nr_of_elems   !< number of elements (array size)
+    CHARACTER(SHORT_NAME_LEN), ALLOCATABLE :: element_shortname(:)   !< shortname of the elements
+    TYPE(t_jsb_var_p),         ALLOCATABLE :: collection_1l_p(:)     !< pointer array for access to the vars
+    REAL(wp),                      POINTER :: mt_1l_2d_bgcm(:,:,:)   !< if 2d var (elements, nc, nblks)
+    REAL(wp),                      POINTER :: mt_1l_3d_bgcm(:,:,:,:) !< if 3d var (elements, nc, nsoil, nblks)
   END TYPE t_lnd_1l_bgc_material_collection
 
   ! ======================================================================================================= !
@@ -88,12 +90,13 @@ MODULE mo_lnd_bgcm_store_class
   !> Type used to collect pointer for a certain 2l bgc material (i.e. with compartments)
   !>
   TYPE :: t_lnd_2l_bgc_material_collection
-    INTEGER                        :: nr_of_parts   !< number of compartments (size dim 1)
-    INTEGER                        :: nr_of_elems   !< number of elements (size dim 2)
-    TYPE(t_jsb_var_p), ALLOCATABLE :: collection_2l_p(:,:)   !< pointer array for access to the vars
-    REAL(wp),              POINTER :: mt_2l_2d_bgcm(:,:,:,:) !< if 2d var (compartments, elements, nc, nblks)
-    REAL(wp),              POINTER :: mt_2l_3d_bgcm(:,:,:,:,:)
-      !< if 3d var (compartments, elements, nc, nsoil, nblks)
+    INTEGER                                 :: nr_of_parts   !< number of compartments (size dim 1)
+    INTEGER                                 :: nr_of_elems   !< number of elements (size dim 2)
+    CHARACTER(SHORT_NAME_LEN),  ALLOCATABLE :: element_shortname(:)     !< shortname of the elements
+    CHARACTER(MEDIUM_NAME_LEN), ALLOCATABLE :: compartment_shortname(:) !< shortname of the compartments
+    TYPE(t_jsb_var_p),          ALLOCATABLE :: collection_2l_p(:,:)     !< pointer array for access to the vars
+    REAL(wp),                       POINTER :: mt_2l_2d_bgcm(:,:,:,:)   !< if 2d var (compartments, elements, nc, nblks)
+    REAL(wp),                       POINTER :: mt_2l_3d_bgcm(:,:,:,:,:) !< if 3d var (compartments, elements, nc, extra_dim, nblks)
   END TYPE t_lnd_2l_bgc_material_collection
 
   ! ======================================================================================================= !
