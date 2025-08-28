@@ -690,38 +690,48 @@ CONTAINS
     ! we can do '1,n-1' here, because by definition, there cannot be any upward transport from the uppermost layer
     DO ic = 1,nc
       nsoil = INT(num_sl_above_bedrock(ic))
-      DO isoil = 1,nsoil-1
-        IF (particle_fluxrate(ic, isoil) < 0.0_wp) THEN
-          hlp1(ic) = particle_fluxrate(ic, isoil) * pool(ic, isoil + 1)
-        ELSE
-          ! when particle transport pushes down material, check if the fluxrate exceeds the soil layer depth
-          isoil_hlp = isoil
-          hlp1(ic)  = 0._wp
-          hlp2(ic)  = particle_fluxrate(ic, isoil)
-          ! DO loop: only when fluxrate is more than the soil layer depth,
-          !          push the whole layer downwards and store the rest in hlp2
-          DO WHILE (hlp2(ic) > soil_depth_sl(ic, isoil_hlp) .AND. isoil_hlp > 0)
-            hlp1(ic)  = hlp1(ic) + soil_depth_sl(ic, isoil_hlp) * pool(ic, isoil_hlp)
-            hlp2(ic)  = hlp2(ic) - soil_depth_sl(ic, isoil_hlp)
-            ! IF (isoil_hlp == 1) EXIT
-            isoil_hlp = isoil_hlp - 1
-          ENDDO
-          ! IF 1. fluxrate does not exceeds depth of layer isoil, material are transported from the layer isoil
-          !    2. not all isoil layers are pushed down, extra material are transported from layer i
-          ! ELSE (i<eps4) all isoil layers are pushed down (fluxrate is more than the total depth of isoil layers)
-          IF (isoil_hlp > 0) THEN
-            hlp1(ic) = hlp1(ic) + hlp2(ic) * pool(ic, isoil_hlp)
+      IF (nsoil > 1) THEN
+        DO isoil = 1,nsoil-1
+          IF (particle_fluxrate(ic, isoil) < 0.0_wp) THEN
+            hlp1(ic) = particle_fluxrate(ic, isoil) * pool(ic, isoil + 1)
+          ELSE
+            ! when particle transport pushes down material, check if the fluxrate exceeds the soil layer depth
+            isoil_hlp = isoil
+            hlp1(ic)  = 0._wp
+            hlp2(ic)  = particle_fluxrate(ic, isoil)
+            ! DO loop: only when fluxrate is more than the soil layer depth,
+            !          push the whole layer downwards and store the rest in hlp2
+            DO WHILE (hlp2(ic) > soil_depth_sl(ic, isoil_hlp) .AND. isoil_hlp > 0)
+              hlp1(ic)  = hlp1(ic) + soil_depth_sl(ic, isoil_hlp) * pool(ic, isoil_hlp)
+              hlp2(ic)  = hlp2(ic) - soil_depth_sl(ic, isoil_hlp)
+              IF (isoil_hlp == 1) EXIT
+              isoil_hlp = isoil_hlp - 1
+            ENDDO
+            ! IF 1. fluxrate does not exceeds depth of layer isoil, material are transported from the layer isoil
+            !    2. not all isoil layers are pushed down, extra material are transported from layer i
+            ! ELSE (i<eps4) all isoil layers are pushed down (fluxrate is more than the total depth of isoil layers)
+            IF (isoil_hlp > 0) THEN
+              hlp1(ic) = hlp1(ic) + hlp2(ic) * pool(ic, isoil_hlp)
+            ENDIF
           ENDIF
-        ENDIF
-        transport(ic, isoil)     = transport(ic, isoil)     - hlp1(ic) / soil_depth_sl(ic, isoil)
-        transport(ic, isoil + 1) = transport(ic, isoil + 1) + hlp1(ic) / soil_depth_sl(ic, isoil + 1)
-      ENDDO
-      !>2.0 lower boundary condition, ... ??  @TODO
-      !>
-      !  based on the assumption that there is no upward flux, and that all other
-      !  material is lost
-      hlp1(ic)            = 0.0_wp
-      transport(ic,nsoil) = transport(ic, nsoil) - hlp1(ic) / soil_depth_sl(ic, nsoil)
+          transport(ic, isoil)     = transport(ic, isoil)     - hlp1(ic) / soil_depth_sl(ic, isoil)
+          transport(ic, isoil + 1) = transport(ic, isoil + 1) + hlp1(ic) / soil_depth_sl(ic, isoil + 1)
+        ENDDO
+        !>2.0 lower boundary condition, ... ??  @TODO
+        !>
+        !  based on the assumption that there is no upward flux, and that all other
+        !  material is lost
+        hlp1(ic)            = 0.0_wp
+        transport(ic,nsoil) = transport(ic, nsoil) - hlp1(ic) / soil_depth_sl(ic, nsoil)
+      ELSEIF (nsoil == 1) THEN
+        ! only one soil layer above bedbrock, allow only downward flux
+        hlp1(ic)            = MAX(0.0_wp, soil_depth_sl(ic, isoil_hlp)) * pool(ic, isoil_hlp)
+        transport(ic,nsoil) = transport(ic, nsoil) - hlp1(ic) / soil_depth_sl(ic, nsoil)
+      ELSE
+        ! bare soil
+        transport(ic,nsoil) = transport(ic, nsoil)
+      ENDIF
+      
     ENDDO
 
   END SUBROUTINE calc_particle_transport
