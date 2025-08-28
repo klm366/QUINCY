@@ -319,7 +319,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_10hr ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_100hr ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1000hr ! out [g DM m-2]
-    dsl4jsb_Real3D_onChunk                :: live_fuel_consumption_1hr ! out [g DM m-2]
 
     dsl4jsb_Real2D_onChunk                :: area_burned               ! out [ha ts-1]
     dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! out [-]
@@ -412,7 +411,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_10hr) ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_100hr) ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_1000hr) ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, live_fuel_consumption_1hr) ! out [g DM m-2]
 
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned)               ! out [ha ts-1]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_fract)         ! out [-]

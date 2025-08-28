@@ -71,11 +71,6 @@ MODULE mo_q_dfire_memory_class
     TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_10hr !< [g DM m-2]
     TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_100hr !< [g DM m-2]
     TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_1000hr !< [g DM m-2]
-    ! live fuel
-    TYPE(t_jsb_var_real3d)               :: live_fuel_consumption_1hr !< [g DM m-2]
-    !TYPE(t_jsb_var_real3d)               :: live_fuel_consumption_10hr !< [g DM m-2]
-    !TYPE(t_jsb_var_real3d)               :: live_fuel_consumption_100hr !< [g DM m-2]
-    !TYPE(t_jsb_var_real3d)               :: live_fuel_consumption_1000hr !< [g DM m-2]
 
     TYPE(t_jsb_var_real3d)               :: dead_frac_consumption !< [-]
 
@@ -227,7 +222,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .FALSE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('t_air_min_old', mem%t_air_min_old, &
@@ -238,7 +233,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .FALSE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 9999.0_wp)
 
     CALL mem%Add_var('mask_is_fire_intense_enough', mem%mask_is_fire_intense_enough, &
@@ -248,7 +243,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -316,7 +311,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .FALSE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('pot_burn_area', mem%pot_burn_area, &
@@ -366,17 +361,6 @@ CONTAINS
     CALL mem%Add_var('dead_fuel_consumption_1000hr', mem%dead_fuel_consumption_1000hr, &
         & hgrid, vgrid_dead_fuel_pools, &
         & t_cf('dead_fuel_consumption_1000hr', 'g DM m-2', '1000 hour dead fuel consumption'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('live_fuel_consumption_1hr', mem%live_fuel_consumption_1hr, &
-        & hgrid, vgrid_live_fuel_pools, &
-        & t_cf('live_fuel_consumption_1hr', 'g DM m-2', '1 hour live fuel consumption'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -658,7 +642,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -670,7 +654,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -682,7 +666,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -694,7 +678,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)

@@ -226,7 +226,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, dead_fuel_consumption_10hr, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, dead_fuel_consumption_100hr, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, dead_fuel_consumption_1000hr, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_, live_fuel_consumption_1hr, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, dead_frac_consumption, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, area_burned_fract, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, area_burned, weighted_by_fract)
@@ -235,6 +234,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, precip_daytime, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, precip_mavg, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, precip_daily_mmd, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(Q_DFIRE_, precip_daily, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, reaction_intensity, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, prop_flux_ratio, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, wind_factor, weighted_by_fract)
@@ -256,6 +256,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, e_n_humans, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, e_n_lightning, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, frac_consump_fcl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(Q_DFIRE_, pot_burn_area, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
