@@ -731,7 +731,6 @@ CONTAINS
         ! bare soil
         transport(ic,nsoil) = transport(ic, nsoil)
       ENDIF
-      
     ENDDO
 
   END SUBROUTINE calc_particle_transport
