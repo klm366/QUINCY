@@ -84,7 +84,7 @@ CONTAINS
   SUBROUTINE calc_surface_hydrology_land (                            &
     & lstart, dtime, ltpe_closed, hydro_scale, l_dynsnow,             &
     & l_infil_subzero, l_latflow_to_streamflow,                       &
-    & snow_depth_max, steepness, flowlag, t_soil_sl1,                 &
+    & snow_depth_max, steepness, flowlag, t_soil_sl1, t_snow_mean,    &
     & wind_10m, t_air, skinres_canopy_max, skinres_max,               &
     & weq_pond_max, fract_snow, fract_skin, fract_pond,               &
     & fract_pond_max, evapotrans, evapopot,                           &
@@ -97,9 +97,10 @@ CONTAINS
     & wtr_pond_net_flx, water_to_soil, evapo_deficit, infilt,         &
     & runoff, runoff_horton, wtr_latflow_srf)
 
-    USE mo_jsb_math_constants,     ONLY: pi
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
-    USE mo_hydro_constants,        ONLY: InterceptionEfficiency, Semi_Distributed_, Uniform_
+    USE mo_jsb_math_constants,     ONLY: pi, seconds_per_day
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow
+    USE mo_hydro_constants,        ONLY: InterceptionEfficiency, Semi_Distributed_, Uniform_, &
+      &                                  dens_snow_max, crhosmint, crhosmaxt, csnow_tmin, crhosmax_tmin
     USE mo_sse_constants,          ONLY: snow_depth_min
 
     LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero, &
@@ -108,7 +109,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: dtime, snow_depth_max
     REAL(wp), INTENT(in) ::                                                     &
       & steepness(:), flowlag(:),                                               &
-      & t_soil_sl1(:), wind_10m(:), t_air(:),                                   &
+      & t_soil_sl1(:), t_snow_mean(:), wind_10m(:), t_air(:),                   &
       & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:), fract_snow(:),  &
       & fract_skin(:), fract_pond(:), fract_pond_max(:),                        &
       & evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:),         &
@@ -151,7 +152,11 @@ CONTAINS
       & wtr_pond_inflow,      & !< pond inflow [m]
       & fract_pond_infil,     & !< approximation of pond fraction for infiltration (with inflow included) [/]
       & wtr_pond_infilt,      & !< pond water infiltration into the soil [m]
-      & wtr_pond_overflow       !< water exceeding the maximum allowed pond water content (liquid + ice) [m]
+      & wtr_pond_overflow,    & !< water exceeding the maximum allowed pond water content (liquid + ice) [m]
+      & pond_change_pot,      & !< amount of water that could potentially be frozen or thawed [m]
+      & t_snow_rel,           & !< Relative snow temperature
+      & tau_snow_days,        & !< relaxation/ageing constant
+      & rho_snow_max            !< Temperature dependent maximum value of snow density
 
     INTEGER :: ic, nc
     !
@@ -214,6 +219,7 @@ CONTAINS
       canopy_pre_snow  = weq_snow_can(ic)
       weq_snow_can(ic) = MIN(MAX(0._wp, canopy_pre_snow + new_snow_can + evapo_snow_pot_in_m), skinres_canopy_max(ic))
       evapo_snow_in_m  = evapo_snow_pot_in_m - (weq_snow_can(ic) - canopy_pre_snow - new_snow_can)
+
       ! unloading of snow from the canopy due to melting
       exp_t            = MAX(0._wp, t_air(ic) - zc1) / zc2 * dtime
       snowmelt_can     = weq_snow_can(ic) * (1._wp-EXP(-exp_t))
@@ -350,8 +356,13 @@ CONTAINS
       ! Compute snow density
       IF (l_dynsnow) THEN
         IF (weq_snow_soil_old * rhoh2o / snow_soil_dens(ic) > snow_depth_min) THEN
-          ! Update density of old snow following eq. 31 of Verseghy, 1991
-          snow_soil_dens(ic) = dens_snow_max - (dens_snow_max - snow_soil_dens(ic)) * EXP(-0.01_wp * dtime/3600._wp)
+          ! Update density of old snow following eq. (3) by E. Heise et al. (2006).
+          !   Operational implementation of the multilayer soil model. DWD.
+          t_snow_rel         = (MIN(tmelt, t_snow_mean(ic)) - csnow_tmin) / (tmelt - csnow_tmin)
+          tau_snow_days      = MIN(MAX(0.05_wp, crhosmint + (crhosmaxt - crhosmint) * t_snow_rel), crhosmaxt)
+          rho_snow_max       = crhosmax_tmin  + MAX(-0.25_wp, t_snow_rel) * (dens_snow_max - crhosmax_tmin)
+          snow_soil_dens(ic) = MAX(snow_soil_dens(ic), rho_snow_max + &
+            &                  (snow_soil_dens(ic) - rho_snow_max) * EXP(-tau_snow_days * dtime/seconds_per_day))
         ELSE
           snow_soil_dens(ic) = dens_snow_min  ! fresh snow
         END IF

@@ -484,6 +484,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: pore_size_index_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
+    dsl4jsb_Real3D_onChunk :: t_snow
+    dsl4jsb_Real3D_onChunk :: snow_depth_sl
     ! quincy
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_sl
 
@@ -498,6 +500,8 @@ CONTAINS
       & wpi_rootzone,       &
       & wpi_rootzone_max,   &
       & wtr_soil,           &
+      & t_snow_mean,        &
+      & total_snow_depth,   &
       & trans_tmp,          &
       & flowlag_used,       &
       & slope_used
@@ -508,7 +512,7 @@ CONTAINS
       & ice_impedance_sl,          &
       & mpot_act_sl                  !< saturated soil matric potential on each layer at actual soil state [m]
 
-    INTEGER  :: iblk, ics, ice, nc, ic, nsoil, is
+    INTEGER  :: iblk, ics, ice, nc, ic, nsoil, is, nsnow, isnow
     REAL(wp) :: dtime
     ! Variables from configs
     REAL(wp) :: &
@@ -536,6 +540,7 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
     nsoil = options%nsoil_w
+    nsnow = options%nsnow_e
     dtime = options%dtime
     is_experiment_start = is_time_experiment_start(options%current_datetime)
 
@@ -640,6 +645,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   runoff_glac)      ! inout
     ELSE
       dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)        ! in
+      dsl4jsb_Get_var3D_onChunk(SSE_,     t_snow)           ! in
+      dsl4jsb_Get_var3D_onChunk(SSE_,     snow_depth_sl)    ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_sl)      ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   ice_soil_sl)      ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_pot_scool_sl) ! in
@@ -770,7 +777,7 @@ CONTAINS
       !$ACC DATA CREATE(skinres_max, skinres_canopy_max, wpi_rootzone, wpi_rootzone_max) &
       !$ACC   CREATE(trans_tmp, wpi_soil_sl_tmp(1:nc,1:nsoil), wtr_soil(1:nc)) &
       !$ACC   CREATE(wpi_wsat_soil_sl_tmp(1:nc,1:nsoil), wpi_wres_soil_sl_tmp(1:nc,1:nsoil)) &
-      !$ACC   CREATE(ice_impedance_sl(1:nc,1:nsoil)) &
+      !$ACC   CREATE(ice_impedance_sl(1:nc,1:nsoil), t_snow_mean(1:nc), total_snow_depth(1:nc)) &
       !$ACC   CREATE(mpot_act_sl(1:nc,1:nsoil)) &
       !$ACC   CREATE(slope_used(1:nc), flowlag_used(1:nc)) ASYNC(acc_stream)
 
@@ -845,6 +852,41 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
+      ! Calculate weighted mean snow temperature from the temperatures of each snow layer
+
+      ! Note: For the snow density calculation in calc_surface_hydrology_land we need a temperature for
+      !       all grid cells with weq_snow_soil > 0. There is however a mismatch between weq_snow_soil
+      !       (calculated in the routine) and snow_depth_sl used below, which was calculated earlier in
+      !       SSE:update_soil_and_snow_temperature based on weq_snow_soil of the previous time step.
+      !       To also provide a temperature to snow in grid cells that did not have snow in the time
+      !       step before, we here initialize t_snow_mean for all grid cells.
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        total_snow_depth(ic) = SUM(snow_depth_sl(ic, :))  ! Preparation for the below loop
+        t_snow_mean(ic)      = t_snow(ic,1)               ! Surface temperature, in case uppermost layer has no snow.
+      END DO
+      !$ACC END PARALLEL LOOP
+
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      !$ACC LOOP SEQ
+      ! Note: Layer nsnow is always the lowest snow layer. If only one snow layer is needed, this is
+      !       layer nsnow. Snow layer 1 is only needed if snow layers nsnow to 2 are filled.
+      DO isnow = nsnow, 1, -1
+        !$ACC LOOP GANG VECTOR
+        DO ic = 1, nc
+          IF (snow_depth_sl(ic, isnow) > EPSILON(1.0_wp)) THEN
+            IF (isnow == nsnow) THEN
+              ! Initialize with weighted average of snow layer temperature for the lowest snow layer
+              t_snow_mean(ic) = t_snow(ic, isnow) * (snow_depth_sl(ic, isnow) / total_snow_depth(ic))
+            ELSE
+              ! Add weighted average of snow layer temperature using layer depth fractions
+              t_snow_mean(ic) = t_snow_mean(ic) + t_snow(ic, isnow) * (snow_depth_sl(ic, isnow) / total_snow_depth(ic))
+            END IF
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL
+
       ! Compute soil hydrological properties to get top layer ice impedance and
       ! soil hydrological conductivity for point scale infiltration
       CALL get_soilhyd_properties(                                                           &
@@ -886,6 +928,7 @@ CONTAINS
         & slope_used(:),                  & ! effective slope on tile or steepness for standard scheme    []
         & flowlag_used(:),                & ! lag factor to account for retention in surface runoff luxes    []
         & t_soil_sl(:,1),                 & ! Temperature of the uppermost soil layer [K]
+        & t_snow_mean(:),                 & ! Mean Temperature of the snow layers [K]
         & wind_10m(:),                    & ! wind speed at 10m height [m/s]
         & t_air(:),                       & ! lowest layer atmosphere temperature [K]
         & skinres_canopy_max(:),          & ! Capacity of the canopy skin reservoir (also used to limit snow on canopy) [m]
