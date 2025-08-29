@@ -139,7 +139,6 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_10hr
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_100hr
     dsl4jsb_Real3D_onDomain      :: dead_fuel_consumption_1000hr
-    dsl4jsb_Real3D_onDomain      :: live_fuel_consumption_1hr
 
     dsl4jsb_Real2D_onDomain      :: distance_travelled
     dsl4jsb_Real2D_onDomain      :: l2b_ratio
@@ -214,7 +213,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, dead_fuel_consumption_10hr)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, dead_fuel_consumption_100hr)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, dead_fuel_consumption_1000hr)
-    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, live_fuel_consumption_1hr)
 
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, distance_travelled)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, l2b_ratio)
@@ -256,7 +254,6 @@ CONTAINS
     dead_fuel_consumption_10hr = 0._wp
     dead_fuel_consumption_100hr = 0._wp
     dead_fuel_consumption_1000hr = 0._wp
-    live_fuel_consumption_1hr = 0._wp
 
     fuel_moisture = 0._wp
 
