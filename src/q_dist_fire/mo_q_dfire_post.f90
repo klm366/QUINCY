@@ -146,7 +146,7 @@ CONTAINS
 
     INTEGER                               :: ip ! iterate
 
-    REAL(wp), ALLOCATABLE, SAVE           :: lctlib_emission_factors(:) !< Array packed with emission factors from lctlib (#species)
+    REAL(wp), ALLOCATABLE                 :: lctlib_emission_factors(:) !< Array packed with emission factors from lctlib (#species)
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
