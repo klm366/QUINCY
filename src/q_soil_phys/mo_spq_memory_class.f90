@@ -125,8 +125,7 @@ CONTAINS
     USE mo_quincy_output_class, ONLY: unitless
     USE mo_jsb_physical_constants, ONLY: &
       & Tzero,                           &
-      & dens_snow,                       & ! Density of snow (l_dynsnow=.FALSE.)
-      & dens_snow_min                      ! Density of fresh snow (l_dynsnow=.TRUE.)
+      & dens_snow                          ! Density of snow (l_dynsnow=.FALSE.)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_spq_memory), INTENT(inout), TARGET  :: mem             !< spq memory
     CHARACTER(len=*),     INTENT(in)            :: prefix          !< process name
