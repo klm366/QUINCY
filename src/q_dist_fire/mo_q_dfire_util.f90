@@ -199,6 +199,7 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
+!    WRITE(*,*) "dfire_util.f90:: calculate_daily_vars:: computing..."
 
     !> 1.0 init
     !!
@@ -207,6 +208,8 @@ CONTAINS
     ! 1.1 update min/max values
     t_air_max_old(:) = max(t_air_max_old(:), t_air(:))
     t_air_min_old(:) = min(t_air_min_old(:), t_air(:))
+
+!    WRITE(*,*) "dfire_util.f90:: calculate_daily_vars:: t_air=", t_air(1)
     ! 1.2 update accumulation values
     precip_daytime_old(:) = precip_daytime_old(:) + ((rain(:) + snow(:)) / (one_day / dtime))
 
@@ -276,6 +279,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_pure_moving_averages'
     TYPE(t_mavg), SAVE, ALLOCATABLE :: precip_mavg_type(:)
     ! ---------------------------
+    !$omp threadprivate( precip_mavg_type)
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(A2L_)
@@ -309,11 +313,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, snow)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, precip_mavg)
-
     IF (.NOT. ALLOCATED(precip_mavg_type)) THEN
       ALLOCATE(precip_mavg_type(nc))
-      !$ACC DATA CREATE(precip_mavg_type)
-      precip_mavg_type = t_mavg(dtime, 1) !< daily
+      precip_mavg_type = t_mavg(dtime, 1) !< 1=to daily
     ENDIF
 
     ! ------------------------------------------------------------------------------------------------------------
