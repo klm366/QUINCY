@@ -298,6 +298,9 @@ CONTAINS
 #ifdef __QUINCY_STANDALONE__
     ! quincy only
     CALL q_dfire_read_init_vars(tile)
+
+    ic_pop_dens = dfire_init_vars%pop_dens
+    lightning_events = dfire_init_vars%lightning_events(:,:,1)
 #else
     ! IQ only
     ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
