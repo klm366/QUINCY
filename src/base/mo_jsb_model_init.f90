@@ -493,6 +493,12 @@ CONTAINS
         CALL model%Queue_task(SEB_,     "energy_balance")           ! 't' is used here, and 't' is updated in the 'asselin_filter'
 
         !-- averaging variables in time ------------------------------------------------------------------- !
+        IF(model%config%qmodel_id == QLAND) THEN
+          IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+!            WRITE(*,*) "jsb_model_init.f90:: registering tavrg_q_dist_fire (new soil phys)..."
+            CALL model%Queue_task(Q_DFIRE_, "tavrg_q_dist_fire")    ! LAND ONLY
+          ENDIF
+        ENDIF
         CALL model%Queue_task(RAD_, "rad_time_average")             ! ALL
         CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")      ! ALL
         CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
@@ -598,6 +604,7 @@ CONTAINS
         !-- averaging variables in time ------------------------------------------------------------------- !
         IF(model%config%qmodel_id == QLAND) THEN
           IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+!            WRITE(*,*) "jsb_model_init.f90:: registering tavrg_q_dist_fire (former soil phys)..."
             CALL model%Queue_task(Q_DFIRE_, "tavrg_q_dist_fire")    ! LAND ONLY
           ENDIF
         ENDIF
