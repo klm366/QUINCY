@@ -106,6 +106,7 @@ MODULE mo_veg_constants
       kappa_f_demand_nc    , & !< fraction of maximum labile nitrogen concentration at which uptake is reduced to 50%
       kappa_f_demand_pn    , & !< fraction of maximum labile phosphorus  concentration at which uptake is reduced to 50%
       k_f_demand           , & !< k in nutrient uptake response funktion to labile nutrient concentration
+      omega_nutrient_demand, & !< the safety ratio margin when comparing the targeted and real labile N:C or P:C (unitless)
       k1_temp_bnf          , & !< k1 .. k4 factors in temperature response function of nitrogenase activity
       k2_temp_bnf          , &
       k3_temp_bnf          , &
@@ -115,8 +116,6 @@ MODULE mo_veg_constants
       transform_cost_org   , & !< N transformation costs of converting organic N to organic N (mol C / mol N)
       f_nacq_no3           , & !< fractions of NO3 and NH4 uptake based on transformation costs
       f_nacq_nh4           , &
-      vmax_symb_bnf        , & !< maximum rate of N fixation (micro-mol N / mol C fine root / s )
-      km_symb_bnf          , & !< half_saturating cost of the response of N fixation (mol C / mol N)
       k_cost_symb_bnf      , & !< cost of symbiotic N fixation (mol C / mol N)
       t_opt_symb_bnf       , & !< optimal temperature for BNF (K)
       ea_symb_bnf          , & !< activation energy for symbiotic N fixation (J mol-1)
@@ -308,6 +307,7 @@ CONTAINS
       kappa_f_demand_nc           = 0.75_wp
       kappa_f_demand_pn           = 0.9_wp
       k_f_demand                  = 2.0_wp
+      omega_nutrient_demand       = 0.15_wp ! tuned to leave a flexiable space between the targeted and actual labile CN or NP ratios
       k1_temp_bnf                 = 1.25_wp
       k2_temp_bnf                 = -3.62_wp
       k3_temp_bnf                 = 0.27_wp
@@ -317,8 +317,6 @@ CONTAINS
       transform_cost_org          = 1.0_wp    / (molar_mass_C/molar_mass_N)
       f_nacq_nh4                  = transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4)
       f_nacq_no3                  = transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4)
-      vmax_symb_bnf               = 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day * one_year) * 1.e6_wp  ! Meyerholt et. al 2016
-      km_symb_bnf                 = 5.0_wp    / (molar_mass_C/molar_Mass_N)                                   ! Meyerholt et. al 2016
       k_cost_symb_bnf             = 12.75_wp  / (molar_mass_C/molar_mass_N)     ! Average value from Kern 2021
       t_opt_symb_bnf              = 32.0_wp+273.15_wp  ! calibrated from Bytnerowicz et al. 2022
       ea_symb_bnf                 = 72000._wp          ! calibrated from Bytnerowicz et al. 2022
