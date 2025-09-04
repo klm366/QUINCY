@@ -1142,7 +1142,6 @@ CONTAINS
                                                                 km_dip_biochem_po4_act    !< actual km for soluble P control on biochem_mineralisation_po4
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                         :: ic, is
-    REAL(wp)                        :: hlp1
     CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':calc_local_soil_profile_values'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -1172,26 +1171,15 @@ CONTAINS
     !>
     DO ic = 1,nc
       DO is = 1,INT(num_sl_above_bedrock(ic))
-        IF ((rtm_hsc(ic, is) * rmm_hsc(ic, is)) < eps8) THEN
-          hlp1 = eps8
-        ELSE
-          hlp1 = rtm_hsc(ic, is) * rmm_hsc(ic, is)
-        END IF
-        km1_uptake_nh4_act(ic, is) = km1_up_nh4 / hlp1
-        km1_uptake_no3_act(ic, is) = km1_up_no3 / hlp1
-        IF (wtr_soil_sl(ic, is) > eps8) THEN
-          km1_uptake_po4_act(ic, is) = km1_up_po4 / hlp1 &
-            &                          / 1000._wp / (wtr_soil_sl(ic, is) / soil_depth_sl(ic, is))
-        END IF
-        km2_uptake_nh4_act(ic, is) = km2_up_nh4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
-        km2_uptake_no3_act(ic, is) = km2_up_no3 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
-        IF (wtr_soil_sl(ic, is) > eps8) THEN
-          km2_uptake_po4_act(ic, is) = km2_up_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is) &
-            &                          * 1000._wp * (wtr_soil_sl(ic, is) / soil_depth_sl(ic, is))
-        END IF
+        km1_uptake_nh4_act(ic, is)         = km1_up_nh4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
+        km1_uptake_no3_act(ic, is)         = km1_up_no3 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
+        km1_uptake_po4_act(ic, is)         = km1_up_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
+        km2_uptake_nh4_act(ic, is)         = km2_up_nh4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
+        km2_uptake_no3_act(ic, is)         = km2_up_no3 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
+        km2_uptake_po4_act(ic, is)         = km2_up_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km_uptake_org_act(ic, is)          = km_up_org  * rtm_hsc(ic, is) * rmm_hsc(ic, is)
-        km_mic_uptake_nh4_act(ic, is)      = km_mic_uptake_nh4 / hlp1
-        km_mic_uptake_no3_act(ic, is)      = km_mic_uptake_no3 / hlp1
+        km_mic_uptake_nh4_act(ic, is)      = km_mic_uptake_nh4  * rtm_hsc(ic, is) * rmm_hsc(ic, is)
+        km_mic_uptake_no3_act(ic, is)      = km_mic_uptake_no3  * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km_dip_biochem_po4_act(ic, is)     = km_dip_biochem_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km_denitrification_c_act(ic, is)   = km_denitrification_c
         km_denitrification_no3_act(ic, is) = km_denitrification_no3
@@ -1202,11 +1190,11 @@ CONTAINS
           &                            * MAX(k_fast_som_cn_max - f_fast_som_cn * kref_fast_som_np / bulk_dens_sl(ic, is), &
           &                            k_fast_som_cn_min) / apparent_fast_som_cn(ic, is)
         vmax_weath_mineral_act_sl(ic, is) = rtm_hsc(ic, is) / rmm_hsc(ic, is) * vmax_weath_mineral_sl(ic, is)
-        k_adsorpt_po4_act(ic, is) = rtm_sorption(ic, is) * k_adsorpt_po4
-        k_desorpt_po4_act(ic, is) = rtm_desorption(ic, is) * k_desorpt_po4
-        p_deposition_act(ic, is)  = 0.0_wp
+        k_adsorpt_po4_act(ic, is)         = rtm_sorption(ic, is)   * k_adsorpt_po4
+        k_desorpt_po4_act(ic, is)         = rtm_desorption(ic, is) * k_desorpt_po4
+        p_deposition_act(ic, is)          = 0.0_wp
         ! only for the 1st soil layer
-        p_deposition_act(ic,1)  = p_deposition(ic) / 1.e6_wp / soil_depth_sl(ic,1) * dtime
+        p_deposition_act(ic,1)            = p_deposition(ic) / 1.e6_wp / soil_depth_sl(ic,1) * dtime
       END DO
     END DO
   END SUBROUTINE calc_local_soil_profile_values
@@ -1247,7 +1235,7 @@ CONTAINS
                                               unit_uptake_n_pot, &
                                               unit_uptake_p_pot  )
 
-    USE mo_sb_constants,            ONLY: f_surface_myc2fineroot, myc_root_coverage_max
+    USE mo_sb_constants,            ONLY: f_surface_myc2fineroot, myc_root_coverage_max, fract_vmax_low_affinity
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1327,11 +1315,11 @@ CONTAINS
         !! potential N uptake rate (micro-mol N / mol C fine-root / s), weighted by root distribution
         hlp1(ic, is) = root_fraction_sl(ic, is) * rtm_root_uptake_act(ic, is) * rmm_root_uptake_act(ic, is) * &
                         (1.0_wp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(ic) * &
-                        nh4_solute(ic, is) * ( km1_uptake_nh4_act(ic, is) + &
+                        nh4_solute(ic, is) * ( fract_vmax_low_affinity / ( km1_uptake_nh4_act(ic, is) + nh4_solute(ic, is)) + &
                         1._wp / ( km2_uptake_nh4_act(ic, is) + nh4_solute(ic, is) ))
         hlp2(ic, is) = root_fraction_sl(ic, is) * rtm_root_uptake_act(ic, is) * rmm_root_uptake_act(ic, is) * &
                         (1.0_wp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(ic) * &
-                        no3_solute(ic, is) * ( km1_uptake_no3_act(ic, is) + &
+                        no3_solute(ic, is) * ( fract_vmax_low_affinity / ( km1_uptake_no3_act(ic, is) + no3_solute(ic, is)) + &
                         1._wp / ( km2_uptake_no3_act(ic, is) + no3_solute(ic, is) ))
         unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + hlp1(ic, is) + hlp2(ic, is)
 
@@ -1348,8 +1336,8 @@ CONTAINS
         !! potential P uptake rate (micro-mol P / mol C fine-root / s), weighted by root distribution
         hlp1(ic, is) = root_fraction_sl(ic, is)  * rtm_root_uptake_act(ic, is) * rmm_root_uptake_act(ic, is) * &
                         (1.0_wp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_p * f_vmax_uptake_act(ic) * &
-                         po4_solute(ic, is) * ( km1_uptake_po4_act(ic, is) + &
-                         1._wp / ( km2_uptake_po4_act(ic, is) + po4_solute(ic, is) ))
+                        po4_solute(ic, is) * ( fract_vmax_low_affinity / ( km1_uptake_po4_act(ic, is) + po4_solute(ic, is)) + &
+                        1._wp / ( km2_uptake_po4_act(ic, is) + po4_solute(ic, is) ))
         unit_uptake_p_pot(ic) = unit_uptake_p_pot(ic) + hlp1(ic, is)
         ! potential uptake rate in mol P / m3 / timestep
         plant_uptake_po4_sl(ic, is) = hlp1(ic, is) * veg_pool_fine_root_carbon(ic) / soil_depth_sl(ic, is) * dtime / 1.e6_wp
@@ -1390,7 +1378,7 @@ CONTAINS
                                                    mycorrhiza_uptake_po4_sl )
 
     USE mo_veg_constants,           ONLY: transform_cost_nh4, transform_cost_no3
-    USE mo_sb_constants,            ONLY: f_maxresp_myc, f_surface_myc2fineroot, myc_root_coverage_max
+    USE mo_sb_constants,            ONLY: f_maxresp_myc, f_surface_myc2fineroot, myc_root_coverage_max, fract_vmax_low_affinity
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1446,14 +1434,16 @@ CONTAINS
       mycorrhiza_uptake_nh4_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
                                           rtm_mycorrhiza_uptake_act(:,isoil) * rmm_mycorrhiza_uptake_act(:,isoil) * &
                                           f_surface_myc2fineroot * lctlib_vmax_uptake_n * f_vmax_uptake_act(:) * &
-                                          nh4_solute(:,isoil) * ( km1_uptake_nh4_act(:,isoil) + &
-                                          1._wp / ( km2_uptake_nh4_act(:,isoil) + nh4_solute(:,isoil) )) * &
+                                          nh4_solute(:, isoil) * ( fract_vmax_low_affinity / &
+                                          ( km1_uptake_nh4_act(:, isoil) + nh4_solute(:, isoil)) + &
+                                          1._wp / ( km2_uptake_nh4_act(:, isoil) + nh4_solute(:, isoil) )) * &
                                           dtime / 1.e6_wp
       mycorrhiza_uptake_no3_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
                                           rtm_mycorrhiza_uptake_act(:,isoil) * rmm_mycorrhiza_uptake_act(:,isoil) * &
                                           f_surface_myc2fineroot * lctlib_vmax_uptake_n * f_vmax_uptake_act(:) * &
-                                          no3_solute(:,isoil) * ( km1_uptake_no3_act(:,isoil) + &
-                                          1._wp / ( km2_uptake_no3_act(:,isoil) + no3_solute(:,isoil) )) * &
+                                          no3_solute(:, isoil) * ( fract_vmax_low_affinity / &
+                                          ( km1_uptake_no3_act(:, isoil) + no3_solute(:, isoil)) + &
+                                          1._wp / ( km2_uptake_no3_act(:, isoil) + no3_solute(:, isoil) )) * &
                                           dtime / 1.e6_wp
       !> 1.1 constrain potential N uptake by avaiable C for N transformation to organic
       !!
@@ -1475,8 +1465,9 @@ CONTAINS
       mycorrhiza_uptake_po4_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
                                           rtm_mycorrhiza_uptake_act(:,isoil) * rmm_mycorrhiza_uptake_act(:,isoil) *  &
                                           f_surface_myc2fineroot * lctlib_vmax_uptake_p * f_vmax_uptake_act(:) * &
-                                          po4_solute(:,isoil) * ( km1_uptake_po4_act(:,isoil) + &
-                                          1._wp / ( km2_uptake_po4_act(:,isoil) + po4_solute(:,isoil) )) * &
+                                          po4_solute(:, isoil) * ( fract_vmax_low_affinity / &
+                                          ( km1_uptake_po4_act(:, isoil) + po4_solute(:, isoil)) + &
+                                          1._wp / ( km2_uptake_po4_act(:, isoil) + po4_solute(:, isoil) )) * &
                                           dtime / 1.e6_wp
     END DO
   END SUBROUTINE calc_potential_mycorrhiza_uptake_rate

@@ -25,6 +25,15 @@
 !>
 !> - A. Roesch et al. Climate Dynamics (2001) 17: 933-947
 !>
+!> Parametrization of snow density / snow aging
+!>
+!> - Heise, E. et al. (2006): Operational Implementation of the Multilayer Soil Model,
+!>   COSMO Technical Report No. 9, Section 2.2 eq. 3 (p. 4)
+!>   [pdf](https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=48848da738cc550b42393ec9a7bb7a65c1c6ad69)
+!> - Doms, G. et al. (2021): A Description of the Nonhydrostatic Regional COSMO-Model Part II, Physical
+!>   Parameterizations, Section 11.4.2 b (p. 137)
+!>   [pdf](https://www.cosmo-model.org/content/model/cosmo/coreDocumentation/cosmo_physics_6.00.pdf)
+!>
 !> Parametrization of runoff/drainage
 !>
 !> - Todini, E., The ARNO rainfall-runoff model, Journal of Hydrology 175 (1996) 339-382,
@@ -93,6 +102,16 @@ MODULE mo_hydro_constants
     & wsn2fract_eps    = 1.E-12_wp,        & !< Used for numerical reasons (Roesch et al. 2001, Eq. 6)
     & wsn2fract_sigfac = 0.15_wp,          & !< Factor to approximate sub-grid scale slopes (Roesch et al. 2001, Eq. 7)
     & wsn2fract_const  = 0.95_wp,          & !< Factor for snow fraction (Roesch et al. 2001, Eq. 6 and 7)
+
+    ! Parameters used to calculate snow density (following Heise et al. 2006, also used in TERRA; compare Doms et al. 2021)
+    ! Note: dens_snow_min is currently also used in SSE and thus defined in shared/mo_jsb_physical_constants
+    ! dens_snow_min      = 50._wp,         & !< Minimum density of snow - for fresh snow [kg/m3] (Heise et al. 2006)
+    & dens_snow_max      = 400._wp,        & !< Maximum density of snow [kg/m3] (Heise et al. 2006)
+    & csnow_tmin         = 258.15_wp,      & !< Lower threshold temperature of snow for ageing and fresh snow density [K]
+                                             !< (= 273.15-15.0 K; Heise et al. 2006)
+    & crhosmaxt          = 0.40_wp,        & !< Maximum value of time constant for ageing of snow
+    & crhosmint          = 0.125_wp,       & !< Time constant for ageing of snow at csnow_tmin (8 days)
+    & crhosmax_tmin      = 200.00_wp,      & !< Maximum density of snow at csnow_tmin [kg/m3] (Doms et al., 2021)
 
     ! Canopy interception
     & InterceptionEfficiency = 0.25_wp,    & !< Efficiency of precipitation interception (rain and snow)

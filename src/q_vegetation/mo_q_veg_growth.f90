@@ -509,19 +509,7 @@ CONTAINS
 
     fmaint_rate_root(:) = fmaint_rate_base * temperature_response_respiration(t_soil_root(:), t_soil_root_tacclim_mavg(:))
 
-    !>  1.2 calculate nutrient demand scalars
-    !>
-    CALL calc_nutrient_demand_scalar( &
-      & lctlib%cn_leaf, &                   ! in
-      & lctlib%np_leaf, &
-      & leaf2root_troot_mavg(:), &
-      & veg_pool_mt(ix_labile, ixC, :), &
-      & veg_pool_mt(ix_labile, ixN, :), &
-      & veg_pool_mt(ix_labile, ixP, :), &   ! in
-      & f_n_demand(:), &                    ! out
-      & f_p_demand(:))                      ! out
-
-    !> 1.3 Adjust fluxes in case a stand replacing mortality event occurs
+    !> 1.2 Adjust fluxes in case a stand replacing mortality event occurs
     !>     prevent further growth, and maintenance/resource use respiration, nutrient uptake
     !>     average individual will die at the end of this timestep
     DO ic = 1,nc
@@ -545,6 +533,8 @@ CONTAINS
       & lctlib%np_leaf, &
       & lctlib%tau_fine_root, &
       & lctlib%bnf_base, &
+      & lctlib%vmax_symb_bnf, &
+      & lctlib%km_symb_bnf, &
       & model%config%qmodel_id, &
       & model%config%elements_index_map(:), &
       & model%config%is_element_used(:), &
@@ -871,6 +861,20 @@ CONTAINS
       &                                           target_labile_pool_nitrogen(:), &
       &                                           target_labile_pool_phosphorus(:))
 
+    !>  4.4 calculate nutrient demand scalars
+    !>
+    f_n_demand(:) = calc_nutrient_demand_scalar( &
+      & target_labile_pool_carbon(:)   + target_reserve_pool_carbon(:), &
+      & target_labile_pool_nitrogen(:) + target_reserve_pool_nitrogen(:), &
+      & veg_pool_mt(ix_labile, ixC, :) + veg_pool_mt(ix_reserve, ixC, :), &
+      & veg_pool_mt(ix_labile, ixN, :) + veg_pool_mt(ix_reserve, ixN, :))
+    f_p_demand(:) = calc_nutrient_demand_scalar( &
+      & target_labile_pool_nitrogen(:)   + target_reserve_pool_nitrogen(:), &
+      & target_labile_pool_phosphorus(:) + target_reserve_pool_phosphorus(:), &
+      & veg_pool_mt(ix_labile, ixN, :)   + veg_pool_mt(ix_reserve, ixN, :), &
+      & veg_pool_mt(ix_labile, ixP, :)   + veg_pool_mt(ix_reserve, ixP, :))
+
+
     !>5.0 calculate allocation coefficients for structural plant pools (leaves, wood, fine and coarse root, fruits)
     !>
     CALL calc_allocation_fraction( &
@@ -1016,89 +1020,12 @@ CONTAINS
   END FUNCTION calc_meristem_activity
 
 
-  !----------------------------------------------------------------------------------------------------------
-  ! 1.1 Sub Task of update_veg_growth
-  !
-  !----------------------------------------------------------------------------------------------------------
-  !> Routine to calculate N and P demand to regulate N and P uptake
-  !!
-  !! output: N and P demand scalar for root uptake
-  !----------------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_nutrient_demand_scalar(lctlib_cn_leaf, &
-                                                   lctlib_np_leaf, &
-                                                   leaf2root_mass_ratio, &
-                                                   labile_carbon, &
-                                                   labile_nitrogen, &
-                                                   labile_phosphorus, &
-                                                   f_n_demand, &
-                                                   f_p_demand)
-
-    USE mo_kind,                        ONLY: wp
-    USE mo_jsb_math_constants,          ONLY: eps8
-    USE mo_veg_constants,               ONLY: kappa_f_demand_nc, kappa_f_demand_pn, k_f_demand, &
-                                              root2leaf_cn, root2leaf_np, fresp_growth
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    REAL(wp),               INTENT(in)  :: lctlib_cn_leaf            !< PFT-specific foliar C:N (mol/mol)
-    REAL(wp),               INTENT(in)  :: lctlib_np_leaf            !< PFT-specific foliar N:P (mol/mol)
-    REAL(wp),               INTENT(in)  :: leaf2root_mass_ratio      !< growing season mean leaf 2 fine root ratio
-    REAL(wp),               INTENT(in)  :: labile_carbon             !< labile pool carbon (mol C / m2)
-    REAL(wp),               INTENT(in)  :: labile_nitrogen           !< labile pool nitrogen (mol N / m2)
-    REAL(wp),               INTENT(in)  :: labile_phosphorus         !< labile pool phosphorus (mol P / m2)
-    REAL(wp),               INTENT(out) :: f_n_demand                !< root N uptake demand scalar (unitless)
-    REAL(wp),               INTENT(out) :: f_p_demand                !< root P uptake demand scalar (unitless)
-    ! ---------------------------
-    ! 0.2 Local
-    REAL(wp)                    :: nc_max, pn_max, hlp1
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nutrient_demand_scalar'
-
-
-    !> 1.0 calculate reference level of N and P in labile pool that would induce zero uptake
-    !! The highest useful level corresponds to the C:N:P expected for leaves and fine root,
-    !! given the average root-lifetime ratio of leaf to root mass
-    !! and the lctlib levels of leaf and fine root C:N:P \n
-    !! i.e. CN = CN_leaf,pft * (1 + 1 / leaf2root_mass) / (1 + cn_root2leaf / leaf2root_mass) \n
-    !! Since growth respiration takes some of the C away from growth, this is accounted in the C:N:P ratio
-    nc_max = 1._wp / (lctlib_cn_leaf * &
-                      ((1._wp + 1._wp / leaf2root_mass_ratio) / &
-                       (1._wp + root2leaf_cn / leaf2root_mass_ratio ) * (1._wp + fresp_growth)))
-    pn_max = 1._wp / (lctlib_np_leaf / &
-                      ((1._wp + root2leaf_cn / leaf2root_mass_ratio) / &
-                       (1._wp + root2leaf_cn * root2leaf_np / leaf2root_mass_ratio )))
-
-    !> 1.1 N demand
-    !!
-    !! lambda_f_demand_nc acconts for the range of C:N at which uptake becomes reduces
-    IF(labile_carbon > eps8) THEN
-      hlp1       = MAX(nc_max - labile_nitrogen / labile_carbon,0.0_wp) / MAX(nc_max * (1._wp - kappa_f_demand_nc),eps8)
-      f_n_demand = 1._wp - EXP(-hlp1 ** k_f_demand)
-    ELSE
-      f_n_demand = 1.0_wp
-    ENDIF
-
-    !> 1.2 P demand
-    !!
-    IF(labile_nitrogen > eps8) THEN
-      hlp1       = MAX(pn_max - labile_phosphorus / labile_nitrogen,0.0_wp) / MAX(pn_max * (1._wp - kappa_f_demand_pn),eps8)
-      f_p_demand = 1._wp - EXP(-hlp1 ** k_f_demand)
-    ELSE
-      f_p_demand = 1.0_wp
-    ENDIF
-
-  END SUBROUTINE calc_nutrient_demand_scalar
-
-
-  !----------------------------------------------------------------------------------------------------------
-  ! 1.1 Sub Task of update_veg_growth
-  !
-  !----------------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
   !> Routine to calculate actual uptake rates of nitrogen and phosphorus from soil given the
-  !! vegetation demands and resource availability
-  !!
-  !! output: actual uptake rates and associated respiration costs
-  !----------------------------------------------------------------------------------------------------------
+  !> vegetation demands and resource availability
+  !>
+  !> output: actual uptake rates and associated respiration costs
+  !>
   SUBROUTINE calc_actual_nutrient_uptake_rate(nc, &
                                               nsoil_sb, &
                                               dtime, &
@@ -1106,6 +1033,8 @@ CONTAINS
                                               lctlib_np_leaf, &
                                               lctlib_tau_fine_root, &
                                               lctlib_bnf_base, &
+                                              lctlib_vmax_symb_bnf, &
+                                              lctlib_km_symb_bnf, &
                                               qmodel_id, &
                                               elements_index_map, &
                                               is_element_used, &
@@ -1163,7 +1092,7 @@ CONTAINS
     USE mo_isotope_util,            ONLY: calc_mixing_ratio_N15N14
     USE mo_jsb_math_constants,      ONLY: one_day, one_year, eps8
     USE mo_phy_schemes,             ONLY: calc_peaked_arrhenius_function
-    USE mo_veg_constants,           ONLY: vmax_symb_bnf, km_symb_bnf, k_cost_symb_bnf, &
+    USE mo_veg_constants,           ONLY: k_cost_symb_bnf, &
                                           ea_symb_bnf, ed_symb_bnf, t_opt_symb_bnf, &
                                           eta_nfixation, transform_cost_nh4, transform_cost_no3, &
                                           fresp_growth, tau_labile, &
@@ -1179,6 +1108,8 @@ CONTAINS
     REAL(wp),                             INTENT(in)    :: lctlib_np_leaf               !< lctlib parameter
     REAL(wp),                             INTENT(in)    :: lctlib_tau_fine_root         !< lctlib parameter
     REAL(wp),                             INTENT(in)    :: lctlib_bnf_base              !< lctlib parameter
+    REAL(wp),                             INTENT(in)    :: lctlib_vmax_symb_bnf         !< lctlib parameter
+    REAL(wp),                             INTENT(in)    :: lctlib_km_symb_bnf           !< lctlib parameter
     INTEGER,                              INTENT(in)    :: qmodel_id                    !< id for model: land plant soil ...
     INTEGER,                              INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
     LOGICAL,                              INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
@@ -1320,7 +1251,10 @@ CONTAINS
     !> 2.1 C costs for (inorganic) N uptake, based on Rastetter (2001) and Meyerholt (2016, OPT)
     !!
     ! photosynthesis gain relative to carbon investment into leafs
-    gain_c(:) = MAX(unit_npp_troot_mavg(:),0.0_wp)
+    ! includes the construction costs of the leaves with fresp_growth
+    ! consistent with nitrogen gain calculation
+!    gain_c(:) = MAX(unit_npp_troot_mavg(:),0.0_wp)
+    gain_c(:) = MAX(unit_npp_troot_mavg(:) / (1.0_wp + fresp_growth),0.0_wp)
 
     ! n-uptake gain relative to carbon investment into roots
     ! multiplier is Croot / Croot * (1 + fresp_growth + fresp_maint
@@ -1377,14 +1311,14 @@ CONTAINS
       !>
       CASE ("dynamic")
         WHERE(cost_n_uptake_root(:) > (k_cost_symb_bnf + eps8))
-          n_fixation(:) = fine_root_carbon(:) * vmax_symb_bnf * &
+          n_fixation(:) = fine_root_carbon(:) * lctlib_vmax_symb_bnf * &
             &             active_n_fixation(:) * &
             &             calc_peaked_arrhenius_function(t_soil_root, &
             &                                            ea_symb_bnf, &
             &                                            ed_symb_bnf, &
             &                                            t_opt_symb_bnf) * &
             &             (cost_n_uptake_root(:) - k_cost_symb_bnf) / &
-            &             (km_symb_bnf + (cost_n_uptake_root(:) - k_cost_symb_bnf))
+            &             (lctlib_km_symb_bnf + (cost_n_uptake_root(:) - k_cost_symb_bnf))
         ELSEWHERE
           n_fixation(:) = 0.0_wp
         END WHERE
@@ -2597,6 +2531,42 @@ CONTAINS
 
   END FUNCTION calc_beta_sinklimitation
 
+  ! ======================================================================================================= !
+  !> Routine to calculate N and P demand to regulate N and P uptake given the nutrient stoichiometry
+  !>  of the labile + reserves pool relative to the respective target values
+  !>
+  !> output: N and P demand scalar for root uptake
+  !>
+  ELEMENTAL FUNCTION calc_nutrient_demand_scalar( &
+    &   target_reference, &
+    &   target_nutrient, &
+    &   actual_reference, &
+    &   actual_nutrient) &
+    &   RESULT (f_demand)
+
+    USE mo_kind,                        ONLY: wp
+    USE mo_jsb_math_constants,          ONLY: eps8
+    USE mo_veg_constants,               ONLY: k_f_demand, omega_nutrient_demand
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp),               INTENT(in)  :: target_reference        !< target level of reference pool (mol m-2)
+    REAL(wp),               INTENT(in)  :: target_nutrient         !< target level of nutrient pool (mol m-2)
+    REAL(wp),               INTENT(in)  :: actual_reference        !< actual level of reference pool (mol m-2)
+    REAL(wp),               INTENT(in)  :: actual_nutrient         !< actual level of nutrient pool (mol m-2)
+    REAL(wp)                            :: f_demand                !< root uptake demand scalar (unitless)
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp)                    :: hlp1,hlp2,hlp3
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nutrient_demand_scalar'
+
+    IF (target_reference > eps8 .AND. actual_reference > eps8) THEN
+      hlp1 = target_nutrient / target_reference
+      hlp2 = actual_nutrient / actual_reference
+      hlp3 = MAX(hlp1 * (1._wp + omega_nutrient_demand) - hlp2, 0.0_wp) &
+        &    / (hlp1 * (omega_nutrient_demand + omega_nutrient_demand))
+      f_demand = 1._wp - EXP(-hlp3 ** k_f_demand)
+    ELSE
+      f_demand = 1.0_wp
+    END IF
+  END FUNCTION calc_nutrient_demand_scalar
 
   !-----------------------------------------------------------------------------------------------------
   ! 5.0 Sub Task of update_veg_growth
