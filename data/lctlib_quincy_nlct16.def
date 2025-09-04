@@ -47,8 +47,9 @@
 # 12: TrC:  C4 crop
 # 13: BSO:  bare soil
 # 14: UAR:  urban area
-# 15: CSH:  evergreen (needleleaf) cool low shrubs 
+# 15: CSH:  evergreen (needleleaf) cool low shrubs
 # 16: BSH:  tall broadleaf decidious shrubs
+
 #----------------------------------------------------------------------------------------                             
                              
 NLCT 16 # number of landcover types
@@ -60,17 +61,17 @@ LctNumber 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
 #LandcoverClass (bare soil: 0; glacier: 1; lake: 2; natural forest: 3; natural grassland: 4; other natural vegetation: 5; crops: 6; pastures: 7)                             
 LandcoverClass 3 3 3 3 3 3 4 4 7 7 6 6 0 0 5 5
         
-#growthform: vegetation growth form (itree: 1; igrass: 2)        
+#growthform: vegetation growth form (itree: 1; igrass: 2, icrop: 3)
 # JSBACH4: (tree: 0; grass: 1)        
-growthform 1 1 1 1 1 1 2 2 2 2 2 2 2 2 1 1
+growthform 1 1 1 1 1 1 2 2 2 2 3 3 2 2 1 1
         
 #ps_pathway: Photosynthetic pathway (ic3phot: 1, ic4phot: 2)        
 # JSBACH4: C4flag (C3: 0; C4: 1)        
 ps_pathway 1 1 1 1 1 1 1 2 1 2 1 2 2 2 1 1
         
-#phenology_type: (ievergreen: 1; isummergreen: 2; iraingreen: 3; iperennial: 4)        
+#phenology_type: (ievergreen: 1; isummergreen: 2; iraingreen: 3; iperennial: 4; icrop_phenology: 5)
 # JSBACH4: Phenology type (none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grass (QUINCY = perennial?): 4; crop: 5)         
-phenology_type 1 1 3 2 1 2 4 4 4 4 4 4 0 0 1 2
+phenology_type 1 1 3 2 1 2 4 4 4 4 5 5 0 0 1 2
         
 #lai_max: maximum leaf area index (--) only used for CANOPY mode
 lai_max 5.0 4.0 5.0 5.0 3.0 3.0 2.0 2.0 2.0 2.0 4.0 4.0 0.0 0.0 3.0 5.0
@@ -99,7 +100,8 @@ crown_shape_factor 3.34 3.34 3.34 3.34 2.19 2.88 3.34 3.34 3.34 3.34 3.34 3.34 3
         
 #cn_leaf: default leaf nitrogen concentration (mgN/gDW)        
 # From Kattge et al. 2011, Table 5, converted internally from nitrogen concentration (mg/gDW) to CN mol C / mol N        
-cn_leaf 16.89 13.73 21.32 21.32 12.09 19.37 17.84 14.14 17.84 14.14 17.84 14.14 14.14 14.14 10.11 21.50         
+cn_leaf 16.89 13.73 21.32 21.32 12.09 19.37 17.84 14.14 17.84 14.14 17.84 14.14 14.14 14.14 10.11 21.50
+        
 #cn_leaf_min: Minimum leaf N for dynamic stoichiometry  (mgN/gDW)        
 # Tuned from OCN, for shrubs adapted to changed default        
 cn_leaf_min 35.0 35.0 35.0 35.0 20.0 30.0 35.0 28.0 35.0 28.0 35.0 28.0 28.0 28.0 16.7 35.3
@@ -121,7 +123,7 @@ np_leaf_min 1.29 1.26 2.16 2.16 1.85 2.75 2.15 2.04 2.15 2.04 2.15 2.04 2.04 2.0
 np_leaf_max 0.43 0.42 0.72 0.72 0.62 0.92 0.72 0.68 0.72 0.68 0.72 0.68 0.68 0.68 0.37 0.78
         
 #k0_fn_struc: fraction of leaf N not used for photosynthesis (Friend 1997)        
-# temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5  # shrub/needleleaf number does not match      
+# temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5 # shrub/needleleaf number does not match       
 k0_fn_struc 0.75 0.70 0.63 0.63 0.83 0.79 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.83 0.63
         
 #fn_oth_min: minimum fraction of non-photosynthetic leaf N. Calculated using range of leaf N values from GLOPNET        
@@ -165,7 +167,7 @@ tau_coarse_root 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0
 #tau_branch: turnover time of the fraction of sapwood that is in branches (years), for shrub based on higher sapwood fraction        
 tau_branch 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 50.0 50.0
         
-#tau_sap_wood: turnover time of the sapwood pool (years), for low shrubs: 0.01 fraction/year -> 100 years (Zhang et al., 2013, for other species: 10-20 yr )         
+#tau_sap_wood: turnover time of the sapwood pool (years), for low shrubs: 0.01 fraction/year -> 100 years (Zhang et al., 2013, for other species:10-20 yr)         
 tau_sap_wood 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 100.0 66.7
         
 #tau_fruit: turnover time of the fruit pool (years)        
@@ -186,11 +188,11 @@ tau_mycorrhiza 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
         
 #vmax_uptake_n: vmax of N uptake (~micro-mol N / mol C / s) [714.28_wp ? old value]        
 # tuned from OCN's 1.5 gN/gC/1800s        
-vmax_uptake_n 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42
+vmax_uptake_n 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 2.1 2.1 0.42 0.42 0.42 0.42
         
 #vmax_uptake_p: vmax of P uptake (~micro-mol P / mol C / s)        
 # tuned from OCN's 1.5 gN/gC/1800s plus changes by Lin following Kavka and Polle 2016 (0.01  micro-mol P / g fine root / min)        
-vmax_uptake_p 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044
+vmax_uptake_p 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0088 0.0088 0.0044 0.0044 0.044 0.044
         
 #bnf_base: base nitrogen fixation rate (g N / m2 / year)        
 # converted internally to mumol N m-2 s-1        
@@ -212,20 +214,22 @@ seed_size 0.5 0.5 0.5 0.5 0.5 0.5 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.5 0.5
 #k1_mort_greff: asymptotic growth efficiency mortality rate (1/yr)
 k1_mort_greff 0.05 0.05 0.3 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
  
+ 
+ 
 #        
 # Phenology parameters        
 #        
         
 #beta_soil_flush: soil moisture limitation factor on stomatal conductance inducing leaf flushing        
-beta_soil_flush 0.0 0.0 0.85 0.0 0.0 0.0 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.0 0.0
+beta_soil_flush 0.0 0.0 0.85 0.0 0.0 0.0 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75
         
 #beta_soil_senescence: soil moisture limitation factor on stomatal conductance inducing leaf senescence        
-beta_soil_senescence 0.0 0.0 0.3 0.0 0.0 0.0 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.0 0.0
+beta_soil_senescence 0.0 0.0 0.3 0.0 0.0 0.0 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02
         
-#gdd_req_max: maximum GDD requirement (degC days) in the absence of chilling, for cool shrub: parameter h of Fu et al. 2014 is used        
-gdd_req_max 0.0 0.0 0.0 800.0 0.0 800.0 20.0 40.0 20.0 40.0 20.0 40.0 40.0 40.0 400.0 700.0
+#gdd_req_max: maximum GDD requirement (degC days) in the absence of chilling        
+gdd_req_max 0.0 0.0 0.0 800.0 0.0 800.0 20.0 40.0 20.0 40.0 50.0 50.0 40.0 40.0 100.0 0
         
-#k_gdd_dormance: scaling factor in the GDD to number of dormant days relationship (days -1), for cool shrub: parameter w of Fu et al. 2014 is used        
+#k_gdd_dormance: scaling factor in the GDD to number of dormant days relationship (days -1)        
 k_gdd_dormance 0.0 0.0 0.0 0.007 0.0 0.0098 0.0027 0.0027 0.0027 0.0027 0.0027 0.0027 0.0027 0.0027 0.1 0.1
         
 #t_air_senescence: weekly air temperature threshold inducing senescence of leaves ( degC)        
@@ -239,15 +243,15 @@ min_leaf_age 10 10 10 50 10 10 10 10 10 10 10 10 10 10 10 10
 # Allocation paramters        
 #        
         
-#frac_sapwood_branch: fraction of sapwood that is in branches, sapwood that is turned to litter        
+#frac_sapwood_branch: fraction of sapwood that is in branches         
 frac_sapwood_branch 0.05 0.05 0.05 0.05 0.05 0.05 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 0.5 0.5
         
 #wood_density: wood density (g C / cm3)        
-# converted internally from g/cm3 to mol C m-3, for shrubs see Zhang et al., 2013        
+# converted internally from g/cm3 to mol C m-3        
 wood_density 0.3 0.3 0.3 0.3 0.3 0.3 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.25 0.25
         
-#k_latosa: leaf area to sapwood area ratio (for shrubs: Zhang et al. 2013)       
-k_latosa 4000.0 4000.0 4000.0 4000.0 4000.0 4000.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 125.0 500.0 
+#k_latosa: leaf area to sapwood area ratio        
+k_latosa 4000.0 4000.0 4000.0 4000.0 4000.0 4000.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 3500.0 3500.0
         
 #k_crtos: coarse root to sapwood mass ratio         
 k_crtos 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 1.0 1.0
@@ -259,10 +263,10 @@ k_rtos 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 #k2_fruit_alloc: maximum fraction of biomass growth going to fruits         
 k2_fruit_alloc 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.1 0.1
         
-#allom_k1: paramter in height diameter relationship, Thum et al. 2019,  (=allom_k2 from Zhang et al., 2013?, but not consistent with the others)       
-allom_k1 55.0 55.0 55.0 55.0 55.0 55.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 4.0 6.0
+#allom_k1: paramter in height diameter relationship, Thum et al. 2019        
+allom_k1 55.0 55.0 55.0 55.0 55.0 55.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0
         
-#allom_k2: paramter in height diameter relationship, Thum et al., 2019 (~kallom3 in Zhang et al. 2013)       
+#allom_k2: paramter in height diameter relationship, Thum et al. 2019        
 allom_k2 0.65 0.65 0.65 0.65 0.65 0.65 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.67 0.67
         
 #phi_leaf_min: minimum leaf water potential (MPa)        
@@ -286,8 +290,6 @@ fstore_target 1.0 1.2 1.0 1.0 0.5 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 0.5 1.0
 #        
 # Soil        
 #        
-        
-#k_root_dist:         
 # tuned according to Jackson et al. 1996, Oecologia, to reproduce their cummulative root distribution profiles        
 # only making use of the contrast sclerophyllic, tree, grass        
 k_root_dist 3.5 2.8 2.5 3.5 3.5 3.5 5.5 5.5 5.5 5.5 5.5 5.5 5.5 5.5 4.5 4.5
@@ -320,11 +322,10 @@ AlbedoLitterVIS 0.09 0.10 0.10 0.13 0.11 0.11 0.34 0.34 0.34 0.34 0.34 0.34 0.0 
 #AlbedoLitterNIR: Albedo of litter in the near infrared range                     
 AlbedolitterNIR 0.16 0.17 0.17 0.22 0.20 0.20 0.34 0.34 0.34 0.34 0.34 0.34 0.0 0.0 0.20 0.22
 
-#VegRoughness: Vegetation roughness length [m]; for non-vegetation value is arbitrary but should be larger than zero to avoid division by zero, for shrubs Li et al. (2017)
+#VegRoughness: Vegetation roughness length [m]; for non-vegetation value is arbitrary but should be larger than zero to avoid division by zero                     
 VegRoughness 2.0 1.0 1.0 1.0 1.4 1.4 0.5 0.5 0.5 0.5 0.5 0.5 0.005 1.0 0.2 0.5
 
 #MinVegRoughness: Vegetation roughness length at LAI=1 [m]; for non-vegetation value is arbitrary but should be larger than zero to avoid division by zero
 MinVegRoughness 2.0 1.0 1.0 1.0 1.0 1.0 0.005 0.005 0.005 0.005 0.005 0.005 0.005 1.0 0.05 0.1
-
 #MaxVegRoughness: Vegetation roughness length at LAI=LAI_max [m]; for non-vegetation value is arbitrary but should be larger than zero to avoid division by zero
 MaxVegRoughness 5.0 3.0 3.0 3.0 3.0 3.0 0.1 0.1 0.1 0.1 0.1 0.1 0.01 3.0 0.5 1.0
