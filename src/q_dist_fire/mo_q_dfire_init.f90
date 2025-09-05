@@ -29,7 +29,7 @@ MODULE mo_q_dfire_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
-  USE mo_exception,               ONLY: message
+  USE mo_exception,               ONLY: message, finish
   USE mo_jsb_control,             ONLY: debug_on
 
   USE mo_jsb_model_class,         ONLY: t_jsb_model
@@ -41,7 +41,7 @@ MODULE mo_q_dfire_init
 #ifndef __QUINCY_STANDALONE__
   USE mo_jsb_time,                ONLY: timestep_in_days
 #endif
-  USE mo_jsb_process_class,       ONLY: Q_DFIRE_
+  USE mo_jsb_process_class,       ONLY: Q_DFIRE_, SB_, A2L_
 
   IMPLICIT NONE
   PRIVATE
@@ -146,7 +146,6 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: frac_consump_fcl
     dsl4jsb_Real2D_onDomain      :: ic_pop_dens
     dsl4jsb_Real3D_onDomain      :: ic_lightning_events_monthly
-    dsl4jsb_Real2D_onDomain      :: lightning_events
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
 #ifdef __QUINCY_STANDALONE__
@@ -220,7 +219,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, frac_consump_fcl)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, ic_pop_dens)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, ic_lightning_events_monthly)
-    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, lightning_events)
     ! ----------------------------------------------------------------------------------------------------- !
     nesterov_index = 0._wp
     fdi = 0._wp
@@ -268,8 +266,6 @@ CONTAINS
     frac_consump_fcl = 0._wp
 
     ic_pop_dens = 0._wp
-    ic_lightning_events_monthly = 0._wp
-    lightning_events = 0._wp
 
     !< Thonicke's Eq 14 is adapted to 30 minutes timestep. Original implementation runs at daily TS.
     df_sf_fire_duration_thd = dtime / 60._wp ! convert seconds to minutes
@@ -306,18 +302,8 @@ CONTAINS
     END IF
 
     !CALL spq_init_ic_bc(tile)
-    ic_pop_dens = dfire_init_vars%pop_dens
-    !write(*,*) "dfire_init.f90:: shape ic_lightning_events_monthly?", SHAPE(ic_lightning_events_monthly)
-    !write(*,*) "dfire_init.f90:: shape dfire_init_vars%lightning_events?", SHAPE(dfire_init_vars%lightning_events)
-!    DO iproma=1, nproma
-!      DO iblk=1, nblks
-!        DO imonth=1, 12
-          ! Properly define dimesions (swap them)
-!          ! todo: convert units from km-2 to ha-1
-!          ic_lightning_events_monthly(iproma, imonth, iblk) = dfire_init_vars%lightning_events(iproma,iblk,imonth)
-!        ENDDO
-!      ENDDO
-!    ENDDO
+    ic_pop_dens = dfire_init_vars%pop_dens(1,1)
+    write(*,*) "dfire_init.f90:: ic_pop_dens(1,1)?", ic_pop_dens(1,1)
 
 !    IF (tile%Is_last_process_tile(Q_DFIRE_)) THEN
     !  CALL spq_finalize_init_vars()
@@ -409,12 +395,12 @@ CONTAINS
     nblks  = hgrid%Get_nblks()
 
     ALLOCATE( &
-        & dfire_init_vars%pop_dens               (nproma, nblks),       &
-        & dfire_init_vars%lightning_events       (nproma, nblks, 12)    & ! months in 1 year
-        & )
+        & dfire_init_vars%pop_dens               (nproma, nblks))!,       &
+!        & dfire_init_vars%lightning_events       (nproma, nblks, 12)    & ! months in 1 year
+!        & )
 
     dfire_init_vars%pop_dens              (:,:) = missval
-    dfire_init_vars%lightning_events    (:,:,:) = missval
+!    dfire_init_vars%lightning_events    (:,:,:) = missval
 
     dsl4jsb_Get_config(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -433,22 +419,26 @@ CONTAINS
 
   END SUBROUTINE q_dfire_read_init_vars
 
+
   ! ====================================================================================================== !
   !
   !> Provide lightning events depending on the month
+  !> Call at the start of the month to update lightning events data (monthly forcing data)
   !
-
   SUBROUTINE provide_lightning_events(model_id, current_datetime, dtime)
 
     USE mo_jsb_time_iface,         ONLY: t_datetime
-    USE mo_jsb_time,               ONLY: is_newyear, get_year, get_month
+    USE mo_jsb_time,               ONLY: is_newyear, get_year, get_month, is_time_experiment_start
     USE mo_io_units,               ONLY: filename_max
     USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_jsb_grid,               ONLY: Get_grid
     USE mo_jsb_class,              ONLY: get_model
+    USE mo_jsb_parallel,           ONLY: Get_omp_thread
 
     dsl4jsb_Use_memory(Q_DFIRE_)
+    dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_config(Q_DFIRE_)
+    dsl4jsb_Use_config(SB_)
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -460,57 +450,69 @@ CONTAINS
     LOGICAL, SAVE                        :: is_read = .FALSE. !< TRUE if forcing file has beed read
 
     dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(Q_DFIRE_)
+    dsl4jsb_Def_memory(A2L_)
 
-    dsl4jsb_Real3D_onDomain :: ic_lightning_events_monthly
-    dsl4jsb_Real2D_onDomain :: lightning_events
+    dsl4jsb_Real3D_onDomain :: ic_lightning_events_monthly ! out
+    dsl4jsb_Real2D_onDomain :: a2l_lightning_events            ! out
 
     REAL(wp),       POINTER :: ptr_3D(:,:,:)  ! tmp pointer
+    LOGICAL :: is_experiment_start, read_deposition_data
 
-    INTEGER :: current_year, current_month, nproma, nblks, i_month
+    INTEGER :: current_month, nproma, nblks, i_month, no_omp_thread
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=*), PARAMETER :: routine = modname//':provide_lightning_events'
     ! -------------------------------------------------------------------------------------------------- !
     model => Get_model(model_id)
     CALL model%Get_top_tile(tile)
+    no_omp_thread = Get_omp_thread()
     hgrid => Get_grid(model%grid_id)
 
     nproma = hgrid%nproma
     nblks  = hgrid%nblks
+
+    is_experiment_start = is_time_experiment_start(current_datetime)
     ! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DFIRE_)
+    dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(Q_DFIRE_)
+    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, ic_lightning_events_monthly) ! yearly lightning events
-    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, lightning_events) ! lightning events for the current month
+    dsl4jsb_Get_var2D_onDomain(A2L_, a2l_lightning_events) ! lightning events for the current month
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
-    IF (.NOT. is_read) THEN
-      ! Read data from sso file
-      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(Q_DFIRE_)%ic_lightning_events_filename), model%grid_id)
-
-      !>
-      ptr_3D => input_file%Read_2D_time(variable_name='HRMC_COM_FR')
-      DO i_month = 1,12
-        ! Data is loaded as #events km-2 day-1 
-        ! Units conversion from km-2 to ha-1
-        ic_lightning_Events_monthly(:,i_month,:) = ptr_3D(:,:,i_month) / 100.
-      END DO
-
-      CALL input_file%Close()
-      !WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: current_month, lightning_events=", &
-      !        SHAPE(ic_lightning_Events_monthly)
-
-      ! no need to read the file anymore
-      is_read = .TRUE.
+      ! Check if data needs to be read
+    IF (is_experiment_start &
+          & .OR. (is_newyear(current_datetime, dtime))) THEN
+        read_deposition_data = .TRUE.
+    ELSE
+        read_deposition_data = .FALSE.
     END IF
+
+    IF (read_deposition_data) THEN
+        ! In this case we search a file ending on the current year
+        input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(Q_DFIRE_)%ic_lightning_events_filename), model%grid_id)
+
+        !>
+        ptr_3D => input_file%Read_2D_time(variable_name='HRMC_COM_FR')
+        DO i_month = 1,12
+          ! Data is loaded as #events km-2 day-1 
+          ! Units conversion from km-2 to ha-1
+          ic_lightning_events_monthly(:,i_month,:) = ptr_3D(:,:,i_month) / 100.
+        END DO
+        CALL input_file%Close()
+
+    END IF ! (read_deposition_data) THEN
 
     ! Assign the deposition values of this month to the A2L variables
     current_month = get_month(current_datetime)
 
-    lightning_events(:,:) = ic_lightning_events_monthly(:,current_month,:)
-!    WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: current_month=", &
-!                        current_month!, lightning_events(47,:)
+    a2l_lightning_events(:,:) = ic_lightning_events_monthly(:,current_month,:)
+
+!    WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: current_month, a2l_lightning_events=", &
+!                        current_month, ", ", a2l_lightning_events
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
   END SUBROUTINE provide_lightning_events

@@ -327,8 +327,7 @@ CONTAINS
 
     dsl4jsb_Real3D_onChunk                :: frac_consump_fcl          ! out [-]
     dsl4jsb_Real2D_onChunk                :: ic_pop_dens               ! in [#humans km-2]
-    dsl4jsb_Real3D_onChunk                :: ic_lightning_events_monthly ! in [#events ha-1 d-1]
-    dsl4jsb_Real2D_onChunk                :: lightning_events ! in [#events ha-1 d-1]
+    dsl4jsb_Real2D_onChunk                :: a2l_lightning_events ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -419,8 +418,7 @@ CONTAINS
 
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, frac_consump_fcl)            ! out [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, ic_pop_dens)                 ! in [#humans km-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, ic_lightning_events_monthly) ! in [#events ha-1 d-1]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, lightning_events) ! in [#events ha-1 d-1]
+    dsl4jsb_Get_var2D_onChunk(A2L_, a2l_lightning_events) ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     !dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -477,6 +475,9 @@ CONTAINS
     t_air_max_c = sf_convert_units("Kelvin", "Celsius", t_air_max)
     t_air_min_c = sf_convert_units("Kelvin", "Celsius", t_air_min)
     precip_daily_mmd = sf_convert_units("kg m-2 s-1", "mm/day", precip_daily)
+
+!    WRITE(*,*) "spitfire.f90:: t air min, t air max, precip daily=", t_air_min(1), t_air_max(1), precip_daily(1)
+
     wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
     grid_cell_area_ha = sf_convert_units("m2", "ha", tile_area)
     !DBH(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
@@ -501,7 +502,7 @@ CONTAINS
 
     ! Load input data
     density_human_population = ic_pop_dens  ! todo: directly use ic_pop_dens
-    lightning_frequency = lightning_events  ! todo: same as before
+    lightning_frequency = a2l_lightning_events  ! todo: same as before
     a_nd = density_human_population * 4._wp
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
@@ -702,6 +703,10 @@ CONTAINS
     spitfire%e_n_ignitions = sf_ignitions%total * (dtime / one_day)
     spitfire%e_n_humans = sf_ignitions%human * (dtime / one_day)
     spitfire%e_n_lightning = sf_ignitions%lightning * (dtime / one_day)
+
+!    WRITE(*,*) "spitfire.f90:: total ign, hum ign, lights ign=", &
+!            spitfire%e_n_ignitions(1), spitfire%e_n_humans(1), &
+!            spitfire%e_n_lightning(1)
 
     !< no ignitions events, no fire conditions
     has_fire_conditions = has_fire_conditions .AND. (spitfire%e_n_ignitions > 0._wp)
