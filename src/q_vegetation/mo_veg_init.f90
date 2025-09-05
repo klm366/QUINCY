@@ -23,7 +23,7 @@ MODULE mo_veg_init
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_jsb_math_constants,      ONLY: eps8
 
-  USE mo_jsb_process_class,       ONLY: VEG_
+  USE mo_jsb_process_class,       ONLY: VEG_, Q_AGR_, Q_SYL_
   USE mo_jsb_model_class,         ONLY: t_jsb_model
   USE mo_jsb_class,               ONLY: get_model
 
@@ -628,6 +628,10 @@ CONTAINS
     USE mo_jsb_io_netcdf,           ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_util,                    ONLY: read_2D_var, read_3D_var
     USE mo_lnd_bgcm_store,          ONLY: read_bgcm_from_file
+    USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_PP_CROP_ID, VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, &
+      & VEG_BGCM_PP_FIBERBOARD_ID, VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID
+    dsl4jsb_Use_config(Q_AGR_)
+    dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile             !< one tile with data structure for one lct
@@ -641,6 +645,8 @@ CONTAINS
     REAL(wp),               POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':veg_read_states'
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(Q_SYL_)
+    dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Real2D_onDomain :: dens_ind
@@ -657,6 +663,8 @@ CONTAINS
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     nsoil_sb = vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(Q_SYL_)
+    dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_var2D_onDomain(VEG_, dens_ind)
@@ -676,6 +684,21 @@ CONTAINS
     IF (ASSOCIATED(tile%bgcm_store)) THEN
       bgcm_store => tile%bgcm_store
       CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_POOL_ID, "veg", tile%name, routine, input_file)
+
+      IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+        IF (dsl4jsb_Config(Q_AGR_)%active) THEN
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_CROP_ID, "veg", tile%name, routine, input_file)
+        END IF
+
+        IF (dsl4jsb_Config(Q_SYL_)%active) THEN
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_FUEL_ID, "veg", tile%name, routine, input_file)
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_PAPER_ID, "veg", tile%name, routine, input_file)
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_FIBERBOARD_ID, "veg", tile%name, routine, input_file)
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_OIRW_ID, "veg", tile%name, routine, input_file)
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_PV_ID, "veg", tile%name, routine, input_file)
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_SAWNWOOD_ID, "veg", tile%name, routine, input_file)
+        END IF
+      END IF
     END IF
 
     CALL read_2D_var(input_file, dens_ind, "veg_dens_ind_"//tile%name)
