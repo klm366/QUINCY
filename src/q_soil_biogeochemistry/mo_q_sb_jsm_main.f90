@@ -549,7 +549,7 @@ CONTAINS
       & nc, &                                   ! in
       & nsoil_sb, &	
       & dtime, &
-	  & num_sl_above_bedrock(:), &
+      & num_sl_above_bedrock(:), &
       & dsl4jsb_Config(SB_)%flag_sb_prescribe_po4, &  ! in
       & sb_pool_mt(ix_microbial, ixC, :, :), &
       & sb_pool_mt(ix_microbial, ixN, :, :), &

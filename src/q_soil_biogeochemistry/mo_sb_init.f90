@@ -314,7 +314,7 @@ CONTAINS
       hlp1 = discrimination_ps_c13(CiCa_default_C4 * def_co2_mixing_ratio, &
         &                          def_co2_mixing_ratio, &
         &                          lctlib%ps_pathway)
-    ENDIF
+    END IF
     hlp_frac_c13 = calc_fractionation(def_co2_mixing_ratio, &
       &                               def_co2_mixing_ratio_C13, &
       &                               hlp1 )
@@ -327,7 +327,7 @@ CONTAINS
       hlp1 = discrimination_ps_c14(CiCa_default_C4 * def_co2_mixing_ratio, &
         &                          def_co2_mixing_ratio, &
         &                          lctlib%ps_pathway)
-    ENDIF
+    END IF
     hlp_frac_c14 = calc_mixing_ratio_C14C(def_co2_deltaC13, &
       &                                   def_co2_deltaC14 - hlp1)
 
@@ -356,16 +356,16 @@ CONTAINS
     IF (model%config%flag_spp1685) THEN
       IF (ABS(model%config%lon - 9.75_wp) < eps8) THEN
         site_ID_spp1685 = "BBR"
-      ELSEIF (ABS(model%config%lon - 10.25_wp) < eps8) THEN
+      ELSE IF (ABS(model%config%lon - 10.25_wp) < eps8) THEN
         site_ID_spp1685 = "LUE"
-      ELSEIF (ABS(model%config%lon - 10.75_wp) < eps8) THEN
+      ELSE IF (ABS(model%config%lon - 10.75_wp) < eps8) THEN
         site_ID_spp1685 = "VES"
-      ELSEIF (ABS(model%config%lon - 12.75_wp) < eps8) THEN
+      ELSE IF (ABS(model%config%lon - 12.75_wp) < eps8) THEN
         site_ID_spp1685 = "MIT"
-      ELSEIF (ABS(model%config%lon - 7.75_wp)  < eps8) THEN
+      ELSE IF (ABS(model%config%lon - 7.75_wp)  < eps8) THEN
         site_ID_spp1685 = "CON"
-      ENDIF
-    ENDIF
+      END IF
+    END IF
     !------------------------------------------------------------------------------------------------------ !
 #endif
 
@@ -980,10 +980,10 @@ CONTAINS
           IF (soil_lay_depth_center_sl(ic, is, iblk) < reference_depth_som_init) THEN
             hlp1(ic, iblk) = hlp1(ic, iblk) + weight_fast_sl(ic, is, iblk) * soil_lay_width_sl(ic, is, iblk)
             hlp2(ic, iblk) = hlp2(ic, iblk) + weight_slow_sl(ic, is, iblk) * soil_lay_width_sl(ic, is, iblk)
-          ENDIF
-        ENDDO
-      ENDDO
-    ENDDO
+          END IF
+        END DO
+      END DO
+    END DO
 
     ! calculate top-soil SOM concentration and convert from default gC/m2 to mol C / m3
     WHERE(hlp1 > eps8)
@@ -1004,14 +1004,14 @@ CONTAINS
             &                                                         * weight_fast_sl(ic, is, iblk)
           sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk)        = init_fast(ic, iblk) * weight_fast_sl(ic, is, iblk)
           sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk)          = init_slow(ic, iblk) * weight_slow_sl(ic, is, iblk)
-        ENDDO
-      ENDDO
-    ENDDO
+        END DO
+      END DO
+    END DO
     ! re-calculate the first layer of the wood litter pool for trees only
     IF (lctlib_growthform == ITREE) THEN
       sb_pool_mt_domain(ix_woody_litter, ixC, :, 1, :) = &
         &   sb_pool_total_som_at_ref_depth_init / molar_mass_C / soil_lay_width_sl(:,1,:)
-    ENDIF
+    END IF
 
     ! NOTE: this differs on purpose from the calculation in mo_q_sb_update_pools for the prescribed option
     !       this is because here I'm trying to ensure that the models are initialised with the same amount of nutrient
@@ -1024,9 +1024,9 @@ CONTAINS
             &                           / soil_lay_depth_ubound_sl(ic, NINT(num_sl_above_bedrock(ic, iblk)), iblk)
           no3_solute(ic, is, iblk) = no3_solute_prescribe &
             &                           / soil_lay_depth_ubound_sl(ic, NINT(num_sl_above_bedrock(ic, iblk)), iblk)
-        ENDDO
-      ENDDO
-    ENDDO
+        END DO
+      END DO
+    END DO
 
     ! inital bulk density and qmax_po4 based on current soil carbon content
     DO iblk = 1,nblks
@@ -1068,7 +1068,7 @@ CONTAINS
           & ph_sl(:,:,iblk), &          ! out
           & Qmax_AlFe_cor(:,:,iblk) )   ! out
       END DO
-    ENDIF
+    END IF
 #endif
 
     ! Correct the 1st soil layer Qmax_AlFe_cor(:,:,:) with the woody litter
@@ -1101,9 +1101,9 @@ CONTAINS
             & km_fast_po4(ic, is, iblk), &
             & km_slow_po4(ic, is, iblk), &
             & Qmax_AlFe_cor(ic, is, iblk) )           ! inout
-        ENDDO
-      ENDDO
-    ENDDO
+        END DO
+      END DO
+    END DO
     ! calculate the partition coefficient between labile and slow P pool based on
     ! their Qmax (double-Langmuir) or global average values (single-Langmuir)
     IF (flag_sb_double_langmuir) THEN
@@ -1120,7 +1120,7 @@ CONTAINS
       END DO
     ELSE
       p_labile_slow_site(:,:,:) = p_labile_slow_global_avg
-    ENDIF
+    END IF
 
     ! nh4 adsorption parameter intialisation
     qmax_nh4_min_sl(:,:,:) = calc_qmax_texture(qmax_nh4_clay, &
@@ -1134,14 +1134,14 @@ CONTAINS
         & 0.0_wp, &
         & qmax_nh4_min_sl(:,:,iblk), &      ! in
         & qmax_nh4(:,:,iblk) )              ! out
-    ENDDO
+    END DO
     DO iblk = 1,nblks
       DO ic = 1,nproma
         DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
           qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk)
-        ENDDO
-      ENDDO
-    ENDDO
+        END DO
+      END DO
+    END DO
     DO iblk = 1,nblks
       CALL calc_qmax_bulk_density_correction( &
         & bulk_soil_carbon_sl(:,:,iblk), &  ! in
@@ -1150,7 +1150,7 @@ CONTAINS
         & km_adsorpt_OM_nh4, &
         & km_adsorpt_mineral_nh4, &         ! in
         & km_adsorpt_nh4_sl(:,:,iblk) )     ! out
-    ENDDO
+    END DO
     DO iblk = 1,nblks
       DO ic = 1,nproma
         DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
@@ -1208,9 +1208,9 @@ CONTAINS
           ! ..
           nh4_n15_solute(ic, is, iblk) = nh4_solute(ic, is, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
           no3_n15_solute(ic, is, iblk) = no3_solute(ic, is, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-        ENDDO
-      ENDDO
-    ENDDO
+        END DO
+      END DO
+    END DO
 
     !> Soil P pools intialisation
     !>
@@ -1245,10 +1245,10 @@ CONTAINS
               po4_assoc_fast(ic, is, iblk) = calc_fast_po4(p_labile(ic, is, iblk), &
                 &                            qmax_po4(ic, is, iblk), &
                 &                            km_adsorpt_po4_sl(ic, is, iblk) )
-            ENDIF
-          ENDDO
-        ENDDO
-      ENDDO
+            END IF
+          END DO
+        END DO
+      END DO
       po4_solute(:,:,:) = p_labile(:,:,:) - po4_assoc_fast(:,:,:)
     ELSE
 #endif
@@ -1495,7 +1495,7 @@ CONTAINS
       &                                             * root_fraction_sl(:,1,:))
     IF (lctlib_growthform == ITREE) THEN
       sb_pool_mt_domain(ix_woody_litter, ixC, :, 1, :)  = def_sb_pool_woody_litter / molar_mass_C / soil_lay_width_sl(:,1,:)
-    ENDIF
+    END IF
     DO iblk = 1,nblks
       DO ic = 1,nproma	
 	    DO is = 1,NINT(num_sl_above_bedrock(ic, iblk))
@@ -1505,9 +1505,9 @@ CONTAINS
 		  sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) = def_sb_pool_jsm_struct_litter / molar_mass_C &
 			&                                                 / soil_lay_width_sl(ic, is, iblk) &
 			&                                                 * (1.0_wp - frac_prod_not_root) * root_fraction_sl(ic, is, iblk)
-		ENDDO
-	  ENDDO
-	ENDDO
+		END DO
+	  END DO
+	END DO
 
     ! for each soil layer
     DO iblk = 1,nblks
@@ -1530,7 +1530,7 @@ CONTAINS
 			! deep soil is initialised with very low MOC, corrected by k_deep_soil_moc_corr
 			IF (soil_lay_depth_ubound_sl(ic, is, iblk) > 2._wp) THEN
 			  frac_mineral_assoc_soil_c = frac_mineral_assoc_soil_c * k_deep_soil_moc_corr
-			ENDIF
+			END IF
 			sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = qmax_org_fine_particle(ic, is, iblk) &
 			  &                                                      * (clay_sl(ic, is, iblk) + silt_sl(ic, is, iblk)) &
 			  &                                                      * bulk_dens_sl(ic, is, iblk) * frac_mineral_assoc_soil_c
@@ -1554,7 +1554,7 @@ CONTAINS
 			  arr_hlp8(ic, is, iblk) = (sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk) &
 				&                     + sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk)) * &
 				&                     molar_mass_C / carbon_per_dryweight_SOM / 1000._wp / rho_bulk_org
-			ENDIF
+			END IF
 			! check if soil is over-saturated with fast C
 			IF (arr_hlp7(ic, is, iblk) > 1._wp ) THEN
 			  sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk)  = sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk)  &
@@ -1586,7 +1586,7 @@ CONTAINS
 				  &                                                 + (arr_hlp8(ic, is, iblk) - arr_hlp9(ic, is, iblk)) &
 				  &                                                 * (1._wp - fact_repartition_om_init_cond2)
 				arr_hlp8(ic, is, iblk) = arr_hlp9(ic, is, iblk)
-			  ENDIF
+			  END IF
 		      sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = calc_fast_po4(arr_hlp8(ic, is, iblk), &
 				&                                                      arr_hlp9(ic, is, iblk), &
 				&                                                      k_desorpt_det / k_adsorpt_det)
@@ -1609,23 +1609,23 @@ CONTAINS
 				  &                                               + (arr_hlp8(ic, is, iblk) - arr_hlp9(ic, is, iblk)) &
 				  &                                               * (1._wp - fact_repartition_om_init_cond2)
 				arr_hlp8(ic, is, iblk) = arr_hlp9(ic, is, iblk)
-			  ENDIF
+			  END IF
 			  sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = calc_fast_po4(arr_hlp8(ic, is, iblk), &
 				&                                                      arr_hlp9(ic, is, iblk), &
 				&                                                      k_desorpt_det / k_adsorpt_det)
 			  sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk) &
 				& = arr_hlp8(ic, is, iblk) - sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk)
-			ENDIF
+			END IF
 		  ELSE
 		    sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk) = 0._wp
 			sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk) = 0._wp
 			sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk) = 0._wp
 			sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk) = 0._wp
 			sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = 0._wp
-		  ENDIF
-        ENDDO
-      ENDDO
-    ENDDO
+		  END IF
+        END DO
+      END DO
+    END DO
 
     ! initial values of soluble nh4 and no3
     DO iblk = 1,nblks
@@ -1665,7 +1665,7 @@ CONTAINS
           qmax_org_min_sl(ic, is, iblk) = qmax_org_min_sl(ic, is, iblk) * frac_mineral_assoc_soil_c
           IF (soil_lay_depth_ubound_sl(ic, is, iblk) > 2._wp) THEN
             qmax_org_min_sl(ic, is, iblk) = qmax_org_min_sl(ic, is, iblk) * 0.1_wp
-          ENDIF
+          END IF
 		END DO
       END DO
 
@@ -1692,7 +1692,7 @@ CONTAINS
           & ph_sl(:,:,iblk), &          ! out
           & Qmax_AlFe_cor(:,:,iblk) )   ! out
       END DO
-    ENDIF
+    END IF
 #endif
 
     ! Correct the first layer Qmax_AlFe_cor(:,:,:) with the woody litter
@@ -1725,9 +1725,9 @@ CONTAINS
             & km_fast_po4(ic, is, iblk), &
             & km_slow_po4(ic, is, iblk), &
             & Qmax_AlFe_cor(ic, is, iblk) )           ! inout
-        ENDDO
-      ENDDO
-    ENDDO
+        END DO
+      END DO
+    END DO
 
     ! calculate the partition coefficient between labile and slow P pool based on
     ! their Qmax (double-Langmuir) or global average values (single-Langmuir)
@@ -1745,7 +1745,7 @@ CONTAINS
       END DO
     ELSE
       p_labile_slow_site(:,:,:) = p_labile_slow_global_avg
-    ENDIF
+    END IF
 
     !> nh4 adsorption parameter intialisation
     !!
@@ -1766,9 +1766,9 @@ CONTAINS
       DO ic = 1,nproma
         DO is = 1,INT(num_sl_above_bedrock(ic, iblk))	
           qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk)
-        ENDDO
-      ENDDO
-    ENDDO
+        END DO
+      END DO
+    END DO
 
     DO iblk = 1,nblks
       CALL calc_qmax_bulk_density_correction( &
@@ -1785,9 +1785,9 @@ CONTAINS
         DO is = 1,INT(num_sl_above_bedrock(ic, iblk))		
           nh4_assoc(ic, is, iblk)     = qmax_nh4(ic, is, iblk) * nh4_solute (ic, is, iblk) / (nh4_solute(ic, is, iblk) + km_adsorpt_nh4_sl(ic, is, iblk))
           nh4_n15_assoc(ic, is, iblk) = nh4_assoc(ic, is, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-        ENDDO
-      ENDDO
-    ENDDO
+        END DO
+      END DO
+    END DO
 
     !> Soil P pools intialisation
     !>
@@ -1823,11 +1823,11 @@ CONTAINS
               po4_assoc_fast(ic, is, iblk) = calc_fast_po4(p_labile(ic, is, iblk), &
                 &                            qmax_po4(ic, is, iblk), &
                 &                            km_adsorpt_po4_sl(ic, is, iblk))
-            ENDIF
+            END IF
             po4_solute(ic, is, iblk) = p_labile(ic, is, iblk) - po4_assoc_fast(ic, is, iblk)
-          ENDDO
-        ENDDO
-      ENDDO
+          END DO
+        END DO
+      END DO
     ELSE
 #endif
 
@@ -2045,10 +2045,10 @@ CONTAINS
             soil_p_weight(ic) = hlp2(ic) - soil_weight_sl(ic,is) * (hlp1(ic) - soil_p_depth) / soil_depth_sl(ic,is)
             aflag(ic)         = .FALSE.
             soil_p_layer(ic)  = is
-          ENDIF
-        ENDIF
-      ENDDO
-    ENDDO
+          END IF
+        END IF
+      END DO
+    END DO
     hlp4(:) = rhlp1(:) / soil_p_weight(:) ! the P density from init map, [g P / kg soil]
 
     !> 2.0 calculate the initial slow P, occluded P, primary P pool, and p_labile
@@ -2069,7 +2069,7 @@ CONTAINS
           hlp1(ic) = hlp1(ic) / (hlp1(ic) + hlp2(ic) + hlp3(ic))
           hlp2(ic) = hlp2(ic) / (hlp1(ic) + hlp2(ic) + hlp3(ic))
           hlp3(ic) = hlp3(ic) / (hlp1(ic) + hlp2(ic) + hlp3(ic))
-        ENDIF
+        END IF
         IF (soil_p_layer(ic) > is) THEN
           po4_assoc_slow(ic,is) = bulk_dens_sl(ic,is) * hlp4(ic) * (soil_p_slow(ic,is) + soil_p_labile(ic,is)) &
             &                     / rhlp1(ic) / molar_mass_P * (1._wp - p_labile_slow_ratio(ic,is))
@@ -2086,9 +2086,9 @@ CONTAINS
           po4_primary(ic,is)    = bulk_dens_sl(ic,is) * hlp4(ic) * hlp1(ic) / molar_mass_P
           arr_hlp1(ic,is)       = bulk_dens_sl(ic,is) * hlp4(ic) * hlp2(ic) / molar_mass_P &
             &                     * p_labile_slow_ratio(ic,is)
-        ENDIF
-      ENDDO
-    ENDDO
+        END IF
+      END DO
+    END DO
 
     !> 2.1 calculate the initial solute P and fast P,
     !! based on the assumption that labile P is the sum of both,
@@ -2102,9 +2102,9 @@ CONTAINS
         ELSE
           po4_assoc_fast(ic, is) = calc_fast_po4(arr_hlp1(ic, is), qmax_po4(ic, is), km_po4(ic, is))
           po4_solute(ic, is)     = arr_hlp1(ic, is) - po4_assoc_fast(ic, is)
-        ENDIF
-      ENDDO
-    ENDDO
+        END IF
+      END DO
+    END DO
   END SUBROUTINE init_soil_p_pools
 
 #ifndef __QUINCY_STANDALONE__

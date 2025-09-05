@@ -309,12 +309,12 @@ MODULE mo_sb_memory_class
     !>3D JSM pools
     !>
     TYPE(t_jsb_var_real3d)  :: &
-                            sb_bgcm_pool_microbial_c, &           !< microbial C [mol C m-3 soil]
-                            sb_bgcm_pool_microbial_n, &           !< microbial N [mol N m-3 soil]
-                            sb_bgcm_pool_microbial_p, &           !< microbial P [mol P m-3 soil]
-                            sb_bgcm_pool_mineral_assoc_c, &       !< microbial C [mol C m-3 soil]
-                            sb_bgcm_pool_mineral_assoc_n, &       !< microbial N [mol N m-3 soil]
-                            sb_bgcm_pool_mineral_assoc_p          !< microbial P [mol P m-3 soil]
+      & sb_bgcm_pool_microbial_c, &        !< microbial C [mol C m-3 soil]
+      & sb_bgcm_pool_microbial_n, &        !< microbial N [mol N m-3 soil]
+      & sb_bgcm_pool_microbial_p, &        !< microbial P [mol P m-3 soil]
+      & sb_bgcm_pool_mineral_assoc_c, &    !< microbial C [mol C m-3 soil]
+      & sb_bgcm_pool_mineral_assoc_n, &    !< microbial N [mol N m-3 soil]
+      & sb_bgcm_pool_mineral_assoc_p       !< microbial P [mol P m-3 soil]
 
     !------------------------------------------------------------------------------------------------------ !
     !>3D soil properties
@@ -365,8 +365,8 @@ MODULE mo_sb_memory_class
     !> biosphere-level diagnostics
     !>
     TYPE(t_jsb_var_real3d)  :: &
-      & total_soil_n, &                 !< sb_pool_total_som_n + nh4_solute + nh4_assoc + no3_solute [mol m-3]
-      & total_soil_inorg_n              !< nh4_solute + nh4_assoc + no3_solute [mol m-3]
+      & total_soil_n, &      !< sb_pool_total_som_n + nh4_solute + nh4_assoc + no3_solute [mol m-3]
+      & total_soil_inorg_n   !< nh4_solute + nh4_assoc + no3_solute [mol m-3]
 
     TYPE(t_jsb_var_real2d)  :: &
       & ecosystem_total_n_loss     !< emission_noy + emission_n2o + emission_n2 + leaching_dom_nitrogen + leaching_nh4_solute + leaching_no3_solute

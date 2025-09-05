@@ -762,13 +762,17 @@ CONTAINS
       ! ...
       sb_transport_mt(:,:,:,:) = sb_transport_mt(:, :, :, :) + sb_particle_transport_hlp_mt(:, :, :, :)
       sb_pool_mt(:,:,:,:)      = sb_pool_mt(:, :, :, :)      + sb_particle_transport_hlp_mt(:, :, :, :)
-      WHERE (sb_pool_mt(ix_dom, ixN, :, :) > eps8)
-        dom_cn(:,:)              = sb_pool_mt(ix_dom, ixC, :, :) / sb_pool_mt(ix_dom, ixN, :, :)
-      ENDWHERE
+      DO ic = 1,nc
+        DO isoil = 1,INT(num_sl_above_bedrock(ic))  
+          IF (sb_pool_mt(ix_dom, ixN, ic, isoil) > eps8) THEN
+            dom_cn(ic, isoil)  = sb_pool_mt(ix_dom, ixC, ic, isoil) / sb_pool_mt(ix_dom, ixN, ic, isoil)
+          END IF
 
-      WHERE (sb_pool_mt(ix_dom, ixP, :, :) > eps8)
-        dom_cp(:,:)              = sb_pool_mt(ix_dom, ixC, :, :) / sb_pool_mt(ix_dom, ixP, :, :)
-      ENDWHERE
+          IF (sb_pool_mt(ix_dom, ixP, ic, isoil) > eps8) THEN
+            dom_cp(ic, isoil)  = sb_pool_mt(ix_dom, ixC, ic, isoil) / sb_pool_mt(ix_dom, ixP, ic, isoil)
+          END IF
+        END DO
+      END DO
 
 
       sb_bgcm_pool_microbial_c(:,:)       = sb_pool_mt(ix_microbial, ixC, :, :)
@@ -947,12 +951,16 @@ CONTAINS
       hlp2(:,1) = hlp2(:,1) + (nhx_n15_deposition(:) + fertiliser_nh4_n15(:)) &
         &                     / 1.e6_wp / soil_depth_sl(:,1) * dtime
 
-      WHERE ((nh4_n15_solute(:,:) + nh4_n15_assoc(:,:)) < -hlp2(:,:))
-        hlp2(:,:) = -(nh4_n15_solute(:,:) + nh4_n15_assoc(:,:))
-      ENDWHERE
-      WHERE (nh4_solute(:,:) + nh4_assoc(:,:) > eps8)
-        partition_coef(:,:) = nh4_solute(:,:) / (nh4_solute(:,:) + nh4_assoc(:,:))
-      ENDWHERE
+      DO ic = 1,nc
+        DO isoil = 1,INT(num_sl_above_bedrock(ic))
+          IF ((nh4_n15_solute(ic,isoil) + nh4_n15_assoc(ic,isoil)) < -hlp2(ic,isoil)) THEN
+            hlp2(ic,isoil) = -(nh4_n15_solute(ic,isoil) + nh4_n15_assoc(ic,isoil))
+          END IF
+          IF (nh4_solute(ic,isoil) + nh4_assoc(ic,isoil) > eps8) THEN
+            partition_coef(ic,isoil) = nh4_solute(ic,isoil) / (nh4_solute(ic,isoil) + nh4_assoc(ic,isoil))
+          END IF
+        END DO
+      END DO
 
       nh4_n15_solute(:,:) = partition_coef(:,:) * (nh4_n15_solute(:,:) + nh4_n15_assoc(:,:) + hlp2(:,:))
       nh4_n15_assoc(:,:)  = (1._wp - partition_coef(:,:)) * (nh4_n15_solute(:,:) + nh4_n15_assoc(:,:) + hlp2(:,:))

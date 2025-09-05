@@ -399,7 +399,7 @@ CONTAINS
 
     IF (param > eps8 .AND. wtr_soil_fc_sl > eps8 .AND. wtr_soil_sl > eps8) THEN
        hlp1 = (wtr_soil_sl / wtr_soil_fc_sl) ** k2_afps
-       IF(hlp1 > param) THEN
+       IF (hlp1 > param) THEN
           rate_modifier = 1._wp / hlp1
        ELSE
           rate_modifier = 1._wp / param
