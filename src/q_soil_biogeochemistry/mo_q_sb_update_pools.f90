@@ -763,7 +763,7 @@ CONTAINS
       sb_transport_mt(:,:,:,:) = sb_transport_mt(:, :, :, :) + sb_particle_transport_hlp_mt(:, :, :, :)
       sb_pool_mt(:,:,:,:)      = sb_pool_mt(:, :, :, :)      + sb_particle_transport_hlp_mt(:, :, :, :)
       DO ic = 1,nc
-        DO isoil = 1,INT(num_sl_above_bedrock(ic))  
+        DO isoil = 1,INT(num_sl_above_bedrock(ic))
           IF (sb_pool_mt(ix_dom, ixN, ic, isoil) > eps8) THEN
             dom_cn(ic, isoil)  = sb_pool_mt(ix_dom, ixC, ic, isoil) / sb_pool_mt(ix_dom, ixN, ic, isoil)
           END IF
