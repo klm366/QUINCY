@@ -1895,11 +1895,7 @@ CONTAINS
     sb_pool_mt_domain(ix_dom_assoc, ixC14, :, :, :) = sb_pool_mt_domain(ix_dom_assoc, ixC, :, :, :) * hlp_frac_c14
     sb_pool_mt_domain(ix_dom_assoc, ixN15, :, :, :) = sb_pool_mt_domain(ix_dom_assoc, ixN, :, :, :) / &
       &                                        (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-    ! fungi and mycorrhiza
-    sb_pool_mt_domain(ix_fungi, ixC13, :, :, :) = sb_pool_mt_domain(ix_fungi, ixC, :, :, :) * hlp_frac_c13
-    sb_pool_mt_domain(ix_fungi, ixC14, :, :, :) = sb_pool_mt_domain(ix_fungi, ixC, :, :, :) * hlp_frac_c14
-    sb_pool_mt_domain(ix_fungi, ixN15, :, :, :) = sb_pool_mt_domain(ix_fungi, ixN, :, :, :) / &
-      &                                    (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+    ! mycorrhiza
     sb_pool_mt_domain(ix_mycorrhiza, ixC13, :, :, :) = sb_pool_mt_domain(ix_mycorrhiza, ixC, :, :, :) * hlp_frac_c13
     sb_pool_mt_domain(ix_mycorrhiza, ixC14, :, :, :) = sb_pool_mt_domain(ix_mycorrhiza, ixC, :, :, :) * hlp_frac_c14
     sb_pool_mt_domain(ix_mycorrhiza, ixN15, :, :, :) = sb_pool_mt_domain(ix_mycorrhiza, ixN, :, :, :) / &

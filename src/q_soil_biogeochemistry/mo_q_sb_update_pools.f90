@@ -1605,7 +1605,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     sb_pool_total_bg_soil_elem(:,:) &
       & =  sb_pool_mt(ix_dom, ix_elem, :, :)       + sb_pool_mt(ix_dom_assoc, ix_elem, :, :)  &
-      &  + sb_pool_mt(ix_fungi, ix_elem, :, :)     + sb_pool_mt(ix_mycorrhiza, ix_elem, :, :) &
+      &  + sb_pool_mt(ix_mycorrhiza, ix_elem, :, :) &
       &  + sb_pool_mt(ix_microbial, ix_elem, :, :) + sb_pool_mt(ix_residue, ix_elem, :, :)    &
       &  + sb_pool_mt(ix_residue_assoc, ix_elem, :, :)
 

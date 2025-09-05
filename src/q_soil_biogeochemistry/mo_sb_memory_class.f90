@@ -62,7 +62,7 @@ MODULE mo_sb_memory_class
       & sb_pool_total_c14        , &        !< sum of all sb_pool%*%carbon14    [mol m-3]
       & sb_pool_total_n15                   !< sum of all sb_pool%*%nitrogen15  [mol m-3]
     ! Sum of
-    ! soil organic matter (som): dom & dom_assoc & fungi & mycorrhiza & microbial & residue & residue_assoc
+    ! soil organic matter (som): dom & dom_assoc & mycorrhiza & microbial & residue & residue_assoc
     ! and below ground (bg) litter: bg parts of soluble_litter & polymeric_litter & woody_litter
     TYPE(t_jsb_var_real3d) ::  &
       & sb_pool_total_bg_soil_c,   & !< sum of som and below ground litter (layers 2:nsoil) of sb_pool%*%carbon     [mol m-3]
@@ -399,7 +399,6 @@ MODULE mo_sb_memory_class
     TYPE(t_sb_bgcm_with_elements), POINTER :: soluable_litter  !< elements of metabolic litter (sugars, cellulose etc.)
     TYPE(t_sb_bgcm_with_elements), POINTER :: polymeric_litter !< elements of structural litter (lignified litter)
     TYPE(t_sb_bgcm_with_elements), POINTER :: woody_litter     !< elements of physically protected wood litter
-    TYPE(t_sb_bgcm_with_elements), POINTER :: fungi            !< elements of saprophytic fungal biomass
     TYPE(t_sb_bgcm_with_elements), POINTER :: mycorrhiza       !< elements of mycorrhizal fungal biomass
     TYPE(t_sb_bgcm_with_elements), POINTER :: microbial        !< elements of microbial biomass (bacteria!)
     TYPE(t_sb_bgcm_with_elements), POINTER :: residue          !< elements of necromass of fungi, microbial and mycorrhiza
@@ -518,9 +517,8 @@ CONTAINS
     END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
-    ! add memory only for LAND & PFT tiles
-    IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
-       & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
+    ! add memory only for PFT tiles
+    IF (lib_id > 0) THEN
 
       ! --------------------------------------------------------------------------------------------------- !
       !>  1.0 bgc_material structures
@@ -631,7 +629,13 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
+    END IF ! IF(lib_id > 0) THEN (i.e. if PFT tile)
 
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! add memory for LAND & PFT tiles
+    IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
+       & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
+      ! --------------------------------------------------------------------------------------------------- !
       ! --------------------------------------------------------------------------------------------------- !
       !> 2.0 bgc_material diagnostics variables - used for model output with IQ
       !>
@@ -3328,9 +3332,6 @@ CONTAINS
     ! woody_litter
     sb_bgcm_with_components%woody_litter => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
       & name = 'woody_litter_bgcm', shortname = 'woo_litter', elements_index_map = elements_index_map(:), unit = unit)
-    ! fungi
-    sb_bgcm_with_components%fungi => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
-      & name = 'fungi_bgcm', shortname = 'fungi', elements_index_map = elements_index_map(:), unit = unit)
     ! mycorrhiza
     sb_bgcm_with_components%mycorrhiza => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
       & name = 'mycorrhiza_bgcm', shortname = 'mycorrhiza', elements_index_map = elements_index_map(:), unit = unit)

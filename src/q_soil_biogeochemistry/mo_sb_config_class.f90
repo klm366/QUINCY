@@ -28,7 +28,7 @@ MODULE mo_sb_config_class
   PUBLIC :: t_sb_config, get_number_of_sb_compartments, simple_1d_compartments
   PUBLIC :: SB_PART_DOM_IDX , SB_PART_DOM_ASSOC_IDX, SB_PART_SOLUBLE_LITTER_IDX,                   &
     &       SB_PART_POLYMERIC_LITTER_IDX, SB_PART_WOODY_LITTER_IDX
-  PUBLIC :: SB_PART_FUNGI_IDX, SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX, &
+  PUBLIC :: SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX, &
     &       SB_PART_RESIDUE_ASSOC_IDX
   PUBLIC :: CONST_DEP, REFYEAR_DEP, TRANS_DEP
 
@@ -96,7 +96,6 @@ MODULE mo_sb_config_class
       & SB_PART_SOLUBLE_LITTER_IDX,   &  !< metabolic litter (sugars, cellulose etc.)
       & SB_PART_POLYMERIC_LITTER_IDX, &  !< structural litter (lignified litter)
       & SB_PART_WOODY_LITTER_IDX,     &  !< physically protected wood litter
-      & SB_PART_FUNGI_IDX,            &  !< saprophytic fungal biomass
       & SB_PART_MYCORRHIZA_IDX,       &  !< mycorrhizal fungal biomass
       & SB_PART_MICROBIAL_IDX,        &  !< microbial biomass (bacteria!)
       & SB_PART_RESIDUE_IDX,          &  !< necromass of fungi, microbial and mycorrhiza
