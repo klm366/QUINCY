@@ -49,7 +49,6 @@
 # 14: UAR:  urban area
 # 15: CSH:  evergreen (needleleaf) cool low shrubs
 # 16: BSH:  tall broadleaf decidious shrubs
-
 #----------------------------------------------------------------------------------------                             
                              
 NLCT 16 # number of landcover types
@@ -103,27 +102,27 @@ crown_shape_factor 3.34 3.34 3.34 3.34 2.19 2.88 3.34 3.34 3.34 3.34 3.34 3.34 3
 cn_leaf 16.89 13.73 21.32 21.32 12.09 19.37 17.84 14.14 17.84 14.14 17.84 14.14 14.14 14.14 10.11 21.50
         
 #cn_leaf_min: Minimum leaf N for dynamic stoichiometry  (mgN/gDW)        
-# Tuned from OCN, for shrubs adapted to changed default        
+# Tuned from OCN        
 cn_leaf_min 35.0 35.0 35.0 35.0 20.0 30.0 35.0 28.0 35.0 28.0 35.0 28.0 28.0 28.0 16.7 35.3
         
 #cn_leaf_max: Maximum leaf N for dynamic stoichiometry  (mgN/gDW)        
-# Tuned from OCN, for shrubs adapted to changed default        
+# Tuned from OCN        
 cn_leaf_max 12.4 12.4 12.4 12.4 7.4 15.5 12.0 10.0 12.0 10.0 12.0 10.0 10.0 10.0 12.5 13.2
         
 #np_leaf: default leaf phosphorus concentration (mgP/gDW)          
-# From Kattge et al. 2011, Table 5, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P, for shrubs adapted to changed default        
+# From Kattge et al. 2011, Table 5, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P        
 np_leaf 0.86 0.84 1.44 1.44 1.23 1.83 1.43 1.36 1.43 1.36 1.43 1.36 1.36 1.36 0.74 1.56
         
 #np_leaf_min: minimum leaf phosphorus concentration (mgP/gDW)        
-# Set to 0.5 of fixed np_leaf value, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P, for shrubs adapted to defaut leaf P        
+# Set to 0.5 of fixed np_leaf value, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P        
 np_leaf_min 1.29 1.26 2.16 2.16 1.85 2.75 2.15 2.04 2.15 2.04 2.15 2.04 2.04 2.04 1.22 2.34
         
 #np_leaf_max: maximum leaf phosphorus concentration (mgP/gDW)        
-# Set to 1.5 of fixed np_leaf value, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P, for shrubs adapted to defaut leaf P        
+# Set to 1.5 of fixed np_leaf value, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P        
 np_leaf_max 0.43 0.42 0.72 0.72 0.62 0.92 0.72 0.68 0.72 0.68 0.72 0.68 0.68 0.68 0.37 0.78
         
 #k0_fn_struc: fraction of leaf N not used for photosynthesis (Friend 1997)        
-# temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5 # shrub/needleleaf number does not match       
+# temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5        
 k0_fn_struc 0.75 0.70 0.63 0.63 0.83 0.79 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.83 0.63
         
 #fn_oth_min: minimum fraction of non-photosynthetic leaf N. Calculated using range of leaf N values from GLOPNET        
@@ -155,7 +154,7 @@ gmin 0.00006 0.00006 0.00006 0.00006 0.00003 0.00003 0.00006 0.00006 0.00006 0.0
 #           
         
 #tau_leaf: average turnover time of a leaf (months)        
-# From Kattge et al. 2011, Table 5, converted internally from month to years - wrong reference
+# From Kattge et al. 2011, Table 5, converted internally from month to years -wrong reference
 tau_leaf 16.83 15.88 5.83 5.83 39.7 6.08 3.85 3.85 3.85 3.85 3.85 3.85 3.85 3.85 39.7 5.83
         
 #tau_fine_root: average turnover time of a fine root (years), Ahrens et al. 2014, NP        
@@ -167,7 +166,7 @@ tau_coarse_root 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0 8.0
 #tau_branch: turnover time of the fraction of sapwood that is in branches (years), for shrub based on higher sapwood fraction        
 tau_branch 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 10.0 50.0 50.0
         
-#tau_sap_wood: turnover time of the sapwood pool (years), for low shrubs: 0.01 fraction/year -> 100 years (Zhang et al., 2013, for other species:10-20 yr)         
+#tau_sap_wood: turnover time of the sapwood pool (years), for low shrubs: 0.01 fraction/year -> 100 years (Zhang et al., 2013, for other species:10-20 yr)        
 tau_sap_wood 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 100.0 66.7
         
 #tau_fruit: turnover time of the fruit pool (years)        
@@ -187,17 +186,27 @@ tau_mycorrhiza 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
 #         
         
 #vmax_uptake_n: vmax of N uptake (~micro-mol N / mol C / s) [714.28_wp ? old value]        
-# tuned from OCN's 1.5 gN/gC/1800s        
-vmax_uptake_n 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 2.1 2.1 0.42 0.42 0.42 0.42
+# tuned with GLOBAL sitelists to make N uptake comparable with other C-N coupled TBMs (NMIP2) 
+vmax_uptake_n 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04
         
 #vmax_uptake_p: vmax of P uptake (~micro-mol P / mol C / s)        
-# tuned from OCN's 1.5 gN/gC/1800s plus changes by Lin following Kavka and Polle 2016 (0.01  micro-mol P / g fine root / min)        
-vmax_uptake_p 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0088 0.0088 0.0044 0.0044 0.044 0.044
+# tuned together with N, but needs further validation
+vmax_uptake_p 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012
         
 #bnf_base: base nitrogen fixation rate (g N / m2 / year)        
 # converted internally to mumol N m-2 s-1        
 bnf_base 2.0 1.0 1.0 1.0 1.0 1.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 1.0 1.0
-        
+
+#vmax_symb_bnf: maximum rate of N fixation (g N / g C fine root / yr )
+# converted internally to mumol N / mol C fine root / s
+# set C4 grass/pasture/crop as zero because they cannot fix N
+# tuned based on T. Davies-Barnard and P. Friedlingstein 2020
+vmax_symb_bnf 0.0150 0.0680 0.0306 0.0680 0.0068 0.0680 0.0306 0.0 0.0306 0.0 0.0306 0.0 0.0 0.0 0.0068 0.0680
+#km_symb_bnf: half-saturating cost of the response of N fixation (g C / g N)
+# converted internally to mol C / mol N
+# tuned to fit the meta-analysis of T. Davies-Barnard and P. Friedlingstein 2020
+km_symb_bnf 5.0 5.0 5.0 5.0 5.0 5.0 200.0 200.0 200.0 200.0 200.0 200.0 200.0 200.0 5.0 5.0       
+
 #        
 # Vegetation dynamics parameters        
 #        
@@ -213,8 +222,6 @@ seed_size 0.5 0.5 0.5 0.5 0.5 0.5 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.5 0.5
        
 #k1_mort_greff: asymptotic growth efficiency mortality rate (1/yr)
 k1_mort_greff 0.05 0.05 0.3 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
- 
- 
  
 #        
 # Phenology parameters        
@@ -266,7 +273,7 @@ k2_fruit_alloc 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.1 0.1
 #allom_k1: paramter in height diameter relationship, Thum et al. 2019        
 allom_k1 55.0 55.0 55.0 55.0 55.0 55.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0 20.0
         
-#allom_k2: paramter in height diameter relationship, Thum et al. 2019        
+#allom_k2: paramter in height diameter relationship        
 allom_k2 0.65 0.65 0.65 0.65 0.65 0.65 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.67 0.67
         
 #phi_leaf_min: minimum leaf water potential (MPa)        
@@ -290,6 +297,8 @@ fstore_target 1.0 1.2 1.0 1.0 0.5 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 0.5 1.0
 #        
 # Soil        
 #        
+        
+#k_root_dist:         
 # tuned according to Jackson et al. 1996, Oecologia, to reproduce their cummulative root distribution profiles        
 # only making use of the contrast sclerophyllic, tree, grass        
 k_root_dist 3.5 2.8 2.5 3.5 3.5 3.5 5.5 5.5 5.5 5.5 5.5 5.5 5.5 5.5 4.5 4.5
@@ -326,6 +335,7 @@ AlbedolitterNIR 0.16 0.17 0.17 0.22 0.20 0.20 0.34 0.34 0.34 0.34 0.34 0.34 0.0 
 VegRoughness 2.0 1.0 1.0 1.0 1.4 1.4 0.5 0.5 0.5 0.5 0.5 0.5 0.005 1.0 0.2 0.5
 
 #MinVegRoughness: Vegetation roughness length at LAI=1 [m]; for non-vegetation value is arbitrary but should be larger than zero to avoid division by zero
-MinVegRoughness 2.0 1.0 1.0 1.0 1.0 1.0 0.005 0.005 0.005 0.005 0.005 0.005 0.005 1.0 0.05 0.1
+MinVegRoughness 2.0 1.0 1.0 1.0 1.0 1.0 0.005 0.005 0.005 0.005 0.005 0.005 0.005 1.0 0.2 0.5
+                     
 #MaxVegRoughness: Vegetation roughness length at LAI=LAI_max [m]; for non-vegetation value is arbitrary but should be larger than zero to avoid division by zero
-MaxVegRoughness 5.0 3.0 3.0 3.0 3.0 3.0 0.1 0.1 0.1 0.1 0.1 0.1 0.01 3.0 0.5 1.0
+MaxVegRoughness 5.0 3.0 3.0 3.0 3.0 3.0 0.1 0.1 0.1 0.1 0.1 0.1 0.01 3.0 0.6 1.5
