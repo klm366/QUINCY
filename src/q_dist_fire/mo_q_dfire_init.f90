@@ -114,6 +114,8 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain      :: area_burned
     dsl4jsb_Real2D_onDomain      :: area_burned_fract
+    dsl4jsb_Real2D_onDomain      :: area_burned_output
+    dsl4jsb_Real2D_onDomain      :: area_burned_fract_output
     dsl4jsb_Real3D_onDomain      :: dead_frac_consumption
     dsl4jsb_Real2D_onDomain      :: i_surface
 
@@ -203,6 +205,8 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, area_burned)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, area_burned_fract)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, area_burned_output)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, area_burned_fract_output)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, dead_frac_consumption)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, i_surface)
 
@@ -246,6 +250,8 @@ CONTAINS
 
     area_burned = 0._wp
     area_burned_fract = 0._wp
+    area_burned_output = 0._wp
+    area_burned_fract_output = 0._wp
     dead_frac_consumption = 0._wp
     i_surface = 0._wp
     dead_fuel_consumption_1hr = 0._wp

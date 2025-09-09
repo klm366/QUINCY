@@ -321,7 +321,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1000hr ! out [g DM m-2]
 
     dsl4jsb_Real2D_onChunk                :: area_burned               ! out [ha ts-1]
-    dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! out [-]
+    dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! out [% ts-1]
+    dsl4jsb_Real2D_onChunk                :: area_burned_output        ! out [ha s-1]
+    dsl4jsb_Real2D_onChunk                :: area_burned_fract_output  ! out [% s-1]
     dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! out [-]
     dsl4jsb_Real2D_onChunk                :: i_surface                 ! out [kW m-1]
 
@@ -412,7 +414,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_1000hr) ! out [g DM m-2]
 
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned)               ! out [ha ts-1]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_fract)         ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_fract)         ! out [% ts-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_output)        ! out [ha s-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_fract_output)  ! out [% s-1]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_frac_consumption)     ! out [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, i_surface)                 ! out [kW m-1]
 
@@ -536,6 +540,8 @@ CONTAINS
     mask_is_fire_intense_enough = logical2real(sf_spitfire % is_fire_intense_enough)
     area_burned_fract = sf_spitfire % area_burned_fract
     area_burned = sf_spitfire % area_burned
+    area_burned_fract_output = sf_spitfire % area_burned_fract / dtime !< to seconds
+    area_burned_output = sf_spitfire % area_burned / dtime !< to seconds
 
     fdi = sf_spitfire % fdi ! todo: define as pointer
 
