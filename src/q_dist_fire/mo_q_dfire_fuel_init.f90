@@ -111,6 +111,11 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: F_scorch_height
     dsl4jsb_Real2D_onDomain      :: crown_length
     dsl4jsb_Real2D_onDomain      :: tree_height
+
+    dsl4jsb_Real3D_onDomain      :: veg_fire_litterfall_total_els
+    dsl4jsb_Real3D_onDomain      :: veg_fire_emisisons_total_els
+    dsl4jsb_Real3D_onDomain      :: sb_fire_emisisons_total_els
+    dsl4jsb_Real3D_onDomain      :: sb_fire_litter_ash_total_els
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(Q_DFIRE_FUEL_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -166,6 +171,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, emissions_els)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, residue_els)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, overflow_els)
+
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, veg_fire_litterfall_total_els)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, veg_fire_emisisons_total_els)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, sb_fire_emisisons_total_els)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, sb_fire_litter_ash_total_els)
     ! ----------------------------------------------------------------------------------------------------- !
     !WRITE(*,*) "Computing q_dfire_fuel_init..."
     dead_fuel_1hr_dfp = 0._wp
@@ -213,6 +223,11 @@ CONTAINS
     emissions_els = 0._wp
     residue_els = 0._wp
     overflow_els = 0._wp
+
+    veg_fire_litterfall_total_els = 0._wp
+    veg_fire_emisisons_total_els = 0._wp
+    sb_fire_emisisons_total_els = 0._wp
+    sb_fire_litter_ash_total_els = 0._wp
   END SUBROUTINE q_dfire_fuel_init
 
 #endif

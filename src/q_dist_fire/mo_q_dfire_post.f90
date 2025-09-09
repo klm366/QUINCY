@@ -101,7 +101,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store !< the bgcm store of this tile
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: iblk, ics, ice, nc, ic
+    INTEGER                               :: iblk, ics, ice, nc, ic, ipool, iel
     INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
 
@@ -537,7 +537,21 @@ CONTAINS
     residue_els = (SUM(residue_dead_el, DIM=2) + SUM(residue_live_el, DIM=2)) / dtime * 1000000._wp !< 2 = fuel pool index
     overflow_els = (SUM(mass_imbalance_emitted_dead_el, DIM=2) + & !< 2 = fuel pool index
                         SUM(mass_imbalance_emitted_live_el, DIM=2)) / dtime * 1000000._wp
-
+    ! for diagnostics (fluxes):
+    DO ipool=1, SIZE(veg_fire_litterfall_mt,DIM=1)
+      DO iel=1, df_sf_elements_nr
+        DO ic=1, nc ! (#pool, #elements, #nc)
+          veg_fire_litterfall_total_els(ic,iel) = veg_fire_litterfall_total_els(ic,iel) + veg_fire_litterfall_mt(ipool,iel,ic)
+          sb_fire_emissions_total_els(ic,iel) = sb_fire_emisisons_total_els(ic,iel) + sb_fire_emisisons_mt(ipool,iel,ic)
+          veg_fire_emisisons_total_els(ic,iel) = veg_fire_emisisons_total_els(ic,iel) + veg_fire_emisisons_total_els(ipool,iel,ic)
+          sb_fire_litter_ash_total_els(ic,iel) = sb_fire_litter_ash_total_els(ic,iel) + sb_fire_litter_ash_mt(ipool,iel,ic)
+        END DO
+      END DO
+    END DO
+    veg_fire_litterfall_total_els = veg_fire_litterfall_total_els / dtime * 1000000._wp ! to umols s-1
+    sb_fire_emissions_total_els = sb_fire_emissions_total_els / dtime * 1000000._wp
+    veg_fire_emisisons_total_els = veg_fire_emisisons_total_els / dtime * 1000000._wp
+    sb_fire_litter_ash_total_els = sb_fire_litter_ash_total_els / dtime * 1000000._wp
   END SUBROUTINE update_q_dfire_post
 
 
