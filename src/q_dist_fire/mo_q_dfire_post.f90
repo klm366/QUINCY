@@ -379,8 +379,6 @@ CONTAINS
       w_oi = SUM(dead_fuel_fcl, DIM=2) !< 2= dead fuel pools index, fuel class only
 
       dbh(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
-      !WRITE(*,*) "update_q_dfire_post:: area, tile_fract, height, dbh=", &
-      !      area(1), tile_fract(1), (tile_fract(1) > 0._wp), height(1), dbh(1)
 
       is_fire_intense_enough = real2logical(mask_is_fire_intense_enough) .AND. &
                                 (tile_fract > 0._wp) .AND. & ! tile is empty, skip 
