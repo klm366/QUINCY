@@ -166,7 +166,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: i_surface                 ! in [kW m-1]
     dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! in [-]
     dsl4jsb_Real2D_onChunk                :: pm_prop_ck                ! out [-]
-    dsl4jsb_Real2D_onChunk                :: pm_fire                   ! out, Tree probability of mortality by fire [0 to 1]
+    dsl4jsb_Real2D_onChunk                :: pm_fire                   ! out, Tree probability of mortality by fire [0 to 1 ts-1]
+    dsl4jsb_Real2D_onChunk                :: pm_fire_output            ! out, Tree probability of mortality by fire [0 to 1 s-1]
     dsl4jsb_Real2D_onChunk                :: pm_tau                    ! out [-]
     dsl4jsb_Real2D_onChunk                :: tau_l                     ! out [-]
     dsl4jsb_Real2D_onChunk                :: tau_c                     ! out [-]
@@ -255,7 +256,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, i_surface)                 ! in [kW m-1]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, mask_is_fire_intense_enough)! in [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_prop_ck)           ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_fire)              ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_fire)              ! out [- ts-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_fire_output)       ! out [- s-1]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_tau)               ! out [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, tau_l)                ! out [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, tau_c)                ! out [-]
@@ -308,6 +310,7 @@ CONTAINS
     is_fire_intense_enough = .FALSE.
     fc_live = 0._wp
     pm_fire = 0._wp
+    pm_fire_output = 0._wp
     pm_prop_ck = 0._wp
     pm_tau = 0._wp
     tau_l = 0._wp
@@ -379,8 +382,6 @@ CONTAINS
       w_oi = SUM(dead_fuel_fcl, DIM=2) !< 2= dead fuel pools index, fuel class only
 
       dbh(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
-      !WRITE(*,*) "update_q_dfire_post:: area, tile_fract, height, dbh=", &
-      !      area(1), tile_fract(1), (tile_fract(1) > 0._wp), height(1), dbh(1)
 
       is_fire_intense_enough = real2logical(mask_is_fire_intense_enough) .AND. &
                                 (tile_fract > 0._wp) .AND. & ! tile is empty, skip 
@@ -426,6 +427,7 @@ CONTAINS
       If (dsl4jsb_Config(Q_DFIRE_)%flag_has_prob_mort_feedback) THEN
         ! todo: add pm_fire_diag -> always output (even when false)
         pm_fire = prob_mort % pm_fire * area_burned_fract_pft
+        pm_fire_output = pm_fire / dtime !< from ts-1 to seconds-1
       End If
     END IF
 

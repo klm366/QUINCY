@@ -321,7 +321,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1000hr ! out [g DM m-2]
 
     dsl4jsb_Real2D_onChunk                :: area_burned               ! out [ha ts-1]
-    dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! out [-]
+    dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! out [% ts-1]
+    dsl4jsb_Real2D_onChunk                :: area_burned_output        ! out [ha s-1]
+    dsl4jsb_Real2D_onChunk                :: area_burned_fract_output  ! out [% s-1]
     dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! out [-]
     dsl4jsb_Real2D_onChunk                :: i_surface                 ! out [kW m-1]
 
@@ -412,7 +414,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_1000hr) ! out [g DM m-2]
 
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned)               ! out [ha ts-1]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_fract)         ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_fract)         ! out [% ts-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_output)        ! out [ha s-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_fract_output)  ! out [% s-1]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_frac_consumption)     ! out [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, i_surface)                 ! out [kW m-1]
 
@@ -476,11 +480,8 @@ CONTAINS
     t_air_min_c = sf_convert_units("Kelvin", "Celsius", t_air_min)
     precip_daily_mmd = sf_convert_units("kg m-2 s-1", "mm/day", precip_daily)
 
-!    WRITE(*,*) "spitfire.f90:: t air min, t air max, precip daily=", t_air_min(1), t_air_max(1), precip_daily(1)
-
     wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
     grid_cell_area_ha = sf_convert_units("m2", "ha", tile_area)
-    !DBH(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
 
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
     ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
@@ -539,6 +540,8 @@ CONTAINS
     mask_is_fire_intense_enough = logical2real(sf_spitfire % is_fire_intense_enough)
     area_burned_fract = sf_spitfire % area_burned_fract
     area_burned = sf_spitfire % area_burned
+    area_burned_fract_output = sf_spitfire % area_burned_fract / dtime !< to seconds
+    area_burned_output = sf_spitfire % area_burned / dtime !< to seconds
 
     fdi = sf_spitfire % fdi ! todo: define as pointer
 
@@ -682,11 +685,6 @@ CONTAINS
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions(:) = mask_tile_enabled .AND. (has_dead_fuel) .AND. (spitfire % fdi > 1.e-6_wp)
 
-    !< If there are no fire conditions, stop calculation and return burned area and fire emissions as zero.
-    !< Previously initialized to zero.
-    !< Such conditions accounts for multiple grid cells running at the same time (IQ)
-!    IF (ALL(has_fire_conditions .EQV. .FALSE.)) RETURN
-
     !> Fire rate of spread (IR, optimum reaction velocity, fuel bulk density, net fuel loading, ...)
     !> calculate the rate of spread following Thonicke et al. (2010)
     spitfire % ros = sf_calc_rate_of_spread(nc, df_sf_fc_spread_nr, & !< 3 = fuel classes for 1, 10 and 100 hours
@@ -703,10 +701,6 @@ CONTAINS
     spitfire%e_n_ignitions = sf_ignitions%total * (dtime / one_day)
     spitfire%e_n_humans = sf_ignitions%human * (dtime / one_day)
     spitfire%e_n_lightning = sf_ignitions%lightning * (dtime / one_day)
-
-!    WRITE(*,*) "spitfire.f90:: total ign, hum ign, lights ign=", &
-!            spitfire%e_n_ignitions(1), spitfire%e_n_humans(1), &
-!            spitfire%e_n_lightning(1)
 
     !< no ignitions events, no fire conditions
     has_fire_conditions = has_fire_conditions .AND. (spitfire%e_n_ignitions > 0._wp)
