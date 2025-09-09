@@ -531,12 +531,12 @@ CONTAINS
     END IF
 
     ! for diagnostics:
-    fuel_consumption_els = SUM(fc_dead_el, DIM=2) + SUM(fc_live_el, DIM=2) !< 2 = fuel pool index
-    emissions_spc = SUM(emissions_dead_spc, DIM=2) + SUM(emissions_live_spc, DIM=2) !< 2 = fuel pool index
-    emissions_els = SUM(emissions_dead_el, DIM=2) + SUM(emissions_live_el, DIM=2) !< 2 = fuel pool index
-    residue_els = SUM(residue_dead_el, DIM=2) + SUM(residue_live_el, DIM=2) !< 2 = fuel pool index
-    overflow_els = SUM(mass_imbalance_emitted_dead_el, DIM=2) + & !< 2 = fuel pool index
-                        SUM(mass_imbalance_emitted_live_el, DIM=2)
+    fuel_consumption_els = (SUM(fc_dead_el, DIM=2) + SUM(fc_live_el, DIM=2)) / dtime * 1000000._wp !< 2 = fuel pool index
+    emissions_spc = (SUM(emissions_dead_spc, DIM=2) + SUM(emissions_live_spc, DIM=2)) / dtime !< 2 = fuel pool index
+    emissions_els = (SUM(emissions_dead_el, DIM=2) + SUM(emissions_live_el, DIM=2)) / dtime * 1000000._wp !< 2 = fuel pool index
+    residue_els = (SUM(residue_dead_el, DIM=2) + SUM(residue_live_el, DIM=2)) / dtime * 1000000._wp !< 2 = fuel pool index
+    overflow_els = (SUM(mass_imbalance_emitted_dead_el, DIM=2) + & !< 2 = fuel pool index
+                        SUM(mass_imbalance_emitted_live_el, DIM=2)) / dtime * 1000000._wp
 
   END SUBROUTINE update_q_dfire_post
 
