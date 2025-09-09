@@ -88,6 +88,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: fwd_wind_factor
 
     dsl4jsb_Real2D_onDomain      :: pm_fire
+    dsl4jsb_Real2D_onDomain      :: pm_fire_output
     dsl4jsb_Real2D_onDomain      :: pm_prop_ck
     dsl4jsb_Real2D_onDomain      :: pm_tau
     dsl4jsb_Real2D_onDomain      :: tau_l
@@ -142,6 +143,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, fwd_wind_factor)
 
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, pm_fire)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, pm_fire_output)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, pm_prop_ck)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, pm_tau)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, tau_l)
@@ -188,6 +190,7 @@ CONTAINS
     fwd_wind_factor = 0._wp
 
     pm_fire = 0._wp
+    pm_fire_output = 0._wp
     pm_prop_ck = 0._wp
     pm_tau = 0._wp
     tau_l = 0._wp

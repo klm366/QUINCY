@@ -74,7 +74,8 @@ MODULE mo_q_dfire_fuel_memory_class
     TYPE(t_jsb_var_real3d)  :: live_tree_fuel_100hr_lfp   !< 100hr dead fuel [g DM m-2], _lfp = live fuel pools
     TYPE(t_jsb_var_real3d)  :: live_tree_fuel_1000hr_lfp  !< 1000hr dead fuel [g DM m-2], _lfp = live fuel pools
 
-    TYPE(t_jsb_var_real2d)  :: pm_fire                    !< Tree probability of mortality of tree [-]
+    TYPE(t_jsb_var_real2d)  :: pm_fire                    !< Tree probability of mortality of tree [- ts-1]
+    TYPE(t_jsb_var_real2d)  :: pm_fire_output             !< Tree probability of mortality of tree [- s-1]
     TYPE(t_jsb_var_real2d)  :: pm_prop_ck                 !< Prob mortality: fraction of the crown scorch [-]
     TYPE(t_jsb_var_real2d)  :: pm_tau                     !< Probability of mortality due to cambial damage [-]
     TYPE(t_jsb_var_real2d)  :: tau_l                      !< Residence time of the fire [min]
@@ -348,7 +349,18 @@ CONTAINS
 
     CALL mem%Add_var('pm_fire', mem%pm_fire, &
         & hgrid, vgrid_surface, &
-        & t_cf('pm_fire', '-', 'Tree probability of mortality by fire'), &
+        & t_cf('pm_fire', '- ts-1', 'Tree probability of mortality by fire'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('pm_fire_output', mem%pm_fire_output, &
+        & hgrid, vgrid_surface, &
+        & t_cf('pm_fire_output', '- s-1', 'Tree probability of mortality by fire'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

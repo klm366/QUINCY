@@ -235,6 +235,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp   , weighted_by_fract)
 
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, pm_fire      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, pm_fire_output , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, pm_prop_ck   , weighted_by_fract)
 
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, pm_tau, weighted_by_fract)
