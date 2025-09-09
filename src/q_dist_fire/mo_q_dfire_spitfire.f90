@@ -503,7 +503,7 @@ CONTAINS
     ! Load input data
     density_human_population = ic_pop_dens  ! todo: directly use ic_pop_dens
     lightning_frequency = a2l_lightning_events  ! todo: same as before
-    a_nd = density_human_population * 4._wp
+    a_nd = lightning_frequency * 4._wp
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
