@@ -453,6 +453,8 @@ CONTAINS
     ab_moisture_sl = 0._wp
     ab_moisture = 0._wp
     frac_consump_fcl = 0._wp
+    area_burned_output = 0._wp
+    area_burned_fract_output = 0._wp
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science

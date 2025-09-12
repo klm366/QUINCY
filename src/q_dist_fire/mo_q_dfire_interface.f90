@@ -147,6 +147,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, dead_frac_consumption, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, area_burned_fract, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, area_burned, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(Q_DFIRE_, area_burned_fract_output, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(Q_DFIRE_, area_burned_output, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, i_surface, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, precip_qc_mavg, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, precip_daytime, weighted_by_fract)

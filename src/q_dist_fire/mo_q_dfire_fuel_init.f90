@@ -113,8 +113,8 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: tree_height
 
     dsl4jsb_Real3D_onDomain      :: veg_fire_litterfall_total_els
-    dsl4jsb_Real3D_onDomain      :: veg_fire_emisisons_total_els
-    dsl4jsb_Real3D_onDomain      :: sb_fire_emisisons_total_els
+    dsl4jsb_Real3D_onDomain      :: veg_fire_emissions_total_els
+    dsl4jsb_Real3D_onDomain      :: sb_fire_emissions_total_els
     dsl4jsb_Real3D_onDomain      :: sb_fire_litter_ash_total_els
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(Q_DFIRE_FUEL_)) RETURN
@@ -173,8 +173,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, overflow_els)
 
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, veg_fire_litterfall_total_els)
-    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, veg_fire_emisisons_total_els)
-    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, sb_fire_emisisons_total_els)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, veg_fire_emissions_total_els)
+    dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, sb_fire_emissions_total_els)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, sb_fire_litter_ash_total_els)
     ! ----------------------------------------------------------------------------------------------------- !
     !WRITE(*,*) "Computing q_dfire_fuel_init..."
@@ -225,8 +225,8 @@ CONTAINS
     overflow_els = 0._wp
 
     veg_fire_litterfall_total_els = 0._wp
-    veg_fire_emisisons_total_els = 0._wp
-    sb_fire_emisisons_total_els = 0._wp
+    veg_fire_emissions_total_els = 0._wp
+    sb_fire_emissions_total_els = 0._wp
     sb_fire_litter_ash_total_els = 0._wp
   END SUBROUTINE q_dfire_fuel_init
 

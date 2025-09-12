@@ -78,8 +78,8 @@ MODULE mo_q_dfire_memory_class
     TYPE(t_jsb_var_real2d)               :: area_burned         !< Area burned in a gridcell [ha ts-1]
     TYPE(t_jsb_var_real2d)               :: i_surface           !< Fire intensity [kW m-1]
 
-    TYPE(t_jsb_var_real2d)               :: area_burned_fract_output !< Fraction of the area burned [% s-1]
-    TYPE(t_jsb_var_real2d)               :: area_burned_output       !< Area burned in a gridcell [ha s-1]
+    TYPE(t_jsb_var_real2d)               :: area_burned_fract_output !< Fraction of the area burned to output [% s-1]
+    TYPE(t_jsb_var_real2d)               :: area_burned_output       !< Area burned in a gridcell to output [ha s-1]
 
     !< Precipitation
     !< Multiple methods used to aproximate daily precipitation. Not directly available into IQ.
@@ -400,7 +400,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -410,8 +410,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 

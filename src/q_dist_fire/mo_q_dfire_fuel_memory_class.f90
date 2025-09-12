@@ -100,10 +100,10 @@ MODULE mo_q_dfire_fuel_memory_class
     TYPE(t_jsb_var_real3d)  :: overflow_els               !< Emissions mass imbalance (nc, #elements) [umolX m-2 s-1]
 
     !< flux diagnostics
-    TYPE(t_jsb_var_real2d)  :: veg_fire_litterfall_total_els   !< Total veg fire litterfall [umol m-2 s-1]
-    TYPE(t_jsb_var_real2d)  :: veg_fire_emisisons_total_els    !< Total veg fire emissions [umol m-2 s-1]
-    TYPE(t_jsb_var_real2d)  :: sb_fire_emisisons_total_els     !< Total sb fire emissions [umol m-2 s-1]
-    TYPE(t_jsb_var_real2d)  :: sb_fire_litter_ash_total_els    !< Total sb fire litter ash [umol m-2 s-1]
+    TYPE(t_jsb_var_real3d)  :: veg_fire_litterfall_total_els   !< Total veg fire litterfall [umol m-2 s-1]
+    TYPE(t_jsb_var_real3d)  :: veg_fire_emissions_total_els    !< Total veg fire emissions [umol m-2 s-1]
+    TYPE(t_jsb_var_real3d)  :: sb_fire_emissions_total_els     !< Total sb fire emissions [umol m-2 s-1]
+    TYPE(t_jsb_var_real3d)  :: sb_fire_litter_ash_total_els    !< Total sb fire litter ash [umol m-2 s-1]
   CONTAINS
     PROCEDURE :: Init => Init_q_dfire_fuel_memory
   END TYPE t_q_dfire_fuel_memory
@@ -606,9 +606,9 @@ CONTAINS
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('veg_fire_emisisons_total_els', mem%veg_fire_emisisons_total_els, &
+    CALL mem%Add_var('veg_fire_emissions_total_els', mem%veg_fire_emissions_total_els, &
         & hgrid, vgrid_elements, &
-        & t_cf('veg_fire_emisisons_total_els', 'umol X m-2 s-1', 'Total veg fire emissions'), &
+        & t_cf('veg_fire_emissions_total_els', 'umol X m-2 s-1', 'Total veg fire emissions'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -617,9 +617,9 @@ CONTAINS
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('sb_fire_emisisons_total_els', mem%sb_fire_emisisons_total_els, &
+    CALL mem%Add_var('sb_fire_emissions_total_els', mem%sb_fire_emissions_total_els, &
         & hgrid, vgrid_elements, &
-        & t_cf('sb_fire_emisisons_total_els', 'umol X m-2 s-1', 'Total sb fire emissions'), &
+        & t_cf('sb_fire_emissions_total_els', 'umol X m-2 s-1', 'Total sb fire emissions'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

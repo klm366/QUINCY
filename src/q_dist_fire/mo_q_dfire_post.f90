@@ -198,6 +198,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: diameter                   ! in [?]
     dsl4jsb_Real2D_onChunk                :: height                     ! in [?]
     dsl4jsb_Real3D_onChunk                :: soil_depth_sl              ! in [m]
+    
+    dsl4jsb_Real3D_onChunk                :: veg_fire_litterfall_total_els ! out [umol X m-2 s-1]
+    dsl4jsb_Real3D_onChunk                :: veg_fire_emissions_total_els ! out [umol X m-2 s-1]
+    dsl4jsb_Real3D_onChunk                :: sb_fire_emissions_total_els ! out [umol X m-2 s-1]
+    dsl4jsb_Real3D_onChunk                :: sb_fire_litter_ash_total_els ! out [umol X m-2 s-1]
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
@@ -288,6 +293,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, residue_els)          ! out
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, overflow_els)         ! out
 
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, veg_fire_litterfall_total_els) ! out [umol X m-2 s-1]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, veg_fire_emissions_total_els) ! out [umol X m-2 s-1]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, sb_fire_emissions_total_els) ! out [umol X m-2 s-1]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, sb_fire_litter_ash_total_els) ! out [umol X m-2 s-1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -333,6 +342,10 @@ CONTAINS
     emissions_els = 0._wp
     residue_els = 0._wp
     overflow_els = 0._wp
+    veg_fire_litterfall_total_els = 0._wp
+    veg_fire_emissions_total_els = 0._wp
+    sb_fire_emissions_total_els = 0._wp
+    sb_fire_litter_ash_total_els = 0._wp
 
     prob_mort = t_sf_prob_mort(nc)
     !< Rebuild dead fuel consumption
@@ -542,15 +555,15 @@ CONTAINS
       DO iel=1, df_sf_elements_nr
         DO ic=1, nc ! (#pool, #elements, #nc)
           veg_fire_litterfall_total_els(ic,iel) = veg_fire_litterfall_total_els(ic,iel) + veg_fire_litterfall_mt(ipool,iel,ic)
-          sb_fire_emissions_total_els(ic,iel) = sb_fire_emisisons_total_els(ic,iel) + sb_fire_emisisons_mt(ipool,iel,ic)
-          veg_fire_emisisons_total_els(ic,iel) = veg_fire_emisisons_total_els(ic,iel) + veg_fire_emisisons_total_els(ipool,iel,ic)
-          sb_fire_litter_ash_total_els(ic,iel) = sb_fire_litter_ash_total_els(ic,iel) + sb_fire_litter_ash_mt(ipool,iel,ic)
+          sb_fire_emissions_total_els(ic,iel) = sb_fire_emissions_total_els(ic,iel) + sb_fire_emissions_mt(ipool,iel,ic,1)
+          veg_fire_emissions_total_els(ic,iel) = veg_fire_emissions_total_els(ic,iel) + veg_fire_emissions_mt(ipool,iel,ic)
+          sb_fire_litter_ash_total_els(ic,iel) = sb_fire_litter_ash_total_els(ic,iel) + sb_fire_litter_ash_mt(ipool,iel,ic,1)
         END DO
       END DO
     END DO
     veg_fire_litterfall_total_els = veg_fire_litterfall_total_els / dtime * 1000000._wp ! to umols s-1
     sb_fire_emissions_total_els = sb_fire_emissions_total_els / dtime * 1000000._wp
-    veg_fire_emisisons_total_els = veg_fire_emisisons_total_els / dtime * 1000000._wp
+    veg_fire_emissions_total_els = veg_fire_emissions_total_els / dtime * 1000000._wp
     sb_fire_litter_ash_total_els = sb_fire_litter_ash_total_els / dtime * 1000000._wp
   END SUBROUTINE update_q_dfire_post
 
