@@ -234,8 +234,6 @@ CONTAINS
     INTEGER                               :: nr_of_children
 
     REAL(wp)                              :: a_nd(options%nc)
-    REAL(wp)                              :: lightning_frequency(options%nc)
-    REAL(wp)                              :: density_human_population(options%nc)
     INTEGER                               :: ierror
     ! ----------------------------------------------------------------------------------------------------- !
     !dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -504,15 +502,13 @@ CONTAINS
     ENDDO
 
     ! Load input data
-    density_human_population = ic_pop_dens  ! todo: directly use ic_pop_dens
-    lightning_frequency = a2l_lightning_events  ! todo: same as before
-    a_nd = lightning_frequency * 4._wp
+    a_nd = a2l_lightning_events * 4._wp
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
-                        density_human_population, & ! ignition events
+                        ic_pop_dens, & ! ignition events
                         a_nd, &
-                        lightning_frequency, &
+                        a2l_lightning_events, &
                         df_sf_calorific_heat_content, &
                         df_sf_isurface_extinc_th, &
                         df_sf_alphas, &
