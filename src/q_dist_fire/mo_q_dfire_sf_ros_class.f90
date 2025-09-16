@@ -423,16 +423,14 @@ CONTAINS
   !> Calculate the weighted average of the Fuel bulk density for the current PFT.
   !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
   !> when accounting for the other pfts.
-  !> Thonicke's et al. (2010) is not used as the equation does not seems correct when accounting for 10 and 100 hours
-  !> fuel bulk densities (slightly more).
-  !>
-  !> TODO: currently done for 1 PFT. Later on, it will be changed for each PFT.
+  !> Thonicke's et al. (2010) is not used as the equation does not seems correct when accounting for
+  !> 10 and 100 hours fuel bulk densities (slightly more).
   !>
   FUNCTION calc_fbd(nfclasses, fuel_bulk_density, dead_fuel) RESULT (fbd)
     INTEGER, INTENT(in)         :: nfclasses !< The number of used fuel classes
     REAL(wp), INTENT(in)        :: fuel_bulk_density !< [kg m-3]
     REAL(wp), INTENT(in)        :: dead_fuel(nfclasses) !< 1, 10, 100 hours [gDM m-2]
-    REAL(wp)                    :: fbd !< output
+    REAL(wp)                    :: fbd !< output [kg m-3]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)                    :: total_dead_fuel
     REAL(wp)                    :: fbd_accounting_fc
