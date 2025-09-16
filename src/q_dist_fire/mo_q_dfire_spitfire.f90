@@ -486,9 +486,13 @@ CONTAINS
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
     ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
     ab_w_soil_fc_sl(:,:) = wtr_soil_fc_sl(:, [df_sf_sl_indices])
-    ! todo: change DO CONCURRENT to DO-IF construct
-    DO CONCURRENT(ic=1:nc, is=1:df_sf_sl_dims_nr, (mask_is_tile_enabled(ic) .AND. ab_w_soil_fc_sl(ic,is)>0._wp)) ! should it happen? (ab_w_soil_fc_sl = 0)
-      ab_moisture_sl(ic,is) = ab_w_soil_sl(ic,is) / ab_w_soil_fc_sl(ic,is)
+
+    DO is=1, df_sf_sl_dims_nr
+      DO ic=1, nc
+        IF (mask_is_tile_enabled(ic) .AND. ab_w_soil_fc_sl(ic,is)>0._wp) THEN
+          ab_moisture_sl(ic,is) = ab_w_soil_sl(ic,is) / ab_w_soil_fc_sl(ic,is)
+        END IF
+      END DO
     END DO
 
     !< Pack vegetation cover fraction
