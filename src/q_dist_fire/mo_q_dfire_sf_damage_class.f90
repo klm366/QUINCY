@@ -34,18 +34,18 @@ MODULE mo_q_dfire_sf_damage_class
   PUBLIC :: calc_prob_mortality
 
   TYPE t_sf_prob_mort
-    REAL(wp), ALLOCATABLE :: pm_fire(:) !< mix of tau and ck [-]
-    REAL(wp), ALLOCATABLE :: pm_tau(:)  !< probability of post fire mortality due to cambial damage [-]
     REAL(wp), ALLOCATABLE :: pm_ck(:)   !< probability of post fire mortality due to crown damage [-]
-    REAL(wp), ALLOCATABLE :: tau_l(:)!< Reside:e time of the fire [min]
-    REAL(wp), ALLOCATABLE :: tau_c(:)!< Critical time for cambial damage [min]
-    REAL(wp), ALLOCATABLE :: bark_thickness(:) !< [cm]
-    REAL(wp), ALLOCATABLE :: prop_ck(:) !< Fraction of the crown scorch [-]
     REAL(wp), ALLOCATABLE :: r_ck !< Resistance factor against crown damage [-]
     REAL(wp), ALLOCATABLE :: ck_p !< Parameter for woody PFTs used in Pm (CK) equation [-]
-    REAL(wp), ALLOCATABLE :: scorch_height(:)   !< Scorch height [m]
     REAL(wp), ALLOCATABLE :: F_scorch_height    !< PFT-parameter in crown scorch equation [-]
-    REAL(wp), ALLOCATABLE :: crown_length(:)    !< Crown length of woody PFT [m]
+    REAL(wp), POINTER :: pm_fire(:) => NULL() !< mix of tau and ck [-]
+    REAL(wp), POINTER :: pm_tau(:)  => NULL() !< probability of post fire mortality due to cambial damage [-]
+    REAL(wp), POINTER :: tau_l(:)!< Residence time of the fire [min]
+    REAL(wp), POINTER :: tau_c(:)!< Critical time for cambial damage [min]
+    REAL(wp), POINTER :: bark_thickness(:) !< [cm]
+    REAL(wp), POINTER :: prop_ck(:) !< Fraction of the crown scorch [-]
+    REAL(wp), POINTER :: scorch_height(:)   !< Scorch height [m]
+    REAL(wp), POINTER :: crown_length(:)    !< Crown length of woody PFT [m]
   CONTAINS
     PROCEDURE :: copy_from_prob_mort
     GENERIC, PUBLIC :: assignment(=) => copy_from_prob_mort
@@ -64,22 +64,32 @@ CONTAINS
   !>
   !> Constructor for t_sf_prob_mort
   !>
-  FUNCTION create_t_sf_prob_mort(nc) RESULT (sf_pm)
+  FUNCTION create_t_sf_prob_mort(nc, pm_fire, pm_tau, tau_l, tau_c, &
+                  bark_thickness, prop_ck, scorch_height, &
+                  crown_length) RESULT (sf_pm)
     INTEGER, INTENT(in) :: nc
+    REAL(wp), INTENT(inout), POINTER :: pm_fire(:)
+    REAL(wp), INTENT(inout), POINTER :: pm_tau(:)
+    REAL(wp), INTENT(inout), POINTER :: tau_l(:)
+    REAL(wp), INTENT(inout), POINTER :: tau_c(:)
+    REAL(wp), INTENT(inout), POINTER :: bark_thickness(:)
+    REAL(wp), INTENT(inout), POINTER :: prop_ck(:)
+    REAL(wp), INTENT(inout), POINTER :: scorch_height(:)
+    REAL(wp), INTENT(inout), POINTER :: crown_length(:)
     TYPE(t_sf_prob_mort) :: sf_pm
 
-    ALLOCATE(sf_pm%pm_fire(nc))
-    ALLOCATE(sf_pm%pm_tau(nc))
     ALLOCATE(sf_pm%pm_ck(nc))
-    ALLOCATE(sf_pm%tau_l(nc))
-    ALLOCATE(sf_pm%tau_c(nc))
-    ALLOCATE(sf_pm%bark_thickness(nc))
-    ALLOCATE(sf_pm%prop_ck(nc))
     ALLOCATE(sf_pm%r_ck)
     ALLOCATE(sf_pm%ck_p)
-    ALLOCATE(sf_pm%scorch_height(nc))
     ALLOCATE(sf_pm%F_scorch_height)
-    ALLOCATE(sf_pm%crown_length(nc))
+    sf_pm%pm_fire => pm_fire
+    sf_pm%pm_tau => pm_tau
+    sf_pm%tau_l => tau_l 
+    sf_pm%tau_c => tau_c
+    sf_pm%bark_thickness => bark_thickness
+    sf_pm%prop_ck => prop_ck
+    sf_pm%scorch_height => scorch_height
+    sf_pm%crown_length => crown_length
 
     sf_pm%pm_fire = 0._wp
     sf_pm%pm_tau = 0._wp
@@ -100,22 +110,22 @@ CONTAINS
   !>
   !> Copy from "other" into "self"
   !>
-  PURE SUBROUTINE copy_from_prob_mort(self, other)
+  SUBROUTINE copy_from_prob_mort(self, other)
     CLASS(t_sf_prob_mort), INTENT(inout) :: self
     CLASS(t_sf_prob_mort), INTENT(in)    :: other
 
-    self % pm_fire = other % pm_fire
-    self % pm_tau = other % pm_tau
-    self % pm_ck = other % pm_ck
-    self % tau_l = other % tau_l
-    self % tau_c = other % tau_c
-    self % bark_thickness = other % bark_thickness
-    self % prop_ck = other % prop_ck
+    self % pm_ck = other % pm_ck ! copy data
     self % r_ck = other % r_ck
     self % ck_p = other % ck_p
-    self % scorch_height = other % scorch_height
     self % F_scorch_height = other % F_scorch_height
-    self % crown_length = other % crown_length
+    self % pm_fire => other % pm_fire ! copy pointer reference
+    self % pm_tau => other % pm_tau
+    self % tau_l => other % tau_l
+    self % tau_c => other % tau_c
+    self % bark_thickness => other % bark_thickness
+    self % prop_ck => other % prop_ck
+    self % scorch_height => other % scorch_height
+    self % crown_length => other % crown_length
   END SUBROUTINE copy_from_prob_mort
 
 
@@ -124,10 +134,11 @@ CONTAINS
   !> Calculate probability of mortality (Section 2.2.6 from Thonicke et al. (2010))
   !> (Tree only)
   !>
-  FUNCTION calc_prob_mortality(nc, nfuels, lctlib_crown_length, lctlib_r_ck, lctlib_ck_p, &
+  SUBROUTINE calc_prob_mortality(nc, nfuels, lctlib_crown_length, lctlib_r_ck, lctlib_ck_p, &
                               lctlib_F_scorch_height, lctlib_par1, lctlib_par2, &
                               height, dbh, i_surface, dead_fuel, frac_consump, &
-                              mask_opt) RESULT (prob_mort)
+                              prob_mort, &
+                              mask_opt) 
     INTEGER, INTENT(in)  :: nc
     INTEGER, INTENT(in)  :: nfuels                          !< Dead fuel classes
     REAL(wp), INTENT(in) :: lctlib_crown_length             !< Crown length of woody PFT [m]
@@ -141,8 +152,8 @@ CONTAINS
     REAL(wp), INTENT(in) :: lctlib_F_scorch_height          !< Scorch height parameter [-]
     REAL(wp), INTENT(in) :: lctlib_par1                     !< Bark thickness par1 parameter [-]
     REAL(wp), INTENT(in) :: lctlib_par2                     !< Bark thickness par2 parameter [-]
+    TYPE(t_sf_prob_mort), INTENT(inout) :: prob_mort        !< output
     LOGICAL, INTENT(in), OPTIONAL :: mask_opt(nc)           !< True = Compute gridcell(s) (default = true)
-    TYPE(t_sf_prob_mort) :: prob_mort                       !< output
 
     LOGICAL :: mask(nc)
     INTEGER :: inc
@@ -151,7 +162,6 @@ CONTAINS
     IF (PRESENT(mask_opt)) THEN
       mask = mask_opt
     END IF
-    prob_mort = t_sf_prob_mort(nc) !< Initialize outputs to 0
 
     DO inc = 1, nc
       IF (mask(inc)) THEN
@@ -181,7 +191,7 @@ CONTAINS
         prob_mort%F_scorch_height = lctlib_F_scorch_height
       END IF
     END DO
-  END FUNCTION calc_prob_mortality
+  END SUBROUTINE calc_prob_mortality
 
 
   ! ======================================================================================================= !

@@ -347,7 +347,6 @@ CONTAINS
     sb_fire_emissions_total_els = 0._wp
     sb_fire_litter_ash_total_els = 0._wp
 
-    prob_mort = t_sf_prob_mort(nc)
     !< Rebuild dead fuel consumption
     !< * Derive dead FC (DM * AB) *
     !< Calculate from Tile to PFT (* tile_fract)
@@ -391,6 +390,11 @@ CONTAINS
       dead_fuel_fcl(:,:,df_sf_fc_100hr_idx) = dead_fuel_100hr_dfp
       dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1000hr_dfp
 
+      ! ref vars and init to 0
+      prob_mort = t_sf_prob_mort(nc, pm_fire, pm_tau, tau_l, tau_c, &
+                               bark_thickness, pm_prop_ck, scorch_height, &
+                               crown_length )
+
       !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
       w_oi = SUM(dead_fuel_fcl, DIM=2) !< 2= dead fuel pools index, fuel class only
 
@@ -400,16 +404,17 @@ CONTAINS
                                 (tile_fract > 0._wp) .AND. & ! tile is empty, skip 
                                 (height > 0._wp) ! height is not yet initialized, skip
 
-      prob_mort = calc_prob_mortality(nc, df_sf_fc_spread_nr, &
-                                      lctlib%q_crown_length, lctlib%q_crown_damage_p, lctlib%q_crown_damage_r_ck, &
-                                      lctlib%q_scorch_height_f, & 
-                                      lctlib%q_bark_thickness_par1, lctlib%q_bark_thickness_par2, &
-                                      height * dsl4jsb_Config(Q_DFIRE_)%tree_height_factor, & ! Tree characteristics
-                                      dbh * dsl4jsb_Config(Q_DFIRE_)%tree_diameter_factor, &
-                                      i_surface, & ! Fire intensity
-                                      w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
-                                      dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
-                                      mask_opt=is_fire_intense_enough)
+      CALL calc_prob_mortality(nc, df_sf_fc_spread_nr, &
+                                    lctlib%q_crown_length, lctlib%q_crown_damage_p, lctlib%q_crown_damage_r_ck, &
+                                    lctlib%q_scorch_height_f, & 
+                                    lctlib%q_bark_thickness_par1, lctlib%q_bark_thickness_par2, &
+                                    height * dsl4jsb_Config(Q_DFIRE_)%tree_height_factor, & ! Tree characteristics
+                                    dbh * dsl4jsb_Config(Q_DFIRE_)%tree_diameter_factor, &
+                                    i_surface, & ! Fire intensity
+                                    w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
+                                    dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
+                                    prob_mort, & ! output
+                                    mask_opt=is_fire_intense_enough) 
 
       fc_live = sf_calc_live_fuel_consumption(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
                                               prob_mort % prop_ck, &
@@ -420,9 +425,6 @@ CONTAINS
 
       !< output calculated values
       pm_prop_ck = prob_mort % prop_ck
-      pm_tau = prob_mort % pm_tau
-      tau_l = prob_mort % tau_l
-      tau_c = prob_mort % tau_c
       bark_thickness = prob_mort % bark_thickness
       par1_diag = lctlib%q_bark_thickness_par1
       par2_diag = lctlib%q_bark_thickness_par2
@@ -439,7 +441,7 @@ CONTAINS
 
       If (dsl4jsb_Config(Q_DFIRE_)%flag_has_prob_mort_feedback) THEN
         ! todo: add pm_fire_diag -> always output (even when false)
-        pm_fire = prob_mort % pm_fire * area_burned_fract_pft
+        pm_fire = pm_fire * area_burned_fract_pft
         pm_fire_output = pm_fire / dtime !< from ts-1 to seconds-1
       End If
     END IF
@@ -589,8 +591,6 @@ CONTAINS
       DO ip=1, SIZE(emissions, DIM=2)
         DO ic=1, SIZE( emissions, DIM=1)
           IF ( mask(ic) .AND. fc(ic,ip,iel) < emissions(ic,ip,iel)) THEN !< Mass imabalance found
-            !            WRITE(*,*) "spitfire.f90:: calc:: capping emissions, ic, ip, iel, old, new=", &
-            !            ic, ip, iel, emissions(ic,ip,iel), fc(ic,ip,iel)
             emissions(ic,ip,iel) = fc(ic,ip,iel)
           ENDIF
         ENDDO
