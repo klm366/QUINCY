@@ -79,14 +79,14 @@ CONTAINS
     TYPE(t_jsb_model),              POINTER :: model                !< the model
     TYPE(t_lnd_bgcm_store),         POINTER :: bgcm_store           !< the bgcm store of this tile
     TYPE(t_jsb_grid),               POINTER :: hgrid                !< Horizontal grid
-    TYPE(t_jsb_vgrid),              POINTER :: vgrid_soil_sb        !< Vertical grid
+    TYPE(t_jsb_vgrid),              POINTER :: vgrid_soil_w         !< Vertical grid
     TYPE(t_lctlib_element),         POINTER :: lctlib               !< land-cover-type library - parameter across pft's
     REAL(wp)                                :: hlp1                 !< helper variable
     REAL(wp)                                :: ref_lai              !< LAI                                 | for canopy model init
     REAL(wp)                                :: ref_nleaf            !< N leaf per unit leaf area in gN/m2  | for canopy model init
     INTEGER                                 :: iblk, ic, is         !< loop dimensions
     INTEGER                                 :: nproma, nblks        !< dimensions
-    INTEGER                                 :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
+    INTEGER                                 :: nsoil_w              !< number of soil layers (water)
     INTEGER                                 :: veg_pool_idx         !< index of the veg pool within the bgcm store
     REAL(wp), POINTER           :: veg_pool_mt_domain(:,:,:,:)      !< dim: compartments, elements, nc, nblks -- on domain!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init'
@@ -194,8 +194,8 @@ CONTAINS
     hgrid  => Get_grid(model%grid_id)
     nblks  =  hgrid%nblks
     nproma =  hgrid%nproma
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      = vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       = vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
@@ -449,7 +449,7 @@ CONTAINS
       !>
       ! all roots are in the first soil layer
       root_fraction_sl(:, 1, :)          = 1.0_wp
-      root_fraction_sl(:, 2:nsoil_sb, :) = 0.0_wp
+      root_fraction_sl(:, 2:nsoil_w, :)  = 0.0_wp
     ELSE
       !>     - fixed root fractions (no changes after init) depending on root_depth (SPQ variable)
       !>
@@ -639,9 +639,9 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER :: model            !< the model
     TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store       !< the bgcm store of this tile
     TYPE(t_input_file)              :: input_file       !< file with to be read veg state variables
-    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_sb    !< vertical grid for sl variables
+    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_w     !< vertical grid for sl variables
     INTEGER                         :: isoil            !< soillayer index
-    INTEGER                         :: nsoil_sb         !< number of soil layers as used/defined by the SB_ process
+    INTEGER                         :: nsoil_w          !< number of soil layers (water)
     REAL(wp),               POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':veg_read_states'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -660,8 +660,8 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: root_fraction_sl
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb = vgrid_soil_sb%n_levels
+    vgrid_soil_w => Get_vgrid('soil_depth_water')
+    nsoil_w = vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_SYL_)
     dsl4jsb_Get_config(Q_AGR_)
@@ -710,7 +710,7 @@ CONTAINS
     CALL read_2D_var(input_file, net_growth_tvegdyn_mavg, "veg_net_growth_tvegdyn_mavg_"//tile%name)
     CALL read_2D_var(input_file, lai_tvegdyn_mavg, "veg_lai_tvegdyn_mavg_"//tile%name)
 
-    CALL read_3D_var(input_file, root_fraction_sl, 'veg_root_fraction_sl_'//tile%name, 'soillev', nsoil_sb)
+    CALL read_3D_var(input_file, root_fraction_sl, 'veg_root_fraction_sl_'//tile%name, 'soillev', nsoil_w)
 
     CALL input_file%Close()
 

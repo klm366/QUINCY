@@ -204,7 +204,7 @@ CONTAINS
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid),  POINTER :: surface                      ! Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy_q_assimi        ! Vertical grid
-    TYPE(t_jsb_vgrid),  POINTER :: vgrid_soil_sb                !< Vertical grid for soil layers
+    TYPE(t_jsb_vgrid),  POINTER :: vgrid_soil_w                 !< Vertical grid for soil layers
     INTEGER                     :: table                        ! ...
     LOGICAL                     :: restart_veg_optimal               !< if true: write restart (i.e. using optimality code)
     LOGICAL                     :: restart_veg_optimal_n_fractions   !< if true: write restart (optimise n fractions)
@@ -218,7 +218,7 @@ CONTAINS
     hgrid                 => Get_grid(mem%grid_id)
     surface               => Get_vgrid('surface')
     vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
-    vgrid_soil_sb         => Get_vgrid('soil_layer_sb')
+    vgrid_soil_w          => Get_vgrid('soil_depth_water')
     model                 => Get_model(model_id)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_ASSIMI_)
@@ -267,7 +267,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('ftranspiration_sl', mem%ftranspiration_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('ftranspiration_sl', '?', 'fraction of transpiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &

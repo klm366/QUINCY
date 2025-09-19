@@ -978,8 +978,8 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER      :: model
     TYPE(t_lctlib_element), POINTER :: lctlib           !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_sb    !< Vertical grid
-    INTEGER                         :: nsoil_sb         !< number of soil layers as used/defined by the SB_ process
+    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_w     !< Vertical grid
+    INTEGER                         :: nsoil_w          !< number of soil layers as used/defined by the SB_ process
     INTEGER                         :: iblk, ic, is
     INTEGER                         :: ics, ice, nc
     INTEGER                         :: model_scheme
@@ -1122,8 +1122,8 @@ CONTAINS
 #ifndef __NO_QUINCY__
     SELECT CASE (model_scheme)
     CASE (MODEL_QUINCY)
-      vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-      nsoil_sb      =  vgrid_soil_sb%n_levels
+      vgrid_soil_w  => Get_vgrid('soil_depth_water')
+      nsoil_w       =  vgrid_soil_w%n_levels
     END SELECT
 #endif
 
@@ -1253,7 +1253,7 @@ CONTAINS
         !$ACC END PARALLEL LOOP
         !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
         !$ACC LOOP SEQ
-        DO is = 1, nsoil_sb
+        DO is = 1, nsoil_w
           !$ACC LOOP GANG VECTOR
           DO ic = 1, nc
             IF (is <= NINT(num_sl_above_bedrock(ic))) THEN

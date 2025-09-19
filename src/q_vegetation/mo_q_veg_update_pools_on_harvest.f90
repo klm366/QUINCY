@@ -80,8 +80,8 @@ CONTAINS
     TYPE(t_jsb_model),          POINTER :: model                      !< the model
     TYPE(t_lnd_bgcm_store),     POINTER :: bgcm_store                 !< the bgcm store of this tile
     TYPE(t_lctlib_element),     POINTER :: lctlib                     !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),          POINTER :: vgrid_soil_sb              !< Vertical grid
-    INTEGER                             :: nsoil_sb                   !< number of soil layers as used/defined by the SB_ process
+    TYPE(t_jsb_vgrid),          POINTER :: vgrid_soil_w               !< Vertical grid
+    INTEGER                             :: nsoil_w                    !< number of soil layers (water)
     INTEGER                             :: elem_idx_map(LAST_ELEM_ID) !< element mapper ID -> IX
     LOGICAL                             :: is_elem_used(LAST_ELEM_ID) !< indicates which elements are used in this simulation
     REAL(wp), DIMENSION(options%nc)     :: fract_harvest_rel_to_tile  !< harvested area fraction relative to the tile area
@@ -141,8 +141,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
     nr_of_veg_bgcm_comp = get_number_of_veg_compartments()
     CALL model%Get_top_tile(box_tile)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -332,7 +332,7 @@ CONTAINS
       !>
       CALL calc_litter_partitioning( &
         & nc, &                                         ! in
-        & nsoil_sb, &
+        & nsoil_w, &
         & num_sl_above_bedrock(:), &
         & lctlib%sla, &
         & lctlib%growthform, &

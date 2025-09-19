@@ -470,8 +470,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff_glac
     dsl4jsb_Real2D_onChunk :: water_to_soil
     dsl4jsb_Real2D_onChunk :: weq_glac
-    ! quincy
-    dsl4jsb_Real2D_onChunk :: fract_fpc
 
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
@@ -516,7 +514,7 @@ CONTAINS
     REAL(wp) :: dtime
     ! Variables from configs
     REAL(wp) :: &
-      & w_skin_max_config,      &
+      & config_w_skin_max,      &
       & snow_depth_max_config,  &
       & ret_macro_srf
     INTEGER  :: &
@@ -528,8 +526,6 @@ CONTAINS
       & l_latflow_to_streamflow, &
       & ltpe_closed,             &
       & use_tmx
-
-    REAL(wp), ALLOCATABLE      :: fract_fol_proj_cov(:)     !< use for jsbach & quincy, as helper variable
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -553,7 +549,7 @@ CONTAINS
     use_tmx = model%config%use_tmx
 
     dsl4jsb_Get_config(HYDRO_)
-    w_skin_max_config      = dsl4jsb_Config(HYDRO_)%w_skin_max ! Maximum capacity of skin reservoir (soil + canopy)
+    config_w_skin_max      = dsl4jsb_Config(HYDRO_)%w_skin_max ! Maximum capacity of skin reservoir (soil + canopy)
     snow_depth_max_config  = dsl4jsb_Config(HYDRO_)%snow_depth_max
     l_infil_subzero_config = dsl4jsb_Config(HYDRO_)%l_infil_subzero
     hydro_scale            = dsl4jsb_Config(HYDRO_)%hydro_scale ! choice of hydrological scale scheme
@@ -685,15 +681,6 @@ CONTAINS
 
       IF (tile%contains_vegetation) THEN
 
-        ALLOCATE(fract_fol_proj_cov(nc))
-        !$ACC ENTER DATA CREATE(fract_fol_proj_cov) ASYNC(acc_stream)
-
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          fract_fol_proj_cov(ic) = 0._wp
-        END DO
-        !$ACC END PARALLEL LOOP
-
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   transpiration)    ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_snow_can)     ! in
         SELECT CASE (model%config%model_scheme)
@@ -701,21 +688,10 @@ CONTAINS
         CASE (MODEL_JSBACH)
           dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)              ! in
           dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)    ! in
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-          DO ic = 1, nc
-            fract_fol_proj_cov(ic) = fract_fpc_max(ic)
-          END DO
-          !$ACC END PARALLEL LOOP
 #endif
 #ifndef __NO_QUINCY__
         CASE (MODEL_QUINCY)
           dsl4jsb_Get_var2D_onChunk(VEG_,     lai)              ! in
-          dsl4jsb_Get_var2D_onChunk(VEG_,     fract_fpc)        ! in
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-          DO ic = 1, nc
-            fract_fol_proj_cov(ic) = fract_fpc(ic)
-          END DO
-          !$ACC END PARALLEL LOOP
 #endif
         END SELECT
       END IF
@@ -832,18 +808,48 @@ CONTAINS
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
         &  wpi_rootzone_max(:))
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic=1,nc
-        IF (tile%contains_vegetation) THEN
-          skinres_canopy_max(ic) = w_skin_max_config * lai(ic) * fract_fol_proj_cov(ic)
-        ELSE
+      !
+      ! Maximum capacity of the soil and canopy skin reservoir
+      !
+      ! tile: contains vegetation
+      IF (tile%contains_vegetation) THEN
+        SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+        CASE (MODEL_JSBACH)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+          DO ic = 1,nc
+            skinres_canopy_max(ic) = config_w_skin_max * lai(ic) * fract_fpc_max(ic)
+          END DO
+          !$ACC END PARALLEL LOOP
+#endif
+#ifndef __NO_QUINCY__
+        CASE (MODEL_QUINCY)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+          DO ic = 1,nc
+            ! no scaling with 'fract_fpc(:)' because:
+            ! max LAI fraction of the tile area is one (but not fract_fpc(:)) as vegetation spreads across the whole tile area
+            skinres_canopy_max(ic) = config_w_skin_max * lai(ic)
+          END DO
+          !$ACC END PARALLEL LOOP
+#endif
+        END SELECT
+      ELSE
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic = 1,nc
           skinres_canopy_max(ic) = 0._wp
-        END IF
+        END DO
+        !$ACC END PARALLEL LOOP
+      END IF
+
+      ! tile: contains soil and is vegetation
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1,nc
         IF (tile%contains_soil) THEN
-          skinres_max(ic) =  w_skin_max_config + skinres_canopy_max(ic)
+          skinres_max(ic) =  config_w_skin_max + skinres_canopy_max(ic)
         ELSE
           skinres_max(ic) = 0._wp
         END IF
+
         IF (tile%is_vegetation) THEN
           trans_tmp(ic) = transpiration(ic)
         ELSE
@@ -895,25 +901,9 @@ CONTAINS
         & nc, nsoil, soil_depth_sl(:,:),                                                     &
         & wtr_soil_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:),                    &
         & wpi_wsat_soil_sl_tmp(:,:), wpi_wres_soil_sl_tmp(:,:),                              &
-        & hyd_cond_sat_sl(:,:), matric_pot_sl(:,:), bclapp_sl(:,:), pore_size_index_sl(:,:), &
-        & ice_impedance=ice_impedance_sl(:,:) , mpot_act=mpot_act_sl(:,:)                    &
+        & hyd_cond_sat_sl(:,:), matric_pot_sl(:,:), bclapp_sl(:,:), pore_size_index_sl(:,:), &  ! in
+        & ice_impedance=ice_impedance_sl(:,:)                                                &  ! out
         )
-
-#ifndef __NO_QUINCY__
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_QUINCY)
-      ! Update soil water potential based on "soil matric potential"
-      !   includes unit conversion from: m -> J/N -> MPa
-      !
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
-      DO is = 1, nsoil
-        DO ic = 1, nc
-          wtr_soil_pot_sl(ic, is) = mpot_act_sl(ic, is) * grav / 1000.0_wp
-        END DO
-      END DO
-      !$ACC END PARALLEL
-    END SELECT
-#endif
 
       CALL calc_surface_hydrology_land(   &
         ! in
@@ -983,6 +973,38 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+
+      ! Compute soil hydrological properties to get top layer ice impedance and
+      ! soil hydrological conductivity for point scale infiltration
+      !
+      ! called here to get an updated value of mpot_act_sl(:,:)
+      !
+      CALL get_soilhyd_properties(                                                           &
+        & dsl4jsb_Config(HYDRO_)%soilhydmodel,                                               &
+        & dsl4jsb_Config(HYDRO_)%interpol_mean,                                              &
+        & nc, nsoil, soil_depth_sl(:,:),                                                     &
+        & wtr_soil_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:),                    &
+        & wpi_wsat_soil_sl_tmp(:,:), wpi_wres_soil_sl_tmp(:,:),                              &
+        & hyd_cond_sat_sl(:,:), matric_pot_sl(:,:), bclapp_sl(:,:), pore_size_index_sl(:,:), &  ! in
+        & mpot_act=mpot_act_sl(:,:)                                                          &  ! out
+        )
+
+      ! Update soil water potential based on "soil matric potential"
+      !   includes unit conversion from: m -> J/N -> MPa
+      !
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          wtr_soil_pot_sl(ic, is) = mpot_act_sl(ic, is) * grav / 1000.0_wp
+        END DO
+      END DO
+      !$ACC END PARALLEL
+    END SELECT
+#endif
+
       !$ACC END DATA
     END IF ! NOT tile%is_glacier
 
@@ -1007,11 +1029,6 @@ CONTAINS
       !$ACC END LOOP
     END IF
     !$ACC END PARALLEL
-
-    IF (.NOT. tile%is_glacier .AND. tile%contains_vegetation) THEN
-      !$ACC EXIT DATA DELETE(fract_fol_proj_cov) ASYNC(acc_stream)
-      DEALLOCATE(fract_fol_proj_cov)
-    END IF
 
   END SUBROUTINE update_surface_hydrology
   !
@@ -2706,7 +2723,6 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     REAL(wp), DIMENSION(options%nc) :: skinres_canopy_max, skinres_max, heat_tcoef
-    REAL(wp), ALLOCATABLE      :: fract_fol_proj_cov(:)     !< use for jsbach & quincy, as helper variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_wet_fraction'
 
@@ -2752,8 +2768,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: q_air
 
-    ! quincy
-    dsl4jsb_Real2d_onChunk :: fract_fpc
 
     ! ---------------------------
     ! Go
@@ -2777,7 +2791,7 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
 
     ! Use simple scalar for GPU
-    config_w_skin_max = dsl4jsb_Config(HYDRO_)%w_skin_max
+    config_w_skin_max = dsl4jsb_Config(HYDRO_)%w_skin_max       ! Maximum capacity of skin reservoir (soil + canopy)
     pond_dynamics_scheme = dsl4jsb_Config(HYDRO_)%pond_dynamics
 
     dsl4jsb_Get_memory(HYDRO_)
@@ -2838,35 +2852,15 @@ CONTAINS
     END IF
     IF (tile%contains_vegetation) THEN
 
-      ALLOCATE(fract_fol_proj_cov(nc))
-      !$ACC ENTER DATA CREATE(fract_fol_proj_cov) ASYNC(acc_stream)
-
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic = 1, nc
-        fract_fol_proj_cov(ic) = 0._wp
-      END DO
-      !$ACC END PARALLEL LOOP
-
       SELECT CASE (model%config%model_scheme)
 #ifndef __QUINCY_STANDALONE__
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)              ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)    ! in
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          fract_fol_proj_cov(ic) = fract_fpc_max(ic)
-        END DO
-        !$ACC END PARALLEL LOOP
 #endif
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_var2D_onChunk(VEG_,     lai)              ! in
-        dsl4jsb_Get_var2D_onChunk(VEG_,     fract_fpc)        ! in
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          fract_fol_proj_cov(ic) = fract_fpc(ic)
-        END DO
-        !$ACC END PARALLEL LOOP
 #endif
       END SELECT
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)    ! out
@@ -2890,14 +2884,42 @@ CONTAINS
 
     !$ACC DATA CREATE(skinres_canopy_max, skinres_max, heat_tcoef) ASYNC(acc_stream)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic=1,nc
-      ! Maximum capacity of skin reservoir (soil + canopy)
-      IF (tile%contains_vegetation) THEN
-        skinres_canopy_max(ic) = config_w_skin_max * lai(ic) * fract_fol_proj_cov(ic)
-      ELSE
+    !
+    ! Maximum capacity of the soil and canopy skin reservoir
+    !
+    ! tile: contains vegetation
+    IF (tile%contains_vegetation) THEN
+      SELECT CASE (model%config%model_scheme)
+#ifndef __QUINCY_STANDALONE__
+      CASE (MODEL_JSBACH)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic = 1,nc
+          skinres_canopy_max(ic) = config_w_skin_max * lai(ic) * fract_fpc_max(ic)
+        END DO
+        !$ACC END PARALLEL LOOP
+#endif
+#ifndef __NO_QUINCY__
+      CASE (MODEL_QUINCY)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic = 1,nc
+          ! no scaling with 'fract_fpc(:)' because:
+          ! max LAI fraction of the tile area is one (but not fract_fpc(:)) as vegetation spreads across the whole tile area
+          skinres_canopy_max(ic) = config_w_skin_max * lai(ic)
+        END DO
+        !$ACC END PARALLEL LOOP
+#endif
+      END SELECT
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1,nc
         skinres_canopy_max(ic) = 0._wp
-      END IF
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
+
+    ! tile: contains soil and is glacier
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1,nc
       IF (tile%contains_soil) THEN
         skinres_max(ic) = config_w_skin_max + skinres_canopy_max(ic)
       ELSE
@@ -2987,11 +3009,6 @@ CONTAINS
     END IF
 
     !$ACC END DATA
-
-    IF (tile%contains_vegetation) THEN
-      !$ACC EXIT DATA DELETE(fract_fol_proj_cov) ASYNC(acc_stream)
-      DEALLOCATE(fract_fol_proj_cov)
-    END IF
 
   END SUBROUTINE update_snow_and_wet_fraction
 

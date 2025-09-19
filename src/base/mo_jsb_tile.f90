@@ -900,7 +900,7 @@ CONTAINS
     hgrid  => Get_grid(this%grid_id)
     nproma = hgrid%nproma
     nblks  = hgrid%nblks
-    vgrid  => Get_vgrid('soil_layer_sb')
+    vgrid  => Get_vgrid('soil_depth_water')
     nsoil  =  vgrid%n_levels
 
     ! Loop over all processes

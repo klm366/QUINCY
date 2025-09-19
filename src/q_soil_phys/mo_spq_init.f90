@@ -114,9 +114,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER         :: model              !< the model
     TYPE(t_jsb_grid),       POINTER         :: hgrid              !< Horizontal grid
-    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_soil_sb      !< Vertical grid
+    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_soil_w       !< Vertical grid
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_snow_spq     !< Vertical grid snow
-    INTEGER                                 :: nsoil_sb           !< number of soil layers as used/defined by the SB_ process
+    INTEGER                                 :: nsoil_w            !< number of soil layers (water)
     INTEGER                                 :: nsnow              !< number of snow layers
     REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: soil_awc
     REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: hlp2
@@ -190,11 +190,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model          => Get_model(tile%owner_model_id)
     hgrid          => Get_grid(model%grid_id)
-    vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
+    vgrid_soil_w   => Get_vgrid('soil_depth_water')
     vgrid_snow_spq => Get_vgrid('snow_layer_spq')
     nblks          =  hgrid%nblks
     nproma         =  hgrid%nproma
-    nsoil_sb       =  vgrid_soil_sb%n_levels
+    nsoil_w        =  vgrid_soil_w%n_levels
     nsnow          =  vgrid_snow_spq%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SPQ_)
@@ -206,13 +206,13 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ALLOCATE(soil_awc(nproma, nblks))
     ALLOCATE(hlp2(nproma, nblks))
-    ALLOCATE(hlp1(nproma, nsoil_sb, nblks))
-    ALLOCATE(theta_pwp_sl(nproma, nsoil_sb, nblks))
-    ALLOCATE(theta_fc_sl(nproma, nsoil_sb, nblks))
-    ALLOCATE(theta_sat_sl(nproma, nsoil_sb, nblks))
-    ALLOCATE(sand_spq_init_sl(nproma, nsoil_sb, nblks))
-    ALLOCATE(clay_spq_init_sl(nproma, nsoil_sb, nblks))
-    ALLOCATE(silt_spq_init_sl(nproma, nsoil_sb, nblks))
+    ALLOCATE(hlp1(nproma, nsoil_w, nblks))
+    ALLOCATE(theta_pwp_sl(nproma, nsoil_w, nblks))
+    ALLOCATE(theta_fc_sl(nproma, nsoil_w, nblks))
+    ALLOCATE(theta_sat_sl(nproma, nsoil_w, nblks))
+    ALLOCATE(sand_spq_init_sl(nproma, nsoil_w, nblks))
+    ALLOCATE(clay_spq_init_sl(nproma, nsoil_w, nblks))
+    ALLOCATE(silt_spq_init_sl(nproma, nsoil_w, nblks))
     ! ----------------------------------------------------------------------------------------------------- !
     ! SEB_ 2D
     dsl4jsb_Get_var2D_onDomain(SEB_, t)
@@ -276,7 +276,7 @@ CONTAINS
     !>
     ! NOTE: soil_depth_to_layers_2d() returns a 3D variable
     soil_depth_sl(:,:,:) = soil_depth_to_layers_2d(soil_depth(:,:), &     ! Total soil depth until bedrock (from textures), 2D variable
-      &                                            vgrid_soil_sb%dz(:))   ! Soil layer thicknesses from namelist
+      &                                            vgrid_soil_w%dz(:))   ! Soil layer thicknesses from namelist
     ! pass these values to a SPQ_ variable with a correct name
     soil_lay_width_sl(:,:,:) = soil_depth_sl(:,:,:)
 
@@ -285,7 +285,7 @@ CONTAINS
     ! i)  lower & upper boundary
     ! ii) depth at the center of each layer
     DO iblk = 1,nblks
-      DO is = 1,nsoil_sb
+      DO is = 1,nsoil_w
         ! lower & upper boundary
         IF (is == 1) THEN
           soil_lay_depth_lbound_sl(:, is, iblk) = 0.0_wp
@@ -310,7 +310,7 @@ CONTAINS
     !>
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,nsoil_sb
+        DO is = 1,nsoil_w
           IF (soil_lay_width_sl(ic, is, iblk) > eps8) THEN
             num_sl_above_bedrock(ic, iblk) = REAL(is, wp)
           ELSE
@@ -325,12 +325,12 @@ CONTAINS
 
     !>   3.1 init with one site-specific value for all soil layers
     !>
-    bulk_dens_sl(:,:,:)   = SPREAD(spq_init_vars%soil_bulk_density(:,:), DIM = 2, ncopies = nsoil_sb)
+    bulk_dens_sl(:,:,:)   = SPREAD(spq_init_vars%soil_bulk_density(:,:), DIM = 2, ncopies = nsoil_w)
     heat_capa_sl(:,:,:)   = soil_heat_cap
     therm_cond_sl(:,:,:)  = soil_therm_cond
-    sand_sl(:,:,:)        = SPREAD(spq_init_vars%soil_sand(:,:), DIM = 2, ncopies = nsoil_sb)
-    silt_sl(:,:,:)        = SPREAD(spq_init_vars%soil_silt(:,:), DIM = 2, ncopies = nsoil_sb)
-    clay_sl(:,:,:)        = SPREAD(spq_init_vars%soil_clay(:,:), DIM = 2, ncopies = nsoil_sb)
+    sand_sl(:,:,:)        = SPREAD(spq_init_vars%soil_sand(:,:), DIM = 2, ncopies = nsoil_w)
+    silt_sl(:,:,:)        = SPREAD(spq_init_vars%soil_silt(:,:), DIM = 2, ncopies = nsoil_w)
+    clay_sl(:,:,:)        = SPREAD(spq_init_vars%soil_clay(:,:), DIM = 2, ncopies = nsoil_w)
     ! land2atmosphere
     !   these variables are initialized with the mem%Add_var() routine in addition (same values) !
     t_soil_sl(:,:,:)      = 273.15_wp
@@ -349,7 +349,7 @@ CONTAINS
       DO iblk = 1,nblks
         CALL init_spq_soil_properties_spp1685_sites( &
           & nproma, &                           ! in
-          & nsoil_sb, &
+          & nsoil_w, &
           & model%config%lon, &                 ! in ('site_longitude')
           & bulk_dens_sl(:, :, iblk), &         ! out
           & sand_sl(:, :, iblk), &
@@ -376,7 +376,7 @@ CONTAINS
     DO iblk = 1,nblks
       CALL calc_soil_texture_saxton_compatible( &
         & nproma, &                         ! in
-        & nsoil_sb, &                       ! in
+        & nsoil_w, &                        ! in
         & sand_spq_init_sl(:, :, iblk), &   ! inout
         & silt_spq_init_sl(:, :, iblk), &   ! inout
         & clay_spq_init_sl(:, :, iblk) )    ! inout
@@ -565,10 +565,10 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_w
     INTEGER                     :: nproma
     INTEGER                     :: nblks
-    INTEGER                     :: nsoil_sb
+    INTEGER                     :: nsoil_w
     CHARACTER(len=*), PARAMETER :: routine = modname//':spq_qs_read_init_vars'
 
     IF (debug_on()) CALL message(routine, 'Reading/setting SPQ_ init vars')
@@ -577,8 +577,8 @@ CONTAINS
     hgrid  => Get_grid(model%grid_id)
     nproma = hgrid%Get_nproma()
     nblks  = hgrid%Get_nblks()
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
 
     ALLOCATE( &
       & spq_init_vars%soil_sand               (nproma, nblks),       &
@@ -645,11 +645,11 @@ CONTAINS
     REAL(wp), POINTER           :: ptr_2D(:, :)
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_w
     TYPE(t_input_file)          :: input_file
     INTEGER                     :: nproma
     INTEGER                     :: nblks
-    INTEGER                     :: nsoil_sb
+    INTEGER                     :: nsoil_w
     CHARACTER(len=*), PARAMETER :: routine = modname//':spq_read_init_vars'
 
     IF (debug_on()) CALL message(routine, 'Reading/setting SPQ_ init vars')
@@ -658,8 +658,8 @@ CONTAINS
     hgrid  => Get_grid(model%grid_id)
     nproma = hgrid%Get_nproma()
     nblks  = hgrid%Get_nblks()
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
 
     ALLOCATE( &
       & spq_init_vars%soil_sand               (nproma, nblks),       &
@@ -752,21 +752,21 @@ CONTAINS
   !>
   SUBROUTINE calc_soil_texture_saxton_compatible( &
     & nproma, &
-    & nsoil_sb, &
+    & nsoil_w, &
     & sand_sl, &
     & silt_sl, &
     & clay_sl )
 
     INTEGER,                                INTENT(in)    :: nproma        !< dimensions
-    INTEGER,                                INTENT(in)    :: nsoil_sb      !< number of soil layers
-    REAL(wp), DIMENSION(nproma, nsoil_sb),  INTENT(inout) :: sand_sl       !< sand proportion per layer
-    REAL(wp), DIMENSION(nproma, nsoil_sb),  INTENT(inout) :: silt_sl       !< silt proportion per layer
-    REAL(wp), DIMENSION(nproma, nsoil_sb),  INTENT(inout) :: clay_sl       !< clay proportion per layer
+    INTEGER,                                INTENT(in)    :: nsoil_w       !< number of soil layers
+    REAL(wp), DIMENSION(nproma, nsoil_w),   INTENT(inout) :: sand_sl       !< sand proportion per layer
+    REAL(wp), DIMENSION(nproma, nsoil_w),   INTENT(inout) :: silt_sl       !< silt proportion per layer
+    REAL(wp), DIMENSION(nproma, nsoil_w),   INTENT(inout) :: clay_sl       !< clay proportion per layer
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nproma, nsoil_sb) :: hlp_sand_sl, &
+    REAL(wp), DIMENSION(nproma, nsoil_w)  :: hlp_sand_sl, &
                                              hlp_silt_sl, &
                                              hlp_clay_sl
-    REAL(wp), DIMENSION(nproma, nsoil_sb) :: sand_original_sl, &
+    REAL(wp), DIMENSION(nproma, nsoil_w)  :: sand_original_sl, &
                                              silt_original_sl, &
                                              clay_original_sl
     REAL(wp)                              :: min_prop_soil_texture, &

@@ -50,8 +50,8 @@ CONTAINS
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: A2L_, SEB_, TURB_, HYDRO_, VEG_, SSE_, RAD_, Q_ASSIMI_, Q_AGR_, Q_PHENO_, SB_
-    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
-    USE mo_jsb_grid,                ONLY: Get_vgrid
+    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid, t_jsb_grid
+    USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
     USE mo_q_veg_respiration,       ONLY: temperature_response_respiration, calc_maintenance_respiration
     USE mo_q_veg_canopy,            ONLY: calc_dir_optimal_cn_leaf, calc_marginal_canopy_flux_increment
     USE mo_veg_constants,           ONLY: fmaint_rate_base
@@ -75,15 +75,17 @@ CONTAINS
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store             !< the bgcm store of this tile
     TYPE(t_lctlib_element),   POINTER :: lctlib                 !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_grid),         POINTER :: grid                   !< horizontal grid
     TYPE(t_jsb_vgrid),        POINTER :: vgrid_canopy_q_assimi  !< Vertical grid
-    TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_sb          !< Vertical grid
+    TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_w           !< Vertical grid
     INTEGER                           :: ncanopy                !< number of canopy layers
-    INTEGER                           :: nsoil_sb               !< number of soil layers as used/defined by the SB_ process
+    INTEGER                           :: nsoil_w                !< number of soil layers (water)
     REAL(wp), DIMENSION(options%nc)   :: dheight, target_labile_pool_carbon, target_labile_pool_nitrogen, &
                                          target_labile_pool_phosphorus, target_reserve_pool_carbon, &
                                          target_reserve_pool_nitrogen, target_reserve_pool_phosphorus
     REAL(wp), DIMENSION(options%nc)   :: phi_phenology_base     !< relative pull from reserve due to phenology,
                                                                 !! calculated from carbon reserve flow (unitless)
+    LOGICAL                           :: config_flag_log_negative_vegpool !< debug option of veg config
     REAL(wp), DIMENSION(options%nc)   :: hlp1
     REAL(wp)                          :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     REAL(wp)                          :: dtime                  !< timestep length
@@ -283,10 +285,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model                 => Get_model(tile%owner_model_id)
     lctlib                => model%lctlib(tile%lcts(1)%lib_id)
+    grid                  => Get_grid(model%grid_id)
     vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
-    vgrid_soil_sb         => Get_vgrid('soil_layer_sb')
+    vgrid_soil_w          => Get_vgrid('soil_depth_water')
     ncanopy               =  vgrid_canopy_q_assimi%n_levels
-    nsoil_sb              =  vgrid_soil_sb%n_levels
+    nsoil_w               =  vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -474,10 +477,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)                   ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)             !   out
     ! ----------------------------------------------------------------------------------------------------- !
+    config_flag_log_negative_vegpool = dsl4jsb_Config(VEG_)%flag_log_negative_vegpool
+
 
     !>0.8 calculate temperature of fine roots
     t_soil_root(:) = 0.0_wp
-    DO isoil = 1,nsoil_sb
+    DO isoil = 1,nsoil_w
       t_soil_root(:) = t_soil_root(:) + root_fraction_sl(:,isoil) * t_soil_sl(:,isoil)
     ENDDO
 
@@ -527,7 +532,7 @@ CONTAINS
     !>
     CALL calc_actual_nutrient_uptake_rate( &
       & nc, &                                         ! in
-      & nsoil_sb, &
+      & nsoil_w, &
       & dtime, &
       & lctlib%cn_leaf, &
       & lctlib%np_leaf, &
@@ -831,23 +836,27 @@ CONTAINS
     !>  4.2 calculate net flux between reserve and labile pool
     !>
     CALL calc_reserve_useage( &
-      & nc                               , & ! in
-      & dtime                            , &
-      & lctlib%growthform                , &
-      & growing_season(:)                , &
-      & kstar_labile(:)                  , &
-      & target_labile_pool_carbon(:)     , &
-      & target_labile_pool_nitrogen(:)   , &
-      & target_labile_pool_phosphorus(:) , &
-      & target_reserve_pool_carbon(:)    , &
-      & target_reserve_pool_nitrogen(:)  , &
-      & target_reserve_pool_phosphorus(:), &
-      & target_lai(:)                    , &
-      & lai(:)                           , &
-      & veg_litterfall_mt(:,:,:)         , & ! in
-      & veg_pool_mt(:,:,:)               , & ! in
-      & veg_reserve_use_mt(:,:)          , & ! inout
-      & phi_phenology_base(:)            )   ! out
+      & nc                                    , & ! in
+      & TRIM(tile%name)                       , &
+      & grid%lon(:,iblk)                      , &
+      & grid%lat(:,iblk)                      , &
+      & dtime                                 , &
+      & lctlib%growthform                     , &
+      & config_flag_log_negative_vegpool      , &
+      & growing_season(:)                     , &
+      & kstar_labile(:)                       , &
+      & target_labile_pool_carbon(:)          , &
+      & target_labile_pool_nitrogen(:)        , &
+      & target_labile_pool_phosphorus(:)      , &
+      & target_reserve_pool_carbon(:)         , &
+      & target_reserve_pool_nitrogen(:)       , &
+      & target_reserve_pool_phosphorus(:)     , &
+      & target_lai(:)                         , &
+      & lai(:)                                , &
+      & veg_litterfall_mt(:,:,:)              , & ! in
+      & veg_pool_mt(:,:,:)                    , & ! in
+      & veg_reserve_use_mt(:,:)               , & ! inout
+      & phi_phenology_base(:)                 )   ! out
 
     !>  4.3 signal sink limitation, identified by an accummulation of labile carbon,
     !>      to photosynthesis routine
@@ -945,7 +954,7 @@ CONTAINS
     IF (dsl4jsb_Config(VEG_)%flag_dynamic_roots) THEN
       CALL calc_root_distribution_change( &
         & nc                                             , & ! in
-        & nsoil_sb                                       , &
+        & nsoil_w                                        , &
         & dtime                                          , &
         & lctlib%tau_fine_root                           , &
         & lctlib%k_root_dist                             , &
@@ -1027,7 +1036,7 @@ CONTAINS
   !> output: actual uptake rates and associated respiration costs
   !>
   SUBROUTINE calc_actual_nutrient_uptake_rate(nc, &
-                                              nsoil_sb, &
+                                              nsoil_w, &
                                               dtime, &
                                               lctlib_cn_leaf, &
                                               lctlib_np_leaf, &
@@ -1102,7 +1111,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                              INTENT(in)    :: nc, &                        !< dimensions: points of chunk
-                                                           nsoil_sb                     !< dimensions: soil layers
+                                                           nsoil_w                      !< dimensions: soil layers (water)
     REAL(wp),                             INTENT(in)    :: dtime                        !< timestep length
     REAL(wp),                             INTENT(in)    :: lctlib_cn_leaf               !< lctlib parameter
     REAL(wp),                             INTENT(in)    :: lctlib_np_leaf               !< lctlib parameter
@@ -1123,8 +1132,8 @@ CONTAINS
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: labile_carbon                !< labile pool carbon (mol C / m2)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: labile_nitrogen              !< labile pool nitrogen (mol N / m2)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: labile_phosphorus            !< labile pool phosphorus (mol P / m2)
-    REAL(wp), DIMENSION(nc, nsoil_sb),    INTENT(in)    :: sb_pool_mycorrhiza_carbon    !< mycorrhiza biomass (mol C /m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),    INTENT(in)    :: nh4_solute         , &       !< soil solution ammonium (mol N /m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),     INTENT(in)    :: sb_pool_mycorrhiza_carbon    !< mycorrhiza biomass (mol C /m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),     INTENT(in)    :: nh4_solute         , &       !< soil solution ammonium (mol N /m3)
                                                            no3_solute         , &       !< soil solution nitrate (mol N /m3)
                                                            soil_depth_sl                !< depth of soil layers (m)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: active_n_fixation            !< whether N fixation is permitted to occur here (0-1)
@@ -1137,16 +1146,16 @@ CONTAINS
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: exudation_c_tmyc_mavg        !< time-averaged C allocation to mycorrhizae (mol C / mol N)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: unit_uptake_n_pot            !< potential N uptake per unit root mass (mu mol N / mol C / s)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: unit_uptake_p_pot            !< potential P uptake per unit root mass (mu mol P / mol C / s)
-    REAL(wp), DIMENSION(nc, nsoil_sb),    INTENT(inout) :: plant_uptake_nh4_sl     , &    !< plant NH4 uptake per soil layer (mu mol N / m3 / s)
+    REAL(wp), DIMENSION(nc, nsoil_w),     INTENT(inout) :: plant_uptake_nh4_sl     , &    !< plant NH4 uptake per soil layer (mu mol N / m3 / s)
                                                            plant_uptake_nh4_n15_sl , &    !< plant NH4-N15 uptake per soil layer (mu mol N / m3 / s)
                                                            plant_uptake_no3_sl     , &    !< plant NO3 uptake per soil layer (mu mol N / m3 / s)
                                                            plant_uptake_no3_n15_sl , &    !< plant NO3-N15 uptake per soil layer (mu mol N / m3 / s)
                                                            plant_uptake_po4_sl            !< plant PO4 uptake per soil layer (mu mol P / m3 / s)
     REAL(wp),                             INTENT(inout) :: sb_mycorrhiza_export_mt(:,:,:) !< total plant uptake from mycorrhiza (mol / m2 / timestep)
-    REAL(wp), DIMENSION(nc, nsoil_sb),    INTENT(inout) :: myc_export_n_tlabile_mavg_sl   !< time averaged N export from myc2plant (mu mol N / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),    INTENT(inout) :: myc_export_p_tlabile_mavg_sl   !< time averaged P export from myc2plant (mu mol P / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),    INTENT(inout) :: myc_export_c_tmyc_mavg_sl      !< time averaged C export from myc2plant (mu mol N / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),    INTENT(inout) :: myc_export_n_tmyc_mavg_sl      !< time averaged N export from myc2plant (mu mol P / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),     INTENT(inout) :: myc_export_n_tlabile_mavg_sl   !< time averaged N export from myc2plant (mu mol N / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),     INTENT(inout) :: myc_export_p_tlabile_mavg_sl   !< time averaged P export from myc2plant (mu mol P / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),     INTENT(inout) :: myc_export_c_tmyc_mavg_sl      !< time averaged C export from myc2plant (mu mol N / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),     INTENT(inout) :: myc_export_n_tmyc_mavg_sl      !< time averaged N export from myc2plant (mu mol P / m3)
     REAL(wp), DIMENSION(nc),              INTENT(out)   :: uptake_nh4                   !< total plant NH4 uptake (mu mol N / m2 / s)
     REAL(wp), DIMENSION(nc),              INTENT(out)   :: uptake_nh4_n15               !< total plant NH4-N15 uptake (mu mol N / m2 / s)
     REAL(wp), DIMENSION(nc),              INTENT(out)   :: uptake_no3                   !< total plant NO3 uptake (mu mol N / m2 / s)
@@ -1228,7 +1237,7 @@ CONTAINS
     uptake_nh4_pot(:) = 0.0_wp
     uptake_no3_pot(:) = 0.0_wp
     uptake_po4_pot(:) = 0.0_wp
-    DO isoil = 1,nsoil_sb
+    DO isoil = 1,nsoil_w
        uptake_nh4_pot(:) = uptake_nh4_pot(:) + plant_uptake_nh4_sl(:,isoil) * soil_depth_sl(:,isoil)
        uptake_no3_pot(:) = uptake_no3_pot(:) + plant_uptake_no3_sl(:,isoil) * soil_depth_sl(:,isoil)
        uptake_po4_pot(:) = uptake_po4_pot(:) + plant_uptake_po4_sl(:,isoil) * soil_depth_sl(:,isoil)
@@ -1374,14 +1383,14 @@ CONTAINS
       DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
         IF (is_element_used(ielem)) THEN
           ix_elem = elements_index_map(ielem)    ! get element index in bgcm
-          DO isoil = 1,nsoil_sb
+          DO isoil = 1,nsoil_w
             sb_mycorrhiza_export_mt(ix_elem, :, isoil) = sb_mycorrhiza_export_mt(ix_elem, :, isoil) &
               &                                          * MIN(demand_uptake_n_tuptake_mavg(:) * 1.5_wp, 1.0_wp)
           END DO
         END IF
       END DO
 
-      ! DO isoil = 1,nsoil_sb
+      ! DO isoil = 1,nsoil_w
       !   veg_exudation_carbon(:) = veg_exudation_carbon(:) + sb_mycorrhiza_export_mt(ixC, :, isoil)
       ! END DO
     ENDIF ! flag_mycorrhiza
@@ -1429,7 +1438,7 @@ CONTAINS
 
     !> 5.2 apply actual uptake rates to soil layers
     !!
-    DO isoil = 1,nsoil_sb
+    DO isoil = 1,nsoil_w
       WHERE((uptake_nh4_pot(:) > eps8) .AND. (uptake_nh4_pot(:) > uptake_nh4(:)))
         plant_uptake_nh4_sl(:,isoil)      = plant_uptake_nh4_sl(:,isoil) * uptake_nh4(:) / uptake_nh4_pot(:)
         plant_uptake_nh4_n15_sl(:,isoil)  = plant_uptake_nh4_n15_sl(:,isoil) * uptake_nh4(:) / uptake_nh4_pot(:)
@@ -1447,7 +1456,7 @@ CONTAINS
     !!
     uptake_nh4_n15(:) = 0.0_wp
     uptake_no3_n15(:) = 0.0_wp
-    DO isoil = 1,nsoil_sb
+    DO isoil = 1,nsoil_w
       uptake_nh4_n15(:) = uptake_nh4_n15(:) + plant_uptake_nh4_n15_sl(:,isoil) * soil_depth_sl(:,isoil)
       uptake_no3_n15(:) = uptake_no3_n15(:) + plant_uptake_no3_n15_sl(:,isoil) * soil_depth_sl(:,isoil)
     ENDDO
@@ -2209,23 +2218,27 @@ CONTAINS
   !>   Output: net flux between reserve and labile pools, as well as phenology-reserve use trigger
   !>
   SUBROUTINE calc_reserve_useage( &
-    & nc                            , &
-    & dtime                         , &
-    & lctlib_growthform             , &
-    & growing_season                , &
-    & kstar_labile                  , &
-    & target_labile_pool_carbon     , &
-    & target_labile_pool_nitrogen   , &
-    & target_labile_pool_phosphorus , &
-    & target_reserve_pool_carbon    , &
-    & target_reserve_pool_nitrogen  , &
-    & target_reserve_pool_phosphorus, &
-    & target_lai                    , &
-    & lai                           , &
-    & veg_litterfall_mt             , &
-    & veg_pool_mt                   , &
-    & veg_reserve_use_mt            , &
-    & phi_phenology_base            )
+    & nc                                    , &
+    & tile_name                             , &
+    & grid_lon                              , &
+    & grid_lat                              , &
+    & dtime                                 , &
+    & lctlib_growthform                     , &
+    & config_flag_log_negative_vegpool      , &
+    & growing_season                        , &
+    & kstar_labile                          , &
+    & target_labile_pool_carbon             , &
+    & target_labile_pool_nitrogen           , &
+    & target_labile_pool_phosphorus         , &
+    & target_reserve_pool_carbon            , &
+    & target_reserve_pool_nitrogen          , &
+    & target_reserve_pool_phosphorus        , &
+    & target_lai                            , &
+    & lai                                   , &
+    & veg_litterfall_mt                     , &
+    & veg_pool_mt                           , &
+    & veg_reserve_use_mt                    , &
+    & phi_phenology_base                    )
     !------------------------------------------------------------------------------------------------------ !
     USE mo_kind,                  ONLY: wp
     USE mo_jsb_math_constants,    ONLY: one_day, eps8
@@ -2238,24 +2251,28 @@ CONTAINS
       &                                 k_phi_interact, &
       &                                 min_lai, target_lai_max, igrass, itree, icrop
     !------------------------------------------------------------------------------------------------------ !
-    INTEGER,      INTENT(in)    :: nc                                !< dimensions
-    REAL(wp),     INTENT(in)    :: dtime                             !< timestep length
-    INTEGER,      INTENT(in)    :: lctlib_growthform                 !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: growing_season(:)                 !< does the plant intend to grow?
-    REAL(wp),     INTENT(in)    :: kstar_labile(:)                   !< potential labile pool turnover (1/day)
-    REAL(wp),     INTENT(in)    :: target_labile_pool_carbon(:)      !< desirable size (mol C/m2) of the labile pool
-    REAL(wp),     INTENT(in)    :: target_labile_pool_nitrogen(:)    !< desirable size (mol N/m2) of the labile pool
-    REAL(wp),     INTENT(in)    :: target_labile_pool_phosphorus(:)  !< desirable size (mol P/m2) of the labile pool
-    REAL(wp),     INTENT(in)    :: target_reserve_pool_carbon(:)     !< desirable size (mol C/m2) of the reserve pool
-    REAL(wp),     INTENT(in)    :: target_reserve_pool_nitrogen(:)   !< desirable size (mol N/m2) of the reserve pool
-    REAL(wp),     INTENT(in)    :: target_reserve_pool_phosphorus(:) !< desirable size (mol P/m2) of the reserve pool
-    REAL(wp),     INTENT(in)    :: target_lai(:)                     !< target LAI
-    REAL(wp),     INTENT(in)    :: lai(:)                            !< current LAI
-    REAL(wp),     INTENT(in)    :: veg_litterfall_mt(:,:,:)          !< the plant's current litter fall rate (mol/time step)
-    REAL(wp),     INTENT(in)    :: veg_pool_mt(:,:,:)                !< the plant's pool
-    REAL(wp),     INTENT(inout) :: veg_reserve_use_mt(:,:)           !< current resource use rate (mol/time step)
-    REAL(wp),     INTENT(out)   :: phi_phenology_base(:)             !< relative pull from reserve due to phenology,
-                                                                     !! calculated from carbon reserve flow (unitless)
+    INTEGER,      INTENT(in)    :: nc                                   !< dimensions
+    CHARACTER(*), INTENT(in)    :: tile_name                            !< name of tile
+    REAL(wp),     INTENT(in)    :: grid_lon(:)                          !< grid longitude
+    REAL(wp),     INTENT(in)    :: grid_lat(:)                          !< grid latitude
+    REAL(wp),     INTENT(in)    :: dtime                                !< timestep length
+    INTEGER,      INTENT(in)    :: lctlib_growthform                    !< lctlib parameter
+    LOGICAL,      INTENT(in)    :: config_flag_log_negative_vegpool     !< veg config option
+    REAL(wp),     INTENT(in)    :: growing_season(:)                    !< does the plant intend to grow?
+    REAL(wp),     INTENT(in)    :: kstar_labile(:)                      !< potential labile pool turnover (1/day)
+    REAL(wp),     INTENT(in)    :: target_labile_pool_carbon(:)         !< desirable size (mol C/m2) of the labile pool
+    REAL(wp),     INTENT(in)    :: target_labile_pool_nitrogen(:)       !< desirable size (mol N/m2) of the labile pool
+    REAL(wp),     INTENT(in)    :: target_labile_pool_phosphorus(:)     !< desirable size (mol P/m2) of the labile pool
+    REAL(wp),     INTENT(in)    :: target_reserve_pool_carbon(:)        !< desirable size (mol C/m2) of the reserve pool
+    REAL(wp),     INTENT(in)    :: target_reserve_pool_nitrogen(:)      !< desirable size (mol N/m2) of the reserve pool
+    REAL(wp),     INTENT(in)    :: target_reserve_pool_phosphorus(:)    !< desirable size (mol P/m2) of the reserve pool
+    REAL(wp),     INTENT(in)    :: target_lai(:)                        !< target LAI
+    REAL(wp),     INTENT(in)    :: lai(:)                               !< current LAI
+    REAL(wp),     INTENT(in)    :: veg_litterfall_mt(:,:,:)             !< the plant's current litter fall rate (mol/time step)
+    REAL(wp),     INTENT(in)    :: veg_pool_mt(:,:,:)                   !< the plant's pool
+    REAL(wp),     INTENT(inout) :: veg_reserve_use_mt(:,:)              !< current resource use rate (mol/time step)
+    REAL(wp),     INTENT(out)   :: phi_phenology_base(:)                !< relative pull from reserve due to phenology,
+                                                                        !! calculated from carbon reserve flow (unitless)
     !------------------------------------------------------------------------------------------------------ !
     INTEGER                     :: ic                       !< loop over point of the chunk
     REAL(wp)                    :: k_labphen                !< set to k_labphen parameter for grass or trees
@@ -2302,7 +2319,15 @@ CONTAINS
       END IF
       ! Save value for use for N and P calculations
       phi_phenology_base(ic) = phi_phenology(ic)
-      ! calc phi_maintenance; for safety, catch potential negative values
+      ! calc phi_maintenance; catch potential negative veg_pool values and write info to LOG (if enabled)
+      IF (config_flag_log_negative_vegpool) THEN
+        IF (veg_pool_mt(ix_labile, ixC, ic) < 0.0_wp) THEN
+          WRITE (message_text,*) 'Negative value of vegetation labile pool C at tile ', tile_name, &
+            &                    ' at (lon:lat) ', grid_lon(ic), ':', grid_lat(ic), &
+            &                    ', value ', veg_pool_mt(ix_labile, ixC, ic), ' is NOT modified here'
+          CALL message(TRIM(routine), message_text)
+        END IF
+      END IF
       hlp1(ic) = MAX(0.0_wp, veg_pool_mt(ix_labile, ixC, ic))
       IF (target_labile_pool_carbon(ic) > eps8 .AND. hlp1(ic) < target_labile_pool_carbon(ic)) THEN
         phi_maintenance(ic) = EXP(-(lambda_phimaint * hlp1(ic) / target_labile_pool_carbon(ic)) ** k_phimaint) &
@@ -2310,7 +2335,15 @@ CONTAINS
       ELSE
         phi_maintenance(ic) = 0._wp
       END IF
-      ! calc phi_storage; for safety, catch potential negative values
+      ! calc phi_storage; catch potential negative veg_pool values and write info to LOG (if enabled)
+      IF (config_flag_log_negative_vegpool) THEN
+        IF (veg_pool_mt(ix_reserve, ixC, ic) < 0.0_wp) THEN
+          WRITE (message_text,*) 'Negative value of vegetation reserve pool C at tile ', tile_name, &
+            &                    ' at (lon:lat) ', grid_lon(ic), ':', grid_lat(ic), &
+            &                    ', value ', veg_pool_mt(ix_reserve, ixC, ic), ' is NOT modified here'
+          CALL message(TRIM(routine), message_text)
+        END IF
+      END IF
       hlp1(ic) = MAX(0.0_wp, veg_pool_mt(ix_reserve, ixC, ic))
       IF (target_reserve_pool_carbon(ic) > eps8 .AND. hlp1(ic) < target_reserve_pool_carbon(ic)) THEN
         phi_storage(ic) = EXP(-(lambda_phistore * hlp1(ic) / target_reserve_pool_carbon(ic)) ** k_phistore) &
@@ -2349,8 +2382,16 @@ CONTAINS
       !>   2.1 supply of reserve N to labile pool during growing season
       !>
       phi_phenology(ic) = phi_phenology_base(ic)
-      ! calc phi_maintenance; for safety, catch potential negative values
-      hlp1(ic)          = MAX(0.0_wp, veg_pool_mt(ix_labile, ixN, ic))
+      ! calc phi_maintenance; catch potential negative veg_pool values and write info to LOG (if enabled)
+      IF (config_flag_log_negative_vegpool) THEN
+        IF (veg_pool_mt(ix_labile, ixN, ic) < 0.0_wp) THEN
+          WRITE (message_text,*) 'Negative value of vegetation labile pool N at tile ', tile_name, &
+            &                    ' at (lon:lat) ', grid_lon(ic), ':', grid_lat(ic), &
+            &                    ', value ', veg_pool_mt(ix_labile, ixN, ic), ' is NOT modified here'
+          CALL message(TRIM(routine), message_text)
+        END IF
+      END IF
+      hlp1(ic) = MAX(0.0_wp, veg_pool_mt(ix_labile, ixN, ic))
       IF (target_labile_pool_nitrogen(ic) > eps8 .AND. &
         &   hlp1(ic) < target_labile_pool_nitrogen(ic) .AND. &
         &   growing_season(ic) > test_false_true) THEN
@@ -2363,7 +2404,15 @@ CONTAINS
       !>   2.2 build-up of reserve N (composed of a pull of N to the reserve and a push from the labile to avoid
       !>     too strong accumulation of N in the labile)
       !>
-      ! calc phi_storage; for safety, catch potential negative values, @NOTE which have been observed with IQ simulations
+      ! calc phi_storage; catch potential negative veg_pool values and write info to LOG (if enabled)
+      IF (config_flag_log_negative_vegpool) THEN
+        IF (veg_pool_mt(ix_reserve, ixN, ic) < 0.0_wp) THEN
+          WRITE (message_text,*) 'Negative value of vegetation reserve pool N at tile ', tile_name, &
+            &                    ' at (lon:lat) ', grid_lon(ic), ':', grid_lat(ic), &
+            &                    ', value ', veg_pool_mt(ix_reserve, ixN, ic), ' is NOT modified here'
+          CALL message(TRIM(routine), message_text)
+        END IF
+      END IF
       hlp1(ic) = MAX(0.0_wp, veg_pool_mt(ix_reserve, ixN, ic))
       IF (target_reserve_pool_nitrogen(ic) > eps8 .AND. hlp1(ic) < target_reserve_pool_nitrogen(ic)) THEN
         phi_storage(ic) = EXP(-(lambda_phistore * hlp1(ic) &
@@ -3199,7 +3248,7 @@ CONTAINS
   !!
   !----------------------------------------------------------------------------------------------------------
   SUBROUTINE calc_root_distribution_change( nc                               , &
-                                            nsoil_sb                         , &
+                                            nsoil_w                          , &
                                             dtime                            , &
                                             lctlib_tau_fine_root             , &
                                             lctlib_k_root_dist               , &
@@ -3226,7 +3275,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                          INTENT(in)    :: nc                               !< dimensions
-    INTEGER,                          INTENT(in)    :: nsoil_sb                         !< dimensions
+    INTEGER,                          INTENT(in)    :: nsoil_w                          !< number of soil layers (water)
     REAL(wp),                         INTENT(in)    :: dtime                            !< timestep length
     REAL(wp),                         INTENT(in)    :: lctlib_tau_fine_root         , & !< fine root turnover rate (?)
                                                        lctlib_k_root_dist           , & !< PFT specific root distribution factor
@@ -3235,7 +3284,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: veg_growth_fine_root_carbon  , & !< growth rate of fine roots (micro-mol / m2 / s)]
                                                        veg_pool_fine_root_carbon    , & !< current fine root pool (mol / m2)
                                                        root_limitation_state            !< dominating limiting factor affecting root growth
-    REAL(wp), DIMENSION(nc,nsoil_sb), INTENT(in)    :: soil_depth_sl                , & !< soil layer thinkness (m)
+    REAL(wp), DIMENSION(nc,nsoil_w),  INTENT(in)    :: soil_depth_sl                , & !< soil layer thinkness (m)
                                                        soil_lay_depth_center_sl     , & !< soil layer axis (m)
                                                        wtr_soil_pot_sl              , & !< soil moisture potential (MPa)
                                                        t_soil_sl                    , & !< soil temperature (K)
@@ -3243,10 +3292,10 @@ CONTAINS
                                                        no3_solute_sl                , & !< plant available NO3 (mol N / m3)
                                                        po4_solute_sl                , & !< plant available PO4 (mol P / m3)
                                                        root_fraction_sl                 !< current root distribution (fraction)
-    REAL(wp), DIMENSION(nc,nsoil_sb), INTENT(out)   :: delta_root_fraction_sl           !< update of root distribution this time step
+    REAL(wp), DIMENSION(nc,nsoil_w),  INTENT(out)   :: delta_root_fraction_sl           !< update of root distribution this time step
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(nc,nsoil_sb)                :: hlp1
+    REAL(wp), DIMENSION(nc,nsoil_w)                 :: hlp1
     REAL(wp), DIMENSION(nc)                         :: hlp2
     REAL(wp)                                        :: hlp3
     INTEGER                                         :: ic, isoil
@@ -3285,9 +3334,9 @@ CONTAINS
 
       !> 1.3 Cannot grow in frozen soils, or below the freezing zone
       !>
-      DO isoil = 1,nsoil_sb
+      DO isoil = 1,nsoil_w
         IF(t_soil_sl(ic,isoil) < Tzero) THEN
-          hlp1(ic,isoil:nsoil_sb) = zero
+          hlp1(ic,isoil:nsoil_w) = zero
         ENDIF
       ENDDO
 
@@ -3309,7 +3358,7 @@ CONTAINS
 
     !> 2.0 Calculate change in root mass per layer (note: not converted to 1/m3, as not needed here)
     !>
-    DO isoil = 1,nsoil_sb
+    DO isoil = 1,nsoil_w
       hlp1(:,isoil) = root_fraction_sl(:,isoil) * veg_pool_fine_root_carbon(:) &
         &             * (1._wp - lctlib_tau_fine_root / one_day / one_year * dtime) &
         &             + hlp1(:,isoil) * veg_growth_fine_root_carbon(:)

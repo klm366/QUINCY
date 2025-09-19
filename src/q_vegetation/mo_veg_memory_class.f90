@@ -117,7 +117,7 @@ MODULE mo_veg_memory_class
                                     root_limitation_state, &         !< dominating limiting factor for root growth [-1,1] (P = -1 | Water = 0 | N = 1) [unitless]
                                     falloc_fruit_crop                !< fraction of allocation to fruits in crops [0-1] [unitless]
     ! basic plant 3D
-    TYPE(t_jsb_var_real3d)          :: &    ! DIMENSION(soil_layer_sb)
+    TYPE(t_jsb_var_real3d)          :: &    ! DIMENSION(soil_depth_water)
                                     root_fraction_sl          , &    !< fractions of root per layer [unitless]
                                     delta_root_fraction_sl    , &    !< change of fractions of root per layer [1/timestep]
                                     lai_cl                    , &    !< leaf area index per canopy layer [m2 m-2]
@@ -452,7 +452,7 @@ CONTAINS
     TYPE(t_jsb_grid),   POINTER :: hgrid                      !< Horizontal grid
     TYPE(t_jsb_vgrid),  POINTER :: surface                    !< Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy_q_assimi      !< Vertical grid
-    TYPE(t_jsb_vgrid),  POINTER :: vgrid_soil_sb              !< Vertical grid
+    TYPE(t_jsb_vgrid),  POINTER :: vgrid_soil_w               !< Vertical grid
     CHARACTER(len=30)           :: unit_veg_pool              !< unit of element var
     CHARACTER(len=30)           :: unit_veg_flux              !< unit of element var
     INTEGER                     :: elem_idx_map(LAST_ELEM_ID) !< element mapper ID -> IND
@@ -474,7 +474,7 @@ CONTAINS
     hgrid                 => Get_grid(model%grid_id)
     surface               => Get_vgrid('surface')
     vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
-    vgrid_soil_sb         => Get_vgrid('soil_layer_sb')
+    vgrid_soil_w          => Get_vgrid('soil_depth_water')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(Q_SYL_)
@@ -694,7 +694,7 @@ CONTAINS
 
       ! Product pools and decay
       IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
-        IF (dsl4jsb_Config(Q_SYL_)%active .OR. (model%lctlib(lib_id)%CropFlag)) THEN
+        IF (dsl4jsb_Config(Q_SYL_)%active .OR. dsl4jsb_Config(Q_AGR_)%active) THEN
 
           CALL mem%Add_var(mem%veg_bgcm_main%prod_decay, &
             & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
@@ -1335,7 +1335,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('root_fraction_sl', mem%root_fraction_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('root_fraction_sl', '', 'fractions of root per layer'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1346,7 +1346,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('delta_root_fraction_sl', mem%delta_root_fraction_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('delta_root_fraction_sl', '', 'change in fractions of root per layer'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &

@@ -69,6 +69,7 @@ MODULE mo_veg_config_class
     LOGICAL          :: l_use_product_pools        !< enable product pools (required for crop/ and wood harvest processes); default: FALSE
     LOGICAL          :: flag_dynroots_h2o_n_limit  !< root growth across layers limited/affected by H2O and Nitrogen availability (needs flag_dynamic_roots="T")
     LOGICAL          :: flag_herbivory             !< whether herbivory (on grass PFT) is enabled
+    LOGICAL          :: flag_log_negative_vegpool  !< debug option: test for negative veg_pool and message to LOG file for any negative value
 
    CONTAINS
      PROCEDURE :: Init => Init_veg_config
@@ -117,6 +118,7 @@ CONTAINS
     LOGICAL                     :: flag_dynamic_roots
     LOGICAL                     :: flag_dynroots_h2o_n_limit
     LOGICAL                     :: flag_herbivory
+    LOGICAL                     :: flag_log_negative_vegpool
     LOGICAL                     :: l_use_product_pools
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
@@ -138,26 +140,28 @@ CONTAINS
       flag_dynamic_roots,           &
       flag_dynroots_h2o_n_limit,    &
       flag_herbivory,               &
+      flag_log_negative_vegpool,    &
       l_use_product_pools
 
     INTEGER  :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
     CALL message(TRIM(routine), 'Starting veg configuration')
 
     ! Set defaults
-    active                         = .TRUE.
-    lrestart_cont                  = .FALSE.  ! TRUE: Continue although VEG variables are missing in restart file
-    bc_filename                    = 'bc_land_phys.nc'
-    ic_filename                    = 'ic_land_veg.nc'
-    plant_functional_type_id       = 1
-    veg_bnf_scheme                 = "dynamic"
-    veg_dynamics_scheme            = "population"
-    biomass_alloc_scheme           = "dynamic"
-    leaf_stoichom_scheme           = "dynamic"
-    read_veg_state                 = .FALSE.
-    flag_dynamic_roots             = .TRUE.
-    flag_dynroots_h2o_n_limit      = .FALSE.
-    flag_herbivory                 = .FALSE.
-    l_use_product_pools            = .FALSE.
+    active                    = .TRUE.
+    lrestart_cont             = .FALSE.  ! TRUE: Continue although VEG variables are missing in restart file
+    bc_filename               = 'bc_land_phys.nc'
+    ic_filename               = 'ic_land_veg.nc'
+    plant_functional_type_id  = 1
+    veg_bnf_scheme            = "dynamic"
+    veg_dynamics_scheme       = "population"
+    biomass_alloc_scheme      = "dynamic"
+    leaf_stoichom_scheme      = "dynamic"
+    read_veg_state            = .FALSE.
+    flag_dynamic_roots        = .TRUE.
+    flag_dynroots_h2o_n_limit = .FALSE.
+    flag_herbivory            = .FALSE.
+    flag_log_negative_vegpool = .FALSE.
+    l_use_product_pools       = .FALSE.
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -172,20 +176,21 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     ! pass values as read from file
-    config%active                        = active
-    config%lrestart_cont                 = lrestart_cont
-    config%ic_filename                   = ic_filename
-    config%bc_filename                   = bc_filename
-    config%pft_id                        = plant_functional_type_id
-    config%bnf_scheme                    = TRIM(veg_bnf_scheme)
-    config%veg_dynamics_scheme           = TRIM(veg_dynamics_scheme)
-    config%biomass_alloc_scheme          = TRIM(biomass_alloc_scheme)
-    config%leaf_stoichom_scheme          = TRIM(leaf_stoichom_scheme)
-    config%read_veg_state                = read_veg_state
-    config%flag_dynamic_roots            = flag_dynamic_roots
-    config%flag_dynroots_h2o_n_limit     = flag_dynroots_h2o_n_limit
-    config%flag_herbivory                = flag_herbivory
-    config%l_use_product_pools           = l_use_product_pools
+    config%active                     = active
+    config%lrestart_cont              = lrestart_cont
+    config%ic_filename                = ic_filename
+    config%bc_filename                = bc_filename
+    config%pft_id                     = plant_functional_type_id
+    config%bnf_scheme                 = TRIM(veg_bnf_scheme)
+    config%veg_dynamics_scheme        = TRIM(veg_dynamics_scheme)
+    config%biomass_alloc_scheme       = TRIM(biomass_alloc_scheme)
+    config%leaf_stoichom_scheme       = TRIM(leaf_stoichom_scheme)
+    config%read_veg_state             = read_veg_state
+    config%flag_dynamic_roots         = flag_dynamic_roots
+    config%flag_dynroots_h2o_n_limit  = flag_dynroots_h2o_n_limit
+    config%flag_herbivory             = flag_herbivory
+    config%flag_log_negative_vegpool  = flag_log_negative_vegpool
+    config%l_use_product_pools        = l_use_product_pools
 
   END SUBROUTINE Init_veg_config
 

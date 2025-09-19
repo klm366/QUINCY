@@ -67,9 +67,9 @@ CONTAINS
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store             !< the bgcm store of this tile
     TYPE(t_jsb_vgrid),        POINTER :: vgrid_canopy_q_assimi  !< Vertical grid
-    TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_sb          !< Vertical grid
+    TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_w           !< Vertical grid
     INTEGER                           :: ncanopy                !< number of canopy layers
-    INTEGER                           :: nsoil_sb               !< number of soil layers as used/defined by the SB_ process
+    INTEGER                           :: nsoil_w                !< number of soil layers as used/defined by the SB_ process
     REAL(wp), DIMENSION(options%nc)   :: leaf_nitrogen          !< helper array for leaf nitrogen
     REAL(wp), ALLOCATABLE             :: vgrid_canopy_dz(:)     !< canopy grid helper variable dz
     REAL(wp), ALLOCATABLE             :: vgrid_canopy_lbounds(:)!< canopy grid helper variable lbounds
@@ -150,9 +150,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model                 => Get_model(tile%owner_model_id)
     vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
-    vgrid_soil_sb         => Get_vgrid('soil_layer_sb')
+    vgrid_soil_w          => Get_vgrid('soil_depth_water')
     ncanopy               =  vgrid_canopy_q_assimi%n_levels
-    nsoil_sb              =  vgrid_soil_sb%n_levels
+    nsoil_w               =  vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -322,7 +322,7 @@ CONTAINS
 #endif
 
       !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2) DEFAULT(PRESENT)
-      DO is = 1, nsoil_sb
+      DO is = 1, nsoil_w
         DO ic = 1, nc
           root_fraction_sl(ic,is) = root_fraction_sl(ic,is) + delta_root_fraction_sl(ic,is)
         END DO

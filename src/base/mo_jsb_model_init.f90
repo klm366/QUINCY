@@ -444,11 +444,11 @@ CONTAINS
         CALL model%Queue_task(SEB_,       "surface_energy")
         CALL model%Queue_task(HYDRO_,     "evaporation")
         CALL model%Queue_task(SEB_,       "surface_fluxes")
-        CALL model%Queue_task(Q_ASSIMI_,  "ftranspiration_per_sl")
         CALL model%Queue_task(HYDRO_,     "surface_hydrology")
         CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
         CALL model%Queue_task(SSE_,       "soil_and_snow_properties")
         CALL model%Queue_task(SSE_,       "soil_and_snow_temperature")
+        CALL model%Queue_task(Q_ASSIMI_,  "ftranspiration_per_sl")
         CALL model%Queue_task(HYDRO_,     "soil_hydrology")
         CALL model%Queue_task(HYDRO_,     "water_stress")
         CALL model%Queue_task(RAD_,       "radiation_par")
@@ -550,6 +550,7 @@ CONTAINS
         CALL model%Queue_task(Q_PHENO_, "q_phenology")              ! ALL
         CALL model%Queue_task(RAD_, "radiation_par")                ! ALL
         CALL model%Queue_task(Q_ASSIMI_, "canopy_fluxes")           ! ALL
+        CALL model%Queue_task(Q_ASSIMI_, "ftranspiration_per_sl")   ! ALL
         CALL model%Queue_task(SPQ_, "spq_physics")                  ! ALL
 
         IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
@@ -707,6 +708,7 @@ CONTAINS
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (.NOT. model%config%use_soil_phys_jsbach) THEN
+          ! Initialize HYDRO_ before SPQ_
           IF (tile%Is_process_active(SPQ_)) THEN
             CALL spq_init(tile)
           END IF

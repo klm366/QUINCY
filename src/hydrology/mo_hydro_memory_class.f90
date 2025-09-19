@@ -760,7 +760,7 @@ CONTAINS
         & t_cf('vol_field_capy_sl', 'm/m', 'Volumetric soil field capacity'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
+        & lrestart=.TRUE.,                                                     &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'vol_p_wilt', mem%vol_p_wilt,                          &
@@ -792,7 +792,7 @@ CONTAINS
         & t_cf('vol_porosity_sl', 'm/m', 'Volumetric soil porosity'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
+        & lrestart=.TRUE.,                                                     &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'vol_wres', mem%vol_wres,                              &
