@@ -95,7 +95,7 @@ CONTAINS
     lake_min_ice_depth     = 0.05_wp
     l_ice_on_lakes  = .TRUE.
     niter_tmx       = 0
-    l_skin_temp     = .FALSE.
+    l_skin_temp     = .FALSE.   ! default for QUINCY: TRUE
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 

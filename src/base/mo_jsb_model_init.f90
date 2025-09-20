@@ -694,7 +694,7 @@ CONTAINS
       IF (tile%Is_process_active(SSE_)) THEN
         CALL sse_init(tile)
       END IF
-      ! Initialize HYDRO_ before VEG_
+      ! Initialize HYDRO_ before VEG_ and SPQ_
       IF (tile%Is_process_active(HYDRO_)) THEN
         CALL hydro_init(tile)
       END IF

@@ -285,7 +285,7 @@ CONTAINS
     hydro_scale            = "semi_distributed"
     quincy_nsoil_w         = 0           ! by default the values is not set via namelist, but used from 'ic_filename'
 #ifdef __QUINCY_STANDALONE__
-    qs_soil_depth            = 5.7
+    qs_soil_depth            = 9.5
     qs_soil_awc_prescribe    = 300.0_wp
     qs_soil_theta_prescribe  = 1.0_wp
 #endif

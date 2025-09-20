@@ -56,9 +56,11 @@ MODULE mo_sb_config_class
     !> flags
     !!
     LOGICAL               :: read_sb_state          !< TRUE: call sb_read_states (mo_sb_init) after init/restart from file
-    LOGICAL               :: flag_sb_prescribe_nh4
-    LOGICAL               :: flag_sb_prescribe_no3
-    LOGICAL               :: flag_sb_prescribe_po4
+    LOGICAL               :: flag_sb_prescribe_nh4  !< TRUE: solute NH4 is kept at a prescribed level
+    LOGICAL               :: flag_sb_prescribe_no3  !< TRUE: solute NO3 is kept at a prescribed level
+    LOGICAL               :: flag_sb_prescribe_po4  !< TRUE: solute PO4 is kept at a prescribed level
+    LOGICAL               :: flag_sb_interactive_n  !< TRUE: N cycle state affects C,P processes via stoichiometry or allocation changes
+    LOGICAL               :: flag_sb_interactive_p  !< TRUE: P cycle state affects C,N processes via stoichiometry or allocation changes
     ! mycorrhiza
     LOGICAL               :: flag_mycorrhiza
     LOGICAL               :: flag_mycorrhiza_org
@@ -150,6 +152,8 @@ CONTAINS
     LOGICAL                     :: flag_sb_prescribe_nh4
     LOGICAL                     :: flag_sb_prescribe_no3
     LOGICAL                     :: flag_sb_prescribe_po4
+    LOGICAL                     :: flag_sb_interactive_n
+    LOGICAL                     :: flag_sb_interactive_p
     LOGICAL                     :: flag_mycorrhiza
     LOGICAL                     :: flag_mycorrhiza_org
     LOGICAL                     :: flag_mycorrhiza_prim
@@ -187,6 +191,8 @@ CONTAINS
                       flag_sb_prescribe_nh4     , &
                       flag_sb_prescribe_no3     , &
                       flag_sb_prescribe_po4     , &
+                      flag_sb_interactive_n     , &
+                      flag_sb_interactive_p     , &
                       flag_mycorrhiza           , &
                       flag_mycorrhiza_org       , &
                       flag_mycorrhiza_prim      , &
@@ -221,12 +227,14 @@ CONTAINS
     sb_model_scheme             = "simple_1d"       ! simple_1d jsm
     sb_nloss_scheme             = "dynamic"         ! none fixed dynamic
     sb_bnf_scheme               = "dynamic"         ! none dynamic unlimited (fixed == dynamic)
-    sb_adsorp_scheme            = "eca_full"        ! eca_full; eca_part (only uptake, not for adsorption); eca_none
+    sb_adsorp_scheme            = "eca_part"        ! eca_full; eca_part (only uptake, not for adsorption); eca_none
     deposition_scheme           = 'constant'
     read_sb_state               = .FALSE.
     flag_sb_prescribe_nh4       = .FALSE.
     flag_sb_prescribe_no3       = .FALSE.
-    flag_sb_prescribe_po4       = .FALSE.
+    flag_sb_prescribe_po4       = .TRUE.
+    flag_sb_interactive_n       = .TRUE.
+    flag_sb_interactive_p       = .FALSE.
     flag_mycorrhiza             = .FALSE.
     flag_mycorrhiza_org         = .FALSE.
     flag_mycorrhiza_prim        = .FALSE.
@@ -271,6 +279,8 @@ CONTAINS
     config%flag_sb_prescribe_nh4           = flag_sb_prescribe_nh4
     config%flag_sb_prescribe_no3           = flag_sb_prescribe_no3
     config%flag_sb_prescribe_po4           = flag_sb_prescribe_po4
+    config%flag_sb_interactive_n           = flag_sb_interactive_n
+    config%flag_sb_interactive_p           = flag_sb_interactive_p
     config%flag_mycorrhiza                 = flag_mycorrhiza
     config%flag_mycorrhiza_org             = flag_mycorrhiza_org
     config%flag_mycorrhiza_prim            = flag_mycorrhiza_prim

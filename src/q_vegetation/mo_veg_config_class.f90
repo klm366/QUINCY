@@ -70,6 +70,8 @@ MODULE mo_veg_config_class
     LOGICAL          :: flag_dynroots_h2o_n_limit  !< root growth across layers limited/affected by H2O and Nitrogen availability (needs flag_dynamic_roots="T")
     LOGICAL          :: flag_herbivory             !< whether herbivory (on grass PFT) is enabled
     LOGICAL          :: flag_log_negative_vegpool  !< debug option: test for negative veg_pool and message to LOG file for any negative value
+    LOGICAL          :: flag_veg_interactive_n     !< TRUE: N cycle state affects C,P processes via stoichiometry or allocation changes
+    LOGICAL          :: flag_veg_interactive_p     !< TRUE: P cycle state affects C,N processes via stoichiometry or allocation changes
 
    CONTAINS
      PROCEDURE :: Init => Init_veg_config
@@ -119,6 +121,8 @@ CONTAINS
     LOGICAL                     :: flag_dynroots_h2o_n_limit
     LOGICAL                     :: flag_herbivory
     LOGICAL                     :: flag_log_negative_vegpool
+    LOGICAL                     :: flag_veg_interactive_n
+    LOGICAL                     :: flag_veg_interactive_p
     LOGICAL                     :: l_use_product_pools
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
@@ -141,6 +145,8 @@ CONTAINS
       flag_dynroots_h2o_n_limit,    &
       flag_herbivory,               &
       flag_log_negative_vegpool,    &
+      flag_veg_interactive_n,       &
+      flag_veg_interactive_p,       &
       l_use_product_pools
 
     INTEGER  :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
@@ -161,6 +167,8 @@ CONTAINS
     flag_dynroots_h2o_n_limit = .FALSE.
     flag_herbivory            = .FALSE.
     flag_log_negative_vegpool = .FALSE.
+    flag_veg_interactive_n    = .TRUE.
+    flag_veg_interactive_p    = .FALSE.
     l_use_product_pools       = .FALSE.
 
     ! read the namelist
@@ -190,6 +198,8 @@ CONTAINS
     config%flag_dynroots_h2o_n_limit  = flag_dynroots_h2o_n_limit
     config%flag_herbivory             = flag_herbivory
     config%flag_log_negative_vegpool  = flag_log_negative_vegpool
+    config%flag_veg_interactive_n     = flag_veg_interactive_n
+    config%flag_veg_interactive_p     = flag_veg_interactive_p
     config%l_use_product_pools        = l_use_product_pools
 
   END SUBROUTINE Init_veg_config

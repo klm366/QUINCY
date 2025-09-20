@@ -82,7 +82,8 @@ CONTAINS
     INTEGER                           :: nsoil_w                !< number of soil layers (water)
     REAL(wp), DIMENSION(options%nc)   :: dheight, target_labile_pool_carbon, target_labile_pool_nitrogen, &
                                          target_labile_pool_phosphorus, target_reserve_pool_carbon, &
-                                         target_reserve_pool_nitrogen, target_reserve_pool_phosphorus
+                                         target_reserve_pool_nitrogen, target_reserve_pool_phosphorus, &
+                                         leaf2root_allocation_scalar
     REAL(wp), DIMENSION(options%nc)   :: phi_phenology_base     !< relative pull from reserve due to phenology,
                                                                 !! calculated from carbon reserve flow (unitless)
     LOGICAL                           :: config_flag_log_negative_vegpool !< debug option of veg config
@@ -656,8 +657,11 @@ CONTAINS
 
     !>  2.2 calculate the target stoichiometry of the newly grownth tissue
     !>
-    CALL calc_stoichiometry_changes( &
+    CALL calc_target_stoichiometry( &
       & dtime                                           , & ! in
+      & TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) , &
+      & dsl4jsb_Config(VEG_)%flag_veg_interactive_n     , &
+      & dsl4jsb_Config(VEG_)%flag_veg_interactive_p     , &
       & lctlib%growthform                               , &
       & lctlib%phenology_type                           , &
       & lctlib%cn_leaf                                  , &
@@ -666,7 +670,6 @@ CONTAINS
       & lctlib%cn_leaf_max                              , &
       & lctlib%np_leaf_min                              , &
       & lctlib%np_leaf_max                              , &
-      & TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) , &
       & growing_season(:)                               , &
       & leaf_cn_direction(:)                            , &
       & labile_carbon_tcnl_mavg(:)                      , &
@@ -686,6 +689,7 @@ CONTAINS
       & target_np_coarse_root(:)                        , &
       & target_np_sap_wood(:)                           , &
       & target_np_fruit(:)                              )   ! out
+
 
     !>3.0 calculate current allometry
     !>
@@ -742,9 +746,24 @@ CONTAINS
       & unit_npp(:)                                             , & ! out
       & unit_transpiration(:)                                   )   ! out
 
-    !>  3.2 calc the current allometry of trees and grasses
+    !>  3.2 estimate nutrient and water limitation scalar affecting root to leaf allocation
     !>      calculate 'root_limitation_state' the dominating limiting factor for root growth
     !>      (range of 'root_limitation_state' is [-1,1] with P = -1 | Water = 0 | N = 1)
+    CALL calc_root_limitation_state( &
+      & dsl4jsb_Config(VEG_)%flag_veg_interactive_n, & ! in
+      & dsl4jsb_Config(VEG_)%flag_veg_interactive_p, &
+      & dsl4jsb_Config(Q_AGR_)%active              , &
+      & lctlib%CropFlag                            , &
+      & labile_carbon_talloc_mavg(:)               , &
+      & labile_nitrogen_talloc_mavg(:)             , &
+      & labile_phosphorus_talloc_mavg(:)           , &
+      & growth_cn_talloc_mavg(:)                   , &
+      & growth_np_talloc_mavg(:)                   , &
+      & w_root_lim_talloc_mavg(:)                  , & ! in
+      & leaf2root_allocation_scalar(:)             , & ! out
+      & root_limitation_state(:)                   )   ! out
+
+    !>  3.3 calc the current allometry of trees and grasses
     !>
     CALL calc_allometry( &
       & dsl4jsb_Config(Q_AGR_)%active                     , & ! in
@@ -783,15 +802,12 @@ CONTAINS
       & unit_uptake_p_talloc_mavg(:)                      , &
       & dphi_talloc_mavg(:)                               , &
       & kstar_labile(:)                                   , &
-      & w_root_lim_talloc_mavg(:)                         , & ! in
+      & leaf2root_allocation_scalar(:)                    , & ! in
       & leaf2sapwood_mass_ratio(:)                        , & ! inout
       & leaf2root_mass_ratio(:)                           , &
       & dheight(:)                                        , & ! out
       & k1_opt(:)                                         , &
-      & k2_opt(:)                                         , &
-      & root_limitation_state(:)                            ) ! out
-
-
+      & k2_opt(:)                                           )
 
     !>4.0 calculate reserve & labile pool dynamics
     !>
@@ -862,6 +878,8 @@ CONTAINS
     !>      to photosynthesis routine
     !>
     beta_sinklim_ps(:) = calc_beta_sinklimitation( &
+      &                                           dsl4jsb_Config(VEG_)%flag_veg_interactive_n, &
+      &                                           dsl4jsb_Config(VEG_)%flag_veg_interactive_p, &
       &                                           phi_phenology_base(:), &
       &                                           veg_pool_mt(ix_labile, ixC, :), &
       &                                           veg_pool_mt(ix_labile, ixN, :), &
@@ -1473,7 +1491,10 @@ CONTAINS
   !! Includes optimal CN ratio calculation \n
   !! output: target stoichiometries
   ! --------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_stoichiometry_changes(dtime                   , &
+  ELEMENTAL SUBROUTINE calc_target_stoichiometry(dtime, &
+                                                  leaf_stoichom_scheme    , &   ! in
+                                                  flag_veg_interactive_n  , &   ! in
+                                                  flag_veg_interactive_p  , &   ! in
                                                   lctlib_growthform       , &
                                                   lctlib_phenology_type   , &
                                                   lctlib_cn_leaf          , &
@@ -1482,7 +1503,6 @@ CONTAINS
                                                   lctlib_cn_leaf_max      , &
                                                   lctlib_np_leaf_min      , &
                                                   lctlib_np_leaf_max      , &
-                                                  leaf_stoichom_scheme    , &   ! in
                                                   growing_season          , &
                                                   leaf_cn_direction       , &
                                                   labile_carbon           , &
@@ -1512,6 +1532,9 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp),                 INTENT(in)    :: dtime                     !< timestep length
+    CHARACTER(len=*),         INTENT(in)    :: leaf_stoichom_scheme      !< stoichiometry scheme
+    LOGICAL,                  INTENT(in)    :: flag_veg_interactive_n, & !< dynamic N stoichiometry
+                                               flag_veg_interactive_p    !< dynamic P stoichiometry
     INTEGER,                  INTENT(in)    :: lctlib_growthform
     INTEGER,                  INTENT(in)    :: lctlib_phenology_type
     REAL(wp),                 INTENT(in)    :: lctlib_cn_leaf        , &
@@ -1520,7 +1543,6 @@ CONTAINS
                                                lctlib_np_leaf        , &
                                                lctlib_np_leaf_min    , &
                                                lctlib_np_leaf_max
-    CHARACTER(len=*),         INTENT(in)    :: leaf_stoichom_scheme      !< from veg config
     REAL(wp),                 INTENT(in)    :: growing_season            !< ..
     REAL(wp),                 INTENT(in)    :: leaf_cn_direction         !< ..
     REAL(wp),                 INTENT(in)    :: labile_carbon         , & !< average labile carbon
@@ -1543,7 +1565,7 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     REAL(wp) :: delta_cn, delta_np, f_growing_leaf
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_stoichiometry_changes'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_target_stoichiometry'
 
     !> 1.0 calculate leaf C:N
     !!
@@ -1560,7 +1582,7 @@ CONTAINS
       f_growing_leaf = 1._wp
     END SELECT
 
-    IF (growing_season > test_false_true) THEN
+    IF (growing_season > test_false_true .AND. flag_veg_interactive_n ) THEN
       SELECT CASE (leaf_stoichom_scheme)
       CASE ("optimal")
         ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
@@ -1598,7 +1620,7 @@ CONTAINS
     !!
 
     ! Leaf N:P
-    IF (growing_season > test_false_true) THEN
+    IF (growing_season > test_false_true .AND. flag_veg_interactive_p ) THEN
       SELECT CASE (leaf_stoichom_scheme)
       CASE ("dynamic")
         IF (labile_nitrogen / MAX(eps8, labile_phosphorus) >= np_growth) THEN
@@ -1632,8 +1654,90 @@ CONTAINS
       target_np_sap_wood     = lctlib_np_leaf / root2leaf_np
     END SELECT
 
-  END SUBROUTINE calc_stoichiometry_changes
+  END SUBROUTINE calc_target_stoichiometry
 
+  !-----------------------------------------------------------------------------------------------------
+  ! 3.2 Sub Task of update_veg_growth
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> calculates the relative impact of water and nutrient limitation on root growth
+  !! in standard cases this is the minimim of the N and P stress and the W stress
+  !! in case of CROPS with Q_AGR, currently no nutrient stress is assumed
+  !! also calculates the root_limitation state for dynamics depth-dependent root allocation
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL SUBROUTINE calc_root_limitation_state( flag_veg_interactive_n, &
+                                                        flag_veg_interactive_p, &
+                                                        is_active_Q_AGR       , &
+                                                        lctlib_CropFlag       , &
+                                                        labile_carbon         , &
+                                                        labile_nitrogen       , &
+                                                        labile_phosphorus     , &
+                                                        growth_cn             , &
+                                                        growth_np             , &
+                                                        w_root_lim            , &
+                                                        leaf2root_scalar      , &
+                                                        root_limitation_state)
+
+    USE mo_veg_constants,           ONLY: w_root_lim_max
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    LOGICAL,               INTENT(in)  :: flag_veg_interactive_n, & !< if N cycle is affecting root allocation
+                                          flag_veg_interactive_p, & !< if P cycle is affecting root allocation
+                                          is_active_Q_AGR       , & !< if agriculture process is active
+                                          lctlib_CropFlag           !< if tile is a crop
+    REAl(wp),              INTENT(in)  :: labile_carbon             !< labile carbon (mol C/m2)
+    REAL(wp),              INTENT(in)  :: labile_nitrogen           !< labile nitrogen (mol N/m2)
+    REAL(wp),              INTENT(in)  :: labile_phosphorus         !< labile phosphorus (mol P/m2)
+    REAL(wp),              INTENT(in)  :: growth_cn                 !< C:N of whole plant growth increment
+    REAL(wp),              INTENT(in)  :: growth_np                 !< N:P of whole plant growth increment
+    REAL(wp),              INTENT(in)  :: w_root_lim                !< water limitation factor
+    REAL(wp),              INTENT(out) :: leaf2root_scalar          !< relative leaf2root allocation (used in allometry module)
+    REAL(wp),              INTENT(out) :: root_limitation_state     !< dominating limiting factor for root growth [-1,1] (P = -1 | Water = 0 | N = 1)
+    ! ---------------------------
+    ! 0.2 Local
+    REAL(wp)     :: n_l2r_scal, p_l2r_scal ,w_l2r_scal
+
+    !> 1.0 N and P stress of root growth (if assumed to be affecting root growth
+    !>
+    IF (flag_veg_interactive_n) THEN
+      n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+    ELSE
+      n_l2r_scal = 1.0_wp
+    END IF
+    IF (flag_veg_interactive_p) THEN
+      p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+    ELSE
+      p_l2r_scal = 1.0_wp
+    END IF
+    !>   1.1 special case crop PFTs with Q_AGR process - no N or P limitation assumed
+    !>
+    IF (lctlib_CropFlag .AND. is_active_Q_AGR) THEN
+       n_l2r_scal = 1.0_wp
+       p_l2r_scal = 1.0_wp
+    END IF
+
+    w_l2r_scal = MIN(1._wp, w_root_lim / w_root_lim_max)
+        ! actual ratio is given by the minimum of the three factors
+    leaf2root_scalar = MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)
+
+    !> 2.0 calculate root limitation state from root2leaf scaling factors
+    !>  calculate leaf to root scaling factors for N, P, Water
+    !>
+    !>  'root_limitation_state': the dominating limiting factor for root growth
+    !>    all '*_l2r_scal' need to be limited to a MAX of 1.0_wp to make this work
+    !>    hence, all '*_l2r_scal' range [0,1] where 0 == strongest limitation, and 1 lowest limitation considered here
+    !>  range of 'root_limitation_state' is [-1,1] with P = -1 | Water = 0 | N = 1
+    !>
+    IF (n_l2r_scal <= p_l2r_scal) THEN
+      root_limitation_state =  0.5_wp + 0.5_wp * (w_l2r_scal - n_l2r_scal)
+    ELSE
+      root_limitation_state = -0.5_wp - 0.5_wp * (w_l2r_scal - p_l2r_scal)
+    END IF
+
+  END SUBROUTINE calc_root_limitation_state
 
   !-----------------------------------------------------------------------------------------------------
   !>3.2 Calculate allometry - Sub Task of update_veg_growth
@@ -1688,17 +1792,16 @@ CONTAINS
                                             unit_uptake_p                 , &
                                             dphi                          , &
                                             kstar_labile                  , &
-                                            w_root_lim                    , &
+                                            leaf2root_allocation_scalar   , &
                                             leaf2sapwood_mass_ratio       , &
                                             leaf2root_mass_ratio          , &
                                             dheight                       , &
                                             k1_opt                        , &
-                                            k2_opt                        , &
-                                            root_limitation_state           )
+                                            k2_opt                         )
 
     USE mo_jsb_math_constants,      ONLY: one_day, one_year, eps4, eps8
     USE mo_jsb_physical_constants,  ONLY: rhoh2o
-    USE mo_veg_constants,           ONLY: min_height, itree, igrass, icrop, sm2lm_grass, w_root_lim_max, &
+    USE mo_veg_constants,           ONLY: min_height, itree, igrass, icrop, sm2lm_grass, &
       &                                   leaf2root_min_ratio, leaf2root_max_ratio
     USE mo_q_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
@@ -1741,13 +1844,12 @@ CONTAINS
     REAL(wp),              INTENT(in)  :: unit_uptake_p                !< P uptake per unit root mass (micro-mol P m-2 s-1 mol-1 root C)
     REAL(wp),              INTENT(in)  :: dphi                         !< leaf-soil water potential gradient (MPa)
     REAL(wp),              INTENT(in)  :: kstar_labile                 !< labile pool turnover rate
-    REAL(wp),              INTENT(in)  :: w_root_lim                   !< ..
+    REAL(wp),              INTENT(in)  :: leaf2root_allocation_scalar  !< scalar affecting leaf 2 root ratio for allocation (unitless)
     REAL(wp),              INTENT(inout) :: leaf2sapwood_mass_ratio    !< leaf to sapwood mass ratio
     REAL(wp),              INTENT(inout) :: leaf2root_mass_ratio       !< leaf to root mass ratio
     REAL(wp),              INTENT(out) :: dheight                      !< change in height (m) resulting from a small change in woody biomass
     REAL(wp),              INTENT(out) :: k1_opt                       !< coefficient in optimized leaf:root ratio
     REAL(wp),              INTENT(out) :: k2_opt                       !< coefficient in optimized leaf:root ratio
-    REAL(wp),              INTENT(out) :: root_limitation_state        !< dominating limiting factor for root growth [-1,1] (P = -1 | Water = 0 | N = 1)
     ! ---------------------------
     ! 0.2 Local
     REAL(wp)     :: diameter2       ! diameter (m) resulting from a infitisemal small increase in woody biomas
@@ -1755,14 +1857,8 @@ CONTAINS
     REAL(wp)     :: k2_opt_w
     REAL(wp)     :: k1_opt_n
     REAL(wp)     :: k1_opt_p
-    REAL(wp)     :: n_l2r_scal      ! N leaf to root scaling factor (min value = 0, meaning stronges limitation, i.e., larger values == less limitation)
-    REAL(wp)     :: p_l2r_scal      ! P leaf to root scaling factor (min value = 0, meaning stronges limitation, i.e., larger values == less limitation)
-    REAL(wp)     :: w_l2r_scal      ! Water leaf to root scaling factor (min value = 0, meaning stronges limitation, i.e., larger values == less limitation)
-
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_allometry'
-
-
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -1773,15 +1869,11 @@ CONTAINS
     dheight                 = 0.0_wp
     k1_opt                  = 0.0_wp
     k2_opt                  = 0.0_wp
-    root_limitation_state   = 0.0_wp
     diameter2               = 0.0_wp
     k1_opt_w                = 0.0_wp
     k2_opt_w                = 0.0_wp
     k1_opt_n                = 0.0_wp
     k1_opt_p                = 0.0_wp
-    n_l2r_scal              = 0.0_wp
-    p_l2r_scal              = 0.0_wp
-    w_l2r_scal              = 0.0_wp
 
     !> 1.0 case growthform
     !!
@@ -1872,28 +1964,18 @@ CONTAINS
            k2_opt = k2_opt_w
         ENDIF
       CASE("dynamic")
-        ! empirical scaling of leaf to root ratio based on nitrogen, phosphorus and water availability
-        SELECT CASE (bnf_scheme)
-        CASE ("unlimited") ! N and P are assume to not limit production, therefore also no effect on allometry
-          n_l2r_scal = 1.0_wp
-          p_l2r_scal = 1.0_wp
-        CASE DEFAULT
-          n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-          p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
-        END SELECT
-        w_l2r_scal = w_root_lim / w_root_lim_max
+        ! same as fixed case, but with empirical scaling of leaf to root ratio based on
+        ! nitrogen, phosphorus and water availability
         ! actual ratio is given by the minimum of the three factors
         leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
-          &                    lctlib_k_rtos * leaf2sapwood_mass_ratio * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
+          &                    lctlib_k_rtos * leaf2sapwood_mass_ratio * leaf2root_allocation_scalar))
       CASE("fixed")
          ! scaling factor for root to leaf mass
          ! ad 1: derived from hydraulic homeostatis of root and wood hydraulic resistance (Magnani et al. 2000, PCE)
-         ! Note: currently still lacks a moisture response!
          ! sapwood mass / height =  k_rtos * fine_root_mass
          ! Cr = Cs / k_rtos / height
          ! let Cs = Cl / leaf2sapwood_mass_ratio * height
          ! => Cl = Cr * leaf2sapwood_mass_ratio * k_rtos = Cl = Cr * leaf2root_mass_ratio
-         ! ad 2: nitrogen/phosphorus sensitivity still needed
          leaf2root_mass_ratio = lctlib_k_rtos * leaf2sapwood_mass_ratio
       END SELECT  ! biomass_alloc_scheme
     !> 1.2 grass
@@ -1952,18 +2034,8 @@ CONTAINS
         ENDIF
       CASE("dynamic")
         ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
-        SELECT CASE (bnf_scheme)
-        CASE ("unlimited") ! N and P are assume to not limit production, therefore also no effect on allometry
-          n_l2r_scal = 1.0_wp
-          p_l2r_scal = 1.0_wp
-        CASE DEFAULT
-          n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-          p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
-        END SELECT
-        w_l2r_scal = w_root_lim / w_root_lim_max
-        ! actual ratio is given by the minimum of the three factors
         leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
-          &                    sm2lm_grass * lctlib_k_rtos * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
+          &                        sm2lm_grass * lctlib_k_rtos * leaf2root_allocation_scalar))
       CASE("fixed")
         leaf2root_mass_ratio = sm2lm_grass * lctlib_k_rtos
       END SELECT ! biomass_alloc_scheme
@@ -1973,50 +2045,13 @@ CONTAINS
         leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
         ! leaf:root ratio
         ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
-        SELECT CASE (bnf_scheme)
-        CASE ("unlimited") ! N and P are assume to not limit production, therefore also no effect on allometry
-          n_l2r_scal = 1.0_wp
-          p_l2r_scal = 1.0_wp
-        CASE DEFAULT
-          n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-          p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
-        END SELECT
-        w_l2r_scal = w_root_lim / w_root_lim_max
         ! actual ratio is given by the minimum of the three factors
         leaf2root_mass_ratio = sm2lm_grass * lctlib_k_rtos
-      ELSE
-        ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
-        n_l2r_scal = 1.0_wp !growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-        p_l2r_scal = 1.0_wp !growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
-        w_l2r_scal = w_root_lim / w_root_lim_max
       END IF
+      ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
       leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
-        &                    leaf2root_mass_ratio * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
+        &                        leaf2root_mass_ratio * leaf2root_allocation_scalar))
     END SELECT ! SELECT CASE (growthform)
-
-    !>2.0 calculate root limitation state from root2leaf scaling factors
-    !>  calculate leaf to root scaling factors for N, P, Water
-    !>
-    !>  'root_limitation_state': the dominating limiting factor for root growth
-    !>    all '*_l2r_scal' need to be limited to a MAX of 1.0_wp to make this work
-    !>    hence, all '*_l2r_scal' range [0,1] where 0 == strongest limitation, and 1 lowest limitation considered here
-    !>  range of 'root_limitation_state' is [-1,1] with P = -1 | Water = 0 | N = 1
-    !>
-    SELECT CASE (bnf_scheme)
-    ! Assume N and P not affecting root distribution in the unlimited case
-    CASE ("unlimited")
-      n_l2r_scal = 1.0_wp
-      p_l2r_scal = 1.0_wp
-    CASE DEFAULT
-      n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-      p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
-    END SELECT
-    w_l2r_scal = MIN(1._wp, w_root_lim / w_root_lim_max)
-    IF (n_l2r_scal <= p_l2r_scal) THEN
-      root_limitation_state =  0.5_wp + 0.5_wp * (w_l2r_scal - n_l2r_scal)
-    ELSE
-      root_limitation_state = -0.5_wp - 0.5_wp * (w_l2r_scal - p_l2r_scal)
-    END IF
 
   END SUBROUTINE calc_allometry
 
@@ -2526,7 +2561,9 @@ CONTAINS
   !!
   !! output: beta factor for photosynthesis calculation
   !----------------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_beta_sinklimitation(phi_phenology_base, &
+  ELEMENTAL FUNCTION calc_beta_sinklimitation(flag_veg_interactive_n, &
+                                              flag_veg_interactive_p, &
+                                              phi_phenology_base, &
                                               veg_pool_labile_carbon, &
                                               veg_pool_labile_nitrogen, &
                                               veg_pool_labile_phosphorus, &
@@ -2541,6 +2578,8 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
+    LOGICAL,  INTENT(in) :: flag_veg_interactive_n, & !< N effect on sink limitation
+                            flag_veg_interactive_p    !< P effect on sink limitation
     REAL(wp), INTENT(in) :: phi_phenology_base, &
                             veg_pool_labile_carbon, &
                             veg_pool_labile_nitrogen, &
@@ -2567,16 +2606,25 @@ CONTAINS
       beta_sinklim_ps = 1.0_wp
     ENDIF
 
-    !> 1.1 Sink limitation due to low NP content of labile pool
+    !> 1.1 Sink limitation due to low NP content of labile pool in case the
+    !!     interacting N and P cycles is activated
     !!
     IF (veg_pool_labile_carbon > eps8 .AND. target_labile_pool_carbon > eps8) THEN
-      hlp1 = (veg_pool_labile_nitrogen / veg_pool_labile_carbon) &
-        &    / ( target_labile_pool_nitrogen / (k_cnp_sinklim_ps * target_labile_pool_carbon))
-      hlp2 = (veg_pool_labile_phosphorus / veg_pool_labile_carbon) &
-        &    / ( target_labile_pool_phosphorus / (k_cnp_sinklim_ps * target_labile_pool_carbon))
+      IF (flag_veg_interactive_n) THEN
+        hlp1 = (veg_pool_labile_nitrogen / veg_pool_labile_carbon) &
+          &    / ( target_labile_pool_nitrogen / (k_cnp_sinklim_ps * target_labile_pool_carbon))
+      ELSE
+        hlp1 = 1.0_wp
+      END IF
+      IF (flag_veg_interactive_p) THEN
+        hlp2 = (veg_pool_labile_phosphorus / veg_pool_labile_carbon) &
+          &    / ( target_labile_pool_phosphorus / (k_cnp_sinklim_ps * target_labile_pool_carbon))
+      ELSE
+        hlp2 = 1.0_wp
+      END IF
       ! take the minimum of the limit imposed by either N or P
       beta_sinklim_ps = MAX(beta_sinklim_ps_min,beta_sinklim_ps * MIN(MIN(hlp1, hlp2), 1.0_wp))
-    ENDIF
+    END IF
 
   END FUNCTION calc_beta_sinklimitation
 

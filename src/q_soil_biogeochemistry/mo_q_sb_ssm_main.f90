@@ -452,6 +452,7 @@ CONTAINS
       & nsoil_w, &
       & dtime, &
       & num_sl_above_bedrock(:), &
+      & dsl4jsb_Config(SB_)%flag_sb_interactive_n, &
       & soil_depth_sl(:,:), &
       & bulk_dens_sl(:,:), &
       & wtr_soil_sl(:,:), &
@@ -1062,6 +1063,7 @@ CONTAINS
     & nsoil_w, &
     & dtime, &
     & num_sl_above_bedrock, &
+    & flag_sb_interactive_n, &
     & soil_depth_sl, &
     & bulk_dens_sl, &
     & wtr_soil_sl, &
@@ -1105,6 +1107,7 @@ CONTAINS
     INTEGER,                                     INTENT(in)  :: nsoil_w                      !< number of soil layers (water)
     REAL(wp),                                    INTENT(in)  :: dtime                        !< timestep length
     REAL(wp), DIMENSION(nc),                     INTENT(in)  :: num_sl_above_bedrock         !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    LOGICAL,                                     INTENT(in)  :: flag_sb_interactive_n        !< TRUE: fast SOM CN varies with N solute concentration
     REAL(wp), DIMENSION(nc),                     INTENT(in)  :: p_deposition                 !< p deposition, [micro-mol m-2 s-1]
     REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)  :: &
                                                                 soil_depth_sl, &             !< soil depth of a layer [m]
@@ -1182,9 +1185,14 @@ CONTAINS
         km_dip_biochem_po4_act(ic, is)     = km_dip_biochem_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km_denitrification_c_act(ic, is)   = km_denitrification_c
         km_denitrification_no3_act(ic, is) = km_denitrification_no3
-        apparent_fast_som_cn(ic, is) = MAX(k_fast_som_cn_max - f_fast_som_cn &
-          &                            * (nh4_solute(ic, is) + no3_solute(ic, is)) / bulk_dens_sl(ic, is), &
-          &                            k_fast_som_cn_min)
+        IF (flag_sb_interactive_n) THEN
+          apparent_fast_som_cn(ic, is) = MAX(k_fast_som_cn_max - f_fast_som_cn &
+            &                            * (nh4_solute(ic, is) + no3_solute(ic, is)) / bulk_dens_sl(ic, is), &
+            &                            k_fast_som_cn_min)
+        ELSE
+          ! set to mean of min-max range
+          apparent_fast_som_cn(ic,is)  = 0.5_wp * (k_fast_som_cn_min + k_fast_som_cn_max)
+        END IF
         apparent_fast_som_np(ic, is) = k_fast_som_np &
           &                            * MAX(k_fast_som_cn_max - f_fast_som_cn * kref_fast_som_np / bulk_dens_sl(ic, is), &
           &                            k_fast_som_cn_min) / apparent_fast_som_cn(ic, is)
