@@ -402,7 +402,8 @@ CONTAINS
     !$ACC UPDATE DEVICE(f_resp_acclim, t_acclim_zero, fmaint_rate_base, k_fpc, k_sai2lai) ASYNC(1)
     !$ACC UPDATE DEVICE(carbon_per_dryweight_leaf, jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc_C4) ASYNC(1)
     !$ACC UPDATE DEVICE(jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, k0_fn_pepc_C3, kfn_chl) ASYNC(1)
-    !$ACC UPDATE DEVICE(rfr_ratio_toc, k_r2fr_chl)
+    !$ACC UPDATE DEVICE(rfr_ratio_toc, k_r2fr_chl) ASYNC(1)
+    !$ACC WAIT(1)
 
   END SUBROUTINE init_veg_constants
 

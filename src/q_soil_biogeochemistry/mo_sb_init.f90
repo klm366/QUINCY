@@ -21,7 +21,8 @@ MODULE mo_sb_init
   USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: finish, message
   USE mo_jsb_control,           ONLY: debug_on
-  USE mo_jsb_math_constants,    ONLY: eps4, eps8
+  USE mo_jsb_math_constants,    ONLY: eps4, eps8, one_day
+  USE mo_jsb_impl_constants,    ONLY: def_parameters
 
   USE mo_jsb_class,             ONLY: Get_model
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
@@ -115,7 +116,9 @@ CONTAINS
     USE mo_atmland_constants,             ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
       &                                         def_co2_deltaC13, def_co2_deltaC14
     USE mo_sb_constants,                  ONLY: microbial_cue_max, microbial_nue, microbial_pue, microbial_cn, microbial_np, &
-      &                                         k_weath_mineral
+      &   k_weath_mineral, &
+      &   temp_freeze_thres_bio, temp_freeze_window_bio, frac_woody2dec_litter, frac_litter2fast_som, f_nit_noy, f_nit_n2o, &
+      &   vmax_nitrification, vmax_denitrification, t_ref_decomposition, ea_decomposition, ed_decomposition
     USE mo_isotope_util,                  ONLY: calc_fractionation, calc_mixing_ratio_C14C
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SB_)
@@ -292,6 +295,77 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SB_,    qmax_po4_om_sl)
     dsl4jsb_Get_var3D_onDomain(SB_,    volume_min_sl)
     ! ----------------------------------------------------------------------------------------------------- !
+
+    !>0.8 apply calibration of soil-biogeochemistry constants if enabled
+    !>
+    IF (dsl4jsb_Config(SB_)%flag_apply_nml_parameters) THEN
+      ! temp_freeze_thres_bio
+      IF (dsl4jsb_Config(SB_)%nml_temp_freeze_thres_bio > def_parameters) THEN
+        temp_freeze_thres_bio = dsl4jsb_Config(SB_)%nml_temp_freeze_thres_bio
+        !$ACC UPDATE DEVICE(temp_freeze_thres_bio) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: temp_freeze_thres_bio')
+      END IF
+      ! temp_freeze_window_bio
+      IF (dsl4jsb_Config(SB_)%nml_temp_freeze_window_bio > def_parameters) THEN
+        temp_freeze_window_bio = dsl4jsb_Config(SB_)%nml_temp_freeze_window_bio
+        !$ACC UPDATE DEVICE(temp_freeze_window_bio) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: temp_freeze_window_bio')
+      END IF
+      ! frac_woody2dec_litter
+      IF (dsl4jsb_Config(SB_)%nml_frac_woody2dec_litter > def_parameters) THEN
+        frac_woody2dec_litter = dsl4jsb_Config(SB_)%nml_frac_woody2dec_litter
+        !$ACC UPDATE DEVICE(frac_woody2dec_litter) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: frac_woody2dec_litter')
+      END IF
+      ! frac_litter2fast_som
+      IF (dsl4jsb_Config(SB_)%nml_frac_litter2fast_som > def_parameters) THEN
+        frac_litter2fast_som = dsl4jsb_Config(SB_)%nml_frac_litter2fast_som
+        !$ACC UPDATE DEVICE(frac_litter2fast_som) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: frac_litter2fast_som')
+      END IF
+      ! f_nit_noy
+      IF (dsl4jsb_Config(SB_)%nml_f_nit_noy > def_parameters) THEN
+        f_nit_noy = dsl4jsb_Config(SB_)%nml_f_nit_noy
+        !$ACC UPDATE DEVICE(f_nit_noy) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: f_nit_noy')
+      END IF
+      ! f_nit_n2o
+      IF (dsl4jsb_Config(SB_)%nml_f_nit_n2o > def_parameters) THEN
+        f_nit_n2o = dsl4jsb_Config(SB_)%nml_f_nit_n2o
+        !$ACC UPDATE DEVICE(f_nit_n2o) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: f_nit_n2o')
+      END IF
+      ! vmax_nitrification
+      IF (dsl4jsb_Config(SB_)%nml_vmax_nitrification > def_parameters) THEN
+        vmax_nitrification = dsl4jsb_Config(SB_)%nml_vmax_nitrification / one_day * 1.E6_wp
+        !$ACC UPDATE DEVICE(vmax_nitrification) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: vmax_nitrification')
+      END IF
+      ! vmax_denitrification
+      IF (dsl4jsb_Config(SB_)%nml_vmax_denitrification > def_parameters) THEN
+        vmax_denitrification = dsl4jsb_Config(SB_)%nml_vmax_denitrification / one_day * 1.E6_wp
+        !$ACC UPDATE DEVICE(vmax_denitrification) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: vmax_denitrification')
+      END IF
+      ! t_ref_decomposition
+      IF (dsl4jsb_Config(SB_)%nml_t_ref_decomposition > def_parameters) THEN
+        t_ref_decomposition = dsl4jsb_Config(SB_)%nml_t_ref_decomposition
+        !$ACC UPDATE DEVICE(t_ref_decomposition) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: t_ref_decomposition')
+      END IF
+      ! ea_decomposition
+      IF (dsl4jsb_Config(SB_)%nml_ea_decomposition > def_parameters) THEN
+        ea_decomposition = dsl4jsb_Config(SB_)%nml_ea_decomposition
+        !$ACC UPDATE DEVICE(ea_decomposition) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: ea_decomposition')
+      END IF
+      ! ed_decomposition
+      IF (dsl4jsb_Config(SB_)%nml_ed_decomposition > def_parameters) THEN
+        ed_decomposition = dsl4jsb_Config(SB_)%nml_ed_decomposition
+        !$ACC UPDATE DEVICE(ed_decomposition) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: ed_decomposition')
+      END IF
+    END IF
 
     !>0.9 init bgcm with zero
     !>  NOTE: reading the restart files is done after init

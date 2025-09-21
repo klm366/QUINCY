@@ -21,10 +21,11 @@ MODULE mo_veg_config_class
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_exception,         ONLY: message_text, message, finish
-  USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
-  USE mo_jsb_config_class,  ONLY: t_jsb_config
+  USE mo_exception,           ONLY: message_text, message, finish
+  USE mo_io_units,            ONLY: filename_max
+  USE mo_kind,                ONLY: wp
+  USE mo_jsb_impl_constants,  ONLY: def_parameters
+  USE mo_jsb_config_class,    ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -72,6 +73,17 @@ MODULE mo_veg_config_class
     LOGICAL          :: flag_log_negative_vegpool  !< debug option: test for negative veg_pool and message to LOG file for any negative value
     LOGICAL          :: flag_veg_interactive_n     !< TRUE: N cycle state affects C,P processes via stoichiometry or allocation changes
     LOGICAL          :: flag_veg_interactive_p     !< TRUE: P cycle state affects C,N processes via stoichiometry or allocation changes
+
+    ! parameter calibration
+    LOGICAL          :: flag_apply_nml_parameters  !< replace values of veg_constants parameters by the values of the below nml_* variables
+    REAL(wp)         :: nml_fmaint_rate_base
+    REAL(wp)         :: nml_fstore_sap_wood_max
+    REAL(wp)         :: nml_k_f_demand
+    REAL(wp)         :: nml_omega_nutrient_demand
+    REAL(wp)         :: nml_background_mort_rate_tree
+    REAL(wp)         :: nml_k_herbivory_grass
+    REAL(wp)         :: nml_k_herbivory_pasture
+    REAL(wp)         :: nml_sm2lm_grass
 
    CONTAINS
      PROCEDURE :: Init => Init_veg_config
@@ -124,6 +136,15 @@ CONTAINS
     LOGICAL                     :: flag_veg_interactive_n
     LOGICAL                     :: flag_veg_interactive_p
     LOGICAL                     :: l_use_product_pools
+    LOGICAL                     :: flag_apply_nml_parameters
+    REAL(wp)                    :: nml_fmaint_rate_base
+    REAL(wp)                    :: nml_fstore_sap_wood_max
+    REAL(wp)                    :: nml_k_f_demand
+    REAL(wp)                    :: nml_omega_nutrient_demand
+    REAL(wp)                    :: nml_background_mort_rate_tree
+    REAL(wp)                    :: nml_k_herbivory_grass
+    REAL(wp)                    :: nml_k_herbivory_pasture
+    REAL(wp)                    :: nml_sm2lm_grass
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
 #ifdef __QUINCY_STANDALONE__
@@ -147,7 +168,16 @@ CONTAINS
       flag_log_negative_vegpool,    &
       flag_veg_interactive_n,       &
       flag_veg_interactive_p,       &
-      l_use_product_pools
+      l_use_product_pools,          &
+      &   flag_apply_nml_parameters, &
+      &   nml_fmaint_rate_base, &
+      &   nml_fstore_sap_wood_max, &
+      &   nml_k_f_demand, &
+      &   nml_omega_nutrient_demand, &
+      &   nml_background_mort_rate_tree, &
+      &   nml_k_herbivory_grass, &
+      &   nml_k_herbivory_pasture, &
+      &   nml_sm2lm_grass
 
     INTEGER  :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
     CALL message(TRIM(routine), 'Starting veg configuration')
@@ -170,6 +200,15 @@ CONTAINS
     flag_veg_interactive_n    = .TRUE.
     flag_veg_interactive_p    = .FALSE.
     l_use_product_pools       = .FALSE.
+    flag_apply_nml_parameters      = .FALSE.
+    nml_fmaint_rate_base           = def_parameters
+    nml_fstore_sap_wood_max        = def_parameters
+    nml_k_f_demand                 = def_parameters
+    nml_omega_nutrient_demand      = def_parameters
+    nml_background_mort_rate_tree  = def_parameters
+    nml_k_herbivory_grass          = def_parameters
+    nml_k_herbivory_pasture        = def_parameters
+    nml_sm2lm_grass                = def_parameters
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -201,6 +240,15 @@ CONTAINS
     config%flag_veg_interactive_n     = flag_veg_interactive_n
     config%flag_veg_interactive_p     = flag_veg_interactive_p
     config%l_use_product_pools        = l_use_product_pools
+    config%flag_apply_nml_parameters      = flag_apply_nml_parameters
+    config%nml_fmaint_rate_base           = nml_fmaint_rate_base
+    config%nml_fstore_sap_wood_max        = nml_fstore_sap_wood_max
+    config%nml_k_f_demand                 = nml_k_f_demand
+    config%nml_omega_nutrient_demand      = nml_omega_nutrient_demand
+    config%nml_background_mort_rate_tree  = nml_background_mort_rate_tree
+    config%nml_k_herbivory_grass          = nml_k_herbivory_grass
+    config%nml_k_herbivory_pasture        = nml_k_herbivory_pasture
+    config%nml_sm2lm_grass                = nml_sm2lm_grass
 
   END SUBROUTINE Init_veg_config
 

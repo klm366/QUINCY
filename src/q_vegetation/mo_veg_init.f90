@@ -22,6 +22,7 @@ MODULE mo_veg_init
   USE mo_exception,               ONLY: message, finish, message_text
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_jsb_math_constants,      ONLY: eps8
+  USE mo_jsb_impl_constants,      ONLY: def_parameters
 
   USE mo_jsb_process_class,       ONLY: VEG_, Q_AGR_, Q_SYL_
   USE mo_jsb_model_class,         ONLY: t_jsb_model
@@ -65,11 +66,12 @@ CONTAINS
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
       &                                           standard_press_srf, def_co2_deltaC13, def_co2_deltaC14
     USE mo_jsb_physical_constants,          ONLY: molar_mass_N
-    USE mo_veg_constants,                   ONLY: fresp_growth, background_mort_rate_tree, &
-      &                                           background_mort_rate_grass, w_root_lim_max, rfr_ratio_toc
     USE mo_isotope_util,                    ONLY: calc_fractionation,calc_mixing_ratio_N15N14,calc_mixing_ratio_C14C
     USE mo_q_assimi_process,                ONLY: discrimination_ps_c13, discrimination_ps_c14
-    USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE
+    USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE, &
+      &   background_mort_rate_grass, w_root_lim_max, rfr_ratio_toc, fresp_growth, &
+      &   fmaint_rate_base, fmaint_rate_wood, fstore_sap_wood_max, k_f_demand, omega_nutrient_demand, &
+      &   background_mort_rate_tree, k_herbivory_grass, k_herbivory_pasture, sm2lm_grass
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
@@ -298,6 +300,60 @@ CONTAINS
       dsl4jsb_Get_var3D_onDomain(VEG_, lai_cl)
     END SELECT
     ! ----------------------------------------------------------------------------------------------------- !
+
+    !>0.8 apply calibration of vegetation constants if enabled
+    !>
+    IF (dsl4jsb_Config(VEG_)%flag_apply_nml_parameters) THEN
+      ! fmaint_rate_base
+      IF (dsl4jsb_Config(VEG_)%nml_fmaint_rate_base > def_parameters) THEN
+        fmaint_rate_base = dsl4jsb_Config(VEG_)%nml_fmaint_rate_base
+        fmaint_rate_wood = 0.25_wp * fmaint_rate_base
+        !$ACC UPDATE DEVICE(fmaint_rate_base, fmaint_rate_wood) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: fmaint_rate_base & fmaint_rate_wood')
+      END IF
+      ! fstore_sap_wood_max
+      IF (dsl4jsb_Config(VEG_)%nml_fstore_sap_wood_max > def_parameters) THEN
+        fstore_sap_wood_max = dsl4jsb_Config(VEG_)%nml_fstore_sap_wood_max
+        !$ACC UPDATE DEVICE(fstore_sap_wood_max) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: fstore_sap_wood_max')
+      END IF
+      ! k_f_demand
+      IF (dsl4jsb_Config(VEG_)%nml_k_f_demand > def_parameters) THEN
+        k_f_demand = dsl4jsb_Config(VEG_)%nml_k_f_demand
+        !$ACC UPDATE DEVICE(k_f_demand) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: k_f_demand')
+      END IF
+      ! omega_nutrient_demand
+      IF (dsl4jsb_Config(VEG_)%nml_omega_nutrient_demand > def_parameters) THEN
+        omega_nutrient_demand = dsl4jsb_Config(VEG_)%nml_omega_nutrient_demand
+        !$ACC UPDATE DEVICE(omega_nutrient_demand) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: omega_nutrient_demand')
+      END IF
+      ! background_mort_rate_tree
+      IF (dsl4jsb_Config(VEG_)%nml_background_mort_rate_tree > def_parameters) THEN
+        background_mort_rate_tree = dsl4jsb_Config(VEG_)%nml_background_mort_rate_tree
+        !$ACC UPDATE DEVICE(background_mort_rate_tree) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: background_mort_rate_tree')
+      END IF
+      ! k_herbivory_grass
+      IF (dsl4jsb_Config(VEG_)%nml_k_herbivory_grass > def_parameters) THEN
+        k_herbivory_grass = dsl4jsb_Config(VEG_)%nml_k_herbivory_grass
+        !$ACC UPDATE DEVICE(k_herbivory_grass) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: k_herbivory_grass')
+      END IF
+      ! k_herbivory_pasture
+      IF (dsl4jsb_Config(VEG_)%nml_k_herbivory_pasture > def_parameters) THEN
+        k_herbivory_pasture = dsl4jsb_Config(VEG_)%nml_k_herbivory_pasture
+        !$ACC UPDATE DEVICE(k_herbivory_pasture) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: k_herbivory_pasture')
+      END IF
+      ! sm2lm_grass
+      IF (dsl4jsb_Config(VEG_)%nml_sm2lm_grass > def_parameters) THEN
+        sm2lm_grass = dsl4jsb_Config(VEG_)%nml_sm2lm_grass
+        !$ACC UPDATE DEVICE(sm2lm_grass) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: sm2lm_grass')
+      END IF
+    END IF
 
     !>0.9 init veg_pool_mt_domain with zero
     !>
@@ -614,6 +670,7 @@ CONTAINS
     !$ACC   DEVICE(t_air_tacclim_mavg(:,:), t_soil_root_tacclim_mavg(:,:), t_air_week_mavg(:,:), t_air_month_mavg(:,:)) &
     !$ACC   DEVICE(t_jmax_opt_mavg(:,:), veg_pool_mt_domain(:,:,:,:)) &
     !$ACC   DEVICE(rfr_ratio_boc(:,:), rfr_ratio_boc_tvegdyn_mavg(:,:)) ASYNC(1)
+    !$ACC WAIT(1)
 
   END SUBROUTINE veg_init
 

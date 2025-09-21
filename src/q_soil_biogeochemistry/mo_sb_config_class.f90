@@ -18,10 +18,11 @@
 MODULE mo_sb_config_class
 #ifndef __NO_QUINCY__
 
-  USE mo_exception,         ONLY: message_text, message, finish
-  USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
-  USE mo_jsb_config_class,  ONLY: t_jsb_config
+  USE mo_exception,           ONLY: message_text, message, finish
+  USE mo_io_units,            ONLY: filename_max
+  USE mo_kind,                ONLY: wp
+  USE mo_jsb_impl_constants,  ONLY: def_parameters
+  USE mo_jsb_config_class,    ONLY: t_jsb_config
 
   IMPLICIT NONE
   PRIVATE
@@ -85,6 +86,20 @@ MODULE mo_sb_config_class
 
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename    !< IQ (QUINCY) soil input data
     CHARACTER(len=filename_max) :: deposition_filename_prefix !< IQ. Note: should NOT include an ending "_"
+
+    ! parameter calibration
+    LOGICAL          :: flag_apply_nml_parameters  !< replace values of sb_constants parameters by the values of the below nml_* variables
+    REAL(wp)         :: nml_temp_freeze_thres_bio
+    REAL(wp)         :: nml_temp_freeze_window_bio
+    REAL(wp)         :: nml_frac_woody2dec_litter
+    REAL(wp)         :: nml_frac_litter2fast_som
+    REAL(wp)         :: nml_f_nit_noy
+    REAL(wp)         :: nml_f_nit_n2o
+    REAL(wp)         :: nml_vmax_nitrification
+    REAL(wp)         :: nml_vmax_denitrification
+    REAL(wp)         :: nml_t_ref_decomposition
+    REAL(wp)         :: nml_ea_decomposition
+    REAL(wp)         :: nml_ed_decomposition
 
    CONTAINS
      PROCEDURE :: Init => Init_sb_config
@@ -170,6 +185,18 @@ CONTAINS
                                    soil_p_occluded,     &
                                    soil_p_primary
     REAL(wp)                    :: qmax_org_fine_particle
+    LOGICAL                     :: flag_apply_nml_parameters
+    REAL(wp)                    :: nml_temp_freeze_thres_bio
+    REAL(wp)                    :: nml_temp_freeze_window_bio
+    REAL(wp)                    :: nml_frac_woody2dec_litter
+    REAL(wp)                    :: nml_frac_litter2fast_som
+    REAL(wp)                    :: nml_f_nit_noy
+    REAL(wp)                    :: nml_f_nit_n2o
+    REAL(wp)                    :: nml_vmax_nitrification
+    REAL(wp)                    :: nml_vmax_denitrification
+    REAL(wp)                    :: nml_t_ref_decomposition
+    REAL(wp)                    :: nml_ea_decomposition
+    REAL(wp)                    :: nml_ed_decomposition
 
 #ifdef __QUINCY_STANDALONE__
     NAMELIST /soil_biogeochemistry_ctl/       &
@@ -208,7 +235,19 @@ CONTAINS
                       soil_p_slow               , &
                       soil_p_occluded           , &
                       soil_p_primary            , &
-                      qmax_org_fine_particle
+                      qmax_org_fine_particle, &
+      &   flag_apply_nml_parameters, &
+      &   nml_temp_freeze_thres_bio, &
+      &   nml_temp_freeze_window_bio, &
+      &   nml_frac_woody2dec_litter, &
+      &   nml_frac_litter2fast_som, &
+      &   nml_f_nit_noy, &
+      &   nml_f_nit_n2o, &
+      &   nml_vmax_nitrification, &
+      &   nml_vmax_denitrification, &
+      &   nml_t_ref_decomposition, &
+      &   nml_ea_decomposition, &
+      &   nml_ed_decomposition
 
     TYPE(t_jsb_vgrid), POINTER  :: time_months_vgrid
     INTEGER :: i_month
@@ -251,6 +290,18 @@ CONTAINS
     soil_p_occluded             = 150._wp
     soil_p_primary              = 100._wp
     qmax_org_fine_particle      = 6.5537_wp
+    flag_apply_nml_parameters   = .FALSE.
+    nml_temp_freeze_thres_bio   = def_parameters
+    nml_temp_freeze_window_bio  = def_parameters
+    nml_frac_woody2dec_litter   = def_parameters
+    nml_frac_litter2fast_som    = def_parameters
+    nml_f_nit_noy               = def_parameters
+    nml_f_nit_n2o               = def_parameters
+    nml_vmax_nitrification      = def_parameters
+    nml_vmax_denitrification    = def_parameters
+    nml_t_ref_decomposition     = def_parameters
+    nml_ea_decomposition        = def_parameters
+    nml_ed_decomposition        = def_parameters
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -297,6 +348,18 @@ CONTAINS
     config%soil_p_occluded                 = soil_p_occluded
     config%soil_p_primary                  = soil_p_primary
     config%qmax_org_fine_particle          = qmax_org_fine_particle
+    config%flag_apply_nml_parameters       = flag_apply_nml_parameters
+    config%nml_temp_freeze_thres_bio       = nml_temp_freeze_thres_bio
+    config%nml_temp_freeze_window_bio      = nml_temp_freeze_window_bio
+    config%nml_frac_woody2dec_litter       = nml_frac_woody2dec_litter
+    config%nml_frac_litter2fast_som        = nml_frac_litter2fast_som
+    config%nml_f_nit_noy                   = nml_f_nit_noy
+    config%nml_f_nit_n2o                   = nml_f_nit_n2o
+    config%nml_vmax_nitrification          = nml_vmax_nitrification
+    config%nml_vmax_denitrification        = nml_vmax_denitrification
+    config%nml_t_ref_decomposition         = nml_t_ref_decomposition
+    config%nml_ea_decomposition            = nml_ea_decomposition
+    config%nml_ed_decomposition            = nml_ed_decomposition
 
     ! test sb_model_scheme
     SELECT CASE(TRIM(sb_model_scheme))
