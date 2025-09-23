@@ -389,7 +389,9 @@ CONTAINS
       &  wtr_incomming_sl,       &  !< Lateral flux (soil) from sibling to tile [kg m-2 s-1]
       &  wtr_incomming_sl_sibl      !< Lateral flux (soil) from tile to sibling [kg m-2 s-1]
 
-    REAL(wp) ::  hlp1               !< helper variable
+    REAL(wp) :: hlp1                !< helper variable
+
+    LOGICAL  :: l_dynsnow           !< Switch from SSE to use the dynamical snow heat properties computation
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_lex'
     CHARACTER(len=5000)         :: message_text_long
@@ -614,6 +616,7 @@ CONTAINS
     !$ACC   CREATE(weq_wsat_sl(1:nc,1:nsoil), weq_wsat_sl_sibl(1:nc,1:nsoil), weq_wres_sl(1:nc,1:nsoil))             &
     !$ACC   CREATE(weq_wres_sl_sibl(1:nc,1:nsoil), wtr_incomming_sl(1:nc,1:nsoil), wtr_incomming_sl_sibl(1:nc,1:nsoil))
 
+    l_dynsnow = dsl4jsb_Config(SSE_)%l_dynsnow
     ! Get lex_id of tile and the cover fraction
     lex_idt = tile%lcts(1)%lex_id
     CALL tile%Get_fraction(ics, ice, iblk, fract=fract(:))
@@ -1089,7 +1092,7 @@ CONTAINS
 
               ! Snowblow between connected tiles
               CALL calc_snow_redistribution(                  &
-                & dsl4jsb_Config(SSE_)%l_dynsnow,             &
+                & l_dynsnow,                                  &
                 & dtime,                                      &
                 & hlp1,                                       &
                 & h_offset_ct(ic,lex_ids),                    &
