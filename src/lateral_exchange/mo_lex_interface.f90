@@ -409,7 +409,6 @@ CONTAINS
     dsl4jsb_Def_memory_tile(HYDRO_, sibl)
     dsl4jsb_Def_memory_tile(SSE_, sibl)
 
-
     ! Declare pointers to variables in memory
     ! Pointers to variables in memory for tile
     dsl4jsb_Real2D_onChunk :: &
@@ -623,13 +622,11 @@ CONTAINS
 
     ! Initialze those variables, where the values at the end of ast time step,
     ! i.e. unmodified by interactions with siblings are needed.
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       snow_soil_tle_tm1(ic) = weq_snow_soil(ic)
       snow_new_tle_tm1(ic)  = new_snow_soil(ic)
       snow_dens_tle_tm1(ic) = snow_soil_dens(ic)
     END DO
-    !$ACC END PARALLEL LOOP
 
     ! Loop over all tiles on the current tile level
     ! This includes tiles that ma not participate in the lateral exchange, such as glaciers.
@@ -711,13 +708,11 @@ CONTAINS
       ! Start calculating exchange processes between different tiles
       IF (lex_idt /= lex_ids) THEN
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           wtr_incomming_srf(ic)       = 0._wp
           wtr_incomming_srf_sibl(ic)  = 0._wp
         END DO
-        !$ACC END PARALLEL LOOP
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+
         DO is = 1, nsoil
           DO ic = 1, nc
             wtr_incomming_sl(ic,is)      = 0._wp
@@ -725,7 +720,6 @@ CONTAINS
             wtr_latflow_sl_used(ic,is)   = wtr_latflow_sl(ic,is)
           END DO
         END DO
-        !$ACC END PARALLEL LOOP
 
         ! Incomming later subsurface runoff is adjusted according to differences in soil depth (until bedrock),
         ! and for micro-scale connections, also for differences in surface elevation
@@ -740,8 +734,6 @@ CONTAINS
         ! Lateral fluxes of surface runoff.
         ! The outflow from tile is actually calculated in HYDRO_ and here only the distributions on siblings is done
         IF (dsl4jsb_Config(LEX_)%l_runoff_trns) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
-          !$ACC   PRIVATE(hlp1)
           DO ic = 1, nc
 
             hlp1 = wtr_latflow_srf(ic) * fos
@@ -761,15 +753,12 @@ CONTAINS
 
             wtr_incomming_srf_sibl(ic) = wtr_incomming_srf_sibl(ic) + wtr_runoff_in_sibl(ic)
           END DO
-          !$ACC END PARALLEL LOOP
         END IF
 
         IF (tile%contains_soil .AND. sibl%contains_soil) THEN
           ! Lateral fluxes of subsurface runoff.
           ! The outflow from tile is actually calculated in HYDRO_ and here only the distributions on siblings is done
           IF (dsl4jsb_Config(LEX_)%l_drainage_trns) THEN
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream) &
-            !$ACC   PRIVATE(hlp1)
             DO is = 1, nsoil
               DO ic = 1, nc
 
@@ -792,7 +781,6 @@ CONTAINS
 
               END DO
             END DO
-            !$ACC END PARALLEL LOOP
 
             ! Remove excess water from soil and surface
             CALL remove_excess_water(nc,                   &
@@ -808,14 +796,12 @@ CONTAINS
           END IF
 
           ! Calculating wsat, field capacity and mositure residual for tile disregarding soil ice content
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
           DO is = 1, nsoil
             DO ic = 1, nc
               weq_wsat_sl(ic,is) = vol_porosity_sl (ic,is) * soil_depth_sl(ic,is)
               weq_wres_sl(ic,is) = vol_wres_sl(ic,is)      * soil_depth_sl(ic,is)
             END DO
           END DO
-          !$ACC END PARALLEL LOOP
 
           ! Get hydrological properties on tile
           CALL get_soilhyd_properties(                      &
@@ -839,7 +825,6 @@ CONTAINS
             )
 
           ! Calculating wsat, field capacity and mositure residual for sibling disregarding soil ice content
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
           DO is = 1, nsoil
             DO  ic = 1, nc
               weq_wsat_sl_sibl     (ic,is) = vol_porosity_sl_sibl (ic,is) &
@@ -848,7 +833,6 @@ CONTAINS
                 &                          * soil_depth_sl_sibl(ic,is)
             END DO
           END DO
-          !$ACC END PARALLEL LOOP
 
           ! Get hydrological properties on sibling (with updated soil water content)
           CALL get_soilhyd_properties(                      &
@@ -873,13 +857,11 @@ CONTAINS
 
           IF (dsl4jsb_Config(LEX_)%l_infil_trns) THEN
 
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
             DO is = 1, nsoil
               DO  ic = 1, nc
                 wtr_incomming_sl(ic,is) = wtr_incomming_sl(ic,is) - wtr_infil_in_sl(ic,is)
               END DO
             END DO
-            !$ACC END PARALLEL LOOP
 
             ! Lateral ingress from pond to connected tile
             CALL calc_pond_soil_flux_water(              &
@@ -903,18 +885,15 @@ CONTAINS
               &  wtr_soil_sl(:,:)                        &
               &  )
 
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
             DO is = 1, nsoil
               DO  ic = 1, nc
                 wtr_incomming_sl(ic,is) = wtr_incomming_sl(ic,is) + wtr_infil_in_sl(ic,is)
               END DO
             END DO
-            !$ACC END PARALLEL LOOP
 
           END IF
 
           IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr) THEN
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
             DO ic = 1, nc
               IF (microcon_ctc_ct(ic,lex_ids) > 0._wp) THEN
 
@@ -961,11 +940,9 @@ CONTAINS
 
               END IF
             END DO
-            !$ACC END PARALLEL LOOP
           END IF
 
           IF (dsl4jsb_Config(LEX_)%l_dffsn_nrg) THEN
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
             DO ic = 1, nc
               IF (microcon_ctc_ct(ic,lex_ids) > 0._wp) THEN
 
@@ -1020,7 +997,6 @@ CONTAINS
                   &  )
               END IF
             END DO
-            !$ACC END PARALLEL LOOP
           END IF
 
           IF (dsl4jsb_Config(LEX_)%l_cnvctn_nrg) THEN
@@ -1071,14 +1047,11 @@ CONTAINS
 
         ! Update total weq_pond on sibling.
         ! This is required because the water balance does not use wtr_pond and ice_pond directly
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1,nc
           weq_pond_sibl(ic) = wtr_pond_sibl(ic) + ice_pond_sibl(ic)
         END DO
-        !$ACC END PARALLEL LOOP
 
         IF (dsl4jsb_Config(LEX_)%l_snow_trns) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1,nc
             IF (microcon_ctc_ct(ic,lex_ids) > 0._wp) THEN
 
@@ -1115,7 +1088,6 @@ CONTAINS
 
             END IF
           END DO
-          !$ACC END PARALLEL LOOP
         END IF
 
       END IF
@@ -1123,15 +1095,12 @@ CONTAINS
     END DO
 
     ! In case of tiles that are not connected to downstream tiles, the outflow is given to runoff and drainage
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1,nc
       runoff(ic) = runoff(ic) &
         &        + wtr_latflow_srf(ic) / dtime * rhoh2o - wtr_runoff_out(ic)
     END DO
-    !$ACC END PARALLEL LOOP
 
     IF (tile%contains_soil) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1,nc
         drainage(ic) = drainage(ic) &
           & + SUM(wtr_latflow_sl(ic,:)) / dtime * rhoh2o - SUM(wtr_drainage_out_sl(ic,:))
@@ -1139,7 +1108,6 @@ CONTAINS
         drainage_sl(ic,:) = drainage_sl(ic,:) &
           & + wtr_latflow_sl(ic,:) / dtime * rhoh2o - wtr_drainage_out_sl(ic,:)
       END DO
-      !$ACC END PARALLEL LOOP
     END IF
 
     !$ACC END DATA

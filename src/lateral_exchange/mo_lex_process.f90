@@ -237,12 +237,7 @@ CONTAINS
       &                        mpot_lvt_rgrd,     &  !< Matric potential  on elevation tile on helper grid layer [m]
       &                        k_lvt_rgrd            !< Hydraulic conductivity on elevation tile on helper grid layer [[m s-1]
 
-    !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(l_compute(1:nc), fr_lvt_rel(1:nc), fr_dpr_rel(1:nc), z_bot_lvt(1:nc), diffusion_sum(1:nc)) &
-    !$ACC   CREATE(len_inter(1:nc), diffusion(1:nc, 1:nsoil))
-
     ! Initialize 1D fields
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       IF (lvt_fract(ic) >= 1.0e-10_wp .AND. dpr_fract(ic)    >= 1.0e-10_wp .AND. &
         & h_offset(ic)  >= 1.0e-10_wp .AND. wtr_pond_dpr(ic) >= 1.0e-10_wp .AND. &
@@ -261,27 +256,17 @@ CONTAINS
       diffusion_sum(ic) = 0._wp
       z_bot_lvt(ic)     = 0._wp
     END DO
-    !$ACC END PARALLEL LOOP
 
     ! Initilize 2D fields
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-    !$ACC LOOP SEQ
     DO is = 1, nsoil
-      !$ACC LOOP GANG VECTOR
       DO  ic = 1, nc
         diffusion(ic, is) = 0._wp
         z_bot_lvt(ic)     = z_bot_lvt(ic) + dsoil_lvt(ic,is)
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
 
     nrgrd = 2 * nsoil
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-    !$ACC LOOP SEQ
     DO i = 1, nrgrd
-      !$ACC LOOP GANG VECTOR &
-      !$ACC   PRIVATE(i_lvt, z_lvt, z_rgrd_top, z_rgrd_bot, h, a_inter, wtr_soil_lvt_rgrd, wtr_lat) &
-      !$ACC   PRIVATE(field_cap_lvt_rgrd, k_lvt_rgrd, mpot_lvt_rgrd, wtr_flx_lat, free_space, wtr_avail)
       DO ic = 1, nc
         IF (l_compute(ic)) THEN
           ! Initialize first
@@ -344,19 +329,13 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-    !$ACC LOOP SEQ
     DO is = 1, nsoil
-      !$ACC LOOP GANG VECTOR
       DO  ic = 1, nc
         diffusion_sum(ic) = diffusion_sum(ic) + diffusion(ic,is)
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 1, nsoil
       DO ic = 1, nc
         IF (l_compute(ic)) THEN
@@ -366,9 +345,7 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       IF (l_compute(ic)) THEN
         wtr_pond_dpr(ic)    = wtr_pond_dpr(ic)    - diffusion_sum(ic) / fr_dpr_rel(ic)
@@ -376,8 +353,6 @@ CONTAINS
         egress_dpr(ic)      = egress_dpr(ic)      + diffusion_sum(ic) / fr_dpr_rel(ic) * rhoh2o / dtime
       END IF
     END DO
-    !$ACC END PARALLEL LOOP
-    !$ACC END DATA
 
   END SUBROUTINE calc_pond_soil_flux_water
 
@@ -554,8 +529,6 @@ CONTAINS
       &      wtr_soil_tle, wtr_soil_sbl             &
       &      )
 
-    !$ACC ROUTINE SEQ
-
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     INTEGER, INTENT(in)     :: nsoil                   !< Number of soil layers
@@ -596,7 +569,6 @@ CONTAINS
 
 
     ! Local variables ------------------------------------------------------------------------------------
-
     INTEGER                 :: nrgrd,               &  !< Number of layers on helper grid determined by layer overlaps
       &                        i, i_tle, i_sbl         !< Index variables for layers on helper grid (i), in tile (i_tle) and sibling (i_sbl)
 
@@ -1017,19 +989,14 @@ CONTAINS
       &                        heat_flx_tle,           &  !< Incomming heat flux on tile on current layer on helper grid [J m-3]
       &                        heat_flx_sbl               !< Incomming heat flux on sibling on current layer on helper grid [J m-3]
 
-    !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(l_compute(1:nc))
 
     ! Initialize 1D fields
     dz_sum = 0._wp
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO is = 1, nsoil
       dz_sum = dz_sum + dz(is)
     END DO
-    !$ACC END PARALLEL LOOP
 
     ! Idenify grid cells where fluxes should be computed
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       IF (abs(h_offset(ic)) > dz_sum .OR. &
         & tle_fract(ic) < 1.0e-10_wp .OR. sbl_fract(ic) < 1.0e-10_wp) THEN
@@ -1038,21 +1005,13 @@ CONTAINS
         l_compute(ic) = .TRUE.
       END IF
     END DO
-    !$ACC END PARALLEL LOOP
 
     ! Determine number of layers on helper grid
     nrgrd = nsoil * 2 + 3
 
     ! Start setting up the interpolated helper grid
     ! As ponded water / ice do not have a heat content we only account for energy exchange in the soil:
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-    !$ACC LOOP SEQ
     DO i = 1, nrgrd
-      !$ACC LOOP GANG VECTOR &
-      !$ACC   PRIVATE(i_tle, i_sbl, z_tle, z_sbl, z_rgrd_top, z_rgrd_bot, h)  &
-      !$ACC   PRIVATE(t_tle_rgrd, h_cap_soil_tle_rgrd, wtr_flx_in_tle_regrid) &
-      !$ACC   PRIVATE(t_sbl_rgrd, h_cap_soil_sbl_rgrd, wtr_flx_in_sbl_regrid) &
-      !$ACC   PRIVATE(d_t_wtr_soil_tle, d_t_wtr_soil_sbl, heat_flx_tle, heat_flx_sbl)
       DO ic = 1, nc
         IF (l_compute(ic)) THEN
           ! Initialize first
@@ -1167,11 +1126,8 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
 
     ! Add the heat fluxes due to surface runoff / runon
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
-    !$ACC   PRIVATE(d_t_wtr_soil_tle, d_t_wtr_soil_sbl, heat_flx_tle, heat_flx_sbl)
     DO ic = 1, nc
       IF (l_compute(ic)) THEN
         d_t_wtr_soil_tle = t_soil_sbl(ic,1) - t_soil_tle(ic,1)
@@ -1200,8 +1156,6 @@ CONTAINS
         heat_flx_lat_sbl(ic,1) = heat_flx_lat_sbl(ic,1) + heat_flx_sbl
       END IF
     END DO
-    !$ACC END PARALLEL LOOP
-    !$ACC END DATA
 
   END SUBROUTINE calc_convection_heat
 
@@ -1448,10 +1402,7 @@ CONTAINS
     REAL(wp)                :: wtr_pond_max                   !< Maximum liquid water in pond storage [m]
 
     IF (nsoil > 0) THEN
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-      !$ACC LOOP SEQ
       DO is = nsoil, 2, -1
-        !$ACC LOOP GANG VECTOR
         DO ic = 1, nc
           IF (wtr_soil_sl(ic,is) > wtr_soil_sat_sl(ic,is)) THEN
             wtr_soil_sl(ic,is-1) = wtr_soil_sl(ic,is-1) &
@@ -1460,10 +1411,7 @@ CONTAINS
           END IF
         END DO
       END DO
-      !$ACC END PARALLEL
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         IF (wtr_soil_sl(ic,1) > wtr_soil_sat_sl(ic,1)) THEN
           wtr_pond(ic)      = wtr_pond(ic) &
@@ -1471,11 +1419,8 @@ CONTAINS
           wtr_soil_sl(ic,1) = wtr_soil_sat_sl(ic,1)
         END IF
       END DO
-      !$ACC END PARALLEL
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
-    !$ACC PRIVATE(wtr_pond_max)
     DO ic = 1, nc
       wtr_pond_max = MAX(0.0_wp, weq_pond_max(ic) - ice_pond(ic))
       IF (wtr_pond(ic) > wtr_pond_max) THEN
@@ -1484,7 +1429,6 @@ CONTAINS
         wtr_pond(ic)            = wtr_pond_max
       END IF
     END DO
-    !$ACC END PARALLEL
 
   END SUBROUTINE remove_excess_water
 
@@ -1529,11 +1473,8 @@ CONTAINS
 
     REAL(wp) :: flx_lat_sl_upd(nc,nsoil) !< Updated lateral flux [?]
 
-    !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(dsoil_lvt_sum(1:nc), dsoil_dpr_sum(1:nc), l_regrid(1:nc), flx_lat_sl_upd(1:nc,1:nsoil))
 
     ! Check where regridding is needed and initialize non-layered variables
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       IF (hyd_flow_path(ic) > 0._wp .AND. h_offset(ic) > 0._wp) THEN
         l_regrid(ic) = .TRUE.
@@ -1543,13 +1484,9 @@ CONTAINS
         l_regrid(ic) = .FALSE.
       END IF
     END DO
-    !$ACC END PARALLEL LOOP
 
     ! Initialize layered variables
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-    !$ACC LOOP SEQ
     DO is = 1, nsoil
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         IF (l_regrid(ic)) THEN
           flx_lat_sl_upd(ic,is) = 0._wp
@@ -1560,14 +1497,10 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
 
     ! For cells without flow paths or height differences, move lateral fluxes upwards in case
     ! they happen in layers below the total soil depth
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-    !$ACC LOOP SEQ
     DO is = nsoil, 2, -1
-      !$ACC LOOP GANG VECTOR
       DO ic = 1, nc
         IF (.NOT. l_regrid(ic) .AND. dsoil_dpr(ic,is) <= 0._wp) THEN
           flx_lat_sl_upd(ic,is-1) = flx_lat_sl_upd(ic,is-1) + flx_lat_sl_upd(ic,is)
@@ -1575,14 +1508,10 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
 
     ! Compute cells with flow paths and height differences
     nrgrd = nsoil * 2 + 1
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-    !$ACC LOOP SEQ
     DO i = 1, nrgrd
-      !$ACC LOOP GANG VECTOR PRIVATE(i_lvt, i_dpr, z_lvt, z_dpr, z_rgrd_top, z_rgrd_bot, h)
       DO ic = 1, nc
         IF (l_regrid(ic)) THEN
           ! Initialize first
@@ -1620,17 +1549,13 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
 
     ! Write updated lateral fluxes back to the original array
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 1, nsoil
       DO ic = 1, nc
         flx_lat_sl(ic,is) = flx_lat_sl_upd(ic,is)
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
-    !$ACC END DATA
 
   END SUBROUTINE shift_fluxes_sl
 
