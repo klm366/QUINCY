@@ -1024,35 +1024,29 @@ CONTAINS
           END IF
 
           IF (dsl4jsb_Config(LEX_)%l_cnvctn_nrg) THEN
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-            DO ic = 1,nc
-
-                ! Fluxes reulting from the heat contained in the lateral fluxes of water
-                ! Since an update of the actual soil temperatures outside of the SSE routines is not intended,
-                ! only the lateral heat flux is calculated and passed to the SSE routine as an energy source/sink.
-                Call calc_convection_heat(nsoil, dtime,       &
-                  &  soil_e%dz(:),                            &
-                  &  h_offset_ct(ic,lex_ids),                 &
-                  &  fract(ic),                               &
-                  &  fract_sibl(ic),                          &
-                  &  wtr_incomming_srf(ic),                   &
-                  &  wtr_incomming_srf_sibl(ic),              &
-                  &  t_soil_sl(ic,:),                         &
-                  &  t_soil_sl_sibl(ic,:),                    &
-                  &  wtr_incomming_sl(ic,:),                  &
-                  &  wtr_incomming_sl_sibl(ic,:),             &
-                  &  vol_heat_cap_sl(ic,:),                   &
-                  &  vol_heat_cap_sl_sibl(ic,:),              &
-                  &  nrg_convection_in_sl(ic,:),              &
-                  &  nrg_convection_in_sl_sibl(ic,:),         &
-                  &  nrg_convection_out_sl(ic,:),             &
-                  &  nrg_convection_out_sl_sibl(ic,:),        &
-                  &  nrg_lex_net_sl(ic,:),                    &
-                  &  nrg_lex_net_sl_sibl(ic,:)                &
-                  &  )
-
-            END DO
-            !$ACC END PARALLEL LOOP
+            ! Fluxes reulting from the heat contained in the lateral fluxes of water
+            ! Since an update of the actual soil temperatures outside of the SSE routines is not intended,
+            ! only the lateral heat flux is calculated and passed to the SSE routine as an energy source/sink.
+            CALL calc_convection_heat(nc, nsoil, dtime,  &
+              &  soil_e%dz(:),                           &
+              &  h_offset_ct(:,lex_ids),                 &
+              &  fract(:),                               &
+              &  fract_sibl(:),                          &
+              &  wtr_incomming_srf(:),                   &
+              &  wtr_incomming_srf_sibl(:),              &
+              &  t_soil_sl(:,:),                         &
+              &  t_soil_sl_sibl(:,:),                    &
+              &  wtr_incomming_sl(:,:),                  &
+              &  wtr_incomming_sl_sibl(:,:),             &
+              &  vol_heat_cap_sl(:,:),                   &
+              &  vol_heat_cap_sl_sibl(:,:),              &
+              &  nrg_convection_in_sl(:,:),              &
+              &  nrg_convection_in_sl_sibl(:,:),         &
+              &  nrg_convection_out_sl(:,:),             &
+              &  nrg_convection_out_sl_sibl(:,:),        &
+              &  nrg_lex_net_sl(:,:),                    &
+              &  nrg_lex_net_sl_sibl(:,:)                &
+              &  )
           END IF
 
           ! Remove excess water from soil and surface
@@ -1148,7 +1142,6 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC WAIT ASYNC(acc_stream)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

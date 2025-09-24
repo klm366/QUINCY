@@ -948,7 +948,7 @@ CONTAINS
   !! Compute intertile heat exchenge due to lateral movement of water
   !!
   SUBROUTINE calc_convection_heat(                         &
-      &      nsoil, dtime,                                 &
+      &      nc, nsoil, dtime,                             &
       &      dz, h_offset,                                 &
       &      tle_fract, sbl_fract,                         &
       &      wtr_inflx_lat_srf_tle, wtr_inflx_lat_srf_sbl, &
@@ -960,43 +960,48 @@ CONTAINS
       &      heat_flx_lat_tle, heat_flx_lat_sbl            &
       &      )
 
-    !$ACC ROUTINE SEQ
-
     USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_sse_constants, ONLY: vol_hcap_water
 
-    INTEGER, INTENT(in)     :: nsoil                        !< Number of oil layers
+    INTEGER, INTENT(in)     :: nc,                        &  !< Number of grid cells
+      &                        nsoil                         !< Number of oil layers
 
-    REAL(wp), INTENT(in)    :: dtime,                    &  !< Timestep length [s]
-      &                        h_offset,                 &  !< Differece in surface elevation between tile and sibling [m]
-      &                        tle_fract,                &  !< Area fraction of tile [/]
-      &                        sbl_fract,                &  !< Area fraction of sibling [/]
-      &                        wtr_inflx_lat_srf_tle,    &  !< Lateral flux (surface) of water from sibling to tile [kg m-2 s-1]
-      &                        wtr_inflx_lat_srf_sbl        !< Lateral flux (surface) of water from tile to sibling [kg m-2 s-1]
+    REAL(wp), INTENT(in)    :: dtime                         !< Timestep length [s]
 
-    REAL(wp), INTENT(in)    :: dz(:),                    &  !< Layer thickness [m]
-      &                        t_soil_tle(:),            &  !< Soil tempertures of tile [K]
-      &                        t_soil_sbl(:),            &  !< Soil tempertures of sibling [K]
-      &                        wtr_inflx_lat_sl_tle(:),  &  !< Lateral flux (soil) of water from sibling to tile [kg m-2 s-1]
-      &                        wtr_inflx_lat_sl_sbl(:),  &  !< Lateral flux (soil) of water from tile to sibling [kg m-2 s-1]
-      &                        heat_cap_soil_tle(:),     &  !< Soil heat capacity of tile [J m-3 K-1]
-      &                        heat_cap_soil_sbl(:)         !< Soil heat capacity of sibling [J m-3 K-1]
+    REAL(wp), INTENT(in)    :: h_offset(:),               &  !< Difference in surface elevation between tile and sibling [m]
+      &                        tle_fract(:),              &  !< Area fraction of tile [/]
+      &                        sbl_fract(:),              &  !< Area fraction of sibling [/]
+      &                        wtr_inflx_lat_srf_tle(:),  &  !< Lateral flux (surface) of water from sibling to tile [kg m-2 s-1]
+      &                        wtr_inflx_lat_srf_sbl(:),  &  !< Lateral flux (surface) of water from tile to sibling [kg m-2 s-1]
+      &                        dz(:)                         !< Layer thickness [m]
 
-    REAL(wp), INTENT(inout) :: cnvctv_in_tle(:),         &  !< Convective influx at tile [J m-2 s-1]
-      &                        cnvctv_in_sbl(:),         &  !< Convective outflux at sibling [J m-2 s-1]
-      &                        cnvctv_out_tle(:),        &  !< Convective influx at tile [J m-2 s-1]
-      &                        cnvctv_out_sbl(:)            !< Convective outflux at sibling [J m-2 s-1]
+    REAL(wp), INTENT(in)    :: t_soil_tle(:,:),           &  !< Soil tempertures of tile [K]
+      &                        t_soil_sbl(:,:),           &  !< Soil tempertures of sibling [K]
+      &                        wtr_inflx_lat_sl_tle(:,:), &  !< Lateral flux (soil) of water from sibling to tile [kg m-2 s-1]
+      &                        wtr_inflx_lat_sl_sbl(:,:), &  !< Lateral flux (soil) of water from tile to sibling [kg m-2 s-1]
+      &                        heat_cap_soil_tle(:,:),    &  !< Soil heat capacity of tile [J m-3 K-1]
+      &                        heat_cap_soil_sbl(:,:)        !< Soil heat capacity of sibling [J m-3 K-1]
 
-    REAL(wp), INTENT(inout) :: heat_flx_lat_tle(:),      &  !< Net Heat flux at tile [J m-2 s-1]
-      &                        heat_flx_lat_sbl(:)          !< Net Heat flux at sibling [J m-2 s-1]
+    REAL(wp), INTENT(inout) :: cnvctv_in_tle(:,:),        &  !< Convective influx at tile [J m-2 s-1]
+      &                        cnvctv_in_sbl(:,:),        &  !< Convective outflux at sibling [J m-2 s-1]
+      &                        cnvctv_out_tle(:,:),       &  !< Convective influx at tile [J m-2 s-1]
+      &                        cnvctv_out_sbl(:,:)           !< Convective outflux at sibling [J m-2 s-1]
+
+    REAL(wp), INTENT(inout) :: heat_flx_lat_tle(:,:),     &  !< Net Heat flux at tile [J m-2 s-1]
+      &                        heat_flx_lat_sbl(:,:)         !< Net Heat flux at sibling [J m-2 s-1]
 
 
 
     ! Local variables ------------------------------------------------------------------------------------
     INTEGER                 :: nrgrd,                  &  !< Number of layers on helper grid determined by layer overlaps
+      &                        ic,                     &  !< Index variable for grid cells
+      &                        is,                     &  !< Index variable for soil layers
       &                        i, i_tle, i_sbl            !< Index variables for layers on helper grid (i), on tile (i_tle) and sibling tile (i_sbl)
 
-    REAL(wp)                :: z_tle,                  &  !< Layer bottom of current layer on tile [m]
+    LOGICAL                 :: l_compute(nc)              !< Flag to indicate whether fluxes should be computed for a given cell
+
+    REAL(wp)                :: dz_sum,                 &  !< Total soil column depth [m]
+      &                        z_tle,                  &  !< Layer bottom of current layer on tile [m]
       &                        z_sbl,                  &  !< Layer bottom of current layer on sibling [m]
       &                        z_rgrd_top,             &  !< Top of current layer on helper grid [m]
       &                        z_rgrd_bot,             &  !< Bottom of current layer on helper grid [m]
@@ -1012,149 +1017,191 @@ CONTAINS
       &                        heat_flx_tle,           &  !< Incomming heat flux on tile on current layer on helper grid [J m-3]
       &                        heat_flx_sbl               !< Incomming heat flux on sibling on current layer on helper grid [J m-3]
 
-    nrgrd         = nsoil * 2 + 3
+    !$ACC DATA ASYNC(acc_stream) &
+    !$ACC   CREATE(l_compute(1:nc))
 
-    IF (abs(h_offset) > SUM(dz(:))) RETURN
-    IF (tle_fract < 1.0e-10_wp .OR. sbl_fract < 1.0e-10_wp) RETURN
+    ! Initialize 1D fields
+    dz_sum = 0._wp
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO is = 1, nsoil
+      dz_sum = dz_sum + dz(is)
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    ! Idenify grid cells where fluxes should be computed
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      IF (abs(h_offset(ic)) > dz_sum .OR. &
+        & tle_fract(ic) < 1.0e-10_wp .OR. sbl_fract(ic) < 1.0e-10_wp) THEN
+        l_compute(ic) = .FALSE.
+      ELSE
+        l_compute(ic) = .TRUE.
+      END IF
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    ! Determine number of layers on helper grid
+    nrgrd = nsoil * 2 + 3
 
     ! Start setting up the interpolated helper grid
     ! As ponded water / ice do not have a heat content we only account for energy exchange in the soil:
-
-    IF (h_offset < 0._wp) THEN
-      i_tle = 0
-      i_sbl = 1
-      z_tle = abs(h_offset)
-      z_sbl = dz(i_sbl)
-    ELSE IF  (h_offset > 0._wp) THEN
-      i_tle = 1
-      i_sbl = 0
-      z_tle = dz(i_tle)
-      z_sbl = abs(h_offset)
-    ELSE
-      i_tle = 1
-      i_sbl = 1
-      z_tle = dz(i_tle)
-      z_sbl = dz(i_sbl)
-    END IF
-
-    z_rgrd_top = 0._wp
-    z_rgrd_bot = MIN(z_tle, z_sbl)
-
-    ! First determine the lateral heat fluxes for water movements within the soil
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+    !$ACC LOOP SEQ
     DO i = 1, nrgrd
-      IF (i_tle <= nsoil .AND. i_sbl <= nsoil) THEN ! Within the soil column of both tiles
+      !$ACC LOOP GANG VECTOR &
+      !$ACC   PRIVATE(i_tle, i_sbl, z_tle, z_sbl, z_rgrd_top, z_rgrd_bot, h)  &
+      !$ACC   PRIVATE(t_tle_rgrd, h_cap_soil_tle_rgrd, wtr_flx_in_tle_regrid) &
+      !$ACC   PRIVATE(t_sbl_rgrd, h_cap_soil_sbl_rgrd, wtr_flx_in_sbl_regrid) &
+      !$ACC   PRIVATE(d_t_wtr_soil_tle, d_t_wtr_soil_sbl, heat_flx_tle, heat_flx_sbl)
+      DO ic = 1, nc
+        IF (l_compute(ic)) THEN
+          ! Initialize first
+          IF (i == 1) THEN
+            IF (h_offset(ic) < 0._wp) THEN
+              i_tle = 0
+              i_sbl = 1
+              z_tle = abs(h_offset(ic))
+              z_sbl = dz(i_sbl)
+            ELSE IF  (h_offset(ic) > 0._wp) THEN
+              i_tle = 1
+              i_sbl = 0
+              z_tle = dz(i_tle)
+              z_sbl = abs(h_offset(ic))
+            ELSE
+              i_tle = 1
+              i_sbl = 1
+              z_tle = dz(i_tle)
+              z_sbl = dz(i_sbl)
+            END IF
 
-        h                    = z_rgrd_bot - z_rgrd_top
+            z_rgrd_top = 0._wp
+            z_rgrd_bot = MIN(z_tle, z_sbl)
+          END IF
 
-        IF (i_tle > 0) THEN
-          t_tle_rgrd            = t_soil_tle(i_tle)
-          h_cap_soil_tle_rgrd   = heat_cap_soil_tle(i_tle)
-          wtr_flx_in_tle_regrid = wtr_inflx_lat_sl_tle(i_tle) * h / dz(i_tle) / rhoh2o
-        ELSE
-          t_tle_rgrd            = t_soil_tle(1)
-          h_cap_soil_tle_rgrd   = heat_cap_soil_tle(1)
-          wtr_flx_in_tle_regrid = 0._wp
-        END IF
+          ! First determine the lateral heat fluxes for water movements within the soil
+          IF (i_tle <= nsoil .AND. i_sbl <= nsoil) THEN ! Within the soil column of both tiles
 
-        IF (i_sbl > 0) THEN
-          t_sbl_rgrd            = t_soil_sbl(i_sbl)
-          h_cap_soil_sbl_rgrd   = heat_cap_soil_sbl(i_sbl)
-          wtr_flx_in_sbl_regrid = wtr_inflx_lat_sl_sbl(i_sbl) * h / dz(i_sbl) / rhoh2o
-        ELSE
-          t_sbl_rgrd            = t_soil_sbl(1)
-          h_cap_soil_sbl_rgrd   = heat_cap_soil_sbl(1)
-          wtr_flx_in_sbl_regrid = 0._wp
-        END IF
+            h = z_rgrd_bot - z_rgrd_top
 
-        ! Effective heat flux is determined so that:
-        ! t_sl_new = t_wtr + (t_sl-t_wtr) * (h - h_wtr) / h * vol_heat_cap_sl_old / vol_heat_cap_sl_new.
-        ! Since there is no way of knowing what vol_heat_cap_sl_new will be, the scheme assumes that
-        ! the water content will change according to wtr_flx * dtime:
-        ! vol_heat_cap_new = (vol_heat_cap_sl_old * (h-h_wtr) + vol_heat_cap_h2o * h_wtr) / h
-        ! Incomming water is assumed to have the same temperature as the soil layer it originates from.
+            IF (i_tle > 0) THEN
+              t_tle_rgrd            = t_soil_tle(ic,i_tle)
+              h_cap_soil_tle_rgrd   = heat_cap_soil_tle(ic,i_tle)
+              wtr_flx_in_tle_regrid = wtr_inflx_lat_sl_tle(ic,i_tle) * h / dz(i_tle) / rhoh2o
+            ELSE
+              t_tle_rgrd            = t_soil_tle(ic,1)
+              h_cap_soil_tle_rgrd   = heat_cap_soil_tle(ic,1)
+              wtr_flx_in_tle_regrid = 0._wp
+            END IF
 
-        d_t_wtr_soil_tle = t_sbl_rgrd - t_tle_rgrd
-        d_t_wtr_soil_sbl = t_tle_rgrd - t_sbl_rgrd
+            IF (i_sbl > 0) THEN
+              t_sbl_rgrd            = t_soil_sbl(ic,i_sbl)
+              h_cap_soil_sbl_rgrd   = heat_cap_soil_sbl(ic,i_sbl)
+              wtr_flx_in_sbl_regrid = wtr_inflx_lat_sl_sbl(ic,i_sbl) * h / dz(i_sbl) / rhoh2o
+            ELSE
+              t_sbl_rgrd            = t_soil_sbl(ic,1)
+              h_cap_soil_sbl_rgrd   = heat_cap_soil_sbl(ic,1)
+              wtr_flx_in_sbl_regrid = 0._wp
+            END IF
 
-        heat_flx_tle     = d_t_wtr_soil_tle * vol_hcap_water * wtr_flx_in_tle_regrid
-        heat_flx_sbl     = d_t_wtr_soil_sbl * vol_hcap_water * wtr_flx_in_sbl_regrid
+            ! Effective heat flux is determined so that:
+            ! t_sl_new = t_wtr + (t_sl-t_wtr) * (h - h_wtr) / h * vol_heat_cap_sl_old / vol_heat_cap_sl_new.
+            ! Since there is no way of knowing what vol_heat_cap_sl_new will be, the scheme assumes that
+            ! the water content will change according to wtr_flx * dtime:
+            ! vol_heat_cap_new = (vol_heat_cap_sl_old * (h-h_wtr) + vol_heat_cap_h2o * h_wtr) / h
+            ! Incomming water is assumed to have the same temperature as the soil layer it originates from.
 
-        ! Soil may not warm above or cool below the temperature of the incomming water
-        ! This could happen in the above formulation if wtr_flx_in_tle_regrid * dtime > h
-        ! Here, we use the current soil heat capacities instead of assuming that
-        ! the water content will change according to wtr_flx * dtime.
-        ! This makes the limits more retrictive, given that these are anyway very large margins.
-        IF (     heat_flx_tle < 0._wp) THEN
-          heat_flx_tle   = MAX(heat_flx_tle, d_t_wtr_soil_tle * h_cap_soil_tle_rgrd * h / dtime)
-        ELSE IF (heat_flx_tle > 0._wp) THEN
-          heat_flx_tle   = MIN(heat_flx_tle, d_t_wtr_soil_tle * h_cap_soil_tle_rgrd * h / dtime)
-        END IF
-        IF (     heat_flx_sbl < 0._wp) THEN
-          heat_flx_sbl   = MAX(heat_flx_sbl, d_t_wtr_soil_sbl * h_cap_soil_sbl_rgrd * h / dtime)
-        ELSE IF (heat_flx_sbl > 0._wp) THEN
-          heat_flx_sbl   = MIN(heat_flx_sbl, d_t_wtr_soil_sbl * h_cap_soil_sbl_rgrd * h / dtime)
-        END IF
+            d_t_wtr_soil_tle = t_sbl_rgrd - t_tle_rgrd
+            d_t_wtr_soil_sbl = t_tle_rgrd - t_sbl_rgrd
 
-        ! Diagnosing incoming-, outgoing- and net fluxes on tiles
-        ! Note that the the outgoing fluxes are not included in the net fluxes
-        ! since these do not change the temperature (only the heat capcity)
-        IF (i_tle > 0) THEN
-          cnvctv_in_tle(i_tle)    = cnvctv_in_tle(i_tle)  + heat_flx_tle
-          cnvctv_out_tle(i_tle)   = cnvctv_out_tle(i_tle) + heat_flx_sbl * sbl_fract / tle_fract
-          heat_flx_lat_tle(i_tle) = heat_flx_lat_tle(i_tle) + heat_flx_tle
-        END IF
+            heat_flx_tle     = d_t_wtr_soil_tle * vol_hcap_water * wtr_flx_in_tle_regrid
+            heat_flx_sbl     = d_t_wtr_soil_sbl * vol_hcap_water * wtr_flx_in_sbl_regrid
 
-        IF (i_sbl > 0) THEN
-          cnvctv_in_sbl(i_sbl)    = cnvctv_in_sbl(i_sbl)  + heat_flx_sbl
-          cnvctv_out_sbl(i_sbl)   = cnvctv_out_sbl(i_sbl) + heat_flx_tle * tle_fract / sbl_fract
-          heat_flx_lat_sbl(i_sbl) = heat_flx_lat_sbl(i_sbl) + heat_flx_sbl
-        END IF
+            ! Soil may not warm above or cool below the temperature of the incomming water
+            ! This could happen in the above formulation if wtr_flx_in_tle_regrid * dtime > h
+            ! Here, we use the current soil heat capacities instead of assuming that
+            ! the water content will change according to wtr_flx * dtime.
+            ! This makes the limits more restrictive, given that these are anyway very large margins.
+            IF (     heat_flx_tle < 0._wp) THEN
+              heat_flx_tle   = MAX(heat_flx_tle, d_t_wtr_soil_tle * h_cap_soil_tle_rgrd * h / dtime)
+            ELSE IF (heat_flx_tle > 0._wp) THEN
+              heat_flx_tle   = MIN(heat_flx_tle, d_t_wtr_soil_tle * h_cap_soil_tle_rgrd * h / dtime)
+            END IF
+            IF (     heat_flx_sbl < 0._wp) THEN
+              heat_flx_sbl   = MAX(heat_flx_sbl, d_t_wtr_soil_sbl * h_cap_soil_sbl_rgrd * h / dtime)
+            ELSE IF (heat_flx_sbl > 0._wp) THEN
+              heat_flx_sbl   = MIN(heat_flx_sbl, d_t_wtr_soil_sbl * h_cap_soil_sbl_rgrd * h / dtime)
+            END IF
 
-        ! Determening the top and bottem of the next layer of the regridded
-        IF (z_rgrd_bot == z_tle) THEN
-          i_tle = i_tle + 1
-          IF (i_tle <= nsoil) THEN
-            z_tle = z_tle + dz(i_tle)
+            ! Diagnosing incoming-, outgoing- and net fluxes on tiles
+            ! Note that the the outgoing fluxes are not included in the net fluxes
+            ! since these do not change the temperature (only the heat capacity)
+            IF (i_tle > 0) THEN
+              cnvctv_in_tle(ic,i_tle)    = cnvctv_in_tle(ic,i_tle)    + heat_flx_tle
+              cnvctv_out_tle(ic,i_tle)   = cnvctv_out_tle(ic,i_tle)   + heat_flx_sbl * (sbl_fract(ic) / tle_fract(ic))
+              heat_flx_lat_tle(ic,i_tle) = heat_flx_lat_tle(ic,i_tle) + heat_flx_tle
+            END IF
+
+            IF (i_sbl > 0) THEN
+              cnvctv_in_sbl(ic,i_sbl)    = cnvctv_in_sbl(ic,i_sbl)    + heat_flx_sbl
+              cnvctv_out_sbl(ic,i_sbl)   = cnvctv_out_sbl(ic,i_sbl)   + heat_flx_tle * (tle_fract(ic) / sbl_fract(ic))
+              heat_flx_lat_sbl(ic,i_sbl) = heat_flx_lat_sbl(ic,i_sbl) + heat_flx_sbl
+            END IF
+
+            ! Determening the top and bottem of the next layer of the regridded
+            IF (z_rgrd_bot == z_tle) THEN
+              i_tle = i_tle + 1
+              IF (i_tle <= nsoil) THEN
+                z_tle = z_tle + dz(i_tle)
+              END IF
+            END IF
+
+            IF (z_rgrd_bot == z_sbl) THEN
+              i_sbl = i_sbl + 1
+              IF (i_sbl <= nsoil) THEN
+                z_sbl = z_sbl + dz(i_sbl)
+              END IF
+            END IF
+            z_rgrd_top = z_rgrd_bot
+            z_rgrd_bot = MIN(z_tle, z_sbl)
           END IF
         END IF
-
-        IF (z_rgrd_bot == z_sbl) THEN
-          i_sbl = i_sbl + 1
-          IF (i_sbl <= nsoil) THEN
-            z_sbl = z_sbl + dz(i_sbl)
-          END IF
-        END IF
-        z_rgrd_top=z_rgrd_bot
-        z_rgrd_bot=MIN(z_tle, z_sbl)
-      END IF
+      END DO
     END DO
+    !$ACC END PARALLEL LOOP
 
     ! Add the heat fluxes due to surface runoff / runon
-    d_t_wtr_soil_tle = t_soil_sbl(1) - t_soil_tle(1)
-    d_t_wtr_soil_sbl = t_soil_tle(1) - t_soil_sbl(1)
-    heat_flx_tle = d_t_wtr_soil_tle * vol_hcap_water * wtr_inflx_lat_srf_tle / rhoh2o
-    heat_flx_sbl = d_t_wtr_soil_sbl * vol_hcap_water * wtr_inflx_lat_srf_sbl / rhoh2o
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+    !$ACC   PRIVATE(d_t_wtr_soil_tle, d_t_wtr_soil_sbl, heat_flx_tle, heat_flx_sbl)
+    DO ic = 1, nc
+      IF (l_compute(ic)) THEN
+        d_t_wtr_soil_tle = t_soil_sbl(ic,1) - t_soil_tle(ic,1)
+        d_t_wtr_soil_sbl = t_soil_tle(ic,1) - t_soil_sbl(ic,1)
+        heat_flx_tle = d_t_wtr_soil_tle * vol_hcap_water * wtr_inflx_lat_srf_tle(ic) / rhoh2o
+        heat_flx_sbl = d_t_wtr_soil_sbl * vol_hcap_water * wtr_inflx_lat_srf_sbl(ic) / rhoh2o
 
-    IF (     heat_flx_tle < 0._wp) THEN
-      heat_flx_tle   = MAX(heat_flx_tle, d_t_wtr_soil_tle * heat_cap_soil_tle(1) * dz(1) / dtime)
-    ELSE IF (heat_flx_tle > 0._wp) THEN
-      heat_flx_tle   = MIN(heat_flx_tle, d_t_wtr_soil_tle * heat_cap_soil_tle(1) * dz(1) / dtime)
-    END IF
+        IF (     heat_flx_tle < 0._wp) THEN
+          heat_flx_tle   = MAX(heat_flx_tle, d_t_wtr_soil_tle * heat_cap_soil_tle(ic,1) * dz(1) / dtime)
+        ELSE IF (heat_flx_tle > 0._wp) THEN
+          heat_flx_tle   = MIN(heat_flx_tle, d_t_wtr_soil_tle * heat_cap_soil_tle(ic,1) * dz(1) / dtime)
+        END IF
 
-    IF (     heat_flx_sbl < 0._wp) THEN
-      heat_flx_sbl   = MAX(heat_flx_sbl, d_t_wtr_soil_sbl * heat_cap_soil_sbl(1) * dz(1) / dtime)
-    ELSE IF (heat_flx_sbl > 0._wp) THEN
-      heat_flx_sbl   = MIN(heat_flx_sbl, d_t_wtr_soil_sbl * heat_cap_soil_sbl(1) * dz(1) / dtime)
-    END IF
+        IF (     heat_flx_sbl < 0._wp) THEN
+          heat_flx_sbl   = MAX(heat_flx_sbl, d_t_wtr_soil_sbl * heat_cap_soil_sbl(ic,1) * dz(1) / dtime)
+        ELSE IF (heat_flx_sbl > 0._wp) THEN
+          heat_flx_sbl   = MIN(heat_flx_sbl, d_t_wtr_soil_sbl * heat_cap_soil_sbl(ic,1) * dz(1) / dtime)
+        END IF
 
-    cnvctv_in_tle(1)    = cnvctv_in_tle(1)  + heat_flx_tle
-    cnvctv_in_sbl(1)    = cnvctv_in_sbl(1)  + heat_flx_sbl
-    cnvctv_out_tle(1)   = cnvctv_out_tle(1) + heat_flx_sbl * sbl_fract / tle_fract
-    cnvctv_out_sbl(1)   = cnvctv_out_sbl(1) + heat_flx_tle * tle_fract / sbl_fract
+        cnvctv_in_tle(ic,1)    = cnvctv_in_tle(ic,1)  + heat_flx_tle
+        cnvctv_in_sbl(ic,1)    = cnvctv_in_sbl(ic,1)  + heat_flx_sbl
+        cnvctv_out_tle(ic,1)   = cnvctv_out_tle(ic,1) + heat_flx_sbl * (sbl_fract(ic) / tle_fract(ic))
+        cnvctv_out_sbl(ic,1)   = cnvctv_out_sbl(ic,1) + heat_flx_tle * (tle_fract(ic) / sbl_fract(ic))
 
-    heat_flx_lat_tle(1) = heat_flx_lat_tle(1) + heat_flx_tle
-    heat_flx_lat_sbl(1) = heat_flx_lat_sbl(1) + heat_flx_sbl
-
+        heat_flx_lat_tle(ic,1) = heat_flx_lat_tle(ic,1) + heat_flx_tle
+        heat_flx_lat_sbl(ic,1) = heat_flx_lat_sbl(ic,1) + heat_flx_sbl
+      END IF
+    END DO
+    !$ACC END PARALLEL LOOP
+    !$ACC END DATA
 
   END SUBROUTINE calc_convection_heat
 
