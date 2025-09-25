@@ -228,13 +228,6 @@ CONTAINS
       mortality_rate_fire(:) = 0._wp !< no change
     END IF
 
-    !> 1.2 Load mortality_rate_fire
-    IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
-      mortality_rate_fire(:) = pm_fire(:)
-    ELSE
-      mortality_rate_fire(:) = 0._wp !< no change
-    END IF
-
     !>2.0 Calculate mortality rate and veg litterfall
     !>
     ! returns constant mortality_rate if veg_dynamics_scheme == none \n
