@@ -106,8 +106,8 @@ MODULE mo_hydro_memory_class
       & elevation,            & !< Topographic height                                    [m]
       & oro_stddev,           & !< Standard deviation of the orography                   [m]
       & steepness,            & !< Parameter defining sub-grid scale slope               []
-      & area,                 & !< characteristic area of tile                           [m2]
-      & h_surf,               & !< characteristic surface elevation of tile              [m]
+      & char_area,            & !< characteristic area of tile                           [m2]
+      & char_h_surf,          & !< characteristic surface elevation of tile              [m]
       & macro_slope             !< macro scale slope of tile                             []
 
     ! Additional variables for land type
@@ -569,22 +569,20 @@ CONTAINS
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
     END IF
 
-    CALL mem%Add_var( 'area', mem%area,                                              &
+    CALL mem%Add_var( 'char_area', mem%char_area,                                    &
       & hgrid, surface,                                                              &
-      & t_cf('area', 'm2', 'characteristic area of tile'),                           &
+      & t_cf('char_area', 'm2', 'characteristic area of tile'),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.TRUE.,                                                             &
-      & loutput=.TRUE., output_level=BASIC,                                          &
+      & lrestart=.TRUE., output_level=BASIC,                                         &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL mem%Add_var( 'h_surf', mem%h_surf,                                          &
+    CALL mem%Add_var( 'char_h_surf', mem%char_h_surf,                                &
       & hgrid, surface,                                                              &
-      & t_cf('h_surf', 'm', 'characteristic surface elevation of tile'),             &
+      & t_cf('char_h_surf', 'm', 'characteristic surface elevation of tile'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.TRUE.,                                                             &
-      & loutput=.TRUE., output_level=BASIC,                                          &
+      & lrestart=.TRUE., output_level=BASIC,                                         &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'macro_slope', mem%macro_slope,                                &
@@ -592,8 +590,7 @@ CONTAINS
       & t_cf('macro_slope', '/', 'macro scale slope of tile'),                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.TRUE.,                                                             &
-      & loutput=.TRUE., output_level=BASIC,                                          &
+      & lrestart=.TRUE., output_level=BASIC,                                         &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     ! Additional variables if the tile contains land, i.e. the tile or sub-tiles are land tiles
@@ -1133,7 +1130,7 @@ CONTAINS
         & t_cf('wtr_lex_net_sl', 'kg m-2 s-1', 'Lateral exchange with connected tiles on soil layers'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
         & prefix, suffix,                                                                               &
-        & loutput=l_lex, output_level=BASIC,                                                            &
+        & output_level=BASIC,                                                                           &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_latflow_res_srf', mem%wtr_latflow_res_srf,             &
@@ -1156,7 +1153,7 @@ CONTAINS
         & t_cf('water_to_soil_lex', 'm', 'Infiltratable water from connected tiles'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
         & prefix, suffix,                                                             &
-        & loutput=l_lex, output_level=BASIC,                                          &
+        & output_level=BASIC,                                                         &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_lex_net_srf', mem%wtr_lex_net_srf,                                         &
@@ -1164,7 +1161,7 @@ CONTAINS
         & t_cf('wtr_lex_net_srf', 'kg m-2 s-1', 'Lateral exchange with connected tiles on the surface'),&
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
         & prefix, suffix,                                                                               &
-        & loutput=l_lex, output_level=BASIC,                                                            &
+        & output_level=BASIC,                                                                           &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('wtr_rootzone_rel', mem%wtr_rootzone_rel,                         &
@@ -1181,7 +1178,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
-        & loutput=l_ponds, output_level=BASIC,                                         &
+        & output_level=BASIC,                                                          &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'weq_pond', mem%weq_pond,                                      &
@@ -1190,7 +1187,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
-        & loutput=l_ponds, output_level=BASIC,                                         &
+        & output_level=BASIC,                                                          &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_pond', mem%wtr_pond,                                      &
@@ -1199,7 +1196,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
-        & loutput=l_ponds, output_level=BASIC,                                         &
+        & output_level=BASIC,                                                          &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'ice_pond', mem%ice_pond,                                      &
@@ -1208,7 +1205,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
-        & loutput=l_ponds, output_level=BASIC,                                         &
+        & output_level=BASIC,                                                          &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'pond_melt', mem%pond_melt,                                    &

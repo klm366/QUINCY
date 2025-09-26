@@ -168,10 +168,11 @@ CONTAINS
     !$ACC LOOP GANG VECTOR &
     !$ACC   PRIVATE(rain_in_m, new_snow, weq_snow_soil_old) &
     !$ACC   PRIVATE(evapotrans_in_m, evapotrans_soil_in_m, evapo_soil_in_m, evapo_skin_in_m) &
-    !$ACC   PRIVATE(transpiration_in_m, evapo_snow_in_m, snowmelt_can) &
-    !$ACC   PRIVATE(new_snow_can, new_snow_soil, exp_t, exp_w, snow_blown, canopy_pre_snow) &
+    !$ACC   PRIVATE(evapo_pond_in_m, transpiration_in_m, evapo_snow_in_m, snowmelt_can) &
+    !$ACC   PRIVATE(new_snow_can, exp_t, exp_w, snow_blown, canopy_pre_snow) &
     !$ACC   PRIVATE(evapotrans_no_snow, evapo_snow_pot_in_m, evapo_skin_pot_in_m) &
-    !$ACC   PRIVATE(evapo_pond_pot_in_m, rain_to_skinres, wtr_skin_pre_rain)
+    !$ACC   PRIVATE(evapo_pond_pot_in_m, rain_to_skinres, wtr_skin_pre_rain) &
+    !$ACC   PRIVATE(wtr_pond_inflow, fract_pond_infil, wtr_pond_infilt, wtr_pond_overflow)
 
     DO ic = 1, nc
       snow_accum(ic)          = 0._wp
@@ -1808,8 +1809,6 @@ CONTAINS
     !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(drain_bot_pot, weq_sl, field_cap_sl)
 
-    drain_bot_act = 0._wp
-
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 1, nsoil
       DO ic = 1, nc
@@ -1839,9 +1838,9 @@ CONTAINS
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
-    DO is=1,nsoil
-      !$ACC LOOP GANG VECTOR
-      DO ic=1,nc
+    DO is = 1, nsoil
+      !$ACC LOOP GANG VECTOR PRIVATE(drain_bot_act)
+      DO ic = 1, nc
         ! Adding layered drainage to storage reservoir and setting drainage to 0.
         wtr_latflow_res_sl(ic,is)     = wtr_latflow_res_sl(ic,is) + drainage_sl(ic,is)
         drainage_sl(ic,is)            = 0._wp

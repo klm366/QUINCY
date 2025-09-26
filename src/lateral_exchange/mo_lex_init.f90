@@ -108,8 +108,8 @@ CONTAINS
 
     ! Pointers to variables in memory for tile
     dsl4jsb_Real2D_onDomain :: &
-      & h_surf,                &
-      & area,                  &
+      & char_h_surf,                &
+      & char_area,                  &
       & macro_slope,           &
       & slope_eff,             &
       & fact_lag_srf,          &
@@ -130,8 +130,8 @@ CONTAINS
 
     ! Pointers to variables in memory for sibling
     dsl4jsb_Real2D_onDomain :: &
-      & h_surf_sibl,           &
-      & area_sibl
+      & char_h_surf_sibl,           &
+      & char_area_sibl
 
     ! Locally allocated vectors
     dsl4jsb_Real2D_onDomain :: &
@@ -168,8 +168,8 @@ CONTAINS
       dsl4jsb_Get_memory(LEX_)
       dsl4jsb_Get_memory(HYDRO_)
 
-      dsl4jsb_Get_var2D_onDomain(HYDRO_, h_surf)               ! in
-      dsl4jsb_Get_var2D_onDomain(HYDRO_, area)                 ! in
+      dsl4jsb_Get_var2D_onDomain(HYDRO_, char_h_surf)          ! in
+      dsl4jsb_Get_var2D_onDomain(HYDRO_, char_area)            ! in
       dsl4jsb_Get_var2D_onDomain(HYDRO_, macro_slope)          ! in
 
       dsl4jsb_Get_var2D_onDomain(LEX_,   fact_lag_srf)         ! out
@@ -363,12 +363,12 @@ CONTAINS
         IF (dsl4jsb_Config(LEX_)%l_nested) THEN
 
           dsl4jsb_Get_memory_tile(HYDRO_, sibl)
-          dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, area, sibl)    ! in
+          dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, char_area, sibl)    ! in
 
 
           trgt_id = INT(FINDLOC(cmx_micro_ctc(lex_ids,:), 1._wp, 1))
           IF (trgt_id /= 0) THEN
-            area_nclsd(:,trgt_id,:)  = area_sibl(:,:)
+            area_nclsd(:,trgt_id,:)  = char_area_sibl(:,:)
             fract_nclsd(:,trgt_id,:) = fract_sibl(:,:)
           END IF
         END IF
@@ -391,8 +391,8 @@ CONTAINS
         IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE
 
         dsl4jsb_Get_memory_tile(HYDRO_, sibl)
-        dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, h_surf, sibl)  ! in
-        dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, area, sibl)    ! in
+        dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, char_h_surf, sibl)  ! in
+        dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, char_area, sibl)    ! in
 
         CALL sibl%Get_fraction(fract=fract_sibl(:,:))
 
@@ -450,9 +450,9 @@ CONTAINS
               & hlp1(ic,ib), hlp2(ic,ib),                               &
               & fract(ic,ib), fract_sibl(ic,ib),                        &
               & fract_nclsd(ic,lex_idt,ib), fract_nclsd(ic,lex_ids,ib), &
-              & area(ic,ib), area_sibl(ic,ib),                          &
+              & char_area(ic,ib), char_area_sibl(ic,ib),                &
               & area_nclsd(ic,lex_idt,ib), area_nclsd(ic,lex_ids,ib),   &
-              & h_surf(ic,ib), h_surf_sibl(ic,ib),                      &
+              & char_h_surf(ic,ib), char_h_surf_sibl(ic,ib),            &
               & h_offset_ct(ic,lex_ids,ib),                             &
               & length_scale_ct(ic,lex_ids,ib),                         &
               & length_iface_ct(ic,lex_ids,ib),                         &

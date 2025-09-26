@@ -436,7 +436,6 @@ CONTAINS
 
     INTEGER :: isoil                            !< Looping index for soil layers
     LOGICAL :: l_organic                        !< T: read mineral soil properties
-    LOGICAL :: l_dpr4ponds                      !< T: set LEX depression tiles to 100% ponds
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_read_init_vars'
 
@@ -452,7 +451,6 @@ CONTAINS
     IF (tile%Is_process_active(LEX_)) THEN
       ! Get lateral exchange config
       dsl4jsb_Get_config(LEX_)
-      l_dpr4ponds = dsl4jsb_Config(LEX_)%l_dpr4ponds
     END IF
 
     grid   => Get_grid(model%grid_id)
@@ -575,7 +573,7 @@ CONTAINS
         ! Reset LEX l_dpr4ponds switch in case that tile specific depression data is provided
         IF (input_file%Has_var('surf_depr_fract_'//TRIM(tile%name)) .AND. &
           & input_file%Has_var('surf_depr_depth_'//TRIM(tile%name))) THEN
-          l_dpr4ponds = .FALSE.
+          dsl4jsb_Config(LEX_)%l_dpr4ponds = .FALSE.
         END IF
       END IF
 
@@ -1075,42 +1073,41 @@ CONTAINS
 
     !>     - Topographic features relevant for lateral exchange between connected tiles
     IF (tile%Is_process_active(LEX_)) THEN
-      dsl4jsb_var_ptr(HYDRO_, area)        = hydro_init_vars%char_area(:,:)
-      dsl4jsb_var_ptr(HYDRO_, h_surf)      = hydro_init_vars%char_h_srf(:,:)
+      dsl4jsb_var_ptr(HYDRO_, char_area)   = hydro_init_vars%char_area(:,:)
+      dsl4jsb_var_ptr(HYDRO_, char_h_surf) = hydro_init_vars%char_h_srf(:,:)
       dsl4jsb_var_ptr(HYDRO_, macro_slope) = hydro_init_vars%char_slope(:,:)
       ! Assigning macro-slope in case no tile-specific input was provided (init var is -9999.9)
       IF (dsl4jsb_Config(LEX_)%l_noslope_dpr) THEN
-        ! Assuming zero slope on depression tiles (h_surf < 0.0) ...
-        WHERE ((dsl4jsb_var_ptr(HYDRO_,macro_slope) < 0.0_wp) .AND. &
-          &    (dsl4jsb_var_ptr(HYDRO_,h_surf)      < 0.0_wp))
-          dsl4jsb_var_ptr(HYDRO_,macro_slope) = 0.0_wp
+        ! Assuming zero slope on depression tiles (char_h_surf < 0.0) ...
+        WHERE ((dsl4jsb_var_ptr(HYDRO_, macro_slope) < 0.0_wp) .AND. &
+          &    (dsl4jsb_var_ptr(HYDRO_, char_h_surf)      < 0.0_wp))
+          dsl4jsb_var_ptr(HYDRO_, macro_slope) = 0.0_wp
         ! ... and steepness elsewhere
-        ELSE WHERE (dsl4jsb_var_ptr(HYDRO_,macro_slope) < 0.0_wp)
-          dsl4jsb_var_ptr(HYDRO_,macro_slope) = dsl4jsb_var_ptr(HYDRO_, steepness)
+        ELSE WHERE (dsl4jsb_var_ptr(HYDRO_, macro_slope) < 0.0_wp)
+          dsl4jsb_var_ptr(HYDRO_, macro_slope) = dsl4jsb_var_ptr(HYDRO_, steepness)
         END WHERE
       ELSE
         ! Using Steepness
-        WHERE (dsl4jsb_var_ptr(HYDRO_,macro_slope) < 0.0_wp )
-          dsl4jsb_var_ptr(HYDRO_,macro_slope) = dsl4jsb_var_ptr(HYDRO_,steepness)
+        WHERE (dsl4jsb_var_ptr(HYDRO_, macro_slope) < 0.0_wp )
+          dsl4jsb_var_ptr(HYDRO_, macro_slope) = dsl4jsb_var_ptr(HYDRO_,steepness)
         END WHERE
       END IF
     ELSE
-      ! ! TODO this changes the default simulation, but why? Check whether these fields
-      ! !   are used in the default setup and why
-      ! dsl4jsb_var_ptr(HYDRO_,area)        = 10000._wp
-      ! dsl4jsb_var_ptr(HYDRO_,h_surf)      = 0.0_wp
-      ! dsl4jsb_var_ptr(HYDRO_,macro_slope) = dsl4jsb_var_ptr(HYDRO_, steepness)(:,:)
+      ! This initialization is actually not necessary, as these variables are only used if LEX is active.
+      dsl4jsb_var_ptr(HYDRO_, char_area)   = 10000._wp
+      dsl4jsb_var_ptr(HYDRO_, char_h_surf) = 0.0_wp
+      dsl4jsb_var_ptr(HYDRO_, macro_slope) = dsl4jsb_var_ptr(HYDRO_, steepness)
     END IF
 
     !>     - Maximum depth and extent of surface water ponds
     IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
       IF (tile%Is_process_active(LEX_) .AND. dsl4jsb_Config(LEX_)%l_dpr4ponds) THEN
-        WHERE (dsl4jsb_var_ptr(HYDRO_,h_surf) < 0.0_wp)
+        WHERE (dsl4jsb_var_ptr(HYDRO_, char_h_surf) < 0.0_wp)
           ! Maximum pond fraction is set to 1 for depressions and 0 for non-depressions.
           !   Note, surface elevation is given as negative value for depressions, but represent
           !   a storage on top of the soil --> needs to be converted to positive values!
           dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 1.0_wp
-          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = dsl4jsb_var_ptr(HYDRO_,h_surf)  * (-1._wp)
+          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = dsl4jsb_var_ptr(HYDRO_, char_h_surf)  * (-1._wp)
         ELSEWHERE
           dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0.0_wp
           dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0.0_wp
@@ -1246,8 +1243,8 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_org_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_pond_max)), &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, weq_pond_max)), &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, area)), &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, h_surf)), &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, char_area)), &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, char_h_surf)), &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, macro_slope)), &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, soil_depth))
