@@ -1063,7 +1063,7 @@ CONTAINS
             ! * -1.0_wp because the atmosphere expects CO2 sources as positive and sinks as negative values
             !   ... differs to the convention for fluxes in ICON which would be "fluxes point downwards"
             !   ... note: in jsbach the negation of the fluxes is already done in the carbon interface
-            CO2_flux(i) = fact_land(i) * net_biosphere_production_ptr(i) * molarMassCO2 * 0.001_wp * 0.000001_wp * (-1.0_wp)
+            CO2_flux(i) = fact_land(i) * net_biosphere_production_ptr(i) * molarMassCO2 * 0.000001_wp * (-1.0_wp)
           END DO
 #endif
         END IF

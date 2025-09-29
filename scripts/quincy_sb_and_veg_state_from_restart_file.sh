@@ -99,7 +99,7 @@ fi
 #-- soil
 # bgcm
 soil_bgcm_prefix="sb_sb_bgcm_pool"
-soil_compartments="dom dom_assoc  sol_litter  pol_litter  woo_litter  fungi  mycorrhiza  microbial  residue  residue_assoc"
+soil_compartments="dom dom_assoc  sol_litter  pol_litter  woo_litter  mycorrhiza  microbial  residue  residue_assoc"
 
 # other state variables (according to https://gitlab.dkrz.de/jsbach/jsbach/-/issues/294#note_341494, date 24.07.25)
 sb_process_prefix="sb"
