@@ -784,6 +784,8 @@ CONTAINS
     !>
     !> 3. Iterate over tiles again and
     !>
+    !>     3.0 if demanded: correct tile fractions to assert consistency
+    !>
     !>     3.1 set initial tile fractions for aggregator(s)
     !>
     !>     3.2 set LCT fractions of the specific tile
@@ -802,8 +804,13 @@ CONTAINS
     ! Loop over the tiles, starting from the top tile (i.e. box)
     DO WHILE (ASSOCIATED(tile))
 
-      ! First only handle the leaves: skip the tile in case it has children.
+      ! First only handle the leaves: skip the tile in case it has children
+      ! (but, if demanded, correct child cover fractons first)
       IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
+        ! If demanded, check the cover fractions of the direct children
+        IF (model%config%check_child_cf) THEN
+          CALL tile%Check_child_cover_fractions()
+        END IF
         CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
