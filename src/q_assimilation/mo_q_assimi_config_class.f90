@@ -103,8 +103,8 @@ CONTAINS
     ic_filename                   = 'ic_land_assimi.nc'
     ncanopy                       = 10           ! (default for FAPAR based canopy layers would be 10)
     flag_optimal_Nfraction        = .FALSE.      ! .TRUE. .FALSE.
-    flag_t_resp_acclimation       = .FALSE.      ! .TRUE. .FALSE.
-    flag_t_jmax_acclimation       = .FALSE.      ! .TRUE. .FALSE.
+    flag_t_resp_acclimation       = .TRUE.       ! .TRUE. .FALSE.
+    flag_t_jmax_acclimation       = .TRUE.       ! .TRUE. .FALSE.
     canopy_layer_scheme           = "fapar"      !
     canopy_conductance_scheme     = "medlyn"
     ! ----------------------------------------------------------------------------------------------------- !

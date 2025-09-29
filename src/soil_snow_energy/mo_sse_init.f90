@@ -237,34 +237,13 @@ CONTAINS
 
 #ifndef __NO_QUINCY__
       ! quincy
-      ! read values from quincy specific input file (overwriting values from SSE_ bc_filename)
+      ! read 'bulk density' values from quincy specific input file
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
+        ! close jsbach input file
+        CALL input_file%Close()
+        ! open quincy input file
         input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_quincy_soil_filename), model%grid_id)
-
-        ! sand
-        !
-        ptr_2D => input_file%Read_2d(  &
-          & variable_name='SNDPPT',    &
-          & fill_array = sse_init_vars%fr_sand)
-        sse_init_vars%fr_sand(:,:) = ptr_2D(:,:)
-        ! convert from % to [0,1]
-        sse_init_vars%fr_sand(:,:) = sse_init_vars%fr_sand(:,:) / 100.0_wp
-        sse_init_vars%fr_sand(:,:) = MIN(1.0_wp, MERGE(sse_init_vars%fr_sand(:,:), 0.0_wp, sse_init_vars%fr_sand(:,:) > 0.0_wp))
-
-        ! silt
-        !
-        ptr_2D => input_file%Read_2d(  &
-          & variable_name='SLTPPT',    &
-          & fill_array = sse_init_vars%fr_silt)
-        sse_init_vars%fr_silt(:,:) = ptr_2D(:,:)
-        ! convert from % to [0,1]
-        sse_init_vars%fr_silt(:,:) = sse_init_vars%fr_silt(:,:) / 100.0_wp
-        sse_init_vars%fr_silt(:,:) = MIN(1.0_wp, MERGE(sse_init_vars%fr_silt(:,:), 0.0_wp, sse_init_vars%fr_silt(:,:) > 0.0_wp))
-
-        ! clay
-        !
-        sse_init_vars%fr_clay(:,:) = MIN(1.0_wp, 1.0_wp - sse_init_vars%fr_sand(:,:) + sse_init_vars%fr_silt(:,:))
 
         ! bulk density
         !
@@ -273,7 +252,7 @@ CONTAINS
           & fill_array = sse_init_vars%bulk_density)
         sse_init_vars%bulk_density(:,:) = MERGE(ptr_2D, 1000.0_wp, ptr_2D > 0.0_wp)
 
-        CALL input_file%Close()
+        ! quincy input file may be closed below
     END SELECT
 #endif
 
@@ -524,7 +503,7 @@ CONTAINS
 
         ! Assertion that 'l_soil_texture' option is set to the same value in SSE_ and HYDRO_
         IF (.NOT. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
-          CALL finish (TRIM(routine), 'The value of l_soil_texture differs between SSE_ and HYDRO_ '//TRIM(tile%name))
+          CALL finish (TRIM(routine), 'The setting of l_soil_texture differs between SSE_ and HYDRO_ '//TRIM(tile%name))
         END IF
       ELSE
         sand_sl(:,:,:)      = 0.3_wp

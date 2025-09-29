@@ -64,9 +64,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER       :: model          !< the model
     TYPE(t_jsb_grid),       POINTER       :: grid
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb  !< Vertical grid
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_w   !< Vertical grid
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_snow_spq !< Vertical grid snow
-    INTEGER                               :: nsoil_sb       !< number of soil layers as used/defined by the SB_ process
+    INTEGER                               :: nsoil_w        !< number of soil layers as used/defined by the SB_ process
     INTEGER                               :: nsnow          !< number of snow layers
     INTEGER                               :: isoil
     INTEGER                               :: iblk, ics, ice, nc
@@ -209,9 +209,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model          => Get_model(tile%owner_model_id)
     grid           => Get_grid(model%grid_id)
-    vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
+    vgrid_soil_w   => Get_vgrid('soil_depth_water')
     vgrid_snow_spq => Get_vgrid('snow_layer_spq')
-    nsoil_sb       =  vgrid_soil_sb%n_levels
+    nsoil_w        =  vgrid_soil_w%n_levels
     nsnow          =  vgrid_snow_spq%n_levels
     lat            => grid%lat(ics:ice, iblk)
     lon            => grid%lon(ics:ice, iblk)
@@ -373,7 +373,7 @@ CONTAINS
       !$ACC UPDATE HOST(snow(:), snow_height(:), snow_present_snl(:,:), w_snow_snl(:,:), snow_lay_thickness_snl(:,:)) ASYNC(1)
       !$ACC WAIT(1)
       CALL calc_snow_accumulation(nc, &                                   ! in
-                                  nsoil_sb, &                             ! in
+                                  nsoil_w, &                              ! in
                                   nsnow, &                                ! in
                                   dtime, &                                ! in
                                   snow(:), &                              ! in
@@ -404,7 +404,7 @@ CONTAINS
     !$ACC   HOST(w_snow_snl(:,:), snow_present_snl(:,:), snow_lay_thickness_snl(:,:), q_sat_srf(:)) &
     !$ACC   HOST(fract_wet(:), fract_snow(:), fract_snow_soil(:), fract_snow_can(:)) ASYNC(1)
     !$ACC WAIT(1)
-    CALL calc_surface_energy_balance(nc, nsoil_sb, nsnow, dtime, &
+    CALL calc_surface_energy_balance(nc, nsoil_w, nsnow, dtime, &
                                      lat, lon, &
                                      alpha, &
                                      jsb_standalone, &
@@ -469,7 +469,7 @@ CONTAINS
     !$ACC   HOST(drainage_sl(:,:), frac_wtr_transp_down_sl(:,:), gw_runoff_sl(:,:), t_soil_sl(:,:), ice_soil_sl(:,:)) &
     !$ACC   HOST(frac_w_lat_loss_sl(:,:), ftranspiration_sl(:,:)) ASYNC(1)
     !$ACC WAIT(1)
-    CALL calc_soil_hydrology(nc, nsoil_sb, dtime, &
+    CALL calc_soil_hydrology(nc, nsoil_w, dtime, &
                              num_sl_above_bedrock(:), &
                              soil_lay_depth_ubound_sl(:,:), &                                      ! (upper bound > lower bound !)
                              dsl4jsb_Config(VEG_)%flag_dynamic_roots, &
@@ -507,7 +507,7 @@ CONTAINS
   !> calc snow accumulation
   !!
   SUBROUTINE calc_snow_accumulation(nc, &
-                                    nsoil_sb, &
+                                    nsoil_w, &
                                     nsnow, &
                                     dtime, &
                                     snow, &
@@ -523,7 +523,7 @@ CONTAINS
     ! --------------------------------------------
     ! 0.1 In
     INTEGER,                                          INTENT(in)    :: nc, &                  !< dimension chunk
-                                                                       nsoil_sb, &            !< dimension vertical soil layers
+                                                                       nsoil_w, &             !< dimension vertical soil layers
                                                                        nsnow                  !< dimension vertical snow layers
     REAL(wp),                                         INTENT(in)    :: dtime                  !< timestep length
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: snow                   !< Snowfall           [kg m-2 s-1]
@@ -591,7 +591,7 @@ CONTAINS
   !!
   !! Calculates surface energy fluxes and deep soil temperatures
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_surface_energy_balance(nc, nsoil_sb, nsnow, dtime, &
+  SUBROUTINE calc_surface_energy_balance(nc, nsoil_w, nsnow, dtime, &
                                          lat, lon, &
                                          alpha, &
                                          jsb_standalone, &
@@ -641,7 +641,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)    :: nc, &                  !< dimensions
-                                                                       nsoil_sb, &
+                                                                       nsoil_w, &
                                                                        nsnow
     REAL(wp),                                         INTENT(in)    :: dtime                  !< timestep length
     REAL(wp),                                         INTENT(in)    :: lat(:)                 !< timestep length
@@ -661,7 +661,7 @@ CONTAINS
                                                                        lai, &                 !< LAI
                                                                        w_skin, &              !< skin water reservoir on leaves [m]
                                                                        drag_srf               !< surface drag coefficient (JSBACH-style!)
-    REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(in)    :: soil_depth_sl, &       !< soil depth per layer [m]
+    REAL(wp), DIMENSION(nc,nsoil_w),                  INTENT(in)    :: soil_depth_sl, &       !< soil depth per layer [m]
                                                                        heat_capa_sl, &        !< heat capacity of the soil layer [J/kg]
                                                                        bulk_dens_sl           !< bulk density of the soil layer [kg/m3]
     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: fact_q_air, &          !<
@@ -687,7 +687,7 @@ CONTAINS
                                                                        snow_soil_heat_flux, & !< snow soil heat flux [W/m2]
                                                                        snow_srf_heat_flux, &  !< snow heat flux from top snow layer to layer below [W / m2]
                                                                        snow_melt_to_soil      !< liquid water flux to soil [m]
-    REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(inout) :: therm_cond_sl, &       !< thermal conductivity of the soil layer [J / m / s ]
+    REAL(wp), DIMENSION(nc,nsoil_w),                  INTENT(inout) :: therm_cond_sl, &       !< thermal conductivity of the soil layer [J / m / s ]
                                                                        t_soil_sl, &           !< soil temperature [K]
                                                                        wtr_soil_sl, &         !< soil water content [m]
                                                                        wtr_soil_fc_sl, &      !< soil water field capacity [m]
@@ -712,7 +712,7 @@ CONTAINS
                                                          w_snow_total , &
                                                          hlp1         , &
                                                          hlp2
-    REAL(wp), DIMENSION(nc,nsoil_sb)              :: ground_heat_flx_sl,&             !< Ground heat flux                                [J/m2/s]
+    REAL(wp), DIMENSION(nc,nsoil_w)               :: ground_heat_flx_sl,&             !< Ground heat flux                                [J/m2/s]
                                                      t_soil_old_sl, &                 !< soil layer temperature from previous time step  [m]
                                                      latent_heat_freeze_flx, &        !< latent heat flux freezing                       [J/m2]
                                                      heat_excess, &                   !< Heat excess/deficit after freezing/melting      [J/m2]
@@ -910,7 +910,7 @@ CONTAINS
     !  heat transfer through snow, and
     !  soil surface temperature
     CALL calc_snow_dynamics(nc, &                   !in
-                             nsoil_sb,&             !in
+                             nsoil_w,&              !in
                              nsnow,  &              !in
                              dtime,  &              !in
                              t_air, &               !in
@@ -943,7 +943,7 @@ CONTAINS
     !>
     ground_heat_flx_sl(:,:) = 0.0_wp
     DO ic = 1,nc
-      DO isoil = 1,nsoil_sb
+      DO isoil = 1,nsoil_w
         IF (t_soil_sl(ic,isoil) <= Tzero) THEN
           therm_cond_sl(ic,isoil) = soil_frozen_therm_cond
         ELSE
@@ -953,7 +953,7 @@ CONTAINS
     END DO
 
     DO ic = 1,nc
-      DO isoil = 1,nsoil_sb-1
+      DO isoil = 1,nsoil_w-1
         IF (soil_depth_sl(ic,isoil) > eps8) THEN
           ground_heat_flx_sl(ic,isoil) = therm_cond_sl(ic,isoil) &
             &                           * (t_soil_sl(ic,isoil + 1) - t_soil_sl(ic,isoil)) &
@@ -966,7 +966,7 @@ CONTAINS
     ground_heat_flx_old(:) = ground_heat_flx(:)
     ! loop soil layers 2:max
     DO ic = 1,nc
-      DO isoil = 2,nsoil_sb
+      DO isoil = 2,nsoil_w
         IF(soil_depth_sl(ic,isoil) > eps8) THEN
           t_soil_sl(ic,isoil) = t_soil_sl(ic,isoil) &
             &                  + (ground_heat_flx_sl(ic,isoil) - ground_heat_flx_sl(ic,isoil - 1)) * dtime &
@@ -989,7 +989,7 @@ CONTAINS
     w_soil_freeze_flux(:,:) = 0.0_wp
     w_soil_melt_flux(:,:)   = 0.0_wp
     DO ic = 1,nc
-      DO isoil = 1,nsoil_sb
+      DO isoil = 1,nsoil_w
         ! freezing
         IF (t_soil_sl(ic,isoil) <= Tzero) THEN
           ! if there is water available for freezing
@@ -1087,7 +1087,7 @@ CONTAINS
   !!
   !! Calculates srf_runoff, drainage and an updated state of soil water variables (theta, potential, etc.)
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_soil_hydrology(nc, nsoil_sb, dtime, &
+  SUBROUTINE calc_soil_hydrology(nc, nsoil_w, dtime, &
                                  num_sl_above_bedrock, &
                                  soil_layer_w_ubounds, &
                                  flag_dynamic_roots, &
@@ -1117,10 +1117,10 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)    :: nc, &                   !< dimensions
-                                                                       nsoil_sb                !<
+                                                                       nsoil_w                 !<
     REAL(wp),                                         INTENT(in)    :: dtime                   !< timestep length
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: num_sl_above_bedrock    !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(in)    :: soil_layer_w_ubounds    !< upper bound of soil layers water (upper bound > lower bound !)
+    REAL(wp), DIMENSION(nc,nsoil_w),                  INTENT(in)    :: soil_layer_w_ubounds    !< upper bound of soil layers water (upper bound > lower bound !)
     LOGICAL,                                          INTENT(in)    :: flag_dynamic_roots      !< VEG_ config: use dynmic root scheme if TRUE
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: rain, &                 !< rainfall [kg / m2 / s ]
                                                                        snow, &                 !< snowfall [kg / m2 / s ]
@@ -1133,7 +1133,7 @@ CONTAINS
                                                                        lai, &                  !< leaf area index
                                                                        root_depth, &           !< rooting depth [m]
                                                                        snow_melt_to_soil       !< snow melt water flux to soil in liquid water equivalent [m]
-    REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(in)    :: soil_depth_sl, &        !< soil depth per layer [m]
+    REAL(wp), DIMENSION(nc,nsoil_w),                  INTENT(in)    :: soil_depth_sl, &        !< soil depth per layer [m]
                                                                        ftranspiration_sl, &    !< fraction of transpiration []
                                                                        wtr_soil_sat_sl, &      !< soil moisture per layer at saturation [m]
                                                                        wtr_soil_fc_sl, &       !< soil moisture per layer at field capacity [m]
@@ -1153,14 +1153,14 @@ CONTAINS
                                                                        drainage, &             !< deep drainage [kg / m2 / s]
                                                                        gw_runoff, &            !< sum of lateral runoff across all soil layers [kg / m2 /s]
                                                                        drainage_fraction       !< fraction of soil column lost to drainage [1/s]
-    REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(inout) :: wtr_soil_sl, &                     !< soil moisture per layer [m]
+    REAL(wp), DIMENSION(nc,nsoil_w),                  INTENT(inout) :: wtr_soil_sl, &                     !< soil moisture per layer [m]
                                                                        wtr_soil_pot_sl, &                 !< soil water potential per layer [MPa]
                                                                        drainage_sl, &                     !< drainage per layer [kg / m2 / s]
                                                                        frac_wtr_transp_down_sl, &         !< fractional water loss [1000/s]
                                                                        gw_runoff_sl, &                    !< groundwater runoff per layer [kg / m2 /s]
                                                                        t_soil_sl, &                       !< soil layer temperature
                                                                        ice_soil_sl                        !< ice content of soil layer [m]
-    REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(out)   :: frac_w_lat_loss_sl                 !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep)
+    REAL(wp), DIMENSION(nc,nsoil_w),                  INTENT(out)   :: frac_w_lat_loss_sl                 !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep)
     ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(nc)                         :: &
@@ -1170,7 +1170,7 @@ CONTAINS
                                                        w_soil_root_old, &
                                                        hlp1, hlp2, hlp3
     REAL(wp), DIMENSION(nc)                         :: fdrain_srf_runoff_mod        ! modified fdrain_srf_runoff
-    REAL(wp),DIMENSION(nc,nsoil_sb)                 :: &
+    REAL(wp),DIMENSION(nc,nsoil_w)                  :: &
                                                        fevaporation   , &           ! fraction of evaporation
                                                        w_soil_sl_old  , &
                                                        k_diff         , &
@@ -1263,16 +1263,16 @@ CONTAINS
 
     !> 2.3 update deeper soil layers given infiltration, transpiration and evaporation
     !> 2.3.1 Compute infiltration, transpiration, evaporation and drainage
-    DO isoil = 2,nsoil_sb-1
+    DO isoil = 2,nsoil_w-1
       ! turn off drainage if layer below is frozen/saturated
       hlp1(:) = drain_frac ** soil_depth_sl(:,isoil) * drainage_sl(:,isoil-1)
-      hlp2(:) = SUM(wtr_soil_fc_sl(:,isoil:nsoil_sb),DIM=2) - (SUM(wtr_soil_sl(:,isoil:nsoil_sb),DIM=2) + &
-        &       SUM(water2ice_density_ratio * ice_soil_sl(:,isoil:nsoil_sb),DIM=2))
+      hlp2(:) = SUM(wtr_soil_fc_sl(:,isoil:nsoil_w),DIM=2) - (SUM(wtr_soil_sl(:,isoil:nsoil_w),DIM=2) + &
+        &       SUM(water2ice_density_ratio * ice_soil_sl(:,isoil:nsoil_w),DIM=2))
       WHERE (t_soil_sl(:,isoil) <= Tzero)
         ! Available pore space in layer below
         drainage_sl(:,isoil)  = 0.0_wp
         gw_runoff_sl(:,isoil) = 0.0_wp
-      ELSEWHERE (t_soil_sl(:,nsoil_sb) <= Tzero.AND.hlp1(:)>hlp2(:))
+      ELSEWHERE (t_soil_sl(:,nsoil_w) <= Tzero.AND.hlp1(:)>hlp2(:))
           drainage_sl(:,isoil) =  MAX(hlp2(:),0.0_wp)
       ELSEWHERE
         ! drainage from this layer due to preferential flow of infiltering water flux
@@ -1293,8 +1293,8 @@ CONTAINS
         ! Calculate excess water in current soil layer (over field capacity)
         hlp1(:) = wtr_soil_sl(:,isoil) + ice_soil_sl(:,isoil) * water2ice_density_ratio - wtr_soil_fc_sl(:,isoil)
         ! Calculate  remaining free water uptake capacity in all lower layers
-        hlp2(:) = SUM(wtr_soil_fc_sl(:,isoil:nsoil_sb),DIM=2) - (SUM(wtr_soil_sl(:,isoil:nsoil_sb),DIM=2) + &
-          &       SUM(water2ice_density_ratio * ice_soil_sl(:,isoil:nsoil_sb),DIM=2))
+        hlp2(:) = SUM(wtr_soil_fc_sl(:,isoil:nsoil_w),DIM=2) - (SUM(wtr_soil_sl(:,isoil:nsoil_w),DIM=2) + &
+          &       SUM(water2ice_density_ratio * ice_soil_sl(:,isoil:nsoil_w),DIM=2))
         ! Calculate remaining free water uptake capacity in upper layer
         hlp3(:) = wtr_soil_fc_sl(:,isoil-1) - (wtr_soil_sl(:,isoil-1) + ice_soil_sl(:,isoil-1) * water2ice_density_ratio)
         ! Aggregated water capacity of lower layers has been reached either from liquid or frozen water (impermeable layer)
@@ -1335,35 +1335,35 @@ CONTAINS
     !> 2.3.2 Update deepest soil layer
     ! Compute drainage for deepest layer
     ! Boundary condition for wetland to due frozen bottom soil layers
-    WHERE (t_soil_sl(:,nsoil_sb) <= Tzero)
-      drainage_sl(:,nsoil_sb) = 0.0_wp
+    WHERE (t_soil_sl(:,nsoil_w) <= Tzero)
+      drainage_sl(:,nsoil_w)  = 0.0_wp
     ! Otherwise regular drainage takes place
     ELSEWHERE
-      drainage_sl(:,nsoil_sb) = MAX(drain_frac ** soil_depth_sl(:,nsoil_sb) * drainage_sl(:,nsoil_sb-1),0.0_wp)
+      drainage_sl(:,nsoil_w)  = MAX(drain_frac ** soil_depth_sl(:,nsoil_w) * drainage_sl(:,nsoil_w-1),0.0_wp)
     END WHERE
     ! Update water content of deepest layer
-    wtr_soil_sl(:,nsoil_sb)   = wtr_soil_sl(:,nsoil_sb) + &
-                                (drainage_sl(:,nsoil_sb-1) - drainage_sl(:,nsoil_sb) - &
-                                evaporation(:) * fevaporation(:,nsoil_sb) - &
-                                transpiration(:) * ftranspiration_sl(:,nsoil_sb)) /  &
+    wtr_soil_sl(:,nsoil_w)    = wtr_soil_sl(:,nsoil_w) + &
+                                (drainage_sl(:,nsoil_w-1) - drainage_sl(:,nsoil_w) - &
+                                evaporation(:) * fevaporation(:,nsoil_w) - &
+                                transpiration(:) * ftranspiration_sl(:,nsoil_w)) /  &
                                 1000._wp * dtime
 
     ! conditions in the case that water content in lowest layer is above field capcity
-    WHERE (wtr_soil_sl(:,nsoil_sb) + ice_soil_sl(:,nsoil_sb) * water2ice_density_ratio > wtr_soil_fc_sl(:,nsoil_sb))
-      hlp1(:) = (wtr_soil_sl(:,nsoil_sb) + ice_soil_sl(:,nsoil_sb) * water2ice_density_ratio) - wtr_soil_fc_sl(:,nsoil_sb)
-      hlp2(:) = wtr_soil_fc_sl(:,nsoil_sb-1) - (wtr_soil_sl(:,nsoil_sb-1) + ice_soil_sl(:,nsoil_sb-1) * water2ice_density_ratio)
-      WHERE (t_soil_sl(:,nsoil_sb) <= Tzero)
+    WHERE (wtr_soil_sl(:,nsoil_w) + ice_soil_sl(:,nsoil_w) * water2ice_density_ratio > wtr_soil_fc_sl(:,nsoil_w))
+      hlp1(:) = (wtr_soil_sl(:,nsoil_w) + ice_soil_sl(:,nsoil_w) * water2ice_density_ratio) - wtr_soil_fc_sl(:,nsoil_w)
+      hlp2(:) = wtr_soil_fc_sl(:,nsoil_w-1) - (wtr_soil_sl(:,nsoil_w-1) + ice_soil_sl(:,nsoil_w-1) * water2ice_density_ratio)
+      WHERE (t_soil_sl(:,nsoil_w) <= Tzero)
         WHERE (hlp1(:) > hlp2(:))
-          wtr_soil_sl(:,nsoil_sb-1) = wtr_soil_sl(:,nsoil_sb-1) + hlp2(:)
-          drainage_sl(:,nsoil_sb-1) = drainage_sl(:,nsoil_sb-1) - hlp2(:) * 1000._wp / dtime
+          wtr_soil_sl(:,nsoil_w-1) = wtr_soil_sl(:,nsoil_w-1) + hlp2(:)
+          drainage_sl(:,nsoil_w-1) = drainage_sl(:,nsoil_w-1) - hlp2(:) * 1000._wp / dtime
         ELSEWHERE
-          wtr_soil_sl(:,nsoil_sb-1) = wtr_soil_sl(:,nsoil_sb-1) + hlp1(:)
-          drainage_sl(:,nsoil_sb-1) = drainage_sl(:,nsoil_sb-1) - hlp1(:) * 1000._wp / dtime
+          wtr_soil_sl(:,nsoil_w-1) = wtr_soil_sl(:,nsoil_w-1) + hlp1(:)
+          drainage_sl(:,nsoil_w-1) = drainage_sl(:,nsoil_w-1) - hlp1(:) * 1000._wp / dtime
         END WHERE
       ELSEWHERE
-        drainage_sl(:,nsoil_sb) = drainage_sl(:,nsoil_sb) + hlp1(:) * 1000._wp / dtime
+        drainage_sl(:,nsoil_w) = drainage_sl(:,nsoil_w) + hlp1(:) * 1000._wp / dtime
       END WHERE
-      wtr_soil_sl(:,nsoil_sb) = wtr_soil_fc_sl(:,nsoil_sb) - ice_soil_sl(:,nsoil_sb) * water2ice_density_ratio
+      wtr_soil_sl(:,nsoil_w) = wtr_soil_fc_sl(:,nsoil_w) - ice_soil_sl(:,nsoil_w) * water2ice_density_ratio
     END WHERE
 
     !> 2.4. Diffusion fluxes
@@ -1433,8 +1433,8 @@ CONTAINS
     !>   The threshold 0.75 is to prevent the entire layer from being washed out,
     !>   mainly for the top layers but applied in the whole soil profile, just in case
     !>
-    drainage(:) = drainage_sl(:,nsoil_sb)
-    gw_runoff(:) = SUM(gw_runoff_sl(:,1:nsoil_sb), DIM=2)
+    drainage(:) = drainage_sl(:,nsoil_w)
+    gw_runoff(:) = SUM(gw_runoff_sl(:,1:nsoil_w), DIM=2)
     ! Layer one: water balance of surface layer
     WHERE(wtr_soil_sl(:,1) > eps8)
       frac_wtr_transp_down_sl(:,1) = MIN( MAX((drainage_sl(:,1) / 1000._wp * dtime) / &
@@ -1443,11 +1443,11 @@ CONTAINS
       frac_wtr_transp_down_sl(:,1) = 0.0_wp
     ENDWHERE
 
-    ! layer 1 to nsoil_sb
+    ! layer 1 to nsoil_w
     !   using the soil water content of the previous timestep here (w_soil_sl_old) because
     !   the frac_w_lat_loss_sl is applied to the material (elements / nutrients) concentration
     !   of the previous timestep
-    DO isoil = 1,nsoil_sb
+    DO isoil = 1,nsoil_w
       WHERE(wtr_soil_sl(:,isoil) > eps8)
         frac_wtr_transp_down_sl(:,isoil) = MIN( MAX((drainage_sl(:,isoil) / 1000._wp * dtime) &
           &                                     / (w_soil_sl_old(:,isoil)), frac_wtr_vertical_transport_up_max), &
@@ -1474,7 +1474,7 @@ CONTAINS
     !! note: upper bound is the larger value compared to lower bound !
     !!
     wtr_rootzone(:) = wtr_soil_sl(:,1)
-    DO isoil = 2,nsoil_sb
+    DO isoil = 2,nsoil_w
        WHERE(root_depth(:) > soil_layer_w_ubounds(:,isoil-1))
           WHERE(root_depth(:) >= soil_layer_w_ubounds(:,isoil))
             wtr_rootzone(:) = wtr_rootzone(:) + wtr_soil_sl(:,isoil)
@@ -1686,7 +1686,7 @@ CONTAINS
   !!
   !-----------------------------------------------------------------------------------------------------
     SUBROUTINE calc_snow_dynamics(nc, &
-                              nsoil_sb,&
+                              nsoil_w, &
                               nsnow,  &
                               dtime,  &
                               t_air, &
@@ -1715,14 +1715,14 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)    :: nc, &                  !< dimensions
-                                                                       nsoil_sb, &
+                                                                       nsoil_w, &
                                                                        nsnow
     REAL(wp),                                         INTENT(in)    :: dtime                  !< timestep length
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: t_air,     &           !< air temperature
                                                                        t_old, &               !< old surface temperature [K]
                                                                        t, &                   !< new surface temperature [K]
                                                                        evaporation_snow       !< evaporation snow    [kg / m2]
-    REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(in)    :: heat_capa_sl, &        !< soil heat capacity  [J/kg]
+    REAL(wp), DIMENSION(nc,nsoil_w),                  INTENT(in)    :: heat_capa_sl, &        !< soil heat capacity  [J/kg]
                                                                        bulk_dens_sl, &        !< soil density        [kg m-3]
                                                                        soil_depth_sl          !< soil layer width    [m]
     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: snow_height, &         !< snow depth          [m]
@@ -1730,7 +1730,7 @@ CONTAINS
                                                                        snow_srf_heat_flux, &  !< Heat flux from top snow layer
                                                                                               !  to lower snow layer/ soil [W/m2]
                                                                        snow_melt_to_soil      !< snow soil heat flux [m/s]
-    REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(inout) :: t_soil_sl              !< soil temperature     [K]
+    REAL(wp), DIMENSION(nc,nsoil_w),                  INTENT(inout) :: t_soil_sl              !< soil temperature     [K]
     REAL(wp), DIMENSION(nc,nsnow),                    INTENT(inout) :: t_snow_snl, &          !< snow layer temperature [K]
                                                                        w_snow_snl, &          !< snow water [m]
                                                                        snow_present_snl, &    !< flag if there is snow [-]

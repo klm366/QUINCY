@@ -313,28 +313,21 @@ CONTAINS
           &                              soil_depth_sl(:,:), &
           &                              sb_pool_mt(ix_dom_assoc, ix_elem, :, :), &
           &                              sb_transport_mt(ix_dom_assoc, ix_elem, :, :))
-        !>  1.3 fungi biomass
-        !>
-        CALL calc_bioturbation_transport(nc, nsoil_sb, dtime, num_sl_above_bedrock(:), &
-          &                              k_bioturb(:,:), &
-          &                              soil_depth_sl(:,:), &
-          &                              sb_pool_mt(ix_fungi, ix_elem, :, :), &
-          &                              sb_transport_mt(ix_fungi, ix_elem, :, :))
-        !>  1.4 microbial biomass
+        !>  1.3 microbial biomass
         !>
         CALL calc_bioturbation_transport(nc, nsoil_sb, dtime, num_sl_above_bedrock(:), &
           &                              k_bioturb(:,:), &
           &                              soil_depth_sl(:,:), &
           &                              sb_pool_mt(ix_microbial, ix_elem, :, :), &
           &                              sb_transport_mt(ix_microbial, ix_elem, :, :))
-        !>  1.5 microbial residue
+        !>  1.4 microbial residue
         !>
         CALL calc_bioturbation_transport(nc, nsoil_sb, dtime, num_sl_above_bedrock(:), &
           &                              k_bioturb(:,:), &
           &                              soil_depth_sl(:,:), &
           &                              sb_pool_mt(ix_residue, ix_elem, :, :), &
           &                              sb_transport_mt(ix_residue, ix_elem, :, :))
-        !>  1.6 minerally associated microbial residue
+        !>  1.5 minerally associated microbial residue
         !>
         CALL calc_bioturbation_transport(nc, nsoil_sb, dtime, num_sl_above_bedrock(:), &
           &                              k_bioturb(:,:), &
@@ -406,7 +399,6 @@ CONTAINS
       &   + sb_formation_mt(ix_polymeric_litter, ixC, :, 1) - sb_loss_mt(ix_polymeric_litter, ixC, :, 1)  &
       &   + sb_formation_mt(ix_dom, ixC, :, 1)              - sb_loss_mt(ix_dom, ixC, :, 1)               &
       &   + sb_formation_mt(ix_dom_assoc, ixC, :, 1)        - sb_loss_mt(ix_dom_assoc, ixC, :, 1)         &
-      &   + sb_formation_mt(ix_fungi, ixC, :, 1)            - sb_loss_mt(ix_fungi, ixC, :, 1)             &
       &   + sb_formation_mt(ix_mycorrhiza, ixC, :, 1)       - sb_loss_mt(ix_mycorrhiza, ixC, :, 1)        &
       &   + sb_formation_mt(ix_microbial, ixC, :, 1)        - sb_loss_mt(ix_microbial, ixC, :, 1)         &
       &   + sb_formation_mt(ix_residue, ixC, :, 1)          - sb_loss_mt(ix_residue, ixC, :, 1)           &
@@ -421,7 +413,6 @@ CONTAINS
       &   + sb_formation_mt(ix_woody_litter, ixC, :, isoil)        - sb_loss_mt(ix_woody_litter, ixC, :, isoil)      &
       &   + sb_formation_mt(ix_dom, ixC, :, isoil)                 - sb_loss_mt(ix_dom, ixC, :, isoil)               &
       &   + sb_formation_mt(ix_dom_assoc, ixC, :, isoil)           - sb_loss_mt(ix_dom_assoc, ixC, :, isoil)         &
-      &   + sb_formation_mt(ix_fungi, ixC, :, isoil)               - sb_loss_mt(ix_fungi, ixC, :, isoil)             &
       &   + sb_formation_mt(ix_mycorrhiza, ixC, :, isoil)          - sb_loss_mt(ix_mycorrhiza, ixC, :, isoil)        &
       &   + sb_formation_mt(ix_microbial, ixC, :, isoil)           - sb_loss_mt(ix_microbial, ixC, :, isoil)         &
       &   + sb_formation_mt(ix_residue, ixC, :, isoil)             - sb_loss_mt(ix_residue, ixC, :, isoil)           &
@@ -565,35 +556,28 @@ CONTAINS
           & particle_fluxrate(:,:), &
           & sb_pool_mt(ix_dom_assoc, ix_elem, :, :), &
           & sb_transport_mt(ix_dom_assoc, ix_elem, :, :) )
-        !>  1.6 fungi biomass
-        !>
-        CALL calc_particle_transport( &
-          & nc, nsoil_sb, soil_depth_sl(:,:), &
-          & particle_fluxrate(:,:), &
-          & sb_pool_mt(ix_fungi, ix_elem, :, :), &
-          & sb_transport_mt(ix_fungi, ix_elem, :, :) )
-        !>  1.7 mycorrhiza biomass
+        !>  1.6 mycorrhiza biomass
         !>
         CALL calc_particle_transport( &
           & nc, nsoil_sb, soil_depth_sl(:,:), &
           & particle_fluxrate(:,:), &
           & sb_pool_mt(ix_mycorrhiza, ix_elem, :, :), &
           & sb_transport_mt(ix_mycorrhiza, ix_elem, :, :) )
-        !>  1.8 microbial biomass
+        !>  1.7 microbial biomass
         !>
         CALL calc_particle_transport( &
           & nc, nsoil_sb, soil_depth_sl(:,:), &
           & particle_fluxrate(:,:), &
           & sb_pool_mt(ix_microbial, ix_elem, :, :), &
           & sb_transport_mt(ix_microbial, ix_elem, :, :) )
-        !>  1.9 microbial residue
+        !>  1.8 microbial residue
         !>
         CALL calc_particle_transport( &
           & nc, nsoil_sb, soil_depth_sl(:,:), &
           & particle_fluxrate(:,:), &
           & sb_pool_mt(ix_residue, ix_elem, :, :), &
           & sb_transport_mt(ix_residue, ix_elem, :, :) )
-        !>  1.10 minerally associated microbial residue
+        !>  1.9 minerally associated microbial residue
         !>
         CALL calc_particle_transport( &
           & nc, nsoil_sb, soil_depth_sl(:,:), &
