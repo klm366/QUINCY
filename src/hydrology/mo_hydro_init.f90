@@ -1067,9 +1067,8 @@ CONTAINS
         & dsl4jsb_var_ptr(HYDRO_, steepness  ) (:,i)    &
         & )
     END DO
-
-    !$ACC UPDATE ASYNC(1) &
-    !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, steepness))
+    !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, steepness)) ASYNC(1)
+    !$ACC WAIT(1)
 
     !>     - Topographic features relevant for lateral exchange between connected tiles
     IF (tile%Is_process_active(LEX_)) THEN
@@ -1125,6 +1124,13 @@ CONTAINS
         dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0._wp
       END IF
     END IF
+
+    !$ACC UPDATE ASYNC(1) &
+    !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, fract_pond_max)), &
+    !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, weq_pond_max)),   &
+    !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, char_area)),      &
+    !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, char_h_surf)),    &
+    !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, macro_slope))
 
     IF (tile%contains_soil) THEN
 
@@ -1227,7 +1233,6 @@ CONTAINS
       END IF
 
       !$ACC UPDATE ASYNC(1) &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, steepness)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_sat_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_pwp_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_fc_sl)) &
@@ -1241,11 +1246,6 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, hyd_cond_sat)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_porosity)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_org_sl)) &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_pond_max)), &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, weq_pond_max)), &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, char_area)), &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, char_h_surf)), &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, macro_slope)), &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, soil_depth))
 

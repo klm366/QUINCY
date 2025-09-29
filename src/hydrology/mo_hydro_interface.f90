@@ -503,7 +503,6 @@ CONTAINS
       & wpi_rootzone_max,   &
       & wtr_soil,           &
       & trans_tmp,          &
-      & lex_tmp,            &
       & flowlag_used,       &
       & slope_used
     REAL(wp), DIMENSION(options%nc, options%nsoil_w) :: &
@@ -766,7 +765,7 @@ CONTAINS
       !$ACC   CREATE(trans_tmp, wpi_soil_sl_tmp(1:nc,1:nsoil), wtr_soil(1:nc)) &
       !$ACC   CREATE(wpi_wsat_soil_sl_tmp(1:nc,1:nsoil), wpi_wres_soil_sl_tmp(1:nc,1:nsoil)) &
       !$ACC   CREATE(ice_impedance_sl(1:nc,1:nsoil)) &
-      !$ACC   CREATE(slope_used(1:nc), flowlag_used(1:nc), lex_tmp(1:nc)) ASYNC(acc_stream)
+      !$ACC   CREATE(slope_used(1:nc), flowlag_used(1:nc)) ASYNC(acc_stream)
 
       ret_macro_srf = dsl4jsb_Config(HYDRO_)%ret_macro_srf
 
@@ -851,10 +850,8 @@ CONTAINS
         ELSE
           trans_tmp(ic) = 0._wp
         END IF
-        IF (tile%Is_process_calculated(LEX_)) THEN
-          lex_tmp(ic) = water_to_soil_lex(ic)
-        ELSE
-          lex_tmp(ic) = 0._wp
+        IF (.NOT. tile%Is_process_calculated(LEX_)) THEN
+          water_to_soil_lex(ic) = 0._wp
         END IF
       END DO
       !$ACC END PARALLEL LOOP
@@ -898,7 +895,7 @@ CONTAINS
         & trans_tmp(:),                   & ! transpiration [kg m-2 s-1]
         & rain(:),                        & ! liquid precipitation [kg m-2 s-1]
         & snow(:),                        & ! solid precipitation [kg m-2 s-1]
-        & lex_tmp(:),                     & ! inflow from connected tiles exeeding the pond storage [m]
+        & water_to_soil_lex(:),           & ! inflow from connected tiles exeeding the pond storage [m]
         & wpi_rootzone(:),                & ! water plus ice content of the rootzone [m]
         & wpi_rootzone_max(:),            & ! maximum water plus ice content of the rootzone [m]
         & wtr_soil(:),                    & ! soil layer aggregated water content until bedrock [m]
