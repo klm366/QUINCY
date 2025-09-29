@@ -416,13 +416,8 @@ CONTAINS
     ! select lctlib file depending on the usecase
     ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
-<<<<<<< HEAD
-    ! quincy model with 11 PFT tiles incl. bare soil
-    CASE ('quincy_11_pfts', 'quincy_13_pfts_for_coupling', 'quincy_13pS_pfts', 'quincy_13_pfts')
-=======
     ! quincy model with 13 PFT tiles incl. bare soil
-    CASE ('quincy_13_pfts_for_coupling', 'quincy_13_pfts')
->>>>>>> land4icon-mpim
+    CASE ('quincy_13_pfts_for_coupling', 'quincy_13_pfts', 'quincy_13pS_pfts')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
     ! jsbach_lite & jsbach_pfts & jsbach_12pfts
     CASE DEFAULT
