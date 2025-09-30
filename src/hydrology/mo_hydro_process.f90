@@ -1541,7 +1541,7 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
-      !$ACC LOOP GANG VECTOR PRIVATE(wtr_flux_top)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(wtr_flux_top)
       DO ic = 1, nc
         IF (is == 1) THEN
           wtr_flux_top = infilt(ic) + evapo_soil_sl1(ic)
@@ -1864,7 +1864,6 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-
     ! Determining the potential loss from the intermediate storage from the bottom of the soil column
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
@@ -1884,7 +1883,7 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO is = 1, nsoil
-      !$ACC LOOP GANG VECTOR PRIVATE(drain_bot_act)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(drain_bot_act)
       DO ic = 1, nc
         ! Adding layered drainage to storage reservoir and setting drainage to 0.
         wtr_latflow_res_sl(ic,is)     = wtr_latflow_res_sl(ic,is) + drainage_sl(ic,is)

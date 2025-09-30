@@ -1705,12 +1705,14 @@ CONTAINS
         & lon(:), &
         & nsoil, &
         & dtime, &
+        & dsl4jsb_Config(HYDRO_)%k_brock,                         & ! Hydraulic coductivity of bedrock
         & ltpe_closed, ltpe_open,                                 &
         & dsl4jsb_Config(HYDRO_)%enforce_water_budget,            & ! Water balance check setting
         & l_latflow_to_streamflow,                                &
         & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
         & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
         & dsl4jsb_Config(HYDRO_)%hydro_scale,                     & ! choice of hydrological scale scheme
+        & dsl4jsb_Config(HYDRO_)%bot_drain_mode,                  &
         & model%config%model_scheme,                              &
         & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
         & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
