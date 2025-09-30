@@ -35,30 +35,12 @@ MODULE mo_q_dfire_sf_emissions_class
   USE mo_q_dfire_constants,   ONLY: df_sf_species_nh3_idx, df_sf_species_n2o_idx, df_sf_species_n2_idx
 
   USE mo_lnd_bgcm_idx, ONLY: ixC, ixC13, ixC14, ixN, ixN15, ixP
-  USE mo_lnd_bgcm_idx, ONLY: ix_woody_litter !< sb_pool
-  USE mo_lnd_bgcm_idx, ONLY: ix_fruit, ix_leaf, ix_reserve, ix_labile, ix_sap_wood, ix_heart_wood !< veg_pool
-  USE mo_q_dfire_constants, ONLY: t_sf_fuel_dead_fuel_woody_ix, & !< dead fuel (litter)
-                                  t_sf_fuel_dead_fuel_polymeric_ix, &
-                                  t_sf_fuel_dead_fuel_soluable_ix, &
-                                  t_sf_fuel_dead_fuel_res_ix, &
-                                  t_sf_fuel_dead_fuel_res_assoc_ix, &
-                                  t_sf_fuel_dead_fuel_dom_ix, &
-                                  t_sf_fuel_dead_fuel_dom_assoc_ix
-
-  USE mo_q_dfire_constants, ONLY: t_sf_fuel_dead_fuel_grass_leaf_ix, & !< dead fuel (livegrass)
-                                  t_sf_fuel_dead_fuel_grass_sap_ix, &
-                                  t_sf_fuel_dead_fuel_grass_labile_ix, &
-                                  t_sf_fuel_dead_fuel_grass_reserve_ix, &
-                                  t_sf_fuel_dead_fuel_grass_fruit_ix
-
-  USE mo_q_dfire_constants, ONLY: t_sf_fuel_live_fuel_leaf_ix, t_sf_fuel_live_fuel_sap_wood_ix, & ! live fuel
-                                  t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
-                                  t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix
 
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_emissions, sf_calc_emissions_elements
+  PUBLIC :: sf_calc_emissions ! main subroutine
+  PUBLIC :: sf_calc_emissions_species, sf_calc_emitted_elements, sf_calc_emitted_isotopes, sf_patch_emissions
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_emissions_class'
 
@@ -71,7 +53,7 @@ CONTAINS
   !> Further details:
   !> https://gitlab.dkrz.de/quincy-community/quincy-model-developers/qs-development/-/issues/113#peiffers-eqs-a83-to-a86
   !>
-  FUNCTION sf_calc_emissions(nc, npools, nspecs, emission_factors, bb, mask) RESULT (emissions)
+  FUNCTION sf_calc_emissions_species(nc, npools, nspecs, emission_factors, bb, mask) RESULT (emissions)
     INTEGER, INTENT(in)            :: nc
     INTEGER, INTENT(in)            :: npools !< Total number of pools
     INTEGER, INTENT(in)            :: nspecs !< total number of species
@@ -95,102 +77,77 @@ CONTAINS
         END DO
       END DO
     END DO
-  END FUNCTION sf_calc_emissions
+  END FUNCTION sf_calc_emissions_species
 
 
   ! ======================================================================================================= !
   !>
-  !> Calculate residue from emissions vs fuel consumption
+  !> Calculate elements/nutrients from species emitted
   !>
-  !> Carbon and Nitrogen nutrients are directly calculated from emissions.
-  !> P is not yet calculated. A scientific discussion will be required on this topic. Currently remains in soil.
-  !> Isotopes are derived from Nutrients at the same ratio for emitted elements.
-  !> Residue can be directly calculated "FC - emitted elements"
-  !> Any non mass conservation is capped to 0 but included into mass overflow for diagnostics.
-  !>
-  SUBROUTINE sf_calc_emissions_elements(nc, npools, is_type_of_fuel, &
-      fuel_consumption, emissions, & !< in
-      !residue, mass_overflow, & !< out
-      emissions_el, & !< out
-      mask)  !< optional
+  SUBROUTINE sf_calc_emitted_elements(emissions_spc, emissions_els, mask)
+    REAL(wp), INTENT(in) :: emissions_spc(:,:,:)    !< [molX/m2] (#nc,#npools,#nspecs)
+    REAL(wp), INTENT(inout) :: emissions_els(:,:,:) !< [molX/m2] (#nc,#npools,#nelements)
+    LOGICAL, INTENT(in), OPTIONAL :: mask(:)
 
-    INTEGER, INTENT(in)   :: nc, npools
-    INTEGER, INTENT(in)   :: is_type_of_fuel         !< 1=dead fuel, 2=live fuel
-    REAL(wp), INTENT(in)  :: fuel_consumption(:,:,:) !< [molX/m2] (#nc,#npools, #elements)
-    REAL(wp), INTENT(in)  :: emissions(:,:,:)        !< [molX/m2] (#nc,#npools,#nspecs)
-    REAL(wp), INTENT(out) :: emissions_el(:,:,:)     !< Emissions by elements [molX/m2] (#nc,#npools,#elements)
-    LOGICAL, INTENT(in), OPTIONAL :: mask(:)         !< True=compute gridcell(s)
+    LOGICAL, ALLOCATABLE :: mask_opt(:)
+    INTEGER :: nc, npools
+    INTEGER :: ic, ipool ! counter
 
-    INTEGER               :: ipool, ic
-    LOGICAL               :: mask_opt(nc)
+    nc=SIZE(emissions_spc, DIM=1) ! 1=nc index
+    npools=SIZE(emissions_spc, DIM=2) ! 2= npools index
 
     mask_opt = .TRUE. !< default
     IF (PRESENT(mask)) THEN
       mask_opt = mask
     END IF
-    emissions_el = 0._wp
+
+    emissions_els = 0._wp
 
     !< Back calculate emitted elements into C, N and P = 0
     DO ipool = 1, npools
-      DO ic=1, SIZE(emissions, DIM=1)
+      DO ic=1, nc
         IF (mask(ic)) THEN
-          emissions_el(ic,ipool,ixC) = emissions_el(ic,ipool,ixC) + emissions(ic,ipool,df_sf_species_co2_idx)  !< CO2
-          emissions_el(ic,ipool,ixC) = emissions_el(ic,ipool,ixC) + emissions(ic,ipool,df_sf_species_co_idx)  !< CO
-          emissions_el(ic,ipool,ixC) = emissions_el(ic,ipool,ixC) + emissions(ic,ipool,df_sf_species_ch4_idx) !< CH4
+          emissions_els(ic,ipool,ixC) = emissions_els(ic,ipool,ixC) + emissions_spc(ic,ipool,df_sf_species_co2_idx)  !< CO2
+          emissions_els(ic,ipool,ixC) = emissions_els(ic,ipool,ixC) + emissions_spc(ic,ipool,df_sf_species_co_idx)  !< CO
+          emissions_els(ic,ipool,ixC) = emissions_els(ic,ipool,ixC) + emissions_spc(ic,ipool,df_sf_species_ch4_idx) !< CH4
 
-          emissions_el(ic,ipool,ixN) = emissions_el(ic,ipool,ixN) + emissions(ic,ipool,df_sf_species_nh3_idx) !< NH3
-          emissions_el(ic,ipool,ixN) = emissions_el(ic,ipool,ixN) + emissions(ic,ipool,df_sf_species_n2o_idx) !< N2O
-          emissions_el(ic,ipool,ixN) = emissions_el(ic,ipool,ixN) + emissions(ic,ipool,df_sf_species_n2_idx) !< N2
+          emissions_els(ic,ipool,ixN) = emissions_els(ic,ipool,ixN) + emissions_spc(ic,ipool,df_sf_species_nh3_idx) !< NH3
+          emissions_els(ic,ipool,ixN) = emissions_els(ic,ipool,ixN) + emissions_spc(ic,ipool,df_sf_species_n2o_idx) !< N2O
+          emissions_els(ic,ipool,ixN) = emissions_els(ic,ipool,ixN) + emissions(ic,ipool,df_sf_species_n2_idx) !< N2
         END IF
       END DO
 
       !< Note: no P emissions
       emissions_el(:,ipool,ixP) = 0._wp
     END DO
+  END SUBROUTINE sf_calc_emitted_elements
 
-    IF (is_type_of_fuel == 1) THEN !< 1 = IS_DEAD_FUEL
-      !< Populate emissions_el isotopes at the same ratio as its nutrient
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_woody_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_dead_fuel_woody_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_grass_fruit_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_dead_fuel_grass_fruit_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_grass_leaf_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_dead_fuel_grass_leaf_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_grass_labile_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_dead_fuel_grass_labile_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_grass_reserve_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_dead_fuel_grass_reserve_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_grass_sap_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_dead_fuel_grass_sap_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_polymeric_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_dead_fuel_polymeric_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_soluable_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_dead_fuel_soluable_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_res_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_dead_fuel_res_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_res_assoc_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_dead_fuel_res_assoc_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_dom_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_dead_fuel_dom_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_dead_fuel_dom_assoc_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_dead_fuel_dom_assoc_ix,:), mask_opt)
-    ELSE IF (is_type_of_fuel == 2) THEN !< 2 = IS_LIVE_FUEL
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_live_fuel_leaf_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_live_fuel_leaf_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_live_fuel_sap_wood_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_live_fuel_sap_wood_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_live_fuel_heart_wood_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_live_fuel_heart_wood_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_live_fuel_labile_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_live_fuel_labile_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_live_fuel_reserve_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_live_fuel_reserve_ix,:), mask_opt)
-      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,t_sf_fuel_live_fuel_fruit_ix,:), &
-                                                  emissions_el(:,t_sf_fuel_live_fuel_fruit_ix,:), mask_opt)
-    ELSE
-      ! stop!
-    END IF
-  END SUBROUTINE sf_calc_emissions_elements
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate emitted isotopes from emissions
+  !> Isotopes are derived at the same ratio as fuel consumption
+  !>
+  SUBROUTINE sf_calc_emitted_isotopes(fuel_consumption, emissions_els, mask)
+    REAL(wp), INTENT(in)    :: fuel_consumption(:,:,:)  !< [molX/m2] (#nc,#npools, #elements)
+    REAL(wp), INTENT(inout) :: emissions_els(:,:,:)     !< Emissions by elements [molX/m2] (#nc,#npools,#elements)
+    LOGICAL, INTENT(in), OPTIONAL :: mask(:)            !< True=compute gridcell(s)
+
+    INTEGER :: nc, npools
+    INTEGER :: ipool
+    LOGICAL, ALLOCATABLE :: mask_opt(:)
+
+    nc=SIZE(fuel_consumption, DIM=1) ! 1=nc index
+    npools=SIZE(fuel_consumption, DIM=2) ! 2=npools index
+
+    ALLOCATE(mask_opt(nc))
+    mask_opt=.TRUE. ! default
+    IF (PRESENT(mask)) mask_opt=mask
+
+    DO ipool=1, npools
+      CALL calc_isotopes_same_ratio_as_nutrients(fuel_consumption(:,ipool,:), emissinos_els(:,ipool,:), mask_opt)
+    END DO
+  END SUBROUTINE sf_calc_emitted_isotopes
 
 
   ! ======================================================================================================= !
@@ -215,6 +172,76 @@ CONTAINS
     END DO
 
   END SUBROUTINE calc_isotopes_same_ratio_as_nutrients
+
+
+  ! ======================================================================================================= !
+  !>
+  !> This is temporary patch on Emissions until further research is done on this matter.
+  !> Currently, there is an excess of emissions due to the given Emissions factors.
+  !> This results as emitted N is > than its fuel consumption.
+  !> For instance, mass balance is not preserved.
+  !>
+  !> Current patch caps emissions to its max potential value, defined in Fuel consumption.
+  !> However, it breaks CN ratio, as well as other potential issues.
+  !>
+  SUBROUTINE sf_patch_emissions(fc, emissions, mask)
+    REAL(wp), INTENT(in) :: fc(:,:,:)           ! Fuel consumption (nc,pools,elements)
+    REAL(wp), INTENT(inout) :: emissions(:,:,:) ! Emissions (nc,pools,elements)
+    LOGICAL, INTENT(in) :: mask(:)              !
+
+    INTEGER :: ic, ip, iel
+
+    DO iel=1, SIZE(emissions, DIM=3)
+      DO ip=1, SIZE(emissions, DIM=2)
+        DO ic=1, SIZE( emissions, DIM=1)
+          IF ( mask(ic) .AND. fc(ic,ip,iel) < emissions(ic,ip,iel)) THEN !< Mass imabalance found
+            emissions(ic,ip,iel) = fc(ic,ip,iel)
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+  END SUBROUTINE sf_patch_emissions
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calc emissions (by species and elements)
+  !> Carbon and Nitrogen nutrients are directly calculated from emissions.
+  !> P is not yet calculated. A scientific discussion will be required on this topic. Currently remains in soil.
+  !> Isotopes are derived from Nutrients at the same ratio for emitted elements.
+  !> Residue can be directly calculated "FC - emitted elements"
+  !> Any non mass conservation is capped to 0 but included into mass overflow for diagnostics.
+  !>
+  SUBROUTINE sf_calc_emissions(npecs, emissions_factors, bb, fc_els, emissions_spc, emissions_els, mask)
+    INTEGER, INTENT(in)           :: nspecs
+    REAL(wp), INTENT(in)          :: emission_factors(:)      !< emissions factors (#nspecs) [molX/kgDM/m2]
+    REAL(wp), INTENT(in)          :: bb(:,:)                  !< Burnt biomass (#nc,#npools) [gDM m-2]
+    REAL(wp), INTENT(in)          :: fc_els(:,:,:)            !< Fuel consumption [molX/m2] (#nc,#npools, #elements)
+    REAL(wp), INTENT(out)         :: emissions_spc(:,:,:)     !< Emissions by species [molX/m2] (#nc,#npools,#elements)
+    REAL(wp), INTENT(out)         :: emissions_els(:,:,:)     !< Emissions by elements [molX/m2] (#nc,#npools,#elements)
+    LOGICAL, INTENT(in), OPTIONAL :: mask(:)                  !< True=compute gridcell(s)
+
+    INTEGER :: nc, npools, nels, nspecs
+
+    nc= SIZE(fc_els, DIM=1)
+    npools = SIZE(fc_els, DIM=2)
+    nels = SIZE(fc_els, DIM=3)
+
+    ! Calc Emissions (by Species)
+    !< Calculate fire damage to plants (total biomass burned and tree mortality) based on total dead and
+    !< live fuel, as in Peiffer et al. (2013)
+    emissions_spc = sf_calc_emissions_species(nc, npools, nspecs, emission_factors, bb, mask)
+
+    !< Convert emissions from species to elements (CNP), no emissions for P
+    CALL sf_calc_emitted_elements(emissions_spc, emissions_els, mask)
+
+    !< Account for isotopes, the same ratio found in fuel consumption
+    CALL sf_calc_emitted_isotopes(fc_els, emissions_els, mask)
+
+    !< Cap emissions to FC due to excess of matter in emissions.
+    !< This avoids negative pools until it is solved.
+    CALL sf_patch_emissions(fc_els,  emissions_els, mask)
+  END SUBROUTINE sf_calc_emissions
 
 #endif
 END MODULE mo_q_dfire_sf_emissions_class

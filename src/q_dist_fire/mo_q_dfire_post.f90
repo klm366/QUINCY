@@ -56,7 +56,8 @@ MODULE mo_q_dfire_post
 
   USE mo_q_dfire_sf_feedback_class,   ONLY: calc_sf_feedback_dead, calc_sf_feedback_live
 
-  USE mo_q_dfire_sf_emissions_class,  ONLY: sf_calc_emissions, sf_calc_emissions_elements
+  USE mo_q_dfire_sf_emissions_class,  ONLY: sf_calc_emissions
+
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID, &
                                       SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID, &
                                       VEG_BGCM_FIRE_EMISSIONS_ID, VEG_BGCM_FIRE_LITTERFALL_ID
@@ -446,16 +447,6 @@ CONTAINS
       End If
     END IF
 
-    ! * Calc Emissions (by Species) *
-    !< Calculate fire damage to plants (total biomass burned and tree mortality) based on total dead and
-    !< live fuel, as in Peiffer et al. (2013)
-    emissions_dead_spc = sf_calc_emissions(nc, sf_fuel_dead_fuel_nr, df_sf_species_nr, lctlib_emission_factors, &
-                                                        SUM(fc_dead_cls, dim=3), & !< 3 = fuel classes dim index
-                                                        mask=is_fire_intense_enough)
-    emissions_live_spc = sf_calc_emissions(nc, sf_fuel_live_fuel_nr, df_sf_species_nr, lctlib_emission_factors, &
-                                                        fc_live, &
-                                                        mask=is_fire_intense_enough)
-
     !< Units conversion of Dead fuel consumption into molX/m2
     fc_dead_mol_m2 = sf_convert_units("gDM/m2", "molC/m2", SUM(fc_dead_cls, dim=3)) !< 3=fuel classes
 
@@ -478,24 +469,19 @@ CONTAINS
                                                               veg_pool_mt, fc_live_mol_m2, & ! [molX/m2], [molX/m2]
                                                               mask=is_fire_intense_enough)
 
-    !< Derive missing nutrients/isotopes from emissions
-    CALL sf_calc_emissions_elements(nc,sf_fuel_dead_fuel_nr, 1, & ! in, 1=dead fuel type, todo: weird approach
-                                    fc_dead_el, & ! [molX/m2]
-                                    emissions_dead_spc, & ! [molX/m2]
-                                    emissions_dead_el, & ! out [molX/m2]
-                                    mask=is_fire_intense_enough)
-
-    CALL sf_calc_emissions_elements(nc,sf_fuel_live_fuel_nr, 2, & ! in, 2 = live fuel type
-                                    fc_live_el, & ! [molX/m2]
-                                    emissions_live_spc, & ! [molX/m2]
-                                    emissions_live_el, & ! out [molX/m2]
-                                    mask=is_fire_intense_enough)
-
-    !< Cap emissions to FC due to excess of matter in emissions.
-    !< This avoids negative pools until it is solved.
-    CALL sf_patch_emissions( fc_dead_el,  emissions_dead_el, mask=is_fire_intense_enough)
-    CALL sf_patch_emissions( fc_live_el,  emissions_live_el, mask=is_fire_intense_enough)
-
+    !< Calculate fire damage to plants (total biomass burned and tree mortality) based on total dead and
+    !< live fuel, as in Peiffer et al. (2013)
+    !< Also calculate emissions by elements/nutrients so it can be removed from pools
+    CALL sf_calc_emissions(df_sf_species_nr, lctlib_emissions_factors, & ! in
+                          SUM(fc_dead_cls, dim=3), & ! 3 = fuel classes index
+                          fc_dead_el, &
+                          emissions_dead_spc, emissions_dead_el, & ! out
+                          mask=is_fire_intense_enough)
+    CALL sf_calc_emissions(df_sf_species_nr, lctlib_emissions_factors, & !in
+                          SUM(fc_live_cls, dim=3), & ! 3 = fuel classes index
+                          fc_live_el, &
+                          emissions_live_spc, emissions_live_el, & ! out
+                          mask=is_fire_intense_enough)
 
     !< Is there any C, N and/or P left after Emissions? Calculate residue
     CALL sf_calc_residue(fc_dead_el, & ! in [molX/m2]
@@ -568,35 +554,6 @@ CONTAINS
     veg_fire_emissions_total_els = veg_fire_emissions_total_els / dtime * 1000000._wp
     sb_fire_litter_ash_total_els = sb_fire_litter_ash_total_els / dtime * 1000000._wp
   END SUBROUTINE update_q_dfire_post
-
-
-  ! ======================================================================================================= !
-  !>
-  !> This is temporary patch on Emissions until further research is done on this matter.
-  !> Currently, there is an excess of emissions due to the given Emissions factors.
-  !> This results as emitted N is > than its fuel consumption.
-  !> For instance, mass balance is not preserved.
-  !>
-  !> Current patch caps emissions to its max potential value, defined in Fuel consumption.
-  !> However, it breaks CN ratio, as well as other potential issues.
-  !>
-  SUBROUTINE sf_patch_emissions(fc, emissions, mask)
-    REAL(wp), INTENT(in) :: fc(:,:,:)           ! Fuel consumption (nc,pools,elements)
-    REAL(wp), INTENT(inout) :: emissions(:,:,:) ! Emissions (nc,pools,elements)
-    LOGICAL, INTENT(in) :: mask(:)              !
-
-    INTEGER :: ic, ip, iel
-
-    DO iel=1, SIZE(emissions, DIM=3)
-      DO ip=1, SIZE(emissions, DIM=2)
-        DO ic=1, SIZE( emissions, DIM=1)
-          IF ( mask(ic) .AND. fc(ic,ip,iel) < emissions(ic,ip,iel)) THEN !< Mass imabalance found
-            emissions(ic,ip,iel) = fc(ic,ip,iel)
-          ENDIF
-        ENDDO
-      ENDDO
-    ENDDO
-  END SUBROUTINE sf_patch_emissions
 
 
   ! ======================================================================================================= !
