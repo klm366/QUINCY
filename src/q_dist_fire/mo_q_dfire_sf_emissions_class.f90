@@ -53,16 +53,19 @@ CONTAINS
   !> Further details:
   !> https://gitlab.dkrz.de/quincy-community/quincy-model-developers/qs-development/-/issues/113#peiffers-eqs-a83-to-a86
   !>
-  FUNCTION sf_calc_emissions_species(nc, npools, nspecs, emission_factors, bb, mask) RESULT (emissions)
-    INTEGER, INTENT(in)            :: nc
-    INTEGER, INTENT(in)            :: npools !< Total number of pools
-    INTEGER, INTENT(in)            :: nspecs !< total number of species
+  FUNCTION sf_calc_emissions_species(emission_factors, bb, mask) RESULT (emissions)
     REAL(wp), INTENT(in)           :: emission_factors(:) !< emissions factors (#nspecs) [molX/kgDM/m2]
-    REAL(wp), INTENT(in)           :: bb(:,:) !< Burned biomass (#nc,#npools) [gDM m-2]
-    LOGICAL, INTENT(in)            :: mask(:)   !< True = compute gridcell(s) (#nc)
-    REAL(wp), ALLOCATABLE          :: emissions(:,:,:) !< output (#nc,#npools,#nspecs) [mol m-2]
+    REAL(wp), INTENT(in)           :: bb(:,:)             !< Burned biomass (#nc,#npools) [kgDM m-2]
+    LOGICAL, INTENT(in)            :: mask(:)             !< True = compute gridcell(s) (#nc)
+    REAL(wp), ALLOCATABLE          :: emissions(:,:,:)    !< output (#nc,#npools,#nspecs) [mol m-2]
 
     INTEGER :: ispecs, ipool, ic
+    INTEGER :: nc, npools, nspecs
+
+
+    nc = SIZE(bb, DIM=1) ! 1=nc index
+    npools = SIZE(bb, DIM=2) ! 2=pools index
+    nspecs = SIZE(emission_factors)
 
     IF (.NOT. ALLOCATED(emissions)) ALLOCATE(emissions(nc,npools,nspecs))
     emissions = 0._wp
@@ -72,7 +75,7 @@ CONTAINS
       DO ipool=1, npools
         DO ic=1, nc
           IF (mask(ic)) THEN
-            emissions(ic,ipool,ispecs) = emission_factors(ispecs) *  sf_convert_units("g", "kg", bb(ic,ipool))
+            emissions(ic,ipool,ispecs) = emission_factors(ispecs) *  bb(ic,ipool)
           END IF
         END DO
       END DO
@@ -209,11 +212,10 @@ CONTAINS
   !> Carbon and Nitrogen nutrients are directly calculated from emissions.
   !> P is not yet calculated. A scientific discussion will be required on this topic. Currently remains in soil.
   !> Isotopes are derived from Nutrients at the same ratio for emitted elements.
-  !> Residue can be directly calculated "FC - emitted elements"
+  !>
   !> Any non mass conservation is capped to 0 but included into mass overflow for diagnostics.
   !>
-  SUBROUTINE sf_calc_emissions(npecs, emissions_factors, bb, fc_els, emissions_spc, emissions_els, mask)
-    INTEGER, INTENT(in)           :: nspecs
+  SUBROUTINE sf_calc_emissions(emissions_factors, bb, fc_els, emissions_spc, emissions_els, mask)
     REAL(wp), INTENT(in)          :: emission_factors(:)      !< emissions factors (#nspecs) [molX/kgDM/m2]
     REAL(wp), INTENT(in)          :: bb(:,:)                  !< Burnt biomass (#nc,#npools) [gDM m-2]
     REAL(wp), INTENT(in)          :: fc_els(:,:,:)            !< Fuel consumption [molX/m2] (#nc,#npools, #elements)
@@ -221,16 +223,13 @@ CONTAINS
     REAL(wp), INTENT(out)         :: emissions_els(:,:,:)     !< Emissions by elements [molX/m2] (#nc,#npools,#elements)
     LOGICAL, INTENT(in), OPTIONAL :: mask(:)                  !< True=compute gridcell(s)
 
-    INTEGER :: nc, npools, nels, nspecs
-
-    nc= SIZE(fc_els, DIM=1)
-    npools = SIZE(fc_els, DIM=2)
-    nels = SIZE(fc_els, DIM=3)
+    INTEGER, ALLOCATABLE :: bb_in_kg(:,:)                     !< Burnt biomass (#nc,#npools) [kgDM m-2]
 
     ! Calc Emissions (by Species)
     !< Calculate fire damage to plants (total biomass burned and tree mortality) based on total dead and
     !< live fuel, as in Peiffer et al. (2013)
-    emissions_spc = sf_calc_emissions_species(nc, npools, nspecs, emission_factors, bb, mask)
+    bb_in_kg = sf_convert_units("g", "kg", bb)
+    emissions_spc = sf_calc_emissions_species(emission_factors, bb_in_kg, mask)
 
     !< Convert emissions from species to elements (CNP), no emissions for P
     CALL sf_calc_emitted_elements(emissions_spc, emissions_els, mask)
@@ -240,7 +239,7 @@ CONTAINS
 
     !< Cap emissions to FC due to excess of matter in emissions.
     !< This avoids negative pools until it is solved.
-    CALL sf_patch_emissions(fc_els,  emissions_els, mask)
+    CALL sf_patch_emissions(fc_els, emissions_els, mask)
   END SUBROUTINE sf_calc_emissions
 
 #endif
