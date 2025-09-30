@@ -317,7 +317,7 @@ CONTAINS
     area => grid %area (ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
 #endif
-    is_fire_intense_enough = .FALSE.
+    is_fire_intense_enough = real2logical(mask_is_fire_intense_enough)
     fc_live = 0._wp
     pm_fire = 0._wp
     pm_fire_output = 0._wp
@@ -401,7 +401,7 @@ CONTAINS
 
       dbh(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
 
-      is_fire_intense_enough = real2logical(mask_is_fire_intense_enough) .AND. &
+      is_fire_intense_enough = is_fire_intense_enough .AND. &
                                 (tile_fract > 0._wp) .AND. & ! tile is empty, skip 
                                 (height > 0._wp) ! height is not yet initialized, skip
 
