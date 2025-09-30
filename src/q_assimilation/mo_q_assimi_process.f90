@@ -27,7 +27,8 @@ MODULE mo_q_assimi_process
 
   PRIVATE
   PUBLIC :: update_canopy_fluxes, calc_photosynthesis, calc_soil_moisture_stress
-  PUBLIC :: discrimination_ps
+  PUBLIC :: update_ftranspiration_per_sl
+  PUBLIC :: discrimination_ps_c13, discrimination_ps_c14
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_assimi_process'
 
@@ -42,7 +43,7 @@ CONTAINS
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
-    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, HYDRO_, SSE_, TURB_
+    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, HYDRO_, TURB_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_atmland_constants,      ONLY: min_wind, max_wind
@@ -57,7 +58,6 @@ CONTAINS
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(HYDRO_)
-    dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(TURB_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -66,13 +66,13 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER       :: model                    !< the model
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy_q_assimi    !< Vertical grid
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb            !< Vertical grid for soil layers
-    INTEGER                               :: nsoil_sb                 !< number of soil layers
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_w             !< Vertical grid for soil layers
+    INTEGER                               :: nsoil_w                 !< number of soil layers
     INTEGER                               :: ncanopy                  !< number of canopy layers
     INTEGER                               :: icanopy                  !< for looping across ncanopy layers
     REAL(wp)                              :: hlp                      !< helper variable
     INTEGER                               :: iblk, ics, ice, nc       !< dimensions
-    INTEGER                               :: ic, isoil                !< loop counter
+    INTEGER                               :: ic, is                   !< loop counter
     REAL(wp)                              :: dtime                    !< step length
     REAL(wp)                              :: alpha                    !< implicitness factor
 
@@ -81,8 +81,9 @@ CONTAINS
     REAL(wp)                              :: lctlib_phi_leaf_min, lctlib_gmin, lctlib_g0
     REAL(wp)                              :: lctlib_t_jmax_omega, lctlib_t_jmax_opt
     INTEGER                               :: lctlib_phenology_type, lctlib_ps_pathway
-    REAL(wp), ALLOCATABLE                 :: drag_srf_local(:)        !< surface drag, provided by atmosphere or TURB_
-    LOGICAL                               :: jsb_standalone           !< standalone / coupled simulation
+    REAL(wp), ALLOCATABLE                 :: drag_srf_local(:)            !< surface drag, provided by atmosphere or TURB_
+    REAL(wp), ALLOCATABLE                 :: ftranspiration_sum_local(:)  !< sum of ftranspiration_sl over soil layers
+    LOGICAL                               :: jsb_standalone               !< standalone / coupled simulation
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -91,7 +92,6 @@ CONTAINS
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -122,12 +122,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt
+    dsl4jsb_Real2D_onChunk      :: wtr_soil_root_pot
     ! Q_ASSIMI_ 3D
     dsl4jsb_Real3D_onChunk      :: net_assimilation_cl
     dsl4jsb_Real3D_onChunk      :: gross_assimilation_cl
     dsl4jsb_Real3D_onChunk      :: maint_respiration_leaf_cl
     dsl4jsb_Real3D_onChunk      :: canopy_cond_cl
-    dsl4jsb_Real3D_onChunk      :: ftranspiration_sl
     dsl4jsb_Real3D_onChunk      :: co2_conc_leaf_cl
     dsl4jsb_Real3D_onChunk      :: jmax_cl
     dsl4jsb_Real3D_onChunk      :: vcmax_cl
@@ -136,13 +136,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     ! HYDRO_ 2D
-    dsl4jsb_Real2D_onChunk      :: matric_pot_root
+    dsl4jsb_Real2D_onChunk      :: num_sl_above_bedrock
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: wtr_soil_pwp_sl
     dsl4jsb_Real3D_onChunk      :: wtr_soil_fc_sl
-    dsl4jsb_Real3D_onChunk      :: matric_pot_sl
-    ! SSE_ 3D
-    dsl4jsb_Real3D_onChunk      :: t_soil_sl
+    dsl4jsb_Real3D_onChunk      :: wtr_soil_pot_sl
     ! TURB_ 2D
     dsl4jsb_Real2D_onChunk      :: drag_srf_stdalone
     ! VEG_ 2D
@@ -172,8 +170,8 @@ CONTAINS
     model                  => Get_model(tile%owner_model_id)
     vgrid_canopy_q_assimi  => Get_vgrid('q_canopy_layer')
     ncanopy                =  vgrid_canopy_q_assimi%n_levels
-    vgrid_soil_sb          => Get_vgrid('soil_layer_sb')
-    nsoil_sb               =  vgrid_soil_sb%n_levels
+    vgrid_soil_w           => Get_vgrid('soil_depth_water')
+    nsoil_w                =  vgrid_soil_w%n_levels
     jsb_standalone         =  jsbach_runs_standalone()
     ! ----------------------------------------------------------------------------------------------------- !
     IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
@@ -184,7 +182,6 @@ CONTAINS
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -197,7 +194,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)                 ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)                       ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)                       ! in     ! drag coefficient calculated by jsbach for standalone ("update_surface_temperature_standalone()")
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation)        ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation_C13)    ! out
@@ -207,7 +204,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, maint_respiration_leaf)    ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, aerodyn_cond)              ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, canopy_cond)               ! out
-    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl)         ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, co2_conc_leaf)             ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_air)                  ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soa)                  ! out
@@ -215,6 +211,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs)              ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_ps)              ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, t_jmax_opt)                ! out
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, wtr_soil_root_pot)         ! out   (with SPQ_: in)
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, net_assimilation_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, gross_assimilation_cl)     ! out
@@ -228,13 +225,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
     ! HYDRO_ 2D
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, matric_pot_root)              ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)         ! in
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)              ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)               ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, matric_pot_sl)                ! in
-    ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                      ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_sl)              ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(TURB_, drag_srf_stdalone)             ! in
     ! ---------------------------
@@ -283,16 +278,40 @@ CONTAINS
     !>0.9.3 allocate local 2D
     !>
     ALLOCATE(drag_srf_local(nc))
-    !$ACC ENTER DATA CREATE(drag_srf_local)
+    ALLOCATE(ftranspiration_sum_local(nc))
+    !$ACC ENTER DATA CREATE(drag_srf_local, ftranspiration_sum_local)
 
-    !> 1.0 calculate the moisture scaling factor for photosynthesis
+    !>1.0 calculate root zone water potential (MPa)
+    !>
+    !>  only with jsbach soil physics processes enabled, otherwise calculated with SPQ_
+    !>
+    IF (model%config%use_soil_phys_jsbach) THEN
+      ! set to zero
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        wtr_soil_root_pot(ic) = 0.0_wp
+      END DO
+      !$ACC END PARALLEL LOOP
+      ! calculate
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil_w
+        !$ACC LOOP GANG VECTOR
+        DO ic = 1, nc
+          wtr_soil_root_pot(ic) = wtr_soil_root_pot(ic) + (root_fraction_sl(ic, is) * wtr_soil_pot_sl(ic, is))
+        END DO
+      END DO
+      !$ACC END PARALLEL
+    END IF
+
+    !>2.0 calculate the moisture scaling factor for photosynthesis
     !>
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_air(ic), q_air(ic), press_srf(ic))
-      beta_soil_ps(ic) = calc_soil_moisture_stress(matric_pot_root(ic), lctlib_phi_leaf_min)
-      beta_soil_gs(ic) = calc_soil_moisture_stress(matric_pot_root(ic), lctlib_phi_leaf_min)
-
+      ! calc_soil_moisture_stress() produces values in the range [0,1]
+      beta_soil_ps(ic) = calc_soil_moisture_stress(wtr_soil_root_pot(ic), lctlib_phi_leaf_min)
+      beta_soil_gs(ic) = calc_soil_moisture_stress(wtr_soil_root_pot(ic), lctlib_phi_leaf_min)
       ! catch beta_soil_ps getting zero
       !  with "beta_soil_ps=0" calc_photosynthesis() does get a runtime error, because n1 & n2 become zero,
       !  and then msat & nco become zero, resulting in an error with the log() operation "nlim = -log(nco/..."
@@ -300,40 +319,18 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !> 1.1 determine fraction of transpiration per soil layer
+    !>  2.1 determine aerodynamic conductance
     !>
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) &
-    !$ACC   PRIVATE(hlp)
-    DO ic = 1, nc
-      DO isoil = 1, nsoil_sb
-        ftranspiration_sl(ic,isoil) = 0.0_wp
-        IF ((wtr_soil_fc_sl(ic,isoil) - wtr_soil_pwp_sl(ic,isoil)) > eps8 .AND. t_soil_sl(ic,isoil) > Tzero) THEN
-          hlp = calc_soil_moisture_stress(matric_pot_sl(ic, isoil), lctlib_phi_leaf_min)
-          ftranspiration_sl(ic,isoil) = root_fraction_sl(ic,isoil) * hlp
-        END IF
-      END DO
-    END DO
-    !$ACC END PARALLEL LOOP
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic = 1, nc
-      IF (SUM(ftranspiration_sl(ic,:)) > eps8) THEN
-        ftranspiration_sl(ic,:) = ftranspiration_sl(ic,:) / SUM(ftranspiration_sl(ic,:))
-      ELSE
-        ftranspiration_sl(ic,:) = 0.0_wp
-      END IF
-    END DO
-    !$ACC END PARALLEL LOOP
-
-    !> 1.2 determine aerodynamic conductance
+    !> use drag_srf from A2L_ or SEB_ or SPQ_ - differs between: standalone / coupled simulations / quincy SPQ_ / jsbach soil-physics
     !>
-    ! use drag_srf from A2L_ or TURB_ - differ between standalone and coupled simulations
-    IF (jsb_standalone) THEN
+    ! use for: QUINCY SPQ_ standalone
+    IF (jsb_standalone .AND. .NOT. model%config%use_soil_phys_jsbach) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         drag_srf_local(ic) = drag_srf_stdalone(ic)
       END DO
       !$ACC END PARALLEL LOOP
+    ! use for: QUINCY SPQ_ coupled and QUINCY with JSBACH physics coupled & standalone
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
@@ -357,7 +354,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !>2.0 calculate photosynthesis per layer
+    !>3.0 calculate photosynthesis per layer
     !>
     ! calc photosynthesis
     DO icanopy = 1,ncanopy
@@ -397,8 +394,21 @@ CONTAINS
           & canopy_cond_cl(ic,icanopy)                                 , & ! out
           & co2_conc_leaf_cl(ic,icanopy)                               , & ! out
           & chlfl_yield_cl = chlfl_yield_cl(ic,icanopy)                   )! out
-      END DO
+      END DO  ! DO ic = 1, nc
       !$ACC END PARALLEL LOOP
+
+      ! potential correction of assimilation and canopy conductance
+      IF (model%config%use_soil_phys_jsbach) THEN
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic = 1, nc
+          IF (wtr_soil_root_pot(ic) < lctlib_phi_leaf_min) THEN
+            gross_assimilation_cl(ic,icanopy) = 0.0_wp
+            net_assimilation_cl(ic,icanopy)   = -1.0_wp * maint_respiration_leaf_cl(ic,icanopy)
+            canopy_cond_cl(ic,icanopy)        = 0.0_wp
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP
+      END IF
 
       ! gross_assimilation incl. C13 & C14
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
@@ -408,19 +418,17 @@ CONTAINS
 
         IF (gross_assimilation_cl(ic,icanopy) > eps8) THEN
         ! C13 flux associated with photosynthesis
-        hlp                        = discrimination_ps(co2_conc_leaf_cl(ic,icanopy), &
-          &                                             co2_mixing_ratio(ic)       , &
-          &                                             'C13'                      , &
-          &                                             lctlib_ps_pathway)
+        hlp                        = discrimination_ps_c13(co2_conc_leaf_cl(ic,icanopy), &
+          &                                                co2_mixing_ratio(ic)       , &
+          &                                                lctlib_ps_pathway)
         gross_assimilation_C13(ic) = gross_assimilation_C13(ic) &
           &                          + gross_assimilation_cl(ic,icanopy) &
           &                          * lai_cl(ic,icanopy) &
           &                          * calc_fractionation(co2_mixing_ratio(ic), co2_mixing_ratio_C13(ic), hlp)
         ! C14 flux associated with photosynthesis
-        hlp                        = discrimination_ps(co2_conc_leaf_cl(ic,icanopy), &
-          &                                             co2_mixing_ratio(ic)       , &
-          &                                             'C14'                      , &
-          &                                             lctlib_ps_pathway)
+        hlp                        = discrimination_ps_c14(co2_conc_leaf_cl(ic,icanopy), &
+          &                                                co2_mixing_ratio(ic)       , &
+          &                                                lctlib_ps_pathway)
         gross_assimilation_C14(ic) = gross_assimilation_C14(ic) &
           &                          + gross_assimilation_cl(ic,icanopy) &
           &                          * lai_cl(ic,icanopy) &
@@ -468,9 +476,9 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-    ENDDO ! DO icanopy = 1,ncanopy
+    END DO ! DO icanopy = 1,ncanopy
 
-    !> 3.0 update mean canopy CO2 concentration in the leaf
+    !>4.0 update mean canopy CO2 concentration in the leaf
     !>   was accumulated from the CO2 concentration per canopy layer above ('co2_conc_leaf_cl(:,icanopy) * lai_cl(:,icanopy)')
     !>
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -481,7 +489,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !> 4.0 uptake optimum temperature for electron transport
+    !>5.0 uptake optimum temperature for electron transport
     !>
     IF (dsl4jsb_Config(Q_ASSIMI_)%flag_t_jmax_acclimation) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -500,10 +508,103 @@ CONTAINS
 
     !$ACC WAIT(1)
 
-    !$ACC EXIT DATA DELETE(drag_srf_local)
+    !$ACC EXIT DATA DELETE(drag_srf_local, ftranspiration_sum_local)
     DEALLOCATE(drag_srf_local)
+    DEALLOCATE(ftranspiration_sum_local)
 
   END SUBROUTINE update_canopy_fluxes
+
+
+  ! ======================================================================================================= !
+  !>Update the fraction of transpiration per soil layer
+  !>
+  !>  used only with QUINCY and jsbach soil physics processes (not with SPQ_)
+  !>
+  SUBROUTINE update_ftranspiration_per_sl(tile, options)
+    USE mo_jsb_class,              ONLY: Get_model
+    USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,         ONLY: t_jsb_task_options
+    USE mo_jsb_model_class,        ONLY: t_jsb_model
+    USE mo_jsb_process_class,      ONLY: Q_ASSIMI_, VEG_, HYDRO_
+    USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,               ONLY: Get_vgrid
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_memory(Q_ASSIMI_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),      POINTER       :: model                    !< the model
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_w             !< Vertical grid for soil layers
+    INTEGER                               :: nsoil_w                  !< number of soil layers
+    INTEGER                               :: iblk, ics, ice, nc       !< dimensions
+    INTEGER                               :: ic, is                   !< loop increment
+    REAL(wp)                              :: lctlib_phi_leaf_min
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_ftranspiration_per_sl'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(Q_ASSIMI_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Q_ASSIMI_ 3D
+    dsl4jsb_Real3D_onChunk      :: ftranspiration_sl
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk      :: num_sl_above_bedrock
+    ! HYDRO_ 3D
+    dsl4jsb_Real3D_onChunk      :: wtr_soil_pot_sl
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk      :: root_fraction_sl
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. tile%Is_process_calculated(Q_ASSIMI_)) RETURN
+    ! ----------------------------------------------------------------------------------------------------- !
+    model                  => Get_model(tile%owner_model_id)
+    vgrid_soil_w           => Get_vgrid('soil_depth_water')
+    nsoil_w                =  vgrid_soil_w%n_levels
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(Q_ASSIMI_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Q_ASSIMI_ 3D
+    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl)         ! out
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)         ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_sl)              ! in
+    ! VEG_ 3D
+    dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)               ! in
+    ! ----------------------------------------------------------------------------------------------------- !
+    lctlib_phi_leaf_min = dsl4jsb_Lctlib_param(phi_leaf_min)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO is = 1, nsoil_w
+      DO ic = 1, nc
+        ftranspiration_sl(ic, is) = 0.0_wp
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    CALL calc_ftranspiration_sl( &
+      & nc, &
+      & nsoil_w, &
+      & lctlib_phi_leaf_min, &
+      & num_sl_above_bedrock(:), &
+      & root_fraction_sl(:,:), &
+      & wtr_soil_pot_sl(:,:), &     ! in
+      & ftranspiration_sl(:,:) &    ! out
+      & )
+  END SUBROUTINE update_ftranspiration_per_sl
+
 
   ! ======================================================================================================= !
   !>Calculation of net photosynthesis and canopy conductance
@@ -1034,6 +1135,7 @@ CONTAINS
 
     REAL(wp),INTENT(in) :: phi               !< soil plant available water potential
     REAL(wp),INTENT(in) :: phi_leaf_min      !< minimum leaf water potential from lctlib
+                                             !<  or a modified value when called from 'calc_ftranspiration_sl'
     REAL(wp)            :: beta              !< veg\%beta_soil_ps / veg\%beta_soil_gs
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_soil_moisture_stress'!
@@ -1084,44 +1186,141 @@ CONTAINS
   !>
   !>  Output: Discrimination (per mill)
   !>
-  PURE ELEMENTAL FUNCTION discrimination_ps(ci, ca, isotope_name, ps_pathway) RESULT(discrimination)
-
-    !$ACC ROUTINE SEQ
-
+  !
+  ! C13
+  !
+  PURE ELEMENTAL FUNCTION discrimination_ps_c13(ci, ca, ps_pathway) RESULT(discrimination)
     USE mo_q_assimi_parameters,    ONLY: discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, &
-      &                                  discr_ps_a_C14, discr_ps_b_C14, discr_ps_c_C14, &
       &                                  discr_ps_phi
-    USE mo_q_assimi_constants,     ONLY: ic3phot, ic4phot
+    USE mo_q_assimi_constants,     ONLY: ic3phot !, ic4phot
     !------------------------------------------------------------------------------------------------------ !
     REAL(wp),     INTENT(in) :: ci                     !< leaf internal CO2 concentration (ppm)
     REAL(wp),     INTENT(in) :: ca                     !< atmospheric CO2 concentration (ppm)
-    CHARACTER(3), INTENT(in) :: isotope_name           !< isotope C13 or C14
     INTEGER,      INTENT(in) :: ps_pathway             !< photosynthetic pathway (C3 or C4) from lctlib
     REAL(wp)                 :: discrimination         !< isotopic discrimination (per mill)
     !------------------------------------------------------------------------------------------------------ !
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps_c13'
+
+    !$ACC ROUTINE SEQ
 
     ! SELECT PS pathway C3 C4
-    SELECT CASE(ps_pathway)
-    CASE (ic3phot)
-      ! SELECT isotope C13 C14
-      SELECT CASE(isotope_name)
-        CASE ('C13')
-          discrimination = discr_ps_a_C13 + (discr_ps_b_C13 - discr_ps_a_C13) * ci / ca
-        CASE ('C14')
-          discrimination = discr_ps_a_C14 + (discr_ps_b_C14 - discr_ps_a_C14) * ci / ca
-      END SELECT
-    CASE (ic4phot)
-      ! SELECT isotope C13 C14
-      SELECT CASE(isotope_name)
-        CASE ('C13')
-          discrimination = discr_ps_a_C13 + (discr_ps_c_C13 + discr_ps_phi * discr_ps_b_C13 - discr_ps_a_C13) * ci / ca
-        CASE ('C14')
-          discrimination = discr_ps_a_C14 + (discr_ps_c_C14 + discr_ps_phi * discr_ps_b_C14 - discr_ps_a_C14) * ci / ca
-      END SELECT
-    END SELECT
+    IF (ps_pathway == ic3phot) THEN
+      discrimination = discr_ps_a_C13 + (discr_ps_b_C13 - discr_ps_a_C13) * ci / ca
+    ELSE ! ic4phot
+      discrimination = discr_ps_a_C13 + (discr_ps_c_C13 + discr_ps_phi * discr_ps_b_C13 - discr_ps_a_C13) * ci / ca
+    END IF
+  END FUNCTION discrimination_ps_c13
+  !
+  ! C14
+  !
+  PURE ELEMENTAL FUNCTION discrimination_ps_c14(ci, ca, ps_pathway) RESULT(discrimination)
+    USE mo_q_assimi_parameters,    ONLY: discr_ps_a_C14, discr_ps_b_C14, discr_ps_c_C14, &
+      &                                  discr_ps_phi
+    USE mo_q_assimi_constants,     ONLY: ic3phot !, ic4phot
+    !------------------------------------------------------------------------------------------------------ !
+    REAL(wp),     INTENT(in) :: ci                     !< leaf internal CO2 concentration (ppm)
+    REAL(wp),     INTENT(in) :: ca                     !< atmospheric CO2 concentration (ppm)
+    INTEGER,      INTENT(in) :: ps_pathway             !< photosynthetic pathway (C3 or C4) from lctlib
+    REAL(wp)                 :: discrimination         !< isotopic discrimination (per mill)
+    !------------------------------------------------------------------------------------------------------ !
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps_c14'
 
-  END FUNCTION discrimination_ps
+    !$ACC ROUTINE SEQ
+
+    ! SELECT PS pathway C3 C4
+    IF (ps_pathway == ic3phot) THEN
+      discrimination = discr_ps_a_C14 + (discr_ps_b_C14 - discr_ps_a_C14) * ci / ca
+    ELSE ! ic4phot
+      discrimination = discr_ps_a_C14 + (discr_ps_c_C14 + discr_ps_phi * discr_ps_b_C14 - discr_ps_a_C14) * ci / ca
+    END IF
+  END FUNCTION discrimination_ps_c14
+
+
+  ! ======================================================================================================= !
+  !>Calculate the fraction of transpiration per soil layer
+  !>
+  !>  called only with QUINCY and jsbach soil physics processes (not with SPQ_)
+  !>
+  SUBROUTINE calc_ftranspiration_sl( &
+    & nc, &
+    & nsoil_w, &
+    & lctlib_phi_leaf_min, &
+    & num_sl_above_bedrock, &
+    & root_fraction_sl, &
+    & wtr_soil_pot_sl, &
+    & ftranspiration_sl)
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER,  INTENT(in)    :: nc                       !< dimension chunk
+    INTEGER,  INTENT(in)    :: nsoil_w                 !< dimension soil layers
+    REAL(wp), INTENT(in)    :: lctlib_phi_leaf_min      !< leaf minimum water potential (MPa)
+    REAL(wp), INTENT(in)    :: num_sl_above_bedrock(:)  !< number of soil layers above bedrock
+    REAL(wp), INTENT(in)    :: root_fraction_sl(:,:)    !< fraction of fine roots per layer
+    REAL(wp), INTENT(in)    :: wtr_soil_pot_sl(:,:)     !< soil water matrix potential (MPa)
+    REAL(wp), INTENT(out)   :: ftranspiration_sl(:,:)   !< fraction of transpiration from layer
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER                     :: ic, is                 !< loop over grid cells and soil layers
+    INTEGER                     :: iwpot                  !< looping [0,10]
+    REAL(wp)                    :: hlp
+    REAL(wp), DIMENSION(nc)     :: ftranspiration_sum     !< sum of ftranspiration_sl(:,:) over soil layers
+    REAL(wp)                    :: phi_inc                !< constant used for decrement lctlib_phi_leaf_min in [0,10] loop
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_ftranspiration_sl'
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    ! init local var
+    !
+    phi_inc = -0.25_wp    ! decrement lctlib_phi_leaf_min; value: tuned
+
+    !$ACC DATA CREATE(ftranspiration_sum)
+
+    ! loop over: nc, increment iwpot [0,40], soil layer
+    !
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(hlp)
+    DO ic = 1, nc
+      ! set to zero here to ensure executing 'DO iwpot' at least once
+      ftranspiration_sum(ic) = 0.0_wp
+
+      !$ACC LOOP SEQ
+      ! loop from zero to -10 of wtr_soil_pot_sl in 40 * phi_inc steps
+      DO iwpot = 0, 40
+
+        !> 1.1 determine fraction of transpiration per soil layer
+        !>     the first instance of the loop takes the PFT specific minimum
+        !>     leaf water potential, all further iterations attempt to distribute
+        !>     residual transpiration (due to min. conductance) across soil layers according
+        !>     to soil moisture
+        IF (ftranspiration_sum(ic) == 0.0_wp) THEN
+          !$ACC LOOP SEQ
+          DO is = 1, nsoil_w
+            ftranspiration_sl(ic, is) = 0.0_wp
+            IF ((is <= num_sl_above_bedrock(ic)) .AND. (root_fraction_sl(ic, is) > eps8)) THEN
+              hlp = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, is), &
+                &                             lctlib_phi_leaf_min + phi_inc * REAL(iwpot, wp))
+              IF (hlp > eps4) THEN
+                ftranspiration_sl(ic, is) = root_fraction_sl(ic, is) * hlp
+                ftranspiration_sum(ic)    = ftranspiration_sum(ic) + ftranspiration_sl(ic, is)
+              END IF
+            END IF
+          END DO
+        END IF
+      END DO
+    END DO
+    !$ACC END PARALLEL
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO ic = 1, nc
+      DO is = 1, nsoil_w
+        IF ((is <= num_sl_above_bedrock(ic)) .AND. (ftranspiration_sum(ic) > eps8)) THEN
+          ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum(ic)
+        END IF
+      END DO
+    END DO
+    !$ACC END PARALLEL
+
+    !$ACC END DATA
+
+  END SUBROUTINE calc_ftranspiration_sl
 
 #endif
 END MODULE mo_q_assimi_process

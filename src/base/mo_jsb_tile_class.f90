@@ -160,6 +160,7 @@ MODULE mo_jsb_tile_class
     PROCEDURE(Init_vars_interface),      DEFERRED :: Count_and_classify_bgc_materials
     PROCEDURE(Init_vars_interface),      DEFERRED :: Collect_bgc_materials
 #endif
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Check_child_cover_fractions
     PROCEDURE(Init_vars_interface),      DEFERRED :: Count_conserved_quantities
     PROCEDURE(Init_vars_interface),      DEFERRED :: Collect_conserved_variables
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions

@@ -66,6 +66,7 @@ MODULE mo_jsb_tile
     PROCEDURE :: Has_process_memory               => Has_process_memory_on_tile
     PROCEDURE :: Count_conserved_quantities       => Count_conserved_quantities_on_tile
     PROCEDURE :: Collect_conserved_variables      => Collect_conserved_variables_on_tile
+    PROCEDURE :: Check_child_cover_fractions      => Check_child_cover_fractions_on_tile
 #ifndef __NO_QUINCY__
     PROCEDURE :: Count_and_classify_bgc_materials => Count_and_classify_bgc_materials_on_tile
     PROCEDURE :: Collect_bgc_materials            => Collect_bgc_materials_on_tile
@@ -901,7 +902,7 @@ CONTAINS
     hgrid  => Get_grid(this%grid_id)
     nproma = hgrid%nproma
     nblks  = hgrid%nblks
-    vgrid  => Get_vgrid('soil_layer_sb')
+    vgrid  => Get_vgrid('soil_depth_water')
     nsoil  =  vgrid%n_levels
 
     ! Loop over all processes
@@ -925,6 +926,66 @@ CONTAINS
 
   END SUBROUTINE Collect_bgc_materials_on_tile
 #endif
+
+  ! ======================================================================================================= !
+  !>
+  !> Checks and if required corrects the cover fractions of the children of a tile
+  !>
+  SUBROUTINE Check_child_cover_fractions_on_tile(this)
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+    USE mo_jsb_grid,            ONLY: Get_grid
+    USE mo_util,                ONLY: real2string
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile), INTENT(inout) :: this !< Tile for which the child cover fractions are checked
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract),  POINTER :: current_child
+    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+    INTEGER :: nproma, nblks, i_tile
+    REAL(wp),           POINTER :: tmp_fract(:,:)
+    REAL(wp),       ALLOCATABLE :: sum_fract(:,:)
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Check_child_cover_fractions_on_tile'
+    ! -------------------------------------------------------------------------------------------------- !
+    ! Only relevant for tiles with children
+    IF (.NOT. this%Has_children()) RETURN
+
+    IF (debug_on()) CALL message(TRIM(routine), TRIM(this%name))
+
+    hgrid   => Get_grid(this%grid_id)
+    nproma = hgrid%nproma
+    nblks  = hgrid%nblks
+
+    ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
+    ALLOCATE(sum_fract(hgrid%nproma, hgrid%nblks))
+    sum_fract(:,:) = 0.0_wp
+
+    current_child => this%Get_first_child_tile()
+
+    i_tile = 0
+    DO WHILE (ASSOCIATED(current_child))
+      i_tile = i_tile + 1
+      CALL current_child%Get_fraction(fract=tmp_fract(:,:))
+
+      tmp_fract(:,:) = MIN(1.0_wp, tmp_fract(:,:))
+      tmp_fract(:,:) = MAX(0.0_wp, tmp_fract(:,:))
+
+      CALL current_child%Set_fraction(fract=tmp_fract(:,:))
+
+      sum_fract(:,:) = sum_fract(:,:) + tmp_fract(:,:)
+      current_child => current_child%Get_next_sibling_tile()
+    END DO
+
+    ! Assert that sum is "equal" to tile fraction (whereby the threshold is arbitraryly chosen here)
+    CALL this%Get_fraction(fract=tmp_fract(:,:))
+    IF (ANY(ABS((tmp_fract(:,:) - sum_fract(:,:))) > 1.e-15_wp)) THEN
+
+      CALL finish(TRIM(routine), 'Fractions of '//TRIM(this%name)//' not equal to sum of child cf.'// &
+        &  ' MAX diff: ' //real2string(ABS(MAXVAL(tmp_fract(:,:) - sum_fract(:,:)))))
+    END IF
+
+    DEALLOCATE(tmp_fract, sum_fract)
+
+  END SUBROUTINE Check_child_cover_fractions_on_tile
+
 
   ! ======================================================================================================= !
   !>

@@ -696,9 +696,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, lai                                 , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fract_fpc                           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, dphi                                , weighted_by_fract)
-
     dsl4jsb_Aggregate_onChunk(VEG_, rough_veg_star                      , weighted_by_fract)
-
     ! VEG_ 3D
     dsl4jsb_Aggregate_onChunk(VEG_, root_fraction_sl            , weighted_by_fract)
 

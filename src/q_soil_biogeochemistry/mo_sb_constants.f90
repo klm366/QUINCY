@@ -167,12 +167,13 @@ MODULE mo_sb_constants
 
   ! nutrient uptake kinetics & ECA approach: simple_1d model
   REAL(wp), SAVE :: &
-      km1_up_nh4, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
-      km1_up_no3, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
-      km1_up_po4, &             !< low-affinity parameter for plant and mycorrhizal uptake [l/mol]  unit correct ?
+      km1_up_nh4, &             !< low-affinity parameter for plant and mycorrhizal uptake [mol/m3]
+      km1_up_no3, &             !< low-affinity parameter for plant and mycorrhizal uptake [mol/m3]
+      km1_up_po4, &             !< low-affinity parameter for plant and mycorrhizal uptake [mol/m3]
       km2_up_nh4, &             !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
       km2_up_no3, &             !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
-      km2_up_po4                !< high-affinity parameter for plant and mycorrhizal uptake [mol/l] unit correct ?
+      km2_up_po4, &             !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
+      fract_vmax_low_affinity   !< fraction of vmax for nutrient uptake of low affinity transporter system []
 
   ! nutrient uptake kinetics & ECA approach: additional jsm parameters
   REAL(wp), SAVE :: &
@@ -476,13 +477,14 @@ CONTAINS
     f_tau_myc               = 5.0_wp                                  !
 
     ! nutrient uptake kinetics & ECA approach: simple_1d model
-    km1_up_nh4 = 0.0416_wp                 ! Kronzucker et al. 1996, Plant Physiology
-    km2_up_nh4 = 1.0_wp                    ! Kronzucker et al. 1996, Plant Physiology
-    km1_up_no3 = 0.0416_wp                 ! Kronzucker et al. 1996, Plant Physiology
-    km2_up_no3 = 1.0_wp                    ! Kronzucker et al. 1996, Plant Physiology
-    km1_up_po4 = 0.0689_wp / 0.0003_wp     ! l/mol, corrected low affinity half-saturation, estimated based on Kavka and Polle 2016,
-                                           ! assuming Km for low-affinity transporter is 300 micro-mol/l
-    km2_up_po4 = 22.0_wp / 1.e6_wp         ! mol/l, Kavka and Polle 2016
+    km2_up_nh4 = 0.896_wp / molar_mass_N         ! from Zhu et al. 2017, consistent with km_plant_uptake_nh4 in JSM
+    km2_up_no3 = 0.672_wp / molar_mass_N         ! from Zhu et al. 2017, consistent with km_plant_uptake_no3 in JSM
+    km2_up_po4 = 0.067_wp / molar_mass_P         ! consistent with km_plant_uptake_po4 in JSM
+    km1_up_nh4 = km2_up_nh4 * 100.0_wp
+    km1_up_no3 = km2_up_no3 * 100.0_wp
+    km1_up_po4 = km2_up_po4 * 100.0_wp
+    fract_vmax_low_affinity = 0.01_wp            ! fraction of vmax for nutrient uptake of low affinity transporter system,
+                                                 ! tuned to make nutrient uptakes still slightly increase with larger nutrient pools even under the nutrient-rich condition
 
     ! additional jsm parameters
     vmax_mic_uptake_nh4       = 106.56_wp / 3600._wp * molar_mass_C     ! micro-mol / mol / s from Zhu et al. 2017, and references therein
@@ -542,15 +544,15 @@ CONTAINS
     ea_nitrification          = 80000._wp                               ! Xu-Ri & Prentice, 2008, to fit their function
     ed_nitrification          = 200000._wp                              ! Xu-Ri & Prentice, 2008, to fit their function
     t_opt_nitrification       = 311.15_wp                               ! Xu-Ri & Prentice, 2008, to fit their function
-    f_nit_noy                 = 0.02_wp                                 ! Xu-Ri & Prentice, 2008
+    f_nit_noy                 = 0.04_wp                                 ! Xu-Ri & Prentice, 2008, take the high end to fit a reasonable global budget
     f_nit_n2o                 = 0.002_wp                                ! Xu-Ri & Prentice, 2008
     ea_denitrification        = 47000._wp                               ! Xu-Ri & Prentice, 2008, to fit their function
-    vmax_nitrification        = 0.4_wp / one_day * 1.e6_wp              ! Xu-Ri & Prentice, 2008, 10% / day at 20degC
-    vmax_denitrification      = 0.1_wp / one_day * 1.e6_wp              ! Xu-Ri & Prentice, 2008, 10% / day
+    vmax_nitrification        = 0.6_wp / one_day * 1.e6_wp              ! Xu-Ri & Prentice, 2008, 10% / day at 20degC, retuned to fit a reasonable global budget
+    vmax_denitrification      = 0.3_wp / one_day * 1.e6_wp              ! Xu-Ri & Prentice, 2008, 10% / day, retuned to fit a reasonable global budget
     km_denitrification_c      = 20.0_wp                                 ! ???
     km_denitrification_no3    = 0.083_wp * 1000.0_wp / molar_mass_N     ! Xu-Ri & Prentice, 2008
     f_denit_noy               = 0.002_wp                                ! Xu-Ri & Prentice, 2008
-    f_denit_n2o               = 0.02_wp                                 ! Xu-Ri & Prentice, 2008
+    f_denit_n2o               = 0.04_wp                                 ! Xu-Ri & Prentice, 2008, take the high end to fit a reasonable global budget
     ea_gasdiffusion           = 47000._wp                               ! Xu-Ri & Prentice, 2008, to fit their function
     lambda_anvf               = 1.3_wp                                  ! fitted from Zaehle et al. 2011, NatGeo
     k_anvf                    = 3.0_wp                                  ! fitted from Zaehle et al. 2011, NatGeo

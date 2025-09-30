@@ -190,7 +190,9 @@ MODULE mo_jsb_lctlib_class
     ! N uptake parameters
     REAL(wp) :: vmax_uptake_n     , &
                 vmax_uptake_p     , &
-                bnf_base
+                bnf_base          , &
+                vmax_symb_bnf     , &
+                km_symb_bnf
 
     ! Vegetation dynamics parameters
     REAL(wp) :: lambda_est_light  , &
@@ -412,6 +414,8 @@ CONTAINS
     LOGICAL            :: exists_vmax_uptake_n = .FALSE.
     LOGICAL            :: exists_vmax_uptake_p = .FALSE.
     LOGICAL            :: exists_bnf_base = .FALSE.
+    LOGICAL            :: exists_vmax_symb_bnf = .FALSE.
+    LOGICAL            :: exists_km_symb_bnf = .FALSE.
     LOGICAL            :: exists_lambda_est_light = .FALSE.
     LOGICAL            :: exists_k_est_light = .FALSE.
     LOGICAL            :: exists_seed_size = .FALSE.
@@ -921,6 +925,12 @@ CONTAINS
           CASE ('bnf_base')
             READ(line(pos:length),*) lctlib(1:nlct)%bnf_base
             exists_bnf_base = .TRUE.
+          CASE ('vmax_symb_bnf')
+            READ(line(pos:length),*) lctlib(1:nlct)%vmax_symb_bnf
+            exists_vmax_symb_bnf = .TRUE.
+          CASE ('km_symb_bnf')
+            READ(line(pos:length),*) lctlib(1:nlct)%km_symb_bnf
+            exists_km_symb_bnf = .TRUE.
           !
           CASE ('lambda_est_light')
             READ(line(pos:length),*) lctlib(1:nlct)%lambda_est_light
@@ -1274,6 +1284,10 @@ CONTAINS
           CALL finish('init_lctlib','No data for vmax_uptake_p found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_bnf_base) &
           CALL finish('init_lctlib','No data for bnf_base found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_vmax_symb_bnf) &
+          CALL finish('init_lctlib','No data for vmax_symb_bnf found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_km_symb_bnf) &
+          CALL finish('init_lctlib','No data for km_symb_bnf found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_lambda_est_light) &
           CALL finish('init_lctlib','No data for lambda_est_light found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_k_est_light) &
@@ -1347,7 +1361,7 @@ CONTAINS
        !>Modify the input values of some quincy lctlib parameters
        !>
        !>  TODO QUINCY: calculations may not need to be applied for
-       !>               bare soil and urban area in usecases quincy_11_pfts / quincy_14_pfts
+       !>               bare soil and urban area in usecases quincy_13_pfts
        !>  TODO - is there any reason why you have an own loop for each parameter?
        !>
        IF (model_scheme_char == "quincy") THEN
@@ -1393,6 +1407,14 @@ CONTAINS
        ! bnf_base
          DO i = 1,nlct
           lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp
+         END DO
+       ! vmax_symb_bnf
+         DO i = 1,nlct
+          lctlib(i)%vmax_symb_bnf = lctlib(i)%vmax_symb_bnf / (molar_mass_N / molar_mass_C) / one_day / one_year * 1.e6_wp
+         END DO
+       ! km_symb_bnf
+         DO i = 1,nlct
+          lctlib(i)%km_symb_bnf = lctlib(i)%km_symb_bnf / (molar_mass_C / molar_mass_N)
          END DO
        ! t_air_senescence
          DO i = 1,nlct
@@ -1656,6 +1678,8 @@ CONTAINS
         CALL p_bcast(lctlib(:)%vmax_uptake_n, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%vmax_uptake_p, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%bnf_base, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%vmax_symb_bnf, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%km_symb_bnf, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%lambda_est_light, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%k_est_light, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%seed_size, p_io, mpi_comm)
@@ -1697,8 +1721,8 @@ CONTAINS
     !>
     SELECT CASE (usecase)
 #ifndef __NO_QUINCY__
-    ! quincy model with 8 / 11 PFT tiles
-    CASE ('quincy_eight_pfts', 'quincy_11_pfts', 'quincy_13_pfts_for_coupling', 'quincy_13_pfts')
+    ! quincy model with 13 PFT tiles (of the 14 PFT that would be available with 'lctlib_quincy_nlct14.def')
+    CASE ('quincy_13_pfts_for_coupling', 'quincy_13_pfts')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
 #endif

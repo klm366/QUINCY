@@ -37,7 +37,7 @@ MODULE mo_jsb_lcc_class
     !< min change in cover fractions for daily lcc, i.e. if the change is smaller than this threshold the lcc is not applied
   REAL(wp), PARAMETER :: min_annual_cf_change = min_daily_cf_change * one_year
     !< min change in cover fractions for annual lcc, i.e. if the change is smaller than this threshold the lcc is not applied
-  REAL(wp), PARAMETER :: max_tolerated_cf_mismatch = 1.0E-09_wp
+  REAL(wp), PARAMETER :: max_tolerated_cf_mismatch = 1.0E-08_wp
     !< max mismatch in cover fractions which is tolerated when comparing different cover fraction sums
   REAL(wp), PARAMETER :: max_tolerated_fract_mismatch = 1.0E-14_wp
     !< maximum tolerated mismatch in forest age fraction sums (only used when running with FAGE)

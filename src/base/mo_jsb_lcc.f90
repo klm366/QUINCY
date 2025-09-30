@@ -30,7 +30,7 @@ MODULE mo_jsb_lcc
   USE mo_jsb_varlist,         ONLY: VARNAME_LEN
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
 
-  USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc, t_jsb_lcc_var_p
+  USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc, t_jsb_lcc_var_p, max_tolerated_cf_mismatch
   USE mo_jsb_task_class,      ONLY: t_jsb_task_options
   USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan_p
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
@@ -463,8 +463,8 @@ CONTAINS
     !>
     !> Assertion: lost area is >= 0.0_wp and <= 1.0_wp
     !>
-    IF (ANY(lost_area < 0.0_wp) .OR. ANY(lost_area > 1.0_wp) &
-      & .OR. ANY(initial_area < 0.0_wp) .OR. ANY(initial_area > 1.0_wp)) THEN
+    IF (ANY(lost_area < 0.0_wp) .OR. ANY(lost_area > 1.0_wp + max_tolerated_cf_mismatch) &
+      & .OR. ANY(initial_area < 0.0_wp) .OR. ANY(initial_area > 1.0_wp + max_tolerated_cf_mismatch)) THEN
       CALL finish(TRIM(routine), 'Violation of assertion: Area arrays have values out of range ([0.0, 1.0]). Please check!')
     ENDIF
     !>
@@ -472,9 +472,9 @@ CONTAINS
     !>
     ! -> JN-TODO: we might want/need to discuss the concept of the e-10 areas here
     IF (ANY((initial_area - lost_area) < -EPSILON(1._wp) )) THEN
-      CALL message(routine, 'Violation of assertion: Lost area exceeds available area ' &
-        & //'for lcc process '// TRIM(lcc_relocations%name))
-      WRITE (message_text,*) 'MINVAL: ', MINVAL(initial_area-lost_area), ' at ', MINLOC(initial_area-lost_area), &
+      WRITE (message_text,*) 'Violation of assertion: Lost area exceeds available area' &
+        & //' for lcc process '// TRIM(lcc_relocations%name) &
+        & //' -- MINVAL: ', MINVAL(initial_area-lost_area), ' at ', MINLOC(initial_area-lost_area), &
         & ' (nc,tile)'
       CALL finish(routine, message_text)
     ENDIF

@@ -117,7 +117,7 @@ MODULE mo_veg_memory_class
                                     root_limitation_state, &         !< dominating limiting factor for root growth [-1,1] (P = -1 | Water = 0 | N = 1) [unitless]
                                     falloc_fruit_crop                !< fraction of allocation to fruits in crops [0-1] [unitless]
     ! basic plant 3D
-    TYPE(t_jsb_var_real3d)          :: &    ! DIMENSION(soil_layer_sb)
+    TYPE(t_jsb_var_real3d)          :: &    ! DIMENSION(soil_depth_water)
                                     root_fraction_sl          , &    !< fractions of root per layer [unitless]
                                     delta_root_fraction_sl    , &    !< change of fractions of root per layer [1/timestep]
                                     lai_cl                    , &    !< leaf area index per canopy layer [m2 m-2]
@@ -452,7 +452,7 @@ CONTAINS
     TYPE(t_jsb_grid),   POINTER :: hgrid                      !< Horizontal grid
     TYPE(t_jsb_vgrid),  POINTER :: surface                    !< Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy_q_assimi      !< Vertical grid
-    TYPE(t_jsb_vgrid),  POINTER :: vgrid_soil_sb              !< Vertical grid
+    TYPE(t_jsb_vgrid),  POINTER :: vgrid_soil_w               !< Vertical grid
     CHARACTER(len=30)           :: unit_veg_pool              !< unit of element var
     CHARACTER(len=30)           :: unit_veg_flux              !< unit of element var
     INTEGER                     :: elem_idx_map(LAST_ELEM_ID) !< element mapper ID -> IND
@@ -474,7 +474,7 @@ CONTAINS
     hgrid                 => Get_grid(model%grid_id)
     surface               => Get_vgrid('surface')
     vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
-    vgrid_soil_sb         => Get_vgrid('soil_layer_sb')
+    vgrid_soil_w          => Get_vgrid('soil_depth_water')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(Q_SYL_)
@@ -554,9 +554,7 @@ CONTAINS
         & VEG_BGCM_FRAC_ALLOC_ID, name = 'vegetation_bgcm_frac_alloc', shortname = 'veg_bgcm_frac_alloc', &
         & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
 
-
-      IF ((model%lctlib(lib_id)%ForestFlag .AND. dsl4jsb_Config(Q_SYL_)%active)        &
-          & .OR. (model%lctlib(lib_id)%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active)) THEN
+      IF (dsl4jsb_Config(Q_SYL_)%active .OR. dsl4jsb_Config(Q_AGR_)%active) THEN
         ! flux represented as bgcm with compartments: fluxes due to harvest
         mem%veg_bgcm_main%harvest_litter => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,  &
           & VEG_BGCM_HARVEST_LITTER_ID, name = 'vegetation_bgcm_flux_harvest_litter',                &
@@ -582,8 +580,7 @@ CONTAINS
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_RESERVE_USE_ID)
 
       IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
-        IF ((model%lctlib(lib_id)%ForestFlag .AND. dsl4jsb_Config(Q_SYL_)%active)             &
-            & .OR. (model%lctlib(lib_id)%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active)) THEN
+        IF ((dsl4jsb_Config(Q_SYL_)%active) .OR. dsl4jsb_Config(Q_AGR_)%active) THEN
 
           ! product pools and decay represented as bgcms with elements
           ! one flux represented as bgcm with elements: the product pool decay flux
@@ -596,15 +593,15 @@ CONTAINS
             & name = 'vegetation_bgcm_flux_harvest_to_product_pools', shortname = 'veg_bgcm_harvest_to_prod',    &
             & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_HARVEST_TO_PROD_ID)
 
-          ! only create the crop product pool bgcm on crop tiles
-          IF (model%lctlib(lib_id)%CropFlag) THEN
+          ! only create the crop product pool bgcm if running with agriculture
+          IF (dsl4jsb_Config(Q_AGR_)%active) THEN
             mem%veg_bgcm_main%veg_pp_crop => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,         &
               & name = 'vegetation_bgcm_product_pool_cropland_harvest', shortname = 'veg_bgcm_pp_crop',    &
               & elements_index_map = elem_idx_map(:), unit = unit_veg_pool, bgcm_id = VEG_BGCM_PP_CROP_ID)
           END IF
 
-          ! Only create the wood product pool bgcms on the forest tiles
-          IF (model%lctlib(lib_id)%ForestFlag) THEN
+          ! Only create the wood product pool bgcms if running with sylcivulture
+          IF (dsl4jsb_Config(Q_SYL_)%active) THEN
             ! 6 product pools represented as bgcms with elements
             ! the fuelwood product pool
             mem%veg_bgcm_main%veg_pp_fuel => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,         &
@@ -630,7 +627,7 @@ CONTAINS
             mem%veg_bgcm_main%veg_pp_sawnwood => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,         &
               & name = 'vegetation_bgcm_product_pool_sawnwood', shortname = 'veg_bgcm_pp_sawnwood',            &
               & elements_index_map = elem_idx_map(:), unit = unit_veg_pool, bgcm_id = VEG_BGCM_PP_SAWNWOOD_ID)
-          END IF ! IF (model%lctlib(lib_id)%ForestFlag)
+          END IF ! IF (dsl4jsb_Config(Q_SYL_)%active)
         END IF
       END IF
 
@@ -697,8 +694,7 @@ CONTAINS
 
       ! Product pools and decay
       IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
-        IF ((model%lctlib(lib_id)%ForestFlag .AND. dsl4jsb_Config(Q_SYL_)%active)             &
-            & .OR. (model%lctlib(lib_id)%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active)) THEN
+        IF (dsl4jsb_Config(Q_SYL_)%active .OR. dsl4jsb_Config(Q_AGR_)%active) THEN
 
           CALL mem%Add_var(mem%veg_bgcm_main%prod_decay, &
             & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
@@ -709,8 +705,8 @@ CONTAINS
             & lrestart = .FALSE.,                                                                          &
             & initval_r = 0.0_wp)
 
-          ! Only create crop pool bgcm on crop tiles
-          IF (model%lctlib(lib_id)%CropFlag) THEN
+          ! Only create crop pool bgcm if running with aggriculture
+          IF (dsl4jsb_Config(Q_AGR_)%active) THEN
             CALL mem%Add_var(mem%veg_bgcm_main%veg_pp_crop, &
               & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
               & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -721,8 +717,8 @@ CONTAINS
               & initval_r = 0.0_wp)
           END IF
 
-          ! Only create the wood product pool bgcms on forest tiles
-          IF (model%lctlib(lib_id)%ForestFlag) THEN
+          ! Only create the wood product pool bgcms if running with sylviculture
+          IF (dsl4jsb_Config(Q_SYL_)%active) THEN
             CALL mem%Add_var(mem%veg_bgcm_main%veg_pp_fuel, &
               & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
               & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -771,13 +767,12 @@ CONTAINS
               & loutput = .TRUE.,                                                                            &
               & lrestart = .TRUE.,                                                                           &
               & initval_r = 0.0_wp)
-          END IF ! IF (model%lctlib(lib_id)%ForestFlag)
+          END IF ! IF (dsl4jsb_Config(Q_SYL_)%active)
         END IF
       END IF ! IF (dsl4jsb_Config(VEG_)%l_use_product_pools .AND. lib_id > 0)
 
       ! Flux to litter due to harvest
-      IF ((model%lctlib(lib_id)%ForestFlag .AND. dsl4jsb_Config(Q_SYL_)%active)        &
-          & .OR. (model%lctlib(lib_id)%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active)) THEN
+      IF (dsl4jsb_Config(Q_SYL_)%active .OR. dsl4jsb_Config(Q_AGR_)%active) THEN
 
         CALL mem%Add_var(mem%veg_bgcm_main%harvest_litter,                                               &
           & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
@@ -1340,7 +1335,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('root_fraction_sl', mem%root_fraction_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('root_fraction_sl', '', 'fractions of root per layer'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -1351,7 +1346,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('delta_root_fraction_sl', mem%delta_root_fraction_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('delta_root_fraction_sl', '', 'change in fractions of root per layer'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &

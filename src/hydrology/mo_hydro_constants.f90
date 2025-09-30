@@ -25,6 +25,15 @@
 !>
 !> - A. Roesch et al. Climate Dynamics (2001) 17: 933-947
 !>
+!> Parametrization of snow density / snow aging
+!>
+!> - Heise, E. et al. (2006): Operational Implementation of the Multilayer Soil Model,
+!>   COSMO Technical Report No. 9, Section 2.2 eq. 3 (p. 4)
+!>   [pdf](https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=48848da738cc550b42393ec9a7bb7a65c1c6ad69)
+!> - Doms, G. et al. (2021): A Description of the Nonhydrostatic Regional COSMO-Model Part II, Physical
+!>   Parameterizations, Section 11.4.2 b (p. 137)
+!>   [pdf](https://www.cosmo-model.org/content/model/cosmo/coreDocumentation/cosmo_physics_6.00.pdf)
+!>
 !> Parametrization of runoff/drainage
 !>
 !> - Todini, E., The ARNO rainfall-runoff model, Journal of Hydrology 175 (1996) 339-382,
@@ -94,6 +103,16 @@ MODULE mo_hydro_constants
     & wsn2fract_sigfac = 0.15_wp,          & !< Factor to approximate sub-grid scale slopes (Roesch et al. 2001, Eq. 7)
     & wsn2fract_const  = 0.95_wp,          & !< Factor for snow fraction (Roesch et al. 2001, Eq. 6 and 7)
 
+    ! Parameters used to calculate snow density (following Heise et al. 2006, also used in TERRA; compare Doms et al. 2021)
+    ! Note: dens_snow_min is currently also used in SSE and thus defined in shared/mo_jsb_physical_constants
+    ! dens_snow_min      = 50._wp,         & !< Minimum density of snow - for fresh snow [kg/m3] (Heise et al. 2006)
+    & dens_snow_max      = 400._wp,        & !< Maximum density of snow [kg/m3] (Heise et al. 2006)
+    & csnow_tmin         = 258.15_wp,      & !< Lower threshold temperature of snow for ageing and fresh snow density [K]
+                                             !< (= 273.15-15.0 K; Heise et al. 2006)
+    & crhosmaxt          = 0.40_wp,        & !< Maximum value of time constant for ageing of snow
+    & crhosmint          = 0.125_wp,       & !< Time constant for ageing of snow at csnow_tmin (8 days)
+    & crhosmax_tmin      = 200.00_wp,      & !< Maximum density of snow at csnow_tmin [kg/m3] (Doms et al., 2021)
+
     ! Canopy interception
     & InterceptionEfficiency = 0.25_wp,    & !< Efficiency of precipitation interception (rain and snow)
 
@@ -161,6 +180,40 @@ MODULE mo_hydro_constants
 
     ! Parameter for bedrock
     & k_brock                 = 1.E-6_wp         !< Hydraulic conductivity of fractured bedrock [m/s] (Freeze & Cherry, 1979)
+
+  REAL(wp), PARAMETER :: &
+    & matric_pot_min          = -1000.0_wp       !< min value of matric potential ('mpot_act'), tuned [m]
+
+#ifdef __QUINCY_STANDALONE__
+  ! quincy standalone
+  REAL(wp), PARAMETER :: &
+    & k_pwp_a         = 0.031_wp, &              !< empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_c         = 0.487_wp, &              !< empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_s         = -0.024_wp, &             !< empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_sc        = 0.068_wp, &              !< empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_at        = -0.02_wp, &              !< empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_bt        = 0.14_wp, &               !< empirical constant in pedo-transfer function to get water content at PWP
+    & k_fc_a          = 0.299_wp, &              !< empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_c          = 0.195_wp, &              !< empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_s          = -0.251_wp, &             !< empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_sc         = 0.452_wp, &              !< empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_at         = -0.015_wp, &             !< empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_bt         = -0.373_wp, &             !< empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_ct         = 1.293_wp, &              !< empirical constant in pedo-transfer function to get water content at FC
+    & k_sat_a         = 0.078_wp, &              !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_c         = 0.034_wp, &              !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_s         = 0.278_wp, &              !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_sc        = -0.584_wp, &             !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_at        = -0.107_wp, &             !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_bt        = 0.6360_wp, &             !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_ct        = 0.097_wp, &              !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_dt        = 0.043_wp                 !< empirical constant in pedo-transfer function to get water content at SAT
+#endif
+
+  REAL(wp), PARAMETER :: &
+    & frac_wtr_vertical_transport_up_max    = -0.75_wp, &   !< maximum upwards   directed material transport across soil layers, i.e., 'frac_wtr_transp_down_sl'; parameter value: pure assumption
+    & frac_wtr_vertical_transport_down_max  = 0.75_wp, &    !< maximum downwards directed material transport across soil layers, i.e., 'frac_wtr_transp_down_sl'; parameter value: pure assumption
+    & frac_w_lat_loss_max                   = 0.75_wp       !< maximum of 'frac_w_lat_loss_sl', i.e., fraction of lateral (horizontal) water loss; parameter value: identical with frac_wtr_vertical_transport_down_max
 
 #endif
 END MODULE mo_hydro_constants

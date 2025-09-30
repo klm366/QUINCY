@@ -1184,7 +1184,8 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_jsb_physical_constants, ONLY: rhoh2o, dens_snow_min, dens_snow_max, dens_snow
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, dens_snow_min, dens_snow
+    USE mo_hydro_constants,        ONLY: dens_snow_max
 
     LOGICAL,  INTENT(in)    :: l_dynsnow               !< Dynamic snow density is being used
 
@@ -1358,6 +1359,7 @@ CONTAINS
       snow_rdst_out_sbl = snow_rdst_out_sbl - MIN(0._wp, snow_rdst_sbl)
 
       ! Updating snow densities based on redistributed snow
+      ! TODO Needs to be updated according to Mittals new snow density scheme
       IF (snow_rdst_sbl .NE. 0_wp .AND. snow_soil_sbl > 0._wp) THEN
         snow_dens_sbl   = (snow_new_sbl * snow_dens_min &
           &             + snow_fix_sbl * min(snow_dens_fix_sbl, snow_dens_max)) / snow_soil_sbl
