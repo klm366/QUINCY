@@ -472,13 +472,13 @@ CONTAINS
     !< Calculate fire damage to plants (total biomass burned and tree mortality) based on total dead and
     !< live fuel, as in Peiffer et al. (2013)
     !< Also calculate emissions by elements/nutrients so it can be removed from pools
-    CALL sf_calc_emissions(lctlib_emissions_factors, & ! in
+    CALL sf_calc_emissions(lctlib_emission_factors, & ! in
                           SUM(fc_dead_cls, dim=3), & ! 3 = fuel classes index
                           fc_dead_el, &
                           emissions_dead_spc, emissions_dead_el, & ! out
                           mask=is_fire_intense_enough)
-    CALL sf_calc_emissions(lctlib_emissions_factors, & !in
-                          SUM(fc_live_cls, dim=3), & ! 3 = fuel classes index
+    CALL sf_calc_emissions(lctlib_emission_factors, & !in
+                          fc_live, & 
                           fc_live_el, &
                           emissions_live_spc, emissions_live_el, & ! out
                           mask=is_fire_intense_enough)
