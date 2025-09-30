@@ -1926,7 +1926,7 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END PARALLEL
 
     !$ACC END DATA
 
