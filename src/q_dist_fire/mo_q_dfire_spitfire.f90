@@ -652,6 +652,13 @@ CONTAINS
       mask_tile_enabled = mask
     ENDIF
 
+    !< According to Thonicke et al. (2010), which is based on Rothermel et al.,
+    !< fire spread depends on dead fuel availability. If there is no dead fuel,
+    !< then fire cannot spread and we stop the calculation. The same applies if FDI is low.
+    has_dead_fuel = sf_calc_has_any_fuel(dead_fuel(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
+    !< It accounts for 1, 10 and 100 hours fuel classes
+    has_fire_conditions = mask_tile_enabled .AND. has_dead_fuel
+
     sf_ignitions = t_q_sf_ignitions(nc)
     spitfire = t_sf_spitfire(nc, ndeadpools, sf_fuel_live_fuel_nr)
 
@@ -660,7 +667,8 @@ CONTAINS
     !> and own changes for QUINCY.
     nesterov_index = calc_sf_nesterov_index(nc, t_air_max_c, t_air_min_c, &
         precip_daily_mmd, nesterov_index, &
-        o_tsfactor = (dtime / one_day) )
+        o_tsfactor = (dtime / one_day), &
+        mask= has_fire_conditions)
 
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
     w_oi = SUM(dead_fuel, DIM=2) !< 2= dead fuel pools index, fuel class only
@@ -680,12 +688,8 @@ CONTAINS
       spitfire % fdi = max(0._wp, 1._wp  - (fuel_moisture(:, df_sf_omega_o_idx) / moisture_extinction))
     ENDWHERE
 
-    !< According to Thonicke et al. (2010), which is based on Rothermel et al.,
-    !< fire spread depends on dead fuel availability. If there is no dead fuel,
-    !< then fire cannot spread and we stop the calculation. The same applies if FDI is low.
-    has_dead_fuel = sf_calc_has_any_fuel(dead_fuel(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
     !< It accounts for 1, 10 and 100 hours fuel classes
-    has_fire_conditions(:) = mask_tile_enabled .AND. (has_dead_fuel) .AND. (spitfire % fdi > 1.e-6_wp)
+    has_fire_conditions = has_fire_conditions .AND. (spitfire % fdi > 1.e-6_wp)
 
     !> Fire rate of spread (IR, optimum reaction velocity, fuel bulk density, net fuel loading, ...)
     !> calculate the rate of spread following Thonicke et al. (2010)

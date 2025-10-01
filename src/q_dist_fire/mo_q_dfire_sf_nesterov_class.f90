@@ -58,7 +58,8 @@ CONTAINS
   !>
   FUNCTION calc_sf_nesterov_index(nc, tmax_daily, tmin_daily, &
                                &  precipitation_daily, nesterov_index_prev, &
-                               &  o_precip_thd, o_frost_thd, o_tsfactor) &
+                               &  o_precip_thd, o_frost_thd, o_tsfactor, &
+                               &  mask) &
                                &  RESULT (nesterov_index)
 
     INTEGER, INTENT(in)                 :: nc !< dimenion
@@ -70,6 +71,7 @@ CONTAINS
     REAL(wp), OPTIONAL                  :: o_precip_thd             !< redefine precipitation threshold [mm day-1]
     REAL(wp), OPTIONAL                  :: o_frost_thd              !< redefine frosting threshold [Celsius]
     REAL(wp), OPTIONAL                  :: o_tsfactor               !< timestep adjust (daily * tsfactor)
+    LOGICAL, OPTIONAL                   :: mask(nc)                 !< True if gridcell is enabled
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp) :: tdew_daily(nc)          !< dew temperature
     LOGICAL  :: is_frost(nc)
@@ -79,6 +81,7 @@ CONTAINS
     REAL(wp) :: frost_thd               !< rain as frost threshold
     REAL(wp) :: tsfactor
     INTEGER  :: ic
+    LOGICAL  :: mask_in(nc)
     ! ----------------------------------------------------------------------------------------------------- !
     precip_thd = df_sf_precip_trhd
     IF (PRESENT(o_precip_thd)) precip_thd = o_precip_thd
@@ -89,11 +92,14 @@ CONTAINS
     tsfactor = 1._wp
     IF (PRESENT(o_tsfactor)) tsfactor = o_tsfactor
 
+    mask_in = .TRUE.
+    IF (PRESENT(mask)) mask_in = mask
+
     is_frost = (tmin_daily <= frost_thd)
     is_wet_enough = (precipitation_daily > precip_thd)
 
     DO ic=1, nc
-      IF (is_wet_enough(ic) .OR. is_frost(ic)) THEN
+      IF (is_wet_enough(ic) .OR. is_frost(ic) .OR. .NOT. mask_in(ic)) THEN
         ! reset to 0
         nesterov_index(ic) = 0._wp
       ELSE
