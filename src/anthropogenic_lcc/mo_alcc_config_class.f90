@@ -33,7 +33,9 @@ MODULE mo_alcc_config_class
        !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
      CHARACTER(len=SHORT_NAME_LEN) :: scheme
      LOGICAL                       :: l_daily_alcc
-       !< determines if land use change is to be applied on a daily (TRUE) or annual (FALSE) basis
+       !< Determines if land use change is to be applied on a daily (TRUE) or annual (FALSE) basis.
+       ! Note: This also determines the year of the land use maps file to read in: in case of "annual" the file for
+       ! the current year is read, while in case of "daily" the next year's file is read as target land cover map.
    CONTAINS
      PROCEDURE :: Init => Init_alcc_config
   END type t_alcc_config
@@ -112,15 +114,18 @@ CONTAINS
     CASE ('maps')
       CALL message(TRIM(routine), 'Reading land use data from maps.')
       config%scheme=tolower(config%scheme)
+
+      IF (l_daily_alcc) THEN
+        CALL message(TRIM(routine), '... land use change will be applied on a daily basis, reading next years land cover map' &
+          &                       //' as target land cover to reach by the end of the year.')
+      ELSE
+        CALL message(TRIM(routine), '... land use change will be applied on an annual basis,' &
+          &                       //' reading the land cover map of the current year to be applied in the first timestep.')
+      END IF
+
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
     END SELECT
-
-    IF(l_daily_alcc) THEN
-      CALL message(TRIM(routine), '... land use change will be applied on a daily basis.')
-    ELSE
-      CALL message(TRIM(routine), '... land use change will be applied on an annual basis.')
-    END IF
 
     ! Create vertical axis
     ! JN-TODO (RS...): currently I get nr_of_pfts from namelist -> better way? usecase?

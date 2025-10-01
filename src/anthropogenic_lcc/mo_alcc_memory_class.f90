@@ -40,8 +40,8 @@ MODULE mo_alcc_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_alcc_memory
 
     TYPE(t_jsb_var_real3d) :: &
-      & cf_current_year,      & !< This years cover fractions derived from annually read land use data [-].
-      & cf_day_delta            !< Daily change in cover fractions calculated from cf_current_year.
+      & cf_target_year,       & !< Target cover fractions derived from annually read land use data [-].
+      & cf_day_delta            !< Daily change in cover fractions calculated from cf_target_year.
 
   CONTAINS
     PROCEDURE :: Init => Init_alcc_memory
@@ -86,9 +86,9 @@ CONTAINS
 
 !    dsl4jsb_Get_config(ALCC_)
 
-    CALL mem%Add_var('cf_current_year', mem%cf_current_year,                              &
+    CALL mem%Add_var('cf_target_year', mem%cf_target_year,                                &
       & hgrid, pft_vgrid,                                                                 &
-      & t_cf('This years cover fractions read from forcing.'),  &
+      & t_cf('Target cover fractions read from forcing.'),                                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & lrestart=.FALSE., initval_r=-0.1_wp)

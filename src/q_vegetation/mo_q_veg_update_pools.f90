@@ -19,7 +19,7 @@ MODULE mo_q_veg_update_pools
 #ifndef __NO_QUINCY__
 
   USE mo_jsb_control,             ONLY: debug_on
-  USE mo_exception,               ONLY: message, finish
+  USE mo_exception,               ONLY: message, finish, message_text
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
@@ -50,8 +50,8 @@ CONTAINS
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QCANOPY
     USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, Q_SYL_
-    USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
-    USE mo_jsb_grid,                        ONLY: Get_vgrid
+    USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid, t_jsb_grid
+    USE mo_jsb_grid,                        ONLY: Get_vgrid, Get_grid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14
     USE mo_jsb_math_constants,              ONLY: one_day, one_year, eps4, eps8
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14
@@ -70,8 +70,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store             !< the bgcm store of this tile
-    TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_sb          !< Vertical grid
-    INTEGER                           :: nsoil_sb               !< number of soil layers as used/defined by the SB_ process
+    TYPE(t_jsb_grid),         POINTER :: grid                   !< horizontal grid
+    TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_w           !< Vertical grid
+    INTEGER                           :: nsoil_w                !< number of soil layers (water)
     REAL(wp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< grid dimensions
     INTEGER                           :: ic, is, icanopy        !< looping indices
@@ -81,7 +82,9 @@ CONTAINS
     REAL(wp) :: lctlib_sla, lctlib_tau_leaf, lctlib_cn_leaf, lctlib_np_leaf
     REAL(wp) :: hlp
     INTEGER  :: lctlib_phenology_type
-    LOGICAL  :: config_l_use_product_pools, lctlib_ForestFlag, lctlib_CropFlag, config_active_q_syl, config_active_q_agr
+    LOGICAL  :: config_flag_log_negative_vegpool                !< debug option of veg config
+    LOGICAL  :: config_l_use_product_pools, config_active_q_syl, config_active_q_agr
+    LOGICAL  :: lctlib_ForestFlag, lctlib_CropFlag
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -197,9 +200,9 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
     model                 => Get_model(tile%owner_model_id)
-    vgrid_soil_sb         => Get_vgrid('soil_layer_sb')
-    nsoil_sb              =  vgrid_soil_sb%n_levels
-
+    grid                  => Get_grid(model%grid_id)
+    vgrid_soil_w          => Get_vgrid('soil_depth_water')
+    nsoil_w               =  vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -212,9 +215,10 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
+    config_flag_log_negative_vegpool = dsl4jsb_Config(VEG_)%flag_log_negative_vegpool
     config_l_use_product_pools = dsl4jsb_Config(VEG_)%l_use_product_pools
-    config_active_q_syl = dsl4jsb_Config(Q_SYL_)%active
-    config_active_q_agr = dsl4jsb_Config(Q_AGR_)%active
+    config_active_q_syl        = dsl4jsb_Config(Q_SYL_)%active
+    config_active_q_agr        = dsl4jsb_Config(Q_AGR_)%active
     lctlib_ForestFlag   = dsl4jsb_Lctlib_param(ForestFlag)
     lctlib_CropFlag     = dsl4jsb_Lctlib_param(CropFlag)
 
@@ -375,7 +379,7 @@ CONTAINS
 
        !>  1.3 Add mycorrhiza export
        !>
-       DO is = 1, nsoil_sb
+       DO is = 1, nsoil_w
         veg_growth_mt(ix_labile, ixC, ic)   = veg_growth_mt(ix_labile, ixC, ic)   + &
           &                                   sb_mycorrhiza_export_mt(ixC, ic, is)    * soil_depth_sl(ic,is)
         veg_growth_mt(ix_labile, ixC13, ic) = veg_growth_mt(ix_labile, ixC13, ic) + &
@@ -470,25 +474,29 @@ CONTAINS
         END DO
       END DO
 
-      ! @TODO
-      !>    1.8.1 quick-fix ensure veg_pool does not become negative
-      !>          apply only with IQ as it changes results with QS
+      !>    1.8.1 ensure veg_pool does not become negative - quick-fix and debug
       !>
-      !   ==> need additional debug code
-      !       to output litterfall & growth fluxes + lat/lon/PFT for grid cells where veg_pool gets negative
-#ifdef __QUINCY_STANDALONE__
-#else
       DO ic = 1, nc
         DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
           IF (model%config%is_element_used(id_elem)) THEN
             ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
             DO ix_comp = 1, nr_of_veg_bgcm_comp
-              veg_pool_mt(ix_comp, ix_elem, ic) = MAX(0.0_wp, veg_pool_mt(ix_comp, ix_elem, ic))
+              ! set a negative pool to zero (breaking mass balance !)
+              ! and write message to LOG (if enabled)
+              IF (veg_pool_mt(ix_comp, ix_elem, ic) < 0.0_wp) THEN
+                IF (config_flag_log_negative_vegpool) THEN
+                  WRITE (message_text,*) 'Negative value of vegetation pool at tile ', tile%name, &
+                    &                    ' at (lon:lat) ', grid%lon(ic,iblk), ':', grid%lat(ic,iblk), &
+                    &                    ', compartment: ', ix_comp, ' , element: ', ix_elem, &
+                    &                    ', value ', veg_pool_mt(ix_comp, ix_elem, ic), ' is set to zero here'
+                  CALL message(TRIM(routine), message_text)
+                END IF
+                veg_pool_mt(ix_comp, ix_elem, ic) = 0.0_wp
+              END IF
             END DO
           END IF
         END DO
       END DO
-#endif
 
       !>    1.8.2 Radioactive decay of C14
       !>

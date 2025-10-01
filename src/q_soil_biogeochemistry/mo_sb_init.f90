@@ -21,7 +21,8 @@ MODULE mo_sb_init
   USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: finish, message
   USE mo_jsb_control,           ONLY: debug_on
-  USE mo_jsb_math_constants,    ONLY: eps4, eps8
+  USE mo_jsb_math_constants,    ONLY: eps4, eps8, one_day
+  USE mo_jsb_impl_constants,    ONLY: def_parameters
 
   USE mo_jsb_class,             ONLY: Get_model
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
@@ -45,7 +46,7 @@ MODULE mo_sb_init
   PRIVATE
   PUBLIC :: sb_init
 #ifndef __QUINCY_STANDALONE__
-  PUBLIC :: provide_n_and_p_deposition
+  PUBLIC :: provide_n_and_p_deposition, sb_read_states
 #endif
 
   TYPE t_sb_init_vars
@@ -110,12 +111,14 @@ CONTAINS
   SUBROUTINE sb_init_ic_bc(tile)
     USE mo_jsb_lctlib_class,              ONLY: t_lctlib_element
     USE mo_q_assimi_constants,            ONLY: IC3PHOT
-    USE mo_q_assimi_process,              ONLY: discrimination_ps
+    USE mo_q_assimi_process,              ONLY: discrimination_ps_c13, discrimination_ps_c14
     USE mo_q_assimi_parameters,           ONLY: CiCa_default_C3, CiCa_default_C4
     USE mo_atmland_constants,             ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
       &                                         def_co2_deltaC13, def_co2_deltaC14
     USE mo_sb_constants,                  ONLY: microbial_cue_max, microbial_nue, microbial_pue, microbial_cn, microbial_np, &
-      &                                         k_weath_mineral
+      &   k_weath_mineral, &
+      &   temp_freeze_thres_bio, temp_freeze_window_bio, frac_woody2dec_litter, frac_litter2fast_som, f_nit_noy, f_nit_n2o, &
+      &   vmax_nitrification, vmax_denitrification, t_ref_decomposition, ea_decomposition, ed_decomposition
     USE mo_isotope_util,                  ONLY: calc_fractionation, calc_mixing_ratio_C14C
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SB_)
@@ -130,8 +133,8 @@ CONTAINS
     TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store            !< the bgcm store of this tile
     TYPE(t_lctlib_element), POINTER :: lctlib                !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_grid),       POINTER :: hgrid                 !< Horizontal grid
-    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_sb         !< Vertical grid
-    INTEGER                         :: nsoil_sb              !< number of soil layers as used/defined by the SB_ process
+    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_w          !< Vertical grid
+    INTEGER                         :: nsoil_w               !< number of soil layers as used/defined by the SB_ process
     REAL(wp)                        :: hlp1                  !< helper var
     REAL(wp)                        :: hlp_frac_c13          !< helper var
     REAL(wp)                        :: hlp_frac_c14          !< helper var
@@ -217,8 +220,8 @@ CONTAINS
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     hgrid         => Get_grid(model%grid_id)
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
     nblks         =  hgrid%nblks
     nproma        =  hgrid%nproma
     ! ----------------------------------------------------------------------------------------------------- !
@@ -293,6 +296,77 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SB_,    volume_min_sl)
     ! ----------------------------------------------------------------------------------------------------- !
 
+    !>0.8 apply calibration of soil-biogeochemistry constants if enabled
+    !>
+    IF (dsl4jsb_Config(SB_)%flag_apply_nml_parameters) THEN
+      ! temp_freeze_thres_bio
+      IF (dsl4jsb_Config(SB_)%nml_temp_freeze_thres_bio > def_parameters) THEN
+        temp_freeze_thres_bio = dsl4jsb_Config(SB_)%nml_temp_freeze_thres_bio
+        !$ACC UPDATE DEVICE(temp_freeze_thres_bio) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: temp_freeze_thres_bio')
+      END IF
+      ! temp_freeze_window_bio
+      IF (dsl4jsb_Config(SB_)%nml_temp_freeze_window_bio > def_parameters) THEN
+        temp_freeze_window_bio = dsl4jsb_Config(SB_)%nml_temp_freeze_window_bio
+        !$ACC UPDATE DEVICE(temp_freeze_window_bio) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: temp_freeze_window_bio')
+      END IF
+      ! frac_woody2dec_litter
+      IF (dsl4jsb_Config(SB_)%nml_frac_woody2dec_litter > def_parameters) THEN
+        frac_woody2dec_litter = dsl4jsb_Config(SB_)%nml_frac_woody2dec_litter
+        !$ACC UPDATE DEVICE(frac_woody2dec_litter) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: frac_woody2dec_litter')
+      END IF
+      ! frac_litter2fast_som
+      IF (dsl4jsb_Config(SB_)%nml_frac_litter2fast_som > def_parameters) THEN
+        frac_litter2fast_som = dsl4jsb_Config(SB_)%nml_frac_litter2fast_som
+        !$ACC UPDATE DEVICE(frac_litter2fast_som) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: frac_litter2fast_som')
+      END IF
+      ! f_nit_noy
+      IF (dsl4jsb_Config(SB_)%nml_f_nit_noy > def_parameters) THEN
+        f_nit_noy = dsl4jsb_Config(SB_)%nml_f_nit_noy
+        !$ACC UPDATE DEVICE(f_nit_noy) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: f_nit_noy')
+      END IF
+      ! f_nit_n2o
+      IF (dsl4jsb_Config(SB_)%nml_f_nit_n2o > def_parameters) THEN
+        f_nit_n2o = dsl4jsb_Config(SB_)%nml_f_nit_n2o
+        !$ACC UPDATE DEVICE(f_nit_n2o) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: f_nit_n2o')
+      END IF
+      ! vmax_nitrification
+      IF (dsl4jsb_Config(SB_)%nml_vmax_nitrification > def_parameters) THEN
+        vmax_nitrification = dsl4jsb_Config(SB_)%nml_vmax_nitrification / one_day * 1.E6_wp
+        !$ACC UPDATE DEVICE(vmax_nitrification) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: vmax_nitrification')
+      END IF
+      ! vmax_denitrification
+      IF (dsl4jsb_Config(SB_)%nml_vmax_denitrification > def_parameters) THEN
+        vmax_denitrification = dsl4jsb_Config(SB_)%nml_vmax_denitrification / one_day * 1.E6_wp
+        !$ACC UPDATE DEVICE(vmax_denitrification) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: vmax_denitrification')
+      END IF
+      ! t_ref_decomposition
+      IF (dsl4jsb_Config(SB_)%nml_t_ref_decomposition > def_parameters) THEN
+        t_ref_decomposition = dsl4jsb_Config(SB_)%nml_t_ref_decomposition
+        !$ACC UPDATE DEVICE(t_ref_decomposition) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: t_ref_decomposition')
+      END IF
+      ! ea_decomposition
+      IF (dsl4jsb_Config(SB_)%nml_ea_decomposition > def_parameters) THEN
+        ea_decomposition = dsl4jsb_Config(SB_)%nml_ea_decomposition
+        !$ACC UPDATE DEVICE(ea_decomposition) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: ea_decomposition')
+      END IF
+      ! ed_decomposition
+      IF (dsl4jsb_Config(SB_)%nml_ed_decomposition > def_parameters) THEN
+        ed_decomposition = dsl4jsb_Config(SB_)%nml_ed_decomposition
+        !$ACC UPDATE DEVICE(ed_decomposition) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: ed_decomposition')
+      END IF
+    END IF
+
     !>0.9 init bgcm with zero
     !>  NOTE: reading the restart files is done after init
     !>  NOTE: not using a "Get" function in process init for bgcm
@@ -307,37 +381,33 @@ CONTAINS
     !>
     ! C13
     IF (lctlib%ps_pathway == IC3PHOT) THEN
-      hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, &
-        &                      def_co2_mixing_ratio, &
-        &                      'C13', &
-        &                      lctlib%ps_pathway)
+      hlp1 = discrimination_ps_c13(CiCa_default_C3 * def_co2_mixing_ratio, &
+        &                          def_co2_mixing_ratio, &
+        &                          lctlib%ps_pathway)
     ELSE
-      hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, &
-        &                      def_co2_mixing_ratio, &
-        &                      'C13', &
-        &                      lctlib%ps_pathway)
+      hlp1 = discrimination_ps_c13(CiCa_default_C4 * def_co2_mixing_ratio, &
+        &                          def_co2_mixing_ratio, &
+        &                          lctlib%ps_pathway)
     ENDIF
     hlp_frac_c13 = calc_fractionation(def_co2_mixing_ratio, &
       &                               def_co2_mixing_ratio_C13, &
       &                               hlp1 )
     ! C14
     IF (lctlib%ps_pathway == IC3PHOT) THEN
-      hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, &
-        &                      def_co2_mixing_ratio, &
-        &                      'C14', &
-        &                      lctlib%ps_pathway)
+      hlp1 = discrimination_ps_c14(CiCa_default_C3 * def_co2_mixing_ratio, &
+        &                          def_co2_mixing_ratio, &
+        &                          lctlib%ps_pathway)
     ELSE
-      hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, &
-        &                      def_co2_mixing_ratio, &
-        &                      'C14', &
-        &                      lctlib%ps_pathway)
+      hlp1 = discrimination_ps_c14(CiCa_default_C4 * def_co2_mixing_ratio, &
+        &                          def_co2_mixing_ratio, &
+        &                          lctlib%ps_pathway)
     ENDIF
     hlp_frac_c14 = calc_mixing_ratio_C14C(def_co2_deltaC13, &
       &                                   def_co2_deltaC14 - hlp1)
 
     !>  1.2 init site-specific soil properties
     !>
-    ph_sl(:,:,:)              = SPREAD(sb_init_vars%soil_ph(:,:), DIM = 2, ncopies = nsoil_sb)
+    ph_sl(:,:,:)              = SPREAD(sb_init_vars%soil_ph(:,:), DIM = 2, ncopies = nsoil_w)
     Qmax_AlFe_cor(:,:,:)      = 1._wp                           !< ... docu ...
 
     !>  1.3 init SB_ variables from constants
@@ -379,7 +449,7 @@ CONTAINS
     CASE("simple_1d")
       CALL sb_init_simple_sm( &
         & nproma, &                                   ! in
-        & nsoil_sb, &
+        & nsoil_w, &
         & nblks, &
         & num_sl_above_bedrock(:,:), &
         & lctlib%growthform, &
@@ -387,11 +457,11 @@ CONTAINS
         & lctlib%k_som_slow_init, &
         & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
         & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
-        & SPREAD(sb_init_vars%qmax_org_fine_particle(:,:), DIM = 2, ncopies = nsoil_sb), &
-        & SPREAD(sb_init_vars%soil_p_labile(:,:), DIM = 2, ncopies = nsoil_sb), &
-        & SPREAD(sb_init_vars%soil_p_slow(:,:), DIM = 2, ncopies = nsoil_sb), &
-        & SPREAD(sb_init_vars%soil_p_occluded(:,:), DIM = 2, ncopies = nsoil_sb), &
-        & SPREAD(sb_init_vars%soil_p_primary(:,:), DIM = 2, ncopies = nsoil_sb), &
+        & SPREAD(sb_init_vars%qmax_org_fine_particle(:,:), DIM = 2, ncopies = nsoil_w), &
+        & SPREAD(sb_init_vars%soil_p_labile(:,:), DIM = 2, ncopies = nsoil_w), &
+        & SPREAD(sb_init_vars%soil_p_slow(:,:), DIM = 2, ncopies = nsoil_w), &
+        & SPREAD(sb_init_vars%soil_p_occluded(:,:), DIM = 2, ncopies = nsoil_w), &
+        & SPREAD(sb_init_vars%soil_p_primary(:,:), DIM = 2, ncopies = nsoil_w), &
         & dsl4jsb_Config(SB_)%soil_p_depth, &
         & soil_depth_sl(:,:,:), &
         & soil_lay_width_sl(:,:,:), &
@@ -446,17 +516,17 @@ CONTAINS
     CASE("jsm")
       CALL sb_init_jsm( &
         & nproma, &                                   ! in
-        & nsoil_sb, &
+        & nsoil_w, &
         & nblks, &
         & num_sl_above_bedrock(:,:), &
         & lctlib%growthform, &
         & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
         & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
-        & SPREAD(sb_init_vars%qmax_org_fine_particle(:,:), DIM = 2, ncopies = nsoil_sb), &
-        & SPREAD(sb_init_vars%soil_p_labile(:,:), DIM = 2, ncopies = nsoil_sb), &
-        & SPREAD(sb_init_vars%soil_p_slow(:,:), DIM = 2, ncopies = nsoil_sb), &
-        & SPREAD(sb_init_vars%soil_p_occluded(:,:), DIM = 2, ncopies = nsoil_sb), &
-        & SPREAD(sb_init_vars%soil_p_primary(:,:), DIM = 2, ncopies = nsoil_sb), &
+        & SPREAD(sb_init_vars%qmax_org_fine_particle(:,:), DIM = 2, ncopies = nsoil_w), &
+        & SPREAD(sb_init_vars%soil_p_labile(:,:), DIM = 2, ncopies = nsoil_w), &
+        & SPREAD(sb_init_vars%soil_p_slow(:,:), DIM = 2, ncopies = nsoil_w), &
+        & SPREAD(sb_init_vars%soil_p_occluded(:,:), DIM = 2, ncopies = nsoil_w), &
+        & SPREAD(sb_init_vars%soil_p_primary(:,:), DIM = 2, ncopies = nsoil_w), &
         & dsl4jsb_Config(SB_)%soil_p_depth, &
         & soil_depth_sl(:,:,:), &
         & soil_lay_width_sl(:,:,:), &
@@ -579,10 +649,10 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_w
     INTEGER                     :: nproma
     INTEGER                     :: nblks
-    INTEGER                     :: nsoil_sb
+    INTEGER                     :: nsoil_w
     CHARACTER(len=*), PARAMETER :: routine = modname//':sb_qs_read_init_vars'
 
     IF (debug_on()) CALL message(routine, 'Reading/setting SB_ init vars')
@@ -591,8 +661,8 @@ CONTAINS
     hgrid  => Get_grid(model%grid_id)
     nproma = hgrid%Get_nproma()
     nblks  = hgrid%Get_nblks()
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
 
     ALLOCATE( &
       & sb_init_vars%usda_taxonomy_class     (nproma, nblks),       &
@@ -670,11 +740,11 @@ CONTAINS
     REAL(wp), POINTER           :: ptr_2D(:, :)
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_w
     TYPE(t_input_file)          :: input_file
     INTEGER                     :: nproma
     INTEGER                     :: nblks
-    INTEGER                     :: nsoil_sb
+    INTEGER                     :: nsoil_w
     CHARACTER(len=*), PARAMETER :: routine = modname//':sb_read_init_vars'
 
     IF (debug_on()) CALL message(routine, 'Reading/setting SB_ init vars')
@@ -683,8 +753,8 @@ CONTAINS
     hgrid  => Get_grid(model%grid_id)
     nproma = hgrid%Get_nproma()
     nblks  = hgrid%Get_nblks()
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
 
     ALLOCATE( &
       & sb_init_vars%usda_taxonomy_class     (nproma, nblks),       &
@@ -785,7 +855,7 @@ CONTAINS
   !>
   SUBROUTINE sb_init_simple_sm( &
     & nproma, &
-    & nsoil_sb, &
+    & nsoil_w, &
     & nblks, &
     & num_sl_above_bedrock, &
     & lctlib_growthform, &
@@ -867,7 +937,7 @@ CONTAINS
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                    INTENT(in)    :: nproma
-    INTEGER,                    INTENT(in)    :: nsoil_sb
+    INTEGER,                    INTENT(in)    :: nsoil_w
     INTEGER,                    INTENT(in)    :: nblks
     REAL(wp),                   INTENT(in)    :: num_sl_above_bedrock(:,:)
     INTEGER,                    INTENT(in)    :: lctlib_growthform
@@ -960,14 +1030,14 @@ CONTAINS
     !>
     ALLOCATE(hlp1(nproma, nblks))
     ALLOCATE(hlp2(nproma, nblks))
-    ALLOCATE(weight_fast_sl(nproma, nsoil_sb, nblks))
-    ALLOCATE(weight_slow_sl(nproma, nsoil_sb, nblks))
+    ALLOCATE(weight_fast_sl(nproma, nsoil_w, nblks))
+    ALLOCATE(weight_slow_sl(nproma, nsoil_w, nblks))
     ALLOCATE(init_soluable_litter(nproma, nblks))
     ALLOCATE(init_polymeric_litter(nproma, nblks))
     ALLOCATE(init_fast(nproma, nblks))
     ALLOCATE(init_slow(nproma, nblks))
-    ALLOCATE(p_labile(nproma, nsoil_sb, nblks))
-    ALLOCATE(p_labile_slow_site(nproma, nsoil_sb, nblks))
+    ALLOCATE(p_labile(nproma, nsoil_w, nblks))
+    ALLOCATE(p_labile_slow_site(nproma, nsoil_w, nblks))
 
     !>1.0 init
     !>
@@ -1036,7 +1106,7 @@ CONTAINS
     DO iblk = 1,nblks
       CALL calc_bulk_soil_carbon( &
         & nproma, &                           ! in
-        & nsoil_sb, &
+        & nsoil_w, &
         & num_sl_above_bedrock(:,iblk), &
         & TRIM(sb_model_scheme), &
         & sb_pool_mt_domain(:,:,:,:,iblk), &  ! in
@@ -1067,7 +1137,7 @@ CONTAINS
       DO iblk = 1,nblks
         CALL init_sb_soil_properties_spp1685_sites( &
           & nproma, &                   ! in
-          & nsoil_sb, &
+          & nsoil_w, &
           & site_ID_spp1685, &          ! in
           & ph_sl(:,:,iblk), &          ! out
           & Qmax_AlFe_cor(:,:,iblk) )   ! out
@@ -1114,7 +1184,7 @@ CONTAINS
       p_labile_slow_site(:,:,:) = eps4
       ! if 'qmax_po4(:,:,:) > eps8'
       DO iblk = 1,nblks
-        DO is = 1,nsoil_sb
+        DO is = 1,nsoil_w
           DO ic = 1,nproma
             IF (qmax_po4(ic, is, iblk) > eps8) THEN
               p_labile_slow_site(ic, is, iblk) = MAX(qmax_fast_po4(ic, is, iblk) / qmax_po4(ic, is, iblk), eps4)
@@ -1225,7 +1295,7 @@ CONTAINS
         ! for SPP sites, read in initial state from site-specific input data
         CALL init_sb_soil_p_pools_spp1685_sites( &
           & nproma, &
-          & nsoil_sb, &
+          & nsoil_w, &
           & soil_lay_depth_center_sl(:,:,iblk), &
           & soil_p_labile(:,:,iblk), &
           & soil_p_slow(:,:,iblk), &
@@ -1261,7 +1331,7 @@ CONTAINS
     DO iblk = 1,nblks
       CALL init_soil_p_pools( &
         & nproma, &                         ! in
-        & nsoil_sb, &
+        & nsoil_w, &
         & num_sl_above_bedrock(:, iblk), &
         & soil_lay_depth_center_sl(:,:,iblk), &
         & flag_sb_double_langmuir, &
@@ -1300,7 +1370,7 @@ CONTAINS
   !>
   SUBROUTINE sb_init_jsm( &
     & nproma, &
-    & nsoil_sb, &
+    & nsoil_w, &
     & nblks, &
     & num_sl_above_bedrock, &
     & lctlib_growthform, &
@@ -1379,7 +1449,7 @@ CONTAINS
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                    INTENT(in)    :: nproma
-    INTEGER,                    INTENT(in)    :: nsoil_sb
+    INTEGER,                    INTENT(in)    :: nsoil_w
     INTEGER,                    INTENT(in)    :: nblks
     REAL(wp),                   INTENT(in)    :: num_sl_above_bedrock(:,:)
     INTEGER,                    INTENT(in)    :: lctlib_growthform
@@ -1477,11 +1547,11 @@ CONTAINS
 
     !>0.9 allocate local var
     !>
-    ALLOCATE(p_labile(nproma, nsoil_sb, nblks))
-    ALLOCATE(p_labile_slow_site(nproma, nsoil_sb, nblks))
-    ALLOCATE(arr_hlp7(nproma, nsoil_sb, nblks))
-    ALLOCATE(arr_hlp8(nproma, nsoil_sb, nblks))
-    ALLOCATE(arr_hlp9(nproma, nsoil_sb, nblks))
+    ALLOCATE(p_labile(nproma, nsoil_w, nblks))
+    ALLOCATE(p_labile_slow_site(nproma, nsoil_w, nblks))
+    ALLOCATE(arr_hlp7(nproma, nsoil_w, nblks))
+    ALLOCATE(arr_hlp8(nproma, nsoil_w, nblks))
+    ALLOCATE(arr_hlp9(nproma, nsoil_w, nblks))
 
     !>1.0 init
     !>
@@ -1498,7 +1568,7 @@ CONTAINS
     IF (lctlib_growthform == ITREE) THEN
       sb_pool_mt_domain(ix_woody_litter, ixC, :, 1, :)  = def_sb_pool_woody_litter / molar_mass_C / soil_lay_width_sl(:,1,:)
     ENDIF
-    DO is = 2,nsoil_sb
+    DO is = 2,nsoil_w
       sb_pool_mt_domain(ix_soluable_litter, ixC, :, is, :)  = def_sb_pool_metabol_litter /  molar_mass_C &
         &                                                 / soil_lay_width_sl(:, is, :) &
         &                                                 * (1.0_wp - frac_prod_not_root) * root_fraction_sl(:, is, :)
@@ -1620,9 +1690,9 @@ CONTAINS
     ! initial values of soluble nh4 and no3
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        nh4_solute(ic, :, iblk)      = nh4_solute_prescribe / soil_lay_depth_ubound_sl(ic, nsoil_sb, iblk)
+        nh4_solute(ic, :, iblk)      = nh4_solute_prescribe / soil_lay_depth_ubound_sl(ic, nsoil_w, iblk)
         nh4_n15_solute(ic, :, iblk)  = nh4_solute(ic, :, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-        no3_solute(ic, :, iblk)      = no3_solute_prescribe / soil_lay_depth_ubound_sl(ic, nsoil_sb, iblk)
+        no3_solute(ic, :, iblk)      = no3_solute_prescribe / soil_lay_depth_ubound_sl(ic, nsoil_w, iblk)
         no3_n15_solute(ic, :, iblk)  = no3_solute(ic, :, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
       END DO
     END DO
@@ -1630,7 +1700,7 @@ CONTAINS
     DO iblk = 1,nblks
       CALL calc_bulk_soil_carbon( &
         & nproma, &                           ! in
-        & nsoil_sb, &
+        & nsoil_w, &
         & num_sl_above_bedrock(:,iblk), &
         & TRIM(sb_model_scheme), &
         & sb_pool_mt_domain(:,:,:,:,iblk), &         ! in
@@ -1663,7 +1733,7 @@ CONTAINS
       DO iblk = 1,nblks
         CALL init_sb_soil_properties_spp1685_sites( &
           & nproma, &                   ! in
-          & nsoil_sb, &
+          & nsoil_w, &
           & site_ID_spp1685, &          ! in
           & ph_sl(:,:,iblk), &          ! out
           & Qmax_AlFe_cor(:,:,iblk) )   ! out
@@ -1711,7 +1781,7 @@ CONTAINS
       p_labile_slow_site(:,:,:) = eps4
       ! if 'qmax_po4(:,:,:) > eps8'
       DO iblk = 1,nblks
-        DO is = 1,nsoil_sb
+        DO is = 1,nsoil_w
           DO ic = 1,nproma
             IF (qmax_po4(ic, is, iblk) > eps8) THEN
               p_labile_slow_site(ic, is, iblk) = MAX(qmax_fast_po4(ic, is, iblk) / qmax_po4(ic, is, iblk), eps4)
@@ -1759,7 +1829,7 @@ CONTAINS
         ! for SPP sites, read in initial state from site-specific input data
         CALL init_sb_soil_p_pools_spp1685_sites( &
           & nproma, &
-          & nsoil_sb, &
+          & nsoil_w, &
           & soil_lay_depth_center_sl(:,:,iblk), &
           & soil_p_labile(:,:,iblk), &
           & soil_p_slow(:,:,iblk), &
@@ -1796,7 +1866,7 @@ CONTAINS
     DO iblk = 1,nblks
       CALL init_soil_p_pools( &
         & nproma, &                               ! in
-        & nsoil_sb, &
+        & nsoil_w, &
         & num_sl_above_bedrock(:, iblk), &
         & soil_lay_depth_center_sl(:,:,iblk), &
         & flag_sb_double_langmuir, &
@@ -1829,7 +1899,7 @@ CONTAINS
     ! initialise diffusion by bioturbation
     DO iblk = 1,nblks
       k_bioturb(:,:,iblk) = calc_bioturbation_rate(nproma, &
-        &                                          nsoil_sb, &
+        &                                          nsoil_w, &
         &                                          num_sl_above_bedrock(:,iblk), &
         &                                          soil_depth_sl(:,:,iblk), &
         &                                          bulk_dens_corr_sl(:,:,iblk), &
@@ -1899,11 +1969,7 @@ CONTAINS
     sb_pool_mt_domain(ix_dom_assoc, ixC14, :, :, :) = sb_pool_mt_domain(ix_dom_assoc, ixC, :, :, :) * hlp_frac_c14
     sb_pool_mt_domain(ix_dom_assoc, ixN15, :, :, :) = sb_pool_mt_domain(ix_dom_assoc, ixN, :, :, :) / &
       &                                        (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-    ! fungi and mycorrhiza
-    sb_pool_mt_domain(ix_fungi, ixC13, :, :, :) = sb_pool_mt_domain(ix_fungi, ixC, :, :, :) * hlp_frac_c13
-    sb_pool_mt_domain(ix_fungi, ixC14, :, :, :) = sb_pool_mt_domain(ix_fungi, ixC, :, :, :) * hlp_frac_c14
-    sb_pool_mt_domain(ix_fungi, ixN15, :, :, :) = sb_pool_mt_domain(ix_fungi, ixN, :, :, :) / &
-      &                                    (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+    ! mycorrhiza
     sb_pool_mt_domain(ix_mycorrhiza, ixC13, :, :, :) = sb_pool_mt_domain(ix_mycorrhiza, ixC, :, :, :) * hlp_frac_c13
     sb_pool_mt_domain(ix_mycorrhiza, ixC14, :, :, :) = sb_pool_mt_domain(ix_mycorrhiza, ixC, :, :, :) * hlp_frac_c14
     sb_pool_mt_domain(ix_mycorrhiza, ixN15, :, :, :) = sb_pool_mt_domain(ix_mycorrhiza, ixN, :, :, :) / &
@@ -1922,7 +1988,7 @@ CONTAINS
   !> assuming that the soil P pool sizes are correlated with soil weight
   !>
   SUBROUTINE init_soil_p_pools(nc, &
-                               nsoil_sb, &
+                               nsoil_w, &
                                num_sl_above_bedrock, &
                                soil_lay_depth_center_sl, &
                                flag_sb_double_langmuir, &
@@ -1938,20 +2004,20 @@ CONTAINS
     USE mo_q_sb_jsm_processes,     ONLY: calc_fast_po4
 
     INTEGER,                          INTENT(in)     :: nc                        !< dimensions
-    INTEGER                         , INTENT(in)     :: nsoil_sb                  !< number of soil layers as used/defined by the SB_ process
+    INTEGER                         , INTENT(in)     :: nsoil_w                   !< number of soil layers (water)
     REAL(wp), DIMENSION(nc)         , INTENT(in)     :: num_sl_above_bedrock      !< number of soil layers with thickness > eps8
-    REAL(wp), DIMENSION(nc,nsoil_sb), INTENT(in)     :: soil_lay_depth_center_sl  !< depth at the center of each soil layer
+    REAL(wp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_lay_depth_center_sl  !< depth at the center of each soil layer
     LOGICAL                         , INTENT(in)     :: flag_sb_double_langmuir   !< T: double Langmuir; F: traditional Langmuir
-    REAL(wp), DIMENSION(nc,nsoil_sb), INTENT(in)     :: soil_depth_sl, &      !< soil depth per soil layer, [m]
+    REAL(wp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_depth_sl, &      !< soil depth per soil layer, [m]
                                                         root_fraction_sl, &   !<
                                                         bulk_dens_sl, &       !< corrected soil bulk density per soil layer, [kg m-3]
                                                         p_labile_slow_ratio   !< ratio between labile and labile+slow P pools
     REAL(wp)                        , INTENT(in)     :: soil_p_depth          !< soil depth of the soil P maps
-    REAL(wp), DIMENSION(nc,nsoil_sb), INTENT(in)     :: soil_p_labile, &      !< total labile P pool (solute + assoc_fast) of the soil P maps, [g m-2]
+    REAL(wp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_p_labile, &      !< total labile P pool (solute + assoc_fast) of the soil P maps, [g m-2]
                                                         soil_p_slow, &        !< total slow P pool (secondary P) of the soil P maps, [g m-2]
                                                         soil_p_occluded, &    !< total occluded P pool of the soil P maps, [g m-2]
                                                         soil_p_primary        !< total primary P pool of the soil P maps, [g m-2]
-    REAL(wp), DIMENSION(nc,nsoil_sb), INTENT(inout)  :: po4_solute, &         !< soluble Pi pool per soil layer, [mol m-3]
+    REAL(wp), DIMENSION(nc,nsoil_w) , INTENT(inout)  :: po4_solute, &         !< soluble Pi pool per soil layer, [mol m-3]
                                                         po4_assoc_fast, &     !< fast minerally associated PO4 pool per soil layer, [mol m-3]
                                                         po4_assoc_slow, &     !< slow minerally associated PO4 pool per soil layer, [mol m-3]
                                                         po4_occluded, &       !< occluded PO4 pool per soil layer, [mol m-3]
@@ -1969,10 +2035,19 @@ CONTAINS
     REAL(wp), DIMENSION(nc)                          :: hlp1, hlp2
     REAL(wp), DIMENSION(nc)                          :: hlp3, hlp4
     LOGICAL,  DIMENSION(nc)                          :: aflag
-    REAL(wp), DIMENSION(nc,nsoil_sb)                 :: soil_weight_sl, &                 !< soil weight per soil layer
+    REAL(wp), DIMENSION(nc,nsoil_w)                  :: soil_weight_sl, &                 !< soil weight per soil layer
                                                         arr_hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_p_pools'
 
+
+    !> 0.8 init local variables
+    !!
+    soil_p_weight(:)    = eps8
+    soil_p_layer(:)     = 1.0_wp
+    hlp1(:)             = 0.0_wp
+    hlp2(:)             = 0.0_wp
+    aflag(:)            = .TRUE.
+    soil_weight_sl(:,:) = 0.0_wp
 
     !> 0.9 init output variables
     !!
@@ -1984,9 +2059,7 @@ CONTAINS
 
     !> 1.0 calculate the total soil weight up to the soil_p_depth,
     !! and the soil weight per soil layer
-    hlp1(:)  = 0._wp
-    hlp2(:)  = 0._wp
-    aflag(:) = .TRUE.
+    !!
     !> NOTE at the moment the soil_p_* values are identical across soil layers, hence, using the value from sl 1
     rhlp1(:) = soil_p_slow(:,1) + soil_p_labile(:,1) + soil_p_occluded(:,1) + soil_p_primary(:,1)
     DO ic = 1,nc
@@ -2062,6 +2135,75 @@ CONTAINS
   END SUBROUTINE init_soil_p_pools
 
 #ifndef __QUINCY_STANDALONE__
+  ! ====================================================================================================== !
+  !
+  !> Read soil biogeochemistry state from file (after init/restart)
+  !> (variables should be in sync with those listed in ./scripts/quincy_sb_and_veg_state_from_restart_file.sh)
+  !
+  ! ======================================================================================================= !
+  SUBROUTINE sb_read_states(tile)
+    USE mo_jsb_io_netcdf,           ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_util,                    ONLY: read_3D_var
+    USE mo_lnd_bgcm_store,          ONLY: read_bgcm_from_file
+    dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_memory(SB_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),      POINTER :: model            !< the model
+    TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store       !< the bgcm store of this tile
+    TYPE(t_input_file)              :: input_file       !< file with to be read sb state variables
+    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_w     !< vertical grid for sl variables
+    INTEGER                         :: nsoil_w          !< number of soil layers as used/defined by the SB_ process
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sb_read_states'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Real3D_onDomain :: microbial_cue_eff_tmic_mavg
+    dsl4jsb_Real3D_onDomain :: microbial_nue_eff_tmic_mavg
+    dsl4jsb_Real3D_onDomain :: microbial_pue_eff_tmic_mavg
+    dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_c_mavg
+    dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_n_mavg
+    dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_p_mavg
+    ! ----------------------------------------------------------------------------------------------------- !
+    model  => Get_model(tile%owner_model_id)
+    vgrid_soil_w => Get_vgrid('soil_depth_water')
+    nsoil_w = vgrid_soil_w%n_levels
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_var3D_onDomain(SB_, microbial_cue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onDomain(SB_, microbial_nue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onDomain(SB_, microbial_pue_eff_tmic_mavg)
+    IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == 'jsm') THEN
+      dsl4jsb_Get_var3D_onDomain(SB_, enzyme_frac_poly_c_mavg)
+      dsl4jsb_Get_var3D_onDomain(SB_, enzyme_frac_poly_n_mavg)
+      dsl4jsb_Get_var3D_onDomain(SB_, enzyme_frac_poly_p_mavg)
+    END IF
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on()) CALL message(TRIM(routine), ' for tile '//TRIM(tile%name))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%ic_filename), model%grid_id)
+
+    IF (ASSOCIATED(tile%bgcm_store)) THEN
+      bgcm_store => tile%bgcm_store
+      CALL read_bgcm_from_file(bgcm_store, SB_BGCM_POOL_ID, "sb", tile%name, routine, input_file, 'soillev', nsoil_w)
+    END IF
+
+    CALL read_3D_var(input_file, microbial_cue_eff_tmic_mavg, 'sb_microbial_cue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_w)
+    CALL read_3D_var(input_file, microbial_nue_eff_tmic_mavg, 'sb_microbial_nue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_w)
+    CALL read_3D_var(input_file, microbial_pue_eff_tmic_mavg, 'sb_microbial_pue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_w)
+
+    IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == 'jsm') THEN
+      CALL read_3D_var(input_file, enzyme_frac_poly_c_mavg, 'sb_enzyme_frac_poly_c_mavg_'//tile%name, 'soillev', nsoil_w)
+      CALL read_3D_var(input_file, enzyme_frac_poly_n_mavg, 'sb_enzyme_frac_poly_n_mavg_'//tile%name, 'soillev', nsoil_w)
+      CALL read_3D_var(input_file, enzyme_frac_poly_p_mavg, 'sb_enzyme_frac_poly_p_mavg_'//tile%name, 'soillev', nsoil_w)
+    END IF
+
+    CALL input_file%Close()
+
+  END SUBROUTINE sb_read_states
+
   ! ====================================================================================================== !
   !
   !> Provide n and p deposition depending on the deposition configuration and the time of the year - for IQ

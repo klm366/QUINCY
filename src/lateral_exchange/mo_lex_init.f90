@@ -88,6 +88,8 @@ CONTAINS
       &        nconti,   &  !< number of connected tiles on current tile level
       &        it,       &  !< counter for loop over tiles
       &        is,       &  !< counter for loop over tiles when within loop over tiles
+      &        ic,       &  !< counter for loop over cells
+      &        ib,       &  !< counter for loop over blocks
       &        src_id,   &  !< source lex_id
       &        trgt_id,  &  !< target lex_id
       &        lex_idt,  &  !< lex id of of tile
@@ -106,8 +108,8 @@ CONTAINS
 
     ! Pointers to variables in memory for tile
     dsl4jsb_Real2D_onDomain :: &
-      & h_surf,                &
-      & area,                  &
+      & char_h_surf,                &
+      & char_area,                  &
       & macro_slope,           &
       & slope_eff,             &
       & fact_lag_srf,          &
@@ -128,8 +130,8 @@ CONTAINS
 
     ! Pointers to variables in memory for sibling
     dsl4jsb_Real2D_onDomain :: &
-      & h_surf_sibl,           &
-      & area_sibl
+      & char_h_surf_sibl,           &
+      & char_area_sibl
 
     ! Locally allocated vectors
     dsl4jsb_Real2D_onDomain :: &
@@ -166,8 +168,8 @@ CONTAINS
       dsl4jsb_Get_memory(LEX_)
       dsl4jsb_Get_memory(HYDRO_)
 
-      dsl4jsb_Get_var2D_onDomain(HYDRO_, h_surf)               ! in
-      dsl4jsb_Get_var2D_onDomain(HYDRO_, area)                 ! in
+      dsl4jsb_Get_var2D_onDomain(HYDRO_, char_h_surf)          ! in
+      dsl4jsb_Get_var2D_onDomain(HYDRO_, char_area)            ! in
       dsl4jsb_Get_var2D_onDomain(HYDRO_, macro_slope)          ! in
 
       dsl4jsb_Get_var2D_onDomain(LEX_,   fact_lag_srf)         ! out
@@ -361,12 +363,12 @@ CONTAINS
         IF (dsl4jsb_Config(LEX_)%l_nested) THEN
 
           dsl4jsb_Get_memory_tile(HYDRO_, sibl)
-          dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, area, sibl)    ! in
+          dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, char_area, sibl)    ! in
 
 
           trgt_id = INT(FINDLOC(cmx_micro_ctc(lex_ids,:), 1._wp, 1))
           IF (trgt_id /= 0) THEN
-            area_nclsd(:,trgt_id,:)  = area_sibl(:,:)
+            area_nclsd(:,trgt_id,:)  = char_area_sibl(:,:)
             fract_nclsd(:,trgt_id,:) = fract_sibl(:,:)
           END IF
         END IF
@@ -389,8 +391,8 @@ CONTAINS
         IF (lex_ids == 0 .OR. lex_ids /= lex_ids) CYCLE
 
         dsl4jsb_Get_memory_tile(HYDRO_, sibl)
-        dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, h_surf, sibl)  ! in
-        dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, area, sibl)    ! in
+        dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, char_h_surf, sibl)  ! in
+        dsl4jsb_Get_var2D_onDomain_tile_name(HYDRO_, char_area, sibl)    ! in
 
         CALL sibl%Get_fraction(fract=fract_sibl(:,:))
 
@@ -442,18 +444,23 @@ CONTAINS
         ! Determine the geometric relationship between two connected tiles, i.e.
         ! the offset in surface height (h_offset_ct), the characteric distance between the tile centres (length_scale_ct),
         ! the length of the interface between the two tiles (length_iface_ct) and the slope between the tiles (micro_slope_ct)
-        CALL get_geometry(                                      &
-          & hlp1(:,:), hlp2(:,:),                               &
-          & fract(:,:), fract_sibl(:,:),                        &
-          & fract_nclsd(:,lex_idt,:), fract_nclsd(:,lex_ids,:), &
-          & area(:,:), area_sibl(:,:),                          &
-          & area_nclsd(:,lex_idt,:), area_nclsd(:,lex_ids,:),   &
-          & h_surf(:,:), h_surf_sibl(:,:),                      &
-          & h_offset_ct(:,lex_ids,:),                           &
-          & length_scale_ct(:,lex_ids,:),                       &
-          & length_iface_ct(:,lex_ids,:),                       &
-          & micro_slope_ct(:,lex_ids,:)                         &
-          & )
+        DO ib = 1, nblks
+          DO ic = 1, nproma
+            CALL get_geometry(                                          &
+              & hlp1(ic,ib), hlp2(ic,ib),                               &
+              & fract(ic,ib), fract_sibl(ic,ib),                        &
+              & fract_nclsd(ic,lex_idt,ib), fract_nclsd(ic,lex_ids,ib), &
+              & char_area(ic,ib), char_area_sibl(ic,ib),                &
+              & area_nclsd(ic,lex_idt,ib), area_nclsd(ic,lex_ids,ib),   &
+              & char_h_surf(ic,ib), char_h_surf_sibl(ic,ib),            &
+              & h_offset_ct(ic,lex_ids,ib),                             &
+              & length_scale_ct(ic,lex_ids,ib),                         &
+              & length_iface_ct(ic,lex_ids,ib),                         &
+              & micro_slope_ct(ic,lex_ids,ib)                           &
+              & )
+          END DO
+        END DO
+        !$ACC UPDATE ASYNC(1) DEVICE(h_offset_ct, length_scale_ct, length_iface_ct, micro_slope_ct)
 
         ! Check if h_offset_ct is consistant with assumed micro-scale connection.
         ! If not adjust the direction of flow:
@@ -531,8 +538,9 @@ CONTAINS
         END WHERE
       END DO
 
-      !$ACC UPDATE DEVICE(h_offset_ct, length_scale_ct, length_iface_ct, micro_slope_ct) ASYNC(1)
-      !$ACC UPDATE DEVICE(microcon_ctc_ct, microcon_hfp_srf_ct, microcon_hfp_blg_ct, macrocon_hfp_srf_ct, macrocon_hfp_blg_ct) ASYNC(1)
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(microcon_ctc_ct, microcon_hfp_srf_ct, microcon_hfp_blg_ct) &
+      !$ACC   DEVICE(macrocon_hfp_srf_ct, macrocon_hfp_blg_ct)
 
       ALLOCATE(fact_lag_micro_srf(nproma, nblks))
       ALLOCATE(fact_lag_micro_blg(nproma, nblks))
@@ -558,22 +566,26 @@ CONTAINS
         CALL sibl%Get_fraction(fract=fract_sibl(:,:))
 
         ! Get effective flow lag between tile and sibling
-        CALL get_flow_lags(                                     &
-          & lex_idt, lex_ids,                                   &
-          & vel_lat_srf, vel_lat_blg,                           &
-          & dsl4jsb_Config(HYDRO_)%ret_macro_srf,               &
-          & dsl4jsb_Config(HYDRO_)%ret_macro_blg,               &
-          & length_scale_ct(:,lex_ids,:),                       &
-          & fract(:,:), fract_sibl(:,:),                        &
-          & microcon_hfp_srf_ct(:,lex_ids,:),                   &
-          & microcon_hfp_blg_ct(:,lex_ids,:),                   &
-          & macrocon_hfp_srf_ct(:,lex_ids,:),                   &
-          & macrocon_hfp_blg_ct(:,lex_ids,:),                   &
-          & fract_micro_hfp_srf(:,:), fract_micro_hfp_blg(:,:), &
-          & fract_macro_hfp_srf(:,:), fract_macro_hfp_blg(:,:), &
-          & fact_lag_micro_srf(:,:), fact_lag_micro_blg(:,:),   &
-          & fact_lag_macro_srf(:,:), fact_lag_macro_blg(:,:)    &
-          )
+        DO ib = 1, nblks
+          DO ic = 1, nproma
+            CALL get_flow_lags(                                         &
+              & lex_idt, lex_ids,                                       &
+              & vel_lat_srf, vel_lat_blg,                               &
+              & dsl4jsb_Config(HYDRO_)%ret_macro_srf,                   &
+              & dsl4jsb_Config(HYDRO_)%ret_macro_blg,                   &
+              & length_scale_ct(ic,lex_ids,ib),                         &
+              & fract(ic,ib), fract_sibl(ic,ib),                        &
+              & microcon_hfp_srf_ct(ic,lex_ids,ib),                     &
+              & microcon_hfp_blg_ct(ic,lex_ids,ib),                     &
+              & macrocon_hfp_srf_ct(ic,lex_ids,ib),                     &
+              & macrocon_hfp_blg_ct(ic,lex_ids,ib),                     &
+              & fract_micro_hfp_srf(ic,ib), fract_micro_hfp_blg(ic,ib), &
+              & fract_macro_hfp_srf(ic,ib), fract_macro_hfp_blg(ic,ib), &
+              & fact_lag_micro_srf(ic,ib), fact_lag_micro_blg(ic,ib),   &
+              & fact_lag_macro_srf(ic,ib), fact_lag_macro_blg(ic,ib)    &
+              )
+          END DO
+        END DO
 
         fact_lag_srf_ct(:,lex_ids,:) = fact_lag_micro_srf(:,:) + fact_lag_macro_srf(:,:)
         fact_lag_blg_ct(:,lex_ids,:) = fact_lag_micro_blg(:,:) + fact_lag_macro_blg(:,:)
@@ -605,7 +617,7 @@ CONTAINS
         END WHERE
       END DO
 
-      !$ACC UPDATE DEVICE(slope_eff, fact_lag_srf, fact_lag_blg) ASYNC(1)
+      !$ACC UPDATE ASYNC(1) DEVICE(slope_eff, fact_lag_srf, fact_lag_blg)
 
       ! Fourth loop over neighbour tiles:
       ! Determines the fraction of flow from tile to sibling
@@ -649,7 +661,7 @@ CONTAINS
         END IF
       END DO
 
-      !$ACC UPDATE DEVICE(fract_latflow_srf_ct, fract_latflow_blg_ct) ASYNC(1)
+      !$ACC UPDATE ASYNC(1) DEVICE(fract_latflow_srf_ct, fract_latflow_blg_ct)
 
       DEALLOCATE(fract)
       DEALLOCATE(fract_sibl)

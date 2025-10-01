@@ -25,6 +25,7 @@ MODULE mo_atmland_constants
   ! wind speed
   REAL(wp),SAVE :: min_wind                    !< minimum wind speed allowed to prevent total decoupling of the surface (m/s)
   REAL(wp),SAVE :: max_wind                    !< maximum wind speed allowed to prevent excess cooling of the surface (m/s)
+  REAL(wp),SAVE :: def_wind                    !< wind (m/s)
 
   ! conversion factors
   REAL(wp),SAVE :: standard_press_srf          !< standard pressure in Pa
@@ -42,13 +43,16 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: def_co2_mixing_ratio_C14    !< atmospheric 14CO2 in pp?
   REAL(wp),SAVE :: def_co2_deltaC13            !< molar mixing ratio of 13C / 12C of atmospheric CO2
   REAL(wp),SAVE :: def_co2_deltaC14            !< molar mixing ratio of 14C / 12C of atmospheric CO2
-  REAL(wp),SAVE :: def_wind                    !< wind in m/s
 
   PUBLIC
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_atmland_constants'
 
-  !$ACC DECLARE CREATE(eps_vpd, def_co2_deltaC13, def_co2_deltaC14)
+  !$ACC DECLARE CREATE(frac_vis_swtot_srf, frac_par_swvis_srf)
+  !$ACC DECLARE CREATE(min_wind, max_wind, def_wind, standard_press_srf, eps_vpd)
+  !$ACC DECLARE CREATE(def_t_air, def_vpd, def_swdown, def_fdiffuse, def_cos_angle)
+  !$ACC DECLARE CREATE(def_co2_mixing_ratio, def_co2_deltaC13, def_co2_mixing_ratio_C13)
+  !$ACC DECLARE CREATE(def_co2_deltaC14, def_co2_mixing_ratio_C14)
 
 CONTAINS
 
@@ -80,6 +84,7 @@ CONTAINS
     !!
     min_wind                  = 0.3_wp
     max_wind                  = 5.0_wp
+    def_wind                  = 1.0_wp
 
     !> conversion factors
     !!
@@ -98,9 +103,12 @@ CONTAINS
     def_co2_mixing_ratio_C13  = def_co2_mixing_ratio / (1._wp + 1._wp/calc_mixing_ratio_C13C12(def_co2_deltaC13))
     def_co2_deltaC14          = -14.9_wp
     def_co2_mixing_ratio_C14  = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) * def_co2_mixing_ratio
-    def_wind                  = 1.0_wp
 
-    !$ACC UPDATE DEVICE(eps_vpd, def_co2_deltaC14, def_co2_deltaC13) ASYNC(1)
+    !$ACC UPDATE DEVICE(frac_vis_swtot_srf, frac_par_swvis_srf) ASYNC(1)
+    !$ACC UPDATE DEVICE(min_wind, max_wind, def_wind, standard_press_srf, eps_vpd) ASYNC(1)
+    !$ACC UPDATE DEVICE(def_t_air, def_vpd, def_swdown, def_fdiffuse, def_cos_angle) ASYNC(1)
+    !$ACC UPDATE DEVICE(def_co2_mixing_ratio, def_co2_deltaC13, def_co2_mixing_ratio_C13) ASYNC(1)
+    !$ACC UPDATE DEVICE(def_co2_deltaC14, def_co2_mixing_ratio_C14) ASYNC(1)
 
   END SUBROUTINE init_atmland_constants
 
