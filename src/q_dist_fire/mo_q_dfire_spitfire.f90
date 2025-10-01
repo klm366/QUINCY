@@ -94,6 +94,7 @@ MODULE mo_q_dfire_spitfire
 
   USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
   USE mo_q_dfire_util,          ONLY: logical2real
+  USE mo_quincy_stats,          ONLY: stats_average
 
   IMPLICIT NONE
 
@@ -807,28 +808,29 @@ CONTAINS
     REAL(wp), INTENT(in)                :: ab_wtr_soil_sl(:,:)        !< soil water content [m] (#nc, #above ground soil layers)
     REAL(wp), INTENT(in)                :: ab_wtr_soil_fc_sl(:,:)     !< soil water field capacity [m] (#nc, #above ground soil layers)
     LOGICAL, INTENT(in)                 :: mask(:)                    !< True = gridcell enabled
-    REAL(wp)                            :: ab_moisture(:)             !< Relative above ground soil moisture [-] (nc)
+    REAL(wp), ALLOCATABLE               :: ab_moisture(:)             !< Relative above ground soil moisture [-] (nc)
 
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
     INTEGER :: is, ic
     INTEGER :: nc, nsoil_layers
     REAL(wp), ALLOCATABLE :: ab_moisture_sl(:,:)
 
-    ALLOCATE(ab_moisture_sl, mold=ab_wtr_soil_sl)
     nc = SIZE(ab_wtr_soil_fc_sl, DIM=1)
     nsoil_layers = SIZE(ab_wtr_soil_fc_sl, DIM=2) ! 2=soil layers index
+    ALLOCATE(ab_moisture_sl, mold=ab_wtr_soil_sl)
 
     !< Relative soil moisture for each above ground soil layers
     ab_moisture_sl = 0._wp
     DO is=1, nsoil_layers
       DO ic=1, nc
-        IF (mask(ic) .AND. ab_w_soil_fc_sl(ic,is)>0._wp) THEN
-          ab_moisture_sl(ic,is) = ab_w_soil_sl(ic,is) / ab_w_soil_fc_sl(ic,is)
+        IF (mask(ic) .AND. ab_wtr_soil_fc_sl(ic,is)>0._wp) THEN
+          ab_moisture_sl(ic,is) = ab_wtr_soil_sl(ic,is) / ab_wtr_soil_fc_sl(ic,is)
         END IF
       END DO
     END DO
 
     !< Average of above ground soil layers
+    IF (.NOT. ALLOCATED(ab_moisture)) ALLOCATE(ab_moisture(nc))
     ab_moisture = 0._wp
     DO ic=1, nc
       IF (mask(ic)) THEN
