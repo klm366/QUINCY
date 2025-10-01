@@ -212,7 +212,6 @@ CONTAINS
 
     REAL(wp)                              :: ab_w_soil_sl(options%nc,df_sf_sl_dims_nr)    !< above ground soil water [m]
     REAL(wp)                              :: ab_w_soil_fc_sl(options%nc,df_sf_sl_dims_nr) !< above ground soil field capacity [m]
-    REAL(wp)                              :: ab_moisture_sl(options%nc,df_sf_sl_dims_nr)  !< above ground relative soil moisture layers [-]
     REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
 
     TYPE(t_sf_veget_cover_frac)           :: veg_cover_frac                               !< Vegetation cover
@@ -449,7 +448,6 @@ CONTAINS
     ab_moisture_diag = 0._wp
     fuel_moisture = 0._wp
     i_surface = 0._wp
-    ab_moisture_sl = 0._wp
     ab_moisture = 0._wp
     frac_consump_fcl = 0._wp
     area_burned_output = 0._wp
@@ -484,27 +482,12 @@ CONTAINS
     wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
     grid_cell_area_ha = sf_convert_units("m2", "ha", tile_area)
 
-    !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
-    ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
-    ab_w_soil_fc_sl(:,:) = wtr_soil_fc_sl(:, [df_sf_sl_indices])
-
-    DO is=1, df_sf_sl_dims_nr
-      DO ic=1, nc
-        IF (mask_is_tile_enabled(ic) .AND. ab_w_soil_fc_sl(ic,is)>0._wp) THEN
-          ab_moisture_sl(ic,is) = ab_w_soil_sl(ic,is) / ab_w_soil_fc_sl(ic,is)
-        END IF
-      END DO
-    END DO
-
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
 
-    !< moisture average of above ground soil layers
-    DO ic=1, nc
-      IF (mask_is_tile_enabled(ic)) THEN
-        ab_moisture(ic) = sum(ab_moisture_sl(ic,:)) / size(ab_moisture_sl, dim=2) !< 2 = soil layers index
-      END IF
-    ENDDO
+    ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
+    ab_w_soil_fc_sl(:,:) = wtr_soil_fc_sl(:, [df_sf_sl_indices])
+    ab_moisture = calc_ab_moisture(ab_w_soil_sl, ab_w_soil_fc_sl, mask=mask_is_tile_enabled)
 
     ! Load input data
     a_nd = a2l_lightning_events * 4._wp
@@ -814,6 +797,45 @@ CONTAINS
       END IF
     END DO
   END SUBROUTINE calc_area_burned
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate the above ground relative soil moisture
+  !>
+  FUNCTION calc_ab_moisture(ab_wtr_soil_sl, ab_wtr_soil_fc_sl, mask) RESULT (ab_moisture)
+    REAL(wp), INTENT(in)                :: ab_wtr_soil_sl(:,:)        !< soil water content [m] (#nc, #above ground soil layers)
+    REAL(wp), INTENT(in)                :: ab_wtr_soil_fc_sl(:,:)     !< soil water field capacity [m] (#nc, #above ground soil layers)
+    LOGICAL, INTENT(in)                 :: mask(:)                    !< True = gridcell enabled
+    REAL(wp)                            :: ab_moisture(:)             !< Relative above ground soil moisture [-] (nc)
+
+    !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
+    INTEGER :: is, ic
+    INTEGER :: nc, nsoil_layers
+    REAL(wp), ALLOCATABLE :: ab_moisture_sl(:,:)
+
+    ALLOCATE(ab_moisture_sl, mold=ab_wtr_soil_sl)
+    nc = SIZE(ab_wtr_soil_fc_sl, DIM=1)
+    nsoil_layers = SIZE(ab_wtr_soil_fc_sl, DIM=2) ! 2=soil layers index
+
+    !< Relative soil moisture for each above ground soil layers
+    ab_moisture_sl = 0._wp
+    DO is=1, nsoil_layers
+      DO ic=1, nc
+        IF (mask(ic) .AND. ab_w_soil_fc_sl(ic,is)>0._wp) THEN
+          ab_moisture_sl(ic,is) = ab_w_soil_sl(ic,is) / ab_w_soil_fc_sl(ic,is)
+        END IF
+      END DO
+    END DO
+
+    !< Average of above ground soil layers
+    ab_moisture = 0._wp
+    DO ic=1, nc
+      IF (mask(ic)) THEN
+        ab_moisture(ic) = stats_average(ab_moisture_sl(ic,:))
+      END IF
+    ENDDO
+  END FUNCTION calc_ab_moisture
 
 #endif
 END MODULE mo_q_dfire_spitfire
