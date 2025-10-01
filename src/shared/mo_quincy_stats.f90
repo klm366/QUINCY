@@ -22,9 +22,11 @@
 MODULE mo_quincy_stats
 
   USE mo_kind,                  ONLY: wp
+  USE mo_exception,             ONLY: finish
 
   IMPLICIT NONE
   PUBLIC :: stats_average_weight, stats_average_weight_1d
+  PUBLIC :: stats_average
   PRIVATE
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_quincy_stats'
@@ -62,5 +64,26 @@ CONTAINS
     weighted(:) = values(:) * norm_weights(:)
     average = SUM(weighted)
   END FUNCTION stats_average_weight_1d
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculates the average for reals
+  !>
+  PURE FUNCTION stats_average_r1d(values) RESULT (average)
+    REAL(wp), INTENT(in)  :: values(:)
+    REAL(wp)              :: average
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (SIZE(values) == 0) THEN
+      CALL finish("stats_average_r1d", "No data given in values")
+    END IF
+
+    IF (SUM(values) == 0._wp) THEN
+      average = 0._wp
+      RETURN
+    END IF
+
+    average = SUM(values) / SIZE(values)
+  END FUNCTION stats_average_r1d
 
 END MODULE mo_quincy_stats
