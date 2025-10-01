@@ -431,6 +431,7 @@ CONTAINS
     no_children = tile%Get_no_of_children()
 
     !< Init variables
+    live_grass_fuel_fcl = 0._wp
 
     ! rebuild fuel variables
     dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp ! dead fuel
