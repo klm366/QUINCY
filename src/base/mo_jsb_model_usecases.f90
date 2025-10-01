@@ -1242,7 +1242,7 @@ CONTAINS
   !>
   !>   the data/lctlib_quincy_nlct14.def is used for this usecase (hardcoded in: mo_jsb_base:jsbach_setup_tiles)
   !>
-  SUBROUTINE init_usecase_quincy_13pS_pfts
+  SUBROUTINE init_usecase_quincy_13pS_pfts(model)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model                    !< model instance
 
