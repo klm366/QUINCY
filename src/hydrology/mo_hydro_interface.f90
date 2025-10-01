@@ -770,7 +770,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(LEX_, slope_eff)     ! in
         dsl4jsb_Get_var2D_onChunk(LEX_, fact_lag_srf)  ! in
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic=1,nc
+        DO ic = 1, nc
           slope_used(ic)   = slope_eff(ic)
           flowlag_used(ic) = MIN(dtime * fact_lag_srf(ic), 0.5_wp)
         END DO
@@ -778,9 +778,10 @@ CONTAINS
       ELSE
         l_latflow_to_streamflow = .TRUE.
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic=1,nc
-          slope_used(ic)   = steepness(ic)
-          flowlag_used(ic) = dtime / ret_macro_srf
+        DO ic = 1, nc
+          slope_used(ic)        = steepness(ic)
+          flowlag_used(ic)      = dtime / ret_macro_srf
+          water_to_soil_lex(ic) = 0._wp
         END DO
         !$ACC END PARALLEL LOOP
       END IF
@@ -874,9 +875,6 @@ CONTAINS
           trans_tmp(ic) = transpiration(ic)
         ELSE
           trans_tmp(ic) = 0._wp
-        END IF
-        IF (.NOT. tile%Is_process_calculated(LEX_)) THEN
-          water_to_soil_lex(ic) = 0._wp
         END IF
       END DO
       !$ACC END PARALLEL LOOP
