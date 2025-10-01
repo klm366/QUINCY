@@ -275,7 +275,7 @@ CONTAINS
       !>
       IF (dsl4jsb_Lctlib_param(ForestFlag)) THEN
         DO ic = 1,nc
-          delta_dens_ind = - (fract_harvest_rel_to_tile(ic) * dens_ind(ic))
+          delta_dens_ind(ic) = - (fract_harvest_rel_to_tile(ic) * dens_ind(ic))
         END DO
       END IF
 
