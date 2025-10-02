@@ -481,7 +481,6 @@ CONTAINS
     precip_daily_mmd = sf_convert_units("kg m-2 s-1", "mm/day", precip_daily)
 
     wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
-    grid_cell_area_ha = sf_convert_units("m2", "ha", tile_area)
 
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
@@ -776,7 +775,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: fdi(nc)            !< Fire danger index [0 to 1]
     REAL(wp), INTENT(in)  :: mean_fire_area(nc) !< [ha]
     REAL(wp), INTENT(in)  :: area(nc)           !< Area of the gridcell [ha]
-    REAL(wp), INTENT(out) :: ab(nc)             !< area_burned [ha ts-1]
+    REAL(wp), INTENT(out) :: ab(nc)             !< area_burned [ha]
     REAL(wp), INTENT(out) :: ab_fract(nc)       !< area_burned fraction [-]
     LOGICAL, INTENT(in), OPTIONAL :: mask(nc)   !< True=compute gridcell(s)
     LOGICAL :: mask_sel(nc)
@@ -794,6 +793,7 @@ CONTAINS
       IF (mask(ic)) THEN
         !< Calculate Fraction of the Area burned (eq. 2 from Thonicke et al. (2010))
         ab(ic) = e_n_ignitions(ic) * fdi(ic) * mean_fire_area(ic) * area(ic) !< [ha TS-1]
+        ! [ha ts-1] = [ha-1 ts-1] * [-] * [ha] * [ha] ! ignitions are in km-2 day-1, TAKE A LOOK!
         ab_fract(ic) = ab(ic) / area(ic)
       END IF
     END DO
