@@ -304,7 +304,7 @@ MODULE mo_veg_memory_class
                                     reserve_carbon_talloc_mavg     , &  !< reserve carbon needed for optimal allocation time-averaged [mol C m-2]
                                     reserve_nitrogen_talloc_mavg   , &  !< reserve nitrogen needed for optimal allocation time-averaged [mol N m-2]
                                     reserve_phosphorus_talloc_mavg , &  !< reserve phosphorus needed for optimal allocation time-averaged [mol P m-2]
-                                    w_root_lim_talloc_mavg              !< root water limitation below which root allocation starts responding time-averaged
+                                    wtr_rootzone_rel_talloc_mavg        !< time-averaged relative rootzone water content [unitless], below which root allocation starts responding
     ! 1.7 memory over root life time
     TYPE(t_jsb_var_real2d)          :: &
                                     leaf2root_troot_mavg           , &  !< leaf to root mass ratio time-averaged [unitless]
@@ -2819,9 +2819,9 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('w_root_lim_talloc_mavg', mem%w_root_lim_talloc_mavg, &
+      CALL mem%Add_var('wtr_rootzone_rel_talloc_mavg', mem%wtr_rootzone_rel_talloc_mavg, &
         & hgrid, surface, &
-        & t_cf('w_root_lim_talloc_mavg', '', 'moving average of ...'), &
+        & t_cf('wtr_rootzone_rel_talloc_mavg', '', 'moving average of relative soil moisture in rootzone'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

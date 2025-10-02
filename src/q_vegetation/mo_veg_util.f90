@@ -468,7 +468,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: reserve_carbon_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_phosphorus_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: w_root_lim_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: wtr_rootzone_rel_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_respiration
     dsl4jsb_Real2D_onChunk      :: maint_respiration
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration
@@ -489,8 +489,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_dacc_cl
     ! HYDRO_ 2D
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_fc
-    dsl4jsb_Real2D_onChunk      :: wtr_rootzone
+    dsl4jsb_Real2D_onChunk      :: wtr_rootzone_rel
     dsl4jsb_Real2D_onChunk      :: transpiration
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
@@ -626,7 +625,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_phosphorus_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, w_root_lim_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, wtr_rootzone_rel_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)
@@ -647,8 +646,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_dacc_cl)
     ! HYDRO_ 2D
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_fc)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone_rel)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, transpiration)
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                      ! in
@@ -917,17 +915,10 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
-    !$ACC   PRIVATE(hlp_r)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      ! avoid division by zero
-      IF (w_soil_root_fc(ic) > eps8) THEN
-        hlp_r = wtr_rootzone(ic) / w_soil_root_fc(ic)
-      ELSE
-        hlp_r = 0._wp
-      END IF
-      w_root_lim_talloc_mavg(ic)           = calc_time_mavg(dtime, w_root_lim_talloc_mavg(ic), hlp_r, &
-        &                                                   mavg_period_hlp, do_calc=l_growing_season(ic))
+      wtr_rootzone_rel_talloc_mavg(ic) = calc_time_mavg(dtime, wtr_rootzone_rel_talloc_mavg(ic), wtr_rootzone_rel(ic), &
+        &                                               mavg_period_hlp, do_calc=l_growing_season(ic))
     END DO
     !$ACC END PARALLEL LOOP
 

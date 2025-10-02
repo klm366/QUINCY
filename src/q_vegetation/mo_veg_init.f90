@@ -69,7 +69,7 @@ CONTAINS
     USE mo_isotope_util,                    ONLY: calc_fractionation,calc_mixing_ratio_N15N14,calc_mixing_ratio_C14C
     USE mo_q_assimi_process,                ONLY: discrimination_ps_c13, discrimination_ps_c14
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE, &
-      &   background_mort_rate_grass, w_root_lim_max, rfr_ratio_toc, fresp_growth, &
+      &   background_mort_rate_grass, k1_root_alloc, rfr_ratio_toc, fresp_growth, &
       &   fmaint_rate_base, fmaint_rate_wood, fstore_sap_wood_max, k_f_demand, omega_nutrient_demand, &
       &   background_mort_rate_tree, k_herbivory_grass, k_herbivory_pasture, sm2lm_grass
     ! ----------------------------------------------------------------------------------------------------- !
@@ -175,7 +175,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: t_air_week_mavg
     dsl4jsb_Real2D_onDomain      :: t_air_month_mavg
     dsl4jsb_Real2D_onDomain      :: t_jmax_opt_mavg
-    dsl4jsb_Real2D_onDomain      :: w_root_lim_talloc_mavg
+    dsl4jsb_Real2D_onDomain      :: wtr_rootzone_rel_talloc_mavg
     dsl4jsb_Real2D_onDomain      :: exudation_c_tmyc_mavg
     dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc
     dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc_tvegdyn_mavg
@@ -285,7 +285,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(VEG_, t_air_week_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, t_air_month_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, t_jmax_opt_mavg)
-    dsl4jsb_Get_var2D_onDomain(VEG_, w_root_lim_talloc_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_, wtr_rootzone_rel_talloc_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, exudation_c_tmyc_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, rfr_ratio_boc)
     dsl4jsb_Get_var2D_onDomain(VEG_, rfr_ratio_boc_tvegdyn_mavg)
@@ -352,6 +352,12 @@ CONTAINS
         sm2lm_grass = dsl4jsb_Config(VEG_)%nml_sm2lm_grass
         !$ACC UPDATE DEVICE(sm2lm_grass) ASYNC(1)
         CALL message(TRIM(routine), ' Modified value of vegetation parameter: sm2lm_grass')
+      END IF
+      ! k1_root_alloc
+      IF (dsl4jsb_Config(VEG_)%nml_k1_root_alloc > def_parameters) THEN
+        k1_root_alloc = dsl4jsb_Config(VEG_)%nml_k1_root_alloc
+        !$ACC UPDATE DEVICE(k1_root_alloc) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: k1_root_alloc')
       END IF
     END IF
 
@@ -589,7 +595,7 @@ CONTAINS
     reserve_carbon_talloc_mavg(:,:)       = 0.0_wp
     reserve_nitrogen_talloc_mavg(:,:)     = 0.0_wp
     reserve_phosphorus_talloc_mavg(:,:)   = 0.0_wp
-    w_root_lim_talloc_mavg(:,:)           = w_root_lim_max
+    wtr_rootzone_rel_talloc_mavg(:,:)     = k1_root_alloc
     exudation_c_tmyc_mavg(:,:)            = 0.0_wp
     ! N fraction optimisation
     fleaf_sunlit_tfrac_mavg_cl(:,:,:)     = 0.5_wp
@@ -653,7 +659,7 @@ CONTAINS
     !$ACC   DEVICE(growth_cn_talloc_mavg(:,:), unit_npp_talloc_mavg(:,:), growth_cp_talloc_mavg(:,:)) &
     !$ACC   DEVICE(growth_np_talloc_mavg(:,:), labile_carbon_talloc_mavg(:,:), labile_nitrogen_talloc_mavg(:,:)) &
     !$ACC   DEVICE(labile_phosphorus_talloc_mavg(:,:), growth_p_limit_based_on_n_mavg(:,:), reserve_carbon_talloc_mavg(:,:)) &
-    !$ACC   DEVICE(reserve_nitrogen_talloc_mavg(:,:), reserve_phosphorus_talloc_mavg(:,:), w_root_lim_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(reserve_nitrogen_talloc_mavg(:,:), reserve_phosphorus_talloc_mavg(:,:), wtr_rootzone_rel_talloc_mavg(:,:)) &
     !$ACC   DEVICE(exudation_c_tmyc_mavg(:,:), fleaf_sunlit_tfrac_mavg_cl(:,:,:), t_air_tfrac_mavg(:,:)) &
     !$ACC   DEVICE(press_srf_tfrac_mavg(:,:), co2_mixing_ratio_tfrac_mavg(:,:), ga_tfrac_mavg(:,:)) &
     !$ACC   DEVICE(beta_sinklim_ps_tfrac_mavg(:,:), fleaf_sunlit_tcnl_mavg_cl(:,:,:), t_air_tcnl_mavg(:,:)) &

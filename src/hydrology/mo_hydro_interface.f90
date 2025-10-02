@@ -2018,6 +2018,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
     dsl4jsb_Real3D_onChunk :: vol_field_cap_sl       !< Volumetric soil field capacity
+    dsl4jsb_Real3D_onChunk :: vol_p_wilt_sl          !< Volumetric soil permanent wilting point
     dsl4jsb_Real2D_onChunk :: wtr_rootzone           !< Liquid water content in the root zone
     dsl4jsb_Real2D_onChunk :: ice_rootzone           !< Frozen water content in the root zone
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl            !< Liquid water content in soil column
@@ -2030,11 +2031,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wpi_rootzone_max       !< Maximum possible amount of water and/or ice in the rootzone
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel       !< Relative root zone soil moisture
+    dsl4jsb_Real2D_onChunk :: wtr_plant_avail_rel    !< relative plant available soil moisture in root zone
 
     INTEGER :: iblk, ics, ice, nc, ic, nsoil, is
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
     REAL(wp) :: wtr_soil_pot_scool_sl_min(options%nc, options%nsoil_w)
     REAL(wp) :: wpi_fcap_soil_sl(options%nc, options%nsoil_w)
+    REAL(wp) :: wpi_pwp_soil_sl(options%nc, options%nsoil_w)
+    REAL(wp) :: wtr_rootzone_pwp(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -2059,6 +2063,7 @@ CONTAINS
     !
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_field_cap_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_p_wilt_sl)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pot_scool_sl)  ! in
@@ -2072,6 +2077,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail_max) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)       ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_plant_avail_rel)    ! out
 
     ! Get water stress
 
@@ -2081,7 +2087,8 @@ CONTAINS
     config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
     config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
-    !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min, wpi_fcap_soil_sl) ASYNC(acc_stream)
+    !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min, wpi_fcap_soil_sl) &
+    !$ACC   CREATE(wpi_pwp_soil_sl, wtr_rootzone_pwp) ASYNC(acc_stream)
 
     ! Calculate actual plant available water
     !   Meant here is all liquid water (without supercooled water) in the root zone. Water
@@ -2104,6 +2111,26 @@ CONTAINS
     !$ACC END PARALLEL LOOP
     CALL get_amount_in_rootzone(wpi_fcap_soil_sl(:,:),  &
       &  soil_depth_sl(:,:), root_depth_sl(:,:), wpi_rootzone_max(:))
+
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      ! Compute minimum plant available water in the root zone water based on soil permanent wilting point
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          wpi_pwp_soil_sl(ic,is) = vol_p_wilt_sl(ic,is) * soil_depth_sl(ic,is)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+      CALL get_amount_in_rootzone( &
+        &   wpi_pwp_soil_sl(:,:), &   ! in
+        &   soil_depth_sl(:,:), &     ! in
+        &   root_depth_sl(:,:), &     ! in
+        &   wtr_rootzone_pwp(:) &     ! inout
+        &   )
+    END SELECT
+#endif
 
     IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
       ! Supercooled water is not available to plants
@@ -2186,6 +2213,24 @@ CONTAINS
       END IF
     END DO
     !$ACC END PARALLEL LOOP
+
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      ! Calculate relative soil moisture (used in Quincy Vegetation)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        IF ((wtr_rootzone_avail_max(ic) - wtr_rootzone_pwp(ic)) > 0.0_wp) THEN
+          wtr_plant_avail_rel(ic) = MIN(MAX(wtr_rootzone_avail(ic) - wtr_rootzone_pwp(ic), 0.0_wp) &
+            &                       / (wtr_rootzone_avail_max(ic) - wtr_rootzone_pwp(ic)), 1.0_wp)
+        ELSE
+          ! wpi_rootzone_max is zero for glacier tiles
+          wtr_plant_avail_rel(ic) = 0.0_wp
+        END IF
+      END DO
+      !$ACC END PARALLEL LOOP
+    END SELECT
+#endif
 
     !$ACC END DATA
 

@@ -84,6 +84,7 @@ MODULE mo_veg_config_class
     REAL(wp)         :: nml_k_herbivory_grass
     REAL(wp)         :: nml_k_herbivory_pasture
     REAL(wp)         :: nml_sm2lm_grass
+    REAL(wp)         :: nml_k1_root_alloc
 
    CONTAINS
      PROCEDURE :: Init => Init_veg_config
@@ -145,6 +146,7 @@ CONTAINS
     REAL(wp)                    :: nml_k_herbivory_grass
     REAL(wp)                    :: nml_k_herbivory_pasture
     REAL(wp)                    :: nml_sm2lm_grass
+    REAL(wp)                    :: nml_k1_root_alloc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
 #ifdef __QUINCY_STANDALONE__
@@ -177,7 +179,8 @@ CONTAINS
       &   nml_background_mort_rate_tree, &
       &   nml_k_herbivory_grass, &
       &   nml_k_herbivory_pasture, &
-      &   nml_sm2lm_grass
+      &   nml_sm2lm_grass, &
+      &   nml_k1_root_alloc
 
     INTEGER  :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
     CALL message(TRIM(routine), 'Starting veg configuration')
@@ -209,6 +212,7 @@ CONTAINS
     nml_k_herbivory_grass          = def_parameters
     nml_k_herbivory_pasture        = def_parameters
     nml_sm2lm_grass                = def_parameters
+    nml_k1_root_alloc              = def_parameters
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -249,6 +253,7 @@ CONTAINS
     config%nml_k_herbivory_grass          = nml_k_herbivory_grass
     config%nml_k_herbivory_pasture        = nml_k_herbivory_pasture
     config%nml_sm2lm_grass                = nml_sm2lm_grass
+    config%nml_k1_root_alloc              = nml_k1_root_alloc
 
   END SUBROUTINE Init_veg_config
 

@@ -151,7 +151,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: myc_export_c_tmyc_mavg_sl
     dsl4jsb_Real3D_onChunk      :: myc_export_n_tmyc_mavg_sl
     ! HYDRO_ 2D
-    dsl4jsb_Real2D_onChunk      :: wtr_rootzone_rel
+    dsl4jsb_Real2D_onChunk      :: wtr_plant_avail_rel
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     dsl4jsb_Real3D_onChunk      :: soil_lay_depth_center_sl
@@ -215,7 +215,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: reserve_carbon_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_phosphorus_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: w_root_lim_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: wtr_rootzone_rel_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cp_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_np_talloc_mavg
@@ -353,7 +353,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_c_tmyc_mavg_sl)        ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_n_tmyc_mavg_sl)        ! inout
     ! HYDRO_ 2D
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_rootzone_rel)              ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_plant_avail_rel)           ! in
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)                 ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_lay_depth_center_sl)      ! in
@@ -417,7 +417,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_talloc_mavg)         ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_talloc_mavg)       ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_phosphorus_talloc_mavg)     ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, w_root_lim_talloc_mavg)     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, wtr_rootzone_rel_talloc_mavg)       ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)              ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cp_talloc_mavg)              ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_np_talloc_mavg)              ! in
@@ -498,7 +498,7 @@ CONTAINS
 
     !>1.0 calculate potential growth rate relative to labile pool size
     !>
-    kstar_labile(:) = calc_meristem_activity(t_air(:), wtr_rootzone_rel(:), growing_season(:))
+    kstar_labile(:) = calc_meristem_activity(t_air(:), wtr_plant_avail_rel(:), growing_season(:))
 
     !>  1.1 calculate N-based maintenance respiration rate (as potential maitenance rate) and
     !>      update N-specific maintenance respiration rate
@@ -759,7 +759,7 @@ CONTAINS
       & labile_phosphorus_talloc_mavg(:)           , &
       & growth_cn_talloc_mavg(:)                   , &
       & growth_np_talloc_mavg(:)                   , &
-      & w_root_lim_talloc_mavg(:)                  , & ! in
+      & wtr_rootzone_rel_talloc_mavg(:)            , & ! in
       & leaf2root_allocation_scalar(:)             , & ! out
       & root_limitation_state(:)                   )   ! out
 
@@ -1006,7 +1006,7 @@ CONTAINS
   !! (<20\% saturation). \nAdditionally, phenological dormancy is accounted for.
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air, &
-                                                 wtr_rootzone_rel, &
+                                                 wtr_plant_avail_rel, &
                                                  growing_season) &
                                                  RESULT(kstar_labile)
 
@@ -1022,7 +1022,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp),   INTENT(in)    :: t_air                  !< air temperature (K)
-    REAL(wp),   INTENT(in)    :: wtr_rootzone_rel       !< soil moisture scalar (fraction of available water holding capacity)
+    REAL(wp),   INTENT(in)    :: wtr_plant_avail_rel    !< relative plant available soil moisture in the root zone
     REAL(wp),   INTENT(in)    :: growing_season         !< is the plant growing?
     REAL(wp)                  :: kstar_labile           !< current potential labile pool turnover (1/day)
     ! ---------------------------
@@ -1037,7 +1037,7 @@ CONTAINS
       ELSE
         ftemp = 0.0_wp
     ENDIF
-    fmoist = 1.0_wp - EXP(-(lambda_labile_theta * wtr_rootzone_rel)**k_labile_theta)
+    fmoist = 1.0_wp - EXP(-(lambda_labile_theta * wtr_plant_avail_rel)**k_labile_theta)
     IF(growing_season > test_false_true)THEN
         kstar_labile = ftemp * fmoist / tau_labile
       ELSE
@@ -1675,11 +1675,11 @@ CONTAINS
                                                         labile_phosphorus     , &
                                                         growth_cn             , &
                                                         growth_np             , &
-                                                        w_root_lim            , &
+                                                        wtr_rootzone_rel      , &
                                                         leaf2root_scalar      , &
                                                         root_limitation_state)
 
-    USE mo_veg_constants,           ONLY: w_root_lim_max
+    USE mo_veg_constants,           ONLY: k1_root_alloc
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1693,7 +1693,7 @@ CONTAINS
     REAL(wp),              INTENT(in)  :: labile_phosphorus         !< labile phosphorus (mol P/m2)
     REAL(wp),              INTENT(in)  :: growth_cn                 !< C:N of whole plant growth increment
     REAL(wp),              INTENT(in)  :: growth_np                 !< N:P of whole plant growth increment
-    REAL(wp),              INTENT(in)  :: w_root_lim                !< water limitation factor
+    REAL(wp),              INTENT(in)  :: wtr_rootzone_rel          !< relative water availability in root zone
     REAL(wp),              INTENT(out) :: leaf2root_scalar          !< relative leaf2root allocation (used in allometry module)
     REAL(wp),              INTENT(out) :: root_limitation_state     !< dominating limiting factor for root growth [-1,1] (P = -1 | Water = 0 | N = 1)
     ! ---------------------------
@@ -1719,7 +1719,7 @@ CONTAINS
        p_l2r_scal = 1.0_wp
     END IF
 
-    w_l2r_scal = MIN(1._wp, w_root_lim / w_root_lim_max)
+    w_l2r_scal = MIN(1._wp, wtr_rootzone_rel / k1_root_alloc)
         ! actual ratio is given by the minimum of the three factors
     leaf2root_scalar = MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)
 
