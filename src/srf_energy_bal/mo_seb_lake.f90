@@ -47,7 +47,7 @@ CONTAINS
 
   SUBROUTINE update_surface_energy_lake(tile, options)
 
-    USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, surface_dry_static_energy, update_drag
+    USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, qsat_mixed, surface_dry_static_energy, update_drag
     USe mo_jsb_physical_constants, ONLY: cpd, cvd
     USE mo_jsb4_forcing,           ONLY: forcing_options
 
@@ -408,7 +408,11 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
-      qsat_lwtr(ic)  = qsat_water(t_lwtr(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      IF (use_tmx) THEN
+        qsat_lwtr(ic)  = qsat_water(t_lwtr(ic), press_srf(ic))
+      ELSE
+        qsat_lwtr(ic)  = qsat_mixed(t_lwtr(ic), press_srf(ic))
+      END IF
       s_lwtr(ic)     = surface_dry_static_energy(t_lwtr(ic), qsat_lwtr(ic), cpd_or_cvd, jsb_standalone)
     END DO
     !$ACC END PARALLEL LOOP
@@ -416,7 +420,11 @@ CONTAINS
     IF (config_l_ice_on_lakes) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
-        qsat_lice(ic) = qsat_ice(t_lice(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+        IF (use_tmx) THEN
+          qsat_lice(ic) = qsat_ice(t_lice(ic), press_srf(ic))
+        ELSE
+          qsat_lice(ic) = qsat_mixed(t_lice(ic), press_srf(ic))
+        END IF
         t(ic)         = (1._wp - fract_lice(ic)) * t_lwtr(ic) + fract_lice(ic) * t_lice(ic)
         t_unfilt(ic)  = t(ic)
         s_lice(ic)    = surface_dry_static_energy(t_lice(ic), qsat_lice(ic), cpd_or_cvd, jsb_standalone)

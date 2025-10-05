@@ -952,7 +952,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: r_gas_dryair
     USE mo_rad_parameters,         ONLY: rad2ppfd, kbl0_vis
     USE mo_q_assimi_constants,     ONLY: ic3phot, ic4phot
-    USE mo_atmland_util,           ONLY: calc_spec_humidity_sat
+    USE mo_phy_schemes,            ONLY: qsat_water
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1030,7 +1030,7 @@ CONTAINS
                                                           q_sat                     , &
                                                           hlp0 ! calc_photosynthesis dummy output
 
-    INTEGER                                            :: icanopy !< looping
+    INTEGER                                            :: ic, icanopy !< looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_marginal_canopy_flux_increment'
 
 
@@ -1163,7 +1163,9 @@ CONTAINS
 
     !> 3.2 Calculate increment in net water loss from increased LAI
     !!
-    q_sat(:) = calc_spec_humidity_sat(t_air(:), press_srf(:))
+    DO ic=1,nc
+      q_sat(ic) = qsat_water(t_air(ic), press_srf(ic))
+    END DO
     WHERE(canopy_cond(:) > eps8 .AND. canopy_cond_new(:) > eps8)
        unit_transpiration(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
                                 (q_sat(:) - q_air(:)) / (1._wp / canopy_cond_new(:) + 1._wp / aerodyn_cond(:) ) - &

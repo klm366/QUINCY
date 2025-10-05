@@ -297,7 +297,7 @@ CONTAINS
     DO ic = 1, nc
       pot_temperature_srf(ic) = potential_temperature(t_unfilt(ic), press_srf(ic))
       pot_temperature_air(ic) = potential_temperature(t_air(ic), press_air(ic))
-      qsat_srf(ic) = qsat_water(t_unfilt(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      qsat_srf(ic) = qsat_water(t_unfilt(ic), press_srf(ic))
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -305,7 +305,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! in
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(qsat_lice)
         DO ic = 1, nc
-          qsat_lice = qsat_ice(t_unfilt(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+          qsat_lice = qsat_ice(t_unfilt(ic), press_srf(ic))
           qsat_srf(ic) = (1._wp - fract_lice(ic)) * qsat_srf(ic) + fract_lice(ic) * qsat_lice
         END DO
         !$ACC END PARALLEL LOOP

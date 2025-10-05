@@ -2299,7 +2299,7 @@ CONTAINS
     & fract_snow_soil                  & ! out
     & )
 
-    USE mo_phy_schemes,            ONLY: qsat_water
+    USE mo_phy_schemes,            ONLY: qsat_water, qsat_mixed
     USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_jsb_math_constants,     ONLY: pi
     USE mo_hydro_constants,        ONLY: Quad_, Tanh_, oro_crit
@@ -2370,7 +2370,11 @@ CONTAINS
         fract_pond(ic) = 0._wp
       END IF
       ! Potential evaporation using old values of air and surface humidity
-      qsat_srf_old = qsat_water(t_srf_old(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      IF (use_tmx) THEN
+        qsat_srf_old = qsat_water(t_srf_old(ic), press_srf(ic))
+      ELSE
+        qsat_srf_old = qsat_mixed(t_srf_old(ic), press_srf(ic))
+      END IF
       evapo_pot    = -1._wp * heat_tcoef(ic) * (q_air(ic) - qsat_srf_old)  ! Positive upwards
 
       ! Modify snow cover if snow loss during the time step due to potential evaporation is larger than
@@ -2421,7 +2425,7 @@ CONTAINS
     & fract_snow_soil                   & ! out
     & )
 
-    USE mo_phy_schemes,            ONLY: qsat_water
+    USE mo_phy_schemes,            ONLY: qsat_water, qsat_mixed
     USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_jsb_math_constants,     ONLY: pi
     USE mo_hydro_constants,        ONLY: Quad_, Tanh_, oro_crit
@@ -2486,7 +2490,11 @@ CONTAINS
       END IF
 
       ! Potential evaporation using old values of air and surface humidity
-      qsat_srf_old = qsat_water(t_srf_old(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      IF (use_tmx) THEN
+        qsat_srf_old = qsat_water(t_srf_old(ic), press_srf(ic))
+      ELSE
+        qsat_srf_old = qsat_mixed(t_srf_old(ic), press_srf(ic))
+      END IF
       evapo_pot    = heat_tcoef(ic) * (qsat_srf_old - q_air(ic)) ! Positive upwards
 
       ! Reduce snow cover on soil if snow loss during the time step due to potential evaporation is larger than

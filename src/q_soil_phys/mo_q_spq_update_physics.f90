@@ -630,13 +630,12 @@ CONTAINS
 
     USE mo_jsb_math_constants,        ONLY: eps8
     USE mo_atmland_constants,         ONLY: min_wind, max_wind
-    USE mo_atmland_util,              ONLY: calc_spec_humidity_sat
     USE mo_spq_constants,             ONLY: w_skin_max, soil_therm_cond, soil_frozen_therm_cond, latent_heat_fusion, &
                                             w_density, water2ice_density_ratio, fact_water_supercooled, w_snow_min, snow_dens, &
                                             snow_heat_capa, snow_therm_cond, t_soil_max_increase, t_soil_max_decrease
     USE mo_jsb_physical_constants,    ONLY: r_gas_dryair, LatentHeatSublimation, LatentHeatVaporization, &
                                             stbo, zemiss_def, grav, cpd, cpvd1, Tzero
-    USE mo_phy_schemes,               ONLY: heat_transfer_coef, q_effective, surface_dry_static_energy
+    USE mo_phy_schemes,               ONLY: qsat_water, heat_transfer_coef, q_effective, surface_dry_static_energy
 
 
     IMPLICIT NONE
@@ -751,8 +750,10 @@ CONTAINS
 
     !> 1.0 calculate surface characteristic given old surface state
     !>
-    q_sat(:)      = calc_spec_humidity_sat(t_air(:), press_srf(:))
-    q_sat_srf(:)  = calc_spec_humidity_sat(t_old(:), press_srf(:))
+    DO ic = 1, nc
+      q_sat(ic)      = qsat_water(t_air(ic), press_srf(ic))
+      q_sat_srf(ic)  = qsat_water(t_old(ic), press_srf(ic))
+    END DO
 
     !>   1.1 Calculate heat transfer coefficient
     !>
@@ -788,7 +789,9 @@ CONTAINS
 
     !>   2.1 Compute sensitivity of surface saturation specific humidity to temperature
     !>
-    dQdT(:) = (calc_spec_humidity_sat(t_old(:) + 0.001_wp, press_srf(:)) - q_sat_srf(:)) * 1000._wp
+    DO ic = 1, nc
+      dQdT(ic) = (qsat_water(t_old(ic) + 0.001_wp, press_srf(ic)) - q_sat_srf(ic)) * 1000._wp
+    END DO
 
     !>   2.2 Old dry static energy
     !>
