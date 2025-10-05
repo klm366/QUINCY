@@ -287,6 +287,29 @@ CONTAINS
     recycling_fine_root_n15(:)  = recycling_fine_root_n15(:)  * (1._wp - mortality_rate(:))
     recycling_heart_wood_n15(:) = recycling_heart_wood_n15(:) * (1._wp - mortality_rate(:))
 
+    !>
+    !> catch numerical issues arising at leaf or fine-root shedding of the order of < E-12
+    DO ic = 1, nc
+      IF(veg_pool_mt(ix_leaf,ixN,ic) < recycling_leaf_n(ic) + veg_litterfall_mt(ix_leaf,ixN,ic)) THEN
+        recycling_leaf_n(ic) = veg_pool_mt(ix_leaf,ixN,ic) - veg_litterfall_mt(ix_leaf,ixN,ic)
+      END IF
+      IF(veg_pool_mt(ix_leaf,ixP,ic) < recycling_leaf_p(ic) + veg_litterfall_mt(ix_leaf,ixP,ic)) THEN
+        recycling_leaf_p(ic) = veg_pool_mt(ix_leaf,ixP,ic) - veg_litterfall_mt(ix_leaf,ixP,ic)
+      END IF
+      IF(veg_pool_mt(ix_leaf,ixN15,ic) < recycling_leaf_n15(ic) + veg_litterfall_mt(ix_leaf,ixN15,ic)) THEN
+        recycling_leaf_n15(ic) = veg_pool_mt(ix_leaf,ixN15,ic) - veg_litterfall_mt(ix_leaf,ixN15,ic)
+      END IF
+      IF(veg_pool_mt(ix_fine_root,ixN,ic) < recycling_fine_root_n(ic) + veg_litterfall_mt(ix_fine_root,ixN,ic)) THEN
+        recycling_fine_root_n(ic) = veg_pool_mt(ix_fine_root,ixN,ic) - veg_litterfall_mt(ix_fine_root,ixN,ic)
+      END IF
+      IF(veg_pool_mt(ix_fine_root,ixP,ic) < recycling_fine_root_p(ic) + veg_litterfall_mt(ix_fine_root,ixP,ic)) THEN
+        recycling_fine_root_p(ic) = veg_pool_mt(ix_fine_root,ixP,ic) - veg_litterfall_mt(ix_fine_root,ixP,ic)
+      END IF
+      IF(veg_pool_mt(ix_fine_root,ixN15,ic) < recycling_fine_root_n15(ic) + veg_litterfall_mt(ix_fine_root,ixN15,ic)) THEN
+        recycling_fine_root_n15(ic) = veg_pool_mt(ix_fine_root,ixN15,ic) - veg_litterfall_mt(ix_fine_root,ixN15,ic)
+      END IF
+    END DO
+
     !>3.0 Calculate establishment_rate and veg establishment
     !>
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
@@ -459,8 +482,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc)     :: greff_mortality_rate           !< rate of mortality due to low growth efficiency
     REAL(wp), DIMENSION(nc)     :: self_thinning_mortality_rate   !< rate of mortality due to self-thinning
     REAL(wp), DIMENSION(nc)     :: bg_mortality_rate              !< background rate of mortality
-    REAL(wp)                    :: eff_mortality_rate             !< effective mortality rate of biomass
-                                                                  !<  (corrected by ancedent litterfall)
+    REAL(wp)                    :: hlp1                           !< potential biomass mortality (to be corrected for litterfall)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_mortality'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -547,18 +569,19 @@ CONTAINS
             IF (is_element_used(ielem)) THEN
               ix_elem = elements_index_map(ielem)    ! get element index in bgcm
               ! Only the fraction of veg pool not yet lost to litterfall is available for mortality.
-              ! If remaining biomass is smaller than mortality rate, reduce biomass by mortality rate
-              ! Otherwise put remaining biomass to litter
-              IF (veg_pool_mt(ix_comp, ix_elem, ic) > eps8) THEN
-                eff_mortality_rate = MIN(mortality_rate(ic), &
-                  &   (veg_pool_mt(ix_comp, ix_elem, ic) - veg_litterfall_mt(ix_comp, ix_elem, ic)) &
-                  &   / veg_pool_mt(ix_comp, ix_elem, ic))
+              ! If remaining biomass is smaller than litterfall + mortality put remaining biomass to litter,
+              ! else reduce biomass by mortality rate
+              hlp1 = veg_pool_mt(ix_comp, ix_elem, ic) * mortality_rate(ic)
+              IF (veg_pool_mt(ix_comp, ix_elem, ic) - veg_litterfall_mt(ix_comp, ix_elem, ic) - hlp1 <= 0.0_wp) THEN
+                veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
+                  &                                       + (veg_pool_mt(ix_comp, ix_elem, ic)    &
+                  &                                         - veg_litterfall_mt(ix_comp, ix_elem, ic))
               ELSE
-                eff_mortality_rate = 0.0_wp
+                veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
+                  &                                       + (veg_pool_mt(ix_comp, ix_elem, ic)    &
+                  &                                         * mortality_rate(ic))
               END IF
-              veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
-                &                                       + (veg_pool_mt(ix_comp, ix_elem, ic) &
-                &                                       * eff_mortality_rate)
+              veg_litterfall_mt(ix_comp, ix_elem, ic) = MAX(0.0_wp, veg_litterfall_mt(ix_comp, ix_elem, ic))
             END IF
           END DO
         END IF
@@ -739,6 +762,7 @@ CONTAINS
                   &                                       + (veg_pool_mt(ix_comp, ix_elem, ic) &
                   &                                       * eff_fract_herbivory)
               END IF
+              veg_litterfall_mt(ix_comp, ix_elem, ic) = MAX(0.0_wp, veg_litterfall_mt(ix_comp, ix_elem, ic))
             END IF
           END DO
         END IF

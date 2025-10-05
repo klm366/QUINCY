@@ -1158,8 +1158,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
 
       ! Do not test as long as the variables still carry the initialisation value
-      IF (.NOT. (ALL(q_c_conservation_test(:) == -999.0_wp) .OR. ALL(q_total_c(:) == 0.0_wp))) THEN
-
+      IF (.NOT. (ALL(q_c_conservation_test(:) == -999.0_wp))) THEN
         DO ic = 1, nc
           ! vegetation and soil carbon
           q_total_c_new(ic) = veg_pool_total_c(ic) + SUM(sb_pool_total_c(ic,:) * soil_depth_sl(ic,:))
@@ -1171,13 +1170,13 @@ CONTAINS
 
           q_c_conservation_test(ic) = q_total_c_new(ic) - q_total_c(ic) - (net_biosphere_production(ic) * dtime / 1000000.0_wp)
 
-          IF (ABS(q_c_conservation_test(ic)) > 1.e-12_wp) THEN
-
-            WRITE(message_text,*) 'Failed carbon conservation test: ', q_c_conservation_test(ic), &
-              & '; new total c: ', q_total_c_new(ic), '; old total c: ', q_total_c(ic),           &
-              & '; nbp ',  (net_biosphere_production(ic) * dtime / 1000000.0_wp)
-            CALL message(TRIM(routine), message_text)
-
+          IF (dsl4jsb_Config(VEG_)%flag_log_c_conservation) THEN
+            IF ((ABS(q_c_conservation_test(ic)) > 1.e-11_wp) .AND. (ABS(q_total_c(ic)) > 0.0_wp)) THEN
+              WRITE(message_text,*) 'Failed carbon conservation test: ', q_c_conservation_test(ic), &
+                & '; new total c: ', q_total_c_new(ic), '; old total c: ', q_total_c(ic),           &
+                & '; nbp ',  (net_biosphere_production(ic) * dtime / 1000000.0_wp)
+              CALL message(TRIM(routine), message_text, all_print=.TRUE.)
+            END IF
           END IF
 
           q_total_c(ic) = q_total_c_new(ic)

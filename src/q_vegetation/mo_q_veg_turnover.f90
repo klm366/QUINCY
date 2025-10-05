@@ -433,6 +433,9 @@ CONTAINS
         END WHERE
       END IF
     END SELECT
+    ! Safeguard that leaf turnover cannot exceed 1
+    fturn_leaf(:) = MAX(0.0_wp, MIN(1.0_wp, fturn_leaf(:)))
+
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN

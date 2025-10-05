@@ -952,6 +952,8 @@ CONTAINS
       & growth_req_p(:)                        , &
       & growth_req_n(:)                        , &
       & veg_frac_alloc_mt(:,:,:)               , &
+      & veg_litterfall_mt(:,:,:)               , &
+      & veg_reserve_use_mt(:,:)                , &
       & veg_pool_mt(:,:,:)                     , & ! in
       & n_processing_respiration(:)            , & ! inout
       & maint_respiration_c13(:)               , &
@@ -2360,7 +2362,7 @@ CONTAINS
           WRITE (message_text,*) 'Negative value of vegetation labile pool C at tile ', tile_name, &
             &                    ' at (lon:lat) ', grid_lon(ic), ':', grid_lat(ic), &
             &                    ', value ', veg_pool_mt(ix_labile, ixC, ic), ' is NOT modified here'
-          CALL message(TRIM(routine), message_text)
+          CALL message(TRIM(routine), message_text, all_print=.TRUE.)
         END IF
       END IF
       hlp1(ic) = MAX(0.0_wp, veg_pool_mt(ix_labile, ixC, ic))
@@ -2399,17 +2401,17 @@ CONTAINS
       phi_storage(ic)     = k_labphen * phi_storage(ic) / tau_labile / one_day * dtime
       ! ..
       veg_reserve_use_mt(ixC, ic)   = ((phi_phenology(ic) + phi_maintenance(ic))                                   &
-        &                             * (veg_pool_mt(ix_reserve, ixC,ic) - veg_litterfall_mt(ix_reserve, ixC, ic)) &
+        &                             * MAX(0.0_wp, veg_pool_mt(ix_reserve, ixC,ic) - veg_litterfall_mt(ix_reserve, ixC, ic)) &
         &                             - phi_storage(ic)                                                            &
-        &                             * (veg_pool_mt(ix_labile, ixC, ic) - veg_litterfall_mt(ix_labile, ixC, ic)))
-      veg_reserve_use_mt(ixC13, ic) = ((phi_phenology(ic) + phi_maintenance(ic))                                       &
-        &                             * (veg_pool_mt(ix_reserve, ixC13,ic) - veg_litterfall_mt(ix_reserve, ixC13, ic)) &
-        &                             - phi_storage(ic)                                                                &
-        &                             * (veg_pool_mt(ix_labile, ixC13, ic) - veg_litterfall_mt(ix_labile, ixC13, ic)))
-      veg_reserve_use_mt(ixC14, ic) = ((phi_phenology(ic) + phi_maintenance(ic))                                       &
-        &                             * (veg_pool_mt(ix_reserve, ixC14,ic) - veg_litterfall_mt(ix_reserve, ixC14, ic)) &
-        &                             - phi_storage(ic)                                                                &
-        &                             * (veg_pool_mt(ix_labile, ixC14, ic) - veg_litterfall_mt(ix_labile, ixC14, ic)))
+        &                             * MAX(0.0_wp, veg_pool_mt(ix_labile, ixC, ic) - veg_litterfall_mt(ix_labile, ixC, ic)))
+      veg_reserve_use_mt(ixC13, ic)   = ((phi_phenology(ic) + phi_maintenance(ic))                                   &
+        &                             * MAX(0.0_wp, veg_pool_mt(ix_reserve, ixC13,ic) - veg_litterfall_mt(ix_reserve, ixC13, ic)) &
+        &                             - phi_storage(ic)                                                            &
+        &                             * MAX(0.0_wp, veg_pool_mt(ix_labile, ixC13, ic) - veg_litterfall_mt(ix_labile, ixC13, ic)))
+      veg_reserve_use_mt(ixC14, ic)   = ((phi_phenology(ic) + phi_maintenance(ic))                                   &
+        &                             * MAX(0.0_wp, veg_pool_mt(ix_reserve, ixC14,ic) - veg_litterfall_mt(ix_reserve, ixC14, ic)) &
+        &                             - phi_storage(ic)                                                            &
+        &                             * MAX(0.0_wp, veg_pool_mt(ix_labile, ixC14, ic) - veg_litterfall_mt(ix_labile, ixC14, ic)))
 
       !> 2.0 net transfer of N from labile to reserve
       !>
@@ -2479,14 +2481,14 @@ CONTAINS
         phi_maintenance(ic) = phi_maintenance(ic) * 1._wp / (1._wp - k_phi_interact) * ( 1.0_wp - phi_storage(ic))
       END IF
       veg_reserve_use_mt(ixN, ic)   = ((phi_maintenance(ic) + phi_phenology(ic))                                   &
-        &                             * (veg_pool_mt(ix_reserve, ixN,ic) - veg_litterfall_mt(ix_reserve, ixN, ic)) &
+        &                             * MAX(0.0_wp, (veg_pool_mt(ix_reserve,ixN,ic) - veg_litterfall_mt(ix_reserve,ixN,ic))) &
         &                             - phi_storage(ic)                                                            &
-        &                             * (veg_pool_mt(ix_labile, ixN, ic) - veg_litterfall_mt(ix_labile, ixN, ic))) &
+        &                             * MAX(0.0_wp, (veg_pool_mt(ix_labile,ixN,ic) - veg_litterfall_mt(ix_labile,ixN,ic)))) &
         &                             / tau_labile / one_day * dtime
       veg_reserve_use_mt(ixN15, ic) = ((phi_maintenance(ic) + phi_phenology(ic))                                       &
-        &                             * (veg_pool_mt(ix_reserve, ixN15,ic) - veg_litterfall_mt(ix_reserve, ixN15, ic)) &
+        &                             * MAX(0.0_wp,(veg_pool_mt(ix_reserve,ixN15,ic) - veg_litterfall_mt(ix_reserve,ixN15,ic))) &
         &                             - phi_storage(ic)                                                                &
-        &                             * (veg_pool_mt(ix_labile, ixN15, ic) - veg_litterfall_mt(ix_labile, ixN15, ic))) &
+        &                             * MAX(0.0_wp,(veg_pool_mt(ix_labile,ixN15,ic) - veg_litterfall_mt(ix_labile,ixN15,ic)))) &
         &                             / tau_labile / one_day * dtime
 
       !> 3.0 net transfer of P from labile to reserve
@@ -2539,9 +2541,9 @@ CONTAINS
         phi_maintenance(ic) = phi_maintenance(ic) * 1._wp / (1._wp - k_phi_interact) * ( 1.0_wp - phi_storage(ic))
       END IF
       veg_reserve_use_mt(ixP, ic) = ((phi_maintenance(ic) + phi_phenology(ic))                                   &
-        &                           * (veg_pool_mt(ix_reserve, ixP,ic) - veg_litterfall_mt(ix_reserve, ixP, ic)) &
+        &                           * MAX(0.0_wp,(veg_pool_mt(ix_reserve, ixP,ic) - veg_litterfall_mt(ix_reserve, ixP, ic))) &
         &                           - phi_storage(ic)                                                            &
-        &                           * (veg_pool_mt(ix_labile, ixP, ic) - veg_litterfall_mt(ix_labile, ixP, ic))) &
+        &                           * MAX(0.0_wp,(veg_pool_mt(ix_labile, ixP, ic) - veg_litterfall_mt(ix_labile, ixP, ic)))) &
         &                           / tau_labile / one_day * dtime
     END DO ! loop over 1:nc
   END SUBROUTINE calc_reserve_useage
@@ -3046,6 +3048,8 @@ CONTAINS
                                 growth_req_p                  , &
                                 growth_req_n                  , &
                                 veg_frac_alloc_mt             , &
+                                veg_litterfall_mt             , &
+                                veg_reserve_use_mt            , &
                                 veg_pool_mt                   , &
                                 n_processing_respiration      , &
                                 maint_respiration_c13         , &
@@ -3071,6 +3075,8 @@ CONTAINS
                                                growth_req_p                 , & !< moles P required for a unit of N growth under current allocation fractions
                                                growth_req_n                     !< moles N required for a unit of C growth under current allocation fractions
     REAL(wp),                 INTENT(in)    :: veg_frac_alloc_mt(:,:,:)         !< fractional allocation to pools
+    REAL(wp),                 INTENT(in)    :: veg_litterfall_mt(:,:,:)
+    REAL(wp),                 INTENT(in)    :: veg_reserve_use_mt(:,:)
     REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)               !< labile pool size of the plant
     REAL(wp), DIMENSION(nc),  INTENT(inout) :: n_processing_respiration     , & !< respiration associated with N processing
                                                maint_respiration_c13        , & !< maintenance respiration
@@ -3085,6 +3091,8 @@ CONTAINS
     REAL(wp), DIMENSION(nc),  INTENT(out)   :: growth_respiration               !< growth respiration (micro-mol C / m2 / s)
     !------------------------------------------------------------------------------------------------------ !
     REAL(wp), DIMENSION(nc)     :: hlp1
+    REAL(wp)                    :: hlp2
+    INTEGER :: ic
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_partitioning'
     !------------------------------------------------------------------------------------------------------ !
 
