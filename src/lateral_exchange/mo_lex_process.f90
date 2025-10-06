@@ -26,7 +26,8 @@ MODULE mo_lex_process
 
   PUBLIC :: calc_runoff_transport, calc_drainage_transport,                &
           & calc_pond_soil_flux_water, calc_pond_soil_flux_heat,           &
-          & calc_diffusion_water, calc_diffusion_heat,                     &
+          & calc_lat_fluxes_soil,                                          &
+          & calc_diffusion_heat,                                           &
           & calc_convection_heat, calc_snow_redistribution,                &
           & remove_excess_water, shift_fluxes_sl,                          &
           & get_geometry, get_flow_lags, check_flow_matrix
@@ -34,6 +35,139 @@ MODULE mo_lex_process
   CHARACTER(len=*), PARAMETER :: modname = 'mo_lex_process'
 
 CONTAINS
+
+  ! TODO get_intersected_grid should later be moved to a lex utility module
+  !      together with the connectivity matrix routines
+
+  ! ===============================================================================================================================
+  !>
+  !! Get intersected grid from two soil grids with vertical offset
+  !!
+  SUBROUTINE get_intersected_grid(offset, d_bedrock, dz, nsoil, ngrid, &
+    &  index_tile, index_sibl, l_act_hydro, layer_thickness)
+
+    USE mo_util_sort,   ONLY: quicksort
+
+    INTEGER,  INTENT(in)  :: ngrid,            &  !< Maximum number of layers in intersected grid
+      &                      nsoil                !< Number of standard soil layers per tile
+
+    REAL(wp), INTENT(in)  :: offset,           &  !< Vertical offset between tile and sibling soil layers [m]
+      &                      d_bedrock            !< Depth to bedrock [m]
+    REAL(wp), INTENT(in)  :: dz(:)                !< Standard soil layer bottom depths [m]
+
+    INTEGER,  INTENT(out) :: index_tile(:),    &  !< Index mapping from intersected grid to tile soil layers
+      &                      index_sibl(:)        !< Index mapping from intersected grid to sibling soil layers
+    LOGICAL,  INTENT(out) :: l_act_hydro(:)       !< T: new grid soil layer above bedrock in all tiles
+    REAL(wp), INTENT(out) :: layer_thickness(:)   !< Soil layer thicknesses on intersected grid [m]
+
+    INTEGER               :: index_bedrock,    &  !< Index of bedrock layer in standard soil grid
+      &                      i,                &  !< Index variable for layers on any vertical grid
+      &                      i_tile,           &  !< Current index position in tile soil grid
+      &                      i_sibl               !< Current index position in sibling soil grid
+
+    INTEGER               :: index_list(nsoil+1)  !< Temporary index list for soil layers
+
+    REAL(wp)              :: top, bot             !< Top and bottom of current layer on intersected grid [m]
+
+    REAL(wp)              :: dz_tile(nsoil+1), &  !< Bottom depth of soil layers at tile [m]
+      &                      dz_sibl(nsoil+1)     !< Bottom depth of soil layers at sibling [m]
+
+    REAL(wp)              :: new_layers(ngrid)    !< Intersecting grids of both soil layer [m]
+
+    !$ACC ROUTINE SEQ
+
+    ! Determine bedrock index in standard soil grid
+    index_bedrock = 1
+    DO i = 1, nsoil
+      IF (dz(i) >= d_bedrock) THEN
+        index_bedrock = i
+        EXIT
+      END IF
+    END DO
+
+    ! Initialize new grid variables
+    DO i = 1, ngrid
+      index_tile(i)      = 0
+      index_sibl(i)      = 0
+      l_act_hydro(i)     = .FALSE.
+      layer_thickness(i) = 0._wp
+    END DO
+
+    ! Add offset and bedrock depth to soil profiles of tile and sibling
+    ! and generate according soil layer index list
+    DO i = 1, nsoil
+      dz_tile(i)    = dz(i)
+      dz_sibl(i)    = dz(i) + offset
+      index_list(i) = i
+    END DO
+    dz_tile(nsoil+1)    = d_bedrock
+    dz_sibl(nsoil+1)    = d_bedrock + offset
+    index_list(nsoil+1) = index_bedrock
+
+    ! Merge soil depth profiles into one common grid
+    DO i = 1, nsoil + 1
+      new_layers(i)             = dz_tile(i)
+      new_layers(nsoil + 1 + i) = dz_sibl(i)
+    END DO
+
+    ! Sort index list and intersected grid depths
+    CALL quicksort(index_list)
+    CALL quicksort(new_layers)
+
+    ! Initialize starting positions for grid indices
+    i_tile = 1
+    IF (offset < 0._wp) THEN
+      ! Sibling tile is above tile
+      top = 0._wp
+      ! Find first sibling soil layer index that intersects with first soil layer on tile
+      DO i = 1, nsoil + 1
+        IF (dz_sibl(i) >= 0._wp) THEN
+          i_sibl = i
+          EXIT
+        END IF
+      END DO
+    ELSE
+      ! Sibling tile is equal or below tile
+      top    = offset
+      i_sibl = 1
+    END IF
+
+    ! Loop over all layers in intersected grid and determine mapping indices and
+    ! layer thickness
+    DO i = 1, ngrid
+      ! Set new layer bottom depth
+      bot = new_layers(i)
+      ! Increase index of layer boundary is crossed on each tile
+      IF (bot > dz_tile(i_tile)) THEN
+        i_tile = i_tile + 1
+      END IF
+      IF (bot > dz_sibl(i_sibl)) THEN
+        i_sibl = i_sibl + 1
+      END IF
+      ! Compute layer thickness
+      IF (bot > 0._wp) THEN
+        layer_thickness(i) = bot - top
+      ELSE
+        layer_thickness(i) = 0._wp
+      END IF
+      ! Set mapping indices
+      IF (i_tile <= nsoil + 1 .AND. i_sibl <= nsoil + 1) THEN
+        index_tile(i) = index_list(i_tile)
+        index_sibl(i) = index_list(i_sibl)
+        ! Mark layer as hydrologically active layer if above bedrock in both columns
+        IF (layer_thickness(i) > 0._wp .AND. bot <= MIN(d_bedrock, d_bedrock + offset)) THEN
+          l_act_hydro(i) = .TRUE.
+        END IF
+      ELSE
+        ! Below valid soil layers
+        layer_thickness(i) = 0._wp
+      END IF
+      ! Set new layer top for next iteration
+      top = bot
+    END DO
+
+  END SUBROUTINE get_intersected_grid
+
   !
   ! ===============================================================================================================================
   !>
@@ -475,30 +609,45 @@ CONTAINS
 
   ! ===============================================================================================================================
   !>
-  !! Compute lateral diffusion between two adjacent soil columns (water)
+  !! Compute lateral fluxes of water and heat between two adjacent soil columns
   !!
-  SUBROUTINE calc_diffusion_water(                  &
-      &      nsoil, dtime,                          &
-      &      h_offset, length_scale, len_inter,     &
-      &      tle_fract, sbl_fract,                  &
-      &      dsoil_tle, dsoil_sbl,                  &
-      &      field_cap_tle, field_cap_sbl,          &
-      &      wsat_tle, wsat_sbl,                    &
-      &      res_tle, res_sbl,                      &
-      &      k_sat_tle, k_sat_sbl,                  &
-      &      k_tle, k_sbl,                          &
-      &      mpot_tle, mpot_sbl,                    &
-      &      diffus_in_tle, diffus_in_sbl,          &
-      &      diffus_out_tle, diffus_out_sbl,        &
-      &      wtr_latflow_tle, wtr_latflow_sbl,      &
-      &      wtr_soil_tle, wtr_soil_sbl             &
+  SUBROUTINE calc_lat_fluxes_soil(                       &
+      &      nc, nsoil, nrgrd, dtime,                    &
+      &      l_diff_water, l_diff_heat,                  &
+      &      connect, h_offset, length_scale, len_inter, &
+      &      tle_fract, sbl_fract,                       &
+      &      dsoil_tle, dsoil_sbl,                       &
+      &      field_cap_tle, field_cap_sbl,               &
+      &      wsat_tle, wsat_sbl,                         &
+      &      res_tle, res_sbl,                           &
+      &      k_sat_tle, k_sat_sbl,                       &
+      &      k_tle, k_sbl,                               &
+      &      mpot_tle, mpot_sbl,                         &
+      &      dz,                                         &
+      &      t_soil_tle, t_soil_sbl,                     &
+      &      heat_cond_soil_tle, heat_cond_soil_sbl,     &
+      &      heat_cap_soil_tle, heat_cap_soil_sbl,       &
+      &      diffus_in_tle, diffus_in_sbl,               &
+      &      diffus_out_tle, diffus_out_sbl,             &
+      &      wtr_latflow_tle, wtr_latflow_sbl,           &
+      &      wtr_soil_tle, wtr_soil_sbl,                 &
+      &      nrg_diff_in_tle, nrg_diff_in_sbl,           &
+      &      nrg_diff_out_tle, nrg_diff_out_sbl,         &
+      &      heat_flx_lat_tle, heat_flx_lat_sbl          &
       &      )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
-    INTEGER, INTENT(in)     :: nsoil                   !< Number of soil layers
+    INTEGER, INTENT(in)     :: nc,                  &  !< Number of grid cells
+      &                        nsoil,               &  !< Number of soil layers
+      &                        nrgrd                   !< Number of layers on helper grid determined by layer overlaps
 
-    REAL(wp), INTENT(in)    :: dtime,               &  !< Timestep length [s]
+    REAL(wp), INTENT(in)    :: dtime                   !< Timestep length [s]
+
+    LOGICAL,  INTENT(in)    :: l_diff_water,        &  !< T: compute diffusive water fluxes
+      &                        l_diff_heat             !< T: compute diffusive heat fluxes
+
+    REAL(wp), INTENT(in)    :: connect,             &  !< Connectivity array for lateral exchange
       &                        h_offset,            &  !< Differece in surface elevation between tile and sibling [m]
       &                        length_scale,        &  !< Characteristic length scale of gradient between two adjacent tiles [m]
       &                        len_inter,           &  !< Length of interface between tile and sibling [m m-2]
@@ -520,6 +669,14 @@ CONTAINS
       &                        mpot_tle(:),         &  !< Soil layer matric potential on source tile [m]
       &                        mpot_sbl(:)             !< Soil layer matric potential on target tile [m]
 
+    REAL(wp), INTENT(in)    :: dz(:),               &  !< Total soil layer depth [m]
+      &                        t_soil_tle(:),       &  !< Soil tempertures of tile [K]
+      &                        t_soil_sbl(:),       &  !< Soil tempertures of sibling [K]
+      &                        heat_cond_soil_tle(:), &  !< Soil heat conductivity of tile [J m-1 s-1 K-1]
+      &                        heat_cond_soil_sbl(:), &  !< Soil heat conductivity of sibling [J m-1 s-1 K-1]
+      &                        heat_cap_soil_tle(:),  &  !< Soil heat capacity of tile [J m-3 K-1]
+      &                        heat_cap_soil_sbl(:)     !< Soil heat capacity of sibling [J m-3 K-1]
+
     REAL(wp), INTENT(inout) :: diffus_in_tle(:),    &  !< Diffusion influx at tile [kg m-2 s-1]
       &                        diffus_in_sbl(:),    &  !< Diffusion influx at sibling [kg m-2 s-1]
       &                        diffus_out_tle(:),   &  !< Diffusion influx at tile [kg m-2 s-1]
@@ -531,14 +688,28 @@ CONTAINS
     REAL(wp), INTENT(inout) :: wtr_soil_tle(:),     &  !< Soil water storage on tile [m]
       &                        wtr_soil_sbl(:)         !< Soil water storage on sibling [m]
 
+    REAL(wp), INTENT(inout) :: nrg_diff_in_tle(:),  &  !< Diffusive energy influx at tile [J m-2 s-1]
+      &                        nrg_diff_in_sbl(:),  &  !< Diffusive energy influx at sibling [J m-2 s-1]
+      &                        nrg_diff_out_tle(:), &  !< Diffusive energy outflux at tile [J m-2 s-1]
+      &                        nrg_diff_out_sbl(:), &  !< Diffusive energy outflux at sibling [J m-2 s-1]
+      &                        heat_flx_lat_tle(:),  &  !< Net lateral heat flux (below ground) on tile [J m-2 s-1]
+      &                        heat_flx_lat_sbl(:)      !< Net lateral heat flux (below ground) on sibling [J m-2 s-1]
+
 
 
     ! Local variables ------------------------------------------------------------------------------------
-    INTEGER                 :: nrgrd,               &  !< Number of layers on helper grid determined by layer overlaps
-      &                        i, i_tle, i_sbl         !< Index variables for layers on helper grid (i), in tile (i_tle) and sibling (i_sbl)
+    INTEGER                 :: i,                   &  !< Index variable for layers on helper grid
+      &                        i_tle,               &  !< Index variable for layers on tile
+      &                        i_sbl                   !< Index variable for layers sibling
+    INTEGER                 :: index_tile(nrgrd),   &  !< Mapping index from helper grid to tile layers
+      &                        index_sibl(nrgrd)       !< Mapping index from helper grid to sibling layers
 
+    REAL(wp)                :: layer_thickness(nrgrd)  !< Thickness of layers on helper grid [m]
+    LOGICAL                 :: l_act_hydro(nrgrd)      !< T: lateral hydro. exchange active on given layer of helper grid
     REAL(wp)                :: fr_tle_rel,          &  !< Relative fraction of tile [/]
       &                        fr_sbl_rel,          &  !< Relative fraction of sibling [/]
+      &                        sum_soil_tle,        &  !< Total soil depth on tile [m]
+      &                        sum_soil_sbl,        &  !< Total soil depth on sibling [m]
       &                        h,                   &  !< Height of current layer [m]
       &                        a_inter,             &  !< Interface area on current layer [m2 m-2]
       &                        k_inter,             &  !< Hydraulic conductivity at interface [m s-1]
@@ -568,135 +739,167 @@ CONTAINS
       &                        mpot_sbl_rgrd,       &  !< Matric potential on deperssion tile on helper grid layer [m]
       &                        k_sbl_rgrd              !< Hydraulic conductivity on sibling on helper grid layer [[m s-1]
 
+    REAL(wp)                :: sum_dz                  !< Total soil depth on tile and sibling [m]
+
+    LOGICAL                 :: l_compute_water,     &  !< T: water fluxes should be computed for a given cell
+      &                        l_compute_heat          !< T: heat fluxes should be computed for a given cell
+
     REAL(wp)                :: diffus_tle(nsoil),   &  !< Net diffusive flux on tile on soil layers [m]
       &                        diffus_sbl(nsoil)       !< Net diffusive flux on sibling on soil layers [m]
-
-    nrgrd         = nsoil * 2 + 3
 
     ! Initilize fields for accumulating regridded output
     diffus_tle(:)        = 0._wp
     diffus_sbl(:)        = 0._wp
 
-    IF (h_offset > 0._wp .AND. h_offset > SUM(dsoil_tle(:))) RETURN
-    IF (h_offset < 0._wp .AND. abs(h_offset) > SUM(dsoil_sbl(:))) RETURN
-    IF (tle_fract < 1.0e-10_wp .OR. sbl_fract < 1.0e-10_wp) RETURN
+    sum_soil_tle = SUM(dsoil_tle(:))
+    sum_soil_sbl = SUM(dsoil_sbl(:))
+    sum_dz       = SUM(dz(:))
 
-    ! Determine relative fractions from absolute fractions -- don't forget to scale fluxes afterwards
-    fr_tle_rel = tle_fract / (tle_fract+sbl_fract)
-    fr_sbl_rel = sbl_fract / (tle_fract+sbl_fract)
-
-    ! Start setting up the interpolated helper grid
-    IF (h_offset > 0._wp) THEN
-      i_tle     = 1
-      i_sbl     = 0
-      z_tle     = dsoil_tle(i_tle)
-      z_sbl     = abs(h_offset)
-      z_bot_tle = SUM(dsoil_tle(:))
-      z_bot_sbl = SUM(dsoil_sbl(:)) + abs(h_offset)
-    ELSE IF (h_offset < 0._wp) THEN
-      i_tle     = 0
-      i_sbl     = 1
-      z_tle     = abs(h_offset)
-      z_sbl     = dsoil_sbl(i_sbl)
-      z_bot_tle = SUM(dsoil_tle(:)) + abs(h_offset)
-      z_bot_sbl = SUM(dsoil_sbl(:))
+    ! Set basic conditions for lateral fluxes
+    IF (tle_fract < 1.0e-10_wp .OR. sbl_fract < 1.0e-10_wp .OR. .NOT. connect > 0._wp) THEN
+      ! No lateral fluxes possible under these conditions
+      l_compute_water = .FALSE.
+      l_compute_heat  = .FALSE.
     ELSE
-      i_tle     = 1
-      i_sbl     = 1
-      z_tle     = dsoil_tle(i_tle)
-      z_sbl     = dsoil_sbl(i_sbl)
-      z_bot_tle = SUM(dsoil_tle(:))
-      z_bot_sbl = SUM(dsoil_sbl(:))
+      ! Basic conditions for lateral transport are met
+      l_compute_water = .TRUE.
+      l_compute_heat  = .TRUE.
+      ! Determine relative fractions from absolute fractions -- don't forget to scale fluxes afterwards
+      fr_tle_rel = tle_fract / (tle_fract + sbl_fract)
+      fr_sbl_rel = sbl_fract / (tle_fract + sbl_fract)
     END IF
 
-    z_rgrd_top = 0._wp
-    z_rgrd_bot = MIN(z_tle, z_sbl)
+    ! Test special conditions for water fluxes
+    IF ((h_offset > 0._wp .AND. h_offset >  sum_soil_tle)  .OR. &
+      & (h_offset < 0._wp .AND. h_offset < -sum_soil_sbl)  .OR. &
+      & .NOT. l_diff_water) THEN
+      ! No lateral fluxes computed under these conditions
+      l_compute_water = .FALSE.
+    END IF
 
-    DO i = 1, nrgrd
-      IF (z_rgrd_bot <= z_bot_tle .AND. z_rgrd_bot <= z_bot_sbl .AND. & ! Above Bedrock in both tiles
-          i_tle       > 0         .AND. i_sbl       > 0         .AND. & ! level within upper and
-          i_tle      <= nsoil     .AND. i_sbl      <= nsoil     ) THEN  ! lower soil layer limits
-        IF (wsat_tle(i_tle) > 0._wp .AND. wsat_sbl(i_sbl) > 0._wp) THEN ! Space for liquid water exists in both tiles
+    ! Test special conditions for heat fluxes
+    IF ((abs(h_offset) > sum_dz)  .OR. &
+      & .NOT. l_diff_heat) THEN
+      ! No lateral fluxes computed under these conditions
+      l_compute_heat = .FALSE.
+    END IF
 
-          IF (z_rgrd_bot > abs(h_offset) ) THEN ! Within the soil column of both tiles
-            ! Flux is determined by the difference in matric potential between the two tiles
+    IF (l_compute_water .OR. l_compute_heat) THEN
 
-            wtr_lat            = 0._wp
-            h                  = z_rgrd_bot - z_rgrd_top
-            a_inter            = len_inter * h
+      ! Get vertical grid information for intersecting soil layers
+      ! Currently assumes soil depth and layering is equal on all tiles
+      CALL get_intersected_grid(h_offset, sum_soil_tle, dz(:), nsoil, nrgrd, &
+        &  index_tile(:), index_sibl(:), l_act_hydro(:), layer_thickness(:))
 
-            wtr_soil_tle_rgrd  = wtr_soil_tle(i_tle)   * h / dsoil_tle(i_tle)
-            wsat_tle_rgrd      = wsat_tle(i_tle)       * h / dsoil_tle(i_tle)
-            field_cap_tle_rgrd = field_cap_tle(i_tle)  * h / dsoil_tle(i_tle)
-            res_tle_rgrd       = res_tle(i_tle)        * h / dsoil_tle(i_tle)
-            mpot_tle_rgrd      = mpot_tle(i_tle)
-            k_tle_rgrd         = k_tle(i_tle)
+      DO i = 1, nrgrd
 
-            wtr_soil_sbl_rgrd  = wtr_soil_sbl(i_sbl)   * h / dsoil_sbl(i_sbl)
-            wsat_sbl_rgrd      = wsat_sbl(i_sbl)       * h / dsoil_sbl(i_sbl)
-            field_cap_sbl_rgrd = field_cap_sbl(i_sbl)  * h / dsoil_sbl(i_sbl)
-            res_sbl_rgrd       = res_sbl(i_sbl)        * h / dsoil_sbl(i_sbl)
-            mpot_sbl_rgrd      = mpot_sbl(i_sbl)
-            k_sbl_rgrd         = k_sbl(i_sbl)
-            k_inter            = (k_sbl_rgrd * k_tle_rgrd)**0.5_wp
-            d_mpot             =  abs(mpot_tle_rgrd) - abs(mpot_sbl_rgrd)
-            wtr_flx_lat        = - k_inter  * d_mpot / length_scale *  a_inter
-            wtr_rel_qlbrm      = MIN(1._wp, (wtr_soil_tle_rgrd * fr_tle_rel  &
-              &                +  wtr_soil_sbl_rgrd * fr_sbl_rel)            &
-              &                / (wsat_tle_rgrd * fr_tle_rel + wsat_sbl_rgrd * fr_sbl_rel ))
-            IF (wtr_flx_lat > 0._wp) THEN ! Flux is going from tile to sibling
+        IF (i == 1) THEN
+          ! Setting up the interpolated helper grid
+          z_bot_tle = sum_soil_tle
+          z_bot_sbl = sum_soil_sbl
+          i_tle     = 1
+          i_sbl     = 1
+          z_tle     = dsoil_tle(i_tle)
+          z_sbl     = dsoil_sbl(i_sbl)
+          IF (h_offset > 0._wp) THEN ! Tile is higher than sibling
+            i_sbl     = 0
+            z_tle     = dsoil_tle(i_tle)
+            z_sbl     = abs(h_offset)
+            z_bot_sbl = z_bot_sbl + abs(h_offset)
+          ELSE IF (h_offset < 0._wp) THEN  ! Tile is lower than sibling
+            i_tle     = 0
+            z_tle     = abs(h_offset)
+            z_sbl     = dsoil_sbl(i_sbl)
+            z_bot_tle = z_bot_tle + abs(h_offset)
+          END IF
+          z_rgrd_top = 0._wp
+          z_rgrd_bot = MIN(z_tle, z_sbl)
+        END IF
 
-              wtr_2_qlbrm      = MAX(0._wp, &
-                &               (wtr_rel_qlbrm * wsat_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
-              free_space       = MAX(0._wp,(field_cap_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
-              wtr_avail        = MAX(0._wp,(wtr_soil_tle_rgrd - res_tle_rgrd) * fr_tle_rel)
-              wtr_lat          = MIN(wtr_flx_lat * dtime, free_space, wtr_avail, wtr_2_qlbrm)
-              wtr_lat          = MAX(0._wp, wtr_lat)
+        ! Compute lateral diffusion of water within bedrock layers
+        IF (l_compute_water) THEN
+          ! Flux is determined by the difference in matric potential between the two tiles
+          IF (z_rgrd_bot <= z_bot_tle .AND. z_rgrd_bot <= z_bot_sbl .AND. &               ! Above Bedrock in both tiles
+            & z_rgrd_bot > abs(h_offset) .AND. i_tle <= nsoil .AND. i_sbl <= nsoil) THEN  ! and within soil column
+            IF (wsat_tle(i_tle) > 0._wp .AND. wsat_sbl(i_sbl) > 0._wp) THEN ! Space for liquid water exists in both tiles
 
-            ELSE ! Flux is going from sibling to tile
+              wtr_lat            = 0._wp
+              h                  = z_rgrd_bot - z_rgrd_top
+              a_inter            = len_inter * h
 
-              wtr_2_qlbrm      = MAX(0._wp, &
-                &               (wtr_rel_qlbrm  * wsat_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
-              free_space       = MAX(0._wp, (field_cap_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
-              wtr_avail        = MAX(0._wp, (wtr_soil_sbl_rgrd - res_sbl_rgrd) * fr_sbl_rel)
-              wtr_lat          = MAX(wtr_flx_lat * dtime, -free_space, -wtr_avail, -wtr_2_qlbrm)
-              wtr_lat          = MIN(0._wp, wtr_lat)
+              wtr_soil_tle_rgrd  = wtr_soil_tle(i_tle)   * h / dsoil_tle(i_tle)
+              wsat_tle_rgrd      = wsat_tle(i_tle)       * h / dsoil_tle(i_tle)
+              field_cap_tle_rgrd = field_cap_tle(i_tle)  * h / dsoil_tle(i_tle)
+              res_tle_rgrd       = res_tle(i_tle)        * h / dsoil_tle(i_tle)
+              mpot_tle_rgrd      = mpot_tle(i_tle)
+              k_tle_rgrd         = k_tle(i_tle)
 
+              wtr_soil_sbl_rgrd  = wtr_soil_sbl(i_sbl)   * h / dsoil_sbl(i_sbl)
+              wsat_sbl_rgrd      = wsat_sbl(i_sbl)       * h / dsoil_sbl(i_sbl)
+              field_cap_sbl_rgrd = field_cap_sbl(i_sbl)  * h / dsoil_sbl(i_sbl)
+              res_sbl_rgrd       = res_sbl(i_sbl)        * h / dsoil_sbl(i_sbl)
+              mpot_sbl_rgrd      = mpot_sbl(i_sbl)
+              k_sbl_rgrd         = k_sbl(i_sbl)
+              k_inter            = (k_sbl_rgrd * k_tle_rgrd)**0.5_wp
+              d_mpot             =  abs(mpot_tle_rgrd) - abs(mpot_sbl_rgrd)
+              wtr_flx_lat        = - k_inter  * d_mpot / length_scale *  a_inter
+              wtr_rel_qlbrm      = MIN(1._wp, (wtr_soil_tle_rgrd * fr_tle_rel  &
+                &                +  wtr_soil_sbl_rgrd * fr_sbl_rel)            &
+                &                / (wsat_tle_rgrd * fr_tle_rel + wsat_sbl_rgrd * fr_sbl_rel ))
+              IF (wtr_flx_lat > 0._wp) THEN
+                ! Flux is going from tile to sibling
+                wtr_2_qlbrm      = MAX(0._wp, &
+                  &               (wtr_rel_qlbrm * wsat_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
+                free_space       = MAX(0._wp,(field_cap_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
+                wtr_avail        = MAX(0._wp,(wtr_soil_tle_rgrd - res_tle_rgrd) * fr_tle_rel)
+                wtr_lat          = MIN(wtr_flx_lat * dtime, free_space, wtr_avail, wtr_2_qlbrm)
+                wtr_lat          = MAX(0._wp, wtr_lat)
+
+              ELSE
+                ! Flux is going from sibling to tile
+                wtr_2_qlbrm      = MAX(0._wp, &
+                  &               (wtr_rel_qlbrm  * wsat_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
+                free_space       = MAX(0._wp, (field_cap_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
+                wtr_avail        = MAX(0._wp, (wtr_soil_sbl_rgrd - res_sbl_rgrd) * fr_sbl_rel)
+                wtr_lat          = MAX(wtr_flx_lat * dtime, -free_space, -wtr_avail, -wtr_2_qlbrm)
+                wtr_lat          = MIN(0._wp, wtr_lat)
+
+              END IF
+              diffus_tle(i_tle)  = diffus_tle(i_tle) - wtr_lat / fr_tle_rel
+              diffus_sbl(i_sbl)  = diffus_sbl(i_sbl) + wtr_lat / fr_sbl_rel
             END IF
-            diffus_tle(i_tle)  = diffus_tle(i_tle) - wtr_lat / fr_tle_rel
-            diffus_sbl(i_sbl)  = diffus_sbl(i_sbl) + wtr_lat / fr_sbl_rel
-          END IF
-
-        END IF
-      END IF
-
-      IF (z_rgrd_bot == z_tle) THEN
-        i_tle = i_tle + 1
-        IF (i_tle <= nsoil) THEN
-          IF (dsoil_tle(i_tle) > 0._wp) THEN
-            z_tle = z_tle + dsoil_tle(i_tle)
-          ELSE
-            i_tle = nsoil + 1
           END IF
         END IF
-      END IF
 
-      IF (z_rgrd_bot == z_sbl) THEN
-        i_sbl = i_sbl + 1
-        IF (i_sbl <= nsoil) THEN
-          IF (dsoil_sbl(i_sbl) > 0._wp) THEN
-            z_sbl = z_sbl + dsoil_sbl(i_sbl)
-          ELSE
-            i_sbl = nsoil + 1
+        ! Update layer information of the interpolated helper grid
+        IF (z_rgrd_bot == z_tle) THEN
+          i_tle = i_tle + 1
+          IF (i_tle <= nsoil) THEN
+            IF (dsoil_tle(i_tle) > 0._wp) THEN
+              z_tle = z_tle + dsoil_tle(i_tle)
+            ELSE
+              i_tle = nsoil + 1
+            END IF
           END IF
         END IF
-      END IF
 
-      z_rgrd_top=z_rgrd_bot
-      z_rgrd_bot=MIN(z_tle, z_sbl)
-    END DO
+        IF (z_rgrd_bot == z_sbl) THEN
+          i_sbl = i_sbl + 1
+          IF (i_sbl <= nsoil) THEN
+            IF (dsoil_sbl(i_sbl) > 0._wp) THEN
+              z_sbl = z_sbl + dsoil_sbl(i_sbl)
+            ELSE
+              i_sbl = nsoil + 1
+            END IF
+          END IF
+        END IF
 
-    ! Adjusting the water contents and calculating the net- in- and outgoing fluxes for the tiles
+        z_rgrd_top=z_rgrd_bot
+        z_rgrd_bot=MIN(z_tle, z_sbl)
+      END DO
+    END IF
+
+    ! Adjusting the water contents and calculating the net- in- and outgoing water fluxes for the tiles
     wtr_soil_tle(:)   = wtr_soil_tle(:)              + diffus_tle(:)
     wtr_soil_sbl(:)   = wtr_soil_sbl(:)              + diffus_sbl(:)
 
@@ -708,8 +911,7 @@ CONTAINS
     diffus_out_tle(:) = diffus_out_tle(:) - MIN(0._wp, diffus_tle(:)) * rhoh2o / dtime
     diffus_out_sbl(:) = diffus_out_sbl(:) - MIN(0._wp, diffus_sbl(:)) * rhoh2o / dtime
 
-  END SUBROUTINE calc_diffusion_water
-
+  END SUBROUTINE calc_lat_fluxes_soil
 ! ===============================================================================================================================
   !>
   !! Compute lateral diffusion between two adjacent soil columns (energy)

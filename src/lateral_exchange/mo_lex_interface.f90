@@ -327,7 +327,7 @@ CONTAINS
       &                                  calc_drainage_transport,         &
       &                                  calc_pond_soil_flux_water,       &
       &                                  calc_pond_soil_flux_heat,        &
-      &                                  calc_diffusion_water,            &
+      &                                  calc_lat_fluxes_soil,            &
       &                                  calc_diffusion_heat,             &
       &                                  calc_convection_heat,            &
       &                                  calc_snow_redistribution,        &
@@ -353,6 +353,7 @@ CONTAINS
       &         nc,                                          &  !< options%nc
       &         nsoil,                                       &  !< options%nsoil_w
       &         nsibl,                                       &  !< number of siblings on tile level
+      &         nrgrd,                                       &  !< number of layers on helper grid determined by layer overlaps
       &         ic, is, it,                                  &  !< counters for loops over cells (ic), soil layers (is), tiles (it)
       &         lex_idt,                                     &  !< lex id of tile
       &         lex_ids,                                     &  !< lex id of sibling tile
@@ -628,6 +629,9 @@ CONTAINS
       snow_dens_tle_tm1(ic) = snow_soil_dens(ic)
     END DO
 
+    ! Maximum number of intersecting soil layers for lateral exchange
+    nrgrd   = nsoil * 2 + 2
+
     ! Loop over all tiles on the current tile level
     ! This includes tiles that ma not participate in the lateral exchange, such as glaciers.
     DO it = 1, nsibl
@@ -872,7 +876,7 @@ CONTAINS
               hlp1 = length_iface_ct(ic,lex_ids)*fract_pond_max_sibl(ic)
               wtr_incomming_sl(ic,:) = wtr_incomming_sl(ic,:) - wtr_infil_in_sl(ic,:)
 
-              ! Lateral ingress from pond to connected tile 
+              ! Lateral ingress from pond to connected tile
               CALL calc_pond_soil_flux_water(               &
                 &  nsoil, dtime,                            &
                 &  h_offset_ct(ic,lex_ids),                 &
@@ -899,50 +903,70 @@ CONTAINS
 
           IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr) THEN
             DO ic = 1, nc
-              IF (microcon_ctc_ct(ic,lex_ids) > 0._wp) THEN
+              wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
+                &                         - wtr_diffusion_in_sl(ic,:)
+              wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
+                &                         - wtr_diffusion_in_sl_sibl(ic,:)
+            END DO
 
-                wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
-                  &                         - wtr_diffusion_in_sl(ic,:)
-                wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
-                  &                         - wtr_diffusion_in_sl_sibl(ic,:)
+            ! Water and heat exchange between connected tiles
+            DO ic = 1, nc
+              CALL calc_lat_fluxes_soil(nc, nsoil, nrgrd, dtime,   &
+                &  dsl4jsb_Config(LEX_)%l_dffsn_wtr,        &
+                &  dsl4jsb_Config(LEX_)%l_dffsn_nrg,        &
+                &  microcon_ctc_ct(ic,lex_ids),             &
+                &  h_offset_ct(ic,lex_ids),                 &
+                &  length_scale_ct(ic,lex_ids),             &
+                &  length_iface_ct(ic,lex_ids),             &
+                &  fract(ic),                               &
+                &  fract_sibl(ic),                          &
+                ! Soil hydrological properties
+                &  soil_depth_sl(ic,:),                     &
+                &  soil_depth_sl_sibl(ic,:),                &
+                &  wtr_soil_fc_sl(ic,:),                    &
+                &  wtr_soil_fc_sl_sibl(ic,:),               &
+                &  wtr_soil_sat_sl(ic,:),                   &
+                &  wtr_soil_sat_sl_sibl(ic,:),              &
+                &  wtr_soil_res_sl(ic,:),                   &
+                &  wtr_soil_res_sl_sibl(ic,:),              &
+                &  hyd_cond_sat_sl(ic,:),                   &
+                &  hyd_cond_sat_sl_sibl(ic,:),              &
+                &  hyd_cond_sl(ic,:),                       &
+                &  hyd_cond_sl_sibl(ic,:),                  &
+                &  mpot_act(ic,:),                          &
+                &  mpot_act_sibl(ic,:),                     &
+                ! Soil thermal properties
+                &  soil_e%ubounds(:),                       &
+                &  t_soil_sl(ic,:),                         &
+                &  t_soil_sl_sibl(ic,:),                    &
+                &  heat_cond_sl(ic,:),                      &
+                &  heat_cond_sl_sibl(ic,:),                 &
+                &  vol_heat_cap_sl(ic,:),                   &
+                &  vol_heat_cap_sl_sibl(ic,:),              &
+                ! Soil water fluxes
+                &  wtr_diffusion_in_sl(ic,:),               &
+                &  wtr_diffusion_in_sl_sibl(ic,:),          &
+                &  wtr_diffusion_out_sl(ic,:),              &
+                &  wtr_diffusion_out_sl_sibl(ic,:),         &
+                &  wtr_lex_net_sl(ic,:),                    &
+                &  wtr_lex_net_sl_sibl(ic,:),               &
+                &  wtr_soil_sl(ic,:),                       &
+                &  wtr_soil_sl_sibl(ic,:),                  &
+                ! Soil heat fluxes
+                &  nrg_diffusion_in_sl(ic,:),               &
+                &  nrg_diffusion_in_sl_sibl(ic,:),          &
+                &  nrg_diffusion_out_sl(ic,:),              &
+                &  nrg_diffusion_out_sl_sibl(ic,:),         &
+                &  nrg_lex_net_sl(ic,:),                    &
+                &  nrg_lex_net_sl_sibl(ic,:)                &
+                &  )
+            END DO
 
-                ! Diffusion between connected tiles (water)
-                CALL calc_diffusion_water(nsoil, dtime,       &
-                  &  h_offset_ct(ic,lex_ids),                 &
-                  &  length_scale_ct(ic,lex_ids),             &
-                  &  length_iface_ct(ic,lex_ids),             &
-                  &  fract(ic),                               &
-                  &  fract_sibl(ic),                          &
-                  &  soil_depth_sl(ic,:),                     &
-                  &  soil_depth_sl_sibl(ic,:),                &
-                  &  wtr_soil_fc_sl(ic,:),                    &
-                  &  wtr_soil_fc_sl_sibl(ic,:),               &
-                  &  wtr_soil_sat_sl(ic,:),                   &
-                  &  wtr_soil_sat_sl_sibl(ic,:),              &
-                  &  wtr_soil_res_sl(ic,:),                   &
-                  &  wtr_soil_res_sl_sibl(ic,:),              &
-                  &  hyd_cond_sat_sl(ic,:),                   &
-                  &  hyd_cond_sat_sl_sibl(ic,:),              &
-                  &  hyd_cond_sl(ic,:),                       &
-                  &  hyd_cond_sl_sibl(ic,:),                  &
-                  &  mpot_act(ic,:),                          &
-                  &  mpot_act_sibl(ic,:),                     &
-                  &  wtr_diffusion_in_sl(ic,:),               &
-                  &  wtr_diffusion_in_sl_sibl(ic,:),          &
-                  &  wtr_diffusion_out_sl(ic,:),              &
-                  &  wtr_diffusion_out_sl_sibl(ic,:),         &
-                  &  wtr_lex_net_sl(ic,:),                    &
-                  &  wtr_lex_net_sl_sibl(ic,:),               &
-                  &  wtr_soil_sl(ic,:),                       &
-                  &  wtr_soil_sl_sibl(ic,:)                   &
-                  &  )
-
-                wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
-                  &                         + wtr_diffusion_in_sl(ic,:)
-                wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
-                  &                         + wtr_diffusion_in_sl_sibl(ic,:)
-
-              END IF
+            DO ic = 1, nc
+              wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
+                &                         + wtr_diffusion_in_sl(ic,:)
+              wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
+                &                         + wtr_diffusion_in_sl_sibl(ic,:)
             END DO
           END IF
 
