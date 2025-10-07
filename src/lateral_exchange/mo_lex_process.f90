@@ -169,190 +169,155 @@ CONTAINS
   !! Compute ingress of water from pond to adjacent soil
   !!
   SUBROUTINE calc_pond_soil_flux_water(           &
-      &      nc, nsoil, dtime, connect,           &
-      &      h_offset, length_scale,              &
-      &      length_iface_ct, fract_pond_max_dpr, &
+      &      nsoil, dtime,                        &
+      &      h_offset, length_scale, len_inter,   &
       &      lvt_fract, dpr_fract, dsoil_lvt,     &
       &      field_cap_lvt,  k_lvt, mpot_lvt,     &
-      &      egress_dpr, ingress_lvt,             &
+      &      egress_dpr,                          &
+      &      ingress_lvt,                         &
       &      wtr_latflow_dpr, wtr_latflow_lvt,    &
       &      wtr_pond_dpr, wtr_soil_lvt           &
       &      )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
-    INTEGER,  INTENT(in)    :: nc,                   &  !< Number of cells
-      &                        nsoil                    !< Number of soil ayers
+    INTEGER,  INTENT(in)    :: nsoil                 !< Number of soil ayers
 
-    REAL(wp), INTENT(in)    :: dtime,                &  !< Timestep length [s]
-      &                        connect(:),           &  !< Connectivity array for lateral exchange
-      &                        h_offset(:),          &  !< Differece in surface elevation between elevation and depression [m]
-      &                        length_scale(:),      &  !< Characteristic length scale of gradient between two adjacent tiles [m]
-      &                        length_iface_ct(:),   &
-      &                        fract_pond_max_dpr(:),&  !< Maximum fraction of ponded water on depression tile [/]
-      &                        lvt_fract(:),         &  !< Area fraction of elevation tile [/]
-      &                        dpr_fract(:)             !< Area fraction of depression tile [/]
+    REAL(wp), INTENT(in)    :: dtime,             &  !< Timestep length [s]
+      &                        h_offset,          &  !< Differece in surface elevation between elevation and depression [m]
+      &                        length_scale,      &  !< Characteristic length scale of gradient between two adjacent tiles [m]
+      &                        len_inter,         &  !< Length of interface between elevation and depression [m m-2]
+      &                        lvt_fract,         &  !< Area fraction of elevation tile [/]
+      &                        dpr_fract             !< Area fraction of depression tile [/]
 
-    REAL(wp), INTENT(in)    :: dsoil_lvt(:,:),       &  !< Soil depth on layers of elevation tile [m]
-      &                        field_cap_lvt(:,:),   &  !< Soil field capacity of elevation tile [m]
-      &                        k_lvt(:,:),           &  !< Soil layer hyd. conductivity on source tile [m s-1]
-      &                        mpot_lvt(:,:)            !< Matric potential on source tile [m]
+    REAL(wp), INTENT(in)    :: dsoil_lvt(:),      &  !< Soil depth on layers of elevation tile [m]
+      &                        field_cap_lvt(:),  &  !< Soil field capacity of elevation tile [m]
+      &                        k_lvt(:),          &  !< Soil layer hyd. conductivity on source tile [m s-1]
+      &                        mpot_lvt(:)           !< Matric potential on source tile [m]
 
 
-    REAL(wp), INTENT(inout) :: egress_dpr(:),        &  !< Diffusion flux on depression tile [kg m-2 s-1]
-      &                        wtr_pond_dpr(:),      &  !< Pond storage on depression tile [m]
-      &                        wtr_latflow_dpr(:)       !< Netflux (surface) on depression tile [kg m-2 s-1]
+    REAL(wp), INTENT(inout) :: egress_dpr            !< Diffusion flux on depression tile [kg m-2 s-1]
 
-    REAL(wp), INTENT(inout) :: ingress_lvt(:,:),     &  !< Diffusion flux on elevation tile [kg m-2 s-1]
-      &                        wtr_soil_lvt(:,:),    &  !< Soil water storage on elevation tile [m]
-      &                        wtr_latflow_lvt(:,:)     !< Netflux (below ground) on elevation tile [kg m-2 s-1]
+    REAL(wp), INTENT(inout) :: ingress_lvt(:),    &  !< Diffusion flux on elevation tile [kg m-2 s-1]
+      &                        wtr_soil_lvt(:),   &  !< Soil water storage on elevation tile [m]
+      &                        wtr_latflow_lvt(:)    !< Netflux (below ground) on elevation tile [kg m-2 s-1]
+
+    REAL(wp), INTENT(inout) :: wtr_pond_dpr,      &  !< Pond storage on depression tile [m]
+      &                        wtr_latflow_dpr       !< Netflux (surface) on depression tile [kg m-2 s-1]
+
 
     ! Local variables ------------------------------------------------------------------------------------
     INTEGER                 :: nrgrd,             &  !< Number of layers on helper grid determined by layer overlaps
-      &                        i, ic, is, i_lvt      !< Index variables for layers on helper grid (i), grid cell, soil level, and in elevation (i_lvt)
+      &                        i, i_lvt              !< Index variables for layers on helper grid (i) and in elevation (i_lvt)
 
-    LOGICAL                 :: l_compute(nc)         !< Flag to indicate whether fluxes should be computed for a given cell
-
-    REAL(wp)                :: wtr_pond_dpr_ini,  &  !< Initial surface water storage of depression tile [m]
+    REAL(wp)                :: fr_lvt_rel,        &  !< Relative fraction of elevation tile [/]
+      &                        fr_dpr_rel,        &  !< Relative fraction of depression tile [/]
+      &                        wtr_pond_dpr_ini,  &  !< Initial surface water storage of depression tile [m]
       &                        free_space,        &  !< Free pore space on elevation tile on a given layer [m]
       &                        wtr_avail,         &  !< Available water on depression tile on a given layer [m]
       &                        wtr_flx_lat,       &  !< Potential flux (based on k and mpot) between depression and elevation [m/s]
       &                        wtr_lat               !< Actual flux between depression and elevation [m]
 
-    REAL(wp)                :: len_inter(nc),     &  !< Length of interface between elevation and depression [m m-2]
-      &                        fr_lvt_rel(nc),    &  !< Relative fraction of elevation tile [/]
-      &                        fr_dpr_rel(nc),    &  !< Relative fraction of depression tile [/]
-      &                        z_bot_lvt(nc),     &  !< Bedrock boundary on elevation tile [m]
-      &                        diffusion_sum(nc)     !< Sum of diffusive fluxes on all soil layers [m]
+    REAL(wp)                :: diffusion(nsoil)      !< Diffusive flux between depression and elevation on soil layers [m]
 
-    REAL(wp)                :: diffusion(nc, nsoil)  !< Diffusive flux between depression and elevation on soil layers [m]
 
     REAL(wp)                :: z_lvt,             &  !< Layer bottom of current layer on elevation tile [m]
       &                        h,                 &  !< Height of current layer [m]
       &                        a_inter,           &  !< Interface area on current layer [m2 m-2]
       &                        z_rgrd_top,        &  !< Top of current layer on helper grid [m]
       &                        z_rgrd_bot,        &  !< Bottom of current layer on helper grid [m]
+      &                        z_rgrd_bot_new,    &  !< New bottom of current layer on helper grid [m]
+      &                        z_bot_lvt,         &  !< Bedrock boundary on elevation tile [m]
       &                        wtr_soil_lvt_rgrd, &  !< Soil water content on elevation tile on helper grid layer [m]
       &                        field_cap_lvt_rgrd,&  !< Field capacity on elevation tile on helper grid layer [m]
       &                        mpot_lvt_rgrd,     &  !< Matric potential  on elevation tile on helper grid layer [m]
       &                        k_lvt_rgrd            !< Hydraulic conductivity on elevation tile on helper grid layer [[m s-1]
 
-    ! Initialize 1D fields
-    DO ic = 1, nc
-      IF (lvt_fract(ic) >= 1.0e-10_wp .AND. dpr_fract(ic)    >= 1.0e-10_wp .AND. &
-        & h_offset(ic)  >= 1.0e-10_wp .AND. wtr_pond_dpr(ic) >= 1.0e-10_wp .AND. &
-        & connect(ic) > 0._wp) THEN
-        ! Conditions for lateral transport are met
-        l_compute(ic)  = .TRUE.
-        ! Compute length of interface between soil on elevation and ponds on depression tile
-        len_inter(ic)  = length_iface_ct(ic) * fract_pond_max_dpr(ic)
-        ! Determine relative fractions from absolute fractions -- don't forget to scale fluxes afterwards
-        fr_lvt_rel(ic) = lvt_fract(ic) / (lvt_fract(ic) + dpr_fract(ic))
-        fr_dpr_rel(ic) = dpr_fract(ic) / (lvt_fract(ic) + dpr_fract(ic))
-      ELSE
-        ! No lateral transport possible
-        l_compute(ic) = .FALSE.
-      END IF
-      diffusion_sum(ic) = 0._wp
-      z_bot_lvt(ic)     = 0._wp
-    END DO
+    nrgrd = 2*nsoil
 
-    ! Initilize 2D fields
-    DO is = 1, nsoil
-      DO  ic = 1, nc
-        diffusion(ic, is) = 0._wp
-        z_bot_lvt(ic)     = z_bot_lvt(ic) + dsoil_lvt(ic,is)
-      END DO
-    END DO
+    ! Initilize fields for accumulating regridded output
+    diffusion(:)        = 0._wp
 
-    nrgrd = 2 * nsoil
+    IF (lvt_fract < 1.0e-10_wp .OR. dpr_fract < 1.0e-10_wp) RETURN
+
+    ! Determine relative fractions from absolute fractions -- don't forget to scale fluxes afterwards
+    fr_lvt_rel = lvt_fract / (lvt_fract+dpr_fract)
+    fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
+
+    wtr_pond_dpr_ini = wtr_pond_dpr
+
+
+    IF (h_offset < 1.0e-10_wp .OR. wtr_pond_dpr < 1.0e-10_wp) RETURN
+
+    ! Start setting up the interpolated helper grid
+    i_lvt = 1
+    z_bot_lvt = SUM(dsoil_lvt(:))
+    z_lvt     = dsoil_lvt(i_lvt)
+    z_rgrd_top = 0._wp
+
+    IF (h_offset > wtr_pond_dpr_ini) THEN
+      z_rgrd_bot = MIN(z_lvt, h_offset - wtr_pond_dpr_ini)
+    ELSE
+      z_rgrd_bot = MIN(z_lvt, h_offset)
+    END IF
+
     DO i = 1, nrgrd
-      DO ic = 1, nc
-        IF (l_compute(ic)) THEN
-          ! Initialize first
-          IF (i == 1) THEN
-            wtr_pond_dpr_ini = wtr_pond_dpr(ic)
-            i_lvt      = 1
-            z_lvt      = dsoil_lvt(ic,1)
-            z_rgrd_top = 0._wp
-            IF (h_offset(ic) > wtr_pond_dpr_ini) THEN
-              z_rgrd_bot = MIN(z_lvt, h_offset(ic) - wtr_pond_dpr_ini)
-            ELSE
-              z_rgrd_bot = MIN(z_lvt, h_offset(ic))
-            END IF
-          END IF
-
-          IF (z_rgrd_bot <= z_bot_lvt(ic)) THEN ! Within soil of elevation
-            h                     = z_rgrd_bot - z_rgrd_top
-            a_inter               = len_inter(ic) * h
-            wtr_soil_lvt_rgrd     = wtr_soil_lvt(ic,i_lvt)  * h / dsoil_lvt(ic,i_lvt)
-            wtr_lat               = 0._wp
-            IF (z_rgrd_bot <= h_offset(ic)) THEN ! Above depression surface
-              field_cap_lvt_rgrd  = field_cap_lvt(ic,i_lvt) * h / dsoil_lvt(ic,i_lvt)
-              k_lvt_rgrd          = k_lvt(ic,i_lvt)
-              mpot_lvt_rgrd       = mpot_lvt(ic,i_lvt)
-              IF (z_rgrd_bot > h_offset(ic) - wtr_pond_dpr_ini) THEN ! Within the ponded surface water in the depression
-                ! Water flows from the pond reservoir of the depression tile into the soil of the elevation tile
-                wtr_flx_lat       = abs(k_lvt_rgrd  * mpot_lvt_rgrd) / length_scale(ic) *  a_inter
-                free_space        = MAX(0._wp,(field_cap_lvt_rgrd - wtr_soil_lvt_rgrd) * fr_lvt_rel(ic))
-                wtr_avail         = MIN(h, wtr_pond_dpr(ic)) * fr_dpr_rel(ic)
-                wtr_lat           = MIN(wtr_flx_lat * dtime, free_space, wtr_avail)
-              END IF
-            END IF
-            diffusion(ic,i_lvt)   = diffusion(ic,i_lvt) + wtr_lat
-          END IF
-          ! Layer bottom was on soil layer
-          IF (z_rgrd_bot == z_lvt) THEN
-            i_lvt = i_lvt + 1
-            IF (i_lvt <= nsoil) THEN
-              IF (dsoil_lvt(ic,i_lvt) > 0._wp) THEN
-                z_lvt = z_lvt + dsoil_lvt(ic,i_lvt)
-              ELSE
-                z_lvt = 10000._wp
-                i_lvt = nsoil + 1
-              END IF
-            ELSE
-              z_lvt = 10000._wp
-              i_lvt = nsoil + 1
-            END IF
-          END IF
-
-          ! Finding new layer Bottom
-          z_rgrd_top = z_rgrd_bot
-          IF (z_rgrd_bot < h_offset(ic) - wtr_pond_dpr_ini) THEN ! Still above water level in depression
-            z_rgrd_bot = MIN(h_offset(ic) - wtr_pond_dpr_ini, z_lvt)
-          ELSE IF (z_rgrd_bot < h_offset(ic) ) THEN              ! Within the ponded surface water in the depression
-            z_rgrd_bot = MIN(h_offset(ic), z_lvt)
-          ELSE
-            z_rgrd_bot = z_lvt
+      IF (z_rgrd_bot <= z_bot_lvt) THEN ! Within soil of elevation
+        h                     = z_rgrd_bot - z_rgrd_top
+        a_inter               = len_inter * h
+        wtr_soil_lvt_rgrd     = wtr_soil_lvt(i_lvt)  * h / dsoil_lvt(i_lvt)
+        wtr_lat               = 0._wp
+        IF (z_rgrd_bot <= h_offset) THEN ! Above depression surface
+          field_cap_lvt_rgrd  = field_cap_lvt(i_lvt) * h / dsoil_lvt(i_lvt)
+          k_lvt_rgrd          = k_lvt(i_lvt)
+          mpot_lvt_rgrd       = mpot_lvt(i_lvt)
+          IF (z_rgrd_bot > h_offset - wtr_pond_dpr_ini) THEN ! Within the ponded surface water in the depression
+            ! Water flows from the pond reservoir of the depression tile into the soil of the elevation tile
+            wtr_flx_lat       = abs(k_lvt_rgrd  * mpot_lvt_rgrd) / length_scale *  a_inter
+            free_space        = MAX(0._wp,(field_cap_lvt_rgrd - wtr_soil_lvt_rgrd) * fr_lvt_rel)
+            wtr_avail         = MIN(h, wtr_pond_dpr) * fr_dpr_rel
+            wtr_lat           = MIN(wtr_flx_lat * dtime, free_space, wtr_avail)
           END IF
         END IF
-      END DO
-    END DO
-
-    DO is = 1, nsoil
-      DO  ic = 1, nc
-        diffusion_sum(ic) = diffusion_sum(ic) + diffusion(ic,is)
-      END DO
-    END DO
-
-    DO is = 1, nsoil
-      DO ic = 1, nc
-        IF (l_compute(ic)) THEN
-          wtr_soil_lvt(ic,is)    = wtr_soil_lvt(ic,is)    + diffusion(ic,is) / fr_lvt_rel(ic)
-          wtr_latflow_lvt(ic,is) = wtr_latflow_lvt(ic,is) + diffusion(ic,is) / fr_lvt_rel(ic) * rhoh2o / dtime
-          ingress_lvt(ic,is)     = ingress_lvt(ic,is)     + diffusion(ic,is) / fr_lvt_rel(ic) * rhoh2o / dtime
-        END IF
-      END DO
-    END DO
-
-    DO ic = 1, nc
-      IF (l_compute(ic)) THEN
-        wtr_pond_dpr(ic)    = wtr_pond_dpr(ic)    - diffusion_sum(ic) / fr_dpr_rel(ic)
-        wtr_latflow_dpr(ic) = wtr_latflow_dpr(ic) - diffusion_sum(ic) / fr_dpr_rel(ic) * rhoh2o / dtime
-        egress_dpr(ic)      = egress_dpr(ic)      + diffusion_sum(ic) / fr_dpr_rel(ic) * rhoh2o / dtime
+        diffusion(i_lvt)      = diffusion(i_lvt) + wtr_lat
       END IF
+      ! Layer bottom was on soil layer
+      IF (z_rgrd_bot == z_lvt) THEN
+        i_lvt = i_lvt + 1
+        IF (i_lvt <= nsoil) THEN
+          IF (dsoil_lvt(i_lvt) > 0._wp) THEN
+            z_lvt = z_lvt + dsoil_lvt(i_lvt)
+          ELSE
+            z_lvt = 10000._wp
+            i_lvt = nsoil + 1
+          END IF
+        ELSE
+          z_lvt = 10000._wp
+          i_lvt = nsoil + 1
+        END IF
+      END IF
+
+      ! Finding new layer Bottom
+      IF (z_rgrd_bot < h_offset - wtr_pond_dpr_ini) THEN ! Still above water level in depression
+        z_rgrd_bot_new = MIN(h_offset - wtr_pond_dpr_ini, z_lvt)
+      ELSE IF (z_rgrd_bot < h_offset ) THEN              ! Within the ponded surface water in the depression
+        z_rgrd_bot_new = MIN(h_offset, z_lvt)
+      ELSE
+        z_rgrd_bot_new = z_lvt
+      END IF
+
+      z_rgrd_top=z_rgrd_bot
+      z_rgrd_bot=z_rgrd_bot_new
     END DO
+
+    wtr_soil_lvt     = wtr_soil_lvt    +     diffusion  / fr_lvt_rel
+    wtr_pond_dpr     = wtr_pond_dpr    - SUM(diffusion) / fr_dpr_rel
+
+    wtr_latflow_lvt  = wtr_latflow_lvt +     diffusion  / fr_lvt_rel * rhoh2o / dtime
+    wtr_latflow_dpr  = wtr_latflow_dpr - SUM(diffusion) / fr_dpr_rel * rhoh2o / dtime
+
+    ingress_lvt      = ingress_lvt     + diffusion      / fr_lvt_rel * rhoh2o / dtime
+    egress_dpr       = egress_dpr      + SUM(diffusion) / fr_dpr_rel * rhoh2o / dtime
 
   END SUBROUTINE calc_pond_soil_flux_water
 

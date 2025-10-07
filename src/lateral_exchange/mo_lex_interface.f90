@@ -865,43 +865,37 @@ CONTAINS
             & mpot_act=mpot_act_sibl(:,:)                   &
             )
 
-          IF (dsl4jsb_Config(LEX_)%l_infil_trns) THEN
+          DO ic = 1,nc
+            IF  (dsl4jsb_Config(LEX_)%l_infil_trns .AND. &
+              & (microcon_ctc_ct(ic,lex_ids) > 0._wp)) THEN
 
-            DO is = 1, nsoil
-              DO  ic = 1, nc
-                wtr_incomming_sl(ic,is) = wtr_incomming_sl(ic,is) - wtr_infil_in_sl(ic,is)
-              END DO
-            END DO
+              hlp1 = length_iface_ct(ic,lex_ids)*fract_pond_max_sibl(ic)
+              wtr_incomming_sl(ic,:) = wtr_incomming_sl(ic,:) - wtr_infil_in_sl(ic,:)
 
-            ! Lateral ingress from pond to connected tile
-            CALL calc_pond_soil_flux_water(              &
-              &  nc, nsoil, dtime,                       &
-              &  microcon_ctc_ct(:,lex_ids),             &
-              &  h_offset_ct(:,lex_ids),                 &
-              &  length_scale_ct(:,lex_ids),             &
-              &  length_iface_ct(:,lex_ids),             &
-              &  fract_pond_max_sibl(:),                 &
-              &  fract(:),                               &
-              &  fract_sibl(:),                          &
-              &  soil_depth_sl(:,:),                     &
-              &  wtr_soil_fc_sl(:,:),                    &
-              &  hyd_cond_sl(:,:),                       &
-              &  mpot_act(:,:),                          &
-              &  wtr_infil_out_sibl(:),                  &
-              &  wtr_infil_in_sl(:,:),                   &
-              &  wtr_lex_net_srf_sibl(:),                &
-              &  wtr_lex_net_sl(:,:),                    &
-              &  wtr_pond_sibl(:),                       &
-              &  wtr_soil_sl(:,:)                        &
-              &  )
+              ! Lateral ingress from pond to connected tile 
+              CALL calc_pond_soil_flux_water(               &
+                &  nsoil, dtime,                            &
+                &  h_offset_ct(ic,lex_ids),                 &
+                &  length_scale_ct(ic,lex_ids),             &
+                &  hlp1,                                    &
+                &  fract(ic),                               &
+                &  fract_sibl(ic),                          &
+                &  soil_depth_sl(ic,:),                     &
+                &  wtr_soil_fc_sl(ic,:),                    &
+                &  hyd_cond_sl(ic,:),                       &
+                &  mpot_act(ic,:),                          &
+                &  wtr_infil_out_sibl(ic),                  &
+                &  wtr_infil_in_sl(ic,:),                   &
+                &  wtr_lex_net_srf_sibl(ic),                &
+                &  wtr_lex_net_sl(ic,:),                    &
+                &  wtr_pond_sibl(ic),                       &
+                &  wtr_soil_sl(ic,:)                        &
+                &  )
 
-            DO is = 1, nsoil
-              DO  ic = 1, nc
-                wtr_incomming_sl(ic,is) = wtr_incomming_sl(ic,is) + wtr_infil_in_sl(ic,is)
-              END DO
-            END DO
+              wtr_incomming_sl(ic,:) = wtr_incomming_sl(ic,:) + wtr_infil_in_sl(ic,:)
 
-          END IF
+            END IF
+          END DO
 
           IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr) THEN
             DO ic = 1, nc
