@@ -708,28 +708,38 @@ CONTAINS
       ! Start calculating exchange processes between different tiles
       IF (lex_idt /= lex_ids) THEN
 
-        DO ic = 1, nc
-          wtr_incomming_srf(ic)       = 0._wp
-          wtr_incomming_srf_sibl(ic)  = 0._wp
-        END DO
-
-        DO is = 1, nsoil
-          DO ic = 1, nc
-            wtr_incomming_sl(ic,is)      = 0._wp
-            wtr_incomming_sl_sibl(ic,is) = 0._wp
-            wtr_latflow_sl_used(ic,is)   = wtr_latflow_sl(ic,is)
-          END DO
-        END DO
+        wtr_incomming_srf(:)       = 0._wp
+        wtr_incomming_srf_sibl(:)  = 0._wp
+        wtr_incomming_sl(:,:)      = 0._wp
+        wtr_incomming_sl_sibl(:,:) = 0._wp
 
         ! Incomming later subsurface runoff is adjusted according to differences in soil depth (until bedrock),
         ! and for micro-scale connections, also for differences in surface elevation
-        CALL shift_fluxes_sl(nc, nsoil,     &
-          & microcon_hfp_blg_ct(:,lex_ids), &
-          & h_offset_ct(:,lex_ids),         &
-          & soil_depth_sl(:,:),             &
-          & soil_depth_sl_sibl(:,:),        &
-          & wtr_latflow_sl_used(:,:)        &
-          )
+        wtr_latflow_sl_used(:,:) = wtr_latflow_sl(:,:)
+
+        DO ic = 1, nc
+          IF (microcon_hfp_blg_ct(ic,lex_ids) > 0._wp .AND. h_offset_ct(ic,lex_ids) > 0._wp) THEN
+
+            CALL shift_fluxes_sl( nsoil,                &
+              &  h_offset_ct(ic,lex_ids),               &
+              &  soil_depth_sl(ic,:),                   &
+              &  soil_depth_sl_sibl(ic,:),              &
+              &  wtr_latflow_sl_used(ic,:)              &
+              )
+
+          ELSE
+
+            DO is = nsoil, 2, -1
+              IF (soil_depth_sl_sibl(ic, is) <= 0._wp) THEN
+
+                wtr_latflow_sl_used(ic,is-1) = wtr_latflow_sl_used(ic,is-1) &
+                  &                          + wtr_latflow_sl_used(ic,is)
+                wtr_latflow_sl_used(ic,is)   = 0._wp
+
+              END IF
+            END DO
+          END IF
+        END DO
 
         ! Lateral fluxes of surface runoff.
         ! The outflow from tile is actually calculated in HYDRO_ and here only the distributions on siblings is done

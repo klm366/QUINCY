@@ -1439,125 +1439,76 @@ CONTAINS
   !>
   !! Adjust lateral fluxes according to differences in surface elevation and bedrock boundary
   !!
-  SUBROUTINE shift_fluxes_sl( &
-    & nc,                     &
-    & nsoil,                  &
-    & hyd_flow_path,          &
-    & h_offset,               &
-    & dsoil_lvt, dsoil_dpr,   &
-    & flx_lat_sl              &
+  SUBROUTINE shift_fluxes_sl(                 &
+    & nsoil,                                  &
+    & h_offset,                               &
+    & dsoil_lvt, dsoil_dpr,                   &
+    & flx_lat_sl                              &
     )
 
-    INTEGER , INTENT(in)    :: nc,               &  !< Number of cells
-      &                        nsoil                !< Number of soil ayers
-
-    REAL(wp), INTENT(in)    :: hyd_flow_path(:), &  !< Connectivity factor for below-ground flow paths [/]
-      &                        h_offset(:)          !< Difference in surface hights between elevation and depression [m]
-
-    REAL(wp), INTENT(in)    :: dsoil_lvt(:,:),   &  !< Soil depth on layers of elevation tile [m]
-      &                        dsoil_dpr(:,:)       !< Soil depth on layers of depression tile [m]
-
-    REAL(wp), INTENT(inout) :: flx_lat_sl(:,:)     !< Lateralal flux to be adjusted [?]
-
-    INTEGER  :: nrgrd,                &  !< Number of layers on helper grid determined by layer overlaps
-      &         i, ic, is,            &  !< Counter variables
-      &         i_lvt, i_dpr             !< Index variables for layers on in elevation (i_lvt) and in depression (i_dpr)
-
-    REAL(wp) :: z_lvt,                &  !< Layer bottom of current layer on elevation tile [m]
-      &         z_dpr,                &  !< Layer bottom of current layer on depression tile [m]
-      &         z_rgrd_top,           &  !< Top of current layer on helper grid [m]
-      &         z_rgrd_bot,           &  !< Bottom of current layer on helper grid [m]
-      &         h                        !< Height of current layer [m]
-    REAL(wp) :: dsoil_lvt_sum(nc),    &  !< Acc. soil depth on layers of elevation tile [m]
-      &         dsoil_dpr_sum(nc)        !< Acc. soil depth on layers of depression tile + tile height diff [m]
-
-    LOGICAL  :: l_regrid(nc)             !< Flag to indicate if regridding is needed
-
-    REAL(wp) :: flx_lat_sl_upd(nc,nsoil) !< Updated lateral flux [?]
+    INTEGER , INTENT(in)    :: nsoil             !< Number of soil ayers
 
 
-    ! Check where regridding is needed and initialize non-layered variables
-    DO ic = 1, nc
-      IF (hyd_flow_path(ic) > 0._wp .AND. h_offset(ic) > 0._wp) THEN
-        l_regrid(ic) = .TRUE.
-        dsoil_lvt_sum(ic) = 0._wp
-        dsoil_dpr_sum(ic) = h_offset(ic)
-      ELSE
-        l_regrid(ic) = .FALSE.
+    REAL(wp), INTENT(in)    :: h_offset          !< Differece in surface elevation between elevation and depression [m]
+
+    REAL(wp), INTENT(in)    :: dsoil_lvt(:),  &  !< Soil depth on layers of elevation tile [m]
+      &                        dsoil_dpr(:)      !< Soil depth on layers of depression tile [m]
+
+    REAL(wp), INTENT(inout) :: flx_lat_sl(:)     !< Lateralal flux to be adjusted [?]
+
+
+    INTEGER                 :: nrgrd,         &  !< Number of layers on helper grid determined by layer overlaps
+      &                        i,             &  !< Counter variable
+      &                        i_lvt, i_dpr      !< Index variables for layers on in elevation (i_lvt) and in depression (i_dpr)
+
+    REAL(wp)                :: z_lvt,         &  !< Layer bottom of current layer on elevation tile [m]
+      &                        z_dpr,         &  !< Layer bottom of current layer on depression tile [m]
+      &                        z_rgrd_top,    &  !< Top of current layer on helper grid [m]
+      &                        z_rgrd_bot,    &  !< Bottom of current layer on helper grid [m]
+      &                        h                 !< Height of current layer [m]
+
+
+    REAL(wp)                :: flx_lat_sl_upd(nsoil) !< Updated lateral flux [?]
+
+    flx_lat_sl_upd(:) = 0._wp
+
+    nrgrd       = nsoil * 2 + 1
+
+    i_lvt = 1
+    z_lvt = dsoil_lvt(1)
+
+    i_dpr = 1
+    z_dpr = dsoil_dpr(1) + h_offset
+
+    z_rgrd_top = 0._wp
+    z_rgrd_bot = MIN(z_lvt, z_dpr)
+
+    DO i  = 1, nrgrd
+      h                     = z_rgrd_bot-z_rgrd_top
+      flx_lat_sl_upd(i_dpr) = flx_lat_sl_upd(i_dpr) + flx_lat_sl(i_lvt) * h / dsoil_lvt(i_lvt)
+
+      IF (z_rgrd_bot == z_lvt .AND. z_lvt < SUM(dsoil_lvt(:))) THEN
+        i_lvt = i_lvt + 1
+        IF (i_lvt <= nsoil) THEN
+          z_lvt = z_lvt + dsoil_lvt(i_lvt)
+        END IF
       END IF
-    END DO
 
-    ! Initialize layered variables
-    DO is = 1, nsoil
-      DO ic = 1, nc
-        IF (l_regrid(ic)) THEN
-          flx_lat_sl_upd(ic,is) = 0._wp
-          dsoil_lvt_sum(ic)     = dsoil_lvt_sum(ic) + dsoil_lvt(ic,is)
-          dsoil_dpr_sum(ic)     = dsoil_dpr_sum(ic) + dsoil_dpr(ic,is)
-        ELSE
-          flx_lat_sl_upd(ic,is) = flx_lat_sl(ic,is)
+      IF (z_rgrd_bot == z_dpr .AND. z_dpr < SUM(dsoil_dpr(:)) + h_offset) THEN
+        i_dpr = i_dpr + 1
+        IF (i_dpr <= nsoil) THEN
+          z_dpr = z_dpr + dsoil_dpr(i_dpr)
         END IF
-      END DO
+      ELSE IF (z_rgrd_bot >= SUM(dsoil_dpr(:)) + h_offset) THEN
+        z_dpr = z_lvt
+      END IF
+
+      z_rgrd_top=z_rgrd_bot
+      z_rgrd_bot=MIN(z_lvt, z_dpr)
+
     END DO
 
-    ! For cells without flow paths or height differences, move lateral fluxes upwards in case
-    ! they happen in layers below the total soil depth
-    DO is = nsoil, 2, -1
-      DO ic = 1, nc
-        IF (.NOT. l_regrid(ic) .AND. dsoil_dpr(ic,is) <= 0._wp) THEN
-          flx_lat_sl_upd(ic,is-1) = flx_lat_sl_upd(ic,is-1) + flx_lat_sl_upd(ic,is)
-          flx_lat_sl_upd(ic,is)   = 0._wp
-        END IF
-      END DO
-    END DO
-
-    ! Compute cells with flow paths and height differences
-    nrgrd = nsoil * 2 + 1
-    DO i = 1, nrgrd
-      DO ic = 1, nc
-        IF (l_regrid(ic)) THEN
-          ! Initialize first
-          IF (i == 1) THEN
-            i_lvt      = 1
-            z_lvt      = dsoil_lvt(ic,1)
-            i_dpr      = 1
-            z_dpr      = dsoil_dpr(ic,1) + h_offset(ic)
-            z_rgrd_top = 0._wp
-            z_rgrd_bot = MIN(z_lvt, z_dpr)
-          END IF
-          ! Compute layer thickness and update lateral fluxes depending on layer fraction
-          h = z_rgrd_bot - z_rgrd_top
-          flx_lat_sl_upd(ic,i_dpr) = flx_lat_sl_upd(ic,i_dpr) + flx_lat_sl(ic,i_lvt) * h / dsoil_lvt(ic,i_lvt)
-
-          ! Update layer information
-          IF (z_rgrd_bot == z_lvt .AND. z_lvt < dsoil_lvt_sum(ic)) THEN
-            i_lvt = i_lvt + 1
-            IF (i_lvt <= nsoil) THEN
-              z_lvt = z_lvt + dsoil_lvt(ic,i_lvt)
-            END IF
-          END IF
-          IF (z_rgrd_bot == z_dpr .AND. z_dpr < dsoil_dpr_sum(ic)) THEN
-            i_dpr = i_dpr + 1
-            IF (i_dpr <= nsoil) THEN
-              z_dpr = z_dpr + dsoil_dpr(ic,i_dpr)
-            END IF
-          ELSE IF (z_rgrd_bot >= dsoil_dpr_sum(ic)) THEN
-            z_dpr = z_lvt
-          END IF
-
-          z_rgrd_top = z_rgrd_bot
-          z_rgrd_bot = MIN(z_lvt, z_dpr)
-
-        END IF
-      END DO
-    END DO
-
-    ! Write updated lateral fluxes back to the original array
-    DO is = 1, nsoil
-      DO ic = 1, nc
-        flx_lat_sl(ic,is) = flx_lat_sl_upd(ic,is)
-      END DO
-    END DO
+    flx_lat_sl(:) = flx_lat_sl_upd(:)
 
   END SUBROUTINE shift_fluxes_sl
 
