@@ -193,7 +193,7 @@ CONTAINS
       CALL hydro_read_init_vars(tile)
       CALL hydro_init_bc(tile)
       CALL hydro_init_ic(tile)
-      CALL hydro_finalize_init_vars()
+      CALL hydro_finalize_init_vars()  ! TODO: Is this necessary? Or should it be done like below.
     ELSE
       ! Read initial and boundary condition data by the top tile, only.
       ! Note: this requires that the init routines in mo_jsb_model_init:jsbach_init are called starting
@@ -1042,7 +1042,7 @@ CONTAINS
         CALL read_bc_data(input_file, 'char_area',  tile%name, .FALSE., hydro_init_vars%char_area,  &
           &  llimit=0._wp, fallback=10000._wp)
         CALL read_bc_data(input_file, 'char_h_srf', tile%name, .FALSE., hydro_init_vars%char_h_srf, &
-          &  llimit=0._wp, fallback=0._wp)
+          &  fallback=0._wp)
         CALL read_bc_data(input_file, 'char_slope', tile%name, .FALSE., hydro_init_vars%char_slope, &
           &  llimit=0._wp, fallback=-9999._wp)
         ! Reset LEX l_dpr4ponds switch in case that tile specific depression data is provided
@@ -1399,7 +1399,7 @@ CONTAINS
       IF (dsl4jsb_Config(LEX_)%l_noslope_dpr) THEN
         ! Assuming zero slope on depression tiles (char_h_surf < 0.0) ...
         WHERE ((dsl4jsb_var_ptr(HYDRO_, macro_slope) < 0.0_wp) .AND. &
-          &    (dsl4jsb_var_ptr(HYDRO_, char_h_surf)      < 0.0_wp))
+          &    (dsl4jsb_var_ptr(HYDRO_, char_h_surf) < 0.0_wp))
           dsl4jsb_var_ptr(HYDRO_, macro_slope) = 0.0_wp
         ! ... and steepness elsewhere
         ELSE WHERE (dsl4jsb_var_ptr(HYDRO_, macro_slope) < 0.0_wp)
