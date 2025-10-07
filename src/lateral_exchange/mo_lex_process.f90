@@ -614,7 +614,8 @@ CONTAINS
 
     DO i = 1, nrgrd
       IF (z_rgrd_bot <= z_bot_tle .AND. z_rgrd_bot <= z_bot_sbl .AND. & ! Above Bedrock in both tiles
-          i_tle      <= nsoil     .AND. i_sbl      <= nsoil     ) THEN  ! within soil column
+          i_tle       > 0         .AND. i_sbl       > 0         .AND. & ! level within upper and
+          i_tle      <= nsoil     .AND. i_sbl      <= nsoil     ) THEN  ! lower soil layer limits
         IF (wsat_tle(i_tle) > 0._wp .AND. wsat_sbl(i_sbl) > 0._wp) THEN ! Space for liquid water exists in both tiles
 
           IF (z_rgrd_bot > abs(h_offset) ) THEN ! Within the soil column of both tiles
@@ -666,32 +667,33 @@ CONTAINS
             diffus_sbl(i_sbl)  = diffus_sbl(i_sbl) + wtr_lat / fr_sbl_rel
           END IF
 
-          IF (z_rgrd_bot == z_tle) THEN
-            i_tle = i_tle + 1
-            IF (i_tle <= nsoil) THEN
-              IF (dsoil_tle(i_tle) > 0._wp) THEN
-                z_tle = z_tle + dsoil_tle(i_tle)
-              ELSE
-                i_tle = nsoil + 1
-              END IF
-            END IF
-          END IF
-
-          IF (z_rgrd_bot == z_sbl) THEN
-            i_sbl = i_sbl + 1
-            IF (i_sbl <= nsoil) THEN
-              IF (dsoil_sbl(i_sbl) > 0._wp) THEN
-                z_sbl = z_sbl + dsoil_sbl(i_sbl)
-              ELSE
-                i_sbl = nsoil + 1
-              END IF
-            END IF
-          END IF
-
-          z_rgrd_top=z_rgrd_bot
-          z_rgrd_bot=MIN(z_tle, z_sbl)
         END IF
       END IF
+
+      IF (z_rgrd_bot == z_tle) THEN
+        i_tle = i_tle + 1
+        IF (i_tle <= nsoil) THEN
+          IF (dsoil_tle(i_tle) > 0._wp) THEN
+            z_tle = z_tle + dsoil_tle(i_tle)
+          ELSE
+            i_tle = nsoil + 1
+          END IF
+        END IF
+      END IF
+
+      IF (z_rgrd_bot == z_sbl) THEN
+        i_sbl = i_sbl + 1
+        IF (i_sbl <= nsoil) THEN
+          IF (dsoil_sbl(i_sbl) > 0._wp) THEN
+            z_sbl = z_sbl + dsoil_sbl(i_sbl)
+          ELSE
+            i_sbl = nsoil + 1
+          END IF
+        END IF
+      END IF
+
+      z_rgrd_top=z_rgrd_bot
+      z_rgrd_bot=MIN(z_tle, z_sbl)
     END DO
 
     ! Adjusting the water contents and calculating the net- in- and outgoing fluxes for the tiles
