@@ -94,7 +94,7 @@ MODULE mo_q_dfire_spitfire
 
   USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
   USE mo_q_dfire_util,          ONLY: logical2real
-  USE mo_quincy_stats,          ONLY: stats_average
+  USE mo_quincy_stats,          ONLY: stats_average_weight
 
   IMPLICIT NONE
 
@@ -211,6 +211,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: tile_area(:) ! [m2]
     LOGICAL                               :: mask_is_tile_enabled(options%nc)
 
+    REAL(wp)                              :: ab_soil_depth_sl(options%nc,df_sf_sl_dims_nr)    !< above ground soil depth layers [m]
     REAL(wp)                              :: ab_w_soil_sl(options%nc,df_sf_sl_dims_nr)    !< above ground soil water [m]
     REAL(wp)                              :: ab_w_soil_fc_sl(options%nc,df_sf_sl_dims_nr) !< above ground soil field capacity [m]
     REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
@@ -253,6 +254,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real3D_onChunk                :: wtr_soil_sl        ! soil water content [m]
     dsl4jsb_Real3D_onChunk                :: wtr_soil_fc_sl     ! soil water field capacity [m]
+    dsl4jsb_Real3D_onChunk                :: soil_depth_sl      ! Soil depth until bedrock [m]
 
     !< Ignitions
     dsl4jsb_Real2D_onChunk                :: e_n_ignitions    ! out, Total rate of ignitions events [ha-1 ts-1]
@@ -350,6 +352,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)          ! in
 
     !< Ignitions
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, e_n_ignitions)          ! out
@@ -485,9 +488,10 @@ CONTAINS
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
 
+    ab_soil_depth_sl(:,:) = soil_depth_sl(:, [df_sf_sl_indices])
     ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
     ab_w_soil_fc_sl(:,:) = wtr_soil_fc_sl(:, [df_sf_sl_indices])
-    ab_moisture = calc_ab_moisture(ab_w_soil_sl, ab_w_soil_fc_sl, mask=mask_is_tile_enabled)
+    ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_fc_sl, mask=mask_is_tile_enabled)
 
     ! Load input data
     a_nd = a2l_lightning_events * 4._wp
@@ -804,7 +808,8 @@ CONTAINS
   !>
   !> Calculate the above ground relative soil moisture
   !>
-  FUNCTION calc_ab_moisture(ab_wtr_soil_sl, ab_wtr_soil_fc_sl, mask) RESULT (ab_moisture)
+  FUNCTION calc_ab_moisture(ab_soil_depth_sl, ab_wtr_soil_sl, ab_wtr_soil_fc_sl, mask) RESULT (ab_moisture)
+    REAL(wp), INTENT(in)                :: ab_soil_depth_sl(:,:)        !< soil depth [m] (#nc, #above ground soil layers)
     REAL(wp), INTENT(in)                :: ab_wtr_soil_sl(:,:)        !< soil water content [m] (#nc, #above ground soil layers)
     REAL(wp), INTENT(in)                :: ab_wtr_soil_fc_sl(:,:)     !< soil water field capacity [m] (#nc, #above ground soil layers)
     LOGICAL, INTENT(in)                 :: mask(:)                    !< True = gridcell enabled
@@ -834,7 +839,7 @@ CONTAINS
     ab_moisture = 0._wp
     DO ic=1, nc
       IF (mask(ic)) THEN
-        ab_moisture(ic) = stats_average(ab_moisture_sl(ic,:))
+        ab_moisture(ic) = stats_average_weight(ab_moisture_sl(ic,:), ab_soil_depth_sl(ic,:))
       END IF
     ENDDO
   END FUNCTION calc_ab_moisture
