@@ -480,18 +480,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
 
-    ! VEG_ 2D
-    dsl4jsb_Aggregate_onChunk(VEG_, maint_respiration                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, growth_respiration                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, n_processing_respiration          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, npp                               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, uptake_nh4                        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, uptake_no3                        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c13      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c14      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, biological_n_fixation             , weighted_by_fract)
-
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_reset_veg_fluxes
@@ -586,16 +574,6 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SB_)
-
-    ! VEG_ 2D
-    dsl4jsb_Aggregate_onChunk(VEG_, uptake_nh4                        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, uptake_no3                        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, n_processing_respiration          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, maint_respiration                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, growth_respiration                , weighted_by_fract)
-    ! SB_ 3D
-    dsl4jsb_Aggregate_onChunk(SB_, plant_uptake_nh4_sl                , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -634,14 +612,20 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, net_growth                          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, mean_leaf_age                       , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, npp                                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, npp_c13                             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, npp_c14                             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c13        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c14        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, biological_n_fixation               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, uptake_nh4                          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, uptake_no3                          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, uptake_po4                          , weighted_by_fract)
 
     ! VEG_ bgcm pools
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_n            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_p            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_c             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_n             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_wood_c             , weighted_by_fract)
@@ -653,9 +637,12 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(VEG_, veg_products_total_c        , weighted_by_fract)
     END IF
     ! VEG_ bgcm fluxes
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_n          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_p          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_c      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_n      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_n15    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_p      , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggregate_veg_pools
@@ -696,9 +683,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, lai                                 , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fract_fpc                           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, dphi                                , weighted_by_fract)
-
     dsl4jsb_Aggregate_onChunk(VEG_, rough_veg_star                      , weighted_by_fract)
-
     ! VEG_ 3D
     dsl4jsb_Aggregate_onChunk(VEG_, root_fraction_sl            , weighted_by_fract)
 

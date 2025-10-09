@@ -769,7 +769,7 @@ CONTAINS
     ! Carbon conservation test Quincy
     CALL model%Get_top_tile(tile)
     IF ((model%config%model_scheme == MODEL_QUINCY) .AND. (model%config%qmodel_id == QLAND)) THEN
-      CALL test_carbon_conservation(tile, model%options(no_omp_thread))
+      CALL test_carbon_conservation(tile, model%options(no_omp_thread)%dtime)
     END IF
 #endif
 

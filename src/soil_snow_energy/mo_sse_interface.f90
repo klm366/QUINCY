@@ -124,7 +124,7 @@ CONTAINS
   SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
     USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_snow_abcoeff, calc_soiltemp_old
-    USE mo_jsb_physical_constants, ONLY: alf, rhoh2o, dens_snow
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newyear
 
@@ -175,13 +175,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
+    dsl4jsb_Real2D_onChunk :: le_pc_remain
 
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc) :: &
       & snow_depth,                    &
       & snow_fract,                    &
-      & t_srf_corrected,               &
       & t_soil_top,                    &
       & hcap_grnd_snow,                &
       & hcap_grnd_soil,                &
@@ -233,6 +233,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, le_pc_remain)    ! inout
 
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)         ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_acoef)      ! inout
@@ -275,7 +276,7 @@ CONTAINS
     l_uniform_snow = dsl4jsb_Config(SSE_)%l_uniform_snow
 
     !$ACC ENTER DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(snow_depth, snow_fract, t_srf_corrected, t_soil_top) &
+    !$ACC   CREATE(snow_depth, snow_fract, t_soil_top) &
     !$ACC   CREATE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
 
 #ifdef _CRAYFTN
@@ -290,14 +291,6 @@ CONTAINS
       ! given back to the atmosphere so that the surface energy balance can be computed there
       grnd_hflx_old(ic) = grnd_hflx(ic)
       hcap_grnd_old(ic) = hcap_grnd(ic)
-
-      ! Correction of surface temperature for snow and ice melt
-      ! t_srf is later corrected in task "snowmelt_correction" of process SEB_, but we need it already here on the sub-tiles
-      IF (lstart) THEN
-        t_srf_corrected(ic) = t_srf(ic)
-      ELSE
-        t_srf_corrected(ic) = t_srf(ic) - snowmelt(ic) * dtime * alf / hcap_grnd(ic)
-      END IF
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -313,7 +306,7 @@ CONTAINS
         & soil_e%levels(:),                            &
         & dtime,                                       &
         & lstart,                                      &
-        & t_srf_corrected(:)                        ,  &
+        & t_srf(:)                                  ,  &
         & weq_snow_soil(:)                          ,  &
         & heat_cond(:)                              ,  &
         & vol_heat_cap(:)                           ,  &
@@ -328,7 +321,7 @@ CONTAINS
 
 
       !$ACC EXIT DATA ASYNC(acc_stream) &
-      !$ACC   DELETE(snow_depth, snow_fract, t_srf_corrected, t_soil_top) &
+      !$ACC   DELETE(snow_depth, snow_fract, t_soil_top) &
       !$ACC   DELETE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
       RETURN
 
@@ -459,7 +452,7 @@ CONTAINS
         & lstart,                 &
         & itop_old           (:), &
         & itop               (:), &
-        & t_srf_corrected    (:), &
+        & t_srf              (:), &
         & t_soil_acoef     (:,1), &
         & t_soil_bcoef     (:,1), &
         ! inout
@@ -478,10 +471,12 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
         DO ic = 1, nc
-          IF (snow_depth_sl(ic, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
-            t_soil_top(ic) = snow_fract(ic) * t_soil_top(ic) + (1._wp - snow_fract(ic)) * t_srf_corrected(ic)
-          ELSE                                ! No snow
-            t_soil_top(ic) = t_srf_corrected(ic)
+          IF (snow_depth_sl(ic, nsnow) > 0._wp) THEN
+            ! At least one snow layer above soil
+            t_soil_top(ic) = snow_fract(ic) * t_soil_top(ic) + (1._wp - snow_fract(ic)) * t_srf(ic)
+          ELSE
+            ! No snow
+            t_soil_top(ic) = t_srf(ic)
           END IF
         END DO
         !$ACC END PARALLEL LOOP
@@ -509,7 +504,7 @@ CONTAINS
       DO ic = 1, nc
         snow_depth(ic) = weq_snow_soil(ic) * rhoh2o / dens_snow
         snow_fract(ic) = 0._wp
-        t_soil_top(ic) = t_srf_corrected(ic)
+        t_soil_top(ic) = t_srf(ic)
         grnd_hflx_snow(ic) = 0._wp
         hcap_grnd_snow(ic) = 0._wp
       END DO
@@ -590,10 +585,11 @@ CONTAINS
         ! optional, inout
         & wtr_soil_sl                         (:,:), &
         & ice_soil_sl                         (:,:), &
+        & le_pc_remain                        (:  ), &
+        & wtr_soil_pot_scool_sl               (:,:), &
         ! optional, out
         & wtr_freeze_sl                       (:,:), &
-        & ice_melt_sl                         (:,:), &
-        & wtr_soil_pot_scool_sl               (:,:)  &
+        & ice_melt_sl                         (:,:)  &
         & )
       !$ACC EXIT DATA DELETE(ws_max_sl) ASYNC(acc_stream)
       DEALLOCATE(ws_max_sl)
@@ -672,7 +668,7 @@ CONTAINS
     END IF
 
     !$ACC EXIT DATA ASYNC(acc_stream) &
-    !$ACC   DELETE(snow_depth, snow_fract, t_srf_corrected, t_soil_top, hcap_grnd_snow) &
+    !$ACC   DELETE(snow_depth, snow_fract, t_soil_top, hcap_grnd_snow) &
     !$ACC   DELETE(hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -727,6 +723,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_freeze_sl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_melt_sl,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pot_scool_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, le_pc_remain,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max_ym1,    weighted_by_fract)

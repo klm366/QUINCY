@@ -146,8 +146,6 @@ CONTAINS
     USE mo_action,                  ONLY: ACTION_RESET, reset_act
     USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
 
-    USE mo_jsb_convect_tables_iface,ONLY: init_convect_tables
-
     USE mo_derived_variable_handling, ONLY: update_statistics
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(LEN=*), INTENT(in) :: jsb_namelist_filename
@@ -358,8 +356,6 @@ CONTAINS
     CALL allocate_vct_atmo(p_patch(1)%nlevp1)
 
     IF (timers_level > 4) CALL timer_stop(timer_compute_coeffs)
-
-    CALL init_convect_tables ! necessary for FUNCTION qsat
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 11.0 setup and init external forcing
@@ -809,6 +805,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: evapopot
     dsl4jsb_Real2D_onDomain :: co2_air
     dsl4jsb_Real2D_onDomain :: co2_air_mol
+    dsl4jsb_Real2D_onDomain :: elevation
 #ifndef __NO_QUINCY__
     ! quincy
     dsl4jsb_Def_memory(SPQ_)
@@ -926,8 +923,10 @@ CONTAINS
       ALLOCATE(evapo_act2pot(nproma, nblks))
       !$ACC ENTER DATA CREATE(evapo_act2pot)
 
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_JSBACH)
+      ! run always but not with "quincy and SPQ_"
+#ifndef __NO_QUINCY__
+      IF (model%config%model_scheme == MODEL_JSBACH .OR. model%config%use_soil_phys_jsbach) THEN
+#endif
         dsl4jsb_Get_memory(HYDRO_)
         dsl4jsb_Get_var2d_onDomain(HYDRO_, evapotrans)
         dsl4jsb_Get_var2d_onDomain(HYDRO_, evapopot)
@@ -938,8 +937,8 @@ CONTAINS
           DO iblk = 1, nblks
             DO ic = 1, nproma
               evapo_act2pot(ic, iblk) = 1._wp
-            ENDDO
-          ENDDO
+            END DO
+          END DO
           !$ACC END PARALLEL LOOP
 
         ELSE
@@ -949,29 +948,36 @@ CONTAINS
             DO ic = 1, nproma
               evapo_act2pot(ic, iblk) =   MIN(evapotrans(ic, iblk), -EPSILON(1._wp)) &
                 &                       / MIN(evapopot  (ic, iblk), -EPSILON(1._wp))
-            ENDDO
-          ENDDO
+            END DO
+          END DO
           !$ACC END PARALLEL LOOP
 
         END IF
-      CASE (MODEL_QUINCY)
+#ifndef __NO_QUINCY__
+      END IF  ! use_soil_phys_jsbach
 
+      ! if quincy
+      IF (model%config%model_scheme == MODEL_QUINCY) THEN
        ! Allocate and enter data for C13 and C14 based on configuration flags
         ALLOCATE(co2_air_dc13(nproma, nblks))
         !$ACC ENTER DATA CREATE(co2_air_dc13)
         ALLOCATE(co2_air_Dc14(nproma, nblks))
         !$ACC ENTER DATA CREATE(co2_air_Dc14)
 
-        ! Note: if neither qair nor rh are given as forcing (i.e. forcing_options(model_id)%type_of_qair_forcing = NONE,
-        !       which so far never is the case), this would need to be calculated
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-        DO iblk = 1, nblks
-          DO ic = 1, nproma
-            evapo_act2pot(ic, iblk) = 1._wp
-          ENDDO
-        ENDDO
-        !$ACC END PARALLEL LOOP
-      END SELECT
+        ! with SPQ_ process
+        IF (.NOT. model%config%use_soil_phys_jsbach) THEN
+          ! Note: if neither qair nor rh are given as forcing (i.e. forcing_options(model_id)%type_of_qair_forcing = NONE,
+          !       which so far never is the case), this would need to be calculated
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+              evapo_act2pot(ic, iblk) = 1._wp
+            END DO
+          END DO
+          !$ACC END PARALLEL LOOP
+        END IF
+      END IF
+#endif
 
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_forcing(model%id))
 
@@ -1009,9 +1015,14 @@ CONTAINS
           & )
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
-        dsl4jsb_Get_memory(SPQ_)
-        dsl4jsb_Get_config(SPQ_)
-        flag_snow = dsl4jsb_Config(SPQ_)%flag_snow
+        IF (model%config%use_soil_phys_jsbach) THEN
+          dsl4jsb_Get_var2D_onDomain(HYDRO_, elevation)
+        ELSE
+          dsl4jsb_Get_memory(SPQ_)
+          dsl4jsb_Get_config(SPQ_)
+          flag_snow = dsl4jsb_Config(SPQ_)%flag_snow
+          dsl4jsb_Get_var2D_onDomain(SPQ_,   elevation)
+        END IF
 
         CALL get_standalone_driver( &
           ! in
@@ -1019,7 +1030,7 @@ CONTAINS
           & model%config%model_scheme,                                                 &
           & flag_snow,                                                                 &
           & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
-          & dsl4jsb_var2D_onDomain(SPQ_, elevation),                                   &
+          & elevation(:,:),                                                            &  ! elevation from HYDRO_ or SPQ_
           & sinlat, coslat, lon, evapo_act2pot,                                        &
           & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
           ! out
@@ -1149,6 +1160,7 @@ CONTAINS
 #endif
 
       !$ACC WAIT(1)
+
       !$ACC EXIT DATA DELETE(evapo_act2pot)
       DEALLOCATE(evapo_act2pot)
 
