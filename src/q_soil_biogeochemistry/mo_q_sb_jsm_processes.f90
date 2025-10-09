@@ -51,7 +51,7 @@ CONTAINS
   !>
   SUBROUTINE calc_litter_turnover( &
     & nc                    , &
-    & nsoil_sb              , &
+    & nsoil_w               , &
     & dtime                 , &
     & tau_litter_pool       , &
     & fc_litter2sink        , &
@@ -65,21 +65,21 @@ CONTAINS
     & formation_mt_sink)
 
     INTEGER,                            INTENT(in)    :: nc                       !< dimensions
-    INTEGER,                            INTENT(in)    :: nsoil_sb                 !< number of soil layers
+    INTEGER,                            INTENT(in)    :: nsoil_w                 !< number of soil layers
     REAL(wp),                           INTENT(in)    :: dtime                    !< timestep length
     REAL(wp),                           INTENT(in)    :: tau_litter_pool          !< turnover time of the litter pool [1/s]
     REAL(wp),                           INTENT(in)    :: fc_litter2sink           !< fraction of litter C entering sink pool (rest is respired)
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rtm_depolymerisation     !< temperature rate modifier [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rmm_depolymerisation     !< moisture rate modifier [-]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rtm_depolymerisation     !< temperature rate modifier [-]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rmm_depolymerisation     !< moisture rate modifier [-]
     REAL(wp),                           INTENT(in)    :: pool_mt_litter(:,:,:)    !< bgcm: litter pool to decompose [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration          !< heterotrophic respiration [micro-mol C/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration_c13      !< heterotrophic respiration [micro-mol 13C/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration_c14      !< heterotrophic respiration [pmol 14C/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: het_respiration          !< heterotrophic respiration [micro-mol C/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: het_respiration_c13      !< heterotrophic respiration [micro-mol 13C/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: het_respiration_c14      !< heterotrophic respiration [pmol 14C/m3/s]
     REAL(wp),                           INTENT(inout) :: loss_mt_litter(:,:,:)    !< bgcm: reduction in litter pool [mol/m3/timestep]
     REAL(wp),                           INTENT(inout) :: formation_mt_sink(:,:,:) !< bgcm: formation of SOM pool [mol/m3/timestep]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc, nsoil_sb)                 :: hlp1
-    REAL(wp), DIMENSION(nc, nsoil_sb)                 :: decay_rate
+    REAL(wp), DIMENSION(nc, nsoil_w)                  :: hlp1
+    REAL(wp), DIMENSION(nc, nsoil_w)                  :: decay_rate
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_litter_turnover'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -135,7 +135,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_sourcing_flux( &
     & nc, &
-    & nsoil_sb, &
+    & nsoil_w, &
     & dtime, &
     & num_sl_above_bedrock, &
     & flag_sb_prescribe_po4, &
@@ -187,60 +187,60 @@ CONTAINS
     USE mo_sb_constants
 
     INTEGER,                                     INTENT(in)        :: nc                           !< dimensions
-    INTEGER,                                     INTENT(in)        :: nsoil_sb                     !< number of soil layers
+    INTEGER,                                     INTENT(in)        :: nsoil_w                      !< number of soil layers
     REAL(wp),                                    INTENT(in)        :: dtime                        !< timestep length
-    REAL(wp), DIMENSION(nc),                     INTENT(in)        :: num_sl_above_bedrock         !< number of soil layers above bedrock, i.e., with layer thickness > eps8	
+    REAL(wp), DIMENSION(nc),                     INTENT(in)        :: num_sl_above_bedrock         !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     LOGICAL,                                     INTENT(in)        :: flag_sb_prescribe_po4        !< whether PO4 is prescribed or not
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: microbial_carbon             !< microbial carbon density (mol / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: microbial_nitrogen           !< nitrogen in the microbial biomass pool (mol / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: microbial_po4                !< PO4 in the microbial biomass pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: dom_carbon                   !< dom carbon density (mol / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: dom_nitrogen                 !< dom nitrogen density (mol / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: dom_phosphorus               !< dom phosphorus density (mol / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rtm_mic_uptake               !< temperature rate modifier for microbial (and plant) uptake
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rmm_mic_uptake               !< moisture rate modifier for microbial (and plant) uptake
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rtm_hsc                      !< temperature rate modifier for half_saturation constants
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rmm_hsc                      !< moisture rate modifier for half_saturation constants
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rtm_sorption                 !< temperature rate modifier for sorption
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rmm_sorption                 !< moisture rate modifier for sorption
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rtm_desorption               !< temperature rate modifier for desorption
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rmm_desorption               !< moisture rate modifier for desorption
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: dom_assoc_po4                !< PO4 in the mineral associated dom pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: residue_assoc_po4            !< PO4 in the mineral associated microbial necromass pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: residue_po4                  !< PO4 in the microbial necromass pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: dom_assoc_carbon             !< dom_assoc carbon density (mol / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: residue_assoc_carbon         !< residue_assoc carbon density (mol / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: residue_carbon               !< residue carbon density (mol / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: solute_po4                   !< soluble po4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: solute_nh4                   !< soluble nh4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: solute_no3                   !< soluble no3 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: assoc_slow                   !< slow minerally associated PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: assoc_fast                   !< fast minerally associated PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: po4_primary                  !< primary PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: bulk_dens_sl                 !< soil bulk density [kg/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: volume_min_sl                !< mineral soil volume fraction [m3/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: fine_root_carbon_sl          !< carbon of fine roots per soil layer, [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: vmax_weath_mineral_sl        !< weathering coefficient of mineral soil [mol P /m3 /s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: enzyme_frac_AP               !< fraction of Acid (alkaline) phosphatase of the total enzyme
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: growth_p_limit_smoothed_sl   !< scalor of plant P uptake demand, used for phosphatase downscaling
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(inout)     :: loss_dom_assoc_po4           !< loss of PO4 in the mineral associated dom pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(inout)     :: loss_residue_assoc_po4       !< loss of PO4 in the mineral associated microbial necromass pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(inout)     :: loss_residue_po4             !< loss of PO4 in the microbial necromass pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(inout)     :: loss_dom_po4                 !< loss of PO4 in the dom pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(out)       :: biochem_min_po4              !< phosphorus biochemical mineralization rate, [micro-mol P /m3 /s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(out)       :: gross_min_po4                !< DOM mineralization rate [micro-mol P /m3 /s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(out)       :: weathering_po4               !< phosphorus weathering rate [micro-mol P / m3 / s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(out)       :: mic_upt_nh4                  !< microbial nh4 uptake rate [micro-mol N / m3 / s], for eca_none only
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(out)       :: mic_upt_no3                  !< microbial no3 uptake rate [micro-mol N / m3 / s], for eca_none only
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(out)       :: mic_upt_po4                  !< microbial po4 uptake rate [micro-mol P / m3 / s], for eca_none only
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(out)       :: occlusion_po4                !< phosphorus occlusion rate, assoc_slow --> occluded [micro-mol P / m3 / s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(out)       :: slow_exchange_po4            !< phosphorus desorption rate, assoc_fast --> assoc_slow [micro-mol P / m3 / s]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_carbon             !< microbial carbon density (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_nitrogen           !< nitrogen in the microbial biomass pool (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_po4                !< PO4 in the microbial biomass pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: dom_carbon                   !< dom carbon density (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: dom_nitrogen                 !< dom nitrogen density (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: dom_phosphorus               !< dom phosphorus density (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rtm_mic_uptake               !< temperature rate modifier for microbial (and plant) uptake
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rmm_mic_uptake               !< moisture rate modifier for microbial (and plant) uptake
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rtm_hsc                      !< temperature rate modifier for half_saturation constants
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rmm_hsc                      !< moisture rate modifier for half_saturation constants
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rtm_sorption                 !< temperature rate modifier for sorption
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rmm_sorption                 !< moisture rate modifier for sorption
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rtm_desorption               !< temperature rate modifier for desorption
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rmm_desorption               !< moisture rate modifier for desorption
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: dom_assoc_po4                !< PO4 in the mineral associated dom pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: residue_assoc_po4            !< PO4 in the mineral associated microbial necromass pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: residue_po4                  !< PO4 in the microbial necromass pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: dom_assoc_carbon             !< dom_assoc carbon density (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: residue_assoc_carbon         !< residue_assoc carbon density (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: residue_carbon               !< residue carbon density (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: solute_po4                   !< soluble po4 pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: solute_nh4                   !< soluble nh4 pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: solute_no3                   !< soluble no3 pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: assoc_slow                   !< slow minerally associated PO4 pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: assoc_fast                   !< fast minerally associated PO4 pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: po4_primary                  !< primary PO4 pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: bulk_dens_sl                 !< soil bulk density [kg/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: volume_min_sl                !< mineral soil volume fraction [m3/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: fine_root_carbon_sl          !< carbon of fine roots per soil layer, [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: vmax_weath_mineral_sl        !< weathering coefficient of mineral soil [mol P /m3 /s]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: enzyme_frac_AP               !< fraction of Acid (alkaline) phosphatase of the total enzyme
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: growth_p_limit_smoothed_sl   !< scalor of plant P uptake demand, used for phosphatase downscaling
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(inout)     :: loss_dom_assoc_po4           !< loss of PO4 in the mineral associated dom pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(inout)     :: loss_residue_assoc_po4       !< loss of PO4 in the mineral associated microbial necromass pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(inout)     :: loss_residue_po4             !< loss of PO4 in the microbial necromass pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(inout)     :: loss_dom_po4                 !< loss of PO4 in the dom pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out)       :: biochem_min_po4              !< phosphorus biochemical mineralization rate, [micro-mol P /m3 /s]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out)       :: gross_min_po4                !< DOM mineralization rate [micro-mol P /m3 /s]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out)       :: weathering_po4               !< phosphorus weathering rate [micro-mol P / m3 / s]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out)       :: mic_upt_nh4                  !< microbial nh4 uptake rate [micro-mol N / m3 / s], for eca_none only
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out)       :: mic_upt_no3                  !< microbial no3 uptake rate [micro-mol N / m3 / s], for eca_none only
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out)       :: mic_upt_po4                  !< microbial po4 uptake rate [micro-mol P / m3 / s], for eca_none only
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out)       :: occlusion_po4                !< phosphorus occlusion rate, assoc_slow --> occluded [micro-mol P / m3 / s]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out)       :: slow_exchange_po4            !< phosphorus desorption rate, assoc_fast --> assoc_slow [micro-mol P / m3 / s]
 
     INTEGER                                          :: ic, is       !< loop over dimensions
     REAL(wp)                                         :: hlp1, hlp2, hlp3, hlp4, hlp5, hlp6, hlp7, &
                                                         uptake_c, f_uptake, uptake_n, uptake_p, mic_upt_n, &
                                                         som_pc, enzyme_AP
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: gross_mineralisation_nh4
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: gross_mineralisation_nh4
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sourcing_flux'
 
@@ -258,11 +258,11 @@ CONTAINS
     mic_upt_po4(:,:)       = 0.0_wp
     occlusion_po4(:,:)     = 0.0_wp
     slow_exchange_po4(:,:) = 0.0_wp
-	
+
     !> 1.0 calculate the gross P mineralization, based on the potential depolymerization of DOM
     !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))	
+      DO is = 1,INT(num_sl_above_bedrock(ic))
         hlp1 = dom_carbon(ic,is) / (km_mic_uptake * rtm_hsc(ic,is) * rmm_hsc(ic,is) + dom_carbon(ic,is) )
         uptake_c = vmax_mic_uptake * rtm_mic_uptake(ic,is) * rmm_mic_uptake(ic,is) * hlp1 * microbial_carbon(ic,is)
         IF(dom_carbon(ic,is) > eps8) THEN
@@ -402,7 +402,7 @@ CONTAINS
   !! Output: microbial and plant inorganic uptake rates, fast adsorption rates (po4, nh4), \n
   !!         nitrification/denitrification rates (nh4/no3)
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_sinking_flux(nc, nsoil_sb, dtime, num_sl_above_bedrock, &
+  SUBROUTINE calc_sinking_flux(nc, nsoil_w, dtime, num_sl_above_bedrock, &
     &                                        lctlib_vmax_uptake, substrate, sb_adsorp_scheme, &       ! in
     &                                        microbial_carbon, fine_root_carbon, solute, &            ! in
     &                                        rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, &      ! in
@@ -423,38 +423,38 @@ CONTAINS
     USE mo_sb_constants
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                                     INTENT(in)        :: nc                        !< dimensions
-    INTEGER,                                     INTENT(in)        :: nsoil_sb                  !< number of soil layers
+    INTEGER,                                     INTENT(in)        :: nsoil_w                   !< number of soil layers
     REAL(wp),                                    INTENT(in)        :: dtime                     !< timestep length
     REAL(wp), DIMENSION(nc),                     INTENT(in)        :: num_sl_above_bedrock      !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     REAL(wp),                                    INTENT(in)        :: lctlib_vmax_uptake        !< lctlib uptake paramter, for eca_none
     CHARACTER(len=*),                            INTENT(in)        :: substrate                 !< po4, nh4, no3, determine the specific ECA paramaters
     CHARACTER(len=*),                            INTENT(in)        :: sb_adsorp_scheme          !< eca_full; eca_none; eca_part
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: microbial_carbon !< bgcm sb_pool: microbial carbon density (mol / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: fine_root_carbon          !< fine_root density (mol / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rtm_mic_uptake            !< temperature rate modifier for microbial uptake
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rmm_mic_uptake            !< moisture rate modifier for microbial uptake
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rtm_hsc                   !< temperature rate modifier for half_saturation constants
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rmm_hsc                   !< moisture rate modifier for half_saturation constants
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rtm_plant_uptake          !< temperature rate modifier for plant uptake
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rmm_plant_uptake          !< moisture rate modifier for plant uptake
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: km1_upt                   !< low-affinity parameter for plant uptake [m3/mol]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: km2_upt                   !< high-affinity parameter for plant uptake [m3/mol]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_carbon !< bgcm sb_pool: microbial carbon density (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: fine_root_carbon          !< fine_root density (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rtm_mic_uptake            !< temperature rate modifier for microbial uptake
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rmm_mic_uptake            !< moisture rate modifier for microbial uptake
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rtm_hsc                   !< temperature rate modifier for half_saturation constants
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rmm_hsc                   !< moisture rate modifier for half_saturation constants
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rtm_plant_uptake          !< temperature rate modifier for plant uptake
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rmm_plant_uptake          !< moisture rate modifier for plant uptake
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: km1_upt                   !< low-affinity parameter for plant uptake [m3/mol]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: km2_upt                   !< high-affinity parameter for plant uptake [m3/mol]
     REAL(wp),                                    INTENT(in)        :: km_nitrification          !< half-saturation constant for carbon-limited (de-)nitrification [mol C m-3]
     REAL(wp),                                    INTENT(in)        :: km_denitrification        !< half-saturation constant for nitrate-limited denitrifcation [mol N m-3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rtm_nit_denit_fication    !< actual temperature response for de/nitrification
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: rmm_nit_denit_fication    !< actual moisture response for de/nitrification
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: anaerobic_volume_fraction !< actual anaerobic volume fraction
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: km_adsorpt_sl             !< half-saturation of solute sorption to mineral soil [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: solute                    !< concentration of the solvent to be taken up (mol / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: avail_soil_surface_sorption_capacity_sl  !< available sorption sites [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)        :: solute_available                         !< available solvent for all the sinking processes (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rtm_nit_denit_fication    !< actual temperature response for de/nitrification
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rmm_nit_denit_fication    !< actual moisture response for de/nitrification
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: anaerobic_volume_fraction !< actual anaerobic volume fraction
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: km_adsorpt_sl             !< half-saturation of solute sorption to mineral soil [mol / m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: solute                    !< concentration of the solvent to be taken up (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: avail_soil_surface_sorption_capacity_sl  !< available sorption sites [mol / m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: solute_available                         !< available solvent for all the sinking processes (mol / m3)
     REAL(wp), OPTIONAL,                          INTENT(in)        :: vmax_nitri_denitri                       !< maximum nitrification/denitrification rate, for eca_none
-    REAL(wp), OPTIONAL, DIMENSION(nc, nsoil_sb), INTENT(in)        :: solute_alternative                       !< concentration of the alternative solvent to be taken up by plant (mol / m3)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(inout)     :: microbial_uptake                         !< microbial uptake flux (micro-mol / m3 / s)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(out)       :: plant_uptake                             !< plant uptake flux (micro-mol / m3 / s)
-    REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(out)       :: plant_uptake_pot                         !< plant potential uptake rate (micro-mol / m3 / s)
-    REAL(wp), OPTIONAL, DIMENSION(nc, nsoil_sb), INTENT(out)       :: fast_adsorpt                             !< fast adsorption flux (micro-mol / m3 / s)
-    REAL(wp), OPTIONAL, DIMENSION(nc, nsoil_sb), INTENT(out)       :: flux_nitri_denitri                       !< nitrification or denitrification flux (micro-mol / m3 / s)
+    REAL(wp), OPTIONAL, DIMENSION(nc, nsoil_w),  INTENT(in)        :: solute_alternative                       !< concentration of the alternative solvent to be taken up by plant (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(inout)     :: microbial_uptake                         !< microbial uptake flux (micro-mol / m3 / s)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out)       :: plant_uptake                             !< plant uptake flux (micro-mol / m3 / s)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out)       :: plant_uptake_pot                         !< plant potential uptake rate (micro-mol / m3 / s)
+    REAL(wp), OPTIONAL, DIMENSION(nc, nsoil_w),  INTENT(out)       :: fast_adsorpt                             !< fast adsorption flux (micro-mol / m3 / s)
+    REAL(wp), OPTIONAL, DIMENSION(nc, nsoil_w),  INTENT(out)       :: flux_nitri_denitri                       !< nitrification or denitrification flux (micro-mol / m3 / s)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                             :: ic, is       !< loop over dimensions
     REAL(wp)                            :: mic_hlp, plant_hlp, mineral_hlp, nitri_hlp, &
@@ -464,7 +464,7 @@ CONTAINS
                                            k_mic_uptake, k_plant_uptake, vmax_mic_uptake_sub, vmax_plant_uptake, &
                                            k_desorpt_f, vmax_nit_denit, km_nit_denit, &
                                            k_nit_denit, f_nit_carrier, fast_desorpt
-    REAL(wp), DIMENSION(nc, nsoil_sb)   :: reaction_volume
+    REAL(wp), DIMENSION(nc, nsoil_w)    :: reaction_volume
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sinking_flux'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -684,7 +684,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_nitri_denitri_partitioning_rate( &
                                     nc, &                         ! in
-                                    nsoil_sb, &
+                                    nsoil_w, &
                                     soil_depth_sl, &
                                     sb_nloss_scheme, &
                                     rtm_denitrification_act, &
@@ -708,13 +708,13 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)    :: nc, &                           !< dimensions
-                                                                       nsoil_sb
+                                                                       nsoil_w
     CHARACTER(len=*),                                 INTENT(in)    :: sb_nloss_scheme                 !< sb n loss scheme
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_depth_sl, &                !< soil depth per layer [m]
+    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: soil_depth_sl, &                !< soil depth per layer [m]
                                                                        net_mineralisation_nh4, &       !< net mineralisation rate of NH4 [micro-mol/m2/s]
                                                                        net_mineralisation_nh4_n15, &   !< net mineralisation rate of 15NH4 [micro-mol/m2/s]
                                                                        rtm_denitrification_act         !< temperature modifier for denitrification
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: nitrification_no3, &            !< nitrification to NO3 [micro-mol/m2/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(inout) :: nitrification_no3, &            !< nitrification to NO3 [micro-mol/m2/s]
                                                                        denitrification_n2, &           !< denitrification to N2 [micro-mol/m2/s]
                                                                        nitrification_noy, &            !< nitrification to NOy [micro-mol/m2/s]
                                                                        nitrification_n2o, &            !< nitrification to N2O [micro-mol/m2/s]
@@ -771,7 +771,7 @@ CONTAINS
   !>
   SUBROUTINE calc_microbial_turnover( &
     & nc, &
-    & nsoil_sb, &
+    & nsoil_w, &
     & dtime, &
     & num_sl_above_bedrock, &
     & fact_n_status_mic_c_growth, &
@@ -784,21 +784,21 @@ CONTAINS
       &                                 k_n_recyc_corr, k_p_recyc_corr
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc                          !< dimensions
-    INTEGER,                           INTENT(in)    :: nsoil_sb                    !< number of soil layers
+    INTEGER,                           INTENT(in)    :: nsoil_w                     !< number of soil layers
     REAL(wp),                          INTENT(in)    :: dtime                       !< timestep length
     REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock        !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: fact_n_status_mic_c_growth  !< scalor of N availability on microbial C growth
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: fact_p_status_mic_c_growth  !< scalor of P availability on microbial C growth
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: fact_n_status_mic_c_growth  !< scalor of N availability on microbial C growth
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: fact_p_status_mic_c_growth  !< scalor of P availability on microbial C growth
     REAL(wp),                          INTENT(in)    :: sb_pool_mt_microbial(:,:,:) !< bgcm sb_pool: microbial biomass [mol/m3]
     REAL(wp),                          INTENT(inout) :: sb_loss_mt_microbial(:,:,:) !< bgcm sb_loss flux: microbial death [mol/m3/timestep]
     REAL(wp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)    !< bgcm sb_formation: DOM formation from microbial death [mol/m3/timestep]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: hlp1
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: hlp1
     REAL(wp)                                         :: hlp2
     REAL(wp)                                         :: hlp3
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: p_res2dom
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: n_res2dom
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: mortality_rate
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: p_res2dom
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: n_res2dom
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: mortality_rate
     INTEGER                                          :: ic, is
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_turnover'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -915,7 +915,7 @@ CONTAINS
   !>
   SUBROUTINE calc_microbial_growth( &
     & nc, &
-    & nsoil_sb, &
+    & nsoil_w, &
     & dtime, &
     & num_sl_above_bedrock, &
     & bnf_scheme, &
@@ -956,55 +956,55 @@ CONTAINS
     USE mo_veg_constants,         ONLY: eta_nfixation
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                            INTENT(in)    :: nc                           !< dimensions
-    INTEGER,                            INTENT(in)    :: nsoil_sb                     !< number of soil layers
+    INTEGER,                            INTENT(in)    :: nsoil_w                      !< number of soil layers
     REAL(wp),                           INTENT(in)    :: dtime                        !< timestep length
     REAL(wp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock         !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     CHARACTER(len=*),                   INTENT(in)    :: bnf_scheme                   !< SB_ asymbiotic N fixation scheme
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rtm_mic_uptake               !< temperature rate modifier [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rmm_mic_uptake               !< moisture rate modifier [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rtm_hsc                      !< temperature rate modifier [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rmm_hsc                      !< moisture rate modifier [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: microbial_cue_eff_tmic_mavg  !< microbial effective CUE given NP constraints
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: asymb_n_fixation_rel_rate    !< asymb N fixation rate relative to demand []
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rtm_mic_uptake               !< temperature rate modifier [-]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rmm_mic_uptake               !< moisture rate modifier [-]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rtm_hsc                      !< temperature rate modifier [-]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rmm_hsc                      !< moisture rate modifier [-]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: microbial_cue_eff_tmic_mavg  !< microbial effective CUE given NP constraints
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: asymb_n_fixation_rel_rate    !< asymb N fixation rate relative to demand []
     REAL(wp),                           INTENT(in)    :: sb_pool_mt(:,:,:,:)          !< bgcm sb_pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_nh4_sl      !< microbial uptake rate [micro-mol N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_nh4_n15_sl  !< microbial uptake rate [micro-mol 15N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_no3_sl      !< microbial uptake rate [micro-mol N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_no3_n15_sl  !< microbial uptake rate [micro-mol 15N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_po4_sl      !< microbial uptake rate [micro-mol P/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration              !< respiration rate [micro-mol C/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration_c13          !< respiration rate [micro-mol 13C/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration_c14          !< respiration rate [micro-mol 14C/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_nh4       !< net mineralisation rate [micro-mol N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_nh4_n15   !< net mineralisation rate [micro-mol 15N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_no3       !< net mineralisation rate [micro-mol N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_no3_n15   !< net mineralisation rate [micro-mol 15N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: gross_mineralisation_po4     !< gross mienralization rate by DOM , [micro-mol P/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_po4       !< net mineralisation rate [micro-mol P/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_cue_eff            !< current effective CUE given NP constraints
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_nue_eff            !< current effective NUE given NP constraints
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_pue_eff            !< current effective PUE given NP constraints
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: asymb_n_fixation             !< current effective CUE given NP constraints
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: fact_n_status_mic_c_growth   !< scalor of N availability on microbial C growth
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: fact_p_status_mic_c_growth   !< scalor of P availability on microbial C growth
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: microbial_uptake_nh4_sl      !< microbial uptake rate [micro-mol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: microbial_uptake_nh4_n15_sl  !< microbial uptake rate [micro-mol 15N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: microbial_uptake_no3_sl      !< microbial uptake rate [micro-mol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: microbial_uptake_no3_n15_sl  !< microbial uptake rate [micro-mol 15N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: microbial_uptake_po4_sl      !< microbial uptake rate [micro-mol P/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: het_respiration              !< respiration rate [micro-mol C/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: het_respiration_c13          !< respiration rate [micro-mol 13C/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: het_respiration_c14          !< respiration rate [micro-mol 14C/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: net_mineralisation_nh4       !< net mineralisation rate [micro-mol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: net_mineralisation_nh4_n15   !< net mineralisation rate [micro-mol 15N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: net_mineralisation_no3       !< net mineralisation rate [micro-mol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: net_mineralisation_no3_n15   !< net mineralisation rate [micro-mol 15N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: gross_mineralisation_po4     !< gross mienralization rate by DOM , [micro-mol P/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: net_mineralisation_po4       !< net mineralisation rate [micro-mol P/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: microbial_cue_eff            !< current effective CUE given NP constraints
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: microbial_nue_eff            !< current effective NUE given NP constraints
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: microbial_pue_eff            !< current effective PUE given NP constraints
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: asymb_n_fixation             !< current effective CUE given NP constraints
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: fact_n_status_mic_c_growth   !< scalor of N availability on microbial C growth
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: fact_p_status_mic_c_growth   !< scalor of P availability on microbial C growth
     REAL(wp),                           INTENT(inout) :: sb_loss_mt(:,:,:,:)          !< bgcm flux: sb_loss [mol/m3/timestep]
     REAL(wp),                           INTENT(inout) :: sb_formation_mt(:,:,:,:)     !< bgcm flux: sb_formation [mol/m3/timestep]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: hlp1
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: hlp2
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: hlp3
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: growth
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: growth_c
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: growth_n
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: growth_p
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: f_uptake
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: uptake_dom
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: uptake_c
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: uptake_n
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: uptake_p
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: scal
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: gross_mineralisation_nh4
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: gross_mineralisation_nh4_n15
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: hlp1
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: hlp2
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: hlp3
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: growth
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: growth_c
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: growth_n
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: growth_p
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: f_uptake
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: uptake_dom
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: uptake_c
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: uptake_n
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: uptake_p
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: scal
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: gross_mineralisation_nh4
+    REAL(wp), DIMENSION(nc, nsoil_w)                 :: gross_mineralisation_nh4_n15
     INTEGER                                          :: ic, is
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_growth'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1232,7 +1232,7 @@ CONTAINS
   ! !!
   ! !! Output: transfer of residue/polymeric pool to DOM
   ! !-----------------------------------------------------------------------------------------------------
-  ! SUBROUTINE calc_depolymerisation(nc, nsoil_sb, vmax_depolymerisation,rtm_depolymerisation,rmm_depolymerisation, &
+  ! SUBROUTINE calc_depolymerisation(nc, nsoil_w, vmax_depolymerisation,rtm_depolymerisation,rmm_depolymerisation, &
   !                                  rtm_hsc,rmm_hsc,microbial_carbon,pool_polymeric,loss_polymeric,formation_dom)
   !
   !   USE mo_sb_constants,          ONLY: km_depolymerisation
@@ -1242,19 +1242,19 @@ CONTAINS
   !   ! ---------------------------
   !   ! 0.1 InOut
   !   INTEGER,                                          INTENT(in)    :: nc, &                 !< dimensions
-  !                                                                      nsoil_sb
+  !                                                                      nsoil_w
   !   REAL(wp),                                         INTENT(in)    :: vmax_depolymerisation !< maximum depolymerisation rate
-  !   REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rtm_depolymerisation  !< temperature rate modifier for depolymerisation
-  !   REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rmm_depolymerisation  !< moisture rate modifier for depolymerisation
-  !   REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rtm_hsc               !< temperature rate modifier for half-saturation constants
-  !   REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rmm_hsc               !< moisture rate modifier for half-saturation constants
-  !   REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: microbial_carbon      !< microbial biomass carbon [mol C/m3]
+  !   REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: rtm_depolymerisation  !< temperature rate modifier for depolymerisation
+  !   REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: rmm_depolymerisation  !< moisture rate modifier for depolymerisation
+  !   REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: rtm_hsc               !< temperature rate modifier for half-saturation constants
+  !   REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: rmm_hsc               !< moisture rate modifier for half-saturation constants
+  !   REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: microbial_carbon      !< microbial biomass carbon [mol C/m3]
   !   TYPE(t_sb_element_a),                             INTENT(in)    :: pool_polymeric        !< polymeric/residue pool [mol/m3]
   !   TYPE(t_sb_element_a),                             INTENT(inout) :: loss_polymeric        !< loss of polymeric/residue pool [mol/m3/timestep]
   !   TYPE(t_sb_element_a),                             INTENT(inout) :: formation_dom         !< formation of DOM [mol/m3/timestep]
   !   ! ---------------------------
   !   ! 0.2 Local
-  !   REAL(wp), DIMENSION(nc, nsoil_sb)                :: hlp1                   , &
+  !   REAL(wp), DIMENSION(nc, nsoil_w)                 :: hlp1                   , &
   !                                                       hlp2                   , &
   !                                                       depolymerisation_rate
   !   CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_depolymerisation'
@@ -1320,7 +1320,7 @@ CONTAINS
   !>  Output: transfer of residue/polymeric pool to DOM
   !>
   SUBROUTINE calc_depolymerisation_SESAM( &
-    & nc, nsoil_sb, dtime, num_sl_above_bedrock, &
+    & nc, nsoil_w, dtime, num_sl_above_bedrock, &
     & rtm_hsc,rmm_hsc,rtm_depolymerisation,rmm_depolymerisation, &
     & enzyme_depoly, microbial_cue_mavg, microbial_nue_mavg, microbial_pue_mavg, &
     & fact_n_status_mic_c_growth, fact_p_status_mic_c_growth, &
@@ -1335,42 +1335,42 @@ CONTAINS
     USE mo_lnd_time_averages,               ONLY: mavg_period_tenzyme
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc                           !< dimensions
-    INTEGER,                           INTENT(in)    :: nsoil_sb                     !< number of soil layers
+    INTEGER,                           INTENT(in)    :: nsoil_w                      !< number of soil layers
     REAL(wp),                          INTENT(in)    :: dtime                        !< timestep length
     REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock         !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: rtm_hsc                      !< temperature rate modifier for half-saturation constants
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: rmm_hsc                      !< moisture rate modifier for half-saturation constants
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: rtm_depolymerisation         !< temperature rate modifier for depolymerisation
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: rmm_depolymerisation         !< moisture rate modifier for depolymerisation
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: enzyme_depoly                !< total enzyme for depolymerisation [mol C/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: microbial_cue_mavg           !< microbial cue moving average
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: microbial_nue_mavg           !< microbial nue moving average
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: microbial_pue_mavg           !< microbial pue moving average
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: fact_n_status_mic_c_growth   !< scalor of N availability on microbial C growth
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: fact_p_status_mic_c_growth   !< scalor of P availability on microbial C growth
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: rtm_hsc                      !< temperature rate modifier for half-saturation constants
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: rmm_hsc                      !< moisture rate modifier for half-saturation constants
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: rtm_depolymerisation         !< temperature rate modifier for depolymerisation
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: rmm_depolymerisation         !< moisture rate modifier for depolymerisation
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: enzyme_depoly                !< total enzyme for depolymerisation [mol C/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: microbial_cue_mavg           !< microbial cue moving average
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: microbial_nue_mavg           !< microbial nue moving average
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: microbial_pue_mavg           !< microbial pue moving average
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: fact_n_status_mic_c_growth   !< scalor of N availability on microbial C growth
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: fact_p_status_mic_c_growth   !< scalor of P availability on microbial C growth
     REAL(wp),                          INTENT(in)    :: sb_pool_mt(:,:,:,:)          !< bgcm sb_pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(inout) :: enzyme_frac_poly             !< fraction of enzyme for poly litter depolymerisation
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(inout) :: enzyme_frac_residue          !< fraction of enzyme for microbial residue depolymerisation
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(inout) :: enzyme_frac_AP               !< fraction of enzyme for phosphatase
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(inout) :: enzyme_frac_poly_c           !< temporal fraction of enzyme for poly litter depolymerisation, C
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(inout) :: enzyme_frac_poly_n           !< temporal fraction of enzyme for poly litter depolymerisation, N
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(inout) :: enzyme_frac_poly_p           !< temporal fraction of enzyme for poly litter depolymerisation, P
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(inout) :: enzyme_frac_poly_c_mavg      !< mavg of enzyme for poly litter depolymerisation, C
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(inout) :: enzyme_frac_poly_n_mavg      !< mavg of enzyme for poly litter depolymerisation, N
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(inout) :: enzyme_frac_poly_p_mavg      !< mavg of enzyme for poly litter depolymerisation, P
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: enzyme_frac_poly             !< fraction of enzyme for poly litter depolymerisation
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: enzyme_frac_residue          !< fraction of enzyme for microbial residue depolymerisation
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: enzyme_frac_AP               !< fraction of enzyme for phosphatase
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: enzyme_frac_poly_c           !< temporal fraction of enzyme for poly litter depolymerisation, C
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: enzyme_frac_poly_n           !< temporal fraction of enzyme for poly litter depolymerisation, N
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: enzyme_frac_poly_p           !< temporal fraction of enzyme for poly litter depolymerisation, P
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: enzyme_frac_poly_c_mavg      !< mavg of enzyme for poly litter depolymerisation, C
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: enzyme_frac_poly_n_mavg      !< mavg of enzyme for poly litter depolymerisation, N
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: enzyme_frac_poly_p_mavg      !< mavg of enzyme for poly litter depolymerisation, P
     REAL(wp),                          INTENT(inout) :: sb_loss_mt(:,:,:,:)          !< bgcm sb_loss [mol/m3/timestep]
     REAL(wp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)     !< bgcm sb_formation [mol/m3/timestep]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc, nsoil_sb)   :: hlp1
-    REAL(wp), DIMENSION(nc, nsoil_sb)   :: hlp2
-    REAL(wp), DIMENSION(nc, nsoil_sb)   :: hlp3
-    REAL(wp), DIMENSION(nc, nsoil_sb)   :: poly_depolymerisation_rate
-    REAL(wp), DIMENSION(nc, nsoil_sb)   :: residue_depolymerisation_rate
-    REAL(wp), DIMENSION(nc, nsoil_sb)   :: depoly_c
-    REAL(wp), DIMENSION(nc, nsoil_sb)   :: depoly_n
-    REAL(wp), DIMENSION(nc, nsoil_sb)   :: depoly_p
-    REAL(wp), DIMENSION(nc, nsoil_sb)   :: hlp_depoly
-    REAL(wp), DIMENSION(nc, nsoil_sb)   :: enz_AP_direction
+    REAL(wp), DIMENSION(nc, nsoil_w)    :: hlp1
+    REAL(wp), DIMENSION(nc, nsoil_w)    :: hlp2
+    REAL(wp), DIMENSION(nc, nsoil_w)    :: hlp3
+    REAL(wp), DIMENSION(nc, nsoil_w)    :: poly_depolymerisation_rate
+    REAL(wp), DIMENSION(nc, nsoil_w)    :: residue_depolymerisation_rate
+    REAL(wp), DIMENSION(nc, nsoil_w)    :: depoly_c
+    REAL(wp), DIMENSION(nc, nsoil_w)    :: depoly_n
+    REAL(wp), DIMENSION(nc, nsoil_w)    :: depoly_p
+    REAL(wp), DIMENSION(nc, nsoil_w)    :: hlp_depoly
+    REAL(wp), DIMENSION(nc, nsoil_w)    :: enz_AP_direction
     INTEGER                             :: ic, is
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_depolymerisation_SESAM'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1686,7 +1686,7 @@ CONTAINS
   !>
   SUBROUTINE calc_bulk_soil_carbon( &
     & nc, &
-    & nsoil_sb, &
+    & nsoil_w, &
     & num_sl_above_bedrock, &
     & sb_model_scheme, &
     & sb_pool_mt, &
@@ -1698,7 +1698,7 @@ CONTAINS
     USE mo_sb_constants,           ONLY: rho_bulk_org, carbon_per_dryweight_SOM
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,          INTENT(in)    :: nc                         !<
-    INTEGER,          INTENT(in)    :: nsoil_sb                   !<
+    INTEGER,          INTENT(in)    :: nsoil_w                    !<
     REAL(wp),         INTENT(in)    :: num_sl_above_bedrock(:)    !<
     CHARACTER(len=*), INTENT(in)    :: sb_model_scheme            !< soil model scheme: simple_1d or jsm
     REAL(wp),         INTENT(in)    :: sb_pool_mt(:,:,:,:)        !< pools [mol/m3]
@@ -1707,8 +1707,8 @@ CONTAINS
     REAL(wp),         INTENT(inout) :: volume_min_sl(:,:)         !< m3/m3
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                                             :: isoil, ic
-    REAL(wp), DIMENSION(nc,nsoil_sb)                    :: om_dens_sl   !< organic matter density [kg / m3]
-    REAL(wp), DIMENSION(nc,nsoil_sb)                    :: lit_dens_sl  !< litter density [kg / m3]
+    REAL(wp), DIMENSION(nc, nsoil_w)                    :: om_dens_sl   !< organic matter density [kg / m3]
+    REAL(wp), DIMENSION(nc, nsoil_w)                    :: lit_dens_sl  !< litter density [kg / m3]
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bulk_soil_carbon'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -1824,7 +1824,7 @@ CONTAINS
   !>
   SUBROUTINE calc_sorption_desorption_of_org_material( &
     & nc, &
-    & nsoil_sb, &
+    & nsoil_w, &
     & dtime, &
     & elements_index_map, &
     & is_element_used, &
@@ -1840,26 +1840,26 @@ CONTAINS
     USE mo_sb_constants,          ONLY: k_adsorpt_dom, k_desorpt_dom, k_adsorpt_det, k_desorpt_det
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                            INTENT(in)    :: nc                       !< dimensions
-    INTEGER,                            INTENT(in)    :: nsoil_sb                 !< number of soil layers
+    INTEGER,                            INTENT(in)    :: nsoil_w                  !< number of soil layers
     REAL(wp),                           INTENT(in)    :: dtime                    !< timestep length
     INTEGER,                            INTENT(in)    :: elements_index_map(:)    !< map bgcm element ID -> IDX
     LOGICAL,                            INTENT(in)    :: is_element_used(:)       !< is element in 'elements_index_map' used
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: qmax_org                 !< ...
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rtm_sorption             !< temperature rate modifier [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rmm_sorption             !< moisture rate modifier [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rtm_desorption           !< temperature rate modifier [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rmm_desorption           !< moisture rate modifier [-]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: qmax_org                 !< ...
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rtm_sorption             !< temperature rate modifier [-]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rmm_sorption             !< moisture rate modifier [-]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rtm_desorption           !< temperature rate modifier [-]
+    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rmm_desorption           !< moisture rate modifier [-]
     REAL(wp),                           INTENT(in)    :: sb_pool_mt(:,:,:,:)      !< bgcm sb_pool: [mol/m3]
     REAL(wp),                           INTENT(inout) :: sb_formation_mt(:,:,:,:) !< bgcm flux: transport [mol/m3/timestep]
     REAL(wp),                           INTENT(inout) :: sb_loss_mt(:,:,:,:)      !< bgcm flux: transport [mol/m3/timestep]
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                               :: ielem                !< loop over bgcm elements
     INTEGER                               :: ix_elem              !< index of element in bgcm, used for looping
-    REAL(wp), DIMENSION(nc, nsoil_sb)     :: hlp1
-    REAL(wp), DIMENSION(nc, nsoil_sb)     :: hlp2
-    REAL(wp), DIMENSION(nc, nsoil_sb)     :: avail_soil_surface_sorption_capacity_sl
-    REAL(wp), DIMENSION(nc, nsoil_sb)     :: sorption_rate
-    REAL(wp), DIMENSION(nc, nsoil_sb)     :: desorption_rate
+    REAL(wp), DIMENSION(nc, nsoil_w)      :: hlp1
+    REAL(wp), DIMENSION(nc, nsoil_w)      :: hlp2
+    REAL(wp), DIMENSION(nc, nsoil_w)      :: avail_soil_surface_sorption_capacity_sl
+    REAL(wp), DIMENSION(nc, nsoil_w)      :: sorption_rate
+    REAL(wp), DIMENSION(nc, nsoil_w)      :: desorption_rate
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sorption_desorption_of_org_material'
     ! ----------------------------------------------------------------------------------------------------- !
 
