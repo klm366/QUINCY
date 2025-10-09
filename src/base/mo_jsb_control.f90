@@ -23,6 +23,7 @@ MODULE mo_jsb_control
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
   USE mo_jsb_time_iface,     ONLY: l_timer_host !< timers on in host model?
   USE mo_jsb_io_iface,       ONLY: ldebugio
+  USE mo_jsb_thermo_iface,   ONLY: init_jsb_thermo_iface, iaes, inwp
 
 #ifdef _OPENACC
   USE openacc, ONLY: acc_async_sync
@@ -206,6 +207,11 @@ CONTAINS
     END IF
 
     ldebugio = debug_io > 0
+
+    !> Initialize the JSBACH thermodynamic interface in icon:mo_util_jsbach for different saturation
+    !> vapor pressure formulations depending on the atmospheric physics used in the host model (ICON)
+    !> or as specified in the namelist via `iforcing = 2/3` in `run_nml` for 2=AES, 3=NWP (standalone; default: NWP).
+    CALL init_jsb_thermo_iface(is_standalone)
 
     ! Now read namelists again and set parameters
     ! Note: no_of_models needs to be known here (therfore extra loop above) in order to test for a valid model_id below

@@ -181,27 +181,27 @@ MODULE mo_hydro_constants
 #ifdef __QUINCY_STANDALONE__
   ! quincy standalone
   REAL(wp), PARAMETER :: &
-    & k_pwp_a         = 0.031_wp, &
-    & k_pwp_c         = 0.487_wp, &
-    & k_pwp_s         = -0.024_wp, &
-    & k_pwp_sc        = 0.068_wp, &
-    & k_pwp_at        = -0.02_wp, &
-    & k_pwp_bt        = 0.14_wp, &
-    & k_fc_a          = 0.299_wp, &
-    & k_fc_c          = 0.195_wp, &
-    & k_fc_s          = -0.251_wp, &
-    & k_fc_sc         = 0.452_wp, &
-    & k_fc_at         = -0.015_wp, &
-    & k_fc_bt         = -0.373_wp, &
-    & k_fc_ct         = 1.293_wp, &
-    & k_sat_a         = 0.078_wp, &
-    & k_sat_c         = 0.034_wp, &
-    & k_sat_s         = 0.278_wp, &
-    & k_sat_sc        = -0.584_wp, &
-    & k_sat_at        = -0.107_wp, &
-    & k_sat_bt        = 0.6360_wp, &
-    & k_sat_ct        = 0.097_wp, &
-    & k_sat_dt        = 0.043_wp
+    & k_pwp_a         = 0.031_wp, &              !< empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_c         = 0.487_wp, &              !< empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_s         = -0.024_wp, &             !< empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_sc        = 0.068_wp, &              !< empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_at        = -0.02_wp, &              !< empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_bt        = 0.14_wp, &               !< empirical constant in pedo-transfer function to get water content at PWP
+    & k_fc_a          = 0.299_wp, &              !< empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_c          = 0.195_wp, &              !< empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_s          = -0.251_wp, &             !< empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_sc         = 0.452_wp, &              !< empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_at         = -0.015_wp, &             !< empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_bt         = -0.373_wp, &             !< empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_ct         = 1.293_wp, &              !< empirical constant in pedo-transfer function to get water content at FC
+    & k_sat_a         = 0.078_wp, &              !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_c         = 0.034_wp, &              !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_s         = 0.278_wp, &              !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_sc        = -0.584_wp, &             !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_at        = -0.107_wp, &             !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_bt        = 0.6360_wp, &             !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_ct        = 0.097_wp, &              !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_dt        = 0.043_wp                 !< empirical constant in pedo-transfer function to get water content at SAT
 #endif
 
   REAL(wp), PARAMETER :: &
