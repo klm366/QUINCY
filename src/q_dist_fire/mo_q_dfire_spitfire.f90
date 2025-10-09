@@ -329,7 +329,7 @@ CONTAINS
 
     dsl4jsb_Real3D_onChunk                :: frac_consump_fcl          ! out [-]
     dsl4jsb_Real2D_onChunk                :: ic_pop_dens               ! in [#humans km-2]
-    dsl4jsb_Real2D_onChunk                :: a2l_lightning_events ! in [#events ha-1 d-1]
+    dsl4jsb_Real2D_onChunk                :: a2l_lightning_events      ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -426,10 +426,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, a2l_lightning_events) ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
-    !dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
-    !dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
-!    dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
 
     no_children = tile%Get_no_of_children()
 
@@ -797,7 +794,6 @@ CONTAINS
       IF (mask(ic)) THEN
         !< Calculate Fraction of the Area burned (eq. 2 from Thonicke et al. (2010))
         ab(ic) = e_n_ignitions(ic) * fdi(ic) * mean_fire_area(ic) * area(ic) !< [ha TS-1]
-        ! [ha ts-1] = [ha-1 ts-1] * [-] * [ha] * [ha] ! ignitions are in km-2 day-1, TAKE A LOOK!
         ab_fract(ic) = ab(ic) / area(ic)
       END IF
     END DO
@@ -809,7 +805,7 @@ CONTAINS
   !> Calculate the above ground relative soil moisture
   !>
   FUNCTION calc_ab_moisture(ab_soil_depth_sl, ab_wtr_soil_sl, ab_wtr_soil_fc_sl, mask) RESULT (ab_moisture)
-    REAL(wp), INTENT(in)                :: ab_soil_depth_sl(:,:)        !< soil depth [m] (#nc, #above ground soil layers)
+    REAL(wp), INTENT(in)                :: ab_soil_depth_sl(:,:)      !< soil depth [m] (#nc, #above ground soil layers)
     REAL(wp), INTENT(in)                :: ab_wtr_soil_sl(:,:)        !< soil water content [m] (#nc, #above ground soil layers)
     REAL(wp), INTENT(in)                :: ab_wtr_soil_fc_sl(:,:)     !< soil water field capacity [m] (#nc, #above ground soil layers)
     LOGICAL, INTENT(in)                 :: mask(:)                    !< True = gridcell enabled
@@ -817,16 +813,16 @@ CONTAINS
 
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
     INTEGER :: is, ic
-    INTEGER :: nc, nsoil_layers
+    INTEGER :: nc, nsl
     REAL(wp), ALLOCATABLE :: ab_moisture_sl(:,:)
 
     nc = SIZE(ab_wtr_soil_fc_sl, DIM=1)
-    nsoil_layers = SIZE(ab_wtr_soil_fc_sl, DIM=2) ! 2=soil layers index
+    nsl = SIZE(ab_wtr_soil_fc_sl, DIM=2) ! 2=soil layers index
     ALLOCATE(ab_moisture_sl, mold=ab_wtr_soil_sl)
 
     !< Relative soil moisture for each above ground soil layers
     ab_moisture_sl = 0._wp
-    DO is=1, nsoil_layers
+    DO is=1, nsl
       DO ic=1, nc
         IF (mask(ic) .AND. ab_wtr_soil_fc_sl(ic,is)>0._wp) THEN
           ab_moisture_sl(ic,is) = ab_wtr_soil_sl(ic,is) / ab_wtr_soil_fc_sl(ic,is)
@@ -839,7 +835,7 @@ CONTAINS
     ab_moisture = 0._wp
     DO ic=1, nc
       IF (mask(ic)) THEN
-        ab_moisture(ic) = stats_average_weight(ab_moisture_sl(ic,:), ab_soil_depth_sl(ic,:))
+        ab_moisture(ic) = stats_average_weight(nsl, ab_moisture_sl(ic,:), ab_soil_depth_sl(ic,:))
       END IF
     ENDDO
   END FUNCTION calc_ab_moisture
