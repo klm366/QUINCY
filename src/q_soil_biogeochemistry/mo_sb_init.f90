@@ -1857,7 +1857,8 @@ CONTAINS
     DO iblk = 1,nblks
       DO ic = 1,nproma
         DO is = 1,INT(num_sl_above_bedrock(ic, iblk))		
-          nh4_assoc(ic, is, iblk)     = qmax_nh4(ic, is, iblk) * nh4_solute (ic, is, iblk) / (nh4_solute(ic, is, iblk) + km_adsorpt_nh4_sl(ic, is, iblk))
+          nh4_assoc(ic, is, iblk)     = qmax_nh4(ic, is, iblk) * nh4_solute (ic, is, iblk) &
+            &                           / (nh4_solute(ic, is, iblk) + km_adsorpt_nh4_sl(ic, is, iblk))
           nh4_n15_assoc(ic, is, iblk) = nh4_assoc(ic, is, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
         END DO
       END DO
