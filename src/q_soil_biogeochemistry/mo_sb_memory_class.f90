@@ -3134,7 +3134,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)		
+        & initval_r = 0.0_wp)
 
       CALL mem%Add_var('sb_bgcm_pool_microbial_c', mem%sb_bgcm_pool_microbial_c, &
         & hgrid, vgrid_soil_w, &

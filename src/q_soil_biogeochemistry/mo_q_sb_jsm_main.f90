@@ -546,7 +546,7 @@ CONTAINS
     !!
     CALL calc_sourcing_flux( &
       & nc, &                                         ! in
-      & nsoil_w, &	
+      & nsoil_w, &
       & dtime, &
       & num_sl_above_bedrock(:), &
       & dsl4jsb_Config(SB_)%flag_sb_prescribe_po4, &  ! in

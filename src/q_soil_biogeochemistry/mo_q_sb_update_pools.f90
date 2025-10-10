@@ -337,7 +337,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_microbial_p
     dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_mineral_assoc_c
     dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_mineral_assoc_n
-    dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_mineral_assoc_p											
+    dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_mineral_assoc_p
     dsl4jsb_Real3D_onChunk :: qmax_org_min_sl
     dsl4jsb_Real3D_onChunk :: qmax_po4_min_sl
     dsl4jsb_Real3D_onChunk :: qmax_nh4_min_sl
@@ -620,7 +620,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_microbial_p)
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_c)
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_n)
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_p)															
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_p)
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org_min_sl)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4_min_sl)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_nh4_min_sl)             ! in
