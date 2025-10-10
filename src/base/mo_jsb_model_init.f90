@@ -466,10 +466,10 @@ CONTAINS
           CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
           IF (model%config%qmodel_id == QLAND) THEN
             IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
-              CALL model%Queue_task(SB_, "sb_jsm")           ! LAND ONLY
+              CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
             ELSE
-              CALL model%Queue_task(SB_, "sb_simple_model")           ! LAND ONLY
-            ENDIF
+              CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
+            END IF
           END IF
           CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
         END IF
@@ -566,11 +566,13 @@ CONTAINS
           END IF
           CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
           CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
-          IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
-            CALL model%Queue_task(SB_, "sb_jsm")           ! LAND ONLY
-          ELSE
-            CALL model%Queue_task(SB_, "sb_simple_model")           ! LAND ONLY
-          ENDIF
+          IF (model%config%qmodel_id == QLAND) THEN
+            IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+              CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
+            ELSE
+              CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
+            END IF
+          END IF
           CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
         END IF
 
