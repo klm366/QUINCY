@@ -1630,16 +1630,21 @@ CONTAINS
             ENDIF
             ! check if soil is over-saturated with fast C
             IF (arr_hlp7(ic, is, iblk) > 1._wp ) THEN
-              sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk)  = sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk)  &
-              &                                                         * 1._wp / arr_hlp7(ic, is, iblk)
-              sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) = sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) &
-              &                                                         * 1._wp / arr_hlp7(ic, is, iblk)
-              sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk)        = sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk)        &
-              &                                                         * 1._wp / arr_hlp7(ic, is, iblk)
-              sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk)              = sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk)              &
-              &                                                         * 1._wp / arr_hlp7(ic, is, iblk)
-              sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk)        = sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk)        &
-              &                                                         * 1._wp / arr_hlp7(ic, is, iblk)
+              sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk)  = &
+              &                 sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk)  &
+              &                 * 1._wp / arr_hlp7(ic, is, iblk)
+              sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) = &
+              &                 sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) &
+              &                 * 1._wp / arr_hlp7(ic, is, iblk)
+              sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk)        = &
+              &                 sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk)        &
+              &                 * 1._wp / arr_hlp7(ic, is, iblk)
+              sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk)              = &
+              &                 sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk)              &
+              &                 * 1._wp / arr_hlp7(ic, is, iblk)
+              sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk)        = &
+              &                 sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk)        &
+              &                 * 1._wp / arr_hlp7(ic, is, iblk)
               sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk)          = 0._wp
               sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk)    = 0._wp
             ! check if soil is over-saturated with fast and stable C
