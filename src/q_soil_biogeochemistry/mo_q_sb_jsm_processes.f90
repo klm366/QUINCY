@@ -282,8 +282,13 @@ CONTAINS
           &                  + km_mic_uptake_nh4)
         hlp2               = vmax_mic_uptake_no3 * microbial_carbon(ic,is) * solute_no3(ic,is) / (solute_no3(ic,is) &
           &                  + km_mic_uptake_no3)
-        mic_upt_nh4(ic,is) = mic_upt_n * hlp1 /(hlp1 + hlp2)
-        mic_upt_no3(ic,is) = mic_upt_n * hlp2 /(hlp1 + hlp2)
+        IF ((hlp1 + hlp2) > eps8) THEN
+          mic_upt_nh4(ic,is) = mic_upt_n * hlp1 /(hlp1 + hlp2)
+          mic_upt_no3(ic,is) = mic_upt_n * hlp2 /(hlp1 + hlp2)
+        ELSE
+          mic_upt_nh4(ic,is) = 0._wp
+          mic_upt_no3(ic,is) = 0._wp
+        ENDIF
         gross_mineralisation_nh4(ic,is) = (1._wp - microbial_nue) * uptake_n
       ENDDO
     ENDDO
@@ -831,7 +836,11 @@ CONTAINS
         mortality_rate(ic,is) = k_mort_microbial * dtime
         hlp1(ic,is)           = mortality_rate(ic,is) * sb_pool_mt_microbial(ixC, ic, is)
         IF ((sb_pool_mt_microbial(ixC, ic, is) - hlp1(ic,is)) < min_mic_biomass) THEN
-          mortality_rate(ic,is) = MAX(0._wp, 1._wp - (min_mic_biomass / sb_pool_mt_microbial(ixC, ic, is)))
+          IF (sb_pool_mt_microbial(ixC, ic, is) > eps8) THEN
+            mortality_rate(ic,is) = MAX(0._wp, 1._wp - (min_mic_biomass / sb_pool_mt_microbial(ixC, ic, is)))
+          ELSE
+            mortality_rate(ic,is) = 0._wp
+          ENDIF
         ENDIF
 
         !>2.0 calculate matter fluxes associated with microbial death
