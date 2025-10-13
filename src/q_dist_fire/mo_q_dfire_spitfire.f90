@@ -211,9 +211,9 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: tile_area(:) ! [m2]
     LOGICAL                               :: mask_is_tile_enabled(options%nc)
 
-    REAL(wp)                              :: ab_soil_depth_sl(options%nc,df_sf_sl_dims_nr)    !< above ground soil depth layers [m]
-    REAL(wp)                              :: ab_w_soil_sl(options%nc,df_sf_sl_dims_nr)    !< above ground soil water [m]
-    REAL(wp)                              :: ab_w_soil_fc_sl(options%nc,df_sf_sl_dims_nr) !< above ground soil field capacity [m]
+    REAL(wp)                              :: ab_soil_depth_sl(options%nc,df_sf_sl_dims_nr)!< above ground soil depth layers [m]
+    REAL(wp)                              :: ab_w_soil_sl(options%nc,df_sf_sl_dims_nr)    !< above ground soil water content [m]
+    REAL(wp)                              :: ab_w_soil_sat_sl(options%nc,df_sf_sl_dims_nr)!< above ground soil water saturation [m]
     REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
 
     TYPE(t_sf_veget_cover_frac)           :: veg_cover_frac                               !< Vegetation cover
@@ -253,7 +253,8 @@ CONTAINS
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real3D_onChunk                :: wtr_soil_sl        ! soil water content [m]
-    dsl4jsb_Real3D_onChunk                :: wtr_soil_fc_sl     ! soil water field capacity [m]
+    dsl4jsb_Real3D_onChunk                :: wtr_soil_sat_sl    ! Soil water content at saturation (calculated from
+                                                                ! soil porosity, reduced by ice)                        [m]
     dsl4jsb_Real3D_onChunk                :: soil_depth_sl      ! Soil depth until bedrock [m]
 
     !< Ignitions
@@ -351,7 +352,7 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)            ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sat_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)          ! in
 
     !< Ignitions
@@ -487,8 +488,8 @@ CONTAINS
 
     ab_soil_depth_sl(:,:) = soil_depth_sl(:, [df_sf_sl_indices])
     ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
-    ab_w_soil_fc_sl(:,:) = wtr_soil_fc_sl(:, [df_sf_sl_indices])
-    ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_fc_sl, mask=mask_is_tile_enabled)
+    ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
+    ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl, mask=mask_is_tile_enabled)
 
     ! Load input data
     a_nd = a2l_lightning_events * 4._wp
@@ -804,10 +805,10 @@ CONTAINS
   !>
   !> Calculate the above ground relative soil moisture
   !>
-  FUNCTION calc_ab_moisture(ab_soil_depth_sl, ab_wtr_soil_sl, ab_wtr_soil_fc_sl, mask) RESULT (ab_moisture)
+  FUNCTION calc_ab_moisture(ab_soil_depth_sl, ab_wtr_soil_sl, ab_wtr_wsat_sl, mask) RESULT (ab_moisture)
     REAL(wp), INTENT(in)                :: ab_soil_depth_sl(:,:)      !< soil depth [m] (#nc, #above ground soil layers)
     REAL(wp), INTENT(in)                :: ab_wtr_soil_sl(:,:)        !< soil water content [m] (#nc, #above ground soil layers)
-    REAL(wp), INTENT(in)                :: ab_wtr_soil_fc_sl(:,:)     !< soil water field capacity [m] (#nc, #above ground soil layers)
+    REAL(wp), INTENT(in)                :: ab_wtr_wsat_sl(:,:)        !< soil water saturation [m] (#nc, #above ground soil layers)
     LOGICAL, INTENT(in)                 :: mask(:)                    !< True = gridcell enabled
     REAL(wp), ALLOCATABLE               :: ab_moisture(:)             !< Relative above ground soil moisture [-] (nc)
 
@@ -816,16 +817,16 @@ CONTAINS
     INTEGER :: nc, nsl
     REAL(wp), ALLOCATABLE :: ab_moisture_sl(:,:)
 
-    nc = SIZE(ab_wtr_soil_fc_sl, DIM=1)
-    nsl = SIZE(ab_wtr_soil_fc_sl, DIM=2) ! 2=soil layers index
+    nc = SIZE(ab_wtr_wsat_sl, DIM=1)
+    nsl = SIZE(ab_wtr_wsat_sl, DIM=2) ! 2=soil layers index
     ALLOCATE(ab_moisture_sl, mold=ab_wtr_soil_sl)
 
     !< Relative soil moisture for each above ground soil layers
     ab_moisture_sl = 0._wp
     DO is=1, nsl
       DO ic=1, nc
-        IF (mask(ic) .AND. ab_wtr_soil_fc_sl(ic,is)>0._wp) THEN
-          ab_moisture_sl(ic,is) = ab_wtr_soil_sl(ic,is) / ab_wtr_soil_fc_sl(ic,is)
+        IF (mask(ic) .AND. ab_wtr_wsat_sl(ic,is)>0._wp) THEN
+          ab_moisture_sl(ic,is) = ab_wtr_soil_sl(ic,is) / ab_wtr_wsat_sl(ic,is)
         END IF
       END DO
     END DO
