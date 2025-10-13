@@ -43,7 +43,7 @@ CONTAINS
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
-    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, HYDRO_, TURB_
+    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, HYDRO_, TURB_, SEB_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_atmland_constants,      ONLY: min_wind, max_wind
@@ -54,12 +54,14 @@ CONTAINS
     USE mo_q_assimi_constants,     ONLY: min_aerodyn_cond
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(Q_ASSIMI_)
+    dsl4jsb_Use_config(SEB_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(TURB_)
     dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_memory(SEB_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -77,6 +79,7 @@ CONTAINS
     REAL(wp)                              :: alpha                    !< implicitness factor
 
     CHARACTER(len=1024)                   :: canopy_cond_scheme       !< canopy_conductance_scheme: medlyn / ballberry
+    LOGICAL                               :: config_l_skin_temp       !< skin temperature scheme
     REAL(wp)                              :: lctlib_g1                !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     REAL(wp)                              :: lctlib_phi_leaf_min, lctlib_gmin, lctlib_g0
     REAL(wp)                              :: lctlib_t_jmax_omega, lctlib_t_jmax_opt
@@ -88,12 +91,14 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_ASSIMI_)
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(SEB_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
     dsl4jsb_Real2D_onChunk      :: t_air
@@ -157,6 +162,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
     dsl4jsb_Real3D_onChunk      :: root_fraction_sl
+    ! SEB_ 2D
+    dsl4jsb_Real2D_onChunk      :: t_filt
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -178,12 +185,14 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_ASSIMI_)
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(SEB_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                          ! in
@@ -246,6 +255,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)                     ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)               ! in
+    ! SEB_
+    dsl4jsb_Get_var2D_onChunk(SEB_, t_filt)                         ! in
     ! ----------------------------------------------------------------------------------------------------- !
     lctlib_phi_leaf_min = dsl4jsb_Lctlib_param(phi_leaf_min)
     lctlib_phenology_type = dsl4jsb_Lctlib_param(phenology_type)
@@ -256,6 +267,7 @@ CONTAINS
     lctlib_t_jmax_opt = dsl4jsb_Lctlib_param(t_jmax_opt)
 
     canopy_cond_scheme = TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme)
+    config_l_skin_temp = dsl4jsb_Config(SEB_)%l_skin_temp
 
     !>0.9.1 set output to zero
     !>
@@ -308,7 +320,11 @@ CONTAINS
     !>
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_air(ic), q_air(ic), press_srf(ic))
+      IF (model%config%use_soil_phys_jsbach .AND. config_l_skin_temp) THEN
+        beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_filt(ic), q_air(ic), press_srf(ic)) ! use filtered skin temperature (after Asselin) 
+      ELSE
+        beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_air(ic),  q_air(ic), press_srf(ic))
+      END IF
       ! calc_soil_moisture_stress() produces values in the range [0,1]
       beta_soil_ps(ic) = calc_soil_moisture_stress(wtr_soil_root_pot(ic), lctlib_phi_leaf_min)
       beta_soil_gs(ic) = calc_soil_moisture_stress(wtr_soil_root_pot(ic), lctlib_phi_leaf_min)
@@ -994,15 +1010,15 @@ CONTAINS
 #ifndef _OPENACC
   PURE ELEMENTAL &
 #endif
-  FUNCTION calc_atm_moisture_stress(canopy_cond_scheme, t_air, q_air, press_srf) RESULT(beta)
+  FUNCTION calc_atm_moisture_stress(canopy_cond_scheme, temperature, q_air, press_srf) RESULT(beta)
 
     !$ACC ROUTINE SEQ
 
-    USE mo_phy_schemes,        ONLY: qsat_water
+    USE mo_phy_schemes,        ONLY: qsat_mixed
     USE mo_atmland_constants,  ONLY: eps_vpd
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), INTENT(IN)  :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry
-    REAL(wp),INTENT(in)           :: t_air                  !< air temperature in K
+    REAL(wp),INTENT(in)           :: temperature            !< air or skin temperature in K (t_filt, t_air)
     REAL(wp),INTENT(in)           :: q_air                  !< specific air humidity (g g-1)
     REAL(wp),INTENT(in)           :: press_srf              !< air pressure (Pa)
     REAL(wp)                      :: beta                   !< atmospheric moisture scalar for use in conductance calculation
@@ -1013,7 +1029,7 @@ CONTAINS
 
     !>1.0 saturating specific humidity [kg kg-1]
     !>
-    q_sat = qsat_water(t_air, press_srf)
+    q_sat = qsat_mixed(temperature, press_srf)
 
     !>  1.1 vapour pressure deficit [kPa]
     !>
