@@ -36,7 +36,6 @@ MODULE mo_q_dfire_init
   USE mo_jsb_grid_class,          ONLY: t_jsb_grid
   USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
 
-  USE mo_q_dfire_constants,       ONLY: df_sf_fire_duration_thd
   USE mo_q_dfire_constants,       ONLY: ratio_as_dead_fuel
 #ifndef __QUINCY_STANDALONE__
   USE mo_jsb_time,                ONLY: timestep_in_days
@@ -84,7 +83,6 @@ CONTAINS
     TYPE(t_jsb_grid),       POINTER              :: hgrid              !< Horizontal grid
     INTEGER                                      :: iblk, ics, ice, nc, npft
     INTEGER :: nblks, nproma
-    REAL(wp)                                     :: dtime
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':q_dfire_init'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
@@ -150,11 +148,6 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: ic_lightning_events_monthly
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
-#ifdef __QUINCY_STANDALONE__
-    ! todo: dtime defined as ?
-#else
-    dtime=timestep_in_days(model_id=tile%owner_model_id)
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(Q_DFIRE_)) RETURN
     !IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
@@ -272,9 +265,6 @@ CONTAINS
     frac_consump_fcl = 0._wp
 
     ic_pop_dens = 0._wp
-
-    !< Thonicke's Eq 14 is adapted to 30 minutes timestep. Original implementation runs at daily TS.
-    df_sf_fire_duration_thd = dtime / 60._wp ! convert seconds to minutes
 
     !< Chose daily precipitation. Those are calculated in 3 different ways.
     dfire_pm_id = dsl4jsb_Config(Q_DFIRE_)%dfire_precip_method_id

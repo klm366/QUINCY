@@ -213,7 +213,7 @@ MODULE mo_q_dfire_constants
   REAL(wp), PARAMETER :: df_sf_isurface_extinc_th = 50._wp !< Fires extinguishes below this threshold [kW m-1]
                                                            !< below eq. 15, Thonicke et al. (2010)
 
-  REAL(wp), SAVE      :: df_sf_fire_duration_thd           !< Maximum fire duration allowed, capped to timestep length [min]
+  REAL(wp), PARAMETER :: df_sf_fire_duration_thd = 30      !< Maximum fire duration allowed, capped to timestep length [min]
                                                            !< This is an adaptation from daily to 30 min TS as Thonicke et al. (2010) runs at a daily TS
 
   ! todo: smarter way to do it? 
