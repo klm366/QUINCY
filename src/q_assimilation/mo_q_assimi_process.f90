@@ -318,10 +318,15 @@ CONTAINS
 
     !>2.0 calculate the moisture scaling factor for photosynthesis
     !>
+    ! TODO improve QUINCY with jsb-sp without skin_temp: add a new case and decide what temperature to use, e.g., t_old(:)
+    IF (model%config%use_soil_phys_jsbach .AND. .NOT. config_l_skin_temp) THEN
+      WRITE (message_text, *) 'The calc of saturation vapor pressure without the skin-temperature scheme is not yet implemented.'
+      CALL finish (TRIM(routine), message_text)
+    END IF
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       IF (model%config%use_soil_phys_jsbach .AND. config_l_skin_temp) THEN
-        beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_filt(ic), q_air(ic), press_srf(ic)) ! use filtered skin temperature (after Asselin) 
+        beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_filt(ic), q_air(ic), press_srf(ic)) ! use filtered skin temperature (after Asselin)
       ELSE
         beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_air(ic),  q_air(ic), press_srf(ic))
       END IF
