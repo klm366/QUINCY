@@ -326,7 +326,7 @@ CONTAINS
         & t_cf('sfc_temp_filt', 'K', 'filtered surface temperature'),                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
-        & lrestart=.FALSE.,                                                                  &
+        & lrestart = lrestart_local,                                                         &
         & initval_r=280.0_wp )
 
       CALL mem%Add_var( 't_srf', mem%t_srf,                                                  &
