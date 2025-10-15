@@ -128,18 +128,16 @@ CONTAINS
     REAL(wp) :: A_var(nc)
     REAL(wp) :: max_reaction_velocity(nc)
     REAL(wp) :: u_f_wind(nc)
-    REAL(wp) :: cover_fract_pft_ncs(nc) !< Foliar projective cover
 
     INTEGER :: inc
     ! ----------------------------------------------------------------------------------------------------- !
     ros = t_sf_ros(nc)
-    cover_fract_pft_ncs(:) = 1._wp !TODO: properly calculate the fpc for IQ
     ros%mean_fire_area = 0._wp
 
     DO inc = 1, nc
       IF (mask(inc)) THEN
         !< Calculate wind speed (paragraph before eq. 10 from Thonicke et al. (2010))
-        u_f_wind(inc) = fwd_wind_factor(inc) * cover_fract_pft_ncs(inc) * wind(inc) !< [m min-1]
+        u_f_wind(inc) = fwd_wind_factor(inc) * wind(inc) !< [m min-1]
 
         !<  (Table A1, 5th from Thonicke et al. (2010))
         ros%net_fuel_load(inc) = (1._wp - df_sf_mineral_fract) * SUM(w_oi(inc,:))
