@@ -78,9 +78,10 @@ CONTAINS
     REAL(wp)                              :: dtime                    !< step length
     REAL(wp)                              :: alpha                    !< implicitness factor
 
-    CHARACTER(len=1024)                   :: canopy_cond_scheme       !< canopy_conductance_scheme: medlyn / ballberry
-    LOGICAL                               :: config_l_skin_temp       !< skin temperature scheme
-    REAL(wp)                              :: lctlib_g1                !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
+    CHARACTER(len=1024)                   :: canopy_cond_scheme           !< canopy_conductance_scheme: medlyn / ballberry
+    LOGICAL                               :: config_l_skin_temp           !< skin temperature scheme
+    LOGICAL                               :: config_use_soil_phys_jsbach  !< jsbach soil-physics
+    REAL(wp)                              :: lctlib_g1                    !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     REAL(wp)                              :: lctlib_phi_leaf_min, lctlib_gmin, lctlib_g0
     REAL(wp)                              :: lctlib_t_jmax_omega, lctlib_t_jmax_opt
     INTEGER                               :: lctlib_phenology_type, lctlib_ps_pathway
@@ -266,8 +267,9 @@ CONTAINS
     lctlib_ps_pathway = dsl4jsb_Lctlib_param(ps_pathway)
     lctlib_t_jmax_opt = dsl4jsb_Lctlib_param(t_jmax_opt)
 
-    canopy_cond_scheme = TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme)
-    config_l_skin_temp = dsl4jsb_Config(SEB_)%l_skin_temp
+    canopy_cond_scheme          = TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme)
+    config_l_skin_temp          = dsl4jsb_Config(SEB_)%l_skin_temp
+    config_use_soil_phys_jsbach = model%config%use_soil_phys_jsbach
 
     !>0.9.1 set output to zero
     !>
@@ -297,7 +299,7 @@ CONTAINS
     !>
     !>  only with jsbach soil physics processes enabled, otherwise calculated with SPQ_
     !>
-    IF (model%config%use_soil_phys_jsbach) THEN
+    IF (config_use_soil_phys_jsbach) THEN
       ! set to zero
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
@@ -319,13 +321,13 @@ CONTAINS
     !>2.0 calculate the moisture scaling factor for photosynthesis
     !>
     ! TODO improve QUINCY with jsb-sp without skin_temp: add a new case and decide what temperature to use, e.g., t_old(:)
-    IF (model%config%use_soil_phys_jsbach .AND. .NOT. config_l_skin_temp) THEN
+    IF (config_use_soil_phys_jsbach .AND. .NOT. config_l_skin_temp) THEN
       WRITE (message_text, *) 'The calc of saturation vapor pressure without the skin-temperature scheme is not yet implemented.'
       CALL finish (TRIM(routine), message_text)
     END IF
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      IF (model%config%use_soil_phys_jsbach .AND. config_l_skin_temp) THEN
+      IF (config_use_soil_phys_jsbach .AND. config_l_skin_temp) THEN
         beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_filt(ic), q_air(ic), press_srf(ic)) ! use filtered skin temperature (after Asselin)
       ELSE
         beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_air(ic),  q_air(ic), press_srf(ic))
@@ -345,7 +347,7 @@ CONTAINS
     !> use drag_srf from A2L_ or SEB_ or SPQ_ - differs between: standalone / coupled simulations / quincy SPQ_ / jsbach soil-physics
     !>
     ! use for: QUINCY SPQ_ standalone
-    IF (jsb_standalone .AND. .NOT. model%config%use_soil_phys_jsbach) THEN
+    IF (jsb_standalone .AND. .NOT. config_use_soil_phys_jsbach) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
         drag_srf_local(ic) = drag_srf_stdalone(ic)
@@ -419,7 +421,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       ! potential correction of assimilation and canopy conductance
-      IF (model%config%use_soil_phys_jsbach) THEN
+      IF (config_use_soil_phys_jsbach) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
           IF (wtr_soil_root_pot(ic) < lctlib_phi_leaf_min) THEN
