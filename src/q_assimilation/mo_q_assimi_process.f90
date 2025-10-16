@@ -79,8 +79,8 @@ CONTAINS
     REAL(wp)                              :: alpha                    !< implicitness factor
 
     CHARACTER(len=1024)                   :: canopy_cond_scheme           !< canopy_conductance_scheme: medlyn / ballberry
-    LOGICAL                               :: config_l_skin_temp           !< skin temperature scheme
-    LOGICAL                               :: config_use_soil_phys_jsbach  !< jsbach soil-physics
+    LOGICAL                               :: config_l_skin_temp           !< SEB_ config option to dis-/enable skin-temperature scheme
+    LOGICAL                               :: config_use_soil_phys_jsbach  !< model-config option to dis-/enable jsbach soil-physics
     REAL(wp)                              :: lctlib_g1                    !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     REAL(wp)                              :: lctlib_phi_leaf_min, lctlib_gmin, lctlib_g0
     REAL(wp)                              :: lctlib_t_jmax_omega, lctlib_t_jmax_opt
@@ -328,7 +328,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       IF (config_use_soil_phys_jsbach .AND. config_l_skin_temp) THEN
-        beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_filt(ic), q_air(ic), press_srf(ic)) ! use filtered skin temperature (after Asselin)
+        beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_filt(ic), q_air(ic), press_srf(ic)) ! use skin temperature (after Asselin filter)
       ELSE
         beta_air(ic)     = calc_atm_moisture_stress(canopy_cond_scheme, t_air(ic),  q_air(ic), press_srf(ic))
       END IF
