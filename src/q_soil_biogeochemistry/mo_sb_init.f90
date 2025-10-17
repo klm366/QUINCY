@@ -1545,9 +1545,6 @@ CONTAINS
     enzyme_frac_poly_p(:,:,:)   = 0.0_wp
     enzyme_frac_AP(:,:,:)       = 0.0_wp
 
-    !> init sb_pool_mt_domain
-    sb_pool_mt_domain(:, :, :, :, :)  = 0._wp
-
     !>0.9 allocate local var
     !>
     ALLOCATE(p_labile(nproma, nsoil_w, nblks))

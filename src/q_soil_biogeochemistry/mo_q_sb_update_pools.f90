@@ -343,6 +343,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_nh4_min_sl
     dsl4jsb_Real3D_onChunk :: qmax_po4_om_sl
     dsl4jsb_Real3D_onChunk :: volume_min_sl
+    dsl4jsb_Real3D_onChunk :: dom_cn_mavg
+    dsl4jsb_Real3D_onChunk :: dom_cp_mavg
+    dsl4jsb_Real3D_onChunk :: fact_n_status_mic_c_growth
+    dsl4jsb_Real3D_onChunk :: fact_p_status_mic_c_growth
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -615,17 +619,23 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_woody_litter_c)      ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       total_soil_n)                ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       total_soil_inorg_n)          ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_microbial_c)
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_microbial_n)
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_microbial_p)
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_c)
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_n)
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_p)
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org_min_sl)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4_min_sl)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_nh4_min_sl)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4_om_sl)              ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       volume_min_sl)               ! in
+    IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+      dsl4jsb_Get_var3D_onChunk(SB_,       dom_cn_mavg)
+      dsl4jsb_Get_var3D_onChunk(SB_,       dom_cp_mavg)
+      dsl4jsb_Get_var3D_onChunk(SB_,       fact_n_status_mic_c_growth)
+      dsl4jsb_Get_var3D_onChunk(SB_,       fact_p_status_mic_c_growth)
+      dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_microbial_c)
+      dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_microbial_n)
+      dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_microbial_p)
+      dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_c)
+      dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_n)
+      dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_p)
+    ENDIF
     !------------------------------------------------------------------------------------------------------ !
 
     !> 1.0 correct the plant uptake of nh4, no3 and po4 for soil model
