@@ -57,10 +57,9 @@ $cdo setvar,ICE          -selvar,glac   ${bc_frac}       new_ICE.nc
 $cdo setvar,FR_LAKE      -selvar,lake   ${bc_frac}       new_FR_LAKE.nc
 
 # Variables from bc_land_phys
-# Z0 should be identical, as it was used from extpar in jsbach4_ini_files_from_extpar.sh
+# Z0 should be identical, as it was used from extpar in bc_files_from_extpar.sh
 
 # Variables from bc_land_sso
-# The orographic parameters are read from "initial_extpar_file" in jsbach4_ini_files_from_gauss.sh.
 # If the nwp_extpar file was used as initial_extpar_file (default) a replacement has no effect.
 # We however need to adapt these variables to changes of the land sea mask:
 # Set orography parameters of complete ocean cells to zero (this is the value of existing
