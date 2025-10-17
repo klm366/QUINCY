@@ -52,8 +52,8 @@ CONTAINS
       &                      nsoil                !< Number of standard soil layers per tile
 
     REAL(wp), INTENT(in)  :: offset,           &  !< Vertical offset between tile and sibling soil layers [m]
-      &                      d_bedrock            !< Depth to bedrock [m]
-    REAL(wp), INTENT(in)  :: dz(:)                !< Standard soil layer bottom depths [m]
+      &                      d_bedrock            !< Depth to bedrock in both tiles [m]
+    REAL(wp), INTENT(in)  :: dz(:)                !< Standard soil layer bottom depths in both tiles [m]
 
     INTEGER,  INTENT(out) :: index_tile(:),    &  !< Index mapping from intersected grid to tile soil layers
       &                      index_sibl(:)        !< Index mapping from intersected grid to sibling soil layers
@@ -110,14 +110,16 @@ CONTAINS
       new_layers(nsoil + 1 + i) = dz_sibl(i)
     END DO
 
-    ! Sort index list and intersected grid depths
+    ! Sort index list, soil depths and intersected grid depths
     CALL quicksort(index_list)
+    CALL quicksort(dz_tile)
+    CALL quicksort(dz_sibl)
     CALL quicksort(new_layers)
 
     ! Initialize starting positions for grid indices
-    i_tile = 1
     IF (offset < 0._wp) THEN
       ! Sibling tile is above tile
+      i_tile = 1
       top = 0._wp
       ! Find first sibling soil layer index that intersects with first soil layer on tile
       DO i = 1, nsoil + 1
@@ -126,9 +128,21 @@ CONTAINS
           EXIT
         END IF
       END DO
+    ELSE IF (offset > 0._wp) THEN
+      ! Sibling tile is below tile
+      i_sibl = 1
+      top = offset
+      ! Find first sibling soil layer index that intersects with first soil layer on tile
+      DO i = 1, nsoil + 1
+        IF (dz_tile(i) >= offset) THEN
+          i_tile = i
+          EXIT
+        END IF
+      END DO
     ELSE
       ! Sibling tile is equal or below tile
-      top    = offset
+      top    = 0._wp
+      i_tile = 1
       i_sibl = 1
     END IF
 
@@ -138,14 +152,14 @@ CONTAINS
       ! Set new layer bottom depth
       bot = new_layers(i)
       ! Increase index of layer boundary is crossed on each tile
-      IF (bot > dz_tile(i_tile)) THEN
+      IF (bot > dz_tile(i_tile) .AND. bot <= dz_tile(nsoil+1)) THEN
         i_tile = i_tile + 1
       END IF
-      IF (bot > dz_sibl(i_sibl)) THEN
+      IF (bot > dz_sibl(i_sibl) .AND. bot <= dz_sibl(nsoil+1)) THEN
         i_sibl = i_sibl + 1
       END IF
       ! Compute layer thickness
-      IF (bot > 0._wp) THEN
+      IF (bot > 0._wp .AND. bot <= MIN(dz_tile(nsoil+1), dz_sibl(nsoil+1))) THEN
         layer_thickness(i) = bot - top
       ELSE
         layer_thickness(i) = 0._wp
@@ -163,7 +177,7 @@ CONTAINS
         layer_thickness(i) = 0._wp
       END IF
       ! Set new layer top for next iteration
-      top = bot
+      top = MAX(bot, top)
     END DO
 
   END SUBROUTINE get_intersected_grid
@@ -720,12 +734,6 @@ CONTAINS
       &                        wtr_2_qlbrm,         &  !< Amount of water moved in order to reach equilibrium state [m]
       &                        wtr_flx_lat,         &  !< potential flux (based on k and mpot) between sibling and tile [m/s]
       &                        wtr_lat,             &  !< actual flux between sibling and tile [m]
-      &                        z_rgrd_top,          &  !< Top of current layer on helper grid [m]
-      &                        z_rgrd_bot,          &  !< Bottom of current layer on helper grid [m]
-      &                        z_tle,               &  !< Layer bottom of current layer on tile [m]
-      &                        z_sbl,               &  !< Layer bottom of current layer on sibling [m]
-      &                        z_bot_tle,           &  !< Bedrock boundary on tile [m]
-      &                        z_bot_sbl,           &  !< Bedrock boundary on sibling [m]
       &                        wtr_soil_tle_rgrd,   &  !< Soil water content on tile on helper grid layer [m]
       &                        wsat_tle_rgrd,       &  !< Soil moisture at saturation on tile on helper grid layer [m]
       &                        field_cap_tle_rgrd,  &  !< Field capacity on tile on helper grid layer [m]
@@ -793,109 +801,62 @@ CONTAINS
 
       DO i = 1, nrgrd
 
-        IF (i == 1) THEN
-          ! Setting up the interpolated helper grid
-          z_bot_tle = sum_soil_tle
-          z_bot_sbl = sum_soil_sbl
-          i_tle     = 1
-          i_sbl     = 1
-          z_tle     = dsoil_tle(i_tle)
-          z_sbl     = dsoil_sbl(i_sbl)
-          IF (h_offset > 0._wp) THEN ! Tile is higher than sibling
-            i_sbl     = 0
-            z_tle     = dsoil_tle(i_tle)
-            z_sbl     = abs(h_offset)
-            z_bot_sbl = z_bot_sbl + abs(h_offset)
-          ELSE IF (h_offset < 0._wp) THEN  ! Tile is lower than sibling
-            i_tle     = 0
-            z_tle     = abs(h_offset)
-            z_sbl     = dsoil_sbl(i_sbl)
-            z_bot_tle = z_bot_tle + abs(h_offset)
-          END IF
-          z_rgrd_top = 0._wp
-          z_rgrd_bot = MIN(z_tle, z_sbl)
-        END IF
+        i_tle = index_tile(i)
+        i_sbl = index_sibl(i)
+        h = layer_thickness(i)
 
         ! Compute lateral diffusion of water within bedrock layers
-        IF (l_compute_water) THEN
-          ! Flux is determined by the difference in matric potential between the two tiles
-          IF (z_rgrd_bot <= z_bot_tle .AND. z_rgrd_bot <= z_bot_sbl .AND. &               ! Above Bedrock in both tiles
-            & z_rgrd_bot > abs(h_offset) .AND. i_tle <= nsoil .AND. i_sbl <= nsoil) THEN  ! and within soil column
-            IF (wsat_tle(i_tle) > 0._wp .AND. wsat_sbl(i_sbl) > 0._wp) THEN ! Space for liquid water exists in both tiles
+        IF (l_compute_water .AND. h > 0._wp .AND. l_act_hydro(i)) THEN
+          ! Space for liquid water must exists in both tiles
+          IF (wsat_tle(i_tle) > 0._wp .AND. wsat_sbl(i_sbl) > 0._wp) THEN
 
-              wtr_lat            = 0._wp
-              h                  = z_rgrd_bot - z_rgrd_top
-              a_inter            = len_inter * h
+            ! Flux is determined by the difference in matric potential between the two tiles
+            wtr_lat            = 0._wp
+            a_inter            = len_inter * h
 
-              wtr_soil_tle_rgrd  = wtr_soil_tle(i_tle)   * h / dsoil_tle(i_tle)
-              wsat_tle_rgrd      = wsat_tle(i_tle)       * h / dsoil_tle(i_tle)
-              field_cap_tle_rgrd = field_cap_tle(i_tle)  * h / dsoil_tle(i_tle)
-              res_tle_rgrd       = res_tle(i_tle)        * h / dsoil_tle(i_tle)
-              mpot_tle_rgrd      = mpot_tle(i_tle)
-              k_tle_rgrd         = k_tle(i_tle)
+            wtr_soil_tle_rgrd  = wtr_soil_tle(i_tle)   * h / dsoil_tle(i_tle)
+            wsat_tle_rgrd      = wsat_tle(i_tle)       * h / dsoil_tle(i_tle)
+            field_cap_tle_rgrd = field_cap_tle(i_tle)  * h / dsoil_tle(i_tle)
+            res_tle_rgrd       = res_tle(i_tle)        * h / dsoil_tle(i_tle)
+            mpot_tle_rgrd      = mpot_tle(i_tle)
+            k_tle_rgrd         = k_tle(i_tle)
 
-              wtr_soil_sbl_rgrd  = wtr_soil_sbl(i_sbl)   * h / dsoil_sbl(i_sbl)
-              wsat_sbl_rgrd      = wsat_sbl(i_sbl)       * h / dsoil_sbl(i_sbl)
-              field_cap_sbl_rgrd = field_cap_sbl(i_sbl)  * h / dsoil_sbl(i_sbl)
-              res_sbl_rgrd       = res_sbl(i_sbl)        * h / dsoil_sbl(i_sbl)
-              mpot_sbl_rgrd      = mpot_sbl(i_sbl)
-              k_sbl_rgrd         = k_sbl(i_sbl)
-              k_inter            = (k_sbl_rgrd * k_tle_rgrd)**0.5_wp
-              d_mpot             =  abs(mpot_tle_rgrd) - abs(mpot_sbl_rgrd)
-              wtr_flx_lat        = - k_inter  * d_mpot / length_scale *  a_inter
-              wtr_rel_qlbrm      = MIN(1._wp, (wtr_soil_tle_rgrd * fr_tle_rel  &
-                &                +  wtr_soil_sbl_rgrd * fr_sbl_rel)            &
-                &                / (wsat_tle_rgrd * fr_tle_rel + wsat_sbl_rgrd * fr_sbl_rel ))
-              IF (wtr_flx_lat > 0._wp) THEN
-                ! Flux is going from tile to sibling
-                wtr_2_qlbrm      = MAX(0._wp, &
-                  &               (wtr_rel_qlbrm * wsat_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
-                free_space       = MAX(0._wp,(field_cap_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
-                wtr_avail        = MAX(0._wp,(wtr_soil_tle_rgrd - res_tle_rgrd) * fr_tle_rel)
-                wtr_lat          = MIN(wtr_flx_lat * dtime, free_space, wtr_avail, wtr_2_qlbrm)
-                wtr_lat          = MAX(0._wp, wtr_lat)
+            wtr_soil_sbl_rgrd  = wtr_soil_sbl(i_sbl)   * h / dsoil_sbl(i_sbl)
+            wsat_sbl_rgrd      = wsat_sbl(i_sbl)       * h / dsoil_sbl(i_sbl)
+            field_cap_sbl_rgrd = field_cap_sbl(i_sbl)  * h / dsoil_sbl(i_sbl)
+            res_sbl_rgrd       = res_sbl(i_sbl)        * h / dsoil_sbl(i_sbl)
+            mpot_sbl_rgrd      = mpot_sbl(i_sbl)
+            k_sbl_rgrd         = k_sbl(i_sbl)
+            k_inter            = (k_sbl_rgrd * k_tle_rgrd)**0.5_wp
+            d_mpot             =  abs(mpot_tle_rgrd) - abs(mpot_sbl_rgrd)
+            wtr_flx_lat        = - k_inter  * d_mpot / length_scale *  a_inter
+            wtr_rel_qlbrm      = MIN(1._wp, (wtr_soil_tle_rgrd * fr_tle_rel  &
+              &                +  wtr_soil_sbl_rgrd * fr_sbl_rel)            &
+              &                / (wsat_tle_rgrd * fr_tle_rel + wsat_sbl_rgrd * fr_sbl_rel ))
+            IF (wtr_flx_lat > 0._wp) THEN
+              ! Flux is going from tile to sibling
+              wtr_2_qlbrm      = MAX(0._wp, &
+                &               (wtr_rel_qlbrm * wsat_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
+              free_space       = MAX(0._wp,(field_cap_sbl_rgrd - wtr_soil_sbl_rgrd) * fr_sbl_rel)
+              wtr_avail        = MAX(0._wp,(wtr_soil_tle_rgrd - res_tle_rgrd) * fr_tle_rel)
+              wtr_lat          = MIN(wtr_flx_lat * dtime, free_space, wtr_avail, wtr_2_qlbrm)
+              wtr_lat          = MAX(0._wp, wtr_lat)
 
-              ELSE
-                ! Flux is going from sibling to tile
-                wtr_2_qlbrm      = MAX(0._wp, &
-                  &               (wtr_rel_qlbrm  * wsat_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
-                free_space       = MAX(0._wp, (field_cap_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
-                wtr_avail        = MAX(0._wp, (wtr_soil_sbl_rgrd - res_sbl_rgrd) * fr_sbl_rel)
-                wtr_lat          = MAX(wtr_flx_lat * dtime, -free_space, -wtr_avail, -wtr_2_qlbrm)
-                wtr_lat          = MIN(0._wp, wtr_lat)
-
-              END IF
-              diffus_tle(i_tle)  = diffus_tle(i_tle) - wtr_lat / fr_tle_rel
-              diffus_sbl(i_sbl)  = diffus_sbl(i_sbl) + wtr_lat / fr_sbl_rel
-            END IF
-          END IF
-        END IF
-
-        ! Update layer information of the interpolated helper grid
-        IF (z_rgrd_bot == z_tle) THEN
-          i_tle = i_tle + 1
-          IF (i_tle <= nsoil) THEN
-            IF (dsoil_tle(i_tle) > 0._wp) THEN
-              z_tle = z_tle + dsoil_tle(i_tle)
             ELSE
-              i_tle = nsoil + 1
+              ! Flux is going from sibling to tile
+              wtr_2_qlbrm      = MAX(0._wp, &
+                &               (wtr_rel_qlbrm  * wsat_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
+              free_space       = MAX(0._wp, (field_cap_tle_rgrd - wtr_soil_tle_rgrd) * fr_tle_rel)
+              wtr_avail        = MAX(0._wp, (wtr_soil_sbl_rgrd - res_sbl_rgrd) * fr_sbl_rel)
+              wtr_lat          = MAX(wtr_flx_lat * dtime, -free_space, -wtr_avail, -wtr_2_qlbrm)
+              wtr_lat          = MIN(0._wp, wtr_lat)
+
             END IF
+            diffus_tle(i_tle)  = diffus_tle(i_tle) - wtr_lat / fr_tle_rel
+            diffus_sbl(i_sbl)  = diffus_sbl(i_sbl) + wtr_lat / fr_sbl_rel
           END IF
         END IF
 
-        IF (z_rgrd_bot == z_sbl) THEN
-          i_sbl = i_sbl + 1
-          IF (i_sbl <= nsoil) THEN
-            IF (dsoil_sbl(i_sbl) > 0._wp) THEN
-              z_sbl = z_sbl + dsoil_sbl(i_sbl)
-            ELSE
-              i_sbl = nsoil + 1
-            END IF
-          END IF
-        END IF
-
-        z_rgrd_top=z_rgrd_bot
-        z_rgrd_bot=MIN(z_tle, z_sbl)
       END DO
     END IF
 
