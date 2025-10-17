@@ -312,9 +312,9 @@ MODULE mo_sb_memory_class
       & sb_bgcm_pool_microbial_c, &        !< microbial C [mol C m-3 soil]
       & sb_bgcm_pool_microbial_n, &        !< microbial N [mol N m-3 soil]
       & sb_bgcm_pool_microbial_p, &        !< microbial P [mol P m-3 soil]
-      & sb_bgcm_pool_mineral_assoc_c, &    !< microbial C [mol C m-3 soil]
-      & sb_bgcm_pool_mineral_assoc_n, &    !< microbial N [mol N m-3 soil]
-      & sb_bgcm_pool_mineral_assoc_p       !< microbial P [mol P m-3 soil]
+      & sb_bgcm_pool_mineral_assoc_c, &    !< mineral-associated C [mol C m-3 soil]
+      & sb_bgcm_pool_mineral_assoc_n, &    !< mineral-associated N [mol N m-3 soil]
+      & sb_bgcm_pool_mineral_assoc_p       !< mineral-associated P [mol P m-3 soil]
 
     !------------------------------------------------------------------------------------------------------ !
     !>3D soil properties
@@ -475,6 +475,9 @@ CONTAINS
     CHARACTER(len=30)                        :: unit_sb_flux                !< unit of element var
     INTEGER                                  :: elem_idx_map(LAST_ELEM_ID)  !< element mapper ID -> IND
     INTEGER                                  :: table                       !< ...
+    INTEGER                                  :: l_jsmvar                    !< add var to BASIC output_level, model specific (ssm/jsm)
+    LOGICAL                                  :: loutput_jsm                 !< add var to output file, model specific (ssm/jsm)
+    LOGICAL                                  :: lrestart_jsm                !< add var to restart file, model specific (ssm/jsm)
     CHARACTER(len=*), PARAMETER              :: routine = TRIM(modname)//':Init_sb_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
@@ -492,6 +495,16 @@ CONTAINS
     ! init local variables
     unit_sb_pool = "mol m-3"
     unit_sb_flux = "mol m-3 timestep-1"
+
+    ! set local switch for the JSM model
+    l_jsmvar = FULL
+    loutput_jsm  = .FALSE.
+    lrestart_jsm = .FALSE.
+    IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+      l_jsmvar     = BASIC
+      loutput_jsm  = .TRUE.
+      lrestart_jsm = .TRUE.
+    END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Monthly deposition data is only required on the grid-box level
@@ -1764,6 +1777,61 @@ CONTAINS
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
+      CALL mem%Add_var('microbial_uptake_nh4_sl', mem%microbial_uptake_nh4_sl, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('microbial_uptake_nh4_sl', 'micro-mol m-3 s-1', 'microbial uptake of N'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('microbial_uptake_nh4_n15_sl', mem%microbial_uptake_nh4_n15_sl, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('microbial_uptake_nh4_n15_sl', 'micro-mol m-3 s-1', 'microbial uptake of N15'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('microbial_uptake_no3_sl', mem%microbial_uptake_no3_sl, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('microbial_uptake_no3_sl', 'micro-mol m-3 s-1', 'microbial uptake of N'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('microbial_uptake_no3_n15_sl', mem%microbial_uptake_no3_n15_sl, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('microbial_uptake_no3_n15_sl', 'micro-mol m-3 s-1', 'microbial uptake of N15'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('microbial_uptake_po4_sl', mem%microbial_uptake_po4_sl, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('microbial_uptake_po4_sl', 'micro-mol m-3 s-1', 'microbial uptake of P'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
       CALL mem%Add_var('mycorrhiza_uptake_nh4_sl', mem%mycorrhiza_uptake_nh4_sl, &
         & hgrid, vgrid_soil_w, &
         & t_cf('mycorrhiza_uptake_nh4_sl', 'micro-mol m-3 s-1', 'mycorrhiza uptake of N'), &
@@ -2144,14 +2212,80 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('gross_mineralisation_po4', mem%gross_mineralisation_po4, &
         & hgrid, vgrid_soil_w, &
         & t_cf('gross_mineralisation_po4', 'micro-mol m-3 s-1', 'phosphorus gross (biological) mineralization rate'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('leaching_dom_carbon', mem%leaching_dom_carbon, &
+        & hgrid, surface, &
+        & t_cf('leaching_dom_carbon', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-C'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('leaching_dom_nitrogen', mem%leaching_dom_nitrogen, &
+        & hgrid, surface, &
+        & t_cf('leaching_dom_nitrogen', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-N'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = loutput_jsm, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('leaching_dom_phosphorus', mem%leaching_dom_phosphorus, &
+        & hgrid, surface, &
+        & t_cf('leaching_dom_phosphorus', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-P'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = loutput_jsm, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('leaching_dom_carbon13', mem%leaching_dom_carbon13, &
+        & hgrid, surface, &
+        & t_cf('leaching_dom_carbon13', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-C13'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('leaching_dom_carbon14', mem%leaching_dom_carbon14, &
+        & hgrid, surface, &
+        & t_cf('leaching_dom_carbon14', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-C14'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('leaching_dom_nitrogen15', mem%leaching_dom_nitrogen15, &
+        & hgrid, surface, &
+        & t_cf('leaching_dom_nitrogen15', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-N15'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2287,8 +2421,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2397,8 +2531,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2408,8 +2542,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2424,6 +2558,17 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
+      CALL mem%Add_var('particle_fluxrate', mem%particle_fluxrate, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('particle_fluxrate', 'm s-1', 'burial rate due to organic matter fall and decay'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
       CALL mem%Add_var('anaerobic_volume_fraction_sl', mem%anaerobic_volume_fraction_sl, &
         & hgrid, vgrid_soil_w, &
         & t_cf('anaerobic_volume_fraction_sl', unitless, 'anaerobic volume fraction'), &
@@ -2432,6 +2577,149 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('microbial_cue_eff', mem%microbial_cue_eff, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('microbial_cue_eff', unitless, 'instantaneous microbial CUE given NP constraints'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('microbial_cue_eff_tmic_mavg', mem%microbial_cue_eff_tmic_mavg, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('microbial_cue_eff_tmic_mavg', unitless, 'time-averaged microbial CUE given NP constraints'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('microbial_nue_eff', mem%microbial_nue_eff, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('microbial_nue_eff', unitless, 'instantaneous microbial NUE given NP constraints'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('microbial_nue_eff_tmic_mavg', mem%microbial_nue_eff_tmic_mavg, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('microbial_nue_eff_tmic_mavg', unitless, 'time-averaged microbial NUE given NP constraints'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('microbial_pue_eff', mem%microbial_pue_eff, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('microbial_pue_eff', unitless, 'instantaneous microbial PUE given NP constraints'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('microbial_pue_eff_tmic_mavg', mem%microbial_pue_eff_tmic_mavg, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('microbial_pue_eff_tmic_mavg', unitless, 'time-averaged microbial CUE given NP constraints'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fact_n_status_mic_c_growth', mem%fact_n_status_mic_c_growth, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('fact_n_status_mic_c_growth', unitless, 'microbial N status, scaling up/down microbial processes'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fact_p_status_mic_c_growth', mem%fact_p_status_mic_c_growth, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('fact_p_status_mic_c_growth', unitless, 'microbial P status, scaling up/down microbial processes'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('enzyme_frac_AP', mem%enzyme_frac_AP, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('enzyme_frac_AP', unitless, 'fraction of Acid (alkaline) phosphatase of the total enzyme'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('dom_cn', mem%dom_cn, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('dom_cn', 'mol mol-1', 'C:N ratio of DOM pool'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('dom_cp', mem%dom_cp, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('dom_cp', 'mol mol-1', 'C:P ratio of DOM pool'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('dom_cn_mavg', mem%dom_cn_mavg, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('dom_cn_mavg', 'mol mol-1', 'time-averaged C:N ratio of DOM pool'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('dom_cp_mavg', mem%dom_cp_mavg, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('dom_cp_mavg', 'mol mol-1', 'time-averaged C:P ratio of DOM pool'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2567,6 +2855,94 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('enzyme_frac_poly', mem%enzyme_frac_poly, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('enzyme_frac_poly', unitless, 'fraction of depolymerisation enzyme which depolymerises poly litter'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = lrestart_jsm, &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('enzyme_frac_residue', mem%enzyme_frac_residue, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('enzyme_frac_residue', unitless, 'fraction of depolymerisation enzyme which depolymerises microbial residue'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = lrestart_jsm, &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('enzyme_frac_poly_c', mem%enzyme_frac_poly_c, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('enzyme_frac_poly_c', unitless, 'fract of depolymerisation enzyme depol. microbial residue, determined by C'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = lrestart_jsm, &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('enzyme_frac_poly_n', mem%enzyme_frac_poly_n, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('enzyme_frac_poly_n', unitless, 'fract of depolymerisation enzyme depol. microbial residue, determined by N'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = lrestart_jsm, &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('enzyme_frac_poly_p', mem%enzyme_frac_poly_p, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('enzyme_frac_poly_p', unitless, 'fract of depolymerisation enzyme depol. microbial residue, determined by P'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = lrestart_jsm, &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('enzyme_frac_poly_c_mavg', mem%enzyme_frac_poly_c_mavg, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('enzyme_frac_poly_c_mavg', unitless, 'moving average of enzyme_frac_poly_c'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = lrestart_jsm, &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('enzyme_frac_poly_n_mavg', mem%enzyme_frac_poly_n_mavg, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('enzyme_frac_poly_n_mavg', unitless, 'moving average of enzyme_frac_poly_n'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = lrestart_jsm, &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('enzyme_frac_poly_p_mavg', mem%enzyme_frac_poly_p_mavg, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('enzyme_frac_poly_p_mavg', unitless, 'moving average of enzyme_frac_poly_p'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = lrestart_jsm, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('volume_min_sl', mem%volume_min_sl, &
@@ -2773,436 +3149,72 @@ CONTAINS
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
-      IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
-        CALL mem%Add_var('microbial_uptake_nh4_sl', mem%microbial_uptake_nh4_sl, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('microbial_uptake_nh4_sl', 'micro-mol m-3 s-1', 'microbial uptake of N'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
+      CALL mem%Add_var('sb_bgcm_pool_microbial_c', mem%sb_bgcm_pool_microbial_c, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('sb_bgcm_pool_microbial_c', 'mol m-3', 'microbial C'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
 
-        CALL mem%Add_var('microbial_uptake_nh4_n15_sl', mem%microbial_uptake_nh4_n15_sl, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('microbial_uptake_nh4_n15_sl', 'micro-mol m-3 s-1', 'microbial uptake of N15'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
+      CALL mem%Add_var('sb_bgcm_pool_microbial_n', mem%sb_bgcm_pool_microbial_n, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('sb_bgcm_pool_microbial_n', 'mol m-3', 'microbial N'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
 
-        CALL mem%Add_var('microbial_uptake_no3_sl', mem%microbial_uptake_no3_sl, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('microbial_uptake_no3_sl', 'micro-mol m-3 s-1', 'microbial uptake of N'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
+      CALL mem%Add_var('sb_bgcm_pool_microbial_p', mem%sb_bgcm_pool_microbial_p, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('sb_bgcm_pool_microbial_p', 'mol m-3', 'microbial P'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
 
-        CALL mem%Add_var('microbial_uptake_no3_n15_sl', mem%microbial_uptake_no3_n15_sl, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('microbial_uptake_no3_n15_sl', 'micro-mol m-3 s-1', 'microbial uptake of N15'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
+      CALL mem%Add_var('sb_bgcm_pool_mineral_assoc_c', mem%sb_bgcm_pool_mineral_assoc_c, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('sb_bgcm_pool_mineral_assoc_c', 'mol m-3', 'mineral associated C in soils'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
 
-        CALL mem%Add_var('microbial_uptake_po4_sl', mem%microbial_uptake_po4_sl, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('microbial_uptake_po4_sl', 'micro-mol m-3 s-1', 'microbial uptake of P'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
+      CALL mem%Add_var('sb_bgcm_pool_mineral_assoc_n', mem%sb_bgcm_pool_mineral_assoc_n, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('sb_bgcm_pool_mineral_assoc_n', 'mol m-3', 'mineral associated N in soils'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
 
-        CALL mem%Add_var('leaching_dom_carbon', mem%leaching_dom_carbon, &
-          & hgrid, surface, &
-          & t_cf('leaching_dom_carbon', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-C'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
+      CALL mem%Add_var('sb_bgcm_pool_mineral_assoc_p', mem%sb_bgcm_pool_mineral_assoc_p, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('sb_bgcm_pool_mineral_assoc_p', 'mol m-3', 'mineral associated P in soils'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = l_jsmvar, &
+        & loutput = loutput_jsm, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
 
-        CALL mem%Add_var('leaching_dom_nitrogen', mem%leaching_dom_nitrogen, &
-          & hgrid, surface, &
-          & t_cf('leaching_dom_nitrogen', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-N'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('leaching_dom_phosphorus', mem%leaching_dom_phosphorus, &
-          & hgrid, surface, &
-          & t_cf('leaching_dom_phosphorus', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-P'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('leaching_dom_carbon13', mem%leaching_dom_carbon13, &
-          & hgrid, surface, &
-          & t_cf('leaching_dom_carbon13', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-C13'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('leaching_dom_carbon14', mem%leaching_dom_carbon14, &
-          & hgrid, surface, &
-          & t_cf('leaching_dom_carbon14', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-C14'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('leaching_dom_nitrogen15', mem%leaching_dom_nitrogen15, &
-          & hgrid, surface, &
-          & t_cf('leaching_dom_nitrogen15', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-N15'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('particle_fluxrate', mem%particle_fluxrate, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('particle_fluxrate', 'm s-1', 'burial rate due to organic matter fall and decay'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('microbial_cue_eff', mem%microbial_cue_eff, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('microbial_cue_eff', unitless, 'instantaneous microbial CUE given NP constraints'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('microbial_cue_eff_tmic_mavg', mem%microbial_cue_eff_tmic_mavg, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('microbial_cue_eff_tmic_mavg', unitless, 'time-averaged microbial CUE given NP constraints'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('microbial_nue_eff', mem%microbial_nue_eff, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('microbial_nue_eff', unitless, 'instantaneous microbial NUE given NP constraints'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('microbial_nue_eff_tmic_mavg', mem%microbial_nue_eff_tmic_mavg, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('microbial_nue_eff_tmic_mavg', unitless, 'time-averaged microbial NUE given NP constraints'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('microbial_pue_eff', mem%microbial_pue_eff, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('microbial_pue_eff', unitless, 'instantaneous microbial PUE given NP constraints'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('microbial_pue_eff_tmic_mavg', mem%microbial_pue_eff_tmic_mavg, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('microbial_pue_eff_tmic_mavg', unitless, 'time-averaged microbial CUE given NP constraints'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('fact_n_status_mic_c_growth', mem%fact_n_status_mic_c_growth, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('fact_n_status_mic_c_growth', unitless, 'microbial N status, scaling up/down microbial processes'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('fact_p_status_mic_c_growth', mem%fact_p_status_mic_c_growth, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('fact_p_status_mic_c_growth', unitless, 'microbial P status, scaling up/down microbial processes'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('enzyme_frac_AP', mem%enzyme_frac_AP, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('enzyme_frac_AP', unitless, 'fraction of Acid (alkaline) phosphatase of the total enzyme'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('dom_cn', mem%dom_cn, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('dom_cn', 'mol mol-1', 'C:N ratio of DOM pool'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('dom_cp', mem%dom_cp, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('dom_cp', 'mol mol-1', 'C:P ratio of DOM pool'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('dom_cn_mavg', mem%dom_cn_mavg, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('dom_cn_mavg', 'mol mol-1', 'time-averaged C:N ratio of DOM pool'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('dom_cp_mavg', mem%dom_cp_mavg, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('dom_cp_mavg', 'mol mol-1', 'time-averaged C:P ratio of DOM pool'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('enzyme_frac_poly', mem%enzyme_frac_poly, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('enzyme_frac_poly', unitless, 'fraction of depolymerisation enzyme which depolymerises poly litter'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('enzyme_frac_residue', mem%enzyme_frac_residue, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('enzyme_frac_residue', unitless, 'fraction of depolymerisation enzyme which depolymerises microbial residue'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('enzyme_frac_poly_c', mem%enzyme_frac_poly_c, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('enzyme_frac_poly_c', unitless, 'fract of depolymerisation enzyme depol. microbial residue, determined by C'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('enzyme_frac_poly_n', mem%enzyme_frac_poly_n, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('enzyme_frac_poly_n', unitless, 'fract of depolymerisation enzyme depol. microbial residue, determined by N'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('enzyme_frac_poly_p', mem%enzyme_frac_poly_p, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('enzyme_frac_poly_p', unitless, 'fract of depolymerisation enzyme depol. microbial residue, determined by P'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('enzyme_frac_poly_c_mavg', mem%enzyme_frac_poly_c_mavg, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('enzyme_frac_poly_c_mavg', unitless, 'moving average of enzyme_frac_poly_c'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('enzyme_frac_poly_n_mavg', mem%enzyme_frac_poly_n_mavg, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('enzyme_frac_poly_n_mavg', unitless, 'moving average of enzyme_frac_poly_n'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('enzyme_frac_poly_p_mavg', mem%enzyme_frac_poly_p_mavg, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('enzyme_frac_poly_p_mavg', unitless, 'moving average of enzyme_frac_poly_p'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('sb_bgcm_pool_microbial_c', mem%sb_bgcm_pool_microbial_c, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('sb_bgcm_pool_microbial_c', 'mol m-3', 'microbial C'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('sb_bgcm_pool_microbial_n', mem%sb_bgcm_pool_microbial_n, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('sb_bgcm_pool_microbial_n', 'mol m-3', 'microbial N'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('sb_bgcm_pool_microbial_p', mem%sb_bgcm_pool_microbial_p, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('sb_bgcm_pool_microbial_p', 'mol m-3', 'microbial P'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('sb_bgcm_pool_mineral_assoc_c', mem%sb_bgcm_pool_mineral_assoc_c, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('sb_bgcm_pool_mineral_assoc_c', 'mol m-3', 'mineral associated C in soils'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('sb_bgcm_pool_mineral_assoc_n', mem%sb_bgcm_pool_mineral_assoc_n, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('sb_bgcm_pool_mineral_assoc_n', 'mol m-3', 'mineral associated N in soils'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('sb_bgcm_pool_mineral_assoc_p', mem%sb_bgcm_pool_mineral_assoc_p, &
-          & hgrid, vgrid_soil_w, &
-          & t_cf('sb_bgcm_pool_mineral_assoc_p', 'mol m-3', 'mineral associated P in soils'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
-      ENDIF
     ENDIF  ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)
   END SUBROUTINE Init_sb_memory
 
