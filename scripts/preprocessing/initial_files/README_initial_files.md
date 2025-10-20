@@ -24,34 +24,27 @@ The master script `create_icon-land_ini_files.sh` makes use of the following scr
    - run extpar to generate soil texture data as well as albedo, roughness
      length, forest fraction and LAI and vegetation fraction climatologies.
 
-3. `jsbach4_ini_files_from_gauss.sh`
-   - Remapping of Gaussian grid JSBACH3 initial files to the ICON grid
-   - Remapping of additional soil parameters from a 0.5deg to the ICON grid
-   - Get glacier, land sea mask and orographic data based on extpar data
-   - Assigning the data to the different jsbach4 ic and bc files
+3. `bc_files_from_extpar.sh`
+   Generate ICON-Land ic/bc files based on extpar and other sources.
+   The script calls sub-scripts for the different boundary data files
+   - generate_bc_land_fractions.sh
+   - generate_bc_land_phys.sh
+   - generate_bc_land_soil.sh
+   - generate_bc_land_sso.sh
+   - generate_ic_land_soil.sh
 
-4. `jsbach4_ini_files_from_extpar.sh`
-   Generate ic/bc files containing the new expar data:
-   - Lake mask replaced (-> bc_land_frac)
-   - Albedo, roughness length, forest fraction, lai_clim and veg_fract
-     replaced. Note: albedo_veg_vis, -veg_nir, -soil_vis and -soil_nir are
-     still interpolated from Gaussian grid
-   - Rooting depth (and maxmoist) replaced, additional variables:
-     FR_SAND, FR_SILT, FR_CLAY, FR_OC, SUB_FR_SAND, SUB_FR_SILT,
-     SUB_FR_CLAY and SUB_FR_OC
-
-5. `adapt_extpar_file.sh`
+4. `adapt_extpar_file.sh`
    The extpar data file read by the NWP atmosphere contains several
    variables, that are also included in the bc_land files. For consistency,
    these variables are replaced by the respective bc_land file variables.
    We make sure, variable `cell_sea_land_mask` is **not** included in the
    adapted extpar file to avoid land sea mask correction at run time.
 
-6. `calc_hd_receive_mask.sh`
+5. `calc_hd_receive_mask.sh`
    Coupled setups with external HD model need a mask file indicating ocean
    inflow cells. This mask depends on the fractional land sea mask.
 
-7. `generate_hdpara_file.sh`
+6. `generate_hdpara_file.sh`
    Generate a HD parameter file for the defined atmosphere and ocean grid
    combination needed with internal HD.
 
