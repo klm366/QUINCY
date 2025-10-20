@@ -302,7 +302,6 @@ CONTAINS
 
     !CALL spq_init_ic_bc(tile)
     ic_pop_dens = dfire_init_vars%pop_dens(1,1)
-    write(*,*) "dfire_init.f90:: ic_pop_dens(1,1)?", ic_pop_dens(1,1)
 
 !    IF (tile%Is_last_process_tile(Q_DFIRE_)) THEN
     !  CALL spq_finalize_init_vars()
