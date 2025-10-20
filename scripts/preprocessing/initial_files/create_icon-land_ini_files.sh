@@ -24,27 +24,19 @@
 # Master script to generate ICON-Land initial files
 #
 # It makes use of the existing scripts:
-#  0) generate_fractional_mask.sh
+#  1) generate_fractional_mask.sh
 #     - Generation of a fractional land sea mask for coupled setups:
 #       Remapping of the ocean mask to the atmosphere grid
 #
-#  1) extpar4jsbach_mpim_icon.sh
+#  2) extpar4jsbach_mpim_icon.sh
 #     - run extpar to generate soil texture data as well as albedo, roughness
 #       length, forest fraction and LAI and vegetation fraction climatologies.
 #
-#  2) jsbach4_ini_files_from_gauss.sh
-#     - Remapping of Gaussian grid JSBACH3 initial files to the ICON grid
-#     - Read additional soil parameters from 0.5 deg grid and do the remapping
-#       to the ICON grid.
-#     - Get glacier, land sea mask and orographic data based on extpar data
-#     - Assigning the data to the different jsbach4 ic and bc files
-#
-#  3) jsbach4_ini_files_from_extpar.sh
+#  3) bc_files_from_extpar.sh
 #     Generate ic/bc files containing the new expar data:
 #     - Lake mask replaced (-> bc_land_frac)
 #     - Albedo, roughness length, forest fraction, lai_clim and veg_fract
-#       replaced. Note: albedo_veg_vis, -veg_nir, -soil_vis and -soil_nir are
-#       still interpolated from Gaussian grid
+#       replaced.
 #     - Rooting depth (and maxmoist) replaced, additional variables:
 #       FR_SAND, FR_SILT, FR_CLAY, SUB_FR_SAND, SUB_FR_SILT and
 #       SUB_FR_CLAY
@@ -71,14 +63,11 @@
 #
 # Notes on the extpar file variables
 #
-# In this script we use three different variables defining extpar files although
+# In this script we use two different variables defining extpar files although
 # you generally need just one extpar file:
 # - extpar_file: The extpar file we generate here using extpar4jsbach_mpim_icon.sh
 #      (unless it is already available from /pool/data/JSBACH/icon/extpar4jsbach/).
 #      This extpar file contains e.g. soil textures and other soil parameters.
-# - initial_extpar_file: In earlier revisions we based the ic/bc file generation
-#      on extpar files already available from the ICON pool. We have now switched
-#      to also using the "extpar_file" described above as "initial_extpar_file".
 # - nwp_extpar_file: The extpar file read by the NWP atmosphere at runtime.
 #      It will be adapted to the newly generated ic/bc files in
 #      adapt_nwp_extpar_file.sh. Unless a better extpar file is provided by DWD
@@ -93,11 +82,8 @@ set -e
 
 run_extpar4jsbach_mpim_icon=false  # Generally available in /pool/data/JSBACH/icon/extpar4jsbach/
 run_generate_fractional_mask=false # Only needed for coupled setups with new grid combination
-run_jsbach4_ini_files_from_gauss=true
-run_jsbach4_ini_files_from_extpar=true
-rm_bc_files_from_gauss=true        # true: move ic/bc files into output directory
-run_adapt_nwp_extpar_file=true     # Only needed for configurations with NWP atmosphere,
-                                   # and only possible after "rm_bc_files_from_gauss"
+run_bc_files_from_extpar=true
+run_adapt_nwp_extpar_file=true     # Only needed for configurations with NWP atmosphere
 run_calc_hd_receive_mask=false     # Only needed for coupled setups with external HD model
 run_generate_hdpara_file=true      # Needed with internal HD model; only up to res. R02B06
 
@@ -116,7 +102,6 @@ run_generate_hdpara_file=true      # Needed with internal HD model; only up to r
 # - start_year and end_year or year_list
 # - extpar_dir and extpar_file
 # - extpar_source_dir (if extpar_file not yet existing)
-# - initial_extpar_file
 # - nwp_extpar_file (for simulations with NWP atmosphere)
 # - minimum/maximum fractions for grid cells that are not completely ocean/land (if coupled=false)
 #
@@ -151,7 +136,7 @@ if [[ ${coupled} == true ]]; then
   export oceGridID=0035      # Required for coupled configurations
   export oceRes=R02B06
   # Ocean grid/mask: We need the mask on the global (*_G.nc) grid.
-  #    Using the reduced ocean grid (*_O.nc) thechnically works but leads to wrong results!
+  #    Using the reduced ocean grid (*_O.nc) technically works but leads to wrong results!
   export icon_grid_oce=${oce_grid_rootdir}/${oceGridID}/icon_mask_${oceGridID}_${oceRes}_G.nc
   export grid_label=$atmGridID-$oceGridID
 else
@@ -195,8 +180,8 @@ if [[ ${run_extpar4jsbach_mpim_icon} == false ]]; then
   else
     export extpar_dir=/pool/data/JSBACH/icon/extpar4jsbach/dwd
   fi
-  export extpar_file=icon_extpar4jsbach_${atmGridID}_20250324_tiles.nc   # Check for grid ID and corresponding date tag
-  #export extpar_file=icon_extpar4jsbach_${atmGridID}_20250306_tiles.nc  # icon-xpp
+  export extpar_file=icon_extpar4jsbach_${atmGridID}_20251007_tiles.nc   # Check for grid ID and corresponding date tag
+  #export extpar_file=icon_extpar4jsbach_${atmGridID}_20251007_tiles.nc  # icon-xpp
   # -----
   #export extpar_dir=${output_root_dir}                                  # Use extpar file from previous run
   #export extpar_file=icon_extpar4jsbach_${atmGridID}_${today}_tiles.nc  #   with run_extpar4jsbach_mpim_icon=true
@@ -228,9 +213,6 @@ else
 fi
 
 # --------------------------------------
-# Initial Extpar file:  Used in jsbach4_ini_files_from_gauss.sh  - compare above "Notes on the extpar files"
-export initial_extpar_file=${extpar_dir}/${extpar_file}   # Use extpar file defind above (to be generated or existing)
-# --------------------------------------
 # NWP Extpar file:  Only used in setups with NWP atmosphere  - compare above "Notes on the extpar files"
 export nwp_extpar_file=${extpar_dir}/${extpar_file}       # Use extpar file defind above (to be generated or existing)
 
@@ -242,13 +224,15 @@ if [[ ${coupled} == true ]]; then
   else
     # Needs to exist
     export fractional_mask=${icon_grid_rootdir}/${grid_label}/fractional_mask/fractional_lsm_${atmGridID}_${oceGridID}.nc
+    # ATTENTION: some XPP grids use "-" instead of "_"!
+    # export fractional_mask=${icon_grid_rootdir}/${grid_label}/fractional_mask/fractional_lsm_${atmGridID}-${oceGridID}.nc
     if [[ ! -f ${fractional_mask} ]]; then
       echo "$0: ERROR: fractional mask file ${fractional_mask} does not exist!"
       exit 1
     fi
   fi
 else
-  export fractional_mask=${initial_extpar_file} # Fractional mask in extpar file (based on observations)
+  export fractional_mask=${extpar_file}          # Fractional mask in extpar file (based on observations)
   # export fractional_mask=${icon_grid}          # Leads to integer LSM!
 fi
 
@@ -363,7 +347,7 @@ set -u
 export cdo="cdo -s -P 8"
 
 #-----------------------------------------------------------------------------
-# 0. Generate fractional land sea mask
+# 1. Generate fractional land sea mask
 if [[ ${run_generate_fractional_mask} == true ]]; then
   if [[ ${coupled} != true ]]; then
     echo " Skipping the generation of fractional masks as this is only needed in coupled setups."
@@ -375,7 +359,7 @@ if [[ ${run_generate_fractional_mask} == true ]]; then
 fi
 
 #-----------------------------------------------------------------------------
-# 1. Run extpar4jsbach
+# 2. Run extpar4jsbach
 if [[ ${run_extpar4jsbach_mpim_icon} == true ]]; then
 
   [[ ! -d ${extpar_dir} ]] && [[ ${extpar_dir} != ${output_root_dir} ]] && mkdir -p ${extpar_dir}
@@ -448,39 +432,16 @@ if [[ ${run_extpar4jsbach_mpim_icon} == true ]]; then
 fi
 
 #-----------------------------------------------------------------------------
-# 2. Run jsbach4_ini_files_from_gauss
-if [[ ${run_jsbach4_ini_files_from_gauss} == true ]]; then
-  ${scripts_dir}/jsbach4_ini_files_from_gauss.sh
-  cp ${scripts_dir}/jsbach4_ini_files_from_gauss.sh ${bc_file_dir}/scripts
-  cp ${scripts_dir}/jsbach_init_file.f90            ${bc_file_dir}/scripts
-  cp ${scripts_dir}/jsbach_init_file.ksh            ${bc_file_dir}/scripts
-fi
-
-#-----------------------------------------------------------------------------
-# 3. Run jsbach4_ini_files_from_extpar
-if [[ ${run_jsbach4_ini_files_from_extpar} == true ]]; then
+# 3. Run bc_files_from_extpar
+if [[ ${run_bc_files_from_extpar} == true ]]; then
 
   if [[ ! -f ${extpar_dir}/${extpar_file} ]]; then
     echo "${extpar_dir}/${extpar_file} does not exist."
     exit 1
   fi
 
-  ${scripts_dir}/jsbach4_ini_files_from_extpar.sh
-  cp ${scripts_dir}/jsbach4_ini_files_from_extpar.sh ${bc_file_dir}/scripts
-fi
-
-#-----------------------------------------------------------------------------
-#    Move new bc/ic files to bc_file_dir and remove preliminary directories
-if [[ ${rm_bc_files_from_gauss} == true ]]; then
-  [[ -d ${bc_file_dir} ]] || mkdir ${bc_file_dir}
-  mv ${bc_file_dir}_with_extpar/*.nc                ${bc_file_dir}
-  rmdir ${bc_file_dir}_with_extpar
-  mv ${bc_file_dir}_from_gauss/bc_land_sso.nc  ${bc_file_dir}
-  mv ${bc_file_dir}_from_gauss/ic_land_soil.nc ${bc_file_dir}
-  rm -fr ${bc_file_dir}_from_gauss
-  echo ""
-  echo "${script_name}: Output moved to"
-  echo "     ${bc_file_dir}"
+  ${scripts_dir}/bc_files_from_extpar.sh
+  cp ${scripts_dir}/bc_files_from_extpar.sh ${bc_file_dir}/scripts
 fi
 
 #-----------------------------------------------------------------------------
