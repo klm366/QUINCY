@@ -1170,11 +1170,11 @@ CONTAINS
     !> 3.2 Calculate increment in net water loss from increased LAI
     !!
     DO ic = 1, nc
-      IF (config_use_soil_phys_jsbach .AND. config_l_skin_temp) THEN
-        q_sat(ic) = qsat_mixed(t_filt(ic), press_srf(ic))
-      ELSE
+      ! IF (config_use_soil_phys_jsbach .AND. config_l_skin_temp) THEN
+      !   q_sat(ic) = qsat_mixed(t_filt(ic), press_srf(ic))
+      ! ELSE
         q_sat(ic) = qsat_mixed(t_air(ic),  press_srf(ic))
-      END IF
+      ! END IF
     END DO
     WHERE(canopy_cond(:) > eps8 .AND. canopy_cond_new(:) > eps8)
        unit_transpiration(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
