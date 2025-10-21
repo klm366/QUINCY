@@ -694,7 +694,7 @@ CONTAINS
             ! IF 1. fluxrate does not exceeds depth of layer isoil, material are transported from the layer isoil
             !    2. not all isoil layers are pushed down, extra material are transported from layer i
             ! ELSE (i<eps4) all isoil layers are pushed down (fluxrate is more than the total depth of isoil layers)
-            IF (isoil_hlp > 0) THEN
+            IF (isoil_hlp > 1) THEN
               hlp1(ic) = hlp1(ic) + hlp2(ic) * pool(ic, isoil_hlp)
             ENDIF
           ENDIF
@@ -709,7 +709,7 @@ CONTAINS
         transport(ic,nsoil) = transport(ic, nsoil) - hlp1(ic) / soil_depth_sl(ic, nsoil)
       ELSEIF (nsoil == 1) THEN
         ! only one soil layer above bedbrock, allow only downward flux
-        hlp1(ic)            = MAX(0.0_wp, soil_depth_sl(ic, isoil_hlp)) * pool(ic, isoil_hlp)
+        hlp1(ic)            = MAX(0.0_wp, MIN(soil_depth_sl(ic, nsoil), particle_fluxrate(ic, nsoil))) * pool(ic, nsoil)
         transport(ic,nsoil) = transport(ic, nsoil) - hlp1(ic) / soil_depth_sl(ic, nsoil)
       ELSE
         ! bare soil
