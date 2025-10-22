@@ -755,7 +755,7 @@ CONTAINS
     !>  6.1 PO4
     !>
     DO ic = 1,nc
-      DO is = 1, INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (wtr_soil_sl(ic, is) > eps8) THEN
           km1_uptake_act(ic,is) = km1_up_po4 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._wp / (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
@@ -791,7 +791,7 @@ CONTAINS
       &   fast_adsorpt     = fast_adsorpt_po4(:,:))                  ! OPTIONAL (out)
     !! calculate potential P uptake (micro-mol P / mol C fine-root / s), weighted by root distribution
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (fine_root_carbon_sl(ic, is) > eps8) THEN
           unit_uptake_p_pot(ic) = unit_uptake_p_pot(ic) + unit_uptake_p_pot_sl(ic, is) &
             &                     / fine_root_carbon_sl(ic, is) * root_fraction_sl(ic, is)
@@ -802,7 +802,7 @@ CONTAINS
     !>  6.2 NH4 - Microbial and plant N uptake, nitrification/denitrification
     !>
     DO ic = 1,nc
-      DO is = 1, INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (wtr_soil_sl(ic, is) > eps8) THEN
           km1_uptake_act(ic,is) = km1_up_nh4 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._wp / (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
@@ -841,7 +841,7 @@ CONTAINS
       &   flux_nitri_denitri = nitrification_no3(:,:))               ! OPTIONAL (out)
     !! update potential N uptake due to nh4 uptake
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (fine_root_carbon_sl(ic, is) > eps8) THEN
           unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + unit_uptake_n_pot_sl(ic, is) &
             &                     / fine_root_carbon_sl(ic, is) * root_fraction_sl(ic, is)
@@ -852,7 +852,7 @@ CONTAINS
     !>  6.3 NO3
     !>
     DO ic = 1,nc
-      DO is = 1, INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (wtr_soil_sl(ic, is) > eps8) THEN
           km1_uptake_act(ic,is) = km1_up_no3 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._wp / (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
@@ -889,7 +889,7 @@ CONTAINS
       &   flux_nitri_denitri = denitrification_n2(:,:))              ! OPTIONAL (out)
     !! update potential N uptake due to no3 uptake
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (fine_root_carbon_sl(ic, is) > eps8) THEN
           unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + unit_uptake_n_pot_sl(ic, is) &
             &                     / fine_root_carbon_sl(ic, is) * root_fraction_sl(ic, is)

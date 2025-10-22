@@ -65,7 +65,7 @@ CONTAINS
     & formation_mt_sink)
 
     INTEGER,                            INTENT(in)    :: nc                       !< dimensions
-    INTEGER,                            INTENT(in)    :: nsoil_w                 !< number of soil layers
+    INTEGER,                            INTENT(in)    :: nsoil_w                  !< number of soil layers
     REAL(wp),                           INTENT(in)    :: dtime                    !< timestep length
     REAL(wp),                           INTENT(in)    :: tau_litter_pool          !< turnover time of the litter pool [1/s]
     REAL(wp),                           INTENT(in)    :: fc_litter2sink           !< fraction of litter C entering sink pool (rest is respired)
@@ -236,11 +236,16 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out)       :: occlusion_po4                !< phosphorus occlusion rate, assoc_slow --> occluded [micro-mol P / m3 / s]
     REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out)       :: slow_exchange_po4            !< phosphorus desorption rate, assoc_fast --> assoc_slow [micro-mol P / m3 / s]
 
-    INTEGER                                          :: ic, is       !< loop over dimensions
-    REAL(wp)                                         :: hlp1, hlp2, hlp3, hlp4, hlp5, hlp6, hlp7, &
-                                                        uptake_c, f_uptake, uptake_n, uptake_p, mic_upt_n, &
-                                                        som_pc, enzyme_AP
-    REAL(wp), DIMENSION(nc, nsoil_w)                 :: gross_mineralisation_nh4
+    INTEGER                             :: ic, is       !< loop over dimensions
+    REAL(wp)                            :: hlp1, hlp2, hlp3, hlp4, hlp5, hlp6, hlp7
+    REAL(wp)                            :: uptake_c
+    REAL(wp)                            :: f_uptake
+    REAL(wp)                            :: uptake_n
+    REAL(wp)                            :: uptake_p
+    REAL(wp)                            :: mic_upt_n
+    REAL(wp)                            :: som_pc
+    REAL(wp)                            :: enzyme_AP
+    REAL(wp), DIMENSION(nc, nsoil_w)    :: gross_mineralisation_nh4
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sourcing_flux'
 
@@ -248,7 +253,7 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    !> init out var
+    !> 0.9 init out var
     !>
     biochem_min_po4(:,:)   = 0.0_wp
     gross_min_po4(:,:)     = 0.0_wp
@@ -262,14 +267,14 @@ CONTAINS
     !> 1.0 calculate the gross P mineralization, based on the potential depolymerization of DOM
     !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
-        hlp1 = dom_carbon(ic,is) / (km_mic_uptake * rtm_hsc(ic,is) * rmm_hsc(ic,is) + dom_carbon(ic,is) )
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
+        hlp1     = dom_carbon(ic,is) / (km_mic_uptake * rtm_hsc(ic,is) * rmm_hsc(ic,is) + dom_carbon(ic,is) )
         uptake_c = vmax_mic_uptake * rtm_mic_uptake(ic,is) * rmm_mic_uptake(ic,is) * hlp1 * microbial_carbon(ic,is)
-        IF(dom_carbon(ic,is) > eps8) THEN
-          f_uptake = MIN(uptake_c / dom_carbon(ic,is), 1._wp * 1.e6_wp / dtime)
+        IF (dom_carbon(ic,is) > eps8) THEN
+          f_uptake = MIN(uptake_c / dom_carbon(ic,is), 1._wp * 1.E6_wp / dtime)
         ELSE
           f_uptake = 0.0_wp
-        ENDIF
+        END IF
         uptake_p = f_uptake * dom_phosphorus(ic,is)
         uptake_n = f_uptake * dom_nitrogen(ic,is)
         uptake_c = f_uptake * dom_carbon(ic,is)
@@ -283,24 +288,24 @@ CONTAINS
         hlp2               = vmax_mic_uptake_no3 * microbial_carbon(ic,is) * solute_no3(ic,is) / (solute_no3(ic,is) &
           &                  + km_mic_uptake_no3)
         IF ((hlp1 + hlp2) > eps8) THEN
-          mic_upt_nh4(ic,is) = mic_upt_n * hlp1 /(hlp1 + hlp2)
-          mic_upt_no3(ic,is) = mic_upt_n * hlp2 /(hlp1 + hlp2)
+          mic_upt_nh4(ic,is) = mic_upt_n * hlp1 / (hlp1 + hlp2)
+          mic_upt_no3(ic,is) = mic_upt_n * hlp2 / (hlp1 + hlp2)
         ELSE
           mic_upt_nh4(ic,is) = 0._wp
           mic_upt_no3(ic,is) = 0._wp
-        ENDIF
+        END IF
         gross_mineralisation_nh4(ic,is) = (1._wp - microbial_nue) * uptake_n
-      ENDDO
-    ENDDO
+      END DO
+    END DO
 
     !> 2.0 Calculates the biochemical P mineralization and P gross mineralization, and the loss of the contributing pools.
     !> P is assumed to clevage out from dom associated, residue and residue associated
     !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
-        IF(.NOT. flag_sb_prescribe_po4)THEN
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
+        IF (.NOT. flag_sb_prescribe_po4) THEN
            hlp1 = (dom_assoc_po4(ic,is) + residue_assoc_po4(ic,is) + residue_po4(ic,is) + dom_phosphorus(ic,is))
-           !! Biomineralization only occurs when there is available organic P
+           ! Biomineralization only occurs when there is available organic P
            IF (hlp1 > eps8) THEN
               ! biomineralisation is regulated by solute_po4 and enzyme concentration (from root and microbe)
               enzyme_AP = fine_root_carbon_sl(ic,is) * f_plant_carrier_po4 * growth_p_limit_smoothed_sl(ic,is) &
@@ -319,8 +324,8 @@ CONTAINS
                   hlp5 = 0.0_wp
                 ELSE
                   hlp5 = som_pc / ( km_pc_biochem_po4 + som_pc)
-                ENDIF
-              ENDIF
+                END IF
+              END IF
               loss_dom_assoc_po4(ic,is) = loss_dom_assoc_po4(ic,is) + biochem_min_po4(ic,is) * dom_assoc_po4(ic,is) * hlp5 * dtime
 
               ! loss from mineral associated residue
@@ -332,8 +337,8 @@ CONTAINS
                   hlp6 = 0.0_wp
                 ELSE
                   hlp6 = som_pc / ( km_pc_biochem_po4 + som_pc)
-                ENDIF
-              ENDIF
+                END IF
+              END IF
               loss_residue_assoc_po4(ic,is) = loss_residue_assoc_po4(ic,is) + biochem_min_po4(ic,is) * residue_assoc_po4(ic,is) &
                 &                             * hlp6 * dtime
 
@@ -346,9 +351,8 @@ CONTAINS
                   hlp7 = 0.0_wp
                 ELSE
                   hlp7 = som_pc / ( km_pc_biochem_po4 / 5._wp + som_pc)
-                ENDIF
-              ENDIF
-
+                END IF
+              END IF
               loss_residue_po4(ic,is) = loss_residue_po4(ic,is) + biochem_min_po4(ic,is) * residue_po4(ic,is) * hlp7 * dtime
 
               ! loss from microbial residue, removed by Lin (2020-11-04)
@@ -356,44 +360,45 @@ CONTAINS
                 gross_min_po4(ic,is) = 0._wp
               ELSE
                 gross_min_po4(ic,is) = MAX(0._wp, MIN( (dom_phosphorus(ic,is)-uptake_p) / dtime, biochem_min_po4(ic,is) &
-                  &                    * dom_phosphorus(ic,is))) * 1.e6_wp
-              ENDIF
-              loss_dom_po4(ic,is)  = loss_dom_po4(ic,is) + gross_min_po4(ic,is) * dtime / 1.e6_wp
+                  &                    * dom_phosphorus(ic,is))) * 1.E6_wp
+              END IF
+              loss_dom_po4(ic,is)  = loss_dom_po4(ic,is) + gross_min_po4(ic,is) * dtime / 1.E6_wp
 
               ! biochemical mineralisation in micro-mol P / m3 / s
               biochem_min_po4(ic,is) = biochem_min_po4(ic,is) * (dom_assoc_po4(ic,is) * hlp5 + residue_po4(ic,is) &
-                &                      * hlp7 + residue_assoc_po4(ic,is) * hlp6) * 1.e6_wp
-           ELSE
+                &                      * hlp7 + residue_assoc_po4(ic,is) * hlp6) * 1.E6_wp
+           ELSE ! IF (hlp1 > eps8) 
               biochem_min_po4(ic,is) = 0.0_wp
-           ENDIF
-        ELSE
-           biochem_min_po4(ic,is) = 0.0_wp
-           gross_min_po4(ic,is) = 0._wp
-        ENDIF
-      ENDDO
-    ENDDO
+           END IF
+        ELSE  ! IF (.NOT. flag_sb_prescribe_po4)
+          biochem_min_po4(ic,is) = 0.0_wp
+          gross_min_po4(ic,is)   = 0._wp
+        END IF
+      END DO
+    END DO
 
     !> 3.0 Pi fluxes between different mineral P pools
     !> weathering, occlusion and slow exchange between sorbed and labile P pools
     !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         hlp3 = fine_root_carbon_sl(ic,is) * f_plant_carrier_po4 + microbial_carbon(ic,is) * f_mic_carrier_po4
         hlp4 = hlp3 / (rtm_hsc(ic,is) * rmm_hsc(ic,is) * km_root_enzyme_weath_po4 + hlp3)
-        hlp5 = 0.1_wp ! minimum microbial biomass to exudate bio-weathering enzyme
+        ! minimum microbial biomass to exudate bio-weathering enzyme
+        hlp5 = 0.1_wp
         IF (fine_root_carbon_sl(ic,is) < eps8 .AND. microbial_carbon(ic,is) < hlp5) THEN
           hlp4 = 0._wp
         END IF
         weathering_po4(ic,is) = rtm_hsc(ic,is) / rmm_hsc(ic,is) * vmax_weath_mineral_sl(ic,is) * po4_primary(ic,is) &
-          &                     * (frac_background_weath_mineral + hlp4) * 1.e6_wp
-        IF ((weathering_po4(ic,is) / 1.e6_wp) > (po4_primary(ic,is) / dtime)) THEN
-          weathering_po4(ic,is) = po4_primary(ic,is) / dtime * 1.e6_wp
+          &                     * (frac_background_weath_mineral + hlp4) * 1.E6_wp
+        IF ((weathering_po4(ic,is) / 1.E6_wp) > (po4_primary(ic,is) / dtime)) THEN
+          weathering_po4(ic,is) = po4_primary(ic,is) / dtime * 1.E6_wp
         END IF
-        occlusion_po4(ic,is) = assoc_slow(ic,is) * k_occlude_po4 * 1.e6_wp
+        occlusion_po4(ic,is) = assoc_slow(ic,is) * k_occlude_po4 * 1.E6_wp
 
         hlp1 = rtm_desorption(ic,is) * k_desorpt_po4 * assoc_slow(ic,is)
         hlp2 = rtm_sorption(ic,is) * k_adsorpt_po4 * assoc_fast(ic,is)
-        slow_exchange_po4(ic,is) = (hlp2 - hlp1) * 1.e6_wp
+        slow_exchange_po4(ic,is) = (hlp2 - hlp1) * 1.E6_wp
       ENDDO
     ENDDO
 
@@ -413,7 +418,7 @@ CONTAINS
   !! Output: microbial and plant inorganic uptake rates, fast adsorption rates (po4, nh4), \n
   !!         nitrification/denitrification rates (nh4/no3)
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_sinking_flux(nc, nsoil_w, dtime, num_sl_above_bedrock, &
+  SUBROUTINE calc_sinking_flux(nc, nsoil_w, dtime, num_sl_above_bedrock, &                            ! in
     &                                        lctlib_vmax_uptake, substrate, sb_adsorp_scheme, &       ! in
     &                                        microbial_carbon, fine_root_carbon, solute, &            ! in
     &                                        rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, &      ! in
@@ -440,7 +445,7 @@ CONTAINS
     REAL(wp),                                    INTENT(in)        :: lctlib_vmax_uptake        !< lctlib uptake paramter, for eca_none
     CHARACTER(len=*),                            INTENT(in)        :: substrate                 !< po4, nh4, no3, determine the specific ECA paramaters
     CHARACTER(len=*),                            INTENT(in)        :: sb_adsorp_scheme          !< eca_full; eca_none; eca_part
-    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_carbon !< bgcm sb_pool: microbial carbon density (mol / m3)
+    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_carbon          !< bgcm sb_pool: microbial carbon density (mol / m3)
     REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: fine_root_carbon          !< fine_root density (mol / m3)
     REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rtm_mic_uptake            !< temperature rate modifier for microbial uptake
     REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rmm_mic_uptake            !< moisture rate modifier for microbial uptake
@@ -468,8 +473,8 @@ CONTAINS
     REAL(wp), OPTIONAL, DIMENSION(nc, nsoil_w),  INTENT(out)       :: flux_nitri_denitri                       !< nitrification or denitrification flux (micro-mol / m3 / s)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                             :: ic, is       !< loop over dimensions
-    REAL(wp)                            :: mic_hlp, plant_hlp, mineral_hlp, nitri_hlp, &
-                                           hlp1, hlp2, hlp3
+    REAL(wp)                            :: mic_hlp, plant_hlp, mineral_hlp, nitri_hlp
+    REAL(wp)                            :: hlp1, hlp2, hlp3
     REAL(wp)                            :: f_mic_carrier, km1_mic_uptake, km2_mic_uptake, &
                                            f_plant_carrier, km_plant_uptake, km1_plant_uptake, &
                                            k_mic_uptake, k_plant_uptake, vmax_mic_uptake_sub, vmax_plant_uptake, &
@@ -479,20 +484,21 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sinking_flux'
     ! ----------------------------------------------------------------------------------------------------- !
 
-    !> init out var
+    !>0.8 init out var
     !>
     plant_uptake(:,:)         = 0.0_wp
     plant_uptake_pot(:,:)     = 0.0_wp
     IF (substrate == "po4" .OR. substrate == "nh4") THEN
       fast_adsorpt(:,:)         = 0.0_wp
-    ENDIF
+    END IF
     IF (substrate == "nh4" .OR. substrate == "no3") THEN
       flux_nitri_denitri(:,:)   = 0.0_wp
-    ENDIF
+    END IF
 
     !>0.9 init local variables
     !>
-    !! assign ECA specific parameter values based on substrate
+    !> assign ECA specific parameter values based on substrate
+    !>
     SELECT CASE (substrate)
       CASE ("po4")
         f_mic_carrier         = f_mic_carrier_po4
@@ -547,129 +553,132 @@ CONTAINS
 
 
     !> 1.0 uptake
-    !! co-limited rates of substrate uptake for microbes and plants
-    !!
-    !! define uptake scheme to use, 1. ECA; 2. non-ECA
+    !>
+    !> co-limited rates of substrate uptake for microbes and plants
+    !>
+    !> define uptake scheme to use, 1. ECA; 2. non-ECA
+    !>
     SELECT CASE (sb_adsorp_scheme)
-      !> 1.1 ECA approach
-      !!
-      CASE("eca_full", "eca_part")
-        DO ic = 1,nc
-          DO is = 1,INT(num_sl_above_bedrock(ic))
-            mic_hlp     = km1_mic_uptake + solute_available(ic,is) + f_mic_carrier * microbial_carbon(ic,is) + &
-                          km1_mic_uptake / km_plant_uptake * f_plant_carrier * fine_root_carbon(ic,is)
-            plant_hlp   = km_plant_uptake + solute_available(ic,is) + f_plant_carrier * fine_root_carbon(ic,is) + &
-                          km_plant_uptake / km1_mic_uptake * f_mic_carrier * microbial_carbon(ic,is)
-            mineral_hlp = km_adsorpt_sl(ic,is) + solute_available(ic,is) + avail_soil_surface_sorption_capacity_sl(ic,is) + &
-                          km_adsorpt_sl(ic,is) / km_plant_uptake * f_plant_carrier * fine_root_carbon(ic,is) + &
-                          km_adsorpt_sl(ic,is) / km1_mic_uptake * f_mic_carrier * microbial_carbon(ic,is)
-            nitri_hlp   = km_nit_denit + solute_available(ic,is) + f_nit_carrier * microbial_carbon(ic,is) + &
-                          km_nit_denit / km1_mic_uptake * f_mic_carrier * microbial_carbon(ic,is) + &
-                          km_nit_denit / km_plant_uptake * f_plant_carrier * fine_root_carbon(ic,is)
-            ! nh4 & no3
-            !! including the effects of alternative solute and nitrification/denitrification process
-            IF (substrate == "nh4" .OR. substrate == "no3") THEN
-              plant_hlp = plant_hlp + &
-                          km_plant_uptake / km1_plant_uptake * solute_alternative(ic,is) + &
-                          km_plant_uptake / km_nit_denit * f_nit_carrier * microbial_carbon(ic,is)
-              mic_hlp   = mic_hlp + &
-                          km1_mic_uptake / km2_mic_uptake * solute_alternative(ic,is) + &
-                          km1_mic_uptake / km_nit_denit * f_nit_carrier * microbial_carbon(ic,is)
-              ! nh4
-              !! including the effect of adsorption
-              IF (substrate=="nh4") THEN
-                mic_hlp      = mic_hlp + &
-                               km1_mic_uptake / km_adsorpt_sl(ic,is) * avail_soil_surface_sorption_capacity_sl(ic,is)
-                plant_hlp    = plant_hlp + &
-                               km_plant_uptake / km_adsorpt_sl(ic,is) * avail_soil_surface_sorption_capacity_sl(ic,is)
-                mineral_hlp  = mineral_hlp + &
-                               km_adsorpt_sl(ic,is) / km_nit_denit * f_nit_carrier * microbial_carbon(ic,is)
-                nitri_hlp    = nitri_hlp + &
-                               km_nit_denit / km_adsorpt_sl(ic,is) * avail_soil_surface_sorption_capacity_sl(ic,is)
-                hlp1         = k_desorpt_f / km_adsorpt_sl(ic,is) * solute(ic,is)
-                fast_adsorpt(ic,is) = MIN(1._wp / dtime, hlp1 * solute_available(ic,is) / mineral_hlp) &
-                  &            * avail_soil_surface_sorption_capacity_sl(ic,is) * 1.e6_wp
-              ENDIF
-            ! po4
-            !! including the effect of adsorption
-            ELSE
+    !> 1.1 ECA approach
+    !>
+    CASE("eca_full", "eca_part")
+      DO ic = 1,nc
+        DO is = 1, NINT(num_sl_above_bedrock(ic))
+          mic_hlp     = km1_mic_uptake + solute_available(ic,is) + f_mic_carrier * microbial_carbon(ic,is) + &
+            &           km1_mic_uptake / km_plant_uptake * f_plant_carrier * fine_root_carbon(ic,is)
+          plant_hlp   = km_plant_uptake + solute_available(ic,is) + f_plant_carrier * fine_root_carbon(ic,is) + &
+            &           km_plant_uptake / km1_mic_uptake * f_mic_carrier * microbial_carbon(ic,is)
+          mineral_hlp = km_adsorpt_sl(ic,is) + solute_available(ic,is) + avail_soil_surface_sorption_capacity_sl(ic,is) + &
+            &           km_adsorpt_sl(ic,is) / km_plant_uptake * f_plant_carrier * fine_root_carbon(ic,is) + &
+            &           km_adsorpt_sl(ic,is) / km1_mic_uptake * f_mic_carrier * microbial_carbon(ic,is)
+          nitri_hlp   = km_nit_denit + solute_available(ic,is) + f_nit_carrier * microbial_carbon(ic,is) + &
+            &            km_nit_denit / km1_mic_uptake * f_mic_carrier * microbial_carbon(ic,is) + &
+            &            km_nit_denit / km_plant_uptake * f_plant_carrier * fine_root_carbon(ic,is)
+          ! nh4 & no3
+          ! including the effects of alternative solute and nitrification/denitrification process
+          IF (substrate == "nh4" .OR. substrate == "no3") THEN
+            plant_hlp = plant_hlp + &
+              &         km_plant_uptake / km1_plant_uptake * solute_alternative(ic,is) + &
+              &         km_plant_uptake / km_nit_denit * f_nit_carrier * microbial_carbon(ic,is)
+            mic_hlp   = mic_hlp + &
+              &         km1_mic_uptake / km2_mic_uptake * solute_alternative(ic,is) + &
+              &         km1_mic_uptake / km_nit_denit * f_nit_carrier * microbial_carbon(ic,is)
+            ! nh4
+            ! including the effect of adsorption
+            IF (substrate=="nh4") THEN
               mic_hlp      = mic_hlp + &
-                             km1_mic_uptake / km_adsorpt_sl(ic,is) * avail_soil_surface_sorption_capacity_sl(ic,is)
+                &            km1_mic_uptake / km_adsorpt_sl(ic,is) * avail_soil_surface_sorption_capacity_sl(ic,is)
               plant_hlp    = plant_hlp + &
-                             km_plant_uptake / km_adsorpt_sl(ic,is) * avail_soil_surface_sorption_capacity_sl(ic,is)
+                &            km_plant_uptake / km_adsorpt_sl(ic,is) * avail_soil_surface_sorption_capacity_sl(ic,is)
+              mineral_hlp  = mineral_hlp + &
+                &            km_adsorpt_sl(ic,is) / km_nit_denit * f_nit_carrier * microbial_carbon(ic,is)
+              nitri_hlp    = nitri_hlp + &
+                &            km_nit_denit / km_adsorpt_sl(ic,is) * avail_soil_surface_sorption_capacity_sl(ic,is)
               hlp1         = k_desorpt_f / km_adsorpt_sl(ic,is) * solute(ic,is)
               fast_adsorpt(ic,is) = MIN(1._wp / dtime, hlp1 * solute_available(ic,is) / mineral_hlp) &
-                &            * avail_soil_surface_sorption_capacity_sl(ic,is) * 1.e6_wp
-            ENDIF
-            ! eca_full, rates calculation based on enzyme abundance
-            !! Calculate plant uptake, microbial uptake and nitrification/denitrification rates
-            microbial_uptake(ic,is)   = MIN(rtm_mic_uptake(ic,is) * rmm_mic_uptake(ic,is) * k_mic_uptake &
-                                        * solute_available(ic,is) * f_mic_carrier &
-                                        * microbial_carbon(ic,is) / mic_hlp, microbial_uptake(ic,is))
-            plant_uptake(ic,is)       = rtm_plant_uptake(ic,is) * rmm_plant_uptake(ic,is) * k_plant_uptake &
-                                        * solute_available(ic,is) * f_plant_carrier &
-                                        * fine_root_carbon(ic,is) / plant_hlp
+                &            * avail_soil_surface_sorption_capacity_sl(ic,is) * 1.E6_wp
+            END IF
+          ! po4
+          ! including the effect of adsorption
+          ELSE
+            mic_hlp      = mic_hlp + &
+              &            km1_mic_uptake / km_adsorpt_sl(ic,is) * avail_soil_surface_sorption_capacity_sl(ic,is)
+            plant_hlp    = plant_hlp + &
+              &            km_plant_uptake / km_adsorpt_sl(ic,is) * avail_soil_surface_sorption_capacity_sl(ic,is)
+            hlp1         = k_desorpt_f / km_adsorpt_sl(ic,is) * solute(ic,is)
+            fast_adsorpt(ic,is) = MIN(1._wp / dtime, hlp1 * solute_available(ic,is) / mineral_hlp) &
+              &            * avail_soil_surface_sorption_capacity_sl(ic,is) * 1.E6_wp
+          END IF
+          ! eca_full, rates calculation based on enzyme abundance
+          ! Calculate plant uptake, microbial uptake and nitrification/denitrification rates
+          microbial_uptake(ic,is)   = MIN(rtm_mic_uptake(ic,is) * rmm_mic_uptake(ic,is) * k_mic_uptake &
+            &                         * solute_available(ic,is) * f_mic_carrier &
+            &                         * microbial_carbon(ic,is) / mic_hlp, microbial_uptake(ic,is))
+          plant_uptake(ic,is)       = rtm_plant_uptake(ic,is) * rmm_plant_uptake(ic,is) * k_plant_uptake &
+            &                         * solute_available(ic,is) * f_plant_carrier &
+            &                         * fine_root_carbon(ic,is) / plant_hlp
+          IF (substrate == "nh4" .OR. substrate == "no3") THEN
+            flux_nitri_denitri(ic,is) = rtm_nit_denit_fication(ic,is) * rmm_nit_denit_fication(ic,is) &
+              &                         * reaction_volume(ic,is) * k_nit_denit &
+              &                         * solute_available(ic,is) * f_nit_carrier * microbial_carbon(ic,is) / nitri_hlp
+          END IF
+          ! eca_part, rates calculation based on vmax (prescribed)
+          !! Calculate plant uptake, microbial uptake and nitrification/denitrification rates
+          IF (sb_adsorp_scheme == "eca_part") THEN
+            microbial_uptake(ic,is)   = rtm_mic_uptake(ic,is) * rmm_mic_uptake(ic,is) * vmax_mic_uptake_sub * &
+              &                         solute_available(ic,is) * microbial_carbon(ic,is) / mic_hlp
+            plant_uptake(ic,is)       = rtm_plant_uptake(ic,is) * rmm_plant_uptake(ic,is) * vmax_plant_uptake * &
+              &                         solute_available(ic,is) * fine_root_carbon(ic,is) / plant_hlp
             IF (substrate == "nh4" .OR. substrate == "no3") THEN
               flux_nitri_denitri(ic,is) = rtm_nit_denit_fication(ic,is) * rmm_nit_denit_fication(ic,is) &
-                                          * reaction_volume(ic,is) * k_nit_denit &
-                                          * solute_available(ic,is) * f_nit_carrier * microbial_carbon(ic,is) / nitri_hlp
-            ENDIF
-            ! eca_part, rates calculation based on vmax (prescribed)
-            !! Calculate plant uptake, microbial uptake and nitrification/denitrification rates
-            IF (sb_adsorp_scheme == "eca_part") THEN
-              microbial_uptake(ic,is)   = rtm_mic_uptake(ic,is) * rmm_mic_uptake(ic,is) * vmax_mic_uptake_sub * &
-                                          solute_available(ic,is) * microbial_carbon(ic,is) / mic_hlp
-              plant_uptake(ic,is)       = rtm_plant_uptake(ic,is) * rmm_plant_uptake(ic,is) * vmax_plant_uptake * &
-                                          solute_available(ic,is) * fine_root_carbon(ic,is) / plant_hlp
-              IF (substrate == "nh4" .OR. substrate == "no3") THEN
-                flux_nitri_denitri(ic,is) = rtm_nit_denit_fication(ic,is) * rmm_nit_denit_fication(ic,is) &
-                                            * reaction_volume(ic,is) * vmax_nit_denit &
-                                            * solute_available(ic,is) * microbial_carbon(ic,is) / nitri_hlp
-              ENDIF
-            ENDIF
-          ENDDO
+                &                         * reaction_volume(ic,is) * vmax_nit_denit &
+                &                         * solute_available(ic,is) * microbial_carbon(ic,is) / nitri_hlp
+            END IF
+          END IF
         ENDDO
+      ENDDO
 
-      !> 1.2 non-ECA approach
-      !! same as simple_1d model
-      CASE("eca_none")
-        DO ic = 1,nc
-          DO is = 1,INT(num_sl_above_bedrock(ic))
-            plant_uptake(ic,is)   = rtm_plant_uptake(ic,is) * rmm_plant_uptake(ic,is) * fine_root_carbon(ic,is) &
-                                    * lctlib_vmax_uptake * solute(ic,is) &
-                                    * (km1_upt(ic,is) + 1._wp / (km2_upt(ic,is) + solute(ic,is)))
-            IF (substrate == "po4" .OR. substrate == "nh4") THEN
-              fast_adsorpt(ic,is)   = 0._wp
-            ENDIF
-            IF (substrate == "nh4" .OR. substrate == "no3") THEN
-              flux_nitri_denitri(ic,is) = rtm_nit_denit_fication(ic,is) * rmm_nit_denit_fication(ic,is) &
-                                          * vmax_nitri_denitri * microbial_carbon(ic,is) &
-                                          / (km_nitrification + microbial_carbon(ic,is))  * reaction_volume(ic,is) * solute(ic,is)
-            ENDIF
-            ! Lin comment out on 20250826: to check, it is probably an error or leftover from code development
-            ! IF (substrate == "no3") THEN
-              ! flux_nitri_denitri(ic,is) = flux_nitri_denitri(ic,is) / (km_denitrification + solute(ic,is))
-            ! ENDIF
-          ENDDO
+    !> 1.2 non-ECA approach
+    !>
+    !> same as ssm (simple_1d soil model)
+    !>
+    CASE("eca_none")
+      DO ic = 1,nc
+        DO is = 1, NINT(num_sl_above_bedrock(ic))
+          plant_uptake(ic,is)   = rtm_plant_uptake(ic,is) * rmm_plant_uptake(ic,is) * fine_root_carbon(ic,is) &
+            &                     * lctlib_vmax_uptake * solute(ic,is) &
+            &                     * (km1_upt(ic,is) + 1._wp / (km2_upt(ic,is) + solute(ic,is)))
+          IF (substrate == "po4" .OR. substrate == "nh4") THEN
+            fast_adsorpt(ic,is) = 0._wp
+          END IF
+          IF (substrate == "nh4" .OR. substrate == "no3") THEN
+            flux_nitri_denitri(ic,is) = rtm_nit_denit_fication(ic,is) * rmm_nit_denit_fication(ic,is) &
+              &                         * vmax_nitri_denitri * microbial_carbon(ic,is) &
+              &                         / (km_nitrification + microbial_carbon(ic,is))  * reaction_volume(ic,is) * solute(ic,is)
+          END IF
+          ! Lin comment out on 20250826: to check, it is probably an error or leftover from code development
+          ! IF (substrate == "no3") THEN
+            ! flux_nitri_denitri(ic,is) = flux_nitri_denitri(ic,is) / (km_denitrification + solute(ic,is))
+          ! END IF
         ENDDO
+      ENDDO
     END SELECT
 
-    !> 2.0
-    !! check the availability of solute considering all sinking fluxes
-
+    !> 2.0 check the availability of solute considering all sinking fluxes
+    !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
-        fast_desorpt = (solute_available(ic,is) - solute(ic,is)) * k_desorpt_f * 1.e6_wp
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
+        fast_desorpt = (solute_available(ic,is) - solute(ic,is)) * k_desorpt_f * 1.E6_wp
         SELECT CASE (substrate)
           CASE("po4")
             hlp1 = microbial_uptake(ic,is) + plant_uptake(ic,is)
-            hlp2 = MAX(0._wp, ((solute(ic,is)) / dtime * 1.e6_wp - fast_adsorpt(ic,is) + fast_desorpt))
+            hlp2 = MAX(0._wp, ((solute(ic,is)) / dtime * 1.E6_wp - fast_adsorpt(ic,is) + fast_desorpt))
           CASE("nh4")
             hlp1 = microbial_uptake(ic,is) + plant_uptake(ic,is) + flux_nitri_denitri(ic,is)
-            hlp2 = MAX(0._wp, ((solute(ic,is)) / dtime * 1.e6_wp - fast_adsorpt(ic,is) + fast_desorpt))
+            hlp2 = MAX(0._wp, ((solute(ic,is)) / dtime * 1.E6_wp - fast_adsorpt(ic,is) + fast_desorpt))
           CASE("no3")
             hlp1 = microbial_uptake(ic,is) + plant_uptake(ic,is) + flux_nitri_denitri(ic,is)
-            hlp2 = MAX(0._wp, (solute(ic,is)) / dtime * 1.e6_wp)
+            hlp2 = MAX(0._wp, (solute(ic,is)) / dtime * 1.E6_wp)
         END SELECT
         IF (hlp1 > hlp2 .AND. hlp1 > 0._wp) THEN
           microbial_uptake(ic,is)   = microbial_uptake(ic,is)   * hlp2 / hlp1
@@ -683,10 +692,10 @@ CONTAINS
             CASE("no3")
               flux_nitri_denitri(ic,is) = flux_nitri_denitri(ic,is) * hlp2 / hlp1
           END SELECT
-        ENDIF
+        END IF
         plant_uptake_pot(ic,is) = plant_uptake(ic,is)
-      ENDDO
-    ENDDO
+      END DO
+    END DO
   END SUBROUTINE calc_sinking_flux
 
   !-----------------------------------------------------------------------------------------------------
@@ -822,7 +831,7 @@ CONTAINS
 
 
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         !>0.9 init local variables
         !>
         !>  Fractional of N and P in microbial necromass is recycled to DOM,
@@ -840,8 +849,8 @@ CONTAINS
             mortality_rate(ic,is) = MAX(0._wp, 1._wp - (min_mic_biomass / sb_pool_mt_microbial(ixC, ic, is)))
           ELSE
             mortality_rate(ic,is) = 0._wp
-          ENDIF
-        ENDIF
+          END IF
+        END IF
 
         !>2.0 calculate matter fluxes associated with microbial death
         !>  a fraction turns to DOM, the remainder becomes residue
@@ -888,8 +897,8 @@ CONTAINS
           &                                        + (1._wp - f_soluable_residue) * hlp1(ic,is) * n_res2dom(ic,is)
         sb_formation_mt(ix_residue, ixN15, ic, is) = sb_formation_mt(ix_residue, ixN15, ic, is) + (1._wp - f_soluable_residue) &
           &                                        * (1._wp - n_res2dom(ic,is)) * hlp1(ic,is)
-      ENDDO
-    ENDDO
+      END DO
+    END DO
   END SUBROUTINE calc_microbial_turnover
 
   ! ======================================================================================================= !
@@ -917,7 +926,7 @@ CONTAINS
 
     !>1.0 rate modifier for mineral soil nitrogen
     !>
-    IF(nh4_solute + no3_solute > eps8) THEN
+    IF (nh4_solute + no3_solute > eps8) THEN
       f_nav = MIN(1.0_wp, 1.0_wp - (nh4_solute + no3_solute) / (nh4_solute + no3_solute + km_asymb_bnf))
     ELSE
       f_nav = 1._wp
@@ -1034,7 +1043,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         !>1.0 potential microbial DOM consumption [mumol / m3 / s]
         !>
         hlp1(ic,is)     = sb_pool_mt(ix_dom, ixC, ic, is) / (km_mic_uptake * rtm_hsc(ic,is) &
@@ -1414,7 +1423,7 @@ CONTAINS
     depoly_p(:,:) = 0.0_wp
 
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         !>1.0 calculate polymeric litter depolymerisation rate
         !>
         hlp1(ic,is) = 1._wp
@@ -1770,7 +1779,7 @@ CONTAINS
     ! and therefore mix with the mineral soil, requiring a correction of the soil bulk density term (mixing
     ! OM and mineral soils.)
     DO ic = 1,nc
-      DO isoil = 2,INT(num_sl_above_bedrock(ic))
+      DO isoil = 2, NINT(num_sl_above_bedrock(ic))
         soil_litter_carbon_sl(ic,isoil) = sb_pool_mt(ix_woody_litter, ixC, ic, isoil)    &
           &                            + sb_pool_mt(ix_soluable_litter, ixC, ic, isoil)  &
           &                            + sb_pool_mt(ix_polymeric_litter, ixC, ic, isoil)
@@ -1790,7 +1799,7 @@ CONTAINS
     om_dens_sl  = bulk_soil_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp    ! OM density [kg/m3]
     lit_dens_sl = soil_litter_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp  ! litter density [kg/m3]
     DO ic = 1,nc
-      DO isoil = 1,INT(num_sl_above_bedrock(ic))
+      DO isoil = 1, NINT(num_sl_above_bedrock(ic))
         volume_min_sl(ic,isoil) = MAX(0.01_wp, &
           &   MIN( 0.99_wp, 1._wp - om_dens_sl(ic,isoil) / rho_bulk_org - lit_dens_sl(ic,isoil) / rho_bulk_org))
       ENDDO
