@@ -367,7 +367,7 @@ CONTAINS
               ! biochemical mineralisation in micro-mol P / m3 / s
               biochem_min_po4(ic,is) = biochem_min_po4(ic,is) * (dom_assoc_po4(ic,is) * hlp5 + residue_po4(ic,is) &
                 &                      * hlp7 + residue_assoc_po4(ic,is) * hlp6) * 1.E6_wp
-           ELSE ! IF (hlp1 > eps8) 
+           ELSE ! IF (hlp1 > eps8)
               biochem_min_po4(ic,is) = 0.0_wp
            END IF
         ELSE  ! IF (.NOT. flag_sb_prescribe_po4)
