@@ -1047,18 +1047,19 @@ CONTAINS
         !>1.0 potential microbial DOM consumption [mumol / m3 / s]
         !>
         hlp1(ic,is)     = sb_pool_mt(ix_dom, ixC, ic, is) / (km_mic_uptake * rtm_hsc(ic,is) &
-                          * rmm_hsc(ic,is) + sb_pool_mt(ix_dom, ixC, ic, is) )
+          &               * rmm_hsc(ic,is) + sb_pool_mt(ix_dom, ixC, ic, is) )
         uptake_c(ic,is) = vmax_mic_uptake * rtm_mic_uptake(ic,is) * rmm_mic_uptake(ic,is) &
-                          * hlp1(ic,is) * sb_pool_mt(ix_microbial, ixC, ic, is)
+          &               * hlp1(ic,is) * sb_pool_mt(ix_microbial, ixC, ic, is)
         IF (sb_pool_mt(ix_dom, ixC, ic, is) > eps8) THEN
-          f_uptake(ic,is) = MIN(uptake_c(ic,is) / sb_pool_mt(ix_dom, ixC, ic, is), 1._wp * 1.e6_wp/dtime)
+          f_uptake(ic,is) = MIN(uptake_c(ic,is) / sb_pool_mt(ix_dom, ixC, ic, is), 1._wp * 1.E6_wp / dtime)
         ELSE
           f_uptake(ic,is) = 0.0_wp
-        ENDIF
+        END IF
         uptake_n(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is)
         uptake_p(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixP, ic, is)
 
-        !> 1.1 free-living N fixation rate supporting microbial growth (micro-mol / m3 / s)
+        !>  1.1 free-living N fixation rate supporting microbial growth (micro-mol / m3 / s)
+        !>
         SELECT CASE(TRIM(bnf_scheme))
         ! for the SB_ asymbiotic N fixation no difference is made between "dynamic" and "fixed"
         !  ("fixed" is only available in the VEG_ symbiotic N fixation)
@@ -1076,13 +1077,13 @@ CONTAINS
           CALL finish(TRIM(routine),'No such bnf_scheme available here.')
         END SELECT
 
-        !> 1.1 microbial growth rates in micro-mol C / m3 / s, given by C, N and P availability, and the rate-limiting growth rate
-        !!
+        !>  1.2 microbial growth rates in micro-mol C / m3 / s, given by C, N and P availability, and the rate-limiting growth rate
+        !>
         growth_c(ic,is) = microbial_cue_max * uptake_c(ic,is)
         growth_n(ic,is) = (microbial_nue * uptake_n(ic,is) + asymb_n_fixation(ic,is) + &
-                         microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is)) * microbial_cn
+          &               microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is)) * microbial_cn
         growth_p(ic,is) = (microbial_pue * uptake_p(ic,is) + &
-                          microbial_uptake_po4_sl(ic,is)) * microbial_np * microbial_cn
+          &               microbial_uptake_po4_sl(ic,is)) * microbial_np * microbial_cn
 
         IF (growth_c(ic,is) > eps8 .AND. sb_pool_mt(ix_microbial, ixC, ic, is) > (min_mic_biomass + eps8)) THEN
           fact_n_status_mic_c_growth(ic,is) = growth_n(ic,is) / growth_c(ic,is)
@@ -1090,43 +1091,42 @@ CONTAINS
         ELSE
           fact_n_status_mic_c_growth(ic,is) = 1._wp
           fact_p_status_mic_c_growth(ic,is) = 1._wp
-        ENDIF
+        END IF
         IF (growth_c(ic,is) <= growth_n(ic,is) .AND. growth_c(ic,is) <= growth_p(ic,is)) THEN
           ! carbon uptake is limiting
           growth(ic,is) = growth_c(ic,is)
-        ELSEIF (growth_n(ic,is) < growth_c(ic,is) .AND. growth_n(ic,is) <= growth_p(ic,is)) THEN
+        ELSE IF (growth_n(ic,is) < growth_c(ic,is) .AND. growth_n(ic,is) <= growth_p(ic,is)) THEN
           ! nitrogen uptake is limiting
           growth(ic,is) = growth_n(ic,is)
-        ELSEIF (growth_p(ic,is) < growth_c(ic,is) .AND. growth_p(ic,is) < growth_n(ic,is)) THEN
+        ELSE IF (growth_p(ic,is) < growth_c(ic,is) .AND. growth_p(ic,is) < growth_n(ic,is)) THEN
           ! phosphorus uptake is limiting
           growth(ic,is) = growth_p(ic,is)
-        ENDIF
+        END IF
 
-        !> 2.0 Adjust carbon-use efficiency such that the growth is stoichiometrically balanced
-        !!
+        !>2.0 Adjust carbon-use efficiency such that the growth is stoichiometrically balanced
+        !>
         microbial_cue_eff(ic,is) = microbial_cue_max
         IF (growth(ic,is) < growth_c(ic,is) .AND. uptake_c(ic,is) > eps8) THEN
           ! excess carbon is going to be respired
           microbial_cue_eff(ic,is) = MAX(microbial_cue_min,growth(ic,is) / uptake_c(ic,is))
-        ELSEIF (growth(ic,is) < growth_c(ic,is)) THEN
+        ELSE IF (growth(ic,is) < growth_c(ic,is)) THEN
           microbial_cue_eff(ic,is) = microbial_cue_min
-        ENDIF
+        END IF
 
-        !> 2.1 actual growth given actual CUE, adjust uptake rate of DOM to the most
-        !!     limiting nutrient
-        !!
-        !! growth_n and growth_p are unchanged, only growth_c needs to be adjusted to current
-        !! CUE
+        !>  2.1 actual growth given actual CUE, adjust uptake rate of DOM to the most
+        !>     limiting nutrient
+        !>
+        ! growth_n and growth_p are unchanged, only growth_c needs to be adjusted to current CUE
         growth_c(ic,is) = microbial_cue_eff_tmic_mavg(ic,is) * uptake_c(ic,is)
-        !! ensure asymb_n_fixation does not exceed uptake demand
+        ! ensure asymb_n_fixation does not exceed uptake demand
         IF (asymb_n_fixation(ic,is) > growth_c(ic,is) / microbial_cn - microbial_nue * uptake_n(ic,is)) THEN
           asymb_n_fixation(ic,is) = MAX(0.0_wp, growth_c(ic,is) / microbial_cn - microbial_nue * uptake_n(ic,is))
-        ENDIF
+        END IF
 
         IF (growth_c(ic,is) <= growth_n(ic,is) .AND. growth_c(ic,is) <= growth_p(ic,is)) THEN
           ! carbon uptake is limiting, full uptake rate is realised
           f_uptake(ic,is) = f_uptake(ic,is)
-        ELSEIF (growth_n(ic,is) < growth_c(ic,is) .AND. growth_n(ic,is) <= growth_p(ic,is) .AND. &
+        ELSE IF (growth_n(ic,is) < growth_c(ic,is) .AND. growth_n(ic,is) <= growth_p(ic,is) .AND. &
                  (microbial_cue_eff_tmic_mavg(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is) - microbial_nue &
                   * sb_pool_mt(ix_dom, ixN, ic, is) * microbial_cn) > eps8) THEN
           ! nitrogen uptake is limiting
@@ -1135,7 +1135,7 @@ CONTAINS
             &   ((asymb_n_fixation(ic,is) + microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is)) * microbial_cn) / &
             &   (microbial_cue_eff_tmic_mavg(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is) - &
             &    microbial_nue * sb_pool_mt(ix_dom, ixN, ic, is) * microbial_cn)))
-        ELSEIF (growth_p(ic,is) < growth_c(ic,is) .AND. growth_p(ic,is) < growth_n(ic,is) .AND. &
+        ELSE IF (growth_p(ic,is) < growth_c(ic,is) .AND. growth_p(ic,is) < growth_n(ic,is) .AND. &
                  (microbial_cue_eff_tmic_mavg(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is) - microbial_pue &
                  * sb_pool_mt(ix_dom, ixP, ic, is) * microbial_np * microbial_cn) > eps8) THEN
           ! phosphorus uptake is limiting
@@ -1146,7 +1146,7 @@ CONTAINS
             &              microbial_pue * sb_pool_mt(ix_dom, ixP, ic, is) * microbial_np * microbial_cn)))
         ELSE
           f_uptake(ic,is) = 0.0_wp
-        ENDIF
+        END IF
 
         growth_c(ic,is) = microbial_cue_eff_tmic_mavg(ic,is) * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is)
         uptake_n(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is)
@@ -1156,8 +1156,9 @@ CONTAINS
         growth_p(ic,is) = (microbial_pue * uptake_p(ic,is) + &
                          microbial_uptake_po4_sl(ic,is)) * microbial_np * microbial_cn
 
-        !> 2.2 Adjust nitrogen-use efficiency and immobilisation flux such that the growth is stoichiometrically balanced
-        !!     and calculate gross mineralisation rate (and its isotopic signature)
+        !>  2.2 Adjust nitrogen-use efficiency and immobilisation flux such that the growth is stoichiometrically balanced
+        !>     and calculate gross mineralisation rate (and its isotopic signature)
+        !>
         microbial_nue_eff(ic,is) = microbial_nue
         IF (growth_c(ic,is) < growth_n(ic,is)) THEN
           ! inorganic N immobilisation flux in agreement with C growth, taking into account current fixation rate
@@ -1167,7 +1168,7 @@ CONTAINS
             scal(ic,is) = hlp1(ic,is) / (microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is))
           ELSE
             scal(ic,is) = 0.0_wp
-          ENDIF
+          END IF
           microbial_uptake_nh4_sl(ic,is)     = microbial_uptake_nh4_sl(ic,is)     * scal(ic,is)
           microbial_uptake_nh4_n15_sl(ic,is) = microbial_uptake_nh4_n15_sl(ic,is) * scal(ic,is)
           microbial_uptake_no3_sl(ic,is)     = microbial_uptake_no3_sl(ic,is)     * scal(ic,is)
@@ -1177,16 +1178,17 @@ CONTAINS
               &                      ( growth_c(ic,is) / &
               &                        microbial_cn - microbial_uptake_nh4_sl(ic,is) - microbial_uptake_no3_sl(ic,is) ) / &
               &                      uptake_n(ic,is))
-          ENDIF
-        ENDIF
+          END IF
+        END IF
         gross_mineralisation_nh4(ic,is)     = (1._wp - microbial_nue_eff(ic,is)) * uptake_n(ic,is)
         gross_mineralisation_nh4_n15(ic,is) = gross_mineralisation_nh4(ic,is) * calc_fractionation( &
           &                                                                                sb_pool_mt(ix_dom, ixN, ic, is), &
           &                                                                                sb_pool_mt(ix_dom, ixN15, ic, is), &
           &                                                                                eta_ammonification)
 
-        !> 2.3 Adjust phosphorus-use efficiency and immobilisation flux such that the growth is stoichiometrically balanced
-        !!     and calculate gross mineralisation rate
+        !>  2.3 Adjust phosphorus-use efficiency and immobilisation flux such that the growth is stoichiometrically balanced
+        !>     and calculate gross mineralisation rate
+        !>
         microbial_pue_eff(ic,is) = microbial_pue
         IF (growth_c(ic,is) < growth_p(ic,is)) THEN
           ! inorganic P immobilisation flux, in agreement with C and N uptake
@@ -1196,8 +1198,8 @@ CONTAINS
           IF (uptake_p(ic,is) > eps8) THEN
             microbial_pue_eff(ic,is) = ( growth_c(ic,is) / microbial_cn / microbial_np - microbial_uptake_po4_sl(ic,is) ) &
                                        / uptake_p(ic,is)
-          ENDIF
-        ENDIF
+          END IF
+        END IF
         gross_mineralisation_po4(ic,is) = gross_mineralisation_po4(ic,is) + (1._wp - microbial_pue_eff(ic,is)) * uptake_p(ic,is)
 
         !>3.0 update fluxes
@@ -1255,8 +1257,8 @@ CONTAINS
           &                                          / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(- eta_nfixation)) &
           &                                          + microbial_uptake_nh4_n15_sl(ic,is) + microbial_uptake_no3_n15_sl(ic,is)) &
           &                                          * dtime / 1000000.0_wp
-      ENDDO
-    ENDDO
+      END DO
+    END DO
   END SUBROUTINE calc_microbial_growth
 
 
@@ -1437,7 +1439,7 @@ CONTAINS
           poly_depolymerisation_rate(ic,is) = hlp2(ic,is) / sb_pool_mt(ix_polymeric_litter, ixC, ic, is)
         ELSE
           poly_depolymerisation_rate(ic,is) = 0.0_wp
-        ENDIF
+        END IF
 
         !>2.0 calculate microbial residue depolymerisation rate
         !>
@@ -1452,7 +1454,7 @@ CONTAINS
           residue_depolymerisation_rate(ic,is) = hlp2(ic,is) / sb_pool_mt(ix_residue, ixC, ic, is)
         ELSE
           residue_depolymerisation_rate(ic,is) = 0.0_wp
-        ENDIF
+        END IF
 
         !>3.0 apply to all elements in polymeric litter pool
         !>
@@ -1536,39 +1538,39 @@ CONTAINS
           hlp1(ic,is)               = poly_depolymerisation_rate(ic,is) * sb_pool_mt(ix_polymeric_litter, ixP, ic, is)
           hlp2(ic,is)               = residue_depolymerisation_rate(ic,is) * sb_pool_mt(ix_residue, ixP, ic, is)
           enzyme_frac_poly_p(ic,is) = calc_enzyme_allocation(hlp1(ic,is), hlp2(ic,is), hlp3(ic,is), enzyme_depoly(ic,is))
-        ENDIF
+        END IF
 
-        !> 6.0 calculate the enzyme partitioning based on microbial nutrition status
-        !!
+        !>6.0 calculate the enzyme partitioning based on microbial nutrition status
+        !>
         hlp1(ic,is) = depoly_c(ic,is) * microbial_cue_mavg(ic,is)
         hlp2(ic,is) = depoly_n(ic,is) * microbial_cn * microbial_nue_mavg(ic,is)
         hlp3(ic,is) = depoly_p(ic,is) * microbial_cn * microbial_np * microbial_pue_mavg(ic,is)
         enz_AP_direction(ic,is) = 1._wp
         IF (hlp1(ic,is) > 0.0_wp .AND. hlp2(ic,is) > 0.0_wp .AND. hlp3(ic,is) > 0.0_wp) THEN
           IF (fact_n_status_mic_c_growth(ic,is) > 1._wp .AND. fact_p_status_mic_c_growth(ic,is) > 1._wp) THEN
-            hlp_depoly(ic,is) = enzyme_frac_poly_c_mavg(ic,is)
-          ELSEIF (fact_n_status_mic_c_growth(ic,is) > 1._wp .AND. fact_p_status_mic_c_growth(ic,is) <= 1._wp) THEN
+            hlp_depoly(ic,is)       = enzyme_frac_poly_c_mavg(ic,is)
+          ELSE IF (fact_n_status_mic_c_growth(ic,is) > 1._wp .AND. fact_p_status_mic_c_growth(ic,is) <= 1._wp) THEN
             hlp_depoly(ic,is)       = enzyme_frac_poly_c_mavg(ic,is)
             enz_AP_direction(ic,is) = -1._wp
-          ELSEIF (fact_n_status_mic_c_growth(ic,is) <= 1._wp .AND. fact_p_status_mic_c_growth(ic,is) > 1._wp) THEN
-            hlp_depoly(ic,is) = enzyme_frac_poly_n_mavg(ic,is)
+          ELSE IF (fact_n_status_mic_c_growth(ic,is) <= 1._wp .AND. fact_p_status_mic_c_growth(ic,is) > 1._wp) THEN
+            hlp_depoly(ic,is)       = enzyme_frac_poly_n_mavg(ic,is)
           ELSE
-            hlp_depoly(ic,is) = enzyme_frac_poly_n_mavg(ic,is)
+            hlp_depoly(ic,is)       = enzyme_frac_poly_n_mavg(ic,is)
             IF (fact_n_status_mic_c_growth(ic,is) > fact_p_status_mic_c_growth(ic,is)) THEN
               enz_AP_direction(ic,is) = -1._wp
-            ENDIF
-          ENDIF
+            END IF
+          END IF
         ELSE
           hlp_depoly(ic,is) = enzyme_frac_poly_c_mavg(ic,is)
-        ENDIF
+        END IF
         enzyme_frac_poly(ic,is)    = MIN( MAX(enzyme_frac_poly(ic,is) + (hlp_depoly(ic,is) - enzyme_frac_poly(ic,is)) / &
           &                        mavg_period_tenzyme / one_day * dtime, min_enzyme_fraction), (1._wp - min_enzyme_fraction))
         enzyme_frac_residue(ic,is) = 1._wp - enzyme_frac_poly(ic,is)
         enzyme_frac_AP(ic,is)      = MIN( MAX(enzyme_frac_AP(ic,is) * (1._wp - enz_AP_direction(ic,is) &
           &                          / mavg_period_tenzyme / one_day * dtime), &
           &                          min_enzyme_fraction), max_enzyme_fraction)
-      ENDDO
-    ENDDO
+      END DO
+    END DO
   END SUBROUTINE calc_depolymerisation_SESAM
 
   ! ======================================================================================================= !
@@ -1706,7 +1708,7 @@ CONTAINS
     ! km = (Qmax/hlp - 2*solute +/- sqrt((Qmax/hlp)^2-4 * Qmax/hlp))/2
     IF (hlp < eps8) THEN
       km = MAX(km1, km2)
-    ELSEIF ((km1 + solute) < eps8 .OR. (km2 + solute) < eps8) THEN
+    ELSE IF ((km1 + solute) < eps8 .OR. (km2 + solute) < eps8) THEN
       km = MAX(km1, km2)
     ELSE
       hlp  = (qmax1 + qmax2) / hlp
@@ -1714,7 +1716,7 @@ CONTAINS
       sol2 = (hlp - 2._wp * solute - SQRT(hlp * hlp - 4._wp * hlp * solute)) / 2._wp
       IF (sol1 /= sol1 .OR. sol2 /= sol2) THEN
         km = MAX(km1, km2)
-      ELSEIF ((km1 - sol1) * (km2 - sol1) <= 0._wp) THEN
+      ELSE IF ((km1 - sol1) * (km2 - sol1) <= 0._wp) THEN
         km = sol1
       ELSE
         km = sol2

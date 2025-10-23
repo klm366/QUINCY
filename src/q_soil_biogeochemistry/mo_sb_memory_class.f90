@@ -261,7 +261,7 @@ MODULE mo_sb_memory_class
                             emission_n2_n15                       !< land to atmosphere flux of 15N2 [micro-mol m-2 s-1]
 
     !------------------------------------------------------------------------------------------------------ !
-    !>3D JSM diagnostics
+    !>3D JSM diagnostics (Jena Soil Model)
     !>
     TYPE(t_jsb_var_real3d)  :: &
                             qmax_org, &                           !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
@@ -306,7 +306,7 @@ MODULE mo_sb_memory_class
 
 
     !------------------------------------------------------------------------------------------------------ !
-    !>3D JSM pools
+    !>3D JSM pools (Jena Soil Model)
     !>
     TYPE(t_jsb_var_real3d)  :: &
       & sb_bgcm_pool_microbial_c, &        !< microbial C [mol C m-3 soil]
@@ -475,9 +475,9 @@ CONTAINS
     CHARACTER(len=30)                        :: unit_sb_flux                !< unit of element var
     INTEGER                                  :: elem_idx_map(LAST_ELEM_ID)  !< element mapper ID -> IND
     INTEGER                                  :: table                       !< ...
-    INTEGER                                  :: l_jsmvar                    !< add var to BASIC output_level, model specific (ssm/jsm)
-    LOGICAL                                  :: loutput_jsm                 !< add var to output file, model specific (ssm/jsm)
-    LOGICAL                                  :: lrestart_jsm                !< add var to restart file, model specific (ssm/jsm)
+    INTEGER                                  :: l_output_level              !< add var to BASIC output_level, model specific (ssm/jsm)
+    LOGICAL                                  :: l_output_switch             !< add var to output file, model specific (ssm/jsm)
+    LOGICAL                                  :: l_restart_switch            !< add var to restart file, model specific (ssm/jsm)
     CHARACTER(len=*), PARAMETER              :: routine = TRIM(modname)//':Init_sb_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
@@ -497,13 +497,13 @@ CONTAINS
     unit_sb_flux = "mol m-3 timestep-1"
 
     ! set local switch for the JSM model
-    l_jsmvar = FULL
-    loutput_jsm  = .FALSE.
-    lrestart_jsm = .FALSE.
+    l_output_level   = FULL
+    l_output_switch  = .FALSE.
+    l_restart_switch = .FALSE.
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
-      l_jsmvar     = BASIC
-      loutput_jsm  = .TRUE.
-      lrestart_jsm = .TRUE.
+      l_output_level   = BASIC
+      l_output_switch  = .TRUE.
+      l_restart_switch = .TRUE.
     END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1783,8 +1783,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -1794,7 +1794,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
+        & output_level = l_output_level, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1805,8 +1805,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -1816,7 +1816,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
+        & output_level = l_output_level, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1827,8 +1827,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -2212,8 +2212,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -2234,8 +2234,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -2246,7 +2246,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
-        & loutput = loutput_jsm, &
+        & loutput = l_output_switch, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -2257,7 +2257,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
-        & loutput = loutput_jsm, &
+        & loutput = l_output_switch, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -2421,8 +2421,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2531,8 +2531,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2542,8 +2542,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2564,7 +2564,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
+        & output_level = l_output_level, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -2597,8 +2597,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2619,8 +2619,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2641,8 +2641,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2652,8 +2652,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2663,8 +2663,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2674,8 +2674,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2707,8 +2707,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2718,8 +2718,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2863,9 +2863,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
-        & lrestart = lrestart_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
+        & lrestart = l_restart_switch, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_residue', mem%enzyme_frac_residue, &
@@ -2874,9 +2874,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
-        & lrestart = lrestart_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
+        & lrestart = l_restart_switch, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_poly_c', mem%enzyme_frac_poly_c, &
@@ -2887,7 +2887,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = lrestart_jsm, &
+        & lrestart = l_restart_switch, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_poly_n', mem%enzyme_frac_poly_n, &
@@ -2898,7 +2898,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = lrestart_jsm, &
+        & lrestart = l_restart_switch, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_poly_p', mem%enzyme_frac_poly_p, &
@@ -2909,7 +2909,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = lrestart_jsm, &
+        & lrestart = l_restart_switch, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_poly_c_mavg', mem%enzyme_frac_poly_c_mavg, &
@@ -2920,7 +2920,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = lrestart_jsm, &
+        & lrestart = l_restart_switch, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_poly_n_mavg', mem%enzyme_frac_poly_n_mavg, &
@@ -2931,7 +2931,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = lrestart_jsm, &
+        & lrestart = l_restart_switch, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_poly_p_mavg', mem%enzyme_frac_poly_p_mavg, &
@@ -2942,7 +2942,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = lrestart_jsm, &
+        & lrestart = l_restart_switch, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('volume_min_sl', mem%volume_min_sl, &
@@ -3155,8 +3155,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -3166,8 +3166,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -3177,8 +3177,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -3188,8 +3188,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -3199,8 +3199,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -3210,8 +3210,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = l_jsmvar, &
-        & loutput = loutput_jsm, &
+        & output_level = l_output_level, &
+        & loutput = l_output_switch, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 

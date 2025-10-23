@@ -540,7 +540,7 @@ CONTAINS
     km_adsorpt_OM_po4         = 14._wp / 1000._wp / molar_mass_P        ! [mol P L-1 kg-1 OM], from literature data analysis
     k_deep_soil_moc_corr      = 0.01_wp                                 ! estimated, Yu et al. 2020, GMD
     k_sl_conv_moc_corr        = 7._wp / 15._wp                          ! Yu et al. 2020, GMD
-    z_deep_soil_moc_corr      = 2._wp                                  ! estimated based on Yu et al. 2020, GMD
+    z_deep_soil_moc_corr      = 2._wp                                   ! estimated based on Yu et al. 2020, GMD
     fact_repartition_om_init_cond1 = 1.0_wp / 10.0_wp                   ! estimated, Yu et al. 2020, GMD
     fact_repartition_om_init_cond2 = 1.0_wp / 11.0_wp                   ! estimated, Yu et al. 2020, GMD
 

@@ -635,30 +635,31 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_c)
       dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_n)
       dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_p)
-    ENDIF
+    END IF
     !------------------------------------------------------------------------------------------------------ !
 
     !> 1.0 correct the plant uptake of nh4, no3 and po4 for soil model
-    !!
-    IF (model%config%qmodel_id==QSOIL) THEN
+    !>
+    IF (model%config%qmodel_id == QSOIL) THEN
       DO ic = 1,nc
-        DO is = 1,INT(num_sl_above_bedrock(ic))
+        DO is = 1, NINT(num_sl_above_bedrock(ic))
           plant_uptake_nh4_sl(ic, is)     = plant_uptake_nh4_sl(ic, is)     * f_n_demand(ic)
           plant_uptake_nh4_n15_sl(ic, is) = plant_uptake_nh4_n15_sl(ic, is) * f_n_demand(ic)
           plant_uptake_no3_sl(ic, is)     = plant_uptake_no3_sl(ic, is)     * f_n_demand(ic)
           plant_uptake_no3_n15_sl(ic, is) = plant_uptake_no3_n15_sl(ic, is) * f_n_demand(ic)
           plant_uptake_po4_sl(ic, is)     = plant_uptake_po4_sl(ic, is)     * f_p_demand(ic)
-        ENDDO
-      ENDDO
-    ENDIF
+        END DO
+      END DO
+    END IF
 
     !> 2.0 infrastructure for mass balance checks
-    !!
-    !! fluxes are calculated at the end of this routine (to include het_respiration)
-    !!
-    !! changes in pools per time step are calculated here AND at the end of this routine
+    !>
+    !> fluxes are calculated at the end of this routine (to include het_respiration)
+    !>
+    !> changes in pools per time step are calculated here AND at the end of this routine
+    !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         sb_delta_pools_mt(ixC,ic, is) = SUM(sb_pool_mt(:, ixC, ic, is))
         sb_delta_pools_mt(ixN,ic, is) = SUM(sb_pool_mt(:, ixN, ic, is)) &
           & + nh4_solute(ic, is) + nh4_assoc(ic, is) + no3_solute(ic, is) + noy(ic, is) + n2o(ic, is) + n2(ic, is)
@@ -683,7 +684,7 @@ CONTAINS
     f_myc_sl(:,:) = root_fraction_sl(:,:)
 
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         sb_formation_mt(ix_mycorrhiza, ixC, ic, is) = sb_formation_mt(ix_mycorrhiza, ixC, ic, is) &
           & + f_myc_sl(ic, is) * mycorrhiza_cue * veg_exudation_mt(ixC, ic) / soil_depth_sl(ic, is)
 
@@ -772,7 +773,7 @@ CONTAINS
       sb_transport_mt(:,:,:,:) = sb_transport_mt(:, :, :, :) + sb_particle_transport_hlp_mt(:, :, :, :)
       sb_pool_mt(:,:,:,:)      = sb_pool_mt(:, :, :, :)      + sb_particle_transport_hlp_mt(:, :, :, :)
       DO ic = 1,nc
-        DO isoil = 1,INT(num_sl_above_bedrock(ic))
+        DO isoil = 1, NINT(num_sl_above_bedrock(ic))
           IF (sb_pool_mt(ix_dom, ixN, ic, isoil) > eps8) THEN
             dom_cn(ic, isoil)  = sb_pool_mt(ix_dom, ixC, ic, isoil) / sb_pool_mt(ix_dom, ixN, ic, isoil)
           END IF
@@ -783,14 +784,13 @@ CONTAINS
         END DO
       END DO
 
-
       sb_bgcm_pool_microbial_c(:,:)       = sb_pool_mt(ix_microbial, ixC, :, :)
       sb_bgcm_pool_microbial_n(:,:)       = sb_pool_mt(ix_microbial, ixN, :, :)
       sb_bgcm_pool_microbial_p(:,:)       = sb_pool_mt(ix_microbial, ixP, :, :)
       sb_bgcm_pool_mineral_assoc_c(:,:)   = sb_pool_mt(ix_residue_assoc, ixC, :, :) + sb_pool_mt(ix_dom_assoc, ixC, :, :)
       sb_bgcm_pool_mineral_assoc_n(:,:)   = sb_pool_mt(ix_residue_assoc, ixN, :, :) + sb_pool_mt(ix_dom_assoc, ixN, :, :)
       sb_bgcm_pool_mineral_assoc_p(:,:)   = sb_pool_mt(ix_residue_assoc, ixP, :, :) + sb_pool_mt(ix_dom_assoc, ixP, :, :)
-      ! unit conversion of inorganic transport fluxes to [mumol m3 s-1] for compatibility with the simple_1d soil model
+      ! unit conversion of inorganic transport fluxes to [micro-mol m3 s-1] for compatibility with ssm (the simple_1d soil model)
       transport_nh4_solute(:,:)           = transport_nh4_solute(:,:)     * 1.e6_wp / dtime
       transport_nh4_assoc(:,:)            = transport_nh4_assoc(:,:)      * 1.e6_wp / dtime
       transport_no3_solute(:,:)           = transport_no3_solute(:,:)     * 1.e6_wp / dtime
@@ -831,7 +831,7 @@ CONTAINS
     !>  7.1 update of N pools
     !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         no3_solute(ic, is)     = no3_solute(ic, is)     + &
                               (net_mineralisation_no3(ic, is) + nitrification_no3(ic, is) + transport_no3_solute(ic, is) - &
                                lateral_loss_no3_solute_sl(ic, is) - &
@@ -888,7 +888,7 @@ CONTAINS
     END DO
     ! calc P sorption parameters
     DO ic = 1,nc
-      DO isoil = 1,INT(num_sl_above_bedrock(ic))
+      DO isoil = 1, NINT(num_sl_above_bedrock(ic))
         CALL calc_Psorption_parameter( &
           & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
           & clay_sl(ic, isoil), &
@@ -971,7 +971,7 @@ CONTAINS
         &                     / 1.e6_wp / soil_depth_sl(:,1) * dtime
 
       DO ic = 1,nc
-        DO isoil = 1,INT(num_sl_above_bedrock(ic))
+        DO isoil = 1, NINT(num_sl_above_bedrock(ic))
           IF ((nh4_n15_solute(ic,isoil) + nh4_n15_assoc(ic,isoil)) < -hlp2(ic,isoil)) THEN
             hlp2(ic,isoil) = -(nh4_n15_solute(ic,isoil) + nh4_n15_assoc(ic,isoil))
           END IF
@@ -1191,39 +1191,41 @@ CONTAINS
       &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)
 
     !> 15.0 spin-up accelerator
+    !>
     IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
       SELECT CASE(model%config%qmodel_id)
       ! only execute spin-up accelerator when running in LAND or SOIL mode
       CASE(QLAND, QSOIL)
         DO ic = 1,nc
           ! Determine if running a spin-up with acceleration
-          IF (slow_sb_pool_accelerator_execute(ic) == 1.0_wp) THEN
+          IF (ABS(slow_sb_pool_accelerator_execute(ic) - 1.0_wp) < eps8) THEN
             IF (debug_on() .AND. iblk == 1 .AND. ic == 1) &
-              & CALL message(TRIM(routine), 'Accelerate spin up for '//TRIM(tile%name)//' ...')
+              & CALL message(TRIM(routine), 'Accelerate spin up for '//TRIM(tile%name)//' ...', all_print=.TRUE.)
 
+            ! accelerate spinup
             IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
-              ! fasten the spinup for residual pool
+              ! residual pool
               CALL calc_accelerated_slow_soil_pool_spinup(nsoil_w, dtime, soil_depth_sl(ic,:), &
-                                                        & model%config%slow_sb_pool_spinup_accelerator_length, &
-                                                        & residue_som_c_form_mavg_sl(ic,:), &
-                                                        & residue_som_c14_form_mavg_sl(ic,:), &
-                                                        & residue_som_c_loss_mavg_sl(ic,:), &
-                                                        & sb_pool_mt(ix_residue,:,ic,:))
+                &     model%config%slow_sb_pool_spinup_accelerator_length, &
+                &     residue_som_c_form_mavg_sl(ic,:), &
+                &     residue_som_c14_form_mavg_sl(ic,:), &
+                &     residue_som_c_loss_mavg_sl(ic,:), &
+                &     sb_pool_mt(ix_residue,:,ic,:))
             ELSE IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
-              ! fasten the spinup for the associated residual pool
+              ! associated residual pool
               CALL calc_accelerated_slow_soil_pool_spinup(nsoil_w, dtime, soil_depth_sl(ic,:), &
-                                                        & model%config%slow_sb_pool_spinup_accelerator_length, &
-                                                        & residue_assoc_som_c_form_mavg_sl(ic,:), &
-                                                        & residue_assoc_som_c14_form_mavg_sl(ic,:), &
-                                                        & residue_assoc_som_c_loss_mavg_sl(ic,:), &
-                                                        & sb_pool_mt(ix_residue_assoc,:,ic,:))
-              ! fasten the spinup for the associated dom pool
+                &       model%config%slow_sb_pool_spinup_accelerator_length, &
+                &       residue_assoc_som_c_form_mavg_sl(ic,:), &
+                &       residue_assoc_som_c14_form_mavg_sl(ic,:), &
+                &       residue_assoc_som_c_loss_mavg_sl(ic,:), &
+                &       sb_pool_mt(ix_residue_assoc,:,ic,:))
+              ! associated DOM pool
               CALL calc_accelerated_slow_soil_pool_spinup(nsoil_w, dtime, soil_depth_sl(ic,:), &
-                                                        & model%config%slow_sb_pool_spinup_accelerator_length, &
-                                                        & assoc_dom_c_form_mavg_sl(ic,:), &
-                                                        & assoc_dom_c14_form_mavg_sl(ic,:), &
-                                                        & assoc_dom_c_loss_mavg_sl(ic,:), &
-                                                        & sb_pool_mt(ix_dom_assoc,:,ic,:))
+                &       model%config%slow_sb_pool_spinup_accelerator_length, &
+                &       assoc_dom_c_form_mavg_sl(ic,:), &
+                &       assoc_dom_c14_form_mavg_sl(ic,:), &
+                &       assoc_dom_c_loss_mavg_sl(ic,:), &
+                &       sb_pool_mt(ix_dom_assoc,:,ic,:))
             END IF ! simple soil or jsm
           END IF
         END DO

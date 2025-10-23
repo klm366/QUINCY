@@ -1047,7 +1047,7 @@ CONTAINS
     weight_slow_sl(:,:,:) = 0.0_wp
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,NINT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
           weight_fast_sl(ic, is, iblk) = EXP(-(lctlib_k_som_fast_init * soil_lay_depth_center_sl(ic, is, iblk)) ** k_som_init)
           weight_slow_sl(ic, is, iblk) = EXP(-(lctlib_k_som_slow_init * soil_lay_depth_center_sl(ic, is, iblk)) ** k_som_init)
           ! only count up to reference depth for scaling
@@ -1071,7 +1071,7 @@ CONTAINS
 
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,NINT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
           sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk)  = init_soluable_litter(ic, iblk) &
             &                                                         * weight_fast_sl(ic, is, iblk)
           sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) = init_polymeric_litter(ic, iblk) &
@@ -1093,7 +1093,7 @@ CONTAINS
     !       to more nutrient in the soil column in 1d compared to 0d.
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,NINT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
           nh4_solute(ic, is, iblk) = nh4_solute_prescribe &
             &                           / soil_lay_depth_ubound_sl(ic, NINT(num_sl_above_bedrock(ic, iblk)), iblk)
           no3_solute(ic, is, iblk) = no3_solute_prescribe &
@@ -1153,7 +1153,7 @@ CONTAINS
       &                      + volume_min_sl(:, 1, :))
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
           CALL calc_Psorption_parameter( &
             & flag_sb_double_langmuir, &          ! in
             & clay_sl(ic, is, iblk), &
@@ -1211,7 +1211,7 @@ CONTAINS
     END DO
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
           qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk)
         END DO
       END DO
@@ -1227,7 +1227,7 @@ CONTAINS
     END DO
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
           nh4_assoc(ic, is, iblk)     = qmax_nh4(ic, is, iblk) * nh4_solute(ic, is, iblk) &
               &                           / (nh4_solute(ic, is, iblk) + km_adsorpt_nh4_sl(ic, is, iblk))
           nh4_n15_assoc(ic, is, iblk) = nh4_assoc(ic, is, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
@@ -1310,7 +1310,7 @@ CONTAINS
       END DO
       DO iblk = 1,nblks
         DO ic = 1,nproma
-          DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+          DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
             IF (flag_sb_double_langmuir) THEN
               po4_assoc_fast(ic, is, iblk) = calc_fast_po4(p_labile(ic, is, iblk), &
                 &                            qmax_fast_po4(ic, is, iblk), &
@@ -1569,7 +1569,7 @@ CONTAINS
     END IF
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,NINT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
           sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk)  = def_sb_pool_metabol_litter /  molar_mass_C &
             &                                                 / soil_lay_width_sl(ic, is, iblk) &
             &                                                 * (1.0_wp - frac_prod_not_root) * root_fraction_sl(ic, is, iblk)
@@ -1583,7 +1583,7 @@ CONTAINS
     ! for each soil layer
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
           IF (soil_lay_width_sl(ic, is, iblk) > 0._wp) THEN
             sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk) = MAX(def_sb_pool_microbial_biomass &
               &                                          / soil_lay_width_sl(ic, is, iblk) &
@@ -1596,11 +1596,11 @@ CONTAINS
               &                                              * root_fraction_sl(ic, is, iblk)
             ! calc fraction of mineral-associated C in the soil
             ! @TODO add docu for this calculation
-            frac_mineral_assoc_soil_c  = EXP(-is / (INT(num_sl_above_bedrock(ic, iblk)) * k_sl_conv_moc_corr) )
+            frac_mineral_assoc_soil_c  = EXP(-is / (NINT(num_sl_above_bedrock(ic, iblk)) * k_sl_conv_moc_corr) )
             ! deep soil is initialised with very low MOC, corrected by k_deep_soil_moc_corr
             IF (soil_lay_depth_ubound_sl(ic, is, iblk) > z_deep_soil_moc_corr) THEN
               frac_mineral_assoc_soil_c = frac_mineral_assoc_soil_c * k_deep_soil_moc_corr
-            ENDIF
+            END IF
             sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = qmax_org_fine_particle(ic, is, iblk) &
               &                                                      * (clay_sl(ic, is, iblk) + silt_sl(ic, is, iblk)) &
               &                                                      * bulk_dens_sl(ic, is, iblk) * frac_mineral_assoc_soil_c
@@ -1628,29 +1628,29 @@ CONTAINS
             ! check if soil is over-saturated with fast C
             IF (arr_hlp7(ic, is, iblk) > 1._wp ) THEN
               sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk)  = &
-              &                 sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk)  &
-              &                 * 1._wp / arr_hlp7(ic, is, iblk)
+                &                 sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk)  &
+                &                 * 1._wp / arr_hlp7(ic, is, iblk)
               sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) = &
-              &                 sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) &
-              &                 * 1._wp / arr_hlp7(ic, is, iblk)
+                &                 sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) &
+                &                 * 1._wp / arr_hlp7(ic, is, iblk)
               sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk)        = &
-              &                 sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk)        &
-              &                 * 1._wp / arr_hlp7(ic, is, iblk)
+                &                 sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk)        &
+                &                 * 1._wp / arr_hlp7(ic, is, iblk)
               sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk)              = &
-              &                 sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk)              &
-              &                 * 1._wp / arr_hlp7(ic, is, iblk)
+                &                 sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk)              &
+                &                 * 1._wp / arr_hlp7(ic, is, iblk)
               sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk)        = &
-              &                 sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk)        &
-              &                 * 1._wp / arr_hlp7(ic, is, iblk)
+                &                 sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk)        &
+                &                 * 1._wp / arr_hlp7(ic, is, iblk)
               sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk)          = 0._wp
               sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk)    = 0._wp
             ! check if soil is over-saturated with fast and stable C
             ELSE IF ((arr_hlp7(ic, is, iblk) + arr_hlp8(ic, is, iblk)) > 1._wp) THEN
               arr_hlp9(ic, is, iblk) = (1._wp - arr_hlp7(ic, is, iblk)) * fact_repartition_om_init_cond1 * &
-              &                     qmax_org_fine_particle(ic, is, iblk) * &
-              &                     (clay_sl(ic, is, iblk) + silt_sl(ic, is, iblk)) * bulk_dens_sl(ic, is, iblk)
+                &                     qmax_org_fine_particle(ic, is, iblk) * &
+                &                     (clay_sl(ic, is, iblk) + silt_sl(ic, is, iblk)) * bulk_dens_sl(ic, is, iblk)
               arr_hlp8(ic, is, iblk) = (1._wp - arr_hlp7(ic, is, iblk)) * (1._wp - fact_repartition_om_init_cond1) * &
-              &                     rho_bulk_org * 1000._wp * carbon_per_dryweight_SOM / molar_mass_C
+                &                     rho_bulk_org * 1000._wp * carbon_per_dryweight_SOM / molar_mass_C
               IF (arr_hlp8(ic, is, iblk) > arr_hlp9(ic, is, iblk)) THEN
               sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk) = &
                 &                                                 sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk) &
@@ -1662,11 +1662,11 @@ CONTAINS
                 &                                                 * (1._wp - fact_repartition_om_init_cond2)
               arr_hlp8(ic, is, iblk) = arr_hlp9(ic, is, iblk)
               ENDIF
-                sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = calc_fast_po4(arr_hlp8(ic, is, iblk), &
-              &                                                      arr_hlp9(ic, is, iblk), &
-              &                                                      k_desorpt_det / k_adsorpt_det)
+              sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = calc_fast_po4(arr_hlp8(ic, is, iblk), &
+                &                                                      arr_hlp9(ic, is, iblk), &
+                &                                                      k_desorpt_det / k_adsorpt_det)
               sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk) &
-              & = arr_hlp8(ic, is, iblk) - sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk)
+                &   = arr_hlp8(ic, is, iblk) - sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk)
             ! check if the available mineral surface is enough for sorbed OM
             ELSE
               arr_hlp9(ic, is, iblk) = (1._wp - arr_hlp7(ic, is, iblk) - arr_hlp8(ic, is, iblk)) &
@@ -1686,10 +1686,10 @@ CONTAINS
               arr_hlp8(ic, is, iblk) = arr_hlp9(ic, is, iblk)
               ENDIF
               sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = calc_fast_po4(arr_hlp8(ic, is, iblk), &
-              &                                                      arr_hlp9(ic, is, iblk), &
-              &                                                      k_desorpt_det / k_adsorpt_det)
+                &                                                      arr_hlp9(ic, is, iblk), &
+                &                                                      k_desorpt_det / k_adsorpt_det)
               sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk) &
-              & = arr_hlp8(ic, is, iblk) - sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk)
+                &   = arr_hlp8(ic, is, iblk) - sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk)
             ENDIF
           ELSE
             sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk) = 0._wp
@@ -1705,7 +1705,7 @@ CONTAINS
     ! initial values of soluble nh4 and no3
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
           nh4_solute(ic, is, iblk)      = nh4_solute_prescribe / soil_lay_depth_ubound_sl(ic, nsoil_w, iblk)
           nh4_n15_solute(ic, is, iblk)  = nh4_solute(ic, is, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
           no3_solute(ic, is, iblk)      = no3_solute_prescribe / soil_lay_depth_ubound_sl(ic, nsoil_w, iblk)
@@ -1720,7 +1720,7 @@ CONTAINS
         & nsoil_w, &
         & num_sl_above_bedrock(:,iblk), &
         & TRIM(sb_model_scheme), &
-        & sb_pool_mt_domain(:,:,:,:,iblk), &         ! in
+        & sb_pool_mt_domain(:,:,:,:,iblk), &  ! in
         & bulk_soil_carbon_sl(:,:,iblk), &    ! inout
         & soil_litter_carbon_sl(:,:,iblk), &
         & volume_min_sl(:,:,iblk) )           ! inout
@@ -1735,7 +1735,7 @@ CONTAINS
       !! deep soil qmax correction for OM
       !! if we need to fix it also for NH4, and PO4, we need to modify calc_qmax_texture with the following code
       DO ic = 1,nproma
-        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
           frac_mineral_assoc_soil_c  = EXP(-is / (INT(num_sl_above_bedrock(ic, iblk)) * 7._wp / 15._wp) )
           qmax_org_min_sl(ic, is, iblk) = qmax_org_min_sl(ic, is, iblk) * frac_mineral_assoc_soil_c
           IF (soil_lay_depth_ubound_sl(ic, is, iblk) > z_deep_soil_moc_corr) THEN
@@ -1778,7 +1778,7 @@ CONTAINS
       &                    + volume_min_sl(:,1,:))
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
           CALL calc_Psorption_parameter( &
             & flag_sb_double_langmuir, &          ! in
             & clay_sl(ic, is, iblk), &
@@ -1811,7 +1811,7 @@ CONTAINS
       ! if 'qmax_po4(:,:,:) > eps8'
       DO iblk = 1,nblks
         DO ic = 1,nproma
-          DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+          DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
             IF (qmax_po4(ic, is, iblk) > eps8) THEN
               p_labile_slow_site(ic, is, iblk) = MAX(qmax_fast_po4(ic, is, iblk) / qmax_po4(ic, is, iblk), eps4)
             END IF
@@ -1839,7 +1839,7 @@ CONTAINS
 
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
           qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk)
         END DO
       END DO
@@ -1857,7 +1857,7 @@ CONTAINS
 
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
           nh4_assoc(ic, is, iblk)     = qmax_nh4(ic, is, iblk) * nh4_solute (ic, is, iblk) &
             &                           / (nh4_solute(ic, is, iblk) + km_adsorpt_nh4_sl(ic, is, iblk))
           nh4_n15_assoc(ic, is, iblk) = nh4_assoc(ic, is, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
@@ -1890,7 +1890,7 @@ CONTAINS
       ! calculate the soluble and adsorbed P pool based on Langmuir isotherm
       DO iblk = 1,nblks
         DO ic = 1,nproma
-          DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+          DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
             IF (flag_sb_double_langmuir) THEN
               po4_assoc_fast(ic, is, iblk) = calc_fast_po4(p_labile(ic, is, iblk), &
                 &                            qmax_fast_po4(ic, is, iblk), &
@@ -2108,7 +2108,7 @@ CONTAINS
     !> NOTE at the moment the soil_p_* values are identical across soil layers, hence, using the value from sl 1
     rhlp1(:) = soil_p_slow(:,1) + soil_p_labile(:,1) + soil_p_occluded(:,1) + soil_p_primary(:,1)
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         soil_weight_sl(ic,is) = soil_depth_sl(ic,is) * bulk_dens_sl(ic,is)
         IF (aflag(ic)) THEN
           hlp1(ic) = hlp1(ic) + soil_depth_sl(ic,is)
@@ -2129,7 +2129,7 @@ CONTAINS
     !! with basalt as parent material (BBR, Lang et al. 2017) that,
     !! the proportion of: labile+sorbed P decreases with increasing depth, and primary P increases with increasing depth (Yu et al., 2020)
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         ! primary P, corrected with depth, [g P]
         hlp1(ic) = MIN(k2_p_pool_depth_corr * soil_lay_depth_center_sl(ic,is) ** k4_p_pool_depth_corr, &
                       (k1_p_pool_depth_corr - k_p_pool_depth_corr_min_occlud)) / k1_p_pool_depth_corr
@@ -2167,7 +2167,7 @@ CONTAINS
     !! and they follow the Langmuir equilibrium
     !! po4_assoc_fast = (p_labile_sl + Smax + K - sqrt((p_labile_sl + Smax + K)**2._wp - 4*p_labile_sl*Smax)) / 2._wp
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (flag_sb_double_langmuir) THEN
           po4_assoc_fast(ic, is) = calc_fast_po4(arr_hlp1(ic, is), qmax_fast_po4(ic, is), km_fast_po4(ic, is))
           po4_solute(ic, is)     = arr_hlp1(ic, is) - po4_assoc_fast(ic, is)
