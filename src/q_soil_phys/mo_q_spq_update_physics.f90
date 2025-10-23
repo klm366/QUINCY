@@ -635,7 +635,7 @@ CONTAINS
                                             snow_heat_capa, snow_therm_cond, t_soil_max_increase, t_soil_max_decrease
     USE mo_jsb_physical_constants,    ONLY: r_gas_dryair, LatentHeatSublimation, LatentHeatVaporization, &
                                             stbo, zemiss_def, grav, cpd, cpvd1, Tzero
-    USE mo_phy_schemes,               ONLY: qsat_water, heat_transfer_coef, q_effective, surface_dry_static_energy
+    USE mo_phy_schemes,               ONLY: qsat_mixed, heat_transfer_coef, q_effective, surface_dry_static_energy
 
 
     IMPLICIT NONE
@@ -751,8 +751,8 @@ CONTAINS
     !> 1.0 calculate surface characteristic given old surface state
     !>
     DO ic = 1, nc
-      q_sat(ic)      = qsat_water(t_air(ic), press_srf(ic))
-      q_sat_srf(ic)  = qsat_water(t_old(ic), press_srf(ic))
+      q_sat(ic)      = qsat_mixed(t_air(ic), press_srf(ic))
+      q_sat_srf(ic)  = qsat_mixed(t_old(ic), press_srf(ic))
     END DO
 
     !>   1.1 Calculate heat transfer coefficient
@@ -790,7 +790,7 @@ CONTAINS
     !>   2.1 Compute sensitivity of surface saturation specific humidity to temperature
     !>
     DO ic = 1, nc
-      dQdT(ic) = (qsat_water(t_old(ic) + 0.001_wp, press_srf(ic)) - q_sat_srf(ic)) * 1000._wp
+      dQdT(ic) = (qsat_mixed(t_old(ic) + 0.001_wp, press_srf(ic)) - q_sat_srf(ic)) * 1000._wp
     END DO
 
     !>   2.2 Old dry static energy
