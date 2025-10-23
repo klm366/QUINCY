@@ -218,7 +218,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = -999.0_wp)
 #endif
     ELSE
