@@ -998,7 +998,7 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_phy_schemes,        ONLY: qsat_water
+    USE mo_phy_schemes,        ONLY: qsat_mixed
     USE mo_atmland_constants,  ONLY: eps_vpd
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), INTENT(IN)  :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry
@@ -1013,7 +1013,7 @@ CONTAINS
 
     !>1.0 saturating specific humidity [kg kg-1]
     !>
-    q_sat = qsat_water(t_air, press_srf)
+    q_sat = qsat_mixed(t_air, press_srf)
 
     !>  1.1 vapour pressure deficit [kPa]
     !>
