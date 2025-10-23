@@ -49,7 +49,7 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, SEB_, TURB_, HYDRO_, VEG_, SSE_, RAD_, Q_ASSIMI_, Q_AGR_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,       ONLY: A2L_, SEB_, TURB_, HYDRO_, VEG_, SSE_, RAD_, Q_ASSIMI_, Q_AGR_, Q_PHENO_, SB_, SEB_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid, t_jsb_grid
     USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
     USE mo_q_veg_respiration,       ONLY: temperature_response_respiration, calc_maintenance_respiration
@@ -60,6 +60,7 @@ CONTAINS
     dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_config(SEB_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
@@ -68,6 +69,7 @@ CONTAINS
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(SEB_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -107,6 +109,7 @@ CONTAINS
     dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
@@ -115,6 +118,7 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(SEB_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
@@ -275,6 +279,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: root_fraction_sl
     dsl4jsb_Real3D_onChunk      :: delta_root_fraction_sl
+    ! SEB_ 2D
+    dsl4jsb_Real2D_onChunk      :: t_filt
     ! ----------------------------------------------------------------------------------------------------- !
     iblk      = options%iblk
     ics       = options%ics
@@ -299,6 +305,7 @@ CONTAINS
     dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
@@ -307,6 +314,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(SEB_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -477,6 +485,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)          ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)                   ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)             !   out
+    ! SEB_ 2D
+    dsl4jsb_Get_var2D_onChunk(SEB_, t_filt)                             ! in
     ! ----------------------------------------------------------------------------------------------------- !
     config_flag_log_negative_vegpool = dsl4jsb_Config(VEG_)%flag_log_negative_vegpool
 
@@ -714,9 +724,12 @@ CONTAINS
       & lctlib_g1                                               , &
       & lctlib%t_jmax_omega                                     , &
       & lctlib%sigma_vis                                        , &
-      & dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction          , &
-      & TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme) , &
+      & dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction        , &
+      & model%config%use_soil_phys_jsbach                       , &
+      & dsl4jsb_Config(SEB_)%l_skin_temp                        , &
+      & TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme), &
       & t_air(:)                                                , &
+      & t_filt(:)                                               , &
       & press_srf(:)                                            , &
       & q_air(:)                                                , &
       & co2_mixing_ratio(:)                                     , &

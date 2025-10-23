@@ -917,8 +917,11 @@ CONTAINS
                                                   lctlib_t_jmax_omega     , &
                                                   lctlib_sigma_vis        , &
                                                   flag_optimal_Nfraction  , &
+                                                  config_use_soil_phys_jsbach, &
+                                                  config_l_skin_temp      , &
                                                   canopy_cond_scheme      , & ! Q_ASSIMI_ config
                                                   t_air                   , &
+                                                  t_filt                  , &
                                                   press_srf               , &
                                                   q_air                   , &
                                                   co2_mixing_ratio        , &
@@ -952,7 +955,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: r_gas_dryair
     USE mo_rad_parameters,         ONLY: rad2ppfd, kbl0_vis
     USE mo_q_assimi_constants,     ONLY: ic3phot, ic4phot
-    USE mo_phy_schemes,            ONLY: qsat_water
+    USE mo_phy_schemes,            ONLY: qsat_mixed
 
     IMPLICIT NONE
     ! ---------------------------
@@ -975,9 +978,12 @@ CONTAINS
     REAL(wp),                               INTENT(in) :: lctlib_t_jmax_omega           !< lctlib parameter
     REAL(wp),                               INTENT(in) :: lctlib_sigma_vis              !< lctlib parameter
     LOGICAL,                                INTENT(in) :: flag_optimal_Nfraction        !< on/off optimise leaf internal N allocation
-    CHARACTER(len=*),                       INTENT(IN) :: canopy_cond_scheme            !< canopy_conductance_scheme: medlyn / ballberry
-    REAL(wp),DIMENSION(nc),                 INTENT(in) :: t_air                   , &   !< air temperature (K)
-                                                          press_srf               , &   !< air pressure (Pa)
+    LOGICAL,                                INTENT(in) :: config_use_soil_phys_jsbach   !< model config, use jsbach soil-physics
+    LOGICAL,                                INTENT(in) :: config_l_skin_temp            !< SEB_ config, use skin temperature scheme
+    CHARACTER(len=*),                       INTENT(in) :: canopy_cond_scheme            !< canopy_conductance_scheme: medlyn / ballberry
+    REAL(wp), DIMENSION(nc),                INTENT(in) :: t_air                         !< air temperature (K)
+    REAL(wp), DIMENSION(nc),                INTENT(in) :: t_filt                        !< filtered skin temperature (K)
+    REAL(wp), DIMENSION(nc),                INTENT(in) :: press_srf               , &   !< air pressure (Pa)
                                                           q_air                   , &   !< air specific humidity (--)
                                                           co2_mixing_ratio        , &   !< co2 mixing ratio (ppm)
                                                           aerodyn_cond            , &   !< ga -- aerodynamic conductance (day-time running mean, m/s)
@@ -1163,8 +1169,12 @@ CONTAINS
 
     !> 3.2 Calculate increment in net water loss from increased LAI
     !!
-    DO ic=1,nc
-      q_sat(ic) = qsat_water(t_air(ic), press_srf(ic))
+    DO ic = 1, nc
+      IF (config_use_soil_phys_jsbach .AND. config_l_skin_temp) THEN
+        q_sat(ic) = qsat_mixed(t_filt(ic), press_srf(ic))
+      ELSE
+        q_sat(ic) = qsat_mixed(t_air(ic),  press_srf(ic))
+      END IF
     END DO
     WHERE(canopy_cond(:) > eps8 .AND. canopy_cond_new(:) > eps8)
        unit_transpiration(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
