@@ -673,7 +673,7 @@ CONTAINS
     ! loop over: soil layers & points in chunk & soil layers limited by the 1st soil layer loop
     ! we can do '1,n-1' here, because by definition, there cannot be any upward transport from the uppermost layer
     DO ic = 1,nc
-      nsoil = NINT(num_slabove_bedrock(ic))
+      nsoil = NINT(num_sl_above_bedrock(ic))
       IF (nsoil > 1) THEN
         DO isoil = 1, nsoil-1
           IF (particle_fluxrate(ic, isoil) < 0.0_wp) THEN
@@ -772,7 +772,7 @@ CONTAINS
     !
     ! the calculation incl. unit conversion of 'frac_wtr_transp_down_sl' from s-1 to timestep-1
     DO ic = 1,nc
-      DO is = 1,(NINT(num_slabove_bedrock(ic)) - 1)
+      DO is = 1,(NINT(num_sl_above_bedrock(ic)) - 1)
         ! downward transport
         ! (incl. unit conversion of from s-1 to timestep-1 considering frac_wtr_transp_down_sl)
         IF (frac_wtr_transp_down_sl(ic,is) > 0.0_wp) THEN
@@ -795,14 +795,14 @@ CONTAINS
     !
     ! the calculation incl. unit conversion of 'frac_wtr_transp_down_sl' from s-1 to timestep-1
     DO ic = 1,nc
-      IF (frac_wtr_transp_down_sl(ic, NINT(num_slabove_bedrock(ic))) > 0.0_wp) THEN
-        hlp1(ic) = frac_wtr_transp_down_sl(ic, NINT(num_slabove_bedrock(ic))) * dtime / 1000._wp &
-          &        * pool(ic, NINT(num_slabove_bedrock(ic))) * soil_depth_sl(ic, NINT(num_slabove_bedrock(ic)))
+      IF (frac_wtr_transp_down_sl(ic, NINT(num_sl_above_bedrock(ic))) > 0.0_wp) THEN
+        hlp1(ic) = frac_wtr_transp_down_sl(ic, NINT(num_sl_above_bedrock(ic))) * dtime / 1000._wp &
+          &        * pool(ic, NINT(num_sl_above_bedrock(ic))) * soil_depth_sl(ic, NINT(num_sl_above_bedrock(ic)))
       ELSE
         hlp1(ic) = 0.0_wp
       END IF
-      transport(ic, NINT(num_slabove_bedrock(ic))) = transport(ic, NINT(num_slabove_bedrock(ic))) - hlp1(ic) &
-        &                                            / soil_depth_sl(ic, NINT(num_slabove_bedrock(ic)))
+      transport(ic, NINT(num_sl_above_bedrock(ic))) = transport(ic, NINT(num_sl_above_bedrock(ic))) - hlp1(ic) &
+        &                                            / soil_depth_sl(ic, NINT(num_sl_above_bedrock(ic)))
       leaching(ic)                                 = hlp1(ic)
     ENDDO
 
@@ -815,7 +815,7 @@ CONTAINS
     !
     ! the calculation incl. unit conversion of 'frac_wtr_transp_down_sl' from s-1 to timestep-1
     DO ic = 1,nc
-      DO is = 1,NINT(num_slabove_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         IF (frac_w_lat_loss_sl(ic, is) > 0.0_wp) THEN
           hlp1(ic) = frac_w_lat_loss_sl(ic, is) * pool(ic, is) * soil_depth_sl(ic, is) * dtime / 1000._wp
         ELSE
@@ -864,13 +864,13 @@ CONTAINS
     !>
     hlp1(:,:) = 0.0_wp
     DO ic = 1,nc
-      DO is = 1,NINT(num_slabove_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         hlp1(ic, is) = root_fraction_sl(ic, is) / soil_depth_sl(ic, is)
       ENDDO
     ENDDO
 
     DO ic = 1,nc
-      DO is = NINT(num_slabove_bedrock(ic)), 1, -1
+      DO is = NINT(num_sl_above_bedrock(ic)), 1, -1
         IF (hlp1(ic, 1) > eps8) THEN
           hlp1(ic, is) = hlp1(ic, is) / hlp1(ic, 1)
         ELSE
@@ -882,7 +882,7 @@ CONTAINS
     !>2.0 adjust bioturbation coefficient by bulk density and root density
     !>
     DO ic = 1,nc
-      DO is = 1,NINT(num_slabove_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         IF (bulk_dens_corr_sl(ic, is) > eps8) THEN
           k_bioturb(ic, is) = hlp1(ic, is) * k_diff_org / bulk_dens_corr_sl(ic, is)
         ELSE
@@ -929,7 +929,7 @@ CONTAINS
     !! we don't need soil_layer (nsoil_w) here, because the assumption is made that the gradient at the bottom of the
     !! soil column is zero
     DO ic = 1,nc
-      DO is = 1,(NINT(num_slabove_bedrock(ic)) - 1)
+      DO is = 1,(NINT(num_sl_above_bedrock(ic)) - 1)
         ! distance between the centres of the soil layers
         hlp1(ic) = (soil_depth_sl(ic,is) / 2.0_wp + soil_depth_sl(ic,is + 1) / 2.0_wp)
 
