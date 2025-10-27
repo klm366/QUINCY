@@ -51,6 +51,7 @@ MODULE mo_q_dfire_post
   USE mo_q_dfire_util,          ONLY: real2logical
 
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption, &
+                                              sf_calc_dead_fuel_consumption, &
                                             sf_calc_dead_fuel_consumption_populate_elements, &
                                             sf_calc_live_fuel_consumption_populate_elements
 
@@ -348,15 +349,12 @@ CONTAINS
     sb_fire_emissions_total_els = 0._wp
     sb_fire_litter_ash_total_els = 0._wp
 
-    !< Rebuild dead fuel consumption
-    !< * Derive dead FC (DM * AB) *
-    !< Calculate from Tile to PFT (* tile_fract)
-    DO ip=1, sf_fuel_dead_fuel_nr ! iterate over dead fuel pools
-      fc_dead_cls(:,ip,df_sf_fc_1hr_idx) = dead_fuel_consumption_1hr(:,ip) * tile_fract
-      fc_dead_cls(:,ip,df_sf_fc_10hr_idx) = dead_fuel_consumption_10hr(:,ip) * tile_fract
-      fc_dead_cls(:,ip,df_sf_fc_100hr_idx) = dead_fuel_consumption_100hr(:,ip) * tile_fract
-      fc_dead_cls(:,ip,df_sf_fc_1000hr_idx) = dead_fuel_consumption_1000hr(:,ip) * tile_fract
-    ENDDO
+    ALLOCATE( dead_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr) )
+    dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp
+    dead_fuel_fcl(:,:,df_sf_fc_10hr_idx) = dead_fuel_10hr_dfp
+    dead_fuel_fcl(:,:,df_sf_fc_100hr_idx) = dead_fuel_100hr_dfp
+    dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1000hr_dfp
+
     live_fuel_cls(:,:,df_sf_fc_1hr_idx) = live_fuel_1hr_lfp
     live_fuel_cls(:,:,df_sf_fc_10hr_idx) = live_fuel_10hr_lfp
     live_fuel_cls(:,:,df_sf_fc_100hr_idx) = live_fuel_100hr_lfp
@@ -385,11 +383,6 @@ CONTAINS
 
     ! calc tree mortality
     IF (lctlib%growthform == itree) THEN
-      ALLOCATE( dead_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr) )
-      dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp
-      dead_fuel_fcl(:,:,df_sf_fc_10hr_idx) = dead_fuel_10hr_dfp
-      dead_fuel_fcl(:,:,df_sf_fc_100hr_idx) = dead_fuel_100hr_dfp
-      dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1000hr_dfp
 
       ! ref vars and init to 0
       prob_mort = t_sf_prob_mort(nc, pm_fire, pm_tau, tau_l, tau_c, &
@@ -420,7 +413,7 @@ CONTAINS
       fc_live = sf_calc_live_fuel_consumption(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
                                               prob_mort % prop_ck, &
                                               dsl4jsb_Config(Q_DFIRE_)%fract_crown_scorch, &
-                                              area_burned_fract, &
+                                              area_burned_fract_pft, &
                                               live_fuel_cls, &
                                               mask=is_fire_intense_enough)
 
@@ -446,6 +439,10 @@ CONTAINS
         pm_fire_output = pm_fire / dtime !< from ts-1 to seconds-1
       End If
     END IF
+
+    !< Recalculate dead fuel consumption at a PFT level 
+    fc_dead_cls = sf_calc_dead_fuel_consumption(area_burned_fract, dead_frac_consumption, &
+                                                dead_fuel_fcl, mask=is_fire_intense_enough)
 
     !< Units conversion of Dead fuel consumption into molX/m2
     fc_dead_mol_m2 = sf_convert_units("gDM/m2", "molC/m2", SUM(fc_dead_cls, dim=3)) !< 3=fuel classes
