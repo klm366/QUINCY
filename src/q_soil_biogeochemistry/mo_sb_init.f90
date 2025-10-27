@@ -1746,7 +1746,7 @@ CONTAINS
       !! if we need to fix it also for NH4, and PO4, we need to modify calc_qmax_texture with the following code
       DO ic = 1,nproma
         DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
-          frac_mineral_assoc_soil_c  = EXP(-is / (INT(num_sl_above_bedrock(ic, iblk)) * 7._wp / 15._wp) )
+          frac_mineral_assoc_soil_c  = EXP(-is / (INT(num_sl_above_bedrock(ic, iblk)) * k_sl_conv_moc_corr) )
           qmax_org_min_sl(ic, is, iblk) = qmax_org_min_sl(ic, is, iblk) * frac_mineral_assoc_soil_c
           IF (soil_lay_depth_ubound_sl(ic, is, iblk) > z_deep_soil_moc_corr) THEN
             qmax_org_min_sl(ic, is, iblk) = qmax_org_min_sl(ic, is, iblk) * k_deep_soil_moc_corr
