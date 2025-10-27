@@ -306,7 +306,7 @@ MODULE mo_sb_memory_class
 
 
     !------------------------------------------------------------------------------------------------------ !
-    !>3D JSM pools (Jena Soil Model)
+    !>3D JSM pools | microbe, mineral-associated organic matter (Jena Soil Model)
     !>
     TYPE(t_jsb_var_real3d)  :: &
       & sb_bgcm_pool_microbial_c, &        !< microbial C [mol C m-3 soil]

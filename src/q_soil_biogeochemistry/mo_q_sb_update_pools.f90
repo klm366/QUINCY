@@ -769,7 +769,7 @@ CONTAINS
         & transport_nh4_n15_solute(:,:), transport_nh4_n15_assoc(:,:), &
         & transport_no3_n15_solute(:,:), &
         & sb_particle_transport_hlp_mt(:,:,:,:) )                                             ! inout
-      ! ...
+      ! update sb pools and transport with particle transport
       sb_transport_mt(:,:,:,:) = sb_transport_mt(:, :, :, :) + sb_particle_transport_hlp_mt(:, :, :, :)
       sb_pool_mt(:,:,:,:)      = sb_pool_mt(:, :, :, :)      + sb_particle_transport_hlp_mt(:, :, :, :)
       DO ic = 1,nc
@@ -1204,7 +1204,7 @@ CONTAINS
 
             ! accelerate spinup
             IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
-              ! residual pool
+              ! simple_1d: residual pool
               CALL calc_accelerated_slow_soil_pool_spinup(nsoil_w, dtime, soil_depth_sl(ic,:), &
                 &     model%config%slow_sb_pool_spinup_accelerator_length, &
                 &     residue_som_c_form_mavg_sl(ic,:), &
@@ -1212,14 +1212,14 @@ CONTAINS
                 &     residue_som_c_loss_mavg_sl(ic,:), &
                 &     sb_pool_mt(ix_residue,:,ic,:))
             ELSE IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
-              ! associated residual pool
+              ! jsm: associated residual pool
               CALL calc_accelerated_slow_soil_pool_spinup(nsoil_w, dtime, soil_depth_sl(ic,:), &
                 &       model%config%slow_sb_pool_spinup_accelerator_length, &
                 &       residue_assoc_som_c_form_mavg_sl(ic,:), &
                 &       residue_assoc_som_c14_form_mavg_sl(ic,:), &
                 &       residue_assoc_som_c_loss_mavg_sl(ic,:), &
                 &       sb_pool_mt(ix_residue_assoc,:,ic,:))
-              ! associated DOM pool
+              ! jsm: associated dissolved organic matter (DOM) pool
               CALL calc_accelerated_slow_soil_pool_spinup(nsoil_w, dtime, soil_depth_sl(ic,:), &
                 &       model%config%slow_sb_pool_spinup_accelerator_length, &
                 &       assoc_dom_c_form_mavg_sl(ic,:), &

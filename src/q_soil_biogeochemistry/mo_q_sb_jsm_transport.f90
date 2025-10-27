@@ -94,7 +94,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: n2o_n15                  !< 15N2O concentration [mol / m3]
     REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: n2                       !< N2 concentration [mol / m3]
     REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: n2_n15                   !< 15N2 concentration [mol / m3]
-    REAL(wp),                          INTENT(in)    :: pool_mt_dom(:,:,:)       !< bgcm: DOM pool [mol/m3]
+    REAL(wp),                           INTENT(in)    :: pool_mt_dom(:,:,:)       !< bgcm: dissolved organic matter (DOM) pool [mol/m3]
     REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_solute     !< rate of NH4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_no3_solute     !< rate of NO3 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_solute     !< rate of PO4 transport [mol/m3/timestep]
@@ -166,7 +166,7 @@ CONTAINS
     emission_n2_n15(:)                  = 0.0_wp
 
 
-    !>1.0 transport of DOM
+    !>1.0 transport of dissolved organic matter (DOM)
     !>
     CALL calc_liquid_phase_transport(nc, nsoil_w, dtime, num_sl_above_bedrock(:), &
       &                              frac_wtr_transp_down_sl(:,:), frac_w_lat_loss_sl(:,:), soil_depth_sl(:,:), &
@@ -306,7 +306,7 @@ CONTAINS
           &                              soil_depth_sl(:,:), &
           &                              sb_pool_mt(ix_polymeric_litter, ix_elem, :, :), &
           &                              sb_transport_mt(ix_polymeric_litter, ix_elem, :, :))
-        !>  1.2 minerally associated DOM
+        !>  1.2 minerally associated dissolved organic matter (DOM)
         !>
         CALL calc_bioturbation_transport(nc, nsoil_w, dtime, num_sl_above_bedrock(:), &
           &                              k_bioturb(:,:), &
@@ -544,7 +544,7 @@ CONTAINS
           & particle_fluxrate_woody_sl(:,:), &
           & sb_pool_mt(ix_woody_litter, ix_elem, :, :), &
           & sb_transport_mt(ix_woody_litter, ix_elem, :, :) )
-        !>  1.4 DOM
+        !>  1.4 dissolved organic matter (DOM)
         !>
         CALL calc_particle_transport( &
           & nc, nsoil_w, soil_depth_sl(:,:), num_sl_above_bedrock(:), &
@@ -643,7 +643,7 @@ CONTAINS
   !>
   !> Input: pool to be transported for a specific element, percolation rate, and soil depth
   !>
-  !> Output: vertical transport rate (mol/m2/s)
+  !> Output: vertical transport rate [mol /m2 /s]
   !>
   SUBROUTINE calc_particle_transport( &
     & nc, &
@@ -683,17 +683,16 @@ CONTAINS
             isoil_hlp = isoil
             hlp1(ic)  = 0._wp
             hlp2(ic)  = particle_fluxrate(ic, isoil)
-            ! DO loop: only when fluxrate is more than the soil layer depth,
+            ! DO WHILE loop: only when fluxrate is more than the soil layer depth,
             !          push the whole layer downwards and store the rest in hlp2
             DO WHILE (hlp2(ic) > soil_depth_sl(ic, isoil_hlp) .AND. isoil_hlp > 0)
               hlp1(ic) = hlp1(ic) + soil_depth_sl(ic, isoil_hlp) * pool(ic, isoil_hlp)
               hlp2(ic) = hlp2(ic) - soil_depth_sl(ic, isoil_hlp)
               IF (isoil_hlp == 1) EXIT
-                isoil_hlp = isoil_hlp - 1
+              isoil_hlp = isoil_hlp - 1
             END DO
-            ! IF 1. fluxrate does not exceeds depth of layer isoil, material are transported from the layer isoil
-            !    2. not all isoil layers are pushed down, extra material are transported from layer i
-            ! ELSE (i<eps4) all isoil layers are pushed down (fluxrate is more than the total depth of isoil layers)
+            ! IF isoil_hlp > 1, particile transport transfers all materials above isoil_hlp layer (hlp1) and a fraction of material in isoil_hlp (hlp2)
+            ! ELSE (isoil_hlp==1), all materials from layers 1 to nsoil are pushed down by particile transport
             IF (isoil_hlp > 1) THEN
               hlp1(ic) = hlp1(ic) + hlp2(ic) * pool(ic, isoil_hlp)
             ENDIF
@@ -701,18 +700,18 @@ CONTAINS
           transport(ic, isoil)     = transport(ic, isoil)     - hlp1(ic) / soil_depth_sl(ic, isoil)
           transport(ic, isoil + 1) = transport(ic, isoil + 1) + hlp1(ic) / soil_depth_sl(ic, isoil + 1)
         END DO
-        !>2.0 lower boundary condition, ... ??  @TODO
+        !>2.0 lower boundary condition @TODO: mass balance check while enabling the last layer
         !>
-        !  based on the assumption that there is no upward flux, and that all other
-        !  material is lost
+        ! we simply skip the last soil layer to avoid mass loss of the system
         hlp1(ic)            = 0.0_wp
         transport(ic,nsoil) = transport(ic, nsoil) - hlp1(ic) / soil_depth_sl(ic, nsoil)
-      ELSEIF (nsoil == 1) THEN
-        ! only one soil layer above bedbrock, allow only downward flux
-        hlp1(ic)            = MAX(0.0_wp, MIN(soil_depth_sl(ic, nsoil), particle_fluxrate(ic, nsoil))) * pool(ic, nsoil)
-        transport(ic,nsoil) = transport(ic, nsoil) - hlp1(ic) / soil_depth_sl(ic, nsoil)
+      ! ELSEIF (nsoil == 1) THEN
+        ! ! only one soil layer above bedbrock, allow only downward flux
+        ! hlp1(ic)            = MAX(0.0_wp, MIN(soil_depth_sl(ic, nsoil), particle_fluxrate(ic, nsoil))) * pool(ic, nsoil)
+        ! transport(ic,nsoil) = transport(ic, nsoil) - hlp1(ic) / soil_depth_sl(ic, nsoil)
       ELSE
-        ! bare soil
+        ! bare soil or nsoil == 1
+        ! ignore the particle transport in this case, as last soil layer needs to be skipped for mass balance
         transport(ic,nsoil) = transport(ic, nsoil)
       ENDIF
     END DO

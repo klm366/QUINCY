@@ -299,7 +299,7 @@ CONTAINS
     END DO
 
     !> 2.0 Calculates the biochemical P mineralization and P gross mineralization, and the loss of the contributing pools.
-    !> P is assumed to clevage out from dom associated, residue and residue associated
+    !> P is assumed to clevage out from dom, dom associated, residue and residue associated
     !>
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
@@ -311,7 +311,8 @@ CONTAINS
               enzyme_AP = fine_root_carbon_sl(ic,is) * f_plant_carrier_po4 * growth_p_limit_smoothed_sl(ic,is) &
                 &         + microbial_carbon(ic,is) * enzyme_frac_total * enzyme_frac_AP(ic,is)
               hlp4      = enzyme_AP / (rtm_hsc(ic,is) * rmm_hsc(ic,is) * km_mic_biochem_po4 + enzyme_AP)
-              ! instantaneous rate of biochemical mineralisation 1/s
+              ! instantaneous rate of biochemical mineralisation 1/s,
+              ! needs to multiply by 1.E6_wp for standard flux rate unit
               biochem_min_po4(ic,is) = rtm_mic_uptake(ic,is) * rmm_mic_uptake(ic,is) * vmax_biochem_po4 * hlp4
 
               ! unit of loss terms: mol/m3/timestep
@@ -355,7 +356,7 @@ CONTAINS
               END IF
               loss_residue_po4(ic,is) = loss_residue_po4(ic,is) + biochem_min_po4(ic,is) * residue_po4(ic,is) * hlp7 * dtime
 
-              ! loss from microbial residue, removed by Lin (2020-11-04)
+              ! loss from dom
               IF (dom_phosphorus(ic,is) <eps8) THEN
                 gross_min_po4(ic,is) = 0._wp
               ELSE
@@ -377,7 +378,7 @@ CONTAINS
       END DO
     END DO
 
-    !> 3.0 Pi fluxes between different mineral P pools
+    !> 3.0 Pi fluxes [micro-mol / m3 / s] between different mineral P pools
     !> weathering, occlusion and slow exchange between sorbed and labile P pools
     !>
     DO ic = 1,nc
@@ -485,6 +486,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.8 init out var
+    !>
+    !> unit conversion from mol to micro-mol is introduced in the calculation when necessary
     !>
     plant_uptake(:,:)         = 0.0_wp
     plant_uptake_pot(:,:)     = 0.0_wp
@@ -656,10 +659,6 @@ CONTAINS
               &                         * vmax_nitri_denitri * microbial_carbon(ic,is) &
               &                         / (km_nitrification + microbial_carbon(ic,is))  * reaction_volume(ic,is) * solute(ic,is)
           END IF
-          ! Lin comment out on 20250826: to check, it is probably an error or leftover from code development
-          ! IF (substrate == "no3") THEN
-            ! flux_nitri_denitri(ic,is) = flux_nitri_denitri(ic,is) / (km_denitrification + solute(ic,is))
-          ! END IF
         ENDDO
       ENDDO
     END SELECT
@@ -1044,7 +1043,7 @@ CONTAINS
 
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
-        !>1.0 potential microbial DOM consumption [mumol / m3 / s]
+        !>1.0 potential microbial DOM consumption [micro-mol / m3 / s]
         !>
         hlp1(ic,is)     = sb_pool_mt(ix_dom, ixC, ic, is) / (km_mic_uptake * rtm_hsc(ic,is) &
           &               * rmm_hsc(ic,is) + sb_pool_mt(ix_dom, ixC, ic, is) )
@@ -1058,7 +1057,7 @@ CONTAINS
         uptake_n(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is)
         uptake_p(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixP, ic, is)
 
-        !>  1.1 free-living N fixation rate supporting microbial growth (micro-mol / m3 / s)
+        !>  1.1 free-living N fixation rate supporting microbial growth [micro-mol / m3 / s]
         !>
         SELECT CASE(TRIM(bnf_scheme))
         ! for the SB_ asymbiotic N fixation no difference is made between "dynamic" and "fixed"
@@ -1077,7 +1076,7 @@ CONTAINS
           CALL finish(TRIM(routine),'No such bnf_scheme available here.')
         END SELECT
 
-        !>  1.2 microbial growth rates in micro-mol C / m3 / s, given by C, N and P availability, and the rate-limiting growth rate
+        !>  1.2 microbial growth rates in [micro-mol C / m3 / s], given by C, N and P availability, and the rate-limiting growth rate
         !>
         growth_c(ic,is) = microbial_cue_max * uptake_c(ic,is)
         growth_n(ic,is) = (microbial_nue * uptake_n(ic,is) + asymb_n_fixation(ic,is) + &
@@ -1203,8 +1202,8 @@ CONTAINS
         gross_mineralisation_po4(ic,is) = gross_mineralisation_po4(ic,is) + (1._wp - microbial_pue_eff(ic,is)) * uptake_p(ic,is)
 
         !>3.0 update fluxes
-        !>  note that loss and formation of organic matter is in [mol/m3/timestep]
-        !>  whereas fluxes are in [mumol/m3/s]
+        !>  note that loss and formation of organic matter is in [mol / m3 / timestep]
+        !>  whereas fluxes are in [micro-mol / m3 / s]
         !>
         ! carbon
         uptake_dom(ic,is)                          = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is)
@@ -1260,95 +1259,6 @@ CONTAINS
       END DO
     END DO
   END SUBROUTINE calc_microbial_growth
-
-
-  ! !-----------------------------------------------------------------------------------------------------
-  ! ! Sub Task called from update_sb_jsm
-  ! !
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> calculate depolymerisation rate of polymeric litter and microbial residue
-  ! !! corresponds Ahrens et al. 2015, eq. 1
-  ! !! updated to the more recent version of JSM, including microbial residue as alternative polymeric pool
-  ! !!
-  ! !! Input: maximum depolymerisation rate (vmax), temperature and moisture modifiers for
-  ! !!        depolymerisation and half-saturation, polymeric/residue pool and microbial biomass
-  ! !!
-  ! !! Output: transfer of residue/polymeric pool to DOM
-  ! !-----------------------------------------------------------------------------------------------------
-  ! SUBROUTINE calc_depolymerisation(nc, nsoil_w, vmax_depolymerisation,rtm_depolymerisation,rmm_depolymerisation, &
-  !                                  rtm_hsc,rmm_hsc,microbial_carbon,pool_polymeric,loss_polymeric,formation_dom)
-  !
-  !   USE mo_sb_constants,          ONLY: km_depolymerisation
-  !   dsl4slm_Use_memory_a_sb
-  !
-  !   IMPLICIT NONE
-  !   ! ---------------------------
-  !   ! 0.1 InOut
-  !   INTEGER,                                          INTENT(in)    :: nc, &                 !< dimensions
-  !                                                                      nsoil_w
-  !   REAL(wp),                                         INTENT(in)    :: vmax_depolymerisation !< maximum depolymerisation rate
-  !   REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: rtm_depolymerisation  !< temperature rate modifier for depolymerisation
-  !   REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: rmm_depolymerisation  !< moisture rate modifier for depolymerisation
-  !   REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: rtm_hsc               !< temperature rate modifier for half-saturation constants
-  !   REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: rmm_hsc               !< moisture rate modifier for half-saturation constants
-  !   REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: microbial_carbon      !< microbial biomass carbon [mol C/m3]
-  !   TYPE(t_sb_element_a),                             INTENT(in)    :: pool_polymeric        !< polymeric/residue pool [mol/m3]
-  !   TYPE(t_sb_element_a),                             INTENT(inout) :: loss_polymeric        !< loss of polymeric/residue pool [mol/m3/timestep]
-  !   TYPE(t_sb_element_a),                             INTENT(inout) :: formation_dom         !< formation of DOM [mol/m3/timestep]
-  !   ! ---------------------------
-  !   ! 0.2 Local
-  !   REAL(wp), DIMENSION(nc, nsoil_w)                 :: hlp1                   , &
-  !                                                       hlp2                   , &
-  !                                                       depolymerisation_rate
-  !   CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_depolymerisation'
-  !   ! ---------------------------
-  !   ! 0.3 Declare Memory
-  !   ! ...
-  !
-  !
-  !
-  !   !> 1.0 determine potential depolymerisation rate [mol / m3 / timestep]
-  !   !!
-  !   hlp1(:,:) = 1._wp
-  !   hlp1(:,:) = microbial_carbon(:,:) / (km_depolymerisation * rtm_hsc(:,:) * rmm_hsc(:,:) + microbial_carbon(:,:))
-  !   hlp2(:,:) = vmax_depolymerisation * rtm_depolymerisation(:,:) * rmm_depolymerisation(:,:) * hlp1(:,:) * dtime * &
-  !                pool_polymeric%carbon(:,:)
-  !
-  !   !> 2.0 convert to turnover rate [1 / timestep]
-  !   !!
-  !   WHERE(pool_polymeric%carbon(:,:) > eps8)
-  !       depolymerisation_rate(:,:) = hlp2(:,:) / pool_polymeric%carbon(:,:)
-  !   ELSEWHERE
-  !       depolymerisation_rate(:,:) = 0.0_wp
-  !   ENDWHERE
-  !
-  !   !> 3.0 apply to all elements in this pool (should be a simple operator overload, but does currently not work safely)
-  !   !!
-  !   hlp2(:,:)                       = depolymerisation_rate(:,:) * pool_polymeric%carbon(:,:)
-  !   loss_polymeric%carbon(:,:)      = loss_polymeric%carbon(:,:) + hlp2(:,:)
-  !   formation_dom%carbon(:,:)       = formation_dom%carbon(:,:) + hlp2(:,:)
-  !
-  !   hlp2(:,:)                       = depolymerisation_rate(:,:) * pool_polymeric%nitrogen(:,:)
-  !   loss_polymeric%nitrogen(:,:)    = loss_polymeric%nitrogen(:,:) + hlp2(:,:)
-  !   formation_dom%nitrogen(:,:)     = formation_dom%nitrogen(:,:) + hlp2(:,:)
-  !
-  !   hlp2(:,:)                       = depolymerisation_rate(:,:) * pool_polymeric%phosphorus(:,:)
-  !   loss_polymeric%phosphorus(:,:)  = loss_polymeric%phosphorus(:,:) + hlp2(:,:)
-  !   formation_dom%phosphorus(:,:)   = formation_dom%phosphorus(:,:) + hlp2(:,:)
-  !
-  !   hlp2(:,:)                       = depolymerisation_rate(:,:) * pool_polymeric%carbon13(:,:)
-  !   loss_polymeric%carbon13(:,:)    = loss_polymeric%carbon13(:,:) + hlp2(:,:)
-  !   formation_dom%carbon13(:,:)     = formation_dom%carbon13(:,:) + hlp2(:,:)
-  !
-  !   hlp2(:,:)                       = depolymerisation_rate(:,:) * pool_polymeric%carbon14(:,:)
-  !   loss_polymeric%carbon14(:,:)    = loss_polymeric%carbon14(:,:) + hlp2(:,:)
-  !   formation_dom%carbon14(:,:)     = formation_dom%carbon14(:,:) + hlp2(:,:)
-  !
-  !   hlp2(:,:)                       = depolymerisation_rate(:,:) * pool_polymeric%nitrogen15(:,:)
-  !   loss_polymeric%nitrogen15(:,:)  = loss_polymeric%nitrogen15(:,:) + hlp2(:,:)
-  !   formation_dom%nitrogen15(:,:)   = formation_dom%nitrogen15(:,:) + hlp2(:,:)
-  !
-  ! END SUBROUTINE calc_depolymerisation
 
   ! ======================================================================================================= !
   !>calculate depolymerisation rate of polymeric litter and microbial residue
@@ -1456,7 +1366,7 @@ CONTAINS
           residue_depolymerisation_rate(ic,is) = 0.0_wp
         END IF
 
-        !>3.0 apply to all elements in polymeric litter pool
+        !>3.0 calculate the loss and formation of all elements in polymeric litter pool
         !>
         ! C
         hlp2(ic,is)                                  = poly_depolymerisation_rate(ic,is) &
@@ -1492,7 +1402,7 @@ CONTAINS
         sb_loss_mt(ix_polymeric_litter, ixN15, ic, is) = sb_loss_mt(ix_polymeric_litter, ixN15, ic, is) + hlp2(ic,is)
         sb_formation_mt(ix_dom, ixN15, ic, is)         = sb_formation_mt(ix_dom, ixN15, ic, is) + hlp2(ic,is)
 
-        !>4.0 apply to all elements in microbial residue pool
+        !>4.0 calculate the loss and formation of all elements in microbial residue pool
         !>
         ! C
         hlp2(ic,is)                          = residue_depolymerisation_rate(ic,is) * sb_pool_mt(ix_residue, ixC, ic, is)
@@ -1522,19 +1432,21 @@ CONTAINS
         sb_loss_mt(ix_residue, ixN15, ic, is)  = sb_loss_mt(ix_residue, ixN15, ic, is) + hlp2(ic,is)
         sb_formation_mt(ix_dom, ixN15, ic, is) = sb_formation_mt(ix_dom, ixN15, ic, is) + hlp2(ic,is)
 
-        !>5.0 calculate the temporal enzyme partitioning for poly litter based on C, N, and P/m3/s
+        !>5.0 calculate the temporal enzyme partitioning for poly litter based on C, N, and P
+        !>
+        !> following the algorithm described in Wutzler et al. 2025 (DOI:10.5194/gmd-15-8377-2022)
         !>
         IF (poly_depolymerisation_rate(ic,is) > 0.0_wp .AND. residue_depolymerisation_rate(ic,is)> 0.0_wp) THEN
-          !! alpha_C
+          !! alpha_C, poly enzyme allocation coefficient based on carbon
           hlp1(ic,is)               = poly_depolymerisation_rate(ic,is) * sb_pool_mt(ix_polymeric_litter, ixC, ic, is)
           hlp2(ic,is)               = residue_depolymerisation_rate(ic,is) * sb_pool_mt(ix_residue, ixC, ic, is)
           hlp3(ic,is)               = km_depolymerisation * rtm_hsc(ic,is) * rmm_hsc(ic,is)
           enzyme_frac_poly_c(ic,is) = calc_enzyme_allocation(hlp1(ic,is), hlp2(ic,is), hlp3(ic,is), enzyme_depoly(ic,is))
-          !! alpha_N
+          !! alpha_N, poly enzyme allocation coefficient based on nitrogen
           hlp1(ic,is)               = poly_depolymerisation_rate(ic,is) * sb_pool_mt(ix_polymeric_litter, ixN, ic, is)
           hlp2(ic,is)               = residue_depolymerisation_rate(ic,is) * sb_pool_mt(ix_residue, ixN, ic, is)
           enzyme_frac_poly_n(ic,is) = calc_enzyme_allocation(hlp1(ic,is), hlp2(ic,is), hlp3(ic,is), enzyme_depoly(ic,is))
-          !! alpha_P
+          !! alpha_P, poly enzyme allocation coefficient based on phosphorus
           hlp1(ic,is)               = poly_depolymerisation_rate(ic,is) * sb_pool_mt(ix_polymeric_litter, ixP, ic, is)
           hlp2(ic,is)               = residue_depolymerisation_rate(ic,is) * sb_pool_mt(ix_residue, ixP, ic, is)
           enzyme_frac_poly_p(ic,is) = calc_enzyme_allocation(hlp1(ic,is), hlp2(ic,is), hlp3(ic,is), enzyme_depoly(ic,is))
