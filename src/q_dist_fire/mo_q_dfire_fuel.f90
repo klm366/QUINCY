@@ -182,6 +182,8 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts(1)%lib_id) 
     ! ----------------------------------------------------------------------------------------------------- !
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (lctlib%PastureFlag) RETURN !< do not run this routine at tiles like "pasture pft"
+    IF (lctlib%CropFlag) RETURN !< do not run this routine at tiles like "crops pft"
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
     dsl4jsb_Get_memory(VEG_)
