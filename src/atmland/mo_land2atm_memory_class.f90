@@ -218,8 +218,8 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & lrestart = .TRUE., &
+        & initval_r = -999.0_wp)
 #endif
     ELSE
 #ifdef __QUINCY_STANDALONE__

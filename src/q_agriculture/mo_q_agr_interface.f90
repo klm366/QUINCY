@@ -179,8 +179,8 @@ MODULE mo_q_agr_interface
     dsl4jsb_Def_mt2L2D     :: veg_litterfall_mt
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                    :: ic, iblk, ics, ice, nc !< loop counter / dimensions
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb          !< Vertical grid
-    INTEGER                    :: nsoil_sb               !< number of soil layers as used/defined by the SB_ process
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_w           !< Vertical grid
+    INTEGER                    :: nsoil_w               !< number of soil layers as used/defined by the SB_ process
     INTEGER                    :: nr_of_veg_bgcm_comp    !< dim for veg compartments
     REAL(wp)                   :: dtime                  !< timestep length
     TYPE(t_jsb_model), POINTER :: model
@@ -210,8 +210,8 @@ MODULE mo_q_agr_interface
     ice   = options%ice
     iblk  = options%iblk
     dtime = options%dtime
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
     nr_of_veg_bgcm_comp = get_number_of_veg_compartments()
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')

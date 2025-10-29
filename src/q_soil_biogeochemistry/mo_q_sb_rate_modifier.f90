@@ -61,7 +61,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER   :: model              !< the model
     TYPE(t_lctlib_element), POINTER   :: lctlib             !< land-cover-type library - parameter across pft's
-    REAL(wp)                          :: soil_state_hlp     !< wtr_soil_sat_sl or vol_porosity_sl*soil_depth_sl of soil layer (depending on using SPQ_ / jsbach soil physics)
+    REAL(wp)                          :: w_soil_sat_sl      !< soil state helper, different for "jsbach soil-physics" / SPQ_
+    REAL(wp)                          :: w_soil_fc_sl       !< soil state helper, different for "jsbach soil-physics" / SPQ_
     INTEGER                           :: iblk, ics, ice, nc !< dimensions
     INTEGER                           :: is, ic             !< dimensions looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_rate_modifier'
@@ -103,6 +104,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: wtr_soil_sat_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
+    dsl4jsb_Real3D_onChunk :: vol_field_cap_sl
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk :: t_soil_sl
     ! ----------------------------------------------------------------------------------------------------- !
@@ -116,7 +118,6 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
@@ -151,10 +152,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   ice_soil_sl)                 ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_sl)                 ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_fc_sl)              ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_sat_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_fc_sl)              ! in   needed for SPQ_
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_sat_sl)             ! in   needed for SPQ_
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_pot_sl)             ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_porosity_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_field_cap_sl)            ! in
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)                    ! in
     ! ----------------------------------------------------------------------------------------------------- !
@@ -163,6 +165,15 @@ CONTAINS
       DO is = 1,INT(num_sl_above_bedrock(ic))
         !>1.0 soil organic rate calc modifiers
         !>
+        ! saturated and field capacity of soils (not accounting for ice)
+        ! vol_porosity_sl(:,:) and vol_field_cap_sl(:,:) might be modified with 'update_soil_properties()'
+        IF (model%config%use_soil_phys_jsbach) THEN
+          w_soil_sat_sl = vol_porosity_sl(ic, is)  * soil_depth_sl(ic, is)
+          w_soil_fc_sl  = vol_field_cap_sl(ic, is) * soil_depth_sl(ic, is)
+        ELSE
+          w_soil_sat_sl = wtr_soil_sat_sl(ic, is)
+          w_soil_fc_sl  = wtr_soil_fc_sl(ic, is)
+        END IF
 
         !>  1.1 simple model
         !>
@@ -182,12 +193,12 @@ CONTAINS
         rtm_hsc(ic, is)              = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_hsc)
 
         rmm_depolymerisation(ic, is) = calc_oxygen_rate_modifier(wtr_soil_sl(ic, is), ice_soil_sl(ic, is), &
-          &                                                      wtr_soil_fc_sl(ic, is), kmr_depolymerisation)
+          &                                                      w_soil_fc_sl, kmr_depolymerisation)
         rmm_mic_uptake(ic, is)       = calc_oxygen_rate_modifier(wtr_soil_sl(ic, is), ice_soil_sl(ic, is), &
-          &                                                      wtr_soil_fc_sl(ic, is), kmr_mic_uptake)
+          &                                                      w_soil_fc_sl, kmr_mic_uptake)
         rmm_sorption(ic, is)         = calc_convert_bulk_to_liquid(wtr_soil_sl(ic, is),soil_depth_sl(ic, is),kmr_sorption)
         rmm_desorption(ic, is)       = calc_convert_bulk_to_liquid(wtr_soil_sl(ic, is),soil_depth_sl(ic, is),kmr_sorption)
-        rmm_hsc(ic, is)              = calc_substrate_rate_modifier(wtr_soil_sl(ic, is),wtr_soil_fc_sl(ic, is),kmr_hsc)
+        rmm_hsc(ic, is)              = calc_substrate_rate_modifier(wtr_soil_sl(ic, is),w_soil_fc_sl,kmr_hsc)
 
         !>2.0 nitrification-denitrification model
         !>
@@ -197,16 +208,11 @@ CONTAINS
           &                                                                    temp_freeze_window_bio)
         rtm_gasdiffusion(ic, is)              = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_gasdiffusion, &
           &                                                                    temp_freeze_window_bio)
-        rmm_nitrification(ic, is)             = calc_moisture_modifier(wtr_soil_sl(ic, is), wtr_soil_fc_sl(ic, is))
+        rmm_nitrification(ic, is)             = calc_moisture_modifier(wtr_soil_sl(ic, is), w_soil_fc_sl)
         rmm_gasdiffusion(ic, is)              = MAX(min_rmm_gasdiffusion, &
-          &                                     1.0_wp - calc_moisture_modifier(wtr_soil_sl(ic, is), wtr_soil_fc_sl(ic,is)))
-        IF (model%config%use_soil_phys_jsbach) THEN
-          soil_state_hlp = vol_porosity_sl(ic, is) * soil_depth_sl(ic, is)
-        ELSE
-          soil_state_hlp = wtr_soil_sat_sl(ic, is)
-        END IF
+          &                                     1.0_wp - calc_moisture_modifier(wtr_soil_sl(ic, is), w_soil_fc_sl))
         anaerobic_volume_fraction_sl(ic, is)  = calc_anaerobic_volume_fraction(wtr_soil_sl(ic, is), ice_soil_sl(ic, is), &
-          &                                     soil_state_hlp, lambda_anvf, k_anvf)
+          &                                     w_soil_sat_sl, lambda_anvf, k_anvf)
 
         !>  2.1 N fixation model
         !>   Using the symbiotic T-function as no other data available
@@ -399,7 +405,7 @@ CONTAINS
 
     IF (param > eps8 .AND. wtr_soil_fc_sl > eps8 .AND. wtr_soil_sl > eps8) THEN
        hlp1 = (wtr_soil_sl / wtr_soil_fc_sl) ** k2_afps
-       IF(hlp1 > param) THEN
+       IF (hlp1 > param) THEN
           rate_modifier = 1._wp / hlp1
        ELSE
           rate_modifier = 1._wp / param

@@ -195,7 +195,7 @@ MODULE mo_hydro_memory_class
                                 !< lateral flow of subsurface runoff                     [kg m-2 s-1]
 
     TYPE(t_jsb_var_real2d) :: &
-      & w_skin,           &     !< Water content in skin reservoir                                    [m]
+      & wtr_plant_avail_rel, &  !< relative plant available water (difference between saturation and PWP in root zone) [unitless]
       & w_soil_root_fc,   &     !< Water content at field capacity in root zone of the soil           [m]
       & w_soil_root_pwp         !< Water content at permanent wilting point in root zone of the soil  [m]
 
@@ -760,7 +760,7 @@ CONTAINS
         & t_cf('vol_field_capy_sl', 'm/m', 'Volumetric soil field capacity'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
+        & lrestart=lrestart_local,                                             &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'vol_p_wilt', mem%vol_p_wilt,                          &
@@ -792,7 +792,7 @@ CONTAINS
         & t_cf('vol_porosity_sl', 'm/m', 'Volumetric soil porosity'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
+        & lrestart=lrestart_local,                                             &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'vol_wres', mem%vol_wres,                              &
@@ -1300,20 +1300,20 @@ CONTAINS
         & loutput=.TRUE., output_level=BASIC,                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      CALL mem%Add_var('wtr_plant_avail_rel', mem%wtr_plant_avail_rel, &
+        & hgrid, surface, &
+        & t_cf('wtr_plant_avail_rel', '', 'relative plant available soil moisture in root zone'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, &
+        & loutput = .FALSE., &
+        & lrestart = lrestart_local, &
+        & initval_r = 0.0_wp)
+
 #ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-        CALL mem%Add_var('w_skin', mem%w_skin, &
-          & hgrid, surface, &
-          & t_cf('w_skin', 'm', 'Water content in skin reservoir'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = NONE, &
-          & loutput = .FALSE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
         CALL mem%Add_var('w_soil_root_fc', mem%w_soil_root_fc, &
           & hgrid, surface, &
           & t_cf('w_soil_root_fc', 'm', 'Water content at field capacity in root zone of the soil'), &

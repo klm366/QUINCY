@@ -22,8 +22,9 @@ MODULE mo_veg_init
   USE mo_exception,               ONLY: message, finish, message_text
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_jsb_math_constants,      ONLY: eps8
+  USE mo_jsb_impl_constants,      ONLY: def_parameters
 
-  USE mo_jsb_process_class,       ONLY: VEG_
+  USE mo_jsb_process_class,       ONLY: VEG_, Q_AGR_, Q_SYL_
   USE mo_jsb_model_class,         ONLY: t_jsb_model
   USE mo_jsb_class,               ONLY: get_model
 
@@ -65,11 +66,12 @@ CONTAINS
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
       &                                           standard_press_srf, def_co2_deltaC13, def_co2_deltaC14
     USE mo_jsb_physical_constants,          ONLY: molar_mass_N
-    USE mo_veg_constants,                   ONLY: fresp_growth, background_mort_rate_tree, &
-      &                                           background_mort_rate_grass, w_root_lim_max, rfr_ratio_toc
     USE mo_isotope_util,                    ONLY: calc_fractionation,calc_mixing_ratio_N15N14,calc_mixing_ratio_C14C
     USE mo_q_assimi_process,                ONLY: discrimination_ps_c13, discrimination_ps_c14
-    USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE
+    USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE, &
+      &   background_mort_rate_grass, k1_root_alloc, rfr_ratio_toc, fresp_growth, &
+      &   fmaint_rate_base, fmaint_rate_wood, fstore_sap_wood_max, k_f_demand, omega_nutrient_demand, &
+      &   background_mort_rate_tree, k_herbivory_grass, k_herbivory_pasture, sm2lm_grass
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
@@ -79,14 +81,14 @@ CONTAINS
     TYPE(t_jsb_model),              POINTER :: model                !< the model
     TYPE(t_lnd_bgcm_store),         POINTER :: bgcm_store           !< the bgcm store of this tile
     TYPE(t_jsb_grid),               POINTER :: hgrid                !< Horizontal grid
-    TYPE(t_jsb_vgrid),              POINTER :: vgrid_soil_sb        !< Vertical grid
+    TYPE(t_jsb_vgrid),              POINTER :: vgrid_soil_w         !< Vertical grid
     TYPE(t_lctlib_element),         POINTER :: lctlib               !< land-cover-type library - parameter across pft's
     REAL(wp)                                :: hlp1                 !< helper variable
     REAL(wp)                                :: ref_lai              !< LAI                                 | for canopy model init
     REAL(wp)                                :: ref_nleaf            !< N leaf per unit leaf area in gN/m2  | for canopy model init
     INTEGER                                 :: iblk, ic, is         !< loop dimensions
     INTEGER                                 :: nproma, nblks        !< dimensions
-    INTEGER                                 :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
+    INTEGER                                 :: nsoil_w              !< number of soil layers (water)
     INTEGER                                 :: veg_pool_idx         !< index of the veg pool within the bgcm store
     REAL(wp), POINTER           :: veg_pool_mt_domain(:,:,:,:)      !< dim: compartments, elements, nc, nblks -- on domain!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init'
@@ -173,7 +175,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: t_air_week_mavg
     dsl4jsb_Real2D_onDomain      :: t_air_month_mavg
     dsl4jsb_Real2D_onDomain      :: t_jmax_opt_mavg
-    dsl4jsb_Real2D_onDomain      :: w_root_lim_talloc_mavg
+    dsl4jsb_Real2D_onDomain      :: wtr_rootzone_rel_talloc_mavg
     dsl4jsb_Real2D_onDomain      :: exudation_c_tmyc_mavg
     dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc
     dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc_tvegdyn_mavg
@@ -194,8 +196,8 @@ CONTAINS
     hgrid  => Get_grid(model%grid_id)
     nblks  =  hgrid%nblks
     nproma =  hgrid%nproma
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      = vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       = vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
@@ -283,7 +285,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(VEG_, t_air_week_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, t_air_month_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, t_jmax_opt_mavg)
-    dsl4jsb_Get_var2D_onDomain(VEG_, w_root_lim_talloc_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_, wtr_rootzone_rel_talloc_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, exudation_c_tmyc_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, rfr_ratio_boc)
     dsl4jsb_Get_var2D_onDomain(VEG_, rfr_ratio_boc_tvegdyn_mavg)
@@ -298,6 +300,66 @@ CONTAINS
       dsl4jsb_Get_var3D_onDomain(VEG_, lai_cl)
     END SELECT
     ! ----------------------------------------------------------------------------------------------------- !
+
+    !>0.8 apply calibration of vegetation constants if enabled
+    !>
+    IF (dsl4jsb_Config(VEG_)%flag_apply_nml_parameters) THEN
+      ! fmaint_rate_base
+      IF (dsl4jsb_Config(VEG_)%nml_fmaint_rate_base > def_parameters) THEN
+        fmaint_rate_base = dsl4jsb_Config(VEG_)%nml_fmaint_rate_base
+        fmaint_rate_wood = 0.25_wp * fmaint_rate_base
+        !$ACC UPDATE DEVICE(fmaint_rate_base, fmaint_rate_wood) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: fmaint_rate_base & fmaint_rate_wood')
+      END IF
+      ! fstore_sap_wood_max
+      IF (dsl4jsb_Config(VEG_)%nml_fstore_sap_wood_max > def_parameters) THEN
+        fstore_sap_wood_max = dsl4jsb_Config(VEG_)%nml_fstore_sap_wood_max
+        !$ACC UPDATE DEVICE(fstore_sap_wood_max) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: fstore_sap_wood_max')
+      END IF
+      ! k_f_demand
+      IF (dsl4jsb_Config(VEG_)%nml_k_f_demand > def_parameters) THEN
+        k_f_demand = dsl4jsb_Config(VEG_)%nml_k_f_demand
+        !$ACC UPDATE DEVICE(k_f_demand) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: k_f_demand')
+      END IF
+      ! omega_nutrient_demand
+      IF (dsl4jsb_Config(VEG_)%nml_omega_nutrient_demand > def_parameters) THEN
+        omega_nutrient_demand = dsl4jsb_Config(VEG_)%nml_omega_nutrient_demand
+        !$ACC UPDATE DEVICE(omega_nutrient_demand) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: omega_nutrient_demand')
+      END IF
+      ! background_mort_rate_tree
+      IF (dsl4jsb_Config(VEG_)%nml_background_mort_rate_tree > def_parameters) THEN
+        background_mort_rate_tree = dsl4jsb_Config(VEG_)%nml_background_mort_rate_tree
+        !$ACC UPDATE DEVICE(background_mort_rate_tree) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: background_mort_rate_tree')
+      END IF
+      ! k_herbivory_grass
+      IF (dsl4jsb_Config(VEG_)%nml_k_herbivory_grass > def_parameters) THEN
+        k_herbivory_grass = dsl4jsb_Config(VEG_)%nml_k_herbivory_grass
+        !$ACC UPDATE DEVICE(k_herbivory_grass) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: k_herbivory_grass')
+      END IF
+      ! k_herbivory_pasture
+      IF (dsl4jsb_Config(VEG_)%nml_k_herbivory_pasture > def_parameters) THEN
+        k_herbivory_pasture = dsl4jsb_Config(VEG_)%nml_k_herbivory_pasture
+        !$ACC UPDATE DEVICE(k_herbivory_pasture) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: k_herbivory_pasture')
+      END IF
+      ! sm2lm_grass
+      IF (dsl4jsb_Config(VEG_)%nml_sm2lm_grass > def_parameters) THEN
+        sm2lm_grass = dsl4jsb_Config(VEG_)%nml_sm2lm_grass
+        !$ACC UPDATE DEVICE(sm2lm_grass) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: sm2lm_grass')
+      END IF
+      ! k1_root_alloc
+      IF (dsl4jsb_Config(VEG_)%nml_k1_root_alloc > def_parameters) THEN
+        k1_root_alloc = dsl4jsb_Config(VEG_)%nml_k1_root_alloc
+        !$ACC UPDATE DEVICE(k1_root_alloc) ASYNC(1)
+        CALL message(TRIM(routine), ' Modified value of vegetation parameter: k1_root_alloc')
+      END IF
+    END IF
 
     !>0.9 init veg_pool_mt_domain with zero
     !>
@@ -449,7 +511,7 @@ CONTAINS
       !>
       ! all roots are in the first soil layer
       root_fraction_sl(:, 1, :)          = 1.0_wp
-      root_fraction_sl(:, 2:nsoil_sb, :) = 0.0_wp
+      root_fraction_sl(:, 2:nsoil_w, :)  = 0.0_wp
     ELSE
       !>     - fixed root fractions (no changes after init) depending on root_depth (SPQ variable)
       !>
@@ -533,7 +595,7 @@ CONTAINS
     reserve_carbon_talloc_mavg(:,:)       = 0.0_wp
     reserve_nitrogen_talloc_mavg(:,:)     = 0.0_wp
     reserve_phosphorus_talloc_mavg(:,:)   = 0.0_wp
-    w_root_lim_talloc_mavg(:,:)           = w_root_lim_max
+    wtr_rootzone_rel_talloc_mavg(:,:)     = k1_root_alloc
     exudation_c_tmyc_mavg(:,:)            = 0.0_wp
     ! N fraction optimisation
     fleaf_sunlit_tfrac_mavg_cl(:,:,:)     = 0.5_wp
@@ -597,7 +659,7 @@ CONTAINS
     !$ACC   DEVICE(growth_cn_talloc_mavg(:,:), unit_npp_talloc_mavg(:,:), growth_cp_talloc_mavg(:,:)) &
     !$ACC   DEVICE(growth_np_talloc_mavg(:,:), labile_carbon_talloc_mavg(:,:), labile_nitrogen_talloc_mavg(:,:)) &
     !$ACC   DEVICE(labile_phosphorus_talloc_mavg(:,:), growth_p_limit_based_on_n_mavg(:,:), reserve_carbon_talloc_mavg(:,:)) &
-    !$ACC   DEVICE(reserve_nitrogen_talloc_mavg(:,:), reserve_phosphorus_talloc_mavg(:,:), w_root_lim_talloc_mavg(:,:)) &
+    !$ACC   DEVICE(reserve_nitrogen_talloc_mavg(:,:), reserve_phosphorus_talloc_mavg(:,:), wtr_rootzone_rel_talloc_mavg(:,:)) &
     !$ACC   DEVICE(exudation_c_tmyc_mavg(:,:), fleaf_sunlit_tfrac_mavg_cl(:,:,:), t_air_tfrac_mavg(:,:)) &
     !$ACC   DEVICE(press_srf_tfrac_mavg(:,:), co2_mixing_ratio_tfrac_mavg(:,:), ga_tfrac_mavg(:,:)) &
     !$ACC   DEVICE(beta_sinklim_ps_tfrac_mavg(:,:), fleaf_sunlit_tcnl_mavg_cl(:,:,:), t_air_tcnl_mavg(:,:)) &
@@ -614,6 +676,7 @@ CONTAINS
     !$ACC   DEVICE(t_air_tacclim_mavg(:,:), t_soil_root_tacclim_mavg(:,:), t_air_week_mavg(:,:), t_air_month_mavg(:,:)) &
     !$ACC   DEVICE(t_jmax_opt_mavg(:,:), veg_pool_mt_domain(:,:,:,:)) &
     !$ACC   DEVICE(rfr_ratio_boc(:,:), rfr_ratio_boc_tvegdyn_mavg(:,:)) ASYNC(1)
+    !$ACC WAIT(1)
 
   END SUBROUTINE veg_init
 
@@ -628,6 +691,10 @@ CONTAINS
     USE mo_jsb_io_netcdf,           ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_util,                    ONLY: read_2D_var, read_3D_var
     USE mo_lnd_bgcm_store,          ONLY: read_bgcm_from_file
+    USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_PP_CROP_ID, VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, &
+      & VEG_BGCM_PP_FIBERBOARD_ID, VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID
+    dsl4jsb_Use_config(Q_AGR_)
+    dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile             !< one tile with data structure for one lct
@@ -635,12 +702,14 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER :: model            !< the model
     TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store       !< the bgcm store of this tile
     TYPE(t_input_file)              :: input_file       !< file with to be read veg state variables
-    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_sb    !< vertical grid for sl variables
+    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_w     !< vertical grid for sl variables
     INTEGER                         :: isoil            !< soillayer index
-    INTEGER                         :: nsoil_sb         !< number of soil layers as used/defined by the SB_ process
+    INTEGER                         :: nsoil_w          !< number of soil layers (water)
     REAL(wp),               POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':veg_read_states'
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(Q_SYL_)
+    dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Real2D_onDomain :: dens_ind
@@ -654,9 +723,11 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: root_fraction_sl
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb = vgrid_soil_sb%n_levels
+    vgrid_soil_w => Get_vgrid('soil_depth_water')
+    nsoil_w = vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(Q_SYL_)
+    dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_var2D_onDomain(VEG_, dens_ind)
@@ -676,6 +747,21 @@ CONTAINS
     IF (ASSOCIATED(tile%bgcm_store)) THEN
       bgcm_store => tile%bgcm_store
       CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_POOL_ID, "veg", tile%name, routine, input_file)
+
+      IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+        IF (dsl4jsb_Config(Q_AGR_)%active) THEN
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_CROP_ID, "veg", tile%name, routine, input_file)
+        END IF
+
+        IF (dsl4jsb_Config(Q_SYL_)%active) THEN
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_FUEL_ID, "veg", tile%name, routine, input_file)
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_PAPER_ID, "veg", tile%name, routine, input_file)
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_FIBERBOARD_ID, "veg", tile%name, routine, input_file)
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_OIRW_ID, "veg", tile%name, routine, input_file)
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_PV_ID, "veg", tile%name, routine, input_file)
+          CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_SAWNWOOD_ID, "veg", tile%name, routine, input_file)
+        END IF
+      END IF
     END IF
 
     CALL read_2D_var(input_file, dens_ind, "veg_dens_ind_"//tile%name)
@@ -687,7 +773,7 @@ CONTAINS
     CALL read_2D_var(input_file, net_growth_tvegdyn_mavg, "veg_net_growth_tvegdyn_mavg_"//tile%name)
     CALL read_2D_var(input_file, lai_tvegdyn_mavg, "veg_lai_tvegdyn_mavg_"//tile%name)
 
-    CALL read_3D_var(input_file, root_fraction_sl, 'veg_root_fraction_sl_'//tile%name, 'soillev', nsoil_sb)
+    CALL read_3D_var(input_file, root_fraction_sl, 'veg_root_fraction_sl_'//tile%name, 'soillev', nsoil_w)
 
     CALL input_file%Close()
 

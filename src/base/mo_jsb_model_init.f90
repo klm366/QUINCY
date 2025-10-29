@@ -26,7 +26,6 @@ MODULE mo_jsb_model_init
   dsl4jsb_Use_config(FAGE_)
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(HYDRO_)
-  dsl4jsb_Use_config(SB_)
 #ifndef __NO_QUINCY__
   dsl4jsb_Use_config(VEG_)
   dsl4jsb_Use_config(SB_)
@@ -186,9 +185,9 @@ CONTAINS
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(FAGE_)
-    dsl4jsb_Def_config(SB_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(SB_)
 #endif
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
@@ -206,7 +205,6 @@ CONTAINS
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(FAGE_)
-    dsl4jsb_Get_config(SB_)
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -374,6 +372,7 @@ CONTAINS
     !
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_config(VEG_)
+      dsl4jsb_Get_config(SB_)
 
       !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
       IF (.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
@@ -447,11 +446,11 @@ CONTAINS
         CALL model%Queue_task(SEB_,       "surface_energy")
         CALL model%Queue_task(HYDRO_,     "evaporation")
         CALL model%Queue_task(SEB_,       "surface_fluxes")
-        CALL model%Queue_task(Q_ASSIMI_,  "ftranspiration_per_sl")
         CALL model%Queue_task(HYDRO_,     "surface_hydrology")
         CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
         CALL model%Queue_task(SSE_,       "soil_and_snow_properties")
         CALL model%Queue_task(SSE_,       "soil_and_snow_temperature")
+        CALL model%Queue_task(Q_ASSIMI_,  "ftranspiration_per_sl")
         CALL model%Queue_task(HYDRO_,     "soil_hydrology")
         CALL model%Queue_task(HYDRO_,     "water_stress")
         CALL model%Queue_task(RAD_,       "radiation_par")
@@ -466,10 +465,10 @@ CONTAINS
           CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
           IF (model%config%qmodel_id == QLAND) THEN
             IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
-              CALL model%Queue_task(SB_, "sb_jsm")           ! LAND ONLY
+              CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
             ELSE
-              CALL model%Queue_task(SB_, "sb_simple_model")           ! LAND ONLY
-            ENDIF
+              CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
+            END IF
           END IF
           CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
         END IF
@@ -557,6 +556,7 @@ CONTAINS
         CALL model%Queue_task(Q_PHENO_, "q_phenology")              ! ALL
         CALL model%Queue_task(RAD_, "radiation_par")                ! ALL
         CALL model%Queue_task(Q_ASSIMI_, "canopy_fluxes")           ! ALL
+        CALL model%Queue_task(Q_ASSIMI_, "ftranspiration_per_sl")   ! ALL
         CALL model%Queue_task(SPQ_, "spq_physics")                  ! ALL
 
         IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
@@ -566,7 +566,11 @@ CONTAINS
           CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
           CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
           IF (model%config%qmodel_id == QLAND) THEN
-            CALL model%Queue_task(SB_, "sb_simple_model")           ! LAND ONLY
+            IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+              CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
+            ELSE
+              CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
+            END IF
           END IF
           CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
         END IF
@@ -700,7 +704,7 @@ CONTAINS
       IF (tile%Is_process_active(SSE_)) THEN
         CALL sse_init(tile)
       END IF
-      ! Initialize HYDRO_ before VEG_
+      ! Initialize HYDRO_ before VEG_ and SPQ_
       IF (tile%Is_process_active(HYDRO_)) THEN
         CALL hydro_init(tile)
       END IF
@@ -714,6 +718,7 @@ CONTAINS
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (.NOT. model%config%use_soil_phys_jsbach) THEN
+          ! Initialize HYDRO_ before SPQ_
           IF (tile%Is_process_active(SPQ_)) THEN
             CALL spq_init(tile)
           END IF
@@ -789,6 +794,8 @@ CONTAINS
     !>
     !> 3. Iterate over tiles again and
     !>
+    !>     3.0 if demanded: correct tile fractions to assert consistency
+    !>
     !>     3.1 set initial tile fractions for aggregator(s)
     !>
     !>     3.2 set LCT fractions of the specific tile
@@ -807,8 +814,13 @@ CONTAINS
     ! Loop over the tiles, starting from the top tile (i.e. box)
     DO WHILE (ASSOCIATED(tile))
 
-      ! First only handle the leaves: skip the tile in case it has children.
+      ! First only handle the leaves: skip the tile in case it has children
+      ! (but, if demanded, correct child cover fractons first)
       IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
+        ! If demanded, check the cover fractions of the direct children
+        IF (model%config%check_child_cf) THEN
+          CALL tile%Check_child_cover_fractions()
+        END IF
         CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
@@ -925,9 +937,9 @@ CONTAINS
 
       IF (tile%Is_process_calculated(PHENO_)) THEN
         dsl4jsb_Get_config(PHENO_)
-        IF (        tile%is_vegetation                                          &
+        IF (        tile%is_vegetation                                   &
             & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology' &
-            & .AND. tile%lcts(1)%lib_id == 0)                                   &
+            & .AND. tile%lcts(1)%lib_id == 0)                            &
           & CALL finish(TRIM(routine), &
           &             'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))
       END IF
