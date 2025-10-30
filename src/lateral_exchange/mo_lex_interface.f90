@@ -328,7 +328,6 @@ CONTAINS
       &                                  calc_pond_soil_flux_water,       &
       &                                  calc_pond_soil_flux_heat,        &
       &                                  calc_lat_fluxes_soil,            &
-      &                                  calc_diffusion_heat,             &
       &                                  calc_convection_heat,            &
       &                                  calc_snow_redistribution,        &
       &                                  shift_fluxes_sl,                 &
@@ -630,7 +629,7 @@ CONTAINS
     END DO
 
     ! Maximum number of intersecting soil layers for lateral exchange
-    nrgrd   = nsoil * 2 + 2
+    nrgrd   = (nsoil + 1) * 2
 
     ! Loop over all tiles on the current tile level
     ! This includes tiles that ma not participate in the lateral exchange, such as glaciers.
@@ -908,60 +907,62 @@ CONTAINS
               wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
                 &                         - wtr_diffusion_in_sl_sibl(ic,:)
             END DO
+          END IF
 
-            ! Water and heat exchange between connected tiles
-            DO ic = 1, nc
-              CALL calc_lat_fluxes_soil(nc, nsoil, nrgrd, dtime,   &
-                &  dsl4jsb_Config(LEX_)%l_dffsn_wtr,        &
-                &  dsl4jsb_Config(LEX_)%l_dffsn_nrg,        &
-                &  microcon_ctc_ct(ic,lex_ids),             &
-                &  h_offset_ct(ic,lex_ids),                 &
-                &  length_scale_ct(ic,lex_ids),             &
-                &  length_iface_ct(ic,lex_ids),             &
-                &  fract(ic),                               &
-                &  fract_sibl(ic),                          &
-                ! Soil hydrological properties
-                &  soil_depth_sl(ic,:),                     &
-                &  soil_depth_sl_sibl(ic,:),                &
-                &  wtr_soil_fc_sl(ic,:),                    &
-                &  wtr_soil_fc_sl_sibl(ic,:),               &
-                &  wtr_soil_sat_sl(ic,:),                   &
-                &  wtr_soil_sat_sl_sibl(ic,:),              &
-                &  wtr_soil_res_sl(ic,:),                   &
-                &  wtr_soil_res_sl_sibl(ic,:),              &
-                &  hyd_cond_sat_sl(ic,:),                   &
-                &  hyd_cond_sat_sl_sibl(ic,:),              &
-                &  hyd_cond_sl(ic,:),                       &
-                &  hyd_cond_sl_sibl(ic,:),                  &
-                &  mpot_act(ic,:),                          &
-                &  mpot_act_sibl(ic,:),                     &
-                ! Soil thermal properties
-                &  soil_e%ubounds(:),                       &
-                &  t_soil_sl(ic,:),                         &
-                &  t_soil_sl_sibl(ic,:),                    &
-                &  heat_cond_sl(ic,:),                      &
-                &  heat_cond_sl_sibl(ic,:),                 &
-                &  vol_heat_cap_sl(ic,:),                   &
-                &  vol_heat_cap_sl_sibl(ic,:),              &
-                ! Soil water fluxes
-                &  wtr_diffusion_in_sl(ic,:),               &
-                &  wtr_diffusion_in_sl_sibl(ic,:),          &
-                &  wtr_diffusion_out_sl(ic,:),              &
-                &  wtr_diffusion_out_sl_sibl(ic,:),         &
-                &  wtr_lex_net_sl(ic,:),                    &
-                &  wtr_lex_net_sl_sibl(ic,:),               &
-                &  wtr_soil_sl(ic,:),                       &
-                &  wtr_soil_sl_sibl(ic,:),                  &
-                ! Soil heat fluxes
-                &  nrg_diffusion_in_sl(ic,:),               &
-                &  nrg_diffusion_in_sl_sibl(ic,:),          &
-                &  nrg_diffusion_out_sl(ic,:),              &
-                &  nrg_diffusion_out_sl_sibl(ic,:),         &
-                &  nrg_lex_net_sl(ic,:),                    &
-                &  nrg_lex_net_sl_sibl(ic,:)                &
-                &  )
-            END DO
+          ! Water and heat exchange between connected tiles
+          DO ic = 1, nc
+            CALL calc_lat_fluxes_soil(nc, nsoil, nrgrd, dtime,   &
+              &  dsl4jsb_Config(LEX_)%l_dffsn_wtr,        &
+              &  dsl4jsb_Config(LEX_)%l_dffsn_nrg,        &
+              &  microcon_ctc_ct(ic,lex_ids),             &
+              &  h_offset_ct(ic,lex_ids),                 &
+              &  length_scale_ct(ic,lex_ids),             &
+              &  length_iface_ct(ic,lex_ids),             &
+              &  fract(ic),                               &
+              &  fract_sibl(ic),                          &
+              ! Soil hydrological properties
+              &  soil_depth_sl(ic,:),                     &
+              &  soil_depth_sl_sibl(ic,:),                &
+              &  wtr_soil_fc_sl(ic,:),                    &
+              &  wtr_soil_fc_sl_sibl(ic,:),               &
+              &  wtr_soil_sat_sl(ic,:),                   &
+              &  wtr_soil_sat_sl_sibl(ic,:),              &
+              &  wtr_soil_res_sl(ic,:),                   &
+              &  wtr_soil_res_sl_sibl(ic,:),              &
+              &  hyd_cond_sat_sl(ic,:),                   &
+              &  hyd_cond_sat_sl_sibl(ic,:),              &
+              &  hyd_cond_sl(ic,:),                       &
+              &  hyd_cond_sl_sibl(ic,:),                  &
+              &  mpot_act(ic,:),                          &
+              &  mpot_act_sibl(ic,:),                     &
+              ! Soil thermal properties
+              &  soil_e%ubounds(:),                       &
+              &  t_soil_sl(ic,:),                         &
+              &  t_soil_sl_sibl(ic,:),                    &
+              &  heat_cond_sl(ic,:),                      &
+              &  heat_cond_sl_sibl(ic,:),                 &
+              &  vol_heat_cap_sl(ic,:),                   &
+              &  vol_heat_cap_sl_sibl(ic,:),              &
+              ! Soil water fluxes
+              &  wtr_diffusion_in_sl(ic,:),               &
+              &  wtr_diffusion_in_sl_sibl(ic,:),          &
+              &  wtr_diffusion_out_sl(ic,:),              &
+              &  wtr_diffusion_out_sl_sibl(ic,:),         &
+              &  wtr_lex_net_sl(ic,:),                    &
+              &  wtr_lex_net_sl_sibl(ic,:),               &
+              &  wtr_soil_sl(ic,:),                       &
+              &  wtr_soil_sl_sibl(ic,:),                  &
+              ! Soil heat fluxes
+              &  nrg_diffusion_in_sl(ic,:),               &
+              &  nrg_diffusion_in_sl_sibl(ic,:),          &
+              &  nrg_diffusion_out_sl(ic,:),              &
+              &  nrg_diffusion_out_sl_sibl(ic,:),         &
+              &  nrg_lex_net_sl(ic,:),                    &
+              &  nrg_lex_net_sl_sibl(ic,:)                &
+              &  )
+          END DO
 
+          IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr) THEN
             DO ic = 1, nc
               wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
                 &                         + wtr_diffusion_in_sl(ic,:)
@@ -1002,27 +1003,6 @@ CONTAINS
                     &  nrg_lex_net_sl(ic,:)                   &
                     &  )
                 END IF
-
-                CALL calc_diffusion_heat(nsoil, dtime,        &
-                  &  soil_e%dz(:),                            &
-                  &  h_offset_ct(ic,lex_ids),                 &
-                  &  length_scale_ct(ic,lex_ids),             &
-                  &  length_iface_ct(ic,lex_ids),             &
-                  &  fract(ic),                               &
-                  &  fract_sibl(ic),                          &
-                  &  t_soil_sl(ic,:),                         &
-                  &  t_soil_sl_sibl(ic,:),                    &
-                  &  heat_cond_sl(ic,:),                      &
-                  &  heat_cond_sl_sibl(ic,:),                 &
-                  &  vol_heat_cap_sl(ic,:),                   &
-                  &  vol_heat_cap_sl_sibl(ic,:),              &
-                  &  nrg_diffusion_in_sl(ic,:),               &
-                  &  nrg_diffusion_in_sl_sibl(ic,:),          &
-                  &  nrg_diffusion_out_sl(ic,:),              &
-                  &  nrg_diffusion_out_sl_sibl(ic,:),         &
-                  &  nrg_lex_net_sl(ic,:),                    &
-                  &  nrg_lex_net_sl_sibl(ic,:)                &
-                  &  )
               END IF
             END DO
           END IF
