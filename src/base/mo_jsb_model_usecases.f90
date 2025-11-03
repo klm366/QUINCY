@@ -369,14 +369,14 @@ CONTAINS
         ! thus much time can be saved by calculating only once. However, a specific peatland tile
         ! requires special treatment and thus each PFT must be calculcated by itself
         IF (model%processes(CH4_)%p%config%run_case == 1) THEN
+          IF (model%processes(MEGAN_)%p%config%active) THEN
+            CALL pft_tile%Set_process_action(MEGAN_, ON_TILE_, AGGREGATE_)
+          END IF
           IF (model%processes(TOP_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(TOP_, ON_TILE_, AGGREGATE_)
           END IF
           IF (model%processes(CH4_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(CH4_, ON_TILE_, AGGREGATE_)
-          END IF
-          IF (model%processes(MEGAN_)%p%config%active) THEN
-            CALL pft_tile%Set_process_action(MEGAN_, ON_TILE_, AGGREGATE_)
           END IF
         ENDIF
 
@@ -386,6 +386,9 @@ CONTAINS
             !$ACC ENTER DATA COPYIN(pft_tile)
            ! See comment above regarding placement of TOP_ and CH4_ processes
             IF (model%processes(CH4_)%p%config%run_case == 2) THEN
+              IF (model%processes(MEGAN_)%p%config%active) THEN
+                CALL pft_tile%Set_process_action(MEGAN_, ON_LEAFS_, AGGREGATE_)
+              END IF
               IF (model%processes(TOP_)%p%config%active) THEN
                 CALL pft_tile%Set_process_action(TOP_, ON_LEAFS_, AGGREGATE_)
               END IF
@@ -393,9 +396,6 @@ CONTAINS
                 CALL pft_tile%Set_process_action(CH4_, ON_LEAFS_, AGGREGATE_)
               END IF
             ENDIF
-            IF (model%processes(MEGAN_)%p%config%active) THEN
-              CALL pft_tile%Set_process_action(MEGAN_, ON_LEAFS_, AGGREGATE_)
-            END IF
             NULLIFY(pft_tile)
           END DO
 
