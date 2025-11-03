@@ -232,7 +232,7 @@ CONTAINS
       &                                              lai_ta,  lai_relax_short, lai_relax_long, &
       &                       swvis_srf_down+swnir_srf_down,  pfd_relax_short, pfd_relax_long)
 
-    IF (.NOT. lnew_day) RETURN ! Megan process is updated only once per day TODO: Check this!
+!    IF (.NOT. lnew_day) RETURN ! Megan process is updated only once per day TODO: Check this!
 
     ! A2L_ variables
     dsl4jsb_Get_var2D_onChunk(A2L_,   cos_zenith_angle)
