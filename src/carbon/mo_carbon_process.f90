@@ -380,7 +380,8 @@ CONTAINS
           ! add the fire affected fraction of the above ground wood pools
         & + c_woods(ic) * fire_fract_wood_2_atmos * fract_wood_aboveGround    &
           ! scale with the burned fraction
-        & ) * burned_fract(ic) * bfe * molarMassCO2_kg / sec_per_day
+!        & ) * burned_fract(ic) * bfe * molarMassCO2_kg / sec_per_day
+        & ) * bfe * molarMassCO2_kg / sec_per_day
 
       ! Reduce the above ground yasso pools accordingly
       fraction = 1._wp - bfe
