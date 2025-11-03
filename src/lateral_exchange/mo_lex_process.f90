@@ -42,138 +42,142 @@ CONTAINS
   !>
   !! Get intersected grid from two soil grids with vertical offset
   !!
-  SUBROUTINE get_intersected_grid(offset, d_bedrock, dz, nsoil, ngrid, &
-    &  index_tile, index_sibl, l_act_hydro, layer_thickness)
+  SUBROUTINE get_intersected_grid(dz, nsoil, ngrid, offset, d_bedrock, d_pond, &
+    &  index_tile, index_sibl, layer_thickness, status)
 
     USE mo_util_sort,   ONLY: quicksort
 
-    INTEGER,  INTENT(in)  :: ngrid,            &  !< Maximum number of layers in intersected grid
-      &                      nsoil                !< Number of standard soil layers per tile
+    REAL(wp), INTENT(in)  :: dz(:)                !< Standard soil layer bottom depths in both tiles [m]
+    INTEGER,  INTENT(in)  :: nsoil,            &  !< Number of standard soil layers per tile
+      &                      ngrid                !< Maximum number of layers in intersected grid
 
     REAL(wp), INTENT(in)  :: offset,           &  !< Vertical offset between tile and sibling soil layers [m]
-      &                      d_bedrock            !< Depth to bedrock in both tiles [m]
-    REAL(wp), INTENT(in)  :: dz(:)                !< Standard soil layer bottom depths in both tiles [m]
+      &                      d_bedrock,        &  !< Depth to bedrock in both tiles [m]
+      &                      d_pond               !< Water content of surface ponds [m]
 
     INTEGER,  INTENT(out) :: index_tile(:),    &  !< Index mapping from intersected grid to tile soil layers
       &                      index_sibl(:)        !< Index mapping from intersected grid to sibling soil layers
-    LOGICAL,  INTENT(out) :: l_act_hydro(:)       !< T: new grid soil layer above bedrock in all tiles
     REAL(wp), INTENT(out) :: layer_thickness(:)   !< Soil layer thicknesses on intersected grid [m]
+    CHARACTER(LEN=4), INTENT(out) :: status(:)    !< Connection type (None, Pond, Soil, Rock) between tile and sibling
 
-    INTEGER               :: index_bedrock,    &  !< Index of bedrock layer in standard soil grid
-      &                      i,                &  !< Index variable for layers on any vertical grid
+    INTEGER               :: i,                &  !< Index variable for layers on any vertical grid
       &                      i_tile,           &  !< Current index position in tile soil grid
       &                      i_sibl               !< Current index position in sibling soil grid
 
-    INTEGER               :: index_list(nsoil+1)  !< Temporary index list for soil layers
+    REAL(wp)              :: top, bot,         &  !< Depth boundaries of current layer on intersected grid [m]
+      &                      br_tile,          &  !< Bedrock depth on tile [m]
+      &                      br_sibl,          &  !< Bedrock depth on sibling [m]
+      &                      dz_pond              !< Upper elevation of pond wrt tile [m]
 
-    REAL(wp)              :: top, bot             !< Top and bottom of current layer on intersected grid [m]
-
-    REAL(wp)              :: dz_tile(nsoil+1), &  !< Bottom depth of soil layers at tile [m]
-      &                      dz_sibl(nsoil+1)     !< Bottom depth of soil layers at sibling [m]
+    REAL(wp)              :: dz_tile(nsoil),   &  !< Bottom depth of soil layers at tile [m]
+      &                      dz_sibl(nsoil)       !< Bottom depth of soil layers at sibling [m]
 
     REAL(wp)              :: new_layers(ngrid)    !< Intersecting grids of both soil layer [m]
 
     !$ACC ROUTINE SEQ
 
-    ! Determine bedrock index in standard soil grid
-    index_bedrock = 1
-    DO i = 1, nsoil
-      IF (dz(i) >= d_bedrock) THEN
-        index_bedrock = i
-        EXIT
-      END IF
-    END DO
-
     ! Initialize new grid variables
     DO i = 1, ngrid
-      index_tile(i)      = 0
-      index_sibl(i)      = 0
-      l_act_hydro(i)     = .FALSE.
+      index_tile(i)      = -1
+      index_sibl(i)      = -1
       layer_thickness(i) = 0._wp
+      status(i)          = 'None'
     END DO
 
-    ! Add offset and bedrock depth to soil profiles of tile and sibling
-    ! and generate according soil layer index list
-    DO i = 1, nsoil
-      dz_tile(i)    = dz(i)
-      dz_sibl(i)    = dz(i) + offset
-      index_list(i) = i
-    END DO
-    dz_tile(nsoil+1)    = d_bedrock
-    dz_sibl(nsoil+1)    = d_bedrock + offset
-    index_list(nsoil+1) = index_bedrock
+    ! Setup soil profiles using the tile as reference
+    dz_tile(:) = dz(:)
+    dz_sibl(:) = dz(:) + offset
+    br_tile    = d_bedrock
+    br_sibl    = d_bedrock + offset
 
-    ! Merge soil depth profiles into one common grid
-    DO i = 1, nsoil + 1
-      new_layers(i)             = dz_tile(i)
-      new_layers(nsoil + 1 + i) = dz_sibl(i)
-    END DO
-
-    ! Sort index list, soil depths and intersected grid depths
-    CALL quicksort(index_list)
-    CALL quicksort(dz_tile)
-    CALL quicksort(dz_sibl)
-    CALL quicksort(new_layers)
-
-    ! Initialize starting positions for grid indices
+    ! Setup top level elevation and indices
     IF (offset < 0._wp) THEN
       ! Sibling tile is above tile
-      i_tile = 1
-      top = 0._wp
-      ! Find first sibling soil layer index that intersects with first soil layer on tile
-      DO i = 1, nsoil + 1
-        IF (dz_sibl(i) >= 0._wp) THEN
-          i_sibl = i
-          EXIT
-        END IF
-      END DO
+      top = offset
+      IF (d_pond + offset < 0) THEN
+        ! Depression not completely filled with ponded water
+        i_tile = -1
+      ELSE
+        ! Depression completely filled with ponded water
+        i_tile = 0
+      END IF
+      i_sibl = 1
+      dz_pond = -d_pond
     ELSE IF (offset > 0._wp) THEN
       ! Sibling tile is below tile
-      i_sibl = 1
-      top = offset
-      ! Find first sibling soil layer index that intersects with first soil layer on tile
-      DO i = 1, nsoil + 1
-        IF (dz_tile(i) >= offset) THEN
-          i_tile = i
-          EXIT
-        END IF
-      END DO
+      top = 0._wp
+      i_tile = 1
+      IF (offset - d_pond > 0) THEN
+        ! Depression not completely filled with ponded water
+        i_sibl = -1
+      ELSE
+        ! Depression completely filled with ponded water
+        i_sibl = 0
+      END IF
+      dz_pond = offset - d_pond
     ELSE
-      ! Sibling tile is equal or below tile
-      top    = 0._wp
+      ! Both tiles are at the same level
+      top = 0._wp
       i_tile = 1
       i_sibl = 1
+      dz_pond = 0._wp
     END IF
 
-    ! Loop over all layers in intersected grid and determine mapping indices and
-    ! layer thickness
+    ! Merge soil depth profiles into one common grid
+    DO i = 1, nsoil
+      new_layers(i)         = dz_tile(i)
+      new_layers(nsoil + i) = dz_sibl(i)
+    END DO
+    ! Add pond depth to layers
+    new_layers(2*nsoil + 1) = dz_pond
+    ! Add lower soil surface to layers
+    new_layers(2*nsoil + 2) = MAX(0._wp, offset)
+    ! Add bedrock depth to layers
+    new_layers(2*nsoil + 3) = br_tile
+    new_layers(2*nsoil + 4) = br_sibl
+
+    ! Order new layers
+    CALL quicksort(new_layers)
+
+    ! Loop over all layers in intersected grid
     DO i = 1, ngrid
-      ! Set new layer bottom depth
       bot = new_layers(i)
-      ! Increase index of layer boundary is crossed on each tile
-      IF (bot > dz_tile(i_tile) .AND. bot <= dz_tile(nsoil+1)) THEN
-        i_tile = i_tile + 1
-      END IF
-      IF (bot > dz_sibl(i_sibl) .AND. bot <= dz_sibl(nsoil+1)) THEN
-        i_sibl = i_sibl + 1
-      END IF
-      ! Compute layer thickness
-      IF (bot > 0._wp .AND. bot <= MIN(dz_tile(nsoil+1), dz_sibl(nsoil+1))) THEN
+      IF (bot > top .AND. i_tile <= nsoil .AND. i_sibl <= nsoil) THEN
+        ! There is a layer here --> store thickness and status and update indices
         layer_thickness(i) = bot - top
-      ELSE
-        layer_thickness(i) = 0._wp
-      END IF
-      ! Set mapping indices
-      IF (i_tile <= nsoil + 1 .AND. i_sibl <= nsoil + 1) THEN
-        index_tile(i) = index_list(i_tile)
-        index_sibl(i) = index_list(i_sibl)
-        ! Mark layer as hydrologically active layer if above bedrock in both columns
-        IF (layer_thickness(i) > 0._wp .AND. bot <= MIN(d_bedrock, d_bedrock + offset)) THEN
-          l_act_hydro(i) = .TRUE.
+        index_tile(i) = i_tile
+        index_sibl(i) = i_sibl
+        ! Determine connection status between tile and sibling soil layers
+        IF ((i_tile == 0 .AND. i_sibl > 0 .AND. bot <= br_sibl) .OR. &
+          & (i_sibl == 0 .AND. i_tile > 0 .AND. bot <= br_tile)) THEN
+          status(i) = 'Pond'
+        ELSE IF (i_tile > 0 .AND. i_sibl > 0 .AND. bot <= br_tile .AND. bot <= br_sibl) THEN
+          status(i) = 'Soil'
+        ELSE IF (i_tile > 0 .AND. i_sibl > 0) THEN
+          status(i) = 'Rock'
         END IF
-      ELSE
-        ! Below valid soil layers
-        layer_thickness(i) = 0._wp
+        ! Update indices for next layer for tile
+        IF (i_tile < 0 .AND. bot >= dz_pond .AND. d_pond > 0._wp) THEN
+          ! Entering pond on tile --> set index to 0
+          i_tile = 0
+        ELSE IF (i_tile < 1 .AND. bot >= 0._wp) THEN
+          ! Depression on tile but now entering soil column --> set index to 1
+          i_tile = 1
+        ELSE IF (i_tile > 0 .AND. bot >= dz_tile(MAX(i_tile,1))) THEN
+          ! Entering next soil layer on tile
+          i_tile = i_tile + 1
+        END IF
+        ! Update indices for next layer for sibling tile
+        IF (i_sibl < 0 .AND. bot >= dz_pond .AND. d_pond > 0._wp) THEN
+          ! Entering pond layer on sibling tile --> set index to 0
+          i_sibl = 0
+        ELSE IF (i_sibl < 1 .AND. bot >= offset) THEN
+          ! Depression on sibling but now entering soil column --> set index to 1
+          i_sibl = 1
+        ELSE IF (i_sibl > 0 .AND. bot >= dz_sibl(MAX(i_sibl,1))) THEN
+          ! Entering next soil layer on tile
+          i_sibl = i_sibl + 1
+        END IF
       END IF
       ! Set new layer top for next iteration
       top = MAX(bot, top)
@@ -626,7 +630,7 @@ CONTAINS
   !!
   SUBROUTINE calc_lat_fluxes_soil(                       &
       &      nc, nsoil, nrgrd, dtime,                    &
-      &      l_diff_water, l_diff_heat,                  &
+      &      l_diff_water, l_diff_heat, l_advec_heat,    &
       &      connect, h_offset, length_scale, len_inter, &
       &      tle_fract, sbl_fract,                       &
       &      dsoil_tle, dsoil_sbl,                       &
@@ -642,6 +646,7 @@ CONTAINS
       &      heat_cap_soil_tle, heat_cap_soil_sbl,       &
       &      wtr_diff_in_tle, wtr_diff_in_sbl,           &
       &      wtr_diff_out_tle, wtr_diff_out_sbl,         &
+      &      wtr_lat_in_sl_tle,  wtr_lat_in_sl_sbl,      &
       &      wtr_latflow_tle, wtr_latflow_sbl,           &
       &      wtr_soil_tle, wtr_soil_sbl,                 &
       &      nrg_diff_in_tle, nrg_diff_in_sbl,           &
@@ -658,7 +663,8 @@ CONTAINS
     REAL(wp), INTENT(in)    :: dtime                      !< Timestep length [s]
 
     LOGICAL,  INTENT(in)    :: l_diff_water,           &  !< T: compute diffusive water fluxes
-      &                        l_diff_heat                !< T: compute diffusive heat fluxes
+      &                        l_diff_heat,            &  !< T: compute diffusive heat fluxes
+      &                        l_advec_heat               !< T: compute advective heat fluxes
 
     REAL(wp), INTENT(in)    :: connect(:),             &  !< Connectivity array for lateral exchange
       &                        h_offset(:),            &  !< Differece in surface elevation between tile and sibling [m]
@@ -682,7 +688,7 @@ CONTAINS
       &                        mpot_tle(:,:),          &  !< Soil layer matric potential on source tile [m]
       &                        mpot_sbl(:,:)              !< Soil layer matric potential on target tile [m]
 
-    REAL(wp), INTENT(in)    :: dz(:)                      !< Total soil layer depth [m]
+    REAL(wp), INTENT(in)    :: dz(:)                      !< Lower depth bounds for soil layers [m]
     REAL(wp), INTENT(in)    :: t_soil_tle(:,:),        &  !< Soil tempertures of tile [K]
       &                        t_soil_sbl(:,:),        &  !< Soil tempertures of sibling [K]
       &                        heat_cond_soil_tle(:,:), &  !< Soil heat conductivity of tile [J m-1 s-1 K-1]
@@ -694,6 +700,8 @@ CONTAINS
       &                        wtr_diff_in_sbl(:,:),   &  !< Diffusive water influx at sibling [kg m-2 s-1]
       &                        wtr_diff_out_tle(:,:),  &  !< Diffusive water outflux at tile [kg m-2 s-1]
       &                        wtr_diff_out_sbl(:,:),  &  !< Diffusive water outflux at sibling [kg m-2 s-1]
+      &                        wtr_lat_in_sl_tle(:,:), &  !< Lateral water influx in soil layers at tile [kg m-2 s-1]
+      &                        wtr_lat_in_sl_sbl(:,:), &  !< Lateral water influx in soil layers at sibling [kg m-2 s-1]
       &                        wtr_latflow_tle(:,:),   &  !< Netflux (below ground) on tile [kg m-2 s-1]
       &                        wtr_latflow_sbl(:,:),   &  !< Netflux (below ground) on sibling [kg m-2 s-1]
       &                        wtr_soil_tle(:,:),      &  !< Soil water storage on tile [m]
@@ -717,7 +725,7 @@ CONTAINS
       &                        index_sibl(nc,nrgrd)       !< Mapping index from helper grid to sibling layers
 
     REAL(wp)                :: layer_thickness(nc,nrgrd)  !< Thickness of layers on helper grid [m]
-    LOGICAL                 :: l_act_hydro(nc,nrgrd)      !< T: lateral hydro. exchange active on given layer of helper grid
+    CHARACTER(LEN=4)        :: contype(nc,nrgrd)          !< Type of connection between tile and sibling
     REAL(wp)                :: fr_tle_rel(nc),         &  !< Relative fraction of tile [/]
       &                        fr_sbl_rel(nc),         &  !< Relative fraction of sibling [/]
       &                        sum_soil_tle(nc),       &  !< Total soil depth on tile [m]
@@ -750,13 +758,15 @@ CONTAINS
       &                        t_eq,                   &  !< Equilibrium temperature [K]
       &                        heat_flx_eq_lat            !< Equilirium energy flux between sibling and tile [J m-2 s-1]
 
-    REAL(wp)                :: sum_dz                     !< Total soil depth on tile and sibling [m]
-
     LOGICAL                 :: l_compute_water(nc),    &  !< T: water fluxes should be computed for a given cell
       &                        l_compute_heat(nc)         !< T: heat fluxes should be computed for a given cell
 
     REAL(wp)                :: wtr_diff_tle(nc,nsoil), &  !< Net diffusive flux on tile on soil layers [m]
       &                        wtr_diff_sbl(nc,nsoil)     !< Net diffusive flux on sibling on soil layers [m]
+
+    ! Reset lateral flux accumulators
+    wtr_lat_in_sl_tle(:,:) = wtr_lat_in_sl_tle(:,:) - wtr_diff_in_tle(:,:)
+    wtr_lat_in_sl_sbl(:,:) = wtr_lat_in_sl_sbl(:,:) - wtr_diff_in_sbl(:,:)
 
     ! Initilize fields for accumulating regridded output
     wtr_diff_tle(:,:) = 0._wp
@@ -764,7 +774,6 @@ CONTAINS
 
     sum_soil_tle(:) = SUM(dsoil_tle(:,:), DIM=2)
     sum_soil_sbl(:) = SUM(dsoil_sbl(:,:), DIM=2)
-    sum_dz          = SUM(dz(:))
 
     ! Set basic conditions for lateral fluxes
     DO ic = 1, nc
@@ -790,7 +799,7 @@ CONTAINS
       END IF
 
       ! Test special conditions for heat fluxes
-      IF ((abs(h_offset(ic)) > sum_dz)  .OR. &
+      IF ((abs(h_offset(ic)) > dz(nsoil))  .OR. &
         & .NOT. l_diff_heat) THEN
         ! No lateral fluxes computed under these conditions
         l_compute_heat(ic) = .FALSE.
@@ -800,12 +809,13 @@ CONTAINS
       IF (l_compute_water(ic) .OR. l_compute_heat(ic)) THEN
         ! Get vertical grid information for intersecting soil layers
         ! Currently assumes soil depth and layering is equal on all tiles
-        CALL get_intersected_grid(h_offset(ic), sum_soil_tle(ic), dz(:), nsoil, nrgrd, &
-          &  index_tile(ic,:), index_sibl(ic,:), l_act_hydro(ic,:), layer_thickness(ic,:))
+        ! Pond depth is set to zero, as no pond interaction is needed for soil diffusion
+        CALL get_intersected_grid(dz(:), nsoil, nrgrd, h_offset(ic), sum_soil_tle(ic), 0._wp, &
+          & index_tile(ic,:), index_sibl(ic,:), layer_thickness(ic,:), contype(ic,:))
       END IF
     END DO
 
-
+    ! First loop: compute water and energy diffusion between tiles on regridded soil layers
     DO i = 1, nrgrd
       DO ic = 1, nc
 
@@ -814,7 +824,7 @@ CONTAINS
         h = layer_thickness(ic,i)
 
         ! Compute lateral diffusion of water within bedrock layers
-        IF (l_compute_water(ic) .AND. h > 0._wp .AND. l_act_hydro(ic,i)) THEN
+        IF (l_compute_water(ic) .AND. h > 0._wp .AND. contype(ic,i) == "Soil") THEN
           ! Space for liquid water must exists in both tiles
           IF (wsat_tle(ic,i_tle) > 0._wp .AND. wsat_sbl(ic,i_sbl) > 0._wp) THEN
 
@@ -867,7 +877,7 @@ CONTAINS
         END IF
 
         ! Compute lateral diffusion of heat within soil column
-        IF (l_compute_heat(ic) .AND. h > 0._wp) THEN
+        IF (l_compute_heat(ic) .AND. h > 0._wp .AND. (contype(ic,i) == "Soil" .OR. contype(ic,i) == "Rock")) THEN
           a_inter              = len_inter(ic) * h
 
           ! Flux is determined by the difference in temperature between the two tiles
@@ -917,6 +927,10 @@ CONTAINS
     wtr_diff_out_tle(:,:) = wtr_diff_out_tle(:,:) - MIN(0._wp, wtr_diff_tle(:,:)) * rhoh2o / dtime
     wtr_diff_out_sbl(:,:) = wtr_diff_out_sbl(:,:) - MIN(0._wp, wtr_diff_sbl(:,:)) * rhoh2o / dtime
 
+    ! Adding updated water diffusion fluxes to lateral fluxes
+    wtr_lat_in_sl_tle(:,:)   = wtr_lat_in_sl_tle(:,:) + wtr_diff_in_tle(:,:)
+    wtr_lat_in_sl_sbl(:,:)   = wtr_lat_in_sl_sbl(:,:) + wtr_diff_in_sbl(:,:)
+
   END SUBROUTINE calc_lat_fluxes_soil
 
   ! ===============================================================================================================================
@@ -924,12 +938,14 @@ CONTAINS
   !! Compute intertile heat exchenge due to lateral movement of water
   !!
   SUBROUTINE calc_convection_heat(                         &
-      &      nc, nsoil, dtime,                             &
+      &      nc, nsoil, nrgrd, dtime,                      &
       &      dz, h_offset,                                 &
       &      tle_fract, sbl_fract,                         &
       &      wtr_inflx_lat_srf_tle, wtr_inflx_lat_srf_sbl, &
       &      t_soil_tle, t_soil_sbl,                       &
+      &      wtr_pond_tle, wtr_pond_sbl,                   &
       &      wtr_inflx_lat_sl_tle, wtr_inflx_lat_sl_sbl,   &
+      &      dsoil_tle, dsoil_sbl,                         &
       &      heat_cap_soil_tle, heat_cap_soil_sbl,         &
       &      cnvctv_in_tle, cnvctv_in_sbl,                 &
       &      cnvctv_out_tle, cnvctv_out_sbl,               &
@@ -940,7 +956,8 @@ CONTAINS
     USE mo_sse_constants, ONLY: vol_hcap_water
 
     INTEGER, INTENT(in)     :: nc,                        &  !< Number of grid cells
-      &                        nsoil                         !< Number of oil layers
+      &                        nsoil,                     &  !< Number of oil layers
+      &                        nrgrd                         !< Number of layers on helper grid determined by layer overlaps
 
     REAL(wp), INTENT(in)    :: dtime                         !< Timestep length [s]
 
@@ -949,12 +966,16 @@ CONTAINS
       &                        sbl_fract(:),              &  !< Area fraction of sibling [/]
       &                        wtr_inflx_lat_srf_tle(:),  &  !< Lateral flux (surface) of water from sibling to tile [kg m-2 s-1]
       &                        wtr_inflx_lat_srf_sbl(:),  &  !< Lateral flux (surface) of water from tile to sibling [kg m-2 s-1]
+      &                        wtr_pond_tle(:),           &  !< Ponded water on tile [m]
+      &                        wtr_pond_sbl(:),           &  !< Ponded water on sibling [m]
       &                        dz(:)                         !< Layer thickness [m]
 
     REAL(wp), INTENT(in)    :: t_soil_tle(:,:),           &  !< Soil tempertures of tile [K]
       &                        t_soil_sbl(:,:),           &  !< Soil tempertures of sibling [K]
       &                        wtr_inflx_lat_sl_tle(:,:), &  !< Lateral flux (soil) of water from sibling to tile [kg m-2 s-1]
       &                        wtr_inflx_lat_sl_sbl(:,:), &  !< Lateral flux (soil) of water from tile to sibling [kg m-2 s-1]
+      &                        dsoil_tle(:,:),            &  !< Soil depth on layers of tile [m]
+      &                        dsoil_sbl(:,:),            &  !< Soil depth on layers of sibling [m]
       &                        heat_cap_soil_tle(:,:),    &  !< Soil heat capacity of tile [J m-3 K-1]
       &                        heat_cap_soil_sbl(:,:)        !< Soil heat capacity of sibling [J m-3 K-1]
 
@@ -969,12 +990,21 @@ CONTAINS
 
 
     ! Local variables ------------------------------------------------------------------------------------
-    INTEGER                 :: nrgrd,                  &  !< Number of layers on helper grid determined by layer overlaps
-      &                        ic,                     &  !< Index variable for grid cells
+    INTEGER                 :: ic,                     &  !< Index variable for grid cells
       &                        is,                     &  !< Index variable for soil layers
       &                        i, i_tle, i_sbl            !< Index variables for layers on helper grid (i), on tile (i_tle) and sibling tile (i_sbl)
+    INTEGER                 :: index_tile(nc,nrgrd),   &  !< Mapping index from helper grid to tile layers
+      &                        index_sibl(nc,nrgrd)       !< Mapping index from helper grid to sibling layers
+
+    REAL(wp)                :: layer_thickness(nc,nrgrd)  !< Thickness of layers on helper grid [m]
+    CHARACTER(LEN=4)        :: contype(nc,nrgrd)          !< Type of connection between tile and sibling
 
     LOGICAL                 :: l_compute(nc)              !< Flag to indicate whether fluxes should be computed for a given cell
+
+    REAL(wp)                :: dz_bedrock(nc),         &  !< Depth until bedrock (assumed to be equal on tile and sibling) [m]
+      &                        dz_pond(nc)                !< Pond depth [m]
+
+    REAL(wp)                :: dz_lb(nsoil)               !< Lower depth bounds of soil layers [m]
 
     REAL(wp)                :: dz_sum,                 &  !< Total soil column depth [m]
       &                        z_tle,                  &  !< Layer bottom of current layer on tile [m]
@@ -996,55 +1026,48 @@ CONTAINS
 
     ! Initialize 1D fields
     dz_sum = 0._wp
+    dz_lb(:) = 0._wp
     DO is = 1, nsoil
       dz_sum = dz_sum + dz(is)
+      IF (is == 1) THEN
+        dz_lb(is) = dz(is)
+      ELSE
+        dz_lb(is) = dz_lb(is-1) + dz(is)
+      END IF
     END DO
+
+    ! Compute bedrock depth (assumed equal on tile and sibling)
+    dz_bedrock(:) = SUM(dsoil_tle(:,:), DIM=2)
 
     ! Idenify grid cells where fluxes should be computed
     DO ic = 1, nc
       IF (abs(h_offset(ic)) > dz_sum .OR. &
         & tle_fract(ic) < 1.0e-10_wp .OR. sbl_fract(ic) < 1.0e-10_wp) THEN
         l_compute(ic) = .FALSE.
+        dz_pond(ic) = 0._wp
       ELSE
         l_compute(ic) = .TRUE.
+        dz_pond(ic) = MAX(wtr_pond_tle(ic), wtr_pond_sbl(ic))
+        ! Get vertical grid information for intersecting soil layers
+        ! Currently assumes soil depth and layering is equal on all tiles
+        CALL get_intersected_grid(dz_lb(:), nsoil, nrgrd, h_offset(ic), dz_bedrock(ic), dz_pond(ic), &
+          & index_tile(ic,:), index_sibl(ic,:), layer_thickness(ic,:), contype(ic,:))
       END IF
     END DO
-
-    ! Determine number of layers on helper grid
-    nrgrd = nsoil * 2 + 3
 
     ! Start setting up the interpolated helper grid
     ! As ponded water / ice do not have a heat content we only account for energy exchange in the soil:
     DO i = 1, nrgrd
       DO ic = 1, nc
         IF (l_compute(ic)) THEN
-          ! Initialize first
-          IF (i == 1) THEN
-            IF (h_offset(ic) < 0._wp) THEN
-              i_tle = 0
-              i_sbl = 1
-              z_tle = abs(h_offset(ic))
-              z_sbl = dz(i_sbl)
-            ELSE IF  (h_offset(ic) > 0._wp) THEN
-              i_tle = 1
-              i_sbl = 0
-              z_tle = dz(i_tle)
-              z_sbl = abs(h_offset(ic))
-            ELSE
-              i_tle = 1
-              i_sbl = 1
-              z_tle = dz(i_tle)
-              z_sbl = dz(i_sbl)
-            END IF
 
-            z_rgrd_top = 0._wp
-            z_rgrd_bot = MIN(z_tle, z_sbl)
-          END IF
+          ! Get indices and layer thickness for actual cell and layer
+          i_tle = index_tile(ic,i)
+          i_sbl = index_sibl(ic,i)
+          h     = layer_thickness(ic,i)
 
           ! First determine the lateral heat fluxes for water movements within the soil
-          IF (i_tle <= nsoil .AND. i_sbl <= nsoil) THEN ! Within the soil column of both tiles
-
-            h = z_rgrd_bot - z_rgrd_top
+          IF (contype(ic,i) /= "None") THEN ! Within the pond or soil column of both tiles
 
             IF (i_tle > 0) THEN
               t_tle_rgrd            = t_soil_tle(ic,i_tle)
@@ -1110,22 +1133,6 @@ CONTAINS
               heat_flx_lat_sbl(ic,i_sbl) = heat_flx_lat_sbl(ic,i_sbl) + heat_flx_sbl
             END IF
 
-            ! Determening the top and bottem of the next layer of the regridded
-            IF (z_rgrd_bot == z_tle) THEN
-              i_tle = i_tle + 1
-              IF (i_tle <= nsoil) THEN
-                z_tle = z_tle + dz(i_tle)
-              END IF
-            END IF
-
-            IF (z_rgrd_bot == z_sbl) THEN
-              i_sbl = i_sbl + 1
-              IF (i_sbl <= nsoil) THEN
-                z_sbl = z_sbl + dz(i_sbl)
-              END IF
-            END IF
-            z_rgrd_top = z_rgrd_bot
-            z_rgrd_bot = MIN(z_tle, z_sbl)
           END IF
         END IF
       END DO

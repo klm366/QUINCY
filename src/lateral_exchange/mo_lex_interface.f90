@@ -418,6 +418,7 @@ CONTAINS
       & wtr_runoff_out,       &
       & weq_snowblow_out,     &
       & weq_pond,             &
+      & wtr_pond,             &
       & weq_snow,             &
       & weq_snow_soil,        &
       & new_snow_soil,        &
@@ -593,6 +594,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)                 ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)               ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)               ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)               ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)               ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)          ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, new_snow_soil)          ! inout
@@ -629,7 +631,7 @@ CONTAINS
     END DO
 
     ! Maximum number of intersecting soil layers for lateral exchange
-    nrgrd   = (nsoil + 1) * 2
+    nrgrd   = (nsoil + 2) * 2
 
     ! Loop over all tiles on the current tile level
     ! This includes tiles that ma not participate in the lateral exchange, such as glaciers.
@@ -900,20 +902,21 @@ CONTAINS
             END IF
           END DO
 
-          IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr) THEN
-            DO ic = 1, nc
-              wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
-                &                         - wtr_diffusion_in_sl(ic,:)
-              wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
-                &                         - wtr_diffusion_in_sl_sibl(ic,:)
-            END DO
-          END IF
+          ! IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr) THEN
+          !   DO ic = 1, nc
+          !     wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
+          !       &                         - wtr_diffusion_in_sl(ic,:)
+          !     wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
+          !       &                         - wtr_diffusion_in_sl_sibl(ic,:)
+          !   END DO
+          ! END IF
 
           ! Water and heat exchange between connected tiles
           CALL calc_lat_fluxes_soil(                    &
             &  nc, nsoil, nrgrd, dtime,                 &
             &  dsl4jsb_Config(LEX_)%l_dffsn_wtr,        &
             &  dsl4jsb_Config(LEX_)%l_dffsn_nrg,        &
+            &  dsl4jsb_Config(LEX_)%l_cnvctn_nrg,       &
             &  microcon_ctc_ct(:,lex_ids),              &
             &  h_offset_ct(:,lex_ids),                  &
             &  length_scale_ct(:,lex_ids),              &
@@ -948,6 +951,8 @@ CONTAINS
             &  wtr_diffusion_in_sl_sibl(:,:),           &
             &  wtr_diffusion_out_sl(:,:),               &
             &  wtr_diffusion_out_sl_sibl(:,:),          &
+            &  wtr_incomming_sl(:,:),                   &
+            &  wtr_incomming_sl_sibl(:,:),              &
             &  wtr_lex_net_sl(:,:),                     &
             &  wtr_lex_net_sl_sibl(:,:),                &
             &  wtr_soil_sl(:,:),                        &
@@ -961,14 +966,14 @@ CONTAINS
             &  nrg_lex_net_sl_sibl(:,:)                 &
             &  )
 
-          IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr) THEN
-            DO ic = 1, nc
-              wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
-                &                         + wtr_diffusion_in_sl(ic,:)
-              wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
-                &                         + wtr_diffusion_in_sl_sibl(ic,:)
-            END DO
-          END IF
+          ! IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr) THEN
+          !   DO ic = 1, nc
+          !     wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
+          !       &                         + wtr_diffusion_in_sl(ic,:)
+          !     wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
+          !       &                         + wtr_diffusion_in_sl_sibl(ic,:)
+          !   END DO
+          ! END IF
 
           IF (dsl4jsb_Config(LEX_)%l_dffsn_nrg) THEN
             DO ic = 1, nc
@@ -1010,7 +1015,8 @@ CONTAINS
             ! Fluxes reulting from the heat contained in the lateral fluxes of water
             ! Since an update of the actual soil temperatures outside of the SSE routines is not intended,
             ! only the lateral heat flux is calculated and passed to the SSE routine as an energy source/sink.
-            CALL calc_convection_heat(nc, nsoil, dtime,  &
+            CALL calc_convection_heat(                   &
+              &  nc, nsoil, nrgrd, dtime,                &
               &  soil_e%dz(:),                           &
               &  h_offset_ct(:,lex_ids),                 &
               &  fract(:),                               &
@@ -1019,8 +1025,12 @@ CONTAINS
               &  wtr_incomming_srf_sibl(:),              &
               &  t_soil_sl(:,:),                         &
               &  t_soil_sl_sibl(:,:),                    &
+              &  wtr_pond(:),                            &
+              &  wtr_pond_sibl(:),                       &
               &  wtr_incomming_sl(:,:),                  &
               &  wtr_incomming_sl_sibl(:,:),             &
+              &  soil_depth_sl(:,:),                     &
+              &  soil_depth_sl_sibl(:,:),                &
               &  vol_heat_cap_sl(:,:),                   &
               &  vol_heat_cap_sl_sibl(:,:),              &
               &  nrg_convection_in_sl(:,:),              &
