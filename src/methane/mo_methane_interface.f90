@@ -1041,7 +1041,7 @@ CONTAINS
       !   Herbivores
       IF (dsl4jsb_Config(CH4_)%do_herbivore) THEN
         DO ic = 1, nc
-          CALL calc_methane_herbivores(co2flux_herb_2_atm_ta(ic)/molarMassCO2_kg,dsl4jsb_Lctlib_param(woody_pft), &
+          CALL calc_methane_herbivores(co2flux_herb_2_atm_ta(ic)/CO2_consts%molarMass_kg,dsl4jsb_Lctlib_param(woody_pft), &
                                        CH4_out_herbivore(ic))
           CH4_out_herbivore(ic) = CH4_out_herbivore(ic) * dsl4jsb_Config(CH4_)%scale_herbivore
         ENDDO
