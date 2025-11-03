@@ -29,7 +29,7 @@ MODULE mo_util
   PRIVATE
 
   PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, tolower, int2string, real2string, logical2string, &
-    &       report_memory_usage, soil_init_from_texture
+    &       report_memory_usage, soil_init_from_texture, get_string_indexed, get_string_index
 
 #ifdef __QUINCY_STANDALONE__
 #else
@@ -281,6 +281,71 @@ CONTAINS
       END IF
     END DO
   END FUNCTION one_of_int
+
+  FUNCTION get_string_indexed(str,ind) RESULT(ret)
+    CHARACTER(len=16)            :: ret
+    CHARACTER(len=*), INTENT(in) :: str
+    INTEGER,          INTENT(in) :: ind
+    ! local variables:
+    INTEGER :: i, st, en
+
+    ret = ''
+    st = 1
+    en = -1
+    DO i=1,ind
+      en = INDEX(str(st:),',') + st - 1
+      IF (en < st) THEN
+        IF (i < ind-1) RETURN
+        en = LEN_TRIM(str) + 1
+      ENDIF
+      IF (i < Ind) st = en + 1
+    ENDDO
+    ret = str(st:en-1)
+
+  END FUNCTION get_string_indexed
+
+  INTEGER FUNCTION get_string_index(str,se) RESULT(ret)
+    CHARACTER(len=*), INTENT(in) :: str
+    CHARACTER(len=*), INTENT(in) :: se
+
+    INTEGER :: st, res, tst, n
+    LOGICAL :: lcont
+
+    ret = -1
+    st = 1
+    lCont = .TRUE.
+    DO WHILE (lCont)
+      res = INDEX(str(st:),se) + st - 1
+      IF (res < st) RETURN ! String not found
+      ! Searched string is either at the beginning or preceeded with a ','
+      IF (res == 1) THEN
+        lCont = .FALSE.
+      ELSE
+        IF (str(res-1:res-1)==',') lCont = .FALSE.
+      ENDIF
+      IF (.NOT. lCont) THEN
+        ! Searched string is either at the end or followed by a ','
+        lCont = .TRUE.
+        tst = res + LEN_TRIM(se)
+        IF (tst > LEN_TRIM(str)) THEN
+          lCont = .FALSE.
+        ELSE
+          IF (str(tst:tst)==',') lCont = .FALSE.
+        ENDIF
+      ENDIF
+      IF (lCont) st = res + 2
+    ENDDO
+
+    ! Now count commas
+    st = 1
+    n = 1
+    DO WHILE (st < res)
+      st = INDEX(str(st:),',') + st
+      n = n + 1
+    ENDDO
+    ret = n
+
+  END FUNCTION get_string_index
 
   !-----------------------------------------------------------------------------------------------------
   !> returns integer n as a string (often needed in printing messages)
