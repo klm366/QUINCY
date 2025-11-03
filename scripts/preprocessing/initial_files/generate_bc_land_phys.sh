@@ -173,7 +173,8 @@ for var in ${var_list}; do
     skin_conductivity )
   # ----------------------
       # Skin layer conductivity
-      ${cdo} setvar,${var} -selvar,SKC ${extpar_file} ${atmGridID}_${var}.nc
+      ${cdo} setvar,${var} -ifthen notsea.nc -setmisstonn -setmissval,0 \
+          -selvar,SKC ${extpar_file}  ${atmGridID}_${var}.nc
       ;;
   # ----------------------
     * )
