@@ -167,7 +167,7 @@ CONTAINS
     dsl4jsb_memory(MEGAN_)%NO%beta     = dsl4jsb_Config(MEGAN_)%beta_NO
     dsl4jsb_memory(MEGAN_)%NO%ldf      = 0._wp
     dsl4jsb_memory(MEGAN_)%NO%scale    = dsl4jsb_Config(MEGAN_)%scale_NO
-    dsl4jsb_memory(MEGAN_)%NO%ef       = dsl4jsb_Lctlib_param(em_fac_CO)
+    dsl4jsb_memory(MEGAN_)%NO%ef       = dsl4jsb_Lctlib_param(em_fac_NO)
     
 !    IF (debug_on() .OR. dsl4jsb_Config(MEGAN_)%dbg_process) &
 !      CALL message(TRIM(routine), 'Setting megan boundary conditions for tile '//TRIM(tile%name))
