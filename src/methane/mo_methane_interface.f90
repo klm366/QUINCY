@@ -274,7 +274,10 @@ CONTAINS
 
     ! Local variables
     !
+    CLASS(t_jsb_tile_abstract), POINTER :: curr_tile
+    TYPE(t_ch4_source_config), POINTER :: curr
     TYPE(t_jsb_model), POINTER :: model
+    LOGICAL, SAVE :: lfirstcall = .TRUE.
     dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_config(TOP_)
     dsl4jsb_Def_config(SSE_)
@@ -349,7 +352,7 @@ CONTAINS
     REAL(wp), POINTER :: AnoxDecompCarbon(:)
     REAL(wp), POINTER :: water_table(:)
     REAL(wp), POINTER :: tiller_area_sl(:)
-    REAL(wp), POINTER :: frac_tile(:)
+    REAL(wp), POINTER :: frac_tile(:), frac_tile_abs(:), frac1(:), tile_fac(:)
     REAL(wp), POINTER :: D_CH4(:), D_CO2(:), D_O2(:), D_used(:)
     REAL(wp), POINTER :: CH4_dry_sl(:), CO2_dry_sl(:), O2_dry_sl(:)
     REAL(wp), POINTER :: CH4_wet_sl(:), CO2_wet_sl(:), O2_wet_sl(:)
@@ -365,10 +368,11 @@ CONTAINS
     ! Pointers for assignment
     REAL(wp), POINTER :: GDD(:)
 
+    TYPE(t_datetime), POINTER :: time_next
     TYPE(t_jsb_grid), POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w
     REAL(wp) :: stored_C_sum
-    LOGICAL  :: lnew_day, lstart, lrestart
+    LOGICAL  :: lnew_day, lstart, lrestart, labs_tile_calc
     INTEGER  :: year, hour, minute, sec
     LOGICAL  :: is_veg, is_wet, is_peat, compute_flag, l_stop, l_GPP_dep
     LOGICAL  :: lissue, lissue_tst, dbg, lmsg
@@ -435,7 +439,6 @@ CONTAINS
       dsl4jsb_Config(CH4_)%do_termite = .FALSE.
     ENDIF
 
-    model  => Get_model(tile%owner_model_id)
     grid   => Get_grid(model%grid_id)
     soil_e => Get_vgrid('soil_depth_energy')
     soil_w => Get_vgrid('soil_depth_water')
@@ -463,6 +466,8 @@ CONTAINS
     ALLOCATE(AnoxDecompCarbon      (nc))
     ALLOCATE(water_table           (nc))
     ALLOCATE(frac_tile             (nc))
+    ALLOCATE(frac_tile_abs         (nc))
+    ALLOCATE(frac1                 (nc))
     ALLOCATE(tiller_area_sl        (nsoil))
     ALLOCATE(CH4_dry_sl            (nsoil))
     ALLOCATE(CO2_dry_sl            (nsoil))
@@ -1034,6 +1039,71 @@ CONTAINS
       CALL message(routine,TRIM(tile%name)//': Tridiagonal matrix solving failed for one or more points',all_print = .TRUE.)
     ENDIF
 
+    IF (dsl4jsb_Config(CH4_)%atm_couple) THEN
+      ! Sum total methane emissions for the atmosphere
+      dsl4jsb_Get_var2D_onChunk(CH4_, ch4_2_atm)
+      DO ic=1,nc
+        ch4_2_atm(ic) = 0._wp
+        frac1(ic) = 1._wp
+      ENDDO
+      labs_tile_calc = .FALSE.
+      curr => dsl4jsb_Config(CH4_)%ch4_sources
+      DO WHILE (ASSOCIATED(curr))
+        IF (curr%isource > 0) THEN
+          tile_fac => frac1
+          IF (.NOT. ASSOCIATED(curr%dta)) CALL allocate_ch4_source_data(curr) ! Needed by isource in {1,2,5,6,7}
+          IF (curr%isource >= 3) THEN
+            SELECT CASE (curr%isource)
+              CASE (3) ! Wetlands
+                DO ic=1,nc
+                  curr%dta(ics+ic-1,iblk) = CH4_wet%total_out(ic) + CH4_dry%total_out(ic)
+                ENDDO
+              CASE (4) ! Deposition
+                DO ic=1,nc
+                  curr%dta(ics+ic-1,iblk) = CH4_wet%in_out(ic) + CH4_dry%in_out(ic)
+                ENDDO
+              CASE (5) ! Termites
+                curr%dta => dsl4jsb_var2d_onDomain(CH4_,CH4_out_termite)
+              CASE (6) ! Herbivores
+                curr%dta => dsl4jsb_var2d_onDomain(CH4_,CH4_out_herbivore)
+              CASE (7) ! Fires
+                curr%dta => dsl4jsb_var2d_onDomain(CH4_,CH4_out_fire)
+            END SELECT
+          ELSE ! Something is to be read from file (climatology (isource==1) or time series (isource==2))
+            IF ((iblk==1) .AND. (lfirstcall .OR. is_newmonth(options%current_datetime,options%dtime)) .AND. &
+               .NOT. ASSOCIATED(tile%get_prev_sibling_tile())) THEN
+              IF (.NOT. curr%ifile%is_readable) CALL open_ch4_source_file(curr%ifile,curr%name_file,year) ! Open file if needed
+              CALL read_new_ch4_source_field(curr) ! Read next field
+              ! Prepare scaling for correct aggregation
+              IF (.NOT. labs_tile_calc) THEN
+                CALL model%Get_top_tile(curr_tile)
+                curr_tile => curr_tile%first_child_tile
+                DO WHILE (ASSOCIATED(curr_tile))
+                  IF (trim(curr_tile%name) == 'lake') EXIT
+                  curr_tile => curr_tile%next_sibling_tile
+                ENDDO
+                IF (ASSOCIATED(curr_tile)) THEN
+                  CALL curr_tile%Get_fraction(ics,ice,iblk,frac_tile)
+                  DO ic=1,nc
+                    frac_tile_abs(ic) = 1._wp - frac_tile(ic)
+                  ENDDO
+                  labs_tile_calc = .TRUE.
+                ENDIF
+              ENDIF
+              tile_fac => frac_tile_abs
+            ENDIF
+          ENDIF
+          ! Update the variable for the atmosphere
+          DO ic=1,nc
+            ch4_2_atm(ic) = ch4_2_atm(ic) + curr%dta(ics+ic-1,iblk) / tile_fac(ic) * curr%fac
+          ENDDO
+        ENDIF
+        curr => curr%next
+      ENDDO
+
+      lfirstcall = .FALSE.
+    ENDIF
+
     ! Deallocate local work arrays
     !
     DEALLOCATE(OxicDecompCarbon)
@@ -1041,6 +1111,8 @@ CONTAINS
     DEALLOCATE(water_table)
     DEALLOCATE(tiller_area_sl)
     DEALLOCATE(frac_tile)
+    DEALLOCATE(frac_tile_abs)
+    DEALLOCATE(frac1)
     DEALLOCATE(CH4_dry_sl)
     DEALLOCATE(CO2_dry_sl)
     DEALLOCATE( O2_dry_sl)
