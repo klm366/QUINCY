@@ -1136,7 +1136,7 @@ CONTAINS
     REAL(wp), INTENT(out) :: CH4_out_fire                     ! Negative methane emission from fire [mol m-2 s-1]
     REAL(wp), INTENT(out) :: fire_em_NO                       ! NOx emission      from fire [kg m-2 s-1]
     REAL(wp), INTENT(out) :: fire_em_CO                       ! CO emission       from fire [kg m-2 s-1]
-    REAL(wp), INTENT(out) :: fire_em_iso                      ! Isoprene emission from fire [ g m-2 s-1]
+    REAL(wp), INTENT(out) :: fire_em_iso                      ! Isoprene emission from fire [kg m-2 s-1]
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_methane_fire'
 
@@ -1148,10 +1148,10 @@ CONTAINS
     ! this SHOULD now be kg(dry matter)/m2(grid cell)/s
 
     ! flip sign for JSBACH sign convention -> loss of CH4 is negative
-    CH4_out_fire = ef(SPECIE_CH4,     landscape_type) * matter_burned_kg / 1000._wp / molarMassCH4_kg
-    fire_em_NO   = ef(SPECIE_NOx,     landscape_type) * matter_burned_kg / 1000._wp
-    fire_em_CO   = ef(SPECIE_CO,      landscape_type) * matter_burned_kg / 1000._wp
-    fire_em_iso  = ef(SPECIE_ISOPRENE,landscape_type) * matter_burned_kg ! isoprene emissions in [g], otherwise output does not work
+    CH4_out_fire = ef(SPECIE_CH4,     landscape_type) * matter_burned_kg / 1000._wp / molarMassCH4_kg ! [mol(CH4)]
+    fire_em_NO   = ef(SPECIE_NOx,     landscape_type) * matter_burned_kg / 1000._wp                   ! [kg(NO)]
+    fire_em_CO   = ef(SPECIE_CO,      landscape_type) * matter_burned_kg / 1000._wp                   ! [kg(CO)]
+    fire_em_iso  = ef(SPECIE_ISOPRENE,landscape_type) * matter_burned_kg / 1000._wp                   ! [kg(C5H8)]
 
   END SUBROUTINE calc_methane_fire
 

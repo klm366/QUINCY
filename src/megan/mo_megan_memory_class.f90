@@ -55,14 +55,14 @@ MODULE mo_megan_memory_class
 
     ! 2D Fields
     TYPE(t_jsb_var_real2d) ::              &
-      & total_out,                         &  ! Emission [kg m-2 s-1]
+      & total_out,                         &  ! Emission [g m-2 s-1]
       & gamma_age,                         &
       & gamma_temp
   END TYPE t_megan_specie
 
   TYPE t_megan_ptrs
     REAL(wp), DIMENSION(:), POINTER ::     &
-      & total_out,                         &  ! Emission [kg m-2 s-1]
+      & total_out,                         &  ! Emission [g m-2 s-1]
       & gamma_age,                         &
       & gamma_temp
   END TYPE t_megan_ptrs

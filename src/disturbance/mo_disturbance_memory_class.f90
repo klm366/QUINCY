@@ -85,7 +85,7 @@ CONTAINS
 
     CALL mem%Add_var( 'burned_fract', mem%burned_fract,                                 &
       & hgrid, surface,                                                                 &
-      & t_cf('burned_fract', 'frac', 'Fraction of tile that is burned.'),               &
+      & t_cf('burned_fract', 'frac d-1', 'Fraction of tile that is burned.'),               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
       & prefix, suffix,                                                                 &
       & output_level=BASIC,                                                             &
