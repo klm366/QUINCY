@@ -1003,6 +1003,7 @@ CONTAINS
       IF (dsl4jsb_Config(CH4_)%do_fire) THEN
         DO ic = 1, nc
           CALL calc_methane_fire(co2flux_fire_all_2_atm_ta(ic),lt,CH4_out_fire(ic),fire_em_NO(ic),fire_em_CO(ic),fire_em_iso(ic))
+          CH4_out_fire(ic) = -CH4_out_fire(ic) ! Sign convention: +ve downward
         ENDDO
       ENDIF
 
