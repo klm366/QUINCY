@@ -22,11 +22,33 @@ MODULE mo_ch4_config_class
   USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
+  USE mo_jsb_io_netcdf,     ONLY: t_input_file
+  USE mo_jsb_time,          ONLY: t_datetime, get_time_start, get_date_components
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_ch4_config
+  PUBLIC :: t_ch4_config, t_ch4_source_config, t_multi_file
+
+  TYPE, EXTENDS(t_input_file) :: t_multi_file
+    INTEGER :: nrec        ! # Records in file (available on all PEs
+    LOGICAL :: is_readable ! File is open on some PE and could thus be read
+  END TYPE t_multi_file
+
+  TYPE :: t_ch4_source_config
+    TYPE (t_ch4_source_config), POINTER :: next
+    REAL(wp), POINTER                   :: dta(:,:)    ! Data to currently add to total emissions (nproma,nblks) [kg(CH4) m-2 s-1]
+    REAL(wp), POINTER                   :: buf(:,:,:)  ! Read buffer (since no routine for reading 1 ts is available)
+    LOGICAL                             :: dta_alloc   ! dta is not refering to a model var and should be deallocated manually
+    TYPE (t_multi_file),        POINTER :: ifile       ! File to read data from
+    INTEGER                             :: crec        ! Current record to read
+    ! Namelist parameters
+    CHARACTER(len=64)   :: name_source                 ! Name of methane source (diagnostics only)
+    INTEGER             :: isource                     ! 0: none, 1: monthly climatology, 2: monthly time series, 3: interactive
+    CHARACTER(len=128)  :: name_file                   ! Name of file to read data from (if isource == 1 or 2)
+    CHARACTER(len=128)  :: name_var                    ! Name of variable in file to read data from (if isource == 1 or 2)
+    REAL(wp)            :: fac                         ! Multiplicative factor for emission
+  END TYPE t_ch4_source_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_ch4_config
     CHARACTER(len=32) :: CH4_varname                   ! Variable name of CH4 in netcdf file for CH4_source == 2
@@ -55,6 +77,7 @@ MODULE mo_ch4_config_class
     LOGICAL           :: do_fire                       ! determine fire CH4 emissions
     LOGICAL           :: do_termite                    ! determine termite CH4 emissions
     LOGICAL           :: do_herbivore                  ! determine herbivory CH4 emissions
+    LOGICAL           :: atm_couple                    ! Prepare methane emissions for passing to atmospheric model
     INTEGER           :: nstep_diffusion               ! number of diffusion steps per timestep
     INTEGER           :: nstep_per_day                 ! number of methane process time steps per day
     INTEGER           :: minimum_no_layers             ! Minimum number of soil layers to consider for methane
@@ -68,9 +91,13 @@ MODULE mo_ch4_config_class
     ! 4 : Timeseries with yearly mmr values from file
     ! 5 : Timeseries with yearly conc values from file
     ! Presently all timeseries of GHGs need to be in the same file (bc_filename)
+    TYPE (t_ch4_source_config), POINTER :: ch4_sources !
   CONTAINS
      PROCEDURE :: Init => Init_methane_config
-  END type t_ch4_config
+  END TYPE t_ch4_config
+
+  CHARACTER(len=*), PARAMETER :: interactives =    'wetland,deposition,termites,herbivores,wildfire'
+  REAL(wp),         PARAMETER :: interfac(*)  =(/-16.043e-3,-16.043e-3,-16.043e-3,-16.043e-3,-16.043e-3/)
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_ch4_config_class'
 
@@ -117,11 +144,27 @@ CONTAINS
 
     USE mo_methane_constants,  ONLY: CH4_consts, CO2_consts, O2_consts
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_util,               ONLY: real2string, int2string, logical2string
+    USE mo_util,               ONLY: real2string, int2string, logical2string, get_string_indexed, get_string_index
 
     CLASS(t_ch4_config), INTENT(inout) :: config
 
-    ! Local namelist parameters
+    ! Local namelist parameters for methane source namelists
+    CHARACTER(len=64)           :: name_source
+    CHARACTER(len=128)          :: name_file
+    CHARACTER(len=128)          :: name_var
+    INTEGER                     :: isource
+    INTEGER                     :: year_start
+    REAL(wp)                    :: fac
+
+    NAMELIST /jsb_methane_source_nml/ &
+      name_source,                    &
+      name_file,                      &
+      name_var,                       &
+      isource,                        &
+      year_start,                     &
+      fac
+
+    ! Local namelist parameters for methane master namelist
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     CHARACTER(len=32)           :: CH4_varname
@@ -156,6 +199,7 @@ CONTAINS
     LOGICAL                     :: do_fire                   ! determine fire CH4 emissions
     LOGICAL                     :: do_termite                ! determine termite CH4 emissions
     LOGICAL                     :: do_herbivore              ! determine herbivory CH4 emissions
+    LOGICAL                     :: atm_couple                ! Prepare methane emissions for atmospheric model
     INTEGER                     :: CH4_source                ! Source for atmospheric CH4 (see above)
     INTEGER                     :: CO2_source                ! Source for atmospheric CO2 (see above)
     INTEGER                     ::  O2_source                ! Source for atmospheric O2 (see above)
@@ -196,13 +240,17 @@ CONTAINS
          do_fire,                  &
          do_termite,               &
          do_herbivore,             &
+         atm_couple,               &
          minimum_no_layers,        &
          frac_inun_min,            &
          polar_anoxic_fac,         &
          nstep_per_day,            &
          nstep_diffusion
 
-    INTEGER :: nml_handler, nml_unit, istat
+    ! Locals
+    TYPE(t_ch4_source_config), POINTER :: curr_source, check_source
+    INTEGER :: nml_handler, nml_unit, istat, st, year
+    LOGICAL :: lrewind, lfound, procs(5)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_methane_config'
 
@@ -250,12 +298,117 @@ CONTAINS
     do_fire                = .TRUE.
     do_termite             = .TRUE.
     do_herbivore           = .TRUE.
+    atm_couple             = .FALSE.
 
-    ! Read namelist
+    ! Read methane master namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
     nml_unit = position_nml('jsb_methane_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_methane_nml)
+
+    ! Read and store any number of methane source namelists for passing to the atmospheric model
+    NULLIFY(config%ch4_sources)
+    IF (atm_couple .AND. active) THEN
+      procs = (/.TRUE.,.TRUE.,do_termite,do_herbivore,do_fire/) ! Temporary variable for testing shortcut
+      DO WHILE (istat == POSITIONED)
+        nml_unit = position_nml('jsb_methane_source_nml', nml_handler, lrewind, istat)
+        lrewind = .FALSE.
+        IF (istat == POSITIONED) THEN
+
+          ! Namelist defaults
+          name_source = ''
+          name_file = ''
+          name_var = ''
+          isource = 0 ! Default is "source switched off"
+          year_start = -1 ! Use current year
+          fac = 1._wp
+
+          ! Read namelist
+          READ(nml_unit, jsb_methane_source_nml)
+          IF ((isource < 0) .OR. (isource > 3)) CALL finish(routine,'Invalid source specification for '//TRIM(name_source))
+
+          ! Test if source is allowed to be interactive
+          IF (isource == 3) THEN
+            st = get_string_index(interactives,TRIM(name_source))
+            IF (st <= 0) THEN
+              st = get_string_index(interactives,name_source(1:LEN_TRIM(name_source)-1)) ! Skip trailing s
+              IF (st > 0) name_source = name_source(1:LEN_TRIM(name_source)-1)
+            ENDIF
+            IF (st > 0) THEN
+              isource = 2+st  ! Use isource to point to correct interactive routine
+              fac = fac * interfac(st) ! Internal mol/m2/s, +ve downward => external kg/m2/s, +ve upward
+              ! Crosscheck that the process calculating the interactive request is actually running
+              IF (.NOT. procs(st)) THEN
+                isource = 0
+                CALL message(routine,'No source contribution from '//TRIM(get_string_indexed(interactives,st))// &
+                                     's since process is switched off')
+              ENDIF
+            ELSE
+              CALL message(routine,'Sorry, currently no interactive method for source '//TRIM(name_source)//'. Disabling source.')
+              isource = 0
+            ENDIF
+          ENDIF
+
+          ! Create new list element for namelist contents
+          ALLOCATE(curr_source)
+          NULLIFY(curr_source%next,curr_source%dta,curr_source%buf,curr_source%ifile)
+          curr_source%dta_alloc   = .FALSE. ! To be checked during further processing
+          curr_source%name_source = name_source
+          curr_source%name_file   = name_file
+          curr_source%name_var    = name_var
+          curr_source%isource     = isource
+          curr_source%fac         = fac
+          ! Current record: Always 1 for climatologies, use specified start year of file to determine for time series
+          curr_source%crec        = 1
+          IF ((isource == 2) .AND. (year_start /= -1)) THEN
+            CALL get_date_components(get_time_start(), year=year)
+            curr_source%crec = (year-year_start)*12 + 1
+          ENDIF
+          ! Check if this file has been used before
+          IF ((isource == 1) .OR. (isource == 2)) THEN
+            check_source => config%ch4_sources
+            lfound = .FALSE.
+            IF (ASSOCIATED(check_source)) THEN
+              IF (name_file == '') THEN ! Use last mentioned file
+                DO WHILE (ASSOCIATED(check_source))
+                  IF ((check_source%isource == 2) .OR. (check_source%isource == 3)) THEN
+                    curr_source%ifile => check_source%ifile
+                    lfound = .TRUE.
+                    EXIT
+                  ENDIF
+                  check_source => check_source%next
+                ENDDO
+                IF (.NOT. ASSOCIATED(check_source)) &
+                  CALL finish(routine,'No way to determine file for methane source '//TRIM(name_source))
+              ELSE ! Test for files with same name
+                DO WHILE (ASSOCIATED(check_source))
+                  IF ((check_source%isource == 1) .OR. (check_source%isource == 2)) THEN
+                    IF (TRIM(name_file) == TRIM(check_source%name_file)) THEN
+                      curr_source%ifile => check_source%ifile
+                      lfound = .TRUE.
+                      EXIT
+                    ENDIF
+                  ENDIF
+                  check_source => check_source%next
+                ENDDO
+              ENDIF
+            ENDIF
+            ! If no match found, create a new file
+            IF (.NOT. lfound) THEN
+              ALLOCATE(curr_source%ifile)
+              curr_source%ifile%is_open       = .FALSE.
+              curr_source%ifile%is_readable   = .FALSE.
+              curr_source%ifile%nrec          = 1
+            ENDIF
+          ENDIF
+
+          ! Store new source in list (order reversed but doesn't matter)
+          curr_source%next => config%ch4_sources
+          config%ch4_sources => curr_source
+
+        ENDIF
+      ENDDO
+    ENDIF
 
     CALL close_nml(nml_handler)
 
@@ -295,6 +448,7 @@ CONTAINS
     config%do_fire                = do_fire
     config%do_termite             = do_termite
     config%do_herbivore           = do_herbivore
+    config%atm_couple             = atm_couple
     config%nstep_diffusion        = nstep_diffusion
     config%nstep_per_day          = nstep_per_day
     config%minimum_no_layers      = minimum_no_layers
@@ -333,6 +487,14 @@ CONTAINS
       IF (scale_oxid_wet /= 1.0_wp) THEN
         CALL message(routine,'Scaling wet CH4 oxidation by '//real2string(scale_oxid_wet))
       END IF
+      CALL message(routine,'Preparing emissions for atmosphere '//logical2string(atm_couple))
+      curr_source => config%ch4_sources
+      DO WHILE (ASSOCIATED(curr_source))
+        CALL message(routine,'Methane source '//TRIM(curr_source%name_source)//' is '// &
+          TRIM(get_string_indexed('inactive,climatology,time series,interactive',MIN(4,curr_source%isource+1)))//' Factor: '// &
+          TRIM(r2s(curr_source%fac)))
+        curr_source => curr_source%next
+      ENDDO
     END IF
 
   END SUBROUTINE Init_methane_config
