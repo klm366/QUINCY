@@ -26,25 +26,51 @@ MODULE mo_jsb_io_netcdf
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io_netcdf'
 
+  INTERFACE jsb_netcdf_open_input
+    MODULE PROCEDURE jsb_netcdf_open_input_type
+    MODULE PROCEDURE jsb_netcdf_open_input_class
+  END INTERFACE jsb_netcdf_open_input
+
 CONTAINS
 
-  TYPE(t_input_file) FUNCTION jsb_netcdf_open_input(filename, grid_id)
+  TYPE(t_input_file) FUNCTION jsb_netcdf_open_input_type(filename, grid_id)
 
     CHARACTER(LEN=*), INTENT(in)           :: filename
     INTEGER,          INTENT(in), OPTIONAL :: grid_id
 
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_netcdf_open_input'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_netcdf_open_input_type'
 
     IF (PRESENT(grid_id)) THEN
       grid => Get_grid(grid_id)
-      jsb_netcdf_open_input = netcdf_open_input(filename, grid%patch)
+      jsb_netcdf_open_input_type = netcdf_open_input(filename, grid%patch)
     ELSE
-      jsb_netcdf_open_input = netcdf_open_input(filename)
+      jsb_netcdf_open_input_type = netcdf_open_input(filename)
     END IF
 
-  END FUNCTION jsb_netcdf_open_input
+  END FUNCTION jsb_netcdf_open_input_type
+
+  FUNCTION jsb_netcdf_open_input_class(filename, ifile, grid_id) RESULT(ret)
+
+    CLASS (t_input_file), POINTER                 :: ret
+    CHARACTER(LEN=*),               INTENT(in)    :: filename
+    CLASS (t_input_file), TARGET,   INTENT(inout) :: ifile
+    INTEGER,              OPTIONAL, INTENT(in)    :: grid_id
+
+
+    TYPE(t_jsb_grid),  POINTER :: grid
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_netcdf_open_input_class'
+
+    IF (PRESENT(grid_id)) THEN
+      grid => Get_grid(grid_id)
+      ret => netcdf_open_input(filename, grid%patch, ifile)
+    ELSE
+      ret => netcdf_open_input(filename, ifile)
+    END IF
+
+  END FUNCTION jsb_netcdf_open_input_class
 
 #endif
 END MODULE mo_jsb_io_netcdf
