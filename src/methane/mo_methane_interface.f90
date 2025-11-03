@@ -44,10 +44,12 @@ MODULE mo_methane_interface
   USE mo_megan_memory_class,     ONLY: t_megan_ptrs
 
   dsl4jsb_Use_config(CH4_)
+  dsl4jsb_Use_config(MEGAN_)
   dsl4jsb_Use_config(TOP_)
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_memory(CH4_)
+  dsl4jsb_Use_memory(MEGAN_)
   dsl4jsb_Use_memory(TOP_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(CARBON_)
@@ -279,11 +281,13 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     LOGICAL, SAVE :: lfirstcall = .TRUE.
     dsl4jsb_Def_config(CH4_)
+    dsl4jsb_Def_config(MEGAN_)
     dsl4jsb_Def_config(TOP_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(CH4_)
+    dsl4jsb_Def_memory(MEGAN_)
     dsl4jsb_Def_memory(TOP_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(A2L_)
@@ -300,6 +304,11 @@ CONTAINS
       & CO2_wet,          &
       & O2_dry,           &
       & O2_wet
+
+    TYPE (t_megan_ptrs) :: &
+      & co,                &
+      & no,                &
+      & iso
 
     ! Pointers to variables in memory
     ! Inputs
@@ -345,6 +354,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: GDD_prev_year
     dsl4jsb_Real2D_onChunk :: GDD_sum
     dsl4jsb_Real2D_onChunk :: min_mmtemp20
+    dsl4jsb_Real2D_onChunk :: ch4_2_atm
+    dsl4jsb_Real2D_onChunk :: co_2_atm
+    dsl4jsb_Real2D_onChunk :: no_2_atm
+    dsl4jsb_Real2D_onChunk :: iso_2_atm
 
     ! Pointers to allocated non-variables
     !
@@ -394,6 +407,7 @@ CONTAINS
     dsl4jsb_Get_Config(TOP_)
     dsl4jsb_Get_Config(SSE_)
     dsl4jsb_Get_Config(NLCC_)
+    dsl4jsb_Get_Config(MEGAN_)
     dsl4jsb_Get_memory(CH4_)
     dsl4jsb_Get_memory(TOP_)
     dsl4jsb_Get_memory(SSE_)
@@ -402,6 +416,7 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(NLCC_)
+    dsl4jsb_Get_memory(MEGAN_)
 
     lstart = is_time_experiment_start(options%current_datetime)
     lrestart = is_time_restart(options%current_datetime)
@@ -1101,6 +1116,37 @@ CONTAINS
         curr => curr%next
       ENDDO
 
+      ! Sum of sources of emissions of species which have influence on atmospheric methane lifetime
+      dsl4jsb_Get_var2D_onChunk(CH4_, co_2_atm)
+      dsl4jsb_Get_var2D_onChunk(CH4_, no_2_atm)
+      dsl4jsb_Get_var2D_onChunk(CH4_, iso_2_atm)
+      DO ic = 1, nc
+        co_2_atm (ic) = 0_wp
+        no_2_atm (ic) = 0_wp
+        iso_2_atm(ic) = 0_wp
+      ENDDO
+
+      ! Fire emissions
+      IF (dsl4jsb_Config(CH4_)%do_fire) THEN
+        DO ic = 1, nc
+          co_2_atm(ic)  = fire_em_CO(ic)
+          no_2_atm(ic)  = fire_em_NO(ic)
+          iso_2_atm(ic) = fire_em_iso(ic)
+        ENDDO
+      ENDIF
+
+      ! Biogenic emissions (MEGAN should be updated before methane)
+      IF (dsl4jsb_Config(MEGAN_)%active) THEN
+        dsl4jsb_Get_var2D_onChunk(MEGAN_, co%total_out)
+        dsl4jsb_Get_var2D_onChunk(MEGAN_, no%total_out)
+        dsl4jsb_Get_var2D_onChunk(MEGAN_, iso%total_out)
+
+        DO ic = 1, nc
+          co_2_atm(ic)  = (co_2_atm(ic)  + co%total_out(ic) *1e-3) / 28.01_wp * 12.01_wp    ![(k)g(CO) m-2 s-1] to [kg(C) m-2 s-1]
+          no_2_atm(ic)  = (no_2_atm(ic)  + no%total_out(ic) *1e-3) / 30.01_wp * 14.01_wp    ![(k)g(NO) m-2 s-1] to [kg(N) m-2 s-1]
+          iso_2_atm(ic) = (iso_2_atm(ic) + iso%total_out(ic)*1e-3) / 68.12_wp*12.01_wp*5._wp![(k)g(iso) m-2 s-1]-> [kg(C) m-2 s-1]
+        ENDDO
+      ENDIF
       lfirstcall = .FALSE.
     ENDIF
 
@@ -1349,6 +1395,12 @@ CONTAINS
     ENDIF
     IF (dsl4jsb_Config(CH4_)%do_herbivore) THEN
       dsl4jsb_Aggregate_onChunk(CH4_, CH4_out_herbivore, weighted_by_fract)
+    ENDIF
+    IF (dsl4jsb_Config(CH4_)%atm_couple) THEN
+      dsl4jsb_Aggregate_onChunk(CH4_, ch4_2_atm, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_, co_2_atm,  weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_, no_2_atm,  weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CH4_, iso_2_atm, weighted_by_fract)
     ENDIF
     IF (dbg) THEN
       dsl4jsb_Aggregate_onChunk(CH4_,CH4_wet%prod_out_sl,  weighted_by_fract)
