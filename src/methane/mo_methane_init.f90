@@ -26,6 +26,7 @@ MODULE mo_methane_init
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io_netcdf_iface, ONLY: nf !, nf_inq_dimid, nf_inq_dimlen, nf_get_vara_double, nf_inq_varndims, nf_inq_varid
   USE mo_jsb_parallel,        ONLY: my_process_is_stdio, p_io, mpi_comm, p_bcast
+  USE mo_ch4_config_class,    ONLY: t_ch4_source_config
   USE mo_ch4_memory_class,    ONLY: t_timeseries
   USE mo_methane_constants,   ONLY: t_specie_const, CH4_consts, CO2_consts, O2_consts
 
@@ -242,6 +243,7 @@ CONTAINS
     dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_memory(CH4_)
 
+    TYPE(t_ch4_source_config), POINTER :: curr
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':methane_init_bc'
@@ -261,6 +263,20 @@ CONTAINS
     IF (dsl4jsb_Config(CH4_)%CH4_source > 2) CALL methane_copy_ts(ch4_init_vars%CH4,dsl4jsb_Memory(CH4_)%GHG_atm_CH4)
     IF (dsl4jsb_Config(CH4_)%CO2_source > 2) CALL methane_copy_ts(ch4_init_vars%CO2,dsl4jsb_Memory(CH4_)%GHG_atm_CO2)
     IF (dsl4jsb_Config(CH4_)%O2_source  > 2) CALL methane_copy_ts(ch4_init_vars%O2 ,dsl4jsb_Memory(CH4_)%GHG_atm_O2)
+
+    ! Associate simple process data to atmospheric coupling if requested as temporary placeholders to avoid accidential allocation
+    curr => dsl4jsb_Config(CH4_)%ch4_sources
+    DO WHILE (ASSOCIATED(curr))
+      SELECT CASE (curr%isource)
+        CASE (5) ! Termites
+          curr%dta => dsl4jsb_var2d_onDomain(CH4_,CH4_out_termite)
+        CASE (6) ! Herbivores
+          curr%dta => dsl4jsb_var2d_onDomain(CH4_,CH4_out_herbivore)
+        CASE (7) ! Fires
+          curr%dta => dsl4jsb_var2d_onDomain(CH4_,CH4_out_fire)
+      END SELECT
+      curr => curr%next
+    ENDDO
 
   END SUBROUTINE methane_init_bc
 
