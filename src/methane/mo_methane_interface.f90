@@ -23,11 +23,25 @@ MODULE mo_methane_interface
   USE mo_jsb_grid_class,         ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,               ONLY: Get_vgrid, Get_grid
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_process_class,      ONLY: t_jsb_process, PHENO_, CH4_, TOP_, CARBON_, A2L_, HYDRO_, SSE_, NLCC_
+  USE mo_jsb_process_class,      ONLY: t_jsb_process, PHENO_, CH4_, TOP_, CARBON_, A2L_, HYDRO_, SSE_, NLCC_, MEGAN_
   USE mo_jsb_task_class,         ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_math_constants,     ONLY: eps8
   USE mo_jsb_physical_constants, ONLY: tmelt
-  USE mo_methane_constants,      ONLY: t_specie_const, CH4_consts, CO2_consts, O2_consts
+  USE mo_jsb_time,               ONLY: t_datetime, is_newmonth, get_time_next, is_newyear, timesteps_per_day, &
+                                       is_time_experiment_start, get_time_start, is_time_restart, get_date_components
+  USE mo_jsb_io_netcdf,          ONLY: jsb_netcdf_open_input
+  USE mo_mpi,                    ONLY: p_bcast, p_io, my_process_is_stdio
+  USE mo_ch4_memory_class,       ONLY: t_chem_ptrs, t_timeseries
+  USE mo_methane_constants,      ONLY: t_specie_const, CH4_consts, CO2_consts, O2_consts, emission_factors_for_methane,  &
+  &                                    LT_TROPICAL_FOREST, LT_EXTRATROPICAL_FOREST, LT_SAVANNAH, LT_AGRICULTURE, LT_PEAT
+  USE mo_methane_util,           ONLY: concentration_mmr_2_mol_m3, concentration_vmr_2_mol_m3, concentration_mol_m3_2_vmr, &
+                                       determine_Henry_cc
+  USE mo_methane_process,        ONLY: plant_setup, calc_methane_termites, calc_methane_herbivores, calc_methane_fire, &
+                                       soil_column_setup, diffusion_setup, production, plant_transport, oxidation_mm,  &
+                                       reaction_diffusion, ebullition, init_gas_pools
+  USE mo_ch4_config_class,       ONLY: t_ch4_source_config, t_multi_file
+  USE mo_util,                   ONLY: real2string
+  USE mo_megan_memory_class,     ONLY: t_megan_ptrs
 
   dsl4jsb_Use_config(CH4_)
   dsl4jsb_Use_config(TOP_)
@@ -108,8 +122,6 @@ CONTAINS
 
   SUBROUTINE reset_chem_specie(specie,nc,nsoil,dbg)
 
-    USE mo_ch4_memory_class,  ONLY: t_chem_ptrs
-
     TYPE (t_chem_ptrs), INTENT(inout) :: specie
     INTEGER,            INTENT(in)    :: nc, nsoil
     LOGICAL, OPTIONAL,  INTENT(in)    :: dbg
@@ -147,8 +159,6 @@ CONTAINS
   END SUBROUTINE reset_chem_specie
 
   SUBROUTINE update_chem_specie(dt,nly,i,frac,specie,diff,act_sl,prod_sl,plant_sl,oxid_sl,dbg,other_sl,to_other_i)
-
-    USE mo_ch4_memory_class, ONLY: t_chem_ptrs
 
     REAL(wp),           INTENT(in)    :: dt
     INTEGER,            INTENT(in)    :: nly
@@ -200,11 +210,6 @@ CONTAINS
   END SUBROUTINE update_chem_specie
 
   SUBROUTINE methane_update_atm_GHG_conc(options,GAS,source,atm_conc,nml_conc,GHG_atm,dst,dbg)
-    USE mo_jsb_time,          ONLY: is_newyear, is_time_experiment_start, is_time_restart, get_date_components
-    USE mo_methane_util,      ONLY: concentration_mmr_2_mol_m3, concentration_vmr_2_mol_m3, concentration_mol_m3_2_vmr
-    USE mo_methane_constants, ONLY: t_specie_const
-    USE mo_ch4_memory_class,  ONLY: t_timeseries
-    USE mo_util,              ONLY: real2string
 
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     TYPE(t_specie_const),       INTENT(in)    :: GAS
@@ -263,17 +268,6 @@ CONTAINS
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_methane(tile, options)
-
-    USE mo_jsb_time,          ONLY: is_newyear, timesteps_per_day, is_time_experiment_start, is_time_restart, get_date_components
-    USE mo_ch4_memory_class,  ONLY: t_chem_ptrs
-    USE mo_methane_constants, ONLY: CH4_consts, CO2_consts, O2_consts, emission_factors_for_methane,                   &
-    &                               LT_TROPICAL_FOREST, LT_EXTRATROPICAL_FOREST, LT_SAVANNAH, LT_AGRICULTURE, LT_PEAT
-    USE mo_methane_util,      ONLY: concentration_mmr_2_mol_m3, determine_Henry_cc
-    USE mo_methane_process,   ONLY: plant_setup, calc_methane_termites, calc_methane_herbivores, calc_methane_fire, &
-                                    soil_column_setup, diffusion_setup, production, plant_transport, oxidation_mm,  &
-                                    reaction_diffusion, ebullition, init_gas_pools
-    USE mo_carbon_constants,  ONLY: molarMassCO2_kg
-    USE mo_jsb_time,          ONLY: get_time_experiment_start, get_time_start
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1084,10 +1078,83 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
+  CONTAINS
+
+    FUNCTION tile_as_ptr(tile) RESULT(ret)
+
+      CLASS(t_jsb_tile_abstract), POINTER :: ret
+      CLASS(t_jsb_tile_abstract), TARGET, INTENT(in) :: tile
+
+      ret => tile
+
+    END FUNCTION tile_as_ptr
+
+    SUBROUTINE allocate_ch4_source_data(src)
+      TYPE (t_ch4_source_config), POINTER :: src
+
+      ALLOCATE(src%buf(grid%nproma,grid%nblks,1)) ! Only a function to read multiple available - therefore 1 extra dummy dim.
+      src%dta => src%buf(:,:,1)                   ! This is how we want the data
+      src%dta_alloc = .TRUE.
+
+    END SUBROUTINE allocate_ch4_source_data
+
+    SUBROUTINE read_new_ch4_source_field(src)
+      TYPE (t_ch4_source_config), POINTER :: src
+
+      REAL(wp), POINTER :: tmp(:,:,:)
+
+      CALL message(routine,'Reading '//trim(src%name_source)//' from rec. '//TRIM(i2s(ABS(src%crec)))// &
+              ' of '//trim(src%name_var)//'@'//trim(src%name_file))
+      tmp => src%ifile%Read_2d_time(src%name_var,src%buf,src%crec,src%crec)
+      src%crec = src%crec + 1
+      IF (src%crec > src%ifile%nrec) THEN
+        src%crec = 1
+        IF (src%isource == 2) THEN
+          CALL src%ifile%close() ! New file needed if not a climatology is used
+          src%ifile%is_readable = .FALSE.
+        ENDIF
+      ENDIF
+
+    END SUBROUTINE read_new_ch4_source_field
+
+    SUBROUTINE open_ch4_source_file(ifile,fname,year)
+      TYPE(t_multi_file), INTENT(inout) :: ifile
+      CHARACTER(len=*),   INTENT(in)    :: fname
+      INTEGER,            INTENT(in)    :: year
+
+      CHARACTER(:), ALLOCATABLE :: rname
+      CHARACTER(4) :: syear
+      INTEGER  :: i, ind, nc_id
+
+      CHARACTER(len=*), PARAMETER :: routine = modname//':open_ch4_source_file'
+
+      rname = TRIM(fname)
+      ind = INDEX(fname,'<yyyy>')
+      IF (ind > 0) THEN
+        WRITE(syear,'(i4)') year
+        DO i=1,4
+          IF (syear(i:i) == ' ') syear(i:i) = '0'
+        ENDDO
+        rname = fname(1:ind-1)//syear//TRIM(fname(ind+6:))
+      ENDIF
+      IF (ASSOCIATED(jsb_netcdf_open_input(rname,ifile,model%grid_id))) THEN
+        IF (my_process_is_stdio()) THEN
+          ifile%is_readable = ifile%is_open
+          IF (ifile%is_open) THEN
+            ifile%nrec = ifile%Get_dimlen('time')
+          ELSE
+            CALL finish(routine,'Source file '//TRIM(rname)//' could not be opened')
+          ENDIF
+        ENDIF
+      ENDIF
+      CALL p_bcast(ifile%nrec,p_io)
+      CALL p_bcast(ifile%is_readable,p_io)
+
+    END SUBROUTINE open_ch4_source_file
+
   END SUBROUTINE update_methane
 
   SUBROUTINE aggregate_methane(tile, options)
-    USE mo_ch4_memory_class,  ONLY: t_chem_ptrs
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
