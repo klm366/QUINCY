@@ -146,7 +146,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
-      & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+      & output_level = FULL, l_aggregate_all = .FALSE.,                      &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'gamma_pfd', mem%gamma_pfd,                            &
@@ -155,7 +155,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
-      & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+      & output_level = FULL, l_aggregate_all = .FALSE.,                      &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'gamma_co2', mem%gamma_co2,                            &
@@ -164,7 +164,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
-      & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+      & output_level = FULL, l_aggregate_all = .FALSE.,                      &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'gamma_sm', mem%gamma_sm,                              &
@@ -173,7 +173,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
-      & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
+      & output_level = FULL, l_aggregate_all = .FALSE.,                      &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'temp_relax_short', mem%temp_relax_short,              &
@@ -268,7 +268,7 @@ CONTAINS
           & t_cf(specie_name//'_gamma_age', '', ''),                             &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
           & prefix, suffix, lrestart = .FALSE.,                                  &
-          & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
+          & output_level = FULL, l_aggregate_all=.FALSE.,                        &
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
       
         CALL mem%Add_var( specie_name//'_gamma_temp', specie%gamma_temp,         &
@@ -276,7 +276,7 @@ CONTAINS
           & t_cf(specie_name//'_gamma_temp', '', ''),                            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
           & prefix, suffix, lrestart = .FALSE.,                                  &
-          & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
+          & output_level = FULL, l_aggregate_all=.FALSE.,                        &
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
       ENDIF
 
