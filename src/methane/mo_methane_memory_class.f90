@@ -141,6 +141,13 @@ MODULE mo_ch4_memory_class
       & anox_prod_in,           & ! StW: Production of what?
       & oxic_prod_in              ! StW: Production of what?
 
+    ! Variables for coupling to the atmospheric model
+    TYPE (t_jsb_var_real2d) ::  &
+      & ch4_2_atm,              & ! Total methane surface emissions
+      & co_2_atm,               & ! Total carbon monoxide emissions
+      & no_2_atm,               & ! Total nitric emissions
+      & iso_2_atm                 ! Total isoprene emissions
+
     ! Data for obtaining time dependent atmospheric GHG from file
     TYPE(t_timeseries) ::       &
       & GHG_atm_CH4,            &
@@ -346,6 +353,41 @@ CONTAINS
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+    ENDIF
+
+    IF (dsl4jsb_Config(CH4_)%atm_couple) THEN
+      CALL mem%Add_var( 'ch4_2_atm', mem%ch4_2_atm,                            &
+        & hgrid, surface,                                                      &
+        & t_cf('Total terrestrial methane emisions', 'kg(CH4) m-2 s-1', ''),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix, lrestart = .TRUE., lrestart_cont = .TRUE.,           &
+        & output_level = default_output_level, l_aggregate_all=.TRUE.,                         &
+        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+
+      CALL mem%Add_var( 'co_2_atm', mem%co_2_atm,                              &
+        & hgrid, surface,                                                      &
+        & t_cf('Total terrestrial carbon monoxide emisions', 'kg(CO) m-2 s-1', ''), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix, lrestart = .TRUE., lrestart_cont = .TRUE.,           &
+        & output_level =default_output_level, l_aggregate_all=.TRUE.,                         &
+        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+
+      CALL mem%Add_var( 'no_2_atm', mem%no_2_atm,                              &
+        & hgrid, surface,                                                      &
+        & t_cf('Total terrestrial nitric emisions', 'kg(NO) m-2 s-1', ''),     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix, lrestart = .TRUE., lrestart_cont = .TRUE.,           &
+        & output_level =default_output_level, l_aggregate_all=.TRUE.,                         &
+        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+
+      CALL mem%Add_var( 'iso_2_atm', mem%iso_2_atm,                            &
+        & hgrid, surface,                                                      &
+        & t_cf('Total terrestrial isoprene emisions', 'kg m-2 s-1', ''),       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix, lrestart = .TRUE., lrestart_cont = .TRUE.,           &
+        & output_level =default_output_level, l_aggregate_all=.TRUE.,                         &
+        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+
     ENDIF
 
     CALL mem%Add_var( 'root_dist_sl', mem%root_dist_sl,                      &
