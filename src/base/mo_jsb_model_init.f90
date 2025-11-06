@@ -157,6 +157,7 @@ CONTAINS
     USE mo_spq_init,            ONLY: spq_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
+    USE mo_sb_carbon_init,      ONLY: sb_carbon_init
 #endif
     USE mo_fage_init,           ONLY: fage_init
 
@@ -272,7 +273,8 @@ CONTAINS
 
       ! FLCC (which runs on the veg tile) changes the co2flux_fire_all_2_atm_ta variable on the leaves
       ! ... it therefore requires a carbon aggregation task on the leaves to run subsequent to the flcc task
-      IF (model%processes(FLCC_)%p%config%active .AND. model%processes(CARBON_)%p%config%active) THEN
+      IF (model%processes(FLCC_)%p%config%active .AND. &
+         (model%processes(CARBON_)%p%config%active .OR. model%processes(SB_CARBON_)%p%config%active)) THEN
         CALL model%Queue_task(CARBON_, "ta_vars_after_lcc")
       END IF
 
@@ -328,6 +330,23 @@ CONTAINS
       IF (model%processes(CARBON_)%p%config%active) THEN
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
+#ifndef __NO_QUINCY__
+      IF (model%processes(SB_CARBON_)%p%config%active) THEN
+         CALL model%Queue_task(SB_CARBON_, "") ! one for layer aggregation
+         CALL model%Queue_task(SB_CARBON_, "") ! one for C NPP allocation
+         ! need to load SB tasks
+         dsl4jsb_Get_config(SB_)
+         CALL model%Queue_task(SB_, "sb_rate_modifier")
+         CALL model%Queue_task(SB_, "reset_sb_fluxes")
+         CALL model%Queue_task(SB_, "sb_pools")
+         CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")
+         IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+           CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
+         ELSE
+           CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
+         END IF
+      END IF
+#endif
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       IF (.NOT. model%config%use_tmx) THEN
         CALL model%Queue_task(TURB_,   "surface_roughness")
@@ -762,6 +781,12 @@ CONTAINS
         IF (tile%Is_process_active(CARBON_)) THEN
           CALL carbon_init(tile)
         END IF
+#ifndef __NO_QUINCY__
+        IF (tile%Is_process_active(SB_CARBON_)) THEN
+          CALL sb_init(tile)
+          CALL sb_carbon_init(tile)
+        END IF
+#endif
         IF (tile%Is_process_active(FAGE_)) THEN
           CALL fage_init(tile)
         END IF

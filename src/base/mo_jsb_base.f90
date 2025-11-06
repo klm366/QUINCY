@@ -48,6 +48,7 @@ CONTAINS
     USE mo_jsb_grid,            ONLY: Register_vgrid, Get_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
+    USE mo_sb_constants,        ONLY: init_sb_constants
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT
     USE mo_rad_parameters,      ONLY: init_rad_parameters
@@ -56,20 +57,20 @@ CONTAINS
     USE mo_q_agr_constants,     ONLY: init_q_agr_constants
     USE mo_q_syl_constants,     ONLY: init_q_syl_constants
     USE mo_veg_constants,       ONLY: init_veg_constants
-    USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
     USE mo_spq_constants,       ONLY: init_spq_constants
     USE mo_turb_constants,      ONLY: init_turb_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 #endif
 
-    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_
+    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, CARBON_, &
+      &                   SB_CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
     dsl4jsb_Use_config(CARBON_)
+    dsl4jsb_Use_config(SB_CARBON_)
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
     dsl4jsb_Use_config(FAGE_)
@@ -87,6 +88,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(RAD_)
     dsl4jsb_Def_config(CARBON_)
+    dsl4jsb_Def_config(SB_CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
     dsl4jsb_Def_config(FAGE_)
@@ -144,8 +146,11 @@ CONTAINS
        ! Require that only one model_scheme is used!
        IF (model_idx == 1) THEN
          model_scheme = model%config%model_scheme
+         IF (model%config%use_sb_carbon) THEN
+           CALL set_bgcm_element_idx(model%config%elements_index_map)
+         END IF
        ELSE IF (model%config%model_scheme /= model_scheme) THEN
-          CALL finish(routine, 'Only one model_scheme allowed!')
+         CALL finish(routine, 'Only one model_scheme allowed!')
        END IF
 
 #ifndef __NO_QUINCY__
@@ -185,6 +190,11 @@ CONTAINS
          CASE (MODEL_JSBACH)
            CALL message(TRIM(routine), 'starting init of JSBACH process parameters')
            CALL init_pheno_parameters
+           IF (model%config%use_sb_carbon) THEN
+#ifndef __NO_QUINCY__
+             CALL init_sb_constants
+#endif
+           END IF
          END SELECT
        END IF
 
@@ -254,6 +264,10 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
+        IF (model%config%use_sb_carbon) THEN
+          CALL message('    ', '... using sb soil models')
+          dsl4jsb_Get_config(SB_CARBON_)
+        END IF
         dsl4jsb_Get_config(CARBON_)
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
@@ -350,7 +364,9 @@ CONTAINS
           dsl4jsb_Config(FUEL_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
         END IF
-        IF (model%Is_process_enabled(DISTURB_) .AND. .NOT. model%Is_process_enabled(CARBON_)) THEN
+        IF (model%Is_process_enabled(DISTURB_) .AND. (.NOT. model%Is_process_enabled(CARBON_)) & 
+          &                                    .AND. (.NOT. model%Is_process_enabled(SB_CARBON_))) THEN
+          ! use the default carbon module
           dsl4jsb_Config(CARBON_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
         END IF
