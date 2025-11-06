@@ -206,9 +206,9 @@ CONTAINS
     REAL(wp)                              :: dtime      !< timestep
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_q_fdire_sf_spitfire'
 
-    REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2?]
+    REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2]
     REAL(wp), POINTER                     :: tile_fract(:) ! [%]
-    REAL(wp), ALLOCATABLE                 :: tile_area(:) ! [m2]
+    REAL(wp), ALLOCATABLE                 :: burnable_area(:) ! [m2]
     LOGICAL                               :: mask_is_tile_enabled(options%nc)
 
     REAL(wp)                              :: ab_soil_depth_sl(options%nc,df_sf_sl_dims_nr)!< above ground soil depth layers [m]
@@ -228,7 +228,8 @@ CONTAINS
     REAL(wp)                              :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
     REAL(wp)                              :: t_air_min_c(options%nc)                      !< Minimum daily temperature [Celsius]
     REAL(wp)                              :: t_air_max_c(options%nc)                      !< Maximum daily temperature [Celsius]
-    REAL(wp)                              :: grid_cell_area_ha(options%nc)                !< Grid cell area [ha] 
+    REAL(wp)                              :: burnable_area_ha(options%nc)                 !< Burnable area [ha] 
+    LOGICAL, PARAMETER                    :: are_all_pfts_wave =.FALSE. ! todo: replace by config option, flag_wa_pfts=all|only
 
     TYPE(t_sf_spitfire)                   :: sf_spitfire
 
@@ -237,16 +238,11 @@ CONTAINS
     REAL(wp)                              :: a_nd(options%nc)
     INTEGER                               :: ierror
     ! ----------------------------------------------------------------------------------------------------- !
-    !dsl4jsb_Def_mt2L2D :: veg_pool_mt
-    !dsl4jsb_Def_mt2L3D :: sb_loss_mt
-    dsl4jsb_Def_mt2L3D :: sb_pool_mt
-    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(Q_DFIRE_)
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
     dsl4jsb_Def_memory(VEG_)
-    !dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -460,21 +456,23 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_STANDALONE__
     ALLOCATE(grid_cell_area(options%nc))
-    ALLOCATE(tile_area(options%nc))
+    ALLOCATE(burnable_area(options%nc))
     grid_cell_area = 1._wp ! defined as fraction too, QS has site simulations
-    grid_cell_area_ha = 1._wp
+    burnable_area_ha = 1._wp
     mask_is_tile_enabled = .TRUE.
-    tile_area = 1._wp
+    burnable_area = 1._wp
 #else
     ! IQ
     grid_cell_area => grid % area(ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
-    tile_area = grid_cell_area * tile_fract
-    grid_cell_area_ha = sf_convert_units("m2", "ha", tile_area)
+    IF(are_all_pfts_wave) THEN ! Fuel.f90 to spitfire.f90 weighting average using all PFTs
+      burnable_area = grid_cell_area ! * tile_fract is ignored because WA accounts for all, including bare soil
+    ELSE ! Weighting average only using tree and grass PFTs
+      burnable_area = grid_cell_area * (grass_fract + forest_fract)
+    ENDIF
+    burnable_area_ha = sf_convert_units("m2", "ha", burnable_area)
     mask_is_tile_enabled = (tile_fract > 0._wp)
 #endif
-    ! diagnostics only
-    pot_burn_area = grid_cell_area * (grass_fract + forest_fract)
 
     !> Units conversion
     t_air_max_c = sf_convert_units("Kelvin", "Celsius", t_air_max)
@@ -491,8 +489,14 @@ CONTAINS
     ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
     ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl, mask=mask_is_tile_enabled)
 
-    ! Load input data
+    ! Load input data: rate of human-caused ignitions per person [#ign indiv-1 d-]
+    ! Todo: further research on this data, currently taken from a paper.
     a_nd = a2l_lightning_events * 4._wp
+
+!    IF (iblk==1) THEN
+!      WRITE(*,*) "spitfire.f90:: fbd, area, fract=", fuel_bulk_density(40), burnable_area(40), tile_fract(40), &
+!              (grass_fract(40) + forest_fract(40))
+!    ENDIF
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
@@ -504,7 +508,7 @@ CONTAINS
                         df_sf_alphas, &
                         moisture_extinction, &
                         ab_moisture, & ! soil properties
-                        grid_cell_area_ha, &
+                        burnable_area_ha, &
                         dead_fuel_fcl, live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
                         t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
                         veg_cover_frac, &
@@ -557,7 +561,7 @@ CONTAINS
     frac_consump_fcl = sf_spitfire % dead_frac_consump
 #ifdef __QUINCY_STANDALONE__
     DEALLOCATE(grid_cell_area)
-    DEALLOCATE(tile_area)
+    DEALLOCATE(burnable_area)
 #endif
   END SUBROUTINE update_q_dfire_spitfire
 
