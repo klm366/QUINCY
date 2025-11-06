@@ -923,6 +923,7 @@ CONTAINS
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
     REAL(wp), POINTER :: fract_sum(:,:)
     REAL(wp), POINTER :: data_sum(:,:)
+    LOGICAL, ALLOCATABLE :: mask_use_child(:)
 
     INTEGER :: no_children, icount,ichild, i, iproc, j
     LOGICAL :: l_aggregate_all
@@ -931,17 +932,16 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
-    IF (PRESENT(mask)) THEN
-      CALL finish(routine, "mask not yet implemented")
-    END IF
-
-    IF (PRESENT(mask)) THEN
-      CALL finish(routine, "mask not yet implemented")
-    END IF
-
     no_children = tile%Get_no_of_children()
     IF (no_children == 0) CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
       &  'This should never happen!')
+
+    IF (PRESENT(mask)) THEN
+      ALLOCATE(mask_use_child, source=mask)
+    ELSE
+      ALLOCATE(mask_use_child(no_children))
+      mask_use_child=.TRUE.
+    END IF
 
     ! Set the fractions of the child tiles (on the current chunk)
     CALL this%Set_fractions(tile, ics, ice, iblk)
@@ -1008,6 +1008,8 @@ CONTAINS
       !
       !$ACC LOOP SEQ
       DO i=1,no_children
+        IF (.NOT. mask_use_child(i)) CYCLE ! skip current child
+
         ! Check if the var exists on this tile (could be a tile on which the according process is not running)
         IF ( var%child_idx(i) > 0 ) THEN
           ! The variable exists on the child tile
@@ -1032,7 +1034,7 @@ CONTAINS
             fract_sum(j,iblk) = fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
         END IF
-      END DO
+      END DO ! i=1,no_children
 
       ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
         ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
@@ -1101,6 +1103,7 @@ CONTAINS
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
     REAL(wp), POINTER :: fract_sum(:,:)
     REAL(wp), POINTER :: data_sum(:,:)
+    LOGICAL, ALLOCATABLE :: mask_use_child(:)
 
     INTEGER :: no_children, icount, ichild, i, iproc, ilev, nlev, j
     LOGICAL :: l_aggregate_all
@@ -1109,17 +1112,16 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
-    IF (PRESENT(mask)) THEN
-      CALL finish(routine, "mask not yet implemented")
-    END IF
-
-    IF (PRESENT(mask)) THEN
-      CALL finish(routine, "mask not yet implemented")
-    END IF
-
     no_children = tile%Get_no_of_children()
     IF (no_children == 0) CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
       &  'This should never happen!')
+
+    IF (PRESENT(mask)) THEN
+      ALLOCATE(mask_use_child, source=mask)
+    ELSE
+      ALLOCATE(mask_use_child(no_children))
+      mask_use_child=.TRUE.
+    END IF
 
     ! Set the fractions of the child tiles (on the current chunk)
     CALL this%Set_fractions(tile, ics, ice, iblk)
@@ -1189,6 +1191,8 @@ CONTAINS
       END DO
       !$ACC LOOP SEQ
       DO i=1,no_children
+        IF (.NOT. mask_use_pft(i)) CYCLE
+
         ! Check if the var exists on this tile (could be a tile on which the according process is not running)
         IF (var%child_idx(i) > 0) THEN
           !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1204,7 +1208,7 @@ CONTAINS
             fract_sum(j,iblk) = fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
         END IF
-      END DO
+      END DO ! DO i=1,no_children
 
       !$ACC LOOP SEQ
       DO ilev = 1, nlev
@@ -1215,6 +1219,8 @@ CONTAINS
 
         !$ACC LOOP SEQ
         DO i=1,no_children
+          IF (mask_use_pft(i)) CYCLE
+
           IF (var%child_idx(i) > 0) THEN
             !$ACC LOOP GANG(STATIC: 1) VECTOR
             DO j = ics, ice
@@ -1227,7 +1233,7 @@ CONTAINS
               !      tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr3d(j,ilev,iblk)
             END DO
           END IF
-        END DO
+        END DO ! i=1,no_children
 
         ! Calculate the weighted average
         !
@@ -1250,9 +1256,9 @@ CONTAINS
         ELSE
           STOP 'Aggregate_weighted_by_fract_3d: This should not happen (icount=0)!'
         END IF
-      END DO
+      END DO ! ilev = 1, nlev
 
-    END IF
+    END IF ! no_children > 1
 
     !$ACC END PARALLEL
 
