@@ -1191,7 +1191,7 @@ CONTAINS
       END DO
       !$ACC LOOP SEQ
       DO i=1,no_children
-        IF (.NOT. mask_use_pft(i)) CYCLE
+        IF (.NOT. mask_use_child(i)) CYCLE
 
         ! Check if the var exists on this tile (could be a tile on which the according process is not running)
         IF (var%child_idx(i) > 0) THEN
@@ -1219,7 +1219,7 @@ CONTAINS
 
         !$ACC LOOP SEQ
         DO i=1,no_children
-          IF (mask_use_pft(i)) CYCLE
+          IF (mask_use_child(i)) CYCLE
 
           IF (var%child_idx(i) > 0) THEN
             !$ACC LOOP GANG(STATIC: 1) VECTOR
