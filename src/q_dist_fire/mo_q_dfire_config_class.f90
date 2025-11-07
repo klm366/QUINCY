@@ -79,7 +79,7 @@ MODULE mo_q_dfire_config_class
     REAL(wp)          :: lightning_frequency         !< avrg number of all lightnings [ha-1 d-1]
     REAL(wp)          :: a_nd                        !< Propensity of people to produce ignition events (Eq. 3, Thonicke et al. (2010))
                                                      !< [ignitions indivual-1 d-1]      
-    REAL(wp)          :: fract_crown_scorch(4)       !< Fraction of live fuel consumed in crown scorch
+    REAL(wp)          :: fract_crown_scorch(4)       !< Fraction of live fuel consumed in crown scorch. 4=fuel classes
 
     ! input data
     CHARACTER(len=filename_max) :: ic_popdens_filename, ic_lightning_events_filename
@@ -98,6 +98,9 @@ MODULE mo_q_dfire_config_class
     LOGICAL           :: flag_has_prob_mort_feedback !< Flag to enable live probability of mortality from Spitfire into Quincy (q_veg_dynamics.f90)
     REAL(wp)          :: tree_height_factor          !< Tree height factor for spitfire
     REAL(wp)          :: tree_diameter_factor        !< Tree diameter factor for spitfire
+    LOGICAL           :: burnable_pfts(13)           !< Define which PFTs are burnable. Those PFTs are then accounted for the weighting average
+                                                     !< from leaf to tile processes. This also involces the Burned area as it is influenced by the area.
+                                                     !< 13= number of PFTs. TODO: make it dynamic, to accomodate other configurations
 
   CONTAINS
     PROCEDURE :: Init => Init_q_dfire_config
@@ -157,6 +160,7 @@ CONTAINS
     LOGICAL                       :: flag_has_prob_mort_feedback !< Flag to enable live probability of mortality from Spitfire into Quincy (q_veg_dynamics.f90)
     REAL(wp)                      :: tree_height_factor          !< Tree height factor for spitfire
     REAL(wp)                      :: tree_diameter_factor        !< Tree diameter factor for spitfire
+    LOGICAL                       :: burnable_pfts(13)           !< Burnable PFTs, used in aggregation and potential burnable area
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_q_dfire_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -187,7 +191,8 @@ CONTAINS
       & flag_has_live_feedback,               &
       & flag_has_prob_mort_feedback,          &
       & tree_height_factor,                   &
-      & tree_diameter_factor
+      & tree_diameter_factor,                 &
+      & burnable_pfts
 
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -220,6 +225,8 @@ CONTAINS
     flag_has_prob_mort_feedback = .TRUE.
     tree_height_factor       = 1._wp
     tree_diameter_factor     = 1._wp
+    burnable_pfts            = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., &
+                                .FALSE., .FALSE., .FALSE., .FALSE., .FALSE.] ! T,T,T,T,T,G,G,P,P,C,C,B 
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! read the namelist
@@ -258,6 +265,7 @@ CONTAINS
     config%flag_has_prob_mort_feedback = flag_has_prob_mort_feedback  !
     config%tree_height_factor        = tree_height_factor             !
     config%tree_diameter_factor      = tree_diameter_factor           !
+    config%burnable_pfts             = burnable_pfts
     ! ----------------------------------------------------------------------------------------------------- !
     CALL close_nml(nml_handler)
     ! ----------------------------------------------------------------------------------------------------- !

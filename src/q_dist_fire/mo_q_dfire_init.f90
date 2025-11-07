@@ -287,6 +287,8 @@ CONTAINS
     ratio_as_dead_fuel % residue        = dsl4jsb_Config(Q_DFIRE_)%ratio_residue_to_dead_fuel
     ratio_as_dead_fuel % residue_assoc  = dsl4jsb_Config(Q_DFIRE_)%ratio_residue_assoc_to_dead_fuel
 
+    q_dfire_pft_mask = dsl4jsb_Config(Q_DFIRE_)%burnable_pfts
+
 #ifdef __QUINCY_STANDALONE__
     ! quincy only
     CALL q_dfire_read_init_vars(tile)

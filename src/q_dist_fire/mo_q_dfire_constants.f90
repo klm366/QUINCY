@@ -217,11 +217,11 @@ MODULE mo_q_dfire_constants
                                                            !< This is an adaptation from daily to 30 min TS as Thonicke et al. (2010) runs at a daily TS
 
   ! todo: smarter way to do it? 
-  LOGICAL, PARAMETER :: q_dfire_pft_mask(13) = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
-                                              .TRUE., .TRUE., &                                 ! grass pfts
-                                              .FALSE., .FALSE., &                               ! pasture pfts , 13 pfts only
-                                              .FALSE., .FALSE., &                               ! crop pfts
-                                              .FALSE.]                                          ! Bar soil
+  LOGICAL, SAVE :: q_dfire_pft_mask(13) != [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
+                                        !      .TRUE., .TRUE., &                                 ! grass pfts
+                                        !      .FALSE., .FALSE., &                               ! pasture pfts , 13 pfts only
+                                        !      .FALSE., .FALSE., &                               ! crop pfts
+                                        !      .FALSE.]                                          ! Bare soil
 
   TYPE(t_sf_litter_ratios), SAVE :: ratio_as_dead_fuel                                 !< sb_pool ratios to dead fuel pools [0 to 1]
 CONTAINS
