@@ -274,10 +274,10 @@ CONTAINS
                             sb_pool_in_gdm, veg_pool_in_gdm, &
                             ratio_as_dead_fuel)
 
-    live_grass_fuel_fcl = fuel_cls % calc_live_grass_fuel()
-    live_tree_fuel_fcl = fuel_cls % calc_live_tree_fuel()
-    dead_fuel_fcl = fuel_cls % calc_dead_fuel()
-    live_fuel_fcl = fuel_cls % calc_live_fuel()
+    live_grass_fuel_fcl = fuel_cls % calc_live_grass_fuel() * live_fuel_factor
+    live_tree_fuel_fcl = fuel_cls % calc_live_tree_fuel() * live_fuel_factor
+    dead_fuel_fcl = fuel_cls % calc_dead_fuel() * dead_fuel_factor
+    live_fuel_fcl = fuel_cls % calc_live_fuel() * live_fuel_factor
 
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
