@@ -129,7 +129,7 @@ CONTAINS
 
   SUBROUTINE Init_seb_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM !, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -181,7 +181,6 @@ CONTAINS
         & t_cf('sfc_temp_rad**4', 'K', 'surface radiative temperature **4'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
-        & output_level=BASIC,                                                        &
         & initval_r=280.0_wp**4 )
     END IF
 
@@ -214,7 +213,7 @@ CONTAINS
       & t_cf('sfc_heat_cap', 'J m-2 K-1', 'surface layer heat capacity'),            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & output_level=BASIC, &
+      & output_level=MEDIUM,                                                         &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'latent_hflx', mem%latent_hflx,                                &
@@ -285,7 +284,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & lrestart=.FALSE.,                                                                  &
-        & output_level=BASIC, &
+        & output_level=FULL,                                                                 &
         & initval_r=2.9E5_wp )
 
       CALL mem%Add_var( 'qsat_star', mem%qsat_star,                                          &
@@ -294,7 +293,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & lrestart=.TRUE.,                                                                   &
-        & output_level=BASIC,                                                                &
+        & output_level=FULL,                                                                 &
         & initval_r=0.0075_wp )
 
 #ifndef __NO_QUINCY__
@@ -336,6 +335,7 @@ CONTAINS
         & prefix, suffix,                                                                    &
         & lrestart=(    (.NOT. model%config%use_tmx .AND. .NOT. jsbach_runs_standalone())    &
         &           .OR. dsl4jsb_Config(SEB_)%l_skin_temp),                                  &
+        & output_level = BASIC,                                                              &
         & initval_r=280.0_wp )
 
       CALL mem%Add_var( 'dt_sk_dt_srf', mem%dt_sk_dt_srf,                                    &
