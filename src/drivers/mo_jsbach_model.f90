@@ -146,8 +146,6 @@ CONTAINS
     USE mo_action,                  ONLY: ACTION_RESET, reset_act
     USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
 
-    USE mo_jsb_convect_tables_iface,ONLY: init_convect_tables
-
     USE mo_derived_variable_handling, ONLY: update_statistics
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(LEN=*), INTENT(in) :: jsb_namelist_filename
@@ -358,8 +356,6 @@ CONTAINS
     CALL allocate_vct_atmo(p_patch(1)%nlevp1)
 
     IF (timers_level > 4) CALL timer_stop(timer_compute_coeffs)
-
-    CALL init_convect_tables ! necessary for FUNCTION qsat
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 11.0 setup and init external forcing

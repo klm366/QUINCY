@@ -43,7 +43,7 @@ CONTAINS
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
-    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, HYDRO_, SSE_, TURB_
+    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, HYDRO_, TURB_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_atmland_constants,      ONLY: min_wind, max_wind
@@ -58,7 +58,6 @@ CONTAINS
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(HYDRO_)
-    dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(TURB_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -67,8 +66,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER       :: model                    !< the model
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy_q_assimi    !< Vertical grid
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb            !< Vertical grid for soil layers
-    INTEGER                               :: nsoil_sb                 !< number of soil layers
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_w             !< Vertical grid for soil layers
+    INTEGER                               :: nsoil_w                 !< number of soil layers
     INTEGER                               :: ncanopy                  !< number of canopy layers
     INTEGER                               :: icanopy                  !< for looping across ncanopy layers
     REAL(wp)                              :: hlp                      !< helper variable
@@ -93,7 +92,6 @@ CONTAINS
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -134,7 +132,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: jmax_cl
     dsl4jsb_Real3D_onChunk      :: vcmax_cl
     dsl4jsb_Real3D_onChunk      :: chlfl_yield_cl
-    dsl4jsb_Real3D_onChunk      :: ftranspiration_sl
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
@@ -144,8 +141,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: wtr_soil_pwp_sl
     dsl4jsb_Real3D_onChunk      :: wtr_soil_fc_sl
     dsl4jsb_Real3D_onChunk      :: wtr_soil_pot_sl
-    ! SSE_ 3D
-    dsl4jsb_Real3D_onChunk      :: t_soil_sl
     ! TURB_ 2D
     dsl4jsb_Real2D_onChunk      :: drag_srf_stdalone
     ! VEG_ 2D
@@ -175,8 +170,8 @@ CONTAINS
     model                  => Get_model(tile%owner_model_id)
     vgrid_canopy_q_assimi  => Get_vgrid('q_canopy_layer')
     ncanopy                =  vgrid_canopy_q_assimi%n_levels
-    vgrid_soil_sb          => Get_vgrid('soil_layer_sb')
-    nsoil_sb               =  vgrid_soil_sb%n_levels
+    vgrid_soil_w           => Get_vgrid('soil_depth_water')
+    nsoil_w                =  vgrid_soil_w%n_levels
     jsb_standalone         =  jsbach_runs_standalone()
     ! ----------------------------------------------------------------------------------------------------- !
     IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
@@ -187,7 +182,6 @@ CONTAINS
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -227,7 +221,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, jmax_cl)                   ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, vcmax_cl)                  ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, chlfl_yield_cl)            ! out
-    dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, ftranspiration_sl)         ! out
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
@@ -237,8 +230,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)              ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_sl)              ! in
-    ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                      ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(TURB_, drag_srf_stdalone)             ! in
     ! ---------------------------
@@ -304,7 +295,7 @@ CONTAINS
       ! calculate
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP SEQ
-      DO is = 1, nsoil_sb
+      DO is = 1, nsoil_w
         !$ACC LOOP GANG VECTOR
         DO ic = 1, nc
           wtr_soil_root_pot(ic) = wtr_soil_root_pot(ic) + (root_fraction_sl(ic, is) * wtr_soil_pot_sl(ic, is))
@@ -328,64 +319,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !>  2.1 determine fraction of transpiration per soil layer
-    !>
-    ! calc transpiration per soil layer
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-    DO is = 1, nsoil_sb
-      DO ic = 1, nc
-        ftranspiration_sl(ic, is) = 0.0_wp
-      END DO
-    END DO
-    !$ACC END PARALLEL LOOP
-
-    ! QUINCY with SPQ_
-    IF (.NOT. model%config%use_soil_phys_jsbach) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) PRIVATE(hlp)
-      DO is = 1, nsoil_sb
-        DO ic = 1, nc
-          IF ((is <= num_sl_above_bedrock(ic)) .AND. (t_soil_sl(ic, is) > Tzero)) THEN
-            hlp                       = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, is), lctlib_phi_leaf_min)
-            ftranspiration_sl(ic, is) = root_fraction_sl(ic, is) * hlp
-          END IF
-        END DO
-      END DO
-      !$ACC END PARALLEL LOOP
-
-      ! re-calc transpiration as fraction of transpiration per soil layer
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO ic = 1, nc
-        ftranspiration_sum_local(ic) = 0.0_wp
-      END DO
-      !$ACC END PARALLEL LOOP
-
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP SEQ
-      DO is = 1, nsoil_sb
-        !$ACC LOOP GANG(STATIC: 1) VECTOR
-        DO ic = 1, nc
-          ftranspiration_sum_local(ic) = ftranspiration_sum_local(ic) + ftranspiration_sl(ic, is)
-        END DO
-      END DO
-      !$ACC END PARALLEL
-
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-      DO is = 1, nsoil_sb
-        DO ic = 1, nc
-          IF (ftranspiration_sum_local(ic) > eps8) THEN
-            ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum_local(ic)
-          ELSE
-            ftranspiration_sl(ic, is) = 0.0_wp
-          END IF
-        END DO
-      END DO
-      !$ACC END PARALLEL LOOP
-
-    ! for QUINCY with jsbach soil physics processes
-    !  ftranspiration_sl is calculated with an individual task: update_ftranspiration_per_sl
-    END IF ! model%config%use_soil_phys_jsbach
-
-    !>  2.2 determine aerodynamic conductance
+    !>  2.1 determine aerodynamic conductance
     !>
     !> use drag_srf from A2L_ or SEB_ or SPQ_ - differs between: standalone / coupled simulations / quincy SPQ_ / jsbach soil-physics
     !>
@@ -603,9 +537,10 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER       :: model                    !< the model
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb            !< Vertical grid for soil layers
-    INTEGER                               :: nsoil_sb                 !< number of soil layers
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_w             !< Vertical grid for soil layers
+    INTEGER                               :: nsoil_w                  !< number of soil layers
     INTEGER                               :: iblk, ics, ice, nc       !< dimensions
+    INTEGER                               :: ic, is                   !< loop increment
     REAL(wp)                              :: lctlib_phi_leaf_min
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_ftranspiration_per_sl'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -630,8 +565,8 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(Q_ASSIMI_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
     model                  => Get_model(tile%owner_model_id)
-    vgrid_soil_sb          => Get_vgrid('soil_layer_sb')
-    nsoil_sb               =  vgrid_soil_sb%n_levels
+    vgrid_soil_w           => Get_vgrid('soil_depth_water')
+    nsoil_w                =  vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -651,10 +586,17 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     lctlib_phi_leaf_min = dsl4jsb_Lctlib_param(phi_leaf_min)
 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+    DO is = 1, nsoil_w
+      DO ic = 1, nc
+        ftranspiration_sl(ic, is) = 0.0_wp
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
 
     CALL calc_ftranspiration_sl( &
       & nc, &
-      & nsoil_sb, &
+      & nsoil_w, &
       & lctlib_phi_leaf_min, &
       & num_sl_above_bedrock(:), &
       & root_fraction_sl(:,:), &
@@ -1049,12 +991,15 @@ CONTAINS
   !>    Medlyn et al. 2011: beta = MIN(5._wp, 1._wp / SQRT(vpd + eps8))
   !>    Ball & Berry: beta = q_air / q_sat
   !>
-  PURE ELEMENTAL FUNCTION calc_atm_moisture_stress(canopy_cond_scheme, t_air, q_air, press_srf) RESULT(beta)
+#ifndef _OPENACC
+  PURE ELEMENTAL &
+#endif
+  FUNCTION calc_atm_moisture_stress(canopy_cond_scheme, t_air, q_air, press_srf) RESULT(beta)
 
     !$ACC ROUTINE SEQ
 
+    USE mo_phy_schemes,        ONLY: qsat_mixed
     USE mo_atmland_constants,  ONLY: eps_vpd
-    USE mo_atmland_util,       ONLY: calc_spec_humidity_sat
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), INTENT(IN)  :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp),INTENT(in)           :: t_air                  !< air temperature in K
@@ -1068,7 +1013,7 @@ CONTAINS
 
     !>1.0 saturating specific humidity [kg kg-1]
     !>
-    q_sat = calc_spec_humidity_sat(t_air, press_srf)
+    q_sat = qsat_mixed(t_air, press_srf)
 
     !>  1.1 vapour pressure deficit [kPa]
     !>
@@ -1301,7 +1246,7 @@ CONTAINS
   !>
   SUBROUTINE calc_ftranspiration_sl( &
     & nc, &
-    & nsoil_sb, &
+    & nsoil_w, &
     & lctlib_phi_leaf_min, &
     & num_sl_above_bedrock, &
     & root_fraction_sl, &
@@ -1310,7 +1255,7 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                       !< dimension chunk
-    INTEGER,  INTENT(in)    :: nsoil_sb                 !< dimension soil layers
+    INTEGER,  INTENT(in)    :: nsoil_w                 !< dimension soil layers
     REAL(wp), INTENT(in)    :: lctlib_phi_leaf_min      !< leaf minimum water potential (MPa)
     REAL(wp), INTENT(in)    :: num_sl_above_bedrock(:)  !< number of soil layers above bedrock
     REAL(wp), INTENT(in)    :: root_fraction_sl(:,:)    !< fraction of fine roots per layer
@@ -1321,17 +1266,17 @@ CONTAINS
     INTEGER                     :: iwpot                  !< looping [0,10]
     REAL(wp)                    :: hlp
     REAL(wp), DIMENSION(nc)     :: ftranspiration_sum     !< sum of ftranspiration_sl(:,:) over soil layers
-    REAL(wp)                    :: phi_inc                !< constant used for increment in [0,10] loop
+    REAL(wp)                    :: phi_inc                !< constant used for decrement lctlib_phi_leaf_min in [0,10] loop
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_ftranspiration_sl'
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! init local var
     !
-    phi_inc = -0.25_wp    ! value: tuned
+    phi_inc = -0.25_wp    ! decrement lctlib_phi_leaf_min; value: tuned
 
     !$ACC DATA CREATE(ftranspiration_sum)
 
-    ! loop over: nc, increment iwpot [0,10], soil layer
+    ! loop over: nc, increment iwpot [0,40], soil layer
     !
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(hlp)
@@ -1340,7 +1285,8 @@ CONTAINS
       ftranspiration_sum(ic) = 0.0_wp
 
       !$ACC LOOP SEQ
-      DO iwpot = 0, 10
+      ! loop from zero to -10 of wtr_soil_pot_sl in 40 * phi_inc steps
+      DO iwpot = 0, 40
 
         !> 1.1 determine fraction of transpiration per soil layer
         !>     the first instance of the loop takes the PFT specific minimum
@@ -1349,7 +1295,7 @@ CONTAINS
         !>     to soil moisture
         IF (ftranspiration_sum(ic) == 0.0_wp) THEN
           !$ACC LOOP SEQ
-          DO is = 1, nsoil_sb
+          DO is = 1, nsoil_w
             ftranspiration_sl(ic, is) = 0.0_wp
             IF ((is <= num_sl_above_bedrock(ic)) .AND. (root_fraction_sl(ic, is) > eps8)) THEN
               hlp = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, is), &
@@ -1367,7 +1313,7 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO ic = 1, nc
-      DO is = 1, nsoil_sb
+      DO is = 1, nsoil_w
         IF ((is <= num_sl_above_bedrock(ic)) .AND. (ftranspiration_sum(ic) > eps8)) THEN
           ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum(ic)
         END IF

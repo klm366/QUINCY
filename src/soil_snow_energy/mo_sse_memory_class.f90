@@ -207,7 +207,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
-        & output_level=MEDIUM,                                                 &
+        & output_level=BASIC,                                                  &
         & initval_r=0._wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 't_snow', mem%t_snow,                                  &
@@ -238,7 +238,7 @@ CONTAINS
       & t_cf('heat_capacity_ground', 'J m-2 K-1', 'Ground heat capacity'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & output_level=BASIC,                                                  &
+      & output_level=MEDIUM,                                                 &
       & initval_r=1.3e5_wp )
 
     CALL mem%Add_var( 'hcap_grnd_old', mem%hcap_grnd_old,                            &
@@ -247,7 +247,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
-      & output_level=BASIC,                                                          &
       & initval_r=1.3e5_wp )
 
     CALL mem%Add_var( 'grnd_hflx', mem%grnd_hflx,                            &
@@ -264,7 +263,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC,                                                  &
       & initval_r=10.0_wp )
 
     CALL mem%Add_var( 'thaw_depth', mem%thaw_depth,                          &
@@ -273,7 +271,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=NONE, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'thaw_depth_max', mem%thaw_depth_max,                  &

@@ -44,16 +44,11 @@ MODULE mo_hydro_init
   USE mo_util,               ONLY: int2string, soil_init_from_texture
 
   dsl4jsb_Use_processes HYDRO_
-#ifndef __NO_QUINCY__
-  dsl4jsb_Use_processes SSE_
-#endif
-
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(HYDRO_)
-#ifndef __NO_QUINCY__
-  dsl4jsb_Use_memory(SSE_)
-#endif
+
 #ifdef __QUINCY_STANDALONE__
+  dsl4jsb_Use_processes SSE_
   dsl4jsb_Use_config(SSE_)
 #else
   dsl4jsb_Use_processes PHENO_
@@ -441,9 +436,10 @@ CONTAINS
     dsl4jsb_Real2D_onDomain    :: root_depth
     dsl4jsb_Real2D_onDomain    :: w_soil_root_pwp
     dsl4jsb_Real2D_onDomain    :: w_soil_root_fc
-    dsl4jsb_Real2D_onDomain    :: w_skin
+    dsl4jsb_Real2D_onDomain    :: wtr_skin
     dsl4jsb_Real2D_onDomain    :: wtr_rootzone
     dsl4jsb_Real2D_onDomain    :: wtr_rootzone_rel
+    dsl4jsb_Real2D_onDomain    :: wtr_plant_avail_rel
     dsl4jsb_Real2D_onDomain    :: oro_stddev
     dsl4jsb_Real2D_onDomain    :: weq_snow_soil
     dsl4jsb_Real2D_onDomain    :: elevation
@@ -487,9 +483,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   root_depth)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_soil_root_pwp)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_soil_root_fc)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_skin)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_skin)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_rootzone)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_rootzone_rel)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_plant_avail_rel)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   oro_stddev)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   weq_snow_soil)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   elevation)
@@ -637,11 +634,12 @@ CONTAINS
 
     !> water in the surface reservoir [m]
     !>
-    w_skin(:,:) = 0.0_wp
+    wtr_skin(:,:) = 0.0_wp
 
     !> adjust initial water amount to prescribed theta
     !>
-    wtr_rootzone_rel(:,:)   = hydro_init_vars%soil_theta_prescribe(:,:)
+    wtr_rootzone_rel(:,:)    = hydro_init_vars%soil_theta_prescribe(:,:)
+    wtr_plant_avail_rel(:,:) = hydro_init_vars%soil_theta_prescribe(:,:)
     wtr_rootzone(:,:)       = w_soil_root_pwp(:,:) &
       &                       + hydro_init_vars%soil_theta_prescribe(:,:) * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:))
 
@@ -879,28 +877,22 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile      !< Current tile
 
     dsl4jsb_Def_config(HYDRO_)                  !< Configurable parameters of the HYDRO process
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_memory(SSE_)
-#endif
 
     REAL(wp), POINTER :: &
+      & ptr_1D(:    ),   &                      !< Pointer to 1d variable
       & ptr_2D(:,  :),   &                      !< Pointer to 2d variable
       & ptr_3D(:,:,:)                           !< Pointer to 3d variable
     LOGICAL,  POINTER   :: is_in_domain(:,:)    !< True: the cell belongs to domain; False: halo cell
 
-    TYPE(t_jsb_model), POINTER :: model         !< Current instance of the model
-    TYPE(t_jsb_grid),  POINTER :: grid          !< Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: soil_w        !< Vertical grid used for hydrology
-    TYPE(t_input_file)         :: input_file    !< File containing input data to be read
-    INTEGER                    :: nproma, nblks !< Dimensions of the horizontal grid
-    INTEGER                    :: nsoil         !< Number of vertical soil layers
-    INTEGER                    :: isoil         !< Looping index for soil layers
+    TYPE(t_jsb_model), POINTER :: model             !< Current instance of the model
+    TYPE(t_jsb_grid),  POINTER :: grid              !< Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: soil_w            !< Vertical grid used for hydrology
+    TYPE(t_input_file)         :: input_file        !< File containing input data to be read
+    INTEGER                    :: nproma, nblks     !< Dimensions of the horizontal grid
+    INTEGER                    :: nsoil             !< Number of vertical soil layers of the vgrid 'soil_depth_water'
+    INTEGER                    :: nsoil_input_file  !< Number of vertical soil layers as provided by the ic input file
+    INTEGER                    :: isoil             !< Looping index for soil layers
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_read_init_vars'
-
-    ! SSE_ 3D
-    dsl4jsb_Real3D_onDomain :: sand_sl
-    dsl4jsb_Real3D_onDomain :: silt_sl
-    dsl4jsb_Real3D_onDomain :: clay_sl
 
     ! Assertion: do nothing if hydrology process is not active on this tile (should not happen)
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
@@ -917,22 +909,6 @@ CONTAINS
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
     is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-
-#ifndef __NO_QUINCY__
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_QUINCY)
-      IF (dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
-        dsl4jsb_Get_memory(SSE_)
-        ! SSE_ 3D
-        dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)
-        dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)
-        dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)
-      ELSE
-        CALL message(TRIM(routine), 'QUINCY model: HYDRO_ l_soil_texture is FALSE '//TRIM(tile%name))
-        CALL message(TRIM(routine), 'Using default values of soil properties (sand,silt,clay,bulk_density) '//TRIM(tile%name))
-      END IF
-    END SELECT
-#endif
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -1059,6 +1035,13 @@ CONTAINS
     !>    soil properties are either read directly or they are calculated from soil textures.
 
     IF (tile%contains_soil) THEN ! for tiles containing soil
+
+      ! Open ic input file to get the number of soil layers
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%ic_filename))
+      ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of the bottom of each soil layer
+      nsoil_input_file = SIZE(ptr_1D)                          ! number of soil layers provided by the ic input file
+      ! Close input file - ic
+      CALL input_file%Close()
 
       ! Open input file - bc
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_filename), model%grid_id)
@@ -1249,20 +1232,6 @@ CONTAINS
           & fill_array=hydro_init_vars%fr_clay_deep)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
-#ifndef __NO_QUINCY__
-        ! use values from quincy specific input file (overwriting values from HYDRO_ bc_filename)
-        ! (input file does provide just one value for all soil layers, hence, using the value from soil layer 1)
-        !
-        ! NOTE: SSE_ is initialized before HYDRO_
-        !
-        SELECT CASE (model%config%model_scheme)
-        CASE (MODEL_QUINCY)
-          hydro_init_vars%fr_sand(:,:) = sand_sl(:, 1, :)
-          hydro_init_vars%fr_silt(:,:) = silt_sl(:, 1, :)
-          hydro_init_vars%fr_clay(:,:) = clay_sl(:, 1, :)
-        END SELECT
-#endif
-
         !
         ! Calculate the soil properties from soil textures
         !
@@ -1330,12 +1299,18 @@ CONTAINS
       !>
       !>     - Soil organic carbon fractions for each soil layer
       IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
-        DO isoil=1,nsoil
+        DO isoil = 1,nsoil_input_file
           ptr_3D => input_file%Read_2d_extdim( &
             & variable_name='fract_org_sl',    &
             & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
           hydro_init_vars%fract_org_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
         END DO
+        ! apply the value from the lowest soil layer (of the input file) to all soil layers below
+        IF (nsoil > nsoil_input_file) THEN
+          DO isoil = nsoil_input_file+1, nsoil
+            hydro_init_vars%fract_org_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+          END DO
+        END IF
       END IF
 
       ! TODO Move up reading root depth to section of variables read in all configurations to
@@ -1357,12 +1332,8 @@ CONTAINS
       ! Constrain root depth because in the bc file it may be larger then soil depth
       hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)
 
-      ! close bc input file
+      ! Close input file - bc
       CALL input_file%Close()
-
-    END IF
-
-    IF (tile%contains_soil) THEN ! for tiles containing soil
 
       !>
       !> -  Read initial conditons for the hydrology
@@ -1408,12 +1379,18 @@ CONTAINS
 
       ELSE
 
-        DO isoil=1,nsoil
+        DO isoil = 1,nsoil_input_file
           ptr_3D => input_file%Read_2d_extdim( &
             & variable_name='layer_moist',     &
             & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
           hydro_init_vars%wtr_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
         END DO
+        ! apply the value from the lowest soil layer (of the input file) to all soil layers below
+        IF (nsoil > nsoil_input_file) THEN
+          DO isoil = nsoil_input_file+1, nsoil
+            hydro_init_vars%wtr_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+          END DO
+        END IF
 
       END IF ! init_from_ifs
 
@@ -1421,7 +1398,7 @@ CONTAINS
         CALL input_file%Close()
       END IF
 
-    END IF ! contains_soil
+    END IF ! tile contains_soil
 
   END SUBROUTINE hydro_read_init_vars
 
@@ -1926,6 +1903,11 @@ CONTAINS
         & dsl4jsb_var3D_onDomain(HYDRO_, vol_wres_sl)      * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)  &
         & - dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl))
 
+      !> water in the surface reservoir [m]
+      !>
+      dsl4jsb_var2D_onDomain(HYDRO_, wtr_skin) = 0.0_wp
+      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_skin)) ASYNC(1)
+
       !$ACC UPDATE ASYNC(1) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl)) &
@@ -1933,6 +1915,7 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_res_sl))
+      !$ACC WAIT(1)
 
     END IF ! contains_soil
 
@@ -2002,7 +1985,7 @@ CONTAINS
       END WHERE
       !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)) ASYNC(1)
 
-      ! Initialization of the relative root zone moisture
+      ! Initialization of the relative root zone moisture and plant available root zone moisture
       ! Note: It is re-calculated every time step in mo_hydro_interface:update_water_stress.
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone) > 0._wp)
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = &
@@ -2011,8 +1994,12 @@ CONTAINS
       ELSE WHERE
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
       END WHERE
+      dsl4jsb_var2D_onDomain(HYDRO_, wtr_plant_avail_rel) = dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel)
 
-      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel)) ASYNC(1)
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_plant_avail_rel))
+      !$ACC WAIT(1)
 
     END IF ! Tile with vegetation
   END SUBROUTINE hydro_init_ic

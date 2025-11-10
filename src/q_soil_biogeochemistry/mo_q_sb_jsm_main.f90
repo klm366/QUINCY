@@ -75,14 +75,14 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model                !< the model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store           !< the bgcm store of this tile
     TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb        !< Vertical grid
-    INTEGER                               :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_w         !< Vertical grid
+    INTEGER                               :: nsoil_w              !< number of soil layers as used/defined by the SB_ process
     INTEGER                               :: ic                   !< looping over points
     INTEGER                               :: isoil, is            !< looping over soil layers
     REAL(wp)                              :: hlp1                 !< helper
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp1             !< helper, Dimension: (nc, nsoil_sb)
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp2             !< helper, Dimension: (nc, nsoil_sb)
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp3             !< helper, Dimension: (nc, nsoil_sb)
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp1             !< helper, Dimension: (nc, nsoil_w)
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp2             !< helper, Dimension: (nc, nsoil_w)
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp3             !< helper, Dimension: (nc, nsoil_w)
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: fine_root_carbon_sl                      !<
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: km1_uptake_act                           !<
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: km2_uptake_act                           !<
@@ -303,10 +303,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
@@ -316,21 +315,21 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ALLOCATE(arr_hlp1(nc, nsoil_sb))
-    ALLOCATE(arr_hlp2(nc, nsoil_sb))
-    ALLOCATE(arr_hlp3(nc, nsoil_sb))
-    ALLOCATE(fine_root_carbon_sl(nc, nsoil_sb))
-    ALLOCATE(km1_uptake_act(nc, nsoil_sb))
-    ALLOCATE(km2_uptake_act(nc, nsoil_sb))
-    ALLOCATE(km_array(nc, nsoil_sb))
-    ALLOCATE(avail_soil_surface_sorption_capacity_sl(nc, nsoil_sb))
-    ALLOCATE(graze_mineralisation_po4(nc, nsoil_sb))
-    ALLOCATE(graze_mineralisation_nh4(nc, nsoil_sb))
-    ALLOCATE(graze_mineralisation_nh4_n15(nc, nsoil_sb))
-    ALLOCATE(unit_uptake_n_pot_sl(nc, nsoil_sb))
-    ALLOCATE(unit_uptake_p_pot_sl(nc, nsoil_sb))
-    ALLOCATE(growth_p_limit_smoothed_sl(nc, nsoil_sb))
-    ALLOCATE(asymb_n_fixation_rel_rate_sl(nc, nsoil_sb))
+    ALLOCATE(arr_hlp1(nc, nsoil_w))
+    ALLOCATE(arr_hlp2(nc, nsoil_w))
+    ALLOCATE(arr_hlp3(nc, nsoil_w))
+    ALLOCATE(fine_root_carbon_sl(nc, nsoil_w))
+    ALLOCATE(km1_uptake_act(nc, nsoil_w))
+    ALLOCATE(km2_uptake_act(nc, nsoil_w))
+    ALLOCATE(km_array(nc, nsoil_w))
+    ALLOCATE(avail_soil_surface_sorption_capacity_sl(nc, nsoil_w))
+    ALLOCATE(graze_mineralisation_po4(nc, nsoil_w))
+    ALLOCATE(graze_mineralisation_nh4(nc, nsoil_w))
+    ALLOCATE(graze_mineralisation_nh4_n15(nc, nsoil_w))
+    ALLOCATE(unit_uptake_n_pot_sl(nc, nsoil_w))
+    ALLOCATE(unit_uptake_p_pot_sl(nc, nsoil_w))
+    ALLOCATE(growth_p_limit_smoothed_sl(nc, nsoil_w))
+    ALLOCATE(asymb_n_fixation_rel_rate_sl(nc, nsoil_w))
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -523,7 +522,7 @@ CONTAINS
 
     !>1.0 calc fine root carbon, used for N & P calculations below, and smooth the plant growth P limitation
     !>
-    DO isoil = 1,nsoil_sb
+    DO isoil = 1,nsoil_w
       WHERE(soil_depth_sl(:,isoil) > eps8)
         fine_root_carbon_sl(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool_mt(ix_fine_root, ixC, :)
         ! using LOG() here to smooth the response curve in case of extreme P limited condition,
@@ -600,7 +599,7 @@ CONTAINS
     !>
     CALL calc_litter_turnover( &
       & nc, &                                           ! in
-      & nsoil_sb, &
+      & nsoil_w, &
       & dtime, &
       & tau_soluable_litter, &
       & fc_soluable2dom, &
@@ -617,7 +616,7 @@ CONTAINS
     !>
     CALL calc_litter_turnover( &
       & nc, &                                           ! in
-      & nsoil_sb, &
+      & nsoil_w, &
       & dtime, &
       & tau_woody_litter, &
       & fc_woody2polymeric, &
@@ -634,7 +633,7 @@ CONTAINS
     !>
     CALL calc_litter_partitioning( &
       & nc, &                                         ! in
-      & nsoil_sb, &
+      & nsoil_w, &
       & num_sl_above_bedrock(:), &
       & lctlib%sla, &
       & lctlib%growthform, &
@@ -651,7 +650,7 @@ CONTAINS
     !>
     CALL calc_liquid_phase_transport_wrapper( &
       & nc, &                                   ! in
-      & nsoil_sb, &
+      & nsoil_w, &
       & dtime, &
       & num_sl_above_bedrock(:), &
       & soil_depth_sl(:,:), &
@@ -722,12 +721,12 @@ CONTAINS
 
     !>  5.2 transport due to bioturbation
     !>
-    k_bioturb(:,:) = calc_bioturbation_rate(nc, nsoil_sb, num_sl_above_bedrock(:), soil_depth_sl(:,:), &
+    k_bioturb(:,:) = calc_bioturbation_rate(nc, nsoil_w, num_sl_above_bedrock(:), soil_depth_sl(:,:), &
       &                                     bulk_dens_corr_sl(:,:), root_fraction_sl(:,:))
     ! bioturbation transport for JSM
     CALL calc_bioturbation_transport_wrapper_jsm( &
       & nc, &                                 ! in
-      & nsoil_sb, &
+      & nsoil_w, &
       & dtime, &
       & num_sl_above_bedrock(:), &
       & soil_depth_sl(:,:), &
@@ -782,7 +781,7 @@ CONTAINS
       &                    fast_adsorpt     = fast_adsorpt_po4(:,:))                  ! OPTIONAL (out)
     !! calculate potential P uptake (micro-mol P / mol C fine-root / s), weighted by root distribution
     DO ic = 1,nc
-      DO isoil = 1,nsoil_sb
+      DO isoil = 1,nsoil_w
         IF (fine_root_carbon_sl(ic,isoil) > eps8) THEN
           unit_uptake_p_pot(ic) = unit_uptake_p_pot(ic) + unit_uptake_p_pot_sl(ic,isoil) &
             &                     / fine_root_carbon_sl(ic,isoil) * root_fraction_sl(ic,isoil)
@@ -825,7 +824,7 @@ CONTAINS
       &                    flux_nitri_denitri = nitrification_no3(:,:))               ! OPTIONAL (out)
     !! update potential N uptake due to nh4 uptake
     DO ic = 1,nc
-      DO isoil = 1,nsoil_sb
+      DO isoil = 1,nsoil_w
         IF (fine_root_carbon_sl(ic,isoil) > eps8) THEN
           unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + unit_uptake_n_pot_sl(ic,isoil) &
             &                     / fine_root_carbon_sl(ic,isoil) * root_fraction_sl(ic,isoil)
@@ -866,7 +865,7 @@ CONTAINS
       &                    flux_nitri_denitri = denitrification_n2(:,:))              ! OPTIONAL (out)
     !! update potential N uptake due to no3 uptake
     DO ic = 1,nc
-      DO isoil = 1,nsoil_sb
+      DO isoil = 1,nsoil_w
         IF (fine_root_carbon_sl(ic,isoil) > eps8) THEN
           unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + unit_uptake_n_pot_sl(ic,isoil) &
             &                     / fine_root_carbon_sl(ic,isoil) * root_fraction_sl(ic,isoil)
@@ -878,7 +877,7 @@ CONTAINS
     !>
     CALL calc_nitri_denitri_partitioning_rate( &
       & nc, &
-      & nsoil_sb, &
+      & nsoil_w, &
       & soil_depth_sl(:,:), &
       & TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme), &
       & rtm_denitrification(:,:), &
@@ -902,7 +901,7 @@ CONTAINS
     ! (simple_1d is using the same function but uses flux rates in [mol/m3/timestep])
     CALL calc_sb_inorganic_n15_fluxes( &
       & nc, &
-      & nsoil_sb, &
+      & nsoil_w, &
       & dtime, &
       & num_sl_above_bedrock(:), &
       & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
@@ -944,7 +943,7 @@ CONTAINS
     arr_hlp1(:,:) = sb_pool_mt(ix_microbial, ixC, :, :) * enzyme_frac_total * (1._wp - enzyme_frac_AP(:,:))
     CALL calc_depolymerisation_SESAM( &
       & nc, &                                 ! in
-      & nsoil_sb, &
+      & nsoil_w, &
       & dtime, &
       & rtm_hsc(:,:), &
       & rmm_hsc(:,:), &
@@ -974,7 +973,7 @@ CONTAINS
     !>
     CALL calc_microbial_turnover( &
       & nc, &                                 ! in
-      & nsoil_sb, &
+      & nsoil_w, &
       & dtime, &
       & fact_n_status_mic_c_growth(:,:), &
       & fact_p_status_mic_c_growth(:,:), &
@@ -989,7 +988,7 @@ CONTAINS
     !>
     CALL calc_sorption_desorption_of_org_material( &
       & nc, &                                 ! in
-      & nsoil_sb, &
+      & nsoil_w, &
       & dtime, &
       & model%config%elements_index_map(:), &
       & model%config%is_element_used(:), &
@@ -1015,7 +1014,7 @@ CONTAINS
     !>  11.2 actual microbial growth
     !>
     CALL calc_microbial_growth(nc, &
-      & nsoil_sb, &                               ! in
+      & nsoil_w, &                               ! in
       & dtime, &
       & TRIM(dsl4jsb_Config(SB_)%bnf_scheme), &
       & rtm_mic_uptake(:,:), &

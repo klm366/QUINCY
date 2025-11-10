@@ -93,8 +93,8 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model                !< the model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store           !< the bgcm store of this tile
     TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb        !< Vertical grid
-    INTEGER                               :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_w         !< Vertical grid
+    INTEGER                               :: nsoil_w              !< number of soil layers (water)
     INTEGER                               :: isoil                !< loop over soil layers
     REAL(wp), ALLOCATABLE, DIMENSION(:)   :: root_depth_avg       !< dim: nc
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: p_deposition_sl      !< ..
@@ -359,10 +359,9 @@ CONTAINS
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
     ! ---------------------------
-    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! Get process config
@@ -378,8 +377,8 @@ CONTAINS
     ! Allocate bgcm matrices
     nr_elements     = model%config%nr_of_used_elements
     nr_sb_parts     = get_number_of_sb_compartments()
-    ALLOCATE(sb_pool_prev_timestep_hlp_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_particle_transport_hlp_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
+    ALLOCATE(sb_pool_prev_timestep_hlp_mt(nr_sb_parts, nr_elements, nc, nsoil_w))
+    ALLOCATE(sb_particle_transport_hlp_mt(nr_sb_parts, nr_elements, nc, nsoil_w))
     ! And get them from the store
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
@@ -394,26 +393,26 @@ CONTAINS
     dsl4jsb_Get_mt2L3D(SB_BGCM_FIRE_EMISSIONS_ID, sb_fire_emissions_mt)
 
     ! Allocate local allocatable variables (deallocate below at the end of this routine)
-    ALLOCATE(p_deposition_sl(nc, nsoil_sb))
-    ALLOCATE(f_myc_sl(nc, nsoil_sb))
-    ALLOCATE(hlp1(nc, nsoil_sb))
-    ALLOCATE(hlp2(nc, nsoil_sb))
-    ALLOCATE(hlp3(nc, nsoil_sb))
-    ALLOCATE(km_adsorpt_po4_act(nc, nsoil_sb))
-    ALLOCATE(qmax_po4_mineral_act(nc, nsoil_sb))
-    ALLOCATE(km_fast_po4_act(nc, nsoil_sb))
-    ALLOCATE(qmax_fast_po4_act(nc, nsoil_sb))
-    ALLOCATE(km_slow_po4_act(nc, nsoil_sb))
-    ALLOCATE(qmax_slow_po4_act(nc, nsoil_sb))
-    ALLOCATE(km_adsorpt_nh4_act(nc, nsoil_sb))
-    ALLOCATE(qmax_nh4_mineral_act(nc, nsoil_sb))
-    ALLOCATE(k_desorpt_po4_act(nc, nsoil_sb))
-    ALLOCATE(k_adsorpt_po4_act(nc, nsoil_sb))
-    ALLOCATE(rtm_sorption_act(nc, nsoil_sb))
-    ALLOCATE(rmm_sorption_act(nc, nsoil_sb))
-    ALLOCATE(rtm_desorption_act(nc, nsoil_sb))
-    ALLOCATE(rmm_desorption_act(nc, nsoil_sb))
-    ALLOCATE(partition_coef(nc, nsoil_sb))
+    ALLOCATE(p_deposition_sl(nc, nsoil_w))
+    ALLOCATE(f_myc_sl(nc, nsoil_w))
+    ALLOCATE(hlp1(nc, nsoil_w))
+    ALLOCATE(hlp2(nc, nsoil_w))
+    ALLOCATE(hlp3(nc, nsoil_w))
+    ALLOCATE(km_adsorpt_po4_act(nc, nsoil_w))
+    ALLOCATE(qmax_po4_mineral_act(nc, nsoil_w))
+    ALLOCATE(km_fast_po4_act(nc, nsoil_w))
+    ALLOCATE(qmax_fast_po4_act(nc, nsoil_w))
+    ALLOCATE(km_slow_po4_act(nc, nsoil_w))
+    ALLOCATE(qmax_slow_po4_act(nc, nsoil_w))
+    ALLOCATE(km_adsorpt_nh4_act(nc, nsoil_w))
+    ALLOCATE(qmax_nh4_mineral_act(nc, nsoil_w))
+    ALLOCATE(k_desorpt_po4_act(nc, nsoil_w))
+    ALLOCATE(k_adsorpt_po4_act(nc, nsoil_w))
+    ALLOCATE(rtm_sorption_act(nc, nsoil_w))
+    ALLOCATE(rmm_sorption_act(nc, nsoil_w))
+    ALLOCATE(rtm_desorption_act(nc, nsoil_w))
+    ALLOCATE(rmm_desorption_act(nc, nsoil_w))
+    ALLOCATE(partition_coef(nc, nsoil_w))
     ALLOCATE(root_depth_avg(nc))
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_,      nhx_deposition)              ! in
@@ -766,11 +765,11 @@ CONTAINS
       !>  6.3 particle transport
       !>
       sb_particle_transport_hlp_mt = sb_transport_mt * 0._wp
-      particle_fluxrate(:,:) = calc_particle_fluxrate(nc, nsoil_sb, ixC, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
+      particle_fluxrate(:,:) = calc_particle_fluxrate(nc, nsoil_w, ixC, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
         &                                             sb_pool_mt, sb_pool_prev_timestep_hlp_mt)
       ! particle transport of organic and inorganic pools
       CALL calc_particle_transport_wrapper( &
-        & nc, nsoil_sb, soil_depth_sl(:,:), &                                                 ! in
+        & nc, nsoil_w, soil_depth_sl(:,:), &                                                  ! in
         & model%config%elements_index_map(:), &
         & model%config%is_element_used(:), &
         & particle_fluxrate(:,:), &
@@ -862,7 +861,7 @@ CONTAINS
     !! OC
     CALL calc_bulk_soil_carbon( &
       & nc, &                                        ! in
-      & nsoil_sb, &
+      & nsoil_w, &
       & num_sl_above_bedrock(:), &
       & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
       & sb_pool_mt(:,:,:,:), &                       ! in
@@ -872,11 +871,21 @@ CONTAINS
     bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), soil_litter_carbon_sl(:,:), bulk_dens_sl(:,:))
     CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
       &                                    0._wp, qmax_org_min_sl(:,:), qmax_org(:,:))
+    !!
     !! po4
+    !!
     ! Correct the first layer Qmax_AlFe_cor with the woody litter
-    Qmax_AlFe_cor(:,1) = Qmax_AlFe_cor(:,1) * 1._wp / ((1._wp - volume_min_sl(:,1))                                      &
-      &                 * (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)  + sb_pool_mt(ix_woody_litter,ixC,:,1)) &
-      &                 / (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)) + volume_min_sl(:,1))
+    DO ic = 1,nc
+      ! at the bare soil tile, the soil might not contain carbon
+      IF ((bulk_soil_carbon_sl(ic,1) + soil_litter_carbon_sl(ic,1)) > eps8) THEN
+        Qmax_AlFe_cor(ic,1) = Qmax_AlFe_cor(ic,1) * 1._wp / ((1._wp - volume_min_sl(ic,1)) &
+          &   * (bulk_soil_carbon_sl(ic,1) + soil_litter_carbon_sl(ic,1)  + sb_pool_mt(ix_woody_litter, ixC, ic, 1)) &
+          &   / (bulk_soil_carbon_sl(ic,1) + soil_litter_carbon_sl(ic,1)) + volume_min_sl(ic,1))
+      ELSE
+        Qmax_AlFe_cor(ic,1) = 0.0_wp
+      END IF
+    END DO
+    ! calc P sorption parameters
     DO ic = 1,nc
       DO isoil = 1,INT(num_sl_above_bedrock(ic))
         CALL calc_Psorption_parameter( &
@@ -974,7 +983,7 @@ CONTAINS
     !> 10.3 update mineral P pools if not prescibed
     !!
     IF(.NOT. dsl4jsb_Config(SB_)%flag_sb_prescribe_po4) THEN
-      CALL calc_p_inorg_dynamics(nc, nsoil_sb, dtime, &
+      CALL calc_p_inorg_dynamics(nc, nsoil_w, dtime, &
                                        TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                        TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
                                        dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
@@ -1132,12 +1141,12 @@ CONTAINS
 
     sb_pool_woody_litter_c(:,:)   = sb_pool_mt(ix_woody_litter, ixC, :, :)
 
-    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ixC, sb_pool_total_bg_soil_c)
-    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ixN, sb_pool_total_bg_soil_n)
-    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ixP, sb_pool_total_bg_soil_p)
-    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ixC13, sb_pool_total_bg_soil_c13)
-    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ixC14, sb_pool_total_bg_soil_c14)
-    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ixN15, sb_pool_total_bg_soil_n15)
+    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_w, ixC, sb_pool_total_bg_soil_c)
+    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_w, ixN, sb_pool_total_bg_soil_n)
+    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_w, ixP, sb_pool_total_bg_soil_p)
+    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_w, ixC13, sb_pool_total_bg_soil_c13)
+    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_w, ixC14, sb_pool_total_bg_soil_c14)
+    CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_w, ixN15, sb_pool_total_bg_soil_n15)
 
     CALL calculate_sb_pool_ag_litter_for_element(sb_pool_mt, soil_depth_sl, ixC, sb_pool_total_ag_litter_c)
     CALL calculate_sb_pool_ag_litter_for_element(sb_pool_mt, soil_depth_sl, ixN, sb_pool_total_ag_litter_n)
@@ -1185,7 +1194,7 @@ CONTAINS
               & CALL message(TRIM(routine), 'Accelerate spin up for '//TRIM(tile%name)//' ...')
 
             ! fasten the spinup for residual pool
-            CALL calc_accelerated_slow_soil_pool_spinup(nsoil_sb, dtime, soil_depth_sl(ic,:),&
+            CALL calc_accelerated_slow_soil_pool_spinup(nsoil_w, dtime, soil_depth_sl(ic,:), &
                                                       & model%config%slow_sb_pool_spinup_accelerator_length, &
                                                       & residue_som_c_form_mavg_sl(ic,:), &
                                                       & residue_som_c14_form_mavg_sl(ic,:), &
@@ -1193,14 +1202,14 @@ CONTAINS
                                                       & sb_pool_mt(ix_residue,:,ic,:))
             IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
               ! fasten the spinup for the associated residual pool
-              CALL calc_accelerated_slow_soil_pool_spinup(nsoil_sb, dtime, soil_depth_sl(ic,:), &
+              CALL calc_accelerated_slow_soil_pool_spinup(nsoil_w, dtime, soil_depth_sl(ic,:), &
                                                         & model%config%slow_sb_pool_spinup_accelerator_length, &
                                                         & residue_assoc_som_c_form_mavg_sl(ic,:), &
                                                         & residue_assoc_som_c14_form_mavg_sl(ic,:), &
                                                         & residue_assoc_som_c_loss_mavg_sl(ic,:), &
                                                         & sb_pool_mt(ix_residue_assoc,:,ic,:))
               ! fasten the spinup for the associated dom pool
-              CALL calc_accelerated_slow_soil_pool_spinup(nsoil_sb, dtime, soil_depth_sl(ic,:), &
+              CALL calc_accelerated_slow_soil_pool_spinup(nsoil_w, dtime, soil_depth_sl(ic,:), &
                                                         & model%config%slow_sb_pool_spinup_accelerator_length, &
                                                         & assoc_dom_c_form_mavg_sl(ic,:), &
                                                         & assoc_dom_c14_form_mavg_sl(ic,:), &
@@ -1245,7 +1254,7 @@ CONTAINS
   !> Subroutine to calculate fast_exchange_po4 based on Langmuir equilibrium (Yang et al. 2014)
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_p_inorg_dynamics(nc, nsoil_sb, &
+  SUBROUTINE calc_p_inorg_dynamics(nc, nsoil_w, &
                                    dtime, &
                                    sb_model_scheme, &
                                    sb_adsorp_scheme, &
@@ -1283,12 +1292,12 @@ CONTAINS
     IMPLICIT NONE
 
     INTEGER,                                          INTENT(in)    :: nc, &                         !< dimensions
-                                                                       nsoil_sb
+                                                                       nsoil_w
     REAL(wp),                                         INTENT(in)    :: dtime                         !< timestep length
     CHARACTER(len=*),                                 INTENT(in)    :: sb_model_scheme               !< from sb config
     CHARACTER(len=*),                                 INTENT(in)    :: sb_adsorp_scheme              !< eca_full or eca_none
     LOGICAL ,                                         INTENT(in)    :: flag_sb_double_langmuir       !< T: double Langmuir; F: traditional Langmuir
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: qmax_po4_mineral_act, &       !< maximum sorption capacity of po4, [mol P/ m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: qmax_po4_mineral_act, &       !< maximum sorption capacity of po4, [mol P/ m3]
                                                                        km_adsorpt_po4_act, &         !< half saturation of po4 sorption capacity, [mol P/ m3]
                                                                        qmax_fast_po4_act, &          !< maximum sorption capacity of fast_assoc_po4, [mol P/ m3]
                                                                        km_fast_po4_act, &            !< half saturation of po4 sorption in fast_assoc_po4, [mol P/ m3]
@@ -1308,18 +1317,18 @@ CONTAINS
                                                                        microbial_uptake_po4_sl, &    !< microbial PO4 uptake [micro-mol P / m3 / s]
                                                                        gross_mineralisation_po4, &   !< gross mineralisation of PO4 [micro-mol P / m3 / s]
                                                                        net_mineralisation_po4        !< net mineralisation of PO4 [micro-mol P / m3 / s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: po4_solute, &                 !< PO4 in solution [mol / m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(inout) :: po4_solute, &                 !< PO4 in solution [mol / m3]
                                                                        po4_assoc_fast, &             !< fast minerally associated PO4 pool [mol/m3]
                                                                        po4_assoc_slow, &             !< slow minerally associated PO4 pool [mol/m3]
                                                                        occlusion_po4, &              !< phosphorus occlusion rate [micro-mol P / m3 / s]
                                                                        slow_exchange_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [micro-mol P / m3 / s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: fast_exchange_po4             !< phosphorus adsorption rate, solute --> assoc_fast [micro-mol P / m3 / s]
+    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(out)   :: fast_exchange_po4             !< phosphorus adsorption rate, solute --> assoc_fast [micro-mol P / m3 / s]
 
-    REAL(wp), DIMENSION(nc, nsoil_sb)           :: hlp1, hlp2, hlp3, hlp4, &
+    REAL(wp), DIMENSION(nc, nsoil_w)            :: hlp1, hlp2, hlp3, hlp4, &
                                                    partition_coef, & !< partition coefficient to soluble po4
                                                    partition_coef_1  !< partition coefficient to absorbed po4
-    INTEGER                                     :: isoil, ichunk     !< loop over nsoil_sb and nc
-    LOGICAL , DIMENSION(nc, nsoil_sb)           :: flag_arr          !< logical array helper
+    INTEGER                                     :: isoil, ichunk     !< loop over nsoil_w and nc
+    LOGICAL , DIMENSION(nc, nsoil_w)            :: flag_arr          !< logical array helper
     CHARACTER(len=*), PARAMETER                 :: routine = TRIM(modname)//':calc_p_inorg_dynamics'
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -1381,7 +1390,7 @@ CONTAINS
       hlp2(:,:) = ( - transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
 
       DO ichunk = 1, nc
-        DO isoil = 1, nsoil_sb
+        DO isoil = 1, nsoil_w
           IF (flag_arr(ichunk,isoil)) THEN
             CALL calc_langmuir_kinetics(dtime, hlp1(ichunk,isoil), &
                                         po4_solute(ichunk,isoil),po4_assoc_fast(ichunk,isoil), &
@@ -1542,7 +1551,7 @@ CONTAINS
   !> Subroutine to fasten the spinup by separately balancing slow soil pools
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_accelerated_slow_soil_pool_spinup(nsoil_sb, dtime, &
+  SUBROUTINE calc_accelerated_slow_soil_pool_spinup(nsoil_w, dtime, &
                                                   & soil_depth_sl, &
                                                   & spinup_accelerator_length, &
                                                   & formation_c_mavg_sl, &
@@ -1551,7 +1560,7 @@ CONTAINS
                                                   & pool_slow_sl)
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.1 inout
-    INTEGER,  INTENT(in)    :: nsoil_sb                  !< soil dimension
+    INTEGER,  INTENT(in)    :: nsoil_w                   !< number of soil layers (water)
     REAL(wp), INTENT(in)    :: dtime                     !< timestep length [s]
     REAL(wp), INTENT(in)    :: soil_depth_sl(:)          !< soil depth at each layer[m]
     INTEGER,  INTENT(in)    :: spinup_accelerator_length !< loop times of acceleration, read from namelist
@@ -1561,8 +1570,8 @@ CONTAINS
     REAL(wp), INTENT(inout) :: pool_slow_sl(:,:)         !< slow soil pool with all elements [mol m-3]
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.2 Local
-    REAL(wp), DIMENSION(nsoil_sb) :: c13c_slow_sl, nc_slow_sl, n15n_slow_sl,pn_slow_sl !< stiochiometry factors [mol / mol]
-    REAL(wp), DIMENSION(nsoil_sb) :: ratio_sl, ratio_c14_sl !< slow soil pool distributions across all soil layers[unitless]
+    REAL(wp), DIMENSION(nsoil_w)  :: c13c_slow_sl, nc_slow_sl, n15n_slow_sl,pn_slow_sl !< stoichiometry factors [mol / mol]
+    REAL(wp), DIMENSION(nsoil_w)  :: ratio_sl, ratio_c14_sl !< slow soil pool distributions across all soil layers[unitless]
     REAL(wp)                      :: tau_slow !< slow soil pool turnover rate [timestep]
     REAL(wp)                      :: pool_c_slow, pool_c14_slow !< the total slow soil pool [mol m-2]
     REAL(wp)                      :: formation_c_mavg, formation_c14_mavg, loss_c_mavg ! formation and loss rates of the total slow soil pool [mol m-2 timestep-1]
@@ -1574,7 +1583,7 @@ CONTAINS
     !> 1.0 record current stoichiometry, apparent turnover rate of slow pool and slow pool distribution across all soil layers
     !!
     !> 1.1 record current stoichiometry
-    DO i_soil = 1,nsoil_sb
+    DO i_soil = 1,nsoil_w
       IF (pool_slow_sl(ixC,i_soil) > eps8) THEN
         c13c_slow_sl(i_soil) = pool_slow_sl(ixC13,i_soil) / pool_slow_sl(ixC,i_soil)
         nc_slow_sl(i_soil)   = pool_slow_sl(ixN,i_soil) / pool_slow_sl(ixC,i_soil)
@@ -1599,7 +1608,7 @@ CONTAINS
     IF ((pool_c_slow > eps8) .AND. (loss_c_mavg > eps8)) THEN
       tau_slow  = pool_c_slow / loss_c_mavg
 
-      DO i_soil = 1,nsoil_sb
+      DO i_soil = 1,nsoil_w
         ratio_sl(i_soil) = pool_slow_sl(ixC,i_soil) / pool_c_slow
         ratio_c14_sl(i_soil) = pool_slow_sl(ixC14,i_soil) / pool_c14_slow
       END DO
@@ -1632,10 +1641,10 @@ CONTAINS
   !>
   !> Small helper routine to sum up total sb pool below ground soil (SOM and below ground litter) for a given element
   !>
-  SUBROUTINE calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_sb, ix_elem, sb_pool_total_bg_soil_elem)
+  SUBROUTINE calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_w, ix_elem, sb_pool_total_bg_soil_elem)
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp), INTENT(IN)    :: sb_pool_mt(:,:,:,:)             !< sb pool for which the total BG soil is to be calculated
-    INTEGER,  INTENT(IN)    :: nsoil_sb                        !< number of soil layers
+    INTEGER,  INTENT(IN)    :: nsoil_w                         !< number of soil layers (water)
     INTEGER,  INTENT(IN)    :: ix_elem                         !< index of the queried element in the sb pool
     REAL(wp), INTENT(INOUT) :: sb_pool_total_bg_soil_elem(:,:) !< total sb pool SOM + BG litter for given element
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1643,11 +1652,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     sb_pool_total_bg_soil_elem(:,:) &
       & =  sb_pool_mt(ix_dom, ix_elem, :, :)       + sb_pool_mt(ix_dom_assoc, ix_elem, :, :)  &
-      &  + sb_pool_mt(ix_fungi, ix_elem, :, :)     + sb_pool_mt(ix_mycorrhiza, ix_elem, :, :) &
+      &  + sb_pool_mt(ix_mycorrhiza, ix_elem, :, :) &
       &  + sb_pool_mt(ix_microbial, ix_elem, :, :) + sb_pool_mt(ix_residue, ix_elem, :, :)    &
       &  + sb_pool_mt(ix_residue_assoc, ix_elem, :, :)
 
-    DO isoil = 2,nsoil_sb
+    DO isoil = 2,nsoil_w
       sb_pool_total_bg_soil_elem(:,isoil) = sb_pool_total_bg_soil_elem(:,isoil) &
         & + sb_pool_mt(ix_soluable_litter, ix_elem, :, isoil)                   &
         & + sb_pool_mt(ix_polymeric_litter, ix_elem, :, isoil)                  &

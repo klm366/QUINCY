@@ -24,6 +24,8 @@
 #
 # Inspired by cpool_file_from_restart_files.sh
 
+module load nco
+
 #----------------------------------------------------------------------
 # paths and filenames
 
@@ -34,6 +36,10 @@ output_file="sb_and_veg_state_file.nc"
 
 # usecase dependent number of pfts
 nr_pft=13
+
+# if true: include according product pool bgcms (Note: if "true" then the restart file is expected to contain these variables)
+use_agriculture=true
+use_sylviculture=true
 
 # the name of the extra dimension in the icon output
 name_of_soildim=layers_5
@@ -49,11 +55,12 @@ fi
 
 #----------------------------------------------------------------------
 #----------------------------------------------------------------------
-# To derive the variable names as used in the restart file different lists are created
+# To derive the variable names as used in the restart file different lists / variables are created
 # - for the bgcms
 #   - all required elements
-#   - bgcm main prefix (veg and sb, respectively)
 #   - all required compartments (veg and sb, respectively)
+#   - bgcm main prefix (veg and sb, respectively)
+#   - if required: product pool bgcms
 # - for 'normal' variables
 #   - process prefix (currently veg or sb)
 #   - variable names
@@ -76,11 +83,23 @@ veg_variable_list="dens_ind  root_fraction_sl  mean_leaf_age
                    leaf2root_troot_mavg  unit_npp_troot_mavg  unit_uptake_n_pot_troot_mavg  unit_uptake_p_pot_troot_mavg
                    net_growth_tvegdyn_mavg  lai_tvegdyn_mavg"
 
+# product pool bgcms - if the restart file contains product pool variables and these should be used
+if [ ${use_agriculture} = true ] || [ ${use_sylviculture} = true ]; then
+  veg_product_pool_bgcms=""
+  if [ ${use_agriculture} = true ]; then
+    veg_product_pool_bgcms="${veg_product_pool_bgcms} veg_bgcm_pp_crop"
+  fi
+  if [ ${use_sylviculture} = true ]; then
+    veg_product_pool_bgcms="${veg_product_pool_bgcms} veg_bgcm_pp_fuel veg_bgcm_pp_paper veg_bgcm_pp_fiberboard"
+    veg_product_pool_bgcms="${veg_product_pool_bgcms} veg_bgcm_pp_oirw veg_bgcm_pp_pv veg_bgcm_pp_sawnwood"
+  fi
+fi
+
 #------------------
 #-- soil
 # bgcm
 soil_bgcm_prefix="sb_sb_bgcm_pool"
-soil_compartments="dom dom_assoc  sol_litter  pol_litter  woo_litter  fungi  mycorrhiza  microbial  residue  residue_assoc"
+soil_compartments="dom dom_assoc  sol_litter  pol_litter  woo_litter  mycorrhiza  microbial  residue  residue_assoc"
 
 # other state variables (according to https://gitlab.dkrz.de/jsbach/jsbach/-/issues/294#note_341494, date 24.07.25)
 sb_process_prefix="sb"
@@ -121,6 +140,17 @@ for element in ${elements}; do
     done
   done
 done
+
+# veg product pool bgcms
+if [ ${use_agriculture} = true ] || [ ${use_sylviculture} = true ]; then
+  for product_pool_bgcm in ${veg_product_pool_bgcms}; do
+    for element in ${elements}; do
+      for tile in ${tile_list} ; do
+        var_list="${var_list},${veg_process_prefix}_${product_pool_bgcm}_${element}_${tile}"
+      done
+    done
+  done
+fi
 
 # veg variables
 for var in ${veg_variable_list} ; do

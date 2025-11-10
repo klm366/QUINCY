@@ -125,8 +125,7 @@ CONTAINS
     USE mo_quincy_output_class, ONLY: unitless
     USE mo_jsb_physical_constants, ONLY: &
       & Tzero,                           &
-      & dens_snow,                       & ! Density of snow (l_dynsnow=.FALSE.)
-      & dens_snow_min                      ! Density of fresh snow (l_dynsnow=.TRUE.)
+      & dens_snow                          ! Density of snow (l_dynsnow=.FALSE.)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_spq_memory), INTENT(inout), TARGET  :: mem             !< spq memory
     CHARACTER(len=*),     INTENT(in)            :: prefix          !< process name
@@ -138,7 +137,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb                ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_w                 ! Vertical grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_snow_spq               ! Vertical grid
     INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_spq_memory'
@@ -147,7 +146,7 @@ CONTAINS
     table          =  tables(1)
     hgrid          => Get_grid(model%grid_id)
     surface        => Get_vgrid('surface')
-    vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
+    vgrid_soil_w   => Get_vgrid('soil_depth_water')
     vgrid_snow_spq => Get_vgrid('snow_layer_spq')
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -310,7 +309,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('gw_runoff_sl', mem%gw_runoff_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('gw_runoff_sl', 'kg m-2 s-1', 'lateral groundwater runoff per layer'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -321,7 +320,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('drainage_sl', mem%drainage_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('drainage_sl', 'kg m-2 s-1', 'drainage of soil layers'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -332,7 +331,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('saxtonA', mem%saxtonA, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('saxtonA', unitless, 'coefficient in moisture-tension relationship'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -343,7 +342,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('saxtonB', mem%saxtonB, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('saxtonB', unitless, 'coefficient in moisture-tension relationship'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -354,7 +353,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('saxtonC', mem%saxtonC, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('saxtonC', unitless, 'exponent of moisture-conductivity relationship'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -365,7 +364,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('kdiff_sat_sl', mem%kdiff_sat_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('kdiff_sat_sl', 'm s-1', 'saturated hydraulic conductivity'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -420,7 +419,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('w_soil_freeze_flux', mem%w_soil_freeze_flux, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('w_soil_freeze_flux', '-', 'Water flux from liquid to ice from freezing'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -431,7 +430,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('w_soil_melt_flux', mem%w_soil_melt_flux, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('w_soil_melt_flux', '-', 'Water transfer from ice to liquid from melting'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -442,7 +441,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('heat_capa_sl', mem%heat_capa_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('heat_capa_sl', 'J kg-1', 'soil heat capacity'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -453,7 +452,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('therm_cond_sl', mem%therm_cond_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('therm_cond_sl', 'W m-2 K-1', 'soil thermal conductivity'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &

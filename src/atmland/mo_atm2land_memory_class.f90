@@ -173,7 +173,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC, &
       & initval_r=777.7_wp )
 
     CALL mem%Add_var( 'co2_air', mem%CO2_air,                                                      &
@@ -181,7 +180,6 @@ CONTAINS
       & t_cf('CO2_air', '[kg(CO2)/kg(air)]', 'CO2 mass mixing ratio of lowest atmosphere level'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
       & prefix, suffix,                                                                            &
-      & output_level=BASIC, &
       & lrestart=.FALSE., initval_r=6.077E-4_wp ) ! R: I just freely choosed this value. Corresponds to 400 ppm:
                                                   !    CO2:44.011 g/mol; dry air: 28,97 g/mol
                                                   !    400 ppm => 6.077*10^-4
@@ -374,7 +372,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=jsbach_runs_standalone(),                                   &
-        & output_level=BASIC,                                                  &
+        & output_level=FULL,                                                   &
         & initval_r=0.0_wp )
       CALL mem%Add_var( 'pch', mem%pch,                                        &
         & hgrid, surface,                                                      &
@@ -382,7 +380,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
     END IF
 
@@ -392,7 +389,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 't_bcoef', mem%t_bcoef,                                &
@@ -401,7 +397,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'q_acoef', mem%q_acoef,                                &
@@ -410,7 +405,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'q_bcoef', mem%q_bcoef,                                &
@@ -419,7 +413,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'cos_zenith_angle', mem%cos_zenith_angle,              &
@@ -428,7 +421,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     ! lakes
@@ -440,7 +432,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
+        & output_level=FULL,                                                   &
         & initval_r=0.0_wp )
 
       CALL  mem%Add_var( 'drag_ice', mem%drag_ice,                             &
@@ -449,7 +441,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
+        & output_level=FULL,                                                   &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 't_acoef_wtr', mem%t_acoef_wtr,                        &
@@ -458,7 +450,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 't_bcoef_wtr', mem%t_bcoef_wtr,                        &
@@ -467,7 +458,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'q_acoef_wtr', mem%q_acoef_wtr,                        &
@@ -476,7 +466,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'q_bcoef_wtr', mem%q_bcoef_wtr,                        &
@@ -485,7 +474,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 't_acoef_ice', mem%t_acoef_ice,                        &
@@ -494,7 +482,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 't_bcoef_ice', mem%t_bcoef_ice,                        &
@@ -503,7 +490,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'q_acoef_ice', mem%q_acoef_ice,                        &
@@ -512,7 +498,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'q_bcoef_ice', mem%q_bcoef_ice,                        &
@@ -521,7 +506,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
     END IF ! lakes
@@ -579,7 +563,6 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & output_level=BASIC, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('a2l_lightning_events', mem%a2l_lightning_events, &

@@ -58,8 +58,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER   :: model                !< the model
     TYPE(t_lnd_bgcm_store), POINTER   :: bgcm_store           !< the bgcm store of this tile
-    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_soil_sb        !< Vertical grid
-    INTEGER                           :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
+    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_soil_w         !< Vertical grid
+    INTEGER                           :: nsoil_w              !< number of soil layers as used/defined by the SB_ process
     INTEGER                           :: iblk, ics, ice, nc   !< dimensions
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_sb_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -80,10 +80,9 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (model%lctlib(tile%lcts(1)%lib_id)%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
@@ -246,8 +245,8 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER   :: model                !< instance of the model
     TYPE(t_lnd_bgcm_store), POINTER   :: bgcm_store           !< the bgcm store of this tile
     TYPE(t_lctlib_element), POINTER   :: lctlib               !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_soil_sb        !< Vertical grid
-    INTEGER                           :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
+    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_soil_w         !< Vertical grid
+    INTEGER                           :: nsoil_w              !< number of soil layers as used/defined by the SB_ process
     REAL(wp)                          :: dtime                !< timestep length
     INTEGER                           :: iblk, ics, ice, nc   !< dimensions
     CHARACTER(len=*), PARAMETER       :: routine = modname//':calculate_time_average_soilbiogeochemistry'
@@ -300,10 +299,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
