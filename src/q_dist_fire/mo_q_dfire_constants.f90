@@ -217,7 +217,7 @@ MODULE mo_q_dfire_constants
                                                            !< This is an adaptation from daily to 30 min TS as Thonicke et al. (2010) runs at a daily TS
 
   ! todo: smarter way to do it? 
-  LOGICAL, SAVE :: q_dfire_pft_mask(13) != [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
+  LOGICAL, SAVE :: burnable_pfts(13) != [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
                                         !      .TRUE., .TRUE., &                                 ! grass pfts
                                         !      .FALSE., .FALSE., &                               ! pasture pfts , 13 pfts only
                                         !      .FALSE., .FALSE., &                               ! crop pfts

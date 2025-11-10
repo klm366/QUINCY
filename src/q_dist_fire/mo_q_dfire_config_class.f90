@@ -96,6 +96,7 @@ MODULE mo_q_dfire_config_class
     LOGICAL           :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
     LOGICAL           :: flag_has_live_feedback      !< Flag to enable live fuel feedback from Spitfire into Quincy
     LOGICAL           :: flag_has_prob_mort_feedback !< Flag to enable live probability of mortality from Spitfire into Quincy (q_veg_dynamics.f90)
+    LOGICAL           :: flag_wa_custom              !< Flag to enable custom weighting average, defined at 'burnable_pfts'
     REAL(wp)          :: tree_height_factor          !< Tree height factor for spitfire
     REAL(wp)          :: tree_diameter_factor        !< Tree diameter factor for spitfire
     REAL(wp)          :: dead_fuel_factor            !< Dead fuel factor for spitfire
@@ -161,6 +162,7 @@ CONTAINS
     LOGICAL                       :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
     LOGICAL                       :: flag_has_live_feedback      !< Flag to enable live fuel feedback from Spitfire into Quincy
     LOGICAL                       :: flag_has_prob_mort_feedback !< Flag to enable live probability of mortality from Spitfire into Quincy (q_veg_dynamics.f90)
+    LOGICAL                       :: flag_wa_custom              !< Flag to enable custom PFTs weighting average define at 'burnable_pfts'
     REAL(wp)                      :: tree_height_factor          !< Tree height factor for spitfire
     REAL(wp)                      :: tree_diameter_factor        !< Tree diameter factor for spitfire
     REAL(wp)                      :: dead_fuel_factor            !< Dead fuel factor for spitfire
@@ -195,6 +197,7 @@ CONTAINS
       & flag_has_dead_feedback,               &
       & flag_has_live_feedback,               &
       & flag_has_prob_mort_feedback,          &
+      & flag_wa_custom,                       &
       & tree_height_factor,                   &
       & tree_diameter_factor,                 &
       & dead_fuel_factor,                     &
@@ -230,6 +233,7 @@ CONTAINS
     flag_has_dead_feedback   = .TRUE.
     flag_has_live_feedback   = .TRUE.
     flag_has_prob_mort_feedback = .TRUE.
+    flag_wa_custom           = .FALSE.
     tree_height_factor       = 1._wp
     tree_diameter_factor     = 1._wp
     dead_fuel_factor         = 1.0_wp
@@ -272,6 +276,7 @@ CONTAINS
     config%flag_has_dead_feedback    = flag_has_dead_feedback         !
     config%flag_has_live_feedback    = flag_has_live_feedback         !
     config%flag_has_prob_mort_feedback = flag_has_prob_mort_feedback  !
+    config%flag_wa_custom            = flag_wa_custom
     config%tree_height_factor        = tree_height_factor             !
     config%tree_diameter_factor      = tree_diameter_factor           !
     config%dead_fuel_factor          = dead_fuel_factor

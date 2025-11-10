@@ -40,7 +40,7 @@ MODULE mo_q_dfire_fuel
   USE mo_q_dfire_constants,     ONLY: t_sf_fuel_dead_fuel_grass_fruit_ix, t_sf_fuel_dead_fuel_grass_labile_ix, &  ! dead fuel indices from veg_pool
                                       t_sf_fuel_dead_fuel_grass_reserve_ix, t_sf_fuel_dead_fuel_grass_leaf_ix, &
                                       t_sf_fuel_dead_fuel_grass_sap_ix
-  USE mo_q_dfire_constants,     ONLY: df_sf_spq_layer_top_sl
+  USE mo_q_dfire_constants,     ONLY: df_sf_spq_layer_top_sl, burnable_pfts
 
   USE mo_q_dfire_constants,     ONLY: t_sf_fuel_live_fuel_fruit_ix, t_sf_fuel_live_fuel_leaf_ix, & ! live fuel indices from veg_pool
                                       t_sf_fuel_live_fuel_labile_ix, t_sf_fuel_live_fuel_reserve_ix, &
@@ -88,17 +88,18 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_
+    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid_class,          ONLY: t_jsb_grid
     USE mo_jsb_math_constants,      ONLY: one_day
-
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_config(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -134,6 +135,7 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(Q_DFIRE_)
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -185,6 +187,7 @@ CONTAINS
     IF (lctlib%PastureFlag) RETURN !< do not run this routine at tiles like "pasture pft"
     IF (lctlib%CropFlag) RETURN !< do not run this routine at tiles like "crops pft"
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(Q_DFIRE_)
     dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -274,10 +277,10 @@ CONTAINS
                             sb_pool_in_gdm, veg_pool_in_gdm, &
                             ratio_as_dead_fuel)
 
-    live_grass_fuel_fcl = fuel_cls % calc_live_grass_fuel() * live_fuel_factor
-    live_tree_fuel_fcl = fuel_cls % calc_live_tree_fuel() * live_fuel_factor
-    dead_fuel_fcl = fuel_cls % calc_dead_fuel() * dead_fuel_factor
-    live_fuel_fcl = fuel_cls % calc_live_fuel() * live_fuel_factor
+    live_grass_fuel_fcl = fuel_cls % calc_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
+    live_tree_fuel_fcl = fuel_cls % calc_live_tree_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
+    dead_fuel_fcl = fuel_cls % calc_dead_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
+    live_fuel_fcl = fuel_cls % calc_live_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
 
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
