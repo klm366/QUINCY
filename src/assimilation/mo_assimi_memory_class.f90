@@ -327,6 +327,7 @@ CONTAINS
       & prefix, suffix,                                                                            &
       & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3 CO2_conc_leaf_acc
 
+    !TODO: add unit and longname
     CALL mem%Add_var('canopy_cond_unlimited', mem%canopy_cond_unlimited,       &
       & hgrid, surface,                                                        &
       & t_cf('canopy_conductance_unlimited', '', ''),                          &

@@ -81,7 +81,7 @@ MODULE mo_hydro_memory_class
       & fract_pond_max,       & !< Maximum possible inudated tile fraction               []
       & weq_pond,             & !< Water content of pond reservoir                       [m water equivalent]
       & weq_pond_max,         & !< Maximum water content of pond reservoir               [m water equivalent]
-      & wtr_pond,             & !< Liquid water content of pond reservoir                [m water equivalent]
+      & wtr_pond,             & !< Liquid water content of pond reservoir                [m]
       & pond_melt,            & !< Melting of ice in pond reservoir                      [kg m-2 s-1]
       & pond_freeze,          & !< Freezing of liquid water in pond reservoir            [kg m-2 s-1]
       & wtr_pond_net_flx,     & !< Net water flux into pond reservoir                    [kg m-2 s-1]
@@ -104,7 +104,7 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & elevation,            & !< Topographic height                                    [m]
       & oro_stddev,           & !< Standard deviation of the orography                   [m]
-      & steepness               !< Parameter defining sub-grid scale slope               []
+      & steepness               !< Parameter defining subgrid scale slope                []
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
@@ -151,7 +151,7 @@ MODULE mo_hydro_memory_class
       & evapo_deficit,        & !< Evaporation deficit flux due to inconsistent
                                 !< treatment of snow evaporation           [m water equivalent / (time step)]
       & water_to_soil,        & !< Water available for infiltration into the soil        [m water equivalent]
-      & wtr_soilhyd_res,      & !< Residual of vertical soil water transport scheme      [m]
+      & wtr_soilhyd_res,      & !< Residual of vertical soil water transport scheme      [m3 / (time step)]
       & tpe_overflow,         & !< Water content of terraplanet reservoir for soil water
                                 !< overflow                                              [m]
       & wtr_rootzone,         & !< Liquid water content in the root zone                 [m]
@@ -225,7 +225,7 @@ MODULE mo_hydro_memory_class
 
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & fract_snow_glac,      & !< Snow fraction on glacier                              []
+      & fract_snow_glac,      & !< Snow fraction on glacier                              []  TODO: remove
       & weq_glac,             & !< Glacier depth (snow is considered as glacier)         [m water equivalent]
       & runoff_glac             !< Runoff from glacier (rain + ice melt, no calving)     [m water equivalent]
 
@@ -355,6 +355,7 @@ CONTAINS
     !> are defined. Note, that the code triplet '255, 255, 255' used for most jsbach output variables is rather
     !> a placeholder.
 
+    !TODO: Change unit for unitless variables '-' -> ''
     ! Define grib codes for snow fraction if we are on the box tile, i.e. the name of the tile "owning" this
     ! memory is 'box'.
     IF (TRIM(mem%owner_tile_name) == 'box') THEN
@@ -515,6 +516,8 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp )
 
+    !TODO: Change cf names: t_cf('weq_balance_err_count', '',                                            &
+    !      'Number of time steps with water balance error since (re)start')
     CALL mem%Add_var( 'weq_balance_err_count', mem%weq_balance_err_count,            &
       & hgrid, surface,                                                              &
       & t_cf('weq_balance_err_count', 'time steps',                                  &
@@ -1371,6 +1374,7 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &  ) ) THEN
 
+      ! TODO: Remove fract_snow_glac - never used
       CALL mem%Add_var( 'fract_snow_glac', mem%fract_snow_glac,                          &
         & hgrid, surface,                                                                &
         & t_cf('fract_snow_glac', '-', 'Snow fraction on glacier'),                      &
