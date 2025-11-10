@@ -226,7 +226,7 @@ CONTAINS
 #else
 
       ! jsbach carbon
-      IF (model%processes(CARBON_)%p%config%active) THEN
+      IF (model%processes(CARBON_)%p%config%active .OR. model%processes(SB_CARBON_)%p%config%active) THEN
         CALL mem%Add_var( 'carbon_conservation_test', mem%carbon_conservation_test,      &
           & hgrid, surface,                                                              &
           & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &

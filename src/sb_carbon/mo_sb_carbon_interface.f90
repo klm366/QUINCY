@@ -64,17 +64,17 @@ MODULE mo_sb_carbon_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_carbon_interface'
 
-  !> Type definition for C_NPP_pot_allocation task
-  TYPE, EXTENDS(t_jsb_process_task) ::   tsk_C_NPP_pot_allocation
+  !> Type definition for sb_C_NPP_update task
+  TYPE, EXTENDS(t_jsb_process_task) ::   tsk_sb_C_NPP_update
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_C_NPP_pot_allocation    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_C_NPP_pot_allocation !< Aggregates computed task variables
-  END TYPE   tsk_C_NPP_pot_allocation
+    PROCEDURE, NOPASS :: Integrate => update_sb_C_NPP    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_sb_C_NPP !< Aggregates computed task variables
+  END TYPE   tsk_sb_C_NPP_update
 
-  !> Constructor interface for C_NPP_pot_allocation task
-  INTERFACE tsk_C_NPP_pot_allocation
-    PROCEDURE Create_task_C_NPP_pot_allocation        !< Constructor function for task
-  END INTERFACE tsk_C_NPP_pot_allocation
+  !> Constructor interface for sb_C_NPP_update task
+  INTERFACE tsk_sb_C_NPP_update
+    PROCEDURE Create_task_sb_C_NPP_update        !< Constructor function for task
+  END INTERFACE tsk_sb_C_NPP_update
 
   !> Type definition for ta_vars_after_lcc task
   TYPE, EXTENDS(t_jsb_process_task) ::   tsk_ta_vars_after_lcc
@@ -99,15 +99,15 @@ CONTAINS
   !! @param[in]     model_id     Model id
   !! @return        return_ptr   Instance of process task "carbon"
   !!
-  FUNCTION Create_task_C_NPP_pot_allocation(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_sb_C_NPP_update(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_C_NPP_pot_allocation::return_ptr)
-    CALL return_ptr%Construct(name='C_NPP_pot_allocation', process_id=CARBON_, owner_model_id=model_id)
+    ALLOCATE(tsk_sb_C_NPP_update::return_ptr)
+    CALL return_ptr%Construct(name='sb_C_NPP_update', process_id=SB_CARBON_, owner_model_id=model_id)
 
-  END FUNCTION Create_task_C_NPP_pot_allocation
+  END FUNCTION Create_task_sb_C_NPP_update
 
   ! ====================================================================================================== !
   !
@@ -135,7 +135,7 @@ CONTAINS
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,                 INTENT(in) :: model_id
 
-    CALL this%Register_task(tsk_C_NPP_pot_allocation(model_id))
+    CALL this%Register_task(tsk_sb_C_NPP_update(model_id))
     CALL this%Register_task(tsk_ta_vars_after_lcc(model_id))
 
   END SUBROUTINE Register_sb_carbon_tasks
@@ -148,7 +148,7 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE update_C_NPP_pot_allocation(tile, options)
+  SUBROUTINE update_sb_C_NPP(tile, options)
 
     ! Use declarations
     USE mo_carbon_process,    ONLY: calc_Cpools
@@ -177,7 +177,7 @@ CONTAINS
     REAL(wp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
     REAL(wp)                     :: lctlib_WoodLit_coef_humus
     REAL(wp)                     :: F_pseudo_temp, N_pseudo_temp, F_pseudo_precip, N_pseudo_precip
-    CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
+    CHARACTER(len=*), PARAMETER  :: routine = modname//':update_sb_C_NPP'
     REAL(wp)                     :: dtime
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
@@ -449,9 +449,9 @@ CONTAINS
 
     ! Put a comment on the screen...
     IF (debug_on() .AND. iblk==1 .AND. new_day  ) CALL message(TRIM(routine), &
-                                                           'update_C_NPP_pot_allocation: First time step of new day')
+                                                           'update_sb_C_NPP: First time step of new day')
     IF (debug_on() .AND. iblk==1 .AND. new_year ) CALL message(TRIM(routine), &
-                                                           'update_C_NPP_pot_allocation: First time step of new year')
+                                                           'update_sb_C_NPP: First time step of new year')
 
     ! Initializations
 
@@ -793,17 +793,17 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_C_NPP_pot_allocation
+  END SUBROUTINE update_sb_C_NPP
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! Implementation of "aggregate" for task "C_NPP_pot_allocation"
+  !! Implementation of "aggregate" for task "sb_C_NPP_update"
   !!
   !! @param[in,out] tile    Tile for which aggregation of child tiles is executed.
   !! @param[in]     config  Vector of process configurations.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE aggregate_C_NPP_pot_allocation(tile, options)
+  SUBROUTINE aggregate_sb_C_NPP_update(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -812,7 +812,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_C_NPP_pot_allocation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_sb_C_NPP_update'
 
     INTEGER  :: iblk , ics, ice
 
@@ -899,7 +899,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_C_NPP_pot_allocation
+  END SUBROUTINE aggregate_sb_C_NPP_update
 
 
 !##########################################################################################################################

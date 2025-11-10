@@ -332,19 +332,21 @@ CONTAINS
       END IF
 #ifndef __NO_QUINCY__
       IF (model%processes(SB_CARBON_)%p%config%active) THEN
-         CALL model%Queue_task(SB_CARBON_, "") ! one for layer aggregation
-         CALL model%Queue_task(SB_CARBON_, "") ! one for C NPP allocation
-         ! need to load SB tasks
+         ! need to load SB tasks first
          dsl4jsb_Get_config(SB_)
          CALL model%Queue_task(SB_, "sb_rate_modifier")
          CALL model%Queue_task(SB_, "reset_sb_fluxes")
-         CALL model%Queue_task(SB_, "sb_pools")
-         CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")
+         ! litter inputs need to be sorted out beforehand or within the SB_
+         CALL model%Queue_task(SB_CARBON_, "allocate_C_npp_sb_litter") ! allocate the npp from JSBACH to the SB_ litter pools
          IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
            CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
          ELSE
-           CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
+           CALL model%Queue_task(SB_, "sb_simple_model")         ! 
          END IF
+         CALL model%Queue_task(SB_, "sb_pools")
+         CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")      
+         ! CALL model%Queue_task(SB_CARBON_, "") ! one for layer aggregation
+         CALL model%Queue_task(SB_CARBON_, "sb_C_NPP_update") ! one for C NPP allocation         
       END IF
 #endif
       CALL model%Queue_task(TURB_,   "humidity_scaling")
@@ -1059,6 +1061,7 @@ CONTAINS
 #ifndef __NO_QUINCY__
     USE mo_veg_init,            ONLY: veg_read_states
     USE mo_sb_init,             ONLY: sb_read_states
+    USE mo_sb_carbon_init,      ONLY: sb_carbon_read_cpools
 #endif
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -1072,6 +1075,7 @@ CONTAINS
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(HYDRO_)
 #ifndef __NO_QUINCY__
+    dsl4jsb_Def_config(SB_CARBON_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
 #endif
@@ -1095,7 +1099,10 @@ CONTAINS
     CASE (MODEL_JSBACH)
       dsl4jsb_Get_config(CARBON_)
       dsl4jsb_Get_config(HYDRO_)
+      IF (model%config%use_sb_carbon) THEN
 #ifndef __NO_QUINCY__
+        dsl4jsb_Get_config(SB_CARBON_)
+      END IF
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_config(VEG_)
       dsl4jsb_Get_config(SB_)
@@ -1129,6 +1136,16 @@ CONTAINS
           CALL hydro_sanitize_state(tile)
         END IF
 #ifndef __NO_QUINCY__
+        IF (tile%Is_process_active(SB_CARBON_)) THEN
+          IF (dsl4jsb_Config(SB_CARBON_)%read_sbcpools) CALL sb_carbon_read_cpools(tile)
+        END IF
+        IF (ASSOCIATED(tile%bgcm_store)) THEN
+          DO blk = blks, blke
+            jcs = grid%get_col_start(blk)
+            jce = grid%get_col_end  (blk)
+            CALL tile%bgcm_store%Store_bgcms_in_matrices(tile%name, jcs, jce, blk)
+          ENDDO
+        END IF
       CASE (MODEL_QUINCY)
         IF (tile%Is_process_calculated(VEG_)) THEN
           IF (dsl4jsb_Config(VEG_)%read_veg_state) CALL veg_read_states(tile)

@@ -741,7 +741,7 @@ CONTAINS
     IF (model_scheme == MODEL_QUINCY) THEN
       tile_is_carbon_active = .TRUE.
     ELSE
-      tile_is_carbon_active = tile%Is_process_active(CARBON_)
+      tile_is_carbon_active = tile%Is_process_active(CARBON_) .OR. tile%Is_process_active(SB_CARBON_)
     END IF
 
     dsl4jsb_Get_config(SEB_)
