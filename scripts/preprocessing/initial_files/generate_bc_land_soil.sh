@@ -62,6 +62,23 @@ var_list="FR_SAND FR_SILT FR_CLAY SUB_FR_SAND SUB_FR_SILT SUB_FR_CLAY \
 # Preparations that need to be done outside the parallel loop
 ${cdo} splitvar ${pool_prepare}/05/soil_parameter_05_apr2024.nc   05_
 
+# Process root depth, as it is needed for soil depth calculation
+if [[ ${var_list} == *"soil_depth"* || ${var_list} == *"root_depth"* ]]; then
+  # ----------------------
+  var=root_depth
+  # ----------------------
+  echo "   ${var} ..."
+  minimum_root_depth=0.15  # Note: root depth of GLCC data used in extpar ranges from 0.3 to 2.0 m.
+  # Get root depth from extpar file and extrapolate land values to ocean area
+  ${cdo} -setmisstodis -setmissval,0 -selvar,ROOTDP ${extpar_file} extpar_ROOTDP.nc
+  # Set minimum root depth - also use this value for complete ocean cells. Root depth of glaciers is zero.
+  ${cdo} -setattribute,root_depth@long_name="Root depth" -setattribute,root_depth@units="m" \
+      -setname,root_depth -mul notglac.nc -maxc,${minimum_root_depth} \
+      -mul non-glac-land-mask.nc extpar_ROOTDP.nc  ${atmGridID}_root_depth.nc
+  # Copy for later usage in generate_ic_land_soil
+  $cp ${atmGridID}_root_depth.nc ${atmGridID}_root_depth.keep
+fi
+
 
 for var in ${var_list}; do
   {
@@ -94,15 +111,12 @@ for var in ${var_list}; do
   # ----------------------
     root_depth )
   # ----------------------
-      minimum_root_depth=0.15  # Note: root depth of GLCC data used in extpar ranges from 0.3 to 2.0 m.
-      # Get root depth from extpar file and extrapolate land values to ocean area
-      ${cdo} -setmisstodis -setmissval,0 -selvar,ROOTDP ${extpar_file} extpar_ROOTDP.nc
-      # Set minimum root depth - also use this value for complete ocean cells. Root depth of glaciers is zero.
-      ${cdo} -setattribute,root_depth@long_name="Root depth" -setattribute,root_depth@units="m" \
-          -setname,root_depth -mul notglac.nc -maxc,${minimum_root_depth} \
-          -mul non-glac-land-mask.nc extpar_ROOTDP.nc  ${atmGridID}_root_depth.nc
-      # Copy for later usage in generate_ic_land_soil
-      $cp ${atmGridID}_root_depth.nc ${atmGridID}_root_depth.keep
+      # Root depth already calculated above ...
+      ;;
+  # ----------------------
+    maxmoist )
+  # ----------------------
+      # Maxmoist calculated below ...
       ;;
   # ----------------------
     soil_depth )
@@ -119,11 +133,6 @@ for var in ${var_list}; do
       ncatted -a code,${var},d,c, ${atmGridID}_${var}.nc
       # Copy for later usage in generate_ic_land_soil
       $cp ${atmGridID}_soil_depth.nc ${atmGridID}_soil_depth.keep
-      ;;
-  # ----------------------
-    maxmoist )
-  # ----------------------
-      # Maxmoist calculated below ...
       ;;
   # ----------------------
     fract_org_sl )
