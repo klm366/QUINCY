@@ -216,7 +216,9 @@ MODULE mo_q_dfire_constants
   REAL(wp), PARAMETER :: df_sf_fire_duration_thd = 30      !< Maximum fire duration allowed, capped to timestep length [min]
                                                            !< This is an adaptation from daily to 30 min TS as Thonicke et al. (2010) runs at a daily TS
 
-  ! todo: smarter way to do it? 
+  ! todo: smarter way to do it?
+  LOGICAL, SAVE :: burnable_tree_pfts(13)  ! TTTTTTFFFFFFF, default
+  LOGICAL, SAVE :: burnable_grass_pfts(13) ! FFFFFFTTFFFFF, default
   LOGICAL, SAVE :: burnable_pfts(13) != [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
                                         !      .TRUE., .TRUE., &                                 ! grass pfts
                                         !      .FALSE., .FALSE., &                               ! pasture pfts , 13 pfts only

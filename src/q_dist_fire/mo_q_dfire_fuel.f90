@@ -145,10 +145,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl         ! in [m]
     dsl4jsb_Real2D_onChunk      :: height                ! in [m]
 
-    dsl4jsb_Real3D_onChunk      :: live_fuel_1hr_lfp     ! out [g DM m-2]
-    dsl4jsb_Real3D_onChunk      :: live_fuel_10hr_lfp    ! out [g DM m-2]
-    dsl4jsb_Real3D_onChunk      :: live_fuel_100hr_lfp   ! out [g DM m-2]
-    dsl4jsb_Real3D_onChunk      :: live_fuel_1000hr_lfp  ! out [g DM m-2]
+!    dsl4jsb_Real3D_onChunk      :: live_fuel_1hr_lfp     ! out [g DM m-2]
+!    dsl4jsb_Real3D_onChunk      :: live_fuel_10hr_lfp    ! out [g DM m-2]
+!    dsl4jsb_Real3D_onChunk      :: live_fuel_100hr_lfp   ! out [g DM m-2]
+!    dsl4jsb_Real3D_onChunk      :: live_fuel_1000hr_lfp  ! out [g DM m-2]
 
 !    dsl4jsb_Real3D_onChunk      :: dead_fuel             ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: dead_fuel_1hr_dfp     ! out [g DM m-2]
@@ -201,10 +201,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_100hr_dfp)   ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1000hr_dfp)  ! out [g DM m-2]
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_1hr_lfp)          ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_10hr_lfp)         ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_100hr_lfp)        ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_1000hr_lfp)       ! out [g DM m-2]
+!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_1hr_lfp)          ! out [g DM m-2]
+!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_10hr_lfp)         ! out [g DM m-2]
+!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_100hr_lfp)        ! out [g DM m-2]
+!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_1000hr_lfp)       ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp)    ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp)     ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp)    ! out [g DM m-2]
@@ -277,10 +277,7 @@ CONTAINS
                             sb_pool_in_gdm, veg_pool_in_gdm, &
                             ratio_as_dead_fuel)
 
-    live_grass_fuel_fcl = fuel_cls % calc_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
-    live_tree_fuel_fcl = fuel_cls % calc_live_tree_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
     dead_fuel_fcl = fuel_cls % calc_dead_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
-    live_fuel_fcl = fuel_cls % calc_live_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
 
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
@@ -300,18 +297,19 @@ CONTAINS
     dead_fuel_10hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_10hr_idx)
     dead_fuel_100hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_100hr_idx)
     dead_fuel_1000hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
-    
-    live_grass_fuel_1hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx)
 
-    live_tree_fuel_1hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1hr_idx)
-    live_tree_fuel_10hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx)
-    live_tree_fuel_100hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx)
-    live_tree_fuel_1000hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
+    IF (lctlib%growthform == igrass) THEN
+      live_grass_fuel_fcl = fuel_cls % calc_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
+      live_grass_fuel_1hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx)
+    END IF
 
-    live_fuel_1hr_lfp = live_fuel_fcl(:,:,df_sf_fc_1hr_idx)
-    live_fuel_10hr_lfp = live_fuel_fcl(:,:,df_sf_fc_10hr_idx)
-    live_fuel_100hr_lfp = live_fuel_fcl(:,:,df_sf_fc_100hr_idx)
-    live_fuel_1000hr_lfp = live_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
+    IF (lctlib%growthform == itree) THEN
+      live_tree_fuel_fcl = fuel_cls % calc_live_tree_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
+      live_tree_fuel_1hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1hr_idx)
+      live_tree_fuel_10hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx)
+      live_tree_fuel_100hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx)
+      live_tree_fuel_1000hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
+    END IF
 
     NULLIFY(live_fuel_frac)
   END SUBROUTINE update_q_dfire_fuel

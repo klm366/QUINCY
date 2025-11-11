@@ -74,7 +74,7 @@ MODULE mo_q_dfire_sf_fuel_class
   !< Spitfire fuel pool class
   TYPE :: t_sf_fuel_class
     INTEGER :: nc
-    INTEGER, ALLOCATABLE :: growth_form(:)    !< itree, igrass
+    INTEGER, ALLOCATABLE :: growth_form(:)    !< itree, igrass ! todo: remove, not necessary
     TYPE(t_sf_litter_ratios) :: litter_ratios !< Litter ratio [0 to 1]
     INTEGER :: ndeadpools                     !< Total number of dead pools
 
@@ -268,7 +268,7 @@ CONTAINS
     grass_fuel = 0._wp !< for itree = 0
 
     DO ic = 1, this % nc
-!      IF (this % growth_form(ic) == igrass) THEN
+      IF (this % growth_form(ic) == igrass) THEN
         DO ifuel = 1, df_sf_fc_full_nr
           grass_fuel(ic,t_sf_fuel_live_fuel_leaf_ix, ifuel) = this%live(ic,t_sf_fuel_live_fuel_leaf_ix) * &
               this%live_frac(ifuel,t_sf_fuel_live_fuel_leaf_ix)
@@ -281,7 +281,7 @@ CONTAINS
           grass_fuel(ic,t_sf_fuel_live_fuel_fruit_ix, ifuel) = this%live(ic,t_sf_fuel_live_fuel_fruit_ix) * &
               this%live_frac(ifuel,t_sf_fuel_live_fuel_fruit_ix)
         END DO
-!      END IF
+      END IF
     END DO
   END FUNCTION Calc_live_grass_fuel
 

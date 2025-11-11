@@ -37,7 +37,7 @@ MODULE mo_q_dfire_fuel_interface
   USE mo_q_dfire_fuel,                ONLY: update_q_dfire_fuel
   USE mo_q_dfire_post,                ONLY: update_q_dfire_post
 
-  USE mo_q_dfire_constants,           ONLY: burnable_pfts ! pfts to compute average
+  USE mo_q_dfire_constants,           ONLY: burnable_pfts, burnable_grass_pfts, burnable_tree_pfts ! pfts to compute average
 
   dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
 
@@ -161,17 +161,12 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, dead_fuel_100hr_dfp  , weighted_by_fract, burnable_pfts)
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, dead_fuel_1000hr_dfp , weighted_by_fract, burnable_pfts)
 
-      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_fuel_1hr_lfp    , weighted_by_fract, burnable_pfts)
-      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_fuel_10hr_lfp   , weighted_by_fract, burnable_pfts)
-      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_fuel_100hr_lfp  , weighted_by_fract, burnable_pfts)
-      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_fuel_1000hr_lfp , weighted_by_fract, burnable_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp  , weighted_by_fract, burnable_grass_pfts)
 
-      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp  , weighted_by_fract, burnable_pfts)
-
-      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp   , weighted_by_fract, burnable_pfts)
-      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp  , weighted_by_fract, burnable_pfts)
-      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp , weighted_by_fract, burnable_pfts)
-      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp, weighted_by_fract, burnable_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp   , weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp  , weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp , weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp, weighted_by_fract, burnable_tree_pfts)
     ELSE ! weighting average for including all PFTs (tree, grass, crop, pasture, baresoil, ...)
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, moisture_extinction  , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, fwd_wind_factor      , weighted_by_fract)
@@ -181,11 +176,6 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, dead_fuel_10hr_dfp   , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, dead_fuel_100hr_dfp  , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, dead_fuel_1000hr_dfp , weighted_by_fract)
-
-      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_fuel_1hr_lfp    , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_fuel_10hr_lfp   , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_fuel_100hr_lfp  , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_fuel_1000hr_lfp , weighted_by_fract)
 
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp    , weighted_by_fract)
 
