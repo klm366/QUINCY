@@ -627,7 +627,7 @@ CONTAINS
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%sb_bgcm_main%sbbfirelitterash, &
-        & hgrid, surface, vgrid_soil_sb,                                                               &
+        & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = FULL,                                                                       &
@@ -635,7 +635,7 @@ CONTAINS
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%sb_bgcm_main%sbbfireemissions, &
-        & hgrid, surface, vgrid_soil_sb,                                                               &
+        & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = FULL,                                                                       &

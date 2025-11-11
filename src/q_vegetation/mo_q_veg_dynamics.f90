@@ -130,6 +130,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c13
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c14
+    ! Q_DFIRE_FUEL_ 2D
+    dsl4jsb_Real2D_onChunk      :: pm_fire 
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -148,6 +150,7 @@ CONTAINS
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_config(Q_SYL_)
+    dsl4jsb_Get_config(Q_DFIRE_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(HYDRO_)

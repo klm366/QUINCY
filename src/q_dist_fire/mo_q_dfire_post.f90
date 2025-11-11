@@ -152,10 +152,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Real3D_onChunk                :: live_fuel_1hr_lfp         ! in [g DM m-2]
-    dsl4jsb_Real3D_onChunk                :: live_fuel_10hr_lfp        ! in [g DM m-2]
-    dsl4jsb_Real3D_onChunk                :: live_fuel_100hr_lfp       ! in [g DM m-2]
-    dsl4jsb_Real3D_onChunk                :: live_fuel_1000hr_lfp      ! in [g DM m-2]
+!    dsl4jsb_Real3D_onChunk                :: live_fuel_1hr_lfp         ! in [g DM m-2]
+!    dsl4jsb_Real3D_onChunk                :: live_fuel_10hr_lfp        ! in [g DM m-2]
+!    dsl4jsb_Real3D_onChunk                :: live_fuel_100hr_lfp       ! in [g DM m-2]
+!    dsl4jsb_Real3D_onChunk                :: live_fuel_1000hr_lfp      ! in [g DM m-2]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr_dfp         ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_10hr_dfp        ! in [g DM m-2]
@@ -249,10 +249,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)               ! in [?]
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_1hr_lfp)    ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_10hr_lfp)   ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_100hr_lfp)  ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_1000hr_lfp) ! in [g DM m-2]
+!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_1hr_lfp)    ! in [g DM m-2]
+!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_10hr_lfp)   ! in [g DM m-2]
+!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_100hr_lfp)  ! in [g DM m-2]
+!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_1000hr_lfp) ! in [g DM m-2]
 
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_10hr_dfp)    ! in [g DM m-2]
@@ -357,10 +357,10 @@ CONTAINS
     dead_fuel_fcl(:,:,df_sf_fc_100hr_idx) = dead_fuel_100hr_dfp
     dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1000hr_dfp
 
-    live_fuel_cls(:,:,df_sf_fc_1hr_idx) = live_fuel_1hr_lfp
-    live_fuel_cls(:,:,df_sf_fc_10hr_idx) = live_fuel_10hr_lfp
-    live_fuel_cls(:,:,df_sf_fc_100hr_idx) = live_fuel_100hr_lfp
-    live_fuel_cls(:,:,df_sf_fc_1000hr_idx) = live_fuel_1000hr_lfp
+!    live_fuel_cls(:,:,df_sf_fc_1hr_idx) = live_fuel_1hr_lfp
+!    live_fuel_cls(:,:,df_sf_fc_10hr_idx) = live_fuel_10hr_lfp
+!    live_fuel_cls(:,:,df_sf_fc_100hr_idx) = live_fuel_100hr_lfp
+!    live_fuel_cls(:,:,df_sf_fc_1000hr_idx) = live_fuel_1000hr_lfp
     area_burned_pft = area_burned * tile_fract
     area_burned_fract_pft = area_burned_fract * tile_fract
 
