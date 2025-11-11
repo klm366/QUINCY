@@ -315,7 +315,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: live_fuel(:,:,:)       !< (#nc, #live fuel pools, #fuel class) [gDM m-2]
 
     ALLOCATE(live_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr))
-    live_fuel = this%Calc_live_fuel()
+    live_fuel = this%Calc_live_tree_fuel()
     total_live_fuel = sf_calc_aggr_fuels(live_fuel)
   END FUNCTION Calc_total_live_tree_fuel
 
