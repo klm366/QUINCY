@@ -99,6 +99,7 @@ CONTAINS
     nc=SIZE(emissions_spc, DIM=1) ! 1=nc index
     npools=SIZE(emissions_spc, DIM=2) ! 2= npools index
 
+    ALLOCATE(mask_opt(SIZE(emissions_spc, DIM=1))) ! 1=nc index
     mask_opt = .TRUE. !< default
     IF (PRESENT(mask)) THEN
       mask_opt = mask
