@@ -201,7 +201,7 @@ CONTAINS
       dead_fuel(:,t_sf_fuel_dead_fuel_grass_labile_ix,ifuel) = grass_fuel(:,t_sf_fuel_live_fuel_labile_ix,ifuel) * &
                                                         this%live_frac(ifuel,t_sf_fuel_live_fuel_labile_ix)
       dead_fuel(:,t_sf_fuel_dead_fuel_grass_reserve_ix,ifuel) = grass_fuel(:,t_sf_fuel_live_fuel_reserve_ix,ifuel) * &
-                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_leaf_ix)
+                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_reserve_ix)
       dead_fuel(:,t_sf_fuel_dead_fuel_grass_fruit_ix,ifuel) = grass_fuel(:,t_sf_fuel_live_fuel_fruit_ix,ifuel) * &
                                                         this%live_frac(ifuel,t_sf_fuel_live_fuel_fruit_ix)
     END DO
