@@ -102,9 +102,11 @@ MODULE mo_q_dfire_config_class
     REAL(wp)          :: dead_fuel_factor            !< Dead fuel factor for spitfire
     REAL(wp)          :: live_fuel_factor            !< Live fuel factor for spitfire
 
-    LOGICAL           :: burnable_pfts(13)           !< Define which PFTs are burnable. Those PFTs are then accounted for the weighting average
+    LOGICAL           :: burnable_pfts(13)           !< Burnable PFTs. Those PFTs are then accounted for the weighting average
                                                      !< from leaf to tile processes. This also involces the Burned area as it is influenced by the area.
                                                      !< 13= number of PFTs. TODO: make it dynamic, to accomodate other configurations
+    LOGICAL           :: burnable_grass_pfts(13)     !< Burnable grass PFTs
+    LOGICAL           :: burnable_tree_pfts(13)      !< Burnable tree PFTs
 
   CONTAINS
     PROCEDURE :: Init => Init_q_dfire_config
@@ -168,6 +170,8 @@ CONTAINS
     REAL(wp)                      :: dead_fuel_factor            !< Dead fuel factor for spitfire
     REAL(wp)                      :: live_fuel_factor            !< Live fuel factor for spitfire
     LOGICAL                       :: burnable_pfts(13)           !< Burnable PFTs, used in aggregation and potential burnable area
+    LOGICAL                       :: burnable_grass_pfts(13)     !< Burnable grass PFTs, used in aggregation and potential burnable area
+    LOGICAL                       :: burnable_tree_pfts(13)      !< Burnable tree PFTs, used in aggregation and potential burnable area
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_q_dfire_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -202,7 +206,9 @@ CONTAINS
       & tree_diameter_factor,                 &
       & dead_fuel_factor,                     &
       & live_fuel_factor,                     &
-      & burnable_pfts
+      & burnable_pfts,                        &
+      & burnable_grass_pfts,                  &
+      & burnable_tree_pfts
 
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -238,8 +244,13 @@ CONTAINS
     tree_diameter_factor     = 1._wp
     dead_fuel_factor         = 1.0_wp
     live_fuel_factor         = 1.0_wp
+    ! PFTS: Tree,Tree,Tree,Tree,Tree,Tree,Grass,Grass,Pasture,Pasture,Crops,Crops,Bare-soil
     burnable_pfts            = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., &
-                                .FALSE., .FALSE., .FALSE., .FALSE., .FALSE.] ! T,T,T,T,T,G,G,P,P,C,C,B 
+                                .FALSE., .FALSE., .FALSE., .FALSE., .FALSE.]
+    burnable_grass_pfts      = [.FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .TRUE.,  .TRUE.,  .FALSE.,&
+                                .FALSE., .FALSE., .FALSE., .FALSE.]
+    burnable_tree_pfts       = [.TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .FALSE., .FALSE., .FALSE.,&
+                                .FALSE., .FALSE., .FALSE., .FALSE.]
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! read the namelist
@@ -282,6 +293,8 @@ CONTAINS
     config%dead_fuel_factor          = dead_fuel_factor
     config%live_fuel_factor          = live_fuel_factor
     config%burnable_pfts             = burnable_pfts
+    config%burnable_grass_pfts       = burnable_grass_pfts
+    config%burnable_tree_pfts        = burnable_tree_pfts
     ! ----------------------------------------------------------------------------------------------------- !
     CALL close_nml(nml_handler)
     ! ----------------------------------------------------------------------------------------------------- !
