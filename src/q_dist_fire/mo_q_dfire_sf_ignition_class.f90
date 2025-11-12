@@ -26,6 +26,8 @@ MODULE mo_q_dfire_sf_ignition_class
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
 
+  USE mo_q_dfire_constants,   ONLY: df_sf_lign_cg, df_sf_lign_eff
+
   IMPLICIT NONE
 
   PRIVATE
@@ -101,7 +103,7 @@ CONTAINS
     !< Section 2.2.1, equation 3 from Thonicke et al. (2010)
     sf_ignitions%human = sel_dens_hum_pop * k_pd * a_nd / 100._wp
 
-    sf_ignitions%lightning = n_lightning_ig
+    sf_ignitions%lightning = n_lightning_ig * df_sf_lign_cg * df_sf_lign_eff
     !< Section 2.2, last paragraph (below eq. 2 from Thonicke et al. (2010))
     sf_ignitions%total = sf_ignitions%human + sf_ignitions%lightning
   END FUNCTION calc_q_sf_ignition

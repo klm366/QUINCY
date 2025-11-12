@@ -216,6 +216,9 @@ MODULE mo_q_dfire_constants
   REAL(wp), PARAMETER :: df_sf_fire_duration_thd = 30      !< Maximum fire duration allowed, capped to timestep length [min]
                                                            !< This is an adaptation from daily to 30 min TS as Thonicke et al. (2010) runs at a daily TS
 
+  REAL(wp), PARAMETER :: df_sf_lign_cg = 0.20_wp           !< Lightning events, from cloud to ground flashes, Thonicke et al. (2010) section 2.2.1
+  REAL(wp), PARAMETER :: df_sf_lign_eff = 0.04_wp          !< Lightning events, Efficiency to start fires from cloud to ground flashes, Thonicke et al. (2010) section 2.2.1
+
   ! todo: smarter way to do it?
   LOGICAL, SAVE :: burnable_tree_pfts(13)  ! TTTTTTFFFFFFF, default
   LOGICAL, SAVE :: burnable_grass_pfts(13) ! FFFFFFTTFFFFF, default
