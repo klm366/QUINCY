@@ -336,17 +336,9 @@ CONTAINS
          dsl4jsb_Get_config(SB_)
          CALL model%Queue_task(SB_, "sb_rate_modifier")
          CALL model%Queue_task(SB_, "reset_sb_fluxes")
-         ! litter inputs need to be sorted out beforehand or within the SB_
-         CALL model%Queue_task(SB_CARBON_, "allocate_C_npp_sb_litter") ! allocate the npp from JSBACH to the SB_ litter pools
-         IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
-           CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
-         ELSE
-           CALL model%Queue_task(SB_, "sb_simple_model")         ! 
-         END IF
-         CALL model%Queue_task(SB_, "sb_pools")
-         CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")      
-         ! CALL model%Queue_task(SB_CARBON_, "") ! one for layer aggregation
-         CALL model%Queue_task(SB_CARBON_, "sb_C_NPP_update") ! one for C NPP allocation         
+         ! allocate the npp from JSBACH to the SB_ litter pools, and run soil model from SB
+         CALL model%Queue_task(SB_CARBON_, "sb_C_npp_update") 
+         CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")       
       END IF
 #endif
       CALL model%Queue_task(TURB_,   "humidity_scaling")

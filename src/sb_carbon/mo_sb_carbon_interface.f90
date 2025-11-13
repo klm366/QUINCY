@@ -32,9 +32,8 @@ MODULE mo_sb_carbon_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  USE mo_sb_carbon_constants! ,   ONLY: molarMassCO2_kg, sec_per_day,                    &
-                            !     & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, &
-                            !     & i_lctlib_nonsoluble, i_lctlib_humus
+  USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
+  USE mo_sb_carbon_process
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
   dsl4jsb_Use_processes SB_CARBON_, ASSIMI_, PHENO_, DISTURB_, NLCC_, A2L_, L2A_
@@ -60,33 +59,22 @@ MODULE mo_sb_carbon_interface
     &        calculate_current_c_ta_state_sum, check_carbon_conservation, yday_carbon_conservation_test,   &
     &        rescale_carbon_upon_reference_area_change,                                                    &
     &        carbon_transfer_from_active_to_passive_vars_onChunk, global_carbon_diagnostics,               &
-    &        rescale_carbon_vars_upon_ageing_induced_ref_area_change, merge_carbon_vars_upon_ageing
+    &        rescale_carbon_vars_upon_ageing_induced_ref_area_change, merge_carbon_vars_upon_ageing,       &
+    &        relocate_carbon_fire, relocate_carbon_damage
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_carbon_interface'
 
-  !> Type definition for sb_C_NPP_update task
-  TYPE, EXTENDS(t_jsb_process_task) ::   tsk_sb_C_NPP_update
+  !> Type definition for sb_C_npp_update task
+  TYPE, EXTENDS(t_jsb_process_task) ::   tsk_sb_C_npp_update
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_sb_C_NPP    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_sb_C_NPP !< Aggregates computed task variables
-  END TYPE   tsk_sb_C_NPP_update
+  END TYPE   tsk_sb_C_npp_update
 
-  !> Constructor interface for sb_C_NPP_update task
-  INTERFACE tsk_sb_C_NPP_update
-    PROCEDURE Create_task_sb_C_NPP_update        !< Constructor function for task
-  END INTERFACE tsk_sb_C_NPP_update
-
-  !> Type definition for ta_vars_after_lcc task
-  TYPE, EXTENDS(t_jsb_process_task) ::   tsk_ta_vars_after_lcc
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_ta_vars_after_lcc    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_ta_vars_after_lcc !< Aggregates computed task variables
-  END TYPE   tsk_ta_vars_after_lcc
-
-  !> Constructor interface for ta_vars_after_lcc task
-  INTERFACE tsk_ta_vars_after_lcc
-    PROCEDURE Create_task_ta_vars_after_lcc        !< Constructor function for task
-  END INTERFACE tsk_ta_vars_after_lcc
+  !> Constructor interface for sb_C_npp_update task
+  INTERFACE tsk_sb_C_npp_update
+    PROCEDURE Create_task_sb_C_npp_update        !< Constructor function for task
+  END INTERFACE tsk_sb_C_npp_update
 
 CONTAINS
 
@@ -99,29 +87,16 @@ CONTAINS
   !! @param[in]     model_id     Model id
   !! @return        return_ptr   Instance of process task "carbon"
   !!
-  FUNCTION Create_task_sb_C_NPP_update(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_sb_C_npp_update(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_sb_C_NPP_update::return_ptr)
-    CALL return_ptr%Construct(name='sb_C_NPP_update', process_id=SB_CARBON_, owner_model_id=model_id)
+    ALLOCATE(tsk_sb_C_npp_update::return_ptr)
+    CALL return_ptr%Construct(name='sb_C_npp_update', process_id=SB_CARBON_, owner_model_id=model_id)
 
-  END FUNCTION Create_task_sb_C_NPP_update
+  END FUNCTION Create_task_sb_C_npp_update
 
-  ! ====================================================================================================== !
-  !
-  !> Constructor for ta variables after lcc
-  !
-  FUNCTION Create_task_ta_vars_after_lcc(model_id) RESULT(return_ptr)
-
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_ta_vars_after_lcc::return_ptr)
-    CALL return_ptr%Construct(name='ta_vars_after_lcc', process_id=CARBON_, owner_model_id=model_id)
-
-  END FUNCTION Create_task_ta_vars_after_lcc
 
   ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for carbon process
@@ -135,15 +110,17 @@ CONTAINS
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,                 INTENT(in) :: model_id
 
-    CALL this%Register_task(tsk_sb_C_NPP_update(model_id))
-    CALL this%Register_task(tsk_ta_vars_after_lcc(model_id))
+    CALL this%Register_task(tsk_sb_C_npp_update(model_id))
 
   END SUBROUTINE Register_sb_carbon_tasks
 
+  ! ------------------------------------------------------------------------------------------------------- !
+  ! Wrappers for update routines from different module
+  ! ------------------------------------------------------------------------------------------------------- !
   ! ================================================================================================================================
   !>
   !> Implementation to calculate the allocation of NPP carbon to the plant and soil carbon pools
-  !!        R: Corresponds to update_cbalance_bethy in JSBACH3.
+  !!        following SB soil pool structure
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -151,14 +128,13 @@ CONTAINS
   SUBROUTINE update_sb_C_NPP(tile, options)
 
     ! Use declarations
-    USE mo_carbon_process,    ONLY: calc_Cpools
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, timesteps_per_day, is_time_experiment_start
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    ! Declare local variables
+    ! Declare local variables for JSB CARBON
     TYPE(t_jsb_model), POINTER   :: model
     LOGICAL                      :: lstart, new_day, new_year
     LOGICAL                      :: nlcc_is_enabled    ! helper needed on DWD NEC
@@ -170,21 +146,35 @@ CONTAINS
     REAL(wp)                     :: lctlib_tau_c_woods, lctlib_LAI_shed_constant, lctlib_MaxLAI
     REAL(wp)                     :: lctlib_WoodLitterSize, lctlib_Max_C_content_woods
     REAL(wp)                     :: lctlib_specificLeafArea_C, lctlib_reserveC2leafC
-    REAL(wp)                     :: lctlib_LeafLit_coef_acid, lctlib_LeafLit_coef_water
-    REAL(wp)                     :: lctlib_LeafLit_coef_ethanol, lctlib_LeafLit_coef_nonsoluble
-    REAL(wp)                     :: lctlib_LeafLit_coef_humus
-    REAL(wp)                     :: lctlib_WoodLit_coef_acid, lctlib_WoodLit_coef_water
-    REAL(wp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
-    REAL(wp)                     :: lctlib_WoodLit_coef_humus
     REAL(wp)                     :: F_pseudo_temp, N_pseudo_temp, F_pseudo_precip, N_pseudo_precip
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_sb_C_NPP'
     REAL(wp)                     :: dtime
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
+    REAL(wp), DIMENSION(options%nc) :: leafLitter, C_2_litter_woodPool    
+    
+    ! Declare local variables for QUINCY SB
+    
+    
+    ! ! local variables from old calc_Cpools
+    ! REAL(wp) :: c_green_max,c_reserve_optimal
+    ! REAL(wp) :: NPP_2_greenPool, NPP_2_woodPool, NPP_2_reservePool, NPP_2_rootExudates, Green_2_herbivory
+    ! REAL(wp) :: C_2_litter_greenPool, C_2_litter_woodPool
+    ! REAL(wp) :: excess_carbon
+    ! REAL(wp) :: leaf_shedding
+
+    ! REAL(wp) :: c_green_pot, c_woods_pot         !! values of potential carbon pools i.e. before accounting for N-limitation
+    ! REAL(wp) :: c_reserve_pot
+
+    ! REAL(wp) :: Cflx_NPP_2_green_pot,Cflx_NPP_2_wood_pot,Cflx_NPP_2_reserve_pot
+    ! REAL(wp) :: Cflx_2_crop_harvest, Cflx_crop_harvest_2_atmos
+    ! REAL(wp) :: Cflx_faeces_2_LG, Cflx_faeces_2_atm    
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(PHENO_)
-    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_memory(PHENO_)    
+    dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(A2L_)
@@ -206,54 +196,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_woods           ! C-pool for stems, thick roots and other (dead) structural
                                                      !  material of living plants [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_crop_harvest    ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
-
-    !SIZE CLASS 1
-    dsl4jsb_Real2D_onChunk ::  c_acid_ag1        ! Yasso above ground litter-pool for acid soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_water_ag1       ! Yasso above ground litter-pool for water soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag1     ! Yasso above ground litter-pool for ethanol soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag1  ! Yasso above ground litter-pool for non-soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_acid_bg1        ! Yasso below ground litter-pool for acid soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_water_bg1       ! Yasso below ground litter-pool for water soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg1     ! Yasso below ground litter-pool for ethanol soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg1  ! Yasso below ground litter-pool for non-soluble litter
-                                                      ! [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_humus_1         ! Yasso below ground litter-pool for slow C compartment
-                                                      !  [mol(C)/m^2(canopy)]
-    !SIZE CLASS 2
-    dsl4jsb_Real2D_onChunk ::  c_acid_ag2        ! Yasso above ground litter-pool for acid soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_water_ag2       ! Yasso above ground litter-pool for water soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag2     ! Yasso above ground litter-pool for ethanol soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag2  ! Yasso above ground litter-pool for non-soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_acid_bg2        ! Yasso below ground litter-pool for acid soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_water_bg2       ! Yasso below ground litter-pool for water soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg2     ! Yasso below ground litter-pool for ethanol soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2  ! Yasso below ground litter-pool for non-soluble litter
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_humus_2         ! Yasso below ground litter-pool for slow C compartment
-                                                      !  [mol(C)/m^2(canopy)]
-
-    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum  ! Annual sum of humus decomposed in YASSO (leaf)
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum  ! Annual sum of humus decomposed in YASSO (wood)
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum    ! Annual sum of cflux into humus in YASSO (leaf)
-                                                      !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum    ! Annual sum of cflux into humus in YASSO (wood)
-                                                      !  [mol(C)/m^2(canopy)]
 
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
     dsl4jsb_Real2D_onChunk ::  NPP_pot_rate_ca        ! The instantaneous (potential) NPP rate [mol(C)/m^2(canopy) s]
@@ -324,7 +266,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
 
     !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes)
+    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, leafLitter, C_2_litter_woodPool)
 
     iblk  = options%iblk
     ics   = options%ics
@@ -340,7 +282,9 @@ CONTAINS
 
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(SB)
     dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(A2L_)
 
@@ -507,7 +451,7 @@ CONTAINS
 
 
     ! Update pseudo-15day-mean air temperature and precipitation for pseudo_temp_yDay and pseudo_precip_yDay
-    ! These variables are needed for the "CALL calc_Cpools", where they given to yasso to calculte C decomposition.
+    ! These variables are needed for the "CALL ", where they given to yasso to calculte C decomposition.
     ! pseudo_temp is a temperature that depicts the smoth course of the soil temperature following the air temperature.
 
     !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -601,17 +545,6 @@ CONTAINS
       lctlib_specificLeafArea_C      = dsl4jsb_Lctlib_param(specificLeafArea_C)
       lctlib_reserveC2leafC          = dsl4jsb_Lctlib_param(reserveC2leafC)
       lctlib_PhenologyType           = dsl4jsb_Lctlib_param(PhenologyType)
-      lctlib_LeafLit_coef_acid       = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_acid))
-      lctlib_LeafLit_coef_water      = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_water))
-      lctlib_LeafLit_coef_ethanol    = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_ethanol))
-      lctlib_LeafLit_coef_nonsoluble = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_nonsoluble))
-      lctlib_LeafLit_coef_humus      = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_humus))
-      lctlib_WoodLit_coef_acid       = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_acid))
-      lctlib_WoodLit_coef_water      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_water))
-      lctlib_WoodLit_coef_ethanol    = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_ethanol))
-      lctlib_WoodLit_coef_nonsoluble = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_nonsoluble))
-      lctlib_WoodLit_coef_humus      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_humus))
-      lctlib_WoodLitterSize          = dsl4jsb_Lctlib_param(WoodLitterSize)
 
       ! Calculate current carbon sum before the update - for C conservation test
       CALL recalc_carbon_per_tile_vars(tile, options)
@@ -619,8 +552,8 @@ CONTAINS
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        ! Now update the C pools
-        CALL calc_Cpools( &
+        ! Now calculate the jsb litter for SB inputs
+        CALL calc_jsb_C_litter( &
           &  LAI_yDayMean(ic),                                  & ! in
           &  LAI_yyDayMean(ic),                                 & ! in
           &  MaxLai(ic),                                        & ! in
@@ -642,7 +575,6 @@ CONTAINS
           &  c_reserve(ic),                                     & ! inout
           &  c_crop_harvest(ic),                                & ! inout
           !
-          &  soil_respiration(ic),                              & ! out
           &  NPP_flux_correction(ic),                           & ! out
           &  excess_NPP(ic),                                    & ! out
           &  root_exudates(ic),                                 & ! out
@@ -651,50 +583,37 @@ CONTAINS
           &  cflux_herb_2_littergreen(ic),                      & ! out
           &  cflux_herb_2_atm(ic),                              & ! out
           &  NPP_act_yDayMean(ic),                              & ! out
-          !
-          ! Variables only needed with yasso:
-          &  temp2_30d        =  pseudo_temp_yDay(ic),          & ! in
-          &  precip_30d       =  pseudo_precip_yDay(ic),        & ! in
-
-          &  c_acid_ag1       =  c_acid_ag1(ic),                & ! inout
-          &  c_water_ag1      =  c_water_ag1(ic),               & ! inout
-          &  c_ethanol_ag1    =  c_ethanol_ag1(ic),             & ! inout
-          &  c_nonsoluble_ag1 =  c_nonsoluble_ag1(ic),          & ! inout
-          &  c_acid_bg1       =  c_acid_bg1(ic),                & ! inout
-          &  c_water_bg1      =  c_water_bg1(ic),               & ! inout
-          &  c_ethanol_bg1    =  c_ethanol_bg1(ic),             & ! inout
-          &  c_nonsoluble_bg1 =  c_nonsoluble_bg1(ic),          & ! inout
-          &  c_humus_1        =  c_humus_1(ic),                 & ! inout
-          &  c_acid_ag2       =  c_acid_ag2(ic),                & ! inout
-          &  c_water_ag2      =  c_water_ag2(ic),               & ! inout
-          &  c_ethanol_ag2    =  c_ethanol_ag2(ic),             & ! inout
-          &  c_nonsoluble_ag2 =  c_nonsoluble_ag2(ic),          & ! inout
-          &  c_acid_bg2       =  c_acid_bg2(ic),                & ! inout
-          &  c_water_bg2      =  c_water_bg2(ic),               & ! inout
-          &  c_ethanol_bg2    =  c_ethanol_bg2(ic),             & ! inout
-          &  c_nonsoluble_bg2 =  c_nonsoluble_bg2(ic),          & ! inout
-          &  c_humus_2        =  c_humus_2(ic),                 & ! inout
-
-          &  LeafLit_coef_acid       =  lctlib_LeafLit_coef_acid,       & ! in
-          &  LeafLit_coef_water      =  lctlib_LeafLit_coef_water,      & ! in
-          &  LeafLit_coef_ethanol    =  lctlib_LeafLit_coef_ethanol,    & ! in
-          &  LeafLit_coef_nonsoluble =  lctlib_LeafLit_coef_nonsoluble, & ! in
-          &  LeafLit_coef_humus      =  lctlib_LeafLit_coef_humus,      & ! in
-          &  WoodLit_coef_acid       =  lctlib_WoodLit_coef_acid,       & ! in
-          &  WoodLit_coef_water      =  lctlib_WoodLit_coef_water,      & ! in
-          &  WoodLit_coef_ethanol    =  lctlib_WoodLit_coef_ethanol,    & ! in
-          &  WoodLit_coef_nonsoluble =  lctlib_WoodLit_coef_nonsoluble, & ! in
-          &  WoodLit_coef_humus      =  lctlib_WoodLit_coef_humus,      & ! in
-          &  WoodLitterSize          =  lctlib_WoodLitterSize,          & ! in
-
-          & c_decomp_humus_1_sum  = c_decomp_humus_1_sum(ic),   & ! out
-          & c_decomp_humus_2_sum  = c_decomp_humus_2_sum(ic),   & ! out
-          & c_into_humus_1_sum    = c_into_humus_1_sum(ic),     & ! out
-          & c_into_humus_2_sum    = c_into_humus_2_sum(ic)      & ! out
-          & )
+          &  leafLitter(ic),                                    & ! out
+          &  C_2_litter_woodPool(ic)                            & ! out          
+          & ) 
       END DO
       !$ACC END PARALLEL LOOP
 
+      ! partition the jsb litter and C content to SB structure
+      ! prepare other variables for SB processes
+      CALL prep_jsb_sb_processes( &
+        & nc, &                                         ! in
+        & nsoil_w, &
+        & num_sl_above_bedrock(:), &
+        & lctlib%sla, &
+        & lctlib%growthform, &
+        & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
+        & soil_depth_sl(:,:), &
+        & root_fraction_sl(:,:), &
+        & leafLitter(:), C_2_litter_woodPool(:), &            ! in
+        & sb_formation_mt(:,:,:,:) )  
+        
+      IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+         CALL update_sb_simple_model(tile, options)                  ! LAND ONLY
+      ELSE
+         CALL update_sb_jsm(tile, options)         ! 
+      END IF
+      CALL update_sb_pools(tile, options)
+      
+      ! we need to calculate soil_respiration after SB processes
+      soil_respiration = soil_respiration - Cflx_crop_harvest_2_atmos / sec_per_day
+      !soilResp_rate_pot = soilResp_rate_pot - Cflx_crop_harvest_2_atmos / sec_per_day
+    
       ! determine annual maximum content of green pool for NLCC process
       IF (model%Is_process_enabled(NLCC_)) THEN
         IF (new_year) THEN
@@ -797,13 +716,13 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! Implementation of "aggregate" for task "sb_C_NPP_update"
+  !! Implementation of "aggregate" for task "sb_C_npp_update"
   !!
   !! @param[in,out] tile    Tile for which aggregation of child tiles is executed.
   !! @param[in]     config  Vector of process configurations.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE aggregate_sb_C_NPP_update(tile, options)
+  SUBROUTINE aggregate_sb_C_npp_update(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -812,7 +731,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_sb_C_NPP_update'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_sb_C_npp_update'
 
     INTEGER  :: iblk , ics, ice
 
@@ -899,7 +818,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_sb_C_NPP_update
+  END SUBROUTINE aggregate_sb_C_npp_update
 
 
 !##########################################################################################################################
@@ -2143,6 +2062,283 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     DEALLOCATE (scaling, in_domain)
 
   END SUBROUTINE global_carbon_diagnostics
+
+  ! --- relocate_carbon_fire() ---------------------------------------------------------------------------------------------------
+  !
+  ! This routine models the consequences of fire for the carbon pools. More precisely:
+  ! It is assumed that for the burned area the carbon from the above ground litter pools (c_litter_green_ag,
+  ! c_litter_wood_ag) is completely released to the atmosphere and the carbon from the living plant pools
+  ! (c_green_st, c_reserve_st, c_woods_st) is partly released to the atmosphere and partly relocated
+  ! into the litter pools.
+  !
+  SUBROUTINE relocate_carbon_fire( &
+    & burned_fract,                      & ! in from disturbed_frac
+    & fire_fract_wood_2_atmos,           & ! in
+    & LeafLit_coef,                      & ! in
+    & WoodLit_coef,                      & ! in
+    & c_green,                           & ! inout
+    & c_woods,                           & ! inout
+    & c_reserve,                         & ! inout
+    & cflux_dist_green_2_soil,           & ! inout
+    & cflux_dist_woods_2_soil,           & ! inout
+    & c_acid_ag1,                        & ! inout
+    & c_water_ag1,                       & ! inout
+    & c_ethanol_ag1,                     & ! inout
+    & c_nonsoluble_ag1,                  & ! inout
+    & c_acid_ag2,                        & ! inout
+    & c_water_ag2,                       & ! inout
+    & c_ethanol_ag2,                     & ! inout
+    & c_nonsoluble_ag2,                  & ! inout
+    & c_acid_bg1,                        & ! inout
+    & c_water_bg1,                       & ! inout
+    & c_ethanol_bg1,                     & ! inout
+    & c_nonsoluble_bg1,                  & ! inout
+    & c_acid_bg2,                        & ! inout
+    & c_water_bg2,                       & ! inout
+    & c_ethanol_bg2,                     & ! inout
+    & c_nonsoluble_bg2,                  & ! inout
+    & c_humus_1,                         & ! inout
+    & c_humus_2,                         & ! inout
+    & co2flux_fire_all_2_atm             & ! out
+    & )
+
+    ! Arguments
+    REAL(wp), INTENT(in)    :: burned_fract(:)              ! Fraction of the vegetated area of each tile burned till the last
+                                                            ! call of this routine
+    REAL(wp), INTENT(in)    :: fire_fract_wood_2_atmos      ! Fraction of above ground wood immediately emitted to atmosphere
+                                                            ! by fire
+    REAL(wp), INTENT(in)    :: LeafLit_coef(:)              ! Factor to spread non woody litterfall into yasso pools [ ]
+    REAL(wp), INTENT(in)    :: WoodLit_coef(:)              ! Factor to spread woody litterfall into yasso pools [ ]
+    REAL(wp), INTENT(inout) :: c_green(:)                   ! Value of green carbon pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_woods(:)                   ! Value of wood carbon pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_reserve(:)                 ! Value of reserve carbon pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(out)   :: co2flux_fire_all_2_atm(:)    ! CO2 immediately released by fire per tile [kg(CO2)m-2(canopy)s-1]
+    REAL(wp), INTENT(inout) :: cflux_dist_green_2_soil(:)   ! Amount of carbon relocated by wind and fire damage
+                                                            ! .. to the green litter pools [mol(C)/m^2(canopy)s-1]
+    REAL(wp), INTENT(inout) :: cflux_dist_woods_2_soil(:)   ! Amount of carbon relocated by wind damage and fire
+                                                            ! .. to the wood litter pools [mol(C)/m^2(canopy)s-1]
+    !   YASSO
+    ! SIZE CLASS 1 ; GREEN
+    !   above ground C pools
+    REAL(wp), INTENT(inout) :: c_acid_ag1(:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_water_ag1(:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_ethanol_ag1(:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_nonsoluble_ag1(:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    !   below ground C pools
+    REAL(wp), INTENT(inout) :: c_acid_bg1(:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_water_bg1(:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_ethanol_bg1(:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_nonsoluble_bg1(:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_humus_1(:)           ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
+    ! SIZE CLASS 2 ; WOOD
+    !   above ground C pools
+    REAL(wp), INTENT(inout) :: c_acid_ag2(:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_water_ag2(:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_ethanol_ag2(:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_nonsoluble_ag2(:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    !   below ground C pools
+    REAL(wp), INTENT(inout) :: c_acid_bg2(:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_water_bg2(:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_ethanol_bg2(:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_nonsoluble_bg2(:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_humus_2(:)           ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
+
+    ! Local variables
+    REAL(wp)  :: non_woody_litter, fraction ! Helper
+    INTEGER   :: ic, nc
+
+    nc = SIZE(burned_fract)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+    !$ACC   PRIVATE(non_woody_litter, fraction)
+    DO ic = 1, nc
+      non_woody_litter = c_green(ic) + c_reserve(ic)
+
+      ! Amount of carbon released from the green and reserve pools entering the green litter pools
+      cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + &
+        & (c_green(ic) + c_reserve(ic)) * (1._wp - fract_green_aboveGround) * burned_fract(ic) / sec_per_day
+
+      ! Amount of carbon released from the wood pool entering the woody litter pools
+      cflux_dist_woods_2_soil(ic)  = cflux_dist_woods_2_soil(ic) + &
+        & c_woods(ic) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(ic) / sec_per_day
+
+      ! Determin the amount of carbon released from the wood pool, the living tissue pools, and the
+      ! litter pools going to the atmosphere
+      co2flux_fire_all_2_atm(ic) = ( &
+          ! above ground fraction of living biomass
+        & non_woody_litter * fract_green_aboveGround                          &
+          ! add the above ground YASSO pools
+        & + c_water_ag1(ic) + c_acid_ag1(ic) + c_ethanol_ag1(ic)              &
+        & + c_nonsoluble_ag1(ic)                                              &
+        & + c_water_ag2(ic) + c_acid_ag2(ic) + c_ethanol_ag2(ic)              &
+        & + c_nonsoluble_ag2(ic)                                              &
+          ! add the fire affected fraction of the above ground wood pools
+        & + c_woods(ic) * fire_fract_wood_2_atmos * fract_wood_aboveGround    &
+          ! scale with the burned fraction
+        & ) * burned_fract(ic) * molarMassCO2_kg / sec_per_day
+
+      ! Reduce the above ground yasso pools accordingly
+      fraction = 1._wp - burned_fract(ic)
+      c_acid_ag1      (ic) = fraction * c_acid_ag1       (ic)
+      c_water_ag1     (ic) = fraction * c_water_ag1      (ic)
+      c_ethanol_ag1   (ic) = fraction * c_ethanol_ag1    (ic)
+      c_nonsoluble_ag1(ic) = fraction * c_nonsoluble_ag1 (ic)
+
+      c_acid_ag2      (ic) = fraction * c_acid_ag2       (ic)
+      c_water_ag2     (ic) = fraction * c_water_ag2      (ic)
+      c_ethanol_ag2   (ic) = fraction * c_ethanol_ag2    (ic)
+      c_nonsoluble_ag2(ic) = fraction * c_nonsoluble_ag2 (ic)
+
+      ! Add below ground fraction of the burned vegetation to the below ground green litter pools
+      fraction = (1._wp - fract_green_aboveGround) * burned_fract(ic)
+      CALL distribute_yasso_litter(c_acid_bg1(ic), c_water_bg1(ic), c_ethanol_bg1(ic), c_nonsoluble_bg1(ic), c_humus_1(ic), &
+        &                          non_woody_litter, fraction, LeafLit_coef)
+
+      ! Distribute the remaings of burned wood to the yasso litter pools
+      !  Above ground
+      fraction = (1._wp - fire_fract_wood_2_atmos) * fract_wood_aboveGround * burned_fract(ic)
+      CALL distribute_yasso_litter(c_acid_ag2(ic), c_water_ag2(ic), c_ethanol_ag2(ic), c_nonsoluble_ag2(ic), c_humus_2(ic), &
+        &                          c_woods(ic), fraction, WoodLit_coef)
+      !  Below ground
+      fraction = (1._wp - fract_wood_aboveGround) * burned_fract(ic)
+      CALL distribute_yasso_litter(c_acid_bg2(ic), c_water_bg2(ic), c_ethanol_bg2(ic), c_nonsoluble_bg2(ic), c_humus_2(ic), &
+        &                          c_woods(ic), fraction, WoodLit_coef)
+
+      ! Reduce the living plant carbon pools accordingly
+      fraction = 1._wp - burned_fract(ic)
+      c_green(ic)   = c_green(ic)   * fraction
+      c_woods(ic)   = c_woods(ic)   * fraction
+      c_reserve(ic) = c_reserve(ic) * fraction
+    END DO
+    !$ACC END PARALLEL LOOP
+
+  END SUBROUTINE relocate_carbon_fire
+
+  ! --- relocate_carbon_damage() ---------------------------------------------------------------------------------------------------
+  !
+  ! This routine models the consequences of damages to the vegetation (e.g. wind break) for the carbon pools. More precisely:
+  ! It is assumed that for the damaged area the carbon from the living plant pools (c_green_st, c_reserve_st and
+  ! c_woods_st) is partly relocated into the litter pools.
+  !
+  SUBROUTINE relocate_carbon_damage(  &
+    & damaged_fract,                  & ! in
+    & LeafLit_coef,                   & ! in
+    & WoodLit_coef,                   & ! in
+    & c_green,                        & ! inout
+    & c_woods,                        & ! inout
+    & c_reserve,                      & ! inout
+    & cflux_dist_green_2_soil,        & ! inout
+    & cflux_dist_woods_2_soil,        & ! inout
+    & c_acid_ag1,                     & ! inout
+    & c_water_ag1,                    & ! inout
+    & c_ethanol_ag1,                  & ! inout
+    & c_nonsoluble_ag1,               & ! inout
+    & c_acid_ag2,                     & ! inout
+    & c_water_ag2,                    & ! inout
+    & c_ethanol_ag2,                  & ! inout
+    & c_nonsoluble_ag2,               & ! inout
+    & c_acid_bg1,                     & ! inout
+    & c_water_bg1,                    & ! inout
+    & c_ethanol_bg1,                  & ! inout
+    & c_nonsoluble_bg1,               & ! inout
+    & c_acid_bg2,                     & ! inout
+    & c_water_bg2,                    & ! inout
+    & c_ethanol_bg2,                  & ! inout
+    & c_nonsoluble_bg2,               & ! inout
+    & c_humus_1,                      & ! inout
+    & c_humus_2                       & ! inout
+    & )
+
+    ! Arguments
+    real(wp),intent(in)    :: damaged_fract(:)         ! Fraction of the vegetated area of each tile damaged since the last
+                                                       ! call of this routine
+    real(wp),intent(in)    :: LeafLit_coef(:)          ! Factor to spread non woody litter into yasso pools [ ]
+    real(wp),intent(in)    :: WoodLit_coef(:)          ! Factor to spread woody litterfall into yasso pools [ ]
+    real(wp),intent(inout) :: c_green(:)               ! Value of green carbon pool [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: c_woods(:)               ! Value of wood carbon pool [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: c_reserve(:)             ! Value of reserve carbon pool [mol(C)/m^(canopy)2]
+    real(wp),intent(inout) :: cflux_dist_green_2_soil(:)          ! Amount of carbon relocated by wind damage
+                                                                  ! (and later also by fire)
+    real(wp),intent(inout) :: cflux_dist_woods_2_soil(:)          ! Amount of carbon relocated by wind damage
+                                                                  ! (and later also by fire)
+                                                                  ! .. to the green litter pools [mol(C)/m^2(canopy)s-1]
+
+    !   YASSO
+    ! Size class 1: green
+    !   above ground C pools
+    real(wp),intent(inout) :: c_acid_ag1(:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: c_water_ag1(:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: c_ethanol_ag1(:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
+    real(wp),intent(inout) :: c_nonsoluble_ag1(:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    !   below ground C pools
+    real(wp),intent(inout) :: c_acid_bg1(:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: c_water_bg1(:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: c_ethanol_bg1(:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
+    real(wp),intent(inout) :: c_nonsoluble_bg1(:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: c_humus_1(:)         ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
+    ! Size class 2: wood
+    !   above ground C pools
+    real(wp),intent(inout) :: c_acid_ag2(:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: c_water_ag2(:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: c_ethanol_ag2(:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
+    real(wp),intent(inout) :: c_nonsoluble_ag2(:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    !   below ground C pools
+    real(wp),intent(inout) :: c_acid_bg2(:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: c_water_bg2(:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: c_ethanol_bg2(:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
+    real(wp),intent(inout) :: c_nonsoluble_bg2(:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    real(wp),intent(inout) :: c_humus_2(:)         ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
+
+    ! Local variables
+    REAL(wp)  :: non_woody_litter, fraction  ! Helper
+    INTEGER   :: ic, nc
+
+    ! Initializations
+    nc = SIZE(damaged_fract)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+    !$ACC   PRIVATE(non_woody_litter, fraction)
+    DO ic = 1, nc
+
+      non_woody_litter = c_green(ic) + c_reserve(ic)
+
+      ! Amount of carbon transfered from damaged wood pool to the wood litter pools
+      cflux_dist_woods_2_soil(ic) = cflux_dist_woods_2_soil(ic) + c_woods(ic) * damaged_fract(ic) / sec_per_day
+
+      ! Amount of carbon transfered from the damaged non-woody vegetation pools to the green litter pools
+      cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + non_woody_litter * damaged_fract(ic) / sec_per_day
+
+      ! Add the carbon of damaged non-woody vegetation pools to the yasso soil pools
+      !  Above ground
+      fraction = fract_green_aboveGround * damaged_fract(ic)
+      CALL distribute_yasso_litter(c_acid_ag1(ic), c_water_ag1(ic), c_ethanol_ag1(ic), c_nonsoluble_ag1(ic), c_humus_1(ic), &
+        &                          non_woody_litter, fraction, LeafLit_coef)
+      !  Below ground
+      fraction = (1._wp - fract_green_aboveGround) * damaged_fract(ic)
+      CALL distribute_yasso_litter(c_acid_bg1(ic), c_water_bg1(ic), c_ethanol_bg1(ic), c_nonsoluble_bg1(ic), c_humus_1(ic), &
+        &                          non_woody_litter, fraction, LeafLit_coef)
+
+      ! Add the carbon of damaged woody vegetation pool to the yasso soil pools
+      !  Above ground
+      fraction = fract_wood_aboveGround * damaged_fract(ic)
+      CALL distribute_yasso_litter(c_acid_ag2(ic), c_water_ag2(ic), c_ethanol_ag2(ic), c_nonsoluble_ag2(ic), c_humus_2(ic), &
+        &                          c_woods(ic), fraction, WoodLit_coef)
+      !  Below ground
+      fraction = (1._wp - fract_wood_aboveGround)  * damaged_fract(ic)
+      CALL distribute_yasso_litter(c_acid_bg2(ic), c_water_bg2(ic), c_ethanol_bg2(ic), c_nonsoluble_bg2(ic), c_humus_2(ic), &
+        &                          c_woods(ic), fraction, WoodLit_coef)
+
+      ! Reduce the living plant carbon pools accordingly
+      fraction = 1._wp - damaged_fract(ic)
+      c_green(ic)   = c_green(ic)   * fraction
+      c_woods(ic)   = c_woods(ic)   * fraction
+      c_reserve(ic) = c_reserve(ic) * fraction
+
+    END DO
+    !$ACC END PARALLEL LOOP
+
+  END SUBROUTINE relocate_carbon_damage
+
 
 #endif
 END MODULE mo_sb_carbon_interface
