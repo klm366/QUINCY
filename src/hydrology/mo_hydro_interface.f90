@@ -3526,7 +3526,7 @@ CONTAINS
       weq_fluxes(ic) = rain(ic) + snow(ic) + evapotrans(ic) - runoff(ic) - drainage(ic)
 
       IF (tile_contains_soil) THEN
-        weq_fluxes(ic) = weq_fluxes(ic) + wtr_latflow_net(ic) 
+        weq_fluxes(ic) = weq_fluxes(ic) + wtr_latflow_net(ic)
         weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) + weq_soil(ic) &
           &          + water_to_soil_lex(ic) + wtr_latflow_res(ic))  &
           &          * tile_area          ! m -> m^3

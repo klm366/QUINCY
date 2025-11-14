@@ -108,7 +108,7 @@ CONTAINS
       & transpiration(:),        & !< Transpiration [kg m-2 s-1]
       & rain(:),                 & !< Liquid precipitation [kg m-2 s-1]
       & snow(:),                 & !< Solid precipitation [kg m-2 s-1]
-      & lex_srf_excess(:),       & 
+      & lex_srf_excess(:),       &
       & wpi_rootzone(:),         & !< Water and ice in the root zone [m]
       & wpi_rootzone_max(:),     & !< Maximum amount of water or ice in the root zone [m]
       & wtr_soil(:),             & !< (Liquid) water content of the soil [m]
