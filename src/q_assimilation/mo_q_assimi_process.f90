@@ -991,12 +991,15 @@ CONTAINS
   !>    Medlyn et al. 2011: beta = MIN(5._wp, 1._wp / SQRT(vpd + eps8))
   !>    Ball & Berry: beta = q_air / q_sat
   !>
-  PURE ELEMENTAL FUNCTION calc_atm_moisture_stress(canopy_cond_scheme, t_air, q_air, press_srf) RESULT(beta)
+#ifndef _OPENACC
+  PURE ELEMENTAL &
+#endif
+  FUNCTION calc_atm_moisture_stress(canopy_cond_scheme, t_air, q_air, press_srf) RESULT(beta)
 
     !$ACC ROUTINE SEQ
 
+    USE mo_phy_schemes,        ONLY: qsat_mixed
     USE mo_atmland_constants,  ONLY: eps_vpd
-    USE mo_atmland_util,       ONLY: calc_spec_humidity_sat
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), INTENT(IN)  :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp),INTENT(in)           :: t_air                  !< air temperature in K
@@ -1010,7 +1013,7 @@ CONTAINS
 
     !>1.0 saturating specific humidity [kg kg-1]
     !>
-    q_sat = calc_spec_humidity_sat(t_air, press_srf)
+    q_sat = qsat_mixed(t_air, press_srf)
 
     !>  1.1 vapour pressure deficit [kPa]
     !>

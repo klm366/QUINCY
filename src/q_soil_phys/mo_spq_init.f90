@@ -153,8 +153,9 @@ CONTAINS
     dsl4jsb_Real2D_onDomain    :: num_sl_above_bedrock
     dsl4jsb_Real2D_onDomain    :: w_soil_root_pwp
     dsl4jsb_Real2D_onDomain    :: w_soil_root_fc
-    dsl4jsb_Real2D_onDomain    :: w_skin
+    dsl4jsb_Real2D_onDomain    :: wtr_skin
     dsl4jsb_Real2D_onDomain    :: wtr_rootzone_rel
+    dsl4jsb_Real2D_onDomain    :: wtr_plant_avail_rel
     dsl4jsb_Real2D_onDomain    :: wtr_rootzone
     dsl4jsb_Real2D_onDomain    :: root_depth
     ! HYDRO_ 3D
@@ -228,8 +229,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   num_sl_above_bedrock)   ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_soil_root_pwp)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_soil_root_fc)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_skin)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_skin)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_rootzone_rel)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_plant_avail_rel)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_rootzone)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   root_depth)
     ! HYDRO_ 3D
@@ -458,11 +460,12 @@ CONTAINS
 
     !>   5.1 water in the surface reservoir [m]
     !>
-    w_skin(:,:) = 0.0_wp
+    wtr_skin(:,:) = 0.0_wp
 
     !>   5.2 adjust initial water amount to prescribed theta
     !>
     wtr_rootzone_rel(:,:)   = dsl4jsb_Config(SPQ_)%soil_theta_prescribe
+    wtr_plant_avail_rel(:,:) = dsl4jsb_Config(SPQ_)%soil_theta_prescribe
     wtr_rootzone(:,:)       = w_soil_root_pwp(:,:) &
       &                       + dsl4jsb_Config(SPQ_)%soil_theta_prescribe * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:))
     wtr_soil_root_pot(:,:)  = saxtonA(:, 1, :) * (MIN(w_soil_root_fc,wtr_rootzone(:,:)) / root_depth(:,:)) &
@@ -521,8 +524,8 @@ CONTAINS
 
     !$ACC UPDATE DEVICE(soil_depth(:,:), root_depth(:,:), t_old(:,:), t(:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(temp_srf_eff_4(:,:), qsat_star(:,:), s_star(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(w_skin(:,:), wtr_rootzone(:,:), w_soil_root_pwp(:,:), w_soil_root_fc(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(wtr_rootzone_rel(:,:), wtr_soil_root_pot(:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(wtr_skin(:,:), wtr_rootzone(:,:), w_soil_root_pwp(:,:), w_soil_root_fc(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(wtr_rootzone_rel(:,:), wtr_plant_avail_rel(:), wtr_soil_root_pot(:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_center_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:), bulk_dens_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(heat_capa_sl(:,:,:), therm_cond_sl(:,:,:), wtr_soil_pwp_sl(:,:,:), wtr_soil_fc_sl(:,:,:)) ASYNC(1)

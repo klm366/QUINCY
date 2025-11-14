@@ -179,9 +179,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: num_sl_above_bedrock
     dsl4jsb_Real2D_onChunk                :: w_soil_root_pwp
     dsl4jsb_Real2D_onChunk                :: w_soil_root_fc
-    dsl4jsb_Real2D_onChunk                :: w_skin
+    dsl4jsb_Real2D_onChunk                :: wtr_skin
     dsl4jsb_Real2D_onChunk                :: wtr_rootzone
     dsl4jsb_Real2D_onChunk                :: wtr_rootzone_rel
+    dsl4jsb_Real2D_onChunk                :: wtr_plant_avail_rel
     dsl4jsb_Real2D_onChunk                :: transpiration
     dsl4jsb_Real2D_onChunk                :: root_depth
     ! HYDRO_ 3D
@@ -315,8 +316,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)   ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_pwp)        ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_fc)         ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_skin)                 ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_skin)               ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone_rel)       ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_plant_avail_rel)    ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone)           ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, transpiration)          ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, root_depth)             ! in
@@ -391,7 +393,7 @@ CONTAINS
     !!
     !$ACC UPDATE HOST(rad_srf_net(:), t_air(:), t_acoef_local(:), t_bcoef_local(:), q_air(:)) &
     !$ACC   HOST(q_acoef_local(:), q_bcoef_local(:)) &
-    !$ACC   HOST(press_srf(:), wind_10m(:), height(:), lai(:), w_skin(:), drag_srf_local(:)) &
+    !$ACC   HOST(press_srf(:), wind_10m(:), height(:), lai(:), wtr_skin(:), drag_srf_local(:)) &
     !$ACC   HOST(soil_depth_sl(:,:), heat_capa_sl(:,:), bulk_dens_sl(:,:), fact_q_air(:), fact_qsat_srf(:)) &
     !$ACC   HOST(fact_qsat_trans_srf(:)) &
     !$ACC   HOST(qsat_star(:), s_star(:), evapotranspiration(:), ground_heat_flx_old(:)) &
@@ -412,7 +414,7 @@ CONTAINS
                                      t_air(:), t_acoef_local(:), t_bcoef_local(:), &
                                      q_air(:), q_acoef_local(:), q_bcoef_local(:), &
                                      press_srf(:), wind_10m(:), &
-                                     height(:), lai(:), w_skin(:), drag_srf_local(:), &
+                                     height(:), lai(:), wtr_skin(:), drag_srf_local(:), &
                                      soil_depth_sl(:,:), heat_capa_sl(:,:), bulk_dens_sl(:,:), &                       ! in
                                      fact_q_air(:), fact_qsat_srf(:), &                                                ! inout
                                      fact_qsat_trans_srf(:), &                                                         ! inout
@@ -441,7 +443,7 @@ CONTAINS
                                      fract_snow_can(:))                                                                ! out
     !$ACC UPDATE DEVICE(rad_srf_net(:), t_air(:), t_acoef_local(:), t_bcoef_local(:), q_air(:)) &
     !$ACC   DEVICE(q_acoef_local(:), q_bcoef_local(:)) &
-    !$ACC   DEVICE(press_srf(:), wind_10m(:), height(:), lai(:), w_skin(:), drag_srf_local(:)) &
+    !$ACC   DEVICE(press_srf(:), wind_10m(:), height(:), lai(:), wtr_skin(:), drag_srf_local(:)) &
     !$ACC   DEVICE(soil_depth_sl(:,:), heat_capa_sl(:,:), bulk_dens_sl(:,:), fact_q_air(:), fact_qsat_srf(:)) &
     !$ACC   DEVICE(fact_qsat_trans_srf(:)) &
     !$ACC   DEVICE(qsat_star(:), s_star(:), evapotranspiration(:), ground_heat_flx_old(:)) &
@@ -464,8 +466,8 @@ CONTAINS
     !$ACC   HOST(lai(:), root_depth(:), snow_melt_to_soil(:), soil_depth_sl(:,:), wtr_soil_sat_sl(:,:)) &
     !$ACC   HOST(wtr_soil_fc_sl(:,:), wtr_soil_pwp_sl(:,:), saxtonA(:,:), saxtonB(:,:), saxtonC(:,:)) &
     !$ACC   HOST(kdiff_sat_sl(:,:), root_fraction_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:)) &
-    !$ACC   HOST(w_skin(:), wtr_rootzone(:), wtr_rootzone_rel(:), wtr_soil_root_pot(:), srf_runoff(:)) &
-    !$ACC   HOST(drainage(:), gw_runoff(:), drainage_fraction(:), wtr_soil_sl(:,:), wtr_soil_pot_sl(:,:)) &
+    !$ACC   HOST(wtr_skin(:), wtr_rootzone(:), wtr_rootzone_rel(:), wtr_plant_avail_rel(:), wtr_soil_root_pot(:)) &
+    !$ACC   HOST(srf_runoff(:), drainage(:), gw_runoff(:), drainage_fraction(:), wtr_soil_sl(:,:), wtr_soil_pot_sl(:,:)) &
     !$ACC   HOST(drainage_sl(:,:), frac_wtr_transp_down_sl(:,:), gw_runoff_sl(:,:), t_soil_sl(:,:), ice_soil_sl(:,:)) &
     !$ACC   HOST(frac_w_lat_loss_sl(:,:), ftranspiration_sl(:,:)) ASYNC(1)
     !$ACC WAIT(1)
@@ -479,8 +481,8 @@ CONTAINS
                              wtr_soil_sat_sl(:,:),wtr_soil_fc_sl(:,:),wtr_soil_pwp_sl(:,:), &
                              saxtonA(:,:),saxtonB(:,:),saxtonC(:,:),kdiff_sat_sl(:,:),root_fraction_sl(:,:),&
                              w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:), &                                              ! in
-                             w_skin(:), wtr_rootzone(:), wtr_rootzone_rel(:), wtr_soil_root_pot(:), &                       ! inout
-                             srf_runoff(:), drainage(:), gw_runoff(:), drainage_fraction(:), &                              ! inout
+                             wtr_skin(:), wtr_rootzone(:), wtr_rootzone_rel(:), wtr_plant_avail_rel(:), &                   ! inout
+                             wtr_soil_root_pot(:), srf_runoff(:), drainage(:), gw_runoff(:), drainage_fraction(:), &        ! inout
                              wtr_soil_sl(:,:), wtr_soil_pot_sl(:,:), drainage_sl(:,:), frac_wtr_transp_down_sl(:,:), &      ! inout
                              gw_runoff_sl(:,:), t_soil_sl(:,:), ice_soil_sl(:,:), &                                         ! inout
                              frac_w_lat_loss_sl(:,:))                                                                       ! out
@@ -489,8 +491,8 @@ CONTAINS
     !$ACC   DEVICE(lai(:), root_depth(:), snow_melt_to_soil(:), soil_depth_sl(:,:), wtr_soil_sat_sl(:,:)) &
     !$ACC   DEVICE(wtr_soil_fc_sl(:,:), wtr_soil_pwp_sl(:,:), saxtonA(:,:), saxtonB(:,:), saxtonC(:,:)) &
     !$ACC   DEVICE(kdiff_sat_sl(:,:), root_fraction_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:)) &
-    !$ACC   DEVICE(w_skin(:), wtr_rootzone(:), wtr_rootzone_rel(:), wtr_soil_root_pot(:), srf_runoff(:)) &
-    !$ACC   DEVICE(drainage(:), gw_runoff(:), drainage_fraction(:), wtr_soil_sl(:,:), wtr_soil_pot_sl(:,:)) &
+    !$ACC   DEVICE(wtr_skin(:), wtr_rootzone(:), wtr_rootzone_rel(:), wtr_plant_avail_rel(:), wtr_soil_root_pot(:)) &
+    !$ACC   DEVICE(srf_runoff(:), drainage(:), gw_runoff(:), drainage_fraction(:), wtr_soil_sl(:,:), wtr_soil_pot_sl(:,:)) &
     !$ACC   DEVICE(drainage_sl(:,:), frac_wtr_transp_down_sl(:,:), gw_runoff_sl(:,:), t_soil_sl(:,:), ice_soil_sl(:,:)) &
     !$ACC   DEVICE(frac_w_lat_loss_sl(:,:), ftranspiration_sl(:,:)) ASYNC(1)
 #ifdef _OPENACC
@@ -599,7 +601,7 @@ CONTAINS
                                          t_air, t_acoef, t_bcoef, &
                                          q_air, q_acoef, q_bcoef, &
                                          press_srf, wind_10m, &
-                                         height, lai, w_skin, drag_srf, &
+                                         height, lai, wtr_skin, drag_srf, &
                                          soil_depth_sl, heat_capa_sl, bulk_dens_sl, &                                 ! in
                                          fact_q_air, fact_qsat_srf, &                                                 ! inout
                                          fact_qsat_trans_srf, &                                                       ! inout
@@ -628,13 +630,12 @@ CONTAINS
 
     USE mo_jsb_math_constants,        ONLY: eps8
     USE mo_atmland_constants,         ONLY: min_wind, max_wind
-    USE mo_atmland_util,              ONLY: calc_spec_humidity_sat
     USE mo_spq_constants,             ONLY: w_skin_max, soil_therm_cond, soil_frozen_therm_cond, latent_heat_fusion, &
                                             w_density, water2ice_density_ratio, fact_water_supercooled, w_snow_min, snow_dens, &
                                             snow_heat_capa, snow_therm_cond, t_soil_max_increase, t_soil_max_decrease
     USE mo_jsb_physical_constants,    ONLY: r_gas_dryair, LatentHeatSublimation, LatentHeatVaporization, &
                                             stbo, zemiss_def, grav, cpd, cpvd1, Tzero
-    USE mo_phy_schemes,               ONLY: heat_transfer_coef, q_effective, surface_dry_static_energy
+    USE mo_phy_schemes,               ONLY: qsat_mixed, heat_transfer_coef, q_effective, surface_dry_static_energy
 
 
     IMPLICIT NONE
@@ -659,7 +660,7 @@ CONTAINS
                                                                        wind_10m, &            !< wind speed [m/2]
                                                                        height, &              !< height
                                                                        lai, &                 !< LAI
-                                                                       w_skin, &              !< skin water reservoir on leaves [m]
+                                                                       wtr_skin, &            !< skin water reservoir on leaves [m]
                                                                        drag_srf               !< surface drag coefficient (JSBACH-style!)
     REAL(wp), DIMENSION(nc,nsoil_w),                  INTENT(in)    :: soil_depth_sl, &       !< soil depth per layer [m]
                                                                        heat_capa_sl, &        !< heat capacity of the soil layer [J/kg]
@@ -749,8 +750,10 @@ CONTAINS
 
     !> 1.0 calculate surface characteristic given old surface state
     !>
-    q_sat(:)      = calc_spec_humidity_sat(t_air(:), press_srf(:))
-    q_sat_srf(:)  = calc_spec_humidity_sat(t_old(:), press_srf(:))
+    DO ic = 1, nc
+      q_sat(ic)      = qsat_mixed(t_air(ic), press_srf(ic))
+      q_sat_srf(ic)  = qsat_mixed(t_old(ic), press_srf(ic))
+    END DO
 
     !>   1.1 Calculate heat transfer coefficient
     !>
@@ -772,7 +775,7 @@ CONTAINS
                                   w_skin_max * lai(:), &
                                   0.01_wp, &              ! IQ: oro_stddev from HYDRO_ init; QS: assume almost flat terrain
                                   evapopot(:), &
-                                  w_skin, &
+                                  wtr_skin(:), &
                                   w_snow_snl(:,1), &      ! jsb4: weq_snow_soil calc in HYDRO_ calc_surface_hydrology_land
                                   0.0_wp, &               ! jsb4: weq_snow_can  calc in HYDRO_ calc_surface_hydrology_land
                                   fract_snow_can(:), &    ! out
@@ -786,7 +789,9 @@ CONTAINS
 
     !>   2.1 Compute sensitivity of surface saturation specific humidity to temperature
     !>
-    dQdT(:) = (calc_spec_humidity_sat(t_old(:) + 0.001_wp, press_srf(:)) - q_sat_srf(:)) * 1000._wp
+    DO ic = 1, nc
+      dQdT(ic) = (qsat_mixed(t_old(ic) + 0.001_wp, press_srf(ic)) - q_sat_srf(ic)) * 1000._wp
+    END DO
 
     !>   2.2 Old dry static energy
     !>
@@ -874,7 +879,7 @@ CONTAINS
     interception(:)     = -1._wp * (1._wp - fract_snow_soil(:)) * fract_wet(:) * evapopot(:)
     evaporation_snow(:) = -1._wp * fract_snow_soil(:) * evapopot(:)
     ! interception evaporation must be less than the total skin water
-    interception(:) = MIN(interception(:) * dtime / 1000._wp, w_skin(:)) * 1000._wp / dtime
+    interception(:) = MIN(interception(:) * dtime / 1000._wp, wtr_skin(:)) * 1000._wp / dtime
     ! snow evaparation must be less than the total snow water
     evaporation_snow(:) = MIN(evaporation_snow(:) * dtime / 1000._wp, SUM(w_snow_snl(:,:),DIM=2)) * 1000._wp / dtime
 
@@ -1098,9 +1103,9 @@ CONTAINS
                                  wtr_soil_sat_sl,wtr_soil_fc_sl,wtr_soil_pwp_sl, &
                                  saxtonA,saxtonB,saxtonC,kdiff_sat_sl,root_fraction_sl, &
                                  w_soil_freeze_flux, w_soil_melt_flux, &                           ! in
-                                 w_skin, wtr_rootzone, wtr_rootzone_rel, wtr_soil_root_pot, &      ! inout
-                                 srf_runoff, drainage, gw_runoff, drainage_fraction, &             ! inout
-                                 wtr_soil_sl, wtr_soil_pot_sl, drainage_sl, &                      ! inout
+                                 wtr_skin, wtr_rootzone, wtr_rootzone_rel, wtr_plant_avail_rel, &  ! inout
+                                 wtr_soil_root_pot, srf_runoff, drainage, gw_runoff, &             ! inout
+                                 drainage_fraction, wtr_soil_sl, wtr_soil_pot_sl, drainage_sl, &   ! inout
                                  frac_wtr_transp_down_sl, &                                        ! inout
                                  gw_runoff_sl, t_soil_sl, ice_soil_sl, &                           ! inout
                                  frac_w_lat_loss_sl)                                               ! out
@@ -1145,9 +1150,10 @@ CONTAINS
                                                                        root_fraction_sl, &     !< fraction of root mass per soil layer
                                                                        w_soil_freeze_flux, &   !< water flux from liquid to ice [m]
                                                                        w_soil_melt_flux        !< water flux from ice to liquid [m]
-    REAL(wp), DIMENSION(nc),                          INTENT(inout) :: w_skin, &               !< water in skin reservoir [m]
+    REAL(wp), DIMENSION(nc),                          INTENT(inout) :: wtr_skin, &             !< water in skin reservoir [m]
                                                                        wtr_rootzone, &         !< water in root zone [m]
                                                                        wtr_rootzone_rel, &     !< fractional water availability in root zone [-]
+                                                                       wtr_plant_avail_rel, &  !< fractional plant available water availability in root zone [-]
                                                                        wtr_soil_root_pot, &    !< soil water potential in root zone [MPa]
                                                                        srf_runoff, &           !< surface runoff [kg / m2 / s]
                                                                        drainage, &             !< deep drainage [kg / m2 / s]
@@ -1200,12 +1206,12 @@ CONTAINS
     WHERE((w_skin_max * lai(:)) > eps8)
       ! m / timestep
       water_to_skin(:) = MIN(InterceptionEfficiency * rain(:) / 1000.0_wp * dtime, &
-        &                    MAX(interception(:) * dtime / 1000.0_wp + w_skin_max * lai(:) - w_skin(:), 0._wp))
+        &                 MAX(interception(:) * dtime / 1000.0_wp + w_skin_max * lai(:) - wtr_skin(:), 0._wp))
     ELSEWHERE
       water_to_skin(:) = 0.0_wp
     ENDWHERE
     water_to_soil(:) = MAX(rain(:) + snow_melt_to_soil(:) - water_to_skin(:) / dtime * 1000.0_wp, 0._wp)
-    w_skin(:)        = MAX(w_skin(:) + water_to_skin(:) - interception(:) * dtime / 1000.0_wp, 0.0_wp)
+    wtr_skin(:)      = MAX(wtr_skin(:) + water_to_skin(:) - interception(:) * dtime / 1000.0_wp, 0.0_wp)
 
     !>  1.2. Freeze thaw water fluxes
     !!
@@ -1491,9 +1497,11 @@ CONTAINS
 
     !> 3.2 calculate plant fractional water availability
     !!
-    wtr_rootzone_rel(:) = ( wtr_rootzone(:) - w_soil_root_pwp(:) ) / &
-                           ( w_soil_root_fc(:) - w_soil_root_pwp(:) )
+    wtr_rootzone_rel(:) = wtr_rootzone(:) / w_soil_root_fc(:)
     wtr_rootzone_rel(:) = MAX(wtr_rootzone_rel(:),0.0_wp)
+    wtr_plant_avail_rel(:) = ( wtr_rootzone(:) - w_soil_root_pwp(:) ) / &
+                             ( w_soil_root_fc(:) - w_soil_root_pwp(:) )
+    wtr_plant_avail_rel(:) = MAX(wtr_plant_avail_rel(:),0.0_wp)
 
     !> 3.3 calculate root zone and layer soil water potential according to Campbell et al 1974
     !!
@@ -1549,7 +1557,7 @@ CONTAINS
     & wsr_max,                                   & ! in
     & oro_stddev,                                & ! in
     & evapo_pot,                                 & ! in
-    & w_skin,                                    & ! in
+    & wtr_skin,                                   & ! in
     & w_snow_soil,                               & ! in
     & w_snow_can,                                & ! in
     & fract_snow_can,                            & ! out
@@ -1568,7 +1576,7 @@ CONTAINS
       & oro_stddev,         &
       & evapo_pot,          &
       & wsr_max,            &
-      & w_skin,             &
+      & wtr_skin,           &
       & w_snow_soil,        &
       & w_snow_can
     REAL(wp), INTENT(out) :: &
@@ -1587,7 +1595,7 @@ CONTAINS
     ! Wet skin reservoir fraction on soil and canopy (between 0 and 1)
     IF (wsr_max > eps8) THEN
       fract_snow_can = MIN(1._wp, w_snow_can / wsr_max)
-      fract_wet      = MIN(1._wp, w_skin     / wsr_max)
+      fract_wet      = MIN(1._wp, wtr_skin   / wsr_max)
     ELSE
       fract_snow_can = 0._wp
       fract_wet      = 0._wp
@@ -1611,7 +1619,7 @@ CONTAINS
 !    END IF
     IF (fract_wet > eps8 ) THEN
       fract_wet = fract_wet    / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime &
-        &                                       / (rhoh2o * MAX(EPSILON(1._wp), w_skin)) &
+        &                                       / (rhoh2o * MAX(EPSILON(1._wp), wtr_skin)) &
         &                                    )
     END IF
 

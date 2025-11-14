@@ -86,7 +86,6 @@ CONTAINS
                                          leaf2root_allocation_scalar
     REAL(wp), DIMENSION(options%nc)   :: phi_phenology_base     !< relative pull from reserve due to phenology,
                                                                 !! calculated from carbon reserve flow (unitless)
-    LOGICAL                           :: config_flag_log_negative_vegpool !< debug option of veg config
     REAL(wp), DIMENSION(options%nc)   :: hlp1
     REAL(wp)                          :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     REAL(wp)                          :: dtime                  !< timestep length
@@ -151,7 +150,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: myc_export_c_tmyc_mavg_sl
     dsl4jsb_Real3D_onChunk      :: myc_export_n_tmyc_mavg_sl
     ! HYDRO_ 2D
-    dsl4jsb_Real2D_onChunk      :: wtr_rootzone_rel
+    dsl4jsb_Real2D_onChunk      :: wtr_plant_avail_rel
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     dsl4jsb_Real3D_onChunk      :: soil_lay_depth_center_sl
@@ -215,7 +214,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: reserve_carbon_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_phosphorus_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: w_root_lim_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: wtr_rootzone_rel_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cp_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_np_talloc_mavg
@@ -353,7 +352,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_c_tmyc_mavg_sl)        ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_n_tmyc_mavg_sl)        ! inout
     ! HYDRO_ 2D
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_rootzone_rel)              ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_plant_avail_rel)           ! in
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)                 ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_lay_depth_center_sl)      ! in
@@ -417,7 +416,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_talloc_mavg)         ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_talloc_mavg)       ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_phosphorus_talloc_mavg)     ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, w_root_lim_talloc_mavg)     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, wtr_rootzone_rel_talloc_mavg)       ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)              ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cp_talloc_mavg)              ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_np_talloc_mavg)              ! in
@@ -478,8 +477,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)                   ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)             !   out
     ! ----------------------------------------------------------------------------------------------------- !
-    config_flag_log_negative_vegpool = dsl4jsb_Config(VEG_)%flag_log_negative_vegpool
-
 
     !>0.8 calculate temperature of fine roots
     t_soil_root(:) = 0.0_wp
@@ -498,7 +495,7 @@ CONTAINS
 
     !>1.0 calculate potential growth rate relative to labile pool size
     !>
-    kstar_labile(:) = calc_meristem_activity(t_air(:), wtr_rootzone_rel(:), growing_season(:))
+    kstar_labile(:) = calc_meristem_activity(t_air(:), wtr_plant_avail_rel(:), growing_season(:))
 
     !>  1.1 calculate N-based maintenance respiration rate (as potential maitenance rate) and
     !>      update N-specific maintenance respiration rate
@@ -759,7 +756,7 @@ CONTAINS
       & labile_phosphorus_talloc_mavg(:)           , &
       & growth_cn_talloc_mavg(:)                   , &
       & growth_np_talloc_mavg(:)                   , &
-      & w_root_lim_talloc_mavg(:)                  , & ! in
+      & wtr_rootzone_rel_talloc_mavg(:)            , & ! in
       & leaf2root_allocation_scalar(:)             , & ! out
       & root_limitation_state(:)                   )   ! out
 
@@ -858,7 +855,6 @@ CONTAINS
       & grid%lat(:,iblk)                      , &
       & dtime                                 , &
       & lctlib%growthform                     , &
-      & config_flag_log_negative_vegpool      , &
       & growing_season(:)                     , &
       & kstar_labile(:)                       , &
       & target_labile_pool_carbon(:)          , &
@@ -952,6 +948,8 @@ CONTAINS
       & growth_req_p(:)                        , &
       & growth_req_n(:)                        , &
       & veg_frac_alloc_mt(:,:,:)               , &
+      & veg_litterfall_mt(:,:,:)               , &
+      & veg_reserve_use_mt(:,:)                , &
       & veg_pool_mt(:,:,:)                     , & ! in
       & n_processing_respiration(:)            , & ! inout
       & maint_respiration_c13(:)               , &
@@ -1006,7 +1004,7 @@ CONTAINS
   !! (<20\% saturation). \nAdditionally, phenological dormancy is accounted for.
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air, &
-                                                 wtr_rootzone_rel, &
+                                                 wtr_plant_avail_rel, &
                                                  growing_season) &
                                                  RESULT(kstar_labile)
 
@@ -1022,7 +1020,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp),   INTENT(in)    :: t_air                  !< air temperature (K)
-    REAL(wp),   INTENT(in)    :: wtr_rootzone_rel       !< soil moisture scalar (fraction of available water holding capacity)
+    REAL(wp),   INTENT(in)    :: wtr_plant_avail_rel    !< relative plant available soil moisture in the root zone
     REAL(wp),   INTENT(in)    :: growing_season         !< is the plant growing?
     REAL(wp)                  :: kstar_labile           !< current potential labile pool turnover (1/day)
     ! ---------------------------
@@ -1037,7 +1035,7 @@ CONTAINS
       ELSE
         ftemp = 0.0_wp
     ENDIF
-    fmoist = 1.0_wp - EXP(-(lambda_labile_theta * wtr_rootzone_rel)**k_labile_theta)
+    fmoist = 1.0_wp - EXP(-(lambda_labile_theta * wtr_plant_avail_rel)**k_labile_theta)
     IF(growing_season > test_false_true)THEN
         kstar_labile = ftemp * fmoist / tau_labile
       ELSE
@@ -1430,12 +1428,18 @@ CONTAINS
         &       uptake_no3(:) * transform_cost_no3 + &
         &       n_fixation(:) * k_cost_symb_bnf
       ! adjust N uptake to possible C expenditure
-      hlp2(:) = MIN(1.0_wp / tau_labile / one_day * labile_carbon(:) * 1.e6_wp, hlp1(:))
-      WHERE((hlp1(:) > eps8) .AND. (hlp1(:) > hlp2(:)))
-        scal(:)       = hlp2(:) / hlp1(:)
-        uptake_nh4(:) = uptake_nh4(:) * scal(:)
-        uptake_no3(:) = uptake_no3(:) * scal(:)
-        n_fixation(:) = n_fixation(:) * scal(:)
+      hlp2(:) = 1.0_wp / tau_labile / one_day * labile_carbon(:) * 1.e6_wp
+      WHERE (hlp1(:) > hlp2(:))
+        WHERE (hlp1(:) > eps8)
+          scal(:)       = hlp2(:) / hlp1(:)
+          uptake_nh4(:) = uptake_nh4(:) * scal(:)
+          uptake_no3(:) = uptake_no3(:) * scal(:)
+          n_fixation(:) = n_fixation(:) * scal(:)
+        ELSE WHERE
+          uptake_nh4(:) = 0.0_wp
+          uptake_no3(:) = 0.0_wp
+          n_fixation(:) = 0.0_wp
+        END WHERE
       END WHERE
       n_transform_respiration(:)  = uptake_nh4(:) * transform_cost_nh4 + uptake_no3(:) * transform_cost_no3
       n_fixation_respiration(:)   = n_fixation(:) * k_cost_symb_bnf
@@ -1675,11 +1679,11 @@ CONTAINS
                                                         labile_phosphorus     , &
                                                         growth_cn             , &
                                                         growth_np             , &
-                                                        w_root_lim            , &
+                                                        wtr_rootzone_rel      , &
                                                         leaf2root_scalar      , &
                                                         root_limitation_state)
 
-    USE mo_veg_constants,           ONLY: w_root_lim_max
+    USE mo_veg_constants,           ONLY: k1_root_alloc
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1693,7 +1697,7 @@ CONTAINS
     REAL(wp),              INTENT(in)  :: labile_phosphorus         !< labile phosphorus (mol P/m2)
     REAL(wp),              INTENT(in)  :: growth_cn                 !< C:N of whole plant growth increment
     REAL(wp),              INTENT(in)  :: growth_np                 !< N:P of whole plant growth increment
-    REAL(wp),              INTENT(in)  :: w_root_lim                !< water limitation factor
+    REAL(wp),              INTENT(in)  :: wtr_rootzone_rel          !< relative water availability in root zone
     REAL(wp),              INTENT(out) :: leaf2root_scalar          !< relative leaf2root allocation (used in allometry module)
     REAL(wp),              INTENT(out) :: root_limitation_state     !< dominating limiting factor for root growth [-1,1] (P = -1 | Water = 0 | N = 1)
     ! ---------------------------
@@ -1719,7 +1723,7 @@ CONTAINS
        p_l2r_scal = 1.0_wp
     END IF
 
-    w_l2r_scal = MIN(1._wp, w_root_lim / w_root_lim_max)
+    w_l2r_scal = MIN(1._wp, wtr_rootzone_rel / k1_root_alloc)
         ! actual ratio is given by the minimum of the three factors
     leaf2root_scalar = MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)
 
@@ -2259,7 +2263,6 @@ CONTAINS
     & grid_lat                              , &
     & dtime                                 , &
     & lctlib_growthform                     , &
-    & config_flag_log_negative_vegpool      , &
     & growing_season                        , &
     & kstar_labile                          , &
     & target_labile_pool_carbon             , &
@@ -2292,7 +2295,6 @@ CONTAINS
     REAL(wp),     INTENT(in)    :: grid_lat(:)                          !< grid latitude
     REAL(wp),     INTENT(in)    :: dtime                                !< timestep length
     INTEGER,      INTENT(in)    :: lctlib_growthform                    !< lctlib parameter
-    LOGICAL,      INTENT(in)    :: config_flag_log_negative_vegpool     !< veg config option
     REAL(wp),     INTENT(in)    :: growing_season(:)                    !< does the plant intend to grow?
     REAL(wp),     INTENT(in)    :: kstar_labile(:)                      !< potential labile pool turnover (1/day)
     REAL(wp),     INTENT(in)    :: target_labile_pool_carbon(:)         !< desirable size (mol C/m2) of the labile pool
@@ -2354,15 +2356,7 @@ CONTAINS
       END IF
       ! Save value for use for N and P calculations
       phi_phenology_base(ic) = phi_phenology(ic)
-      ! calc phi_maintenance; catch potential negative veg_pool values and write info to LOG (if enabled)
-      IF (config_flag_log_negative_vegpool) THEN
-        IF (veg_pool_mt(ix_labile, ixC, ic) < 0.0_wp) THEN
-          WRITE (message_text,*) 'Negative value of vegetation labile pool C at tile ', tile_name, &
-            &                    ' at (lon:lat) ', grid_lon(ic), ':', grid_lat(ic), &
-            &                    ', value ', veg_pool_mt(ix_labile, ixC, ic), ' is NOT modified here'
-          CALL message(TRIM(routine), message_text)
-        END IF
-      END IF
+      ! calc phi_maintenance; catch potential negative veg_pool values
       hlp1(ic) = MAX(0.0_wp, veg_pool_mt(ix_labile, ixC, ic))
       IF (target_labile_pool_carbon(ic) > eps8 .AND. hlp1(ic) < target_labile_pool_carbon(ic)) THEN
         phi_maintenance(ic) = EXP(-(lambda_phimaint * hlp1(ic) / target_labile_pool_carbon(ic)) ** k_phimaint) &
@@ -2370,15 +2364,7 @@ CONTAINS
       ELSE
         phi_maintenance(ic) = 0._wp
       END IF
-      ! calc phi_storage; catch potential negative veg_pool values and write info to LOG (if enabled)
-      IF (config_flag_log_negative_vegpool) THEN
-        IF (veg_pool_mt(ix_reserve, ixC, ic) < 0.0_wp) THEN
-          WRITE (message_text,*) 'Negative value of vegetation reserve pool C at tile ', tile_name, &
-            &                    ' at (lon:lat) ', grid_lon(ic), ':', grid_lat(ic), &
-            &                    ', value ', veg_pool_mt(ix_reserve, ixC, ic), ' is NOT modified here'
-          CALL message(TRIM(routine), message_text)
-        END IF
-      END IF
+      ! calc phi_storage; catch potential negative veg_pool values
       hlp1(ic) = MAX(0.0_wp, veg_pool_mt(ix_reserve, ixC, ic))
       IF (target_reserve_pool_carbon(ic) > eps8 .AND. hlp1(ic) < target_reserve_pool_carbon(ic)) THEN
         phi_storage(ic) = EXP(-(lambda_phistore * hlp1(ic) / target_reserve_pool_carbon(ic)) ** k_phistore) &
@@ -2399,17 +2385,17 @@ CONTAINS
       phi_storage(ic)     = k_labphen * phi_storage(ic) / tau_labile / one_day * dtime
       ! ..
       veg_reserve_use_mt(ixC, ic)   = ((phi_phenology(ic) + phi_maintenance(ic))                                   &
-        &                             * (veg_pool_mt(ix_reserve, ixC,ic) - veg_litterfall_mt(ix_reserve, ixC, ic)) &
+        &                             * MAX(0.0_wp, veg_pool_mt(ix_reserve, ixC,ic) - veg_litterfall_mt(ix_reserve, ixC, ic)) &
         &                             - phi_storage(ic)                                                            &
-        &                             * (veg_pool_mt(ix_labile, ixC, ic) - veg_litterfall_mt(ix_labile, ixC, ic)))
-      veg_reserve_use_mt(ixC13, ic) = ((phi_phenology(ic) + phi_maintenance(ic))                                       &
-        &                             * (veg_pool_mt(ix_reserve, ixC13,ic) - veg_litterfall_mt(ix_reserve, ixC13, ic)) &
-        &                             - phi_storage(ic)                                                                &
-        &                             * (veg_pool_mt(ix_labile, ixC13, ic) - veg_litterfall_mt(ix_labile, ixC13, ic)))
-      veg_reserve_use_mt(ixC14, ic) = ((phi_phenology(ic) + phi_maintenance(ic))                                       &
-        &                             * (veg_pool_mt(ix_reserve, ixC14,ic) - veg_litterfall_mt(ix_reserve, ixC14, ic)) &
-        &                             - phi_storage(ic)                                                                &
-        &                             * (veg_pool_mt(ix_labile, ixC14, ic) - veg_litterfall_mt(ix_labile, ixC14, ic)))
+        &                             * MAX(0.0_wp, veg_pool_mt(ix_labile, ixC, ic) - veg_litterfall_mt(ix_labile, ixC, ic)))
+      veg_reserve_use_mt(ixC13, ic)   = ((phi_phenology(ic) + phi_maintenance(ic))                                   &
+        &                             * MAX(0.0_wp, veg_pool_mt(ix_reserve, ixC13,ic) - veg_litterfall_mt(ix_reserve, ixC13, ic)) &
+        &                             - phi_storage(ic)                                                            &
+        &                             * MAX(0.0_wp, veg_pool_mt(ix_labile, ixC13, ic) - veg_litterfall_mt(ix_labile, ixC13, ic)))
+      veg_reserve_use_mt(ixC14, ic)   = ((phi_phenology(ic) + phi_maintenance(ic))                                   &
+        &                             * MAX(0.0_wp, veg_pool_mt(ix_reserve, ixC14,ic) - veg_litterfall_mt(ix_reserve, ixC14, ic)) &
+        &                             - phi_storage(ic)                                                            &
+        &                             * MAX(0.0_wp, veg_pool_mt(ix_labile, ixC14, ic) - veg_litterfall_mt(ix_labile, ixC14, ic)))
 
       !> 2.0 net transfer of N from labile to reserve
       !>
@@ -2417,15 +2403,7 @@ CONTAINS
       !>   2.1 supply of reserve N to labile pool during growing season
       !>
       phi_phenology(ic) = phi_phenology_base(ic)
-      ! calc phi_maintenance; catch potential negative veg_pool values and write info to LOG (if enabled)
-      IF (config_flag_log_negative_vegpool) THEN
-        IF (veg_pool_mt(ix_labile, ixN, ic) < 0.0_wp) THEN
-          WRITE (message_text,*) 'Negative value of vegetation labile pool N at tile ', tile_name, &
-            &                    ' at (lon:lat) ', grid_lon(ic), ':', grid_lat(ic), &
-            &                    ', value ', veg_pool_mt(ix_labile, ixN, ic), ' is NOT modified here'
-          CALL message(TRIM(routine), message_text)
-        END IF
-      END IF
+      ! calc phi_maintenance; catch potential negative veg_pool values
       hlp1(ic) = MAX(0.0_wp, veg_pool_mt(ix_labile, ixN, ic))
       IF (target_labile_pool_nitrogen(ic) > eps8 .AND. &
         &   hlp1(ic) < target_labile_pool_nitrogen(ic) .AND. &
@@ -2439,15 +2417,7 @@ CONTAINS
       !>   2.2 build-up of reserve N (composed of a pull of N to the reserve and a push from the labile to avoid
       !>     too strong accumulation of N in the labile)
       !>
-      ! calc phi_storage; catch potential negative veg_pool values and write info to LOG (if enabled)
-      IF (config_flag_log_negative_vegpool) THEN
-        IF (veg_pool_mt(ix_reserve, ixN, ic) < 0.0_wp) THEN
-          WRITE (message_text,*) 'Negative value of vegetation reserve pool N at tile ', tile_name, &
-            &                    ' at (lon:lat) ', grid_lon(ic), ':', grid_lat(ic), &
-            &                    ', value ', veg_pool_mt(ix_reserve, ixN, ic), ' is NOT modified here'
-          CALL message(TRIM(routine), message_text)
-        END IF
-      END IF
+      ! calc phi_storage; catch potential negative veg_pool values
       hlp1(ic) = MAX(0.0_wp, veg_pool_mt(ix_reserve, ixN, ic))
       IF (target_reserve_pool_nitrogen(ic) > eps8 .AND. hlp1(ic) < target_reserve_pool_nitrogen(ic)) THEN
         phi_storage(ic) = EXP(-(lambda_phistore * hlp1(ic) &
@@ -2479,14 +2449,14 @@ CONTAINS
         phi_maintenance(ic) = phi_maintenance(ic) * 1._wp / (1._wp - k_phi_interact) * ( 1.0_wp - phi_storage(ic))
       END IF
       veg_reserve_use_mt(ixN, ic)   = ((phi_maintenance(ic) + phi_phenology(ic))                                   &
-        &                             * (veg_pool_mt(ix_reserve, ixN,ic) - veg_litterfall_mt(ix_reserve, ixN, ic)) &
+        &                             * MAX(0.0_wp, (veg_pool_mt(ix_reserve,ixN,ic) - veg_litterfall_mt(ix_reserve,ixN,ic))) &
         &                             - phi_storage(ic)                                                            &
-        &                             * (veg_pool_mt(ix_labile, ixN, ic) - veg_litterfall_mt(ix_labile, ixN, ic))) &
+        &                             * MAX(0.0_wp, (veg_pool_mt(ix_labile,ixN,ic) - veg_litterfall_mt(ix_labile,ixN,ic)))) &
         &                             / tau_labile / one_day * dtime
       veg_reserve_use_mt(ixN15, ic) = ((phi_maintenance(ic) + phi_phenology(ic))                                       &
-        &                             * (veg_pool_mt(ix_reserve, ixN15,ic) - veg_litterfall_mt(ix_reserve, ixN15, ic)) &
+        &                             * MAX(0.0_wp,(veg_pool_mt(ix_reserve,ixN15,ic) - veg_litterfall_mt(ix_reserve,ixN15,ic))) &
         &                             - phi_storage(ic)                                                                &
-        &                             * (veg_pool_mt(ix_labile, ixN15, ic) - veg_litterfall_mt(ix_labile, ixN15, ic))) &
+        &                             * MAX(0.0_wp,(veg_pool_mt(ix_labile,ixN15,ic) - veg_litterfall_mt(ix_labile,ixN15,ic)))) &
         &                             / tau_labile / one_day * dtime
 
       !> 3.0 net transfer of P from labile to reserve
@@ -2539,9 +2509,9 @@ CONTAINS
         phi_maintenance(ic) = phi_maintenance(ic) * 1._wp / (1._wp - k_phi_interact) * ( 1.0_wp - phi_storage(ic))
       END IF
       veg_reserve_use_mt(ixP, ic) = ((phi_maintenance(ic) + phi_phenology(ic))                                   &
-        &                           * (veg_pool_mt(ix_reserve, ixP,ic) - veg_litterfall_mt(ix_reserve, ixP, ic)) &
+        &                           * MAX(0.0_wp,(veg_pool_mt(ix_reserve, ixP,ic) - veg_litterfall_mt(ix_reserve, ixP, ic))) &
         &                           - phi_storage(ic)                                                            &
-        &                           * (veg_pool_mt(ix_labile, ixP, ic) - veg_litterfall_mt(ix_labile, ixP, ic))) &
+        &                           * MAX(0.0_wp,(veg_pool_mt(ix_labile, ixP, ic) - veg_litterfall_mt(ix_labile, ixP, ic)))) &
         &                           / tau_labile / one_day * dtime
     END DO ! loop over 1:nc
   END SUBROUTINE calc_reserve_useage
@@ -3046,6 +3016,8 @@ CONTAINS
                                 growth_req_p                  , &
                                 growth_req_n                  , &
                                 veg_frac_alloc_mt             , &
+                                veg_litterfall_mt             , &
+                                veg_reserve_use_mt            , &
                                 veg_pool_mt                   , &
                                 n_processing_respiration      , &
                                 maint_respiration_c13         , &
@@ -3071,6 +3043,8 @@ CONTAINS
                                                growth_req_p                 , & !< moles P required for a unit of N growth under current allocation fractions
                                                growth_req_n                     !< moles N required for a unit of C growth under current allocation fractions
     REAL(wp),                 INTENT(in)    :: veg_frac_alloc_mt(:,:,:)         !< fractional allocation to pools
+    REAL(wp),                 INTENT(in)    :: veg_litterfall_mt(:,:,:)
+    REAL(wp),                 INTENT(in)    :: veg_reserve_use_mt(:,:)
     REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)               !< labile pool size of the plant
     REAL(wp), DIMENSION(nc),  INTENT(inout) :: n_processing_respiration     , & !< respiration associated with N processing
                                                maint_respiration_c13        , & !< maintenance respiration
@@ -3085,6 +3059,8 @@ CONTAINS
     REAL(wp), DIMENSION(nc),  INTENT(out)   :: growth_respiration               !< growth respiration (micro-mol C / m2 / s)
     !------------------------------------------------------------------------------------------------------ !
     REAL(wp), DIMENSION(nc)     :: hlp1
+    REAL(wp)                    :: hlp2
+    INTEGER :: ic
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_partitioning'
     !------------------------------------------------------------------------------------------------------ !
 
@@ -3092,11 +3068,10 @@ CONTAINS
     !!
     !! based on tissue N and Temperature, constrained by default turnover of the labile pool
     !! to avoid that maitenance respiration consumes all C in times of low GPP
-    !! constrained to support leaf respiration, but not more than the current labile pool turnover
-    maint_respiration(:) = MAX(maint_respiration_leaf(:), &
-      &                    MIN(1.0_wp / tau_labile / one_day * veg_pool_mt(ix_labile, ixC, :) * 1.e6_wp, &
-      &                    maint_respiration_pot(:)))
-
+    !! corrected for the respiration already incurred by N processing
+    maint_respiration(:) = MIN(maint_respiration_pot(:), &
+      &                         1.0_wp / tau_labile / one_day * veg_pool_mt(ix_labile, ixC, :) * 1.e6_wp &
+      &                         - n_processing_respiration(:))
 
     !> 2.0 Determine C, N, P use for growth
     !!
@@ -3104,11 +3079,10 @@ CONTAINS
     !! is determined from the labile turnover minus the carbon used for maintenance, i
     !! accounting for the fraction of growth respiration required to achieve this growth, to ensure that
     !! growth does not empty the labile pool
-    veg_growth_mt(ix_labile, ixC, :) = (veg_pool_mt(ix_labile, ixC, :) * kstar_labile(:) / one_day &
-      &                                - (maint_respiration(:) + n_processing_respiration(:)) / 1.e6_wp ) &
-      &                                * dtime /  (1._wp + fresp_growth)
+    veg_growth_mt(ix_labile, ixC, :) = (veg_pool_mt(ix_labile, ixC, :) * kstar_labile(:) / one_day * (1._wp - fresp_growth) &
+      &                                - (maint_respiration(:) + n_processing_respiration(:)) / 1.e6_wp ) * dtime
 
-    WHERE(veg_growth_mt(ix_labile, ixC, :) < eps8)
+    WHERE (veg_growth_mt(ix_labile, ixC, :) < eps8)
       veg_growth_mt(ix_labile, ixC, :) = 0.0_wp
     END WHERE
 

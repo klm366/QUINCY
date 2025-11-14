@@ -53,7 +53,7 @@ CONTAINS
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid, t_jsb_grid
     USE mo_jsb_grid,                        ONLY: Get_vgrid, Get_grid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14
-    USE mo_jsb_math_constants,              ONLY: one_day, one_year, eps4, eps8
+    USE mo_jsb_math_constants,              ONLY: one_day, one_year, eps4, eps8, eps12
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14
     USE mo_veg_constants,                   ONLY: eta_nfixation, max_leaf_shedding_rate
     ! ----------------------------------------------------------------------------------------------------- !
@@ -396,10 +396,10 @@ CONTAINS
 
       END DO
 
-       !>  1.4 update labile pool and reserve
-       !>
-       veg_pool_mt(ix_labile, :, :)  = veg_pool_mt(ix_labile, :, :)  + veg_reserve_use_mt(:,:)
-       veg_pool_mt(ix_reserve, :, :) = veg_pool_mt(ix_reserve, :, :) - veg_reserve_use_mt(:,:)
+      !>  1.4 update labile pool and reserve
+      !>
+      veg_pool_mt(ix_labile, :, :)  = veg_pool_mt(ix_labile, :, :)  + veg_reserve_use_mt(:,:)
+      veg_pool_mt(ix_reserve, :, :) = veg_pool_mt(ix_reserve, :, :) - veg_reserve_use_mt(:,:)
 
       DO ic = 1, nc
         !>  1.5 remove respiration flux associated with herbivory from affected pools
@@ -418,40 +418,39 @@ CONTAINS
         veg_pool_mt(ix_fruit, ixC14, ic) = veg_pool_mt(ix_fruit, ixC14, ic) &
           &                                - herbivory_fruit_resp_c14(ic) * dtime / 1.e6_wp
 
-       !>  1.6 update fluxes from continuous nutrient turnover and resorption
-       !>
-       ! N
-       veg_pool_mt(ix_labile, ixN, ic)     = veg_pool_mt(ix_labile, ixN, ic) &
-         &                                   + recycling_leaf_n(ic) + recycling_fine_root_n(ic) + recycling_heart_wood_n(ic)
-       veg_pool_mt(ix_leaf, ixN, ic)       = veg_pool_mt(ix_leaf, ixN, ic)       - recycling_leaf_n(ic)
-       veg_pool_mt(ix_fine_root, ixN, ic)  = veg_pool_mt(ix_fine_root, ixN, ic)  - recycling_fine_root_n(ic)
-       veg_pool_mt(ix_heart_wood, ixN, ic) = veg_pool_mt(ix_heart_wood, ixN, ic) - recycling_heart_wood_n(ic)
-       ! P
-       veg_pool_mt(ix_labile, ixP, ic)     = veg_pool_mt(ix_labile, ixP, ic) &
-         &                                   + recycling_leaf_p(ic) + recycling_fine_root_p(ic) + recycling_heart_wood_p(ic)
-       veg_pool_mt(ix_leaf, ixP, ic)       = veg_pool_mt(ix_leaf, ixP, ic)       - recycling_leaf_p(ic)
-       veg_pool_mt(ix_fine_root, ixP, ic)  = veg_pool_mt(ix_fine_root, ixP, ic)  - recycling_fine_root_p(ic)
-       veg_pool_mt(ix_heart_wood, ixP, ic) = veg_pool_mt(ix_heart_wood, ixP, ic) - recycling_heart_wood_p(ic)
-       ! N15
-       veg_pool_mt(ix_labile, ixN15, ic)     = veg_pool_mt(ix_labile, ixN15, ic) &
-         &                                    + recycling_leaf_n15(ic) + recycling_fine_root_n15(ic) + recycling_heart_wood_n15(ic)
-       veg_pool_mt(ix_leaf, ixN15, ic)       = veg_pool_mt(ix_leaf, ixN15, ic)       - recycling_leaf_n15(ic)
-       veg_pool_mt(ix_fine_root, ixN15, ic)  = veg_pool_mt(ix_fine_root, ixN15, ic)  - recycling_fine_root_n15(ic)
-       veg_pool_mt(ix_heart_wood, ixN15, ic) = veg_pool_mt(ix_heart_wood, ixN15, ic) - recycling_heart_wood_n15(ic)
+        !>  1.6 update fluxes from continuous nutrient turnover and resorption
+        !>
+        ! N
+        veg_pool_mt(ix_labile, ixN, ic)     = veg_pool_mt(ix_labile, ixN, ic) &
+          &                                   + recycling_leaf_n(ic) + recycling_fine_root_n(ic) + recycling_heart_wood_n(ic)
+        veg_pool_mt(ix_leaf, ixN, ic)       = veg_pool_mt(ix_leaf, ixN, ic)       - recycling_leaf_n(ic)
+        veg_pool_mt(ix_fine_root, ixN, ic)  = veg_pool_mt(ix_fine_root, ixN, ic)  - recycling_fine_root_n(ic)
+        veg_pool_mt(ix_heart_wood, ixN, ic) = veg_pool_mt(ix_heart_wood, ixN, ic) - recycling_heart_wood_n(ic)
+        ! P
+        veg_pool_mt(ix_labile, ixP, ic)     = veg_pool_mt(ix_labile, ixP, ic) &
+          &                                   + recycling_leaf_p(ic) + recycling_fine_root_p(ic) + recycling_heart_wood_p(ic)
+        veg_pool_mt(ix_leaf, ixP, ic)       = veg_pool_mt(ix_leaf, ixP, ic)       - recycling_leaf_p(ic)
+        veg_pool_mt(ix_fine_root, ixP, ic)  = veg_pool_mt(ix_fine_root, ixP, ic)  - recycling_fine_root_p(ic)
+        veg_pool_mt(ix_heart_wood, ixP, ic) = veg_pool_mt(ix_heart_wood, ixP, ic) - recycling_heart_wood_p(ic)
+        ! N15
+        veg_pool_mt(ix_labile, ixN15, ic)     = veg_pool_mt(ix_labile, ixN15, ic) + recycling_leaf_n15(ic) &
+          &                                     + recycling_fine_root_n15(ic) + recycling_heart_wood_n15(ic)
+        veg_pool_mt(ix_leaf, ixN15, ic)       = veg_pool_mt(ix_leaf, ixN15, ic)       - recycling_leaf_n15(ic)
+        veg_pool_mt(ix_fine_root, ixN15, ic)  = veg_pool_mt(ix_fine_root, ixN15, ic)  - recycling_fine_root_n15(ic)
+        veg_pool_mt(ix_heart_wood, ixN15, ic) = veg_pool_mt(ix_heart_wood, ixN15, ic) - recycling_heart_wood_n15(ic)
 
-       !>  1.7 update labile pool with fluxes to mycorrhiza
-       !>
-       veg_pool_mt(ix_labile, ixC, ic)   = veg_pool_mt(ix_labile, ixC, ic)   - veg_exudation_mt(ixC, ic)
-       veg_pool_mt(ix_labile, ixN, ic)   = veg_pool_mt(ix_labile, ixN, ic)   - veg_exudation_mt(ixN, ic)
-       veg_pool_mt(ix_labile, ixP, ic)   = veg_pool_mt(ix_labile, ixP, ic)   - veg_exudation_mt(ixP, ic)
-       veg_pool_mt(ix_labile, ixC13, ic) = veg_pool_mt(ix_labile, ixC13, ic) - veg_exudation_mt(ixC13, ic)
-       veg_pool_mt(ix_labile, ixC14, ic) = veg_pool_mt(ix_labile, ixC14, ic) - veg_exudation_mt(ixC14, ic)
-       veg_pool_mt(ix_labile, ixN15, ic) = veg_pool_mt(ix_labile, ixN15, ic) - veg_exudation_mt(ixN15, ic)
+        !>  1.7 update labile pool with fluxes to mycorrhiza
+        !>
+        veg_pool_mt(ix_labile, ixC, ic)   = veg_pool_mt(ix_labile, ixC, ic)   - veg_exudation_mt(ixC, ic)
+        veg_pool_mt(ix_labile, ixN, ic)   = veg_pool_mt(ix_labile, ixN, ic)   - veg_exudation_mt(ixN, ic)
+        veg_pool_mt(ix_labile, ixP, ic)   = veg_pool_mt(ix_labile, ixP, ic)   - veg_exudation_mt(ixP, ic)
+        veg_pool_mt(ix_labile, ixC13, ic) = veg_pool_mt(ix_labile, ixC13, ic) - veg_exudation_mt(ixC13, ic)
+        veg_pool_mt(ix_labile, ixC14, ic) = veg_pool_mt(ix_labile, ixC14, ic) - veg_exudation_mt(ixC14, ic)
+        veg_pool_mt(ix_labile, ixN15, ic) = veg_pool_mt(ix_labile, ixN15, ic) - veg_exudation_mt(ixN15, ic)
       END DO
 
-
-       !>  1.8 Update plant biogeochemical pools with growth, litterfall due to natural processes and establishment
-       !>
+      !>  1.8 Update plant biogeochemical pools with growth, litterfall due to natural processes and establishment
+      !>
       DO ic = 1, nc
         DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
           IF (model%config%is_element_used(id_elem)) THEN
@@ -483,14 +482,16 @@ CONTAINS
             DO ix_comp = 1, nr_of_veg_bgcm_comp
               ! set a negative pool to zero (breaking mass balance !)
               ! and write message to LOG (if enabled)
-              IF (veg_pool_mt(ix_comp, ix_elem, ic) < 0.0_wp) THEN
+              IF (veg_pool_mt(ix_comp, ix_elem, ic) < -eps12) THEN
                 IF (config_flag_log_negative_vegpool) THEN
                   WRITE (message_text,*) 'Negative value of vegetation pool at tile ', tile%name, &
                     &                    ' at (lon:lat) ', grid%lon(ic,iblk), ':', grid%lat(ic,iblk), &
                     &                    ', compartment: ', ix_comp, ' , element: ', ix_elem, &
                     &                    ', value ', veg_pool_mt(ix_comp, ix_elem, ic), ' is set to zero here'
-                  CALL message(TRIM(routine), message_text)
+                  CALL message(TRIM(routine), message_text, all_print=.TRUE.)
                 END IF
+              END IF
+              IF (veg_pool_mt(ix_comp, ix_elem, ic) < 0.0_wp) THEN
                 veg_pool_mt(ix_comp, ix_elem, ic) = 0.0_wp
               END IF
             END DO
