@@ -163,7 +163,7 @@ CONTAINS
     TYPE(t_jsb_grid), POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w
     LOGICAL  :: lstart, lrestart, lnew_year, lnew_month, lnew_day, lstop
-    INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, i
+    INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, ic
     INTEGER  :: year, month, summer_state, ylen, mlen
     REAL(wp) :: dtime
 
@@ -225,14 +225,14 @@ CONTAINS
     lnew_day   = is_newday  (options%current_datetime,dtime)
 
     ! Running means must be updated every timestep
-    CALL update_megan_runmean(lstart,dtime,                                                    &
-      &                       dsl4jsb_Config(MEGAN_)%relax_short,                              &
-      &                       dsl4jsb_Config(MEGAN_)%relax_long,                               &
-      &                                               t_air, temp_relax_short,                 &
-      &                                              lai_ta,  lai_relax_short, lai_relax_long, &
-      &                       swvis_srf_down+swnir_srf_down,  pfd_relax_short, pfd_relax_long)
-
-!    IF (.NOT. lnew_day) RETURN ! Megan process is updated only once per day TODO: Check this!
+    DO ic = 1, nc
+      CALL update_megan_runmean(lstart,dtime,                                                                    &
+        &                       dsl4jsb_Config(MEGAN_)%relax_short,                                              &
+        &                       dsl4jsb_Config(MEGAN_)%relax_long,                                               &
+        &                                              t_air(ic), temp_relax_short(ic),                          &
+        &                                              lai_ta(ic),  lai_relax_short(ic), lai_relax_long(ic),     &
+        &                       swvis_srf_down(ic)+swnir_srf_down(ic),  pfd_relax_short(ic), pfd_relax_long(ic))
+    ENDDO
 
     ! A2L_ variables
     dsl4jsb_Get_var2D_onChunk(A2L_,   cos_zenith_angle)
@@ -268,23 +268,26 @@ CONTAINS
     !         Emission = [EF][GAMMA_LAI][GAMMA_T][GAMMA_age][GAMMA_SM]*
     !                    { (1-LDF) + [LDF][GAMMA_P] }
     !--- first compute gamma factors independent of compound
-    CALL calc_gamma_lai (lai_ta, gamma_lai)
-    CALL calc_gamma_pfd(cos_zenith_angle, swvis_srf_down+swnir_srf_down, sw_toa_down, pfd_relax_short, gamma_pfd)
-    CALL calc_gamma_co2(CO2_air, gamma_CO2)
-    CALL calc_gamma_sm(wtr_rootzone_rel, gamma_sm)
+    DO ic = 1, nc
+      CALL calc_gamma_lai (lai_ta(ic), gamma_lai(ic))
+      CALL calc_gamma_pfd(cos_zenith_angle(ic), swvis_srf_down(ic)+swnir_srf_down(ic), sw_toa_down(ic), &
+                          pfd_relax_short(ic), gamma_pfd(ic))
+      CALL calc_gamma_co2(CO2_air(ic), gamma_CO2(ic))
+      CALL calc_gamma_sm(wtr_rootzone_rel(ic), gamma_sm(ic))
 
-    ! Isoprene (only one using gamma_CO2 and gamma_sm)
-    CALL calc_gamma_age(isos%cafac, lai_relax_short, lai_relax_long, temp_relax_short, iso%gamma_age)
-    CALL calc_gamma_temp_iso(t_air, temp_relax_short, iso%gamma_temp)
-    iso%total_out = isos%ef * gamma_lai * iso%gamma_temp * iso%gamma_age * gamma_CO2 * gamma_sm * &
-                     (1._wp - isos%ldf + isos%ldf * gamma_pfd) * unit_scale
-    ! CO
-    CALL calc_gamma_age(COs%cafac, lai_relax_short, lai_relax_long, temp_relax_short, CO%gamma_age)
-    CALL calc_gamma_temp_other(t_air(:), COs%beta, CO%gamma_temp)
-    CO%total_out = COs%ef * gamma_lai * CO%gamma_temp * CO%gamma_age * &
-                    (1._wp - COs%ldf + COs%ldf * gamma_pfd) * unit_scale
-    ! NO
-    NO%total_out = NOs%ef * gamma_lai * (1._wp - NOs%ldf + NOs%ldf * gamma_pfd) * unit_scale
+      ! Isoprene (only one using gamma_CO2 and gamma_sm)
+      CALL calc_gamma_age(isos%cafac, lai_relax_short(ic), lai_relax_long(ic), temp_relax_short(ic), iso%gamma_age(ic))
+      CALL calc_gamma_temp_iso(t_air(ic), temp_relax_short(ic), iso%gamma_temp(ic))
+      iso%total_out(ic) = isos%ef * gamma_lai(ic) * iso%gamma_temp(ic) * iso%gamma_age(ic) * gamma_CO2(ic) * gamma_sm(ic) * &
+                          (1._wp - isos%ldf + isos%ldf * gamma_pfd(ic)) * unit_scale
+      ! CO
+      CALL calc_gamma_age(COs%cafac, lai_relax_short(ic), lai_relax_long(ic), temp_relax_short(ic), CO%gamma_age(ic))
+      CALL calc_gamma_temp_other(t_air(ic), COs%beta, CO%gamma_temp(ic))
+      CO%total_out(ic) = COs%ef * gamma_lai(ic) * CO%gamma_temp(ic) * CO%gamma_age(ic) * &
+                         (1._wp - COs%ldf + COs%ldf * gamma_pfd(ic)) * unit_scale
+      ! NO
+      NO%total_out(ic) = NOs%ef * gamma_lai(ic) * (1._wp - NOs%ldf + NOs%ldf * gamma_pfd(ic)) * unit_scale
+    ENDDO
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

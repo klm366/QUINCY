@@ -214,7 +214,7 @@ CONTAINS
         ! TODO: This expects the "time" in the file to be 1d and given as years only (integer/floating point)
         CALL nf(nf_inq_dimid(input_file%file_id, 'time', nc_id), routine)
         CALL nf(nf_inq_dimlen(input_file%file_id, nc_id, time_length), routine)
-        ALLOCATE(fyears(time_length))
+        ALLOCATE(fyears(time_length)) ! Ok to keep on CPU
         CALL nf(nf_inq_varid(input_file%file_id, 'time', nc_id), routine)
         CALL nf(nf_get_vara_double(input_file%file_id,nc_id,(/1/),(/time_length/),fyears), routine)
       ENDIF
@@ -327,7 +327,7 @@ CONTAINS
     DO i=2,layer%n_levels
       dsl4jsb_memory(CH4_)%layer_midpoint_dz(i) = (layer%dz(i) + layer%dz(i-1)) * 0.5_wp
     ENDDO
-    ! TODO: StW: some $acc stuff missing here
+    !$acc update_device(dsl4jsb_memory(CH4_)%layer_midpoint_dz)
 
     ! Determine (constant) layer for in which bedrock is located
     dsl4jsb_Get_var2D_onDomain(HYDRO_, soil_depth)
@@ -338,7 +338,7 @@ CONTAINS
         mxlay_above_rock(i,j) = REAL(find_bedrock_layer(layer%n_levels,layer%ubounds(:),soil_depth(i,j)),wp)
       ENDDO
     ENDDO
-    ! TODO: StW: some $acc stuff missing here
+    !$acc update_device(mxlay_above_rock)
 
     ! Determine distribution of roots in soil layers.
     ! NOTE: In case of dynamical roots, this should be moved into the time loop in update_methane
@@ -354,13 +354,7 @@ CONTAINS
     ELSE
       root_dist_sl(:,:,:) = 0._wp
     ENDIF
-    ! TODO: StW: some $acc stuff missing here
-
-!      !$acc data present(dsl4jsb_var2D_onDomain(TOP_,cti_mean), &
-!      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_basin), &
-!      !$acc update device(dsl4jsb_var2D_onDomain(TOP_,cti_mean), &
-!      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_basin), &
-!      !$acc end data
+    !$acc update_device(root_dist_sl)
 
   END SUBROUTINE methane_init_ic
 

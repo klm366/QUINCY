@@ -21,9 +21,10 @@ MODULE mo_ch4_config_class
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
-
   USE mo_jsb_io_netcdf,     ONLY: t_input_file
   USE mo_jsb_time,          ONLY: t_datetime, get_time_start, get_date_components
+  USE mo_debug_stw
+
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
   IMPLICIT NONE

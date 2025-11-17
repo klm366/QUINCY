@@ -64,7 +64,7 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
 
 !------------------------------------------------------------------------------------------------
-  ELEMENTAL PURE SUBROUTINE calc_gamma_lai(lai, gamma)
+  PURE SUBROUTINE calc_gamma_lai(lai, gamma)
     ! ----- leaf area index adjustment
     REAL(wp), INTENT(in)  :: lai
     REAL(wp), INTENT(out) :: gamma
@@ -75,7 +75,7 @@ CONTAINS
   END SUBROUTINE calc_gamma_lai
 
 !------------------------------------------------------------------------------------
-  ELEMENTAL PURE SUBROUTINE calc_gamma_pfd(zenith, pfd, tpfd, avg_pfd, gamma)
+  PURE SUBROUTINE calc_gamma_pfd(zenith, pfd, tpfd, avg_pfd, gamma)
     USE mo_jsb_math_constants, ONLY: rad2deg
     ! ----- photosynthetically active radiation adjustment
     !             GAMMA_P = 0.0         a<=0, a>=180, sin(a) <= 0.0
@@ -137,7 +137,7 @@ CONTAINS
   END SUBROUTINE calc_gamma_pfd
 
 !------------------------------------------------------------------------------------
-  ELEMENTAL PURE SUBROUTINE calc_gamma_temp_iso(temp, temp_relax, gamma)
+  PURE SUBROUTINE calc_gamma_temp_iso(temp, temp_relax, gamma)
     ! ----- temperature adjustment for isoprene
     !                          Eopt*CT2*exp(CT1*x)
     !             GAMMA_T =  ------------------------
@@ -178,7 +178,7 @@ CONTAINS
 
 
 !------------------------------------------------------------------------------------
-  ELEMENTAL PURE SUBROUTINE calc_gamma_temp_other(temp, beta, gamma)
+  PURE SUBROUTINE calc_gamma_temp_other(temp, beta, gamma)
     ! ----- temperature adjustment for non-isoprene species
     !             GAMMA_T =  exp[BETA*(T-Ts)]
     !           where BETA   = temperature dependent parameter
@@ -198,7 +198,7 @@ CONTAINS
   !----- adjustment for leaf age
   !### need to verify !
   ! (unchanged from v2.04)
-  ELEMENTAL PURE SUBROUTINE calc_gamma_age(kclass, lai, laip, tempd, gamma)
+  PURE SUBROUTINE calc_gamma_age(kclass, lai, laip, tempd, gamma)
     !
     !             GAMMA_age = Fnew*Anew + Fgro*Agro + Fmat*Amat + Fold*Aold
     !           where Fnew = new foliage fraction
@@ -364,7 +364,7 @@ CONTAINS
   END SUBROUTINE calc_gamma_age
 
 !------------------------------------------------------------------------------------
-  ELEMENTAL PURE SUBROUTINE calc_gamma_sm(soilm, gamma)
+  PURE SUBROUTINE calc_gamma_sm(soilm, gamma)
   ! --- adjustment for soil moisture
   !  gamma_sm = 1 in standard version of MEGAN v2.10
   !! From Guenther et al., 2012, MEGANv2.1
@@ -403,7 +403,7 @@ CONTAINS
   END SUBROUTINE calc_gamma_sm
   
 !------------------------------------------------------------------------------------
-  ELEMENTAL PURE SUBROUTINE calc_gamma_co2(co2,gamma)
+  PURE SUBROUTINE calc_gamma_co2(co2,gamma)
     USE mo_methane_constants, ONLY: CO2_consts
     USE mo_methane_util,      ONLY: concentration_mmr_2_vmr
    
@@ -425,7 +425,7 @@ CONTAINS
   END SUBROUTINE calc_gamma_co2
 
   ! Update needed running means of temp, lai and pfd
-  ELEMENTAL PURE SUBROUTINE update_megan_runmean(linit, dt,t_short,t_long,              &
+  PURE SUBROUTINE update_megan_runmean(linit, dt,t_short,t_long,              &
     &                                            temp,temp_relax_short,                 &
     &                                            lai,  lai_relax_short, lai_relax_long, &
     &                                            pfd,  pfd_relax_short, pfd_relax_long) 

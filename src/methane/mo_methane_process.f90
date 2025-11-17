@@ -70,7 +70,7 @@ CONTAINS
     ! locals
     REAL(wp), ALLOCATABLE :: effective_layer_volume(:)
     REAL(wp) :: current_thickness
-    INTEGER  :: nsoil, iLayer
+    INTEGER  :: nsoil, is
 
     relative_moist         = 0._wp
     relative_ice           = 0._wp
@@ -85,20 +85,22 @@ CONTAINS
     ALLOCATE(effective_layer_volume(nsoil))
 
     !  determine relative moisture and ice content in soil layers ->  divide by layer thickness
-    DO iLayer = 1,mxlay_above_rock
-      current_thickness = layer_thick(iLayer)
-      IF ((iLayer > 1) .AND. (layer_bound(iLayer) > soil_depth)) THEN
-        current_thickness = soil_depth - layer_bound(iLayer-1)
-      END IF
-      relative_moist(iLayer) = layer_moisture(iLayer) / current_thickness
-      relative_ice  (iLayer) = ice_content(iLayer)    / current_thickness
-    END DO
-    relative_moist(mxlay_above_rock+1:nsoil) = 0._wp
-    relative_ice  (mxlay_above_rock+1:nsoil) = 1._wp
+    DO is = 1,mxlay_above_rock
+      current_thickness = layer_thick(is)
+      IF ((is > 1) .AND. (layer_bound(is) > soil_depth)) THEN
+        current_thickness = soil_depth - layer_bound(is-1)
+      ENDIF
+      relative_moist(is) = layer_moisture(is) / current_thickness
+      relative_ice  (is) = ice_content(is)    / current_thickness
+    ENDDO
+    DO is = mxlay_above_rock+1,nsoil
+      relative_moist(is) = 0._wp
+      relative_ice  (is) = 1._wp
+    ENDDO
 
     IF (.NOT. permafrost_flag) THEN
       relative_ice = 0._wp
-    END IF
+    ENDIF
 
     IF (is_wet) THEN
       ! determine, in which layer water table is (remember: water table below surface is negative)
@@ -109,28 +111,32 @@ CONTAINS
     ELSE
       mxlay_above_wt = mxlay_above_rock
       mxlay_acrotelm = 0
-    END IF
+    ENDIF
 
-    ! determine relative pore volume, corrected by ice
-    relative_porevol(1:mxlay_above_rock) = MAX(relative_porevol_min, soil_porosity - relative_ice(1:mxlay_above_rock))
+    DO is = 1,mxlay_above_rock
+      ! determine relative pore volume, corrected by ice
+      relative_porevol(is) = MAX(relative_porevol_min, soil_porosity - relative_ice(is))
 
-    ! calculate the relative moisture content of ice free pores
-    relative_pore_moist(1:mxlay_above_rock) = MIN(relative_moist_saturated, &
-                                                  relative_moist(1:mxlay_above_rock) / relative_porevol(1:mxlay_above_rock))
+      ! calculate the relative moisture content of ice free pores
+      relative_pore_moist(is) = MIN(relative_moist_saturated, relative_moist(is) / relative_porevol(is))
+    ENDDO
 
     ! correct relative moisture and relative moisture content for layers below 
     ! water table -> set to relative_moist_saturated 
-    relative_pore_moist((mxlay_above_wt+1):mxlay_above_rock) = relative_moist_saturated
-    relative_moist     ((mxlay_above_wt+1):mxlay_above_rock) = relative_pore_moist((mxlay_above_wt+1):mxlay_above_rock) * &
-                                                               relative_porevol   ((mxlay_above_wt+1):mxlay_above_rock)
+    DO is = mxlay_above_wt+1,mxlay_above_rock
+      relative_pore_moist(is) = relative_moist_saturated
+      relative_moist     (is) = relative_pore_moist(is) * relative_porevol(is)
+    ENDDO
 
-    relative_pore_air(1:mxlay_above_rock) = 1._wp - relative_pore_moist(1:mxlay_above_rock)
+    DO is = 1, mxlay_above_rock
+      relative_pore_air(is) = 1._wp - relative_pore_moist(is)
 
-    ! helper for transferring between gas densities and concentrations
-    effective_layer_volume(1:mxlay_above_rock) = layer_thick(1:mxlay_above_rock) * relative_porevol(1:mxlay_above_rock)
+      ! helper for transferring between gas densities and concentrations
+      effective_layer_volume(is) = layer_thick(is) * relative_porevol(is)
 
-    conc2dens(1:mxlay_above_rock) =         effective_layer_volume(1:mxlay_above_rock)
-    dens2conc(1:mxlay_above_rock) = 1._wp / effective_layer_volume(1:mxlay_above_rock)
+      conc2dens(is) =         effective_layer_volume(is)
+      dens2conc(is) = 1._wp / effective_layer_volume(is)
+    ENDDO
 
     DEALLOCATE(effective_layer_volume)
 
@@ -347,6 +353,7 @@ CONTAINS
     REAL(wp) :: delta_inun                        ! change in inundated fraction
     REAL(wp) :: frac_transfer                     ! fraction to be transfered
     REAL(wp) :: tmp_GAS(mxlay)                    ! temporary GAS storage
+    INTEGER  :: is, isz
 
     IF (.NOT. is_peat) THEN
       ! for mineral soils, gas densities in methane%GAS_WETNESS are relative to tile / gridcell 
@@ -367,52 +374,59 @@ CONTAINS
 
         ! make sure we don't get incredible values from restart
         IF (frac_inun_pre < frac_inun_min) THEN
-          CH4_dens_wet(1:mxlay) = 0._wp
-          CO2_dens_wet(1:mxlay) = 0._wp
-           O2_dens_wet(1:mxlay) = 0._wp
+          DO is = 1,mxlay
+            CH4_dens_wet(is) = 0._wp
+            CO2_dens_wet(is) = 0._wp
+             O2_dens_wet(is) = 0._wp
+           ENDDO
         END IF
 
-        ! CH4
-        tmp_GAS(1:mxlay) = CH4_dens_dry(1:mxlay) * frac_transfer
-        CH4_dens_dry(1:mxlay) = CH4_dens_dry(1:mxlay) - tmp_GAS(1:mxlay)
-        CH4_dens_wet(1:mxlay) = CH4_dens_wet(1:mxlay) + tmp_GAS(1:mxlay)
+        DO is = 1,mxlay
+          ! CH4
+          tmp_GAS(is) = CH4_dens_dry(is) * frac_transfer
+          CH4_dens_dry(is) = CH4_dens_dry(is) - tmp_GAS(is)
+          CH4_dens_wet(is) = CH4_dens_wet(is) + tmp_GAS(is)
 
-        ! CO2
-        tmp_GAS(1:mxlay) = CO2_dens_dry(1:mxlay) * frac_transfer
-        CO2_dens_dry(1:mxlay) = CO2_dens_dry(1:mxlay) - tmp_GAS(1:mxlay)
-        CO2_dens_wet(1:mxlay) = CO2_dens_wet(1:mxlay) + tmp_GAS(1:mxlay)
+          ! CO2
+          tmp_GAS(is) = CO2_dens_dry(is) * frac_transfer
+          CO2_dens_dry(is) = CO2_dens_dry(is) - tmp_GAS(is)
+          CO2_dens_wet(is) = CO2_dens_wet(is) + tmp_GAS(is)
 
-        ! O2
-        tmp_GAS(1:mxlay) = O2_dens_dry(1:mxlay) * frac_transfer
-        O2_dens_dry (1:mxlay) = O2_dens_dry (1:mxlay) - tmp_GAS(1:mxlay)
-        O2_dens_wet (1:mxlay) = O2_dens_wet (1:mxlay) + tmp_GAS(1:mxlay)
+          ! O2
+          tmp_GAS(is) = O2_dens_dry(is) * frac_transfer
+          O2_dens_dry (is) = O2_dens_dry (is) - tmp_GAS(is)
+          O2_dens_wet (is) = O2_dens_wet (is) + tmp_GAS(is)
+        ENDDO
 
       ELSEIF (delta_inun < -EPSILON(1._wp)) THEN
 
         ! inundated area shrinks -> transfer from wet to dry part of tile
         frac_transfer = MIN(1._wp,-delta_inun / frac_inun_pre)
 
-        ! CH4
-        tmp_GAS(1:mxlay) = CH4_dens_wet(1:mxlay) * frac_transfer
-        CH4_dens_dry(1:mxlay) = CH4_dens_dry(1:mxlay) + tmp_GAS(1:mxlay)
-        CH4_dens_wet(1:mxlay) = CH4_dens_wet(1:mxlay) - tmp_GAS(1:mxlay)
+        DO is = 1,mxlay
+          ! CH4
+          tmp_GAS(is) = CH4_dens_wet(is) * frac_transfer
+          CH4_dens_dry(is) = CH4_dens_dry(is) + tmp_GAS(is)
+          CH4_dens_wet(is) = CH4_dens_wet(is) - tmp_GAS(is)
 
-        ! CO2
-        tmp_GAS(1:mxlay) = CO2_dens_wet(1:mxlay) * frac_transfer
-        CO2_dens_dry(1:mxlay) = CO2_dens_dry(1:mxlay) + tmp_GAS(1:mxlay)
-        CO2_dens_wet(1:mxlay) = CO2_dens_wet(1:mxlay) - tmp_GAS(1:mxlay)
+          ! CO2
+          tmp_GAS(is) = CO2_dens_wet(is) * frac_transfer
+          CO2_dens_dry(is) = CO2_dens_dry(is) + tmp_GAS(is)
+          CO2_dens_wet(is) = CO2_dens_wet(is) - tmp_GAS(is)
 
-        ! O2
-        tmp_GAS(1:mxlay) = O2_dens_wet(1:mxlay) * frac_transfer
-        O2_dens_dry (1:mxlay) = O2_dens_dry (1:mxlay) + tmp_GAS(1:mxlay)
-        O2_dens_wet (1:mxlay) = O2_dens_wet (1:mxlay) - tmp_GAS(1:mxlay)
+          ! O2
+          tmp_GAS(is) = O2_dens_wet(is) * frac_transfer
+          O2_dens_dry (is) = O2_dens_dry (is) + tmp_GAS(is)
+          O2_dens_wet (is) = O2_dens_wet (is) - tmp_GAS(is)
 
-        ! make sure we don't get incredible values from restart
-        IF (frac_inun < frac_inun_min) THEN
-          CH4_dens_wet(1:mxlay) = 0._wp
-          CO2_dens_wet(1:mxlay) = 0._wp
-          O2_dens_wet (1:mxlay) = 0._wp
-        END IF
+          ! make sure we don't get incredible values from restart
+          IF (frac_inun < frac_inun_min) THEN
+            CH4_dens_wet(is) = 0._wp
+            CO2_dens_wet(is) = 0._wp
+            O2_dens_wet (is) = 0._wp
+          END IF
+
+        ENDDO
 
       ENDIF
 
@@ -423,24 +437,27 @@ CONTAINS
     ENDIF
 
     ! Define local arrays scaled to respective (non-)inundated parts of tile
-    CH4_wet = CH4_dens_wet
-    CO2_wet = CO2_dens_wet
-     O2_wet =  O2_dens_wet
-    CH4_dry = CH4_dens_dry
-    CO2_dry = CO2_dens_dry
-     O2_dry =  O2_dens_dry
+    isz = SIZE(CH4_dens_wet)
+    DO is = 1,isz
+      CH4_wet(is) = CH4_dens_wet(is)
+      CO2_wet(is) = CO2_dens_wet(is)
+       O2_wet(is) =  O2_dens_wet(is)
+      CH4_dry(is) = CH4_dens_dry(is)
+      CO2_dry(is) = CO2_dens_dry(is)
+       O2_dry(is) =  O2_dens_dry(is)
 
-    IF (frac_inun > 0._wp) THEN
-      CH4_wet = CH4_dens_wet / frac_inun
-      CO2_wet = CO2_dens_wet / frac_inun
-       O2_wet =  O2_dens_wet / frac_inun
-    ENDIF
+      IF (frac_inun > 0._wp) THEN
+        CH4_wet(is) = CH4_dens_wet(is) / frac_inun
+        CO2_wet(is) = CO2_dens_wet(is) / frac_inun
+         O2_wet(is) =  O2_dens_wet(is) / frac_inun
+      ENDIF
 
-    IF (frac_inun < 1._wp) THEN
-      CH4_dry = CH4_dens_dry / (1._wp - frac_inun)
-      CO2_dry = CO2_dens_dry / (1._wp - frac_inun)
-       O2_dry =  O2_dens_dry / (1._wp - frac_inun)
-    ENDIF
+      IF (frac_inun < 1._wp) THEN
+        CH4_dry(is) = CH4_dens_dry(is) / (1._wp - frac_inun)
+        CO2_dry(is) = CO2_dens_dry(is) / (1._wp - frac_inun)
+         O2_dry(is) =  O2_dens_dry(is) / (1._wp - frac_inun)
+      ENDIF
+    ENDDO
 
   END SUBROUTINE init_gas_pools
 
@@ -491,6 +508,8 @@ CONTAINS
     REAL(wp) :: carbon_dist_sum_acro_inv             ! inverse of the sum of carbon in anoxic acrotelm [-]
     REAL(wp) :: carbon_dist_sum_cato_inv             ! inverse of the sum of carbon in catotelm [-]
     REAL(wp) :: resp_sum
+    INTEGER  :: is
+    !$ACC DATA CREATE(carbon_dist,CO2_Prod_oxic,CO2_Prod_anox,root_dist_peat,f_ch4)
 
     CH4_Prod       = 0._wp
     CO2_Prod       = 0._wp
@@ -533,38 +552,50 @@ CONTAINS
           resp_sum = SUM(resp_sl(1:mxlay_above_rock))
           IF (resp_sum /= 0._wp) THEN ! If not, carbon_oxic should also be 0
             ! Distribute according to respiration
-            carbon_dist(1:mxlay_above_rock) = carbon_oxic * resp_sl(1:mxlay_above_rock) / resp_sum
+            DO is = 1,mxlay_above_rock
+              carbon_dist(is) = carbon_oxic * resp_sl(is) / resp_sum
+            ENDDO
           ENDIF
         ELSE
           ! carbon is input according to root distribution
-          carbon_dist(1:mxlay_above_rock) = root_dist(1:mxlay_above_rock) * carbon_oxic
+          DO is = 1,mxlay_above_rock
+            carbon_dist(is) = root_dist(is) * carbon_oxic
+          ENDDO
         ENDIF
 
         ! dry part of grid cell is completely oxic, becoming CO2 
-        CO2_Prod_oxic(1:mxlay_above_rock) = carbon_dist(1:mxlay_above_rock)
+        DO is = 1,mxlay_above_rock
+          CO2_Prod_oxic(is) = carbon_dist(is)
+        ENDDO
       ELSE
-        f_ch4(:) = MIN(0.5_wp,frac_CH4_anox_mineral * meth_q10**((Tsoil(1:mxlay_above_rock)-Q10basetemp)/10._wp))
         IF (PRESENT(resp_sl)) THEN
           resp_sum = SUM(resp_sl(1:mxlay_above_rock))
-          IF (resp_sum /= 0._wp) THEN ! If not, carbon_oxic should also be 0
-            ! Distribute according to respiration
-            carbon_dist(1:mxlay_above_rock) = carbon_oxic * resp_sl(1:mxlay_above_rock) / resp_sum
-          ENDIF
-        ELSE
-          ! carbon is input according to root distribution
-          carbon_dist(1:mxlay_above_rock) = root_dist(1:mxlay_above_rock) * carbon_anox
         ENDIF
+        DO is = 1,mxlay_above_rock
+          f_ch4(is) = MIN(0.5_wp,frac_CH4_anox_mineral * meth_q10**((Tsoil(is)-Q10basetemp)/10._wp))
+          IF (PRESENT(resp_sl)) THEN
+            IF (resp_sum /= 0._wp) THEN ! If not, carbon_oxic should also be 0
+              ! Distribute according to respiration
+              carbon_dist(is) = carbon_oxic * resp_sl(is) / resp_sum
+            ENDIF
+          ELSE
+            ! carbon is input according to root distribution
+            carbon_dist(is) = root_dist(is) * carbon_anox
+          ENDIF
 
-        ! C decomposed under anaerobic conditions becomes both CH4 and CO2, with
-        ! fractions determined by frac_CH4_anox_mineral
-        ! determine CO2 densities and concentrations produced anaerobically
-        CO2_Prod_anox(1:mxlay_above_rock) = (1._wp - f_ch4(1:mxlay_above_rock)) * carbon_dist(1:mxlay_above_rock)
+          ! C decomposed under anaerobic conditions becomes both CH4 and CO2, with
+          ! fractions determined by frac_CH4_anox_mineral
+          ! determine CO2 densities and concentrations produced anaerobically
+          CO2_Prod_anox(is) = (1._wp - f_ch4(is)) * carbon_dist(is)
 
-        ! determine CH4 densities and concentrations produced
-        CH4_Prod(1:mxlay_above_rock) = f_ch4(1:mxlay_above_rock) * carbon_dist(1:mxlay_above_rock)
+          ! determine CH4 densities and concentrations produced
+          CH4_Prod(is) = f_ch4(is) * carbon_dist(is)
+        ENDDO
       END IF
     ELSE   ! is_peatland
-      f_ch4(:) = MIN(0.5_wp,frac_CH4_anox_organic * meth_q10**((Tsoil(1:mxlay_above_rock)-Q10basetemp)/10._wp))
+      DO is = 1,mxlay_above_rock
+        f_ch4(is) = MIN(0.5_wp,frac_CH4_anox_organic * meth_q10**((Tsoil(is)-Q10basetemp)/10._wp))
+      ENDDO
 
       ! we assume organic soils in this case, using frac_CH4_anox_organic
 
@@ -595,31 +626,37 @@ CONTAINS
       IF ((mxlay_above_wt <= 1._wp) .OR. (carbon_dist_sum_oxic_inv < 1.e-12_wp)) THEN
         CO2_Prod_oxic(1) = carbon_oxic
       ELSE
-        CO2_Prod_oxic(1:mxlay_above_wt) = &
-                root_dist_peat(1:mxlay_above_wt) * carbon_dist_sum_oxic_inv * carbon_oxic
+        DO is = 1,mxlay_above_wt
+          CO2_Prod_oxic(is) = root_dist_peat(is) * carbon_dist_sum_oxic_inv * carbon_oxic
+        ENDDO
       END IF
 
       ! vertical distribution of anoxic carbon in saturated part
       ! consider very low water table as well to conserve carbon
       IF ((mxlay_above_wt < mxlay_above_rock) .AND. (carbon_dist_sum_anox_inv > 1.e-12_wp)) THEN
-        carbon_dist((mxlay_above_wt+1):mxlay_above_rock) = &
-                root_dist_peat((mxlay_above_wt+1):mxlay_above_rock) * carbon_dist_sum_anox_inv * carbon_anox
+        DO is = mxlay_above_wt+1,mxlay_above_rock
+          carbon_dist(is) = root_dist_peat(is) * carbon_dist_sum_anox_inv * carbon_anox
+        ENDDO
       ELSE
         carbon_dist(mxlay_above_rock) = carbon_anox
       END IF
 
       ! determine CO2 densities produced below the water table
-      CO2_Prod_anox(1:mxlay_above_rock) = (1._wp - f_ch4(1:mxlay_above_rock)) * carbon_dist(1:mxlay_above_rock)
-      ! determine CH4 densities produced
-      CH4_Prod(1:mxlay_above_rock) = f_ch4(1:mxlay_above_rock) * carbon_dist(1:mxlay_above_rock)
+      DO is = 1,mxlay_above_rock
+        CO2_Prod_anox(is) = (1._wp - f_ch4(is)) * carbon_dist(is)
+        ! determine CH4 densities produced
+        CH4_Prod(is) = f_ch4(is) * carbon_dist(is)
+      ENDDO
     END IF ! NOT is_peatland
 
-    CO2_Prod (1:mxlay_above_rock) =  CO2_Prod_oxic(1:mxlay_above_rock) + CO2_Prod_anox(1:mxlay_above_rock)
-    O2_Uptake(1:mxlay_above_rock) = -CO2_Prod(1:mxlay_above_rock) * 2._wp   ! 2 mol of O2 for 1 mol of CO2
-    ! StW: The factor of 2 is a special case, assuming that the carbon is in the form of CH4 (other species may
-    !      also fulfill this criteria), but for general hydrocarbons it should be x + y/4, where x is the 
-    !      #C-atoms in the compound and y is the #H-atoms in the compound. E.g. For propane the factor is 5/3.
-    !      Further modifications apply if the compound also contains oxygen.
+    DO is = 1,mxlay_above_rock
+      CO2_Prod (is) =  CO2_Prod_oxic(is) + CO2_Prod_anox(is)
+      O2_Uptake(is) = -CO2_Prod(is) * 2._wp   ! 2 mol of O2 for 1 mol of CO2
+      ! StW: The factor of 2 is a special case, assuming that the carbon is in the form of CH4 (other species may
+      !      also fulfill this criteria), but for general hydrocarbons it should be x + y/4, where x is the
+      !      #C-atoms in the compound and y is the #H-atoms in the compound. E.g. For propane the factor is 5/3.
+      !      Further modifications apply if the compound also contains oxygen.
+    ENDDO
 
     IF (SUM(CH4_Prod(1:mxlay_above_rock)+CO2_Prod_anox(1:mxlay_above_rock)) > 0._wp) &
       CH4_Prod_ratio = SUM(CH4_prod(1:mxlay_above_rock))/SUM(CH4_Prod(1:mxlay_above_rock)+CO2_Prod_anox(1:mxlay_above_rock))
