@@ -34,9 +34,8 @@ MODULE mo_spq_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_spq_config
+    LOGICAL                     :: spq_deactivate_spq   !< only used with quincy-standalone: deactivate SPQ_ consistently with use_soil_phys_jsbach
     LOGICAL                     :: flag_snow            !< on/off snow accumulation
-    INTEGER                     :: nsoil_energy         !< number of soil layers for soil energy calculations   ! depreciated feature, but needed for now, see ticket #521
-    INTEGER                     :: nsoil_water          !< number of soil layers for soil moisture calculations ! depreciated feature, but needed for now, see ticket #521
     REAL(wp)                    :: soil_depth           !< actual soil and rooting depth
     REAL(wp)                    :: wsr_capacity         !< Water holding capacity of ground skin reservoir [m water equivalent]
     REAL(wp)                    :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
@@ -49,16 +48,6 @@ MODULE mo_spq_config_class
     REAL(wp)                    :: bulk_density
     CHARACTER(len=filename_max) :: bc_sso_filename          !< elevation and oro_stddev
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< IQ (QUINCY) soil input data
-
-    !> ---------------------------------------------------------------------------------------------------- !
-    !> temporary SPQ_ config variables - used during implementation of using jsbach physics in quincy
-    !>
-    !> SEB_
-    LOGICAL           :: l_ice_on_lakes       !< Whether to use ice on lakes
-    LOGICAL           :: l_dynsnow            !< T: Calculate snow heat cond. and heat cap. dynamically depending on snow density
-    !> HYDRO_
-    LOGICAL           ::  l_ponds             !< Additional surface water storage
-
   CONTAINS
     PROCEDURE :: Init => Init_spq_config
   END TYPE t_spq_config
@@ -92,37 +81,29 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
+    LOGICAL                     :: spq_deactivate_spq
     LOGICAL                     :: lrestart_cont
     LOGICAL                     :: flag_snow
-    INTEGER                     :: nsoil_energy    , &
-                                   nsoil_water
-    REAL(wp)                    :: dz_energy(max_soil_layers), &                        ! vector of soil layer thicknesses
-                                   dz_water(max_soil_layers)
-    REAL(wp)                    :: soil_layer_profile_ubound_estimate(max_soil_layers)  ! intial estimate of soil profile using the upper bound of each soil layer [m]
-    REAL(wp), ALLOCATABLE       :: ubounds_soil_lay_energy(:), &                        ! layer upper bound (note! upper bound > lower bound)
-                                   ubounds_soil_lay_water(:)
     REAL(wp)                    :: wsr_capacity    , &
                                    wsn_capacity    , &
-                                   soil_depth
-    REAL(wp)                    :: soil_awc_prescribe, &
-                                   soil_theta_prescribe
-    REAL(wp)                    :: elevation
-    REAL(wp)                    :: soil_sand       , &
-                                   soil_silt       , &
-                                   soil_clay
-    REAL(wp)                    :: bulk_density
+                                   spq_soil_depth
+    REAL(wp)                    :: spq_soil_awc_prescribe, &
+                                   spq_soil_theta_prescribe
+    REAL(wp)                    :: spq_elevation
+    REAL(wp)                    :: spq_soil_sand       , &
+                                   spq_soil_silt       , &
+                                   spq_soil_clay
+    REAL(wp)                    :: spq_bulk_density
     INTEGER                     :: isoil   ! looping
     INTEGER                     :: i       ! looping over snow layers, consistent with jsb4
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(len=filename_max) :: bc_sso_filename
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename
-    REAL(wp)                    :: k_soil_profile       ! for soil layer calculations
-    REAL(wp)                    :: min_layer_depth      ! for soil layer calculations
     INTEGER                     :: nsnow
     REAL(wp)                    :: dz_snow(max_snow_layers)   ! width of each snow layer
     REAL(wp), ALLOCATABLE       :: depths(:), mids(:)         ! snow-layer vgrid init
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb              ! soil layers
+    ! TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb              ! soil layers
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_snow_spq             ! snow layers
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_spq_config'
 
@@ -132,26 +113,23 @@ CONTAINS
     NAMELIST /jsb_spq_nml/   &
 #endif
                           active                  , &
+                          spq_deactivate_spq      , &
                           lrestart_cont           , &
                           ic_filename             , &
                           bc_filename             , &
                           bc_sso_filename         , &
                           bc_quincy_soil_filename , &
                           flag_snow               , &
-                          nsoil_energy            , &
-                          nsoil_water             , &
-                          dz_energy               , &
-                          dz_water                , &
                           wsr_capacity            , &
                           wsn_capacity            , &
-                          soil_depth              , &
-                          soil_awc_prescribe      , &
-                          soil_theta_prescribe    , &
-                          elevation               , &
-                          soil_sand               , &
-                          soil_silt               , &
-                          soil_clay               , &
-                          bulk_density
+                          spq_soil_depth          , &
+                          spq_soil_awc_prescribe  , &
+                          spq_soil_theta_prescribe, &
+                          spq_elevation           , &
+                          spq_soil_sand           , &
+                          spq_soil_silt           , &
+                          spq_soil_clay           , &
+                          spq_bulk_density
 
     ! variables for reading model-options from namelist
     INTEGER :: nml_handler, nml_unit, istat
@@ -164,34 +142,29 @@ CONTAINS
     END IF
     ! ----------------------------------------------------------------------------------------------------- !
 
-    ! variabales for soil layer calculations
-    k_soil_profile  = 0.25_wp
-    min_layer_depth = 0.065_wp
-
     ! Set defaults
-    active                        = .TRUE.
+#ifdef __QUINCY_STANDALONE__
+    active                        = .TRUE.   ! activated by default with quincy standalone
+#else
+    active                        = .FALSE.  ! de-activated by default with quincy in icon-land
+#endif
+    spq_deactivate_spq            = .FALSE.  ! may need to be consistent with namelist option "use_soil_phys_jsbach" from model config
     lrestart_cont                 = .FALSE.  ! TRUE: Continue although SPQ variables are missing in restart file
     ic_filename                   = 'ic_land_spq.nc'
     bc_filename                   = 'bc_land_spq.nc'
     bc_sso_filename               = 'bc_land_sso.nc'
     bc_quincy_soil_filename       = 'bc_quincy_soil.nc'
     flag_snow                     = .TRUE.
-    nsoil_energy                  = 15
-    nsoil_water                   = 15
-    dz_energy(1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
-    dz_energy(6:max_soil_layers)  = 0._wp
-    dz_water (1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
-    dz_water (6:max_soil_layers)  = 0._wp
     wsr_capacity                  = 2.E-4_wp
     wsn_capacity                  = 2.E-4_wp
-    soil_depth                    = 9.5_wp
-    soil_awc_prescribe            = 300.0_wp
-    soil_theta_prescribe          = 1.0_wp
-    elevation                     = 0.0_wp
-    soil_sand                     = 0.3_wp
-    soil_silt                     = 0.4_wp
-    soil_clay                     = 0.3_wp
-    bulk_density                  = 1500.0_wp
+    spq_soil_depth                = 9.5_wp
+    spq_soil_awc_prescribe        = 300.0_wp
+    spq_soil_theta_prescribe      = 1.0_wp
+    spq_elevation                 = 0.0_wp
+    spq_soil_sand                 = 0.3_wp
+    spq_soil_silt                 = 0.4_wp
+    spq_soil_clay                 = 0.3_wp
+    spq_bulk_density              = 1500.0_wp
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -205,83 +178,36 @@ CONTAINS
 
     CALL close_nml(nml_handler)
 
-    ! check initialisation of number of soil layers
-    IF (nsoil_water .LT. 5 .OR. nsoil_water .GT. 20) &
-        CALL finish(routine,'Number of soil layers needs to be a number from the range 5 to 20.')
-    IF (nsoil_water .NE. nsoil_energy) &
-        CALL finish(routine,'Init with different numbers of soil layers for energy and water not yet supported for QUINCY.')
-
-    ! allocate upper-bound soil-layer vectors with dimensions defined in the namelist
-    ALLOCATE(ubounds_soil_lay_energy(nsoil_energy))
-    ALLOCATE(ubounds_soil_lay_water(nsoil_water))
-
-    ! If not using 5 layers, estimate soil profile (i.e., dz == layer thicknesses) to mimick standard JSB4 profile
-    !  assuming dz_water(:) = dz_energy(:)
-    IF(nsoil_water > 5) THEN
-      ! initial calculation of soil profile (for soil moisture calculations) calculating the upper bound of each layer
-      DO isoil=1,nsoil_water
-        soil_layer_profile_ubound_estimate(isoil) = min_layer_depth * &
-                                                    exp(k_soil_profile * isoil * REAL(max_soil_layers,wp)/REAL(nsoil_water,wp)) - &
-                                                    min_layer_depth
-      ENDDO
-      ! final calculation of soil profile, calculating the layer thickness (dz(:)) and correcting for minimum soil-layer thickness
-      dz_water(1) = min_layer_depth
-      DO isoil=2,nsoil_water
-        dz_water(isoil) = MAX(min_layer_depth, &
-                               soil_layer_profile_ubound_estimate(isoil) - soil_layer_profile_ubound_estimate(isoil-1))
-      ENDDO
-      ! apply the same soil profile to soil profile for soil energy calculations
-      dz_energy(:) = dz_water(:)
-    ENDIF
-
-    ! run check for soil depth namelist-definition; may not be less/equal zero or larger than covered by soil profile
-    IF (soil_depth .LE. 0.0_wp) CALL finish('Init_spq_config','Initialization with non positive soil depth')
-    IF (soil_depth .GT. SUM(dz_energy)) &
-      & CALL finish('Init_spq_config','Initialization of soil depth larger than soil profile not possible')
-
-    ! calc upper bound of soil layers (water and energy) from layer thickness
-    ! note: upper bound is the larger value compared to lower bound of the same layer!
-    ubounds_soil_lay_water(1)        = dz_water(1)
-    DO isoil=2,nsoil_water
-      ubounds_soil_lay_water(isoil)  = ubounds_soil_lay_water(isoil-1) + dz_water(isoil)
-    END DO
-    ubounds_soil_lay_energy(1)       = dz_energy(1)
-    DO isoil=2,nsoil_energy
-      ubounds_soil_lay_energy(isoil) = ubounds_soil_lay_energy(isoil-1) + dz_energy(isoil)
-    END DO
-
     ! pass values as read from file
     config%active                    = active
+    config%spq_deactivate_spq        = spq_deactivate_spq
     config%lrestart_cont             = lrestart_cont
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
     config%bc_sso_filename           = bc_sso_filename
     config%bc_quincy_soil_filename   = bc_quincy_soil_filename
     config%flag_snow                 = flag_snow
-    config%nsoil_energy              = nsoil_energy     ! depreciated feature, but needed for now, see ticket #521
-    config%nsoil_water               = nsoil_water      ! depreciated feature, but needed for now, see ticket #521
-    config%soil_awc_prescribe        = soil_awc_prescribe
-    config%soil_theta_prescribe      = soil_theta_prescribe
-    config%elevation                 = elevation
+    config%soil_awc_prescribe        = spq_soil_awc_prescribe
+    config%soil_theta_prescribe      = spq_soil_theta_prescribe
+    config%elevation                 = spq_elevation
     config%wsr_capacity              = wsr_capacity
     config%wsn_capacity              = wsn_capacity
-    config%soil_depth                = soil_depth
-    config%soil_sand                 = soil_sand
-    config%soil_silt                 = soil_silt
+    config%soil_depth                = spq_soil_depth
+    config%soil_sand                 = spq_soil_sand
+    config%soil_silt                 = spq_soil_silt
     !config%soil_clay                = not using the input value, as soil_clay must be calculated from soil_sand & soil_silt to guarantee: 1=sand+silt+clay
-    config%soil_clay                 = 1.0_wp - soil_sand - soil_silt
-    config%bulk_density              = bulk_density
+    config%soil_clay                 = 1.0_wp - spq_soil_sand - spq_soil_silt
+    config%bulk_density              = spq_bulk_density
 
-    !> ---------------------------------------------------------------------------------------------------- !
-    !> jsbach config
-    !>
-    !> SEB_
-    config%l_ice_on_lakes            = .FALSE.
-    config%l_dynsnow                 = .TRUE.
-    !> HYDRO_
-    config%l_ponds                   = .FALSE.
-
-    !> ---------------------------------------------------------------------------------------------------- !
+#ifdef __QUINCY_STANDALONE__
+    ! de-activate SPQ_ process
+    ! is used consistently with namelist option "use_soil_phys_jsbach"
+    IF (config%spq_deactivate_spq) THEN
+      config%active = .FALSE.
+    ELSE
+      config%active = .TRUE.
+    END IF
+#endif
 
     ! check for an error in clay content of soil
     IF(config%soil_clay < eps8) THEN
@@ -326,29 +252,6 @@ CONTAINS
     CALL message(TRIM(routine), message_text)
     DEALLOCATE(depths, mids)
 
-    !< Create vertical soil-layer axis (vgrid)
-    !!
-    !! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth" !
-    !!
-    !! site-specific soil-layer thickness values are stored in soil_depth_sl (and calc in spq_init) \n
-    !! the function new_vgrid() does: (a) check for 'dz(:) <= zero', and (b) calc levels & lbounds from ubounds and dz \n
-    !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
-    vgrid_soil_sb => new_vgrid('soil_layer_sb', ZAXIS_GENERIC, nsoil_water, &
-                      longname='Soil (water) layers from SPQ_ QUINCY', &
-                      units='m', &
-                      ! levels=  , &      ! is calculated from ubounds and dz
-                      ! lbounds=  , &     ! is calculated from ubounds and dz
-                      ubounds=ubounds_soil_lay_water(:), &
-                      dz=dz_water(:))
-    CALL register_vgrid(vgrid_soil_sb)
-    WRITE(message_text, *) 'Soil layer SPQ_ (upper)   [m]: ', vgrid_soil_sb%lbounds
-    CALL message(TRIM(routine), message_text)
-    WRITE(message_text, *) 'Soil layer SPQ_ (mid)     [m]: ', vgrid_soil_sb%levels
-    CALL message(TRIM(routine), message_text)
-    WRITE(message_text, *) 'Soil layer SPQ_ (lower)   [m]: ', vgrid_soil_sb%ubounds
-    CALL message(TRIM(routine), message_text)
-    WRITE(message_text, *) 'Soil layer thickness SPQ_ [m]: ', vgrid_soil_sb%dz
-    CALL message(TRIM(routine), message_text)
   END SUBROUTINE Init_spq_config
 
 #endif

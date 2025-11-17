@@ -14,6 +14,7 @@
 MODULE mo_carbon_process
 #ifndef __NO_JSBACH__
 
+  USE mo_jsb_control,      ONLY: acc_stream
   USE mo_kind,             ONLY: wp
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
                                & days_per_year, sec_per_year, sec_per_day,        &
@@ -353,16 +354,16 @@ CONTAINS
 
     nc = SIZE(burned_fract)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(non_woody_litter, fraction)
     DO ic = 1, nc
-
       non_woody_litter = c_green(ic) + c_reserve(ic)
       bfe = burned_fract(ic) * MIN(0.945,1._wp-fuel_moisture(ic))
 
       ! Amount of carbon released from the green and reserve pool to the green litter pools
       cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + &
         & (c_green(ic) + c_reserve(ic)) * (1._wp - fract_green_aboveGround) * bfe / sec_per_day
+
       ! Amount of carbon released from the wood pool entering the woody litter pools
       cflux_dist_woods_2_soil(ic)  = cflux_dist_woods_2_soil(ic) + &
         & c_woods(ic) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * bfe / sec_per_day
@@ -380,7 +381,6 @@ CONTAINS
           ! add the fire affected fraction of the above ground wood pools
         & + c_woods(ic) * fire_fract_wood_2_atmos * fract_wood_aboveGround    &
           ! scale with the burned fraction
-!        & ) * burned_fract(ic) * bfe * molarMassCO2_kg / sec_per_day
         & ) * bfe * molarMassCO2_kg / sec_per_day
 
       ! Reduce the above ground yasso pools accordingly
@@ -502,7 +502,7 @@ CONTAINS
     ! Initializations
     nc = SIZE(damaged_fract)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(non_woody_litter, fraction)
     DO ic = 1, nc
 

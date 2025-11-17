@@ -23,28 +23,57 @@
 
 set -eu
 
-src_restart=/work/bm1235/k203123/nextgems_prefinal/experiments/ngc4008/work/ngc4008_restart_atm_20300101T000000Z.mfr
-src_grid_label=r2b8_0033_0016
-src_exp_id=ngc4008
-src_date=20300101
-output_hdstart_file=hdstart_${src_grid_label}_from_restart_${src_exp_id}_${src_date}.nc
+# Either restart file or directory of multi-file restart files
+src_restart=/work/mh1421/m220053/merge-to-icon-mpim/feature-new-r2b4-land-data-rev/experiments/jsbalone-intel/restart/jsbalone-intel_restart_jsbalone_19920101.nc
 
-CDO="cdo -s"
+# In case of a single restart file: corresponding grid file
+src_grid=/pool/data/ICON/grids/public/mpim/0049/icon_grid_0049_R02B04_G.nc
+
+# Definition of the output file name
+hd_label=r2b4_0049_sc_hfrac_s_v1  # label corresponding to hdpara file used in experiment
+output_hdstart_file=hdstart_${hd_label}.nc
+
+CDO="cdo -s -P 8"
 
 function finish {
   rm temp?_$$.nc *ncap* >& /dev/null
 }
 trap finish EXIT
 
+# Select HD reservoir variables
 if [[ -d $src_restart ]]; then
-  cdo collgrid,hd_overlflow_res_box,hd_riverflow_res_box,hd_baseflow_res_box $src_restart/patch1_*.nc $(basename $src_restart .mfr).nc
-  src_restart=$(basename $src_restart .mfr).nc
+  $CDO collgrid,hd_overlflow_res_box,hd_riverflow_res_box,hd_baseflow_res_box $src_restart/patch1_*.nc temp0_$$.nc
+else
+  $CDO setgrid,${src_grid} -selvar,hd_overlflow_res_box,hd_riverflow_res_box,hd_baseflow_res_box $src_restart temp0_$$.nc
 fi
-ncrename -d cells,cell -d layers_1,bresnum -d layers_5,rresnum ${src_restart} temp1_$$.nc
-ncwa -O -a y,time temp1_$$.nc temp2_$$.nc
-ncatted -O -a cell_methods,,d,, temp2_$$.nc
-${CDO} chname,hd_riverflow_res_box,FRFMEM,hd_baseflow_res_box,FGMEM,hd_overlflow_res_box,FLFMEM temp2_$$.nc temp3_$$.nc
+
+# Remove all global namelist attributes
+ncatted -O -a nml_\*,global,d,c, temp0_$$.nc temp1_$$.nc
+
+# Renaming dimensions
+if [[ $(ncdump -h temp1_$$.nc | grep 'cells = ') != "" ]]; then
+  ncrename -d cells,cell -d layers_1,bresnum -d layers_5,rresnum temp1_$$.nc temp2_$$.nc
+else
+  ncrename               -d layers_1,bresnum -d layers_5,rresnum temp1_$$.nc temp2_$$.nc
+fi
+
+# Remove time dimension
+ncwa -O -a y,time temp2_$$.nc temp3_$$.nc
+ncatted -O -a cell_methods,,d,, temp3_$$.nc
+
+# Renaming variables
+${CDO} chname,hd_riverflow_res_box,FRFMEM,hd_baseflow_res_box,FGMEM,hd_overlflow_res_box,FLFMEM temp3_$$.nc temp4_$$.nc
+# In case if dimension cell has been renamed to x rename it again to cell
+if [[ $(ncdump -h temp4_$$.nc | grep 'cell = ') == "" ]]; then
+  ncrename -O -d x,cell temp4_$$.nc
+fi
+
+# Define dimension oresnum and copy FLFMEM to FLFMEM_new, with dimensions (oresnum,cell) and good long_name attribute
 ncap2 -O -s 'defdim("oresnum",$bresnum.size); FLFMEM_new[$oresnum,$cell]=0.0;FLFMEM_new(:,:)=FLFMEM(:,:);FLFMEM_new@long_name="content of the overflow reservoir"' \
-            temp3_$$.nc temp4_$$.nc
-ncks -x -v FLFMEM temp4_$$.nc temp5_$$.nc
-ncrename -v FLFMEM_new,FLFMEM temp5_$$.nc ${output_hdstart_file}
+            temp4_$$.nc temp5_$$.nc
+ncks -x -v FLFMEM temp5_$$.nc temp6_$$.nc
+ncrename -v FLFMEM_new,FLFMEM temp6_$$.nc ${output_hdstart_file}
+
+echo "---"
+echo " Generation of ${output_hdstart_file} done"
+echo "---"

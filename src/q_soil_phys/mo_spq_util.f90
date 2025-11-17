@@ -70,11 +70,12 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, HYDRO_, VEG_, HD_, Q_ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: SPQ_, HYDRO_
     USE mo_jsb_math_constants,    ONLY: zero
 
     ! Use of process memories
-    dsl4jsb_Use_memory(SPQ_)        !  USE mo_spq_memory_class,      ONLY: t_spq_memory
+    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
 
     IMPLICIT NONE
 
@@ -88,15 +89,16 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb        !< Vertical grid
-    INTEGER                               :: nsoil_sb             !< number of soil layers
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_w         !< Vertical grid
+    INTEGER                               :: nsoil_w              !< number of soil layers
     INTEGER                               :: isoil, ic
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_spq_fluxes'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(SPQ_)                          ! TYPE(t_spq_memory),      POINTER :: spq__mem
+    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -109,14 +111,15 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     ! Get process memories
-    dsl4jsb_Get_memory(SPQ_)           ! spq__mem => spq_memory
+    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
     model  => Get_model(tile%owner_model_id)
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
     ! --------------------------------------------------------------------------------------------------------
-    dsl4jsb_Get_var2D_onChunk(SPQ_, transpiration)
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_freeze_flux)
-    dsl4jsb_Get_var3D_onChunk(SPQ_, w_soil_melt_flux)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, transpiration)
+    dsl4jsb_Get_var3D_onChunk(SPQ_,   w_soil_freeze_flux)
+    dsl4jsb_Get_var3D_onChunk(SPQ_,   w_soil_melt_flux)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
@@ -125,7 +128,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-    DO isoil = 1, nsoil_sb
+    DO isoil = 1, nsoil_w
       DO ic = 1, nc
         w_soil_freeze_flux(ic,isoil) = zero
         w_soil_melt_flux(ic,isoil)   = zero

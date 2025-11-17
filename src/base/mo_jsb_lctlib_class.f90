@@ -45,6 +45,8 @@ MODULE mo_jsb_lctlib_class
     LOGICAL  :: LakeFlag             !< "true" for a land surface class that signifies lake or ocean
     LOGICAL  :: GlacierFlag          !< "true" for a land surface class that signifies glaciers
     LOGICAL  :: BareSoilFlag         !< "true" if none of the foregoing landcover classes
+    ! This was a parameter formerly only used in bethy, but during the meantime also used in pplcc!
+    LOGICAL  :: C4flag                !< Photosynthetic pathway: C4=.true or C3=.false.
 
     ! --- Albedo ------------------------------------------------------------------------------------------------------------------
     REAL(wp) :: AlbedoSnowVisMin      !< Minimum snow albedo in the visible range
@@ -60,7 +62,6 @@ MODULE mo_jsb_lctlib_class
 
     ! --- parameters used by bethy ------------------------------------------------------------------------------------------------
     LOGICAL  :: NitrogenScalingFlag   !< Indicates, whether nitrogen scaling shall be applied to that vegetation type
-    LOGICAL  :: C4flag                !< Photosynthetic pathway: C4=.true or C3=.false.
     REAL(wp) :: CarboxRate            !< Maximum carboxilation rate at 25 degrees Celsius [1.E-6 * Mol(CO2)/m^2/s] ...
                                                   !< ... (Table 2.6 in Knorr)
     REAL(wp) :: ETransport            !< Maximum electron transport rate at 25 degrees Celsius [1.E-6 * Mol/m^2/s] ...
@@ -195,7 +196,9 @@ MODULE mo_jsb_lctlib_class
     ! N uptake parameters
     REAL(wp) :: vmax_uptake_n     , &
                 vmax_uptake_p     , &
-                bnf_base
+                bnf_base          , &
+                vmax_symb_bnf     , &
+                km_symb_bnf
 
     ! Vegetation dynamics parameters
     REAL(wp) :: lambda_est_light  , &
@@ -282,7 +285,8 @@ CONTAINS
     ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
     USE mo_jsb_math_constants,      ONLY: one_day, one_year
     USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero
-    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
+    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree, icrop
+    USE mo_q_assimi_constants,      ONLY: ic4phot
 #else
     USE mo_util_string, ONLY: tolower
 #endif
@@ -421,6 +425,8 @@ CONTAINS
     LOGICAL            :: exists_vmax_uptake_n = .FALSE.
     LOGICAL            :: exists_vmax_uptake_p = .FALSE.
     LOGICAL            :: exists_bnf_base = .FALSE.
+    LOGICAL            :: exists_vmax_symb_bnf = .FALSE.
+    LOGICAL            :: exists_km_symb_bnf = .FALSE.
     LOGICAL            :: exists_lambda_est_light = .FALSE.
     LOGICAL            :: exists_k_est_light = .FALSE.
     LOGICAL            :: exists_seed_size = .FALSE.
@@ -449,6 +455,9 @@ CONTAINS
     LOGICAL            :: exists_k_som_slow_init = .FALSE.
     LOGICAL            :: exists_AlbedoLitterVIS = .FALSE.
     LOGICAL            :: exists_AlbedoLitterNIR = .FALSE.
+    LOGICAL            :: exists_VegRoughness = .FALSE.
+    LOGICAL            :: exists_MinVegRoughness = .FALSE.
+    LOGICAL            :: exists_MaxVegRoughness = .FALSE.
     ! quincy model - end
 
     !> Read lctlib data and eventually allocate also memory for lctlib data on io-processor
@@ -768,7 +777,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values don't add up to 1 carbon is not conserved
-                IF (SUM(lctlib(i)%LitVeg_coef(:)) .NE. 1.) &
+                IF (ABS(SUM(lctlib(i)%LitVeg_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
                      CALL finish('init_lctlib','invalid value for LitVeg_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_litveg_coef = .TRUE.
@@ -780,7 +789,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values dont add up to 1 carbon is not conserved
-                IF (SUM(lctlib(i)%LeafLit_coef(:)) .NE. 1.) &
+                IF (SUM(ABS(lctlib(i)%LeafLit_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
                      CALL finish('init_lctlib','invalid value for LeafLit_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_leaflit_coef = .TRUE.
@@ -792,7 +801,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values dont add up to 1 carbon is not conserved
-                IF (SUM(lctlib(i)%WoodLit_coef(:)) .NE. 1.) &
+                IF (ABS(SUM(lctlib(i)%WoodLit_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
                      CALL finish('init_lctlib','invalid value for WoodLit_coef_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_woodlit_coef = .TRUE.
@@ -939,6 +948,12 @@ CONTAINS
           CASE ('bnf_base')
             READ(line(pos:length),*) lctlib(1:nlct)%bnf_base
             exists_bnf_base = .TRUE.
+          CASE ('vmax_symb_bnf')
+            READ(line(pos:length),*) lctlib(1:nlct)%vmax_symb_bnf
+            exists_vmax_symb_bnf = .TRUE.
+          CASE ('km_symb_bnf')
+            READ(line(pos:length),*) lctlib(1:nlct)%km_symb_bnf
+            exists_km_symb_bnf = .TRUE.
           !
           CASE ('lambda_est_light')
             READ(line(pos:length),*) lctlib(1:nlct)%lambda_est_light
@@ -1029,6 +1044,18 @@ CONTAINS
           CASE ('albedolitternir')
             READ(line(pos:length),*) lctlib(1:nlct)%AlbedoLitterNIR
             exists_AlbedoLitterNIR = .TRUE.
+          ! jsbach parameter
+          CASE ('vegroughness')
+            READ(line(pos:length),*) lctlib(1:nlct)%VegRoughness
+            exists_VegRoughness = .TRUE.
+          ! jsbach parameter
+          CASE ('minvegroughness')
+            READ(line(pos:length),*) lctlib(1:nlct)%MinVegRoughness
+            exists_MinVegRoughness = .TRUE.
+          ! jsbach parameter
+          CASE ('maxvegroughness')
+            READ(line(pos:length),*) lctlib(1:nlct)%MaxVegRoughness
+            exists_MaxVegRoughness = .TRUE.
           CASE default
             ! nothing to do
           END SELECT
@@ -1288,6 +1315,10 @@ CONTAINS
           CALL finish('init_lctlib','No data for vmax_uptake_p found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_bnf_base) &
           CALL finish('init_lctlib','No data for bnf_base found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_vmax_symb_bnf) &
+          CALL finish('init_lctlib','No data for vmax_symb_bnf found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_km_symb_bnf) &
+          CALL finish('init_lctlib','No data for km_symb_bnf found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_lambda_est_light) &
           CALL finish('init_lctlib','No data for lambda_est_light found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_k_est_light) &
@@ -1340,10 +1371,16 @@ CONTAINS
           CALL finish('init_lctlib','No data for k_som_fast_init found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_k_som_slow_init) &
           CALL finish('init_lctlib','No data for k_som_slow_init found in '//TRIM(lctlib_file_name))
-        IF(.NOT. exists_AlbedoLitterVIS) &
-          CALL finish('init_lctlib','No data for AlbedoLitterVIS found in '//TRIM(lctlib_file_name))
-        IF(.NOT. exists_AlbedoLitterNIR) &
-          CALL finish('init_lctlib','No data for AlbedoLitterNIR found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_AlbedoLitterVIS) &
+          & CALL finish('init_lctlib','No data for AlbedoLitterVIS found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_AlbedoLitterNIR) &
+          & CALL finish('init_lctlib','No data for AlbedoLitterNIR found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_VegRoughness) &
+          & CALL finish('init_lctlib','No data for VegRoughness found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_MinVegRoughness) &
+          & CALL finish('init_lctlib','No data for MinVegRoughness found in '//TRIM(lctlib_file_name))
+        IF (.NOT. exists_MaxVegRoughness) &
+          & CALL finish('init_lctlib','No data for MaxVegRoughness found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
 #endif
@@ -1355,7 +1392,7 @@ CONTAINS
        !>Modify the input values of some quincy lctlib parameters
        !>
        !>  TODO QUINCY: calculations may not need to be applied for
-       !>               bare soil and urban area in usecases quincy_11_pfts / quincy_14_pfts
+       !>               bare soil and urban area in usecases quincy_13_pfts
        !>  TODO - is there any reason why you have an own loop for each parameter?
        !>
        IF (model_scheme_char == "quincy") THEN
@@ -1402,6 +1439,14 @@ CONTAINS
          DO i = 1,nlct
           lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp
          END DO
+       ! vmax_symb_bnf
+         DO i = 1,nlct
+          lctlib(i)%vmax_symb_bnf = lctlib(i)%vmax_symb_bnf / (molar_mass_N / molar_mass_C) / one_day / one_year * 1.e6_wp
+         END DO
+       ! km_symb_bnf
+         DO i = 1,nlct
+          lctlib(i)%km_symb_bnf = lctlib(i)%km_symb_bnf / (molar_mass_C / molar_mass_N)
+         END DO
        ! t_air_senescence
          DO i = 1,nlct
            lctlib(i)%t_air_senescence = lctlib(i)%t_air_senescence + Tzero
@@ -1420,13 +1465,14 @@ CONTAINS
          END DO
         ! k_rtos
          DO i = 1,nlct
-           IF(lctlib(i)%growthform /= igrass) THEN
-              lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
-              !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
-              !     lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
-           ELSE
-              lctlib(i)%k_rtos = 0.5_wp / sm2lm_grass
-           END IF
+          SELECT CASE (lctlib(i)%growthform)
+          CASE (itree)
+            lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
+            !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
+            !     lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
+          CASE (igrass,icrop)
+            lctlib(i)%k_rtos = 0.5_wp / sm2lm_grass
+          END SELECT
          END DO
          ! c0_allom
          DO i = 1,nlct
@@ -1438,6 +1484,15 @@ CONTAINS
              lctlib(i)%c0_allom = 0.0_wp
            END IF
          END DO
+       ! derive C4flag from ps_pathway
+         DO i = 1,nlct
+            IF ( lctlib(i)%ps_pathway == ic4phot ) THEN
+              lctlib(i)%C4flag = .TRUE.
+            ELSE
+              lctlib(i)%C4flag = .FALSE.
+            END IF
+         END DO
+
        END IF ! (model_scheme_char == "quincy")
 #endif
 
@@ -1487,7 +1542,7 @@ CONTAINS
            npft = npft + 1 ! count PFTs
 
            ! Check consistency with PhenologyTypes (only for jsbach usecases)
-           IF (usecase == 'jsbach_lite' .OR. usecase == 'jsbach_pfts') THEN
+           IF (usecase == 'jsbach_lite' .OR. usecase == 'jsbach_pfts' .OR. usecase == 'jsbach_12pfts') THEN
              IF(lctlib(i)%naturalVegFlag .AND. &
                   (lctlib(i)%PhenologyType .LE.0 .OR. lctlib(i)%PhenologyType > 4) ) THEN
                 CALL finish('init_lctlib',&
@@ -1501,7 +1556,7 @@ CONTAINS
          END IF
 
          ! --- check consistency between landcover classes and specifications for the dynamic vegetation (only for jsbach usecases)
-         IF (usecase == 'jsbach_lite' .OR. usecase == 'jsbach_pfts') THEN
+         IF (usecase == 'jsbach_lite' .OR. usecase == 'jsbach_pfts' .OR. usecase == 'jsbach_12pfts') THEN
            IF (lctlib(i)%dynamic_pft  .AND. .NOT. lctlib(i)%NaturalVegFlag) THEN
               CALL finish('init_lctlib',&
                     'Inconsistent entries: Every DYNAMIC_PFT must belong to LandcoverClass "natural" in '//TRIM(lctlib_file_name))
@@ -1538,6 +1593,10 @@ CONTAINS
       CALL p_bcast(lctlib(:)%LakeFlag, p_io, mpi_comm)
       CALL p_bcast(lctlib(:)%GlacierFlag, p_io, mpi_comm)
       CALL p_bcast(lctlib(:)%BareSoilFlag, p_io, mpi_comm)
+      ! The C4flag is used together with the other flags in pplcc, the source is model dependant,
+      ! - for jsbach the C4flag (Photosynthetic pathway (C4: .true.; C3: .false.) is read from the lctlib,
+      ! - for quincy it is derived from the ps_pathway
+      CALL p_bcast(lctlib(:)%C4flag, p_io, mpi_comm)
       ! model scheme: jsbach
       IF (model_scheme_char == "jsbach") THEN
         CALL p_bcast(lctlib(:)%AlbedoSnowVisMin, p_io, mpi_comm)
@@ -1551,7 +1610,6 @@ CONTAINS
         CALL p_bcast(lctlib(:)%AlbedoLitterVis, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterNir, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%NitrogenScalingFlag,p_io, mpi_comm)
-        CALL p_bcast(lctlib(:)%C4flag, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%CarboxRate, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%ETransport, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%VegHeight, p_io, mpi_comm)
@@ -1655,6 +1713,8 @@ CONTAINS
         CALL p_bcast(lctlib(:)%vmax_uptake_n, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%vmax_uptake_p, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%bnf_base, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%vmax_symb_bnf, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%km_symb_bnf, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%lambda_est_light, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%k_est_light, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%seed_size, p_io, mpi_comm)
@@ -1683,6 +1743,9 @@ CONTAINS
         CALL p_bcast(lctlib(:)%k_som_slow_init, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterVIS, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterNir, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%VegRoughness, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%MinVegRoughness, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%MaxVegRoughness, p_io, mpi_comm)
       END IF
 #endif
     END IF
@@ -1693,12 +1756,12 @@ CONTAINS
     !>
     SELECT CASE (usecase)
 #ifndef __NO_QUINCY__
-    ! quincy model with 8 / 11 PFT tiles
-    CASE ('quincy_eight_pfts', 'quincy_11_pfts', 'quincy_11_pfts_for_coupling')
+    ! quincy model with 13 PFT tiles (of the 14 PFT that would be available with 'lctlib_quincy_nlct14.def')
+    CASE ('quincy_13_pfts_for_coupling', 'quincy_13_pfts')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
 #endif
-    ! jsbach_lite & jsbach_pfts
+    ! jsbach_lite & jsbach_pfts & jsbach_12pfts
     CASE DEFAULT
       nlct = nlct - 1
       ALLOCATE(return_value(nlct))

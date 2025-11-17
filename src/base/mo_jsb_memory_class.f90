@@ -93,11 +93,12 @@ MODULE mo_jsb_memory_class
   ! Note: argument "mem" needs to have the TARGET attribute so that we can point to individual variables
   !       (of class t_jsb_var) contained in the memory structure.
   ABSTRACT INTERFACE
-    SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids, model_id)
+    SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
       IMPORT :: t_jsb_memory
       CLASS(t_jsb_memory), INTENT(inout), TARGET :: mem
       CHARACTER(LEN=*),    INTENT(in)    :: prefix, suffix
       INTEGER,             INTENT(in)    :: lct_ids(:)     !< Primary lct (1) and lcts of descendant tiles
+      INTEGER,             INTENT(in)    :: lib_id         !< id of primary lct in lctlib
       INTEGER,             INTENT(in)    :: model_id
     END SUBROUTINE Init_memory
   END INTERFACE
@@ -271,7 +272,7 @@ CONTAINS
     END IF
 
     !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr1d) ASYNC(1)
+    !$ACC UPDATE DEVICE(var%ptr1d)
     __acc_attach(var%ptr1d)
     __acc_attach(var%ptr)
 
@@ -444,7 +445,7 @@ CONTAINS
     END IF
 
     !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr2d) ASYNC(1)
+    !$ACC UPDATE DEVICE(var%ptr2d)
     __acc_attach(var%ptr2d)
     __acc_attach(var%ptr)
 
@@ -636,7 +637,7 @@ CONTAINS
     END IF
 
     !$ACC ENTER DATA COPYIN(var)
-    !$ACC UPDATE DEVICE(var%ptr3d) ASYNC(1)
+    !$ACC UPDATE DEVICE(var%ptr3d)
     __acc_attach(var%ptr3d)
     __acc_attach(var%ptr)
 
@@ -829,7 +830,7 @@ CONTAINS
 
       __acc_attach(var%ptr2d)
 
-      !$acc update device(var%ptr2d)
+      !$ACC UPDATE DEVICE(var%ptr2d)
       var%ptr => var%ptr2d
       __acc_attach(var%ptr)
       var%name = TRIM(name)

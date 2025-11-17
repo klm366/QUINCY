@@ -12,7 +12,7 @@
 !> ---------------------------------------
 !>
 !>### Definition of concrete class and methods for tiles
-!> This module implements `t_jsb_tile` as an extension of `[[mo_jsb_tile_class:t_jsb_tile_abstract]]` and
+!> This module implements 't_jsb_tile' as an extension of [[mo_jsb_tile_class:t_jsb_tile_abstract]] and
 !>   implements, among others, the methods
 !>
 !> - Init => [[Init_tile]]
@@ -31,7 +31,7 @@ MODULE mo_jsb_tile
   USE mo_jsb_control,         ONLY: debug_on, get_no_of_models
 
   USE mo_hsm_class,           ONLY: t_State, t_Message
-  USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_process_class,   ONLY: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
@@ -66,6 +66,7 @@ MODULE mo_jsb_tile
     PROCEDURE :: Has_process_memory               => Has_process_memory_on_tile
     PROCEDURE :: Count_conserved_quantities       => Count_conserved_quantities_on_tile
     PROCEDURE :: Collect_conserved_variables      => Collect_conserved_variables_on_tile
+    PROCEDURE :: Check_child_cover_fractions      => Check_child_cover_fractions_on_tile
 #ifndef __NO_QUINCY__
     PROCEDURE :: Count_and_classify_bgc_materials => Count_and_classify_bgc_materials_on_tile
     PROCEDURE :: Collect_bgc_materials            => Collect_bgc_materials_on_tile
@@ -240,12 +241,15 @@ CONTAINS
       IF (j > 0) THEN
         ! Get the ID of the current process i from input argument `processes`
         iproc = processes(j)
-        ! TODO hard coded checks of process dependencies - should not be handled here
-        IF (iproc == SEB_ .AND. ALLOCATED(return_ptr%lcts)) THEN
-          IF (return_ptr%lcts(1)%id /= LAND_TYPE .AND. return_ptr%lcts(1)%id /= LAKE_TYPE) THEN
-            CALL finish(TRIM(routine), 'SEB_ process only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')
+        SELECT CASE (model%config%model_scheme)
+        CASE (MODEL_JSBACH)
+          IF (.NOT. return_ptr%model%config%use_tmx .AND. iproc == SEB_ .AND. ALLOCATED(return_ptr%lcts)) THEN
+            ! TODO hard coded checks of process dependencies - should not be handled here
+            IF (return_ptr%lcts(1)%id /= LAND_TYPE .AND. return_ptr%lcts(1)%id /= LAKE_TYPE) THEN
+              CALL finish(TRIM(routine), 'SEB_ process only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')
+            END IF
           END IF
-        END IF
+        END SELECT
         IF (PRESENT(process_actions)) THEN
           ! Use the given `process_actions(j)` for this tile and process `iproc` ...
           CALL return_ptr%Set_process_action(iproc, process_actions(j), action_to_parents=AGGREGATE_)
@@ -397,9 +401,11 @@ CONTAINS
         !$ACC ENTER DATA CREATE(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
           !TODO: check if prefix is still needed ...
-          CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
+          CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), &
+            &     TRIM(suffix), this%lcts(:)%id, this%lcts(1)%lib_id, this%owner_model_id)
         ELSE
-          CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
+          CALL this%mem(iproc)%p%Init(TRIM(process_name), &
+            &     TRIM(suffix), this%lcts(:)%id, this%lcts(1)%lib_id, this%owner_model_id)
         END IF
         !$ACC UPDATE DEVICE(this%mem(iproc)%p%vars) ASYNC(1)
         IF (debug_on()) &
@@ -423,6 +429,7 @@ CONTAINS
 
     END DO
     !$ACC UPDATE DEVICE(this%mem) ASYNC(1)
+    !$ACC WAIT(1)
 
   END SUBROUTINE Init_tile
 
@@ -627,6 +634,7 @@ CONTAINS
 
     END DO
 
+    !$ACC WAIT(1)
     DEALLOCATE(tmp_fract)
 
   END SUBROUTINE Init_fractions_on_tile
@@ -693,6 +701,7 @@ CONTAINS
       END DO
 
     END DO
+    !$ACC WAIT(1)
 
   END SUBROUTINE Init_vars_on_tile
 
@@ -892,7 +901,7 @@ CONTAINS
     hgrid  => Get_grid(this%grid_id)
     nproma = hgrid%nproma
     nblks  = hgrid%nblks
-    vgrid  => Get_vgrid('soil_layer_sb')
+    vgrid  => Get_vgrid('soil_depth_water')
     nsoil  =  vgrid%n_levels
 
     ! Loop over all processes
@@ -916,6 +925,66 @@ CONTAINS
 
   END SUBROUTINE Collect_bgc_materials_on_tile
 #endif
+
+  ! ======================================================================================================= !
+  !>
+  !> Checks and if required corrects the cover fractions of the children of a tile
+  !>
+  SUBROUTINE Check_child_cover_fractions_on_tile(this)
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+    USE mo_jsb_grid,            ONLY: Get_grid
+    USE mo_util,                ONLY: real2string
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile), INTENT(inout) :: this !< Tile for which the child cover fractions are checked
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract),  POINTER :: current_child
+    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+    INTEGER :: nproma, nblks, i_tile
+    REAL(wp),           POINTER :: tmp_fract(:,:)
+    REAL(wp),       ALLOCATABLE :: sum_fract(:,:)
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Check_child_cover_fractions_on_tile'
+    ! -------------------------------------------------------------------------------------------------- !
+    ! Only relevant for tiles with children
+    IF (.NOT. this%Has_children()) RETURN
+
+    IF (debug_on()) CALL message(TRIM(routine), TRIM(this%name))
+
+    hgrid   => Get_grid(this%grid_id)
+    nproma = hgrid%nproma
+    nblks  = hgrid%nblks
+
+    ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
+    ALLOCATE(sum_fract(hgrid%nproma, hgrid%nblks))
+    sum_fract(:,:) = 0.0_wp
+
+    current_child => this%Get_first_child_tile()
+
+    i_tile = 0
+    DO WHILE (ASSOCIATED(current_child))
+      i_tile = i_tile + 1
+      CALL current_child%Get_fraction(fract=tmp_fract(:,:))
+
+      tmp_fract(:,:) = MIN(1.0_wp, tmp_fract(:,:))
+      tmp_fract(:,:) = MAX(0.0_wp, tmp_fract(:,:))
+
+      CALL current_child%Set_fraction(fract=tmp_fract(:,:))
+
+      sum_fract(:,:) = sum_fract(:,:) + tmp_fract(:,:)
+      current_child => current_child%Get_next_sibling_tile()
+    END DO
+
+    ! Assert that sum is "equal" to tile fraction (whereby the threshold is arbitraryly chosen here)
+    CALL this%Get_fraction(fract=tmp_fract(:,:))
+    IF (ANY(ABS((tmp_fract(:,:) - sum_fract(:,:))) > 1.e-15_wp)) THEN
+
+      CALL finish(TRIM(routine), 'Fractions of '//TRIM(this%name)//' not equal to sum of child cf.'// &
+        &  ' MAX diff: ' //real2string(ABS(MAXVAL(tmp_fract(:,:) - sum_fract(:,:)))))
+    END IF
+
+    DEALLOCATE(tmp_fract, sum_fract)
+
+  END SUBROUTINE Check_child_cover_fractions_on_tile
+
 
   ! ======================================================================================================= !
   !>

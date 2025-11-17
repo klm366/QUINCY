@@ -48,10 +48,12 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_PHENO_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(Q_PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -62,6 +64,7 @@ CONTAINS
     TYPE(t_lctlib_element),   POINTER :: lctlib                 !< land-cover-type library - parameter across pft's
     REAL(wp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
+    LOGICAL                           :: config_active_q_agr
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_turnover'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -69,11 +72,15 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(Q_PHENO_)
+    dsl4jsb_Def_config(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
     dsl4jsb_Real2D_onChunk      :: root_phenology_type
+    ! Q_ASSIMI_ 2D
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_leaf
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: target_lai
@@ -107,7 +114,10 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(Q_PHENO_)
+    dsl4jsb_Get_config(Q_AGR_)
+    config_active_q_agr = dsl4jsb_Config(Q_AGR_)%active
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -117,6 +127,8 @@ CONTAINS
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)            ! in
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, root_phenology_type)       ! in
+    ! Q_ASSIMI_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, maint_respiration_leaf)   ! inout
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, target_lai)
@@ -159,6 +171,7 @@ CONTAINS
     CALL calc_turnover( &
       & nc                                    , & ! in
       & dtime                                 , &
+      & config_active_q_agr                   , &
       & model%config%elements_index_map(:)    , &
       & model%config%is_element_used(:)       , &
       & lctlib%phenology_type                 , &
@@ -182,6 +195,7 @@ CONTAINS
       & recycling_heart_wood_n(:)             , &
       & recycling_heart_wood_n15(:)           , &
       & recycling_heart_wood_p(:)             , &
+      & maint_respiration_leaf(:)             , &
       & veg_growth_mt(:,:,:)                  , & ! inout
       & veg_litterfall_mt(:,:,:)              , & ! inout
       & net_growth(:)                          )  ! out
@@ -219,20 +233,20 @@ CONTAINS
     REAL(wp),                         INTENT(in)    :: dtime                      !< timestep length
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_cn_fine_root        !< target C:N of fine_roots
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_np_fine_root        !< target N:P of fine_roots
-    REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_cn_leaf             !< ..
-    REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_np_leaf             !< ..
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_cn_leaf             !< target C:N of leaves
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_np_leaf             !< target C:N of leaves
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: growing_season             !< whether the plant is in the growing season
     REAL(wp),                         INTENT(in)    :: veg_pool_mt(:,:,:)         !< bgcm veg_pool
-    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_n           !< ..
-    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_fine_root_n      !< ..
-    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_p           !< ..
-    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_fine_root_p      !< ..
-    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_n15         !< ..
-    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_fine_root_n15    !< ..
+    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_n           !< rate of leaf N recycling (mol/m2/timestep)
+    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_fine_root_n      !< rate of fine root N recycling (mol/m2/timestep)
+    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_p           !< rate of leaf P recycling (mol/m2/timestep)
+    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_fine_root_p      !< rate of fine root P recycling (mol/m2/timestep)
+    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_n15         !< rate of leaf 15N recycling (mol/m2/timestep)
+    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_fine_root_n15    !< rate of fine root 15N recycling (mol/m2/timestep)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc)     :: hlp1                     !< helper variable
-    REAL(wp), DIMENSION(nc)     :: recycling_leaf           !< more helpers1
-    REAL(wp), DIMENSION(nc)     :: recycling_fine_root      !< more helpers2
+    REAL(wp)                    :: hlp1, hlp2, hlp3         !< helper variable
+    REAL(wp)                    :: recycling_leaf           !< recycling flux from leaves
+    REAL(wp)                    :: recycling_fine_root      !< recycling flux from fine roots
     INTEGER                     :: ic                       !< loop over chunk of points
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nutrient_recycling'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -241,72 +255,80 @@ CONTAINS
     !>
     DO ic = 1,nc
       IF (growing_season(ic) > test_false_true) THEN
-        recycling_leaf(ic)      = (veg_pool_mt(ix_leaf, ixN, ic) &
-          &                       - veg_pool_mt(ix_leaf, ixC, ic) / target_cn_leaf(ic)) / tau_nutrient_recycling &
-          &                       / one_day * dtime
-        recycling_fine_root(ic) = (veg_pool_mt(ix_fine_root, ixN, ic) &
-          &                       - veg_pool_mt(ix_fine_root, ixC, ic) / target_cn_fine_root(ic)) / tau_nutrient_recycling &
-          &                       / one_day * dtime
+        recycling_leaf      = (veg_pool_mt(ix_leaf, ixN, ic) &
+          &                   - veg_pool_mt(ix_leaf, ixC, ic) / target_cn_leaf(ic)) / tau_nutrient_recycling &
+          &                   / one_day * dtime
+        recycling_fine_root = (veg_pool_mt(ix_fine_root, ixN, ic) &
+          &                   - veg_pool_mt(ix_fine_root, ixC, ic) / target_cn_fine_root(ic)) / tau_nutrient_recycling &
+          &                   / one_day * dtime
         !>  1.1 if N is addded to leaves or fine root (negative flux), make sure there is enough labile N to support this
-        !>
-        IF ((-1.0_wp * (recycling_leaf(ic) + recycling_fine_root(ic))) > eps8) THEN
-          hlp1(ic) = -1.0_wp * (1.0_wp / tau_labile / one_day * veg_pool_mt(ix_labile, ixN, ic) * dtime) &
-            &        / (recycling_leaf(ic) + recycling_fine_root(ic))
-          IF (hlp1(ic) < 1.0_wp) THEN
-            recycling_leaf(ic)       = recycling_leaf(ic)      * hlp1(ic)
-            recycling_fine_root(ic)  = recycling_fine_root(ic) * hlp1(ic)
+        !>      If labile pool is smaller than eps8, do not add N to leaves and fine roots
+        hlp1 = -1.0_wp * (recycling_leaf + recycling_fine_root)
+        hlp2 = 1.0_wp / tau_labile / one_day * veg_pool_mt(ix_labile, ixN, ic) * dtime
+        IF (hlp1 > hlp2) THEN
+          IF (hlp1 > eps8) THEN
+            hlp3 = hlp2 / hlp1
+            recycling_leaf       = recycling_leaf      * hlp3
+            recycling_fine_root  = recycling_fine_root * hlp3
+          ELSE
+            recycling_leaf       = 0.0_wp
+            recycling_fine_root  = 0.0_wp
           END IF
         END IF
-        recycling_leaf_n(ic)      = recycling_leaf_n(ic)      + recycling_leaf(ic)
-        recycling_fine_root_n(ic) = recycling_fine_root_n(ic) + recycling_fine_root(ic)
+        recycling_leaf_n(ic)      = recycling_leaf_n(ic)      + recycling_leaf
+        recycling_fine_root_n(ic) = recycling_fine_root_n(ic) + recycling_fine_root
         !>  1.2 calculate signature of N transfer from labile to leaf or inverse
         !>
-        IF (recycling_leaf(ic) >= 0.0_wp) THEN  ! for all positive values of recycling_fine_root(ic)
+        IF (recycling_leaf >= 0.0_wp) THEN  ! for all positive values of recycling_fine_root(ic)
           IF (veg_pool_mt(ix_leaf, ixN, ic) > eps8) THEN
             recycling_leaf_n15(ic) = recycling_leaf_n15(ic) &
-              &                      + recycling_leaf(ic) / veg_pool_mt(ix_leaf, ixN, ic) * veg_pool_mt(ix_leaf, ixN15, ic)
+              &                      + recycling_leaf / veg_pool_mt(ix_leaf, ixN, ic) * veg_pool_mt(ix_leaf, ixN15, ic)
           END IF
         ! for all negative values of recycling_fine_root(ic)
         ELSE
           IF (veg_pool_mt(ix_labile, ixN, ic) > eps8) THEN
             recycling_leaf_n15(ic) = recycling_leaf_n15(ic) &
-              &                      + recycling_leaf(ic) / veg_pool_mt(ix_labile, ixN, ic) * veg_pool_mt(ix_labile, ixN15, ic)
+              &                      + recycling_leaf / veg_pool_mt(ix_labile, ixN, ic) * veg_pool_mt(ix_labile, ixN15, ic)
           END IF
         END IF
-        IF (recycling_fine_root(ic) >= 0.0_wp) THEN  ! for all positive values of recycling_fine_root(ic)
+        IF (recycling_fine_root >= 0.0_wp) THEN  ! for all positive values of recycling_fine_root(ic)
           IF (veg_pool_mt(ix_fine_root, ixN, ic) > eps8) THEN
             recycling_fine_root_n15(ic) = recycling_fine_root_n15(ic) &
-              &                           + recycling_fine_root(ic) / veg_pool_mt(ix_fine_root, ixN, ic) &
+              &                           + recycling_fine_root / veg_pool_mt(ix_fine_root, ixN, ic) &
               &                           * veg_pool_mt(ix_fine_root, ixN15, ic)
           END IF
         ! for all negative values of recycling_fine_root(ic)
         ELSE
           IF (veg_pool_mt(ix_labile, ixN, ic) > eps8) THEN
             recycling_fine_root_n15(ic) = recycling_fine_root_n15(ic) &
-              &                           + recycling_fine_root(ic) / veg_pool_mt(ix_labile, ixN, ic) &
+              &                           + recycling_fine_root / veg_pool_mt(ix_labile, ixN, ic) &
               &                           * veg_pool_mt(ix_labile, ixN15, ic)
           END IF
         END IF
 
         !>2.0 replace overturning P from leaves and roots by new N from the labile pool using the target N:P
         !>
-        recycling_leaf(ic)      = (veg_pool_mt(ix_leaf, ixP, ic) - veg_pool_mt(ix_leaf, ixN, ic) / target_np_leaf(ic)) &
-          &                       / tau_nutrient_recycling / one_day * dtime
-        recycling_fine_root(ic) = (veg_pool_mt(ix_fine_root, ixP, ic) &
-         &                       - veg_pool_mt(ix_fine_root, ixN, ic) / target_np_fine_root(ic)) &
-         &                       / tau_nutrient_recycling / one_day * dtime
+        recycling_leaf      = (veg_pool_mt(ix_leaf, ixP, ic) - veg_pool_mt(ix_leaf, ixN, ic) / target_np_leaf(ic)) &
+          &                   / tau_nutrient_recycling / one_day * dtime
+        recycling_fine_root = (veg_pool_mt(ix_fine_root, ixP, ic) &
+         &                    - veg_pool_mt(ix_fine_root, ixN, ic) / target_np_fine_root(ic)) &
+         &                    / tau_nutrient_recycling / one_day * dtime
         !>  2.1 if P is addded to leaves or fine root, make sure there is enough labile P to support this
         !>
-        IF ((-1.0_wp * (recycling_leaf(ic) + recycling_fine_root(ic))) > eps8) THEN
-          hlp1(ic) = -1.0_wp * (1.0_wp/tau_labile/one_day * veg_pool_mt(ix_labile, ixP, ic) * dtime) &
-            &        / (recycling_leaf(ic) + recycling_fine_root(ic))
-          IF (hlp1(ic) < 1.0_wp) THEN
-            recycling_leaf(ic)       = recycling_leaf(ic)      * hlp1(ic)
-            recycling_fine_root(ic)  = recycling_fine_root(ic) * hlp1(ic)
+        hlp1 = -1.0_wp * (recycling_leaf + recycling_fine_root)
+        hlp2 = 1.0_wp / tau_labile / one_day * veg_pool_mt(ix_labile, ixP, ic) * dtime
+        IF (hlp1 > hlp2) THEN
+          IF (hlp1 > eps8) THEN
+            hlp3 = hlp2 / hlp1
+            recycling_leaf       = recycling_leaf      * hlp3
+            recycling_fine_root  = recycling_fine_root * hlp3
+          ELSE
+            recycling_leaf       = 0.0_wp
+            recycling_fine_root  = 0.0_wp
           END IF
         END IF
-        recycling_leaf_p(ic)        = recycling_leaf_p(ic)        + recycling_leaf(ic)
-        recycling_fine_root_p(ic)   = recycling_fine_root_p(ic)   + recycling_fine_root(ic)
+        recycling_leaf_p(ic)        = recycling_leaf_p(ic)        + recycling_leaf
+        recycling_fine_root_p(ic)   = recycling_fine_root_p(ic)   + recycling_fine_root
       END IF  ! growing_season(:) > test_false_true
     END DO    ! loop over '1,nc'
   END SUBROUTINE calc_nutrient_recycling
@@ -317,6 +339,7 @@ CONTAINS
   SUBROUTINE calc_turnover( &
     & nc                          , &
     & dtime                       , &
+    & config_active_q_agr         , &
     & elements_index_map          , &
     & is_element_used             , &
     & lctlib_phenology_type       , &
@@ -340,16 +363,19 @@ CONTAINS
     & recycling_heart_wood_n      , &
     & recycling_heart_wood_n15    , &
     & recycling_heart_wood_p      , &
+    & maint_respiration_leaf      , &
     & veg_growth_mt               , &
     & veg_litterfall_mt           , &
     & net_growth                  )
 
-    USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, ITREE
-    USE mo_q_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial, &
+    USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, fstore_leaf_max, igrass, icrop, ITREE
+    USE mo_q_agr_constants,       ONLY: crop_planting_mass, fstore_seed_max
+    USE mo_q_pheno_constants,     ONLY: ievergreen, iraingreen, isummergreen, iperennial, icrop_phenology, &
       &                                 ipheno_type_cold_deciduous, ipheno_type_drought_deciduous, ipheno_type_cbalance_deciduous
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                           !< dimensions
     REAL(wp),                 INTENT(in)    :: dtime                        !< timestep length
+    LOGICAL,                  INTENT(in)    :: config_active_q_agr          !< if Q_AGR_ process is activated
     INTEGER,                  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
     LOGICAL,                  INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
     INTEGER,                  INTENT(in)    :: lctlib_phenology_type        !< lctlib parameter
@@ -373,6 +399,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc),  INTENT(inout) :: recycling_heart_wood_n       !< woody N returning to labile pool
     REAL(wp), DIMENSION(nc),  INTENT(inout) :: recycling_heart_wood_n15     !< woody N15 returning to labile pool
     REAL(wp), DIMENSION(nc),  INTENT(inout) :: recycling_heart_wood_p       !< woody P returning to labile pool
+    REAL(wp), DIMENSION(nc),  INTENT(inout) :: maint_respiration_leaf       !< leaf maintenance respiration [mumol C / m2 / s]
     REAL(wp),                 INTENT(inout) :: veg_growth_mt(:,:,:)         !< bgcm flux: current growth rate of vegetation pools
     REAL(wp),                 INTENT(inout) :: veg_litterfall_mt(:,:,:)     !< bgcm flux: current litter fall from vegetation pools
     REAL(wp), DIMENSION(nc),  INTENT(out)   :: net_growth                   !< current net growth [mumol C / m2 / s]
@@ -385,6 +412,8 @@ CONTAINS
     REAL(wp), DIMENSION(nc)     :: retranslocation                  !< retranslocation before shedding
     REAL(wp), DIMENSION(nc)     :: nitrogen_recycling_fract         !< recycling fraction of N
     REAL(wp), DIMENSION(nc)     :: phosphorus_recycling_fract       !< recycling fraction of P
+    REAL(wp), DIMENSION(nc)     :: excess_leaf_turnover             !< excess fraction of leaf turnover in case of leaf C deficit
+    REAL(wp)                    :: hlp1                             !< helper variable
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_turnover'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -408,18 +437,44 @@ CONTAINS
           fturn_leaf(:) = 1.0_wp
         END WHERE
       END WHERE
-    CASE (iperennial)
-      WHERE(growing_season(:) > test_false_true)
-        fturn_leaf(:) = 1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime
-      ELSEWHERE
-        WHERE(lai(:) > eps4)
-          fturn_leaf(:) = MAX(1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime, &
-            &             max_leaf_shedding_rate * dtime / one_day * target_lai(:) / lai(:))
+    CASE (iperennial, icrop_phenology)
+      IF(config_active_q_agr .AND. lctlib_phenology_type == icrop_phenology) THEN
+        fturn_leaf(:) = 0.0_wp
+      ELSE
+        WHERE(growing_season(:) > test_false_true)
+          fturn_leaf(:) = 1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime
         ELSEWHERE
-          fturn_leaf(:) = 1.0_wp
+          WHERE(lai(:) > eps4)
+            fturn_leaf(:) = MAX(1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime, &
+              &             max_leaf_shedding_rate * dtime / one_day * target_lai(:) / lai(:))
+          ELSEWHERE
+            fturn_leaf(:) = 1.0_wp
+          END WHERE
         END WHERE
-      END WHERE
+      END IF
     END SELECT
+
+    !> 1.01 calculate excess leaf shedding rate in case leaf maintenance respiration cannot be maintained
+    !>      by the available labile carbon
+    !>
+    DO ic = 1,nc
+      hlp1 = maint_respiration_leaf(ic) / 1.e6_wp * dtime
+      IF (hlp1 > fstore_leaf_max * veg_pool_mt(ix_labile, ixC, ic)) THEN
+        IF (hlp1 > eps8) THEN
+          excess_leaf_turnover(ic) = MIN(max_leaf_shedding_rate * dtime / one_day, &
+            &                           (hlp1 - fstore_leaf_max * veg_pool_mt(ix_labile, ixC, ic)) / hlp1)
+        ELSE
+          excess_leaf_turnover(ic) = max_leaf_shedding_rate * dtime / one_day
+        END IF
+        maint_respiration_leaf(ic) = fstore_leaf_max * veg_pool_mt(ix_labile, ixC, ic) * 1.e6_wp / dtime
+      ELSE
+        excess_leaf_turnover(ic) = 0.0_wp
+      END IF
+    END DO
+
+    ! Safeguard that leaf turnover cannot exceed 1
+    fturn_leaf(:) = MAX(0.0_wp, MIN(1.0_wp, fturn_leaf(:) + excess_leaf_turnover(:)))
+
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN
@@ -452,7 +507,7 @@ CONTAINS
     SELECT CASE (lctlib_growthform)
     CASE (ITREE)
       fturn(:) = 1.0_wp / lctlib_tau_fine_root / one_day / one_year * dtime
-    CASE (igrass)
+    CASE (igrass, icrop)
       DO ic = 1,nc
         ! during growing season, constant turnover
         IF (growing_season(ic) > test_false_true) THEN
@@ -500,7 +555,7 @@ CONTAINS
     SELECT CASE (lctlib_growthform)
     CASE (ITREE)
       fturn(:) = 1.0_wp / lctlib_tau_branch / one_day / one_year * dtime
-    CASE (igrass) ! for grases follows leaf phenology
+    CASE (igrass, icrop) ! for grasses and crops follow leaf phenology
       fturn(:) = fturn_leaf(:)
     ENDSELECT
     ! loop over bgcm elements
@@ -554,9 +609,23 @@ CONTAINS
     END DO
     net_growth(:) = net_growth(:) - veg_pool_mt(ix_fruit, ixC, :) * fturn(:)
 
-    !>6.0 seed-bed turnover to litter
+    !>6.0 seed-bed turnover to litter (for natural vegetation types, for croptype the
+    !     seed-bed is not subject to natural decay. Instead, only if seed-bed becomes large
+    !     relative to the planting mass, it is assumed to turnover as litter)
     !>
-    fturn(:) = 1.0_wp / lctlib_tau_seed_litter / one_day / one_year * dtime
+    SELECT CASE (lctlib_growthform)
+    CASE (itree, igrass)
+      fturn(:) = 1.0_wp / lctlib_tau_seed_litter / one_day / one_year * dtime
+    CASE (icrop)
+      DO ic = 1,nc
+        IF (veg_pool_mt(ix_seed_bed, ixC, ic) > crop_planting_mass * fstore_seed_max) THEN
+          fturn(ic) = (veg_pool_mt(ix_seed_bed, ixC, ic) - crop_planting_mass * fstore_seed_max) &
+            &          / veg_pool_mt(ix_seed_bed, ixC, ic)
+        ELSE
+          fturn(ic) = 0.0_wp
+        END IF
+      END DO
+    END SELECT
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN
@@ -565,6 +634,7 @@ CONTAINS
           &                                          + veg_pool_mt(ix_seed_bed, ix_elem, :) * fturn(:)
       END IF
     END DO
+
   END SUBROUTINE calc_turnover
 
   ! ======================================================================================================= !

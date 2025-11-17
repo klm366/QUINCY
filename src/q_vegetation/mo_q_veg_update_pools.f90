@@ -19,15 +19,15 @@ MODULE mo_q_veg_update_pools
 #ifndef __NO_QUINCY__
 
   USE mo_jsb_control,             ONLY: debug_on
-  USE mo_exception,               ONLY: message, finish
+  USE mo_exception,               ONLY: message, finish, message_text
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID, &
+  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, &
     &                                   VEG_BGCM_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, &
     &                                   VEG_BGCM_RESERVE_USE_ID, VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, &
     &                                   VEG_BGCM_PP_FIBERBOARD_ID, VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID,  &
-    &                                   VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_PROD_DECAY_ID
+    &                                   VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_PP_CROP_ID
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_MYCO_EXPORT_ID
 
   IMPLICIT NONE
@@ -49,28 +49,30 @@ CONTAINS
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QCANOPY
-    USE mo_jsb_process_class,               ONLY: SPQ_, VEG_, Q_ASSIMI_, Q_PHENO_
-    USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
-    USE mo_jsb_grid,                        ONLY: Get_vgrid
+    USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, Q_SYL_
+    USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid, t_jsb_grid
+    USE mo_jsb_grid,                        ONLY: Get_vgrid, Get_grid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14
-    USE mo_jsb_math_constants,              ONLY: one_day, one_year, eps4
+    USE mo_jsb_math_constants,              ONLY: one_day, one_year, eps4, eps8, eps12
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14
-    USE mo_veg_constants,                   ONLY: eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy
-    USE mo_q_pheno_constants,               ONLY: ievergreen
+    USE mo_veg_constants,                   ONLY: eta_nfixation, max_leaf_shedding_rate
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(Q_SYL_)
+    dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store             !< the bgcm store of this tile
-    TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_sb          !< Vertical grid
-    INTEGER                           :: nsoil_sb               !< number of soil layers as used/defined by the SB_ process
+    TYPE(t_jsb_grid),         POINTER :: grid                   !< horizontal grid
+    TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_w           !< Vertical grid
+    INTEGER                           :: nsoil_w                !< number of soil layers (water)
     REAL(wp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< grid dimensions
     INTEGER                           :: ic, is, icanopy        !< looping indices
@@ -80,7 +82,9 @@ CONTAINS
     REAL(wp) :: lctlib_sla, lctlib_tau_leaf, lctlib_cn_leaf, lctlib_np_leaf
     REAL(wp) :: hlp
     INTEGER  :: lctlib_phenology_type
-    LOGICAL  :: config_l_use_product_pools
+    LOGICAL  :: config_flag_log_negative_vegpool                !< debug option of veg config
+    LOGICAL  :: config_l_use_product_pools, config_active_q_syl, config_active_q_agr
+    LOGICAL  :: lctlib_ForestFlag, lctlib_CropFlag
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -89,9 +93,9 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
     dsl4jsb_Def_mt1L2D :: veg_reserve_use_mt
-    dsl4jsb_Def_mt1L2D :: veg_total_biomass_mt
     dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
 
+    dsl4jsb_Def_mt1L2D :: veg_pp_crop_mt
     dsl4jsb_Def_mt1L2D :: veg_pp_fuel_mt
     dsl4jsb_Def_mt1L2D :: veg_pp_paper_mt
     dsl4jsb_Def_mt1L2D :: veg_pp_fiberboard_mt
@@ -101,10 +105,12 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: prod_decay_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(Q_SYL_)
+    dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
@@ -113,7 +119,7 @@ CONTAINS
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
     dsl4jsb_Real2D_onChunk      :: lai_max
-    ! SPQ_ 3D
+    ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
@@ -153,6 +159,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c13
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c14
+    dsl4jsb_Real2D_onChunk      :: mean_leaf_age
     dsl4jsb_Real2D_onChunk      :: net_biosphere_production
     dsl4jsb_Real2D_onChunk      :: net_biosphere_production_c13
     dsl4jsb_Real2D_onChunk      :: net_biosphere_production_c14
@@ -193,20 +200,27 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
     model                 => Get_model(tile%owner_model_id)
-    vgrid_soil_sb         => Get_vgrid('soil_layer_sb')
-    nsoil_sb              =  vgrid_soil_sb%n_levels
-
+    grid                  => Get_grid(model%grid_id)
+    vgrid_soil_w          => Get_vgrid('soil_depth_water')
+    nsoil_w               =  vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(Q_SYL_)
+    dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
+    config_flag_log_negative_vegpool = dsl4jsb_Config(VEG_)%flag_log_negative_vegpool
     config_l_use_product_pools = dsl4jsb_Config(VEG_)%l_use_product_pools
+    config_active_q_syl        = dsl4jsb_Config(Q_SYL_)%active
+    config_active_q_agr        = dsl4jsb_Config(Q_AGR_)%active
+    lctlib_ForestFlag   = dsl4jsb_Lctlib_param(ForestFlag)
+    lctlib_CropFlag     = dsl4jsb_Lctlib_param(CropFlag)
 
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -215,18 +229,27 @@ CONTAINS
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
-    dsl4jsb_Get_mt1L2D(VEG_BGCM_TOTAL_BIO_ID, veg_total_biomass_mt)
     dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
 
     IF (config_l_use_product_pools) THEN
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FUEL_ID, veg_pp_fuel_mt)
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PAPER_ID, veg_pp_paper_mt)
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FIBERBOARD_ID, veg_pp_fiberboard_mt)
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_OIRW_ID, veg_pp_oirw_mt)
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PV_ID, veg_pp_pv_mt)
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_SAWNWOOD_ID, veg_pp_sawnwood_mt)
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PROD_DECAY_ID, prod_decay_mt)
-    ENDIF
+
+      IF ((lctlib_ForestFlag .AND. config_active_q_syl) .OR. (lctlib_CropFlag .AND. config_active_q_agr)) THEN
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PROD_DECAY_ID, prod_decay_mt)
+
+        IF (lctlib_CropFlag) THEN
+          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_CROP_ID, veg_pp_crop_mt)
+        END IF
+
+        IF (lctlib_ForestFlag) THEN
+          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FUEL_ID, veg_pp_fuel_mt)
+          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PAPER_ID, veg_pp_paper_mt)
+          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FIBERBOARD_ID, veg_pp_fiberboard_mt)
+          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_OIRW_ID, veg_pp_oirw_mt)
+          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PV_ID, veg_pp_pv_mt)
+          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_SAWNWOOD_ID, veg_pp_sawnwood_mt)
+        END IF
+      END IF
+    END IF
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_ASSIMI_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation)        ! in
@@ -235,8 +258,8 @@ CONTAINS
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)             ! in
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai_max)                    ! in
-    ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                  ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                ! in
     ! VEG 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                  ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, npp)                                  ! out
@@ -275,7 +298,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c13)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_fruit_resp_c14)             ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)             ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)                        ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)             ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c13)         ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c14)         ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation)                ! out
@@ -355,7 +379,7 @@ CONTAINS
 
        !>  1.3 Add mycorrhiza export
        !>
-       DO is = 1, nsoil_sb
+       DO is = 1, nsoil_w
         veg_growth_mt(ix_labile, ixC, ic)   = veg_growth_mt(ix_labile, ixC, ic)   + &
           &                                   sb_mycorrhiza_export_mt(ixC, ic, is)    * soil_depth_sl(ic,is)
         veg_growth_mt(ix_labile, ixC13, ic) = veg_growth_mt(ix_labile, ixC13, ic) + &
@@ -372,10 +396,10 @@ CONTAINS
 
       END DO
 
-       !>  1.4 update labile pool and reserve
-       !>
-       veg_pool_mt(ix_labile, :, :)  = veg_pool_mt(ix_labile, :, :)  + veg_reserve_use_mt(:,:)
-       veg_pool_mt(ix_reserve, :, :) = veg_pool_mt(ix_reserve, :, :) - veg_reserve_use_mt(:,:)
+      !>  1.4 update labile pool and reserve
+      !>
+      veg_pool_mt(ix_labile, :, :)  = veg_pool_mt(ix_labile, :, :)  + veg_reserve_use_mt(:,:)
+      veg_pool_mt(ix_reserve, :, :) = veg_pool_mt(ix_reserve, :, :) - veg_reserve_use_mt(:,:)
 
       DO ic = 1, nc
         !>  1.5 remove respiration flux associated with herbivory from affected pools
@@ -394,40 +418,39 @@ CONTAINS
         veg_pool_mt(ix_fruit, ixC14, ic) = veg_pool_mt(ix_fruit, ixC14, ic) &
           &                                - herbivory_fruit_resp_c14(ic) * dtime / 1.e6_wp
 
-       !>  1.6 update fluxes from continuous nutrient turnover and resorption
-       !>
-       ! N
-       veg_pool_mt(ix_labile, ixN, ic)     = veg_pool_mt(ix_labile, ixN, ic) &
-         &                                   + recycling_leaf_n(ic) + recycling_fine_root_n(ic) + recycling_heart_wood_n(ic)
-       veg_pool_mt(ix_leaf, ixN, ic)       = veg_pool_mt(ix_leaf, ixN, ic)       - recycling_leaf_n(ic)
-       veg_pool_mt(ix_fine_root, ixN, ic)  = veg_pool_mt(ix_fine_root, ixN, ic)  - recycling_fine_root_n(ic)
-       veg_pool_mt(ix_heart_wood, ixN, ic) = veg_pool_mt(ix_heart_wood, ixN, ic) - recycling_heart_wood_n(ic)
-       ! P
-       veg_pool_mt(ix_labile, ixP, ic)     = veg_pool_mt(ix_labile, ixP, ic) &
-         &                                   + recycling_leaf_p(ic) + recycling_fine_root_p(ic) + recycling_heart_wood_p(ic)
-       veg_pool_mt(ix_leaf, ixP, ic)       = veg_pool_mt(ix_leaf, ixP, ic)       - recycling_leaf_p(ic)
-       veg_pool_mt(ix_fine_root, ixP, ic)  = veg_pool_mt(ix_fine_root, ixP, ic)  - recycling_fine_root_p(ic)
-       veg_pool_mt(ix_heart_wood, ixP, ic) = veg_pool_mt(ix_heart_wood, ixP, ic) - recycling_heart_wood_p(ic)
-       ! N15
-       veg_pool_mt(ix_labile, ixN15, ic)     = veg_pool_mt(ix_labile, ixN15, ic) &
-         &                                    + recycling_leaf_n15(ic) + recycling_fine_root_n15(ic) + recycling_heart_wood_n15(ic)
-       veg_pool_mt(ix_leaf, ixN15, ic)       = veg_pool_mt(ix_leaf, ixN15, ic)       - recycling_leaf_n15(ic)
-       veg_pool_mt(ix_fine_root, ixN15, ic)  = veg_pool_mt(ix_fine_root, ixN15, ic)  - recycling_fine_root_n15(ic)
-       veg_pool_mt(ix_heart_wood, ixN15, ic) = veg_pool_mt(ix_heart_wood, ixN15, ic) - recycling_heart_wood_n15(ic)
+        !>  1.6 update fluxes from continuous nutrient turnover and resorption
+        !>
+        ! N
+        veg_pool_mt(ix_labile, ixN, ic)     = veg_pool_mt(ix_labile, ixN, ic) &
+          &                                   + recycling_leaf_n(ic) + recycling_fine_root_n(ic) + recycling_heart_wood_n(ic)
+        veg_pool_mt(ix_leaf, ixN, ic)       = veg_pool_mt(ix_leaf, ixN, ic)       - recycling_leaf_n(ic)
+        veg_pool_mt(ix_fine_root, ixN, ic)  = veg_pool_mt(ix_fine_root, ixN, ic)  - recycling_fine_root_n(ic)
+        veg_pool_mt(ix_heart_wood, ixN, ic) = veg_pool_mt(ix_heart_wood, ixN, ic) - recycling_heart_wood_n(ic)
+        ! P
+        veg_pool_mt(ix_labile, ixP, ic)     = veg_pool_mt(ix_labile, ixP, ic) &
+          &                                   + recycling_leaf_p(ic) + recycling_fine_root_p(ic) + recycling_heart_wood_p(ic)
+        veg_pool_mt(ix_leaf, ixP, ic)       = veg_pool_mt(ix_leaf, ixP, ic)       - recycling_leaf_p(ic)
+        veg_pool_mt(ix_fine_root, ixP, ic)  = veg_pool_mt(ix_fine_root, ixP, ic)  - recycling_fine_root_p(ic)
+        veg_pool_mt(ix_heart_wood, ixP, ic) = veg_pool_mt(ix_heart_wood, ixP, ic) - recycling_heart_wood_p(ic)
+        ! N15
+        veg_pool_mt(ix_labile, ixN15, ic)     = veg_pool_mt(ix_labile, ixN15, ic) + recycling_leaf_n15(ic) &
+          &                                     + recycling_fine_root_n15(ic) + recycling_heart_wood_n15(ic)
+        veg_pool_mt(ix_leaf, ixN15, ic)       = veg_pool_mt(ix_leaf, ixN15, ic)       - recycling_leaf_n15(ic)
+        veg_pool_mt(ix_fine_root, ixN15, ic)  = veg_pool_mt(ix_fine_root, ixN15, ic)  - recycling_fine_root_n15(ic)
+        veg_pool_mt(ix_heart_wood, ixN15, ic) = veg_pool_mt(ix_heart_wood, ixN15, ic) - recycling_heart_wood_n15(ic)
 
-       !>  1.7 update labile pool with fluxes to mycorrhiza
-       !>
-       veg_pool_mt(ix_labile, ixC, ic)   = veg_pool_mt(ix_labile, ixC, ic)   - veg_exudation_mt(ixC, ic)
-       veg_pool_mt(ix_labile, ixN, ic)   = veg_pool_mt(ix_labile, ixN, ic)   - veg_exudation_mt(ixN, ic)
-       veg_pool_mt(ix_labile, ixP, ic)   = veg_pool_mt(ix_labile, ixP, ic)   - veg_exudation_mt(ixP, ic)
-       veg_pool_mt(ix_labile, ixC13, ic) = veg_pool_mt(ix_labile, ixC13, ic) - veg_exudation_mt(ixC13, ic)
-       veg_pool_mt(ix_labile, ixC14, ic) = veg_pool_mt(ix_labile, ixC14, ic) - veg_exudation_mt(ixC14, ic)
-       veg_pool_mt(ix_labile, ixN15, ic) = veg_pool_mt(ix_labile, ixN15, ic) - veg_exudation_mt(ixN15, ic)
+        !>  1.7 update labile pool with fluxes to mycorrhiza
+        !>
+        veg_pool_mt(ix_labile, ixC, ic)   = veg_pool_mt(ix_labile, ixC, ic)   - veg_exudation_mt(ixC, ic)
+        veg_pool_mt(ix_labile, ixN, ic)   = veg_pool_mt(ix_labile, ixN, ic)   - veg_exudation_mt(ixN, ic)
+        veg_pool_mt(ix_labile, ixP, ic)   = veg_pool_mt(ix_labile, ixP, ic)   - veg_exudation_mt(ixP, ic)
+        veg_pool_mt(ix_labile, ixC13, ic) = veg_pool_mt(ix_labile, ixC13, ic) - veg_exudation_mt(ixC13, ic)
+        veg_pool_mt(ix_labile, ixC14, ic) = veg_pool_mt(ix_labile, ixC14, ic) - veg_exudation_mt(ixC14, ic)
+        veg_pool_mt(ix_labile, ixN15, ic) = veg_pool_mt(ix_labile, ixN15, ic) - veg_exudation_mt(ixN15, ic)
       END DO
 
-
-       !>  1.8 Update plant biogeochemical pools with growth, litterfall due to natural processes and establishment
-       !>
+      !>  1.8 Update plant biogeochemical pools with growth, litterfall due to natural processes and establishment
+      !>
       DO ic = 1, nc
         DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
           IF (model%config%is_element_used(id_elem)) THEN
@@ -450,27 +473,33 @@ CONTAINS
         END DO
       END DO
 
-      ! @TODO
-      !>    1.7.1 quick-fix ensure veg_pool does not become negative
-      !>          apply only with IQ as it changes results with QS
+      !>    1.8.1 ensure veg_pool does not become negative - quick-fix and debug
       !>
-      !   ==> need additional debug code
-      !       to output litterfall & growth fluxes + lat/lon/PFT for grid cells where veg_pool gets negative
-#ifdef __QUINCY_STANDALONE__
-#else
       DO ic = 1, nc
         DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
           IF (model%config%is_element_used(id_elem)) THEN
             ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
             DO ix_comp = 1, nr_of_veg_bgcm_comp
-              veg_pool_mt(ix_comp, ix_elem, ic) = MAX(0.0_wp, veg_pool_mt(ix_comp, ix_elem, ic))
+              ! set a negative pool to zero (breaking mass balance !)
+              ! and write message to LOG (if enabled)
+              IF (veg_pool_mt(ix_comp, ix_elem, ic) < -eps12) THEN
+                IF (config_flag_log_negative_vegpool) THEN
+                  WRITE (message_text,*) 'Negative value of vegetation pool at tile ', tile%name, &
+                    &                    ' at (lon:lat) ', grid%lon(ic,iblk), ':', grid%lat(ic,iblk), &
+                    &                    ', compartment: ', ix_comp, ' , element: ', ix_elem, &
+                    &                    ', value ', veg_pool_mt(ix_comp, ix_elem, ic), ' is set to zero here'
+                  CALL message(TRIM(routine), message_text, all_print=.TRUE.)
+                END IF
+              END IF
+              IF (veg_pool_mt(ix_comp, ix_elem, ic) < 0.0_wp) THEN
+                veg_pool_mt(ix_comp, ix_elem, ic) = 0.0_wp
+              END IF
             END DO
           END IF
         END DO
       END DO
-#endif
 
-      !>  1.8 Radioactive decay of C14
+      !>    1.8.2 Radioactive decay of C14
       !>
       DO ic = 1, nc
         ! in living plant tissue
@@ -480,12 +509,19 @@ CONTAINS
 
         ! and if simulating with product pools also within these
         IF (config_l_use_product_pools) THEN
-          veg_pp_fuel_mt(ixC14, ic) = veg_pp_fuel_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
-          veg_pp_paper_mt(ixC14, ic) = veg_pp_paper_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
-          veg_pp_fiberboard_mt(ixC14, ic) = veg_pp_fiberboard_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
-          veg_pp_oirw_mt(ixC14, ic) = veg_pp_oirw_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
-          veg_pp_pv_mt(ixC14, ic) = veg_pp_pv_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
-          veg_pp_sawnwood_mt(ixC14, ic) = veg_pp_sawnwood_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
+
+          IF (lctlib_CropFlag .AND. config_active_q_agr) THEN
+            veg_pp_crop_mt(ixC14, ic) = veg_pp_crop_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
+          END IF
+
+          IF (lctlib_ForestFlag .AND. config_active_q_syl) THEN
+            veg_pp_fuel_mt(ixC14, ic) = veg_pp_fuel_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
+            veg_pp_paper_mt(ixC14, ic) = veg_pp_paper_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
+            veg_pp_fiberboard_mt(ixC14, ic) = veg_pp_fiberboard_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
+            veg_pp_oirw_mt(ixC14, ic) = veg_pp_oirw_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
+            veg_pp_pv_mt(ixC14, ic) = veg_pp_pv_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
+            veg_pp_sawnwood_mt(ixC14, ic) = veg_pp_sawnwood_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
+          END IF
         END IF
       END DO
 
@@ -494,57 +530,35 @@ CONTAINS
       !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
       DO ic = 1, nc
 
-      ! diagnose required change in leaf C given phenology to attain prescribed LAI max
-       IF (growing_season(ic) > test_false_true) THEN
-         veg_growth_mt(ix_leaf, ixC, ic) = lai_max(ic) / lctlib_sla &
-           &                              * (1._wp - exp(-k_leafon_canopy &
-           &                              * (lai_max(ic) - lai(ic)) / lai_max(ic))) &
-           &                              * dtime / one_day
-       ELSE
-         veg_litterfall_mt(ix_leaf, ixC, ic) = MIN(veg_pool_mt(ix_leaf, ixC, ic), &
-           &                                  lai(ic)/lctlib_sla * max_leaf_shedding_rate * dtime / one_day &
-           &                                  * lai_max(ic) &
-           &                                  / MAX(eps4, lai(ic)))
-       END IF
-
-       ! calc leaf turnover for evergreen trees (needed, for e.g. mean_leaf_age, as evergreens are always within growing_season)
-       IF (lctlib_phenology_type == ievergreen) THEN
-         veg_litterfall_mt(ix_leaf, ixC, ic) = veg_pool_mt(ix_leaf, ixC, ic) / lctlib_tau_leaf / one_day / one_year * dtime
-       ENDIF
-
        ! update leaf C:N:P pools
        veg_pool_mt(ix_leaf, ixC, ic) = veg_pool_mt(ix_leaf, ixC, ic) + veg_growth_mt(ix_leaf, ixC, ic) &
          &                            - veg_litterfall_mt(ix_leaf, ixC, ic)
-       veg_pool_mt(ix_leaf, ixN, ic) = veg_pool_mt(ix_leaf, ixC, ic) / lctlib_cn_leaf
-       veg_pool_mt(ix_leaf, ixP, ic) = veg_pool_mt(ix_leaf, ixN, ic) / lctlib_np_leaf
+       veg_pool_mt(ix_leaf, ixN, ic) = veg_pool_mt(ix_leaf, ixN, ic) + veg_growth_mt(ix_leaf, ixN, ic) &
+         &                            - veg_litterfall_mt(ix_leaf, ixN, ic)
+       veg_pool_mt(ix_leaf, ixP, ic) = veg_pool_mt(ix_leaf, ixP, ic) + veg_growth_mt(ix_leaf, ixP, ic) &
+         &                            - veg_litterfall_mt(ix_leaf, ixP, ic)
+  !     veg_pool_mt(ix_leaf, ixN, ic) = veg_pool_mt(ix_leaf, ixC, ic) / lctlib_cn_leaf
+  !     veg_pool_mt(ix_leaf, ixP, ic) = veg_pool_mt(ix_leaf, ixN, ic) / lctlib_np_leaf
 
       END DO
       !$ACC END PARALLEL LOOP
 
     END SELECT
 
-    !> 2.0 analysis of mass conservation: sum compartments of veg_pool into veg_total_biomass
-    !>
-    DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
-      IF (model%config%is_element_used(id_elem)) THEN
-        ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-        DO ic = 1, nc
-          veg_total_biomass_mt(ix_elem,ic) = 0.0_wp
-        END DO
-        !$ACC END PARALLEL
-
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-        DO ix_comp = 1, nr_of_veg_bgcm_comp
-          DO ic = 1, nc
-            veg_total_biomass_mt(ix_elem,ic) = veg_total_biomass_mt(ix_elem,ic) + veg_pool_mt(ix_comp, ix_elem, ic)
-          END DO
-        END DO
-        !$ACC END PARALLEL
+    !> 1.9 update mean leaf age (advance by one timestep), given growth of new and loss of old leaves
+    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
+    DO ic = 1, nc
+      IF (veg_pool_mt(ix_leaf, ixC, ic) > eps8) THEN
+        mean_leaf_age(ic) = (mean_leaf_age(ic) + dtime / one_day) &
+          &                * (1._wp - veg_growth_mt(ix_leaf, ixC, ic) / veg_pool_mt(ix_leaf, ixC, ic)) &
+          &                - mean_leaf_age(ic) * veg_litterfall_mt(ix_leaf, ixC, ic) / veg_pool_mt(ix_leaf, ixC, ic)
+      ELSE
+        mean_leaf_age(ic) = 0.0_wp
       END IF
     END DO
+    !$ACC END PARALLEL LOOP
 
-    !> 3.0 bgc_material diagnostics
+    !> 2.0 bgc_material diagnostics
     !>     sum up veg_pool, veg_growth and veg_litterfall across components for each particular element
     !>     or simply add value (of one/two/few pool variables) to a memory variable for aggregation and output
     !>
@@ -616,12 +630,24 @@ CONTAINS
         veg_pool_total_n15(ic)       = veg_pool_total_n15(ic) + veg_pool_mt(ix_comp,ixN15, ic)
 
         IF (config_l_use_product_pools) THEN
-          veg_products_total_c(ic) = veg_pp_fuel_mt(ixC,ic) + veg_pp_paper_mt(ixC,ic)        &
-            &                       + veg_pp_fiberboard_mt(ixC,ic) + veg_pp_oirw_mt(ixC,ic)  &
-            &                       + veg_pp_pv_mt(ixC,ic) + veg_pp_sawnwood_mt(ixC,ic)
-          veg_products_total_n(ic) = veg_pp_fuel_mt(ixN,ic) + veg_pp_paper_mt(ixN,ic)        &
-            &                       + veg_pp_fiberboard_mt(ixN,ic) + veg_pp_oirw_mt(ixN,ic)  &
-            &                       + veg_pp_pv_mt(ixN,ic) + veg_pp_sawnwood_mt(ixN,ic)
+          veg_products_total_c(ic) = 0.0_wp
+          veg_products_total_n(ic) = 0.0_wp
+
+          IF (lctlib_CropFlag .AND. config_active_q_agr) THEN
+            veg_products_total_c(ic) = veg_products_total_c(ic) + veg_pp_crop_mt(ixC,ic)
+            veg_products_total_n(ic) = veg_products_total_n(ic) + veg_pp_crop_mt(ixN,ic)
+          END IF
+
+          IF (lctlib_ForestFlag .AND. config_active_q_syl) THEN
+            veg_products_total_c(ic) = veg_products_total_c(ic)                                &
+              &                       + veg_pp_fuel_mt(ixC,ic) + veg_pp_paper_mt(ixC,ic)       &
+              &                       + veg_pp_fiberboard_mt(ixC,ic) + veg_pp_oirw_mt(ixC,ic)  &
+              &                       + veg_pp_pv_mt(ixC,ic) + veg_pp_sawnwood_mt(ixC,ic)
+            veg_products_total_n(ic) = veg_products_total_n(ic)                                &
+              &                       + veg_pp_fuel_mt(ixN,ic) + veg_pp_paper_mt(ixN,ic)       &
+              &                       + veg_pp_fiberboard_mt(ixN,ic) + veg_pp_oirw_mt(ixN,ic)  &
+              &                       + veg_pp_pv_mt(ixN,ic) + veg_pp_sawnwood_mt(ixN,ic)
+          END IF
         END IF
 
         ! calculate flux totals
@@ -643,7 +669,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
-    !> 4.0 biosphere-level diagnostics across multiple processes
+    !> 3.0 biosphere-level diagnostics across multiple processes
     !>
     !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
     DO ic = 1, nc
@@ -670,11 +696,14 @@ CONTAINS
       biological_n_fixation(ic)    = biological_n_fixation(ic) + n_fixation(ic)
 
       IF (config_l_use_product_pools) THEN
-        ! The product pool decay is a loss to the atmosphere (prod_decay_mt unit is mol m-2 timestep-1)
-        net_biosphere_production(ic)     = net_biosphere_production(ic)     - (prod_decay_mt(ixC,ic) * 1000000.0_wp / dtime)
-        net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - (prod_decay_mt(ixC13,ic) * 1000000.0_wp / dtime)
-        net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - (prod_decay_mt(ixC14,ic) * 1000000.0_wp / dtime)
-      ENDIF
+        IF ((lctlib_ForestFlag .AND. config_active_q_syl) .OR.  &
+            & (lctlib_CropFlag .AND. config_active_q_agr)) THEN
+          ! The product pool decay is a loss to the atmosphere (prod_decay_mt unit is mol m-2 timestep-1)
+          net_biosphere_production(ic)     = net_biosphere_production(ic)     - (prod_decay_mt(ixC,ic) * 1000000.0_wp / dtime)
+          net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - (prod_decay_mt(ixC13,ic) * 1000000.0_wp / dtime)
+          net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - (prod_decay_mt(ixC14,ic) * 1000000.0_wp / dtime)
+        END IF
+      END IF
     END DO
     !$ACC END PARALLEL LOOP
 

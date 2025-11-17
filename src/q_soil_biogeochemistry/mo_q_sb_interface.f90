@@ -424,21 +424,6 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(VEG_)
-
-    ! VEG 2D
-    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_n_pot               , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_p_pot               , weighted_by_fract)
-    ! SB_ 2D
-    dsl4jsb_Aggregate_onChunk(SB_,  emission_noy                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_,  emission_n2o                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_,  emission_n2                     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_,  emission_noy_n15                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_,  emission_n2o_n15                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_,  emission_n2_n15                 , weighted_by_fract)
-    ! SB_ 3D
-    dsl4jsb_Aggregate_onChunk(SB_,  het_respiration                 , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_nh4_sl             , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -470,8 +455,6 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
-
-    ! @TODO  add missing variables for aggregation
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -507,26 +490,29 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
 
     ! fluxes
-    dsl4jsb_Aggregate_onChunk(SB_, het_respiration              , weighted_by_fract)
     ! 2D
+    dsl4jsb_Aggregate_onChunk(SB_, het_respiration              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, ecosystem_total_n_loss       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, fertiliser_nh4               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, fertiliser_no3               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, fertiliser_po4               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, emission_noy                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, emission_n2o                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, emission_n2                  , weighted_by_fract)
+
+    ! pools
     ! 3D
-    ! 3D
-    dsl4jsb_Aggregate_onChunk(SB_, noy                          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, noy_n15                      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, n2o                          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, n2o_n15                      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, n2                           , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SB_, n2_n15                       , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, total_soil_n                 , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, total_soil_inorg_n           , weighted_by_fract)
-    ! pools
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_c              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_n              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_p              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_bg_soil_c      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_bg_soil_n      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_bg_soil_p      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_ag_litter_c    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_ag_litter_n    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_ag_litter_p    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_woody_litter_c       , weighted_by_fract)
 
     ! VEG_ fluxes

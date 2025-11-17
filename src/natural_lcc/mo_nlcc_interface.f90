@@ -199,13 +199,6 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
-    model => Get_model(tile%owner_model_id)
-
-    ! If process is not to be calculated on this tile, do nothing
-    IF (.NOT. tile%Is_process_calculated(NLCC_)) RETURN
-
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 

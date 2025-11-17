@@ -49,18 +49,22 @@ CONTAINS
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
 #ifndef __NO_QUINCY__
+    USE mo_quincy_model_config, ONLY: QLAND, QPLANT
     USE mo_rad_parameters,      ONLY: init_rad_parameters
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_q_assimi_parameters, ONLY: init_q_assimi_parameters
+    USE mo_q_agr_constants,     ONLY: init_q_agr_constants
+    USE mo_q_syl_constants,     ONLY: init_q_syl_constants
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
     USE mo_spq_constants,       ONLY: init_spq_constants
+    USE mo_turb_constants,      ONLY: init_turb_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 #endif
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, NLCC_, FLCC_, FAGE_, TOP_, CH4_, MEGAN_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, NLCC_, FLCC_, FAGE_, TOP_, CH4_, MEGAN_, SPQ_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -74,6 +78,10 @@ CONTAINS
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
     dsl4jsb_Use_config(CH4_)
+#ifndef __NO_QUINCY__
+    dsl4jsb_Use_config(Q_SYL_)
+    dsl4jsb_Use_config(SPQ_)
+#endif
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
 
@@ -89,6 +97,10 @@ CONTAINS
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
     dsl4jsb_Def_config(CH4_)
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_config(Q_SYL_)
+    dsl4jsb_Def_config(SPQ_)
+#endif
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w, snow_e
@@ -165,8 +177,11 @@ CONTAINS
 #ifndef __NO_QUINCY__
            CALL init_rad_parameters
            CALL init_q_assimi_parameters
+           CALL init_q_agr_constants
+           CALL init_q_syl_constants
            CALL init_veg_constants
            CALL init_spq_constants
+           CALL init_turb_constants
            CALL init_sb_constants
            CALL init_q_pheno_parameters
            CALL init_atmland_constants
@@ -190,6 +205,8 @@ CONTAINS
        END IF
 
       CALL model%Set_mode(model%config%hsm_mode)
+      ! Disable multi-queue processing for QUINCY while it's not ready
+      CALL model%Set_multi_queues(model_scheme /= MODEL_QUINCY)
 
       surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
       CALL register_vgrid(surface)
@@ -212,11 +229,35 @@ CONTAINS
       CALL model%Configure_processes()
 
       dsl4jsb_Get_config(RAD_)
+      dsl4jsb_Get_config(SSE_)
+      dsl4jsb_Get_config(HYDRO_)
+      dsl4jsb_Get_config(PPLCC_)
+
+      ! Make number of vertical layers available from the options type
+      IF (model%Is_process_enabled(HYDRO_)) THEN
+        soil_w => Get_vgrid('soil_depth_water')
+        nsoil_w = soil_w%n_levels
+      END IF
+      IF (model%Is_process_enabled(SSE_)) THEN
+        soil_e => Get_vgrid('soil_depth_energy')
+        nsoil_e = soil_e%n_levels
+        IF (dsl4jsb_Config(SSE_)%l_snow) THEN
+          snow_e => Get_vgrid('snow_depth_energy')
+          nsnow_e = snow_e%n_levels
+        END IF
+      END IF
+      CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
+
+      ! Crosscheck process configs
+      IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
+        & .AND. (nsoil_e /= nsoil_w)) THEN
+        CALL finish(routine, &
+          & 'The number of soil layers used for water and energy currently need to be identical:'  &
+          & //' nsoil_w = '//TRIM(int2string(nsoil_w))//', nsoil_e = '//TRIM(int2string(nsoil_e)))
+      END IF
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        dsl4jsb_Get_config(SSE_)
-        dsl4jsb_Get_config(HYDRO_)
         dsl4jsb_Get_config(CARBON_)
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
@@ -269,11 +310,48 @@ CONTAINS
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         ! There are several jsbach processes for which active is set to TRUE as default, however, these are not required for IQ:
-        model%processes(SSE_)%p%config%active = .FALSE.
-        model%processes(SEB_)%p%config%active = .FALSE.
-        model%processes(TURB_)%p%config%active = .FALSE.
         model%processes(ASSIMI_)%p%config%active = .FALSE.
         model%processes(PHENO_)%p%config%active = .FALSE.
+
+#ifndef __NO_QUINCY__
+        ! The Q_SYL_ process requires the PPLCC process to be active
+        dsl4jsb_Get_config(Q_SYL_)
+        IF (dsl4jsb_Config(Q_SYL_)%active) THEN
+          IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
+            CALL message(TRIM(routine), 'Activating PPLCC_ process because it is required by the active Q_SYL_ process')
+          END IF
+          dsl4jsb_Config(PPLCC_)%active = .TRUE.
+        END IF
+
+        !... assert that syl is only active in land or plant mode
+        IF (model%config%qmodel_id /= QLAND .AND. model%config%qmodel_id /= QPLANT) THEN
+          IF (dsl4jsb_Config(Q_SYL_)%active) THEN
+            CALL message(TRIM(routine), 'Warning: sylviculture can currently only be active in land mode, set active to .FALSE.')
+            dsl4jsb_Config(Q_SYL_)%active = .FALSE.
+          END IF
+        END IF
+
+        ! check settings with jsbach soil physics and SPQ_
+        dsl4jsb_Get_config(SPQ_)
+        IF (model%config%use_soil_phys_jsbach .NEQV. dsl4jsb_Config(SPQ_)%active) THEN
+          IF (dsl4jsb_Config(SPQ_)%active) THEN
+            IF (model%config%use_lakes .OR. model%config%use_glacier) THEN
+              CALL finish(routine, &
+                & 'With the SPQ_ process active, use_lakes and use_glacier must be FALSE.')
+            END IF
+          END IF
+        ELSE
+          IF (model%config%use_soil_phys_jsbach) THEN
+            CALL finish(routine, &
+              & 'The SPQ_ process must not be active if use_soil_phys_jsbach is set to TRUE.')
+          ELSE
+            CALL finish(routine, &
+              & 'The SPQ_ process must be active if use_soil_phys_jsbach is set to FALSE.')
+          END IF
+        END IF
+
+#endif
+
       CASE (MODEL_JSBACH)
 
         IF (model%Do_fractions_change()) THEN
@@ -281,15 +359,6 @@ CONTAINS
             CALL message(TRIM(routine), 'Activating PPLCC_ process since some process changes fractions')
           END IF
           dsl4jsb_Config(PPLCC_)%active = .TRUE.
-        END IF
-
-        IF (model%config%init_from_ifs) THEN
-          CALL message(TRIM(routine), 'Initialize JSBACH from IFS analysis file '//TRIM(model%config%ifs_filename))
-          IF (dsl4jsb_Config(HYDRO_)%l_read_initial_moist) THEN
-            CALL message(routine, 'Reading initial soil moisture from '//TRIM(dsl4jsb_Config(HYDRO_)%ic_filename))
-          END IF
-        ELSE
-          dsl4jsb_Config(HYDRO_)%l_read_initial_moist = .FALSE.
         END IF
 
         IF (model%Is_process_enabled(CH4_) .AND. dsl4jsb_Config(CH4_)%do_termite .AND. &
@@ -349,7 +418,25 @@ CONTAINS
             & 'When FAGE is enabled and disturbances are active, wlcc should be active, too! Please check!')
         END IF
 
-      END SELECT
+      END SELECT  ! jsbach / quincy
+
+      IF (model%config%init_from_ifs) THEN
+        CALL message(TRIM(routine), 'Initialize JSBACH from IFS analysis file '//TRIM(model%config%ifs_filename))
+        IF (dsl4jsb_Config(HYDRO_)%l_read_initial_moist) THEN
+          CALL message(routine, 'Reading initial soil moisture from '//TRIM(dsl4jsb_Config(HYDRO_)%ic_filename))
+        END IF
+      ELSE
+        dsl4jsb_Config(HYDRO_)%l_read_initial_moist = .FALSE.
+      END IF
+
+      IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
+        ! Don't allow infiltration at sub-zero soil temperature for old snow scheme
+        dsl4jsb_Config(HYDRO_)%l_infil_subzero = .FALSE.
+        CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature (l_snow=false)')
+      ELSE IF (.NOT. dsl4jsb_Config(HYDRO_)%l_infil_subzero) THEN
+        ! Print message if infiltration at sub-zero temperature is switched off in namelist
+        CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature')
+      END IF
 
     END DO
 
@@ -375,10 +462,10 @@ CONTAINS
     ! select lctlib file depending on the usecase
     ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
-    ! quincy model with 11 PFT tiles incl. bare soil
-    CASE ('quincy_11_pfts', 'quincy_11_pfts_for_coupling')
+    ! quincy model with 13 PFT tiles incl. bare soil
+    CASE ('quincy_13_pfts_for_coupling', 'quincy_13_pfts')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
-    ! jsbach_lite & jsbach_pfts
+    ! jsbach_lite & jsbach_pfts & jsbach_12pfts
     CASE DEFAULT
       lctlib_filename = 'lctlib_nlct21.def'
     END SELECT

@@ -1,4 +1,4 @@
-!> Summary: provides types and definitions for storing and providing bgc materials
+!> Provides types and definitions for storing and providing bgc materials
 !>
 !> ICON-Land
 !>
@@ -22,6 +22,7 @@ MODULE mo_lnd_bgcm_store_class
   USE mo_jsb_pool_class,      ONLY: t_jsb_pool
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p
   USE mo_jsb_varlist,         ONLY: VARNAME_LEN
+  USE mo_jsb_impl_constants,  ONLY: MEDIUM_NAME_LEN, SHORT_NAME_LEN
 
   IMPLICIT NONE
   PRIVATE
@@ -29,11 +30,11 @@ MODULE mo_lnd_bgcm_store_class
   PUBLIC :: t_lnd_bgcm_store_abstract
   PUBLIC :: SB_BGCM_POOL_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
     &       SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
-  PUBLIC :: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID,               &
-    &       VEG_BGCM_LITTERFALL_ID, VEG_BGCM_FRAC_ALLOC_ID,                            &
-    &       VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_RESERVE_USE_ID, &
-    &       VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, VEG_BGCM_PP_FIBERBOARD_ID,      &
-    &       VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID,           &
+  PUBLIC :: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID,                                                      &
+    &       VEG_BGCM_LITTERFALL_ID, VEG_BGCM_FRAC_ALLOC_ID,                                            &
+    &       VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_RESERVE_USE_ID,                 &
+    &       VEG_BGCM_PP_CROP_ID, VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, VEG_BGCM_PP_FIBERBOARD_ID, &
+    &       VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID,                           &
     &       VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_HARVEST_TO_PROD_ID, VEG_BGCM_HARVEST_LITTER_ID
 
   ! ======================================================================================================= !
@@ -48,13 +49,13 @@ MODULE mo_lnd_bgcm_store_class
       & SB_BGCM_TRANSPORT_ID,        &   !< soil biogeochemistry bgcm transport
       & SB_BGCM_MYCO_EXPORT_ID,      &   !< soil biogeochemistry bgcm mycorrhiza export
       & VEG_BGCM_POOL_ID,            &   !< vegetation bgcm pool
-      & VEG_BGCM_TOTAL_BIO_ID,       &   !< vegetation bgcm total biomass
       & VEG_BGCM_GROWTH_ID,          &   !< vegetation bgcm growth
       & VEG_BGCM_LITTERFALL_ID,      &   !< vegetation bgcm litterfall
       & VEG_BGCM_FRAC_ALLOC_ID,      &   !< vegetation bgcm frac_alloc
       & VEG_BGCM_EXUDATION_ID,       &   !< vegetation bgcm exudation
       & VEG_BGCM_ESTABLISHMENT_ID,   &   !< vegetation bgcm establishment
       & VEG_BGCM_RESERVE_USE_ID,     &   !< vegetation bgcm reserve_use
+      & VEG_BGCM_PP_CROP_ID,         &   !< vegetation bgcm cropland product pool
       & VEG_BGCM_PP_FUEL_ID,         &   !< vegetation bgcm fuel product pool
       & VEG_BGCM_PP_PAPER_ID,        &   !< vegetation bgcm paper product pool
       & VEG_BGCM_PP_FIBERBOARD_ID,   &   !< vegetation bgcm fiberboard product pool
@@ -71,10 +72,11 @@ MODULE mo_lnd_bgcm_store_class
   !> Type used to collect pointer for a certain 1l bgc material (i.e. only elements, no compartements)
   !>
   TYPE :: t_lnd_1l_bgc_material_collection
-    INTEGER                        :: nr_of_elems   !< number of elements (array size)
-    TYPE(t_jsb_var_p), ALLOCATABLE :: collection_1l_p(:) !< pointer array for access to the vars
-    REAL(wp),              POINTER :: mt_1l_2d_bgcm(:,:,:)   !< if 2d var (elements, nc, nblks)
-    REAL(wp),              POINTER :: mt_1l_3d_bgcm(:,:,:,:) !< if 3d var (elements, nc, nsoil, nblks)
+    INTEGER                                :: nr_of_elems   !< number of elements (array size)
+    CHARACTER(SHORT_NAME_LEN), ALLOCATABLE :: element_shortname(:)   !< shortname of the elements
+    TYPE(t_jsb_var_p),         ALLOCATABLE :: collection_1l_p(:)     !< pointer array for access to the vars
+    REAL(wp),                      POINTER :: mt_1l_2d_bgcm(:,:,:)   !< if 2d var (elements, nc, nblks)
+    REAL(wp),                      POINTER :: mt_1l_3d_bgcm(:,:,:,:) !< if 3d var (elements, nc, nsoil, nblks)
   END TYPE t_lnd_1l_bgc_material_collection
 
   ! ======================================================================================================= !
@@ -82,12 +84,13 @@ MODULE mo_lnd_bgcm_store_class
   !> Type used to collect pointer for a certain 2l bgc material (i.e. with compartments)
   !>
   TYPE :: t_lnd_2l_bgc_material_collection
-    INTEGER                        :: nr_of_parts   !< number of compartments (size dim 1)
-    INTEGER                        :: nr_of_elems   !< number of elements (size dim 2)
-    TYPE(t_jsb_var_p), ALLOCATABLE :: collection_2l_p(:,:)   !< pointer array for access to the vars
-    REAL(wp),              POINTER :: mt_2l_2d_bgcm(:,:,:,:) !< if 2d var (compartments, elements, nc, nblks)
-    REAL(wp),              POINTER :: mt_2l_3d_bgcm(:,:,:,:,:)
-      !< if 3d var (compartments, elements, nc, nsoil, nblks)
+    INTEGER                                 :: nr_of_parts   !< number of compartments (size dim 1)
+    INTEGER                                 :: nr_of_elems   !< number of elements (size dim 2)
+    CHARACTER(SHORT_NAME_LEN),  ALLOCATABLE :: element_shortname(:)     !< shortname of the elements
+    CHARACTER(MEDIUM_NAME_LEN), ALLOCATABLE :: compartment_shortname(:) !< shortname of the compartments
+    TYPE(t_jsb_var_p),          ALLOCATABLE :: collection_2l_p(:,:)     !< pointer array for access to the vars
+    REAL(wp),                       POINTER :: mt_2l_2d_bgcm(:,:,:,:)   !< if 2d var (compartments, elements, nc, nblks)
+    REAL(wp),                       POINTER :: mt_2l_3d_bgcm(:,:,:,:,:) !< if 3d var (compartments, elements, nc, extra_dim, nblks)
   END TYPE t_lnd_2l_bgc_material_collection
 
   ! ======================================================================================================= !

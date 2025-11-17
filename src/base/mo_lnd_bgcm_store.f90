@@ -1,4 +1,4 @@
-!> Summary: defines methods for collecting, storing and providing bgc materials
+!> Defines methods for collecting, storing and providing bgc materials
 !>
 !> ICON-Land
 !>
@@ -29,6 +29,9 @@ MODULE mo_lnd_bgcm_store
 
   PUBLIC :: t_lnd_bgcm_store, get_bgcm_idx
 
+#ifndef __QUINCY_STANDALONE__
+  PUBLIC :: read_bgcm_from_file
+#endif
 
   ! ======================================================================================================= !
   !>
@@ -120,7 +123,7 @@ CONTAINS
       idx_bgcm = idx_bgcm + 1
       bgcm => main_bgcm%pool_list(i_bgcm)%p
 
-      this%bgc_material_name(idx_bgcm) = bgcm%name
+      this%bgc_material_name(idx_bgcm) = bgcm%shortname
       IF(bgcm%id == -1) THEN
         CALL finish(TRIM(routine), 'Found bgcm with no specified id '//TRIM(bgcm%name)// &
           & ' in tile '//TRIM(tile_name)//', please check!')
@@ -141,6 +144,7 @@ CONTAINS
         CASE(2)
           idx_1l_2d_bgcm = idx_1l_2d_bgcm + 1
           ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%collection_1l_p(nr_of_elements))
+          ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%element_shortname(nr_of_elements))
 
           ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm(nr_of_elements, nproma, nblks))
           !$ACC ENTER DATA CREATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm(:,:,:))
@@ -152,10 +156,13 @@ CONTAINS
           DO i_element = 1, nr_of_elements
             this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%collection_1l_p(i_element)%p &
               & => bgcm%element_list(i_element)%p
-          ENDDO
+            this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%element_shortname(i_element) &
+              & = bgcm%element_list(i_element)%p%element_shortname
+          END DO
         CASE(3)
           idx_1l_3d_bgcm = idx_1l_3d_bgcm + 1
           ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%collection_1l_p(nr_of_elements))
+          ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%element_shortname(nr_of_elements))
 
           ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm(nr_of_elements, nproma, nsoil, nblks))
           !$ACC ENTER DATA CREATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm(:,:,:,:))
@@ -167,8 +174,10 @@ CONTAINS
           DO i_element = 1, nr_of_elements
             this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%collection_1l_p(i_element)%p &
               & => bgcm%element_list(i_element)%p
-          ENDDO
-        ENDSELECT
+            this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%element_shortname(i_element) &
+              & = bgcm%element_list(i_element)%p%element_shortname
+          END DO
+        END SELECT
 
       ELSE
         ! i.e. no elements but one layer of compartments which are then expected to have elements
@@ -185,6 +194,8 @@ CONTAINS
         CASE(2)
           idx_2l_2d_bgcm = idx_2l_2d_bgcm + 1
           ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%collection_2l_p(nr_of_compartments, nr_of_elements))
+          ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%element_shortname(nr_of_elements))
+          ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%compartment_shortname(nr_of_compartments))
 
           ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm(nr_of_compartments, nr_of_elements, &
             &                                                           nproma, nblks))
@@ -198,6 +209,8 @@ CONTAINS
         CASE(3)
           idx_2l_3d_bgcm = idx_2l_3d_bgcm + 1
           ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%collection_2l_p(nr_of_compartments, nr_of_elements))
+          ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%element_shortname(nr_of_elements))
+          ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%compartment_shortname(nr_of_compartments))
 
           ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm(nr_of_compartments, nr_of_elements, &
             &                                                           nproma, nsoil, nblks))
@@ -213,12 +226,18 @@ CONTAINS
         DO i_compartment = 1, nr_of_compartments
           SELECT CASE(this%nr_of_dimensions(idx_bgcm))
           CASE(2)
+            this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%compartment_shortname(i_compartment) = bgcm%pool_list(i_compartment)%p%shortname
             DO i_element = 1, nr_of_elements
+              this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%element_shortname(i_element) &
+                & = bgcm%pool_list(i_compartment)%p%element_list(i_element)%p%element_shortname
               this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%collection_2l_p(i_compartment, i_element)%p &
                 & => bgcm%pool_list(i_compartment)%p%element_list(i_element)%p
             ENDDO
           CASE(3)
+            this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%compartment_shortname(i_compartment) = bgcm%pool_list(i_compartment)%p%shortname
             DO i_element = 1, nr_of_elements
+              this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%element_shortname(i_element) &
+                & = bgcm%pool_list(i_compartment)%p%element_list(i_element)%p%element_shortname
               this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%collection_2l_p(i_compartment, i_element)%p &
                 & => bgcm%pool_list(i_compartment)%p%element_list(i_element)%p
             ENDDO
@@ -588,6 +607,99 @@ CONTAINS
 
   END FUNCTION get_bgcm_idx
 
+#ifndef __QUINCY_STANDALONE__
+  ! ======================================================================================================= !
+  !>
+  !> Read the bgcm with the given id from the given file
+  !>
+  SUBROUTINE read_bgcm_from_file(this, bgcm_id, process_name, tile_name, caller, input_file, name_extdim, size_extdim)
+    USE mo_jsb_io_netcdf,           ONLY: t_input_file
+    USE mo_util,                    ONLY: read_2D_var, read_3D_var
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_lnd_bgcm_store),    INTENT(IN)    :: this         !< this bgcm store instance
+    INTEGER,                    INTENT(IN)    :: bgcm_id      !< id of bgcm queried from the store
+    CHARACTER(len=*),           INTENT(IN)    :: process_name !< name of the current tile
+    CHARACTER(len=*),           INTENT(IN)    :: tile_name    !< name of the current tile
+    CHARACTER(len=*),           INTENT(in)    :: caller       !< calling routine
+    TYPE(t_input_file),         INTENT(INOUT) :: input_file   !< file to read passed bgcm from
+    CHARACTER(len=*), OPTIONAL, INTENT(IN)    :: name_extdim  !< name of the variable in the file
+    INTEGER, OPTIONAL,          INTENT(IN)    :: size_extdim  !< size of additional dim for bgcms with 3dims
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER :: bgcm_idx                   !< index of this bgcm in the store
+    INTEGER :: i_part                     !< index of compartment
+    INTEGER :: i_elem                     !< index of element
+    INTEGER :: i_dim3                     !< third dim index
+    REAL(wp), POINTER :: ptr2D(:,:)       !< temporary pointers for 2D variables (elements)
+    REAL(wp), POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables (elements)
+    CHARACTER(len=:), ALLOCATABLE :: elem_name
+    CHARACTER(len=:), ALLOCATABLE :: compartment_name
+    CHARACTER(len=:), ALLOCATABLE :: bgcm_var_name_prefix
+    CHARACTER(len=:), ALLOCATABLE :: var_name
+    CHARACTER(len=*), PARAMETER   :: routine = modname//':read_bgcm_from_file'
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Get index of the queried bgcm in this store
+    bgcm_idx = get_bgcm_idx(this, bgcm_id, tile_name, routine)
+    IF (debug_on()) &
+      & CALL message(TRIM(routine), 'Read bcgm '// TRIM(this%bgc_material_name(bgcm_idx)) //' for tile '//TRIM(tile_name))
+
+    bgcm_var_name_prefix = process_name//'_'//TRIM(this%bgc_material_name(bgcm_idx))
+
+    IF (this%nr_of_dimensions(bgcm_idx) == 3 .AND. (.NOT. (PRESENT(size_extdim) .AND. PRESENT(name_extdim)))) THEN
+      CALL finish(TRIM(routine), 'Please pass the size and the name of the additional dimension in order to read the 3D' &
+        &   // ' bgcm '//TRIM(this%bgc_material_name(bgcm_idx))//' on tile '//TRIM(tile_name)//'!')
+    END IF
+
+    SELECT CASE(this%nr_of_levels(bgcm_idx))
+    CASE(1)
+      ! i.e. only elements
+      SELECT CASE(this%nr_of_dimensions(bgcm_idx))
+      CASE(2)
+        ! 1level 2D
+        DO i_elem = 1,this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+          elem_name = TRIM(this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%element_shortname(i_elem))
+          var_name = bgcm_var_name_prefix//'_'//elem_name//'_'//TRIM(tile_name)
+          ptr2D => this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_1l_p(i_elem)%p%ptr2d(:,:)
+          CALL read_2D_var(input_file, ptr2D, var_name)
+        END DO
+      CASE(3)
+        ! 1level 3D
+        DO i_elem = 1,this%store_1l_3d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+          elem_name = TRIM(this%store_1l_3d_bgcms(this%idx_in_store(bgcm_idx))%element_shortname(i_elem))
+          var_name = bgcm_var_name_prefix//'_'//elem_name//'_'//TRIM(tile_name)
+          ptr3D => this%store_1l_3d_bgcms(this%idx_in_store(bgcm_idx))%collection_1l_p(i_elem)%p%ptr3d(:,:,:)
+          CALL read_3D_var(input_file, ptr3D, var_name, name_extdim, size_extdim)
+        END DO
+      END SELECT
+    CASE(2)
+      ! i.e. with compartments
+      SELECT CASE(this%nr_of_dimensions(bgcm_idx))
+      CASE(2)
+        ! 2levels 2D
+        DO i_part = 1,this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_parts
+          compartment_name = TRIM(this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%compartment_shortname(i_part))
+          DO i_elem = 1,this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+            elem_name = TRIM(this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%element_shortname(i_elem))
+            var_name = bgcm_var_name_prefix//'_'//compartment_name//'_'//elem_name//'_'//TRIM(tile_name)
+            ptr2D => this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_2l_p(i_part, i_elem)%p%ptr2d(:,:)
+            CALL read_2D_var(input_file, ptr2D, var_name)
+          END DO
+        END DO
+      CASE(3)
+        ! 2levels 3D -> fill matrix (parts, elems, nc, var_dim3, nblks)
+        DO i_part = 1,this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_parts
+          compartment_name = TRIM(this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%compartment_shortname(i_part))
+          DO i_elem = 1,this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+            elem_name = TRIM(this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%element_shortname(i_elem))
+            var_name = bgcm_var_name_prefix//'_'//compartment_name//'_'//elem_name//'_'//TRIM(tile_name)
+            ptr3D => this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%collection_2l_p(i_part, i_elem)%p%ptr3d(:,:,:)
+            CALL read_3D_var(input_file, ptr3D, var_name, name_extdim, size_extdim)
+          END DO
+        END DO
+      END SELECT
+    END SELECT
+
+  END SUBROUTINE read_bgcm_from_file
+#endif
 
   ! ======================================================================================================= !
   !>
@@ -609,6 +721,8 @@ CONTAINS
       DO i = 1,SIZE(bgcm_store%store_1l_2d_bgcms)
         IF(ALLOCATED(bgcm_store%store_1l_2d_bgcms(i)%collection_1l_p)) &
           & DEALLOCATE(bgcm_store%store_1l_2d_bgcms(i)%collection_1l_p)
+        IF(ALLOCATED(bgcm_store%store_1l_2d_bgcms(i)%element_shortname)) &
+          & DEALLOCATE(bgcm_store%store_1l_2d_bgcms(i)%element_shortname)
         !$ACC EXIT DATA DELETE(bgcm_store%store_1l_2d_bgcms(i)%mt_1l_2d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_1l_2d_bgcms(i)%mt_1l_2d_bgcm)) &
           & DEALLOCATE(bgcm_store%store_1l_2d_bgcms(i)%mt_1l_2d_bgcm)
@@ -623,6 +737,8 @@ CONTAINS
       DO i = 1,SIZE(bgcm_store%store_1l_3d_bgcms)
         IF(ALLOCATED(bgcm_store%store_1l_3d_bgcms(i)%collection_1l_p)) &
           & DEALLOCATE(bgcm_store%store_1l_3d_bgcms(i)%collection_1l_p)
+        IF(ALLOCATED(bgcm_store%store_1l_3d_bgcms(i)%element_shortname)) &
+          & DEALLOCATE(bgcm_store%store_1l_3d_bgcms(i)%element_shortname)
         !$ACC EXIT DATA DELETE(bgcm_store%store_1l_3d_bgcms(i)%mt_1l_2d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_1l_3d_bgcms(i)%mt_1l_2d_bgcm)) &
           & DEALLOCATE(bgcm_store%store_1l_3d_bgcms(i)%mt_1l_2d_bgcm)
@@ -637,6 +753,10 @@ CONTAINS
       DO i = 1,SIZE(bgcm_store%store_2l_2d_bgcms)
         IF(ALLOCATED(bgcm_store%store_2l_2d_bgcms(i)%collection_2l_p)) &
           & DEALLOCATE(bgcm_store%store_2l_2d_bgcms(i)%collection_2l_p)
+        IF(ALLOCATED(bgcm_store%store_2l_2d_bgcms(i)%element_shortname)) &
+          & DEALLOCATE(bgcm_store%store_2l_2d_bgcms(i)%element_shortname)
+        IF(ALLOCATED(bgcm_store%store_2l_2d_bgcms(i)%compartment_shortname)) &
+          & DEALLOCATE(bgcm_store%store_2l_2d_bgcms(i)%compartment_shortname)
         !$ACC EXIT DATA DELETE(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_2d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_2d_bgcm)) &
            & DEALLOCATE(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_2d_bgcm)
@@ -651,6 +771,10 @@ CONTAINS
       DO i = 1,SIZE(bgcm_store%store_2l_3d_bgcms)
         IF(ALLOCATED(bgcm_store%store_2l_3d_bgcms(i)%collection_2l_p)) &
           & DEALLOCATE(bgcm_store%store_2l_3d_bgcms(i)%collection_2l_p)
+        IF(ALLOCATED(bgcm_store%store_2l_3d_bgcms(i)%element_shortname)) &
+          & DEALLOCATE(bgcm_store%store_2l_3d_bgcms(i)%element_shortname)
+        IF(ALLOCATED(bgcm_store%store_2l_3d_bgcms(i)%compartment_shortname)) &
+          & DEALLOCATE(bgcm_store%store_2l_3d_bgcms(i)%compartment_shortname)
         !$ACC EXIT DATA DELETE(bgcm_store%store_2l_3d_bgcms(i)%mt_2l_2d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_2l_3d_bgcms(i)%mt_2l_2d_bgcm)) &
           & DEALLOCATE(bgcm_store%store_2l_3d_bgcms(i)%mt_2l_2d_bgcm)

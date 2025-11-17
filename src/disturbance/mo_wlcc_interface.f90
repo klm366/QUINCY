@@ -349,7 +349,6 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER  :: iblk, ics, ice
-    !X if necessary: REAL(wp) :: dtime, steplen
     CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
     dsl4jsb_Def_memory(FAGE_)
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_wlcc'
@@ -359,9 +358,6 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-
-    !X if necessary: dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 

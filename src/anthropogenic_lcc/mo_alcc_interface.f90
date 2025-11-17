@@ -1,4 +1,4 @@
-!> interface to the alcc process (anthropogenic land cover change)
+!> Interface to the alcc process (anthropogenic land cover change)
 !>
 !> ICON-Land
 !>
@@ -11,7 +11,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!>#### Contains the interfaces to the alcc process, currently annually moving area fractions and to-be-conserved matter
+!>#### Contains the interfaces to the alcc process, changing area fractions and moving to-be-conserved matter
 !>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
@@ -98,9 +98,8 @@ CONTAINS
 
     USE mo_util,              ONLY: one_of
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, get_year, get_year_length
-    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, min_daily_cf_change, min_annual_cf_change, min_tolerated_cf_mismatch
+    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, min_daily_cf_change, min_annual_cf_change, max_tolerated_cf_mismatch
     USE mo_jsb_lcc,           ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc, transfer_active_to_passive_onChunk
-    USE mo_nlcc_process,      ONLY: fract_small
 
     IMPLICIT NONE
 
@@ -119,10 +118,9 @@ CONTAINS
     INTEGER  :: ic, iblk, ics, ice, nc, i_tile, i_ac_index, i_cf_tile, nr_of_tiles, current_year, number_of_days
     REAL(wp) :: dtime
     REAL(wp), ALLOCATABLE :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
-    REAL(wp), ALLOCATABLE :: lost_dynamic(:), gained_dynamic(:), area_dynamic(:)
     REAL(wp), DIMENSION(options%nc) :: cf_diff, current_fract
 
-    dsl4jsb_Real3D_onChunk :: cf_current_year, cf_day_delta
+    dsl4jsb_Real3D_onChunk :: cf_target_year, cf_day_delta
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_alcc'
     ! -------------------------------------------------------------------------------------------------- !
@@ -140,7 +138,7 @@ CONTAINS
 
     dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_memory(ALCC_)
-    dsl4jsb_Get_var3D_onChunk(ALCC_, cf_current_year)
+    dsl4jsb_Get_var3D_onChunk(ALCC_, cf_target_year)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_day_delta)
 
     ! If process is not to be calculated on this tile, do nothing
@@ -228,12 +226,12 @@ CONTAINS
         ! derive area changes
         IF(.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
           ! In case that area changes are only annually, they can directly be derived from the new cfs and the current cfs
-          cf_diff(:) = cf_current_year(:, i_cf_tile) - current_fract(:)
+          cf_diff(:) = cf_target_year(:, i_cf_tile) - current_fract(:)
 
           ! Prevent numerical issues
           WHERE (abs(cf_diff(:)) < min_annual_cf_change)
             cf_diff(:) = 0.0_wp
-            cf_current_year(:, i_cf_tile) = current_fract(:)
+            cf_target_year(:, i_cf_tile) = current_fract(:)
           END WHERE
 
         ELSE
@@ -242,15 +240,15 @@ CONTAINS
             ! if this is the start of a new year, the daily change in cf needs to be determined
             ! which is required to reach the given cf target at the end of the year
             DO ic = 1,nc
-              IF (cf_current_year(ic, i_cf_tile) < 0.0_wp) THEN
+              IF (cf_target_year(ic, i_cf_tile) < 0.0_wp) THEN
                 ! This should only happen upon init with -0.1
                 cf_day_delta(ic, i_cf_tile) = 0.0_wp
               ELSE
-                cf_day_delta(ic, i_cf_tile) = (cf_current_year(ic, i_cf_tile) - current_fract(ic)) / REAL(number_of_days, wp)
+                cf_day_delta(ic, i_cf_tile) = (cf_target_year(ic, i_cf_tile) - current_fract(ic)) / REAL(number_of_days, wp)
                 ! Prevent numerical issues
                 IF(abs(cf_day_delta(ic, i_cf_tile)) < min_daily_cf_change) THEN
                   cf_day_delta(ic, i_cf_tile) = 0.0_wp
-                  cf_current_year(ic, i_cf_tile) = current_fract(ic)
+                  cf_target_year(ic, i_cf_tile) = current_fract(ic)
                 END IF
               END IF
             END DO
@@ -262,7 +260,6 @@ CONTAINS
             ! Prevent numerical issues
             IF(abs(cf_diff(ic)) < min_daily_cf_change) THEN
               cf_diff(ic) = 0.0_wp
-              cf_day_delta(ic, i_cf_tile) = 0.0_wp
             END IF
           END DO
         END IF ! IF(.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc)
@@ -277,7 +274,7 @@ CONTAINS
       ELSE
         ! pft without children (either pft usecase or non forest pfts in fage usecase!)
         ! in the pft usecase i_cf_tile equals i_tile, however, this is not the case for non forest pfts in fage usecase
-        ! therefore cf_current_year and cf_day_delta are used with pft index (i_cf_tile)
+        ! therefore cf_target_year and cf_day_delta are used with pft index (i_cf_tile)
         ! while the lcc arrays (initial_area, lost_area and gained_area) are used with the current tile index (i_tile)
 
         ! Assert: pft without children
@@ -295,17 +292,12 @@ CONTAINS
         END IF
 
         ! derive area changes
-        IF(.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
+        IF (.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
           ! In case that area changes are only annually, they can directly be derived from the new cfs and the current cfs
           DO ic = 1,nc
-            cf_diff(ic) = cf_current_year(ic, i_cf_tile) - initial_area(ic, i_tile)
-            ! Prevent numerical issues
-            IF(abs(cf_diff(ic)) < min_annual_cf_change) THEN
-              cf_diff(ic) = 0.0_wp
-              cf_current_year(ic, i_cf_tile) = initial_area(ic, i_tile)
-            END IF
+            cf_diff(ic) = cf_target_year(ic, i_cf_tile) - initial_area(ic, i_tile)
             ! determine new cover fractions
-            current_fract(ic) = cf_current_year(ic, i_cf_tile)
+            current_fract(ic) = cf_target_year(ic, i_cf_tile)
           END DO
         ELSE
           ! else land use is to be adjusted on a daily basis
@@ -313,16 +305,11 @@ CONTAINS
             ! if this is the start of a new year, the daily change in cf needs to be determined
             ! which is required to reach the given cf target at the end of the year
             DO ic = 1,nc
-              IF (cf_current_year(ic, i_cf_tile) < 0.0_wp) THEN
+              IF (cf_target_year(ic, i_cf_tile) < 0.0_wp) THEN
                 ! This should only happen upon init with -0.1
                 cf_day_delta(ic, i_cf_tile) = 0.0_wp
               ELSE
-                cf_day_delta(ic, i_cf_tile) = (cf_current_year(ic, i_cf_tile) - initial_area(ic, i_tile)) / REAL(number_of_days, wp)
-                ! Prevent numerical issues
-                IF(abs(cf_day_delta(ic, i_cf_tile)) < min_daily_cf_change) THEN
-                  cf_day_delta(ic, i_cf_tile) = 0.0_wp
-                  cf_current_year(ic, i_cf_tile) = initial_area(ic, i_tile)
-                END IF
+                cf_day_delta(ic, i_cf_tile) = (cf_target_year(ic, i_cf_tile) - initial_area(ic, i_tile)) / REAL(number_of_days, wp)
               END IF
             END DO
           END IF ! IF(is_newyear(options%current_datetime,dtime))
@@ -330,16 +317,19 @@ CONTAINS
           ! now cf_day_delta can be used (no matter if just calculated or from earlier in the year or from restart)
           DO ic = 1,nc
             cf_diff(ic) = cf_day_delta(ic, i_cf_tile)
-            ! Prevent numerical issues
-            IF(abs(cf_diff(ic)) < min_daily_cf_change) THEN
-              cf_diff(ic) = 0.0_wp
-              cf_day_delta(ic, i_cf_tile) = 0.0_wp
+
+            ! determine new cover fractions
+            IF ((cf_diff(ic) < 0.0_wp) .AND. (ABS(cf_diff(ic)) >= initial_area(ic, i_tile))) THEN
+              current_fract(ic) = 0.0_wp
+              cf_diff(ic) = -1.0_wp * initial_area(ic, i_tile)
+            ELSE IF ((cf_diff(ic) > 0.0_wp) .AND. ((cf_diff(ic) + initial_area(ic, i_tile)) >= 1.0_wp)) THEN
+              current_fract(ic) = 1.0_wp
+              cf_diff(ic) = 1.0_wp - initial_area(ic, i_tile)
+            ELSE
+              current_fract(ic) = initial_area(ic, i_tile) + cf_diff(ic)
             END IF
           END DO
-
-          ! determine new cover fractions
-          current_fract(:) = initial_area(:, i_tile) + cf_diff(:)
-        END IF ! IF (.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc)
+        END IF ! l_daily_alcc
 
         DO ic = 1,nc
           IF(cf_diff(ic) >= 0.0_wp) THEN
@@ -355,77 +345,26 @@ CONTAINS
       END IF ! If with jsbach_forest_age_classes usecase and forest pft or pft without leaves
 
       current_tile => current_tile%Get_next_sibling_tile()
-    END DO
+    END DO ! current_tile
 
-    !>     Now handle the dynamic PFT tiles
-
-    ! In case natural landcover change (nlcc) is active, the natural PFT fractions should not be
-    ! set to the map's fractions. The fractions of the dynamic PFT tiles need to be rescaled all
-    ! together, corresponding to the changes of the non-dynamic PFTs.
-
+    !>     If demanded: handle the dynamic PFT tiles
     IF (model%Is_process_enabled(NLCC_)) THEN
-
-      ! Allocate area vectors
-      ALLOCATE(lost_dynamic(nc))
-      ALLOCATE(gained_dynamic(nc))
-      ALLOCATE(area_dynamic(nc))
-      lost_dynamic(:)   = 0.0_wp
-      gained_dynamic(:) = 0.0_wp
-      area_dynamic(:)   = 0.0_wp
-
-      current_tile => tile%Get_first_child_tile()
-      i_tile = 0
-      DO WHILE (ASSOCIATED(current_tile))
-        i_tile = i_tile + 1
-
-        IF (dsl4jsb_Lctlib_param_tile(dynamic_PFT, current_tile)) THEN
-          ! Sum up the total area fraction of the dynamic PFT tiles
-          area_dynamic(:) = area_dynamic(:) + initial_area(:,i_tile)
-        ELSE
-          ! The area losses/gains of the non-dynamic PFTs define the joint gains/losses
-          ! of the dynamic PFTs
-          gained_dynamic(:) = gained_dynamic(:) + lost_area(:,i_tile)
-          lost_dynamic(:)   = lost_dynamic(:)   + gained_area(:,i_tile)
-        END IF
-        current_tile => current_tile%Get_next_sibling_tile()
-      END DO
-
-      current_tile => tile%Get_first_child_tile()
-      i_tile = 0
-      DO WHILE (ASSOCIATED(current_tile))
-        i_tile = i_tile + 1
-
-        IF (dsl4jsb_Lctlib_param_tile(dynamic_PFT, current_tile)) THEN
-          DO ic = 1, nc
-            ! The dynamic PFTs are gaining or losing area proportional to their current area fractions
-            IF (area_dynamic(ic) > fract_small) THEN
-              gained_area(ic,i_tile) = MIN(gained_dynamic(ic) * initial_area(ic,i_tile) / area_dynamic(ic), 1._wp - initial_area(ic,i_tile))
-              lost_area(ic,i_tile)   = MIN(lost_dynamic(ic)   * initial_area(ic,i_tile) / area_dynamic(ic), initial_area(ic,i_tile))
-            ELSE
-              gained_area(ic,i_tile) = 0._wp
-              lost_area(ic,i_tile)   = 0._wp
-            END IF
-
-            current_fract(ic) = initial_area(ic, i_tile) + gained_area(ic,i_tile) - lost_area(ic,i_tile)
-          END DO
-          ! Update the fractions of dynamic PFTs
-          CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
-
-        END IF
-        current_tile => current_tile%Get_next_sibling_tile()
-      END DO
-
-      DEALLOCATE(lost_dynamic, gained_dynamic, area_dynamic)
-    END IF  ! with NLCC
+      CALL handle_dynamic_pfts(tile, options, initial_area, gained_area, lost_area)
+    END IF
 
     !>
-    !>     Assert: sum of gained area should equal sum of lost area
+    !>     Sum of gained area needs to equal sum of lost area in order to conserve carbon
     !>
-    cf_diff = SUM(gained_area,DIM=2) - SUM(lost_area,DIM=2)
-    IF (ANY( cf_diff > min_tolerated_cf_mismatch)) THEN
+    cf_diff(:) = SUM(gained_area(:,:),DIM=2) - SUM(lost_area(:,:),DIM=2)
+    ! Check for violations outside of the tolerated range (which are probably rather due to errors than precision)
+    IF (ANY(ABS(cf_diff(:)) > max_tolerated_cf_mismatch)) THEN
       WRITE (message_text,*) 'Violation of assertion: gained area does not equal lost area! Please check input data. ' &
-        & // 'Max difference of: ', MAXVAL(cf_diff)
+        & // 'Max difference of: ', MAXVAL(cf_diff(:))
       CALL finish(TRIM(routine), TRIM(message_text))
+    END IF
+    IF (model%config%check_child_cf) THEN
+      ! Check and correct remaining mismatches
+      CALL check_and_correct_cf_mismatches(tile, options, nr_of_tiles, gained_area, lost_area)
     END IF
 
     !>
@@ -489,7 +428,6 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER  :: iblk, ics, ice
-    !X if necessary: REAL(wp) :: dtime, steplen
     CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
     dsl4jsb_Def_memory(FAGE_)
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_alcc'
@@ -551,6 +489,158 @@ CONTAINS
     CALL distribute_forest_loss_from_alcc(tile, options, this_loss(:), i_first_child, lost_area(:, :))
 
   END SUBROUTINE redistribute_cover_fraction_changes_of_forest_pft
+
+
+  ! ====================================================================================================== !
+  !> #### Handle antropogenic LCC if NLCC is active
+  !
+  !>  In case natural landcover change (nlcc) is active, the natural PFT fractions should not be
+  !>  set to the map's fractions. The fractions of the dynamic PFT tiles need to be rescaled all
+  !>  together, corresponding to the changes of the non-dynamic PFTs.
+  !
+  SUBROUTINE handle_dynamic_pfts(tile, options, initial_area, gained_area, lost_area)
+    USE mo_nlcc_process,      ONLY: fract_small
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile             !< Parent tile for which the routine is called
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options          !< Additional run-time parameters
+    REAL(wp),                   INTENT(inout) :: initial_area(:,:) !< Initial_area matrix for lcc calculations
+    REAL(wp),                   INTENT(inout) :: gained_area(:,:)  !< Gained_area matrix for lcc calculations
+    REAL(wp),                   INTENT(inout) :: lost_area(:,:)    !< Lost_area matrix for lcc calculations
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER  :: ic, i_tile                                !< Looping indices
+    TYPE(t_jsb_model), POINTER          :: model
+    CLASS(t_jsb_tile_abstract), POINTER :: current_tile   !< Pointer on currently investigated tile7
+    REAL(wp), DIMENSION(options%nc)     :: current_fract  !< Cover fraction if current tile
+    REAL(wp), DIMENSION(options%nc)     :: area_dynamic   !< Cover fraction correction
+    REAL(wp), DIMENSION(options%nc)     :: gained_dynamic !< Cover fraction correction
+    REAL(wp), DIMENSION(options%nc)     :: lost_dynamic   !< Cover fraction correction
+    CHARACTER(len=*), PARAMETER :: routine = modname//':handle_dynamic_pfts'
+    ! -------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+
+    ! Init area vectors
+    lost_dynamic(:)   = 0.0_wp
+    gained_dynamic(:) = 0.0_wp
+    area_dynamic(:)   = 0.0_wp
+
+    current_tile => tile%Get_first_child_tile()
+    i_tile = 0
+    DO WHILE (ASSOCIATED(current_tile))
+      i_tile = i_tile + 1
+
+      IF (dsl4jsb_Lctlib_param_tile(dynamic_PFT, current_tile)) THEN
+        ! Sum up the total area fraction of the dynamic PFT tiles
+        area_dynamic(:) = area_dynamic(:) + initial_area(:,i_tile)
+      ELSE
+        ! The area losses/gains of the non-dynamic PFTs define the joint gains/losses
+        ! of the dynamic PFTs
+        gained_dynamic(:) = gained_dynamic(:) + lost_area(:,i_tile)
+        lost_dynamic(:)   = lost_dynamic(:)   + gained_area(:,i_tile)
+      END IF
+      current_tile => current_tile%Get_next_sibling_tile()
+    END DO
+
+    current_tile => tile%Get_first_child_tile()
+    i_tile = 0
+    DO WHILE (ASSOCIATED(current_tile))
+      i_tile = i_tile + 1
+
+      IF (dsl4jsb_Lctlib_param_tile(dynamic_PFT, current_tile)) THEN
+        DO ic = 1, options%nc
+          ! The dynamic PFTs are gaining or losing area proportional to their current area fractions
+          IF (area_dynamic(ic) > fract_small) THEN
+            gained_area(ic,i_tile) = MIN(gained_dynamic(ic) * initial_area(ic,i_tile) / area_dynamic(ic), &
+              &                          1._wp - initial_area(ic,i_tile))
+            lost_area(ic,i_tile)   = MIN(lost_dynamic(ic)   * initial_area(ic,i_tile) / area_dynamic(ic), &
+              &                          initial_area(ic,i_tile))
+          ELSE
+            gained_area(ic,i_tile) = 0._wp
+            lost_area(ic,i_tile)   = 0._wp
+          END IF
+
+          current_fract(ic) = initial_area(ic, i_tile) + gained_area(ic,i_tile) - lost_area(ic,i_tile)
+        END DO
+        ! Update the fractions of dynamic PFTs
+        CALL current_tile%Set_fraction(options%ics, options%ice, options%iblk, fract=current_fract(:))
+
+      END IF
+      current_tile => current_tile%Get_next_sibling_tile()
+    END DO
+
+  END SUBROUTINE handle_dynamic_pfts
+
+  ! ====================================================================================================== !
+  !> #### Check and if required correct gained and lost areas
+  !>
+  !> Verify that the total gained area fraction equals the lost area fractions and apply corrections in
+  !> case of a mismatch.
+  !
+  SUBROUTINE check_and_correct_cf_mismatches(tile, options, nr_of_tiles, gained_area, lost_area)
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile             !< Parent tile for which the routine is called
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options          !< Additional run-time parameters
+    INTEGER,                    INTENT(in)    :: nr_of_tiles      !< Number of tiles involved in the lcc calculation
+    REAL(wp),                   INTENT(inout) :: gained_area(:,:) !< Gained_area matrix for lcc calculations
+    REAL(wp),                   INTENT(inout) :: lost_area(:,:)   !< Lost_area matrix for lcc calculations
+    ! -------------------------------------------------------------------------------------------------- !
+    LOGICAL  :: gained_exceeds_loss !< Logical indicating if an area gain exceeds an area loss; used to assert carbon conservation
+    INTEGER  :: ic, i_tile, i_sort  !< Looping indices
+    REAL(wp) :: remaining_diff      !< Remaining difference between area losses and gains
+    INTEGER  :: i_max_changing_tile !< Tile with the largest area change left
+    CLASS(t_jsb_tile_abstract), POINTER            :: current_tile  !< Pointer on currently investigated tile
+    REAL(wp), DIMENSION(options%nc)                :: current_fract !< Cover fraction if current tile
+    REAL(wp), DIMENSION(options%nc)                :: cf_diff       !< Difference between gained and lost areas
+    LOGICAL,  DIMENSION(nr_of_tiles)               :: masked_tiles  !< Mask of already considered tiles
+    REAL(wp), DIMENSION(nr_of_tiles)               :: area_change   !< Area change to sort for (either losses or gains)
+    REAL(wp), DIMENSION(options%nc, nr_of_tiles) :: cf_correction   !< Cover fraction correction
+    CHARACTER(len=*), PARAMETER :: routine = modname//':check_and_correct_cf_mismatches'
+    ! -------------------------------------------------------------------------------------------------- !
+    cf_diff(:) = SUM(gained_area(:,:),DIM=2) - SUM(lost_area(:,:),DIM=2)
+    cf_correction(:,:) = 0.0_wp
+    area_change(:) = 0.0_wp
+
+    IF (ANY(ABS(cf_diff(:)) > EPSILON(1._wp))) THEN  !EPSILON(1._wp) ! 1.E-15_wp
+      DO ic = 1, options%nc
+        IF (ABS(cf_diff(ic)) > EPSILON(1._wp)) THEN
+          masked_tiles(:) = .FALSE.
+          remaining_diff = cf_diff(ic)
+          DO i_sort = 1, nr_of_tiles
+            IF (remaining_diff > EPSILON(1._wp)) THEN
+              ! I.e. gain > loss
+              area_change(:) = gained_area(ic,:)
+              i_tile = MAXLOC(area_change(:), DIM=1, MASK=masked_tiles(:))
+              cf_correction(ic,i_tile) = MIN(remaining_diff, gained_area(ic,i_tile))
+              remaining_diff = MAX(0.0_wp, remaining_diff - gained_area(ic,i_tile))
+              gained_area(ic,i_tile) = gained_area(ic,i_tile) - cf_correction(ic,i_tile)
+              masked_tiles(i_tile) = .TRUE.
+            ELSE IF (remaining_diff < -EPSILON(1._wp)) THEN
+              ! I.e. loss > gain
+              area_change(:) = lost_area(ic,:)
+              i_tile = MAXLOC(area_change(:), DIM=1, MASK=masked_tiles(:))
+              cf_correction(ic,i_tile) = - MIN(ABS(remaining_diff), lost_area(ic,i_tile))
+              remaining_diff = - MAX(0.0_wp, ABS(remaining_diff) - lost_area(ic,i_tile))
+              lost_area(ic,i_tile) = lost_area(ic,i_tile) - cf_correction(ic,i_tile)
+              masked_tiles(i_tile) = .TRUE.
+            ELSE
+              EXIT
+            END IF
+          END DO
+        END IF
+      END DO ! ic = 1, nc
+
+      ! If requried modify tiles and area changes accordingly
+      current_tile => tile%Get_first_child_tile()
+      i_tile = 0
+      DO WHILE (ASSOCIATED(current_tile))
+        i_tile = i_tile + 1
+        CALL current_tile%Get_fraction(options%ics, options%ice, options%iblk, fract=current_fract(:))
+        current_fract(:) = current_fract(:) - cf_correction(:,i_tile)
+        CALL current_tile%Set_fraction(options%ics, options%ice, options%iblk, fract=current_fract(:))
+        current_tile => current_tile%Get_next_sibling_tile()
+      END DO ! WHILE (ASSOCIATED(current_tile))
+    END IF ! (ANY(ABS(cf_diff) > EPSILON(1._wp))) THEN
+
+  END SUBROUTINE check_and_correct_cf_mismatches
 
 #endif
 END MODULE mo_alcc_interface

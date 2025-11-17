@@ -248,7 +248,7 @@ MODULE mo_carbon_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_carbon_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_carbon_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -259,6 +259,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)    :: model_id
 
     dsl4jsb_Def_config(PHENO_)    ! needed for l_forestRegrowth
@@ -726,7 +727,7 @@ CONTAINS
       & t_cf('c_greenwood2litter_ta', 'mol(CO2) m-2 s-1', 'Total litter flux entering the soil pools.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
       & prefix, suffix,                                                                                &
-      & output_level=BASIC,                                                                            &
+      & output_level=MEDIUM,                                                                           &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('c_green_ta', mem%c_green_ta,                                        &
@@ -1003,7 +1004,6 @@ CONTAINS
       & t_cf('excess_NPP_ta', 'mol(C) m-2  s-1', 'NPP that could not be not stored in vegetation carbon pools.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
-      & output_level=BASIC,                                                                                &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     !      CALL mem%Add_var('lai_yydaymean_ta', mem%LAI_yyDayMean_ta,              &
@@ -1085,6 +1085,7 @@ CONTAINS
       & t_cf('co2flux_fire_all_2_atm_ta', 'kg(CO2) m-2 s-1', 'CO2 flux from C pools to atmosphere due to fire.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                &
       & prefix, suffix, loutput=.TRUE.,                                                                   &
+      & output_level=BASIC,                                                                               &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('co2_l2a_npp_ta', mem%co2flux_npp_2_atm_ta,                                                     &
@@ -1126,7 +1127,6 @@ CONTAINS
       & 'C conservation test: should be zero'),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
       & prefix, suffix,                                                           &
-      & output_level=BASIC,                                                       &
       & loutput=.TRUE.,lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('c_decomp_humus_1_sum', mem%c_decomp_humus_1_sum, hgrid, surface,                                 &

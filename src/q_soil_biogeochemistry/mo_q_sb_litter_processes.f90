@@ -39,8 +39,8 @@ CONTAINS
   !>according to their root profile
   !>
   SUBROUTINE calc_litter_partitioning( &
-    & nc, &                         ! in
-    & nsoil_sb, &
+    & nc, &                            ! in
+    & nsoil_w, &
     & num_sl_above_bedrock, &
     & lctlib_sla, &
     & lctlib_growthform, &
@@ -50,19 +50,19 @@ CONTAINS
     & veg_litterfall_mt, &             ! in
     & sb_formation_mt )                ! inout
 
-    USE mo_veg_constants,           ONLY: ITREE, IGRASS
+    USE mo_veg_constants,           ONLY: ITREE, IGRASS, ICROP
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_sb_constants,            ONLY: fc_soluable_max, k_fc_soluable, k_fn_soluable, k_fp_soluable, &
                                           lc_leaf_max, lc_leaf2sla, lc_fine_root, lc_coarse_root, lc_fruit, lc_seed_bed
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc                        !< dimension
-    INTEGER,                           INTENT(in)    :: nsoil_sb                  !< nr soil layer
+    INTEGER,                           INTENT(in)    :: nsoil_w                   !< nr soil layer
     REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock      !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     REAL(wp),                          INTENT(in)    :: lctlib_sla                !< lctlib parameter
     INTEGER,                           INTENT(in)    :: lctlib_growthform         !< lctlib parameter
     CHARACTER(len=*),                  INTENT(in)    :: sb_model_scheme           !< config option: soil model
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: soil_depth_sl             !< soil layer thickness
-    REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(in)    :: root_fraction_sl          !< root fraction per soil layer
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: soil_depth_sl             !< soil layer thickness
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: root_fraction_sl          !< root fraction per soil layer
     REAL(wp),                          INTENT(in)    :: veg_litterfall_mt(:,:,:)  !< bgcm flux: vegetation litterfall
     REAL(wp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)  !< bgcm flux: soil biogeochemistry formation flux
     ! ----------------------------------------------------------------------------------------------------- !
@@ -304,7 +304,7 @@ CONTAINS
         &           sb_formation_mt(ix_woody_litter, ixN15, :, 1) &
         &           + (veg_litterfall_mt(ix_sap_wood, ixN15, :) + veg_litterfall_mt(ix_heart_wood, ixN15, :)) / soil_depth_sl(:,1)
     ! grass PFT
-    CASE (IGRASS)
+    CASE (IGRASS,ICROP)
       ! soluable litter
       sb_formation_mt(ix_soluable_litter, ixC, :, 1) = &
         &             sb_formation_mt(ix_soluable_litter, ixC, :, 1) &
