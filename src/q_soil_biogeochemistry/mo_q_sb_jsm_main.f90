@@ -532,7 +532,7 @@ CONTAINS
         fine_root_carbon_sl(:,isoil)        = 0.0_wp
         growth_p_limit_smoothed_sl(:,isoil) = 0.0_wp
       ENDWHERE
-    ENDDO
+    END DO
     unit_uptake_n_pot(:) = 0.0_wp
     unit_uptake_p_pot(:) = 0.0_wp
 
@@ -579,7 +579,7 @@ CONTAINS
       & bulk_dens_corr_sl(:,:), &
       & volume_min_sl(:,:), &
       & fine_root_carbon_sl(:,:), &
-      & vmax_weath_mineral_sl, &
+      & vmax_weath_mineral_sl(:,:), &
       & enzyme_frac_AP(:,:), &
       & growth_p_limit_smoothed_sl(:,:), &            ! in
       & sb_loss_mt(ix_dom_assoc, ixP, :, :), &        ! inout

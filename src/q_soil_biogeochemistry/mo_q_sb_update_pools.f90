@@ -988,7 +988,7 @@ CONTAINS
     !> 10.3 update mineral P pools if not prescibed
     !!
     IF(.NOT. dsl4jsb_Config(SB_)%flag_sb_prescribe_po4) THEN
-      CALL calc_p_inorg_dynamics(nc, nsoil_w, dtime, &
+      CALL calc_p_inorg_dynamics(nc, nsoil_w, dtime, num_sl_above_bedrock(:), &
                                        TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                        TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
                                        dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
@@ -1267,6 +1267,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_p_inorg_dynamics(nc, nsoil_w, &
                                    dtime, &
+                                   num_sl_above_bedrock, &
                                    sb_model_scheme, &
                                    sb_adsorp_scheme, &
                                    flag_sb_double_langmuir, &
@@ -1305,6 +1306,7 @@ CONTAINS
     INTEGER,                                          INTENT(in)    :: nc, &                         !< dimensions
                                                                        nsoil_w
     REAL(wp),                                         INTENT(in)    :: dtime                         !< timestep length
+    REAL(wp), DIMENSION(nc),                          INTENT(in)    :: num_sl_above_bedrock          !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     CHARACTER(len=*),                                 INTENT(in)    :: sb_model_scheme               !< from sb config
     CHARACTER(len=*),                                 INTENT(in)    :: sb_adsorp_scheme              !< eca_full or eca_none
     LOGICAL ,                                         INTENT(in)    :: flag_sb_double_langmuir       !< T: double Langmuir; F: traditional Langmuir
@@ -1338,7 +1340,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_w)            :: hlp1, hlp2, hlp3, hlp4, &
                                                    partition_coef, & !< partition coefficient to soluble po4
                                                    partition_coef_1  !< partition coefficient to absorbed po4
-    INTEGER                                     :: isoil, ichunk     !< loop over nsoil_w and nc
+    INTEGER                                     :: ic, is            !< loop over num_sl_above_bedrock and nc
     LOGICAL , DIMENSION(nc, nsoil_w)            :: flag_arr          !< logical array helper
     CHARACTER(len=*), PARAMETER                 :: routine = TRIM(modname)//':calc_p_inorg_dynamics'
 
@@ -1354,80 +1356,81 @@ CONTAINS
 
     !>1.0 limit to possible assoc_slow
     !>
-    hlp1(:,:) = k_desorpt_po4_act(:,:) * po4_assoc_slow(:,:) * dtime
-    hlp2(:,:) = k_adsorpt_po4_act(:,:) * po4_assoc_fast(:,:) * dtime
-    hlp3(:,:) = po4_assoc_slow(:,:) + hlp2(:,:) - hlp1(:,:) + (transport_po4_assoc_slow(:,:) - occlusion_po4(:,:)) * &
-                dtime / 1000000._wp
-    WHERE (hlp3(:,:) < eps8)
-      hlp3(:,:) = po4_assoc_slow(:,:) + transport_po4_assoc_slow(:,:) * dtime / 1000000._wp + hlp2(:,:)
-      hlp4(:,:) = hlp1(:,:) + occlusion_po4(:,:) * dtime / 1000000._wp
-      WHERE (hlp4(:,:) < eps8)
-        hlp1(:,:) = 0._wp
-        occlusion_po4(:,:) = 0._wp
-      ELSEWHERE
-        hlp1(:,:) = hlp1(:,:) * hlp3(:,:) / hlp4(:,:)
-        occlusion_po4(:,:) = occlusion_po4(:,:) * hlp3(:,:) / hlp4(:,:)
-      ENDWHERE
-      slow_exchange_po4(:,:) = (hlp2(:,:) - hlp1(:,:)) / dtime * 1000000._wp
-    ENDWHERE
-
-    !> 2.1 Langmuir equilibrium between soluble P and labile P, simple_1d and jsm model
-    !> 2.1.1 traditional Langmuir isotherm
-    !>
-    IF (.NOT. flag_sb_double_langmuir) THEN ! if_iso2
-      hlp1(:,:) = (weathering_po4(:,:) + biochem_mineralisation_po4(:,:) + net_mineralisation_po4(:,:) + &
-                   transport_po4_solute(:,:) - lateral_loss_po4_solute_sl(:,:) + p_deposition_sl(:,:) - &
-                   (plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) + slow_exchange_po4(:,:)) + &
-                   transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
-      hlp2(:,:) = (slow_exchange_po4(:,:) - transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
-
-      CALL calc_langmuir_kinetics(dtime, hlp1(:,:), &
-                                  po4_solute(:,:),po4_assoc_fast(:,:), &
-                                  km_adsorpt_po4_act(:,:), qmax_po4_mineral_act(:,:), &
-                                  partition_coef(:,:))
-    !> 2.1.2 double-surface Langmuir isotherm
-    !>
-    ELSE
-      flag_arr(:,:) = ((qmax_slow_po4_act(:,:) - po4_assoc_slow(:,:))<eps4 .AND. po4_assoc_slow(:,:) > eps4)
-      WHERE (flag_arr(:,:))
-        slow_exchange_po4(:,:) = - k_desorpt_po4_act * po4_assoc_slow(:,:) * 1000000._wp
-      ELSEWHERE
-        slow_exchange_po4(:,:) = 0._wp
-      ENDWHERE
-      hlp1(:,:) = (weathering_po4(:,:) + biochem_mineralisation_po4(:,:) + net_mineralisation_po4(:,:) + &
-                   transport_po4_solute(:,:) - lateral_loss_po4_solute_sl(:,:) + p_deposition_sl(:,:) - &
-                   (plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) + slow_exchange_po4(:,:)) + &
-                   transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
-      hlp2(:,:) = ( - transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
-
-      DO ichunk = 1, nc
-        DO isoil = 1, nsoil_w
-          IF (flag_arr(ichunk,isoil)) THEN
-            CALL calc_langmuir_kinetics(dtime, hlp1(ichunk,isoil), &
-                                        po4_solute(ichunk,isoil),po4_assoc_fast(ichunk,isoil), &
-                                        km_fast_po4_act(ichunk,isoil), qmax_fast_po4_act(ichunk,isoil), &
-                                        partition_coef(ichunk,isoil))
+    DO ic = 1,nc
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
+        hlp1(ic,is) = k_desorpt_po4_act(ic,is) * po4_assoc_slow(ic,is) * dtime
+        hlp2(ic,is) = k_adsorpt_po4_act(ic,is) * po4_assoc_fast(ic,is) * dtime
+        hlp3(ic,is) = po4_assoc_slow(ic,is) + hlp2(ic,is) - hlp1(ic,is) + &
+                      (transport_po4_assoc_slow(ic,is) - occlusion_po4(ic,is)) * dtime / 1000000._wp
+        IF (hlp3(ic,is) < eps8) THEN
+          hlp3(ic,is) = po4_assoc_slow(ic,is) + transport_po4_assoc_slow(ic,is) * dtime / 1000000._wp + hlp2(ic,is)
+          hlp4(ic,is) = hlp1(ic,is) + occlusion_po4(ic,is) * dtime / 1000000._wp
+          IF (hlp4(ic,is) < eps8) THEN
+            hlp1(ic,is) = 0._wp
+            occlusion_po4(ic,is) = 0._wp
           ELSE
-            CALL calc_langmuir_kinetics(dtime, hlp1(ichunk,isoil), &
-                                        po4_solute(ichunk,isoil),po4_assoc_fast(ichunk,isoil), &
-                                        km_adsorpt_po4_act(ichunk,isoil), qmax_po4_mineral_act(ichunk,isoil), &
-                                        partition_coef(ichunk,isoil), &
-                                        po4_assoc_slow(ichunk,isoil), &
-                                        km_fast_po4_act(ichunk,isoil), qmax_fast_po4_act(ichunk,isoil), &
-                                        km_slow_po4_act(ichunk,isoil), qmax_slow_po4_act(ichunk,isoil), &
-                                        partition_coef_1(ichunk,isoil), slow_exchange_po4(ichunk,isoil))
+            hlp1(ic,is) = hlp1(ic,is) * hlp3(ic,is) / hlp4(ic,is)
+            occlusion_po4(ic,is) = occlusion_po4(ic,is) * hlp3(ic,is) / hlp4(ic,is)
           ENDIF
-        ENDDO
-      ENDDO
-    ENDIF ! if_iso2
+          slow_exchange_po4(ic,is) = (hlp2(ic,is) - hlp1(ic,is)) / dtime * 1000000._wp
+        ENDIF
 
-    !>3.0 update po4_solute, fast_assoc_po4, and slow_assoc_po4
-    !>
-    po4_solute(:,:)        = po4_solute(:,:) + partition_coef(:,:) * hlp1(:,:)
-    po4_assoc_fast(:,:)    = po4_assoc_fast(:,:)  + (1._wp - partition_coef(:,:) - partition_coef_1(:,:)) * hlp1(:,:)
-    fast_exchange_po4(:,:) = ((1._wp-partition_coef(:,:)-partition_coef_1(:,:)) * hlp1(:,:)+hlp2(:,:)) * 1.e6_wp / dtime
-    po4_assoc_slow(:,:)    = po4_assoc_slow(:,:) + &
-                            (slow_exchange_po4(:,:) - occlusion_po4(:,:) + transport_po4_assoc_slow(:,:)) * dtime / 1.e6_wp
+        !> 2.1 Langmuir equilibrium between soluble P and labile P, simple_1d and jsm model
+        !> 2.1.1 traditional Langmuir isotherm
+        !>
+        IF (.NOT. flag_sb_double_langmuir) THEN ! if_iso2
+          hlp1(ic,is) = (weathering_po4(ic,is) + biochem_mineralisation_po4(ic,is) + net_mineralisation_po4(ic,is) + &
+                       transport_po4_solute(ic,is) - lateral_loss_po4_solute_sl(ic,is) + p_deposition_sl(ic,is) - &
+                       (plant_uptake_po4_sl(ic,is) + mycorrhiza_uptake_po4_sl(ic,is) + slow_exchange_po4(ic,is)) + &
+                       transport_po4_assoc_fast(ic,is)) * dtime / 1000000._wp
+          hlp2(ic,is) = (slow_exchange_po4(ic,is) - transport_po4_assoc_fast(ic,is)) * dtime / 1000000._wp
+
+          CALL calc_langmuir_kinetics(dtime, hlp1(ic,is), &
+                                      po4_solute(ic,is),po4_assoc_fast(ic,is), &
+                                      km_adsorpt_po4_act(ic,is), qmax_po4_mineral_act(ic,is), &
+                                      partition_coef(ic,is))
+        !> 2.1.2 double-surface Langmuir isotherm
+        !>
+        ELSE
+          flag_arr(ic,is) = ((qmax_slow_po4_act(ic,is) - po4_assoc_slow(ic,is))<eps4 .AND. po4_assoc_slow(ic,is) > eps4)
+          IF (flag_arr(ic,is)) THEN
+            slow_exchange_po4(ic,is) = - k_desorpt_po4_act(ic,is) * po4_assoc_slow(ic,is) * 1000000._wp
+          ELSE
+            slow_exchange_po4(ic,is) = 0._wp
+          ENDIF
+          hlp1(ic,is) = (weathering_po4(ic,is) + biochem_mineralisation_po4(ic,is) + net_mineralisation_po4(ic,is) + &
+                       transport_po4_solute(ic,is) - lateral_loss_po4_solute_sl(ic,is) + p_deposition_sl(ic,is) - &
+                       (plant_uptake_po4_sl(ic,is) + mycorrhiza_uptake_po4_sl(ic,is) + slow_exchange_po4(ic,is)) + &
+                       transport_po4_assoc_fast(ic,is)) * dtime / 1000000._wp
+          hlp2(ic,is) = ( - transport_po4_assoc_fast(ic,is)) * dtime / 1000000._wp
+
+          IF (flag_arr(ic,is)) THEN
+            CALL calc_langmuir_kinetics(dtime, hlp1(ic,is), &
+                                        po4_solute(ic,is),po4_assoc_fast(ic,is), &
+                                        km_fast_po4_act(ic,is), qmax_fast_po4_act(ic,is), &
+                                        partition_coef(ic,is))
+          ELSE
+            CALL calc_langmuir_kinetics(dtime, hlp1(ic,is), &
+                                        po4_solute(ic,is),po4_assoc_fast(ic,is), &
+                                        km_adsorpt_po4_act(ic,is), qmax_po4_mineral_act(ic,is), &
+                                        partition_coef(ic,is), &
+                                        po4_assoc_slow(ic,is), &
+                                        km_fast_po4_act(ic,is), qmax_fast_po4_act(ic,is), &
+                                        km_slow_po4_act(ic,is), qmax_slow_po4_act(ic,is), &
+                                        partition_coef_1(ic,is), slow_exchange_po4(ic,is))
+          ENDIF
+        ENDIF ! if_iso2
+
+        !>3.0 update po4_solute, fast_assoc_po4, and slow_assoc_po4
+        !>
+        po4_solute(ic,is)        = po4_solute(ic,is) + partition_coef(ic,is) * hlp1(ic,is)
+        po4_assoc_fast(ic,is)    = po4_assoc_fast(ic,is)  + (1._wp - partition_coef(ic,is) - partition_coef_1(ic,is)) * hlp1(ic,is)
+        fast_exchange_po4(ic,is) = ((1._wp-partition_coef(ic,is)-partition_coef_1(ic,is)) * hlp1(ic,is)+hlp2(ic,is)) * &
+              &                    1.e6_wp / dtime
+        po4_assoc_slow(ic,is)    = po4_assoc_slow(ic,is) + (slow_exchange_po4(ic,is) - occlusion_po4(ic,is) + &
+              &                    transport_po4_assoc_slow(ic,is)) * dtime / 1.e6_wp
+      END DO
+    END DO
   END SUBROUTINE calc_p_inorg_dynamics
 
 
