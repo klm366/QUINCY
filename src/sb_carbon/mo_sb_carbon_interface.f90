@@ -40,12 +40,14 @@ MODULE mo_sb_carbon_interface
 
   ! Use of process configurations
   dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(SB_CARBON_)
 
   ! Use of process memories (t_carbon_memory)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(SB_CARBON_)
   dsl4jsb_Use_memory(L2A_)
 
@@ -138,9 +140,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     LOGICAL                      :: lstart, new_day, new_year
     LOGICAL                      :: nlcc_is_enabled    ! helper needed on DWD NEC
-    INTEGER                      :: iblk, ics, ice, nc, ic
+    INTEGER                      :: iblk, ics, ice, nc, ic, nsoil_w
     INTEGER                      :: tmp_timesteps_per_day
-    INTEGER                      :: lctlib_PhenologyType
+    INTEGER                      :: lctlib_PhenologyType, JSBACH_LctNumber, QUINCY_LctNumber
     REAL(wp)                     :: lctlib_fract_npp_2_woodPool, lctlib_fract_NPP_2_reservePool
     REAL(wp)                     :: lctlib_fract_NPP_2_exudates, lctlib_fract_green_2_herbivory
     REAL(wp)                     :: lctlib_tau_c_woods, lctlib_LAI_shed_constant, lctlib_MaxLAI
@@ -149,9 +151,11 @@ CONTAINS
     REAL(wp)                     :: F_pseudo_temp, N_pseudo_temp, F_pseudo_precip, N_pseudo_precip
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_sb_C_NPP'
     REAL(wp)                     :: dtime
+    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_w         !< Vertical grid    
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
-    REAL(wp), DIMENSION(options%nc) :: leafLitter, C_2_litter_woodPool    
+    REAL(wp), DIMENSION(options%nc) :: leafLitter, C_2_litter_woodPool
+    REAL(wp), DIMENSION(options%nc) :: lctlib_sla
     
     ! Declare local variables for QUINCY SB
     
@@ -266,7 +270,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
 
     !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, leafLitter, C_2_litter_woodPool)
+    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, leafLitter, C_2_litter_woodPool, lctlib_sla)
 
     iblk  = options%iblk
     ics   = options%ics
@@ -276,7 +280,9 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
+    model         => Get_model(tile%owner_model_id)
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels    
 
     nlcc_is_enabled = model%Is_process_enabled(NLCC_)     ! workaround currently needed for DWD NEC
 
@@ -288,12 +294,6 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(A2L_)
 
-    ! Set process variables
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_temp)                ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_temp_yDay)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_precip)              ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_precip_yDay)         ! inout
-
     !
     ! This is on canopy area:
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cconservation_calcCpools )  ! out
@@ -303,31 +303,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_woods )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)         ! inout
-    !SIZE CLASS 1
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)            ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag1)      ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg1)            ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg1)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg1)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg1)      ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_1)             ! inout
-    !SIZE CLASS 2
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag2)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg2)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg2)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout
-    !
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_1_sum) ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_2_sum) ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum)   ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum)   ! inout
+
     ! xx
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation_ca )     ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,  NPP_pot_rate_ca )           ! inout
@@ -545,10 +521,14 @@ CONTAINS
       lctlib_specificLeafArea_C      = dsl4jsb_Lctlib_param(specificLeafArea_C)
       lctlib_reserveC2leafC          = dsl4jsb_Lctlib_param(reserveC2leafC)
       lctlib_PhenologyType           = dsl4jsb_Lctlib_param(PhenologyType)
+      JSBACH_LctNumber               = dsl4jsb_Lctlib_param(LctNumber)
 
       ! Calculate current carbon sum before the update - for C conservation test
       CALL recalc_carbon_per_tile_vars(tile, options)
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
+      
+      ! convert the JSB LctNumber to QUINCY and return sla, cn_leaf, k_crtos
+      CALL convert_jsb_lct_to_quincy(JSBACH_LctNumber, lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf)
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
@@ -594,9 +574,12 @@ CONTAINS
       CALL prep_jsb_sb_processes( &
         & nc, &                                         ! in
         & nsoil_w, &
+        & dtime, &
         & num_sl_above_bedrock(:), &
-        & lctlib%sla, &
-        & lctlib%growthform, &
+        & lctlib_sla, &
+        & lctlib_cn_leaf, &
+        & lctlib_np_leaf, &
+        & lctlib_PhenologyType, &
         & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
         & soil_depth_sl(:,:), &
         & root_fraction_sl(:,:), &

@@ -28,7 +28,7 @@ MODULE mo_sb_carbon_memory_class
 
   ! Use process configurations
   dsl4jsb_Use_config(PHENO_)    ! needed for l_forestRegrowth
-  dsl4jsb_Use_config(CARBON_)    ! needed for l_forestRegrowth
+  dsl4jsb_Use_config(SB_CARBON_)    ! needed for l_forestRegrowth
 
   IMPLICIT NONE
   PRIVATE
@@ -40,178 +40,38 @@ MODULE mo_sb_carbon_memory_class
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_sb_carbon_memory
 
-    ! cbalance_type variables
     TYPE(t_jsb_var_real2d) ::     &
-      pseudo_temp,                & ! a proxy for 15-day mean air temperature, [K] needed with yasso
-      pseudo_temp_yDay,           & !
-      pseudo_precip,              & ! a proxy for 15-day mean preciptation rate [Kg/m^2 s] needed with yasso
-      pseudo_precip_yDay            !
-
-    TYPE(t_jsb_var_real2d) ::     &
-      cconservation_calcCpools,   & ! Carbon conservation test: Deviation from conservation [mol(C)/m^2(grid box)]
-      cflux_c_greenwood_2_litter, & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
-                                    !    [mol(C)/m^2(canopy) s]
-      c_green,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+      c_leaf,                 & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
                                     ! .. of vegetation [mol(C)/m^2(canopy)]
-      c_woods,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+      c_fineroot,             & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(canopy)]
+      c_fruit,             & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(canopy)]
+      c_seedbed,             & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(canopy)]
+      c_coarseroot,                & ! C-pool for stems, thick roots and other (dead) structural material of living
                                     ! .. plants [mol(C)/m^2(canopy)]
-      c_reserve,              & ! C-pool for carbohydrate reserve (sugars, starches) that allows plants to survive
-                                    ! .. bad times[mol(C)/m^2(canopy)]
-!@todo why is the c_crop_harvest realised as a density and not as a per tile variable in the first place?
-! ++ only required for crop pfts, or?
-      c_crop_harvest,         & ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
-     !SIZE CLASS 1
-      c_acid_ag1,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
-      c_water_ag1,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
-      c_ethanol_ag1,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
-      c_nonsoluble_ag1,      & ! Yasso above ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
-      c_acid_bg1,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
-      c_water_bg1,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
-      c_ethanol_bg1,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
-      c_nonsoluble_bg1,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
-      c_humus_1,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(canopy)]
-     !SIZE CLASS 2
-      c_acid_ag2,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
-      c_water_ag2,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
-      c_ethanol_ag2,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
-      c_nonsoluble_ag2,      & ! Yasso above ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
-      c_acid_bg2,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
-      c_water_bg2,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
-      c_ethanol_bg2,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
-      c_nonsoluble_bg2,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
-      c_humus_2,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(canopy)]
-
-      max_green_bio,         & ! Annual maximum of C-pool green for NLCC process [mol(C)/m^2(canopy)]
-      sla,                   & ! specific leave area for NLCC process [m2(leaf)/mol(C)]
-
-  !JN: vars for analytically equilibrating YASSO humus pools outside of jsb4 simulations (compare jsb3 svn ref 9652)
-      c_decomp_humus_1_sum,      & ! annual cflux sum of humus decomposed in YASSO (leaf) [mol(C)/m^2(canopy)]
-      c_decomp_humus_2_sum,      & ! annual cflux sum of humus decomposed in YASSO (wood) [mol(C)/m^2(canopy)]
-      c_into_humus_1_sum,        & ! annual cflux sum into humus pool in YASSO (leaf) [mol(C)/m^2(canopy)]
-      c_into_humus_2_sum,        & ! annual cflux sum into humus pool in YASSO (wood) [mol(C)/m^2(canopy)]
-
-      !
-      LAI_sum,                    & ! used to accumulate LAI over a day
-      NPP_pot_sum,                    & ! used to accumulated NPP-Rate over a day
-      GPP_sum,                    & ! used to accumulated GPP-Rate over a day
-      !runoff_sum,                 & ! used to accumulate runoff over a day.  R: Nicht notwendig in JS4.
-      soil_respiration,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(canopy)].
-                                    ! Without N limitation!
-      NPP_flux_correction,        & ! Daily updated flux correction from yesterdays carbon balance
-                                    ! [mol(CO2)/m^2(canopy) s]
-                                    ! Amount by which the NPP rate entering the routine has to be corrected. This
-                                    ! correction arises either because otherwise the reserve pool would get
-                                    ! negative (positive correction).
-      excess_NPP,                 & ! That part of NPP that because of structural limits could not be allocated in
-                                    ! carbon pools [mol(CO2)/m^2(canopy) s]
-      LAI_yyDayMean,              & ! previous previous day mean
-      LAI_yDayMean,               & ! previous day mean
-      NPP_pot_yDayMean,           & ! mean value of NPP-Rate yesterday (from NPP_pot_sum()) [mol(CO2)/(m^2(canopy) s)]
-      NPP_act_yDayMean,           & ! mean value of actual NPP-Rate after N-limitation and excess carbon drop.
-                                    ! "yDayMean" because the actual NPP depends on/is calculated from results of the
-                                    ! previous day.
-      GPP_yDayMean,               & !
-      root_exudates,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(canopy) s]
-      cflux_c_green_2_herb,       & ! Total carbon flux from C pool green to herbivory.
-      cflux_herb_2_littergreen,   & ! ..part of cflux_c_green_2_herb that goes into green litter
-      cflux_herb_2_atm,           & ! ..part of cflux_c_green_2_herb that goes into atmosphere
-      !
-      cflux_dist_green_2_soil,    & ! R: should be later renamed to C_2_GreenLitterPools
-      cflux_dist_woods_2_soil,    & ! R: should be later renamed to C_2_WoodLitterPools
-
-      co2flux_fire_all_2_atm,     & ! CO2 flux from fire per tile [kg(CO2)/m^2(canopy) s]
-      ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-      !fract_litter_wood_new,       & ! new fraction in above ground wood litter pool
-
-  !JN: variables required when l_forestRegrowth = true, i.e. when maxLAI is derived from biomass via allometric relationships
-      current_max_green,          & ! Running maximum of the green pool [mol(C) m-2(canopy)]
-                                    ! since last maxLAI calculation
-      veg_carbon_at_max_green       ! Total vegetation carbon [mol(C) m-2(canopy)]
-                                    ! at the time of the green pool maximum (current_max_green)
+      c_sapwood,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+                                    ! .. plants [mol(C)/m^2(canopy)]
+      c_heartwood,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+                                    ! .. plants [mol(C)/m^2(canopy)]
 
    ! Output on tile areas:
    TYPE(t_jsb_var_real2d) ::         &
-      cflux_c_greenwood_2_litter_ta, & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
-                                       !    [mol(C)/m^2(tile area) s]
-      c_green_ta,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+      c_leaf_ta,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
                                        ! .. of vegetation [mol(C)/m^2(tile area)]
-      c_woods_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+      c_fineroot_ta,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                       ! .. of vegetation [mol(C)/m^2(tile area)]
+      c_fruit_ta,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                       ! .. of vegetation [mol(C)/m^2(tile area)]
+      c_seedbed_ta,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                       ! .. of vegetation [mol(C)/m^2(tile area)]
+      c_coarseroot_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
                                        ! .. plants [mol(C)/m^2(tile area)]
-      c_reserve_ta,              & ! C-pool for carbohydrate reserve (sugars, starches) that allows plants to survive
-                                       ! .. bad times[mol(C)/m^2(tile area)]
-      c_crop_harvest_ta,         & ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
-      !CBAL c_slow_ta,                 & ! C-pool for below ground organic material (coming from the litter pools)
-      !CBAL                              !     [mol(C)/m^2(tile area)]
-     !SIZE CLASS 1
-      c_acid_ag1_ta,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
-      c_water_ag1_ta,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
-      c_ethanol_ag1_ta,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
-      c_nonsoluble_ag1_ta,      & ! Yasso above ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
-      c_acid_bg1_ta,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
-      c_water_bg1_ta,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
-      c_ethanol_bg1_ta,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
-      c_nonsoluble_bg1_ta,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
-      c_humus_1_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(tile area)]
-     !SIZE CLASS 2
-      c_acid_ag2_ta,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
-      c_water_ag2_ta,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
-      c_ethanol_ag2_ta,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
-      c_nonsoluble_ag2_ta,      & ! Yasso above ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
-      c_acid_bg2_ta,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
-      c_water_bg2_ta,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
-      c_ethanol_bg2_ta,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
-      c_nonsoluble_bg2_ta,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
-      c_humus_2_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(tile area)]
-
-  !JN: vars for analytically equilibrating YASSO humus pools outside of jsb4 simulations (compare jsb3 svn ref 9652)
-      c_decomp_humus_1_sum_ta,  & ! annual cflux sum of humus decomposed in YASSO (leaf) [mol(C)/m^2(tile area)]
-      c_decomp_humus_2_sum_ta,  & ! annual cflux sum of humus decomposed in YASSO (wood) [mol(C)/m^2(tile area)]
-      c_into_humus_1_sum_ta,    & ! annual cflux sum into humus pool in YASSO (leaf) [mol(C)/m^2(tile area)]
-      c_into_humus_2_sum_ta,    & ! annual cflux sum into humus pool in YASSO (wood) [mol(C)/m^2(tile area)]
-
-      !
-      ! diagnostic carbon sums
-      c_sum_veg_ta,             & ! Sum of all vegetation carbon pools [mol(C)/m^2(tile area)]
-      c_sum_litter_ag_ta,       & ! Sum of all above ground litter carbon pools [mol(C)/m^2(tile area)]
-      c_sum_litter_bg_ta,       & ! Sum of all below ground litter carbon pools [mol(C)/m^2(tile area)]
-      c_sum_humus_ta,           & ! Sum of all soil / humus carbon pools [mol(C)/m^2(tile area)]
-      c_sum_natural_ta,         & ! Sum of all natural carbon pools [mol(C)/m^2(tile area)]
-      !
-      !@todo: NPP_pot_sum_ta, GPP_sum_ta, LAI_yyDayMean_ta and LAI_yDayMean_ta are never calculated
-!      NPP_pot_sum_ta,                    & ! used to accumulated NPP-Rate over a day
-!      GPP_sum_ta,                    & ! used to accumulated GPP-Rate over a day
-      soil_respiration_ta,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(tile area)].
-                                       ! Without N limitation!
-      NPP_flux_correction_ta,        & ! Daily updated flux correction from yesterdays carbon balance
-                                    ! [mol(CO2)/m^2(tile area) s]
-                                    ! Amount by which the NPP rate entering the routine has to be corrected. This
-                                    ! correction arises either because otherwise the reserve pool would get
-                                    ! negative (positive correction).
-      excess_NPP_ta,                 & ! That part of NPP that because of structural limits could not be allocated in
-                                    ! carbon pools [mol(CO2)/m^2(tile area) s]
-!      LAI_yyDayMean_ta,              & ! previous previous day mean
-!      LAI_yDayMean_ta,               & ! previous day mean
-      NPP_pot_yDayMean_ta,           & ! mean value of NPP-Rate yesterday (from NPP_pot_sum()) [mol(CO2)/(m^2(tile area) s)]
-      NPP_act_yDayMean_ta,           & ! mean value of actual NPP-Rate yesterday, i.e. after N-limitation.
-                                       ! Actual NPP (after N-limitation and) excess carbon drop.
-                                       ! [mol(CO2)/(m^2(tile area) s)]
-      GPP_yDayMean_ta,               & !
-      root_exudates_ta,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(tile area) s]
-      cflux_c_green_2_herb_ta,            & ! Total carbon flux from C pool green to herbivory.
-      cflux_dist_green_2_soil_ta,  & ! R: should be later renamed to C_2_GreenLitterPools_ta
-      cflux_dist_woods_2_soil_ta,   & ! R: should be later renamed to C_2_WoodLitterPools_ta
-
-      ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-      fract_litter_wood_new_ta,      & ! new fraction in above ground wood litter pool
-
-      ! tile averages of net CO2 fluxes between various compartments and atmosphere [kg(CO2)/m^2 s]
-      ! .. positive for emission to atmosphere
-      ! .. negative for absorption by biosphere
-      co2flux_npp_2_atm_ta,          & ! fluxes due to NPP
-      co2flux_soilresp_2_atm_ta,     & ! fluxes due to soil respiration
-      co2flux_herb_2_atm_ta,         & ! fluxes due to grazing
-      co2flux_fire_all_2_atm_ta,     & ! Carbon immediately released by fire per tile
-      co2flux_npp_2_atm_yday_ta        ! previous day CO2 flux from actual NPP, required for C conservation test
+      c_sapwood_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+                                       ! .. plants [mol(C)/m^2(tile area)]
+      c_heartwood_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+                                       ! .. plants [mol(C)/m^2(tile area)]
 
 
     ! Diagnostic global carbon sums e.g. for monitoring (only available with ICON)
