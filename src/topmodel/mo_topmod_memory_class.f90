@@ -100,7 +100,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>initialize memory (variables) for the process: topmodel
   !>
-  SUBROUTINE Init_topmodel_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_topmodel_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, TSTEP_INSTANT, tables
@@ -114,6 +114,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)            :: prefix
     CHARACTER(len=*),    INTENT(in)            :: suffix
     INTEGER,             INTENT(in)            :: lct_ids(:)
+    INTEGER,             INTENT(in)            :: lib_id        !< ID of the tile's primary land cover type (e.g. LAND_TYPE)
     INTEGER,             INTENT(in)            :: model_id
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(TOP_)

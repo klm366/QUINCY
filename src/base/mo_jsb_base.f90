@@ -64,7 +64,7 @@ CONTAINS
 #endif
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, NLCC_, FLCC_, FAGE_, TOP_, CH4_, MEGAN_, SPQ_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, NLCC_, FLCC_, FAGE_, TOP_, CH4_, MEGAN_, SPQ_, Q_SYL_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)

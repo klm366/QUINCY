@@ -185,7 +185,7 @@ CONTAINS
     c_green = c_green - c_2_litter_greenPool                         !! This removes carbon from the green pool
     c_excess = MAX(0.0_wp,c_green - c_green_max)                     !! If by the reduction of LAI the maximum value of the green
                                                                      !!    pool is still smaller than the current value, there is
-    IF (excess_carbon > 0._wp) THEN
+    IF (c_excess  > 0._wp) THEN
       c_2_litter_greenPool = c_2_litter_greenPool + c_excess           !!    excess C that has also to be shedded to the green litter
       c_green              = c_green              - c_excess           !!    pool and also subtracted from the green pool
     END IF
@@ -194,8 +194,6 @@ CONTAINS
       !!  Move shedded Carbon pro rata to crop harvest flux
       c_2_crop_harvest = fract_green_aboveGround * fract_c_crop_harvest * c_2_litter_greenPool
     ENDIF
-
-    cflux_c_greenwood_2_litter = C_2_litter_greenPool
 
     !! ---------------------------------------------------------------------------------
     !! Herbivory loss from c_green & Npool_green w.r.t PFTs in lctlib
@@ -219,8 +217,6 @@ CONTAINS
     ! if (present(fract_litter_wood_new)) litter_wood_new = fract_wood_aboveGround * c_2_litter_woodPool
     c_woods = c_woods -  c_2_litter_woodPool                !! .. and then all is subtracted from the wood pool.
 
-    cflux_c_greenwood_2_litter = cflux_c_greenwood_2_litter + C_2_litter_woodPool
-
     !! ----------------------------------------------------------------------------
     !! 3. Depletion of reserve pool: Transfer of C from reserve pool to green litter pool
     !!    Some organic carbon of the reserve pool is always lost with mortality of plants.
@@ -234,9 +230,6 @@ CONTAINS
     ENDIF
     c_reserve      = c_reserve      - c_reserve_2_litter_greenPool
     c_crop_harvest = c_crop_harvest + c_2_crop_harvest
-    c_crop_harvest = c_crop_harvest + Cflx_2_crop_harvest
-
-    cflux_c_greenwood_2_litter = cflux_c_greenwood_2_litter + C_2_litter_greenPool
 
     !!
     !! ============== START OF POTENTIAL PLANT-CARBON ALLOCATION TO ESTIMATE PLANT-N-DEMAND =================================
@@ -282,7 +275,7 @@ CONTAINS
       c_excess          = MAX(0.0_wp,c_woods_pot-Max_C_content_woods)   !! .. but thereby the pool may get too large
       c_woods_pot       = c_woods_pot - c_excess                        !! .. so that the excess carbon has once more to be
                                                                         !! .. subtracted
-      IF (excess_carbon > 0._wp) THEN
+      IF (c_excess > 0._wp) THEN
         c_NPP_2_greenPool = c_NPP_2_greenPool + c_excess                  !! .. and instead made available to the green pool
         c_NPP_2_woodPool  = c_NPP_2_woodPool  - c_excess                  !! .. and the actual amount of NPP put to the wood pool
       END IF
@@ -293,7 +286,7 @@ CONTAINS
         c_reserve_pot     = c_reserve_pot     + c_NPP_2_reservePool     !! .... it is filled by the available NPP
         c_excess          =                                         &   !! .... Thereby it may happen that it gets larger than
              MAX(0.0_wp,c_reserve_pot - c_reserve_optimal)              !! .... optimal so that there is excess carbon
-        IF (excess_carbon > 0._wp) THEN
+        IF (c_excess > 0._wp) THEN
           c_reserve_pot       = c_reserve_pot       - c_excess            !! .... that needs not be taken up
           c_NPP_2_greenPool   = c_NPP_2_greenPool   + c_excess            !! .... but can better be used to increase the green
           c_NPP_2_reservePool = c_NPP_2_reservePool - c_excess            !! .... pool and the actual amount of NPP put to the
@@ -309,13 +302,13 @@ CONTAINS
       c_green_pot       = c_green_pot + c_NPP_2_greenPool               !! Green pool is filled by the available NPP.
       c_excess          = MAX(0.0_wp,c_green_pot - c_green_max)         !! .. Thereby it may get larger than appropriate for
                                                                         !!    current LAI.
-      IF (excess_carbon > 0._wp) THEN
+      IF (c_excess > 0._wp) THEN
         c_NPP_2_greenPool = c_NPP_2_greenPool - c_excess                  !! .. Hence the actual amount of NPP put to the green
                                                                         !!    pool is less.
         c_green_pot       = c_green_pot - c_excess                        !! .. This excess carbon needs not be taken up but
       END IF
       IF (c_reserve_pot < c_reserve_optimal) THEN                       !! .... if the reserve pool is smaller than optimal
-        IF (excess_carbon > 0._wp) THEN
+        IF (c_excess > 0._wp) THEN
           c_reserve_pot       = c_reserve_pot       + c_excess            !! .... it is tried to put the carbon there,
           c_NPP_2_reservePool = c_NPP_2_reservePool + c_excess            !! .... which means that additional NPP is put to the
           !!      reserve pool.
@@ -323,7 +316,7 @@ CONTAINS
         END IF
         c_excess            =                                   &       !! .... Thereby it may happen that the reserve pool
                  MAX(0.0_wp,c_reserve_pot         - c_reserve_optimal)  !!      increases beyond the optimal value.
-        IF (excess_carbon > 0._wp) THEN
+        IF (c_excess > 0._wp) THEN
           c_reserve_pot       = c_reserve_pot       - c_excess            !! .... In that case the excess carbon is once more
                                                                           !!      removed from the reserve pool
           c_NPP_2_reservePool = c_NPP_2_reservePool - c_excess            !! .... so that the actual amount of NPP put into the
