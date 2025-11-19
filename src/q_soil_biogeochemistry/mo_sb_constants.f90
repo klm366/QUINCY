@@ -223,6 +223,8 @@ MODULE mo_sb_constants
       km_adsorpt_sand_po4, &      !< Half-saturation concentration for PO4 adsorption to sand [mol P kg-1 fine mineral soil], ECA and Langmuir
       km_adsorpt_OM_po4, &        !< Half-saturation concentration for PO4 adsorption to OM, [mol P kg-1 OM], ECA and Langmuir
       k_deep_soil_moc_corr, &     !< numerical coefficient for correction of deep soil initialised with very low MOC, assuming the P sorption capacity of OM is one-tenth of mineral soil
+      k_sl_conv_moc_corr, &       !< numerical converter for number of soil layers in deep soil MOC correction [--], the original code is designed for 15-layer soil only
+      z_deep_soil_moc_corr, &     !< minimum depth [m] for correction of deep soil initialised with very low MOC, assuming the P sorption capacity of OM is one-tenth of mineral soil
       fact_repartition_om_init_cond1, &  !< re-partition factor when OM got over-saturation in SB_ init, soil condition 1 (see docu in sb_init)
       fact_repartition_om_init_cond2     !< re-partition factor when OM got over-saturation in SB_ init, soil condition 2 (see docu in sb_init)
 
@@ -527,16 +529,18 @@ CONTAINS
     qmax_po4_mineral          = 1.2_wp / molar_mass_P                   ! [mol P kg-1 soil], Olander and Vitousek 2005
     km_adsorpt_mineral_po4    = 0.070_wp / 1000._wp / molar_mass_P      ! [mol P kg-1 fine mineral soil], based on 0.332 [mg P l-1 soil solution]
                                                                         ! from literature data analysis, with .33 m wc and 1560 kg/m3 bulk density
-    qmax_po4_clay             = 0.283159_wp / molar_mass_P              ! [mol P kg-1 clay], literature review, a analogous predictor of Feox+Alox																	
+    qmax_po4_clay             = 0.283159_wp / molar_mass_P              ! [mol P kg-1 clay], literature review, a analogous predictor of Feox+Alox
     qmax_po4_silt             = 0.283159_wp / molar_mass_P              ! [mol P kg-1 silt], literature review, clay+silt
     qmax_po4_sand             = 0.140475_wp / molar_mass_P              ! [mol P kg-1 sand], literature review
     qmax_po4_OM               = 0.140475_wp / molar_mass_P              ! [mol P kg-1 OM], literature review,
     km_po4_ph                 = 0.4_wp                                  ! corrector for km_po4 calculation [--]
     km_adsorpt_clay_po4       = 315.445_wp / 1000000._wp / molar_mass_P ! [mol P L-1 kg-1 clay], from literature data analysis
     km_adsorpt_silt_po4       = 2.176_wp / 1000._wp / molar_mass_P      ! [mol P L-1 kg-1 silt], from literature data analysis
-    km_adsorpt_sand_po4       = 20._wp / 1000._wp / molar_mass_P        ! [mol P L-1 kg-1 sand], from literature data analysis																																	
+    km_adsorpt_sand_po4       = 20._wp / 1000._wp / molar_mass_P        ! [mol P L-1 kg-1 sand], from literature data analysis
     km_adsorpt_OM_po4         = 14._wp / 1000._wp / molar_mass_P        ! [mol P L-1 kg-1 OM], from literature data analysis
     k_deep_soil_moc_corr      = 0.01_wp                                 ! estimated, Yu et al. 2020, GMD
+    k_sl_conv_moc_corr        = 7._wp / 15._wp                          ! Yu et al. 2020, GMD
+    z_deep_soil_moc_corr      = 2._wp                                   ! estimated based on Yu et al. 2020, GMD
     fact_repartition_om_init_cond1 = 1.0_wp / 10.0_wp                   ! estimated, Yu et al. 2020, GMD
     fact_repartition_om_init_cond2 = 1.0_wp / 11.0_wp                   ! estimated, Yu et al. 2020, GMD
 
