@@ -325,8 +325,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_lex_process,            ONLY: calc_runoff_transport,           &
       &                                  calc_drainage_transport,         &
-      &                                  calc_pond_soil_flux_water,       &
-      &                                  calc_pond_soil_flux_heat,        &
+      &                                  calc_lat_fluxes_pond,            &
       &                                  calc_lat_fluxes_soil,            &
       &                                  calc_convection_heat,            &
       &                                  calc_snow_redistribution,        &
@@ -870,46 +869,49 @@ CONTAINS
             & mpot_act=mpot_act_sibl(:,:)                   &
             )
 
-          DO ic = 1,nc
-            IF  (dsl4jsb_Config(LEX_)%l_infil_trns .AND. &
-              & (microcon_ctc_ct(ic,lex_ids) > 0._wp)) THEN
-
-              hlp1 = length_iface_ct(ic,lex_ids)*fract_pond_max_sibl(ic)
-              wtr_incomming_sl(ic,:) = wtr_incomming_sl(ic,:) - wtr_infil_in_sl(ic,:)
-
-              ! Lateral ingress from pond to connected tile
-              CALL calc_pond_soil_flux_water(               &
-                &  nsoil, dtime,                            &
-                &  h_offset_ct(ic,lex_ids),                 &
-                &  length_scale_ct(ic,lex_ids),             &
-                &  hlp1,                                    &
-                &  fract(ic),                               &
-                &  fract_sibl(ic),                          &
-                &  soil_depth_sl(ic,:),                     &
-                &  wtr_soil_fc_sl(ic,:),                    &
-                &  hyd_cond_sl(ic,:),                       &
-                &  mpot_act(ic,:),                          &
-                &  wtr_infil_out_sibl(ic),                  &
-                &  wtr_infil_in_sl(ic,:),                   &
-                &  wtr_lex_net_srf_sibl(ic),                &
-                &  wtr_lex_net_sl(ic,:),                    &
-                &  wtr_pond_sibl(ic),                       &
-                &  wtr_soil_sl(ic,:)                        &
-                &  )
-
-              wtr_incomming_sl(ic,:) = wtr_incomming_sl(ic,:) + wtr_infil_in_sl(ic,:)
-
-            END IF
-          END DO
-
-          ! IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr) THEN
-          !   DO ic = 1, nc
-          !     wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
-          !       &                         - wtr_diffusion_in_sl(ic,:)
-          !     wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
-          !       &                         - wtr_diffusion_in_sl_sibl(ic,:)
-          !   END DO
-          ! END IF
+          ! Lateral ingress of water and heat diffusion from pond to connected tile
+          ! Since an update of the actual soil temperatures outside of the SSE routines is not intended,
+          ! only the lateral heat flux is calculated and passed to the SSE routine as an energy source/sink.
+          CALL calc_lat_fluxes_pond(                   &
+            &  nc, nsoil, nrgrd, dtime,                &
+            &  dsl4jsb_Config(LEX_)%l_infil_trns,      &
+            &  dsl4jsb_Config(LEX_)%l_dffsn_nrg,       &
+            &  microcon_ctc_ct(:,lex_ids),             &
+            &  h_offset_ct(:,lex_ids),                 &
+            &  length_scale_ct(:,lex_ids),             &
+            &  length_iface_ct(:,lex_ids),             &
+            &  fract(:),                               &
+            &  fract_sibl(:),                          &
+            &  fract_pond_max_sibl(:),                 &
+            !  Hydrological properties
+            &  soil_depth_sl(:,:),                     &
+            &  wtr_soil_fc_sl(:,:),                    &
+            &  hyd_cond_sl(:,:),                       &
+            &  mpot_act(:,:),                          &
+            !  Thermal properties
+            &  soil_e%ubounds(:),                      &
+            &  t_soil_sl(:,:),                         &
+            &  t_soil_sl_sibl(:,:),                    &
+            &  heat_cond_sl(:,:),                      &
+            &  vol_heat_cap_sl(:,:),                   &
+            &  vol_heat_cap_sl_sibl(:,:),              &
+            &  ice_pond_sibl(:),                       &
+            !  Water states and fluxes between pond and soil
+            &  wtr_infil_out_sibl(:),                  &
+            &  wtr_infil_in_sl(:,:),                   &
+            &  wtr_incomming_sl(:,:),                  &
+            &  wtr_lex_net_srf_sibl(:),                &
+            &  wtr_lex_net_sl(:,:),                    &
+            &  wtr_pond_sibl(:),                       &
+            &  wtr_soil_sl(:,:),                       &
+            !  Heat fluxes between pond and soil
+            &  nrg_diffusion_in_sl_sibl(:,1),          &
+            &  nrg_diffusion_out_sl_sibl(:,1),         &
+            &  nrg_lex_net_sl_sibl(:,1),               &
+            &  nrg_diffusion_in_sl(:,:),               &
+            &  nrg_diffusion_out_sl(:,:),              &
+            &  nrg_lex_net_sl(:,:)                     &
+            &  )
 
           ! Water and heat exchange between connected tiles
           CALL calc_lat_fluxes_soil(                    &
@@ -965,51 +967,6 @@ CONTAINS
             &  nrg_lex_net_sl(:,:),                     &
             &  nrg_lex_net_sl_sibl(:,:)                 &
             &  )
-
-          ! IF (dsl4jsb_Config(LEX_)%l_dffsn_wtr) THEN
-          !   DO ic = 1, nc
-          !     wtr_incomming_sl(ic,:)      = wtr_incomming_sl(ic,:)      &
-          !       &                         + wtr_diffusion_in_sl(ic,:)
-          !     wtr_incomming_sl_sibl(ic,:) = wtr_incomming_sl_sibl(ic,:) &
-          !       &                         + wtr_diffusion_in_sl_sibl(ic,:)
-          !   END DO
-          ! END IF
-
-          IF (dsl4jsb_Config(LEX_)%l_dffsn_nrg) THEN
-            DO ic = 1, nc
-              IF (microcon_ctc_ct(ic,lex_ids) > 0._wp) THEN
-
-                ! Diffusion between connected tiles (energy).
-                ! Since an update of the actual soil temperatures outside of the SSE routines is not intended,
-                ! only the lateral heat flux is calculated and passed to the SSE routine as an energy source/sink.
-
-                IF (h_offset_ct(ic,lex_ids) > 0._wp) THEN
-                  hlp1 = length_iface_ct(ic,lex_ids) * fract_pond_max_sibl(ic)
-                  CALL calc_pond_soil_flux_heat(              &
-                    &  nsoil, dtime,                          &
-                    &  soil_e%dz(:),                          &
-                    &  h_offset_ct(ic,lex_ids),               &
-                    &  length_scale_ct(ic,lex_ids),           &
-                    &  hlp1,                                  &
-                    &  fract(ic),                             &
-                    &  fract_sibl(ic),                        &
-                    &  t_soil_sl_sibl(ic,1),                  &
-                    &  vol_heat_cap_sl_sibl(ic,1),            &
-                    &  wtr_pond_sibl(ic), ice_pond_sibl(ic),  &
-                    &  t_soil_sl(ic,:),                       &
-                    &  heat_cond_sl(ic,:),                    &
-                    &  vol_heat_cap_sl_sibl(ic,:),            &
-                    &  nrg_diffusion_in_sl_sibl(ic,1),        &
-                    &  nrg_diffusion_out_sl_sibl(ic,1),       &
-                    &  nrg_lex_net_sl_sibl(ic,1),             &
-                    &  nrg_diffusion_in_sl(ic,:),             &
-                    &  nrg_diffusion_out_sl(ic,:),            &
-                    &  nrg_lex_net_sl(ic,:)                   &
-                    &  )
-                END IF
-              END IF
-            END DO
-          END IF
 
           IF (dsl4jsb_Config(LEX_)%l_cnvctn_nrg) THEN
             ! Fluxes reulting from the heat contained in the lateral fluxes of water
