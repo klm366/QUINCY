@@ -266,11 +266,11 @@ CONTAINS
       dsl4jsb_Get_memory(TOP_)
 
       ALLOCATE(top__mem%frac_inun_presc(hgrid%nproma, hgrid%nblks, SIZE(top_init_vars%frac_inun_presc,3)))
-      !$acc enter data pcreate(mem%frac_inun_presc)
-      !$acc enter data attach(mem%frac_inun_presc)
+      !$acc enter data pcreate(top__mem%frac_inun_presc)
+      !$acc enter data attach(top__mem%frac_inun_presc)
       !
       dsl4jsb_memory(TOP_)%frac_inun_presc(:,:,:) = top_init_vars%frac_inun_presc(:,:,:)
-      !$acc update device(dsl4jsb_var3D_onDomain(TOP_,frac_inun_presc))
+      !$acc update device(top__mem%frac_inun_presc)
 
       n = hgrid%npromz
       DO iblk=hgrid%nblks,1,-1
@@ -280,11 +280,11 @@ CONTAINS
 
       IF (ASSOCIATED(top_init_vars%wt_inun_presc)) THEN
         ALLOCATE(top__mem%wt_inun_presc(hgrid%nproma, hgrid%nblks, SIZE(top_init_vars%wt_inun_presc,3)))
-        !$acc enter data pcreate(mem%wt_inun_presc)
-        !$acc enter data attach(mem%wt_inun_presc)
+        !$acc enter data pcreate(top__mem%wt_inun_presc)
+        !$acc enter data attach(top__mem%wt_inun_presc)
         !
         dsl4jsb_memory(TOP_)%wt_inun_presc(:,:,:) = top_init_vars%wt_inun_presc(:,:,:)
-        !$acc update device(dsl4jsb_var3D_onDomain(TOP_,wt_inun_presc))
+        !$acc update device(top__mem%wt_inun_presc)
         n = hgrid%npromz
         DO iblk=hgrid%nblks,1,-1
           dsl4jsb_memory(TOP_)%interp_wt_inun(iblk)%p => interpol_reset(n)
@@ -334,12 +334,8 @@ CONTAINS
       dsl4jsb_memory(TOP_)%cti_basin    (:,:) = top_init_vars%cti_basin(:,:)
       dsl4jsb_memory(TOP_)%cti_openwater(:,:) = top_init_vars%cti_openwater(:,:)
 
-      !$acc update device(dsl4jsb_var2D_onDomain(TOP_,cti_mean), &
-      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_basin), &
-      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_openwater), &
-      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_mu), &
-      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_phi), &
-      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_chi))
+      !$acc update device(top__mem%cti_mean,top__mem%cti_basin,top__mem%cti_openwater)
+      !$acc update device(top__mem%cti_mu,top__mem%cti_phi,top__mem%cti_chi)
     ENDIF
 
   END SUBROUTINE topmodel_init_ic

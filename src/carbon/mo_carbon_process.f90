@@ -33,7 +33,7 @@ MODULE mo_carbon_process
 CONTAINS
 
   ! Calculations to allocate NPP to the plant C pools.
-  PURE ELEMENTAL SUBROUTINE calc_soil_c( &
+  PURE SUBROUTINE calc_soil_c( &
     ! General inputs
     & dt,                         &
     ! Input coefficients (fixed)
@@ -80,6 +80,7 @@ CONTAINS
     & c_into_humus_2_sum,         &
     & Cflx_soil_respiration       &
     & )
+    !$acc routine seq
 
     ! Arguments
 
@@ -358,7 +359,7 @@ CONTAINS
     !$ACC   PRIVATE(non_woody_litter, fraction)
     DO ic = 1, nc
       non_woody_litter = c_green(ic) + c_reserve(ic)
-      bfe = burned_fract(ic) * MIN(0.945,1._wp-fuel_moisture(ic))
+      bfe = burned_fract(ic) * MIN(0.945_wp,1._wp-fuel_moisture(ic))
 
       ! Amount of carbon released from the green and reserve pool to the green litter pools
       cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + &

@@ -155,8 +155,8 @@ CONTAINS
     GHG_atm%atm_year_max = init%atm_year_max
     ALLOCATE(GHG_atm%atm_vmr(SIZE(init%atm_vmr)))
     GHG_atm%atm_vmr(:) = init%atm_vmr(:)
-    !$acc data present(GHG_atm%atm_vmr))
-    !$acc update device(GHG_atm%atm_vmr))
+    !$acc data present(GHG_atm%atm_vmr)
+    !$acc update device(GHG_atm%atm_vmr)
     !$acc end data
 
   END SUBROUTINE methane_copy_ts
@@ -327,7 +327,7 @@ CONTAINS
     DO i=2,layer%n_levels
       dsl4jsb_memory(CH4_)%layer_midpoint_dz(i) = (layer%dz(i) + layer%dz(i-1)) * 0.5_wp
     ENDDO
-    !$acc update_device(dsl4jsb_memory(CH4_)%layer_midpoint_dz)
+    !$acc update device(dsl4jsb_memory(CH4_)%layer_midpoint_dz)
 
     ! Determine (constant) layer for in which bedrock is located
     dsl4jsb_Get_var2D_onDomain(HYDRO_, soil_depth)
@@ -338,7 +338,7 @@ CONTAINS
         mxlay_above_rock(i,j) = REAL(find_bedrock_layer(layer%n_levels,layer%ubounds(:),soil_depth(i,j)),wp)
       ENDDO
     ENDDO
-    !$acc update_device(mxlay_above_rock)
+    !$acc update device(mxlay_above_rock)
 
     ! Determine distribution of roots in soil layers.
     ! NOTE: In case of dynamical roots, this should be moved into the time loop in update_methane
@@ -354,7 +354,7 @@ CONTAINS
     ELSE
       root_dist_sl(:,:,:) = 0._wp
     ENDIF
-    !$acc update_device(root_dist_sl)
+    !$acc update device(root_dist_sl)
 
   END SUBROUTINE methane_init_ic
 

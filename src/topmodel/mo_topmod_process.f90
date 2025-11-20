@@ -34,12 +34,15 @@ CONTAINS
   !
   !!
   !!
-  !$acc routine seq
-  PURE SUBROUTINE update_aet( &
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE update_aet( &
     & tmelt, &
     & temp_air, net_radiation, &
     & aet &
   )
+  !$acc routine seq
 
     ! Interface parameters
     REAL(wp), INTENT(in)  :: tmelt                  ! Melting point of water [K]
@@ -71,8 +74,10 @@ CONTAINS
   !
   !!
   !!
-  !$acc routine seq
-  PURE SUBROUTINE update_water_balance_peatland(           &
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE update_water_balance_peatland(           &
     & tspd, delta_time,                                    &
     & peat_runoff_fac, peat_runoff_exp,                    &
     & precipitation, frac_liquid_water, frac_snow,         &
@@ -80,6 +85,7 @@ CONTAINS
     & peat_water_volume, peat_water_table,                 &
     & peat_water_balance                                   &
   )
+  !$acc routine seq
 
     ! Interface parameters
     INTEGER,  INTENT(in)    :: tspd                    ! Time steps per day
@@ -140,8 +146,10 @@ CONTAINS
   ! @brief      Updates the water table for individual tile
   !
   !!
-  !$acc routine seq
-  PURE SUBROUTINE update_water_table(     &
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE update_water_table(     &
     &  with_permafrost, tmelt,            &
     &  soil_depth, soil_depth_min,        &
     &  dz_sl, lower_bound_sl,             &
@@ -152,6 +160,7 @@ CONTAINS
     &  water_table,                       &
     &  frac_liquid_top                    &
     & )
+  !$acc routine seq
 
     ! Parameters
     LOGICAL,  INTENT(in)    :: with_permafrost      ! Soil may contain frozen water?
@@ -245,8 +254,10 @@ CONTAINS
   ! @brief      Updates inundated area
   !
   !!
-  !$acc routine seq
-  PURE SUBROUTINE update_inun_frac(              &
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE update_inun_frac(                   &
     & soil_depth_min,                            &
     & use_cti_basin, use_cti_flood, use_cti_max, &
     & use_wt_max, use_openwater,                 &
@@ -258,6 +269,7 @@ CONTAINS
     & mask, water_table, frac_liquid_water,      &
     & frac_inun, frac_inun_uncorr, wt_inun       &
   )
+  !$acc routine seq
 
     ! Interface parameters
     !  Constants
@@ -359,8 +371,10 @@ CONTAINS
   ! @brief      Updates necessary averages for the topmodel
   !
   !!
-  !$acc routine seq
-  PURE SUBROUTINE update_topmodel_runmean(                  &
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE update_topmodel_runmean(                       &
     & lexp, lfirst_year, lyear, lmonth, lday,               &
     & mlen, ylen, tspd,                                     &
     & summer_state,                                         &
@@ -373,6 +387,7 @@ CONTAINS
     & wt_inun, wt_inun_sum_month, wt_inun_mean_month,       &
     & wt_inun_min_year, wt_inun_min_lt                      &
     & )
+  !$acc routine seq
 
     USE mo_top_util, ONLY: time_relaxation
 
@@ -466,8 +481,10 @@ CONTAINS
   ! @brief      Updates necessary averages for peatland calculations
   !
   !!
-  !$acc routine seq
-  PURE SUBROUTINE update_peat_runmean(                      &
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE update_peat_runmean(                           &
     & lexp, lfirst_year, lyear, lmonth, lday,               &
     & mlen, ylen, tspd,                                     &
     & nyear_lt, nstep_relaxation,                           &
@@ -479,6 +496,7 @@ CONTAINS
     & poaet_sum_year, poaet_mean_year,                      &
     & poaet_lt                                              &
   )
+  !$acc routine seq
     LOGICAL,  INTENT(in)    :: lexp, lyear, lmonth, lday       ! .TRUE. if first step of a(n) Experiment/Year/Month/Day
     LOGICAL,  INTENT(in)    :: lfirst_year                     ! .TRUE. if first year of experiment (finished)
     INTEGER,  INTENT(in)    :: mlen                            ! Length of month of previous timestep [days] (by lmonth only)
@@ -541,11 +559,14 @@ CONTAINS
   !
   !!
   !!
-  !$acc routine seq
-  PURE SUBROUTINE get_climatological_inun( &
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE get_climatological_inun(      &
     & frac_inun_clim,                      & ! Input
     & frac_inun, wt_inun                   & ! Output
   )
+  !$acc routine seq
 
     ! Interface parameters
     REAL(wp), INTENT(in)  :: frac_inun_clim            ! Climatological frac_inun

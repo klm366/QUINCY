@@ -29,7 +29,9 @@ MODULE mo_methane_util
   PUBLIC :: concentration_mol_m3_2_mmr, concentration_vmr_2_mmr
   PUBLIC :: concentration_mol_m3_2_vmr, concentration_mmr_2_vmr
   PUBLIC :: convert_2_vmr, convert_2_mmr, convert_2_mol_m3
+#ifndef _OPENACC
   PUBLIC :: calc_diffusivity, diffusion_cn
+#endif
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_methane_util'
 
@@ -39,7 +41,11 @@ CONTAINS
   ! @brief      Find layer of a given depth (eg. roots end, water table or acrotelm)
   !
   !!
-  PURE INTEGER FUNCTION find_layer(depth, nsoil, midpoints)
+!#ifndef _OPENACC
+  PURE &
+!#endif
+  INTEGER FUNCTION find_layer(depth, nsoil, midpoints)
+  !$acc routine seq
     INTEGER,  INTENT(in)  :: nsoil
     REAL(wp), INTENT(in)  :: depth, midpoints(nsoil)
 
@@ -64,7 +70,11 @@ CONTAINS
   ! @brief      Find layer of a given depth
   !
   !!
-  PURE INTEGER FUNCTION find_bedrock_layer(nsoil, layer_bound, soil_depth)
+!#ifndef _OPENACC
+  PURE &
+!#endif
+  INTEGER FUNCTION find_bedrock_layer(nsoil, layer_bound, soil_depth)
+  !$acc routine seq
     INTEGER,                    INTENT(in)  :: nsoil
     REAL(wp), DIMENSION(nsoil), INTENT(in)  :: layer_bound
     REAL(wp),                   INTENT(in)  :: soil_depth
@@ -93,7 +103,11 @@ CONTAINS
   ! @brief  determine gas concentration in water [mol m-2]
   ! based on Henry's law, as described by Wania
   !!
-  PURE REAL(wp) FUNCTION dissolved_gas(GAS, Tsoil, GAS_dens, dens2conc)
+#ifndef _OPENACC
+  PURE &
+#endif
+  REAL(wp) FUNCTION dissolved_gas(GAS, Tsoil, GAS_dens, dens2conc)
+  !$acc routine seq
     TYPE (t_specie_const),  INTENT(in)  :: GAS       ! Type with constants for specific gas
     REAL(wp),               INTENT(in)  :: Tsoil     ! Soil temperature in layer [K]
     REAL(wp),               INTENT(in)  :: GAS_dens  ! GAS density in ice free pore space of layer [mol]
@@ -121,7 +135,11 @@ CONTAINS
   ! @brief  determine gas concentration in water based on Henry's law
   ! result is dimensionless Henry coefficient relating aqueous to gaseous concentration
   !!
-  PURE REAL(wp) FUNCTION determine_henry_cc(GAS, temp)
+!#ifndef _OPENACC
+  PURE &
+!#endif
+  REAL(wp) FUNCTION determine_henry_cc(GAS, temp)
+  !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS            ! Structure with constanst for a specific gass
     REAL(wp),              INTENT(in) :: temp           ! Soil temperature in layer [K]
   
@@ -155,7 +173,11 @@ CONTAINS
   ! @brief Converts a gas concentration [mol m-3] to volume mixing ration at reference temperature and pressure
   !
   !!
-  PURE REAL(wp) FUNCTION concentration_mol_m3_2_vmr(GAS,GAS_conc)
+#ifndef _OPENACC
+  PURE &
+#endif
+  REAL(wp) FUNCTION concentration_mol_m3_2_vmr(GAS,GAS_conc)
+  !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS      ! Type with constants specific for the gas
     REAL(wp),              INTENT(in) :: GAS_conc ! Gas concentration [mol m-3]
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_mol_m3_2_vmr'
@@ -166,7 +188,11 @@ CONTAINS
   ! @brief Converts a gas volume mixing ration to concentration [mol m-3] at reference temperature and pressure
   !
   !!
-  PURE REAL(wp) FUNCTION concentration_vmr_2_mol_m3(GAS,GAS_vmr)
+#ifndef _OPENACC
+  PURE &
+#endif
+  REAL(wp) FUNCTION concentration_vmr_2_mol_m3(GAS,GAS_vmr)
+  !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS     ! Type with constants specific for the gas
     REAL(wp),              INTENT(in) :: GAS_vmr ! Volume mixing ratio of gas [m3 m-3]
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_vmr_2_mol_m3'
@@ -181,7 +207,11 @@ CONTAINS
   ! @brief Converts a gas concentration to mass mixing ratio at reference temperature and pressure
   !
   !!
-  PURE REAL(wp) FUNCTION concentration_mol_m3_2_mmr(GAS, GAS_conc)
+#ifndef _OPENACC
+  PURE &
+#endif
+  REAL(wp) FUNCTION concentration_mol_m3_2_mmr(GAS, GAS_conc)
+  !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS      ! Type with constants specific for the gas
     REAL(wp),              INTENT(in) :: GAS_conc ! Concentration of gas [mol m-3]
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_mol_m3_2_mmr'
@@ -192,7 +222,11 @@ CONTAINS
   ! @brief Converts a gas concentration to volume mixing ratio at reference temperature and pressure
   !
   !!
-  PURE REAL(wp) FUNCTION concentration_mmr_2_mol_m3(GAS, GAS_mmr)
+#ifndef _OPENACC
+  PURE &
+#endif
+  REAL(wp) FUNCTION concentration_mmr_2_mol_m3(GAS, GAS_mmr)
+  !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS     ! Type with constants specific for the gas
     REAL(wp),              INTENT(in) :: GAS_mmr ! Mass mixing ratio of gas
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_mmr_2_mol_m3'
@@ -206,7 +240,11 @@ CONTAINS
   ! @brief Converts a gas volume mixing ratio to mass mixing ratio at reference temperature and pressure
   !
   !!
-  PURE REAL(wp) FUNCTION concentration_vmr_2_mmr(GAS, GAS_vmr)
+#ifndef _OPENACC
+  PURE &
+#endif
+  REAL(wp) FUNCTION concentration_vmr_2_mmr(GAS, GAS_vmr)
+  !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS     ! Type with constants specific for the gas
     REAL(wp),              INTENT(in) :: GAS_vmr ! Volume mixing ratio of gas
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_vmr_2_mmr'
@@ -217,7 +255,11 @@ CONTAINS
   ! @brief Converts a gas mass mixing ratio to volume mixing ratio at reference temperature and pressure
   !
   !!
-  PURE REAL(wp) FUNCTION concentration_mmr_2_vmr(GAS, GAS_mmr)
+#ifndef _OPENACC
+  PURE &
+#endif
+  REAL(wp) FUNCTION concentration_mmr_2_vmr(GAS, GAS_mmr)
+  !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS     ! Type with constants specific for the gas
     REAL(wp),              INTENT(in) :: GAS_mmr ! Mass mixing ratio of gas [kg kg-1]
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_mmr_2_vmr'
@@ -228,7 +270,11 @@ CONTAINS
   ! @brief Determine which unit of a gas is properly defined
   !
   !!
-  INTEGER PURE FUNCTION which_valid(GAS,mmr,vmr,conc)
+#ifndef _OPENACC
+  PURE &
+#endif
+  INTEGER FUNCTION which_valid(GAS,mmr,vmr,conc)
+  !$acc routine seq
     TYPE (t_specie_const), INTENT(in)  :: GAS
     REAL(wp), OPTIONAL,    INTENT(in)  :: mmr
     REAL(wp), OPTIONAL,    INTENT(in)  :: vmr
@@ -267,7 +313,11 @@ CONTAINS
   ! @brief Converts gas concentration or volume mixing ratio to mass mixing ratio
   ! Invalid units are marked with negative values or not present
   ! Exactly 1 unit must be specified
-  PURE SUBROUTINE convert_2_mmr(GAS,mmr,vmr,conc)
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE convert_2_mmr(GAS,mmr,vmr,conc)
+  !$acc routine seq
     TYPE (t_specie_const),  INTENT(in)    :: GAS
     REAL(wp),     OPTIONAL, INTENT(inout) :: mmr
     REAL(wp),     OPTIONAL, INTENT(in)    :: vmr
@@ -293,7 +343,11 @@ CONTAINS
   ! @brief Converts gas concentration or mass mixing ratio to volume mixing ratio
   ! Invalid units are marked with negative values or not present
   ! Exactly 1 unit must be specified
-  PURE SUBROUTINE convert_2_vmr(GAS,mmr,vmr,conc)
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE convert_2_vmr(GAS,mmr,vmr,conc)
+  !$acc routine seq
     TYPE (t_specie_const), INTENT(in)    :: GAS
     REAL(wp), OPTIONAL,    INTENT(in)    :: mmr
     REAL(wp), OPTIONAL,    INTENT(inout) :: vmr
@@ -319,7 +373,11 @@ CONTAINS
   ! @brief Converts volume or mass mixing ratio to concentration
   ! Invalid units are marked with negative values or not present
   ! Exactly 1 unit must be specified
-  PURE SUBROUTINE convert_2_mol_m3(GAS,mmr,vmr,conc)
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE convert_2_mol_m3(GAS,mmr,vmr,conc)
+  !$acc routine seq
     TYPE (t_specie_const), INTENT(in)    :: GAS
     REAL(wp), OPTIONAL,    INTENT(in)    :: mmr
     REAL(wp), OPTIONAL,    INTENT(in)    :: vmr
@@ -345,7 +403,11 @@ CONTAINS
   ! @brief Calculates diffusivities for a gas in air and water
   !
   !!
-  PURE SUBROUTINE calc_diffusivity(GAS,TK,D_air,D_water)
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE calc_diffusivity(GAS,TK,D_air,D_water)
+  !$acc routine seq
 
     USE mo_jsb_physical_constants, ONLY: tmelt
     USE mo_methane_constants,      ONLY: t_specie_const
@@ -372,7 +434,11 @@ CONTAINS
   !
   !!
   ! If surf not specified, the "upper layer" of src is copied to the new upper layer
-  PURE SUBROUTINE add_surface_layer(src,dst,surf)
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE add_surface_layer(src,dst,surf)
+  !$acc routine seq
     REAL(wp),           INTENT(in)  :: src(:)
     REAL(wp),           INTENT(out) :: dst(:)
     REAL(wp), OPTIONAL, INTENT(in)  :: surf
@@ -391,6 +457,7 @@ CONTAINS
     
   END SUBROUTINE add_surface_layer
 
+#ifndef _OPENACC
   !!
   ! @brief   Setup and calc vertical diffusion of a gas using a Crank-Nicolson integration
   !
@@ -400,6 +467,7 @@ CONTAINS
                           diff_coeff_surf, layer_thick, dens2conc, conc2dens,            &
                           GAS_dens, surf_GAS_flux, lissue)
 
+  !$acc routine seq
     INTEGER,  INTENT(in)    :: nstep              ! #diffusion timesteps per model timestep
     REAL(wp), INTENT(in)    :: dt                 ! Model time step [s]
     INTEGER,  INTENT(in)    :: mxlay_above_rock   ! layer number above bedrock
@@ -490,11 +558,10 @@ CONTAINS
   ! should allow variable set up of implicit / explicit
   ! contributions to diffision problem
   !
-  ! TODO: Where to get the dgtsv routine from
 
   SUBROUTINE diffusion_step_variable(num_iLayers, mxlay_above_wt, implicit_contrib, src_GAS_conc, &
                                      kHCC, diff_coeff, dz, delta_time, GAS_conc, lissue)
-
+  !$acc routine seq
     INTEGER , INTENT(in)    :: num_iLayers      ! no. of internal layers
     INTEGER,  INTENT(in)    :: mxlay_above_wt   ! (outside) layer number above water table
     REAL(wp), INTENT(in)    :: implicit_contrib ! implicit contribution to Crank-Nicolson integration
@@ -659,6 +726,6 @@ CONTAINS
     GAS_conc = rhs
 
   END SUBROUTINE diffusion_step_variable
-
+#endif
 #endif
 END MODULE mo_methane_util

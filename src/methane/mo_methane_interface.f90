@@ -38,7 +38,12 @@ MODULE mo_methane_interface
                                        determine_Henry_cc
   USE mo_methane_process,        ONLY: plant_setup, calc_methane_termites, calc_methane_herbivores, calc_methane_fire, &
                                        soil_column_setup, diffusion_setup, production, plant_transport, oxidation_mm,  &
-                                       reaction_diffusion, ebullition, init_gas_pools
+                                       ebullition, init_gas_pools
+! TODO: Emergency "solution" to allow compilation for GPU
+#ifndef _OPENACC
+  USE mo_methane_process,        ONLY: reaction_diffusion
+#endif
+
   USE mo_ch4_config_class,       ONLY: t_ch4_source_config, t_multi_file
   USE mo_util,                   ONLY: real2string
   USE mo_megan_memory_class,     ONLY: t_megan_ptrs
@@ -412,6 +417,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_methane'
 
     IF (.NOT. tile%Is_process_calculated(CH4_)) RETURN
+! TODO: Emergency exit, since diffusion doesn't work with GPUs (using non-GPU LAPACK routine dgtvs)
+#ifdef _OPENACC
+    RETURN
+#endif
 
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_Config(CH4_)
@@ -480,7 +489,8 @@ CONTAINS
     IF (.NOT. ASSOCIATED(frac_non_crop) .AND. dsl4jsb_Config(CH4_)%do_termite) THEN
       ALLOCATE(frac_non_crop(grid%nproma,grid%nblks))
       ALLOCATE(sum_non_crop (grid%nproma,grid%nblks))
-      !$ACC DATA CREATE(frac_non_crop,sum_non_crop)
+      !$ACC ENTER DATA PCREATE(frac_non_crop,sum_non_crop)
+      !$ACC ENTER DATA ATTACH(frac_non_crop,sum_non_crop)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR
       DO ic = 1, nc
         frac_non_crop(ic,:) = 0._wp
@@ -533,11 +543,11 @@ CONTAINS
     ALLOCATE(CH4_act               (nsoil))
     ALLOCATE(CO2_act               (nsoil))
     ALLOCATE( O2_act               (nsoil))
-    !$ACC DATA CREATE(OxicDecompCarbon,AnoxDecompCarbon,water_table,frac_tile,frac_tile_abs frac1,tiller_area_sl) &
-    !$ACC DATA CREATE(CH4_dry_sl,CO2_dry_sl,O2_dry_sl,CH4_wet_sl,CO2_wet_sl,O2_wet_sl,CH4_plant_sl,CO2_plant_sl,O2_plant_sl) &
-    !$ACC DATA CREATE(CH4_prod_sl,CO2_prod_sl,O2_prod_sl,CH4_oxid_sl,CO2_oxid_sl,O2_oxid_sl,CH4_ebul_sl,O2_other_sl) &
-    !$ACC DATA CREATE(relative_moist_sl,relative_ice_sl,relative_porevol_sl,relative_pore_air_sl,relative_pore_moist_sl) &
-    !$ACC DATA CREATE(dens2conc_sl,conc2dens_sl,D_CH4,D_CO2,D_O2,D_used,CH4_act,CO2_act,O2_act)
+    !$ACC DATA CREATE (OxicDecompCarbon,AnoxDecompCarbon,water_table,frac_tile,frac_tile_abs,frac1,tiller_area_sl) &
+    !$ACC      CREATE (CH4_dry_sl,CO2_dry_sl,O2_dry_sl,CH4_wet_sl,CO2_wet_sl,O2_wet_sl,CH4_plant_sl,CO2_plant_sl,O2_plant_sl) &
+    !$ACC      CREATE (CH4_prod_sl,CO2_prod_sl,O2_prod_sl,CH4_oxid_sl,CO2_oxid_sl,O2_oxid_sl,CH4_ebul_sl,O2_other_sl) &
+    !$ACC      CREATE (relative_moist_sl,relative_ice_sl,relative_porevol_sl,relative_pore_air_sl,relative_pore_moist_sl) &
+    !$ACC      CREATE (dens2conc_sl,conc2dens_sl,D_CH4,D_CO2,D_O2,D_used,CH4_act,CO2_act,O2_act) ASYNC(1)
 
     ! Get reference to variables for current block
     !
@@ -770,7 +780,7 @@ CONTAINS
       !$ACC   PRIVATE( is_veg, is_wet, is_peat, compute_flag, l_stop, l_GPP_dep, lissue, lissue_tst, dbg, lmsg) &
       !$ACC   PRIVATE( tspd, iblk, ics, ice, nc, nsoil, lt, ic, is, iy, iWetness, iWetness_st, iWetness_en)     &
       !$ACC   PRIVATE( acro_height, frac_inun_loc, frac, D_CH4_surface, D_CO2_surface, D_O2_surface)            &
-      !$ACC   PRIVATE( CH4_Prod, CO2_Prod, O2_Prod, CH4_prod_ratio, CH4_diff, CO2_diff, O2_diff)                &
+      !$ACC   PRIVATE( CH4_prod_ratio, CH4_diff, CO2_diff, O2_diff)                &
       !$ACC   PRIVATE( mxlay_above_wt, mxlay_acrotelm, nly)
       DO ic = 1, nc
 
@@ -964,6 +974,8 @@ CONTAINS
             ! -------------------------------------------------------------------------------------------
             ! REACTION-DIFFUSION OF ALL GASES
             ! Also: competition for CH4/O2
+! TODO: Emergency "solution" to allow compilation for GPU
+#ifndef _OPENACC
             CALL reaction_diffusion(dsl4jsb_Config(CH4_)%nstep_diffusion,             &
                                     dsl4jsb_Config(CH4_)%implicit_contrib,            &
                                     dt, nly, mxlay_above_wt,                          &
@@ -981,6 +993,7 @@ CONTAINS
                                     CH4_diff,        CO2_diff,        O2_diff,        &
                                     D_used, lissue_tst)
             lissue = lissue .OR. lissue_tst
+#endif
 
             ! Fill global memory for output (fluxes in s-1)
             IF (is_Wet) THEN

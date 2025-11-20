@@ -38,6 +38,7 @@ CONTAINS
                                     layer_moisture, ice_content,                                               & 
                                     relative_moist, relative_ice, relative_porevol, relative_pore_air,         &
                                     relative_pore_moist, dens2conc, conc2dens, mxlay_above_wt, mxlay_acrotelm)
+  !$acc routine seq
     USE mo_methane_constants, ONLY: minimum_porevol
     USE mo_methane_util,      ONLY: find_layer
     LOGICAL,  INTENT(in)  :: permafrost_flag        ! permafrost flag
@@ -150,8 +151,12 @@ CONTAINS
   PURE SUBROUTINE diffusion_setup(is_peatland, mxlay_above_rock, mxlay_above_wt, bclapp, &
                                   relative_porevol, relative_pore_air, Tsoil, &
                                   D_CH4, D_CO2, D_O2, D_CH4_surface, D_CO2_surface, D_O2_surface)
+  !$acc routine seq
     USE mo_methane_constants, ONLY: CO2_consts, CH4_consts, O2_consts
+! TODO: Emergency "solution" to allow compilation for GPU
+#ifndef _OPENACC
     USE mo_methane_util,      ONLY: calc_diffusivity
+#endif
 
     LOGICAL,  INTENT(in)  :: is_peatland          ! peatland flag (TRUE = peatland)
     INTEGER,  INTENT(in)  :: mxlay_above_rock     ! layer number above bedrock
@@ -180,11 +185,14 @@ CONTAINS
     REAL(wp) :: conv                                            ! conversion factor
     INTEGER  :: is                                              ! layer counter
 
+! TODO: Emergency solution to allow compilation for GPU
+#ifndef _OPENACC
     DO is = 1, mxlay_above_rock
       CALL calc_diffusivity(CH4_consts,Tsoil(is),D_CH4_air(is),D_CH4_water(is))
       CALL calc_diffusivity(CO2_consts,Tsoil(is),D_CO2_air(is),D_CO2_water(is))
       CALL calc_diffusivity( O2_consts,Tsoil(is),D_O2_air (is),D_O2_water (is))
     ENDDO
+#endif
 
     D_CH4 = 0._wp
     D_CO2 = 0._wp
@@ -243,6 +251,7 @@ CONTAINS
   !!
   PURE SUBROUTINE plant_setup(is_wet,is_woody,LAI_max,mxlay_above_rock,LAI,Cpool_green,root_dist, &
                               tiller_area,tillers)
+  !$acc routine seq
     USE mo_jsb_math_constants, ONLY: pi
     LOGICAL,            INTENT(in)  :: is_wet           ! wetness state: .FALSE. = dry, .TRUE. = wet
     LOGICAL,            INTENT(in)  :: is_woody         ! woody landcover type
@@ -327,6 +336,7 @@ CONTAINS
                                  CH4_dens_wet,  CO2_dens_wet, O2_dens_wet,   &
                                  CH4_dry,       CO2_dry,      O2_dry,        &
                                  CH4_wet,       CO2_wet,      O2_wet)
+  !$acc routine seq
     LOGICAL,  INTENT(in)    :: is_peat            ! peatland flag
     INTEGER,  INTENT(in)    :: mxlay              ! layer number above bedrock
     REAL(wp), INTENT(in)    :: frac_inun_min      ! minimum inundated fraction of grid cell to regard for anoxic processes
@@ -469,6 +479,7 @@ CONTAINS
                         frac_CH4_anox_mineral, frac_CH4_anox_organic, meth_q10, root_dist, &
                         inun_frac, Tsoil, OxicDecompCarbon, AnoxDecompCarbon,              &
                         CH4_Prod, CO2_Prod, O2_Uptake, CH4_prod_ratio, resp_sl)
+  !$acc routine seq
     LOGICAL,  INTENT(in)  :: is_peatland      ! peatland flag (.TRUE. if peatland)
     LOGICAL,  INTENT(in)  :: is_wet           ! wetness state, .FALSE. = dry, .TRUE. = wet
     INTEGER,  INTENT(in)  :: mxlay_above_rock ! layer number above bedrock
@@ -661,6 +672,8 @@ CONTAINS
     IF (SUM(CH4_Prod(1:mxlay_above_rock)+CO2_Prod_anox(1:mxlay_above_rock)) > 0._wp) &
       CH4_Prod_ratio = SUM(CH4_prod(1:mxlay_above_rock))/SUM(CH4_Prod(1:mxlay_above_rock)+CO2_Prod_anox(1:mxlay_above_rock))
 
+    !$ACC END DATA
+
   END SUBROUTINE production
 
   !!
@@ -670,7 +683,7 @@ CONTAINS
   PURE SUBROUTINE oxidation_mm(is_wet, dt, oxid_scale_dry, oxid_scale_wet, oxid_q10, Tsoil, rel_soil_moist, &
                                          dens2conc, conc2dens, CH4_dens, CO2_dens, O2_dens, O2_Uptake_Prod, &
                                          CH4_Oxid, CO2_Oxid, O2_Oxid, O2_Other)
-
+  !$acc routine seq
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     LOGICAL,  INTENT(in)  :: is_wet            ! wetness state: .FALSE. = dry, .TRUE. = wet
@@ -766,6 +779,7 @@ CONTAINS
                                   dt, Tsoil, relative_porevol, dens2conc, conc2dens, tiller_area,  &
                                   D_GAS, GAS_conc_atm, GAS_dens, GAS_Plant, GAS_excess)
 
+  !$acc routine seq
     USE mo_methane_constants, ONLY: t_specie_const, minimum_porevol
     USE mo_methane_util,      ONLY: determine_Henry_cc
 
@@ -842,6 +856,7 @@ CONTAINS
   SUBROUTINE ebullition(is_peatland, mxlay_above_rock, mxlay_above_wt, Tsoil, surface_air_pressure, &
                         Dz, relative_porevol, water_table, &
                         dens2conc, conc2dens, CH4_dens, CH4_ebul)
+  !$acc routine seq
 
     USE mo_jsb_physical_constants, ONLY: UniversalGasConstant => argas, tmelt, rhoh2o, grav
     USE mo_methane_util,           ONLY: dissolved_gas
@@ -987,7 +1002,11 @@ CONTAINS
                    CH4_Oxid, CO2_Oxid, O2_Oxid, CH4_Ebul, O2_Other,            &
                    surf_CH4_flux, surf_CO2_flux, surf_O2_flux, D_used, lissue, nissue)
 
-    USE mo_methane_util,      ONLY: determine_Henry_cc, diffusion_cn
+  !$acc routine seq
+    USE mo_methane_util,      ONLY: determine_Henry_cc
+#ifndef _OPENACC
+    USE mo_methane_util,      ONLY: diffusion_cn
+#endif
     USE mo_methane_constants, ONLY: CH4_consts, CO2_consts, O2_consts
 
     INTEGER,  INTENT(in)    :: nstep                  ! #diffusion time steps per model time step
@@ -1122,9 +1141,12 @@ CONTAINS
       D_used(is) = surf_CH4_flux
     ENDDO
 
+! TODO: Emergency solution to allow compilation for GPU
+#ifndef _OPENACC
     CALL diffusion_cn(nstep, dt, mxlay_above_rock, mxlay_above_wt, implicit_contribution, surf_CH4_conc, &
                       CH4_source, kHCC, Di, D_CH4_surf, layer_thick, dens2conc, conc2dens, CH4_dens, surf_CH4_flux,lissue_tst)
     lissue_loc = lissue_loc .OR. lissue_tst
+#endif
 
     ! diffusion calculation: CO2
 
@@ -1134,9 +1156,12 @@ CONTAINS
       kHCC(is) = determine_Henry_cc(CO2_consts, Tsoil(is))
     ENDDO
 
+! TODO: Emergency solution to allow compilation for GPU
+#ifndef _OPENACC
     CALL diffusion_cn(nstep, dt, mxlay_above_rock, mxlay_above_wt, implicit_contribution, surf_CO2_conc, &
                       CO2_source, kHCC, Di, D_CO2_surf, layer_thick, dens2conc, conc2dens, CO2_dens, surf_CO2_flux,lissue_tst)
     lissue_loc = lissue_loc .OR. lissue_tst
+#endif
 
     ! diffusion calculation: O2
 
@@ -1146,9 +1171,12 @@ CONTAINS
       kHCC(is) = determine_Henry_cc(O2_consts, Tsoil(is))
     ENDDO
 
+! TODO: Emergency solution to allow compilation for GPU
+#ifndef _OPENACC
     CALL diffusion_cn(nstep, dt, mxlay_above_rock, mxlay_above_wt, implicit_contribution, surf_O2_conc, &
                       O2_source, kHCC, Di, D_O2_surf, layer_thick, dens2conc, conc2dens, O2_dens, surf_O2_flux,lissue_tst)
     lissue_loc = lissue_loc .OR. lissue_tst
+#endif
 
     IF (PRESENT(lissue)) lissue = lissue_loc
     IF (PRESENT(nissue)) nissue = nissue_loc
@@ -1162,7 +1190,7 @@ CONTAINS
   !!
   PURE SUBROUTINE calc_methane_fire(CO2_fire_emission, landscape_type,                &
                                     CH4_out_fire, fire_em_NO, fire_em_CO, fire_em_iso)
-
+  !$acc routine seq
     USE mo_methane_constants,      ONLY: max_specietypes, ef => emission_factors_for_methane, &
                                          SPECIE_CH4, SPECIE_NOx, SPECIE_CO, SPECIE_ISOPRENE,  &
                                          molarMassCO2_kg, molarMassCH4_kg, molarMassC_kg, C_2_biomass_ratio
@@ -1205,6 +1233,7 @@ CONTAINS
   PURE SUBROUTINE calc_methane_termites(is_crop, frac_tile, GPP, GDD, min_mmtemp20, GPP_dep_termites, &
                                         termite_biomass, CH4_out_termite, frac_non_crop, sum_non_crop)
 
+  !$acc routine seq
     USE mo_methane_constants,      ONLY: molarMassCO2_kg, molarMassCH4_kg, molarMassC_kg
     USE mo_jsb_physical_constants, ONLY: tmelt
 
@@ -1259,6 +1288,7 @@ CONTAINS
   END SUBROUTINE calc_methane_termites
 
   PURE SUBROUTINE calc_methane_herbivores(herbivory2atm, iswoody, CH4_out_herbivore)
+  !$acc routine seq
 
     USE mo_methane_constants, ONLY: molarMassCH4_kg, molarMassC_kg, C_2_biomass_ratio
 
@@ -1298,6 +1328,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: layer_depth(:)       ! soil layer depth
     REAL(wp), INTENT(in)  :: root_dist_beta       ! exponential factor for root distribution
     REAL(wp), INTENT(out) :: root_dist(:)         ! root distribution in each layer
+  !$acc routine seq
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':determine_root_dist'
 

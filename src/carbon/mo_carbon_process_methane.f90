@@ -25,7 +25,7 @@ MODULE mo_carbon_process_methane
 CONTAINS
 
 #ifndef _OPENACC
-  PURE ELEMENTAL &
+  PURE &
 #endif
   SUBROUTINE calc_methane_soil_c(             &
     ! General inputs
@@ -81,6 +81,7 @@ CONTAINS
     & acrotelm_height_ag, acrotelm_height_bg, &
     & redFact_Nlim                            &
     & )
+    !$acc routine seq
     USE mo_carbon_constants,  ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
       &                             rho_YCpool_acro, rho_YCpool_cato, Cfrac_YCpool_acro, Cfrac_YCpool_cato, &
       &                             i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble,   &

@@ -55,8 +55,8 @@ CONTAINS
   ! @brief Constructs or resets an interpolation structure
   !
   !!
-  !$acc routine seq
   FUNCTION interpol_reset(n,intrp,var)
+  !$acc routine seq
     TYPE(t_interp_var),           POINTER :: interpol_reset
     INTEGER,                   INTENT(in) :: n
     TYPE(t_interp_var), OPTIONAL, POINTER :: intrp
@@ -72,6 +72,8 @@ CONTAINS
     ENDIF
     IF (.NOT. ASSOCIATED(res)) THEN
       ALLOCATE(res)
+      !$acc enter data pcreate(res)
+      !$acc enter data attach(res)
       NULLIFY(res%curr,res%a,res%b,res%c,res%excess,res%excess_max,res%add,res%flg)
     ENDIF
     res%valid_range   = (/-HUGE(tmp),HUGE(tmp)/)
@@ -86,6 +88,8 @@ CONTAINS
         res%ext_var = .TRUE.
       ELSE
         ALLOCATE(res%curr(n))
+        !$acc enter data pcreate(res%curr)
+        !$acc enter data attach(res%curr)
       ENDIF
     ENDIF
     IF (.NOT. ASSOCIATED(res%a))          ALLOCATE(res%a(n))
@@ -94,6 +98,8 @@ CONTAINS
     IF (.NOT. ASSOCIATED(res%excess))     ALLOCATE(res%excess(n))
     IF (.NOT. ASSOCIATED(res%excess_max)) ALLOCATE(res%excess_max(n))
     IF (.NOT. ASSOCIATED(res%add))        ALLOCATE(res%add(n))
+    !$acc enter data pcreate(res%a,res%b,res%c,res%excess,res%excess_max,res%add)
+    !$acc enter data attach(res%a,res%b,res%c,res%excess,res%excess_max,res%add)
     IF (.NOT. ASSOCIATED(res%flg)) THEN
       ALLOCATE(res%flg(n))
       DO i=1,n
@@ -118,8 +124,8 @@ CONTAINS
   ! @brief Deep destruction of an interpolation structure
   !
   !!
-  !$acc routine seq
   SUBROUTINE interpol_done(intrp)
+  !$acc routine seq
     TYPE(t_interp_var), POINTER :: intrp
 
     TYPE(t_interp_var), POINTER :: done
@@ -134,6 +140,7 @@ CONTAINS
     IF (ASSOCIATED(done%add))        DEALLOCATE(done%add)
     IF (ASSOCIATED(done%flg))        DEALLOCATE(done%flg)
 
+
     DEALLOCATE(done)
 
   END SUBROUTINE interpol_done
@@ -142,8 +149,8 @@ CONTAINS
   ! @brief Initializes a new interpolation
   !
   !!
-  !$acc routine seq
   FUNCTION interpol_new(dt,nintrp,y1,y2,y3,valid_range,frac_use_full,intrp,var)
+  !$acc routine seq
     TYPE(t_interp_var),              POINTER :: interpol_new
     REAL(wp),                     INTENT(in) :: dt
     INTEGER,                      INTENT(in) :: nintrp
@@ -216,8 +223,8 @@ CONTAINS
   ! @brief Go to next step of an interpolation
   !
   !!
-  !$acc routine seq
   SUBROUTINE interpol_update(intrp)
+  !$acc routine seq
     TYPE(t_interp_var), POINTER :: intrp
 
     REAL(wp) :: x, y, tmp, su
@@ -259,8 +266,11 @@ CONTAINS
   !        Either dt and t_relax or nstep must be present
   !
   !!
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE time_relaxation(inst,relax,dt,t_relax,nstep,linit)
   !$acc routine seq
-  PURE SUBROUTINE time_relaxation(inst,relax,dt,t_relax,nstep,linit)
     REAL(wp),           INTENT(in)    :: inst    ! Instantaneous value to include in relaxation [?]
     REAL(wp),           INTENT(inout) :: relax   ! Mean value to update [?]
     REAL(wp), OPTIONAL, INTENT(in)    :: dt      ! Time step between updates [s]
@@ -290,8 +300,11 @@ CONTAINS
   !------------------------------------------------------------------------------------
 
   !   Returns the incomplete gamma function P (a, x).
+#ifndef _OPENACC
+  PURE &
+#endif
+  FUNCTION gamm_p(a,x)
   !$acc routine seq
-  PURE FUNCTION gamm_p(a,x)
     REAL(wp), INTENT(in) :: a, x
     REAL(wp)             :: gamm_p
     !   USES gcf, gser
@@ -314,8 +327,11 @@ CONTAINS
   END FUNCTION gamm_p
 
   !------------------------------------------------------------------------------------
+#ifndef _OPENACC
+  PURE &
+#endif 
+  FUNCTION gamm_inv_p(p, a)
   !$acc routine seq
-  PURE FUNCTION gamm_inv_p(p, a)
 
     REAL(wp), INTENT(IN) :: p, a
     REAL(wp)             :: gamm_inv_p
@@ -383,8 +399,11 @@ CONTAINS
 
   !------------------------------------------------------------------------------------
   ! Returns the incomplete gamma function Q(a, x) ≡ 1 − P (a, x).
+#ifndef _OPENACC
+  PURE &
+#endif 
+  FUNCTION gamm_q(a,x)
   !$acc routine seq
-  PURE FUNCTION gamm_q(a,x)
     REAL(wp), INTENT(in) :: a,x
     REAL(wp) :: gamm_q
     ! USES gcf,gser
@@ -409,8 +428,11 @@ CONTAINS
   !------------------------------------------------------------------------------------
   !   Returns the incomplete gamma function P (a, x) evaluated by its series representation as
   !   gamser . Also RETURNs ln Γ(a) as gln.
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE gser(gamser,a,x,gln)
   !$acc routine seq
-  PURE SUBROUTINE gser(gamser,a,x,gln)
     REAL(wp), INTENT(inout) :: gamser, gln
     REAL(wp), INTENT(in)    :: a, x
 
@@ -447,8 +469,11 @@ CONTAINS
   !   sentation as gammcf. Also RETURNs ln Γ(a) as gln.
   !   Parameters: ITMAX is the maximum allowed number of iterations; EPS is the relative accu-
   !   racy; FPMIN is a number near the smallest representable floating-point number.
+#ifndef _OPENACC
+  PURE &
+#endif
   !$acc routine seq
-  PURE SUBROUTINE gcf(gammcf,a,x,gln)
+  SUBROUTINE gcf(gammcf,a,x,gln)
     REAL(wp), INTENT(inout) :: gammcf, gln
     REAL(wp), INTENT(in)    :: a,x
 
@@ -490,8 +515,11 @@ CONTAINS
   END SUBROUTINE gcf
 
   !------------------------------------------------------------------------------------
+#ifndef _OPENACC
+  PURE &
+#endif
+  FUNCTION gamm_ln(xx)
   !$acc routine seq
-  PURE FUNCTION gamm_ln(xx)
     REAL(wp), INTENT(in) :: xx
     REAL(wp)             :: gamm_ln
     ! Returns the value ln[Γ(xx )] for xx > 0.

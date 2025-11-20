@@ -67,7 +67,7 @@ CONTAINS
     & Cflx_herb_2_atm,            &
     & Cflx_crop_harvest_2_atm     &
     & )
-
+    !$acc routine seq
     USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround !, days_per_year
     !
 
@@ -410,9 +410,9 @@ CONTAINS
 
   END SUBROUTINE calc_plant_c
 
-#ifndef _OPENACC
+!#ifndef _OPENACC
   PURE &
-#endif
+!#endif
   SUBROUTINE yasso (dt, Yasso_in_pools, Weather, c_2_litter, Lit_coefV, WoodLitterSize, Yasso_out, fract_aboveground, &
                     c_2_rootExudates, redFact_Nlimit, is_anoxic, is_peat,                                             &
                     A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H)
@@ -920,12 +920,13 @@ CONTAINS
   !
   !> Distributes incomming litter to yasso pools (i.e. proportional to litter coefficients and passed factors)
   !
-#ifndef _OPENACC
+!#ifndef _OPENACC
   PURE &
-#endif
+!#endif
   SUBROUTINE distribute_yasso_litter(c_acid, c_water, c_ethanol, c_nonsoluble, c_humus, &
     &                                litter, fraction, coefficients)
-    USE mo_carbon_constants, ONLY: & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol,    &
+!$ACC ROUTINE SEQ
+    USE mo_carbon_constants, ONLY:   i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol,    &
                                    & i_lctlib_nonsoluble, i_lctlib_humus
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
@@ -954,7 +955,7 @@ CONTAINS
 #ifndef _OPENACC
   ELEMENTAL &
 #endif
-  SUBROUTINE add_litter_to_yasso_pool(this_pool, litter, fraction, coefficient)
+  PURE SUBROUTINE add_litter_to_yasso_pool(this_pool, litter, fraction, coefficient)
 
 !$ACC ROUTINE SEQ
 
@@ -978,6 +979,7 @@ CONTAINS
     & Cpool_per_canopy,               & ! in
     & veg_fract_correction,           & ! in
     & fract_fpc_max)                    ! in
+!$ACC ROUTINE SEQ
 
     REAL(wp), INTENT(IN), DIMENSION(:) :: &
       & Cpool_per_canopy, &
@@ -988,11 +990,11 @@ CONTAINS
 
     INTEGER :: ic
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    !ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, SIZE(fract_fpc_max)
       Cpool_per_tile(ic) = Cpool_per_canopy(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
     END DO
-    !$ACC END PARALLEL LOOP
+    !ACC END PARALLEL LOOP
 
   END SUBROUTINE get_per_tile
 

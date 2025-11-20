@@ -283,14 +283,14 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(TOP_, peat_water_volume)
       dsl4jsb_Get_var2D_onChunk(TOP_, peat_water_flux)
 
-      !$acc data parallel
-      !$acc loop gang vector
+      !$acc parallel loop default(present) gang vector
       DO ic = 1, nc
         CALL update_aet(tmelt,t_air(ic),rad_srf_net(ic),aet(ic))
       ENDDO
+      !$acc end parallel loop
 
       ! StW: Access to frac_liquid_top is questionable if inun_mode > 0 - likely seg-fault
-      !$acc parallel loop gang vector
+      !$acc parallel loop default(present) gang vector
       DO ic = 1, nc
         CALL update_water_balance_peatland(tspd, dtime,      & ! Time parameters
           & dsl4jsb_Config(TOP_)%peat_runoff_fac,            & ! Configuration parameters
@@ -302,9 +302,10 @@ CONTAINS
           & peat_water_flux(ic)                              &
         )
       ENDDO
+      !$acc end parallel loop
 
       IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
-        !$acc loop gang vector
+        !$acc parallel loop default(present) gang vector 
         DO ic = 1, nc
           CALL update_peat_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                                       &
             &                      lnew_year,lnew_month,lnew_day,                                                  &
@@ -315,7 +316,7 @@ CONTAINS
             &                      aet (ic),               aet_sum_day(ic),   aet_mean_day (ic),    aet_relax(ic), &
             &                      poaet_mean_day(ic), poaet_sum_year (ic), poaet_mean_year(ic),     poaet_lt(ic))
         ENDDO
-        !$acc end parallel
+        !$acc end parallel loop
       ENDIF
 
     ENDIF
@@ -398,6 +399,7 @@ CONTAINS
         DO ic = 1, nc
           frac_inun_pre(ic) = frac_inun(ic)
         ENDDO
+        !$acc end parallel loop
       ENDIF
 
       ! Use data from next month for next step if end of month is reached
@@ -439,16 +441,16 @@ CONTAINS
       !$acc update device (lat, cti_mean, cti_basin, cti_openwater, cti_phi, cti_chi, cti_mu)
 
       ! Save inundated fraction from last time step for the methane process
-      !$acc data parallel default(present)
       IF (.NOT. lrestart) THEN
-        !$acc loop gang vector
+        !$acc parallel loop gang vector
         DO ic = 1, nc
           frac_inun_pre(ic) = frac_inun(ic)
         ENDDO
+        !$acc end parallel loop
       ENDIF
 
       ! Initializations
-      !$acc loop gang vector
+      !$acc parallel loop gang vector
       DO ic = 1, nc
         water_table      (ic  ) = 0._wp
         frac_liquid_top  (ic  ) = 0._wp
@@ -456,12 +458,13 @@ CONTAINS
         wt_inun          (ic  ) = 0._wp
         frac_inun_uncorr (ic  ) = 0._wp
       ENDDO
+      !$acc end parallel loop
 
       ! If this is a crop tile and wetlands are not allowed on crops: Skip calc of wt and inun
       IF (dsl4jsb_Config(TOP_)%use_crop_wetlands .OR. .NOT. dsl4jsb_Lctlib_param(CropFlag)) THEN
 
         ! Calculate water table
-        !$acc loop gang vector
+        !$acc parallel loop gang vector
         DO ic = 1, nc
 
           ! Secure calculations are done on contiguous data - may be faster
@@ -482,13 +485,15 @@ CONTAINS
           frac_liquid_top(ic  ) = frac_liquid_top_t
 !!!        frac_liquid_sl (ic,:) = frac_liquid_t_sl(:)
         ENDDO
+        !$acc end parallel loop
 
-        !$acc loop gang vector
+        !$acc parallel loop gang vector
         DO ic = 1, nc
           frac_liquid_top_uncorr(ic) =            frac_liquid_top(ic)
           frac_liquid_top       (ic) = MAX(0.1_wp,frac_liquid_top(ic))
         ENDDO
-        !$acc loop gang vector
+        !$acc end parallel loop
+        !$acc parallel loop gang vector
         DO ic = 1, nc
           IF (aet_relax(ic) > 0._wp) THEN
             PE_mask(ic) = (precip_relax(ic) / aet_relax(ic)) > dsl4jsb_Config(TOP_)%wetland_threshold
@@ -496,9 +501,10 @@ CONTAINS
             PE_mask(ic) = precip_relax(ic) > 0._wp
           ENDIF
         ENDDO
+        !$acc end parallel loop
 
         ! Calculate inundated area
-        !$acc loop gang vector
+        !$acc parallel loop gang vector
         DO ic = 1, nc
           CALL update_inun_frac(                            &
             & dsl4jsb_Config(TOP_)%soil_depth_min,          & ! Scalar parameters
@@ -569,12 +575,14 @@ CONTAINS
             &                          wt_inun_min_year(ic), wt_inun_min_lt(ic)                          &
           )
         ENDDO
+        !$acc end parallel loop
       ENDIF
 
     ENDIF
 
     ! Deallocate local work arrays
     !
+    !$acc end data
     DEALLOCATE(t_soil)
     DEALLOCATE(wtr_soil)
     DEALLOCATE(ice_soil)
