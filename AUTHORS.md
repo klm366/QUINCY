@@ -11,6 +11,7 @@ title: Authors
 - Fabrice Lacroix
 - Freja Vamborg
 - Georgii Nerobelov
+- Hideki Ninomiya
 - Jan Engel
 - Julia Nabel
 - Karolina Slominska-Durdasiak
