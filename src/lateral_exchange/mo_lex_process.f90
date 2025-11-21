@@ -42,7 +42,7 @@ CONTAINS
   !! Get intersected grid from two soil grids with vertical offset
   !!
   SUBROUTINE get_intersected_grid(dz, nsoil, ngrid, offset, d_bedrock, d_pond, &
-    &  index_tile, index_sibl, layer_thickness, status)
+    &  index_tile, index_sibl, layer_thickness, status, layer_top, layer_bot)
 
     USE mo_util_sort,   ONLY: quicksort
 
@@ -57,6 +57,9 @@ CONTAINS
     INTEGER,  INTENT(out) :: index_tile(:),    &  !< Index mapping from intersected grid to tile soil layers
       &                      index_sibl(:)        !< Index mapping from intersected grid to sibling soil layers
     REAL(wp), INTENT(out) :: layer_thickness(:)   !< Soil layer thicknesses on intersected grid [m]
+    REAL(wp), INTENT(out), OPTIONAL ::         &
+      & layer_top(:), &  !< Upper depth bound of soil layer on intersected grid [m]
+      & layer_bot(:)     !< Lower depth bound of soil layer on intersected grid [m]
     CHARACTER(LEN=4), INTENT(out) :: status(:)    !< Connection type (None, Pond, Soil, Rock) between tile and sibling
 
     INTEGER               :: i,                &  !< Index variable for layers on any vertical grid
@@ -141,6 +144,8 @@ CONTAINS
     ! Loop over all layers in intersected grid
     DO i = 1, ngrid
       bot = new_layers(i)
+      IF (PRESENT(layer_top)) layer_top(i) = top
+      IF (PRESENT(layer_bot)) layer_bot(i) = bot
       IF (bot > top .AND. i_tile <= nsoil .AND. i_sibl <= nsoil) THEN
         ! There is a layer here --> store thickness and status and update indices
         layer_thickness(i) = bot - top
@@ -1396,75 +1401,105 @@ CONTAINS
   !! Adjust lateral fluxes according to differences in surface elevation and bedrock boundary
   !!
   SUBROUTINE shift_fluxes_sl(                 &
-    & nsoil,                                  &
-    & h_offset,                               &
+    & nc, nsoil, nrgrd,                       &
+    & connect, h_offset, dz,                  &
     & dsoil_lvt, dsoil_dpr,                   &
     & flx_lat_sl                              &
     )
 
-    INTEGER , INTENT(in)    :: nsoil             !< Number of soil ayers
+    INTEGER , INTENT(in)    ::     &
+      & nc,                        &  !< Number of cells
+      & nsoil,                     &  !< Number of soil ayers
+      & nrgrd                         !< Number of layers on helper grid determined by layer overlaps
 
+    REAL(wp), INTENT(in)    ::     &
+      & connect(:),                &  !< Connectivity array for lateral exchange
+      & h_offset(:)                   !< Difference in surface elevation between elevation and depression [m]
 
-    REAL(wp), INTENT(in)    :: h_offset          !< Differece in surface elevation between elevation and depression [m]
+    REAL(wp), INTENT(in)    ::     &
+      & dz(:)                         !< Standard soil layer bottom depths in both tiles [m]
 
-    REAL(wp), INTENT(in)    :: dsoil_lvt(:),  &  !< Soil depth on layers of elevation tile [m]
-      &                        dsoil_dpr(:)      !< Soil depth on layers of depression tile [m]
+    REAL(wp), INTENT(in)    ::     &
+      & dsoil_lvt(:,:),            &  !< Soil depth on layers of elevation tile [m]
+      & dsoil_dpr(:,:)                !< Soil depth on layers of depression tile [m]
 
-    REAL(wp), INTENT(inout) :: flx_lat_sl(:)     !< Lateralal flux to be adjusted [?]
+    REAL(wp), INTENT(inout) ::     &
+      & flx_lat_sl(:,:)               !< Lateralal flux to be adjusted [?]
 
+    INTEGER                 ::     &
+      & i,                         &  !< Counter variable for intersected grid layers
+      & ic, is,                    &  !< Counter variables for grid cells (ic) and soil layers(is)
+      & i_lvt, i_dpr                  !< Index variables for layers on elevation (i_lvt) and in depression (i_dpr) tile
 
-    INTEGER                 :: nrgrd,         &  !< Number of layers on helper grid determined by layer overlaps
-      &                        i,             &  !< Counter variable
-      &                        i_lvt, i_dpr      !< Index variables for layers on in elevation (i_lvt) and in depression (i_dpr)
+    REAL(wp)                ::     &
+      & dz_bedrock(nc)                !< Depth of bedrock boundary [m]
 
-    REAL(wp)                :: z_lvt,         &  !< Layer bottom of current layer on elevation tile [m]
-      &                        z_dpr,         &  !< Layer bottom of current layer on depression tile [m]
-      &                        z_rgrd_top,    &  !< Top of current layer on helper grid [m]
-      &                        z_rgrd_bot,    &  !< Bottom of current layer on helper grid [m]
-      &                        h                 !< Height of current layer [m]
+    REAL(wp)                ::     &
+      & flx_lat_sl_upd(nc,nsoil)      !< Updated lateral flux [?]
 
+    LOGICAL                 ::     &
+      & l_compute(nc)                 !< Flag to indicate whether adjusting the fluxes is necessary
 
-    REAL(wp)                :: flx_lat_sl_upd(nsoil) !< Updated lateral flux [?]
+    INTEGER                 ::     &
+      & index_tile(nc,nrgrd),      &  !< Mapping index from helper grid to tile layers
+      & index_sibl(nc,nrgrd)          !< Mapping index from helper grid to sibling layers
 
-    flx_lat_sl_upd(:) = 0._wp
+    REAL(wp)                ::     &
+      & layer_thickness(nc,nrgrd), &  !< Thickness of layers on helper grid [m]
+      & layer_bot(nc,nrgrd)           !< Bottom depth of soil layers on helper grid [m]
 
-    nrgrd       = nsoil * 2 + 1
+    CHARACTER(LEN=4)        ::     &
+      & contype(nc,nrgrd)             !< Type of connection between tile and sibling
 
-    i_lvt = 1
-    z_lvt = dsoil_lvt(1)
+    ! Initialize fields
+    dz_bedrock(:) = SUM(dsoil_dpr(:,:), DIM=2)
 
-    i_dpr = 1
-    z_dpr = dsoil_dpr(1) + h_offset
-
-    z_rgrd_top = 0._wp
-    z_rgrd_bot = MIN(z_lvt, z_dpr)
-
-    DO i  = 1, nrgrd
-      h                     = z_rgrd_bot-z_rgrd_top
-      flx_lat_sl_upd(i_dpr) = flx_lat_sl_upd(i_dpr) + flx_lat_sl(i_lvt) * h / dsoil_lvt(i_lvt)
-
-      IF (z_rgrd_bot == z_lvt .AND. z_lvt < SUM(dsoil_lvt(:))) THEN
-        i_lvt = i_lvt + 1
-        IF (i_lvt <= nsoil) THEN
-          z_lvt = z_lvt + dsoil_lvt(i_lvt)
-        END IF
+    ! Determine whether adjustment of fluxes is necessary
+    DO ic = 1, nc
+      IF (connect(ic) > 0._wp .AND. h_offset(ic) > 0._wp)THEN
+        l_compute(ic) = .TRUE.
+        flx_lat_sl_upd(ic,:) = 0._wp
+        ! Get intersected grid between elevation and depression tile. Pond depth is set to zero here
+        ! since fluxes are only shifted within the soil
+        ! TODO: Any reason, why lateral drainage should not discharge into ponds? At least from those
+        !       layers, that are above the pond water level?
+        CALL get_intersected_grid(dz(:), nsoil, nrgrd, h_offset(ic), dz_bedrock(ic), 0._wp, &
+          & index_tile(ic,:), index_sibl(ic,:), layer_thickness(ic,:), contype(ic,:),       &
+          & layer_bot=layer_bot(ic,:))
+      ELSE
+        ! No adjustment necessary, either because there is no positive offset, or no connectivity
+        l_compute(ic) = .FALSE.
+        flx_lat_sl_upd(ic,:) = flx_lat_sl(ic,:)
       END IF
-
-      IF (z_rgrd_bot == z_dpr .AND. z_dpr < SUM(dsoil_dpr(:)) + h_offset) THEN
-        i_dpr = i_dpr + 1
-        IF (i_dpr <= nsoil) THEN
-          z_dpr = z_dpr + dsoil_dpr(i_dpr)
-        END IF
-      ELSE IF (z_rgrd_bot >= SUM(dsoil_dpr(:)) + h_offset) THEN
-        z_dpr = z_lvt
-      END IF
-
-      z_rgrd_top=z_rgrd_bot
-      z_rgrd_bot=MIN(z_lvt, z_dpr)
-
     END DO
 
-    flx_lat_sl(:) = flx_lat_sl_upd(:)
+    ! Remap lateral drainage onto depression tile
+    DO i = 1, nrgrd
+      DO ic = 1, nc
+        IF (l_compute(ic)) THEN
+          i_lvt = index_tile(ic,i)
+          i_dpr = MAX(index_sibl(ic,i), 1)
+          ! Map fluxes on soil grid of depression tile while soil depth is above bedrock
+          IF (layer_bot(ic, i) <= dz_bedrock(ic) .AND. i_lvt > 0) THEN
+            flx_lat_sl_upd(ic,i_dpr) = flx_lat_sl_upd(ic,i_dpr) &
+              & + flx_lat_sl(ic,i_lvt) * layer_thickness(ic,i) / dsoil_lvt(ic,i_lvt)
+          END IF
+        END IF
+      END DO
+    END DO
+
+    ! Without offset or connectivity, just check no incoming flux is below the bedrock boundary
+    DO is = nsoil, 2, -1
+      DO ic = 1, nc
+        IF (dsoil_dpr(ic,is) <= 0._wp .AND. .NOT. l_compute(ic)) THEN
+          flx_lat_sl_upd(ic,is-1) = flx_lat_sl_upd(ic,is-1) + flx_lat_sl_upd(ic,is)
+          flx_lat_sl_upd(ic,is)   = 0._wp
+        END IF
+      END DO
+    END DO
+
+    ! Update lateral fluxes with mapped values
+    flx_lat_sl(:,:) = flx_lat_sl_upd(:,:)
 
   END SUBROUTINE shift_fluxes_sl
 
