@@ -279,9 +279,9 @@ CONTAINS
 
   END SUBROUTINE t_jsb_memory_add_var_r1d
 
-  SUBROUTINE t_jsb_memory_add_var_r2d(mem, name, var,       &
+  SUBROUTINE t_jsb_memory_add_var_r2d(mem, name, var,           &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
-    loutput, lcontainer, l_conserve_quan, cons_quan_type_id,    &
+    loutput, lcontainer, cons_quan_type_id,                     &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, l_aggregate_all,              &
     output_level, output_groups, verbose                        &
@@ -300,8 +300,7 @@ CONTAINS
     CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
-    LOGICAL,              INTENT(in), OPTIONAL :: l_conserve_quan     ! if var carries a to-be-conserved quantity
-    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of the conserved quantity (mo_jsb_cqt_class)
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of a conserved quantity (mo_jsb_cqt_class)
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
@@ -426,8 +425,10 @@ CONTAINS
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
-    IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
-    IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
+    IF (PRESENT(cons_quan_type_id)) THEN
+      var%is_conserved_quan = .TRUE.
+      var%cons_quan_type_id = cons_quan_type_id
+    END IF
 
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
@@ -453,10 +454,10 @@ CONTAINS
 
   END SUBROUTINE t_jsb_memory_add_var_r2d
 
-  SUBROUTINE t_jsb_memory_add_var_r3d(mem, name, var,        &
+  SUBROUTINE t_jsb_memory_add_var_r3d(mem, name, var,            &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,              &
     extra_dim_n, loutput, lcontainer,                            &
-    l_conserve_quan, cons_quan_type_id,                          &
+    cons_quan_type_id,                                           &
     lrestart, lrestart_cont, initval_r, isteptype,               &
     resetval_r, lmiss, missval_r, l_aggregate_all,               &
     output_level, output_groups, verbose                         &
@@ -475,8 +476,7 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: extra_dim_n         ! Extra (third) dimension (not levels)
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
-    LOGICAL,              INTENT(in), OPTIONAL :: l_conserve_quan     ! if var carries a to-be-conserved quantity
-    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of the conserved quantity (mo_jsb_cqt_class)
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of a conserved quantity (mo_jsb_cqt_class)
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
@@ -619,8 +619,10 @@ CONTAINS
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
-    IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
-    IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
+    IF (PRESENT(cons_quan_type_id)) THEN
+      var%is_conserved_quan = .TRUE.
+      var%cons_quan_type_id = cons_quan_type_id
+    END IF
 
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
