@@ -1220,7 +1220,7 @@ CONTAINS
 
         !$ACC LOOP SEQ
         DO i=1,no_children
-          IF (mask_use_child(i)) CYCLE
+          IF (.NOT. mask_use_child(i)) CYCLE
 
           IF (var%child_idx(i) > 0) THEN
             !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1561,7 +1561,6 @@ CONTAINS
     ELSE
       routine = modname//':Aggregate_sum_2d'
     END IF
-    !WRITE(*,*) "aggregation_sum:: start..."
 
     IF (PRESENT(mask)) THEN
       CALL finish(routine, "mask not yet implemented")
@@ -1606,7 +1605,6 @@ CONTAINS
         END IF
       END DO
     END IF
-    !WRITE(*,*) "aggregation_sum:: ichild, icount=",  ichild, icount
 
     !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs2d_cache, var) ASYNC(1)
 
@@ -1617,14 +1615,12 @@ CONTAINS
         ! ... and the variable on the current tile equals the var on the child tile.
         var%ptr(j,iblk) = tile_ptrs2d_cache(1,var%child_idx(1),iproc)%p(j,iblk)
       END DO
-      !WRITE(*,*) "aggregation_sum:: no_children=1, var%ptr=",  var%ptr(1,iblk)
     ELSE IF (no_children > 1) THEN
       ! With more then one child tile we need to do the weighted averaging.
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
         this%data_sum(j,iblk) = 0._wp
       END DO
-      !WRITE(*,*) "aggregation_sum:: no_children>1..."
 
       ! Calculate the (weighted) sum of the data and the sum up the fractions
       !
@@ -1632,8 +1628,6 @@ CONTAINS
       DO i=1,no_children
         ! Check if the var exists on this tile (could be a tile on which the according process is not running)
         IF ( var%child_idx(i) > 0 ) THEN
-          !WRITE(*,*) "aggregation_sum:: no_children>1, var%child_idx>0... ptrs2d(1)=",  &
-          !        tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(1,iblk)
           ! The variable exists on the child tile
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
@@ -1670,7 +1664,6 @@ CONTAINS
           ! ichild: the only child that contained the variable
           var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
         END DO
-        !WRITE(*,*) "aggregation_sum:: sum=", var%ptr(1,iblk) 
       ELSE IF (icount > 1) THEN  ! Several child tiles need to be considered.
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
