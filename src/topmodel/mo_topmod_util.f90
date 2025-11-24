@@ -398,7 +398,7 @@ CONTAINS
   END FUNCTION gamm_inv_p
 
   !------------------------------------------------------------------------------------
-  ! Returns the incomplete gamma function Q(a, x) ≡ 1 − P (a, x).
+  ! Returns the incomplete gamma function Q(a, x) = 1 − P (a, x).
 #ifndef _OPENACC
   PURE &
 #endif
@@ -427,7 +427,7 @@ CONTAINS
 
   !------------------------------------------------------------------------------------
   !   Returns the incomplete gamma function P (a, x) evaluated by its series representation as
-  !   gamser . Also RETURNs ln Γ(a) as gln.
+  !   gamser . Also RETURNs ln gamma(a) as gln.
 #ifndef _OPENACC
   PURE &
 #endif
@@ -466,7 +466,7 @@ CONTAINS
 
   !------------------------------------------------------------------------------------
   !   Returns the incomplete gamma function Q(a, x) evaluated by its continued fraction repre-
-  !   sentation as gammcf. Also RETURNs ln Γ(a) as gln.
+  !   sentation as gammcf. Also RETURNs ln gamma(a) as gln.
   !   Parameters: ITMAX is the maximum allowed number of iterations; EPS is the relative accu-
   !   racy; FPMIN is a number near the smallest representable floating-point number.
 #ifndef _OPENACC
@@ -490,7 +490,7 @@ CONTAINS
     b = x+1.-a
     !    Set up for evaluating continued fraction by modified
     c = 1./FPMIN
-    !    Lentz’s method (paragraph 5.2) with b0  =  0.
+    !    Lentz's method (paragraph 5.2) with b0 = 0.
     d = 1./b
     h = d
     DO i = 1,ITMAX

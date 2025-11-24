@@ -419,7 +419,7 @@ CONTAINS
 
     REAL(wp) :: T
 
-    T = TK - tmelt ! Convert to °C
+    T = TK - tmelt ! Convert to degC
 
     ! Constants are in [cm2 s-1]. convert to [m2 s-1] on the fly
     IF (PRESENT(D_air)) &
