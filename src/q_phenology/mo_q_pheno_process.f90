@@ -242,7 +242,7 @@ CONTAINS
   !> calculate phenology
   !>
   ELEMENTAL SUBROUTINE calc_phenology(  &
-    & dtime                           , &                          
+    & dtime                           , &
     & phenology_type                  , &
     & beta_soil_flush                 , &
     & cn_leaf                         , &

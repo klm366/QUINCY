@@ -50,7 +50,7 @@ CONTAINS
 
     WRITE(res,'(A,I4.4,5(A,I2.2))') ' ',datetime%date%year,'-',datetime%date%month, '-',datetime%date%day,' ', &
                                         datetime%time%hour,':',datetime%time%minute,':',datetime%time%second
- 
+
   END FUNCTION dati2s
 
   LOGICAL FUNCTION isnan(r)

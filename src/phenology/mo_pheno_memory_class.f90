@@ -275,7 +275,7 @@ CONTAINS
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
       ENDIF
-        
+
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 
         CALL mem%Add_var('growth_phase_sg', mem%growth_phase_SG,               &
