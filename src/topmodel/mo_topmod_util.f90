@@ -490,7 +490,7 @@ CONTAINS
     b = x+1.-a
     !    Set up for evaluating continued fraction by modified
     c = 1./FPMIN
-    !    Lentz’s method (§5.2) with b0  =  0.
+    !    Lentz’s method (paragraph 5.2) with b0  =  0.
     d = 1./b
     h = d
     DO i = 1,ITMAX
@@ -522,7 +522,7 @@ CONTAINS
   !$acc routine seq
     REAL(wp), INTENT(in) :: xx
     REAL(wp)             :: gamm_ln
-    ! Returns the value ln[Γ(xx )] for xx > 0.
+    ! Returns the value ln[Gamma(xx )] for xx > 0.
 
     INTEGER        :: j
     REAL(wp)       :: ser,tmp,x,y

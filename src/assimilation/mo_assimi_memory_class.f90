@@ -143,7 +143,7 @@ CONTAINS
 
     IF (lct_ids(1) > 0)  CONTINUE ! avoid compiler warning about dummy argument not being used
     IF (model_id > 0)    CONTINUE ! avoid compiler warning about dummy argument not being used
-    
+
     table        =  tables(1)
 
     hgrid        => Get_grid(mem%grid_id)
