@@ -1,6 +1,6 @@
 !>
-!! Contains carbon process routines specific for the methane producing soil
-!!
+!> Contains carbon process routines specific for the methane producing soil
+!>
 !>
 !> ICON-Land
 !>
@@ -13,17 +13,17 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
-!! @author
-!!   Stiig Wilkenskjeld based on JSBACH3 code by Thomas Kleinen (2023-03-27)
-!!
-!! @par Revision History
-!!   2023-03-27 : First JSBACH4 version, Stiig Wilkenskjeld, MPI-M
+!>
+!> @author
+!>   Stiig Wilkenskjeld based on JSBACH3 code by Thomas Kleinen (2023-03-27)
+!>
+!> @par Revision History
+!>   2023-03-27 : First JSBACH4 version, Stiig Wilkenskjeld, MPI-M
 
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 MODULE mo_carbon_process_methane
 #ifndef __NO_JSBACH__
 
@@ -243,7 +243,7 @@ CONTAINS
 
         ! non-inundated area -- should be the same as in mo_carbon_process::calc_soil_c
 
-        !! call yasso for leaf litter
+        !> call yasso for leaf litter
         CALL yasso(dt, Yasso_io_pools(1:9), Weather, leafLitter*dt, LeafLit_coefV,                &
                         0._wp,          Yasso_out_oxic, fract_green_aboveGround, rootExudates*dt, &
                         redFact_Nlimit = red_Fact_N)
@@ -261,7 +261,7 @@ CONTAINS
         c_decomp_humus_1_sum = c_decomp_humus_1_sum + Yasso_out_oxic(17)
         c_into_humus_1_sum   = c_into_humus_1_sum   + Yasso_out_oxic(18)
 
-        !! call yasso for woody litter
+        !> call yasso for woody litter
         CALL yasso(dt, Yasso_io_pools(10:18), Weather, woodLitter*dt, WoodLit_coefV,           &
                         WoodLitterSize, Yasso_out_oxic, fract_wood_aboveGround, 0.0_wp,        &
                         redFact_Nlimit = red_Fact_N) ! no exudates
@@ -290,8 +290,8 @@ CONTAINS
         ! therefore use full C pools as input to Yasso, but apply inundated/non-inundated
         ! fraction to output
 
-        !! call yasso for leaf litter
-        !! non-inundated fraction first
+        !> call yasso for leaf litter
+        !> non-inundated fraction first
         CALL yasso(dt, Yasso_io_pools(1:9), Weather, leafLitter*dt, LeafLit_coefV,              &
                         0._wp,           Yasso_out_oxic, fract_green_aboveGround, rootExudates*dt, &
                         redFact_Nlimit = red_Fact_N, is_anoxic = .FALSE.)
@@ -309,7 +309,7 @@ CONTAINS
         c_decomp_humus_1_sum = c_decomp_humus_1_sum + (1.0_wp-frac_inun) * Yasso_out_oxic(17)
         c_into_humus_1_sum   = c_into_humus_1_sum   + (1.0_wp-frac_inun) * Yasso_out_oxic(18)
 
-        !! inundated fraction second
+        !> inundated fraction second
         CALL yasso(dt, Yasso_io_pools(1:9), Weather, leafLitter*dt, LeafLit_coefV,               &
                         0._wp,          Yasso_out_anoxic, fract_green_aboveGround, rootExudates*dt, &
                         redFact_Nlimit = red_Fact_N, is_anoxic = .TRUE.)
@@ -327,8 +327,8 @@ CONTAINS
         c_decomp_humus_1_sum = c_decomp_humus_1_sum +         frac_inun  * Yasso_out_anoxic(17)
         c_into_humus_1_sum   = c_into_humus_1_sum   +         frac_inun  * Yasso_out_anoxic(18)
 
-        !! call yasso for woody litter
-        !! non-inundated fraction first
+        !> call yasso for woody litter
+        !> non-inundated fraction first
         CALL yasso(dt, Yasso_io_pools(10:18), Weather, woodLitter*dt, WoodLit_coefV,    &
                         WoodLitterSize, Yasso_out_oxic, fract_wood_aboveGround, 0.0_wp, &
                         redFact_Nlimit = red_Fact_N, is_anoxic = .FALSE.) ! no exudates
@@ -346,7 +346,7 @@ CONTAINS
         c_decomp_humus_2_sum = c_decomp_humus_2_sum + (1.0_wp-frac_inun) * Yasso_out_oxic(17)
         c_into_humus_2_sum   = c_into_humus_2_sum   + (1.0_wp-frac_inun) * Yasso_out_oxic(18)
 
-        !! inundated fraction second
+        !> inundated fraction second
         CALL yasso(dt, Yasso_io_pools(10:18), Weather, woodLitter*dt, WoodLit_coefV,      &
                         WoodLitterSize, Yasso_out_anoxic, fract_wood_aboveGround, 0.0_wp, &
                         redFact_Nlimit = red_Fact_N, is_anoxic = .TRUE.) ! no exudates
@@ -417,8 +417,8 @@ CONTAINS
       frac_inundated_YPeat(    9) = 1._wp
       frac_inundated_YPeat(   18) = 1._wp
 
-      !! call yasso for leaf litter
-      !! non-inundated fraction first
+      !> call yasso for leaf litter
+      !> non-inundated fraction first
       CALL yasso(dt, (1._wp-frac_inundated_YPeat(1:9))*Yasso_io_pools(1:9), Weather, leafLitter*dt, LeafLit_coefV, &
                  0._wp, Yasso_out_oxic, fract_green_aboveGround, rootExudates*dt,                                  &
                  redFact_Nlimit = red_Fact_N, is_anoxic = .FALSE., is_peat = .TRUE.,                               &
@@ -438,7 +438,7 @@ CONTAINS
       c_decomp_humus_1_sum = c_decomp_humus_1_sum + Yasso_out_oxic(17)
       c_into_humus_1_sum   = c_into_humus_1_sum   + Yasso_out_oxic(18)
 
-      !! inundated fraction second
+      !> inundated fraction second
       CALL yasso(dt, frac_inundated_YPeat(1:9)*Yasso_io_pools(1:9), Weather, 0._wp, LeafLit_coefV, &
                       0._wp, Yasso_out_anoxic, fract_green_aboveGround, 0._wp,                     &
                       redFact_Nlimit = red_Fact_N, is_anoxic = .TRUE., is_peat = .TRUE.,           &
@@ -457,8 +457,8 @@ CONTAINS
       c_decomp_humus_1_sum = c_decomp_humus_1_sum + Yasso_out_anoxic(17)
       c_into_humus_1_sum   = c_into_humus_1_sum   + Yasso_out_anoxic(18)
 
-      !! call yasso for woody litter
-      !! non-inundated fraction first
+      !> call yasso for woody litter
+      !> non-inundated fraction first
       CALL yasso(dt,(1._wp-frac_inundated_YPeat(10:18))*Yasso_io_pools(10:18), Weather, woodLitter*dt, WoodLit_coefV, &
                  WoodLitterSize, Yasso_out_oxic, fract_wood_aboveGround, 0.0_wp,                                      &
                  redFact_Nlimit = red_Fact_N, is_anoxic = .FALSE., is_peat = .TRUE.,                                  &
@@ -477,7 +477,7 @@ CONTAINS
       c_decomp_humus_2_sum = c_decomp_humus_2_sum + Yasso_out_oxic(17)
       c_into_humus_2_sum   = c_into_humus_2_sum   + Yasso_out_oxic(18)
 
-      !! inundated fraction second
+      !> inundated fraction second
       CALL yasso(dt,frac_inundated_YPeat(10:18)*Yasso_io_pools(10:18), Weather, 0._wp, WoodLit_coefV, &
                  WoodLitterSize, Yasso_out_anoxic, fract_wood_aboveGround, 0.0_wp,                    &
                  redFact_Nlimit = red_Fact_N, is_anoxic = .TRUE., is_peat = .TRUE.,                   &

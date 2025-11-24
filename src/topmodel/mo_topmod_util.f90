@@ -1,5 +1,5 @@
 !>
-!! Contains the utilities for the topmodel wetland diagnostics
+!> Contains the utilities for the topmodel wetland diagnostics
 !>
 !> ICON-Land
 !>
@@ -12,19 +12,19 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
-!!
-!! @author
-!!  Stiig Wilkenskjeld, MPI-M Hamburg
-!!
-!! @par Revision History
-!! Adopted from JSBACH3 code by Thomas Kleinen, 2022-12-06
-!! Added interpolation functionality,           2024-06-06
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!>
+!>
+!> @author
+!>  Stiig Wilkenskjeld, MPI-M Hamburg
+!>
+!> @par Revision History
+!> Adopted from JSBACH3 code by Thomas Kleinen, 2022-12-06
+!> Added interpolation functionality,           2024-06-06
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_top_util
 #ifndef __NO_JSBACH__
@@ -64,10 +64,10 @@ MODULE mo_top_util
 
 CONTAINS
 
-  !!
+  !>
   ! @brief Constructs or resets an interpolation structure
   !
-  !!
+  !>
   FUNCTION interpol_reset(n,intrp,var)
   !$acc routine seq
     TYPE(t_interp_var),           POINTER :: interpol_reset
@@ -133,10 +133,10 @@ CONTAINS
 
   END FUNCTION interpol_reset
 
-  !!
+  !>
   ! @brief Deep destruction of an interpolation structure
   !
-  !!
+  !>
   SUBROUTINE interpol_done(intrp)
   !$acc routine seq
     TYPE(t_interp_var), POINTER :: intrp
@@ -158,10 +158,10 @@ CONTAINS
 
   END SUBROUTINE interpol_done
 
-  !!
+  !>
   ! @brief Initializes a new interpolation
   !
-  !!
+  !>
   FUNCTION interpol_new(dt,nintrp,y1,y2,y3,valid_range,frac_use_full,intrp,var)
   !$acc routine seq
     TYPE(t_interp_var),              POINTER :: interpol_new
@@ -232,10 +232,10 @@ CONTAINS
 
   END FUNCTION interpol_new
 
-  !!
+  !>
   ! @brief Go to next step of an interpolation
   !
-  !!
+  !>
   SUBROUTINE interpol_update(intrp)
   !$acc routine seq
     TYPE(t_interp_var), POINTER :: intrp
@@ -274,11 +274,11 @@ CONTAINS
   END SUBROUTINE interpol_update
 
 
-  !!
+  !>
   ! @brief Update a moving average (e-fold relaxation) with a new value
   !        Either dt and t_relax or nstep must be present
   !
-  !!
+  !>
 #ifndef _OPENACC
   PURE &
 #endif

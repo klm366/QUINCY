@@ -1,6 +1,6 @@
 !>
-!! Initialization of the methane production and transport module.
-!!
+!> Initialization of the methane production and transport module.
+!>
 !>
 !> ICON-Land
 !>
@@ -13,17 +13,17 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
-!! @author
-!!  Stiig Wilkenskjeld, MPI-M Hamburg
-!!
-!! @par Revision History
-!! Adopted from JSBACH3 code by Thomas Kleinen, 2023-03-17
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!>
+!> @author
+!>  Stiig Wilkenskjeld, MPI-M Hamburg
+!>
+!> @par Revision History
+!> Adopted from JSBACH3 code by Thomas Kleinen, 2023-03-17
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_methane_init
 #ifndef __NO_JSBACH__

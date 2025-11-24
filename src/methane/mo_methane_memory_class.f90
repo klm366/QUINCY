@@ -1,6 +1,6 @@
 !>
-!! Contains the memory class for the methane production and transport
-!!
+!> Contains the memory class for the methane production and transport
+!>
 !>
 !> ICON-Land
 !>
@@ -13,17 +13,17 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
-!! @author
-!!  Stiig Wilkenskjeld, MPI-M Hamburg
-!!
-!! @par Revision History
-!! Adopted from JSBACH3 code by Thomas Kleinen, 2023-03-17
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!>
+!> @author
+!>  Stiig Wilkenskjeld, MPI-M Hamburg
+!>
+!> @par Revision History
+!> Adopted from JSBACH3 code by Thomas Kleinen, 2023-03-17
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_ch4_memory_class
 #ifndef __NO_JSBACH__
@@ -221,7 +221,7 @@ CONTAINS
     soil_w        => Get_vgrid('soil_depth_water')
 
     dsl4jsb_Get_Config(CH4_)
-    !! !$acc enter data pcreate(mem)
+    !> !$acc enter data pcreate(mem)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! jsbach4 memory

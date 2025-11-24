@@ -1,6 +1,6 @@
 !>
-!! Contains structures and methods for the topmodel for calculating innundation fractions
-!!
+!> Contains structures and methods for the topmodel for calculating innundation fractions
+!>
 !>
 !> ICON-Land
 !>
@@ -13,17 +13,17 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
-!! @author
-!!  Stiig Wilkenskjeld, MPI-M Hamburg
-!!
-!! @par Revision History
-!! Adopted from JSBACH3 code by Thomas Kleinen, 2024-01-24
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!>
+!> @author
+!>  Stiig Wilkenskjeld, MPI-M Hamburg
+!>
+!> @par Revision History
+!> Adopted from JSBACH3 code by Thomas Kleinen, 2024-01-24
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_megan_process
 #ifndef __NO_JSBACH__
@@ -380,17 +380,17 @@ CONTAINS
   PURE SUBROUTINE calc_gamma_sm(soilm, gamma)
   ! --- adjustment for soil moisture
   !  gamma_sm = 1 in standard version of MEGAN v2.10
-  !! From Guenther et al., 2012, MEGANv2.1
-  !! soil moisture dependence algorithm for isoprene emission:
-  !!
-  !! GAM_SM = 1              IF SM > SM1
-  !! GAM_SM = (SM-WP)/DSM1   IF WP < SM < SM1
-  !! GAM_SM = 0              IF SM < WP
-  !!
-  !! where SM = soil moisture (m3/m3)
-  !!       WP = wilting point (m3/m3)
-  !!       DSM1 = 0.04 empirical parameter (from Pegoraro et al., 2004; modified in MEGANv2.1)
-  !!       SM1 = WP + DSM1
+  !> From Guenther et al., 2012, MEGANv2.1
+  !> soil moisture dependence algorithm for isoprene emission:
+  !>
+  !> GAM_SM = 1              IF SM > SM1
+  !> GAM_SM = (SM-WP)/DSM1   IF WP < SM < SM1
+  !> GAM_SM = 0              IF SM < WP
+  !>
+  !> where SM = soil moisture (m3/m3)
+  !>       WP = wilting point (m3/m3)
+  !>       DSM1 = 0.04 empirical parameter (from Pegoraro et al., 2004; modified in MEGANv2.1)
+  !>       SM1 = WP + DSM1
   !----------------------------------------------------------------------------------------------
     REAL(wp), INTENT(in)  :: soilm
     REAL(wp), INTENT(out) :: gamma

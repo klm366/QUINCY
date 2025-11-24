@@ -1,6 +1,6 @@
 !>
-!! Contains structures and methods for methane config
-!!
+!> Contains structures and methods for methane config
+!>
 !>
 !> ICON-Land
 !>
@@ -13,17 +13,17 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
-!! @author
-!!  Stiig Wilkenskjeld, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Stiig Wilkenskjeld (06.03.2023)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!>
+!> @author
+!>  Stiig Wilkenskjeld, MPI-M Hamburg
+!>
+!> @par Revision History
+!> First version by Stiig Wilkenskjeld (06.03.2023)
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_ch4_config_class
 #ifndef __NO_JSBACH__
@@ -151,9 +151,9 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !> Initialize methane process
-  !!
-  !! @param[inout]     config     Configuration type of process (t_carbon_config)
-  !!
+  !>
+  !> @param[inout]     config     Configuration type of process (t_carbon_config)
+  !>
   SUBROUTINE Init_methane_config(config)
 
     USE mo_methane_constants,  ONLY: CH4_consts, CO2_consts, O2_consts

@@ -1,6 +1,6 @@
 
-!! Contains the interfaces to methane production and transport
-!!
+!> Contains the interfaces to methane production and transport
+!>
 !>
 !> ICON-Land
 !>
@@ -13,17 +13,17 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
-!! @author
-!!  Stiig Wilkenskjeld, MPI-M Hamburg
-!!
-!! @par Revision History
-!! Adopted from JSBACH3 code by Thomas Kleinen, 2023-03-17
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!>
+!> @author
+!>  Stiig Wilkenskjeld, MPI-M Hamburg
+!>
+!> @par Revision History
+!> Adopted from JSBACH3 code by Thomas Kleinen, 2023-03-17
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_methane_interface
 #ifndef __NO_JSBACH__
@@ -103,14 +103,14 @@ MODULE mo_methane_interface
 CONTAINS
 
   ! ================================================================================================================================
-  !! Constructors for tasks
+  !> Constructors for tasks
 
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for methane
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "methane"
-  !!
+  !>
+  !> @param[in]     model_id     Model id
+  !> @return        return_ptr   Instance of process task "methane"
+  !>
   FUNCTION Create_task_methane(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
@@ -123,7 +123,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Register tasks: CH4_ process
-  !!
+  !>
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Register_methane_tasks(process, model_id)
 
@@ -296,7 +296,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> update_methane
-  !!
+  !>
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_methane(tile, options)
 
@@ -1086,7 +1086,7 @@ CONTAINS
       !   Termites
       ! TODO, StW: The way the termite CH4 emissions are calculated for crops depends on the processing order of the tiles.
       ! Currently it only gives expected results if crop tiles are processed last.
-      ! This is unsatisfactory and should be somehow replaced!!!
+      ! This is unsatisfactory and should be somehow replaced!>!
       IF ((dsl4jsb_Config(CH4_)%do_termite) .AND. (min_mmtemp20(1) < 1000._wp)) THEN
 
         l_GPP_dep = dsl4jsb_Lctlib_param(PhenologyType)==3 .OR. dsl4jsb_Lctlib_param(C4flag) ! Crops are separate anyway

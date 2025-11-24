@@ -1,6 +1,6 @@
 !>
-!! Contains the memory class for the topmodel wetland diagnostics
-!!
+!> Contains the memory class for the topmodel wetland diagnostics
+!>
 !>
 !> ICON-Land
 !>
@@ -13,17 +13,17 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
-!! @author
-!!  Stiig Wilkenskjeld, MPI-M Hamburg
-!!
-!! @par Revision History
-!! Adopted from JSBACH3 code by Thomas Kleinen, 2024-01-24
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!>
+!> @author
+!>  Stiig Wilkenskjeld, MPI-M Hamburg
+!>
+!> @par Revision History
+!> Adopted from JSBACH3 code by Thomas Kleinen, 2024-01-24
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_megan_memory_class
 #ifndef __NO_JSBACH__
@@ -144,7 +144,7 @@ CONTAINS
     hgrid         => Get_grid(mem%grid_id)
     surface       => Get_vgrid('surface')
 
-    !! !$acc enter data pcreate(mem)
+    !> !$acc enter data pcreate(mem)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! jsbach4 memory

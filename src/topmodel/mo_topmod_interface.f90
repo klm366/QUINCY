@@ -1,6 +1,6 @@
 !>
-!! Contains the interfaces to the topmodel wetland diagnostics
-!!
+!> Contains the interfaces to the topmodel wetland diagnostics
+!>
 !>
 !> ICON-Land
 !>
@@ -13,17 +13,17 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
-!! @author
-!!  Stiig Wilkenskjeld, MPI-M Hamburg
-!!
-!! @par Revision History
-!! Adopted from JSBACH3 code by Thomas Kleinen, 2022-12-06
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!>
+!> @author
+!>  Stiig Wilkenskjeld, MPI-M Hamburg
+!>
+!> @par Revision History
+!> Adopted from JSBACH3 code by Thomas Kleinen, 2022-12-06
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_top_interface
 #ifndef __NO_JSBACH__
@@ -73,14 +73,14 @@ MODULE mo_top_interface
 CONTAINS
 
   ! ================================================================================================================================
-  !! Constructors for tasks
+  !> Constructors for tasks
 
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for topmodel
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "topmodel"
-  !!
+  !>
+  !> @param[in]     model_id     Model id
+  !> @return        return_ptr   Instance of process task "topmodel"
+  !>
   FUNCTION Create_task_topmodel(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
@@ -93,7 +93,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Register tasks: TOP_ process
-  !!
+  !>
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Register_top_tasks(process, model_id)
 
@@ -113,7 +113,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> update_topmodel
-  !!
+  !>
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_topmodel(tile, options)
 
@@ -496,7 +496,7 @@ CONTAINS
 
           water_table    (ic  ) = water_table_t
           frac_liquid_top(ic  ) = frac_liquid_top_t
-!!!        frac_liquid_sl (ic,:) = frac_liquid_t_sl(:)
+!>!        frac_liquid_sl (ic,:) = frac_liquid_t_sl(:)
         ENDDO
         !$acc end parallel loop
 

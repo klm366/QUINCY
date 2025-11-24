@@ -1,6 +1,6 @@
 !>
-!! Contains the routines for the topmodel wetland diagnostics
-!!
+!> Contains the routines for the topmodel wetland diagnostics
+!>
 !>
 !> ICON-Land
 !>
@@ -13,17 +13,17 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
-!! @author
-!!  Stiig Wilkenskjeld, MPI-M Hamburg
-!!
-!! @par Revision History
-!! Adopted from JSBACH3 code by Thomas Kleinen, 2022-12-06
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!>
+!> @author
+!>  Stiig Wilkenskjeld, MPI-M Hamburg
+!>
+!> @par Revision History
+!> Adopted from JSBACH3 code by Thomas Kleinen, 2022-12-06
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_top_process
 #ifndef __NO_JSBACH__
@@ -42,11 +42,11 @@ MODULE mo_top_process
 
 CONTAINS
 
-  !!
+  !>
   ! @brief      Updates equilibrium evapotranspiration (aet)
   !
-  !!
-  !!
+  !>
+  !>
 #ifndef _OPENACC
   PURE &
 #endif
@@ -82,11 +82,11 @@ CONTAINS
 
   END SUBROUTINE update_aet
 
-  !!
+  !>
   ! @brief      Updates the water balance for individual peat tile
   !
-  !!
-  !!
+  !>
+  !>
 #ifndef _OPENACC
   PURE &
 #endif
@@ -158,7 +158,7 @@ CONTAINS
 
   ! @brief      Updates the water table for individual tile
   !
-  !!
+  !>
 #ifndef _OPENACC
   PURE &
 #endif
@@ -263,10 +263,10 @@ CONTAINS
 
   END SUBROUTINE update_water_table
 
-  !!
+  !>
   ! @brief      Updates inundated area
   !
-  !!
+  !>
 #ifndef _OPENACC
   PURE &
 #endif
@@ -380,10 +380,10 @@ CONTAINS
 
   END SUBROUTINE update_inun_frac
 
-  !!
+  !>
   ! @brief      Updates necessary averages for the topmodel
   !
-  !!
+  !>
 #ifndef _OPENACC
   PURE &
 #endif
@@ -490,10 +490,10 @@ CONTAINS
 
   END SUBROUTINE update_topmodel_runmean
 
-  !!
+  !>
   ! @brief      Updates necessary averages for peatland calculations
   !
-  !!
+  !>
 #ifndef _OPENACC
   PURE &
 #endif
@@ -567,11 +567,11 @@ CONTAINS
 
   END SUBROUTINE update_peat_runmean
 
-  !!
+  !>
   ! @brief      Updates inundated fraction and it's watertable from climatology
   !
-  !!
-  !!
+  !>
+  !>
 #ifndef _OPENACC
   PURE &
 #endif

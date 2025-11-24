@@ -1,6 +1,6 @@
 !>
-!! Contains the interfaces to the megan scheme
-!!
+!> Contains the interfaces to the megan scheme
+!>
 !>
 !> ICON-Land
 !>
@@ -13,17 +13,17 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
-!! @author
-!!  Stiig Wilkenskjeld, MPI-M Hamburg
-!!
-!! @par Revision History
-!! Adopted from JSBACH3 code by Thomas Kleinen, 2024-01-24
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!>
+!> @author
+!>  Stiig Wilkenskjeld, MPI-M Hamburg
+!>
+!> @par Revision History
+!> Adopted from JSBACH3 code by Thomas Kleinen, 2024-01-24
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_megan_interface
 #ifndef __NO_JSBACH__
@@ -72,14 +72,14 @@ MODULE mo_megan_interface
 CONTAINS
 
   ! ================================================================================================================================
-  !! Constructors for tasks
+  !> Constructors for tasks
 
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for megan
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "topmodel"
-  !!
+  !>
+  !> @param[in]     model_id     Model id
+  !> @return        return_ptr   Instance of process task "topmodel"
+  !>
   FUNCTION Create_task_megan(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
@@ -92,7 +92,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Register tasks: MEGAN_ process
-  !!
+  !>
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Register_megan_tasks(process, model_id)
 
@@ -112,7 +112,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> update_megan
-  !!
+  !>
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_megan(tile, options)
 

@@ -1,6 +1,6 @@
 !>
-!! Contains the routines for the methane production and transport
-!!
+!> Contains the routines for the methane production and transport
+!>
 !>
 !> ICON-Land
 !>
@@ -13,17 +13,17 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
-!! @author
-!!  Stiig Wilkenskjeld, MPI-M Hamburg
-!!
-!! @par Revision History
-!! Adopted from JSBACH3 code by Thomas Kleinen, 2023-03-21
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!>
+!> @author
+!>  Stiig Wilkenskjeld, MPI-M Hamburg
+!>
+!> @par Revision History
+!> Adopted from JSBACH3 code by Thomas Kleinen, 2023-03-21
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_methane_process
 #ifndef __NO_JSBACH__
@@ -41,10 +41,10 @@ MODULE mo_methane_process
 
 CONTAINS
 
-  !!
+  !>
   ! @brief     determine soil column setup
   !
-  !!
+  !>
   PURE SUBROUTINE soil_column_setup(permafrost_flag,is_peatland,is_wet, mxlay_above_rock,                      &
                                     layer_thick, layer_mid, layer_bound, soil_depth, soil_porosity,            &
                                     water_table, acrotelm_height,                                              &
@@ -156,11 +156,11 @@ CONTAINS
 
   END SUBROUTINE soil_column_setup
 
-  !!
+  !>
   ! @brief     Calculate the diffusivities for each gas in both water
   !            and air once, to be allocated as needed
   !
-  !!
+  !>
   PURE SUBROUTINE diffusion_setup(is_peatland, mxlay_above_rock, mxlay_above_wt, bclapp, &
                                   relative_porevol, relative_pore_air, Tsoil, &
                                   D_CH4, D_CO2, D_O2, D_CH4_surface, D_CO2_surface, D_O2_surface)
@@ -257,11 +257,11 @@ CONTAINS
 
   END SUBROUTINE diffusion_setup
 
-  !!
+  !>
   ! @brief     set up plant transport parameters for all plant transports on tile
   !            determines tiller_area and tiller_surface
   !
-  !!
+  !>
   PURE SUBROUTINE plant_setup(is_wet,is_woody,LAI_max,mxlay_above_rock,LAI,Cpool_green,root_dist, &
                               tiller_area,tillers)
   !$acc routine seq
@@ -339,10 +339,10 @@ CONTAINS
 
   END SUBROUTINE plant_setup
 
-  !!
+  !>
   ! @brief     Setup gas distribution in soil
   !
-  !!
+  !>
   PURE SUBROUTINE init_gas_pools(is_peat, mxlay,                             &
                                  frac_inun_min, frac_inun,    frac_inun_pre, &
                                  CH4_dens_dry,  CO2_dens_dry, O2_dens_dry,   &
@@ -484,10 +484,10 @@ CONTAINS
 
   END SUBROUTINE init_gas_pools
 
-  !!
+  !>
   ! @brief     Determine the CH4 / CO2 production and vertical distribution
   !
-  !!
+  !>
   PURE SUBROUTINE production(is_peatland, is_wet, mxlay_above_rock, mxlay_above_wt,        &
                         frac_CH4_anox_mineral, frac_CH4_anox_organic, meth_q10, root_dist, &
                         inun_frac, Tsoil, OxicDecompCarbon, AnoxDecompCarbon,              &
@@ -689,10 +689,10 @@ CONTAINS
 
   END SUBROUTINE production
 
-  !!
+  !>
   ! @brief     oxidation following Michaelis-Menten kinetics
   !
-  !!
+  !>
   PURE SUBROUTINE oxidation_mm(is_wet, dt, oxid_scale_dry, oxid_scale_wet, oxid_q10, Tsoil, rel_soil_moist, &
                                          dens2conc, conc2dens, CH4_dens, CO2_dens, O2_dens, O2_Uptake_Prod, &
                                          CH4_Oxid, CO2_Oxid, O2_Oxid, O2_Other)
@@ -783,11 +783,11 @@ CONTAINS
 
   END SUBROUTINE oxidation_mm
 
-  !!
+  !>
   ! @brief      plant transport for GAS
   !             determines GAS transported through plants
   !
-  !!
+  !>
   PURE SUBROUTINE plant_transport(GAS, layer_thick, layer_depth, mxlay_above_rock, mxlay_above_wt, &
                                   dt, Tsoil, relative_porevol, dens2conc, conc2dens, tiller_area,  &
                                   D_GAS, GAS_conc_atm, GAS_dens, GAS_Plant, GAS_excess)
@@ -861,10 +861,10 @@ CONTAINS
 
   END SUBROUTINE plant_transport
 
-  !!
+  !>
   ! @brief      calculate ebulition transport of CH4
   !
-  !!
+  !>
   !  PURE
   SUBROUTINE ebullition(is_peatland, mxlay_above_rock, mxlay_above_wt, Tsoil, surface_air_pressure, &
                         Dz, relative_porevol, water_table, &
@@ -1001,10 +1001,10 @@ CONTAINS
 
   END SUBROUTINE ebullition
 
-  !!
+  !>
   ! @brief      reaction-diffusion for all soil layers and all gases
   !
-  !!
+  !>
   SUBROUTINE reaction_diffusion(nstep, implicit_contribution,                  &
                    dt, mxlay_above_rock, mxlay_above_wt,                       &
                    layer_thick, Tsoil, relative_porevol, dens2conc, conc2dens, &
@@ -1196,11 +1196,11 @@ CONTAINS
 
   END SUBROUTINE reaction_diffusion
 
-  !!
+  !>
   ! @brief      Calculates the flux of methane produced by wildfires
   !
-  !!
-  !!
+  !>
+  !>
   PURE SUBROUTINE calc_methane_fire(CO2_fire_emission, landscape_type,                &
                                     CH4_out_fire, fire_em_NO, fire_em_CO, fire_em_iso)
   !$acc routine seq
@@ -1235,7 +1235,7 @@ CONTAINS
 
   ! @brief      Calculates biomass of termites and the flux of methane that the produce
   !
-  !!
+  !>
 ! GPP dep for:
 !    (cover_type < 17): NaturalVegFlag .OR. PastureFlag (no crops)
 !      ! tropical termite biomass / emission factor assumed for cover types 2 (tropical broadleaf evergreen),
@@ -1331,10 +1331,10 @@ CONTAINS
 
   END SUBROUTINE calc_methane_herbivores
 
-  !!
+  !>
   ! @brief     determine distribution of plant roots in model soil layers (based on Jackson 1996)
   !
-  !!
+  !>
   PURE SUBROUTINE determine_root_dist(mxlay_above_rock, layer_thick, layer_depth, root_dist_beta, root_dist)
     INTEGER,  INTENT(in)  :: mxlay_above_rock     ! layer number above bedrock
     REAL(wp), INTENT(in)  :: layer_thick(:)       ! soil layer thickness

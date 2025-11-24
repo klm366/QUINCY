@@ -11,7 +11,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
+!>
 
 MODULE mo_debug_stw
   USE mo_kind,           ONLY: wp

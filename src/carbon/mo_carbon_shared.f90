@@ -1,6 +1,6 @@
 !>
-!! Contains carbon process routines shared between the standard carbon usage and the methane version
-!!
+!> Contains carbon process routines shared between the standard carbon usage and the methane version
+!>
 !>
 !> ICON-Land
 !>
@@ -13,20 +13,20 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!!
-!! @author
-!!  Rainer Schneck, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Rainer Schneck (2015-07-29)
-!! Julia Nabel (2018-01-10): l_forestRegrowth flag -> allow for changing max_LAI
-!! Julia Nabel (2021-05-28): start of some refactoring (more advisable)
-!! Stiig Wilkenskjeld, MPI-M (2023-02-08): Separated from main process module for clear separation of standard and methane versions
+!>
+!> @author
+!>  Rainer Schneck, MPI-M Hamburg
+!>
+!> @par Revision History
+!> First version by Rainer Schneck (2015-07-29)
+!> Julia Nabel (2018-01-10): l_forestRegrowth flag -> allow for changing max_LAI
+!> Julia Nabel (2021-05-28): start of some refactoring (more advisable)
+!> Stiig Wilkenskjeld, MPI-M (2023-02-08): Separated from main process module for clear separation of standard and methane versions
 
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 MODULE mo_carbon_shared
 #ifndef __NO_JSBACH__
 
@@ -84,12 +84,12 @@ CONTAINS
     USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround !, days_per_year
     !
 
-    !! Names of carbon variables and arguments are:
-    !!   1) Cflx_*  : Carbon flux [mol(C) m-2 s-1]
-    !!   2) NPP*    : as 1)
-    !!   3) c_*_2_* : Carbon transport [mol(C) m-2 carbon-time-step-1], where carbon-time-step is normally 1 day
-    !!   4) c_*     : (if not covered by 3)) Carbon pool [mol(C) m-2]
-    !! All [m-2] are refere to canopy area
+    !> Names of carbon variables and arguments are:
+    !>   1) Cflx_*  : Carbon flux [mol(C) m-2 s-1]
+    !>   2) NPP*    : as 1)
+    !>   3) c_*_2_* : Carbon transport [mol(C) m-2 carbon-time-step-1], where carbon-time-step is normally 1 day
+    !>   4) c_*     : (if not covered by 3)) Carbon pool [mol(C) m-2]
+    !> All [m-2] are refere to canopy area
 
     ! Input arguments
     REAL(wp), INTENT(in)    :: dt                      ! Time step of carbon calculations [s]
@@ -149,7 +149,7 @@ CONTAINS
     REAL(wp) :: c_excess, c_crop_harvest_2_atm
     REAL(wp) :: leaf_shedding
 
-    REAL(wp) :: c_green_pot, c_woods_pot         !! values of potential carbon pools i.e. before accounting for N-limitation
+    REAL(wp) :: c_green_pot, c_woods_pot         !> values of potential carbon pools i.e. before accounting for N-limitation
     REAL(wp) :: c_reserve_pot
 
     REAL(wp) :: c_NPP_2_green_pot, c_NPP_2_wood_pot, c_NPP_2_reserve_pot
@@ -169,73 +169,73 @@ CONTAINS
     c_green_max       = greenC2leafC * LAI / specific_leaf_area_C
     c_reserve_optimal = reserveC2leafC * max_LAI / specific_leaf_area_C
 
-    !! ============== NON-N-LIMITED CARBON AND NITROGEN ALLOCATION =========================================================
-    !!
-    !! Perform those C- and N-allocation steps that are not restricted by N-availability
-    !! 1. Leaf shedding
-    !! 2. Wood shedding
-    !! 3. Depletion of the reserve pool
-    !! 4. Decomposition of slow soil pool (whether this is really independent of N-availability is debatable!!)
-    !!
-    !!
-    !! ----------------------------------------------------------------------------
-    !! 1. Leaf shedding: Transfer of C from green pool to leaf litter litter pool
+    !> ============== NON-N-LIMITED CARBON AND NITROGEN ALLOCATION =========================================================
+    !>
+    !> Perform those C- and N-allocation steps that are not restricted by N-availability
+    !> 1. Leaf shedding
+    !> 2. Wood shedding
+    !> 3. Depletion of the reserve pool
+    !> 4. Decomposition of slow soil pool (whether this is really independent of N-availability is debatable!!)
+    !>
+    !>
+    !> ----------------------------------------------------------------------------
+    !> 1. Leaf shedding: Transfer of C from green pool to leaf litter litter pool
 
-!!$ tr
-!!$       IF (LAI >= LAI_previous) THEN                              !! If LAI is increasing or constant the leaf shedding is given
-!!$          leaf_shedding = LAI * LAI_shed_constant                 !!    by a constant loss of leaves for evergreens, raingreens
-!!$                                                                  !!    and grasses.
-!!$       ELSE                                                       !! Otherwise
-!!$          leaf_shedding = LAI_previous - LAI                      !!    the leaf shedding is given by the decrease in LAI.
-!!$       END IF
-!!$ tr
+!>$ tr
+!>$       IF (LAI >= LAI_previous) THEN                              !! If LAI is increasing or constant the leaf shedding is given
+!>$          leaf_shedding = LAI * LAI_shed_constant                 !!    by a constant loss of leaves for evergreens, raingreens
+!>$                                                                  !!    and grasses.
+!>$       ELSE                                                       !! Otherwise
+!>$          leaf_shedding = LAI_previous - LAI                      !!    the leaf shedding is given by the decrease in LAI.
+!>$       END IF
+!>$ tr
 
-    leaf_shedding = MAX(LAI * LAI_shed_constant,LAI_previous - LAI)  !! Leaf shedding is assured at a minimum constant rate
-                                                                     !! which maybe exceeded by the decrease in LAI.
-    c_2_litter_greenPool =  &                                        !! Maximally the whole carbon from the green pool is transferred
-       MIN(greenC2leafC * leaf_shedding / specific_leaf_area_c, &    !!    by leaf and root shedding to the green litter pool
+    leaf_shedding = MAX(LAI * LAI_shed_constant,LAI_previous - LAI)  !> Leaf shedding is assured at a minimum constant rate
+                                                                     !> which maybe exceeded by the decrease in LAI.
+    c_2_litter_greenPool =  &                                        !> Maximally the whole carbon from the green pool is transferred
+       MIN(greenC2leafC * leaf_shedding / specific_leaf_area_c, &    !>    by leaf and root shedding to the green litter pool
            c_green)
-    c_green = c_green - c_2_litter_greenPool                         !! This removes carbon from the green pool
-    c_excess = MAX(0.0_wp,c_green - c_green_max)                     !! If by the reduction of LAI the maximum value of the green
-                                                                     !!    pool is still smaller than the current value, there is
+    c_green = c_green - c_2_litter_greenPool                         !> This removes carbon from the green pool
+    c_excess = MAX(0.0_wp,c_green - c_green_max)                     !> If by the reduction of LAI the maximum value of the green
+                                                                     !>    pool is still smaller than the current value, there is
     IF (c_excess  > 0._wp) THEN
-      c_2_litter_greenPool = c_2_litter_greenPool + c_excess           !!    excess C that has also to be shedded to the green litter
-      c_green              = c_green              - c_excess           !!    pool and also subtracted from the green pool
+      c_2_litter_greenPool = c_2_litter_greenPool + c_excess           !>    excess C that has also to be shedded to the green litter
+      c_green              = c_green              - c_excess           !>    pool and also subtracted from the green pool
     END IF
 
     IF (is_crop) THEN
-      !!  Move shedded Carbon pro rata to crop harvest flux
+      !>  Move shedded Carbon pro rata to crop harvest flux
       c_2_crop_harvest = fract_green_aboveGround * fract_c_crop_harvest * c_2_litter_greenPool
     ENDIF
 
-    !! ---------------------------------------------------------------------------------
-    !! Herbivory loss from c_green & Npool_green w.r.t PFTs in lctlib
+    !> ---------------------------------------------------------------------------------
+    !> Herbivory loss from c_green & Npool_green w.r.t PFTs in lctlib
 
-    c_green_2_herbivory = c_green * fract_green_2_herbivory                   !! Grazing flux indirect comput.from NPP losses
-    c_green             = c_green - c_green_2_herbivory                       !! Loss due to grazing
+    c_green_2_herbivory = c_green * fract_green_2_herbivory                   !> Grazing flux indirect comput.from NPP losses
+    c_green             = c_green - c_green_2_herbivory                       !> Loss due to grazing
 
-    c_faeces_2_LG       = c_green_2_herbivory * fract_c_faeces2_LG            !! c_faeces_2_LG to be stored in litter green pool
-                                                                              !!   (not considered in Cflx_greenwood_2_litter)
-                                                                              !!   (no life times (tau) enter c_faeces_2_LG!)
-    c_faeces_2_atm      = c_green_2_herbivory * (1.0_wp - fract_c_faeces2_LG) !! c_faeces_2_atm to be lost to atmosphere
-                                                                              !!   (dk: not added to CO2?)
-    !! ---------------------------------------------------------------------------------
-    !! 2. Wood shedding: Transfer of C from wood pool to wood litter pools
-    !!
-                                                            !! Assuming that forests continuously die at the inverse lifetime of trees
+    c_faeces_2_LG       = c_green_2_herbivory * fract_c_faeces2_LG            !> c_faeces_2_LG to be stored in litter green pool
+                                                                              !>   (not considered in Cflx_greenwood_2_litter)
+                                                                              !>   (no life times (tau) enter c_faeces_2_LG!)
+    c_faeces_2_atm      = c_green_2_herbivory * (1.0_wp - fract_c_faeces2_LG) !> c_faeces_2_atm to be lost to atmosphere
+                                                                              !>   (dk: not added to CO2?)
+    !> ---------------------------------------------------------------------------------
+    !> 2. Wood shedding: Transfer of C from wood pool to wood litter pools
+    !>
+                                                            !> Assuming that forests continuously die at the inverse lifetime of trees
     c_2_litter_woodPool = c_woods / tau_c_woods             ! The bigger tau gets, the weaker the C pools will be depreciated:
                                                             ! tau_c_woods: [days] -> [timestep]
-                                                            !! .. the shedded wood (MAX FUNCTION FOR NONWOODY PFTS)
+                                                            !> .. the shedded wood (MAX FUNCTION FOR NONWOODY PFTS)
     ! R: only for spitfire
     ! if (present(fract_litter_wood_new)) litter_wood_new = fract_wood_aboveGround * c_2_litter_woodPool
-    c_woods = c_woods -  c_2_litter_woodPool                !! .. and then all is subtracted from the wood pool.
+    c_woods = c_woods -  c_2_litter_woodPool                !> .. and then all is subtracted from the wood pool.
 
-    !! ----------------------------------------------------------------------------
-    !! 3. Depletion of reserve pool: Transfer of C from reserve pool to green litter pool
-    !!    Some organic carbon of the reserve pool is always lost with mortality of plants.
-    !!    Note that the reserve pool contains no Nitrogen (starches and sugar are free of N).
-    !!    Note also that the green litter pool has no fixed C/N-ratio (therefore no compensation
-    !!    flux is needed)
+    !> ----------------------------------------------------------------------------
+    !> 3. Depletion of reserve pool: Transfer of C from reserve pool to green litter pool
+    !>    Some organic carbon of the reserve pool is always lost with mortality of plants.
+    !>    Note that the reserve pool contains no Nitrogen (starches and sugar are free of N).
+    !>    Note also that the green litter pool has no fixed C/N-ratio (therefore no compensation
+    !>    flux is needed)
 
     c_reserve_2_litter_greenPool = c_reserve / tau_c_reserve
     IF (is_crop) THEN
@@ -244,96 +244,96 @@ CONTAINS
     c_reserve      = c_reserve      - c_reserve_2_litter_greenPool
     c_crop_harvest = c_crop_harvest + c_2_crop_harvest
 
-    !!
-    !! ============== START OF POTENTIAL PLANT-CARBON ALLOCATION TO ESTIMATE PLANT-N-DEMAND =================================
-    !!                       (exception: case NPP<0 handles actual allocation)
+    !>
+    !> ============== START OF POTENTIAL PLANT-CARBON ALLOCATION TO ESTIMATE PLANT-N-DEMAND =================================
+    !>                       (exception: case NPP<0 handles actual allocation)
 
     c_green_pot   = c_green
     c_woods_pot   = c_woods
     c_reserve_pot = c_reserve
 
-    !! Preliminary determination of distribution of NPP to the various pools (may be corrected afterwards according to
-    !!    avaialable Nitrogen)
+    !> Preliminary determination of distribution of NPP to the various pools (may be corrected afterwards according to
+    !>    avaialable Nitrogen)
 
     NPP_flux_correction = 0.0_wp
-    IF (NPP_pot_yDayMean <= 0.0_wp) THEN                      !! In case of negative or zero NPP
+    IF (NPP_pot_yDayMean <= 0.0_wp) THEN                      !> In case of negative or zero NPP
       NPP_excess = 0.0_wp
 
-      c_NPP_2_reservePool =  NPP_pot_yDayMean * dt            !! .. the plant looses C and
-      c_reserve     = c_reserve + c_NPP_2_reservePool         !! .. we try to take it from the reserve pool
-      IF (c_reserve < 0.0_wp) THEN                            !! But if thereby the reserve pool gets negative
-        c_NPP_2_reservePool = c_NPP_2_reservePool - c_reserve !! .. we absorb negative NPP only up to zero reserve pool and
-        NPP_flux_correction = -c_reserve / dt                 !! .. give the deficit as a flux correction back to the
-        c_reserve = 0.0_wp                                    !! .. calling routine. Hence all Carbon from the reserve pool
-      END IF                                                  !! .. is used up.
+      c_NPP_2_reservePool =  NPP_pot_yDayMean * dt            !> .. the plant looses C and
+      c_reserve     = c_reserve + c_NPP_2_reservePool         !> .. we try to take it from the reserve pool
+      IF (c_reserve < 0.0_wp) THEN                            !> But if thereby the reserve pool gets negative
+        c_NPP_2_reservePool = c_NPP_2_reservePool - c_reserve !> .. we absorb negative NPP only up to zero reserve pool and
+        NPP_flux_correction = -c_reserve / dt                 !> .. give the deficit as a flux correction back to the
+        c_reserve = 0.0_wp                                    !> .. calling routine. Hence all Carbon from the reserve pool
+      END IF                                                  !> .. is used up.
 
-      !! For correct handling of nitrogen limitation below (which handles only the case of positive NPP) set NPP to zero:
+      !> For correct handling of nitrogen limitation below (which handles only the case of positive NPP) set NPP to zero:
       c_NPP_2_reservePool  = 0.0_wp
-      c_NPP_2_greenPool    = 0.0_wp    !! All other transfer rates are zero
+      c_NPP_2_greenPool    = 0.0_wp    !> All other transfer rates are zero
       c_NPP_2_woodPool     = 0.0_wp
       Cflx_2_root_exudates = 0.0_wp
-      c_reserve_pot        = c_reserve !! remember modified reserve pool
+      c_reserve_pot        = c_reserve !> remember modified reserve pool
 
-    ELSE  !! NPP is positive
+    ELSE  !> NPP is positive
 
-      !! NPP it is distributed according to predefined relative fraction
+      !> NPP it is distributed according to predefined relative fraction
       c_NPP_2_woodPool     = dt * fract_npp_2_woodPool    * NPP_pot_yDayMean
       c_NPP_2_reservePool  = dt * fract_npp_2_reservePool * NPP_pot_yDayMean
       c_NPP_2_rootExudates = dt * fract_npp_2_exudates    * NPP_pot_yDayMean
       c_NPP_2_greenPool    = dt * (1.0_wp-fract_npp_2_woodPool-fract_npp_2_reservePool-fract_npp_2_exudates) * NPP_pot_yDayMean
 
-      !! Growth of Wood Pool (structural carbon of living plants)
+      !> Growth of Wood Pool (structural carbon of living plants)
 
-      c_woods_pot       = c_woods_pot + c_NPP_2_woodPool                !! Then it is attempted to put all NPP share into it
-      c_excess          = MAX(0.0_wp,c_woods_pot-Max_C_content_woods)   !! .. but thereby the pool may get too large
-      c_woods_pot       = c_woods_pot - c_excess                        !! .. so that the excess carbon has once more to be
-                                                                        !! .. subtracted
+      c_woods_pot       = c_woods_pot + c_NPP_2_woodPool                !> Then it is attempted to put all NPP share into it
+      c_excess          = MAX(0.0_wp,c_woods_pot-Max_C_content_woods)   !> .. but thereby the pool may get too large
+      c_woods_pot       = c_woods_pot - c_excess                        !> .. so that the excess carbon has once more to be
+                                                                        !> .. subtracted
       IF (c_excess > 0._wp) THEN
-        c_NPP_2_greenPool = c_NPP_2_greenPool + c_excess                  !! .. and instead made available to the green pool
-        c_NPP_2_woodPool  = c_NPP_2_woodPool  - c_excess                  !! .. and the actual amount of NPP put to the wood pool
+        c_NPP_2_greenPool = c_NPP_2_greenPool + c_excess                  !> .. and instead made available to the green pool
+        c_NPP_2_woodPool  = c_NPP_2_woodPool  - c_excess                  !> .. and the actual amount of NPP put to the wood pool
       END IF
-                                                                        !! .. is less
+                                                                        !> .. is less
 
-      !! Growth of Reserve Pool (sugars and starches) and determination how much will enter the Green Pool
-      IF (c_reserve_pot < c_reserve_optimal) THEN                       !! .. If the reserve pool is smaller than optimal,
-        c_reserve_pot     = c_reserve_pot     + c_NPP_2_reservePool     !! .... it is filled by the available NPP
-        c_excess          =                                         &   !! .... Thereby it may happen that it gets larger than
-             MAX(0.0_wp,c_reserve_pot - c_reserve_optimal)              !! .... optimal so that there is excess carbon
+      !> Growth of Reserve Pool (sugars and starches) and determination how much will enter the Green Pool
+      IF (c_reserve_pot < c_reserve_optimal) THEN                       !> .. If the reserve pool is smaller than optimal,
+        c_reserve_pot     = c_reserve_pot     + c_NPP_2_reservePool     !> .... it is filled by the available NPP
+        c_excess          =                                         &   !> .... Thereby it may happen that it gets larger than
+             MAX(0.0_wp,c_reserve_pot - c_reserve_optimal)              !> .... optimal so that there is excess carbon
         IF (c_excess > 0._wp) THEN
-          c_reserve_pot       = c_reserve_pot       - c_excess            !! .... that needs not be taken up
-          c_NPP_2_greenPool   = c_NPP_2_greenPool   + c_excess            !! .... but can better be used to increase the green
-          c_NPP_2_reservePool = c_NPP_2_reservePool - c_excess            !! .... pool and the actual amount of NPP put to the
-                                                                        !! .... reserve pool is less.
+          c_reserve_pot       = c_reserve_pot       - c_excess            !> .... that needs not be taken up
+          c_NPP_2_greenPool   = c_NPP_2_greenPool   + c_excess            !> .... but can better be used to increase the green
+          c_NPP_2_reservePool = c_NPP_2_reservePool - c_excess            !> .... pool and the actual amount of NPP put to the
+                                                                        !> .... reserve pool is less.
         END IF
-      ELSE                                                              !! .... Otherwise (reserve pool is larger than optimal)
-        c_NPP_2_greenPool   = c_NPP_2_greenPool   + c_NPP_2_reservePool !! .... all NPP is left for the green pool
-        c_NPP_2_reservePool = 0.0_wp                                    !! .... so that nothing is stored in the reserve pool.
+      ELSE                                                              !> .... Otherwise (reserve pool is larger than optimal)
+        c_NPP_2_greenPool   = c_NPP_2_greenPool   + c_NPP_2_reservePool !> .... all NPP is left for the green pool
+        c_NPP_2_reservePool = 0.0_wp                                    !> .... so that nothing is stored in the reserve pool.
       END IF
 
-      !! Growth of Green Pool (leaves and fine roots): (in case of too much NPP, try to put it into the reserve pool).
+      !> Growth of Green Pool (leaves and fine roots): (in case of too much NPP, try to put it into the reserve pool).
 
-      c_green_pot       = c_green_pot + c_NPP_2_greenPool               !! Green pool is filled by the available NPP.
-      c_excess          = MAX(0.0_wp,c_green_pot - c_green_max)         !! .. Thereby it may get larger than appropriate for
-                                                                        !!    current LAI.
+      c_green_pot       = c_green_pot + c_NPP_2_greenPool               !> Green pool is filled by the available NPP.
+      c_excess          = MAX(0.0_wp,c_green_pot - c_green_max)         !> .. Thereby it may get larger than appropriate for
+                                                                        !>    current LAI.
       IF (c_excess > 0._wp) THEN
-        c_NPP_2_greenPool = c_NPP_2_greenPool - c_excess                  !! .. Hence the actual amount of NPP put to the green
-                                                                        !!    pool is less.
-        c_green_pot       = c_green_pot - c_excess                        !! .. This excess carbon needs not be taken up but
+        c_NPP_2_greenPool = c_NPP_2_greenPool - c_excess                  !> .. Hence the actual amount of NPP put to the green
+                                                                        !>    pool is less.
+        c_green_pot       = c_green_pot - c_excess                        !> .. This excess carbon needs not be taken up but
       END IF
-      IF (c_reserve_pot < c_reserve_optimal) THEN                       !! .... if the reserve pool is smaller than optimal
+      IF (c_reserve_pot < c_reserve_optimal) THEN                       !> .... if the reserve pool is smaller than optimal
         IF (c_excess > 0._wp) THEN
-          c_reserve_pot       = c_reserve_pot       + c_excess            !! .... it is tried to put the carbon there,
-          c_NPP_2_reservePool = c_NPP_2_reservePool + c_excess            !! .... which means that additional NPP is put to the
-          !!      reserve pool.
+          c_reserve_pot       = c_reserve_pot       + c_excess            !> .... it is tried to put the carbon there,
+          c_NPP_2_reservePool = c_NPP_2_reservePool + c_excess            !> .... which means that additional NPP is put to the
+          !>      reserve pool.
 
         END IF
-        c_excess            =                                   &       !! .... Thereby it may happen that the reserve pool
-                 MAX(0.0_wp,c_reserve_pot         - c_reserve_optimal)  !!      increases beyond the optimal value.
+        c_excess            =                                   &       !> .... Thereby it may happen that the reserve pool
+                 MAX(0.0_wp,c_reserve_pot         - c_reserve_optimal)  !>      increases beyond the optimal value.
         IF (c_excess > 0._wp) THEN
-          c_reserve_pot       = c_reserve_pot       - c_excess            !! .... In that case the excess carbon is once more
-                                                                          !!      removed from the reserve pool
-          c_NPP_2_reservePool = c_NPP_2_reservePool - c_excess            !! .... so that the actual amount of NPP put into the
-                                                                          !!      reserve pool is less.
+          c_reserve_pot       = c_reserve_pot       - c_excess            !> .... In that case the excess carbon is once more
+                                                                          !>      removed from the reserve pool
+          c_NPP_2_reservePool = c_NPP_2_reservePool - c_excess            !> .... so that the actual amount of NPP put into the
+                                                                          !>      reserve pool is less.
         END IF
       END IF
 
@@ -341,16 +341,16 @@ CONTAINS
 
       Cflx_2_root_exudates = c_NPP_2_rootExudates / dt
 
-    END IF !! NPP > 0 end
+    END IF !> NPP > 0 end
 
-    !! ============== START OF POTENTIAL LITTER-CARBON ALLOCATION ==============================================
+    !> ============== START OF POTENTIAL LITTER-CARBON ALLOCATION ==============================================
 
-    !! ============== use nitrogen from N mobile pool to satisfy (at least partly) for potential carbon fluxes ===
+    !> ============== use nitrogen from N mobile pool to satisfy (at least partly) for potential carbon fluxes ===
     ! Remarks: Nmobile_2_green + Nmobile_2_wood <= Npool_mobile
     ! Npool_mobile accounts minN_plant_demand by trasfering N into green and wood pool
 
-    c_NPP_2_green_pot = c_NPP_2_greenPool    !! potential growth of green carbon
-    c_NPP_2_wood_pot  = c_NPP_2_woodPool     !! potential growth of wood  carbon
+    c_NPP_2_green_pot = c_NPP_2_greenPool    !> potential growth of green carbon
+    c_NPP_2_wood_pot  = c_NPP_2_woodPool     !> potential growth of wood  carbon
 
     c_NPP_2_green_via_mobileN = 0.0_wp
     c_NPP_2_wood_via_mobileN  = 0.0_wp
@@ -364,19 +364,19 @@ CONTAINS
     !Nflux_NPP_2_wood_pot  = c_NPP_2_wood_pot/cn_woods
     !minN_plant_demand = Nflux_NPP_2_green_pot + Nflux_NPP_2_wood_pot
 
-    !! ============== COLLECT POTENTIAL C-FLUXES ===============================================================
+    !> ============== COLLECT POTENTIAL C-FLUXES ===============================================================
 
-    c_NPP_2_reserve_pot = c_NPP_2_reservePool !! potential growth of reserve carbon
+    c_NPP_2_reserve_pot = c_NPP_2_reservePool !> potential growth of reserve carbon
 
-    redFact_Nlimitation = 1.0_wp              !! This assures absence of nitrogen limitation in this mixed C-N code
+    redFact_Nlimitation = 1.0_wp              !> This assures absence of nitrogen limitation in this mixed C-N code
 
-    !! ============== UPDATE ALL C-POOLS =======================================================================
+    !> ============== UPDATE ALL C-POOLS =======================================================================
 
     c_green   = c_green   + c_NPP_2_green_pot * redFact_Nlimitation
     c_woods   = c_woods   + c_NPP_2_wood_pot  * redFact_Nlimitation
-    c_reserve = c_reserve + c_NPP_2_reserve_pot        !!dk removed Nlimit, as no dependent on N
+    c_reserve = c_reserve + c_NPP_2_reserve_pot        !>dk removed Nlimit, as no dependent on N
 
-    !! ============== COMPUTE ACTUAL NPP (is needed outside the routine e.g. to recompute transpiration through stomata) =======
+    !> ============== COMPUTE ACTUAL NPP (is needed outside the routine e.g. to recompute transpiration through stomata) =======
 
     IF (NPP_pot_yDayMean > 0.0_wp) THEN
       NPP_act = (c_NPP_2_green_via_mobileN + c_NPP_2_wood_via_mobileN + c_NPP_2_rootExudates +             &
@@ -390,7 +390,7 @@ CONTAINS
     ! Input of fastly decomposable material to the soil
 
     ! always:
-    !! ============== Decay of crop harvest =============
+    !> ============== Decay of crop harvest =============
 
     c_crop_harvest_2_atm    =  c_crop_harvest / tau_c_crop_harvest
     c_crop_harvest          =  c_crop_harvest - c_crop_harvest_2_atm
@@ -398,11 +398,11 @@ CONTAINS
     Cflx_crop_harvest_2_atm = -c_crop_harvest_2_atm / dt
     !Cflx_crop_harvest_2_atm_pot = harvestResp_rate_pot - Cflx_crop_harvest_2_atm
 
-    !! ============== COMPUTE Herbivory RESPIRATION =====
+    !> ============== COMPUTE Herbivory RESPIRATION =====
 
     Cflx_herb_2_atm = -(c_faeces_2_atm) / dt
 
-    !! ============== Litter and herbivory diagnostics (flux from d-1 to s-1)
+    !> ============== Litter and herbivory diagnostics (flux from d-1 to s-1)
     Cflx_greenwood_2_litter = (c_2_litter_greenPool + c_2_litter_woodPool + c_reserve_2_litter_greenPool) / dt
     Cflx_green_2_litter     = Cflx_greenwood_2_litter + (-c_2_litter_woodPool+c_faeces_2_LG-c_2_crop_harvest) / dt
     Cflx_wood_2_litter      = c_2_litter_woodPool / dt
@@ -429,35 +429,35 @@ CONTAINS
   SUBROUTINE yasso (dt, Yasso_in_pools, Weather, c_2_litter, Lit_coefV, WoodLitterSize, Yasso_out, fract_aboveground, &
                     c_2_rootExudates, redFact_Nlimit, is_anoxic, is_peat,                                             &
                     A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H)
-    !! DSG: 11.03.2013
-    !! modified Yasso soil C model using an Euler scheme and readable coding style
-    !! AWEN (Acid, Water, Ethanol, Nonsoluble) pools are the yasso pools without the humus pools.
-    !! JSBACH specific modification of model structure: AWEN pools are separated into aboveground and belowground pools
-    !!
-    !! Herbivory flux is treated like normal litter, because the herbivory fluxes in JSBACH are not evaluated, yet.
-    !! If the represenation of herbivory in JSBACH is evaluated I recommend to treat herbivory flux in YASSO different from general
-    !! litter.
-    !!
-    !! The routine needs as input 1. Yasso pools
-    !!                            2. Weather: precipitation and Temperature
-    !!                            3. daily litter flux and NPP_2_rootExudates
-    !!                            4. PFT specific parameters
-    !!
-    !! Even when this subroutine is called every day, the dimensions of the variables refere to years!
-    !! output pools: AWEN + humus
-    !! The routine must be called twice, first for non-woody litter, then for woody litter
-    !!-------------------------------------------------------------------------------------------------------------------------
-    !! Yasso - Soil carbon model (Jari Liski)
-    !!
-    !! The code for the yasso model has been developed and is provided by the Finnish Environment Institute SYKE. It is
-    !! distributed as part of the ICON Earth System Model under the license conditions as stated in the header of this module.
-    !!
-    !! model to calculate the amount of soil organic carbon, changes in the amount of soil organic carbon and
-    !! heterotrophic soil respiration.
-    !! For documention of yasso see Liski et al 2005, Tuomi et al 2008,2009,2011
-    !!
-    !! implementation: Tea Thum (FMI), Petri Raisanen (FMI), Daniel Goll (MPI-M)
-    !!-------------------------------------------------------------------------------------------------------------------------
+    !> DSG: 11.03.2013
+    !> modified Yasso soil C model using an Euler scheme and readable coding style
+    !> AWEN (Acid, Water, Ethanol, Nonsoluble) pools are the yasso pools without the humus pools.
+    !> JSBACH specific modification of model structure: AWEN pools are separated into aboveground and belowground pools
+    !>
+    !> Herbivory flux is treated like normal litter, because the herbivory fluxes in JSBACH are not evaluated, yet.
+    !> If the represenation of herbivory in JSBACH is evaluated I recommend to treat herbivory flux in YASSO different from general
+    !> litter.
+    !>
+    !> The routine needs as input 1. Yasso pools
+    !>                            2. Weather: precipitation and Temperature
+    !>                            3. daily litter flux and NPP_2_rootExudates
+    !>                            4. PFT specific parameters
+    !>
+    !> Even when this subroutine is called every day, the dimensions of the variables refere to years!
+    !> output pools: AWEN + humus
+    !> The routine must be called twice, first for non-woody litter, then for woody litter
+    !>-------------------------------------------------------------------------------------------------------------------------
+    !> Yasso - Soil carbon model (Jari Liski)
+    !>
+    !> The code for the yasso model has been developed and is provided by the Finnish Environment Institute SYKE. It is
+    !> distributed as part of the ICON Earth System Model under the license conditions as stated in the header of this module.
+    !>
+    !> model to calculate the amount of soil organic carbon, changes in the amount of soil organic carbon and
+    !> heterotrophic soil respiration.
+    !> For documention of yasso see Liski et al 2005, Tuomi et al 2008,2009,2011
+    !>
+    !> implementation: Tea Thum (FMI), Petri Raisanen (FMI), Daniel Goll (MPI-M)
+    !>-------------------------------------------------------------------------------------------------------------------------
 
     !$ACC ROUTINE SEQ
     USE mo_carbon_constants, ONLY: days_per_year, sec_per_year, i_lctlib_humus,      &
@@ -703,9 +703,9 @@ CONTAINS
                         + c_nonsoluble_bg
 
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!!!!!! START CALCULATION OF SOIL CARBON !!!!!!!!!!!
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !>!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !>!!!!! START CALCULATION OF SOIL CARBON !!!!!!!!!!!
+    !>!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! 1. Calculate decomposition rates
 
