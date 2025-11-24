@@ -34,6 +34,7 @@ CONTAINS
   ELEMENTAL &
 #endif
   SUBROUTINE calc_jsb_C_litter( &
+    & fixed_allocation,           &,! in
     & LAI,                        & ! in
     & LAI_previous,               & ! in
     & max_LAI,                    & ! in
@@ -51,6 +52,7 @@ CONTAINS
     & specific_leaf_area_C,       & ! in
     & reserveC2leafC,             & ! in
     & pheno_type,                 & ! in
+    & jsb_lctnumber,              & ! in
     !
     & c_green,                    & ! inout
     & c_woods,                    & ! inout
@@ -62,6 +64,8 @@ CONTAINS
     & c_seedbed,                  & ! inout
     & c_sapheartwood,             & ! inout
     & c_coarseroot,               & ! inout
+    & tree_height,                & ! inout
+    & f_lai,                      & ! inout
     !
     & NPP_flux_correction,        & ! out
     & excess_NPP,                 & ! out
@@ -82,6 +86,7 @@ CONTAINS
     !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY : tmelt     ! tmelt =273.15_wp
+    USE mo_veg_constants,          ONLY: background_mort_rate_tree, background_mort_rate_grass
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
 
@@ -89,6 +94,7 @@ CONTAINS
     dsl4jsb_Use_memory(SB_)    
 
     ! Arguments
+    LOGICAL,  INTENT(in)    :: jsb_allocation         ! use jsb allocation with fixed allocation from quincy
     REAL(wp), INTENT(in)    :: LAI                    ! Yesterdays mean LAI
     REAL(wp), INTENT(in)    :: LAI_previous           ! The day before yesterdays mean LAI
     REAL(wp), INTENT(in)    :: max_LAI                ! Maximum value of LAI
@@ -105,6 +111,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: specific_leaf_area_C   ! Specific leaf area (from lctLib) [m^2(leaf)/mol(Carbon)]
     REAL(wp), INTENT(in)    :: reserveC2leafC         ! Ratio of max. carbon in reserve pool to max. carbon of leaves
     INTEGER,  INTENT(in)    :: pheno_type             ! crop =5
+    INTEGER,  INTENT(in)    :: jsb_LctNumber          ! lct number in JSBACH
     !
     REAL(wp), INTENT(inout) :: c_green            ! Green carbon pool: on input last value; updated on output
                                                      !    [mol(C)/m^2(canopy)]
@@ -126,6 +133,9 @@ CONTAINS
                                                      !    [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_coarseroot       ! Crop harvest carbon pool: on input last value; updated on output
                                                      !    [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: tree_height       ! tree height [m]
+    REAL(wp), INTENT(inout) :: f_lai             ! lai index to estimate tree height
+    
     !REAL(wp), INTENT(out)   :: soilResp_rate_pot      ! soil respiration without N limitation
     REAL(wp), INTENT(out)   :: NPP_flux_correction    ! Amount by which the NPP rate entering the routine has to be corrected. This
                                                      !    correction arises either because otherwise the reserve pool would get
@@ -146,7 +156,8 @@ CONTAINS
     REAL(wp), INTENT(inout)   :: litterfall_fineroot   ! amount of woodyLitter
     REAL(wp), INTENT(inout)   :: litterfall_fruit            ! amount of leafLitter
     REAL(wp), INTENT(inout)   :: litterfall_seedbed   ! amount of woodyLitter
-    REAL(wp), INTENT(inout)   :: litterfall_wood            ! amount of leafLitter
+    REAL(wp), INTENT(inout)   :: litterfall_sapwood            ! amount of leafLitter
+    REAL(wp), INTENT(inout)   :: litterfall_heartwood            ! amount of leafLitter
     REAL(wp), INTENT(inout)   :: litterfall_coarseroot   ! amount of woodyLitter
 
     !
@@ -156,41 +167,21 @@ CONTAINS
 
     ! locals
     LOGICAL  :: is_crop                 ! logical crop mask
-
     REAL(wp) :: c_green_max,c_reserve_optimal
-    REAL(wp) :: NPP_2_greenPool, NPP_2_woodPool, NPP_2_reservePool, NPP_2_rootExudates, Green_2_herbivory
-    REAL(wp) :: C_2_litter_greenPool
-    REAL(wp) :: excess_carbon
-    REAL(wp) :: leaf_shedding
-
-    REAL(wp) :: c_green_pot, c_woods_pot         !! values of potential carbon pools i.e. before accounting for N-limitation
-    REAL(wp) :: c_reserve_pot
-
-    REAL(wp) :: Cflx_NPP_2_green_pot,Cflx_NPP_2_wood_pot,Cflx_NPP_2_reserve_pot
     REAL(wp) :: Cflx_2_crop_harvest, Cflx_crop_harvest_2_atmos
     REAL(wp) :: Cflx_faeces_2_LG, Cflx_faeces_2_atm
+    REAL(wp) :: excess_carbon
     ! R: only for spitfire
     !REAL(wp) :: litter_wood_new, litter_wood_total
 
     ! local variables
-
-
-    !REAL(wp) :: Nflux_NPP_2_green_pot,Nflux_NPP_2_wood_pot
-    !REAL(wp) :: Nflux_litterGreen_ag_2_slow_pot, Nflux_litterGreen_bg_2_slow_pot
-    !REAL(wp) :: Nflux_litter_wood_ag_2_slow_pot,Nflux_litter_wood_bg_2_slow_pot
-    !REAL(wp) :: minNflux_litter_green_ag_pot,minNflux_litter_green_bg_pot
-    !REAL(wp) :: minNflux_litter_wood_ag_pot,minNflux_litter_wood_bg_pot
-    !REAL(wp) :: N2O_emissions_litter_pot
-
-    !REAL(wp) :: minN_plant_demand,minN_soil_demand,total_minN_demand
     REAL(wp) :: NPP_2_green_via_mobileN, NPP_2_wood_via_mobileN
-    !REAL(wp) :: Nmobile_2_green, Nmobile_2_wood, Nmobile_2_green_pot, Nmobile_2_wood_pot
-    !REAL(wp) :: redFact_Nmobile
-    REAL(wp) :: redFact_Nlimitation
-    !REAL(wp) :: Nflx_faeces_2_SMINN, minNflux_litter_active
-    !REAL(wp) :: Nflx_crop_harvest_2_SMINN
-
-    !REAL(wp), PARAMETER :: N2O_ef_grazing = 0._wp  !! N2O grazing switched off; reasonable value for the emission factor: 0.0125_wp
+    REAL(wp) :: redFact_Nlimitation, red_scalar
+    
+    REAL(wp) :: lit_leaf_pot, lit_fineroot_pot, lit_fruit_pot, lit_seedbed_pot, &
+                lit_coarseroot_pot, lit_sapwood_pot, lit_heartwood_pot
+    REAL(wp) :: q_tau_leaf, q_tau_fineroot, q_tau_seedbed, q_tau_coarseroot, q_tau_branch, q_tau_sapwood, q_tau_fruit, &
+                q_mortality, frac_sapwood_branch
 
 
     ! R: Normally parameters should be in mo_carbon_constants, but the following parameters are used only in this subroutine!
@@ -206,9 +197,7 @@ CONTAINS
 
     ! Note: All fields with intent(out) are non-defined on return, even if the calling routine has set them.
 
-    !soilResp_rate_pot        = 0.0_wp
     NPP_act                  = 0.0_wp
-    ! redFact_Nlimitation      = 1.0_wp
 
     ! R: only for spitfire:
     !IF (PRESENT(fract_litter_wood_new)) THEN
@@ -238,22 +227,56 @@ CONTAINS
     leafLitter                 = 0.0_wp           ! amount of leafLitter
     C_2_litter_woodPool        = 0.0_wp
 
+    q_tau_leaf       = 0._wp
+    q_tau_fineroot   = 0._wp
+    q_tau_seedbed    = 0._wp
+    q_tau_coarseroot = 0._wp
+    q_tau_branch     = 0._wp
+    q_tau_sapwood    = 0._wp
+    q_tau_fruit      = 0._wp
+    q_mortality      = 0._wp
+    frac_sapwood_branch = 0._wp
+    
+    !> retrieve QUINCY lctlib values for turnover time
+    CALL convert_jsb_lct_to_quincy(jsb_LctNumber, quincy_LctNumber, &
+      &   lctlib_tau_leaf= q_tau_leaf, &
+      &   lctlib_tau_fine_root = q_tau_fineroot , &
+      &   lctlib_tau_seedbed = q_tau_seedbed, &
+      &   lctlib_tau_coarse_root = q_tau_coarseroot, &
+      &   lctlib_tau_branch = q_tau_branch, &
+      &   lctlib_tau_wood = q_tau_sapwood, &
+      &   lctlib_tau_fruit = q_tau_fruit &
+      &   lctlib_frac_sapwood_branch = frac_sapwood_branch &
+      &   )
+    SELECT CASE(pheno_type)
+    CASE(1, 2, 3)
+    ! trees
+      q_mortality = background_mort_rate_tree
+    CASE(4)
+    ! grasses
+      q_mortality = background_mort_rate_grass
+    CASE(5)
+    ! crops
+      q_mortality = 0._wp ! crops are harvested every year
+    END SELECT
     ! on all veg tiles:
 
     c_green_max       = greenC2leafC * LAI / specific_leaf_area_C
     c_reserve_optimal = reserveC2leafC * max_LAI / specific_leaf_area_C
 
-    !! ============== NON-N-LIMITED CARBON AND NITROGEN ALLOCATION =========================================================
+    !! ============== NON-N-LIMITED CARBON ALLOCATION =========================================================
     !!
-    !! Perform those C- and N-allocation steps that are not restricted by N-availability
-    !! 1. Leaf shedding
-    !! 2. Wood shedding
-    !! 3. Depletion of the reserve pool
-    !! 4. Decomposition of slow soil pool (whether this is really independent of N-availability is debatable!!)
+    !! Perform those C-allocation steps that are not restricted by N-availability
+    !! 1. Leaf shedding: follow the jsb assumption for green pool shedding
+    !! 2. Herbivory loss: jsb or quincy
+    !! 3. Wood shedding: jsb or quincy
+    !! 4. Depletion of the reserve pool: jsb
+    !!
     !!
     !!
     !! ----------------------------------------------------------------------------
     !! 1. Leaf shedding: Transfer of C from green pool to leaf litter litter pool
+    
 
 !!$ tr
 !!$       IF (LAI >= LAI_previous) THEN                              !! If LAI is increasing or constant the leaf shedding is given
@@ -287,10 +310,18 @@ CONTAINS
     cflux_c_greenwood_2_litter = C_2_litter_greenPool
 
     !! ---------------------------------------------------------------------------------
-    !! Herbivory loss from c_green & Npool_green w.r.t PFTs in lctlib
+    !! 2. Herbivory loss from c_green & Npool_green w.r.t PFTs in lctlib
 
-    Green_2_herbivory  = c_green * fract_green_2_herbivory             !! Grazing flux indirect comput.from NPP losses
-    c_green        = c_green - Green_2_herbivory                  !! Loss due to grazing
+    IF (jsb_allocation) THEN
+      ! JSBACH
+      Green_2_herbivory  = c_green * fract_green_2_herbivory             !! Grazing flux indirect comput.from NPP losses
+    ELSE
+      ! QUINCY
+      Green_2_herbivory  = (c_leaf + c_fruit) * fract_green_2_herbivory  !! Herbivory loss only from leaf and fruit
+      c_leaf = c_leaf * (1._wp - fract_green_2_herbivory)
+      c_fruit = c_fruit * (1._wp - fract_green_2_herbivory)
+    END IF
+    c_green        = c_green - Green_2_herbivory                       !! Loss due to grazing
 
     Cflx_faeces_2_LG  = Green_2_herbivory * fract_C_faeces2_LG             !! Cflux_faeces_2_LG to be stored in litter green pool
                                                                            !!      (not considered in cflux_c_greenwood_2_litter)
@@ -298,20 +329,47 @@ CONTAINS
     Cflx_faeces_2_atm = Green_2_herbivory * (1.0_wp - fract_C_faeces2_LG)  !! Cflux_faeces_2_atm to be lost to atmosphere
                                                                            !!      (dk: not added to CO2?)
     !! ---------------------------------------------------------------------------------
-    !! 2. Wood shedding: Transfer of C from wood pool to wood litter pools
+    !! 3. Wood shedding: Transfer of C from wood pool to wood litter pools
     !!
-                                                            !! Assuming that forests continuously die at the inverse lifetime of trees
-    C_2_litter_woodPool = c_woods / tau_c_woods             ! The bigger tau gets, the weaker the C pools will be depreciated:
-                                                            ! tau_c_woods: [days] -> [timestep]
-                                                            !! .. the shedded wood (MAX FUNCTION FOR NONWOODY PFTS)
-    ! R: only for spitfire
-    ! if (present(fract_litter_wood_new))     litter_wood_new = fract_wood_aboveGround * C_2_litter_woodPool
-    c_woods = c_woods -  C_2_litter_woodPool                 !! .. and then all is subtracted from the wood pool.
+    
+    ! QUINCY veg pool potential litter flux
+    lit_coarseroot_pot = c_coarseroot * (1._wp/q_tau_coarseroot + q_mortality)
+    lit_sapwood_pot    = c_sapwood    * (1._wp/q_tau_branch*frac_sapwood_branch + q_mortality)
+    lit_heartwood_pot  = c_heartwood  * q_mortality    
+    IF (jsb_allocation) THEN
+      ! JSBACH
+                                                              !! Assuming that forests continuously die at the inverse lifetime of trees
+      C_2_litter_woodPool = c_woods / tau_c_woods             ! The bigger tau gets, the weaker the C pools will be depreciated:
+                                                              ! tau_c_woods: [days] -> [timestep]
+                                                              !! .. the shedded wood (MAX FUNCTION FOR NONWOODY PFTS)
+      !> C_2_litter_wood
+      IF (C_2_litter_woodPool > eps8) THEN
+        IF ( (lit_coarseroot_pot + lit_sapwood_pot + lit_heartwood_pot) > C_2_litter_woodPool ) THEN
+          red_scalar = C_2_litter_woodPool / (lit_coarseroot_pot + lit_sapwood_pot + lit_heartwood_pot)
+          litterfall_sapwood    = lit_sapwood_pot    * red_scalar
+          litterfall_heartwood  = lit_heartwood_pot  * red_scalar
+          litterfall_coarseroot = lit_coarseroot_pot * red_scalar
+        END IF
+      ELSE
+        litterfall_sapwood    = 0._wp
+        litterfall_heartwood  = 0._wp
+        litterfall_coarseroot = 0._wp
+      END If
+      ! R: only for spitfire
+      ! if (present(fract_litter_wood_new))     litter_wood_new = fract_wood_aboveGround * C_2_litter_woodPool
+    ELSE
+      ! QUINCY
+      litterfall_sapwood    = 0._wp
+      litterfall_heartwood  = 0._wp
+      litterfall_coarseroot = 0._wp
+      C_2_litter_woodPool = litterfall_sapwood + litterfall_heartwood + litterfall_coarseroot
+    END IF
+    c_woods      = c_woods -  C_2_litter_woodPool                 !! .. and then all is subtracted from the wood pool.
 
     cflux_c_greenwood_2_litter = cflux_c_greenwood_2_litter + C_2_litter_woodPool
 
     !! ----------------------------------------------------------------------------
-    !! 3. Depletion of reserve pool: Transfer of C from reserve pool to green litter pool
+    !! 4. Depletion of reserve pool: Transfer of C from reserve pool to green litter pool
     !!    Some organic carbon of the reserve pool is always lost with mortality of plants.
     !!    Note that the reserve pool contains no Nitrogen (starches and sugar are free of N).
     !!    Note also that the green litter pool has no fixed C/N-ratio (therefore no compensation
@@ -327,158 +385,45 @@ CONTAINS
 
     cflux_c_greenwood_2_litter = cflux_c_greenwood_2_litter + C_2_litter_greenPool
 
-    !!
-    !! ============== START OF POTENTIAL PLANT-CARBON ALLOCATION TO ESTIMATE PLANT-N-DEMAND =================================
-    !!                       (exception: case NPP<0 handles actual allocation)
-
-    c_green_pot   = c_green
-    c_woods_pot   = c_woods
-    c_reserve_pot = c_reserve
-
-    !! Preliminary determination of distribution of NPP to the various pools (may be corrected afterwards according to
-    !!    avaialable Nitrogen)
-
-    IF (NPP_pot_yDayMean <= 0.0_wp) THEN                    !! In case of negative or zero NPP
-
-      NPP_2_reservePool =  NPP_pot_yDayMean * sec_per_day   !! .. the plant looses C and
-      c_reserve     = c_reserve + NPP_2_reservePool         !! .. we try to take it from the reserve pool
-      IF (c_reserve < 0.0_wp) THEN                          !! But if thereby the reserve pool gets negative
-        NPP_2_reservePool = NPP_2_reservePool - c_reserve   !! .. we absorb negative NPP only up to zero reserve pool and
-        NPP_flux_correction = -c_reserve / sec_per_day      !! .. give the deficit as a flux correction back to the
-        c_reserve = 0.0_wp                                  !! .. calling routine. Hence all Carbon from the reserve pool
-      END IF                                                !! .. is used up.
-
-      !! For correct handling of nitrogen limitation below (which handles only the case of positive NPP) set NPP to zero:
-      NPP_2_reservePool = 0.0_wp
-      NPP_2_greenPool   = 0.0_wp   !! All other transfer rates are zero
-      NPP_2_woodPool    = 0.0_wp
-      NPP_2_rootExudates= 0.0_wp
-      c_reserve_pot = c_reserve    !! remember modified reserve pool
-
-    ELSE  !! NPP is positive
-
-      NPP_2_woodPool    = fract_npp_2_woodPool * NPP_pot_yDayMean * sec_per_day  !! NPP it is distributed according to predefined
-                                                                                 !!    relative fraction
-      NPP_2_reservePool = fract_npp_2_reservePool * NPP_pot_yDayMean * sec_per_day
-      NPP_2_rootExudates= fract_npp_2_exudates * NPP_pot_yDayMean * sec_per_day
-      NPP_2_greenPool   = (1.0_wp - fract_npp_2_woodPool - fract_npp_2_reservePool                 &
-           - fract_npp_2_exudates) * NPP_pot_yDayMean * sec_per_day
-
-      !! Growth of Wood Pool (structural carbon of living plants)
-
-      c_woods_pot = c_woods_pot + NPP_2_woodPool                  !! Then it is attempted to put all NPP share into it
-      excess_carbon = max(0.0_wp,c_woods_pot-Max_C_content_woods) !! .. but thereby the pool may get too large
-      IF (excess_carbon > 0._wp) THEN
-        c_woods_pot = c_woods_pot - excess_carbon                 !! .. so that the excess carbon has once more to be
-                                                                  !! .. subtracted
-        NPP_2_greenPool = NPP_2_greenPool + excess_carbon         !! .. and instead made available to the green pool
-        NPP_2_woodPool = NPP_2_woodPool - excess_carbon           !! .. and the actual amount of NPP put to the wood pool
-      END IF
-                                                                  !! .. is less
-      !! Growth of Reserve Pool (sugars and starches) and determination how much will enter the Green Pool
-      IF (c_reserve_pot < c_reserve_optimal) THEN                 !! .. If the reserve pool is smaller than optimal,
-        c_reserve_pot = c_reserve_pot +  NPP_2_reservePool        !! .... it is filled by the available NPP
-        excess_carbon =                                         & !! .... Thereby it may happen that it gets larger than
-             max(0.0_wp,c_reserve_pot - c_reserve_optimal)        !! .... optimal so that there is excess carbon
-        IF (excess_carbon > 0._wp) THEN
-          c_reserve_pot = c_reserve_pot - excess_carbon           !! .... that needs not be taken up
-          NPP_2_greenPool = NPP_2_greenPool + excess_carbon       !! .... but can better be used to increase the green
-          NPP_2_reservePool = NPP_2_reservePool - excess_carbon   !! .... pool and the actual amount of NPP put to the
-        END IF
-                                                                  !! .... reserve pool is less.
-      ELSE                                                        !! .... Otherwise (reserve pool is larger than optimal)
-        NPP_2_greenPool = NPP_2_greenPool + NPP_2_reservePool     !! .... all NPP is left for the green pool
-        NPP_2_reservePool = 0.0_wp                                !! .... so that nothing is stored in the reserve pool.
-      END IF
-
-      !! Growth of Green Pool (leaves and fine roots): (in case of too much NPP, try to put it into the reserve pool).
-
-      c_green_pot = c_green_pot + NPP_2_greenPool                 !! Green pool is filled by the available NPP.
-      excess_carbon = max(0.0_wp,c_green_pot - c_green_max)       !! .. Thereby it may get larger than appropriate for
-                                                                  !!    current LAI.
-      IF (excess_carbon > 0._wp) THEN
-        NPP_2_greenPool = NPP_2_greenPool - excess_carbon         !! .. Hence the actual amount of NPP put to the green
-                                                                  !!    pool is less.
-        c_green_pot = c_green_pot - excess_carbon                 !! .. This excess carbon needs not be taken up but
-      END IF
-      IF (c_reserve_pot < c_reserve_optimal) THEN                 !! .... if the reserve pool is smaller than optimal
-        IF (excess_carbon > 0._wp) THEN
-          c_reserve_pot = c_reserve_pot + excess_carbon           !! .... it is tried to put the carbon there,
-          NPP_2_reservePool = NPP_2_reservePool + excess_carbon   !! .... which means that additional NPP is put to the
-                                                                  !!      reserve pool.
-        END IF
-        excess_carbon =                                        &  !! .... Thereby it may happen that the reserve pool
-             max(0.0_wp,c_reserve_pot - c_reserve_optimal)        !!      increases beyond the optimal value.
-        IF (excess_carbon > 0._wp) THEN
-          c_reserve_pot = c_reserve_pot - excess_carbon           !! .... In that case the excess carbon is once more
-                                                                  !!      removed from the reserve pool
-          NPP_2_reservePool = NPP_2_reservePool - excess_carbon   !! .... so that the actual amount of NPP put into the
-                                                                  !!      reserve pool is less.
-        END IF
-      END IF
-
-      excess_NPP = excess_carbon / sec_per_day
-
-      root_exudates = NPP_2_rootExudates / sec_per_day
-
-    END IF !! NPP > 0 end
-
-    !! ============== START OF POTENTIAL LITTER-CARBON ALLOCATION ==============================================
-
-    !! ============== use nitrogen from N mobile pool to satisfy (at least partly) for potential carbon fluxes ===
-    ! Remarks: Nmobile_2_green + Nmobile_2_wood <= Npool_mobile
-    ! Npool_mobile accounts minN_plant_demand by trasfering N into green and wood pool
-
-    Cflx_NPP_2_green_pot    = NPP_2_greenPool     !! potential growth of green carbon
-    Cflx_NPP_2_wood_pot     = NPP_2_woodPool      !! potential growth of wood carbon
-
-    NPP_2_green_via_mobileN = 0.0_wp
-    NPP_2_wood_via_mobileN  = 0.0_wp
-
-    Cflx_NPP_2_green_pot = Cflx_NPP_2_green_pot - NPP_2_green_via_mobileN
-    Cflx_NPP_2_wood_pot  = Cflx_NPP_2_wood_pot  - NPP_2_wood_via_mobileN
-
-    ! R: These lines were calculated also with_Nitrogen=.FALSE. in JS3. However, it was not used further when with_Nitrogen=.FALSE.
-    !    In JS3 it should stand within the brackets.
-    !Nflux_NPP_2_green_pot = Cflx_NPP_2_green_pot/cn_green
-    !Nflux_NPP_2_wood_pot  = Cflx_NPP_2_wood_pot/cn_woods
-    !minN_plant_demand = Nflux_NPP_2_green_pot + Nflux_NPP_2_wood_pot
-
-    !! ============== COLLECT POTENTIAL C-FLUXES ===============================================================
-
-    Cflx_NPP_2_reserve_pot        = NPP_2_reservePool                                     !! potential growth of reserve carbon
-
-    redFact_Nlimitation  = 1.0_wp   !! This assures absence of nitrogen limitation in this mixed C-N code
-    Cflx_NPP_2_green_pot = redFact_Nlimitation * Cflx_NPP_2_green_pot
-    Cflx_NPP_2_wood_pot  = redFact_Nlimitation * Cflx_NPP_2_wood_pot
-    !! ============== COMPUTE SOIL RESPIRATION ===================================================================
     leafLitter    = cflux_c_greenwood_2_litter - C_2_litter_woodPool + Cflx_faeces_2_LG - Cflx_2_crop_harvest
     
+    
+    ! QUINCY distrubution for green pool litter
+    !> potential litter flux is calculated by the pool size, turnover rate, and mortality (QUINCY defined)
+    lit_leaf_pot     = c_leaf     * (1._wp/q_tau_leaf + q_mortality)
+    lit_fineroot_pot = c_fineroot * (1._wp/q_tau_fineroot + q_mortality)
+    lit_fruit_pot    = c_fruit    * q_mortality
+    lit_seedbed_pot  = c_seedbed  * (1._wp/q_tau_seedbed + q_mortality)
+    
+    !> actual litter flux is constrained by leafLitter
+    IF (leafLitter > eps8) THEN
+      IF ( (lit_leaf_pot + lit_fineroot_pot + lit_fruit_pot + lit_seedbed_pot) > leafLitter ) THEN
+        red_scalar = leafLitter / (lit_leaf_pot + lit_fineroot_pot + lit_fruit_pot + lit_seedbed_pot)
+        litterfall_leaf     = lit_leaf_pot    * red_scalar
+        litterfall_fineroot = lit_fineroot    * red_scalar
+        litterfall_fruit    = lit_fruit_pot   * red_scalar
+        litterfall_seedbed  = lit_seedbed_pot * red_scalar
+      END If
+    ELSE
+      litterfall_leaf     = 0._wp
+      litterfall_fineroot = 0._wp
+      litterfall_fruit    = 0._wp
+      litterfall_seedbed  = 0._wp
+    END If  
+    
     !! ============== PARTITION JSB C & LITTER FLUX TO QUINCY ===================================================
-    ! partition leaf and woody litter to QUINCY litter types
-    ! leafLitter --> leaf, fine_root, fruit, seedbed
-    ! C_2_litter_woodPool --> coarse_root, and wood
-    CALL quincy_allometry_turnover(pheno_type, &
-         &                    leafLitter, C_2_litter_woodPool, &
+    CALL sb_carbon_allometry(jsb_allocation, &
+         &                    pheno_type, jsb_LctNumber, &
          &                    c_green, c_woods, c_reserve, &
-         &                    Cflx_NPP_2_green_pot, Cflx_NPP_2_wood_pot, Cflx_NPP_2_reserve_pot, &
-         &                    c_leaf, c_fineroot, c_fruit, c_seedbed, c_sapheartwood, c_coarseroot, & 
+         &                    NPP_pot_yDayMean * sec_per_day, NPP_act, &
+         &                    fract_npp_2_woodPool, fract_npp_2_reservePool, &
+         &                    fract_npp_2_exudates, Max_C_content_woods, &
+         &                    LAI, max_LAI, tree_height, f_lai, 
+         ! &                    Cflx_NPP_2_green_pot, Cflx_NPP_2_wood_pot, Cflx_NPP_2_reserve_pot, &
+         &                    c_leaf, c_fineroot, c_fruit, c_seedbed, c_sapwood, c_heartwood, c_coarseroot, & 
          &                    litterfall_leaf, litterfall_fineroot, &
          &                    litterfall_fruit, litterfall_seedbed, &
-         &                    litterfall_wood, litterfall_coarseroot)
-
-    !! ============== COMPUTE ACTUAL NPP (is needed outside the routine e.g. to recompute transpiration through stomata) =======
-
-    IF (NPP_pot_yDayMean > 0.0_wp) THEN
-      NPP_act = (NPP_2_green_via_mobileN + NPP_2_wood_via_mobileN + NPP_2_rootExudates +               &
-        & redFact_Nlimitation * (Cflx_NPP_2_green_pot + Cflx_NPP_2_wood_pot) + Cflx_NPP_2_reserve_pot  &
-        & ) / sec_per_day
-    ELSE
-      NPP_act = NPP_pot_yDayMean + NPP_flux_correction  ! NPP_pot_yDayMean is negative: NPP_flux_correction is zero
-                                                                 ! except c_reserve was < 0.0_wp.
-    END IF
-
-
+         &                    litterfall_sapwood, litterfall_heartwood, litterfall_coarseroot)
 
 
     ! always:
@@ -997,20 +942,41 @@ CONTAINS
 #ifndef _OPENACC
   ELEMENTAL &
 #endif
-  SUBROUTINE quincy_allometry_turnover(  &
-         &                    pheno_type, &
-         &                    C_2_litter_leaf, C_2_litter_wood, &
+  SUBROUTINE sb_carbon_allometry(fixed_allocation, &
+         &                    pheno_type, jsb_LctNumber, &
          &                    c_green, c_woods, c_reserve, &
-         &                    Cflx_NPP_2_green_pot, Cflx_NPP_2_wood_pot, Cflx_NPP_2_reserve_pot, &
+         &                    NPP_pot, NPP_act, &
+         &                    fract_npp_2_woodPool, fract_npp_2_reservePool, &
+         &                    fract_npp_2_exudates, Max_C_content_woods, &
+         &                    LAI, max_LAI, tree_height, f_lai, &
+         ! &                    Cflx_NPP_2_green_pot, Cflx_NPP_2_wood_pot, Cflx_NPP_2_reserve_pot, &
          &                    c_leaf, c_fineroot, c_fruit, c_seedbed, c_sapwood, c_heartwood, c_coarseroot, &
          &                    lit_leaf, lit_fineroot, &
          &                    lit_fruit, lit_seedbed, &
-         &                    lit_wood, lit_coarseroot)
+         &                    lit_sapwood, lit_heartwood, lit_coarseroot)
 
-    USE mo_veg_constants,           ONLY: sm2lm_grass, background_mort_rate_tree, background_mort_rate_grass, 
+    USE mo_veg_constants,           ONLY: sm2lm_grass
+    
     IMPLICIT NONE
+    LOGICAL,  INTENT(in)    :: fixed_allocation       
     INTEGER,  INTENT(in)    :: pheno_type             ! crop =5
+    INTEGER,  INTENT(in)    :: jsb_LctNumber          ! crop =5
     !
+    REAL(wp), INTENT(in)    :: fract_npp_2_woodPool    ! Fraction of NPP to be put maximally into the green pool
+    REAL(wp), INTENT(in)    :: fract_npp_2_reservePool ! Fraction of NPP to be put into the optimally into the reserve pool
+    REAL(wp), INTENT(in)    :: fract_npp_2_exudates    ! Fraction of NPP to be put into the optimally into the root exudates    
+    REAL(wp), INTENT(in)    :: Max_C_content_woods     ! Maximum carbon content of wood pool (from lctLib)   
+    REAL(wp), INTENT(in)    :: LAI                     ! Yesterdays mean LAI
+    REAL(wp), INTENT(in)    :: max_LAI                 ! maximum LAI
+    REAL(wp), INTENT(in)    :: lit_leaf       ! carbon flux to leaf and fineroot [mol(C)/m^2(canopy)/yr]
+    REAL(wp), INTENT(in)    :: lit_fineroot   ! carbon flux to reserve pool [mol(C)/m^2(canopy)/yr]
+    REAL(wp), INTENT(in)    :: lit_fruit      ! carbon flux to wood and coarse root [mol(C)/m^2(canopy)/yr]
+    REAL(wp), INTENT(in)    :: lit_seedbed    ! carbon flux to leaf and fineroot [mol(C)/m^2(canopy)/yr]
+    REAL(wp), INTENT(in)    :: lit_sapwood       ! carbon flux to reserve pool [mol(C)/m^2(canopy)/yr]
+    REAL(wp), INTENT(in)    :: lit_heartwood       ! carbon flux to reserve pool [mol(C)/m^2(canopy)/yr]
+    REAL(wp), INTENT(in)    :: lit_coarseroot ! carbon flux to wood and coarse root [mol(C)/m^2(canopy)/yr]
+    REAL(wp), INTENT(in)    :: NPP_pot               ! potential NPP [mol(C)/m^2(canopy)/yr]
+    REAL(wp), INTENT(inout) :: NPP_act               ! actual NPP [mol(C)/m^2(canopy)/yr]
     REAL(wp), INTENT(inout) :: c_green            ! Green carbon pool: on input last value; updated on output
                                                      !    [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_woods            ! Wood carbon pool: on input last value; updated on output
@@ -1031,141 +997,250 @@ CONTAINS
                                                      !    [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_coarseroot       ! Coarseroot carbon pool: on input last value; updated on output
                                                      !    [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(in) :: C_2_litter_leaf       ! litter flux to leaf and fineroot [mol(C)/m^2(canopy)/yr]
-    REAL(wp), INTENT(in) :: C_2_litter_wood       ! litter flux to wood and coarse root [mol(C)/m^2(canopy)/yr]
-    REAL(wp), INTENT(inout) :: Cflx_NPP_2_green_pot  ! carbon flux to leaf and fineroot [mol(C)/m^2(canopy)/yr]
-    REAL(wp), INTENT(inout) :: Cflx_NPP_2_wood_pot   ! carbon flux to reserve pool [mol(C)/m^2(canopy)/yr]
-    REAL(wp), INTENT(inout) :: Cflx_NPP_2_reserve_pot ! carbon flux to wood and coarse root [mol(C)/m^2(canopy)/yr]
-    REAL(wp), INTENT(inout) :: lit_leaf       ! carbon flux to leaf and fineroot [mol(C)/m^2(canopy)/yr]
-    REAL(wp), INTENT(inout) :: lit_fineroot   ! carbon flux to reserve pool [mol(C)/m^2(canopy)/yr]
-    REAL(wp), INTENT(inout) :: lit_fruit      ! carbon flux to wood and coarse root [mol(C)/m^2(canopy)/yr]
-    REAL(wp), INTENT(inout) :: lit_seedbed    ! carbon flux to leaf and fineroot [mol(C)/m^2(canopy)/yr]
-    REAL(wp), INTENT(inout) :: lit_wood       ! carbon flux to reserve pool [mol(C)/m^2(canopy)/yr]
-    REAL(wp), INTENT(inout) :: lit_coarseroot ! carbon flux to wood and coarse root [mol(C)/m^2(canopy)/yr]
+    REAL(wp), INTENT(inout) :: tree_height        ! tree height, [m]
+    REAL(wp), INTENT(inout) :: f_lai              ! lai index to estimate tree height
+
+
 
 
     ! locals
-    REAL(wp) :: lit_leaf_pot, lit_fineroot_pot, lit_fruit_pot, lit_seedbed_pot, &
-                lit_coarseroot_pot, lit_sapwood_pot, lit_heartwood_pot
-    REAL(wp) :: jsb_allocfrac_leaf, jsb_allocfrac_fineroot, jsb_allocfrac_fruit, &
-                jsb_allocfrac_coarseroot, jsb_allocfrac_wood
-    REAL(wp) :: tau_leaf, tau_fineroot, tau_seedbed, tau_coarseroot, tau_branch, tau_sapwood, &
-                frac_sapwood_branch, mortality
-    REAL(wp) :: hlp1
+    REAL(wp) :: k_latosa, & ! leaf area to sap wood area ratio [m2/m2]
+                sla, & ! specific leaf area [m2/kg C]
+                k_rtos, & ! [1/m]
+                k_crtos, & ! coarse root to sapwood ratio
+                tau_fruit, tau_sapwood, wood_density, frac_sapwood_branch
+    REAL(wp) :: leaf2sapwood_mass_ratio, & ! k_latosa / sla / wood_density [m]
+                leaf2root_mass_ratio, & 
+                leaf2wood_mass_ratio, & ! leaf2sapwood_mass_ratio/ (1 + lctlib_k_crtos)
+                frac_alloc_fruit, &
+                leaf_carbon_inc, root_carbon_inc, coarse_root_carbon_inc, sap_wood_carbon_inc
+    REAL(wp) :: fruit_2_seedbed, sap_2_heartwood
+    INTEGER  :: quincy_LctNumber
+    ! locals from original calc_Cpools
+    REAL(wp) :: NPP_2_greenPool, NPP_2_woodPool, NPP_2_reservePool, NPP_2_rootExudates, Green_2_herbivory
+    REAL(wp) :: excess_carbon
+
+    REAL(wp) :: c_green_pot, c_woods_pot, c_reserve_pot        !! values of potential carbon pools i.e. before accounting for N-limitation
+    REAL(wp) :: t_tree_mature, km_lai, dheight, df_lai
 
     !> init local variables
-    tau_leaf       = 0._wp
-    tau_fineroot   = 0._wp
-    tau_seedbed    = 0._wp
-    tau_coarseroot = 0._wp
-    tau_branch     = 0._wp
-    tau_sapwood    = 0._wp
-    mortality      = 0._wp
-    frac_sapwood_branch = 0._wp
-    
-    !> the litter is 
-    SELECT CASE(PhenologyType)
-    CASE(1)
-    ! evergreen trees
-      jsb_allocfrac_leaf     =
-      jsb_allocfrac_fineroot =
-      jsb_allocfrac_fruit    =
-      jsb_litfrac_coarseroot = 
-      mortality              = background_mort_rate_tree
-    CASE(2)
-    ! summergreen trees
-      jsb_litfrac_leaf       =
-      jsb_litfrac_fruit      =
-      jsb_litfrac_fineroot   =
-      jsb_litfrac_coarseroot = 
-      mortality              = background_mort_rate_tree
-    CASE(3)
-    ! raingreen trees
-      jsb_litfrac_leaf       =
-      jsb_litfrac_fruit      =
-      jsb_litfrac_fineroot   =
-      jsb_litfrac_coarseroot = 
-      mortality              = background_mort_rate_tree
+    leaf_carbon_inc        = 0._wp
+    root_carbon_inc        = 0._wp
+    coarse_root_carbon_inc = 0._wp
+    sap_wood_carbon_inc    = 0._wp
+    fruit_2_seedbed        = 0._wp
+    sap_2_heartwood        = 0._wp
+
+    t_tree_mature = 0._wp
+    km_lai        = 0._wp
+    dheight       = 0._wp
+    df_lai        = 0._wp
+
+    !> retrieve QUINCY lctlib values for turnover time
+    CALL convert_jsb_lct_to_quincy(jsb_LctNumber, quincy_LctNumber, &
+      &   lctlib_k_latosa = k_latosa, &
+      &   lctlib_sla = sla, &
+      &   lctlib_wood_density = wood_density, &
+      &   lctlib_k_crtos = k_crtos, &
+      &   lctlib_tau_fruit = tau_fruit, &
+      &   lctlib_tau_sapwood = tau_sapwood, &
+      &   lctlib_frac_sapwood_branch = frac_sapwood_branch, &
+      &   lctlib_t_tree_mature = t_tree_mature, &
+      &   lctlib_t_lai_max = t_lai_max, &
+      &   lctlib_km_lai = km_lai
+      &   )
+
+    !> retrieve QUINCY 'fixed' allocation coefficient for veg organisms
+    SELECT CASE(pheno_type)
+    CASE(1, 2, 3)
+    ! trees
+      leaf2sapwood_mass_ratio = k_latosa / sla / wood_density
+      k_rtos = 1.75_wp * (15.4_wp * wood_density) / k_latosa
+      leaf2root_mass_ratio    = k_rtos * leaf2sapwood_mass_ratio
+      leaf2wood_mass_ratio = leaf2sapwood_mass_ratio / (1._wp + k_crtos)
     CASE(4)
     ! grasses
-      jsb_litfrac_leaf       =
-      jsb_litfrac_fruit      =
-      jsb_litfrac_fineroot   =
-      jsb_litfrac_coarseroot = 
-      mortality              = background_mort_rate_grass
+      leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
+      k_rtos = 0.5_wp / sm2lm_grass
+      leaf2root_mass_ratio    = sm2lm_grass * k_rtos
+      leaf2wood_mass_ratio = 0._wp ! not applicable
     CASE(5)
     ! crops
-      jsb_litfrac_leaf       =
-      jsb_litfrac_fruit      =
-      jsb_litfrac_fineroot   =
-      jsb_litfrac_coarseroot = 
-      mortality              = 0._wp ! crops are harvested every year
+      leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
+      k_rtos = 0.5_wp / sm2lm_grass
+      leaf2root_mass_ratio    = sm2lm_grass * k_rtos
+      leaf2wood_mass_ratio = 0._wp ! not applicable
     END SELECT
-  
 
 
-    !! ============== UPDATE ALL LITTER FLUXES =================================================================
-    ! potential litter flux is calculated by the pool size, turnover rate, and mortality (QUINCY defined)
-    lit_leaf_pot     = c_leaf     * (1._wp/tau_leaf + mortality)
-    lit_fineroot_pot = c_fineroot * (1._wp/tau_fineroot + mortality)
-    lit_fruit_pot    = c_fruit    * mortality
-    lit_seedbed_pot  = c_seedbed  * (1._wp/tau_seedbed + mortality)
-    
-    lit_coarseroot_pot = c_coarseroot   * (1._wp/tau_coarseroot + mortality)
-    lit_sapwood_pot    = c_sapwood * (1._wp/tau_branch*frac_sapwood_branch + mortality)
-    lit_heartwood_pot  = c_heartwood * mortality
-    
-    ! actual litter flux is constrained by C_2_litter_leaf and C_2_litter_wood
-    ! C_2_litter_leaf
-    IF (C_2_litter_leaf > eps8) THEN
-      IF ( (lit_leaf_pot + lit_fineroot_pot + lit_fruit_pot + lit_seedbed_pot) > C_2_litter_leaf ) THEN
+    !!
+    !! ============== START OF POTENTIAL PLANT-CARBON ALLOCATION =================================
+    !!                       (exception: case NPP<0 handles actual allocation
+    c_green_pot   = c_green
+    c_woods_pot   = c_woods
+    c_reserve_pot = c_reserve
+
+    !! Preliminary determination of distribution of NPP to the various pools (may be corrected afterwards according to
+    !!    avaialable Nitrogen)
+
+    IF (NPP_pot <= 0.0_wp) THEN                             !! In case of negative or zero NPP
+
+      NPP_2_reservePool =  NPP_pot                          !! .. the plant looses C and
+      c_reserve     = c_reserve + NPP_2_reservePool         !! .. we try to take it from the reserve pool
+      IF (c_reserve < 0.0_wp) THEN                          !! But if thereby the reserve pool gets negative
+        NPP_2_reservePool = NPP_2_reservePool - c_reserve   !! .. we absorb negative NPP only up to zero reserve pool and
+        NPP_flux_correction = -c_reserve / sec_per_day      !! .. give the deficit as a flux correction back to the
+        c_reserve = 0.0_wp                                  !! .. calling routine. Hence all Carbon from the reserve pool
+      END IF                                                !! .. is used up.
+
+      !! For correct handling of nitrogen limitation below (which handles only the case of positive NPP) set NPP to zero:
+      NPP_2_reservePool  = 0.0_wp
+      NPP_2_greenPool    = 0.0_wp   !! All other transfer rates are zero
+      NPP_2_woodPool     = 0.0_wp
+      NPP_2_rootExudates = 0.0_wp
+      c_reserve_pot = c_reserve    !! remember modified reserve pool
       
-      END If
-    ELSE
-      lit_leaf     = 0._wp
-      lit_fineroot = 0._wp
-      lit_fruit    = 0._wp
-      lit_seedbed  = 0._wp
-    END If
-    ! C_2_litter_wood
-    IF (C_2_litter_wood > eps8) THEN
-      IF ( (lit_coarseroot_pot + lit_sapwood_pot + lit_heartwood_pot) > C_2_litter_wood ) THEN
-        
-      END IF
-    ELSE
-      lit_sapwood    = 0._wp
-      lit_heartwood  = 0._wp
-      lit_coarseroot = 0._wp
-    END If   
-    
-    lit_fruit      = C_2_litter_leaf * jsb_litfrac_fruit
-    lit_fineroot   = C_2_litter_leaf * jsb_litfrac_fineroot
-    lit_leaf       = C_2_litter_leaf * jsb_litfrac_leaf
-    lit_seedbed    = c_seedbed * tau_seedbed
-    
-    lit_coarseroot = C_2_litter_wood * jsb_litfrac_coarseroot
-    lit_wood       = C_2_litter_wood - lit_coarseroot  
+      leaf_carbon_inc        = 0._wp
+      root_carbon_inc        = 0._wp
+      coarse_root_carbon_inc = 0._wp
+      sap_wood_carbon_inc    = 0._wp
 
-    !! ============== UPDATE ALL C-POOLS =======================================================================
+    ELSE  !! NPP is positive
+      ! root exudates and flux to reserve pool is calculated following jsb
+      NPP_2_rootExudates= fract_npp_2_exudates * NPP_pot
+      NPP_2_reservePool = fract_npp_2_reservePool * NPP_pot
+      IF (jsb_allocation) THEN
+        ! original JSBACH allocation
+        NPP_2_woodPool    = fract_npp_2_woodPool * NPP_pot  !! NPP it is distributed according to predefined
+                                                                                   !!    relative fraction
+        NPP_2_greenPool   = (1.0_wp - fract_npp_2_woodPool - fract_npp_2_reservePool                 &
+             - fract_npp_2_exudates) * NPP_pot
+
+        !! Growth of Wood Pool (structural carbon of living plants)
+
+        c_woods_pot = c_woods_pot + NPP_2_woodPool                  !! Then it is attempted to put all NPP share into it
+        excess_carbon = max(0.0_wp,c_woods_pot-Max_C_content_woods) !! .. but thereby the pool may get too large
+        IF (excess_carbon > 0._wp) THEN
+          c_woods_pot = c_woods_pot - excess_carbon                 !! .. so that the excess carbon has once more to be
+                                                                    !! .. subtracted
+          NPP_2_greenPool = NPP_2_greenPool + excess_carbon         !! .. and instead made available to the green pool
+          NPP_2_woodPool = NPP_2_woodPool - excess_carbon           !! .. and the actual amount of NPP put to the wood pool
+        END IF
+                                                                    !! .. is less
+        !! Growth of Reserve Pool (sugars and starches) and determination how much will enter the Green Pool
+        IF (c_reserve_pot < c_reserve_optimal) THEN                 !! .. If the reserve pool is smaller than optimal,
+          c_reserve_pot = c_reserve_pot +  NPP_2_reservePool        !! .... it is filled by the available NPP
+          excess_carbon =                                         & !! .... Thereby it may happen that it gets larger than
+               max(0.0_wp,c_reserve_pot - c_reserve_optimal)        !! .... optimal so that there is excess carbon
+          IF (excess_carbon > 0._wp) THEN
+            c_reserve_pot = c_reserve_pot - excess_carbon           !! .... that needs not be taken up
+            NPP_2_greenPool = NPP_2_greenPool + excess_carbon       !! .... but can better be used to increase the green
+            NPP_2_reservePool = NPP_2_reservePool - excess_carbon   !! .... pool and the actual amount of NPP put to the
+          END IF
+                                                                    !! .... reserve pool is less.
+        ELSE                                                        !! .... Otherwise (reserve pool is larger than optimal)
+          NPP_2_greenPool = NPP_2_greenPool + NPP_2_reservePool     !! .... all NPP is left for the green pool
+          NPP_2_reservePool = 0.0_wp                                !! .... so that nothing is stored in the reserve pool.
+        END IF
+
+        !! Growth of Green Pool (leaves and fine roots): (in case of too much NPP, try to put it into the reserve pool).
+        c_green_pot = c_green_pot + NPP_2_greenPool                 !! Green pool is filled by the available NPP.
+        excess_carbon = max(0.0_wp,c_green_pot - c_green_max)       !! .. Thereby it may get larger than appropriate for
+                                                                    !!    current LAI.
+        IF (excess_carbon > 0._wp) THEN
+          NPP_2_greenPool = NPP_2_greenPool - excess_carbon         !! .. Hence the actual amount of NPP put to the green
+                                                                    !!    pool is less.
+          c_green_pot = c_green_pot - excess_carbon                 !! .. This excess carbon needs not be taken up but
+        END IF
+        IF (c_reserve_pot < c_reserve_optimal) THEN                 !! .... if the reserve pool is smaller than optimal
+          IF (excess_carbon > 0._wp) THEN
+            c_reserve_pot = c_reserve_pot + excess_carbon           !! .... it is tried to put the carbon there,
+            NPP_2_reservePool = NPP_2_reservePool + excess_carbon   !! .... which means that additional NPP is put to the
+                                                                    !!      reserve pool.
+          END IF
+          excess_carbon =                                        &  !! .... Thereby it may happen that the reserve pool
+               max(0.0_wp,c_reserve_pot - c_reserve_optimal)        !!      increases beyond the optimal value.
+          IF (excess_carbon > 0._wp) THEN
+            c_reserve_pot = c_reserve_pot - excess_carbon           !! .... In that case the excess carbon is once more
+                                                                    !!      removed from the reserve pool
+            NPP_2_reservePool = NPP_2_reservePool - excess_carbon   !! .... so that the actual amount of NPP put into the
+                                                                    !!      reserve pool is less.
+          END IF
+        END IF
+        excess_NPP = excess_carbon / sec_per_day
+        root_exudates = NPP_2_rootExudates / sec_per_day
+        ! update QUINCY pools with fixed allocation distributions
+        SELECT CASE(pheno_type)
+        CASE(1, 2, 3)
+          ! trees
+          leaf_carbon_inc = NPP_2_greenPool * 0.45_wp ! 45%
+          root_carbon_inc = NPP_2_greenPool * 0.4_wp  ! 40%
+          frac_alloc_fruit = 1._wp / 3_wp ! 15%
+          coarse_root_carbon_inc = NPP_2_woodPool / 3._wp ! one third
+          sap_wood_carbon_inc    = NPP_2_woodPool / 3._wp * 2._wp
+        CASE(4, 5)
+          ! grasses, crops
+          leaf_carbon_inc = NPP_2_greenPool * 0.45_wp ! 45%
+          root_carbon_inc = NPP_2_greenPool * 0.4_wp  ! 40%
+          frac_alloc_fruit = 1._wp / 3_wp ! 15%
+          sap_wood_carbon_inc    = NPP_2_woodPool
+        END SELECT
+
+
+      ELSE
+        ! QUINCY allocation
+        frac_alloc_fruit = 1._wp / 3_wp ! allocation to fruit is 1/3 of leaf_carbon_inc
+        CALL simple_pipe_model(pheno_type, NPP_pot, &
+                              c_leaf, c_fineroot, c_sapwood, c_heartwood, c_coarseroot, &
+                              leaf_carbon_inc, root_carbon_inc, coarse_root_carbon_inc, sap_wood_carbon_inc, &
+                              leaf2sapwood_mass_ratio, k_rtos, leaf2root_mass_ratio, leaf2wood_mass_ratio, frac_alloc_fruit, &
+                              tree_height, f_lai, dheight, df_lai)
+
+
+      END IF
+    END IF !! NPP > 0 end  
+
+    !! ============== update tree height and f_lai ============================================
+    tree_height = tree_height + dheight
+    f_lai       = f_lai       + df_lai
+
+    !! ============== use nitrogen from N mobile pool to satisfy (at least partly) for potential carbon fluxes ===
+    ! Remarks: Nmobile_2_green + Nmobile_2_wood <= Npool_mobile
+    ! Npool_mobile accounts minN_plant_demand by trasfering N into green and wood pool
+
+    !! ============== UPDATE ALL C-POOLS IN JSB & QUINCY =======================================================================
+    !> potential C increment of each organism
+    
     ! npp to green pools QUINCY
-    c_leaf         = c_leaf         + Cflx_NPP_2_green_pot * jsb_allocfrac_leaf     - lit_leaf
-    c_fineroot     = c_fineroot     + Cflx_NPP_2_green_pot * jsb_allocfrac_fineroot - lit_fineroot
-    c_fruit        = c_fruit        + Cflx_NPP_2_green_pot * jsb_allocfrac_fruit    - lit_fruit - c_fruit * tau_fruit
-    c_seedbed      = c_seedbed      + c_fruit * tau_fruit                           - lit_seedbed
+    c_leaf          = c_leaf     + leaf_carbon_inc  - lit_leaf
+    c_fineroot      = c_fineroot + root_carbon_inc  - lit_fineroot
+    fruit_2_seedbed = MIN(c_fruit * tau_fruit, c_fruit + leaf_carbon_inc * frac_alloc_fruit - lit_fruit)
+    c_fruit         = c_fruit    + leaf_carbon_inc * frac_alloc_fruit - lit_fruit - fruit_2_seedbed
+    c_seedbed       = c_seedbed  + fruit_2_seedbed  - lit_seedbed
     
     ! npp to wood pools QUINCY
-    c_coarseroot   = c_coarseroot   + Cflx_NPP_2_wood_pot  * jsb_allocfrac_coarseroot - lit_coarseroot
-    c_sapwood      = c_sapwood      + Cflx_NPP_2_wood_pot  * jsb_allocfrac_wood       - lit_sapwood - &
-            &         (1._wp - frac_sapwood_branch) * tau_sapwood
-    c_heartwood    = c_heartwood    + (1._wp - frac_sapwood_branch) * tau_sapwood     - lit_heartwood
+    c_coarseroot   = c_coarseroot + coarse_root_carbon_inc - lit_coarseroot
+    sap_2_heartwood = MIN((1._wp - frac_sapwood_branch) * tau_sapwood, c_sapwood + sap_wood_carbon_inc - lit_sapwood)
+    c_sapwood      = c_sapwood    + sap_wood_carbon_inc - lit_sapwood - sap_2_heartwood   
+    c_heartwood    = c_heartwood  + sap_2_heartwood - lit_heartwood
     
     ! JSBACH pools
-    c_green       = c_green       + Cflx_NPP_2_green_pot
-    c_woods       = c_woods       + Cflx_NPP_2_wood_pot
-    c_reserve     = c_reserve     + Cflx_NPP_2_reserve_pot        !!dk removed Nlimit, as no dependent on N
-    
+    c_green       = c_green   + NPP_2_greenPool
+    c_woods       = c_woods   + NPP_2_woodPool
+    c_reserve     = c_reserve + NPP_2_reservePool        !!dk removed Nlimit, as no dependent on N
 
-  END SUBROUTINE quincy_allometry_turnover
+
+    !! ============== COMPUTE ACTUAL NPP (is needed outside the routine e.g. to recompute transpiration through stomata) =======
+
+    IF (NPP_pot > 0.0_wp) THEN
+      NPP_act = (NPP_2_rootExudates + NPP_2_greenPool + NPP_2_woodPool + NPP_2_reservePool  &
+        & ) / sec_per_day
+    ELSE
+      NPP_act = NPP_pot / sec_per_day + NPP_flux_correction  ! NPP_pot_yDayMean is negative: NPP_flux_correction is zero
+                                                                 ! except c_reserve was < 0.0_wp.
+    END IF    
+
+  END SUBROUTINE sb_carbon_allometry
 
   ! --- convert_lct_to_sla() ---------------------------------------------------------------------------------------------------
   !
@@ -1174,7 +1249,8 @@ CONTAINS
   SUBROUTINE convert_jsb_lct_to_quincy(jsb_LctNumber, lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf, &
                  &                     lctlib_tau_leaf, lctlib_tau_fine_root, lctlib_tau_coarse_root, &
                  &                     lctlib_tau_branch, lctlib_tau_wood, lctlib_tau_fruit, lctlib_tau_seedbed, &
-                 &                     lctlib_k_crtos)
+                 &                     lctlib_frac_sapwood_branch, lctlib_k_crtos, lctlib_k_latosa, lctlib_wood_density, & 
+                 &                     lctlib_t_tree_mature, lctlib_t_lai_max, lctlib_km_lai)
   ! #  QUINCY LCT Number                            
   ! #  1: BEM:  moist broadleaved evergreen
   ! #  2: BED:  dry broadleaved evergreen
@@ -1191,17 +1267,7 @@ CONTAINS
   ! # 13: BSO:  bare soil
   ! # 14: UAR:  urban area  
   !------------------------------------------------------------------------------------
-  ! QUINCY sla
-  ! # From Kattge et al. 2011, Table 5, converted internally from (mm/mgDW) to (m2/mol C)        
-  ! sla 9.46 8.99 15.4 15.4 5.0 10.09 20.12 19.23 20.12 19.23 20.12 19.23 19.23 19.23
-  !------------------------------------------------------------------------------------
-  ! QUINCY cn_leaf: default leaf nitrogen concentration (mgN/gDW)        
-  ! # From Kattge et al. 2011, Table 5, converted internally from nitrogen concentration (mg/gDW) to CN mol C / mol N        
-  ! cn_leaf 16.89 13.73 21.32 21.32 12.09 19.37 17.84 14.14 17.84 14.14 17.84 14.14 14.14 14.14
-  !------------------------------------------------------------------------------------
-  ! QUINCY k_crtos: coarse root to sapwood mass ratio         
-  !k_crtos 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2
-  !------------------------------------------------------------------------------------
+
   ! # JSBACH LCT Number
   ! #  1: Glacier                     
   ! #  2: Tropical evergreen trees                     
@@ -1228,22 +1294,137 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    INTEGER, INTENT(in)                       :: jsb_LctNumber            !< lct number from JSBACH lctlib file
-    INTEGER, INTENT(out)                      :: quincy_LctNumber         !< corresponding QUINCY lct number
-    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_sla               !< corresponding QUINCY lct sla
-    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_cn_leaf           !< corresponding QUINCY lct cn_leaf
-    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_np_leaf           !< corresponding QUINCY lct np_leaf
-    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_k_crtos           !< corresponding QUINCY lct k_crtos
-    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_leaf          !< corresponding QUINCY lct tau_leaf
-    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_fine_root     !< corresponding QUINCY lct tau_fine_root
-    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_coarse_root   !< corresponding QUINCY lct tau_coarse_root
-    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_branch        !< corresponding QUINCY lct tau_branch
-    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_wood          !< corresponding QUINCY lct tau_sap_wood
-    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_fruit         !< corresponding QUINCY lct tau_fruit
-    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_seedbed       !< corresponding QUINCY lct tau_seed_litter
-    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_k_crtos           !< corresponding QUINCY lct k_crtos
+    INTEGER, INTENT(in)                       :: jsb_LctNumber              !< lct number from JSBACH lctlib file
+    INTEGER, INTENT(out)                      :: quincy_LctNumber           !< corresponding QUINCY lct number
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_sla                 !< corresponding QUINCY lct sla
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_cn_leaf             !< corresponding QUINCY lct cn_leaf
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_np_leaf             !< corresponding QUINCY lct np_leaf
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_k_crtos             !< corresponding QUINCY lct k_crtos
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_k_latosa            !< corresponding QUINCY lct k_latosa
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_leaf            !< corresponding QUINCY lct tau_leaf
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_fine_root       !< corresponding QUINCY lct tau_fine_root
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_coarse_root     !< corresponding QUINCY lct tau_coarse_root
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_branch          !< corresponding QUINCY lct tau_branch
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_wood            !< corresponding QUINCY lct tau_sap_wood
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_fruit           !< corresponding QUINCY lct tau_fruit
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_seedbed         !< corresponding QUINCY lct tau_seed_litter
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_frac_sapwood_branch !< corresponding QUINCY lct frac_sapwood_branch
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_wood_density        !< corresponding QUINCY lct wood_density
+
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_t_tree_mature       !< JSBACH tree mature time
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_t_lai_max           !< JSBACH lai saturation time
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_km_lai              !< JSBACH km_lai for the height function
     ! ---------------------------
     ! 0.2 Local
+    ! --------------------------------------------------------------------
+    ! QUINCY LCTLIB lookup arrays
+    ! Index: quincy_LctNumber = 1..14
+    ! --------------------------------------------------------------------
+
+    REAL(wp), PARAMETER :: q_sla_array(14) = (/ &
+        &  9.46_wp,  8.99_wp, 15.40_wp, 15.40_wp,  5.00_wp, 10.09_wp, &
+        & 20.12_wp, 19.23_wp, 20.12_wp, 19.23_wp, 20.12_wp, 19.23_wp, &
+        & 19.23_wp, 19.23_wp &
+        /)
+
+    REAL(wp), PARAMETER :: q_cn_leaf_array(14) = (/ &
+        & 16.89_wp, 13.73_wp, 21.32_wp, 21.32_wp, 12.09_wp, 19.37_wp, &
+        & 17.84_wp, 14.14_wp, 17.84_wp, 14.14_wp, 17.84_wp, 14.14_wp, &
+        & 14.14_wp, 14.14_wp &
+        /)
+
+    REAL(wp), PARAMETER :: q_np_leaf_array(14) = (/ &
+        & 0.86_wp, 0.84_wp, 1.44_wp, 1.44_wp, 1.23_wp, 1.83_wp, &
+        & 1.43_wp, 1.36_wp, 1.43_wp, 1.36_wp, 1.43_wp, 1.36_wp, &
+        & 1.36_wp, 1.36_wp &
+        /)
+
+    REAL(wp), PARAMETER :: q_k_crtos_array(14) = (/ &
+        & 0.1_wp, 0.1_wp, 0.1_wp, 0.1_wp, 0.1_wp, 0.1_wp, &
+        & 0.2_wp, 0.2_wp, 0.2_wp, 0.2_wp, 0.2_wp, 0.2_wp, &
+        & 0.2_wp, 0.2_wp &
+        /)
+
+    REAL(wp), PARAMETER :: q_k_latosa_array(14) = (/ &
+        & 4000._wp, 4000._wp, 4000._wp, 4000._wp, 4000._wp, 4000._wp, &
+        &    0._wp,    0._wp,    0._wp,    0._wp,    0._wp,    0._wp, &
+        &    0._wp,    0._wp &
+        /)
+
+    REAL(wp), PARAMETER :: q_tau_leaf_array(14) = (/ &
+        & 16.83_wp, 15.88_wp,  5.83_wp,  5.83_wp, 39.70_wp,  6.08_wp, &
+        &  3.85_wp,  3.85_wp,  3.85_wp,  3.85_wp,  3.85_wp,  3.85_wp, &
+        &  3.85_wp,  3.85_wp &
+        /) / 12._wp
+
+    REAL(wp), PARAMETER :: q_tau_fine_root_array(14) = (/ &
+        & 0.7_wp, 0.7_wp, 0.7_wp, 0.7_wp, 0.7_wp, 0.7_wp, &
+        & 0.7_wp, 0.7_wp, 0.7_wp, 0.7_wp, 0.7_wp, 0.7_wp, &
+        & 0.7_wp, 0.7_wp &
+        /)
+
+    REAL(wp), PARAMETER :: q_tau_coarse_root_array(14) = (/ &
+        & 8.0_wp, 8.0_wp, 8.0_wp, 8.0_wp, 8.0_wp, 8.0_wp, &
+        & 8.0_wp, 8.0_wp, 8.0_wp, 8.0_wp, 8.0_wp, 8.0_wp, &
+        & 8.0_wp, 8.0_wp &
+        /)
+
+    REAL(wp), PARAMETER :: q_tau_branch_array(14) = (/ &
+        & 10.0_wp, 10.0_wp, 10.0_wp, 10.0_wp, 10.0_wp, 10.0_wp, &
+        & 10.0_wp, 10.0_wp, 10.0_wp, 10.0_wp, 10.0_wp, 10.0_wp, &
+        & 10.0_wp, 10.0_wp &
+        /)
+
+    REAL(wp), PARAMETER :: q_tau_wood_array(14) = (/ &
+        & 40.0_wp, 40.0_wp, 40.0_wp, 40.0_wp, 40.0_wp, 40.0_wp, &
+        & 40.0_wp, 40.0_wp, 40.0_wp, 40.0_wp, 40.0_wp, 40.0_wp, &
+        & 40.0_wp, 40.0_wp &
+        /)
+
+    REAL(wp), PARAMETER :: q_tau_fruit_array(14) = (/ &
+        & 1.0_wp, 1.0_wp, 1.0_wp, 1.0_wp, 1.0_wp, 1.0_wp, &
+        & 1.0_wp, 1.0_wp, 1.0_wp, 1.0_wp, 1.0_wp, 1.0_wp, &
+        & 1.0_wp, 1.0_wp &
+        /)
+
+    REAL(wp), PARAMETER :: q_tau_seedbed_array(14) = (/ &
+        & 2.0_wp, 2.0_wp, 2.0_wp, 2.0_wp, 2.0_wp, 2.0_wp, &
+        & 2.0_wp, 2.0_wp, 2.0_wp, 2.0_wp, 2.0_wp, 2.0_wp, &
+        & 2.0_wp, 2.0_wp &
+        /)
+
+    REAL(wp), PARAMETER :: q_frac_sapwood_branch_array(14) = (/ &
+        & 0.05_wp, 0.05_wp, 0.05_wp, 0.05_wp, 0.05_wp, 0.05_wp, &
+        & 1.00_wp, 1.00_wp, 1.00_wp, 1.00_wp, 1.00_wp, 1.00_wp, &
+        & 1.00_wp, 1.00_wp &
+        /)
+
+    REAL(wp), PARAMETER :: q_wood_density_array(14) = (/ &
+        & 0.30_wp, 0.30_wp, 0.30_wp, 0.30_wp, 0.30_wp, 0.30_wp, &
+        & 0.22_wp, 0.22_wp, 0.22_wp, 0.22_wp, 0.22_wp, 0.22_wp, &
+        & 0.22_wp, 0.22_wp &
+        /)
+    ! --------------------------------------------------------------------
+    ! JSBACH LCTLIB lookup arrays
+    ! Index: jsb_LctNumber = 1..21
+    ! --------------------------------------------------------------------
+    REAL(wp), PARAMETER :: j_t_mature_array(21) = (/ &
+        & 0._wp, 60._wp, 50._wp, 70._wp, 60._wp, 50._wp, 40._wp, 80._wp, 90._wp, &
+        & 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, &
+        & 0._wp, 0._wp &
+        /)
+
+    REAL(wp), PARAMETER :: j_t_lai_max_array(21) = (/ &
+        & 0._wp, 15._wp, 10._wp, 15._wp, 10._wp, 10._wp,  8._wp, 20._wp, 20._wp, &
+        & 0._wp,  0._wp,  0._wp,  0._wp,  0._wp,  0._wp,  0._wp,  0._wp,  0._wp, &
+        & 0._wp,  0._wp,  0._wp &
+        /)
+
+    REAL(wp), PARAMETER :: j_km_lai_array(21) = (/ &
+        & 0._wp, 0.6667_wp, 0.6667_wp, 1.0000_wp, 0.6667_wp, 0.6667_wp, 0.6667_wp, &
+        & 1.0000_wp, 1.0000_wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, &
+        & 0._wp, 0._wp, 0._wp, 0._wp, 0._wp &
+        /)
 
     !> init out var
     !>
@@ -1252,131 +1433,156 @@ CONTAINS
     CASE(2, 6)
       !> moist broadleaved evergreen
       quincy_LctNumber = 1
-      IF (PRESENT(lctlib_sla)) lctlib_sla     = 9.46_wp
-      IF (PRESENT(lctlib_cn_leaf)) lctlib_cn_leaf = 
-      IF (PRESENT(lctlib_k_crtos)) lctlib_k_crtos = 
     CASE(4)
       !> dry broadleaved evergreen
       quincy_LctNumber = 2
-      IF (PRESENT(lctlib_sla)) lctlib_sla     = 8.99_wp
-      IF (PRESENT(lctlib_cn_leaf)) lctlib_cn_leaf = 
-      IF (PRESENT(lctlib_k_crtos)) lctlib_k_crtos = 
     CASE(3, 5, 10)
       !> rain green broadleaved deciduous
       quincy_LctNumber = 3
-      IF (PRESENT(lctlib_sla)) lctlib_sla     = 15.4_wp
-      IF (PRESENT(lctlib_cn_leaf)) lctlib_cn_leaf = 
-      IF (PRESENT(lctlib_k_crtos)) lctlib_k_crtos = 
     CASE(7, 11)
       !> summer green broadleaved deciduous
       quincy_LctNumber = 4
-      IF (PRESENT(lctlib_sla)) lctlib_sla     = 15.4_wp
-      IF (PRESENT(lctlib_cn_leaf)) lctlib_cn_leaf = 
-      IF (PRESENT(lctlib_k_crtos)) lctlib_k_crtos = 
     CASE(8)
       !> needle-leaved evergreen
       quincy_LctNumber = 5
-      IF (PRESENT(lctlib_sla)) lctlib_sla     = 5.0_wp
-      IF (PRESENT(lctlib_cn_leaf)) lctlib_cn_leaf = 
-      IF (PRESENT(lctlib_k_crtos)) lctlib_k_crtos = 
     CASE(9)
       !> summer green needle-leaved
       quincy_LctNumber = 6
-      IF (PRESENT(lctlib_sla)) lctlib_sla     = 10.09_wp
-      IF (PRESENT(lctlib_cn_leaf)) lctlib_cn_leaf = 
-      IF (PRESENT(lctlib_k_crtos)) lctlib_k_crtos = 
     CASE(12)
       !> C3 grass
       quincy_LctNumber = 7
-      IF (PRESENT(lctlib_sla)) lctlib_sla = 20.12_wp
-      IF (PRESENT(lctlib_cn_leaf)) lctlib_cn_leaf = 
-      IF (PRESENT(lctlib_k_crtos)) lctlib_k_crtos = 
     CASE(14, 15)
       !> C3 pasture
       quincy_LctNumber = 9
-      IF (PRESENT(lctlib_sla)) lctlib_sla = 20.12_wp
-      IF (PRESENT(lctlib_cn_leaf)) lctlib_cn_leaf = 
-      IF (PRESENT(lctlib_k_crtos)) lctlib_k_crtos = 
     CASE(19, 20)
       !> C3 crop
       quincy_LctNumber = 11
-      IF (PRESENT(lctlib_sla)) lctlib_sla = 20.12_wp
-      IF (PRESENT(lctlib_cn_leaf)) lctlib_cn_leaf = 
-      IF (PRESENT(lctlib_k_crtos)) lctlib_k_crtos = 
     CASE(13)
       !> C4 grass
       quincy_LctNumber = 8
-      IF (PRESENT(lctlib_sla)) lctlib_sla = 20.12_wp
-      IF (PRESENT(lctlib_cn_leaf)) lctlib_cn_leaf = 
-      IF (PRESENT(lctlib_k_crtos)) lctlib_k_crtos = 
     CASE(16)
       !> C4 pasture
       quincy_LctNumber = 10
-      IF (PRESENT(lctlib_sla)) lctlib_sla = 20.12_wp
-      IF (PRESENT(lctlib_cn_leaf)) lctlib_cn_leaf = 
-      IF (PRESENT(lctlib_k_crtos)) lctlib_k_crtos = 
     CASE(21)
       !> C4 crop
       quincy_LctNumber = 12
-      IF (PRESENT(lctlib_sla)) lctlib_sla = 20.12_wp
-      IF (PRESENT(lctlib_cn_leaf)) lctlib_cn_leaf = 
-      IF (PRESENT(lctlib_k_crtos)) lctlib_k_crtos = 
     CASE(1, 17, 18)
       !> glacier, Tundra, Swamp
-      quincy_LctNumber = 13
-      IF (PRESENT(lctlib_sla)) lctlib_sla = 19.23_wp
-      IF (PRESENT(lctlib_cn_leaf)) lctlib_cn_leaf = 
-      IF (PRESENT(lctlib_k_crtos)) lctlib_k_crtos = 
+      quincy_LctNumber = 13 
     END SELECT          
-  
+
+    ! --- QUINCY LCTLIB optional values -----------------------------------------
+    IF (PRESENT(lctlib_sla))                 lctlib_sla                 = q_sla_array(quincy_LctNumber)
+    IF (PRESENT(lctlib_cn_leaf))             lctlib_cn_leaf             = q_cn_leaf_array(quincy_LctNumber)
+    IF (PRESENT(lctlib_np_leaf))             lctlib_np_leaf             = q_np_leaf_array(quincy_LctNumber)
+    IF (PRESENT(lctlib_k_crtos))             lctlib_k_crtos             = q_k_crtos_array(quincy_LctNumber)
+    IF (PRESENT(lctlib_k_latosa))            lctlib_k_latosa            = q_k_latosa_array(quincy_LctNumber)
+
+    IF (PRESENT(lctlib_tau_leaf))            lctlib_tau_leaf            = q_tau_leaf_array(quincy_LctNumber)
+    IF (PRESENT(lctlib_tau_fine_root))       lctlib_tau_fine_root       = q_tau_fine_root_array(quincy_LctNumber)
+    IF (PRESENT(lctlib_tau_coarse_root))     lctlib_tau_coarse_root     = q_tau_coarse_root_array(quincy_LctNumber)
+    IF (PRESENT(lctlib_tau_branch))          lctlib_tau_branch          = q_tau_branch_array(quincy_LctNumber)
+    IF (PRESENT(lctlib_tau_wood))            lctlib_tau_wood            = q_tau_wood_array(quincy_LctNumber)
+    IF (PRESENT(lctlib_tau_fruit))           lctlib_tau_fruit           = q_tau_fruit_array(quincy_LctNumber)
+    IF (PRESENT(lctlib_tau_seedbed))         lctlib_tau_seedbed         = q_tau_seedbed_array(quincy_LctNumber)
+
+    IF (PRESENT(lctlib_frac_sapwood_branch)) lctlib_frac_sapwood_branch = q_frac_sapwood_branch_array(quincy_LctNumber)
+    IF (PRESENT(lctlib_wood_density))        lctlib_wood_density        = q_wood_density_array(quincy_LctNumber)
+    ! --- JSBACH LCTLIB optional values -----------------------------------------
+    IF (PRESENT(lctlib_t_tree_mature))       lctlib_t_tree_mature       = j_t_mature_array(jsb_LctNumber)
+    IF (PRESENT(lctlib_t_lai_max))           lctlib_t_lai_max           = j_t_lai_max_array(jsb_LctNumber)
+    IF (PRESENT(lctlib_km_lai))              lctlib_km_lai              = j_km_lai_array(jsb_LctNumber)
+
   END SUBROUTINE convert_jsb_lct_to_quincy
   
-  
-  SUBROUTINE calc_litter_fraction ( &
-    &  alloc_fract1, tau1, & 
-    &  alloc_fract2, tau2, & 
-    &  mature_year, &
-    &  lit_fract1,  &
-    &  lit_fract2,  &
-    &  alloc_fract3, tau3, &     
-    &  lit_fract3)
-    
-    USE mo_kind,                        ONLY: wp
-    USE mo_jsb_math_constants,          ONLY: eps8
-    USE mo_veg_constants,               ONLY: k_f_demand, omega_nutrient_demand
-    
-    IMPLICIT NONE
-    ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp),               INTENT(in)  :: alloc_fract1        !< allocation fraction of organism one
-    REAL(wp),               INTENT(in)  :: alloc_fract2        !< allocation fraction of organism two
-    REAL(wp),               INTENT(in)  :: tau1                !< turnover rate of organism one [y -1]
-    REAL(wp),               INTENT(in)  :: tau2                !< turnover rate of organism one [y -2]
-    REAL(wp),               INTENT(in)  :: mature_year         !< number of years for the PhenologyType to mature
-    REAL(wp),               INTENT(inout)  :: lit_fract1       !< fraction of litter from organism one
-    REAL(wp),               INTENT(inout)  :: lit_fract2       !< fraction of litter from organism two
-    REAL(wp), OPTIONAL      INTENT(in)  :: alloc_fract3        !< allocation fraction of organism three
-    REAL(wp), OPTIONAL      INTENT(in)  :: tau3                !< turnover rate of organism three [y -1]
-    REAL(wp), OPTIONAL      INTENT(inout)  :: lit_fract3       !< fraction of litter from organism three
-    ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp)                    :: org_pool1,org_pool2,org_pool3
-    INTEGER,                    :: yr
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_litter_fraction'
-    
-    !> init local variables
-    org_pool1 = 0._wp
-    org_pool2 = 0._wp
-    org_pool3 = 0._wp
-    
-    !> 1.0 
-    DO yr = 1, mature_year
-      org_pool1 = (org_pool1 + alloc_fract1) * (1._wp - 1._wp/tau1)
-      org_pool2 = (org_pool2 + alloc_fract2) * (1._wp - 1._wp/tau2)
-      IF PRESENT(alloc_fract3) THEN
-        org_pool3 = (org_pool3 + alloc_fract3) * (1._wp - 1._wp/tau3)
-      END If
-    END DO
+  ! --- simple_pipe_model() ---------------------------------------------------------------------------------------------------
+  !
+  ! Inputs: NPP, L, R, S, C, height, dheight,
+  !         r_LR, r_LS, r_LW, frac_alloc_fruit
 
+  ! h_new = height + dheight
+
+  ! R_new = L_new / r_LR
+  ! S_new = L_new / r_LS * h_new
+  ! C_new = k_crtos * S_new
+  ! --> S_new + C_new = L_new / r_LW * h_new
+  ! dF = dL * frac_alloc_fruit = (L_new - L) * frac_alloc_fruit
   
-  END SUBROUTINE calc_litter_fraction
+  ! NPP + L + R + S + C = L_new + R_new + S_new + C_new + dF
+  ! -->                 = L_new + L_new / r_LR + L_new / r_LW * h_new + (L_new - L) * frac_alloc_fruit
+  ! NPP + (1+frac_alloc_fruit)*L + R + S + C = L_new * (1 + 1/r_LR + h_new/r_LW + frac_alloc_fruit)
+
+  ! A = 1._wp + 1._wp/r_LR + h_new/r_LW + frac_alloc_fruit
+  ! B = NPP + (1+frac_alloc_fruit)*L + R + S + C
+
+  ! L_new = B / A
+
+  ! dL = L_new - L
+  ! dR = R_new - R
+  ! dS = S_new - S
+  ! dC = C_new - C
+  ! simple pipe model following quincy fixed allocation scheme  
+  SUBROUTINE simple_pipe_model(pheno_type, NPP, &
+                              c_leaf, c_fineroot, c_sapwood, c_coarseroot, &
+                              d_leaf, d_root, d_croot, d_swood, &
+                              r_LS, r_LR, r_LW, frac_alloc_fruit, &
+                              h, f_lai, dh, df_lai)
+    ! USE 
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    INTEGER,  INTENT(in)    :: pheno_type         ! phenology type from JSB lctlib
+    REAL(wp), INTENT(in)    :: NPP                ! potential NPP [mol(C)/m^2(canopy)/yr]
+    REAL(wp), INTENT(in)    :: c_leaf             ! Leaf carbon pool: on input last value; updated on output
+                                                     !    [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(in)    :: c_fineroot         ! Fineroot carbon pool: on input last value; updated on output
+                                                     !    [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(in)    :: c_sapwood          ! SapWood carbon pool (sap and heart wood combined): on input last value; updated on output
+                                                     !    [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(in)    :: c_coarseroot       ! Coarseroot carbon pool: on input last value; updated on output
+                                                     !    [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: d_leaf             ! leaf carbon increment [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: d_root             ! fineroot carbon increment [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: d_croot            ! Coarseroot carbon increment [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: d_wood            ! sapwood carbon increment [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(in)    :: r_LS               ! leaf2sapwood_mass_ratio, [m]
+    REAL(wp), INTENT(in)    :: r_LR               ! leaf2root_mass_ratio, [-]
+    REAL(wp), INTENT(in)    :: r_LW               ! leaf2wood_mass_ratio, [m]
+    REAL(wp), INTENT(in)    :: frac_alloc_fruit   ! ratio between d_fruit and d_leaf
+    REAL(wp), INTENT(in)    :: h                  ! tree height, [m]
+    REAL(wp), INTENT(in)    :: f_lai              ! lai index to estimate tree height
+    REAL(wp), INTENT(inout) :: dh                 ! tree height increment, [m]
+    REAL(wp), INTENT(inout) :: df_lai             ! lai index increment
+
+    ! to_do: 
+    ! df_lai and dh should be updated in update_phenology_logrop SUBROUTINE and passed to SB_CARBON as inputs
+
+    ! locals
+    REAL(wp) :: c_leaf_new, c_fineroot_new, c_sapwood_new, c_coarseroot_new, c_wood, c_wood_new
+    
+    SELECT CASE(pheno_type)
+    !> trees
+    !!
+    CASE (1, 2, 3)
+      
+
+    !> grass
+    !!
+    CASE(4)    
+
+    !> crops
+    !!
+    CASE (5)
+
+
+    CASE DEFAULT
+      !! Write statement
+      !!
+      WRITE(message_text,'(a,i4)') 'invalid growthform type ',lctlib_growthform
+      CALL finish("mo_q_veg_growth",message_text)
+    END SELECT
+
+  END SUBROUTINE simple_pipe_model
   
 END MODULE mo_sb_carbon_process

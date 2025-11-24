@@ -154,8 +154,7 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_w         !< Vertical grid    
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
-    REAL(wp), DIMENSION(options%nc) :: leafLitter, C_2_litter_woodPool
-    REAL(wp), DIMENSION(options%nc) :: lctlib_sla
+    REAL(wp), DIMENSION(options%nc) :: lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf
     
     ! Declare local variables for QUINCY SB
     
@@ -270,7 +269,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
 
     !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, leafLitter, C_2_litter_woodPool, lctlib_sla)
+    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf)
 
     iblk  = options%iblk
     ics   = options%ics
@@ -521,6 +520,7 @@ CONTAINS
       lctlib_specificLeafArea_C      = dsl4jsb_Lctlib_param(specificLeafArea_C)
       lctlib_reserveC2leafC          = dsl4jsb_Lctlib_param(reserveC2leafC)
       lctlib_PhenologyType           = dsl4jsb_Lctlib_param(PhenologyType)
+      lctlib_VegHeight               = dsl4jsb_Lctlib_param(VegHeight)
       JSBACH_LctNumber               = dsl4jsb_Lctlib_param(LctNumber)
 
       ! Calculate current carbon sum before the update - for C conservation test
@@ -528,12 +528,13 @@ CONTAINS
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
       
       ! convert the JSB LctNumber to QUINCY and return sla, cn_leaf, k_crtos
-      CALL convert_jsb_lct_to_quincy(JSBACH_LctNumber, lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf)
+      CALL convert_jsb_lct_to_quincy(JSBACH_LctNumber, QUINCY_LctNumber, lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf)
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         ! Now calculate the jsb litter for SB inputs
         CALL calc_jsb_C_litter( &
+          &  TRIM(dsl4jsb_Config(SB_CARBON)%fixed_allocation),  & ! in
           &  LAI_yDayMean(ic),                                  & ! in
           &  LAI_yyDayMean(ic),                                 & ! in
           &  MaxLai(ic),                                        & ! in
@@ -549,6 +550,8 @@ CONTAINS
           &  lctlib_specificLeafArea_C,                         & ! in
           &  lctlib_reserveC2leafC,                             & ! in
           &  lctlib_PhenologyType,                              & ! in
+          &  lctlib_VegHeight,                                  & ! in
+          &  JSBACH_LctNumber,                                  & ! in
           !
           &  c_green(ic),                                       & ! inout
           &  c_woods(ic),                                       & ! inout
@@ -562,9 +565,7 @@ CONTAINS
           &  cflux_c_green_2_herb(ic),                          & ! out
           &  cflux_herb_2_littergreen(ic),                      & ! out
           &  cflux_herb_2_atm(ic),                              & ! out
-          &  NPP_act_yDayMean(ic),                              & ! out
-          &  leafLitter(ic),                                    & ! out
-          &  C_2_litter_woodPool(ic)                            & ! out          
+          &  NPP_act_yDayMean(ic),                              & ! out        
           & ) 
       END DO
       !$ACC END PARALLEL LOOP
@@ -705,7 +706,7 @@ CONTAINS
   !! @param[in]     config  Vector of process configurations.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE aggregate_sb_C_npp_update(tile, options)
+  SUBROUTINE aggregate_sb_C_npp(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -714,7 +715,7 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_sb_C_npp_update'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_sb_C_npp'
 
     INTEGER  :: iblk , ics, ice
 
@@ -738,32 +739,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_woods_ta,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_reserve_ta,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_crop_harvest_ta,     weighted_by_fract)
-    ! ag1 and bg1
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag1_ta,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag1_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag1_ta,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag1_ta,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg1_ta,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg1_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg1_ta,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg1_ta,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_1_ta,          weighted_by_fract)
-    !ag2 and bg2
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag2_ta,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag2_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_ag2_ta,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_ag2_ta,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg2_ta,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg2_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg2_ta,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2_ta,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2_ta,          weighted_by_fract)
-
-    !JN: vars for analytically equilibrating YASSO humus pools outside of jsb4 simulations (compare jsb3 svn ref 9652)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_decomp_humus_1_sum_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_decomp_humus_2_sum_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_into_humus_1_sum_ta,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_into_humus_2_sum_ta,          weighted_by_fract)
 
     ! sums
     dsl4jsb_Aggregate_onChunk(CARBON_, c_sum_veg_ta,          weighted_by_fract)
@@ -801,7 +776,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_sb_C_npp_update
+  END SUBROUTINE aggregate_sb_C_npp
 
 
 !##########################################################################################################################

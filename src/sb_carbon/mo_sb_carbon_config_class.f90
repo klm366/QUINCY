@@ -28,6 +28,7 @@ MODULE mo_sb_carbon_config_class
   PUBLIC :: t_sb_carbon_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_sb_carbon_config
+    LOGICAL  :: jsb_allocation ! use jsb veg allocation combined with fixed allocation from quincy
     LOGICAL  :: read_sb_cpools ! Read sb Cpools from external file when experiment is newly started (sb cpools are
                             ! initialized with values from file) or restarted (sb cpools from restart file are
                             ! overwritten by values from file).
@@ -54,6 +55,7 @@ CONTAINS
     CLASS(t_sb_carbon_config), INTENT(inout) :: config
 
     LOGICAL                     :: active, lrestart_cont
+    LOGICAL                     :: jsb_allocation
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: read_cpools, diag_humus_fluxes
     ! LOGICAL           :: lemissions
@@ -61,6 +63,7 @@ CONTAINS
     NAMELIST /jsb_sb_carbon_nml/      &
          active,                   &
          lrestart_cont,            &
+         jsb_allocation,         &
          ic_filename,              &
          bc_filename,              &
          read_sbcpools,            &
@@ -75,6 +78,7 @@ CONTAINS
     ! Set defaults
     active                 = .FALSE.
     lrestart_cont          = .FALSE.       ! TRUE: Continue although CARBON variables are missing in restart file
+    jsb_allocation         = .TRUE.
     bc_filename            = 'bc_land_carbon.nc'
     ic_filename            = 'ic_land_carbon.nc'
     read_sbcpools          = .FALSE.
@@ -91,6 +95,7 @@ CONTAINS
     ! Write resulting values in config memory
     config%active                 = active
     config%lrestart_cont          = lrestart_cont
+    config%jsb_allocation         = jsb_allocation
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
     config%read_sbcpools          = read_sbcpools

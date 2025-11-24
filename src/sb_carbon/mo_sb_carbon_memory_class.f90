@@ -55,6 +55,10 @@ MODULE mo_sb_carbon_memory_class
                                     ! .. plants [mol(C)/m^2(canopy)]
       c_heartwood,                & ! C-pool for stems, thick roots and other (dead) structural material of living
                                     ! .. plants [mol(C)/m^2(canopy)]
+      tree_height,            & ! for quincy biomass allocation calculation
+      f_lai,                  & ! growth stage indicator for height estimation
+
+      
 
    ! Output on tile areas:
    TYPE(t_jsb_var_real2d) ::         &
