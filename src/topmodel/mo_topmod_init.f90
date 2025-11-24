@@ -203,26 +203,26 @@ CONTAINS
         ENDIF
         srec(1) = MAX(1,srec(1)-1) ! Better interpolation if we know the values of the month before
         dsl4jsb_config(TOP_)%step_offset = srec(1)-1
-      
+
         DEALLOCATE(rtime)
-      
+
         CALL message(routine,'Using inundation records: '//i2s(srec(1))//'-'//i2s(srec(2)))
 
       ENDIF
 
-      ! If inundation info is only available on box level: read info now 
+      ! If inundation info is only available on box level: read info now
       IF (IAND(dsl4jsb_config(TOP_)%inun_mode,4)==0) THEN
 
         ALLOCATE(top_init_vars%frac_inun_presc(nproma, nblks, srec(2)-srec(1)+1))
         top_init_vars%frac_inun_presc(:,:,:) = missval
-  
+
         ptr_3D => input_file%Read_2d_time(variable_name='frac_inun', fill_array=top_init_vars%frac_inun_presc, &
           start_time_step=srec(1), end_time_step=srec(2))
-  
+
         IF (input_file%Has_var("wt_inun")) THEN
           ALLOCATE(top_init_vars%wt_inun_presc(nproma, nblks, srec(2)-srec(1)+1))
           top_init_vars%wt_inun_presc(:,:,:) = missval
-  
+
           ptr_3D => input_file%Read_2d_time(variable_name='wt_inun', fill_array=top_init_vars%wt_inun_presc, &
             start_time_step=srec(1), end_time_step=srec(2))
         ENDIF
