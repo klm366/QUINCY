@@ -228,7 +228,7 @@ CONTAINS
         ENDIF
 
       ENDIF
-  
+
       CALL input_file%Close()
 
     ENDIF

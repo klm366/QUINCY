@@ -205,7 +205,7 @@ CONTAINS
     lrestart   = is_time_restart(options%current_datetime)
 
     dtime = options%dtime
- 
+
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
@@ -305,7 +305,7 @@ CONTAINS
       !$acc end parallel loop
 
       IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
-        !$acc parallel loop default(present) gang vector 
+        !$acc parallel loop default(present) gang vector
         DO ic = 1, nc
           CALL update_peat_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                                       &
             &                      lnew_year,lnew_month,lnew_day,                                                  &

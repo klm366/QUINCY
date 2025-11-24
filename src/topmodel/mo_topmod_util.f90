@@ -205,7 +205,7 @@ CONTAINS
           res%flg(i) = IOR(res%flg(i),4)
         ENDIF
       ENDIF
-        
+
       dy = ye - ys
       dx = REAL(nintrp,wp)
 
@@ -329,7 +329,7 @@ CONTAINS
   !------------------------------------------------------------------------------------
 #ifndef _OPENACC
   PURE &
-#endif 
+#endif
   FUNCTION gamm_inv_p(p, a)
   !$acc routine seq
 
@@ -401,7 +401,7 @@ CONTAINS
   ! Returns the incomplete gamma function Q(a, x) ≡ 1 − P (a, x).
 #ifndef _OPENACC
   PURE &
-#endif 
+#endif
   FUNCTION gamm_q(a,x)
   !$acc routine seq
     REAL(wp), INTENT(in) :: a,x
