@@ -1,5 +1,18 @@
 !>
-!! @brief Contains structures and methods for the topmodel for calculating innundation fractions
+!! Contains structures and methods for the topmodel for calculating innundation fractions
+!!
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 !!
 !! @author
 !!  Stiig Wilkenskjeld, MPI-M Hamburg

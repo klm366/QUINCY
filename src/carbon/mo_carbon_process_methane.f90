@@ -1,5 +1,18 @@
 !>
-!! @brief Contains carbon process routines specific for the methane producing soil
+!! Contains carbon process routines specific for the methane producing soil
+!!
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 !!
 !! @author
 !!   Stiig Wilkenskjeld based on JSBACH3 code by Thomas Kleinen (2023-03-27)
