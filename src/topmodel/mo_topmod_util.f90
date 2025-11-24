@@ -398,7 +398,7 @@ CONTAINS
   END FUNCTION gamm_inv_p
 
   !------------------------------------------------------------------------------------
-  ! Returns the incomplete gamma function Q(a, x) = 1 − P (a, x).
+  ! Returns the incomplete gamma function Q(a, x) = 1 - P (a, x).
 #ifndef _OPENACC
   PURE &
 #endif
