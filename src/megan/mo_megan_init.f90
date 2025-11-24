@@ -144,7 +144,7 @@ CONTAINS
     dsl4jsb_memory(MEGAN_)%iso%ldf      = 1._wp
     dsl4jsb_memory(MEGAN_)%iso%scale    = dsl4jsb_Config(MEGAN_)%scale_iso
     dsl4jsb_memory(MEGAN_)%iso%ef       = dsl4jsb_Lctlib_param(em_fac_iso)
-    
+
     ! --- carbon monoxide ---
     dsl4jsb_memory(MEGAN_)%CO%longname  = 'carbon monoxide'
     dsl4jsb_memory(MEGAN_)%CO%shortname = 'CO'
@@ -156,7 +156,7 @@ CONTAINS
     dsl4jsb_memory(MEGAN_)%CO%ldf      = 1._wp
     dsl4jsb_memory(MEGAN_)%CO%scale    = dsl4jsb_Config(MEGAN_)%scale_CO
     dsl4jsb_memory(MEGAN_)%CO%ef       = dsl4jsb_Lctlib_param(em_fac_CO)
-    
+
     ! --- nitricoxide ---
     dsl4jsb_memory(MEGAN_)%NO%longname  = 'nitricoxide'
     dsl4jsb_memory(MEGAN_)%NO%shortname = 'NO'
@@ -168,7 +168,7 @@ CONTAINS
     dsl4jsb_memory(MEGAN_)%NO%ldf      = 0._wp
     dsl4jsb_memory(MEGAN_)%NO%scale    = dsl4jsb_Config(MEGAN_)%scale_NO
     dsl4jsb_memory(MEGAN_)%NO%ef       = dsl4jsb_Lctlib_param(em_fac_NO)
-    
+
 !    IF (debug_on() .OR. dsl4jsb_Config(MEGAN_)%dbg_process) &
 !      CALL message(TRIM(routine), 'Setting megan boundary conditions for tile '//TRIM(tile%name))
 

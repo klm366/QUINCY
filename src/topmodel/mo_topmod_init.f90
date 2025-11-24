@@ -147,23 +147,23 @@ CONTAINS
         & top_init_vars%cti_phi      (nproma, nblks    ), &
         & top_init_vars%cti_chi      (nproma, nblks    )  &
         & )
- 
+
       top_init_vars%cti_mean      (:,:) = missval
       top_init_vars%cti_mu        (:,:) = missval
       top_init_vars%cti_phi       (:,:) = missval
       top_init_vars%cti_chi       (:,:) = missval
       top_init_vars%cti_basin     (:,:) = missval
       top_init_vars%cti_openwater (:,:) = missval
- 
+
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TOP_)%ic_filename), model%grid_id)
- 
+
       ptr_2D => input_file%Read_2d(variable_name='cti_mean'     , fill_array=top_init_vars%cti_mean)
       ptr_2D => input_file%Read_2d(variable_name='cti_mu'       , fill_array=top_init_vars%cti_mu)
       ptr_2D => input_file%Read_2d(variable_name='cti_phi'      , fill_array=top_init_vars%cti_phi)
       ptr_2D => input_file%Read_2d(variable_name='cti_chi'      , fill_array=top_init_vars%cti_chi)
       ptr_2D => input_file%Read_2d(variable_name='cti_basin'    , fill_array=top_init_vars%cti_basin)
       ptr_2D => input_file%Read_2d(variable_name='cti_openwater', fill_array=top_init_vars%cti_openwater)
- 
+
       CALL input_file%Close()
 
     ELSE

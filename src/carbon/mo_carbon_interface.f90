@@ -735,17 +735,17 @@ CONTAINS
             & WoodLit_coef_humus           = lctlib_WoodLit_coef_humus,      & ! in
             & WoodLitterSize               = lctlib_WoodLitterSize,          & ! in
             & frac_inun_min                = frac_inun_min,                  & ! in
-            !                              
+            !
             & temp                         = pseudo_temp_yDay(ic),           & ! in
             & precip                       = pseudo_precip_yDay(ic),         & ! in
             !
             & frac_inun                    = frac_inun(ic),                  & ! in
             & wt_peat                      = peat_water_table(ic),           & ! in
-            !                              
+            !
             & woodLitter                   = cflux_c_wood_2_litter(ic),      & ! in
             & leafLitter                   = cflux_c_green_2_litter(ic),     & ! in
             & rootExudates                 = root_exudates(ic),              & ! in
-            !                              
+            !
             & c_acid_ag1                   = c_acid_ag1(ic),                 & ! inout
             & c_water_ag1                  = c_water_ag1(ic),                & ! inout
             & c_ethanol_ag1                = c_ethanol_ag1(ic),              & ! inout
@@ -764,7 +764,7 @@ CONTAINS
             & c_ethanol_bg2                = c_ethanol_bg2(ic),              & ! inout
             & c_nonsoluble_bg2             = c_nonsoluble_bg2(ic),           & ! inout
             & c_humus_2                    = c_humus_2(ic),                  & ! inout
-            !                              
+            !
             & c_decomp_humus_1_sum         = c_decomp_humus_1_sum(ic),       & ! out
             & c_decomp_humus_2_sum         = c_decomp_humus_2_sum(ic),       & ! out
             & c_into_humus_1_sum           = c_into_humus_1_sum(ic),         & ! out
@@ -832,7 +832,7 @@ CONTAINS
             & c_into_humus_1_sum      = c_into_humus_1_sum(ic),                                  & ! out
             & c_into_humus_2_sum      = c_into_humus_2_sum(ic),                                  & ! out
             & Cflx_soil_respiration   = soil_respiration(ic)                                     & ! out
-            & ) 
+            & )
             !
             !&  fract_litter_wood_new    = fract_litter_wood_new(ic),    & ! inout, optional. Only for spitfire
             !

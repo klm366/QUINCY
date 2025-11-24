@@ -890,7 +890,7 @@ CONTAINS
                O2_dry%total_initial(ic) = SUM( O2_dry%dens_sl(ic,1:nly))
             ENDIF
 
-            ! set up soil column 
+            ! set up soil column
 
             ! set up acrotelm height (= 0 for mineral soil)
             acro_height = 0._wp
@@ -1105,7 +1105,7 @@ CONTAINS
         ENDDO
         !$ACC END PARALLEL LOOP
       ENDIF
- 
+
       !   Herbivores
       IF (dsl4jsb_Config(CH4_)%do_herbivore) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(3) GANG VECTOR

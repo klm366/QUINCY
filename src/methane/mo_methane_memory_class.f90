@@ -65,7 +65,7 @@ MODULE mo_ch4_memory_class
       & test3d
 
     CHARACTER(len=8) :: specie_name
- 
+
   END TYPE t_chem_specie
 
   TYPE t_timeseries
@@ -108,7 +108,7 @@ MODULE mo_ch4_memory_class
 
   TYPE, EXTENDS(t_jsb_memory) :: t_ch4_memory
 
-    ! General types for chemical species in oxic/anoxic environments 
+    ! General types for chemical species in oxic/anoxic environments
     TYPE(t_chem_specie) ::      &
       & CH4_dry,                &
       & CH4_wet,                &
@@ -129,15 +129,15 @@ MODULE mo_ch4_memory_class
       & mxlay_above_rock,       & ! Contant throughout run
       & tillers,                &
       & termite_biomass,        &
-!                               
+!
       & CH4_prod_ratio_out_wet, &
 !
-      & CH4_out_net,            & 
-      & CO2_out_net,            & 
-      & CH4_out_fire,           & 
-      & CH4_out_termite,        & 
-      & CH4_out_herbivore,      & 
-!                               
+      & CH4_out_net,            &
+      & CO2_out_net,            &
+      & CH4_out_fire,           &
+      & CH4_out_termite,        &
+      & CH4_out_herbivore,      &
+!
       & anox_prod_in,           & ! StW: Production of what?
       & oxic_prod_in              ! StW: Production of what?
 
@@ -310,7 +310,7 @@ CONTAINS
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-  
+
       CALL mem%Add_var( 'fire_em_CO', mem%fire_em_CO,                          &
         & hgrid, surface,                                                      &
         & t_cf('fire_em_CO', 'kg m-2 s-1', ''),                                &
@@ -318,7 +318,7 @@ CONTAINS
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-  
+
       CALL mem%Add_var( 'fire_em_iso', mem%fire_em_iso,                        &
         & hgrid, surface,                                                      &
         & t_cf('fire_em_iso', 'g m-2 s-1', ''),                                &
@@ -327,7 +327,7 @@ CONTAINS
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
     ENDIF
-  
+
     IF (dsl4jsb_Config(CH4_)%do_termite) THEN
       CALL mem%Add_var( 'CH4_out_termite', mem%CH4_out_termite,                &
         & hgrid, surface,                                                      &
@@ -336,7 +336,7 @@ CONTAINS
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-  
+
       CALL mem%Add_var( 'termite_biomass', mem%termite_biomass,                &
         & hgrid, surface,                                                      &
         & t_cf('termite_biomass', 'kg m-2', ''),                               &
@@ -402,32 +402,32 @@ CONTAINS
   CONTAINS
 
     SUBROUTINE Init_chem_specie(specie_name, specie, use_other, other_name)
-    
+
       USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
       USE mo_jsb_grid,          ONLY: Get_vgrid
       USE mo_exception,         ONLY: message_text, message
       USE mo_jsb_io,            ONLY: TSTEP_CONSTANT, TSTEP_INSTANT
       dsl4jsb_Use_config(CH4_)
-    
+
       CHARACTER(len=*),            INTENT(in)      :: specie_name
       TYPE (t_chem_specie),        INTENT(inout)   :: specie
       LOGICAL,          OPTIONAL,  INTENT(in)      :: use_other
       CHARACTER(len=*), OPTIONAL,  INTENT(in)      :: other_name
-    
+
       TYPE(t_jsb_vgrid), POINTER  :: surface, layer               ! Vertical grids
       CHARACTER(len=256) :: str
       LOGICAL :: uother
 
       dsl4jsb_Def_config(CH4_)
       dsl4jsb_Get_config(CH4_)
-    
+
       uother = .TRUE.; IF (PRESENT(use_other)) uother = use_other
-    
+
       surface       => Get_vgrid('surface')
       layer         => Get_vgrid('soil_depth_water')
 
       specie%specie_name = TRIM(specie_name)
-    
+
       CALL mem%Add_var( specie_name//'_prod_out', specie%prod_out,             &
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_prod_out', 'mol m-2 s-1', ''),                   &
@@ -435,7 +435,7 @@ CONTAINS
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-    
+
       CALL mem%Add_var( specie_name//'_oxid_out', specie%oxid_out,             &
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_oxid_out', 'mol m-2 s-1', ''),                   &
@@ -443,7 +443,7 @@ CONTAINS
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-    
+
       CALL mem%Add_var( specie_name//'_diff_out', specie%diff_out,             &
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_diff_out', 'mol m-2 s-1', ''),                   &
@@ -459,7 +459,7 @@ CONTAINS
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level,                                 &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-    
+
       CALL mem%Add_var( specie_name//'_in_out', specie%in_out,                 &
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_in_out', 'mol m-2 s-1', ''),                     &
@@ -520,7 +520,7 @@ CONTAINS
           & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
       ENDIF
-    
+
       IF (uother) THEN
         IF (PRESENT(other_name)) THEN
           str = specie_name//'_'//other_name//'_out'
@@ -553,7 +553,7 @@ CONTAINS
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-    
+
       CALL mem%Add_var( specie_name//'_total_initial', specie%total_initial,   &
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_total_initial', 'mol m-2', ''),                  &
@@ -561,7 +561,7 @@ CONTAINS
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = FULL, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-    
+
       CALL mem%Add_var( specie_name//'_total_final', specie%total_final,       &
         & hgrid, surface,                                                      &
         & t_cf(specie_name//'_total_final', 'mol m-2', ''),                    &
@@ -569,7 +569,7 @@ CONTAINS
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-    
+
       CALL mem%Add_var( specie_name//'_sl', specie%dens_sl,                    &
         & hgrid, layer,                                                        &
         & t_cf(specie_name//'_sl', 'mol m-2', ''),                             &
@@ -577,7 +577,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
         & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
-    
+
     END SUBROUTINE Init_chem_specie
 
   END SUBROUTINE Init_methane_memory

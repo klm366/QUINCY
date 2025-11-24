@@ -184,7 +184,7 @@ CONTAINS
     lrestart   = is_time_restart(options%current_datetime)
 
     dtime = options%dtime
- 
+
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice

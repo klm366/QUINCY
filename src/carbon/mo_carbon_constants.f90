@@ -54,11 +54,11 @@ MODULE mo_carbon_constants
   REAL(wp), PARAMETER :: sec_per_year            = days_per_year * sec_per_day
   !$ACC DECLARE COPYIN(sec_per_year)
 
-  !   parameters for Yasso peat                   
-  REAL(wp), parameter :: rho_YCpool_acro          = 3.5e4_wp           ! Bulk density of acrotelm peat: 0.035 g/cm3, based on 
+  !   parameters for Yasso peat
+  REAL(wp), parameter :: rho_YCpool_acro          = 3.5e4_wp           ! Bulk density of acrotelm peat: 0.035 g/cm3, based on
                                                                        ! Granberg (1999): rho upper 20cm: 0.02 g/cm^3  */
                                                                        !  rho 20-40cm: 0.05 g/cm3, > 40 cm: 0.1-0.12 g/cm3
-  REAL(wp), parameter :: rho_YCpool_cato          = 9.1e4_wp           ! Bulk density of catotelm peat: 0.091 g/cm3, based on  
+  REAL(wp), parameter :: rho_YCpool_cato          = 9.1e4_wp           ! Bulk density of catotelm peat: 0.091 g/cm3, based on
                                                                        ! Clymo (1983); Turunen (2002)
   REAL(wp), parameter :: Cfrac_YCpool_acro        = 0.50_wp           ! C fraction in acrotelm peat Malmer and Wallen (2004)
   REAL(wp), parameter :: Cfrac_YCpool_cato        = 0.52_wp           ! Malmer and Wallen (2004)

@@ -71,7 +71,7 @@ CONTAINS
 
     ! ### assumes that LAI is zero where not valid ! ###
     gamma = (0.49_wp * lai) / SQRT(1.0_wp + 0.2_wp * (lai**2._wp))
-    
+
   END SUBROUTINE calc_gamma_lai
 
 !------------------------------------------------------------------------------------
@@ -110,14 +110,14 @@ CONTAINS
     REAL(wp)              :: AAA
 
     REAL(wp), PARAMETER :: conv_pfd = 4.766_wp          ! factor to convert avg_pfd in W/m2 to umol/m2/s
-  
+
     ! ### assumes zenith angle in degrees
     IF (zenith < 0.0_wp) THEN   !zenith = SIN(solar angle)
       gamma = 0.0_wp
     ELSEIF (zenith > 0.0_wp) THEN
 
       !  ### PFD and PFD at the top of the atmosphere are adjusted for solar angle
-      IF(tpfd <= 0.0_wp) THEN 
+      IF(tpfd <= 0.0_wp) THEN
         PHI = 0.0_wp
       ELSEIF(tpfd > 0.0_wp) THEN
         PHI = pfd/tpfd
@@ -298,8 +298,8 @@ CONTAINS
 
     !  This way of assigning parameters is less elegant, but secure...
     IF (kclass == 2) THEN
-      Anew = 0.05_wp 
-      Agro = 0.6_wp 
+      Anew = 0.05_wp
+      Agro = 0.6_wp
       Amat = 1.125_wp
       Aold = 1.0_wp
     ELSE
@@ -307,8 +307,8 @@ CONTAINS
       Agro = 1.0_wp
       Amat = 1.0_wp
       Aold = 1.0_wp
-    END IF 
-    
+    END IF
+
     ! TODO: This code may break if either lai or laip is == 0
 
     fac_lai = laip / lai
@@ -369,7 +369,7 @@ CONTAINS
   !  gamma_sm = 1 in standard version of MEGAN v2.10
   !! From Guenther et al., 2012, MEGANv2.1
   !! soil moisture dependence algorithm for isoprene emission:
-  !! 
+  !!
   !! GAM_SM = 1              IF SM > SM1
   !! GAM_SM = (SM-WP)/DSM1   IF WP < SM < SM1
   !! GAM_SM = 0              IF SM < WP
@@ -383,14 +383,14 @@ CONTAINS
     REAL(wp), INTENT(out) :: gamma
 
     REAL(wp), PARAMETER :: delta1 = 0.06_wp
-  
+
     REAL(wp) :: wiltp
     REAL(wp) :: soilm1
 
     wiltp = 0.35_wp
     soilm1 = wiltp + delta1
-  
-  
+
+
     IF (soilm > soilm1) THEN
       gamma = 1._wp
     ELSE
@@ -399,14 +399,14 @@ CONTAINS
     IF (soilm < wiltp) THEN
       gamma = 0._wp
     ENDIF
- 
+
   END SUBROUTINE calc_gamma_sm
-  
+
 !------------------------------------------------------------------------------------
   PURE SUBROUTINE calc_gamma_co2(co2,gamma)
     USE mo_methane_constants, ONLY: CO2_consts
     USE mo_methane_util,      ONLY: concentration_mmr_2_vmr
-   
+
     REAL(wp), INTENT(in)  :: co2            ! CO2 mmr
     REAL(wp), INTENT(out) :: gamma
 
@@ -417,7 +417,7 @@ CONTAINS
     REAL(wp) :: Ci
     REAL(wp) :: CO2_ppm
 
-    CO2_ppm = concentration_mmr_2_vmr(CO2_consts, co2) * 1.e6 ! conversion of mass mixing ratio to volume 
+    CO2_ppm = concentration_mmr_2_vmr(CO2_consts, co2) * 1.e6 ! conversion of mass mixing ratio to volume
                                                               ! mixing ratio and then ppmv
     Ci = 0.7_wp * CO2_ppm
     gamma = Ismax - ((Ismax * Ci**h) / (Cstar**h + Ci**h))
@@ -428,7 +428,7 @@ CONTAINS
   PURE SUBROUTINE update_megan_runmean(linit, dt,t_short,t_long,              &
     &                                            temp,temp_relax_short,                 &
     &                                            lai,  lai_relax_short, lai_relax_long, &
-    &                                            pfd,  pfd_relax_short, pfd_relax_long) 
+    &                                            pfd,  pfd_relax_short, pfd_relax_long)
     USE mo_top_util, ONLY: time_relaxation
     LOGICAL,  INTENT(in)    :: linit            ! Initialize means?
     REAL(wp), INTENT(in)    :: dt               ! Time step for which instantaneous data are assumed valid [s]

@@ -35,7 +35,7 @@ CONTAINS
   PURE SUBROUTINE soil_column_setup(permafrost_flag,is_peatland,is_wet, mxlay_above_rock,                      &
                                     layer_thick, layer_mid, layer_bound, soil_depth, soil_porosity,            &
                                     water_table, acrotelm_height,                                              &
-                                    layer_moisture, ice_content,                                               & 
+                                    layer_moisture, ice_content,                                               &
                                     relative_moist, relative_ice, relative_porevol, relative_pore_air,         &
                                     relative_pore_moist, dens2conc, conc2dens, mxlay_above_wt, mxlay_acrotelm)
   !$acc routine seq
@@ -122,8 +122,8 @@ CONTAINS
       relative_pore_moist(is) = MIN(relative_moist_saturated, relative_moist(is) / relative_porevol(is))
     ENDDO
 
-    ! correct relative moisture and relative moisture content for layers below 
-    ! water table -> set to relative_moist_saturated 
+    ! correct relative moisture and relative moisture content for layers below
+    ! water table -> set to relative_moist_saturated
     DO is = mxlay_above_wt+1,mxlay_above_rock
       relative_pore_moist(is) = relative_moist_saturated
       relative_moist     (is) = relative_pore_moist(is) * relative_porevol(is)
@@ -258,7 +258,7 @@ CONTAINS
     INTEGER,            INTENT(in)  :: mxlay_above_rock ! layer number above bedrock
     REAL(wp),           INTENT(in)  :: LAI_max          ! maximum leaf area index []
     REAL(wp),           INTENT(in)  :: LAI              ! actual, leaf area index []
-    REAL(wp),           INTENT(in)  :: Cpool_green      ! C-pool for leaves, fine roots, vegetative organs and other living parts 
+    REAL(wp),           INTENT(in)  :: Cpool_green      ! C-pool for leaves, fine roots, vegetative organs and other living parts
                                                         ! of vegetation [mol m-2(canopy)]
     REAL(wp),           INTENT(in)  :: root_dist(:)     ! root distribution in each layer
     REAL(wp),           INTENT(out) :: tiller_area(:)   ! area of tillers corresponding to the root fraction in each layer [m2?]
@@ -281,7 +281,7 @@ CONTAINS
 
     tiller_area = 0._wp
 
-    ! Root biomass distribution of all plants, modelled on Wania's 
+    ! Root biomass distribution of all plants, modelled on Wania's
     ! parameterisation for flood-tolerant graminoids
     ! ------------------------------------------------
 
@@ -366,7 +366,7 @@ CONTAINS
     INTEGER  :: is, isz
 
     IF (.NOT. is_peat) THEN
-      ! for mineral soils, gas densities in methane%GAS_WETNESS are relative to tile / gridcell 
+      ! for mineral soils, gas densities in methane%GAS_WETNESS are relative to tile / gridcell
       ! -> convert to densities relative to inundated / non-inundated area of grid cell
       ! changes in inundation require a gas transfer from wet to dry part or vice versa
 
@@ -574,7 +574,7 @@ CONTAINS
           ENDDO
         ENDIF
 
-        ! dry part of grid cell is completely oxic, becoming CO2 
+        ! dry part of grid cell is completely oxic, becoming CO2
         DO is = 1,mxlay_above_rock
           CO2_Prod_oxic(is) = carbon_dist(is)
         ENDDO
@@ -688,7 +688,7 @@ CONTAINS
 
     LOGICAL,  INTENT(in)  :: is_wet            ! wetness state: .FALSE. = dry, .TRUE. = wet
     REAL(wp), INTENT(in)  :: dt                ! time step [s]
-    REAL(wp), INTENT(in)  :: oxid_scale_dry    ! 
+    REAL(wp), INTENT(in)  :: oxid_scale_dry    !
     REAL(wp), INTENT(in)  :: oxid_scale_wet    !
     REAL(wp), INTENT(in)  :: oxid_q10
     REAL(wp), INTENT(in)  :: Tsoil             ! Soil temperature [K]
@@ -731,7 +731,7 @@ CONTAINS
     REAL(wp) :: CH4_conc                                    ! CH4 concentration [mol m-3]
     REAL(wp) :: CH4_conc_oxid                               ! CH4 concentration oxidized [mol m-3]
     REAL(wp) :: O2_conc                                     ! O2 concentration [mol m-3]
-    REAL(wp) :: O2_dens_loc  
+    REAL(wp) :: O2_dens_loc
 
     CH4_conc_oxid = 0._wp
 
@@ -852,7 +852,7 @@ CONTAINS
   ! @brief      calculate ebulition transport of CH4
   !
   !!
-  !  PURE 
+  !  PURE
   SUBROUTINE ebullition(is_peatland, mxlay_above_rock, mxlay_above_wt, Tsoil, surface_air_pressure, &
                         Dz, relative_porevol, water_table, &
                         dens2conc, conc2dens, CH4_dens, CH4_ebul)
@@ -904,7 +904,7 @@ CONTAINS
       CH4_diss(is) = 0._wp
       CH4_gas (is) = 0._wp
     ENDDO
-  
+
     ! water height is >= 0
     ! water table should be > 0 in inundated areas, <= 0 in peatlands
     ! water height is height of wt above surface
@@ -936,7 +936,7 @@ CONTAINS
       ! Calculate hydrostatic pressure
       hydro_press = rhoh2o * grav * water_height ![kg m s-2 or N]
 
-      ! [mL CH4 mL-1 H2O] is equivalent to [m3 CH4 m-3 H2O in soil] 
+      ! [mL CH4 mL-1 H2O] is equivalent to [m3 CH4 m-3 H2O in soil]
       ! To calculate the volume of CH4 per layer, multiply by the
       ! the layer's water content V_water.
       ! We use effective_layer_volume
@@ -965,7 +965,7 @@ CONTAINS
         CH4_gas(is) = CH4_dens(is) - CH4_diss(is) ![mol CH4 m-2]
 
         ! ebullition flux is gas density in layer (but negative as flux removes from soil)
-        CH4_Ebul(is) = -CH4_gas(is) ! [mol CH4 layer-1 timestep-1] 
+        CH4_Ebul(is) = -CH4_gas(is) ! [mol CH4 layer-1 timestep-1]
         CH4_gas (is) = 0.0_wp
       ELSE
 
@@ -1227,7 +1227,7 @@ CONTAINS
 !    (cover_type < 17): NaturalVegFlag .OR. PastureFlag (no crops)
 !      ! tropical termite biomass / emission factor assumed for cover types 2 (tropical broadleaf evergreen),
 !      ! 3 (tropical broadleaf deciduous), 10 (raingreen shrubs), 13 (C4 grass), 16 (C4 pasture)
-!      IF ((cover_type== 2) .OR. (cover_type== 3) .OR. &: 
+!      IF ((cover_type== 2) .OR. (cover_type== 3) .OR. &:
 !          (cover_type==10) .OR. &                      : PhenologyType == 2 (raingreen)
 !          (cover_type==13) .OR. (cover_type==16))      : C4Flag
   PURE SUBROUTINE calc_methane_termites(is_crop, frac_tile, GPP, GDD, min_mmtemp20, GPP_dep_termites, &

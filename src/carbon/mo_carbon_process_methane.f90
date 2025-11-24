@@ -126,19 +126,19 @@ CONTAINS
     REAL(wp),           INTENT(inout) :: c_water_ag1           ! Water soluble litter pool
     REAL(wp),           INTENT(inout) :: c_ethanol_ag1         ! Ethanol soluble litter pool
     REAL(wp),           INTENT(inout) :: c_nonsoluble_ag1      ! Non-soluble litter pool
-    !   Belowground                                  
+    !   Belowground
     REAL(wp),           INTENT(inout) :: c_acid_bg1            ! Acid soluble litter pool
     REAL(wp),           INTENT(inout) :: c_water_bg1           ! Water soluble litter pool
     REAL(wp),           INTENT(inout) :: c_ethanol_bg1         ! Ethanol soluble litter pool
     REAL(wp),           INTENT(inout) :: c_nonsoluble_bg1      ! Non-soluble litter pool
     REAL(wp),           INTENT(inout) :: c_humus_1             ! Humus litter pool
-    ! Size class 2; woody litter                     
-    !   Aboveground                                  
+    ! Size class 2; woody litter
+    !   Aboveground
     REAL(wp),           INTENT(inout) :: c_acid_ag2            ! Acid soluble litter pool
     REAL(wp),           INTENT(inout) :: c_water_ag2           ! Water soluble litter pool
     REAL(wp),           INTENT(inout) :: c_ethanol_ag2         ! Ethanol soluble litter pool
     REAL(wp),           INTENT(inout) :: c_nonsoluble_ag2      ! Non-soluble litter pool
-    !   Belowground                                  
+    !   Belowground
     REAL(wp),           INTENT(inout) :: c_acid_bg2            ! Acid soluble litter pool
     REAL(wp),           INTENT(inout) :: c_water_bg2           ! Water soluble litter pool
     REAL(wp),           INTENT(inout) :: c_ethanol_bg2         ! Ethanol soluble litter pool
@@ -156,8 +156,8 @@ CONTAINS
     REAL(wp),           INTENT(out)   :: soilResp_anoxic       ! soil respiration rate, anoxic part
 
     ! Diagnostics for methane processes
-    REAL(wp),           INTENT(out)   :: acrotelm_height_ag    ! 
-    REAL(wp),           INTENT(out)   :: acrotelm_height_bg    ! 
+    REAL(wp),           INTENT(out)   :: acrotelm_height_ag    !
+    REAL(wp),           INTENT(out)   :: acrotelm_height_bg    !
     REAL(wp), OPTIONAL, INTENT(in)    :: redFact_Nlim          ! reduction factor through N limitation
 
     REAL(wp) :: LeafLit_coefV(5)
@@ -265,16 +265,16 @@ CONTAINS
         soilResp_rate        = soilResp_rate        + Yasso_out_oxic(10) / dt
         c_decomp_humus_2_sum = c_decomp_humus_2_sum + Yasso_out_oxic(17)
         c_into_humus_2_sum   = c_into_humus_2_sum   + Yasso_out_oxic(18)
-        
+
         soilResp_oxic = soilResp_rate
         soilResp_anoxic = 0._wp
 
       ELSE ! (frac_inun <= frac_inun_min)
 
         ! YASSO for inundated area
-        
+
         ! in inundated areas, soil C oxic / anoxic distinction is horizontal
-        ! therefore use full C pools as input to Yasso, but apply inundated/non-inundated 
+        ! therefore use full C pools as input to Yasso, but apply inundated/non-inundated
         ! fraction to output
 
         !! call yasso for leaf litter
@@ -282,7 +282,7 @@ CONTAINS
         CALL yasso(dt, Yasso_io_pools(1:9), Weather, leafLitter*dt, LeafLit_coefV,              &
                         0._wp,           Yasso_out_oxic, fract_green_aboveGround, rootExudates*dt, &
                         redFact_Nlimit = red_Fact_N, is_anoxic = .FALSE.)
-                        
+
         c_acid_ag1           =                        (1.0_wp-frac_inun) * Yasso_out_oxic(1)
         c_water_ag1          =                        (1.0_wp-frac_inun) * Yasso_out_oxic(2)
         c_ethanol_ag1        =                        (1.0_wp-frac_inun) * Yasso_out_oxic(3)
@@ -300,7 +300,7 @@ CONTAINS
         CALL yasso(dt, Yasso_io_pools(1:9), Weather, leafLitter*dt, LeafLit_coefV,               &
                         0._wp,          Yasso_out_anoxic, fract_green_aboveGround, rootExudates*dt, &
                         redFact_Nlimit = red_Fact_N, is_anoxic = .TRUE.)
-                        
+
         c_acid_ag1           = c_acid_ag1           +         frac_inun  * Yasso_out_anoxic(1)
         c_water_ag1          = c_water_ag1          +         frac_inun  * Yasso_out_anoxic(2)
         c_ethanol_ag1        = c_ethanol_ag1        +         frac_inun  * Yasso_out_anoxic(3)
@@ -319,7 +319,7 @@ CONTAINS
         CALL yasso(dt, Yasso_io_pools(10:18), Weather, woodLitter*dt, WoodLit_coefV,    &
                         WoodLitterSize, Yasso_out_oxic, fract_wood_aboveGround, 0.0_wp, &
                         redFact_Nlimit = red_Fact_N, is_anoxic = .FALSE.) ! no exudates
-                        
+
         c_acid_ag2           =                        (1.0_wp-frac_inun) * Yasso_out_oxic(1)
         c_water_ag2          =                        (1.0_wp-frac_inun) * Yasso_out_oxic(2)
         c_ethanol_ag2        =                        (1.0_wp-frac_inun) * Yasso_out_oxic(3)
@@ -337,7 +337,7 @@ CONTAINS
         CALL yasso(dt, Yasso_io_pools(10:18), Weather, woodLitter*dt, WoodLit_coefV,      &
                         WoodLitterSize, Yasso_out_anoxic, fract_wood_aboveGround, 0.0_wp, &
                         redFact_Nlimit = red_Fact_N, is_anoxic = .TRUE.) ! no exudates
-                        
+
         c_acid_ag2           = c_acid_ag2           +         frac_inun  * Yasso_out_anoxic(1)
         c_water_ag2          = c_water_ag2          +         frac_inun  * Yasso_out_anoxic(2)
         c_ethanol_ag2        = c_ethanol_ag2        +         frac_inun  * Yasso_out_anoxic(3)
@@ -352,7 +352,7 @@ CONTAINS
         c_into_humus_2_sum   = c_into_humus_2_sum   +         frac_inun  * Yasso_out_anoxic(18)
 
         soilResp_rate = soilResp_oxic + soilResp_anoxic
-        
+
       END IF ! with_inundation
 
     ELSE ! is_peat
@@ -366,7 +366,7 @@ CONTAINS
       catotelm_height    = 0._wp
 
       ! in peatland areas, soil C oxic / anoxic distinction is vertical
-      ! therefore use distinguish oxic / anoxic C pools as input to Yasso, do not apply inundated/non-inundated 
+      ! therefore use distinguish oxic / anoxic C pools as input to Yasso, do not apply inundated/non-inundated
       ! fraction to output
 
       acrotelm_C_ag = SUM(Yasso_io_pools(1:4)) + SUM(Yasso_io_pools(10:13))
@@ -430,7 +430,7 @@ CONTAINS
                       0._wp, Yasso_out_anoxic, fract_green_aboveGround, 0._wp,                     &
                       redFact_Nlimit = red_Fact_N, is_anoxic = .TRUE., is_peat = .TRUE.,           &
                       N2A = 0.66_wp, N2W = 0.01_wp, N2E = 0.02_wp, N2H = 0.17_wp)
-                
+
       c_acid_ag1           = c_acid_ag1           + Yasso_out_anoxic(1)
       c_water_ag1          = c_water_ag1          + Yasso_out_anoxic(2)
       c_ethanol_ag1        = c_ethanol_ag1        + Yasso_out_anoxic(3)
@@ -450,7 +450,7 @@ CONTAINS
                  WoodLitterSize, Yasso_out_oxic, fract_wood_aboveGround, 0.0_wp,                                      &
                  redFact_Nlimit = red_Fact_N, is_anoxic = .FALSE., is_peat = .TRUE.,                                  &
                  N2A = 0.66_wp, N2W = 0.01_wp, N2E = 0.02_wp, N2H = 0.17_wp) ! no exudates
-                
+
       c_acid_ag2           =                        Yasso_out_oxic(1)
       c_water_ag2          =                        Yasso_out_oxic(2)
       c_ethanol_ag2        =                        Yasso_out_oxic(3)
@@ -469,7 +469,7 @@ CONTAINS
                  WoodLitterSize, Yasso_out_anoxic, fract_wood_aboveGround, 0.0_wp,                    &
                  redFact_Nlimit = red_Fact_N, is_anoxic = .TRUE., is_peat = .TRUE.,                   &
                  N2A = 0.66_wp, N2W = 0.01_wp, N2E = 0.02_wp, N2H = 0.17_wp) ! no exudates
-                
+
       c_acid_ag2           = c_acid_ag2           + Yasso_out_anoxic(1)
       c_water_ag2          = c_water_ag2          + Yasso_out_anoxic(2)
       c_ethanol_ag2        = c_ethanol_ag2        + Yasso_out_anoxic(3)
@@ -488,6 +488,6 @@ CONTAINS
     END IF  ! is_peat
 
   END SUBROUTINE calc_methane_soil_c
- 
+
 #endif
 END MODULE mo_carbon_process_methane
