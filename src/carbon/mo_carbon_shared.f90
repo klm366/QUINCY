@@ -14,19 +14,15 @@
 !> ---------------------------------------
 !>
 !>
-!> @author
+!> author
 !>  Rainer Schneck, MPI-M Hamburg
 !>
-!> @par Revision History
+!>  Revision History
 !> First version by Rainer Schneck (2015-07-29)
 !> Julia Nabel (2018-01-10): l_forestRegrowth flag -> allow for changing max_LAI
 !> Julia Nabel (2021-05-28): start of some refactoring (more advisable)
 !> Stiig Wilkenskjeld, MPI-M (2023-02-08): Separated from main process module for clear separation of standard and methane versions
 
-!> @par Copyright
-!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!>
 MODULE mo_carbon_shared
 #ifndef __NO_JSBACH__
 

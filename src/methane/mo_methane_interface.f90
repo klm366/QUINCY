@@ -14,15 +14,11 @@
 !> ---------------------------------------
 !>
 !>
-!> @author
+!> author
 !>  Stiig Wilkenskjeld, MPI-M Hamburg
 !>
-!> @par Revision History
+!> Revision History
 !> Adopted from JSBACH3 code by Thomas Kleinen, 2023-03-17
-!>
-!> @par Copyright
-!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !>
 
 MODULE mo_methane_interface
@@ -108,8 +104,8 @@ CONTAINS
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for methane
   !>
-  !> @param[in]     model_id     Model id
-  !> @return        return_ptr   Instance of process task "methane"
+  !> param[in]     model_id     Model id
+  !> return        return_ptr   Instance of process task "methane"
   !>
   FUNCTION Create_task_methane(model_id) RESULT(return_ptr)
 
@@ -1326,7 +1322,7 @@ CONTAINS
       REAL(wp), POINTER :: tmp(:,:,:)
 
       CALL message(routine,'Reading '//trim(src%name_source)//' from rec. '//TRIM(i2s(ABS(src%crec)))// &
-              ' of '//trim(src%name_var)//'@'//trim(src%name_file))
+              ' of '//trim(src%name_var)//''//trim(src%name_file))
       tmp => src%ifile%Read_2d_time(src%name_var,src%buf,src%crec,src%crec)
       src%crec = src%crec + 1
       IF (src%crec > src%ifile%nrec) THEN

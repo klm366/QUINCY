@@ -14,15 +14,11 @@
 !> ---------------------------------------
 !>
 !>
-!> @author
+!> author
 !>  Stiig Wilkenskjeld, MPI-M Hamburg
 !>
-!> @par Revision History
+!> Revision History
 !> Adopted from JSBACH3 code by Thomas Kleinen, 2022-12-06
-!>
-!> @par Copyright
-!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !>
 
 MODULE mo_top_process
@@ -43,7 +39,7 @@ MODULE mo_top_process
 CONTAINS
 
   !>
-  ! @brief      Updates equilibrium evapotranspiration (aet)
+  !      Updates equilibrium evapotranspiration (aet)
   !
   !>
   !>
@@ -83,7 +79,7 @@ CONTAINS
   END SUBROUTINE update_aet
 
   !>
-  ! @brief      Updates the water balance for individual peat tile
+  !      Updates the water balance for individual peat tile
   !
   !>
   !>
@@ -156,7 +152,7 @@ CONTAINS
 
   END SUBROUTINE update_water_balance_peatland
 
-  ! @brief      Updates the water table for individual tile
+  !      Updates the water table for individual tile
   !
   !>
 #ifndef _OPENACC
@@ -264,7 +260,7 @@ CONTAINS
   END SUBROUTINE update_water_table
 
   !>
-  ! @brief      Updates inundated area
+  !      Updates inundated area
   !
   !>
 #ifndef _OPENACC
@@ -381,7 +377,7 @@ CONTAINS
   END SUBROUTINE update_inun_frac
 
   !>
-  ! @brief      Updates necessary averages for the topmodel
+  !      Updates necessary averages for the topmodel
   !
   !>
 #ifndef _OPENACC
@@ -491,7 +487,7 @@ CONTAINS
   END SUBROUTINE update_topmodel_runmean
 
   !>
-  ! @brief      Updates necessary averages for peatland calculations
+  !      Updates necessary averages for peatland calculations
   !
   !>
 #ifndef _OPENACC
@@ -568,7 +564,7 @@ CONTAINS
   END SUBROUTINE update_peat_runmean
 
   !>
-  ! @brief      Updates inundated fraction and it's watertable from climatology
+  !      Updates inundated fraction and it's watertable from climatology
   !
   !>
   !>

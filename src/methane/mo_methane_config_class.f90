@@ -14,15 +14,11 @@
 !> ---------------------------------------
 !>
 !>
-!> @author
+!> author
 !>  Stiig Wilkenskjeld, MPI-M Hamburg
 !>
-!> @par Revision History
+!> Revision History
 !> First version by Stiig Wilkenskjeld (06.03.2023)
-!>
-!> @par Copyright
-!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !>
 
 MODULE mo_ch4_config_class
@@ -152,7 +148,7 @@ CONTAINS
   ! -------------------------------------------------------------------------------------------------------
   !> Initialize methane process
   !>
-  !> @param[inout]     config     Configuration type of process (t_carbon_config)
+  !> param[inout]     config     Configuration type of process (t_carbon_config)
   !>
   SUBROUTINE Init_methane_config(config)
 

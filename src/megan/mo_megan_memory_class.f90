@@ -14,15 +14,11 @@
 !> ---------------------------------------
 !>
 !>
-!> @author
+!> author
 !>  Stiig Wilkenskjeld, MPI-M Hamburg
 !>
-!> @par Revision History
+!> Revision History
 !> Adopted from JSBACH3 code by Thomas Kleinen, 2024-01-24
-!>
-!> @par Copyright
-!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !>
 
 MODULE mo_megan_memory_class
@@ -63,7 +59,7 @@ MODULE mo_megan_memory_class
     REAL(wp)               :: beta            ! temperature adjustment factor (2012 paper, Table 4)
     REAL(wp)               :: ldf             ! light-dependent fraction (2012 paper, Table 4)
     INTEGER                :: cafac           ! relative emission rates for leaf age (2012 paper, Table 4)
-    REAL(wp)               :: ef              ! PFT specific emission factor @ standard conditions
+    REAL(wp)               :: ef              ! PFT specific emission factor  standard conditions
     REAL(wp)               :: scale           ! Emission factor scaling
 
     ! 2D Fields

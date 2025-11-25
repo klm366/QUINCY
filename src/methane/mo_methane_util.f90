@@ -14,15 +14,11 @@
 !> ---------------------------------------
 !>
 !>
-!> @author
+!> author
 !>  Stiig Wilkenskjeld, MPI-M Hamburg
 !>
-!> @par Revision History
+!> Revision History
 !> Adopted from JSBACH3 code by Thomas Kleinen, 2023-21-03
-!>
-!> @par Copyright
-!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !>
 
 MODULE mo_methane_util
@@ -51,7 +47,7 @@ MODULE mo_methane_util
 CONTAINS
 
   !>
-  ! @brief      Find layer of a given depth (eg. roots end, water table or acrotelm)
+  !      Find layer of a given depth (eg. roots end, water table or acrotelm)
   !
   !>
 !#ifndef _OPENACC
@@ -80,7 +76,7 @@ CONTAINS
   END FUNCTION find_layer
 
   !>
-  ! @brief      Find layer of a given depth
+  !      Find layer of a given depth
   !
   !>
 !#ifndef _OPENACC
@@ -113,7 +109,7 @@ CONTAINS
   END FUNCTION find_bedrock_layer
 
   !>
-  ! @brief  determine gas concentration in water [mol m-2]
+  !  determine gas concentration in water [mol m-2]
   ! based on Henry's law, as described by Wania
   !>
 #ifndef _OPENACC
@@ -145,7 +141,7 @@ CONTAINS
   END FUNCTION dissolved_gas
 
   !>
-  ! @brief  determine gas concentration in water based on Henry's law
+  !  determine gas concentration in water based on Henry's law
   ! result is dimensionless Henry coefficient relating aqueous to gaseous concentration
   !>
 !#ifndef _OPENACC
@@ -183,7 +179,7 @@ CONTAINS
   END FUNCTION determine_henry_cc
 
   !>
-  ! @brief Converts a gas concentration [mol m-3] to volume mixing ration at reference temperature and pressure
+  ! Converts a gas concentration [mol m-3] to volume mixing ration at reference temperature and pressure
   !
   !>
 #ifndef _OPENACC
@@ -198,7 +194,7 @@ CONTAINS
   END FUNCTION concentration_mol_m3_2_vmr
 
   !>
-  ! @brief Converts a gas volume mixing ration to concentration [mol m-3] at reference temperature and pressure
+  ! Converts a gas volume mixing ration to concentration [mol m-3] at reference temperature and pressure
   !
   !>
 #ifndef _OPENACC
@@ -217,7 +213,7 @@ CONTAINS
   END FUNCTION concentration_vmr_2_mol_m3
 
   !>
-  ! @brief Converts a gas concentration to mass mixing ratio at reference temperature and pressure
+  ! Converts a gas concentration to mass mixing ratio at reference temperature and pressure
   !
   !>
 #ifndef _OPENACC
@@ -232,7 +228,7 @@ CONTAINS
   END FUNCTION concentration_mol_m3_2_mmr
 
   !>
-  ! @brief Converts a gas concentration to volume mixing ratio at reference temperature and pressure
+  ! Converts a gas concentration to volume mixing ratio at reference temperature and pressure
   !
   !>
 #ifndef _OPENACC
@@ -250,7 +246,7 @@ CONTAINS
   END FUNCTION concentration_mmr_2_mol_m3
 
   !>
-  ! @brief Converts a gas volume mixing ratio to mass mixing ratio at reference temperature and pressure
+  ! Converts a gas volume mixing ratio to mass mixing ratio at reference temperature and pressure
   !
   !>
 #ifndef _OPENACC
@@ -265,7 +261,7 @@ CONTAINS
   END FUNCTION concentration_vmr_2_mmr
 
   !>
-  ! @brief Converts a gas mass mixing ratio to volume mixing ratio at reference temperature and pressure
+  ! Converts a gas mass mixing ratio to volume mixing ratio at reference temperature and pressure
   !
   !>
 #ifndef _OPENACC
@@ -280,7 +276,7 @@ CONTAINS
   END FUNCTION concentration_mmr_2_vmr
 
   !>
-  ! @brief Determine which unit of a gas is properly defined
+  ! Determine which unit of a gas is properly defined
   !
   !>
 #ifndef _OPENACC
@@ -323,7 +319,7 @@ CONTAINS
   END FUNCTION which_valid
 
   !>
-  ! @brief Converts gas concentration or volume mixing ratio to mass mixing ratio
+  ! Converts gas concentration or volume mixing ratio to mass mixing ratio
   ! Invalid units are marked with negative values or not present
   ! Exactly 1 unit must be specified
 #ifndef _OPENACC
@@ -353,7 +349,7 @@ CONTAINS
   END SUBROUTINE convert_2_mmr
 
   !>
-  ! @brief Converts gas concentration or mass mixing ratio to volume mixing ratio
+  ! Converts gas concentration or mass mixing ratio to volume mixing ratio
   ! Invalid units are marked with negative values or not present
   ! Exactly 1 unit must be specified
 #ifndef _OPENACC
@@ -383,7 +379,7 @@ CONTAINS
   END SUBROUTINE convert_2_vmr
 
   !>
-  ! @brief Converts volume or mass mixing ratio to concentration
+  ! Converts volume or mass mixing ratio to concentration
   ! Invalid units are marked with negative values or not present
   ! Exactly 1 unit must be specified
 #ifndef _OPENACC
@@ -413,7 +409,7 @@ CONTAINS
   END SUBROUTINE convert_2_mol_m3
 
   !>
-  ! @brief Calculates diffusivities for a gas in air and water
+  ! Calculates diffusivities for a gas in air and water
   !
   !>
 #ifndef _OPENACC
@@ -443,7 +439,7 @@ CONTAINS
   END SUBROUTINE calc_diffusivity
 
   !>
-  ! @brief Adds a surface layer to a layer vector. Vectors must have the right size upon call
+  ! Adds a surface layer to a layer vector. Vectors must have the right size upon call
   !
   !>
   ! If surf not specified, the "upper layer" of src is copied to the new upper layer
@@ -472,7 +468,7 @@ CONTAINS
 
 #ifndef _OPENACC
   !>
-  ! @brief   Setup and calc vertical diffusion of a gas using a Crank-Nicolson integration
+  !   Setup and calc vertical diffusion of a gas using a Crank-Nicolson integration
   !
   !>
   SUBROUTINE diffusion_cn(nstep, dt, mxlay_above_rock, mxlay_above_wt,                   &
@@ -563,7 +559,7 @@ CONTAINS
   END SUBROUTINE diffusion_cn
 
   !>
-  ! @brief   Calc vertical diffusion of a gas
+  !   Calc vertical diffusion of a gas
   !
   !>
   !-----------------------------------------------------------------------------

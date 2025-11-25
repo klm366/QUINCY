@@ -14,16 +14,12 @@
 !> ---------------------------------------
 !>
 !>
-!> @author
+!> author
 !>   Stiig Wilkenskjeld based on JSBACH3 code by Thomas Kleinen (2023-03-27)
 !>
-!> @par Revision History
+!> Revision History
 !>   2023-03-27 : First JSBACH4 version, Stiig Wilkenskjeld, MPI-M
 
-!> @par Copyright
-!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!>
 MODULE mo_carbon_process_methane
 #ifndef __NO_JSBACH__
 
