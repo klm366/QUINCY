@@ -621,6 +621,11 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, uptake_nh4                          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, uptake_no3                          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, uptake_po4                          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, herbivory_leaf_resp                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, herbivory_fruit_resp                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_products_decay_c                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, n_fixation                          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, maint_respiration                   , weighted_by_fract)
 
     ! VEG_ bgcm pools
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c            , weighted_by_fract)

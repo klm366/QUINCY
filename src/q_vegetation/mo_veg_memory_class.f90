@@ -88,7 +88,8 @@ MODULE mo_veg_memory_class
       & veg_pool_fine_root_n              !< fine root nitrogen           [mol m-2]
     TYPE(t_jsb_var_real2d) :: &
       & veg_products_total_c, &           !< total c in product pools     [mol m-2]
-      & veg_products_total_n              !< total n in product pools     [mol m-2]
+       & veg_products_total_n, &           !< total n in product pools     [mol m-2]
+      & veg_products_decay_c              !< total n in product pools     [micro-mol m-2 s-1]
     !------------------------------------------------------------------------------------------------------ !
     !>basic plant 2D
     !>
@@ -1088,6 +1089,17 @@ CONTAINS
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
           & output_level = MEDIUM, &
+          & loutput = .TRUE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('veg_products_decay_c', mem%veg_products_decay_c, &
+          & hgrid, surface, &
+          & t_cf('veg_products_decay_c', 'micro-mol m-2 s-1', 'total c in product decay'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = BASIC, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
           & initval_r = 0.0_wp)

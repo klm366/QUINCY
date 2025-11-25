@@ -516,10 +516,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_woody_litter_c       , weighted_by_fract)
 
     ! VEG_ fluxes
-    dsl4jsb_Aggregate_onChunk(VEG_,   net_biosphere_production  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_,   net_biosphere_production      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_,   net_biosphere_production_c13  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_,   net_biosphere_production_c14  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_,   biological_n_fixation     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_,   biological_n_fixation         , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

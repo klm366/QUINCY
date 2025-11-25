@@ -190,7 +190,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: veg_litterfall_total_n15
     dsl4jsb_Real2D_onChunk      :: veg_products_total_c
     dsl4jsb_Real2D_onChunk      :: veg_products_total_n
-    ! ----------------------------------------------------------------------------------------------------- !
+   dsl4jsb_Real2D_onChunk      :: veg_products_decay_c
+ ! ----------------------------------------------------------------------------------------------------- !
     iblk      = options%iblk
     ics       = options%ics
     ice       = options%ice
@@ -330,6 +331,7 @@ CONTAINS
     IF (config_l_use_product_pools) THEN
       dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_c)               ! out
       dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_n)               ! out
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_decay_c)               ! out
     END IF
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -668,6 +670,16 @@ CONTAINS
       !$ACC END LOOP
     END DO
     !$ACC END PARALLEL
+
+    IF (config_l_use_product_pools) THEN
+      IF ((lctlib_ForestFlag .AND. config_active_q_syl) .OR. (lctlib_CropFlag .AND. config_active_q_agr)) THEN
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT)
+        DO ic = 1, nc
+          veg_products_decay_c(ic) =  prod_decay_mt(ixC, ic) * 1000000.0_wp / dtime
+        END DO
+    	!$ACC END PARALLEL LOOP
+      END IF
+    END IF
 
     !> 3.0 biosphere-level diagnostics across multiple processes
     !>
