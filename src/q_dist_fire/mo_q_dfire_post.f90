@@ -126,7 +126,7 @@ CONTAINS
     REAL(wp)                              :: area_burned_fract_pft(options%nc) !< Fraction of the area burned for current PFT [-]
 
     TYPE(t_sf_prob_mort)                  :: prob_mort     !< Tree mortality
-    REAL(wp)                              :: live_fuel_cls(options%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
+    REAL(wp), ALLOCATABLE                 :: live_tree_fuel_cls(:,:,:) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
 
     REAL(wp), ALLOCATABLE                 :: fc_live_mol_m2(:,:)  !< Total live fuel consumption (nc, live fuels) [molX/m2]
     REAL(wp), ALLOCATABLE                 :: fc_dead_mol_m2(:,:)  !< Total dead fuel consumption (nc, t_sf_fuel_dead_fuel_nr) [molX/m2]
@@ -152,10 +152,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
-!    dsl4jsb_Real3D_onChunk                :: live_fuel_1hr_lfp         ! in [g DM m-2]
-!    dsl4jsb_Real3D_onChunk                :: live_fuel_10hr_lfp        ! in [g DM m-2]
-!    dsl4jsb_Real3D_onChunk                :: live_fuel_100hr_lfp       ! in [g DM m-2]
-!    dsl4jsb_Real3D_onChunk                :: live_fuel_1000hr_lfp      ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_tree_fuel_1hr_lfp    ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_tree_fuel_10hr_lfp   ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_tree_fuel_100hr_lfp  ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: live_tree_fuel_1000hr_lfp ! in [g DM m-2]
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1hr_dfp         ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_10hr_dfp        ! in [g DM m-2]
@@ -249,10 +249,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)               ! in [?]
 
-!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_1hr_lfp)    ! in [g DM m-2]
-!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_10hr_lfp)   ! in [g DM m-2]
-!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_100hr_lfp)  ! in [g DM m-2]
-!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_1000hr_lfp) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp)    ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp)   ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp)  ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp) ! in [g DM m-2]
 
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_10hr_dfp)    ! in [g DM m-2]
@@ -356,11 +356,6 @@ CONTAINS
     dead_fuel_fcl(:,:,df_sf_fc_10hr_idx) = dead_fuel_10hr_dfp
     dead_fuel_fcl(:,:,df_sf_fc_100hr_idx) = dead_fuel_100hr_dfp
     dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1000hr_dfp
-
-!    live_fuel_cls(:,:,df_sf_fc_1hr_idx) = live_fuel_1hr_lfp
-!    live_fuel_cls(:,:,df_sf_fc_10hr_idx) = live_fuel_10hr_lfp
-!    live_fuel_cls(:,:,df_sf_fc_100hr_idx) = live_fuel_100hr_lfp
-!    live_fuel_cls(:,:,df_sf_fc_1000hr_idx) = live_fuel_1000hr_lfp
     area_burned_pft = area_burned * tile_fract
     area_burned_fract_pft = area_burned_fract * tile_fract
 
@@ -385,6 +380,11 @@ CONTAINS
 
     ! calc tree mortality
     IF (lctlib%growthform == itree) THEN
+      ALLOCATE(live_tree_fuel_cls(nc,sf_fuel_live_fuel_nr, df_sf_fc_full_nr))
+      live_tree_fuel_cls(:,:,df_sf_fc_1hr_idx) = live_tree_fuel_1hr_lfp
+      live_tree_fuel_cls(:,:,df_sf_fc_10hr_idx) = live_tree_fuel_10hr_lfp
+      live_tree_fuel_cls(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr_lfp
+      live_tree_fuel_cls(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr_lfp
 
       ! ref vars and init to 0
       prob_mort = t_sf_prob_mort(nc, pm_fire, pm_tau, tau_l, tau_c, &
@@ -416,7 +416,7 @@ CONTAINS
                                               prob_mort % prop_ck, &
                                               dsl4jsb_Config(Q_DFIRE_)%fract_crown_scorch, &
                                               area_burned_fract_pft, &
-                                              live_fuel_cls, &
+                                              live_tree_fuel_cls, &
                                               mask=is_fire_intense_enough)
 
       !< output calculated values
