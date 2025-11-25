@@ -208,7 +208,6 @@ CONTAINS
 
     REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2]
     REAL(wp), POINTER                     :: tile_fract(:) ! [%]
-    REAL(wp), ALLOCATABLE                 :: burnable_area(:) ! [m2]
     LOGICAL                               :: mask_is_tile_enabled(options%nc)
 
     REAL(wp)                              :: ab_soil_depth_sl(options%nc,df_sf_sl_dims_nr)!< above ground soil depth layers [m]
@@ -456,21 +455,21 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_STANDALONE__
     ALLOCATE(grid_cell_area(options%nc))
-    ALLOCATE(burnable_area(options%nc))
     grid_cell_area = 1._wp ! defined as fraction too, QS has site simulations
     burnable_area_ha = 1._wp
     mask_is_tile_enabled = .TRUE.
-    burnable_area = 1._wp
+    pot_burn_area = 1._wp
 #else
     ! IQ
     grid_cell_area => grid % area(ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
     IF(are_all_pfts_wave) THEN ! Fuel.f90 to spitfire.f90 weighting average using all PFTs
-      burnable_area = grid_cell_area ! * tile_fract is ignored because WA accounts for all, including bare soil
+      pot_burn_area = grid_cell_area ! * tile_fract is ignored because WA accounts for all, including bare soil
+      burnable_area_ha = 1._wp
     ELSE ! Weighting average only using tree and grass PFTs
-      burnable_area = grid_cell_area * (grass_fract + forest_fract)
+      pot_burn_area = grid_cell_area * (grass_fract + forest_fract)
+      burnable_area_ha = sf_convert_units("m2", "ha", pot_burn_area)
     ENDIF
-    burnable_area_ha = sf_convert_units("m2", "ha", burnable_area)
     mask_is_tile_enabled = (tile_fract > 0._wp)
 #endif
 
