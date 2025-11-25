@@ -22,7 +22,7 @@ MODULE mo_sb_carbon_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_jsb_C_litter, prep_jsb_sb_processes, get_per_tile, convert_lct_to_sla
+  PUBLIC :: calc_jsb_C_litter, prep_jsb_sb_processes, get_per_tile, convert_lct_to_sla, calc_sb_treeheight
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_carbon_process'
 
@@ -34,7 +34,7 @@ CONTAINS
   ELEMENTAL &
 #endif
   SUBROUTINE calc_jsb_C_litter( &
-    & fixed_allocation,           &,! in
+    & jsb_allocation,           &,! in
     & LAI,                        & ! in
     & LAI_previous,               & ! in
     & max_LAI,                    & ! in
@@ -62,10 +62,13 @@ CONTAINS
     & c_fineroot,                 & ! inout
     & c_fruit,                    & ! inout
     & c_seedbed,                  & ! inout
-    & c_sapheartwood,             & ! inout
+    & c_sapwood,                  & ! inout
+    & c_heartwood,                & ! inout
     & c_coarseroot,               & ! inout
     & tree_height,                & ! inout
     & f_lai,                      & ! inout
+    & dheight,                    & ! inout
+    & df_lai,                     & ! inout
     !
     & NPP_flux_correction,        & ! out
     & excess_NPP,                 & ! out
@@ -135,6 +138,8 @@ CONTAINS
                                                      !    [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: tree_height       ! tree height [m]
     REAL(wp), INTENT(inout) :: f_lai             ! lai index to estimate tree height
+    REAL(wp), INTENT(inout) :: dheight       ! tree height [m]
+    REAL(wp), INTENT(inout) :: df_lai             ! lai index to estimate tree height
     
     !REAL(wp), INTENT(out)   :: soilResp_rate_pot      ! soil respiration without N limitation
     REAL(wp), INTENT(out)   :: NPP_flux_correction    ! Amount by which the NPP rate entering the routine has to be corrected. This
@@ -418,7 +423,7 @@ CONTAINS
          &                    NPP_pot_yDayMean * sec_per_day, NPP_act, &
          &                    fract_npp_2_woodPool, fract_npp_2_reservePool, &
          &                    fract_npp_2_exudates, Max_C_content_woods, &
-         &                    LAI, max_LAI, tree_height, f_lai, 
+         &                    LAI, max_LAI, tree_height, f_lai, dheight, df_lai， &
          ! &                    Cflx_NPP_2_green_pot, Cflx_NPP_2_wood_pot, Cflx_NPP_2_reserve_pot, &
          &                    c_leaf, c_fineroot, c_fruit, c_seedbed, c_sapwood, c_heartwood, c_coarseroot, & 
          &                    litterfall_leaf, litterfall_fineroot, &
@@ -942,13 +947,13 @@ CONTAINS
 #ifndef _OPENACC
   ELEMENTAL &
 #endif
-  SUBROUTINE sb_carbon_allometry(fixed_allocation, &
+  SUBROUTINE sb_carbon_allometry(jsb_allocation, &
          &                    pheno_type, jsb_LctNumber, &
          &                    c_green, c_woods, c_reserve, &
          &                    NPP_pot, NPP_act, &
          &                    fract_npp_2_woodPool, fract_npp_2_reservePool, &
          &                    fract_npp_2_exudates, Max_C_content_woods, &
-         &                    LAI, max_LAI, tree_height, f_lai, &
+         &                    LAI, max_LAI, tree_height, f_lai, dheight, df_lai, &
          ! &                    Cflx_NPP_2_green_pot, Cflx_NPP_2_wood_pot, Cflx_NPP_2_reserve_pot, &
          &                    c_leaf, c_fineroot, c_fruit, c_seedbed, c_sapwood, c_heartwood, c_coarseroot, &
          &                    lit_leaf, lit_fineroot, &
@@ -958,7 +963,7 @@ CONTAINS
     USE mo_veg_constants,           ONLY: sm2lm_grass
     
     IMPLICIT NONE
-    LOGICAL,  INTENT(in)    :: fixed_allocation       
+    LOGICAL,  INTENT(in)    :: jsb_allocation       
     INTEGER,  INTENT(in)    :: pheno_type             ! crop =5
     INTEGER,  INTENT(in)    :: jsb_LctNumber          ! crop =5
     !
@@ -999,6 +1004,8 @@ CONTAINS
                                                      !    [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: tree_height        ! tree height, [m]
     REAL(wp), INTENT(inout) :: f_lai              ! lai index to estimate tree height
+    REAL(wp), INTENT(inout) :: dheight        ! tree height, [m]
+    REAL(wp), INTENT(inout) :: df_lai              ! lai index to estimate tree height
 
 
 
@@ -1021,7 +1028,7 @@ CONTAINS
     REAL(wp) :: excess_carbon
 
     REAL(wp) :: c_green_pot, c_woods_pot, c_reserve_pot        !! values of potential carbon pools i.e. before accounting for N-limitation
-    REAL(wp) :: t_tree_mature, km_lai, dheight, df_lai
+    REAL(wp) :: t_tree_mature, t_lai_max, km_lai
 
     !> init local variables
     leaf_carbon_inc        = 0._wp
@@ -1032,9 +1039,8 @@ CONTAINS
     sap_2_heartwood        = 0._wp
 
     t_tree_mature = 0._wp
+    t_lai_max     = 0._wp
     km_lai        = 0._wp
-    dheight       = 0._wp
-    df_lai        = 0._wp
 
     !> retrieve QUINCY lctlib values for turnover time
     CALL convert_jsb_lct_to_quincy(jsb_LctNumber, quincy_LctNumber, &
@@ -1193,8 +1199,8 @@ CONTAINS
         CALL simple_pipe_model(pheno_type, NPP_pot, &
                               c_leaf, c_fineroot, c_sapwood, c_heartwood, c_coarseroot, &
                               leaf_carbon_inc, root_carbon_inc, coarse_root_carbon_inc, sap_wood_carbon_inc, &
-                              leaf2sapwood_mass_ratio, k_rtos, leaf2root_mass_ratio, leaf2wood_mass_ratio, frac_alloc_fruit, &
-                              tree_height, f_lai, dheight, df_lai)
+                              leaf2sapwood_mass_ratio, k_rtos, leaf2root_mass_ratio, leaf2wood_mass_ratio, k_crtos, frac_alloc_fruit, &
+                              tree_height) ! , f_lai, dheight, df_lai
 
 
       END IF
@@ -1525,8 +1531,8 @@ CONTAINS
   SUBROUTINE simple_pipe_model(pheno_type, NPP, &
                               c_leaf, c_fineroot, c_sapwood, c_coarseroot, &
                               d_leaf, d_root, d_croot, d_swood, &
-                              r_LS, r_LR, r_LW, frac_alloc_fruit, &
-                              h, f_lai, dh, df_lai)
+                              r_LS, r_LR, r_LW, k_crtos, frac_alloc_fruit, &
+                              h) ! , f_lai, dh, df_lai
     ! USE 
 
     IMPLICIT NONE
@@ -1551,38 +1557,156 @@ CONTAINS
     REAL(wp), INTENT(in)    :: r_LW               ! leaf2wood_mass_ratio, [m]
     REAL(wp), INTENT(in)    :: frac_alloc_fruit   ! ratio between d_fruit and d_leaf
     REAL(wp), INTENT(in)    :: h                  ! tree height, [m]
-    REAL(wp), INTENT(in)    :: f_lai              ! lai index to estimate tree height
-    REAL(wp), INTENT(inout) :: dh                 ! tree height increment, [m]
-    REAL(wp), INTENT(inout) :: df_lai             ! lai index increment
+    ! REAL(wp), INTENT(in)    :: f_lai              ! lai index to estimate tree height
+    ! REAL(wp), INTENT(inout) :: dh                 ! tree height increment, [m]
+    ! REAL(wp), INTENT(in)    :: df_lai             ! lai index increment
 
     ! to_do: 
     ! df_lai and dh should be updated in update_phenology_logrop SUBROUTINE and passed to SB_CARBON as inputs
 
     ! locals
-    REAL(wp) :: c_leaf_new, c_fineroot_new, c_sapwood_new, c_coarseroot_new, c_wood, c_wood_new
+    REAL(wp) :: c_leaf_new, c_fineroot_new, c_sapwood_new, c_coarseroot_new, c_wood_new
+    REAL(wp) :: numerator, denominator
+    
+    ! init locals
+    d_leaf  = 0._wp
+    d_root  = 0._wp
+    d_croot = 0._wp
+    d_wood  = 0._wp
+    
     
     SELECT CASE(pheno_type)
     !> trees
     !!
     CASE (1, 2, 3)
-      
+      numerator   = NPP + (1._wp+frac_alloc_fruit)*c_leaf + c_fineroot + c_sapwood + c_coarseroot
+      denominator = 1._wp + 1._wp/r_LR + h/r_LW + frac_alloc_fruit
+      ! leaf
+      c_leaf_new  = numerator / denominator
+      d_leaf      = c_leaf_new - c_leaf
+      ! SapWood
+      c_sapwood_new = c_leaf_new / r_LS * h
+      d_wood        = c_sapwood_new - c_sapwood
+      IF (d_wood > 0._wp) Then
+        d_croot = MAX(c_sapwood_new * k_crtos - c_coarseroot, 0.0_wp)
+        d_root  = MAX(c_leaf_new / r_LR - c_root, 0.0_wp)
+      ELSE! special case of no wood growth (phenology etc.): redistribute available carbon
+        numerator   = NPP + (1._wp+frac_alloc_fruit)*c_leaf + c_fineroot
+        denominator = 1._wp + 1._wp/r_LR + frac_alloc_fruit
+        c_leaf_new  = numerator / denominator
+        d_leaf      = MAX(c_leaf_new - c_leaf, 0.0_wp)
+        d_root      = MAX(0.0_wp, MIN(NPP - (1._wp+frac_alloc_fruit) * d_leaf, (d_leaf + c_leaf) / r_LR - c_root))
+        d_wood      = 0.0_wp
+        d_croot     = 0.0_wp
+      END IF
 
-    !> grass
+    !> grass & crops
     !!
-    CASE(4)    
+    CASE(4, 5)
+      numerator   = NPP + (1+frac_alloc_fruit)*c_leaf + c_fineroot + c_sapwood
+      denominator = 1._wp + 1._wp/r_LR + h/r_LS + frac_alloc_fruit
+      c_leaf_new  = numerator / denominator
+      d_leaf      = MAX(c_leaf_new - c_leaf, 0.0_wp)
 
-    !> crops
-    !!
-    CASE (5)
-
-
+      d_root      = MAX(MIN(NPP-(1._wp+frac_alloc_fruit) * d_leaf,
+                            (c_leaf + d_leaf)/r_LR - c_root),0.0_wp)
+      d_wood      = (d_leaf + c_leaf) / r_LS - c_sapwood
+      d_croot     = 0.0_wp
     CASE DEFAULT
       !! Write statement
       !!
-      WRITE(message_text,'(a,i4)') 'invalid growthform type ',lctlib_growthform
-      CALL finish("mo_q_veg_growth",message_text)
+      WRITE(message_text,'(a,i4)') 'invalid pheno type ',pheno_type
+      CALL finish("simple_pipe_model",message_text)
     END SELECT
 
   END SUBROUTINE simple_pipe_model
+  
+  ! --- calc_sb_treeheight() ---------------------------------------------------------------------------------------------------
+  !
+  ! calculate tree height for sb_carbon simple pipe model
+  ! 
+#ifndef _OPENACC
+  ELEMENTAL &
+#endif
+  SUBROUTINE calc_sb_treeheight(jsb_LctNumber, dtime, LAI_old, LAI, MaxLAI, MaxHeight f_lai, df_lai, h, dh)
+
+    USE mo_carbon_constants,    ONLY: sec_per_year
+    USE mo_jsb_math_constants,  ONLY: eps8
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    INTEGER, INTENT(in)     :: jsb_LctNumber      ! LctNumber from jsb lctlib
+    REAL(wp), INTENT(in)    :: dtime              ! dtime
+    REAL(wp), INTENT(in)    :: LAI_old            ! LAI from previous dt
+    REAL(wp), INTENT(in)    :: LAI                ! LAI after updating
+    REAL(wp), INTENT(in)    :: MaxLAI             ! lctlib maximim LAI
+    REAL(wp), INTENT(in)    :: MaxHeight          ! lctlib maximim height
+    REAL(wp), INTENT(inout) :: h                  ! tree height, [m]
+    REAL(wp), INTENT(inout) :: f_lai              ! lai index to estimate tree height
+    REAL(wp), INTENT(inout) :: dh                 ! tree height increment, [m]
+    REAL(wp), INTENT(inout) :: df_lai             ! lai index increment
+
+    ! locals
+    REAL(wp) :: f_lai_realtime, & ! realtime f_lai calculated by LAI/MaxLAI
+                t_lai_inc         ! years to reach f_lai phase, canopy closure or maximum height
+    REAL(wp) :: t_tree_mature, t_lai_max, km_lai, h_new
+
+    !> init local variables
+    f_lai_realtime = 0._wp
+    t_lai_inc      = 0._wp
+
+    t_tree_mature = 0._wp
+    t_lai_max     = 0._wp
+    km_lai        = 0._wp
+    !> init output
+    df_lai = 0._wp
+    dh     = 0._wp
+    h_new  = h
+
+    !> retrieve QUINCY lctlib values for turnover time
+    CALL convert_jsb_lct_to_quincy(jsb_LctNumber, quincy_LctNumber, &
+      &   lctlib_t_tree_mature = t_tree_mature, &
+      &   lctlib_t_lai_max = t_lai_max, &
+      &   lctlib_km_lai = km_lai
+      &   ) 
+    
+    f_lai_realtime = LAI / MaxLAI
+
+    !> calculate teh change of f_lai based on canopy closure status
+    !>
+    IF ( (f_lai - km_lai) > eps8 ) THEN
+      ! canopy closure, slow growing
+      t_lai_inc = t_tree_mature - t_lai_max
+      IF ( (LAI - LAI_old) > eps8 ) THEN
+        !> ! growing phase, height increase
+        df_lai = MaxLAI/t_lai_inc/sec_per_year*dtime
+      END IF
+    ELSE
+      ! fast growing early phase
+      t_lai_inc = t_lai_max
+      IF ( (LAI - LAI_old) > eps8) THEN
+        !> ! growing phase, height increase
+        IF ( f_lai_realtime > f_lai) THEN
+          df_lai = f_lai_realtime - f_lai
+        ELSE
+          df_lai = MaxLAI/t_lai_inc/sec_per_year*dtime
+        END IF
+      END IF      
+    END IF
+
+    !> calculate new tree height
+    IF (df_lai > 0._wp) THEN
+      h_new = MaxHeight * (f_lai + df_lai)/(km_lai + f_lai + df_lai)
+      dh    = h_new - h
+    END if
+    
+    ! Update h and f_lai
+    f_lai = f_lai + df_lai
+    h     = h + dh
+    END IF
+
+  
+  END SUBROUTINE calc_sb_treeheight
   
 END MODULE mo_sb_carbon_process

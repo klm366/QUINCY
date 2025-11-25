@@ -176,17 +176,15 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(SB_CARBON_)
     dsl4jsb_Def_memory(PHENO_)    
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
+    dsl4jsb_Def_memory(SB_CARBON_)
     dsl4jsb_Def_memory(A2L_)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk ::  pseudo_temp
-    dsl4jsb_Real2D_onChunk ::  pseudo_temp_yDay
-    dsl4jsb_Real2D_onChunk ::  pseudo_precip
-    dsl4jsb_Real2D_onChunk ::  pseudo_precip_yDay
 
     dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
 
@@ -200,6 +198,20 @@ CONTAINS
                                                      !  material of living plants [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_crop_harvest    ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
 
+    ! SB_CARBON_
+    dsl4jsb_Real2D_onChunk ::  c_leaf           ! C-pool for leaves of vegetation [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_fineroot         ! C-pool for fineroot of vegetation [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_fruit           ! C-pool for fruit of living plants [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_seedbed       ! C-pool for seedbed of living plants [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_sapwood           ! C-pool for sapwood of trees [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_heartwood           ! C-pool for heartwood of trees [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_coarseroot         ! C-pool for c_coarseroot of vegetation [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  f_lai           ! 
+    dsl4jsb_Real2D_onChunk ::  tree_height       ! 
+    dsl4jsb_Real2D_onChunk ::  df_lai           ! 
+    dsl4jsb_Real2D_onChunk ::  dheight       ! 
+
+    ! 
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
     dsl4jsb_Real2D_onChunk ::  NPP_pot_rate_ca        ! The instantaneous (potential) NPP rate [mol(C)/m^2(canopy) s]
     !dsl4jsb_Real2D_onChunk ::  NPP_pot_Rate_acc      ! averaged NPP rate over one day [mol(C)/m^2(canopy) s]
@@ -287,10 +299,12 @@ CONTAINS
 
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_config(PHENO_)
-    dsl4jsb_Get_config(SB)
+    dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(SB_CARBON_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(SB_CARBON_)
     dsl4jsb_Get_memory(A2L_)
 
     !
@@ -534,7 +548,7 @@ CONTAINS
       DO ic = 1, nc
         ! Now calculate the jsb litter for SB inputs
         CALL calc_jsb_C_litter( &
-          &  TRIM(dsl4jsb_Config(SB_CARBON)%fixed_allocation),  & ! in
+          &  dsl4jsb_Config(SB_CARBON)%jsb_allocation,  & ! in
           &  LAI_yDayMean(ic),                                  & ! in
           &  LAI_yyDayMean(ic),                                 & ! in
           &  MaxLai(ic),                                        & ! in
@@ -557,6 +571,16 @@ CONTAINS
           &  c_woods(ic),                                       & ! inout
           &  c_reserve(ic),                                     & ! inout
           &  c_crop_harvest(ic),                                & ! inout
+          &  c_leaf(ic),                     & ! inout
+          &  c_fineroot(ic),                 & ! inout
+          &  c_fruit(ic),                    & ! inout
+          &  c_seedbed(ic),                  & ! inout
+          &  c_sapheartwood(ic),             & ! inout
+          &  c_coarseroot(ic),               & ! inout
+          &  tree_height(ic),                & ! inout
+          &  f_lai(ic),                      & ! inout
+          &  dheight(ic),                    & ! inout
+          &  df_lai(ic),                     & ! inout
           !
           &  NPP_flux_correction(ic),                           & ! out
           &  excess_NPP(ic),                                    & ! out

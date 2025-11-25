@@ -57,6 +57,8 @@ MODULE mo_sb_carbon_memory_class
                                     ! .. plants [mol(C)/m^2(canopy)]
       tree_height,            & ! for quincy biomass allocation calculation
       f_lai,                  & ! growth stage indicator for height estimation
+      ! dheight,                & ! change of tree height, [m]
+      ! df_lai,                 & ! change of lai indicator
 
       
 

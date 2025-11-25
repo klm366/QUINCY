@@ -29,7 +29,7 @@ MODULE mo_pheno_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_, VEG_
+  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_, VEG_, SB_CARBON
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_memory(PHENO_)
@@ -38,6 +38,7 @@ MODULE mo_pheno_interface
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(SB_CARBON_)
 
   IMPLICIT NONE
   PRIVATE
@@ -210,12 +211,14 @@ CONTAINS
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(SB_CARBON_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(CARBON_) ! JN 10.01.18 only required with l_forestRegrowth = true
+    dsl4jsb_Def_memory(SB_CARBON_)
 
     ! Declare pointers for variables in memory
     !INTEGER                :: ncanopy     ! number of canopy layers
@@ -251,13 +254,18 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
 
     ! JN 10.01.18 only required with l_forestRegrowth = true
+    ! CARBON_
     dsl4jsb_Real2D_onChunk :: c_green
     dsl4jsb_Real2D_onChunk :: c_reserve
     dsl4jsb_Real2D_onChunk :: c_woods
 
     dsl4jsb_Real2D_onChunk :: current_max_green
     dsl4jsb_Real2D_onChunk :: veg_carbon_at_max_green
+    ! SB_CARBON_
+    dsl4jsb_Real2D_onChunk :: f_lai
+    dsl4jsb_Real2D_onChunk :: tree_height
 
+    ! PHENO_
     dsl4jsb_Real2D_onChunk :: number_of_individuals
     dsl4jsb_Real2D_onChunk :: biomass_per_individual
     dsl4jsb_Real2D_onChunk :: maxLAI_allom
@@ -268,8 +276,9 @@ CONTAINS
     LOGICAL :: l_newday
     REAL(wp) :: timestep  ! Timestep in days
     INTEGER :: i
-    REAL(wp) :: MaxLAI
+    REAL(wp) :: MaxLAI, LAI_old
     REAL(wp) :: LAI_negligible_tmp
+    REAL(wp) :: df_lai, dheight
 
     LOGICAL :: &
       & ForestFlag_param
@@ -280,7 +289,9 @@ CONTAINS
       & beta_leaf_param,          &
       & clumpinessFactor_param,   &
       & specificLeafArea_C_param, &
-      & MaxLAI_param
+      & MaxLAI_param,             &
+      & JSBACH_LctNumber,         &
+      & VegHeight
 
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_phenology_logrop'
 
@@ -314,9 +325,12 @@ CONTAINS
     clumpinessFactor_param   = dsl4jsb_Lctlib_param(clumpinessFactor)
     specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
     MaxLAI_param             = dsl4jsb_Lctlib_param(MaxLAI)
-
+    JSBACH_LctNumber         = dsl4jsb_Lctlib_param(LctNumber)
+    VegHeight                = dsl4jsb_Lctlib_param(VegHeight)
+    
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(SB_CARBON_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(PHENO_)
@@ -384,6 +398,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)            ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    previous_day_NPP_pot_rate_ca) ! out
     dsl4jsb_Get_var2D_onChunk(PHENO_,    lai_ta)                 ! out
+    
+    IF (dsl4jsb_Config(SB_CARBON)%jsb_allocation) THEN
+      dsl4jsb_Get_memory(SB_CARBON_)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,    f_lai)              ! inout
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,    tree_height)        ! inout
+    END IF
 
     ! ---------------------------
     ! Go
@@ -396,6 +416,9 @@ CONTAINS
     l_newday = is_newday(options%current_datetime, options%dtime)
     timestep = timestep_in_days(options%dtime)
     day_of_year  = INT(get_year_day(options%current_datetime))
+    LAI_old = LAI
+    df_lai  = 0._wp
+    dheight = 0._wp
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
@@ -566,6 +589,11 @@ CONTAINS
           & growth_phase_SG(ic),            & ! inout
           & lai(ic)                         & ! inout
           & )
+        IF (dsl4jsb_Config(SB_CARBON_)%jsb_allocation) THEN
+          CALL calc_sb_treeheight(JSBACH_LctNumber, options%dtime, &
+                                  LAI_old(ic), LAI(ic), MaxLAI_param, VegHeight, &
+                                  f_lai(ic), df_lai, tree_height(ic), dheight)
+        END IF
       END DO
     !$ACC END PARALLEL LOOP
 
@@ -589,6 +617,11 @@ CONTAINS
           & growth_phase_EG(ic),            & ! inout
           & lai(ic)                         & ! inout
           & )
+        IF (dsl4jsb_Config(SB_CARBON_)%jsb_allocation) THEN
+          CALL calc_sb_treeheight(JSBACH_LctNumber, options%dtime, &
+                                  LAI_old(ic), LAI(ic), MaxLAI_param, VegHeight, &
+                                  f_lai(ic), df_lai, tree_height(ic), dheight)
+        END IF
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -616,7 +649,6 @@ CONTAINS
           & growth_phase_CRP(ic),             & ! inout
           & lai(ic)                           & ! inout
           & )
-
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -634,7 +666,11 @@ CONTAINS
           & previous_day_NPP_pot_rate_ca(ic), & ! in
           & lai(ic)                           & ! inout
           & )
-
+        IF (dsl4jsb_Config(SB_CARBON_)%jsb_allocation) THEN
+          CALL calc_sb_treeheight(JSBACH_LctNumber, options%dtime, &
+                                  LAI_old(ic), LAI(ic), MaxLAI_param, VegHeight, &
+                                  f_lai(ic), df_lai, tree_height(ic), dheight)
+        END IF
       END DO
       !$ACC END PARALLEL LOOP
     END IF
