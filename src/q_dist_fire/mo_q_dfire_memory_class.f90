@@ -615,7 +615,7 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('Optimum reaction velocity', mem%opt_react_velo, &
+    CALL mem%Add_var('optimum_reaction_velocity', mem%opt_react_velo, &
         & hgrid, vgrid_surface, &
         & t_cf('opt_react_velo', 'min−1', 'Optimum reaction velocity'), &
         & t_grib1(table, 255, grib_bits), &
@@ -626,7 +626,7 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('Net fuel load', mem%net_fuel_load, &
+    CALL mem%Add_var('net_fuel_load', mem%net_fuel_load, &
         & hgrid, vgrid_surface, &
         & t_cf('net_fuel_load', 'kg m-2', 'Amount of fuel after after substraction of its mineral content'), &
         & t_grib1(table, 255, grib_bits), &
@@ -637,7 +637,7 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('Moisture dampening coefficient', mem%moist_damp_coeff, &
+    CALL mem%Add_var('Moisture_dampening_coefficient', mem%moist_damp_coeff, &
         & hgrid, vgrid_surface, &
         & t_cf('moist_damp_coeff', '-', 'Moisture-dampening coefficient'), &
         & t_grib1(table, 255, grib_bits), &
@@ -648,7 +648,7 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('Mineral-dampening coefficient', mem%mineral_damp_coeff, &
+    CALL mem%Add_var('Mineral_dampening_coefficient', mem%mineral_damp_coeff, &
         & hgrid, vgrid_surface, &
         & t_cf('mineral_damp_coeff', '-', 'Mineral-dampening coefficient'), &
         & t_grib1(table, 255, grib_bits), &
