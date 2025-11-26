@@ -463,13 +463,9 @@ CONTAINS
     ! IQ
     grid_cell_area => grid % area(ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
-    IF(are_all_pfts_wave) THEN ! Fuel.f90 to spitfire.f90 weighting average using all PFTs
-      pot_burn_area = grid_cell_area ! * tile_fract is ignored because WA accounts for all, including bare soil
-      burnable_area_ha = 1._wp
-    ELSE ! Weighting average only using tree and grass PFTs
-      pot_burn_area = grid_cell_area * (grass_fract + forest_fract)
-      burnable_area_ha = sf_convert_units("m2", "ha", pot_burn_area)
-    ENDIF
+    dfire_pm_id = dsl4jsb_Config(Q_DFIRE_)%dfire_precip_method_id
+    pot_burn_area = grid_cell_area * (grass_fract + forest_fract)
+    burnable_area_ha = sf_convert_units("m2", "ha", pot_burn_area)
     mask_is_tile_enabled = (tile_fract > 0._wp)
 #endif
 
