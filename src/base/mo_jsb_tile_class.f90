@@ -1118,7 +1118,13 @@ CONTAINS
       &  'This should never happen!')
 
     IF (PRESENT(mask)) THEN
-      ALLOCATE(mask_use_child, source=mask)
+      IF (SIZE(mask) == no_children) THEN ! expected usecase when using a mask
+        ALLOCATE(mask_use_child, source=mask)
+      ELSE ! when mask does not match no_children, ignore given mask and enable all childs.
+           ! tile hierarchy is not at vegetation but at another level
+        ALLOCATE(mask_use_child(no_children))
+        mask_use_child =  .TRUE.
+      ENDIF
     ELSE
       ALLOCATE(mask_use_child(no_children))
       mask_use_child=.TRUE.
