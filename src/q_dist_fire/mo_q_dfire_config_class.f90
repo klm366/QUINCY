@@ -244,12 +244,12 @@ CONTAINS
     tree_diameter_factor     = 1._wp
     dead_fuel_factor         = 1.0_wp
     live_fuel_factor         = 1.0_wp
-    ! PFTS: Tree,Tree,Tree,Tree,Tree,Tree,Grass,Grass,Pasture,Pasture,Crops,Crops,Bare-soil
-    burnable_pfts            = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., &
+    ! 13 PFTS: Tree,Tree,Tree,Tree,Tree,Tree,Grass,Grass,Pasture,Pasture,Crops,Crops,Bare-soil
+    burnable_pfts            = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! Tree and grass PFTs
                                 .FALSE., .FALSE., .FALSE., .FALSE., .FALSE.]
-    burnable_grass_pfts      = [.FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .TRUE.,  .TRUE.,  .FALSE.,&
-                                .FALSE., .FALSE., .FALSE., .FALSE.]
-    burnable_tree_pfts       = [.TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .FALSE., .FALSE., .FALSE.,&
+    burnable_grass_pfts      = [.FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .TRUE.,  .TRUE.,  .FALSE.,& ! grass only PFTs
+                                .FALSE., .FALSE., .FALSE., .FALSE.] 
+    burnable_tree_pfts       = [.TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .FALSE., .FALSE., .FALSE.,& ! tree only PFTs
                                 .FALSE., .FALSE., .FALSE., .FALSE.]
 
     ! ----------------------------------------------------------------------------------------------------- !
