@@ -463,7 +463,6 @@ CONTAINS
     ! IQ
     grid_cell_area => grid % area(ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
-    dfire_pm_id = dsl4jsb_Config(Q_DFIRE_)%dfire_precip_method_id
     pot_burn_area = grid_cell_area * (grass_fract + forest_fract)
     burnable_area_ha = sf_convert_units("m2", "ha", pot_burn_area)
     mask_is_tile_enabled = (tile_fract > 0._wp)
