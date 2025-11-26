@@ -212,6 +212,8 @@ CONTAINS
   !> Implementation of "aggregate": dfire_fuel task
   !>
   SUBROUTINE aggr_q_dfire_post(tile, options)
+    dsl4jsb_Use_config(Q_DFIRE_)
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
@@ -220,6 +222,7 @@ CONTAINS
     INTEGER                                   :: iblk, ics, ice, nc
     CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(Q_DFIRE_)
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -232,59 +235,91 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(Q_DFIRE_)
     dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go aggregate
     ! ----------------------------------------------------------------------------------------------------- !
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_fuel_1hr_lfp   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_fuel_10hr_lfp   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_fuel_100hr_lfp   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_fuel_1000hr_lfp   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, forest_fract   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, grass_fract   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, fuel_bulk_density   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, moisture_extinction   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, fwd_wind_factor   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, dead_fuel_1hr_dfp   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, dead_fuel_10hr_dfp   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, dead_fuel_100hr_dfp   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, dead_fuel_1000hr_dfp   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp   , weighted_by_fract)
-!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp   , weighted_by_fract)
+#ifndef __QUINCY_STANDALONE__
+    IF (dsl4jsb_Config(Q_DFIRE_)%flag_wa_custom) THEN ! only account for custom pfts (e.g tree and grass), 
+                                                      ! WA is done over this PFTs
+!      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp  , weighted_by_fract, burnable_grass_pfts)
+!      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp   , weighted_by_fract, burnable_tree_pfts)
+!      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp  , weighted_by_fract, burnable_tree_pfts)
+!      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp , weighted_by_fract, burnable_tree_pfts)
+!      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp, weighted_by_fract, burnable_tree_pfts)
 
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, veg_fire_litterfall_total_els , weighted_by_fract, burnable_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, veg_fire_emissions_total_els  , weighted_by_fract, burnable_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, sb_fire_emissions_total_els   , weighted_by_fract, burnable_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, sb_fire_litter_ash_total_els  , weighted_by_fract, burnable_pfts)
 
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, veg_fire_litterfall_total_els , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, veg_fire_emissions_total_els , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, sb_fire_emissions_total_els , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, sb_fire_litter_ash_total_els , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, pm_fire        , weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, pm_fire_output , weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, pm_prop_ck     , weighted_by_fract, burnable_tree_pfts)
 
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, pm_fire      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, pm_fire_output , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, pm_prop_ck   , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, pm_tau,    weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, tau_l,     weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, tau_c,     weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, bark_thickness, weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, DBH_diag,  weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, par1_diag, weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, par2_diag, weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, ck, weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, r_ck, weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, ck_p, weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, scorch_height, weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, F_scorch_height, weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, crown_length, weighted_by_fract, burnable_tree_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, tree_height, weighted_by_fract, burnable_tree_pfts)
 
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, pm_tau, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, tau_l, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, tau_c, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, bark_thickness, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, DBH_diag, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, par1_diag, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, par2_diag, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, ck, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, r_ck, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, ck_p, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, scorch_height, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, F_scorch_height, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, crown_length, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, tree_height, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, fuel_consumption_els, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, emissions_spc, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, emissions_els, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, residue_els, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, overflow_els, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, fuel_consumption_els, weighted_by_fract, burnable_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, emissions_spc, weighted_by_fract, burnable_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, emissions_els, weighted_by_fract, burnable_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, residue_els, weighted_by_fract, burnable_pfts)
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, overflow_els, weighted_by_fract, burnable_pfts)
+    ELSE
+#endif
+!      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp    , weighted_by_fract)
+!      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp     , weighted_by_fract)
+!      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp    , weighted_by_fract)
+!      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp   , weighted_by_fract)
+!      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp  , weighted_by_fract)
+
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, veg_fire_litterfall_total_els , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, veg_fire_emissions_total_els , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, sb_fire_emissions_total_els , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, sb_fire_litter_ash_total_els , weighted_by_fract)
+
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, pm_fire      , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, pm_fire_output , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, pm_prop_ck   , weighted_by_fract)
+
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, pm_tau, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, tau_l, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, tau_c, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, bark_thickness, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, DBH_diag, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, par1_diag, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, par2_diag, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, ck, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, r_ck, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, ck_p, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, scorch_height, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, F_scorch_height, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, crown_length, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, tree_height, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, fuel_consumption_els, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, emissions_spc, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, emissions_els, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, residue_els, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, overflow_els, weighted_by_fract)
+
+#ifndef __QUINCY_STANDALONE__
+    ENDIF
+#endif
+
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggr_q_dfire_post
