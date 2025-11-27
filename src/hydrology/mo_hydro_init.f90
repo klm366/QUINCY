@@ -1113,7 +1113,13 @@ CONTAINS
         CALL read_bc_data(input_file, 'wilting_point', tile%name, l_organic, hydro_init_vars%vol_p_wilt, default=0._wp)
 
         !>     - Volumetric residual water content
-        CALL read_bc_data(input_file, 'residual_water', tile%name, l_organic, hydro_init_vars%vol_wres, default=0._wp)
+        IF (input_file%Has_var('residual_water')) THEN
+          CALL read_bc_data(input_file, 'residual_water', tile%name, l_organic, hydro_init_vars%vol_wres, default=0._wp)
+        ELSE
+          WRITE (message_text,*) 'BC File does not contain data on residual water content. Will use approximation instead!'
+          CALL message (TRIM(routine), message_text)
+          hydro_init_vars%vol_wres = hydro_init_vars%vol_porosity * 0.2_wp
+        END IF
 
         !>     - Soil matric potential
         CALL read_bc_data(input_file, 'moisture_pot', tile%name, l_organic, hydro_init_vars%matric_pot, default=-0.2_wp)
