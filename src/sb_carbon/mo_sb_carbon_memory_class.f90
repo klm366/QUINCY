@@ -61,6 +61,7 @@ MODULE mo_sb_carbon_memory_class
       ! df_lai,                 & ! change of lai indicator
 
 
+
     TYPE(t_jsb_var_real2d) ::     &
       litterfall_leaf,                 & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
                                     ! .. of vegetation [mol(C)/m^2(canopy)]
