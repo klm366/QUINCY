@@ -44,7 +44,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_spq_memory_class,     ONLY: t_spq_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
   USE mo_sb_memory_class,      ONLY: t_sb_memory
-  USE mo_sb_carbon_memory_class,  ONLY: t_sb_carbon_memory  
+  USE mo_sb_carbon_memory_class,  ONLY: t_sb_carbon_memory
 #endif
 
   USE mo_rad_interface,        ONLY: Register_rad_tasks
@@ -97,7 +97,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_q_sb_interface,        ONLY: Register_sb_tasks_quincy
   USE mo_sb_config_class,       ONLY: t_sb_config
   USE mo_sb_carbon_interface,   ONLY: Register_sb_carbon_tasks
-  USE mo_sb_carbon_config_class, ONLY: t_sb_carbon_config  
+  USE mo_sb_carbon_config_class, ONLY: t_sb_carbon_config
   USE mo_q_spq_interface,       ONLY: Register_spq_tasks_quincy
   USE mo_spq_config_class,      ONLY: t_spq_config
 #endif
@@ -219,7 +219,7 @@ CONTAINS
       ALLOCATE(t_sb_config::return_ptr%config)
     CASE (SB_CARBON_)
       CALL Register_sb_carbon_tasks(return_ptr, model_id)
-      ALLOCATE(t_sb_carbon_config::return_ptr%config)      
+      ALLOCATE(t_sb_carbon_config::return_ptr%config)
     CASE (SPQ_)
       CALL Register_spq_tasks_quincy(return_ptr, model_id)
       ALLOCATE(t_spq_config::return_ptr%config)
@@ -345,7 +345,7 @@ CONTAINS
       return_ptr%max_no_of_vars = max_no_of_sb_vars
     CASE (SB_CARBON_)
       ALLOCATE(t_sb_carbon_memory::return_ptr)
-      return_ptr%max_no_of_vars = max_no_of_sb_carbon_vars      
+      return_ptr%max_no_of_vars = max_no_of_sb_carbon_vars
     CASE (SPQ_)
       ALLOCATE(t_spq_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_spq_vars

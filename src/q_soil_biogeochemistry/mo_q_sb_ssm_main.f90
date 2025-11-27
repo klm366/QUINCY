@@ -51,15 +51,17 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_
+    USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_, SB_CARBON_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_veg_constants,         ONLY: ITREE
     USE mo_q_sb_jsm_transport,    ONLY: calc_bioturbation_rate
     USE mo_q_sb_litter_processes, ONLY: calc_litter_partitioning
+    USE mo_sb_carbon_process,     ONLY: convert_jsb_lct_to_quincy
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(SB_CARBON_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
@@ -95,8 +97,13 @@ CONTAINS
                                              k_desorpt_po4_act, &
                                              km_dip_biochem_po4_act, &
                                              qmax_po4_mineral_act
+    REAL(wp), ALLOCATABLE, DIMENSION(:)   :: unit_uptake_n_pot_dummy, &
+                                             unit_uptake_p_pot_dummy
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: root_fraction_sl_dummy
     REAL(wp)                              :: dtime
+    REAL(wp)                              :: lctlib_vmax_uptake_n, lctlib_vmax_uptake_p, lctlib_tau_mycorrhiza, lctlib_sla
     INTEGER                               :: iblk, ics, ice, nc             !< dimensions
+    INTEGER                               :: lctlib_growthform, JSBACH_LctNumber, QUINCY_LctNumber
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_simple_model'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -114,11 +121,18 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! VEG_ 2D
-    dsl4jsb_Real2D_onChunk :: unit_uptake_n_pot
-    dsl4jsb_Real2D_onChunk :: unit_uptake_p_pot
-    ! VEG_ 3D
-    dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    IF (tile%Has_process_memory(SB_CARBON_)) THEN
+      dsl4jsb_Def_memory(SB_CARBON_)
+      ! SB_CARBON_ 3D
+      dsl4jsb_Real3D_onChunk :: root_fraction_sl_fixed
+      dsl4jsb_Real3D_onChunk :: fineroot_carbon_sl_fixed
+    ELSE
+      ! VEG_ 2D
+      dsl4jsb_Real2D_onChunk :: unit_uptake_n_pot
+      dsl4jsb_Real2D_onChunk :: unit_uptake_p_pot
+      ! VEG_ 3D
+      dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    END IF
     ! A2L_ 2D
     dsl4jsb_Real2D_onChunk :: p_deposition
     ! HYDRO_ 2D
@@ -270,6 +284,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(SB_CARBON_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
@@ -295,6 +310,9 @@ CONTAINS
     ALLOCATE(k_desorpt_po4_act(nc, nsoil_w))
     ALLOCATE(km_dip_biochem_po4_act(nc, nsoil_w))
     ALLOCATE(qmax_po4_mineral_act(nc, nsoil_w))
+    ALLOCATE(unit_uptake_n_pot_dummy(nc))
+    ALLOCATE(unit_uptake_p_pot_dummy(nc))
+    ALLOCATE(root_fraction_sl_dummy(nc, nsoil_w))                               
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -307,11 +325,18 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
-    ! VEG_ 2D
-    dsl4jsb_Get_var2D_onChunk(VEG_,      unit_uptake_n_pot)
-    dsl4jsb_Get_var2D_onChunk(VEG_,      unit_uptake_p_pot)
-    ! VEG_ 3D
-    dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)
+    IF (tile%Has_process_memory(SB_CARBON_)) THEN
+      dsl4jsb_Get_memory(SB_CARBON_)
+      ! SB_CARBON_ 3D
+      dsl4jsb_Get_var3D_onChunk(SB_CARBON_,  root_fraction_sl_fixed)
+      dsl4jsb_Get_var3D_onChunk(SB_CARBON_,  fineroot_carbon_sl_fixed)
+    ELSE
+      ! VEG_ 2D
+      dsl4jsb_Get_var2D_onChunk(VEG_,   unit_uptake_n_pot)                !
+      dsl4jsb_Get_var2D_onChunk(VEG_,   unit_uptake_p_pot)                !
+      ! VEG_ 3D
+      dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)             ! in
+    END IF
     ! HYDRO_ 2D
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    num_sl_above_bedrock)        ! in
     ! HYDRO_ 3D
@@ -443,7 +468,35 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation_n15)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       vmax_weath_mineral_sl)
     ! ----------------------------------------------------------------------------------------------------- !
-
+    !> initialize dummy variables
+    IF (tile%Has_process_memory(SB_CARBON_)) THEN
+      unit_uptake_n_pot_dummy(:) = 0._wp
+      unit_uptake_p_pot_dummy(:) = 0._wp
+      root_fraction_sl_dummy(:,:)  = root_fraction_sl_fixed(:,:)
+      
+      fine_root_carbon_sl(:,:)     = fineroot_carbon_sl_fixed(:,:)
+      JSBACH_LctNumber             = dsl4jsb_Lctlib_param(LctNumber)
+      CALL convert_jsb_lct_to_quincy(JSBACH_LctNumber, QUINCY_LctNumber, &
+                                     lctlib_vmax_uptake_n = lctlib_vmax_uptake_n, &
+                                     lctlib_vmax_uptake_p = lctlib_vmax_uptake_p, &
+                                     lctlib_tau_mycorrhiza = lctlib_tau_mycorrhiza, & 
+                                     lctlib_sla = lctlib_sla, &
+                                     lctlib_growthform = lctlib_growthform)
+      
+    ELSE
+      unit_uptake_n_pot_dummy(:) = unit_uptake_n_pot(:)
+      unit_uptake_p_pot_dummy(:) = unit_uptake_p_pot(:)
+      root_fraction_sl_dummy(:,:)  = root_fraction_sl(:,:)
+      
+      ! calculate the fine root C of each soil layer, fine_root_carbon_sl [mol C m-3]
+      DO isoil = 1,nsoil_w
+        WHERE(soil_depth_sl(:,isoil) > eps8)
+          fine_root_carbon_sl(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool_mt(ix_fine_root, ixC, :)
+        ELSEWHERE
+          fine_root_carbon_sl(:,isoil) = 0.0_wp
+        ENDWHERE
+      ENDDO
+    END IF
     !>1.0 provide soil profile values
     !>  calculate local variables
     !>
@@ -496,8 +549,8 @@ CONTAINS
       & nsoil_w, &
       & dtime, &
       & num_sl_above_bedrock(:), &
-      & lctlib%vmax_uptake_n, &
-      & lctlib%vmax_uptake_p, &
+      & lctlib_vmax_uptake_n, &
+      & lctlib_vmax_uptake_p, &
       & dsl4jsb_Config(SB_)%flag_mycorrhiza, &
       & soil_depth_sl(:,:), &
       & veg_pool_mt(ix_fine_root, ixC, :), &
@@ -517,8 +570,8 @@ CONTAINS
       & plant_uptake_nh4_sl(:,:), &               ! out
       & plant_uptake_no3_sl(:,:), &
       & plant_uptake_po4_sl(:,:), &
-      & unit_uptake_n_pot(:), &
-      & unit_uptake_p_pot(:) )                    ! out
+      & unit_uptake_n_pot_dummy(:), &
+      & unit_uptake_p_pot_dummy(:) )                    ! out
 
     !>  2.2 Potential mycorrhiza nutrient uptake rates
     !>
@@ -527,8 +580,8 @@ CONTAINS
         & nc, &                                     ! in
         & nsoil_w, &
         & dtime, &
-        & lctlib%vmax_uptake_n, &
-        & lctlib%vmax_uptake_p, &
+        & lctlib_vmax_uptake_n, &
+        & lctlib_vmax_uptake_p, &
         & soil_depth_sl(:,:), &
         & veg_pool_mt(ix_fine_root, ixC, :), &
         & sb_pool_mt(ix_mycorrhiza, ixC, :, :), &
@@ -674,14 +727,6 @@ CONTAINS
 
     !>  2.6 Calculate the potential PO4 flux rate: biomineralisation, weathering, slow sorption, occlusion
     !>
-    ! calculate the fine root C of each soil layer, fine_root_carbon_sl [mol C m-3]
-    DO isoil = 1,nsoil_w
-      WHERE(soil_depth_sl(:,isoil) > eps8)
-        fine_root_carbon_sl(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool_mt(ix_fine_root, ixC, :)
-      ELSEWHERE
-        fine_root_carbon_sl(:,isoil) = 0.0_wp
-      ENDWHERE
-    ENDDO
     ! calculate the potential PO4 flux rate
     CALL calc_potential_p_flux_rate( &
       & nc, &                                         ! in
@@ -854,7 +899,7 @@ CONTAINS
     !>  3.6 formation of metabolic and strucutral litter by woody liter decay and
     !>     associated respiration, net mineralisation fluxes
     !>
-    IF (lctlib%growthform == ITREE) THEN
+    IF (lctlib_growthform == ITREE) THEN
       CALL calc_litter_formation_from_woody_decay( &
         & nc, &                               ! in
         & nsoil_w, &
@@ -877,7 +922,7 @@ CONTAINS
       & soil_depth_sl(:,:), &
       & model%config%elements_index_map(:), &
       & model%config%is_element_used(:), &
-      & lctlib%tau_mycorrhiza, &
+      & lctlib_tau_mycorrhiza, &
       & dsl4jsb_Config(SB_)%flag_mycorrhiza_org, &
       & nh4_solute(:,:), &
       & no3_solute(:,:), &
@@ -909,8 +954,8 @@ CONTAINS
       & nc, &                                         ! in
       & nsoil_w, &
       & num_sl_above_bedrock(:), &
-      & lctlib%sla, &
-      & lctlib%growthform, &
+      & lctlib_sla, &
+      & lctlib_growthform, &
       & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
       & soil_depth_sl(:,:), &
       & root_fraction_sl(:,:), &
@@ -1052,7 +1097,13 @@ CONTAINS
     DEALLOCATE(k_desorpt_po4_act)
     DEALLOCATE(km_dip_biochem_po4_act)
     DEALLOCATE(qmax_po4_mineral_act)
-
+    IF (.NOT. tile%Has_process_memory(SB_CARBON_)) THEN
+      unit_uptake_n_pot(:) = unit_uptake_n_pot_dummy(:)
+      unit_uptake_p_pot(:) = unit_uptake_p_pot_dummy(:)
+    END IF
+    DEALLOCATE(unit_uptake_n_pot_dummy)
+    DEALLOCATE(unit_uptake_p_pot_dummy)
+    DEALLOCATE(root_fraction_sl_dummy)
   END SUBROUTINE update_sb_simple_model
 
   ! ======================================================================================================= !

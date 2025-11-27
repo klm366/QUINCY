@@ -59,7 +59,7 @@ CONTAINS
     USE mo_quincy_model_config,    ONLY: QLAND, QSOIL
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
-    USE mo_jsb_process_class,      ONLY: A2L_, SEB_, TURB_, HYDRO_, HYDRO_, VEG_, SSE_, Q_ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,      ONLY: A2L_, SEB_, TURB_, HYDRO_, VEG_, SSE_, Q_ASSIMI_, Q_PHENO_, SB_, SB_CARBON_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_jsb_math_constants,     ONLY: eps1, eps8
@@ -136,15 +136,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: noy_n15_deposition
     dsl4jsb_Real2D_onChunk :: p_deposition
     dsl4jsb_Real2D_onChunk :: slow_sb_pool_accelerator_execute
-    ! VEG_ 2D
-    dsl4jsb_Real2D_onChunk :: f_n_demand
-    dsl4jsb_Real2D_onChunk :: f_p_demand
-    dsl4jsb_Real2D_onChunk :: net_biosphere_production
-    dsl4jsb_Real2D_onChunk :: net_biosphere_production_c13
-    dsl4jsb_Real2D_onChunk :: net_biosphere_production_c14
-    dsl4jsb_Real2D_onChunk :: biological_n_fixation
-    ! VEG_ 3D
-    dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    IF (.NOT. tile%Has_process_memory(SB_CARBON_)) THEN
+      ! VEG_ 2D
+      dsl4jsb_Real2D_onChunk :: f_n_demand
+      dsl4jsb_Real2D_onChunk :: f_p_demand
+      dsl4jsb_Real2D_onChunk :: net_biosphere_production
+      dsl4jsb_Real2D_onChunk :: net_biosphere_production_c13
+      dsl4jsb_Real2D_onChunk :: net_biosphere_production_c14
+      dsl4jsb_Real2D_onChunk :: biological_n_fixation
+      ! VEG_ 3D
+      dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    END IF
     ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     ! HYDRO_ 3D
@@ -421,15 +423,17 @@ CONTAINS
     IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
       dsl4jsb_Get_var2D_onChunk(A2L_,      slow_sb_pool_accelerator_execute)  !in
     ENDIF
-    ! VEG_ 2D
-    dsl4jsb_Get_var2D_onChunk(VEG_,   f_n_demand)                     ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_,   f_p_demand)                     ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production)       ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production_c13)   ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production_c14)   ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_,   biological_n_fixation)          ! out
-    ! VEG_ 3D
-    dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)               ! in
+    IF (.NOT. tile%Has_process_memory(SB_CARBON_)) THEN
+      ! VEG_ 2D
+      dsl4jsb_Get_var2D_onChunk(VEG_,   f_n_demand)                     ! in
+      dsl4jsb_Get_var2D_onChunk(VEG_,   f_p_demand)                     ! in
+      dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production)       ! inout
+      dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production_c13)   ! inout
+      dsl4jsb_Get_var2D_onChunk(VEG_,   net_biosphere_production_c14)   ! inout
+      dsl4jsb_Get_var2D_onChunk(VEG_,   biological_n_fixation)          ! out
+      ! VEG_ 3D
+      dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)               ! in
+    END IF
     ! HYDRO_ 2D
     dsl4jsb_Get_var2D_onChunk(HYDRO_,   num_sl_above_bedrock)         ! in
     ! HYDRO_ 3D
@@ -640,16 +644,18 @@ CONTAINS
 
     !> 1.0 correct the plant uptake of nh4, no3 and po4 for soil model
     !>
-    IF (model%config%qmodel_id == QSOIL) THEN
-      DO ic = 1,nc
-        DO is = 1, NINT(num_sl_above_bedrock(ic))
-          plant_uptake_nh4_sl(ic, is)     = plant_uptake_nh4_sl(ic, is)     * f_n_demand(ic)
-          plant_uptake_nh4_n15_sl(ic, is) = plant_uptake_nh4_n15_sl(ic, is) * f_n_demand(ic)
-          plant_uptake_no3_sl(ic, is)     = plant_uptake_no3_sl(ic, is)     * f_n_demand(ic)
-          plant_uptake_no3_n15_sl(ic, is) = plant_uptake_no3_n15_sl(ic, is) * f_n_demand(ic)
-          plant_uptake_po4_sl(ic, is)     = plant_uptake_po4_sl(ic, is)     * f_p_demand(ic)
+    IF (.NOT. tile%Has_process_memory(SB_CARBON_)) THEN
+      IF (model%config%qmodel_id == QSOIL) THEN
+        DO ic = 1,nc
+          DO is = 1, NINT(num_sl_above_bedrock(ic))
+            plant_uptake_nh4_sl(ic, is)     = plant_uptake_nh4_sl(ic, is)     * f_n_demand(ic)
+            plant_uptake_nh4_n15_sl(ic, is) = plant_uptake_nh4_n15_sl(ic, is) * f_n_demand(ic)
+            plant_uptake_no3_sl(ic, is)     = plant_uptake_no3_sl(ic, is)     * f_n_demand(ic)
+            plant_uptake_no3_n15_sl(ic, is) = plant_uptake_no3_n15_sl(ic, is) * f_n_demand(ic)
+            plant_uptake_po4_sl(ic, is)     = plant_uptake_po4_sl(ic, is)     * f_p_demand(ic)
+          END DO
         END DO
-      END DO
+      END IF
     END IF
 
     !> 2.0 infrastructure for mass balance checks
@@ -681,50 +687,51 @@ CONTAINS
 
     !> 4.0 update mycorrhiza with flux due to exudation from vegetation and N uptake from soil AND correct flux due to export to plants
     !!
-    f_myc_sl(:,:) = root_fraction_sl(:,:)
+    IF (.NOT. tile%Has_process_memory(SB_CARBON_)) THEN
+      f_myc_sl(:,:) = root_fraction_sl(:,:)
 
-    DO ic = 1,nc
-      DO is = 1, NINT(num_sl_above_bedrock(ic))
-        sb_formation_mt(ix_mycorrhiza, ixC, ic, is) = sb_formation_mt(ix_mycorrhiza, ixC, ic, is) &
-          & + f_myc_sl(ic, is) * mycorrhiza_cue * veg_exudation_mt(ixC, ic) / soil_depth_sl(ic, is)
+      DO ic = 1,nc
+        DO is = 1, NINT(num_sl_above_bedrock(ic))
+          sb_formation_mt(ix_mycorrhiza, ixC, ic, is) = sb_formation_mt(ix_mycorrhiza, ixC, ic, is) &
+            & + f_myc_sl(ic, is) * mycorrhiza_cue * veg_exudation_mt(ixC, ic) / soil_depth_sl(ic, is)
 
-        sb_formation_mt(ix_mycorrhiza, ixN, ic, is) = sb_formation_mt(ix_mycorrhiza, ixN, ic, is) &
-          & + f_myc_sl(ic, is) * veg_exudation_mt(ixN, ic) / soil_depth_sl(ic, is)                   &
-          & + (mycorrhiza_uptake_nh4_sl(ic, is) + mycorrhiza_uptake_no3_sl(ic, is))                 &
-          & * dtime / 1000000._wp
+          sb_formation_mt(ix_mycorrhiza, ixN, ic, is) = sb_formation_mt(ix_mycorrhiza, ixN, ic, is) &
+            & + f_myc_sl(ic, is) * veg_exudation_mt(ixN, ic) / soil_depth_sl(ic, is)                   &
+            & + (mycorrhiza_uptake_nh4_sl(ic, is) + mycorrhiza_uptake_no3_sl(ic, is))                 &
+            & * dtime / 1000000._wp
 
-        sb_formation_mt(ix_mycorrhiza, ixP, ic, is) = sb_formation_mt(ix_mycorrhiza, ixP, ic, is) &
-          & + f_myc_sl(ic, is) * veg_exudation_mt(ixP, ic) / soil_depth_sl(ic, is)                   &
-          & + mycorrhiza_uptake_po4_sl(ic, is) * dtime / 1000000._wp
+          sb_formation_mt(ix_mycorrhiza, ixP, ic, is) = sb_formation_mt(ix_mycorrhiza, ixP, ic, is) &
+            & + f_myc_sl(ic, is) * veg_exudation_mt(ixP, ic) / soil_depth_sl(ic, is)                   &
+            & + mycorrhiza_uptake_po4_sl(ic, is) * dtime / 1000000._wp
 
-        sb_formation_mt(ix_mycorrhiza, ixC13, ic, is) = sb_formation_mt(ix_mycorrhiza, ixC13, ic, is) &
-          & + f_myc_sl(ic, is) * mycorrhiza_cue * veg_exudation_mt(ixC13, ic) / soil_depth_sl(ic, is)
+          sb_formation_mt(ix_mycorrhiza, ixC13, ic, is) = sb_formation_mt(ix_mycorrhiza, ixC13, ic, is) &
+            & + f_myc_sl(ic, is) * mycorrhiza_cue * veg_exudation_mt(ixC13, ic) / soil_depth_sl(ic, is)
 
-        sb_formation_mt(ix_mycorrhiza, ixC14, ic, is) = sb_formation_mt(ix_mycorrhiza, ixC14, ic, is) &
-          & + f_myc_sl(ic, is) * mycorrhiza_cue * veg_exudation_mt(ixC14, ic) / soil_depth_sl(ic, is)
+          sb_formation_mt(ix_mycorrhiza, ixC14, ic, is) = sb_formation_mt(ix_mycorrhiza, ixC14, ic, is) &
+            & + f_myc_sl(ic, is) * mycorrhiza_cue * veg_exudation_mt(ixC14, ic) / soil_depth_sl(ic, is)
 
-        sb_formation_mt(ix_mycorrhiza, ixN15, ic, is) = sb_formation_mt(ix_mycorrhiza, ixN15, ic, is) &
-          & + f_myc_sl(ic, is) * veg_exudation_mt(ixN15, ic) / soil_depth_sl(ic, is)                     &
-          & + (mycorrhiza_uptake_nh4_n15_sl(ic, is) + mycorrhiza_uptake_no3_n15_sl(ic, is))             &
-          & * dtime / 1000000._wp
+          sb_formation_mt(ix_mycorrhiza, ixN15, ic, is) = sb_formation_mt(ix_mycorrhiza, ixN15, ic, is) &
+            & + f_myc_sl(ic, is) * veg_exudation_mt(ixN15, ic) / soil_depth_sl(ic, is)                     &
+            & + (mycorrhiza_uptake_nh4_n15_sl(ic, is) + mycorrhiza_uptake_no3_n15_sl(ic, is))             &
+            & * dtime / 1000000._wp
 
-         het_respiration(ic, is)     = het_respiration(ic, is)     + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
-          veg_exudation_mt(ixC,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
-         myc_respiration(ic, is)     = myc_respiration(ic, is)     + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
-          veg_exudation_mt(ixC,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
-         het_respiration_c13(ic, is) = het_respiration_c13(ic, is) + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
-          veg_exudation_mt(ixC13,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
-         myc_respiration_c13(ic, is) = myc_respiration_c13(ic, is) + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
-          veg_exudation_mt(ixC13,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
-         het_respiration_c14(ic, is) = het_respiration_c14(ic, is) + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
-          veg_exudation_mt(ixC14,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
-         myc_respiration_c14(ic, is) = myc_respiration_c14(ic, is) + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
-          veg_exudation_mt(ixC14,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
+           het_respiration(ic, is)     = het_respiration(ic, is)     + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
+            veg_exudation_mt(ixC,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
+           myc_respiration(ic, is)     = myc_respiration(ic, is)     + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
+            veg_exudation_mt(ixC,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
+           het_respiration_c13(ic, is) = het_respiration_c13(ic, is) + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
+            veg_exudation_mt(ixC13,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
+           myc_respiration_c13(ic, is) = myc_respiration_c13(ic, is) + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
+            veg_exudation_mt(ixC13,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
+           het_respiration_c14(ic, is) = het_respiration_c14(ic, is) + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
+            veg_exudation_mt(ixC14,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
+           myc_respiration_c14(ic, is) = myc_respiration_c14(ic, is) + f_myc_sl(ic, is) * (1._wp - mycorrhiza_cue) * &
+            veg_exudation_mt(ixC14,ic) / soil_depth_sl(ic, is) / dtime * 1000000._wp
+        ENDDO
       ENDDO
-    ENDDO
 
-    sb_loss_mt(ix_mycorrhiza,:,:,:) = sb_loss_mt(ix_mycorrhiza,:,:,:) + sb_mycorrhiza_export_mt(:,:,:)
-
+      sb_loss_mt(ix_mycorrhiza,:,:,:) = sb_loss_mt(ix_mycorrhiza,:,:,:) + sb_mycorrhiza_export_mt(:,:,:)
+    END IF
     !> 5.0 update of the organic pool: simple_1d
     !!
     !! update all components of the sb_pool applying the JSM equation for formation, loss and transport
@@ -1174,21 +1181,26 @@ CONTAINS
     total_soil_n(:,:)         = sb_pool_total_bg_soil_n(:,:) + nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:)
     total_soil_inorg_n(:,:)   = nh4_solute(:,:) + nh4_assoc(:,:) + no3_solute(:,:)
 
-    !> 14.2 across multiple processes
-    !>
-    !>   see also 'update_veg_pools()'
-    net_biosphere_production(:) = net_biosphere_production(:) &
-      &          - SUM((het_respiration(:,:) + lateral_loss_dom_carbon_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
-      &          - leaching_dom_carbon(:)
-    net_biosphere_production_c13(:) = net_biosphere_production_c13(:) &
-      &          - SUM((het_respiration_c13(:,:) + lateral_loss_dom_carbon13_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
-      &          - leaching_dom_carbon13(:)
-    net_biosphere_production_c14(:) = net_biosphere_production_c14(:) &
-      &          - SUM((het_respiration_c14(:,:) + lateral_loss_dom_carbon14_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
-      &          - leaching_dom_carbon14(:)
-    ! biological N fixation (VEG_ and SB_ processes)
-    biological_n_fixation(:)    = biological_n_fixation &
-      &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)
+    IF (tile%Has_process_memory(SB_CARBON_)) THEN
+      !> we need to calculate variables for JSBACH c balance check here
+      
+    ELSE
+      !> 14.2 across multiple processes
+      !>
+      !>   see also 'update_veg_pools()'
+      net_biosphere_production(:) = net_biosphere_production(:) &
+        &          - SUM((het_respiration(:,:) + lateral_loss_dom_carbon_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
+        &          - leaching_dom_carbon(:)
+      net_biosphere_production_c13(:) = net_biosphere_production_c13(:) &
+        &          - SUM((het_respiration_c13(:,:) + lateral_loss_dom_carbon13_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
+        &          - leaching_dom_carbon13(:)
+      net_biosphere_production_c14(:) = net_biosphere_production_c14(:) &
+        &          - SUM((het_respiration_c14(:,:) + lateral_loss_dom_carbon14_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
+        &          - leaching_dom_carbon14(:)
+      ! biological N fixation (VEG_ and SB_ processes)
+      biological_n_fixation(:)    = biological_n_fixation &
+        &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)
+    END IF
 
     !> 15.0 spin-up accelerator
     !>

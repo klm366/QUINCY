@@ -337,8 +337,8 @@ CONTAINS
          CALL model%Queue_task(SB_, "sb_rate_modifier")
          CALL model%Queue_task(SB_, "reset_sb_fluxes")
          ! allocate the npp from JSBACH to the SB_ litter pools, and run soil model from SB
-         CALL model%Queue_task(SB_CARBON_, "sb_C_npp_update") 
-         CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")       
+         CALL model%Queue_task(SB_CARBON_, "sb_C_npp_update")
+         CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")
       END IF
 #endif
       CALL model%Queue_task(TURB_,   "humidity_scaling")

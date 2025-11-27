@@ -364,7 +364,7 @@ CONTAINS
           dsl4jsb_Config(FUEL_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
         END IF
-        IF (model%Is_process_enabled(DISTURB_) .AND. (.NOT. model%Is_process_enabled(CARBON_)) & 
+        IF (model%Is_process_enabled(DISTURB_) .AND. (.NOT. model%Is_process_enabled(CARBON_)) &
           &                                    .AND. (.NOT. model%Is_process_enabled(SB_CARBON_))) THEN
           ! use the default carbon module
           dsl4jsb_Config(CARBON_)%active = .TRUE.

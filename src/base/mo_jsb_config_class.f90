@@ -37,7 +37,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_tmx
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
-    LOGICAL                        :: use_sb_carbon    
+    LOGICAL                        :: use_sb_carbon
     LOGICAL                        :: check_child_cf      !< Assert that cover fractions of children tiles sum up to the tile cf
     INTEGER                        :: enforce_water_budget!< descriptor for water balance 'ignore', 'logging', or 'error'
     CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
@@ -177,7 +177,7 @@ CONTAINS
 #ifndef __NO_QUINCY__
       force_c_isotopes, &
       include_nitrogen, &
-      include_phosphorus, &      
+      include_phosphorus, &
       include_carbon13, &
       include_carbon14, &
       include_nitrogen15, &

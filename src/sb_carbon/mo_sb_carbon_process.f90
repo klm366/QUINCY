@@ -22,7 +22,7 @@ MODULE mo_sb_carbon_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_jsb_C_litter, prep_jsb_sb_processes, get_per_tile, convert_lct_to_sla, calc_sb_treeheight
+  PUBLIC :: calc_jsb_C_litter, prep_jsb_sb_processes, convert_jsb_lct_to_quincy, convert_lct_to_sla, calc_sb_treeheight
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_carbon_process'
 
@@ -66,9 +66,9 @@ CONTAINS
     & c_heartwood,                & ! inout
     & c_coarseroot,               & ! inout
     & tree_height,                & ! inout
-    & f_lai,                      & ! inout
-    & dheight,                    & ! inout
-    & df_lai,                     & ! inout
+    ! & f_lai,                      & ! inout
+    ! & dheight,                    & ! inout
+    ! & df_lai,                     & ! inout
     !
     & NPP_flux_correction,        & ! out
     & excess_NPP,                 & ! out
@@ -157,13 +157,13 @@ CONTAINS
     REAL(wp), INTENT(out)   :: cflux_herb_2_atm
     REAL(wp), INTENT(out)   :: NPP_act               ! Actual NPP after N-limitation and excess carbon drop [mol(C)/m^2 s]
 
-    REAL(wp), INTENT(inout)   :: litterfall_leaf            ! amount of leafLitter
-    REAL(wp), INTENT(inout)   :: litterfall_fineroot   ! amount of woodyLitter
-    REAL(wp), INTENT(inout)   :: litterfall_fruit            ! amount of leafLitter
-    REAL(wp), INTENT(inout)   :: litterfall_seedbed   ! amount of woodyLitter
-    REAL(wp), INTENT(inout)   :: litterfall_sapwood            ! amount of leafLitter
-    REAL(wp), INTENT(inout)   :: litterfall_heartwood            ! amount of leafLitter
-    REAL(wp), INTENT(inout)   :: litterfall_coarseroot   ! amount of woodyLitter
+    REAL(wp), INTENT(inout)   :: litterfall_leaf        ! amount of leafLitter
+    REAL(wp), INTENT(inout)   :: litterfall_fineroot    ! amount of woodyLitter
+    REAL(wp), INTENT(inout)   :: litterfall_fruit       ! amount of leafLitter
+    REAL(wp), INTENT(inout)   :: litterfall_seedbed     ! amount of woodyLitter
+    REAL(wp), INTENT(inout)   :: litterfall_sapwood     ! amount of leafLitter
+    REAL(wp), INTENT(inout)   :: litterfall_heartwood   ! amount of leafLitter
+    REAL(wp), INTENT(inout)   :: litterfall_coarseroot  ! amount of woodyLitter
 
     !
     ! added for thonicke fire algorithm (spitfire) needed to correctly split the carbon pools into the different fuel classes
@@ -364,9 +364,9 @@ CONTAINS
       ! if (present(fract_litter_wood_new))     litter_wood_new = fract_wood_aboveGround * C_2_litter_woodPool
     ELSE
       ! QUINCY
-      litterfall_sapwood    = 0._wp
-      litterfall_heartwood  = 0._wp
-      litterfall_coarseroot = 0._wp
+      litterfall_sapwood    = lit_coarseroot_pot
+      litterfall_heartwood  = lit_sapwood_pot
+      litterfall_coarseroot = lit_heartwood_pot
       C_2_litter_woodPool = litterfall_sapwood + litterfall_heartwood + litterfall_coarseroot
     END IF
     c_woods      = c_woods -  C_2_litter_woodPool                 !! .. and then all is subtracted from the wood pool.
@@ -422,8 +422,7 @@ CONTAINS
          &                    c_green, c_woods, c_reserve, &
          &                    NPP_pot_yDayMean * sec_per_day, NPP_act, &
          &                    fract_npp_2_woodPool, fract_npp_2_reservePool, &
-         &                    fract_npp_2_exudates, Max_C_content_woods, &
-         &                    LAI, max_LAI, tree_height, f_lai, dheight, df_lai， &
+         &                    fract_npp_2_exudates, Max_C_content_woods, tree_height, &
          ! &                    Cflx_NPP_2_green_pot, Cflx_NPP_2_wood_pot, Cflx_NPP_2_reserve_pot, &
          &                    c_leaf, c_fineroot, c_fruit, c_seedbed, c_sapwood, c_heartwood, c_coarseroot, & 
          &                    litterfall_leaf, litterfall_fineroot, &
@@ -447,12 +446,13 @@ CONTAINS
     cflux_herb_2_littergreen = Cflx_faeces_2_LG / sec_per_day
     
     
-
+    !! ============== litterfall for SB partition (flux from day-1 to s-1)
     litterfall_leaf       = litterfall_leaf / sec_per_day
     litterfall_fineroot   = litterfall_fineroot / sec_per_day
     litterfall_fruit      = litterfall_fruit / sec_per_day
     litterfall_seedbed    = litterfall_seedbed / sec_per_day
-    litterfall_wood       = litterfall_wood / sec_per_day
+    litterfall_sapwood    = litterfall_sapwood / sec_per_day
+    litterfall_heartwood  = litterfall_heartwood / sec_per_day
     litterfall_coarseroot = litterfall_coarseroot / sec_per_day
 
 
@@ -477,7 +477,15 @@ CONTAINS
     & sb_model_scheme, &
     & soil_depth_sl, &
     & root_fraction_sl, &
-    & leafLitter, woodLitter, &             ! in
+    & fineroot_carbon_sl, &
+    & c_fineroot, &
+    & litterfall_leaf,                              &
+    & litterfall_fineroot,                          &
+    & litterfall_fruit,                             &
+    & litterfall_seedbed,                           &
+    & litterfall_sapwood,                           &
+    & litterfall_heartwood,                         &
+    & litterfall_coarseroot,                        &
     & sb_formation_mt)
     
     
@@ -499,8 +507,15 @@ CONTAINS
     CHARACTER(len=*),                  INTENT(in)    :: sb_model_scheme           !< config option: soil model
     REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: soil_depth_sl             !< soil layer thickness
     REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: root_fraction_sl          !< root fraction per soil layer
-    REAL(wp), DIMENSION(nc),           INTENT(in)    :: leafLitter                !< jsb flux: vegetation leaf litterfall [mol C/m2 /s]
-    REAL(wp), DIMENSION(nc),           INTENT(in)    :: woodLitter                !< jsb flux: vegetation wood litterfall [mol C/m2 /s]   
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: fineroot_carbon_sl        !< fineroot carbon per soil layer
+    REAL(wp), DIMENSION(nc),           INTENT(inout) :: c_fineroot                !< fineroot carbon [mol C/m2]
+    REAL(wp), DIMENSION(nc),           INTENT(inout) :: litterfall_leaf                !< jsb flux: vegetation leaf litterfall [mol C/m2 /s]
+    REAL(wp), DIMENSION(nc),           INTENT(inout) :: litterfall_fineroot                !< jsb flux: vegetation wood litterfall [mol C/m2 /s]
+    REAL(wp), DIMENSION(nc),           INTENT(inout) :: litterfall_fruit                !< jsb flux: vegetation leaf litterfall [mol C/m2 /s]
+    REAL(wp), DIMENSION(nc),           INTENT(inout) :: litterfall_seedbed                !< jsb flux: vegetation wood litterfall [mol C/m2 /s] 
+    REAL(wp), DIMENSION(nc),           INTENT(inout) :: litterfall_sapwood                !< jsb flux: vegetation leaf litterfall [mol C/m2 /s]
+    REAL(wp), DIMENSION(nc),           INTENT(inout) :: litterfall_heartwood                !< jsb flux: vegetation wood litterfall [mol C/m2 /s]
+    REAL(wp), DIMENSION(nc),           INTENT(inout) :: litterfall_coarseroot                !< jsb flux: vegetation wood litterfall [mol C/m2 /s]
     REAL(wp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)  !< bgcm flux: soil biogeochemistry formation flux [mol C/m3/ dt]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp), DIMENSION(nc) :: fc_soluable_leaf           !< fc: ...
@@ -524,8 +539,9 @@ CONTAINS
     REAL(wp), DIMENSION(nc) :: fp_soluable_seed_bed
     REAL(wp), DIMENSION(nc) :: fp_soluable_labile
     REAL(wp), DIMENSION(nc) :: fp_soluable_reserve
-    REAL(wp), DIMENSION(nc) :: litterfall_leaf, litterfall_fruit, litterfall_seedbed, litterfall_fineroot, &
-                               litterfall_wood, litterfall_coarseroot  
+    REAL(wp), DIMENSION(nc) :: litterfall_wood
+                               ! litterfall_leaf, litterfall_fruit, litterfall_seedbed, litterfall_fineroot, &
+                               ! litterfall_wood, litterfall_coarseroot  
     REAL(wp),               :: leaf_litter_cn, fineroot_litter_cn, coarseroot_litter_cn, &
                                leaf_litter_np, fineroot_litter_np, coarseroot_litter_np
     INTEGER                 :: ic, is                     !< loop over dimensions
@@ -551,6 +567,7 @@ CONTAINS
     fp_soluable_coarse_root = 0.0_wp
     fp_soluable_fruit       = 0.0_wp
     fp_soluable_seed_bed    = 0.0_wp
+    
     !> litter cn ratio
     !> leaf and wood recycle nutrient before litterfall
     !> fruit and seed bed have the same cn as fresh leaf
@@ -566,9 +583,25 @@ CONTAINS
 
     !>1.0 convert unit of jsb leaf and woody litter [mol/s] to SB flux [mol/dtime]
     ! 
-    litterfall_leaf = leafLitter * dtime
-    litterfall_wood = woodLitter * dtime
-
+    litterfall_leaf       = litterfall_leaf * dtime
+    litterfall_fineroot   = litterfall_fineroot * dtime
+    litterfall_fruit      = litterfall_fruit * dtime
+    litterfall_seedbed    = litterfall_seedbed * dtime
+    litterfall_sapwood    = litterfall_sapwood * dtime
+    litterfall_heartwood  = litterfall_heartwood * dtime
+    litterfall_coarseroot = litterfall_coarseroot * dtime
+    
+    litterfall_wood = litterfall_sapwood + litterfall_heartwood
+    
+    !>1.1 calculate fineroot_carbon_sl
+    ! calculate the fine root C of each soil layer, fine_root_carbon_sl [mol C m-3]
+    DO isoil = 1,nsoil_w
+      WHERE(soil_depth_sl(:,isoil) > eps8)
+        fineroot_carbon_sl(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * c_fineroot
+      ELSEWHERE
+        fineroot_carbon_sl(:,isoil) = 0.0_wp
+      ENDWHERE
+    ENDDO
 
     !>2.0 determine allocation of fresh litter fall to litter pools
     !>
@@ -952,8 +985,7 @@ CONTAINS
          &                    c_green, c_woods, c_reserve, &
          &                    NPP_pot, NPP_act, &
          &                    fract_npp_2_woodPool, fract_npp_2_reservePool, &
-         &                    fract_npp_2_exudates, Max_C_content_woods, &
-         &                    LAI, max_LAI, tree_height, f_lai, dheight, df_lai, &
+         &                    fract_npp_2_exudates, Max_C_content_woods, tree_height, &
          ! &                    Cflx_NPP_2_green_pot, Cflx_NPP_2_wood_pot, Cflx_NPP_2_reserve_pot, &
          &                    c_leaf, c_fineroot, c_fruit, c_seedbed, c_sapwood, c_heartwood, c_coarseroot, &
          &                    lit_leaf, lit_fineroot, &
@@ -971,8 +1003,6 @@ CONTAINS
     REAL(wp), INTENT(in)    :: fract_npp_2_reservePool ! Fraction of NPP to be put into the optimally into the reserve pool
     REAL(wp), INTENT(in)    :: fract_npp_2_exudates    ! Fraction of NPP to be put into the optimally into the root exudates    
     REAL(wp), INTENT(in)    :: Max_C_content_woods     ! Maximum carbon content of wood pool (from lctLib)   
-    REAL(wp), INTENT(in)    :: LAI                     ! Yesterdays mean LAI
-    REAL(wp), INTENT(in)    :: max_LAI                 ! maximum LAI
     REAL(wp), INTENT(in)    :: lit_leaf       ! carbon flux to leaf and fineroot [mol(C)/m^2(canopy)/yr]
     REAL(wp), INTENT(in)    :: lit_fineroot   ! carbon flux to reserve pool [mol(C)/m^2(canopy)/yr]
     REAL(wp), INTENT(in)    :: lit_fruit      ! carbon flux to wood and coarse root [mol(C)/m^2(canopy)/yr]
@@ -1002,11 +1032,8 @@ CONTAINS
                                                      !    [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_coarseroot       ! Coarseroot carbon pool: on input last value; updated on output
                                                      !    [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: tree_height        ! tree height, [m]
-    REAL(wp), INTENT(inout) :: f_lai              ! lai index to estimate tree height
-    REAL(wp), INTENT(inout) :: dheight        ! tree height, [m]
-    REAL(wp), INTENT(inout) :: df_lai              ! lai index to estimate tree height
-
+    REAL(wp), INTENT(in)    :: tree_height        ! tree height, [m]
+    ! REAL(wp), INTENT(inout) :: f_lai              ! lai index to estimate tree height
 
 
 
@@ -1206,9 +1233,9 @@ CONTAINS
       END IF
     END IF !! NPP > 0 end  
 
-    !! ============== update tree height and f_lai ============================================
-    tree_height = tree_height + dheight
-    f_lai       = f_lai       + df_lai
+    ! !! ============== update tree height and f_lai ============================================
+    ! tree_height = tree_height + dheight
+    ! f_lai       = f_lai       + df_lai
 
     !! ============== use nitrogen from N mobile pool to satisfy (at least partly) for potential carbon fluxes ===
     ! Remarks: Nmobile_2_green + Nmobile_2_wood <= Npool_mobile
@@ -1252,10 +1279,12 @@ CONTAINS
   !
   ! find the sla value for JSBACH lctNumber
   !  
-  SUBROUTINE convert_jsb_lct_to_quincy(jsb_LctNumber, lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf, &
+  SUBROUTINE convert_jsb_lct_to_quincy(jsb_LctNumber, quincy_LctNumber, &
+                 &                     lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf, &
                  &                     lctlib_tau_leaf, lctlib_tau_fine_root, lctlib_tau_coarse_root, &
                  &                     lctlib_tau_branch, lctlib_tau_wood, lctlib_tau_fruit, lctlib_tau_seedbed, &
                  &                     lctlib_frac_sapwood_branch, lctlib_k_crtos, lctlib_k_latosa, lctlib_wood_density, & 
+                 &                     lctlib_k_root_dist, &
                  &                     lctlib_t_tree_mature, lctlib_t_lai_max, lctlib_km_lai)
   ! #  QUINCY LCT Number                            
   ! #  1: BEM:  moist broadleaved evergreen
@@ -1316,6 +1345,7 @@ CONTAINS
     REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_tau_seedbed         !< corresponding QUINCY lct tau_seed_litter
     REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_frac_sapwood_branch !< corresponding QUINCY lct frac_sapwood_branch
     REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_wood_density        !< corresponding QUINCY lct wood_density
+    REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_k_root_dist         !< corresponding QUINCY lct wood_density
 
     REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_t_tree_mature       !< JSBACH tree mature time
     REAL(wp), OPTIONAL, INTENT(out)           :: lctlib_t_lai_max           !< JSBACH lai saturation time
@@ -1410,6 +1440,12 @@ CONTAINS
         & 0.22_wp, 0.22_wp, 0.22_wp, 0.22_wp, 0.22_wp, 0.22_wp, &
         & 0.22_wp, 0.22_wp &
         /)
+    REAL(wp), PARAMETER :: q_k_root_dist_array(14) = (/ &
+        & 3.5_wp, 2.8_wp, 2.5_wp, 3.5_wp, 3.5_wp, 3.5_wp, &
+        & 5.5_wp, 5.5_wp, 5.5_wp, 5.5_wp, 5.5_wp, 5.5_wp, &
+        & 5.5_wp, 5.5_wp &
+        /)
+
     ! --------------------------------------------------------------------
     ! JSBACH LCTLIB lookup arrays
     ! Index: jsb_LctNumber = 1..21
@@ -1494,6 +1530,7 @@ CONTAINS
 
     IF (PRESENT(lctlib_frac_sapwood_branch)) lctlib_frac_sapwood_branch = q_frac_sapwood_branch_array(quincy_LctNumber)
     IF (PRESENT(lctlib_wood_density))        lctlib_wood_density        = q_wood_density_array(quincy_LctNumber)
+    IF (PRESENT(lctlib_k_root_dist))         lctlib_k_root_dist         = q_k_root_dist_array(quincy_LctNumber)
     ! --- JSBACH LCTLIB optional values -----------------------------------------
     IF (PRESENT(lctlib_t_tree_mature))       lctlib_t_tree_mature       = j_t_mature_array(jsb_LctNumber)
     IF (PRESENT(lctlib_t_lai_max))           lctlib_t_lai_max           = j_t_lai_max_array(jsb_LctNumber)

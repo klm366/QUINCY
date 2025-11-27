@@ -327,7 +327,7 @@ CONTAINS
     MaxLAI_param             = dsl4jsb_Lctlib_param(MaxLAI)
     JSBACH_LctNumber         = dsl4jsb_Lctlib_param(LctNumber)
     VegHeight                = dsl4jsb_Lctlib_param(VegHeight)
-    
+
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(SB_CARBON_)
@@ -398,7 +398,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)            ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    previous_day_NPP_pot_rate_ca) ! out
     dsl4jsb_Get_var2D_onChunk(PHENO_,    lai_ta)                 ! out
-    
+
     IF (dsl4jsb_Config(SB_CARBON)%jsb_allocation) THEN
       dsl4jsb_Get_memory(SB_CARBON_)
       dsl4jsb_Get_var2D_onChunk(SB_CARBON_,    f_lai)              ! inout

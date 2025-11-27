@@ -1283,6 +1283,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       & c_acid_bg2, c_water_bg2, c_ethanol_bg2, c_nonsoluble_bg2, &
       & c_humus_1, c_humus_2,                                     &
       & c_decomp_humus_1_sum, c_decomp_humus_2_sum, c_into_humus_1_sum, c_into_humus_2_sum, &
+      & c_leaf, c_fineroot, c_fruit, c_seedbed, c_sapwood, c_heartwood, c_coarseroot,       &
       & soil_respiration, NPP_flux_correction, NPP_pot_yDayMean, NPP_act_yDayMean,          &
       & GPP_yDayMean, root_exudates, cflux_c_green_2_herb,                                  &
       & cflux_dist_green_2_soil, cflux_dist_woods_2_soil, co2flux_fire_all_2_atm,           &
@@ -1324,6 +1325,16 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_into_humus_1_sum(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_into_humus_2_sum(:)
 
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_leaf(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_fineroot(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_fruit(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_seedbed(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_sapwood(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_heartwood(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_coarseroot(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: tree_height(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: f_lai(:)
+
     REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_dist_green_2_soil(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_dist_woods_2_soil(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: co2flux_fire_all_2_atm(:)
@@ -1338,6 +1349,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(SB_CARBON_)
 
     ! Local variables
     CHARACTER(len=*), PARAMETER     :: routine = modname//':recalc_per_tile_vars'
@@ -1373,6 +1385,16 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum_ta
     dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum_ta
 
+    dsl4jsb_Real2D_onChunk ::  c_leaf
+    dsl4jsb_Real2D_onChunk ::  c_fineroot
+    dsl4jsb_Real2D_onChunk ::  c_fruit
+    dsl4jsb_Real2D_onChunk ::  c_seedbed
+    dsl4jsb_Real2D_onChunk ::  c_sapwood
+    dsl4jsb_Real2D_onChunk ::  c_heartwood
+    dsl4jsb_Real2D_onChunk ::  c_coarseroot
+    dsl4jsb_Real2D_onChunk ::  f_lai
+    dsl4jsb_Real2D_onChunk ::  tree_height
+
     dsl4jsb_Real2D_onChunk ::  cflux_dist_green_2_soil_ta
     dsl4jsb_Real2D_onChunk ::  cflux_dist_woods_2_soil_ta
     dsl4jsb_Real2D_onChunk ::  co2flux_fire_all_2_atm_ta
@@ -1390,6 +1412,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(SB_CARBON_)
 
     iblk  = options%iblk
     ics   = options%ics
@@ -1425,6 +1448,16 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum_ta)      ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum_ta)      ! opt out
 
+    dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_leaf )
+    dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_fineroot)
+    dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_fruit)
+    dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_seedbed)
+    dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_sapwood)
+    dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_heartwood)
+    dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_coarseroot)
+    dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  tree_height)
+    dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  f_lai)
+  
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_dist_green_2_soil_ta )   ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_dist_woods_2_soil_ta )   ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  co2flux_fire_all_2_atm_ta )    ! opt out
@@ -1491,6 +1524,26 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       & c_into_humus_1_sum(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_into_humus_2_sum)) CALL get_per_tile(c_into_humus_2_sum_ta(:), &
       & c_into_humus_2_sum(:), veg_fract_correction(:), fract_fpc_max(:))
+
+    ! SB_CARBON_ variables
+    IF (PRESENT(c_leaf)) CALL get_per_tile(c_leaf_ta(:), &
+      & c_leaf(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_fineroot)) CALL get_per_tile(c_fineroot_ta(:), &
+      & c_fineroot(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_fruit)) CALL get_per_tile(c_fruit_ta(:), &
+      & c_fruit(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_seedbed)) CALL get_per_tile(c_seedbed_ta(:), &
+      & c_seedbed(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_sapwood)) CALL get_per_tile(c_sapwood_ta(:), &
+      & c_sapwood(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_heartwood)) CALL get_per_tile(c_heartwood_ta(:), &
+      & c_heartwood(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_coarseroot)) CALL get_per_tile(c_coarseroot_ta(:), &
+      & c_coarseroot(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(tree_height)) CALL get_per_tile(tree_height_ta(:), &
+      & tree_height(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(f_lai)) CALL get_per_tile(f_lai_ta(:), &
+      & f_lai(:), veg_fract_correction(:), fract_fpc_max(:))    
 
     ! C fluxes
     IF (PRESENT(cflux_dist_green_2_soil)) CALL get_per_tile(cflux_dist_green_2_soil_ta(:), &

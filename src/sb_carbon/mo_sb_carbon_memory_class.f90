@@ -21,7 +21,7 @@ MODULE mo_sb_carbon_memory_class
   USE mo_jsb_cqt_class,          ONLY: LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
     &                                  BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d， t_jsb_var_real3d
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes PHENO_, SB_CARBON_, NLCC_
@@ -60,6 +60,22 @@ MODULE mo_sb_carbon_memory_class
       ! dheight,                & ! change of tree height, [m]
       ! df_lai,                 & ! change of lai indicator
 
+
+    TYPE(t_jsb_var_real2d) ::     &
+      litterfall_leaf,                 & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(canopy)]
+      litterfall_fineroot,             & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(canopy)]
+      litterfall_fruit,             & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(canopy)]
+      litterfall_seedbed,             & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(canopy)]
+      litterfall_sapwood,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+                                    ! .. plants [mol(C)/m^2(canopy)]
+      litterfall_heartwood,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+                                    ! .. plants [mol(C)/m^2(canopy)]
+      litterfall_coarseroot               & ! C-pool for stems, thick roots and other (dead) structural material of living
+                                    ! .. plants [mol(C)/m^2(canopy)]
       
 
    ! Output on tile areas:
@@ -78,19 +94,14 @@ MODULE mo_sb_carbon_memory_class
                                        ! .. plants [mol(C)/m^2(tile area)]
       c_heartwood_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
                                        ! .. plants [mol(C)/m^2(tile area)]
+      tree_height_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+                                       ! .. plants [mol(C)/m^2(tile area)]
+      f_lai_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+                                       ! .. plants [mol(C)/m^2(tile area)]
 
-
-    ! Diagnostic global carbon sums e.g. for monitoring (only available with ICON)
-    TYPE(t_jsb_var_real1d) ::        &
-      c_sum_veg_gsum,                & ! Global sum of all vegetation carbon pools [PgC]
-      c_sum_litter_ag_gsum,          & ! Global sum of all above ground litter carbon pools [PgC]
-      c_sum_litter_bg_gsum,          & ! Global sum of all below ground litter carbon pools [PgC]
-      c_sum_humus_gsum,              & ! Global sum of all soil / humus carbon pools [PgC]
-      c_sum_natural_gsum,            & ! Global sum of all natural carbon pools [PgC]
-      NPP_act_yDayMean_gsum,         & ! Global actual NPP rate [PgC/yr]
-      GPP_yDayMean_gsum,             & ! Global GPP rate [PgC/yr]
-      soil_respiration_gsum
-
+    TYPE(t_jsb_var_real3d)          :: &    ! DIMENSION(soil_depth_water)
+                                    root_fraction_sl_fixed, &               !< fixed fractions of root per layer from QUINCY veg [unitless]
+                                    fineroot_carbon_sl_fixed
 
   CONTAINS
     PROCEDURE :: Init => Init_sb_carbon_memory

@@ -37,6 +37,9 @@ MODULE mo_sb_carbon_init
 CONTAINS
 
   SUBROUTINE sb_carbon_init(tile)
+
+    ! Use declarations
+    USE mo_sb_carbon_process, ONLY: convert_jsb_lct_to_quincy
     !-----------------------------------------------------------------------
     !  ARGUMENTS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -45,20 +48,97 @@ CONTAINS
     !  LOCAL VARIABLES
     !TYPE(t_jsb_model),       POINTER :: model
     !dsl4jsb_Def_memory(sb_CARBON_)
-
+    TYPE(t_jsb_model),              POINTER :: model                !< the model
+    TYPE(t_jsb_grid),               POINTER :: hgrid                !< Horizontal grid
+    INTEGER                                 :: iblk, ic, is         !< loop dimensions
+    INTEGER                                 :: nproma, nblks        !< dimensions
+    INTEGER                                 :: JSBACH_LctNumber, QUINCY_LctNumber
+    REAL(wp)                                :: k_root_dist
     CHARACTER(len=*), PARAMETER :: routine = modname//':sb_carbon_init'
 
     !-----------------------------------------------------------------------
     ! CONTENT
+    dsl4jsb_Def_memory(SB_CARBON_)
+    dsl4jsb_Def_memory(HYDRO_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onDomain    :: num_sl_above_bedrock
+    dsl4jsb_Real2D_onDomain    :: root_depth
+    ! HYDRO_ 3D
+    dsl4jsb_Real3D_onDomain    :: soil_lay_depth_ubound_sl
+    ! SB_CARBON_ 3D
+    dsl4jsb_Real3D_onDomain    :: root_fraction_sl_fixed
 
     !model => get_model(tile%owner_model_id)
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts(1)%lib_id)
+    hgrid  => Get_grid(model%grid_id)
+    nblks  =  hgrid%nblks
+    nproma =  hgrid%nproma
+
+
 
     ! Get sb_carbon memory of the tile
     !dsl4jsb_Get_memory(SB_CARBON_)
-
+    dsl4jsb_Get_memory(SB_CARBON_)
+    dsl4jsb_Get_memory(HYDRO_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   num_sl_above_bedrock)        ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   root_depth)
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_ubound_sl)
+    ! SB_CARBON_ 3D
+    dsl4jsb_Get_var3D_onDomain(SB_CARBON_,   root_fraction_sl_fixed)
+    
     IF (.NOT. tile%Is_process_active(SB_CARBON_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Setting  sb_carbon boundary conditions for tile '//TRIM(tile%name))
+    
+    JSBACH_LctNumber               = dsl4jsb_Lctlib_param(LctNumber)
+    CALL convert_jsb_lct_to_quincy(JSBACH_LctNumber, QUINCY_LctNumber, &
+      &   lctlib_k_root_dist= k_root_dist) 
+    
+    !>     - fixed root fractions (no changes after init) depending on root_depth (SPQ variable)
+    !>
+    ! root fractions assuming an exponential distribution of roots \n
+    !   Cr_l = Cr_0 * exp(-lctlib%k_root_dist*depth) \n
+    ! integral to bottom of root zone: 1/lctlib%k_root_dist * (1 - exp(-lctlib%k_root_dist*depth) \n
+    !   thus for each layer
+    !
+    ! NOTE: upper bound of a layer is the larger value compared to lower bound !
+    !
+    DO iblk = 1,nblks
+      DO ic = 1,nproma
+        ! root depth larger than thickness of first soil layer
+        IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, 1, iblk)) THEN
+          root_fraction_sl_fixed(ic, 1, iblk) = (1._wp - EXP(-k_root_dist * soil_lay_depth_ubound_sl(ic, 1, iblk))) &
+            &                             / (1._wp - EXP(-k_root_dist * root_depth(ic, iblk)))
+          ! soil layers 2 to x
+          !
+          DO is = 2,INT(num_sl_above_bedrock(ic, iblk))
+            IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is-1, iblk)) THEN
+              IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is, iblk)) THEN
+                root_fraction_sl_fixed(ic, is, iblk) = (EXP(-k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
+                  &                                - EXP(-k_root_dist * soil_lay_depth_ubound_sl(ic, is, iblk))) &
+                  &                                / (1._wp - EXP(-k_root_dist * root_depth(ic, iblk)))
+              ELSE
+                root_fraction_sl_fixed(ic, is, iblk) = (EXP(-k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
+                  &                                - EXP(-k_root_dist * root_depth(ic, iblk))) &
+                  &                                / (1._wp - EXP(-k_root_dist * root_depth(ic, iblk)))
+              END IF
+            ELSE
+              root_fraction_sl_fixed(ic, is, iblk) = 0.0_wp
+            END IF
+          END DO
+        ! root depth lower than / equal thickness of first soil layer
+        ! all roots are in the first soil layer
+        ELSE
+          root_fraction_sl_fixed(ic, :, iblk) = 0.0_wp
+          root_fraction_sl_fixed(ic, 1, iblk) = 1.0_wp
+        END IF
+      END DO
+    END DO    
 
     CALL sb_carbon_init_ic(tile)
     !CALL carbon_init_bc(tile)

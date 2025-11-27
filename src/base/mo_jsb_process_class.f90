@@ -126,7 +126,7 @@ CONTAINS
     CASE (SB_)
       return_value = 'sb'
     CASE (SB_CARBON_)
-      return_value = 'sb_carbon'      
+      return_value = 'sb_carbon'
     CASE (SPQ_)
       return_value = 'spq'
     CASE DEFAULT

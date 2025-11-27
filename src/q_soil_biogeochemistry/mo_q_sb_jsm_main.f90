@@ -45,7 +45,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_process_class,     ONLY: SB_, SSE_, HYDRO_, VEG_, A2L_
+    USE mo_jsb_process_class,     ONLY: SB_, SSE_, HYDRO_, VEG_, A2L_, SB_CARBON_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_jsb_math_constants,    ONLY: eps8
@@ -64,6 +64,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(SB_CARBON_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(VEG_)
@@ -95,8 +96,13 @@ CONTAINS
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: unit_uptake_p_pot_sl                     !<
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: growth_p_limit_smoothed_sl               !<
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: asymb_n_fixation_rel_rate_sl             !< asymbiotic N fixation rate (relativ to N demand)
+    REAL(wp), ALLOCATABLE, DIMENSION(:)   :: unit_uptake_n_pot_dummy, &
+                                             unit_uptake_p_pot_dummy
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: root_fraction_sl_dummy
     INTEGER                               :: iblk, ics, ice, nc             !< dimensions
     REAL(wp)                              :: dtime                          !< timestep length
+    REAL(wp)                              :: lctlib_vmax_uptake_n, lctlib_vmax_uptake_p, lctlib_sla
+    INTEGER                               :: lctlib_growthform, JSBACH_LctNumber, QUINCY_LctNumber
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_jsm'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -124,12 +130,20 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl
     ! A2L_ 2D
     dsl4jsb_Real2D_onChunk :: p_deposition
-    ! VEG_ 2D
-    dsl4jsb_Real2D_onChunk :: growth_p_limit_based_on_n_mavg
-    dsl4jsb_Real2D_onChunk :: unit_uptake_n_pot
-    dsl4jsb_Real2D_onChunk :: unit_uptake_p_pot
-    ! VEG_ 3D
-    dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    IF (tile%Has_process_memory(SB_CARBON_)) THEN
+      dsl4jsb_Def_memory(SB_CARBON_)
+      ! SB_CARBON_ 3D
+      dsl4jsb_Real3D_onChunk :: root_fraction_sl_fixed
+      dsl4jsb_Real3D_onChunk :: fineroot_carbon_sl_fixed
+    ELSE
+      ! VEG_ 2D
+      dsl4jsb_Real2D_onChunk :: growth_p_limit_based_on_n_mavg
+      dsl4jsb_Real2D_onChunk :: unit_uptake_n_pot
+      dsl4jsb_Real2D_onChunk :: unit_uptake_p_pot
+      ! VEG_ 3D
+      dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    END IF
+    
     ! SB_ 2D
     dsl4jsb_Real2D_onChunk :: leaching_dom_carbon
     dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen
@@ -329,7 +343,9 @@ CONTAINS
     ALLOCATE(unit_uptake_n_pot_sl(nc, nsoil_w))
     ALLOCATE(unit_uptake_p_pot_sl(nc, nsoil_w))
     ALLOCATE(growth_p_limit_smoothed_sl(nc, nsoil_w))
-    ALLOCATE(asymb_n_fixation_rel_rate_sl(nc, nsoil_w))
+    ALLOCATE(unit_uptake_n_pot_dummy(nc))
+    ALLOCATE(unit_uptake_p_pot_dummy(nc))
+    ALLOCATE(root_fraction_sl_dummy(nc, nsoil_w))
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -350,12 +366,20 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_,   bulk_dens_sl)                 ! inout
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_,   p_deposition)                 ! in
-    ! VEG_ 2D
-    dsl4jsb_Get_var2D_onChunk(VEG_,   growth_p_limit_based_on_n_mavg)   ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_,   unit_uptake_n_pot)                !
-    dsl4jsb_Get_var2D_onChunk(VEG_,   unit_uptake_p_pot)                !
-    ! VEG_ 3D
-    dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)             ! in
+    IF (tile%Has_process_memory(SB_CARBON_)) THEN
+      dsl4jsb_Get_memory(SB_CARBON_)
+      ! SB_CARBON_ 3D
+      dsl4jsb_Get_var3D_onChunk(SB_CARBON_,  root_fraction_sl_fixed)
+      dsl4jsb_Get_var3D_onChunk(SB_CARBON_,  fineroot_carbon_sl_fixed)
+    ELSE
+      ! VEG_ 2D
+      dsl4jsb_Get_var2D_onChunk(VEG_,   growth_p_limit_based_on_n_mavg)   ! in
+      dsl4jsb_Get_var2D_onChunk(VEG_,   unit_uptake_n_pot)                !
+      dsl4jsb_Get_var2D_onChunk(VEG_,   unit_uptake_p_pot)                !
+      ! VEG_ 3D
+      dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)             ! in
+    END IF
+    
     ! SB_ 2D
     dsl4jsb_Get_var2D_onChunk(SB_,    leaching_dom_carbon)          ! out
     dsl4jsb_Get_var2D_onChunk(SB_,    leaching_dom_nitrogen)        ! out
@@ -519,22 +543,52 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,    enzyme_frac_AP)                   ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,    volume_min_sl)                    ! in
     !------------------------------------------------------------------------------------------------------ !
+    !> 1.0 initialize dummy variables
+    IF (tile%Has_process_memory(SB_CARBON_)) THEN
+      ! VEG variables
+      unit_uptake_n_pot_dummy(:) = 0._wp
+      unit_uptake_p_pot_dummy(:) = 0._wp
+      root_fraction_sl_dummy(:,:)  = root_fraction_sl_fixed(:,:)
+      growth_p_limit_smoothed_sl(:,:) = 0._wp ! flag_sb_prescribe_po4 should be on, this won't be used anyway
+      
+      fine_root_carbon_sl(:,:)     = fineroot_carbon_sl_fixed(:,:)
+      ! lctlib values
+      JSBACH_LctNumber             = dsl4jsb_Lctlib_param(LctNumber)
+      CALL convert_jsb_lct_to_quincy(JSBACH_LctNumber, QUINCY_LctNumber, &
+                                     lctlib_vmax_uptake_n = lctlib_vmax_uptake_n, &
+                                     lctlib_vmax_uptake_p = lctlib_vmax_uptake_p, &
+                                     lctlib_sla = lctlib_sla, &
+                                     lctlib_growthform = lctlib_growthform)
+      
+    ELSE
+      ! VEG variables
+      unit_uptake_n_pot(:) = 0.0_wp
+      unit_uptake_p_pot(:) = 0.0_wp
+      unit_uptake_n_pot_dummy(:) = unit_uptake_n_pot(:)
+      unit_uptake_p_pot_dummy(:) = unit_uptake_p_pot(:)
+      root_fraction_sl_dummy(:,:)  = root_fraction_sl(:,:)
 
-    !>1.0 calc fine root carbon, used for N & P calculations below, and smooth the plant growth P limitation
-    !>
-    DO isoil = 1,nsoil_w
-      WHERE(soil_depth_sl(:,isoil) > eps8)
-        fine_root_carbon_sl(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool_mt(ix_fine_root, ixC, :)
-        ! using LOG() here to smooth the response curve in case of extreme P limited condition,
-        ! avoiding drastic changes in plant phosphatase productions as it is updated at each time step
-        growth_p_limit_smoothed_sl(:,isoil) = MAX(0.0_wp, LOG(growth_p_limit_based_on_n_mavg(:)))
-      ELSEWHERE
-        fine_root_carbon_sl(:,isoil)        = 0.0_wp
-        growth_p_limit_smoothed_sl(:,isoil) = 0.0_wp
-      ENDWHERE
-    END DO
-    unit_uptake_n_pot(:) = 0.0_wp
-    unit_uptake_p_pot(:) = 0.0_wp
+      !>1.0 calc fine root carbon, used for N & P calculations below, and smooth the plant growth P limitation
+      !>
+      DO isoil = 1,nsoil_w
+        WHERE(soil_depth_sl(:,isoil) > eps8)
+          fine_root_carbon_sl(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool_mt(ix_fine_root, ixC, :)
+          ! using LOG() here to smooth the response curve in case of extreme P limited condition,
+          ! avoiding drastic changes in plant phosphatase productions as it is updated at each time step
+          growth_p_limit_smoothed_sl(:,isoil) = MAX(0.0_wp, LOG(growth_p_limit_based_on_n_mavg(:)))
+        ELSEWHERE
+          fine_root_carbon_sl(:,isoil)        = 0.0_wp
+          growth_p_limit_smoothed_sl(:,isoil) = 0.0_wp
+        ENDWHERE
+      END DO
+      ! lctlib values
+      lctlib_vmax_uptake_n = lctlib%vmax_uptake_n
+      lctlib_vmax_uptake_p = lctlib%vmax_uptake_p
+      lctlib_sla           = lctlib%sla
+      lctlib_growthform    = lctlib%growthform
+    END IF
+    
+
 
     !>2.0 Inorganic N assimilation
     !>
@@ -638,8 +692,8 @@ CONTAINS
       & nc, &                                         ! in
       & nsoil_w, &
       & num_sl_above_bedrock(:), &
-      & lctlib%sla, &
-      & lctlib%growthform, &
+      & lctlib_sla, &
+      & lctlib_growthform, &
       & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
       & soil_depth_sl(:,:), &
       & root_fraction_sl(:,:), &
@@ -776,7 +830,7 @@ CONTAINS
       &   nsoil_w, &
       &   dtime, &
       &   num_sl_above_bedrock(:), &
-      &   lctlib%vmax_uptake_p, &
+      &   lctlib_vmax_uptake_p, &
       &   "po4", &
       &   TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &   ! in
       &   sb_pool_mt(ix_microbial, ixC, :, :), fine_root_carbon_sl(:,:), po4_solute(:,:), &                ! in
@@ -793,7 +847,7 @@ CONTAINS
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (fine_root_carbon_sl(ic, is) > eps8) THEN
-          unit_uptake_p_pot(ic) = unit_uptake_p_pot(ic) + unit_uptake_p_pot_sl(ic, is) &
+          unit_uptake_p_pot_dummy(ic) = unit_uptake_p_pot_dummy(ic) + unit_uptake_p_pot_sl(ic, is) &
             &                     / fine_root_carbon_sl(ic, is) * root_fraction_sl(ic, is)
         END IF
       END DO
@@ -823,7 +877,7 @@ CONTAINS
       &   nsoil_w, &
       &   dtime, &
       &   num_sl_above_bedrock(:), &
-      &   lctlib%vmax_uptake_n, &
+      &   lctlib_vmax_uptake_n, &
       &   "nh4", &
       &   TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &   ! in
       &   sb_pool_mt(ix_microbial, ixC, :, :), fine_root_carbon_sl(:,:), nh4_solute(:,:), &                ! in
@@ -843,7 +897,7 @@ CONTAINS
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (fine_root_carbon_sl(ic, is) > eps8) THEN
-          unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + unit_uptake_n_pot_sl(ic, is) &
+          unit_uptake_n_pot_dummy(ic) = unit_uptake_n_pot_dummy(ic) + unit_uptake_n_pot_sl(ic, is) &
             &                     / fine_root_carbon_sl(ic, is) * root_fraction_sl(ic, is)
         END IF
       END DO
@@ -872,7 +926,7 @@ CONTAINS
       &   nsoil_w, &
       &   dtime, &
       &   num_sl_above_bedrock(:), &
-      &   lctlib%vmax_uptake_n, &
+      &   lctlib_vmax_uptake_n, &
       &   "no3", &
       &   TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &   ! in
       &   sb_pool_mt(ix_microbial, ixC, :, :), fine_root_carbon_sl(:,:), no3_solute(:,:), &                  ! in
@@ -891,7 +945,7 @@ CONTAINS
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (fine_root_carbon_sl(ic, is) > eps8) THEN
-          unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + unit_uptake_n_pot_sl(ic, is) &
+          unit_uptake_n_pot_dummy(ic) = unit_uptake_n_pot_dummy(ic) + unit_uptake_n_pot_sl(ic, is) &
             &                     / fine_root_carbon_sl(ic, is) * root_fraction_sl(ic, is)
         END IF
       END DO
@@ -1091,7 +1145,13 @@ CONTAINS
     DEALLOCATE(unit_uptake_p_pot_sl)
     DEALLOCATE(growth_p_limit_smoothed_sl)
     DEALLOCATE(asymb_n_fixation_rel_rate_sl)
-
+    IF (.NOT. tile%Has_process_memory(SB_CARBON_)) THEN
+      unit_uptake_n_pot(:) = unit_uptake_n_pot_dummy(:)
+      unit_uptake_p_pot(:) = unit_uptake_p_pot_dummy(:)
+    END IF
+    DEALLOCATE(unit_uptake_n_pot_dummy)
+    DEALLOCATE(unit_uptake_p_pot_dummy)
+    DEALLOCATE(root_fraction_sl_dummy)
   END SUBROUTINE update_sb_jsm
 
 #endif
