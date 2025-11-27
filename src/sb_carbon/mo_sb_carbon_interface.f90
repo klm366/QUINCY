@@ -159,7 +159,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
     REAL(wp), DIMENSION(options%nc) :: lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf
-    
+    REAL(wp), DIMENSION(options%nc) :: Cflx_crop_harvest_2_atmos
     ! Declare local variables for QUINCY SB
     dsl4jsb_Def_mt2L3D :: sb_formation_mt
     
@@ -230,6 +230,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  sb_pool_total_ag_litter_c
     dsl4jsb_Real2D_onChunk ::  sb_pool_total_c
     dsl4jsb_Real2D_onChunk ::  sb_pool_woody_litter_c
+    dsl4jsb_Real2D_onChunk ::  lateral_loss_dom_carbon_sl
+    dsl4jsb_Real2D_onChunk ::  leaching_dom_carbon
+    dsl4jsb_Real3D_onChunk ::  het_respiration
 
     ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
@@ -305,7 +308,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
 
     !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf)
+    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf, Cflx_crop_harvest_2_atmos)
 
     iblk  = options%iblk
     ics   = options%ics
@@ -365,10 +368,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  litterfall_heartwood )         ! inout
     dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  litterfall_coarseroot )            ! inout
 
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_bg_soil_c)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_bg_soil_c)     ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_ag_litter_c)   ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_c)             ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_woody_litter_c)      ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_c)             ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_woody_litter_c)      ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       lateral_loss_dom_carbon_sl)
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon)
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)
 
     ! HYDRO_ 2D
     dsl4jsb_Get_var2D_onChunk(HYDRO_,   num_sl_above_bedrock)         ! in
@@ -631,6 +637,7 @@ CONTAINS
           &  cflux_c_green_2_herb(ic),                          & ! out
           &  cflux_herb_2_littergreen(ic),                      & ! out
           &  cflux_herb_2_atm(ic),                              & ! out
+          &  Cflx_crop_harvest_2_atmos(ic)                      & ! out
           &  NPP_act_yDayMean(ic),                              & ! out   
           &  litterfall_leaf(ic),                               & ! inout
           &  litterfall_fineroot(ic),                           & ! inout
@@ -676,7 +683,9 @@ CONTAINS
       CALL update_sb_pools(tile, options)
       
       ! we need to calculate soil_respiration after SB processes
-      soil_respiration = soil_respiration - Cflx_crop_harvest_2_atmos / sec_per_day
+      soil_respiration(:) = SUM(lateral_loss_dom_carbon_sl(:,:) * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_wp  &
+      & + (leaching_dom_carbon(:) + SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime / 1.e6_wp &
+      & - Cflx_crop_harvest_2_atmos / sec_per_day
       !soilResp_rate_pot = soilResp_rate_pot - Cflx_crop_harvest_2_atmos / sec_per_day
     
       ! determine annual maximum content of green pool for NLCC process

@@ -77,6 +77,7 @@ CONTAINS
     & cflux_herbivory,            & ! out
     & cflux_herb_2_littergreen,   & ! out
     & cflux_herb_2_atm,           & ! out
+    & Cflx_crop_harvest_2_atmos,  & ! out
     & NPP_act,                    & ! out
     & litterfall_leaf,            & ! out
     & litterfall_fineroot,        & ! out
@@ -155,6 +156,7 @@ CONTAINS
     REAL(wp), INTENT(out)   :: cflux_herbivory
     REAL(wp), INTENT(out)   :: cflux_herb_2_littergreen
     REAL(wp), INTENT(out)   :: cflux_herb_2_atm
+    REAL(wp), INTENT(out)   :: Cflx_crop_harvest_2_atmos
     REAL(wp), INTENT(out)   :: NPP_act               ! Actual NPP after N-limitation and excess carbon drop [mol(C)/m^2 s]
 
     REAL(wp), INTENT(inout)   :: litterfall_leaf        ! amount of leafLitter
@@ -173,7 +175,7 @@ CONTAINS
     ! locals
     LOGICAL  :: is_crop                 ! logical crop mask
     REAL(wp) :: c_green_max,c_reserve_optimal
-    REAL(wp) :: Cflx_2_crop_harvest, Cflx_crop_harvest_2_atmos
+    REAL(wp) :: Cflx_2_crop_harvest
     REAL(wp) :: Cflx_faeces_2_LG, Cflx_faeces_2_atm
     REAL(wp) :: excess_carbon
     ! R: only for spitfire
