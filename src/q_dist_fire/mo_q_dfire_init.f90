@@ -147,6 +147,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: frac_consump_fcl
     dsl4jsb_Real2D_onDomain      :: ic_pop_dens
     dsl4jsb_Real3D_onDomain      :: ic_lightning_events_monthly
+    dsl4jsb_Real2D_onDomain      :: dfire_lightning_events
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
     ! ----------------------------------------------------------------------------------------------------- !
@@ -217,6 +218,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, frac_consump_fcl)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, ic_pop_dens)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, ic_lightning_events_monthly)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, dfire_lightning_events)
     ! ----------------------------------------------------------------------------------------------------- !
     nesterov_index = 0._wp
     fdi = 0._wp
@@ -297,7 +299,7 @@ CONTAINS
     CALL q_dfire_read_init_vars(tile)
 
     ic_pop_dens = dfire_init_vars%pop_dens
-    lightning_events = dfire_init_vars%lightning_events(:,:,1)
+    dfire_lightning_events = dfire_init_vars%lightning_events(:,:,1)
 #else
     ! IQ only
     ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
@@ -452,7 +454,7 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
 
     dsl4jsb_Real3D_onDomain :: ic_lightning_events_monthly ! out
-    dsl4jsb_Real2D_onDomain :: a2l_lightning_events            ! out
+    dsl4jsb_Real2D_onDomain :: dfire_lightning_events      ! out
 
     REAL(wp),       POINTER :: ptr_3D(:,:,:)  ! tmp pointer
     LOGICAL :: is_experiment_start, read_deposition_data
@@ -476,7 +478,7 @@ CONTAINS
     dsl4jsb_Get_memory(Q_DFIRE_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, ic_lightning_events_monthly) ! yearly lightning events
-    dsl4jsb_Get_var2D_onDomain(A2L_, a2l_lightning_events) ! lightning events for the current month
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, dfire_lightning_events)      ! lightning events for the current month
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
@@ -506,10 +508,10 @@ CONTAINS
     ! Assign the deposition values of this month to the A2L variables
     current_month = get_month(current_datetime)
 
-    a2l_lightning_events(:,:) = ic_lightning_events_monthly(:,current_month,:)
+    dfire_lightning_events(:,:) = ic_lightning_events_monthly(:,current_month,:)
 
-!    WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: current_month, a2l_lightning_events=", &
-!                        current_month, ", ", a2l_lightning_events
+!    WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: current_month, dfire_lightning_events=", &
+!                        current_month, ", ", dfire_lightning_events
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
   END SUBROUTINE provide_lightning_events

@@ -124,6 +124,7 @@ MODULE mo_q_dfire_memory_class
 
     TYPE(t_jsb_var_real2d)               :: ic_pop_dens         !< Read data from [#events ha-1 day-1]
     TYPE(t_jsb_var_real3d)               :: ic_lightning_events_monthly !< Monthly lightning events data [#events ha-1 day-1]
+    TYPE(t_jsb_var_real2d)               :: dfire_lightning_events !< Lightning events data for current month [#events ha-1 day-1]
   CONTAINS
     PROCEDURE :: Init => Init_q_dfire_memory
   END TYPE t_q_dfire_memory
@@ -686,6 +687,18 @@ CONTAINS
     CALL mem%Add_var('ic_lightning_events_monthly', mem%ic_lightning_events_monthly, &
         & hgrid, vgrid_months_in_year, &
         & t_cf('ic_lightning_events_monthly', '#lightnings h-1 d-1', &
+            '# lightning events'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('dfire_lightning_events', mem%dfire_lightning_events, &
+        & hgrid, vgrid_months_in_year, &
+        & t_cf('dfire_lightning_events', '#lightnings h-1 d-1', &
             '# lightning events'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
