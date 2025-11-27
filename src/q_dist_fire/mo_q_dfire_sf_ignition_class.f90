@@ -1,4 +1,4 @@
-!> QUINCY calculate vegetation dynamics
+!> QUINCY determine the spitfire fire ignition
 !>
 !> ICON-Land
 !>

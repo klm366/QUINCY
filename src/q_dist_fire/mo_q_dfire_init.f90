@@ -332,10 +332,8 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
     INTEGER                     :: nproma
     INTEGER                     :: nblks
-    INTEGER                     :: nsoil_sb
     CHARACTER(len=*), PARAMETER :: routine = modname//':q_dfire_read_init_vars'
 
     IF (debug_on()) CALL message(routine, 'Reading/setting DFIRE_ init vars')
@@ -344,8 +342,6 @@ CONTAINS
     hgrid  => Get_grid(model%grid_id)
     nproma = hgrid%Get_nproma()
     nblks  = hgrid%Get_nblks()
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
 
     ALLOCATE( &
       & dfire_init_vars%pop_dens               (nproma, nblks),       &
@@ -383,11 +379,9 @@ CONTAINS
     REAL(wp), POINTER           :: ptr_2D_time(:, :, :)
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
     TYPE(t_input_file)          :: input_file
     INTEGER                     :: nproma
     INTEGER                     :: nblks
-    INTEGER                     :: nsoil_sb
     CHARACTER(len=*), PARAMETER :: routine = modname//':q_dfire_read_init_vars'
 
     IF (debug_on()) CALL message(routine, 'Reading/setting DFIRE_ init vars')

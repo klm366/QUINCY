@@ -487,11 +487,6 @@ CONTAINS
     ! Todo: further research on this data, currently taken from a paper.
     a_nd = a2l_lightning_events * 4._wp
 
-!    IF (iblk==1) THEN
-!      WRITE(*,*) "spitfire.f90:: fbd, area, fract=", fuel_bulk_density(40), burnable_area(40), tile_fract(40), &
-!              (grass_fract(40) + forest_fract(40))
-!    ENDIF
-
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
                         ic_pop_dens, & ! ignition events

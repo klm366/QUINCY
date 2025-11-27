@@ -199,7 +199,6 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-!    WRITE(*,*) "dfire_util.f90:: calculate_daily_vars:: computing..."
 
     !> 1.0 init
     !!
@@ -208,8 +207,6 @@ CONTAINS
     ! 1.1 update min/max values
     t_air_max_old(:) = max(t_air_max_old(:), t_air(:))
     t_air_min_old(:) = min(t_air_min_old(:), t_air(:))
-
-!    WRITE(*,*) "dfire_util.f90:: calculate_daily_vars:: t_air=", t_air(1)
     ! 1.2 update accumulation values
     precip_daytime_old(:) = precip_daytime_old(:) + ((rain(:) + snow(:)) / (one_day / dtime))
 
