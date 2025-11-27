@@ -215,6 +215,7 @@ CONTAINS
     write_coupler_restart = .FALSE.
 
 !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, n)
+    !$ACC DATA COPYIN(is_valid_parflow)
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO iblk = 1, grid%nblks
@@ -226,15 +227,17 @@ CONTAINS
       END IF
       !$ACC LOOP GANG VECTOR
       DO n = 1, nlen
-        buffer(nn+n,1) = ( water_to_parflow(n,iblk) + evapotrans_to_parflow(n,1,iblk) ) * 3600.0_wp / dz(1)
+        buffer(nn+n,1) = is_valid_parflow(n,iblk) * ( water_to_parflow(n,iblk) + evapotrans_to_parflow(n,1,iblk) ) * 3600.0_wp / dz(1)
       END DO
     END DO
     !$ACC END PARALLEL
     !$ACC UPDATE HOST(buffer(:,1)) ASYNC(acc_stream)
     !$ACC WAIT(acc_stream)
+    !$ACC END DATA
 !$OMP END PARALLEL DO
 
 !$OMP PARALLEL DO PRIVATE(iblk, nn, nlen, is, n)
+    !$ACC DATA COPYIN(is_valid_parflow)
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP SEQ
     DO iblk = 1, grid%nblks
@@ -247,13 +250,14 @@ CONTAINS
       !$ACC LOOP GANG VECTOR COLLAPSE(2)
       DO is = 2, nsoil
         DO n = 1, nlen
-          buffer(nn+n,is) = evapotrans_to_parflow(n,is,iblk) * 3600.0_wp / dz(is)
+          buffer(nn+n,is) = is_valid_parflow(n,iblk) * evapotrans_to_parflow(n,is,iblk) * 3600.0_wp / dz(is)
         END DO
       END DO
     END DO
     !$ACC END PARALLEL
     !$ACC UPDATE HOST(buffer(:,2:nsoil)) ASYNC(acc_stream)
     !$ACC WAIT(acc_stream)
+    !$ACC END DATA
 !$OMP END PARALLEL DO
 
 #ifdef YAC_coupling
