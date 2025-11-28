@@ -91,7 +91,8 @@ MODULE mo_a2l_memory_class
 
     ! FIRE 
     TYPE(t_jsb_var_real2d) ::   &
-      & a2l_lightning_events       !< 
+      & a2l_lightning_events       !< Spitfire related process. Note: when moved to dfire process data is not read on time.
+                                                                  !<
 
     ! For calculation of the timestep after local midnight (1st timestep of the new day)
     TYPE(t_jsb_var_real2d) ::     &
