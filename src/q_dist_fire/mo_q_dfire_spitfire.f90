@@ -325,7 +325,7 @@ CONTAINS
 
     dsl4jsb_Real3D_onChunk                :: frac_consump_fcl          ! out [-]
     dsl4jsb_Real2D_onChunk                :: ic_pop_dens               ! in [#humans km-2]
-    dsl4jsb_Real2D_onChunk                :: dfire_lightning_events    ! in [#lightning km-2 d-1]
+    dsl4jsb_Real2D_onChunk                :: a2l_lightning_events      ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -417,9 +417,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_frac_consumption)     ! out [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, i_surface)                 ! out [kW m-1]
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, frac_consump_fcl)          ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, ic_pop_dens)               ! in [#humans km-2]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, dfire_lightning_events)    ! in [#lightnings km-2 d-1]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, frac_consump_fcl)            ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, ic_pop_dens)                 ! in [#humans km-2]
+    dsl4jsb_Get_var2D_onChunk(A2L_, a2l_lightning_events) ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     ! ----------------------------------------------------------------------------------------------------- !
@@ -485,13 +485,13 @@ CONTAINS
 
     ! Load input data: rate of human-caused ignitions per person [#ign indiv-1 d-]
     ! Todo: further research on this data, currently taken from a paper.
-    a_nd = dfire_lightning_events * 4._wp
+    a_nd = a2l_lightning_events * 4._wp
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
                         ic_pop_dens, & ! ignition events
                         a_nd, &
-                        dfire_lightning_events, &
+                        a2l_lightning_events, &
                         df_sf_calorific_heat_content, &
                         df_sf_isurface_extinc_th, &
                         df_sf_alphas, &
@@ -550,6 +550,7 @@ CONTAINS
     frac_consump_fcl = sf_spitfire % dead_frac_consump
 #ifdef __QUINCY_STANDALONE__
     DEALLOCATE(grid_cell_area)
+    DEALLOCATE(burnable_area)
 #endif
   END SUBROUTINE update_q_dfire_spitfire
 
