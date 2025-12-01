@@ -56,10 +56,7 @@ MODULE mo_sb_carbon_memory_class
       c_heartwood,                & ! C-pool for stems, thick roots and other (dead) structural material of living
                                     ! .. plants [mol(C)/m^2(canopy)]
       tree_height,            & ! for quincy biomass allocation calculation
-      f_lai,                  & ! growth stage indicator for height estimation
-      ! dheight,                & ! change of tree height, [m]
-      ! df_lai,                 & ! change of lai indicator
-
+      f_lai                  & ! growth stage indicator for height estimation
 
 
     TYPE(t_jsb_var_real2d) ::     &
@@ -77,7 +74,19 @@ MODULE mo_sb_carbon_memory_class
                                     ! .. plants [mol(C)/m^2(canopy)]
       litterfall_coarseroot               & ! C-pool for stems, thick roots and other (dead) structural material of living
                                     ! .. plants [mol(C)/m^2(canopy)]
-      
+
+    TYPE(t_jsb_var_real2d) ::     &
+      sb_pool_ag_litter,                 & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(canopy)]
+      sb_pool_bg_litter,             & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(canopy)]
+      sb_pool_bg_humus,             & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(canopy)]
+      sb_pool_bg_mic,             & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(canopy)]
+      sb_pool_bg_res            & ! C-pool for stems, thick roots and other (dead) structural material of living
+                                    ! .. plants [mol(C)/m^2(canopy)]
+    
 
    ! Output on tile areas:
    TYPE(t_jsb_var_real2d) ::         &
@@ -99,10 +108,32 @@ MODULE mo_sb_carbon_memory_class
                                        ! .. plants [mol(C)/m^2(tile area)]
       f_lai_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
                                        ! .. plants [mol(C)/m^2(tile area)]
+      litterfall_leaf_ta,                 & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(tile area)]
+      litterfall_fineroot_ta,             & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(tile area)]
+      litterfall_fruit_ta,             & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(tile area)]
+      litterfall_seedbed_ta,             & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
+                                    ! .. of vegetation [mol(C)/m^2(tile area)]
+      litterfall_sapwood_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+                                    ! .. plants [mol(C)/m^2(tile area)]
+      litterfall_heartwood_ta,                & ! C-pool for stems, thick roots and other (dead) structural material of living
+                                    ! .. plants [mol(C)/m^2(tile area)]
+      litterfall_coarseroot_ta               & ! C-pool for stems, thick roots and other (dead) structural material of living
+                                    ! .. plants [mol(C)/m^2(tile area)]
+      sb_pool_ag_litter_ta,
+      sb_pool_bg_litter_ta,
+      sb_pool_bg_humus_ta
+      
 
     TYPE(t_jsb_var_real3d)          :: &    ! DIMENSION(soil_depth_water)
                                     root_fraction_sl_fixed, &               !< fixed fractions of root per layer from QUINCY veg [unitless]
-                                    fineroot_carbon_sl_fixed
+                                    fineroot_carbon_sl_fixed, &
+                                    sb_pool_bg_humus_sl, &
+                                    sb_pool_bg_mic_sl, &
+                                    sb_pool_bg_res_sl
+                                    
 
   CONTAINS
     PROCEDURE :: Init => Init_sb_carbon_memory

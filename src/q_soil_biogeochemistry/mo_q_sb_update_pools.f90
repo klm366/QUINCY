@@ -124,6 +124,7 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(SB_CARBON_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(VEG_)
@@ -146,6 +147,18 @@ CONTAINS
       dsl4jsb_Real2D_onChunk :: biological_n_fixation
       ! VEG_ 3D
       dsl4jsb_Real3D_onChunk :: root_fraction_sl
+    ELSE
+      ! SB_CARBON_ 2D
+      dsl4jsb_Real2D_onChunk :: sb_pool_ag_litter
+      dsl4jsb_Real2D_onChunk :: sb_pool_bg_litter
+      dsl4jsb_Real2D_onChunk :: sb_pool_bg_som
+      dsl4jsb_Real2D_onChunk :: sb_pool_bg_mic
+      dsl4jsb_Real2D_onChunk :: sb_pool_bg_humus
+
+      ! SB_CARBON_ 3D
+      dsl4jsb_Real2D_onChunk :: sb_pool_bg_res_sl
+      dsl4jsb_Real2D_onChunk :: sb_pool_bg_mic_sl
+      dsl4jsb_Real2D_onChunk :: sb_pool_bg_humus_sl
     END IF
     ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
@@ -357,7 +370,7 @@ CONTAINS
     dtime     = options%dtime
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
+    IF ( (.NOT. tile%Is_process_calculated(SB_)) .OR. (.NOT. tile%Is_process_calculated(SB_CARBON_)) ) RETURN
     ! ---------------------------
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
@@ -433,6 +446,18 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(VEG_,   biological_n_fixation)          ! out
       ! VEG_ 3D
       dsl4jsb_Get_var3D_onChunk(VEG_,   root_fraction_sl)               ! in
+    ELSE
+      ! SB_CARBON_ 2D
+      dsl4jsb_Get_memory(SB_CARBON_)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,   sb_pool_ag_litter)       ! out
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,   sb_pool_bg_litter)       ! out
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,   sb_pool_bg_som)          ! out
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,   sb_pool_bg_mic)          ! out
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,   sb_pool_bg_humus)        ! out
+      ! SB_CARBON_ 3D
+      dsl4jsb_Get_var3D_onChunk(SB_CARBON_,   sb_pool_bg_res_sl)
+      dsl4jsb_Get_var3D_onChunk(SB_CARBON_,   sb_pool_bg_mic_sl)
+      dsl4jsb_Get_var3D_onChunk(SB_CARBON_,   sb_pool_bg_humus_sl)
     END IF
     ! HYDRO_ 2D
     dsl4jsb_Get_var2D_onChunk(HYDRO_,   num_sl_above_bedrock)         ! in
@@ -1183,6 +1208,23 @@ CONTAINS
 
     IF (tile%Has_process_memory(SB_CARBON_)) THEN
       !> we need to calculate variables for JSBACH c balance check here
+      sb_pool_ag_litter(:) = sb_pool_total_ag_litter_c(:)
+      CALL calculate_sb_pool_bg_litter_for_element(sb_pool_mt, soil_depth_sl, ixC, sb_pool_bg_litter)
+      ! mic in ssm is fast_SOC, in jsm is microbial biomass
+      sb_pool_bg_mic_sl(:,:) = sb_pool_mt(ix_microbial, ixC, :, :)
+      sb_pool_bg_humus_sl(:,:) = sb_pool_mt(ix_dom, ix_elem, :, :) + sb_pool_mt(ix_dom_assoc, ix_elem, :, :) &
+                              &  + sb_pool_mt(ix_mycorrhiza, ix_elem, :, :) &
+                              &  + sb_pool_mt(ix_microbial, ix_elem, :, :) + sb_pool_mt(ix_residue, ix_elem, :, :) &
+                              &  + sb_pool_mt(ix_residue_assoc, ix_elem, :, :)
+      IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm")
+        sb_pool_bg_res_sl(:,:) = sb_pool_mt(ix_dom_assoc, ixC, :, :) + sb_pool_mt(ix_residue_assoc, ixC, :, :)
+      ELSE
+        sb_pool_bg_res_sl(:,:) = sb_pool_mt(ix_residue, ixC, :, :)
+      END IF
+
+      sb_pool_bg_mic(:)   = SUM(sb_pool_bg_mic_sl(:,:) * soil_depth_sl(:,:), DIM=2)
+      sb_pool_bg_res(:)   = SUM(sb_pool_bg_res_sl(:,:) * soil_depth_sl(:,:), DIM=2)
+      sb_pool_bg_humus(:) = SUM(sb_pool_bg_humus_sl(:,:) * soil_depth_sl(:,:), DIM=2)
       
     ELSE
       !> 14.2 across multiple processes
@@ -1706,6 +1748,26 @@ CONTAINS
       &                               + sb_pool_mt(ix_polymeric_litter, ix_elem, :, 1) &
       &                               + sb_pool_mt(ix_woody_litter, ix_elem, :, 1)) * soil_depth_sl(:,1)
   END SUBROUTINE calculate_sb_pool_ag_litter_for_element
+  
+  ! ======================================================================================================= !
+  !>
+  !> Small helper routine to calculate total below ground litter in sb_pool for a given element
+  !>
+  SUBROUTINE calculate_sb_pool_bg_litter_for_element(sb_pool_mt, soil_depth_sl, ix_elem, sb_pool_total_bg_litter_elem)
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp), INTENT(IN)    :: sb_pool_mt(:,:,:,:)             !< sb pool for which the above ground litter is to be calculated
+    REAL(wp), INTENT(IN)    :: soil_depth_sl(:,:)              !< soil depth at each layer[m]
+    INTEGER,  INTENT(IN)    :: ix_elem                         !< index of the queried element in the sb pool
+    REAL(wp), INTENT(INOUT) :: sb_pool_total_bg_litter_elem(:) !< total above ground litter for given element [mol m-2]
+    ! ----------------------------------------------------------------------------------------------------- !
+    sb_pool_total_bg_litter_elem(:) = 0._wp
+    DO isoil = 2,nsoil_w
+      sb_pool_total_bg_litter_elem(:) = (sb_pool_mt(ix_soluable_litter, ix_elem, :, isoil)    &
+        &                               + sb_pool_mt(ix_polymeric_litter, ix_elem, :, isoil) &
+        &                               + sb_pool_mt(ix_woody_litter, ix_elem, :, isoil)) * soil_depth_sl(:,isoil)    
+    END DO
+
+  END SUBROUTINE calculate_sb_pool_bg_litter_for_element
 
 #endif
 END MODULE mo_q_sb_update_pools
