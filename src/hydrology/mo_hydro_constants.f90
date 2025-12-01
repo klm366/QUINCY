@@ -19,8 +19,12 @@
 !> _References_
 !>
 !
-! TODO: alphabetic? more links? correct? move to other moduel?
+! TODO: alphabetic? more links? correct? move to other module?
 !
+!> Atmosphere land coupling
+!>
+!> - Richtmyer, R. and K. Morton, Difference Methods for Initial Value Problems (Interscience, 1967)
+!>
 !> Parametrization of snow fraction
 !>
 !> - A. Roesch et al. Climate Dynamics (2001) 17: 933-947
@@ -100,7 +104,7 @@ MODULE mo_hydro_constants
   REAL(wp), PARAMETER :: &
     ! Parameters used to calculate snow fraction from snow amount
     & wsn2fract_eps    = 1.E-12_wp,        & !< Used for numerical reasons (Roesch et al. 2001, Eq. 6)
-    & wsn2fract_sigfac = 0.15_wp,          & !< Factor to approximate sub-grid scale slopes (Roesch et al. 2001, Eq. 7)
+    & wsn2fract_sigfac = 0.15_wp,          & !< Factor to approximate subgrid scale slopes (Roesch et al. 2001, Eq. 7)
     & wsn2fract_const  = 0.95_wp,          & !< Factor for snow fraction (Roesch et al. 2001, Eq. 6 and 7)
 
     ! Parameters used to calculate snow density (following Heise et al. 2006, also used in TERRA; compare Doms et al. 2021)
@@ -187,33 +191,36 @@ MODULE mo_hydro_constants
 #ifdef __QUINCY_STANDALONE__
   ! quincy standalone
   REAL(wp), PARAMETER :: &
-    & k_pwp_a         = 0.031_wp, &              !< empirical constant in pedo-transfer function to get water content at PWP
-    & k_pwp_c         = 0.487_wp, &              !< empirical constant in pedo-transfer function to get water content at PWP
-    & k_pwp_s         = -0.024_wp, &             !< empirical constant in pedo-transfer function to get water content at PWP
-    & k_pwp_sc        = 0.068_wp, &              !< empirical constant in pedo-transfer function to get water content at PWP
-    & k_pwp_at        = -0.02_wp, &              !< empirical constant in pedo-transfer function to get water content at PWP
-    & k_pwp_bt        = 0.14_wp, &               !< empirical constant in pedo-transfer function to get water content at PWP
-    & k_fc_a          = 0.299_wp, &              !< empirical constant in pedo-transfer function to get water content at FC
-    & k_fc_c          = 0.195_wp, &              !< empirical constant in pedo-transfer function to get water content at FC
-    & k_fc_s          = -0.251_wp, &             !< empirical constant in pedo-transfer function to get water content at FC
-    & k_fc_sc         = 0.452_wp, &              !< empirical constant in pedo-transfer function to get water content at FC
-    & k_fc_at         = -0.015_wp, &             !< empirical constant in pedo-transfer function to get water content at FC
-    & k_fc_bt         = -0.373_wp, &             !< empirical constant in pedo-transfer function to get water content at FC
-    & k_fc_ct         = 1.293_wp, &              !< empirical constant in pedo-transfer function to get water content at FC
-    & k_sat_a         = 0.078_wp, &              !< empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_c         = 0.034_wp, &              !< empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_s         = 0.278_wp, &              !< empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_sc        = -0.584_wp, &             !< empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_at        = -0.107_wp, &             !< empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_bt        = 0.6360_wp, &             !< empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_ct        = 0.097_wp, &              !< empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_dt        = 0.043_wp                 !< empirical constant in pedo-transfer function to get water content at SAT
+    & k_pwp_a         = 0.031_wp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_c         = 0.487_wp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_s         = -0.024_wp, &             !< Empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_sc        = 0.068_wp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_at        = -0.02_wp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_bt        = 0.14_wp, &               !< Empirical constant in pedo-transfer function to get water content at PWP
+    & k_fc_a          = 0.299_wp, &              !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_c          = 0.195_wp, &              !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_s          = -0.251_wp, &             !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_sc         = 0.452_wp, &              !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_at         = -0.015_wp, &             !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_bt         = -0.373_wp, &             !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_ct         = 1.293_wp, &              !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_sat_a         = 0.078_wp, &              !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_c         = 0.034_wp, &              !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_s         = 0.278_wp, &              !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_sc        = -0.584_wp, &             !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_at        = -0.107_wp, &             !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_bt        = 0.6360_wp, &             !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_ct        = 0.097_wp, &              !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_dt        = 0.043_wp                 !< Empirical constant in pedo-transfer function to get water content at SAT
 #endif
 
   REAL(wp), PARAMETER :: &
-    & frac_wtr_vertical_transport_up_max    = -0.75_wp, &   !< maximum upwards   directed material transport across soil layers, i.e., 'frac_wtr_transp_down_sl'; parameter value: pure assumption
-    & frac_wtr_vertical_transport_down_max  = 0.75_wp, &    !< maximum downwards directed material transport across soil layers, i.e., 'frac_wtr_transp_down_sl'; parameter value: pure assumption
-    & frac_w_lat_loss_max                   = 0.75_wp       !< maximum of 'frac_w_lat_loss_sl', i.e., fraction of lateral (horizontal) water loss; parameter value: identical with frac_wtr_vertical_transport_down_max
+    & frac_wtr_vertical_transport_up_max    = -0.75_wp, &   !< Maximum upward material transport across soil layers,
+                                                            !< i.e., 'frac_wtr_transp_down_sl'; parameter value: pure assumption
+    & frac_wtr_vertical_transport_down_max  = 0.75_wp, &    !< Maximum downward material transport across soil layers,
+                                                            !< i.e., 'frac_wtr_transp_down_sl'; parameter value: pure assumption
+    & frac_w_lat_loss_max                   = 0.75_wp       !< Maximum fraction of lateral (horizontal) water loss; parameter
+                                                            !< value: identical with frac_wtr_vertical_transport_down_max
 
 #endif
 END MODULE mo_hydro_constants

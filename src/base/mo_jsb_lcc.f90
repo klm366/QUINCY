@@ -173,6 +173,10 @@ CONTAINS
           ALLOCATE(lcc_relocations%passive_vars_cqt(nr_of_passive_vars))
           ALLOCATE(lcc_relocations%passive_vars_process_id(nr_of_passive_vars))
 
+          ALLOCATE(lcc_relocations%initial_area(nproma, nr_of_tiles, nblks))
+          ALLOCATE(lcc_relocations%gained_area(nproma, nr_of_tiles, nblks))
+          ALLOCATE(lcc_relocations%lost_area(nproma, nr_of_tiles, nblks))
+
           ALLOCATE(active_var_process_ids(nr_of_active_vars))
           active_var_process_ids = 0
 

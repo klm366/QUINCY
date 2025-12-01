@@ -99,7 +99,7 @@ CONTAINS
         .AND. TRIM(suffix) == 'box') THEN
       output_level = BASIC   ! Assign variable to basic output group
     ELSE
-      output_level = NONE    ! Do not assigne variable to an output group
+      output_level = NONE    ! Do not assign variable to an output group
     END IF
 
     ! Area fractions of selected groups of PFTs - only calculated on box tile

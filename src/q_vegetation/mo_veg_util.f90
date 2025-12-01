@@ -23,7 +23,7 @@ MODULE mo_veg_util
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
-  USE mo_exception,             ONLY: message
+  USE mo_exception,             ONLY: message, finish, message_text
   USE mo_jsb_math_constants,    ONLY: zero, eps8, eps1
 
   USE mo_lnd_bgcm_idx
@@ -468,7 +468,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: reserve_carbon_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: reserve_phosphorus_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: w_root_lim_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: wtr_rootzone_rel_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_respiration
     dsl4jsb_Real2D_onChunk      :: maint_respiration
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration
@@ -489,8 +489,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_dacc_cl
     ! HYDRO_ 2D
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_fc
-    dsl4jsb_Real2D_onChunk      :: wtr_rootzone
+    dsl4jsb_Real2D_onChunk      :: wtr_rootzone_rel
     dsl4jsb_Real2D_onChunk      :: transpiration
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
@@ -626,7 +625,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, reserve_phosphorus_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, w_root_lim_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, wtr_rootzone_rel_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)
@@ -647,8 +646,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_dacc_cl)
     ! HYDRO_ 2D
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_fc)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone_rel)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, transpiration)
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                      ! in
@@ -917,17 +915,10 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
-    !$ACC   PRIVATE(hlp_r)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      ! avoid division by zero
-      IF (w_soil_root_fc(ic) > eps8) THEN
-        hlp_r = wtr_rootzone(ic) / w_soil_root_fc(ic)
-      ELSE
-        hlp_r = 0._wp
-      END IF
-      w_root_lim_talloc_mavg(ic)           = calc_time_mavg(dtime, w_root_lim_talloc_mavg(ic), hlp_r, &
-        &                                                   mavg_period_hlp, do_calc=l_growing_season(ic))
+      wtr_rootzone_rel_talloc_mavg(ic) = calc_time_mavg(dtime, wtr_rootzone_rel_talloc_mavg(ic), wtr_rootzone_rel(ic), &
+        &                                               mavg_period_hlp, do_calc=l_growing_season(ic))
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -1094,10 +1085,11 @@ CONTAINS
   !>
   !> Determine if carbon is conserved
   !>
-  SUBROUTINE test_carbon_conservation(tile, options)
+  SUBROUTINE test_carbon_conservation(tile, dtime)
+    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
+    USE mo_jsb_grid,              ONLY: Get_grid
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
-    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: VEG_, SB_, HYDRO_, L2A_
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1107,13 +1099,13 @@ CONTAINS
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
-    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile           !< one tile with data structure for one lct
+    REAL(wp),                   INTENT(in)    :: dtime          !< timestep length
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
-    INTEGER                           :: iblk, ics, ice, nc     !< dimensions
-    REAL(wp)                          :: dtime                  !< timestep length
-    REAL(wp), DIMENSION(options%nc)   :: q_total_c_new          !< helper variable
+    TYPE(t_jsb_grid),         POINTER :: grid
+    INTEGER                           :: iblk, ics, ice, nc, ic !< dimensions
+    REAL(wp),       ALLOCATABLE :: q_total_c_new(:)             !< helper variable
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':test_carbon_conservation'
     ! ----------------------------------------------------------------------------------------------------- !
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1131,15 +1123,13 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: sb_pool_total_c
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     ! ----------------------------------------------------------------------------------------------------- !
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
-    dtime   = options%dtime
-    ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(L2A_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ics = 1
+    ice = grid%nproma
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1149,24 +1139,54 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c)
-    dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)
-    dsl4jsb_Get_var2D_onChunk(L2A_, q_c_conservation_test)
-    dsl4jsb_Get_var2D_onChunk(L2A_, q_total_c)
-    dsl4jsb_Get_var3D_onChunk(SB_, sb_pool_total_c)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
-    ! ----------------------------------------------------------------------------------------------------- !
 
-    ! vegetation and soil carbon
-    q_total_c_new(:) = veg_pool_total_c(:) + SUM(sb_pool_total_c(:,:) * soil_depth_sl(:,:), DIM = 2)
+    ALLOCATE(q_total_c_new(grid%nproma))
 
-    IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
-      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_c)
-      q_total_c_new(:) = q_total_c_new(:) + veg_products_total_c(:)
-    END IF
+    DO iblk = 1, grid%nblks
+      IF (iblk == grid%nblks) THEN
+        ice = grid%npromz
+        ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
+      END IF
 
-    q_c_conservation_test(:) = q_total_c_new - q_total_c - (net_biosphere_production * dtime / 1000000.0_wp)
-    q_total_c(:) = q_total_c_new(:)
+      nc = ice - ics + 1
+
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c)
+      dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)
+      dsl4jsb_Get_var2D_onChunk(L2A_, q_c_conservation_test)
+      dsl4jsb_Get_var2D_onChunk(L2A_, q_total_c)
+      dsl4jsb_Get_var3D_onChunk(SB_, sb_pool_total_c)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
+
+      ! Do not test as long as the variables still carry the initialisation value
+      IF (.NOT. (ALL(q_c_conservation_test(:) == -999.0_wp))) THEN
+        DO ic = 1, nc
+          ! vegetation and soil carbon
+          q_total_c_new(ic) = veg_pool_total_c(ic) + SUM(sb_pool_total_c(ic,:) * soil_depth_sl(ic,:))
+
+          IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+            dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_c)
+            q_total_c_new(ic) = q_total_c_new(ic) + veg_products_total_c(ic)
+          END IF
+
+          q_c_conservation_test(ic) = q_total_c_new(ic) - q_total_c(ic) - (net_biosphere_production(ic) * dtime / 1000000.0_wp)
+
+          IF (dsl4jsb_Config(VEG_)%flag_log_c_conservation) THEN
+            IF ((ABS(q_c_conservation_test(ic)) > 1.e-11_wp) .AND. (ABS(q_total_c(ic)) > 0.0_wp)) THEN
+              WRITE(message_text,*) 'Failed carbon conservation test: ', q_c_conservation_test(ic), &
+                & '; new total c: ', q_total_c_new(ic), '; old total c: ', q_total_c(ic),           &
+                & '; nbp ',  (net_biosphere_production(ic) * dtime / 1000000.0_wp)
+              CALL message(TRIM(routine), message_text, all_print=.TRUE.)
+            END IF
+          END IF
+
+          q_total_c(ic) = q_total_c_new(ic)
+        END DO
+      ELSE
+        q_c_conservation_test(:) = 0.0_wp
+      END IF
+    END DO
+
+    DEALLOCATE(q_total_c_new)
 
   END SUBROUTINE test_carbon_conservation
 

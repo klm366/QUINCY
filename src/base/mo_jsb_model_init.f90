@@ -189,6 +189,7 @@ CONTAINS
     dsl4jsb_Def_config(FAGE_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(SB_)
 #endif
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
@@ -264,7 +265,8 @@ CONTAINS
         END IF
 
         IF (model%processes(ALCC_)%p%config%active) THEN
-          CALL model%Queue_task(ALCC_, "alcc")
+          CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
+          CALL model%Queue_task(ALCC_, "alcc_translocation")
         END IF
 
         ! Do postprocessing after all LCC tasks were executed
@@ -375,6 +377,7 @@ CONTAINS
     !
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_config(VEG_)
+      dsl4jsb_Get_config(SB_)
 
       !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
       IF (.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
@@ -415,7 +418,8 @@ CONTAINS
           ! Call alcc for now only in CANOPY mode (i.e. without biogeochemistry enabled)
           IF (model%config%qmodel_id == QCANOPY) THEN
             IF (model%processes(ALCC_)%p%config%active) THEN
-              CALL model%Queue_task(ALCC_, "alcc")
+              CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
+              CALL model%Queue_task(ALCC_, "alcc_translocation")
             END IF
           END IF
 
@@ -466,7 +470,11 @@ CONTAINS
           CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
           CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
           IF (model%config%qmodel_id == QLAND) THEN
-            CALL model%Queue_task(SB_, "sb_simple_model")           ! LAND ONLY
+            IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+              CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
+            ELSE
+              CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
+            END IF
           END IF
           CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
         END IF
@@ -524,7 +532,8 @@ CONTAINS
           ! Call alcc for now only in CANOPY mode (i.e. without biogeochemistry enabled)
           IF (model%config%qmodel_id == QCANOPY) THEN
             IF (model%processes(ALCC_)%p%config%active) THEN
-              CALL model%Queue_task(ALCC_, "alcc")
+              CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
+              CALL model%Queue_task(ALCC_, "alcc_translocation")
             END IF
           END IF
 
@@ -564,7 +573,11 @@ CONTAINS
           CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
           CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
           IF (model%config%qmodel_id == QLAND) THEN
-            CALL model%Queue_task(SB_, "sb_simple_model")           ! LAND ONLY
+            IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+              CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
+            ELSE
+              CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
+            END IF
           END IF
           CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
         END IF
@@ -944,7 +957,7 @@ CONTAINS
 
     END DO
 
-    ! Iterate over tiles, crosscheck tile structure and collect conserved quantities
+    ! Iterate over tiles, crosscheck tile structure, and collect conserved quantities
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &

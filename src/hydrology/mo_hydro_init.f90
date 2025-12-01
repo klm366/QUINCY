@@ -23,7 +23,7 @@
 !> such as the soil properties are set for all tiles in subroutine [[hydro_init_bc]]
 !> while initial conditions as e.g. the initial soil moisture are set in subroutine
 !> [[hydro_init_ic]]. After the last tile has been initialized, the initialization
-!> prozess is finalized by subroutine [[hydro_finalze_init_vars]], where the memory
+!> prozess is finalized by subroutine [[hydro_finalize_init_vars]], where the memory
 !> that was only required in the initialization phase is released again.
 !>
 MODULE mo_hydro_init
@@ -193,7 +193,7 @@ CONTAINS
       CALL hydro_read_init_vars(tile)
       CALL hydro_init_bc(tile)
       CALL hydro_init_ic(tile)
-      CALL hydro_finalize_init_vars()
+      CALL hydro_finalize_init_vars()  ! TODO: Is this necessary? Or should it be done like below.
     ELSE
       ! Read initial and boundary condition data by the top tile, only.
       ! Note: this requires that the init routines in mo_jsb_model_init:jsbach_init are called starting
@@ -456,9 +456,10 @@ CONTAINS
     dsl4jsb_Real2D_onDomain    :: root_depth
     dsl4jsb_Real2D_onDomain    :: w_soil_root_pwp
     dsl4jsb_Real2D_onDomain    :: w_soil_root_fc
-    dsl4jsb_Real2D_onDomain    :: w_skin
+    dsl4jsb_Real2D_onDomain    :: wtr_skin
     dsl4jsb_Real2D_onDomain    :: wtr_rootzone
     dsl4jsb_Real2D_onDomain    :: wtr_rootzone_rel
+    dsl4jsb_Real2D_onDomain    :: wtr_plant_avail_rel
     dsl4jsb_Real2D_onDomain    :: oro_stddev
     dsl4jsb_Real2D_onDomain    :: weq_snow_soil
     dsl4jsb_Real2D_onDomain    :: elevation
@@ -502,9 +503,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   root_depth)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_soil_root_pwp)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_soil_root_fc)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_skin)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_skin)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_rootzone)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_rootzone_rel)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_plant_avail_rel)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   oro_stddev)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   weq_snow_soil)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   elevation)
@@ -652,11 +654,12 @@ CONTAINS
 
     !> water in the surface reservoir [m]
     !>
-    w_skin(:,:) = 0.0_wp
+    wtr_skin(:,:) = 0.0_wp
 
     !> adjust initial water amount to prescribed theta
     !>
-    wtr_rootzone_rel(:,:)   = hydro_init_vars%soil_theta_prescribe(:,:)
+    wtr_rootzone_rel(:,:)    = hydro_init_vars%soil_theta_prescribe(:,:)
+    wtr_plant_avail_rel(:,:) = hydro_init_vars%soil_theta_prescribe(:,:)
     wtr_rootzone(:,:)       = w_soil_root_pwp(:,:) &
       &                       + hydro_init_vars%soil_theta_prescribe(:,:) * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:))
 
@@ -1042,7 +1045,7 @@ CONTAINS
         CALL read_bc_data(input_file, 'char_area',  tile%name, .FALSE., hydro_init_vars%char_area,  &
           &  llimit=0._wp, fallback=10000._wp)
         CALL read_bc_data(input_file, 'char_h_srf', tile%name, .FALSE., hydro_init_vars%char_h_srf, &
-          &  llimit=0._wp, fallback=0._wp)
+          &  fallback=0._wp)
         CALL read_bc_data(input_file, 'char_slope', tile%name, .FALSE., hydro_init_vars%char_slope, &
           &  llimit=0._wp, fallback=-9999._wp)
         ! Reset LEX l_dpr4ponds switch in case that tile specific depression data is provided
@@ -1110,7 +1113,13 @@ CONTAINS
         CALL read_bc_data(input_file, 'wilting_point', tile%name, l_organic, hydro_init_vars%vol_p_wilt, default=0._wp)
 
         !>     - Volumetric residual water content
-        CALL read_bc_data(input_file, 'residual_water', tile%name, l_organic, hydro_init_vars%vol_wres, default=0._wp)
+        IF (input_file%Has_var('residual_water')) THEN
+          CALL read_bc_data(input_file, 'residual_water', tile%name, l_organic, hydro_init_vars%vol_wres, default=0._wp)
+        ELSE
+          WRITE (message_text,*) 'BC File does not contain data on residual water content. Will use approximation instead!'
+          CALL message (TRIM(routine), message_text)
+          hydro_init_vars%vol_wres = hydro_init_vars%vol_porosity * 0.2_wp
+        END IF
 
         !>     - Soil matric potential
         CALL read_bc_data(input_file, 'moisture_pot', tile%name, l_organic, hydro_init_vars%matric_pot, default=-0.2_wp)
@@ -1399,7 +1408,7 @@ CONTAINS
       IF (dsl4jsb_Config(LEX_)%l_noslope_dpr) THEN
         ! Assuming zero slope on depression tiles (char_h_surf < 0.0) ...
         WHERE ((dsl4jsb_var_ptr(HYDRO_, macro_slope) < 0.0_wp) .AND. &
-          &    (dsl4jsb_var_ptr(HYDRO_, char_h_surf)      < 0.0_wp))
+          &    (dsl4jsb_var_ptr(HYDRO_, char_h_surf) < 0.0_wp))
           dsl4jsb_var_ptr(HYDRO_, macro_slope) = 0.0_wp
         ! ... and steepness elsewhere
         ELSE WHERE (dsl4jsb_var_ptr(HYDRO_, macro_slope) < 0.0_wp)
@@ -1856,6 +1865,11 @@ CONTAINS
         & dsl4jsb_var3D_onDomain(HYDRO_, vol_wres_sl)      * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)  &
         & - dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl))
 
+      !> water in the surface reservoir [m]
+      !>
+      dsl4jsb_var2D_onDomain(HYDRO_, wtr_skin) = 0.0_wp
+      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_skin)) ASYNC(1)
+
       !$ACC UPDATE ASYNC(1) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl)) &
@@ -1863,6 +1877,7 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_res_sl))
+      !$ACC WAIT(1)
 
     END IF ! contains_soil
 
@@ -1932,7 +1947,7 @@ CONTAINS
       END WHERE
       !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)) ASYNC(1)
 
-      ! Initialization of the relative root zone moisture
+      ! Initialization of the relative root zone moisture and plant available root zone moisture
       ! Note: It is re-calculated every time step in mo_hydro_interface:update_water_stress.
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone) > 0._wp)
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = &
@@ -1941,8 +1956,12 @@ CONTAINS
       ELSE WHERE
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
       END WHERE
+      dsl4jsb_var2D_onDomain(HYDRO_, wtr_plant_avail_rel) = dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel)
 
-      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel)) ASYNC(1)
+      !$ACC UPDATE ASYNC(1) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_plant_avail_rel))
+      !$ACC WAIT(1)
 
     END IF ! Tile with vegetation
   END SUBROUTINE hydro_init_ic
@@ -1987,7 +2006,7 @@ CONTAINS
       & vol_wres                 !< Volumetric residual soil water content []
     dsl4jsb_Real3D_onDomain :: &
       & fract_org_sl,          & !< Volumetric fraction of soil layer organic carbon []
-      & hyd_cond_sat_sl,       & !< Hydraulic conductivity on soil layers [m s-1]
+      & hyd_cond_sat_sl,       & !< Saturated hydraulic conductivity on soil layers [m s-1]
       & vol_porosity_sl,       & !< Volumetric soil porosity on soil layers []
       & bclapp_sl,             & !< Clapp and Hornberger exponent b on soil layers []
       & matric_pot_sl,         & !< Matric potential on soil layers [m]

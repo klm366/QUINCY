@@ -12,7 +12,7 @@
 !> ---------------------------------------
 !>
 !>### Definition of concrete class and methods for tiles
-!> This module implements `t_jsb_tile` as an extension of `[[mo_jsb_tile_class:t_jsb_tile_abstract]]` and
+!> This module implements 't_jsb_tile' as an extension of [[mo_jsb_tile_class:t_jsb_tile_abstract]] and
 !>   implements, among others, the methods
 !>
 !> - Init => [[Init_tile]]

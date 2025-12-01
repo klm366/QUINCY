@@ -498,11 +498,13 @@ CONTAINS
 
     INTEGER :: nc
     INTEGER :: no_omp_thread
+    LOGICAL :: ltimer
 
     ! ---------------------------
     ! Go
 
-    IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_jsbach(model_id))
+    ltimer = PRESENT(km) .AND. (timer_on() .OR. l_timer_host)
+    IF (ltimer) CALL timer_start(timer_jsbach(model_id))
 
     no_omp_thread = Get_omp_thread()
 
@@ -577,7 +579,7 @@ CONTAINS
     IF (debug_on('basic') .AND. iblk == 1) &
       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
 
-    IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model_id))
+    IF (ltimer) CALL timer_stop(timer_jsbach(model_id))
 
   END SUBROUTINE interface_tmx
 
@@ -769,7 +771,7 @@ CONTAINS
     ! Carbon conservation test Quincy
     CALL model%Get_top_tile(tile)
     IF ((model%config%model_scheme == MODEL_QUINCY) .AND. (model%config%qmodel_id == QLAND)) THEN
-      CALL test_carbon_conservation(tile, model%options(no_omp_thread))
+      CALL test_carbon_conservation(tile, model%options(no_omp_thread)%dtime)
     END IF
 #endif
 

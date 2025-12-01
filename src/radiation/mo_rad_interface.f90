@@ -28,6 +28,7 @@ MODULE mo_rad_interface
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, message_text, finish
 
+  USE mo_jsb_control,         ONLY: jsbach_runs_standalone
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator
@@ -1066,7 +1067,7 @@ CONTAINS
 #ifndef __QUINCY_STANDALONE__
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
     IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
-      & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
+      & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id, jsbach_runs_standalone()) .AND. &
       & .NOT. jsbach_runs_standalone()) THEN
       IF (debug_on() .AND. iblk == 1) THEN
         WRITE (message_text,*) 'Update albedo only at experiment start, ', &
@@ -1080,7 +1081,7 @@ CONTAINS
 
     ! Enable for debugging:
     ! IF (iblk == 1 .AND. .NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
-    !   IF (is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .OR. &
+    !   IF (is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id, jsbach_runs_standalone()) .OR. &
     !     & is_time_experiment_start(options%current_datetime)) THEN
     !     CALL message('update_albedo ', 'compute surface albedo')
     !   END IF
@@ -1801,7 +1802,7 @@ CONTAINS
 #ifndef __QUINCY_STANDALONE__
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
     IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
-      & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
+      & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id, jsbach_runs_standalone()) .AND. &
       & .NOT. jsbach_runs_standalone()) RETURN
 #endif
 

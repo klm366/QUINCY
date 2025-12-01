@@ -60,7 +60,7 @@ CONTAINS
   !
   SUBROUTINE update_surface_energy_land(tile, options)
 
-    USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, q_effective, surface_dry_static_energy
+    USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, qsat_mixed, q_effective, surface_dry_static_energy
     USE mo_jsb_physical_constants, ONLY: tmelt, tpfac2, tpfac3, cpd, cvd
     USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
     USE mo_jsb_grid,               ONLY: Get_grid
@@ -429,10 +429,12 @@ CONTAINS
         t_old(ic)        = t(ic)
       END IF
 
-      IF (tile%is_glacier .AND. use_tmx) THEN
-        qsat_old = qsat_ice(t_old(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      IF (tile%is_glacier) THEN
+        qsat_old = qsat_ice(t_old(ic), press_srf(ic))
+      ELSE IF (use_tmx) THEN
+        qsat_old = qsat_water(t_old(ic), press_srf(ic))
       ELSE
-        qsat_old = qsat_water(t_old(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+        qsat_old = qsat_mixed(t_old(ic), press_srf(ic))
       END IF
 
       ! The heat capacity of the surface layer is currently taken as the heat capacity of the upper soil layer
@@ -585,7 +587,7 @@ CONTAINS
       )
 
     USE mo_jsb4_forcing, ONLY: forcing_options
-    USE mo_phy_schemes, ONLY: heat_transfer_coef, qsat_water, update_drag, q_effective, surface_dry_static_energy
+    USE mo_phy_schemes, ONLY: heat_transfer_coef, qsat_mixed, update_drag, q_effective, surface_dry_static_energy
     USE mo_jsb_physical_constants, ONLY: stbo, zemiss_def, tmelt
 
     INTEGER, PARAMETER :: NUM_ITERS = 10
@@ -696,8 +698,8 @@ CONTAINS
           s_srf(ic) = s_star(ic)
           dt_sk_dt_srf(ic) = 1._wp
           t_radref(ic) = t(ic)
-          qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.TRUE.)
-          dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
+          qsat_star(ic) = qsat_mixed(t(ic), press_srf(ic))
+          dQdT(ic) = (qsat_mixed(t(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
           le_phase_change(ic) = 0._wp
         END DO
         !$ACC END PARALLEL LOOP
@@ -714,8 +716,8 @@ CONTAINS
             s_srf(ic) = s_star(ic)
             dt_sk_dt_srf(ic) = 1._wp
             t_radref(ic) = 280._wp
-            qsat_star(ic) = qsat_water(280._wp, press_srf(ic), use_convect_tables=.TRUE.)
-            dQdT(ic) = (qsat_water(280._wp + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
+            qsat_star(ic) = qsat_mixed(280._wp, press_srf(ic))
+            dQdT(ic) = (qsat_mixed(280._wp + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
             le_phase_change(ic) = 0._wp
           END IF
         END DO
@@ -744,8 +746,8 @@ CONTAINS
               ! Update reference point and linearizations
               rad_net_star = rad_srf_net(ic) + stbo * zemiss_def * (t(ic)**4 - t_star(ic)**4)
               t_radref(ic) = t_star(ic)
-              qsat_star(ic) = qsat_water(t_star(ic), press_srf(ic), use_convect_tables=.TRUE.)
-              dQdT(ic) = (qsat_water(t_star(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
+              qsat_star(ic) = qsat_mixed(t_star(ic), press_srf(ic))
+              dQdT(ic) = (qsat_mixed(t_star(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
 
               s_ref = t2s_conv(ic) * t_star(ic)
 
@@ -782,8 +784,8 @@ CONTAINS
     ELSE ! l_skin_temp
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.TRUE.)
-        dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
+        qsat_star(ic) = qsat_mixed(t(ic), press_srf(ic))
+        dQdT(ic) = (qsat_mixed(t(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
         t_radref(ic) = t(ic)
       END DO
       !$ACC END PARALLEL LOOP
@@ -906,7 +908,7 @@ CONTAINS
         & q_acoef, q_bcoef, drag_srf, s_star, s_srf, dt_sk_dt_srf, qsat_star, dQdT, t_radref, le_phase_change,            &
         & skin_conductivity)
 
-    USE mo_phy_schemes, ONLY: qsat_water, heat_transfer_coef, q_effective, surface_dry_static_energy
+    USE mo_phy_schemes, ONLY: qsat_mixed, heat_transfer_coef, q_effective, surface_dry_static_energy
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     INTEGER, INTENT(IN) :: nc
@@ -960,8 +962,8 @@ CONTAINS
         s_srf(ic) = s_star(ic)
         dt_sk_dt_srf(ic) = 1._wp
         t_radref(ic) = t(ic)
-        qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.TRUE.)
-        dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
+        qsat_star(ic) = qsat_mixed(t(ic), press_srf(ic))
+        dQdT(ic) = (qsat_mixed(t(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
         le_phase_change(ic) = 0._wp
       END DO
       !$ACC END PARALLEL LOOP
@@ -974,15 +976,15 @@ CONTAINS
           s_srf(ic) = s_star(ic)
           dt_sk_dt_srf(ic) = 1._wp
           t_radref(ic) = 280._wp
-          qsat_star(ic) = qsat_water(280._wp, press_srf(ic), use_convect_tables=.TRUE.)
-          dQdT(ic) = (qsat_water(280._wp + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
+          qsat_star(ic) = qsat_mixed(280._wp, press_srf(ic))
+          dQdT(ic) = (qsat_mixed(280._wp + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
           le_phase_change(ic) = 0._wp
         ELSE
           heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)
 
           t_radref(ic) = t(ic)
-          qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.TRUE.)
-          dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.TRUE.) - qsat_star(ic)) * 1000._wp
+          qsat_star(ic) = qsat_mixed(t(ic), press_srf(ic))
+          dQdT(ic) = (qsat_mixed(t(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
 
           s_ref = t2s_conv(ic) * t(ic)
 
@@ -1124,11 +1126,11 @@ CONTAINS
         dt_sk_dt_srf(ic) = 1._wp
         t_radref(ic) = t(ic)
         IF (is_glacier(ic)) THEN
-          qsat_star(ic) = qsat_ice(t(ic), press_srf(ic), use_convect_tables=.FALSE.)
-          dQdT(ic) = (qsat_ice(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.FALSE.) - qsat_star(ic)) * 1000._wp
+          qsat_star(ic) = qsat_ice(t(ic), press_srf(ic))
+          dQdT(ic) = (qsat_ice(t(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
         ELSE
-          qsat_star(ic) = qsat_water(t(ic), press_srf(ic), use_convect_tables=.FALSE.)
-          dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.FALSE.) - qsat_star(ic)) * 1000._wp
+          qsat_star(ic) = qsat_water(t(ic), press_srf(ic))
+          dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
         END IF
         le_phase_change(ic) = 0._wp
       END DO
@@ -1147,8 +1149,8 @@ CONTAINS
           s_srf(ic) = s_star(ic)
           dt_sk_dt_srf(ic) = 1._wp
           t_radref(ic) = 280._wp
-          qsat_star(ic) = qsat_water(280._wp, press_srf(ic), use_convect_tables=.FALSE.)
-          dQdT(ic) = (qsat_water(280._wp + 0.001_wp, press_srf(ic), use_convect_tables=.FALSE.) - qsat_star(ic)) * 1000._wp
+          qsat_star(ic) = qsat_water(280._wp, press_srf(ic))
+          dQdT(ic) = (qsat_water(280._wp + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
           le_phase_change(ic) = 0._wp
         END IF
       END DO
@@ -1164,11 +1166,11 @@ CONTAINS
             rad_net_star = rad_srf_net(ic) + stbo * zemiss_def * (t(ic)**4 - t_star(ic)**4)
 
             IF (is_glacier(ic)) THEN
-              qsat_star(ic) = qsat_ice(t_star(ic), press_srf(ic), use_convect_tables=.FALSE.)
-              dQdT(ic) = (qsat_ice(t_star(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.FALSE.) - qsat_star(ic)) * 1000._wp
+              qsat_star(ic) = qsat_ice(t_star(ic), press_srf(ic))
+              dQdT(ic) = (qsat_ice(t_star(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
             ELSE
-              qsat_star(ic) = qsat_water(t_star(ic), press_srf(ic), use_convect_tables=.FALSE.)
-              dQdT(ic) = (qsat_water(t_star(ic) + 0.001_wp, press_srf(ic), use_convect_tables=.FALSE.) - qsat_star(ic)) * 1000._wp
+              qsat_star(ic) = qsat_water(t_star(ic), press_srf(ic))
+              dQdT(ic) = (qsat_water(t_star(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
             END IF
 
             s_ref = t2s_conv(ic) * t_star(ic)

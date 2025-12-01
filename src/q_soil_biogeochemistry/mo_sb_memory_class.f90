@@ -261,7 +261,7 @@ MODULE mo_sb_memory_class
                             emission_n2_n15                       !< land to atmosphere flux of 15N2 [micro-mol m-2 s-1]
 
     !------------------------------------------------------------------------------------------------------ !
-    !>3D ...
+    !>3D JSM diagnostics (Jena Soil Model)
     !>
     TYPE(t_jsb_var_real3d)  :: &
                             qmax_org, &                           !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
@@ -304,6 +304,17 @@ MODULE mo_sb_memory_class
                             assoc_dom_c_loss_mavg_sl              !< time-averaged associated dom C loss rate [micro-mol m-3 s-1]
 
 
+
+    !------------------------------------------------------------------------------------------------------ !
+    !>3D JSM pools | microbe, mineral-associated organic matter (Jena Soil Model)
+    !>
+    TYPE(t_jsb_var_real3d)  :: &
+      & sb_bgcm_pool_microbial_c, &        !< microbial C [mol C m-3 soil]
+      & sb_bgcm_pool_microbial_n, &        !< microbial N [mol N m-3 soil]
+      & sb_bgcm_pool_microbial_p, &        !< microbial P [mol P m-3 soil]
+      & sb_bgcm_pool_mineral_assoc_c, &    !< mineral-associated C [mol C m-3 soil]
+      & sb_bgcm_pool_mineral_assoc_n, &    !< mineral-associated N [mol N m-3 soil]
+      & sb_bgcm_pool_mineral_assoc_p       !< mineral-associated P [mol P m-3 soil]
 
     !------------------------------------------------------------------------------------------------------ !
     !>3D soil properties
@@ -354,8 +365,8 @@ MODULE mo_sb_memory_class
     !> biosphere-level diagnostics
     !>
     TYPE(t_jsb_var_real3d)  :: &
-      & total_soil_n, &            !< sb_pool_total_bg_soil_n + nh4_solute + nh4_assoc + no3_solute [mol m-3]
-      & total_soil_inorg_n         !< nh4_solute + nh4_assoc + no3_solute [mol m-3]
+      & total_soil_n, &      !< sb_pool_total_som_n + nh4_solute + nh4_assoc + no3_solute [mol m-3]
+      & total_soil_inorg_n   !< nh4_solute + nh4_assoc + no3_solute [mol m-3]
 
     TYPE(t_jsb_var_real2d)  :: &
       & ecosystem_total_n_loss     !< emission_noy + emission_n2o + emission_n2 + leaching_dom_nitrogen + leaching_nh4_solute + leaching_no3_solute
@@ -464,6 +475,9 @@ CONTAINS
     CHARACTER(len=30)                        :: unit_sb_flux                !< unit of element var
     INTEGER                                  :: elem_idx_map(LAST_ELEM_ID)  !< element mapper ID -> IND
     INTEGER                                  :: table                       !< ...
+    INTEGER                                  :: output_level_local          !< add var to BASIC output_level, model specific (ssm/jsm)
+    LOGICAL                                  :: output_switch_local         !< add var to output file, model specific (ssm/jsm)
+    LOGICAL                                  :: restart_switch_local        !< add var to restart file, model specific (ssm/jsm)
     CHARACTER(len=*), PARAMETER              :: routine = TRIM(modname)//':Init_sb_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
@@ -481,6 +495,16 @@ CONTAINS
     ! init local variables
     unit_sb_pool = "mol m-3"
     unit_sb_flux = "mol m-3 timestep-1"
+
+    ! set output/restart options for the ssm/jsm soil model
+    output_level_local   = FULL
+    output_switch_local  = .FALSE.
+    restart_switch_local = .FALSE.
+    IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+      output_level_local   = BASIC
+      output_switch_local  = .TRUE.
+      restart_switch_local = .TRUE.
+    END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Monthly deposition data is only required on the grid-box level
@@ -762,7 +786,7 @@ CONTAINS
 
       CALL mem%Add_var('sb_pool_total_bg_soil_n15', mem%sb_pool_total_bg_soil_n15, &
         & hgrid, vgrid_soil_w, &
-        & t_cf('sb_pool_total_bg_soil_n15', 'mol m-3', 'total N15, sum of SOM and below ground litter in sb_pool components'), &
+        & t_cf('sb_pool_total_som_n15', 'mol m-3', 'total N15, sum of SOM and below ground litter in sb_pool components'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1759,8 +1783,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -1770,7 +1794,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = output_level_local, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1781,8 +1805,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -1792,7 +1816,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = output_level_local, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1803,8 +1827,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -2188,8 +2212,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -2210,8 +2234,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -2222,7 +2246,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
-        & loutput = .FALSE., &
+        & loutput = output_switch_local, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -2233,7 +2257,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
-        & loutput = .FALSE., &
+        & loutput = output_switch_local, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -2397,8 +2421,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2507,8 +2531,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2518,8 +2542,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2540,7 +2564,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = output_level_local, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -2573,8 +2597,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2595,8 +2619,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2617,8 +2641,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2628,8 +2652,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2639,8 +2663,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2650,8 +2674,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2683,8 +2707,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2694,8 +2718,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2839,9 +2863,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
+        & lrestart = restart_switch_local, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_residue', mem%enzyme_frac_residue, &
@@ -2850,9 +2874,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
+        & lrestart = restart_switch_local, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_poly_c', mem%enzyme_frac_poly_c, &
@@ -2863,7 +2887,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = restart_switch_local, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_poly_n', mem%enzyme_frac_poly_n, &
@@ -2874,7 +2898,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = restart_switch_local, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_poly_p', mem%enzyme_frac_poly_p, &
@@ -2885,7 +2909,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = restart_switch_local, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_poly_c_mavg', mem%enzyme_frac_poly_c_mavg, &
@@ -2896,7 +2920,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = restart_switch_local, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_poly_n_mavg', mem%enzyme_frac_poly_n_mavg, &
@@ -2907,7 +2931,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = restart_switch_local, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('enzyme_frac_poly_p_mavg', mem%enzyme_frac_poly_p_mavg, &
@@ -2918,7 +2942,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = restart_switch_local, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('volume_min_sl', mem%volume_min_sl, &
@@ -3122,6 +3146,72 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('sb_bgcm_pool_microbial_c', mem%sb_bgcm_pool_microbial_c, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('sb_bgcm_pool_microbial_c', 'mol m-3', 'microbial C'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('sb_bgcm_pool_microbial_n', mem%sb_bgcm_pool_microbial_n, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('sb_bgcm_pool_microbial_n', 'mol m-3', 'microbial N'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('sb_bgcm_pool_microbial_p', mem%sb_bgcm_pool_microbial_p, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('sb_bgcm_pool_microbial_p', 'mol m-3', 'microbial P'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('sb_bgcm_pool_mineral_assoc_c', mem%sb_bgcm_pool_mineral_assoc_c, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('sb_bgcm_pool_mineral_assoc_c', 'mol m-3', 'mineral associated C in soils'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('sb_bgcm_pool_mineral_assoc_n', mem%sb_bgcm_pool_mineral_assoc_n, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('sb_bgcm_pool_mineral_assoc_n', 'mol m-3', 'mineral associated N in soils'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('sb_bgcm_pool_mineral_assoc_p', mem%sb_bgcm_pool_mineral_assoc_p, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('sb_bgcm_pool_mineral_assoc_p', 'mol m-3', 'mineral associated P in soils'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 

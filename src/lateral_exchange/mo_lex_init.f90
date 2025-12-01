@@ -56,7 +56,7 @@ CONTAINS
       &                              get_flow_lags
     USE mo_hydro_constants,    ONLY: vel_lat_srf, vel_lat_blg
 
-    USE mo_lex_connectivities, ONLY: &
+    USE mo_lex_constants,      ONLY: &
       & cmx_micro_ctc_2tilelex, cmx_micro_hfp_srf_2tilelex, cmx_micro_hfp_blg_2tilelex, &
       & cmx_macro_hfp_srf_2tilelex, cmx_macro_hfp_blg_2tilelex,                         &
       & cmx_micro_ctc_3tilelex, cmx_micro_hfp_srf_3tilelex, cmx_micro_hfp_blg_3tilelex, &
