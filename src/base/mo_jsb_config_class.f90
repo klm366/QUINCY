@@ -130,6 +130,7 @@ CONTAINS
     LOGICAL                       :: use_tmx
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
+    LOGICAL                       :: use_tile_seb     !< compute SEB on tiles
     LOGICAL                       :: check_child_cf
     CHARACTER(len=10)             :: enforce_water_budget
     CHARACTER(len=10)             :: quincy_model
@@ -162,6 +163,7 @@ CONTAINS
       use_tmx, &
       use_lakes, &
       use_glacier, &
+      use_tile_seb, &
       check_child_cf, &
       enforce_water_budget, &
       quincy_model, &
@@ -209,6 +211,7 @@ CONTAINS
     use_tmx                    = .FALSE.
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
+    use_tile_seb               = .FALSE.
     check_child_cf             = .FALSE.
     enforce_water_budget       = 'ignore'
     quincy_model               = 'land'
@@ -297,7 +300,7 @@ CONTAINS
     model_config%use_tmx                    = use_tmx
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
-    model_config%use_tile_seb               = .FALSE. ! enable in use case, not namelist
+    model_config%use_tile_seb               = use_tile_seb
     model_config%check_child_cf             = check_child_cf
     model_config%quincy_model               = TRIM(quincy_model)
     model_config%qmodel_id                  = qmodel_id

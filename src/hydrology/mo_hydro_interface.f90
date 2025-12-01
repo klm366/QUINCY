@@ -2680,9 +2680,6 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(TURB_, ch)
         dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)       ! in
         dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef)       ! in
-      ELSE IF (model%config%use_tile_seb) THEN
-        dsl4jsb_Get_var2D_onChunk(SEB_,  q_acoef)       ! in
-        dsl4jsb_Get_var2D_onChunk(SEB_,  q_bcoef)       ! in
       ELSE
         dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef_wtr)   ! in
         dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef_wtr)   ! in
