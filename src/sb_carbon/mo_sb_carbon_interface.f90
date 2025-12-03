@@ -38,7 +38,7 @@ MODULE mo_sb_carbon_interface
   USE mo_carbon_process,     ONLY: recalc_per_tile_vars, recalc_carbon_per_tile_vars, calculate_current_c_ta_state_sum, &
                                    check_carbon_conservation
   USE mo_q_sb_update_pools,  ONLY: calculate_sb_pool_bg_litter_for_element
-
+  USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_FORMATION_ID
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
@@ -65,7 +65,6 @@ MODULE mo_sb_carbon_interface
   PRIVATE
   PUBLIC ::  Register_sb_carbon_tasks
   PUBLIC ::  &
-    &        yday_carbon_conservation_test,   &
     &        rescale_carbon_upon_reference_area_change,                                                    &
     &        carbon_transfer_from_active_to_passive_vars_onChunk, global_carbon_diagnostics,               &
     &        rescale_carbon_vars_upon_ageing_induced_ref_area_change, merge_carbon_vars_upon_ageing,       &
@@ -157,6 +156,7 @@ CONTAINS
     REAL(wp)                     :: lctlib_specificLeafArea_C, lctlib_reserveC2leafC
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_sb_C_NPP'
     REAL(wp)                     :: dtime
+    TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store           !< the bgcm store of this tile
     TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_w         !< Vertical grid    
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
@@ -350,7 +350,7 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(HYDRO_)
 
-
+    bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L3D(SB_BGCM_FORMATION_ID, sb_formation_mt)
     !
     ! This is on canopy area:
@@ -529,25 +529,22 @@ CONTAINS
 
     ! All per tile variables need to be re-calculated in case they are written to output
     CALL recalc_per_tile_vars(tile, options,                                      &
-      & c_green = c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),     &
+      & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
       & c_crop_harvest = c_crop_harvest(:),                                       &
-      & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
-      & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
-      & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:),                 &
-      & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
-      & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:),                 &
-      & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
-      & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:),                 &
-      & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
-      & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
-      & root_exudates = root_exudates(:),                                         &
-      & soil_respiration = soil_respiration(:),                                   &
-      & NPP_flux_correction = NPP_flux_correction(:),                             &
-      & cflux_c_greenwood_2_litter = cflux_c_greenwood_2_litter(:),               &
-      & cflux_c_green_2_herb = cflux_c_green_2_herb(:),                           &
-      & NPP_act_yDayMean = NPP_act_yDayMean(:),                                   &
-      & NPP_pot_yDayMean = NPP_pot_yDayMean(:),                                   &
-      & GPP_yDayMean = GPP_yDayMean(:))
+      & c_leaf = c_leaf(:), c_fineroot = c_fineroot(:),                 &
+      & c_fruit = c_fruit(:), c_seedbed = c_seedbed(:), &
+      & c_sapwood = c_sapwood(:), c_heartwood = c_heartwood(:),                 &
+      & c_coarseroot = c_coarseroot(:), tree_height = tree_height(:), &
+      & f_lai = f_lai(:),  root_exudates = root_exudates(:),           &
+      & soil_respiration = soil_respiration(:), NPP_flux_correction = NPP_flux_correction(:), &
+      & litterfall_leaf = litterfall_leaf(:), litterfall_fineroot = litterfall_fineroot(:), &
+      & litterfall_fruit = litterfall_fruit(:), litterfall_seedbed = litterfall_seedbed(:), &
+      & litterfall_sapwood = litterfall_sapwood(:), litterfall_heartwood = litterfall_heartwood(:), &
+      & litterfall_coarseroot = litterfall_coarseroot(:), sb_pool_ag_litter = sb_pool_ag_litter(:), &
+      & sb_pool_bg_litter = sb_pool_bg_litter(:), sb_pool_bg_humus = sb_pool_bg_humus(:), &
+      & cflux_c_greenwood_2_litter = cflux_c_greenwood_2_litter(:),                             &
+      & cflux_c_green_2_herb = cflux_c_green_2_herb(:), NPP_act_yDayMean = NPP_act_yDayMean(:), &
+      & NPP_pot_yDayMean = NPP_pot_yDayMean(:), GPP_yDayMean = GPP_yDayMean(:))
 
     IF( .NOT. new_day .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
@@ -623,7 +620,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         ! Now calculate the jsb litter for SB inputs
-        CALL calc_jsb_C_litter( &
+        CALL calc_jsb_sb_npp( &
           &  dsl4jsb_Config(SB_CARBON)%jsb_allocation,  & ! in
           &  LAI_yDayMean(ic),                                  & ! in
           &  LAI_yyDayMean(ic),                                 & ! in
@@ -677,7 +674,7 @@ CONTAINS
 
       ! partition the jsb litter and C content to SB structure
       ! prepare other variables for SB processes
-      CALL prep_jsb_sb_processes( &
+      CALL calc_jsb_to_sb_litter_partitioning( &
         & nc,                                              &
         & nsoil_w,                                         &
         & dtime,                                           &
@@ -698,7 +695,7 @@ CONTAINS
         & litterfall_sapwood(:),                           &
         & litterfall_heartwood(:),                         &
         & litterfall_coarseroot(:),                        &
-        & sb_formation_mt(:,:,:,:) )  
+        & sb_formation_mt(:,:,:,:) )
         
       IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
          CALL update_sb_simple_model(tile, options)                  ! LAND ONLY
@@ -898,687 +895,6 @@ CONTAINS
 ! other subroutines (no further tasks)
 !##########################################################################################################################
 
-  ! ================================================================================================================================
-  !>
-  !> scales all carbon state variables upon reference area change
-  !!
-  !! @todo discuss how to make more general, e.g. get the info on which state variables to scale from somewhere else?
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !
-  SUBROUTINE rescale_carbon_upon_reference_area_change(tile, options, oldRefArea, newRefArea)
-
-    USE mo_util,                ONLY: real2string
-
-    ! Arguments
-    CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)            :: options
-    REAL(wp),                   INTENT(in)            :: oldRefArea(:),  &
-                                                         newRefArea(:)
-
-    dsl4jsb_Def_memory(CARBON_)
-
-    ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = modname//':rescale_carbon_upon_reference_area_change'
-    REAL(wp)                    :: refarea_scaling
-    INTEGER                     :: nc, ic, ics, ice, iblk
-
-    dsl4jsb_Real2D_onChunk ::  c_green
-    dsl4jsb_Real2D_onChunk ::  c_reserve
-    dsl4jsb_Real2D_onChunk ::  c_woods
-    dsl4jsb_Real2D_onChunk ::  c_crop_harvest
-
-    dsl4jsb_Real2D_onChunk ::  c_acid_ag1
-    dsl4jsb_Real2D_onChunk ::  c_water_ag1
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag1
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag1
-    dsl4jsb_Real2D_onChunk ::  c_acid_bg1
-    dsl4jsb_Real2D_onChunk ::  c_water_bg1
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg1
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg1
-    dsl4jsb_Real2D_onChunk ::  c_humus_1
-
-    dsl4jsb_Real2D_onChunk ::  c_acid_ag2
-    dsl4jsb_Real2D_onChunk ::  c_water_ag2
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag2
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag2
-    dsl4jsb_Real2D_onChunk ::  c_acid_bg2
-    dsl4jsb_Real2D_onChunk ::  c_water_bg2
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg2
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2
-    dsl4jsb_Real2D_onChunk ::  c_humus_2
-
-    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum
-    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum
-    dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum
-    dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum
-
-    ! Assertion: 0 < oldRedArea <= 1 and 0 < newRefArea <= 1
-    ! TODO on GPU
-#ifndef _OPENACC
-    IF ( ANY(oldRefArea .LE. 0) .OR. ANY(oldRefArea .GT. 1) ) THEN
-      CALL finish(TRIM(routine), &
-        & 'Violation of assertion: Reference areas (here old) need to be >0 and <=1 - min: '&
-        & //real2string(MINVAL(oldRefArea)) //'; max: '//real2string(MAXVAL(oldRefArea))  )
-    ENDIF
-    IF ( ANY(newRefArea .LE. 0) .OR. ANY(newRefArea .GT. 1) ) THEN
-      CALL finish(TRIM(routine), &
-        & 'Violation of assertion: Reference areas (here new) need to be >0 and <=1 - min: '&
-        & //real2string(MINVAL(newRefArea)) //'; max: '//real2string(MAXVAL(newRefArea))  )
-    ENDIF
-#endif
-
-    dsl4jsb_Get_memory(CARBON_)
-
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
-
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_green )             ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve )           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_woods )             ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)       ! inout
-
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag1)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg1)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg1)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg1)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg1)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_1)            ! inout
-
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag2)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg2)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg2)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout
-
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_1_sum) ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_2_sum) ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum)   ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum)   ! inout
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
-    !$ACC   PRIVATE(refarea_scaling)
-    DO ic = 1, nc
-      refarea_scaling = oldRefArea(ic) / newRefArea(ic)
-      c_green(ic)          = c_green(ic)          * refarea_scaling
-      c_woods(ic)          = c_woods(ic)          * refarea_scaling
-      c_reserve(ic)        = c_reserve(ic)        * refarea_scaling
-      c_crop_harvest(ic)   = c_crop_harvest(ic)   * refarea_scaling
-
-      c_acid_ag1(ic)       = c_acid_ag1(ic)       * refarea_scaling
-      c_water_ag1(ic)      = c_water_ag1(ic)      * refarea_scaling
-      c_ethanol_ag1(ic)    = c_ethanol_ag1(ic)    * refarea_scaling
-      c_nonsoluble_ag1(ic) = c_nonsoluble_ag1(ic) * refarea_scaling
-      c_acid_bg1(ic)       = c_acid_bg1(ic)       * refarea_scaling
-      c_water_bg1(ic)      = c_water_bg1(ic)      * refarea_scaling
-      c_ethanol_bg1(ic)    = c_ethanol_bg1(ic)    * refarea_scaling
-      c_nonsoluble_bg1(ic) = c_nonsoluble_bg1(ic) * refarea_scaling
-      c_humus_1(ic)        = c_humus_1(ic)        * refarea_scaling
-      c_acid_ag2(ic)       = c_acid_ag2(ic)       * refarea_scaling
-      c_water_ag2(ic)      = c_water_ag2(ic)      * refarea_scaling
-      c_ethanol_ag2(ic)    = c_ethanol_ag2(ic)    * refarea_scaling
-      c_nonsoluble_ag2(ic) = c_nonsoluble_ag2(ic) * refarea_scaling
-      c_acid_bg2(ic)       = c_acid_bg2(ic)       * refarea_scaling
-      c_water_bg2(ic)      = c_water_bg2(ic)      * refarea_scaling
-      c_ethanol_bg2(ic)    = c_ethanol_bg2(ic)    * refarea_scaling
-      c_nonsoluble_bg2(ic) = c_nonsoluble_bg2(ic) * refarea_scaling
-      c_humus_2(ic)        = c_humus_2(ic)        * refarea_scaling
-
-      c_decomp_humus_1_sum(ic) = c_decomp_humus_1_sum(ic) * refarea_scaling
-      c_decomp_humus_2_sum(ic) = c_decomp_humus_2_sum(ic) * refarea_scaling
-      c_into_humus_1_sum(ic)   = c_into_humus_1_sum(ic)   * refarea_scaling
-      c_into_humus_2_sum(ic)   = c_into_humus_2_sum(ic)   * refarea_scaling
-    END DO
-    !$ACC END PARALLEL LOOP
-
-    CALL recalc_per_tile_vars(tile, options, &
-      & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
-      & c_crop_harvest = c_crop_harvest(:), &
-      & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:), &
-      & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
-      & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:), &
-      & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
-      & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:), &
-      & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
-      & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:), &
-      & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
-      & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
-      & c_decomp_humus_1_sum  = c_decomp_humus_1_sum(:),                          &
-      & c_decomp_humus_2_sum  = c_decomp_humus_2_sum(:),                          &
-      & c_into_humus_1_sum    = c_into_humus_1_sum(:),                            &
-      & c_into_humus_2_sum    = c_into_humus_2_sum(:))
-
-  END SUBROUTINE rescale_carbon_upon_reference_area_change
-
-
-  ! ====================================================================================================== !
-  !
-  !> Relocates content of (expected) own active to own passive vars that are part of lcc_relocations
-  !
-  SUBROUTINE carbon_transfer_from_active_to_passive_vars_onChunk(lcc_relocations, tile, i_tile, options)
-
-    USE mo_util,                ONLY: one_of
-    USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc, collect_matter_of_active_vars_onChunk
-    USE mo_jsb_task_class,      ONLY: t_jsb_task_options
-    USE mo_carbon_constants,    ONLY: fract_green_aboveGround, fract_wood_aboveGround,           &
-      &                               nr_of_yasso_pools, carbon_required_passive_vars, coefficient_ind_of_passive_vars
-    USE mo_carbon_process,      ONLY: add_litter_to_yasso_pool
-    USE mo_jsb_varlist,         ONLY: VARNAME_LEN
-
-    IMPLICIT NONE
-    ! -------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_lcc_proc),       INTENT(INOUT) :: lcc_relocations
-        !< lcc structure of the calling lcc process for distributing matter from an active to a passive var
-    CLASS(t_jsb_tile_abstract), INTENT(IN)    :: tile    !< tile for which the relocation is be conducted
-    INTEGER,                    INTENT(IN)    :: i_tile  !< index of the tile in lcc structure
-    TYPE(t_jsb_task_options),   INTENT(IN)    :: options !< run-time parameters
-    ! -------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = modname//':carbon_transfer_from_active_to_passive_vars_onChunk'
-
-    TYPE(t_jsb_model), POINTER   :: model
-
-    INTEGER :: ic, k, i_pool, i_passive, i_litter_coefficient, nc, ics, ice, iblk
-
-    REAL(wp) :: litter_coefficient, fraction, this_fract
-    REAL(wp) :: this_fract_green_aboveGround, this_fract_wood_aboveGround, fire_fract_wood_2_atmos, not_burned_AG_fract
-    REAL(wp), DIMENSION(options%nc) :: non_woody_litter, woody_litter, this_litter
-
-    dsl4jsb_Def_config(CARBON_)
-    ! -------------------------------------------------------------------------------------------------- !
-
-    !JN-TODO: is it less expensive to only do it for tiles with actual area changes?
-    nc = options%nc
-    ics = options%ics
-    ice = options%ice
-    iblk = options%iblk
-
-    IF (debug_on() .AND. options%iblk == 1) CALL message(TRIM(routine), 'For '//TRIM(lcc_relocations%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
-    dsl4jsb_Get_config(CARBON_)
-
-
-    !$ACC DATA CREATE(non_woody_litter, woody_litter, this_litter)
-
-    ! Collect matter from potential active variables -- here unfortunately explicit
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic = 1, nc
-      non_woody_litter(ic) = 0._wp
-      woody_litter(ic) = 0._wp
-    END DO
-    !$ACC END PARALLEL LOOP
-
-    CALL collect_matter_of_active_vars_onChunk( non_woody_litter, lcc_relocations, &
-      & i_tile, iblk, ics, ice, [character(len=VARNAME_LEN) :: 'c_green', 'c_reserve' ])
-    CALL collect_matter_of_active_vars_onChunk( woody_litter, lcc_relocations,     &
-      & i_tile, iblk, ics, ice, [character(len=VARNAME_LEN) ::  'c_woods' ])
-
-    ! Usually green, reserve and wood are distributed to ag and bg pools according to given fractions
-    this_fract_green_aboveGround = fract_green_aboveGround
-    this_fract_wood_aboveGround = fract_wood_aboveGround
-    IF(lcc_relocations%name .EQ. 'flcc_lcc') THEN
-      ! In case of fire there is no C transferred from green and reserve pools to ag litter pools, since it burned.
-      this_fract_green_aboveGround = 0.0_wp
-      ! Besides, part of the ag wood C is burned and has already been added to the atmosphere flux (vg: where????)
-      fire_fract_wood_2_atmos = dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos
-      not_burned_AG_fract = (1.0_wp - fire_fract_wood_2_atmos) * fract_wood_aboveGround
-      this_fract_wood_aboveGround = not_burned_AG_fract / (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround))
-    ENDIF
-
-    ! Distribution of the litter to the different yasso carbon pools
-    DO i_pool = 1, nr_of_yasso_pools
-      i_passive = one_of(carbon_required_passive_vars(i_pool), lcc_relocations%passive_vars_names)
-      i_litter_coefficient = coefficient_ind_of_passive_vars(i_pool)
-
-      IF (INDEX(carbon_required_passive_vars(i_pool), '1') > 0) THEN
-        ! Pool name contains '1' => non woody C pool
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          this_litter(ic) = non_woody_litter(ic)
-        END DO
-        !$ACC END PARALLEL LOOP
-        ! Fraction of litter allocated to above ground non-woody yasso pools (rather than below ground non-woody pools)
-        this_fract = this_fract_green_aboveGround
-        ! Fraction of litter allocated to the respective yasso pools (acid vs. water vs. ethanol vs. nonsoluble)
-        litter_coefficient = dsl4jsb_Lctlib_param(LeafLit_coef(i_litter_coefficient))
-      ELSE IF (INDEX(carbon_required_passive_vars(i_pool), '2') > 0) THEN
-        ! Pool name contains '2' => woody C pool
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          this_litter(ic) = woody_litter(ic)
-        END DO
-        !$ACC END PARALLEL LOOP
-        ! Fraction of litter allocated to above ground woody yasso pools (rather than below ground woody pools)
-        this_fract = this_fract_wood_aboveGround
-        ! Fraction of litter allocated to the respective yasso pools (acid vs. water vs. ethanol vs. nonsoluble)
-        litter_coefficient = dsl4jsb_Lctlib_param(WoodLit_coef(i_litter_coefficient))
-      ELSE
-        CALL finish(TRIM(routine), 'Violation of assertion: ' // carbon_required_passive_vars(i_pool) &
-          & // ' did not contain "1" or "2" which are key to identifiy woody vs non-woody yasso pools. Please check!')
-      END IF
-
-      IF (INDEX(carbon_required_passive_vars(i_pool), 'ag') > 0) THEN
-        ! Pool name contains 'ag' => above ground C pool => fraction to above ground pool
-        fraction = this_fract
-      ELSE IF (INDEX(carbon_required_passive_vars(i_pool), 'bg') > 0) THEN
-        ! Pool name contains 'bg' => below ground C pool => 1 - fraction to above ground pool
-        fraction = 1.0_wp - this_fract
-      ELSE IF (INDEX(carbon_required_passive_vars(i_pool), 'humus') > 0) THEN
-        ! Pool name contains 'humus' => humus C pool
-        fraction = 1.0_wp
-      ELSE
-        CALL finish(TRIM(routine), 'Violation of assertion: ' // carbon_required_passive_vars(i_pool) &
-          & // ' did not contain "ag", "bg" or "humus" which are key to identifiy above vs below'     &
-          & // ' ground yasso pools. Please check!')
-      END IF
-
-      !JN-TODO: better way? Reiner? DSL?
-      DO ic = 1, nc
-        k = ics + ic - 1
-        CALL add_litter_to_yasso_pool( &
-          & lcc_relocations%passive_vars(i_passive)%p%relocate_this(k,i_tile,iblk), &
-          & this_litter(ic), fraction, litter_coefficient)
-      END DO
-    END DO
-    !$ACC WAIT(1)
-    !$ACC END DATA
-
-  END SUBROUTINE carbon_transfer_from_active_to_passive_vars_onChunk
-
-
-  ! ====================================================================================================== !
-  !
-  !> Rescales those carbon variables which need to be merged upon ageing (FAGE process), i.e.
-  !> when the fraction with the maximum age of one age class is pushed into the next age class
-  !
-  SUBROUTINE rescale_carbon_vars_upon_ageing_induced_ref_area_change(tile, options, old_veg_fract_correction)
-    ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile_abstract),   INTENT(inout), TARGET :: tile
-    TYPE(t_jsb_task_options),        INTENT(in)         :: options
-    REAL(wp), DIMENSION(options%nc), INTENT(in)         :: old_veg_fract_correction
-    ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: veg_fract_corr_scaling
-    INTEGER  :: iblk, ics, ice, nc, ic
-
-    dsl4jsb_Def_memory(CARBON_)
-    dsl4jsb_Def_memory(PHENO_)
-
-    dsl4jsb_Real2D_onChunk ::  veg_fract_correction
-
-    dsl4jsb_Real2D_onChunk ::  GPP_sum
-    dsl4jsb_Real2D_onChunk ::  NPP_pot_sum
-    dsl4jsb_Real2D_onChunk ::  LAI_yDayMean
-    dsl4jsb_Real2D_onChunk ::  LAI_sum
-    dsl4jsb_Real2D_onChunk ::  current_max_green
-    dsl4jsb_Real2D_onChunk ::  veg_carbon_at_max_green
-    ! -------------------------------------------------------------------------------------------------- !
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
-
-    dsl4jsb_Get_memory(CARBON_)
-    dsl4jsb_Get_memory(PHENO_)
-
-    dsl4jsb_Get_var2D_onChunk(CARBON_, GPP_sum)
-    dsl4jsb_Get_var2D_onChunk(CARBON_, NPP_pot_sum)
-    dsl4jsb_Get_var2D_onChunk(CARBON_, LAI_yDayMean)
-    dsl4jsb_Get_var2D_onChunk(CARBON_, LAI_sum)
-    dsl4jsb_Get_var2D_onChunk(CARBON_, current_max_green)
-    dsl4jsb_Get_var2D_onChunk(CARBON_, veg_carbon_at_max_green)
-
-    dsl4jsb_Get_var2D_onChunk(PHENO_, veg_fract_correction)
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
-    !$ACC   PRIVATE(veg_fract_corr_scaling)
-    DO ic = 1, nc
-      veg_fract_corr_scaling = old_veg_fract_correction(ic) / veg_fract_correction(ic)
-      GPP_sum(ic)                 = GPP_sum(ic)                 * veg_fract_corr_scaling
-      NPP_pot_sum(ic)             = NPP_pot_sum(ic)             * veg_fract_corr_scaling
-      LAI_yDayMean(ic)            = LAI_yDayMean(ic)            * veg_fract_corr_scaling
-      LAI_sum(ic)                 = LAI_sum(ic)                 * veg_fract_corr_scaling
-      current_max_green(ic)       = current_max_green(ic)       * veg_fract_corr_scaling
-      veg_carbon_at_max_green(ic) = veg_carbon_at_max_green(ic) * veg_fract_corr_scaling
-    END DO
-    !$ACC END PARALLEL LOOP
-
-  END SUBROUTINE rescale_carbon_vars_upon_ageing_induced_ref_area_change
-
-
-  ! ====================================================================================================== !
-  !
-  !> Induces merging for those carbon variables which need to be merged upon ageing (FAGE process)
-  !
-  SUBROUTINE merge_carbon_vars_upon_ageing(target, source, options, moved_area)
-
-    USE mo_fage_process,     ONLY : weighted_avg_per_canopy_var_upon_area_movement
-    ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile_abstract),      INTENT(inout) :: target     !< target age class
-    CLASS(t_jsb_tile_abstract),      INTENT(inout) :: source     !< source age class
-    TYPE(t_jsb_task_options),        INTENT(in)    :: options    !< Additional run-time parameters
-    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: moved_area !< area moved from source to target ac
-    ! -------------------------------------------------------------------------------------------------- !
-    INTEGER  :: iblk, ics, ice
-
-    dsl4jsb_Def_memory_tile(PHENO_, target)
-    dsl4jsb_Def_memory_tile(PHENO_, source)
-
-    dsl4jsb_Def_memory_tile(CARBON_, target)
-    dsl4jsb_Def_memory_tile(CARBON_, source)
-
-    dsl4jsb_Real2D_onChunk :: veg_fract_correction_source
-    dsl4jsb_Real2D_onChunk :: veg_fract_correction_target
-
-    dsl4jsb_Real2D_onChunk :: GPP_sum_source
-    dsl4jsb_Real2D_onChunk :: GPP_sum_target
-    dsl4jsb_Real2D_onChunk :: NPP_pot_sum_source
-    dsl4jsb_Real2D_onChunk :: NPP_pot_sum_target
-    dsl4jsb_Real2D_onChunk :: LAI_sum_source
-    dsl4jsb_Real2D_onChunk :: LAI_sum_target
-    dsl4jsb_Real2D_onChunk :: LAI_yDayMean_source
-    dsl4jsb_Real2D_onChunk :: LAI_yDayMean_target
-    dsl4jsb_Real2D_onChunk :: current_max_green_source
-    dsl4jsb_Real2D_onChunk :: current_max_green_target
-    dsl4jsb_Real2D_onChunk :: veg_carbon_at_max_green_source
-    dsl4jsb_Real2D_onChunk :: veg_carbon_at_max_green_target
-
-    REAL(wp), DIMENSION(options%nc) :: target_fract
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':merge_carbon_vars_upon_ageing'
-    ! -------------------------------------------------------------------------------------------------- !
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'For target '//TRIM(target%name)//' ...')
-
-    dsl4jsb_Get_memory_tile(PHENO_, source)
-    dsl4jsb_Get_memory_tile(PHENO_, target)
-
-    dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, veg_fract_correction, source)
-    dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, veg_fract_correction, target)
-
-    dsl4jsb_Get_memory_tile(CARBON_, source)
-    dsl4jsb_Get_memory_tile(CARBON_, target)
-
-    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, GPP_sum, source)
-    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, GPP_sum, target)
-    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, NPP_pot_sum, source)
-    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, NPP_pot_sum, target)
-    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, LAI_yDayMean, source)
-    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, LAI_yDayMean, target)
-    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, LAI_sum, source)
-    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, LAI_sum, target)
-    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, current_max_green, source)
-    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, current_max_green, target)
-    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, veg_carbon_at_max_green, source)
-    dsl4jsb_Get_var2d_onChunk_tile_name(CARBON_, veg_carbon_at_max_green, target)
-
-    CALL target%Get_fraction(ics, ice, iblk, fract=target_fract(:))
-
-    CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:),   &
-      &  veg_fract_correction_source(:), veg_fract_correction_target(:),                  &
-      &  GPP_sum_source(:), GPP_sum_target(:))
-    CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:),   &
-      &  veg_fract_correction_source(:), veg_fract_correction_target(:),                  &
-      &  NPP_pot_sum_source(:), NPP_pot_sum_target(:))
-    CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:),   &
-      &  veg_fract_correction_source(:), veg_fract_correction_target(:),                  &
-      &  LAI_sum_source(:), LAI_sum_target(:))
-    CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:),   &
-      &  veg_fract_correction_source(:), veg_fract_correction_target(:),                  &
-      &  LAI_yDayMean_source(:), LAI_yDayMean_target(:))
-    CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:),   &
-      &  veg_fract_correction_source(:), veg_fract_correction_target(:),                  &
-      &  current_max_green_source(:), current_max_green_target(:))
-    CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:),   &
-      &  veg_fract_correction_source(:), veg_fract_correction_target(:),                  &
-      &  veg_carbon_at_max_green_source(:), veg_carbon_at_max_green_target(:))
-
-  END SUBROUTINE merge_carbon_vars_upon_ageing
-
-
-  ! ================================================================================================================================
-  !>
-  !> conducts a box carbon conservation test for the last day, called each new day -- (jsbach_start_timestep)
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !
-  SUBROUTINE yday_carbon_conservation_test(tile)
-
-    USE mo_jsb_grid,           ONLY: Get_grid
-
-    ! Arguments
-    CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
-
-    dsl4jsb_Def_memory(CARBON_)
-    dsl4jsb_Def_memory(L2A_)
-
-    dsl4jsb_Real2D_onChunk ::  carbon_conservation_test, yday_c_state_sum
-    dsl4jsb_Real2D_onChunk ::  co2flux_npp_2_atm_yday_ta
-    dsl4jsb_Real2D_onChunk ::  co2flux_soilresp_2_atm_ta
-    dsl4jsb_Real2D_onChunk ::  co2flux_herb_2_atm_ta
-    dsl4jsb_Real2D_onChunk ::  co2flux_fire_all_2_atm_ta
-
-    TYPE(t_jsb_model), POINTER      :: model
-    TYPE(t_jsb_grid),  POINTER      :: grid
-    TYPE(t_jsb_task_options)        :: options
-
-    REAL(wp), ALLOCATABLE :: C_flux_yday(:)
-    INTEGER               :: ic, ics, ice, iblk, nc
-
-    dsl4jsb_Get_memory(L2A_)
-    dsl4jsb_Get_memory(CARBON_)
-
-    model => Get_model(tile%owner_model_id)
-    grid => Get_grid(model%grid_id)
-
-    ! Note: options is defined here as a local variable. It is needed in calculate_current_c_ta_state_sum
-    options%ics = 1
-    options%ice = grid%nproma
-
-    ics = options%ics
-    ice = options%ice
-
-    ALLOCATE(C_flux_yday(grid%nproma))
-    !$ACC DATA CREATE(C_flux_yday)
-
-    DO iblk = 1, grid%nblks
-
-      options%iblk = iblk
-      IF (iblk == grid%nblks) THEN
-        options%ice = grid%npromz
-        ice = grid%npromz
-        ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
-      END IF
-      options%nc = ice - ics + 1
-      nc = options%nc
-
-      dsl4jsb_Get_var2D_onChunk(CARBON_, co2flux_npp_2_atm_yday_ta)   ! in
-      dsl4jsb_Get_var2D_onChunk(CARBON_, co2flux_soilresp_2_atm_ta)   ! in
-      dsl4jsb_Get_var2D_onChunk(CARBON_, co2flux_herb_2_atm_ta)       ! in
-      dsl4jsb_Get_var2D_onChunk(CARBON_, co2flux_fire_all_2_atm_ta)   ! in
-
-      dsl4jsb_Get_var2D_onChunk(L2A_,  carbon_conservation_test )     ! inout
-      dsl4jsb_Get_var2D_onChunk(L2A_,  yday_c_state_sum )             ! inout
-
-      ! Do not test as long as carbon_conservation_test still carries the initialisation value
-      IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_wp)) THEN
-
-        ! CO2 flux due to npp, soil respiration and herbivory
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          C_flux_yday(ic) = &
-            & - ((  co2flux_npp_2_atm_yday_ta(ic)  &
-            &     + co2flux_soilresp_2_atm_ta(ic)  &
-            &     + co2flux_herb_2_atm_ta(ic)      &
-            &   ) * sec_per_day / molarMassCO2_kg)
-        END DO
-        !$ACC END PARALLEL LOOP
-
-        ! CO2 flux due to fire
-        IF (model%Is_process_enabled(DISTURB_)) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-          DO ic = 1, nc
-            C_flux_yday(ic) =  C_flux_yday(ic) &
-              & - co2flux_fire_all_2_atm_ta(ic) * sec_per_day / molarMassCO2_kg
-          END DO
-          !$ACC END PARALLEL LOOP
-        END IF
-
-        CALL calculate_current_c_ta_state_sum(tile, options, carbon_conservation_test)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          carbon_conservation_test(ic) = carbon_conservation_test(ic) - yday_c_state_sum(ic)  - C_flux_yday(ic)
-        END DO
-        !$ACC END PARALLEL LOOP
-
-      ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          carbon_conservation_test(ic) = 0._wp
-        END DO
-        !$ACC END PARALLEL LOOP
-      ENDIF
-
-      CALL calculate_current_c_ta_state_sum(tile, options, yday_c_state_sum(:))
-
-    END DO
-
-    !$ACC WAIT(acc_stream)
-    !$ACC END DATA
-
-    DEALLOCATE(C_flux_yday)
-
-  END SUBROUTINE yday_carbon_conservation_test
-
-  ! ================================================================================================================================
-  !>
-  !> calculations of diagnostic global sums
-  !!        called from jsbach_finish_timestep, after the loop over the nproma blocks.
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !
-  SUBROUTINE global_carbon_diagnostics(tile)
-
-    USE mo_carbon_constants,      ONLY: molarMassC_kg, sec_per_year
-    USE mo_sync,                  ONLY: global_sum_array
-    USE mo_jsb_grid,              ONLY: Get_grid
-
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    ! Local variables
-    !
-    dsl4jsb_Def_memory(CARBON_)
-
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_carbon_diagnostics'
-
-    ! Pointers to variables in memory
-
-    dsl4jsb_Real2D_onDomain :: C_sum_veg_ta
-    dsl4jsb_Real2D_onDomain :: C_sum_litter_ag_ta
-    dsl4jsb_Real2D_onDomain :: C_sum_litter_bg_ta
-    dsl4jsb_Real2D_onDomain :: C_sum_humus_ta
-    dsl4jsb_Real2D_onDomain :: C_sum_natural_ta
-    dsl4jsb_Real2D_onDomain :: NPP_act_yDayMean_ta
-    dsl4jsb_Real2D_onDomain :: GPP_yDayMean_ta
-    dsl4jsb_Real2D_onDomain :: soil_respiration_ta
-
-    REAL(wp), POINTER       :: C_sum_veg_gsum(:)
-    REAL(wp), POINTER       :: C_sum_litter_ag_gsum(:)
-    REAL(wp), POINTER       :: C_sum_litter_bg_gsum(:)
-    REAL(wp), POINTER       :: C_sum_humus_gsum(:)
-    REAL(wp), POINTER       :: C_sum_natural_gsum(:)
-    REAL(wp), POINTER       :: NPP_act_yDayMean_gsum(:)
-    REAL(wp), POINTER       :: GPP_yDayMean_gsum(:)
-    REAL(wp), POINTER       :: soil_respiration_gsum(:)
-
-    TYPE(t_jsb_model), POINTER      :: model
-    TYPE(t_jsb_grid),  POINTER      :: grid
-
-    REAL(wp), POINTER      :: area(:,:)
-    REAL(wp), POINTER      :: notsea(:,:)
-    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
-    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
-    REAL(wp), ALLOCATABLE  :: scaling (:,:)
-
-
-    dsl4jsb_Get_memory(CARBON_)
-    dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_veg_ta)                ! in
-    dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_litter_ag_ta)          ! in
-    dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_litter_bg_ta)          ! in
-    dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_humus_ta)              ! in
-    dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_natural_ta)            ! in
-    dsl4jsb_Get_var2D_onDomain(CARBON_,  NPP_act_yDayMean_ta)         ! in
-    dsl4jsb_Get_var2D_onDomain(CARBON_,  GPP_yDayMean_ta)             ! in
-    dsl4jsb_Get_var2D_onDomain(CARBON_,  soil_respiration_ta)         ! in
-
-    C_sum_veg_gsum        => CARBON__mem%C_sum_veg_gsum%ptr(:)        ! out
-    C_sum_litter_ag_gsum  => CARBON__mem%C_sum_litter_ag_gsum%ptr(:)  ! out
-    C_sum_litter_bg_gsum  => CARBON__mem%C_sum_litter_bg_gsum%ptr(:)  ! out
-    C_sum_humus_gsum      => CARBON__mem%C_sum_humus_gsum%ptr(:)      ! out
-    C_sum_natural_gsum    => CARBON__mem%C_sum_natural_gsum%ptr(:)    ! out
-    NPP_act_yDayMean_gsum => CARBON__mem%NPP_act_yDayMean_gsum%ptr(:) ! out
-    GPP_yDayMean_gsum     => CARBON__mem%GPP_yDayMean_gsum%ptr(:)     ! out
-    soil_respiration_gsum => CARBON__mem%soil_respiration_gsum%ptr(:) ! out
-
-    model => Get_model(tile%owner_model_id)
-    grid  => Get_grid(model%grid_id)
-    area         => grid%area(:,:)
-    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
-
-
-    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
-
-    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
-
-    ! Domain Mask - to mask all halo cells for global sums (otherwise these
-    ! cells are counted twice)
-    ALLOCATE (in_domain(grid%nproma,grid%nblks))
-    WHERE (is_in_domain(:,:))
-      in_domain = 1._wp
-    ELSEWHERE
-      in_domain = 0._wp
-    END WHERE
-
-    ALLOCATE (scaling(grid%nproma,grid%nblks))
-
-    ! Calculate global carbon inventories, if requested for output
-    !  => Conversion from [mol(C)/m^2] to [GtC]
-    !     1 mol C = molarMassC_kg kg C   => 1 mol C = molarMassC_kg * e-12 Gt C
-    scaling(:,:) = molarMassC_kg * 1.e-12_wp * notsea(:,:) * area(:,:) * in_domain(:,:)
-    IF (CARBON__mem%C_sum_veg_gsum%is_in_output)        &
-      &  c_sum_veg_gsum        = global_sum_array(C_sum_veg_ta(:,:)        * scaling(:,:))
-    IF (CARBON__mem%C_sum_litter_ag_gsum%is_in_output)  &
-      &  c_sum_litter_ag_gsum  = global_sum_array(C_sum_litter_ag_ta(:,:)  * scaling(:,:))
-    IF (CARBON__mem%C_sum_litter_bg_gsum%is_in_output)  &
-      &  c_sum_litter_bg_gsum  = global_sum_array(C_sum_litter_bg_ta(:,:)  * scaling(:,:))
-    IF (CARBON__mem%C_sum_humus_gsum%is_in_output)      &
-      &  c_sum_humus_gsum      = global_sum_array(C_sum_humus_ta(:,:)      * scaling(:,:))
-    IF (CARBON__mem%C_sum_natural_gsum%is_in_output)    &
-      &  c_sum_natural_gsum    = global_sum_array(C_sum_natural_ta(:,:)    * scaling(:,:))
-    IF (CARBON__mem%NPP_act_yDayMean_gsum%is_in_output) &
-      &  NPP_act_yDayMean_gsum = global_sum_array(NPP_act_yDayMean_ta(:,:) * scaling(:,:) * sec_per_year)
-    IF (CARBON__mem%GPP_yDayMean_gsum%is_in_output)     &
-      &  GPP_yDayMean_gsum     = global_sum_array(GPP_yDayMean_ta(:,:)     * scaling(:,:) * sec_per_year)
-    IF (CARBON__mem%soil_respiration_gsum%is_in_output) &
-      &  soil_respiration_gsum = global_sum_array(soil_respiration_ta(:,:) * scaling(:,:) * sec_per_year)
-
-    DEALLOCATE (scaling, in_domain)
-
-  END SUBROUTINE global_carbon_diagnostics
 
   ! --- relocate_carbon_fire() ---------------------------------------------------------------------------------------------------
   !

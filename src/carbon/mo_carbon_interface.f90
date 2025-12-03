@@ -1182,6 +1182,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  litterfall_sapwood
     dsl4jsb_Real2D_onChunk ::  litterfall_heartwood
     dsl4jsb_Real2D_onChunk ::  litterfall_coarseroot
+
+    dsl4jsb_Real2D_onChunk ::  sb_pool_ag_litter
+    dsl4jsb_Real2D_onChunk ::  sb_pool_bg_litter
+    dsl4jsb_Real2D_onChunk ::  sb_pool_bg_humus
   ELSE
     dsl4jsb_Real2D_onChunk ::  c_acid_ag1
     dsl4jsb_Real2D_onChunk ::  c_water_ag1
@@ -1253,6 +1257,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  litterfall_sapwood)
     dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  litterfall_heartwood)
     dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  litterfall_coarseroot)
+
+    dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  sb_pool_ag_litter)
+    dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  sb_pool_bg_litter)
+    dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  sb_pool_bg_humus)
   ELSE
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)
