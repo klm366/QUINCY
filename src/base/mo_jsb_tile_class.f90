@@ -63,8 +63,8 @@ MODULE mo_jsb_tile_class
     CHARACTER(len=25) :: name    !< Aggregators are distinguished by using unique names
   CONTAINS
     ! Begin/End routines enable multi-stream OpenACC aggregation
-    PROCEDURE(begin_interface),        DEFERRED             :: BeginAggregate !> Start  multi-stream aggregation (useful for OpenACC)
-    PROCEDURE(end_interface),          DEFERRED             :: EndAggregate   !> Finish multi-stream aggregation (useful for OpenACC)
+    PROCEDURE(begin_interface),        DEFERRED             :: BeginAggregate !< Start  multi-stream aggregation (useful for OpenACC)
+    PROCEDURE(end_interface),          DEFERRED             :: EndAggregate   !< Finish multi-stream aggregation (useful for OpenACC)
     PROCEDURE(aggregate_interface_2d), DEFERRED             :: Aggregate_2d !< Aggregate operator for 2d variables
     PROCEDURE(aggregate_interface_3d), DEFERRED             :: Aggregate_3d !< Aggregate operator for 3d variables
     GENERIC                                                 :: Aggregate => Aggregate_2d, Aggregate_3d

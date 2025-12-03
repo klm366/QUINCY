@@ -23,7 +23,7 @@
 !> such as the soil properties are set for all tiles in subroutine [[hydro_init_bc]]
 !> while initial conditions as e.g. the initial soil moisture are set in subroutine
 !> [[hydro_init_ic]]. After the last tile has been initialized, the initialization
-!> prozess is finalized by subroutine [[hydro_finalze_init_vars]], where the memory
+!> prozess is finalized by subroutine [[hydro_finalize_init_vars]], where the memory
 !> that was only required in the initialization phase is released again.
 !>
 MODULE mo_hydro_init
@@ -2044,7 +2044,7 @@ CONTAINS
       & vol_wres                 !< Volumetric residual soil water content []
     dsl4jsb_Real3D_onDomain :: &
       & fract_org_sl,          & !< Volumetric fraction of soil layer organic carbon []
-      & hyd_cond_sat_sl,       & !< Hydraulic conductivity on soil layers [m s-1]
+      & hyd_cond_sat_sl,       & !< Saturated hydraulic conductivity on soil layers [m s-1]
       & vol_porosity_sl,       & !< Volumetric soil porosity on soil layers []
       & bclapp_sl,             & !< Clapp and Hornberger exponent b on soil layers []
       & matric_pot_sl,         & !< Matric potential on soil layers [m]

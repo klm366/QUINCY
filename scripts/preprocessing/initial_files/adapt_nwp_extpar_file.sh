@@ -58,6 +58,7 @@ $cdo setvar,FR_LAKE      -selvar,lake   ${bc_frac}       new_FR_LAKE.nc
 
 # Variables from bc_land_phys
 # Z0 should be identical, as it was used from extpar in bc_files_from_extpar.sh
+$cdo setvar,SKC  -selvar,skin_conductivity ${bc_phys}    new_SKC.nc
 
 # Variables from bc_land_sso
 # If the nwp_extpar file was used as initial_extpar_file (default) a replacement has no effect.

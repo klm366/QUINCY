@@ -112,7 +112,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
-        & output_level=BASIC,                                                              &
+        & output_level=FULL,                                                               &
         & initval_r=0.01_wp )
 
       CALL mem%Add_var( 'km', mem%km,                                                      &
@@ -121,7 +121,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
-        & output_level=BASIC,                                                              &
+        & output_level=FULL,                                                               &
         & initval_r=0.01_wp )
 
       CALL mem%Add_var( 'kh_neutral', mem%kh_neutral,                                      &
@@ -130,7 +130,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
-        & output_level=BASIC,                                                              &
+        & output_level=FULL,                                                               &
         & initval_r=0.01_wp )
 
       CALL mem%Add_var( 'km_neutral', mem%km_neutral,                                      &
@@ -139,7 +139,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
-        & output_level=BASIC,                                                              &
+        & output_level=FULL,                                                               &
         & initval_r=0.01_wp )
 
       CALL mem%Add_var( 'ch', mem%ch,                                                      &
@@ -148,7 +148,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
-        & output_level=BASIC,                                                              &
+        & output_level=FULL,                                                               &
         & initval_r=0.01_wp )
     END IF
 
@@ -158,7 +158,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
       & lrestart=.TRUE.,                                                                 &
-      & output_level=BASIC,                                                              &
+      & output_level=FULL,                                                               &
       & initval_r=1.0_wp )
 
     CALL mem%Add_var( 'rough_h', mem%rough_h,                                    &
@@ -167,7 +167,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
       & prefix, suffix,                                                          &
       & lrestart=.TRUE.,                                                         &
-      & output_level=BASIC,                                                      &
+      & output_level=FULL,                                                       &
       & initval_r=1.0_wp )
 
     CALL mem%Add_var( 'rough_m_star', mem%rough_m_star,                          &
@@ -193,7 +193,7 @@ CONTAINS
       & t_cf('fact_q_air', '', ''),                                        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
-      & output_level=BASIC,                                                &
+      & output_level=FULL,                                                 &
       & initval_r=0.5_wp )
 
     CALL mem%Add_var( 'fact_qsat_srf', mem%fact_qsat_srf,                  &
@@ -201,7 +201,7 @@ CONTAINS
       & t_cf('fact_qsat_srf', '', ''),                                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
-      & output_level=BASIC,                                                &
+      & output_level=FULL,                                                 &
       & initval_r=0.5_wp )
 
     CALL mem%Add_var( 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf,      &
@@ -209,7 +209,7 @@ CONTAINS
       & t_cf('fact_qsat_trans_srf', '', ''),                               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
-      & output_level=BASIC,                                                &
+      & output_level=FULL,                                                 &
       & initval_r=0.0_wp )
 
     ! ----------------------------------------------------------------------------------------------------- !

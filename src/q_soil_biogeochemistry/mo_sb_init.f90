@@ -161,7 +161,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: soil_lay_width_sl
     dsl4jsb_Real3D_onDomain :: soil_lay_depth_center_sl
     dsl4jsb_Real3D_onDomain :: soil_lay_depth_ubound_sl
-    dsl4jsb_Real3D_onDomain :: wtr_soil_sl
+    dsl4jsb_Real3D_onDomain :: vol_porosity_sl
     ! SSE_ 3D
     dsl4jsb_Real3D_onDomain :: bulk_dens_sl
     dsl4jsb_Real3D_onDomain :: silt_sl
@@ -243,7 +243,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_lay_width_sl)        ! in
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_lay_depth_center_sl) ! in
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_lay_depth_ubound_sl) ! in
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, wtr_soil_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onDomain(SSE_,   bulk_dens_sl)             ! in
     dsl4jsb_Get_var3D_onDomain(SSE_,   silt_sl)
@@ -472,7 +472,7 @@ CONTAINS
         & root_fraction_sl(:,:,:), &
         & clay_sl(:,:,:), &
         & silt_sl(:,:,:), &
-        & wtr_soil_sl(:,:,:), &
+        & vol_porosity_sl(:,:,:), &
         & bulk_dens_sl(:,:,:), &                      ! in
         & ph_sl(:,:,:), &                             ! inout
         & bulk_soil_carbon_sl(:,:,:), &
@@ -537,7 +537,7 @@ CONTAINS
         & root_fraction_sl(:,:,:), &
         & clay_sl(:,:,:), &
         & silt_sl(:,:,:), &
-        & wtr_soil_sl(:,:,:), &
+        & vol_porosity_sl(:,:,:), &
         & bulk_dens_sl(:,:,:), &                      ! in
         & ph_sl(:,:,:), &                             ! inout
         & qmax_po4_min_sl(:,:,:), &
@@ -594,7 +594,7 @@ CONTAINS
     END IF
 
     ! IN
-    !$ACC UPDATE DEVICE(root_fraction_sl(:,:,:), num_sl_above_bedrock(:,:), bulk_dens_sl(:,:,:), wtr_soil_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(root_fraction_sl(:,:,:), num_sl_above_bedrock(:,:), bulk_dens_sl(:,:,:), vol_porosity_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_center_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:)) ASYNC(1)
 
@@ -878,7 +878,7 @@ CONTAINS
     & root_fraction_sl, &
     & clay_sl, &
     & silt_sl, &
-    & wtr_soil_sl, &
+    & vol_porosity_sl, &
     & bulk_dens_sl, &
     & ph_sl, &
     & bulk_soil_carbon_sl, &
@@ -960,7 +960,7 @@ CONTAINS
     REAL(wp),                   INTENT(in)    :: root_fraction_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: clay_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: silt_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: wtr_soil_sl(:,:,:)
+    REAL(wp),                   INTENT(in)    :: vol_porosity_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: ph_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: bulk_soil_carbon_sl(:,:,:)
@@ -1158,7 +1158,7 @@ CONTAINS
             & flag_sb_double_langmuir, &          ! in
             & clay_sl(ic, is, iblk), &
             & silt_sl(ic, is, iblk), &
-            & wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk) * 1000._wp, &
+            & vol_porosity_sl(ic, is, iblk) * 1000._wp, &
             & ph_sl(ic, is, iblk), &
             & bulk_soil_carbon_sl(ic, is, iblk), &
             & soil_litter_carbon_sl(ic, is, iblk), &
@@ -1212,7 +1212,7 @@ CONTAINS
     DO iblk = 1,nblks
       DO ic = 1,nproma
         DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
-          qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk)
+          qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * vol_porosity_sl(ic, is, iblk)
         END DO
       END DO
     END DO
@@ -1391,7 +1391,7 @@ CONTAINS
     & root_fraction_sl, &
     & clay_sl, &
     & silt_sl, &
-    & wtr_soil_sl, &
+    & vol_porosity_sl, &
     & bulk_dens_sl, &
     & ph_sl, &
     & qmax_po4_min_sl, &
@@ -1470,7 +1470,7 @@ CONTAINS
     REAL(wp),                   INTENT(in)    :: root_fraction_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: clay_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: silt_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: wtr_soil_sl(:,:,:)
+    REAL(wp),                   INTENT(in)    :: vol_porosity_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: ph_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: qmax_po4_min_sl(:,:,:)
@@ -1792,7 +1792,7 @@ CONTAINS
             & flag_sb_double_langmuir, &          ! in
             & clay_sl(ic, is, iblk), &
             & silt_sl(ic, is, iblk), &
-            & wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk) * 1000._wp, &
+            & vol_porosity_sl(ic, is, iblk) * 1000._wp, &
             & ph_sl(ic, is, iblk), &
             & bulk_soil_carbon_sl(ic, is, iblk), &
             & soil_litter_carbon_sl(ic, is, iblk), &
@@ -1848,7 +1848,7 @@ CONTAINS
     DO iblk = 1,nblks
       DO ic = 1,nproma
         DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
-          qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * wtr_soil_sl(ic, is, iblk) / soil_depth_sl(ic, is, iblk)
+          qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * vol_porosity_sl(ic, is, iblk)
         END DO
       END DO
     END DO

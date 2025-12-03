@@ -400,8 +400,8 @@ CONTAINS
         hlp1 = rtm_desorption(ic,is) * k_desorpt_po4 * assoc_slow(ic,is)
         hlp2 = rtm_sorption(ic,is) * k_adsorpt_po4 * assoc_fast(ic,is)
         slow_exchange_po4(ic,is) = (hlp2 - hlp1) * 1.E6_wp
-      ENDDO
-    ENDDO
+      END DO
+    END DO
 
   END SUBROUTINE calc_sourcing_flux
 
@@ -638,8 +638,8 @@ CONTAINS
                 &                         * solute_available(ic,is) * microbial_carbon(ic,is) / nitri_hlp
             END IF
           END IF
-        ENDDO
-      ENDDO
+        END DO
+      END DO
 
     !> 1.2 non-ECA approach
     !>
@@ -659,8 +659,8 @@ CONTAINS
               &                         * vmax_nitri_denitri * microbial_carbon(ic,is) &
               &                         / (km_nitrification + microbial_carbon(ic,is))  * reaction_volume(ic,is) * solute(ic,is)
           END IF
-        ENDDO
-      ENDDO
+        END DO
+      END DO
     END SELECT
 
     !> 2.0 check the availability of solute considering all sinking fluxes
@@ -1697,8 +1697,8 @@ CONTAINS
         soil_litter_carbon_sl(ic,isoil) = sb_pool_mt(ix_woody_litter, ixC, ic, isoil)    &
           &                            + sb_pool_mt(ix_soluable_litter, ixC, ic, isoil)  &
           &                            + sb_pool_mt(ix_polymeric_litter, ixC, ic, isoil)
-      ENDDO
-    ENDDO
+      END DO
+    END DO
 
     !>  1.1 Only jsm distinguish litter C from SOM C
     !>
@@ -1716,8 +1716,8 @@ CONTAINS
       DO isoil = 1, NINT(num_sl_above_bedrock(ic))
         volume_min_sl(ic,isoil) = MAX(0.01_wp, &
           &   MIN( 0.99_wp, 1._wp - om_dens_sl(ic,isoil) / rho_bulk_org - lit_dens_sl(ic,isoil) / rho_bulk_org))
-      ENDDO
-    ENDDO
+      END DO
+    END DO
   END SUBROUTINE calc_bulk_soil_carbon
 
   ! ======================================================================================================= !

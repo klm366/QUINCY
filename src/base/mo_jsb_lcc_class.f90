@@ -76,6 +76,9 @@ MODULE mo_jsb_lcc_class
         !< Collection of lcc var types that are actively relocated for the encompassing lcc process
     TYPE(t_jsb_lcc_var_p), ALLOCATABLE :: passive_vars(:)
         !< Collection of lcc var types that are passively relocated for the encompassing lcc process
+    REAL(wp), ALLOCATABLE :: initial_area(:,:,:) !< Initial area before lcc event
+    REAL(wp), ALLOCATABLE :: gained_area(:,:,:)  !< area gained during lcc event
+    REAL(wp), ALLOCATABLE :: lost_area(:,:,:)    !< area lost during lcc event
   END TYPE t_jsb_lcc_proc
 
   !> Type used to collect lcc process structures
