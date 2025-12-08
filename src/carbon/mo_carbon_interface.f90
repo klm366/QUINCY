@@ -1007,36 +1007,62 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':rescale_carbon_upon_reference_area_change'
     REAL(wp)                    :: refarea_scaling
     INTEGER                     :: nc, ic, ics, ice, iblk
+    ! Declare local variables
+    TYPE(t_jsb_model), POINTER   :: model
+    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Real2D_onChunk ::  c_green
     dsl4jsb_Real2D_onChunk ::  c_reserve
     dsl4jsb_Real2D_onChunk ::  c_woods
     dsl4jsb_Real2D_onChunk ::  c_crop_harvest
+    IF (model%Is_process_enabled(SB_CARBON_)) THEN
+      dsl4jsb_Real2D_onChunk ::  c_leaf
+      dsl4jsb_Real2D_onChunk ::  c_fineroot
+      dsl4jsb_Real2D_onChunk ::  c_fruit
+      dsl4jsb_Real2D_onChunk ::  c_seedbed
+      dsl4jsb_Real2D_onChunk ::  c_sapwood
+      dsl4jsb_Real2D_onChunk ::  c_heartwood
+      dsl4jsb_Real2D_onChunk ::  c_coarseroot
+      dsl4jsb_Real2D_onChunk ::  f_lai
+      dsl4jsb_Real2D_onChunk ::  tree_height
+      
+      dsl4jsb_Real2D_onChunk ::  litterfall_leaf
+      dsl4jsb_Real2D_onChunk ::  litterfall_fineroot
+      dsl4jsb_Real2D_onChunk ::  litterfall_fruit
+      dsl4jsb_Real2D_onChunk ::  litterfall_seedbed
+      dsl4jsb_Real2D_onChunk ::  litterfall_sapwood
+      dsl4jsb_Real2D_onChunk ::  litterfall_heartwood
+      dsl4jsb_Real2D_onChunk ::  litterfall_coarseroot
 
-    dsl4jsb_Real2D_onChunk ::  c_acid_ag1
-    dsl4jsb_Real2D_onChunk ::  c_water_ag1
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag1
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag1
-    dsl4jsb_Real2D_onChunk ::  c_acid_bg1
-    dsl4jsb_Real2D_onChunk ::  c_water_bg1
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg1
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg1
-    dsl4jsb_Real2D_onChunk ::  c_humus_1
+      dsl4jsb_Real2D_onChunk ::  sb_pool_ag_litter
+      dsl4jsb_Real2D_onChunk ::  sb_pool_bg_litter
+      dsl4jsb_Real2D_onChunk ::  sb_pool_bg_humus
+    ELSE
+      dsl4jsb_Real2D_onChunk ::  c_acid_ag1
+      dsl4jsb_Real2D_onChunk ::  c_water_ag1
+      dsl4jsb_Real2D_onChunk ::  c_ethanol_ag1
+      dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag1
+      dsl4jsb_Real2D_onChunk ::  c_acid_bg1
+      dsl4jsb_Real2D_onChunk ::  c_water_bg1
+      dsl4jsb_Real2D_onChunk ::  c_ethanol_bg1
+      dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg1
+      dsl4jsb_Real2D_onChunk ::  c_humus_1
 
-    dsl4jsb_Real2D_onChunk ::  c_acid_ag2
-    dsl4jsb_Real2D_onChunk ::  c_water_ag2
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag2
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag2
-    dsl4jsb_Real2D_onChunk ::  c_acid_bg2
-    dsl4jsb_Real2D_onChunk ::  c_water_bg2
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg2
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2
-    dsl4jsb_Real2D_onChunk ::  c_humus_2
+      dsl4jsb_Real2D_onChunk ::  c_acid_ag2
+      dsl4jsb_Real2D_onChunk ::  c_water_ag2
+      dsl4jsb_Real2D_onChunk ::  c_ethanol_ag2
+      dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag2
+      dsl4jsb_Real2D_onChunk ::  c_acid_bg2
+      dsl4jsb_Real2D_onChunk ::  c_water_bg2
+      dsl4jsb_Real2D_onChunk ::  c_ethanol_bg2
+      dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2
+      dsl4jsb_Real2D_onChunk ::  c_humus_2
 
-    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum
-    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum
-    dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum
-    dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum
+      dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum
+      dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum
+      dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum
+      dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum
+    END IF
 
     ! Assertion: 0 < oldRedArea <= 1 and 0 < newRefArea <= 1
     ! TODO on GPU
@@ -1065,30 +1091,55 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_woods )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)       ! inout
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag1)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg1)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg1)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg1)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg1)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_1)            ! inout
+    IF (model%Is_process_enabled(SB_CARBON_)) THEN
+      dsl4jsb_Get_memory(SB_CARBON_)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_leaf)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_fineroot)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_fruit)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_seedbed)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_sapwood)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_heartwood)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  c_coarseroot)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  tree_height)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  f_lai)
+      
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  litterfall_leaf)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  litterfall_fineroot)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  litterfall_fruit)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  litterfall_seedbed)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  litterfall_sapwood)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  litterfall_heartwood)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  litterfall_coarseroot)
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag2)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg2)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg2)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  sb_pool_ag_litter)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  sb_pool_bg_litter)
+      dsl4jsb_Get_var2D_onChunk(SB_CARBON_,  sb_pool_bg_humus)
+    ELSE
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)           ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)          ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1)        ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag1)     ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg1)           ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg1)          ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg1)        ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg1)     ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_1)            ! inout
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_1_sum) ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_2_sum) ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum)   ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum)   ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag2)           ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2)          ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2)        ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2)     ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_bg2)           ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_bg2)          ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2)        ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout
+
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_1_sum) ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_2_sum) ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum)   ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum)   ! inout
+    END IF
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(refarea_scaling)
@@ -1098,49 +1149,85 @@ CONTAINS
       c_woods(ic)          = c_woods(ic)          * refarea_scaling
       c_reserve(ic)        = c_reserve(ic)        * refarea_scaling
       c_crop_harvest(ic)   = c_crop_harvest(ic)   * refarea_scaling
+      IF (model%Is_process_enabled(SB_CARBON_)) THEN
+        c_leaf(ic)            = c_leaf(ic)            * refarea_scaling
+        c_fineroot(ic)        = c_fineroot(ic)        * refarea_scaling
+        c_fruit(ic)           = c_fruit(ic)           * refarea_scaling
+        c_seedbed(ic)         = c_seedbed(ic)         * refarea_scaling
+        c_sapwood(ic)         = c_sapwood(ic)         * refarea_scaling
+        c_heartwood(ic)       = c_heartwood(ic)       * refarea_scaling
+        c_coarseroot(ic)      = c_coarseroot(ic)      * refarea_scaling
+        
+        litterfall_leaf(ic)       = litterfall_leaf(ic)       * refarea_scaling
+        litterfall_fineroot(ic)   = litterfall_fineroot(ic)   * refarea_scaling
+        litterfall_fruit(ic)      = litterfall_fruit(ic)      * refarea_scaling
+        litterfall_seedbed(ic)    = litterfall_seedbed(ic)    * refarea_scaling
+        litterfall_sapwood(ic)    = litterfall_sapwood(ic)    * refarea_scaling
+        litterfall_heartwood(ic)  = litterfall_heartwood(ic)  * refarea_scaling
+        litterfall_coarseroot(ic) = litterfall_coarseroot(ic) * refarea_scaling
+        
+        sb_pool_ag_litter(ic) = sb_pool_ag_litter(ic) * refarea_scaling
+        sb_pool_bg_litter(ic) = sb_pool_bg_litter(ic) * refarea_scaling
+        sb_pool_bg_humus(ic)  = sb_pool_bg_humus(ic)  * refarea_scaling
+      ELSE
+        c_acid_ag1(ic)       = c_acid_ag1(ic)       * refarea_scaling
+        c_water_ag1(ic)      = c_water_ag1(ic)      * refarea_scaling
+        c_ethanol_ag1(ic)    = c_ethanol_ag1(ic)    * refarea_scaling
+        c_nonsoluble_ag1(ic) = c_nonsoluble_ag1(ic) * refarea_scaling
+        c_acid_bg1(ic)       = c_acid_bg1(ic)       * refarea_scaling
+        c_water_bg1(ic)      = c_water_bg1(ic)      * refarea_scaling
+        c_ethanol_bg1(ic)    = c_ethanol_bg1(ic)    * refarea_scaling
+        c_nonsoluble_bg1(ic) = c_nonsoluble_bg1(ic) * refarea_scaling
+        c_humus_1(ic)        = c_humus_1(ic)        * refarea_scaling
+        c_acid_ag2(ic)       = c_acid_ag2(ic)       * refarea_scaling
+        c_water_ag2(ic)      = c_water_ag2(ic)      * refarea_scaling
+        c_ethanol_ag2(ic)    = c_ethanol_ag2(ic)    * refarea_scaling
+        c_nonsoluble_ag2(ic) = c_nonsoluble_ag2(ic) * refarea_scaling
+        c_acid_bg2(ic)       = c_acid_bg2(ic)       * refarea_scaling
+        c_water_bg2(ic)      = c_water_bg2(ic)      * refarea_scaling
+        c_ethanol_bg2(ic)    = c_ethanol_bg2(ic)    * refarea_scaling
+        c_nonsoluble_bg2(ic) = c_nonsoluble_bg2(ic) * refarea_scaling
+        c_humus_2(ic)        = c_humus_2(ic)        * refarea_scaling
 
-      c_acid_ag1(ic)       = c_acid_ag1(ic)       * refarea_scaling
-      c_water_ag1(ic)      = c_water_ag1(ic)      * refarea_scaling
-      c_ethanol_ag1(ic)    = c_ethanol_ag1(ic)    * refarea_scaling
-      c_nonsoluble_ag1(ic) = c_nonsoluble_ag1(ic) * refarea_scaling
-      c_acid_bg1(ic)       = c_acid_bg1(ic)       * refarea_scaling
-      c_water_bg1(ic)      = c_water_bg1(ic)      * refarea_scaling
-      c_ethanol_bg1(ic)    = c_ethanol_bg1(ic)    * refarea_scaling
-      c_nonsoluble_bg1(ic) = c_nonsoluble_bg1(ic) * refarea_scaling
-      c_humus_1(ic)        = c_humus_1(ic)        * refarea_scaling
-      c_acid_ag2(ic)       = c_acid_ag2(ic)       * refarea_scaling
-      c_water_ag2(ic)      = c_water_ag2(ic)      * refarea_scaling
-      c_ethanol_ag2(ic)    = c_ethanol_ag2(ic)    * refarea_scaling
-      c_nonsoluble_ag2(ic) = c_nonsoluble_ag2(ic) * refarea_scaling
-      c_acid_bg2(ic)       = c_acid_bg2(ic)       * refarea_scaling
-      c_water_bg2(ic)      = c_water_bg2(ic)      * refarea_scaling
-      c_ethanol_bg2(ic)    = c_ethanol_bg2(ic)    * refarea_scaling
-      c_nonsoluble_bg2(ic) = c_nonsoluble_bg2(ic) * refarea_scaling
-      c_humus_2(ic)        = c_humus_2(ic)        * refarea_scaling
-
-      c_decomp_humus_1_sum(ic) = c_decomp_humus_1_sum(ic) * refarea_scaling
-      c_decomp_humus_2_sum(ic) = c_decomp_humus_2_sum(ic) * refarea_scaling
-      c_into_humus_1_sum(ic)   = c_into_humus_1_sum(ic)   * refarea_scaling
-      c_into_humus_2_sum(ic)   = c_into_humus_2_sum(ic)   * refarea_scaling
+        c_decomp_humus_1_sum(ic) = c_decomp_humus_1_sum(ic) * refarea_scaling
+        c_decomp_humus_2_sum(ic) = c_decomp_humus_2_sum(ic) * refarea_scaling
+        c_into_humus_1_sum(ic)   = c_into_humus_1_sum(ic)   * refarea_scaling
+        c_into_humus_2_sum(ic)   = c_into_humus_2_sum(ic)   * refarea_scaling
+      END IF
     END DO
     !$ACC END PARALLEL LOOP
 
-    CALL recalc_per_tile_vars(tile, options, &
-      & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
-      & c_crop_harvest = c_crop_harvest(:), &
-      & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:), &
-      & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
-      & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:), &
-      & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
-      & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:), &
-      & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
-      & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:), &
-      & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
-      & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
-      & c_decomp_humus_1_sum  = c_decomp_humus_1_sum(:),                          &
-      & c_decomp_humus_2_sum  = c_decomp_humus_2_sum(:),                          &
-      & c_into_humus_1_sum    = c_into_humus_1_sum(:),                            &
-      & c_into_humus_2_sum    = c_into_humus_2_sum(:))
+    IF (model%Is_process_enabled(SB_CARBON_)) THEN
+      CALL recalc_per_tile_vars(tile, options, &
+      & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
+      & c_crop_harvest = c_crop_harvest(:),                                       &
+      & c_leaf = c_leaf(:), c_fineroot = c_fineroot(:),                 &
+      & c_fruit = c_fruit(:), c_seedbed = c_seedbed(:), &
+      & c_sapwood = c_sapwood(:), c_heartwood = c_heartwood(:),                 &
+      & c_coarseroot = c_coarseroot(:), &
+      & litterfall_leaf = litterfall_leaf(:), litterfall_fineroot = litterfall_fineroot(:), &
+      & litterfall_fruit = litterfall_fruit(:), litterfall_seedbed = litterfall_seedbed(:), &
+      & litterfall_sapwood = litterfall_sapwood(:), litterfall_heartwood = litterfall_heartwood(:), &
+      & litterfall_coarseroot = litterfall_coarseroot(:), sb_pool_ag_litter(:) = sb_pool_ag_litter(:), &
+      & sb_pool_bg_litter(:) = sb_pool_bg_litter(:), sb_pool_bg_humus(:) = sb_pool_bg_humus(:))
+    ELSE
+      CALL recalc_per_tile_vars(tile, options, &
+        & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
+        & c_crop_harvest = c_crop_harvest(:), &
+        & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:), &
+        & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
+        & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:), &
+        & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
+        & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:), &
+        & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
+        & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:), &
+        & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
+        & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
+        & c_decomp_humus_1_sum  = c_decomp_humus_1_sum(:),                          &
+        & c_decomp_humus_2_sum  = c_decomp_humus_2_sum(:),                          &
+        & c_into_humus_1_sum    = c_into_humus_1_sum(:),                            &
+        & c_into_humus_2_sum    = c_into_humus_2_sum(:))
+    END IF
 
   END SUBROUTINE rescale_carbon_upon_reference_area_change
 

@@ -13,11 +13,12 @@
 !>
 MODULE mo_sb_carbon_process
 
-  USE mo_jsb_control,      ONLY: acc_stream
-  USE mo_kind,             ONLY: wp
+  USE mo_jsb_control,       ONLY: acc_stream
+  USE mo_kind,              ONLY: wp
   USE mo_lnd_bgcm_idx
-  USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
+  USE mo_carbon_constants,  ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
                                & days_per_year, sec_per_year, sec_per_day
+  USE mo_q_sb_update_pools, ONLY: calculate_sb_pool_ag_litter_for_element, calculate_sb_pool_bg_litter_for_element
 
   IMPLICIT NONE
   PRIVATE
@@ -1775,9 +1776,12 @@ CONTAINS
     & c_coarseroot,                   & ! inout
     & c_sapwood,                      & ! inout
     & c_heartwood,                    & ! inout
+    & sb_pool_ag_litter,
+    & sb_pool_bg_litter,
     & tree_height,                    & ! inout
     & f_lai,                          & ! inout
-    & sb_formation_mt(:,:,:,:),       & ! inout
+    & sb_pool_mt,                     & ! inout
+    & sb_formation_mt,                & ! inout
     & )
 
     ! Arguments
@@ -1815,9 +1819,12 @@ CONTAINS
     REAL(wp), DIMENSION(nc),           INTENT(inout) :: c_heartwood(:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
     !   below ground C pools
     REAL(wp), DIMENSION(nc),           INTENT(inout) :: c_coarseroot(:)  !  [mol(C)/m^2(canopy)]
+    REAL(wp), DIMENSION(nc),           INTENT(inout) :: sb_pool_ag_litter(:)       !  [mol(C)/m^2(canopy)]
+    REAL(wp), DIMENSION(nc),           INTENT(inout) :: sb_pool_bg_litter(:)       !  [mol(C)/m^2(canopy)]
     !   vegetation properties
     REAL(wp), DIMENSION(nc),           INTENT(inout) :: tree_height(:)  !  [mol(C)/m^2(canopy)]
     REAL(wp), DIMENSION(nc),           INTENT(inout) :: f_lai(:)  !  [mol(C)/m^2(canopy)]
+    REAL(wp),                          INTENT(inout) :: sb_pool_mt(:,:,:,:)  !< bgcm flux: soil biogeochemistry pool [mol C/m3]
     REAL(wp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)  !< bgcm flux: soil biogeochemistry formation flux [mol C/m3/ dt]
 
     ! Local variables
@@ -1876,7 +1883,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-
+    ! litter partitioning to sb_formation
     CALL calc_jsb_to_sb_litter_partitioning( &
             & nc,                                              &
             & nsoil_w,                                         &
@@ -1900,6 +1907,11 @@ CONTAINS
             & litterfall_coarseroot(:),                        &
             & sb_formation_mt(:,:,:,:) )
             
+    ! update the sb litter pools and recalculate the per tile vars
+    sb_pool_mt(:,:,:,:) = sb_pool_mt(:,:,:,:) + sb_formation_mt(:,:,:,:)
+    CALL calculate_sb_pool_ag_litter_for_element(sb_pool_mt, soil_depth_sl, ixC, sb_pool_ag_litter)
+    CALL calculate_sb_pool_bg_litter_for_element(sb_pool_mt, soil_depth_sl, ixC, sb_pool_bg_litter)
+
     ! to_do: update tree_height and f_lai
     
 
@@ -1937,11 +1949,13 @@ CONTAINS
     & c_coarseroot,                      & ! inout
     & c_sapwood,                         & ! inout
     & c_heartwood,                       & ! inout
+    & sb_pool_ag_litter,
+    & sb_pool_bg_litter,
     & tree_height,                       & ! inout
-    & f_lai                              & ! inout
-    & co2flux_fire_all_2_atm             & ! out
-    & sb_pool_mt                         & ! inout
-    & sb_loss_mt                         & ! inout
+    & f_lai,                             & ! inout
+    & co2flux_fire_all_2_atm,            & ! out
+    & sb_pool_mt,                        & ! inout
+    & sb_formation_mt                    & ! inout
     & )
 
     ! Arguments
@@ -1968,7 +1982,8 @@ CONTAINS
     !   SB_CARBON_
     ! Size class 1: green
     !   above ground C pools
-    REAL(wp), DIMENSION(nc),           INTENT(inout) :: sb_pool_ag_litter(:)
+    REAL(wp), DIMENSION(nc),           INTENT(inout) :: sb_pool_ag_litter(:)       !  [mol(C)/m^2(canopy)]
+    REAL(wp), DIMENSION(nc),           INTENT(inout) :: sb_pool_bg_litter(:)       !  [mol(C)/m^2(canopy)]
     REAL(wp), DIMENSION(nc),           INTENT(inout) :: c_leaf(:)        !  [mol(C)/m^2(canopy)]
     REAL(wp), DIMENSION(nc),           INTENT(inout) :: c_fruit(:)       !  [mol(C)/m^2(canopy)]
     REAL(wp), DIMENSION(nc),           INTENT(inout) :: c_seedbed(:)     !  [mol(C)/m2(canopy)]
@@ -1983,8 +1998,8 @@ CONTAINS
     !   vegetation properties
     REAL(wp), DIMENSION(nc),           INTENT(inout) :: tree_height(:)  !  [mol(C)/m^2(canopy)]
     REAL(wp), DIMENSION(nc),           INTENT(inout) :: f_lai(:)  !  [mol(C)/m^2(canopy)]
-    REAL(wp),                          INTENT(inout) :: sb_pool_mt(:,:,:,:)  !< bgcm flux: soil biogeochemistry formation flux [mol C/m3/ dt]
-    REAL(wp),                          INTENT(inout) :: sb_loss_mt(:,:,:,:)  !< bgcm flux: soil biogeochemistry formation flux [mol C/m3/ dt]
+    REAL(wp),                          INTENT(inout) :: sb_pool_mt(:,:,:,:)  !< bgcm flux: soil biogeochemistry pool [mol C/m3]
+    REAL(wp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)  !< bgcm flux: soil biogeochemistry formation flux [mol C/m3/ dt]
 
     ! Local variables
     INTEGER   :: ic
@@ -1996,6 +2011,7 @@ CONTAINS
                              & litterfall_sapwood(:),                           &
                              & litterfall_heartwood(:),                         &
                              & litterfall_coarseroot(:)                         &
+    ! REAL(wp), DIMENSION(nc) :: loss_green(:), loss_woods(:)
 
     ! Initializations
     lctlib_PhenologyType           = dsl4jsb_Lctlib_param(PhenologyType)
@@ -2020,23 +2036,35 @@ CONTAINS
           ! scale with the burned fraction
         & ) * burned_fract(ic) * molarMassCO2_kg / sec_per_day
 
-      ! Reduce the above ground yasso pools accordingly
-      fraction = 1._wp - burned_fract(ic)
-      c_acid_ag1      (ic) = fraction * c_acid_ag1       (ic)
-      c_water_ag1     (ic) = fraction * c_water_ag1      (ic)
-      c_ethanol_ag1   (ic) = fraction * c_ethanol_ag1    (ic)
-      c_nonsoluble_ag1(ic) = fraction * c_nonsoluble_ag1 (ic)
-
-      c_acid_ag2      (ic) = fraction * c_acid_ag2       (ic)
-      c_water_ag2     (ic) = fraction * c_water_ag2      (ic)
-      c_ethanol_ag2   (ic) = fraction * c_ethanol_ag2    (ic)
-      c_nonsoluble_ag2(ic) = fraction * c_nonsoluble_ag2 (ic)
+      ! Reduce the above ground SOM accordingly
+      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+        IF (is_element_used(ielem)) THEN
+          ix_elem = elements_index_map(ielem)    ! get element index in bgcm
+          sb_loss_mt(ix_microbial, ix_elem, ic, 1)     = sb_pool_mt(ix_microbial, ix_elem, ic, 1)     * (1._wp - burned_fract(ic))
+          sb_loss_mt(ix_dom, ix_elem, ic, 1)           = sb_pool_mt(ix_dom, ix_elem, ic, 1)           * (1._wp - burned_fract(ic))
+          sb_loss_mt(ix_dom_assoc, ix_elem, ic, 1)     = sb_pool_mt(ix_dom_assoc, ix_elem, ic, 1)     * (1._wp - burned_fract(ic))
+          sb_loss_mt(ix_residue, ix_elem, ic, 1)       = sb_pool_mt(ix_residue, ix_elem, ic, 1)       * (1._wp - burned_fract(ic))
+          sb_loss_mt(ix_residue_assoc, ix_elem, ic, 1) = sb_pool_mt(ix_residue_assoc, ix_elem, ic, 1) * (1._wp - burned_fract(ic))
+        END IF
+      END DO
 
       ! Reduce the living plant carbon pools accordingly
       fraction = 1._wp - burned_fract(ic)
-      c_green(ic)   = c_green(ic)   * fraction
-      c_woods(ic)   = c_woods(ic)   * fraction
-      c_reserve(ic) = c_reserve(ic) * fraction
+      ! c_green
+      c_leaf(ic)     = c_leaf(ic)     * (1._wp - burned_fract(ic))
+      c_fruit(ic)    = c_fruit(ic)    * (1._wp - burned_fract(ic))
+      c_seedbed(ic)  = c_seedbed(ic)  * (1._wp - burned_fract(ic))
+      ! todo: depth function for fineroot loss
+      c_fineroot(ic) = c_fineroot(ic) * (1._wp - burned_fract(ic))
+      c_green(ic)    = c_green(ic)    * (1._wp - burned_fract(ic))
+      ! c_woods
+      c_sapwood(ic)    = c_sapwood(ic)    * (1._wp - burned_fract(ic))
+      c_heartwood(ic)  = c_heartwood(ic)  * (1._wp - burned_fract(ic))
+      ! todo: depth function for coarseroot loss
+      c_coarseroot(ic) = c_coarseroot(ic) * (1._wp - burned_fract(ic))
+      c_woods(ic)      = c_woods(ic)      * (1._wp - burned_fract(ic))
+      ! c_reserve
+      c_reserve(ic) = c_reserve(ic) * (1._wp - burned_fract(ic))
 
       ! step 2: belowground fire damage
       ! Amount of carbon released from the green and reserve pools entering the green litter pools
@@ -2047,28 +2075,45 @@ CONTAINS
       cflux_dist_woods_2_soil(ic)  = cflux_dist_woods_2_soil(ic) + &
         & (c_sapwood(ic) + c_heartwood(ic)) * (1._wp - fire_fract_wood_2_atmos) * burned_fract(ic) / sec_per_day
 
-
-
-
-
       ! Add below ground fraction of the burned vegetation to the below ground green litter pools
-      fraction = (1._wp - fract_green_aboveGround) * burned_fract(ic)
-      CALL distribute_yasso_litter(c_acid_bg1(ic), c_water_bg1(ic), c_ethanol_bg1(ic), c_nonsoluble_bg1(ic), c_humus_1(ic), &
-        &                          non_woody_litter, fraction, LeafLit_coef)
-
-      ! Distribute the remaings of burned wood to the yasso litter pools
-      !  Above ground
-      fraction = (1._wp - fire_fract_wood_2_atmos) * fract_wood_aboveGround * burned_fract(ic)
-      CALL distribute_yasso_litter(c_acid_ag2(ic), c_water_ag2(ic), c_ethanol_ag2(ic), c_nonsoluble_ag2(ic), c_humus_2(ic), &
-        &                          c_woods(ic), fraction, WoodLit_coef)
-      !  Below ground
-      fraction = (1._wp - fract_wood_aboveGround) * burned_fract(ic)
-      CALL distribute_yasso_litter(c_acid_bg2(ic), c_water_bg2(ic), c_ethanol_bg2(ic), c_nonsoluble_bg2(ic), c_humus_2(ic), &
-        &                          c_woods(ic), fraction, WoodLit_coef)
-
-
+      litterfall_fineroot(ic)   = c_fineroot(ic)   * burned_fract(ic) / sec_per_day
+      litterfall_seedbed(ic)    = c_reserve(ic)    * burned_fract(ic) / sec_per_day ! 
+      litterfall_sapwood(ic)    = c_sapwood(ic)    * (1._wp - fire_fract_wood_2_atmos) * burned_fract(ic) / sec_per_day
+      litterfall_heartwood(ic)  = c_heartwood(ic)  * (1._wp - fire_fract_wood_2_atmos) * burned_fract(ic) / sec_per_day
+      litterfall_coarseroot(ic) = c_coarseroot(ic) * burned_fract(ic) / sec_per_day
     END DO
     !$ACC END PARALLEL LOOP
+    
+    CALL calc_jsb_to_sb_litter_partitioning( &
+            & nc,                                              &
+            & nsoil_w,                                         &
+            & dtime,                                           &
+            & num_sl_above_bedrock(:),                         &
+            & lctlib_sla,                                      &
+            & lctlib_cn_leaf,                                  &
+            & lctlib_np_leaf,                                  &
+            & lctlib_PhenologyType,                            &
+            & sb_model_scheme,                                 &
+            & soil_depth_sl(:,:),                              &
+            & root_fraction_sl(:,:),                           &
+            & fineroot_carbon_sl(:,:)                          &
+            & c_fineroot(:),                                   &
+            & litterfall_leaf(:),                              &
+            & litterfall_fineroot(:),                          &
+            & litterfall_fruit(:),                             &
+            & litterfall_seedbed(:),                           &
+            & litterfall_sapwood(:),                           &
+            & litterfall_heartwood(:),                         &
+            & litterfall_coarseroot(:),                        &
+            & sb_formation_mt(:,:,:,:) )
+
+    ! update the sb litter pools and recalculate the per tile vars
+    sb_pool_mt(:,:,:,:) = sb_pool_mt(:,:,:,:) + sb_formation_mt(:,:,:,:)
+    CALL calculate_sb_pool_ag_litter_for_element(sb_pool_mt, soil_depth_sl, ixC, sb_pool_ag_litter)
+    CALL calculate_sb_pool_bg_litter_for_element(sb_pool_mt, soil_depth_sl, ixC, sb_pool_bg_litter)
+
+    ! to_do: update tree_height and f_lai
+    
 
   END SUBROUTINE relocate_sb_carbon_fire
   

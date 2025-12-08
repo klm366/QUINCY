@@ -429,8 +429,9 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_time,              ONLY: is_newday
 
+    USE mo_sb_config_class,       ONLY: get_number_of_sb_compartments
     USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
-    USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID
+    USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -441,12 +442,13 @@ CONTAINS
     TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store           !< the bgcm store of this tile
     
     INTEGER :: iblk, ics, ice, ic, nc, dtime
+    INTEGER :: nr_elements                    !< number of elements
+    INTEGER :: nr_sb_parts                    !< number of sb compartments
+    REAL(wp), ALLOCATABLE  :: sb_formation_hlp_mt(:,:,:,:) !< dim: compartments, elements, nc, nsoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_natural_disturbances'
     ! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
-    dsl4jsb_Def_mt2L3D :: sb_loss_mt
-    dsl4jsb_Def_mt2L3D :: sb_formation_mt
     ! -------------------------------------------------------------------------------------------------- !
     ! Declare process memories
     dsl4jsb_Def_memory(CARBON_)
@@ -539,8 +541,11 @@ CONTAINS
     ! And get them from the store
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
-    dsl4jsb_Get_mt2L3D(SB_BGCM_FORMATION_ID, sb_formation_mt)
-    dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
+    
+    ! Allocate bgcm matrices
+    nr_elements     = model%config%nr_of_used_elements
+    nr_sb_parts     = get_number_of_sb_compartments()
+    ALLOCATE(sb_formation_hlp_mt(nr_sb_parts, nr_elements, nc, nsoil_w))
     
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
@@ -626,6 +631,7 @@ CONTAINS
               CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
               IF (model%Is_process_enabled(SB_CARBON_)) THEN
+                sb_formation_hlp_mt(:,:,:,:) = sb_pool_mt(:,:,:,:) * 0._wp
                 CALL relocate_sb_carbon_damage(                 &
                   & nc, &                            ! in
                   & nsoil_w, &
@@ -648,9 +654,12 @@ CONTAINS
                   & c_coarseroot(:),                   & ! inout
                   & c_sapwood(:),                      & ! inout
                   & c_heartwood(:),                    & ! inout
+                  & sb_pool_ag_litter(:),
+                  & sb_pool_bg_litter(:),
                   & tree_height(:),                    & ! inout
                   & f_lai(:),                          & ! inout
-                  & sb_formation_mt(:,:,:,:)
+                  & sb_pool_mt(:,:,:,:)                & ! in
+                  & sb_formation_hlp_mt(:,:,:,:)
 
                 CALL recalc_per_tile_vars(tile, options,                                              &
                   & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),              &
@@ -739,6 +748,7 @@ CONTAINS
               CALL recalc_carbon_per_tile_vars(tile, options)
               CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
               IF (model%Is_process_enabled(SB_CARBON_)) THEN
+                sb_formation_hlp_mt(:,:,:,:) = sb_pool_mt(:,:,:,:) * 0._wp
                 CALL relocate_sb_carbon_fire(  &
                   & nc, &                            ! in
                   & nsoil_w, &
@@ -763,11 +773,13 @@ CONTAINS
                   & c_coarseroot,                   & ! inout
                   & c_sapwood,                      & ! inout
                   & c_heartwood,                    & ! inout
+                  & sb_pool_ag_litter(:),
+                  & sb_pool_bg_litter(:),
                   & tree_height,                    & ! inout
                   & f_lai,                          & ! inout
                   & co2flux_fire_all_2_atm          & ! out
-                  & sb_pool_mt(:,:,:,:)        & ! inout
-                  & sb_loss_mt(:,:,:,:)        & ! inout
+                  & sb_pool_mt(:,:,:,:)             & ! in
+                  & sb_formation_hlp_mt(:,:,:,:)        & ! inout
                   & )
 
                 CALL recalc_per_tile_vars(tile, options,                                              &
@@ -856,6 +868,7 @@ CONTAINS
 
     ENDIF ! is_newday
 
+    DEALLOCATE(sb_formation_hlp_mt)
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_natural_disturbances

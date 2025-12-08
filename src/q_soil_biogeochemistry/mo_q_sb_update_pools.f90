@@ -35,7 +35,7 @@ MODULE mo_q_sb_update_pools
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_sb_pools
+  PUBLIC :: update_sb_pools, calculate_sb_pool_ag_litter_for_element, calculate_sb_pool_bg_litter_for_element
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_update_pools'
 
