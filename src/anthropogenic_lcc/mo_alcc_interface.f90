@@ -11,7 +11,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!>#### Contains the interfaces to the alcc process, changing area fractions and moving to-be-conserved matter
+!>#### Contains the interfaces to the alcc process, determining area changes and moving to-be-conserved matter
 !>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
@@ -45,84 +45,117 @@ MODULE mo_alcc_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_interface'
 
-  !> Type definition for alcc pre task
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_alcc
+  ! -------------------------------------------------------------------------------------------------------
+  !> Type definition: task to determine ALCC cover fraction changes
+  !>
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_alcc_delta_cover_fractions
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_alcc     !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_alcc  !< Aggregates computed task variables
-  END TYPE tsk_alcc
+    PROCEDURE, NOPASS :: Integrate => update_alcc_delta_cover_fractions     !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_alcc_delta_cover_fractions  !< Aggregates computed task variables
+  END TYPE tsk_alcc_delta_cover_fractions
 
-  !> Constructor interface for alcc pre task
-  INTERFACE tsk_alcc
-    PROCEDURE Create_task_alcc                        !< Constructor function for task
-  END INTERFACE tsk_alcc
+  !> Constructor interface for ALCC task deriving cover fraction changes
+  INTERFACE tsk_alcc_delta_cover_fractions
+    PROCEDURE Create_task_alcc_delta_cover_fractions                        !< Constructor function for task
+  END INTERFACE tsk_alcc_delta_cover_fractions
+
+  ! -------------------------------------------------------------------------------------------------------
+  !> Type definition: alcc translocation task
+  !>
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_alcc_translocation
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_alcc_translocation     !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_alcc_translocation  !< Aggregates computed task variables
+  END TYPE tsk_alcc_translocation
+
+  !> Constructor interface for ALCC translocation task
+  INTERFACE tsk_alcc_translocation
+    PROCEDURE Create_task_alcc_translocation                        !< Constructor function for task
+  END INTERFACE tsk_alcc_translocation
 
 CONTAINS
 
-  ! ====================================================================================================== !
-  !
-  !> Constructor for alcc task
-  !
-  FUNCTION Create_task_alcc(model_id) RESULT(return_ptr)
-
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for ALCC task task deriving cover fraction changes
+  !>
+  FUNCTION Create_task_alcc_delta_cover_fractions(model_id) RESULT(return_ptr)
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id    !< Model id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "alcc"
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "alcc_delta_cover_fractions"
     ! -------------------------------------------------------------------------------------------------- !
-    ALLOCATE(tsk_alcc::return_ptr)
-    CALL return_ptr%Construct(name='alcc', process_id=ALCC_, owner_model_id=model_id)
+    ALLOCATE(tsk_alcc_delta_cover_fractions::return_ptr)
+    CALL return_ptr%Construct(name='alcc_delta_cover_fractions', process_id=ALCC_, owner_model_id=model_id)
+  END FUNCTION Create_task_alcc_delta_cover_fractions
 
-  END FUNCTION Create_task_alcc
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for ALCC translocation task
+  !>
+  FUNCTION Create_task_alcc_translocation(model_id) RESULT(return_ptr)
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER,                   INTENT(in) :: model_id    !< Model id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "alcc_translocation"
+    ! -------------------------------------------------------------------------------------------------- !
+    ALLOCATE(tsk_alcc_translocation::return_ptr)
+    CALL return_ptr%Construct(name='alcc_translocation', process_id=ALCC_, owner_model_id=model_id)
+  END FUNCTION Create_task_alcc_translocation
 
-  ! ====================================================================================================== !
-  !
-  !> Register tasks for alcc process
-  !
+  ! -------------------------------------------------------------------------------------------------------
+  !> Register tasks for ALCC process
+  !>
   SUBROUTINE Register_alcc_tasks(this, model_id)
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_process), INTENT(inout) :: this        !< Instance of alcc process class
     INTEGER,               INTENT(in)   :: model_id    !< Model id
     ! -------------------------------------------------------------------------------------------------- !
-    CALL this%Register_task(tsk_alcc(model_id))
+    CALL this%Register_task(tsk_alcc_delta_cover_fractions(model_id))
+    CALL this%Register_task(tsk_alcc_translocation(model_id))
 
   END SUBROUTINE Register_alcc_tasks
 
+
   ! ====================================================================================================== !
-  !
-  !> Implementation of "update" for task "alcc"
   !>
-  !> Task "alcc" currently annually moves land and to be conserved matter
-  !
-  SUBROUTINE update_alcc(tile, options)
+  !> #### Update ALCC cover fraction changes
+  !>
+  !> The area fraction changes for each PFT tile are derived from prescribed anthropogenic land cover change (ALCC) forcing, read
+  !> in [[mo_alcc_init:read_land_use_data]].
+  !> Updating of cover fraction changes is executed at the beginning of each year.
+  !> The calculation of land cover fractions and the used forcing depends on the configuration (annual or daily changes).
+  !> Note: while this lcc process changes the PFT/age class tiles, it runs and is controlled on their parent tile (the VEG tile).
+  !>
+  SUBROUTINE update_alcc_delta_cover_fractions(tile, options)
 
     USE mo_util,              ONLY: one_of
-    USE mo_jsb_time,          ONLY: is_newday, is_newyear, get_year, get_year_length
-    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, min_daily_cf_change, min_annual_cf_change, max_tolerated_cf_mismatch
-    USE mo_jsb_lcc,           ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc, transfer_active_to_passive_onChunk
-
-    IMPLICIT NONE
+    USE mo_jsb_time,          ONLY: is_newyear, get_year, get_year_length
+    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(ALCC_)
-    dsl4jsb_Def_config(ALCC_)
+    dsl4jsb_Def_memory(ALCC_)                !< Memory of the anthropogenic land use change process
+    dsl4jsb_Def_config(ALCC_)                !< Configuration of the anthropogenic land use change process
+    dsl4jsb_Real3D_onChunk :: cf_target_year !< Target cover fractions derived from annually read land use data []
+    dsl4jsb_Real3D_onChunk :: cf_delta       !< Change in cover fractions derived from cf_target_year (annual or daily change) []
 
-    CLASS(t_jsb_tile_abstract), POINTER :: current_tile, age_class_tile, forest_pft_tile
-    TYPE(t_jsb_model), POINTER          :: model
-    TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations
+    CLASS(t_jsb_tile_abstract), POINTER :: current_tile !< Pointer to the tile for which fraction changes are determined
+    TYPE(t_jsb_model), POINTER          :: model        !< Current instance of the model
 
-    LOGICAL  :: is_age_class, dynamic_tile
-    INTEGER  :: ic, iblk, ics, ice, nc, i_tile, i_ac_index, i_cf_tile, nr_of_tiles, current_year, number_of_days
-    REAL(wp) :: dtime
-    REAL(wp), ALLOCATABLE :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
-    REAL(wp), DIMENSION(options%nc) :: cf_diff, current_fract
+    REAL(wp), DIMENSION(options%nc) :: current_fract    !< Current cover fraction
 
-    dsl4jsb_Real3D_onChunk :: cf_target_year, cf_day_delta
+    INTEGER  :: &
+      & iblk, &         !< Current block index
+      & ics, &          !< Index of first cell of block
+      & ice, &          !< Index of last cell of block
+      & nc, &           !< Number of cells in current block
+      & ic, &           !< Cell index
+      & i_cf_tile, &    !< Index used for forest age classes
+      & current_year, & !< Index of a PFT tile in the array with cover fractions changes
+      & number_of_days  !< Number of tiles participating in the ALCC process
+    REAL(wp) :: dtime   !< Time step length
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_alcc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_alcc_delta_cover_fractions'
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
@@ -139,14 +172,153 @@ CONTAINS
     dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_memory(ALCC_)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_target_year)
-    dsl4jsb_Get_var3D_onChunk(ALCC_, cf_day_delta)
+    dsl4jsb_Get_var3D_onChunk(ALCC_, cf_delta)
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(alcc_)) RETURN
 
-    !>
-    !> Assert that PPLCC process is active
-    !>
+    ! Assert that PPLCC process is active
+    IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
+      CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to be active')
+    END IF
+
+    ! Cover fraction changes only need to be calculated once at the beginning of a new year
+    IF( .NOT. is_newyear(options%current_datetime,dtime)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+
+    ! Assert, that this tile is the VEG tile
+    IF (.NOT. tile%name .EQ. 'veg') THEN
+      CALL finish(TRIM(routine), 'Violation of precondition: alcc processes is expected to run on the veg tile, instead' &
+        & //' tried to run on '// trim(tile%name))
+    END IF
+
+    ! Calculate cover fraction changes
+    current_tile => tile%Get_first_child_tile()
+    i_cf_tile = 0
+
+    DO WHILE (ASSOCIATED(current_tile))
+      i_cf_tile = i_cf_tile + 1
+
+      CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract)
+
+      ! Derive area changes
+      DO ic = 1,nc
+        IF (cf_target_year(ic, i_cf_tile) < 0.0_wp) THEN
+          ! This should only happen upon init with -0.1
+          cf_delta(ic, i_cf_tile) = 0.0_wp
+        ELSE
+          cf_delta(ic, i_cf_tile) = cf_target_year(ic, i_cf_tile) - current_fract(ic)
+        END IF
+
+        IF (dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
+          ! In case that area changes are daily the difference has to be distributed over the year
+          ! such that the target is reached at the end of the year
+          cf_delta(ic, i_cf_tile) = cf_delta(ic, i_cf_tile) / REAL(number_of_days, wp)
+        END IF
+      END DO
+
+      current_tile => current_tile%Get_next_sibling_tile()
+    END DO ! current_tile
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_alcc_delta_cover_fractions
+
+
+  ! ====================================================================================================== !
+  !>
+  !> #### Aggregation of variables from calculation of ALCC cover fraction change -- currently not used.
+  !>
+  SUBROUTINE aggregate_alcc_delta_cover_fractions(tile, options)
+
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
+    ! -------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_alcc_delta_cover_fractions'
+    ! -------------------------------------------------------------------------------------------------- !
+
+  END SUBROUTINE aggregate_alcc_delta_cover_fractions
+
+
+  ! ====================================================================================================== !
+  !
+  !> #### Calculate daily/annual relocation of fractions and matter
+  !>
+  !> This task applies the actual fraction changes as derived in [[update_alcc_delta_cover_fractions]] for each PFT/ or age class,
+  !> as well as the corresponding translocation of matter from tiles loosing area to tiles gaining area. If running with natural
+  !> land cover changes (NLCC) dynamic pfts are handled separately [[handle_dynamic_pfts]].
+  !>
+  !> Note:
+  !>
+  !>   - While this lcc process changes the PFT/age class tiles, it runs and is controlled on their parent tile (the VEG tile).
+  !>   - The ALCC process requires that the PPLCC process is active, too (translocated matter is assumed to be relative to the box).
+  !>
+  SUBROUTINE update_alcc_translocation(tile, options)
+
+    USE mo_util,              ONLY: one_of
+    USE mo_jsb_time,          ONLY: is_newday, is_newyear
+    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, max_tolerated_cf_mismatch
+    USE mo_jsb_lcc,           ONLY: init_lcc_reloc
+
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
+    ! -------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(ALCC_)          !< Memory of the anthropogenic land use change process
+    dsl4jsb_Def_config(ALCC_)          !< Configuration of the anthropogenic land use change process
+    dsl4jsb_Real3D_onChunk :: cf_delta !< Derived change in cover fractions (annual or daily change) []
+
+    CLASS(t_jsb_tile_abstract), POINTER :: current_tile    !< Pointer to the tile for which relocations are determined
+    CLASS(t_jsb_tile_abstract), POINTER :: age_class_tile  !< Pointer to for age class tiles
+    TYPE(t_jsb_model), POINTER          :: model           !< Current instance of the model
+    TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations !< lcc relocations instance of the ALCC process
+
+    REAL(wp), POINTER ::   &
+      & initial_area(:,:), & !< Pointer to initial area in lcc relocations instance of the ALCC process
+      & lost_area(:,:),    & !< Pointer to lost area in lcc relocations instance of the ALCC process
+      & gained_area(:,:)     !< Pointer to gained area in lcc relocations instance of the ALCC process
+
+    REAL(wp), DIMENSION(options%nc) :: &
+      & cf_diff,      & !< Change in cover fractions
+      & current_fract   !< Current cover fraction
+
+    INTEGER  :: &
+      & iblk, &       !< Current block index
+      & ics, &        !< Index of first cell of block
+      & ice, &        !< Index of last cell of block
+      & nc, &         !< Number of cells in current block
+      & ic, &         !< Cell index
+      & i_tile, &     !< Index of a tile in the lcc_relocations
+      & i_ac_index, & !< Index used for forest age classes
+      & i_cf_tile, &  !< Index of a PFT tile in the array with cover fractions changes
+      & nr_of_tiles   !< Number of tiles participating in the ALCC process
+    REAL(wp) :: dtime !< Time step length
+
+    LOGICAL :: dynamic_tile !< Boolean indicating if a tile is a dynamic tile (participating in NLCC; only if NLCC is active)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_alcc_translocation'
+    ! -------------------------------------------------------------------------------------------------- !
+
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    dtime   = options%dtime
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(ALCC_)
+    dsl4jsb_Get_memory(ALCC_)
+    dsl4jsb_Get_var3D_onChunk(ALCC_, cf_delta)
+
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(alcc_)) RETURN
+
+    ! Assert that PPLCC process is active
     IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
       CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to be active')
     END IF
@@ -160,25 +332,20 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    !>
-    !> Assert, that this tile is the VEG tile
-    !>
-    ! - this lcc process changes the PFT tiles but it runs and is controlled on their parent tile
+    ! Assert, that this tile is the VEG tile
     IF (.NOT. tile%name .EQ. 'veg') THEN
       CALL finish(TRIM(routine), 'Violation of precondition: alcc processes is expected to run on the veg tile, instead' &
         & //' tried to run on '// trim(tile%name))
     END IF
 
-    !>
-    !> 1. Get lcc structure
-    !>
+    ! 1. Get lcc structure
     dsl4jsb_Get_lcc_relocations(ALCC_, lcc_relocations)
     nr_of_tiles = lcc_relocations%nr_of_tiles
 
-    ! Allocate area vectors
-    ALLOCATE(initial_area(nc, nr_of_tiles))
-    ALLOCATE(lost_area(nc, nr_of_tiles))
-    ALLOCATE(gained_area(nc, nr_of_tiles))
+    ! Init area vectors
+    dsl4jsb_Get_lcc_area_matrix(initial_area)
+    dsl4jsb_Get_lcc_area_matrix(lost_area)
+    dsl4jsb_Get_lcc_area_matrix(gained_area)
     initial_area(:,:) = 0.0_wp
     lost_area(:,:) = 0.0_wp
     gained_area(:,:) = 0.0_wp
@@ -186,9 +353,7 @@ CONTAINS
     ! Collect current area of all involved tiles
     CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
 
-    !>
-    !> 2. Calculate area changes
-    !>
+    ! 2. Calculate area changes
     current_tile => tile%Get_first_child_tile()
     i_tile = 0
     i_cf_tile = 0
@@ -219,63 +384,23 @@ CONTAINS
           i_ac_index = i_ac_index + 1
         END DO
 
-        ! forest pfts are not part of the lcc structure (i.e. not involved tiles)
+        ! Forest pfts are not part of the lcc structure (i.e. not involved tiles)
         ! and thus the initial area has not yet been automatically collected above
         CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract)
 
-        ! derive area changes
-        IF(.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
-          ! In case that area changes are only annually, they can directly be derived from the new cfs and the current cfs
-          cf_diff(:) = cf_target_year(:, i_cf_tile) - current_fract(:)
-
-          ! Prevent numerical issues
-          WHERE (abs(cf_diff(:)) < min_annual_cf_change)
-            cf_diff(:) = 0.0_wp
-            cf_target_year(:, i_cf_tile) = current_fract(:)
-          END WHERE
-
-        ELSE
-          !  else land use is to be adjusted on a daily basis
-          IF(is_newyear(options%current_datetime,dtime)) THEN
-            ! if this is the start of a new year, the daily change in cf needs to be determined
-            ! which is required to reach the given cf target at the end of the year
-            DO ic = 1,nc
-              IF (cf_target_year(ic, i_cf_tile) < 0.0_wp) THEN
-                ! This should only happen upon init with -0.1
-                cf_day_delta(ic, i_cf_tile) = 0.0_wp
-              ELSE
-                cf_day_delta(ic, i_cf_tile) = (cf_target_year(ic, i_cf_tile) - current_fract(ic)) / REAL(number_of_days, wp)
-                ! Prevent numerical issues
-                IF(abs(cf_day_delta(ic, i_cf_tile)) < min_daily_cf_change) THEN
-                  cf_day_delta(ic, i_cf_tile) = 0.0_wp
-                  cf_target_year(ic, i_cf_tile) = current_fract(ic)
-                END IF
-              END IF
-            END DO
-          ENDIF !IF(is_newyear(options%current_datetime,dtime))
-
-          ! now cf_day_delta can be used (no matter if just calculated or from earlier in the year or from restart)
-          DO ic = 1,nc
-            cf_diff(ic) = cf_day_delta(ic, i_cf_tile)
-            ! Prevent numerical issues
-            IF(abs(cf_diff(ic)) < min_daily_cf_change) THEN
-              cf_diff(ic) = 0.0_wp
-            END IF
-          END DO
-        END IF ! IF(.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc)
-
-        ! the losses / gains of forest pfts need to be redistributed to the age classes that are its children
-        CALL redistribute_cover_fraction_changes_of_forest_pft(current_tile, options, cf_diff, i_tile, gained_area, lost_area)
+        ! The area loss or gain of a forest pft needs to be redistributed to its children (the age classes)
+        CALL redistribute_cover_fraction_changes_of_forest_pft( &
+            & current_tile, options, cf_delta(:, i_cf_tile), i_tile, gained_area, lost_area)
         i_tile = i_tile + current_tile%Get_no_of_children() - 1
 
         ! Finally, update the fraction on the forest pft tile itself
-        current_fract(:) = current_fract(:) + cf_diff(:)
+        current_fract(:) = current_fract(:) + cf_delta(:, i_cf_tile)
         CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
       ELSE
-        ! pft without children (either pft usecase or non forest pfts in fage usecase!)
+        ! Pft without children (either pft usecase or non forest pfts in fage usecase!)
         ! in the pft usecase i_cf_tile equals i_tile, however, this is not the case for non forest pfts in fage usecase
-        ! therefore cf_target_year and cf_day_delta are used with pft index (i_cf_tile)
-        ! while the lcc arrays (initial_area, lost_area and gained_area) are used with the current tile index (i_tile)
+        ! therefore cf_delta is are used with pft index (i_cf_tile), while the lcc arrays (initial_area, lost_area and gained_area)
+        ! are used with the current tile index (i_tile)
 
         ! Assert: pft without children
         IF (current_tile%Has_children()) THEN
@@ -291,50 +416,27 @@ CONTAINS
           & //') is not part of the alcc lcc-structure. Current implementation assumes that all pfts are part of it.')
         END IF
 
-        ! derive area changes
-        IF (.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
-          ! In case that area changes are only annually, they can directly be derived from the new cfs and the current cfs
-          DO ic = 1,nc
-            cf_diff(ic) = cf_target_year(ic, i_cf_tile) - initial_area(ic, i_tile)
-            ! determine new cover fractions
-            current_fract(ic) = cf_target_year(ic, i_cf_tile)
-          END DO
-        ELSE
-          ! else land use is to be adjusted on a daily basis
-          IF(is_newyear(options%current_datetime,dtime)) THEN
-            ! if this is the start of a new year, the daily change in cf needs to be determined
-            ! which is required to reach the given cf target at the end of the year
-            DO ic = 1,nc
-              IF (cf_target_year(ic, i_cf_tile) < 0.0_wp) THEN
-                ! This should only happen upon init with -0.1
-                cf_day_delta(ic, i_cf_tile) = 0.0_wp
-              ELSE
-                cf_day_delta(ic, i_cf_tile) = (cf_target_year(ic, i_cf_tile) - initial_area(ic, i_tile)) / REAL(number_of_days, wp)
-              END IF
-            END DO
-          END IF ! IF(is_newyear(options%current_datetime,dtime))
-
-          ! now cf_day_delta can be used (no matter if just calculated or from earlier in the year or from restart)
-          DO ic = 1,nc
-            cf_diff(ic) = cf_day_delta(ic, i_cf_tile)
-
-            ! determine new cover fractions
-            IF ((cf_diff(ic) < 0.0_wp) .AND. (ABS(cf_diff(ic)) >= initial_area(ic, i_tile))) THEN
-              current_fract(ic) = 0.0_wp
-              cf_diff(ic) = -1.0_wp * initial_area(ic, i_tile)
-            ELSE IF ((cf_diff(ic) > 0.0_wp) .AND. ((cf_diff(ic) + initial_area(ic, i_tile)) >= 1.0_wp)) THEN
-              current_fract(ic) = 1.0_wp
-              cf_diff(ic) = 1.0_wp - initial_area(ic, i_tile)
-            ELSE
-              current_fract(ic) = initial_area(ic, i_tile) + cf_diff(ic)
-            END IF
-          END DO
-        END IF ! l_daily_alcc
-
         DO ic = 1,nc
+          cf_diff(ic) = cf_delta(ic, i_cf_tile)
+
+          ! Determine new cover fractions, while keeping within the boundaries valid for cover fractions [0,1]
+          IF ((cf_diff(ic) < 0.0_wp) .AND. (ABS(cf_diff(ic)) >= initial_area(ic, i_tile))) THEN
+            ! If area is lost it should not exceed the inital area
+            current_fract(ic) = 0.0_wp
+            cf_diff(ic) = -1.0_wp * initial_area(ic, i_tile)
+          ELSE IF ((cf_diff(ic) > 0.0_wp) .AND. ((cf_diff(ic) + initial_area(ic, i_tile)) >= 1.0_wp)) THEN
+            ! If area is gained the sum of initial area and gained area should not exeed 1 (total available area)
+            current_fract(ic) = 1.0_wp
+            cf_diff(ic) = 1.0_wp - initial_area(ic, i_tile)
+          ELSE
+            current_fract(ic) = initial_area(ic, i_tile) + cf_diff(ic)
+          END IF
+
+          ! Derive gained and lost area
           IF(cf_diff(ic) >= 0.0_wp) THEN
             gained_area(ic, i_tile) = cf_diff(ic)
           ELSE
+            ! The lcc framework expects also lost area to be a positive value, therefore the sign is swaped here
             lost_area(ic, i_tile) = -1.0_wp * cf_diff(ic)
           END IF
         END DO
@@ -342,19 +444,17 @@ CONTAINS
         IF (.NOT. dynamic_tile) THEN
           CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
         END IF
-      END IF ! If with jsbach_forest_age_classes usecase and forest pft or pft without leaves
+      END IF ! If running with jsbach_forest_age_classes usecase and a forest pft or ELSE a pft without leaves as current tile
 
       current_tile => current_tile%Get_next_sibling_tile()
-    END DO ! current_tile
+    END DO ! Current_tile
 
-    !>     If demanded: handle the dynamic PFT tiles
+    ! If demanded: handle the dynamic PFT tiles
     IF (model%Is_process_enabled(NLCC_)) THEN
       CALL handle_dynamic_pfts(tile, options, initial_area, gained_area, lost_area)
     END IF
 
-    !>
-    !>     Sum of gained area needs to equal sum of lost area in order to conserve carbon
-    !>
+    ! Assertion: the total gained area needs to equal the total lost area to enable matter conservation
     cf_diff(:) = SUM(gained_area(:,:),DIM=2) - SUM(lost_area(:,:),DIM=2)
     ! Check for violations outside of the tolerated range (which are probably rather due to errors than precision)
     IF (ANY(ABS(cf_diff(:)) > max_tolerated_cf_mismatch)) THEN
@@ -367,13 +467,146 @@ CONTAINS
       CALL check_and_correct_cf_mismatches(tile, options, nr_of_tiles, gained_area, lost_area)
     END IF
 
+    ! Now do the matter translocation
+    CALL alcc_matter_translocation_jsb(tile, options)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_alcc_translocation
+
+
+  ! ====================================================================================================== !
+  !>
+  !> #### Aggregation of variables from calculation of ALCC translocation
+  !>
+  SUBROUTINE aggregate_alcc_translocation(tile, options)
+
+    dsl4jsb_Use_memory(FAGE_)
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER  :: &
+      & iblk, &       !< Current block index
+      & ics, &        !< Index of first cell of block
+      & ice           !< Index of last cell of block
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract  !< Aggregation method: area weighted fractions
+    dsl4jsb_Def_memory(FAGE_)                              !< Memory of the forest age classes process
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_alcc_translocation'
+    ! -------------------------------------------------------------------------------------------------- !
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    IF(tile%Is_process_active(FAGE_)) THEN
+      weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+      dsl4jsb_Get_memory(FAGE_)
+      dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
+    END IF
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_alcc_translocation
+
+
+  ! ====================================================================================================== !
+  !
+  !> Do the matter translocation for jsbach.
+  !
+  SUBROUTINE alcc_matter_translocation_jsb(tile, options)
+
+    USE mo_jsb_time,          ONLY: is_newday, is_newyear
+    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc
+    USE mo_jsb_lcc,           ONLY: start_lcc_reloc, end_lcc_reloc, transfer_active_to_passive_onChunk
+
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
+    ! -------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(ALCC_) !< Memory of the anthropogenic land use change process
+    dsl4jsb_Def_config(ALCC_) !< Configuration of the anthropogenic land use change process
+
+    CLASS(t_jsb_tile_abstract), POINTER :: current_tile    !< Pointer to the tile for which relocations are applied
+    CLASS(t_jsb_tile_abstract), POINTER :: forest_pft_tile !< Pointer for forest pft tiles
+    TYPE(t_jsb_model), POINTER          :: model           !< Current instance of the model
+    TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations !< lcc relocations instance of the ALCC process
+
+    REAL(wp), POINTER ::   &
+      & initial_area(:,:), & !< Pointer to initial area in lcc relocations instance of the ALCC process
+      & lost_area(:,:),    & !< Pointer to lost area in lcc relocations instance of the ALCC process
+      & gained_area(:,:)     !< Pointer to gained area in lcc relocations instance of the ALCC process
+
+    INTEGER  :: &
+      & iblk, &       !< Current block index
+      & ics, &        !< Index of first cell of block
+      & ice, &        !< Index of last cell of block
+      & nc, &         !< Number of cells in current block
+      & ic, &         !< Cell index
+      & i_tile        !< Index of a tile in the lcc_relocations
+    REAL(wp) :: dtime !< Time step length
+
+    LOGICAL  :: is_age_class !< Boolean indicating if a tile is a forest age class
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_alcc_translocation'
+    ! -------------------------------------------------------------------------------------------------- !
+
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    dtime   = options%dtime
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(ALCC_)
+    dsl4jsb_Get_memory(ALCC_)
+
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(alcc_)) RETURN
+
     !>
-    !> 3. collect to be transferred matter
+    !> Assert that PPLCC process is active
+    !>
+    IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
+      CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to be active')
+    END IF
+
+    ! Redistributions are either only conducted at the start of each year or each day
+    IF(.NOT. dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
+      IF( .NOT. is_newyear(options%current_datetime,dtime)) RETURN
+    ELSE
+      IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN
+    END IF
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    ! Assert, that this tile is the VEG tile
+    IF (.NOT. tile%name .EQ. 'veg') THEN
+      CALL finish(TRIM(routine), 'Violation of precondition: alcc processes is expected to run on the veg tile, instead' &
+        & //' tried to run on '// trim(tile%name))
+    END IF
+
+    !>
+    !> 1. Get lcc structure
+    !>
+    dsl4jsb_Get_lcc_relocations(ALCC_, lcc_relocations)
+
+    ! get area vectors
+    dsl4jsb_Get_lcc_area_matrix(initial_area)
+    dsl4jsb_Get_lcc_area_matrix(lost_area)
+    dsl4jsb_Get_lcc_area_matrix(gained_area)
+
+    !>
+    !> 2. Collect to be transferred matter
     !>
     CALL start_lcc_reloc(lcc_relocations, options, lost_area, initial_area)
 
     !>
-    !> 4. transfer matter from active to passive vars
+    !> 3. Transfer matter from active to passive vars
     !>
     current_tile => tile%Get_first_child_tile()
     is_age_class = .FALSE.
@@ -402,82 +635,39 @@ CONTAINS
         current_tile => current_tile%Get_next_sibling_tile()
         is_age_class = .FALSE.
       END IF
-
     END DO
 
     !>
-    !> 5. make the passive matter transfer
+    !> 4. make the passive matter transfer
     !>
     CALL end_lcc_reloc(lcc_relocations, options, gained_area)
 
-    DEALLOCATE(lost_area, gained_area, initial_area)
-
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_alcc
+  END SUBROUTINE alcc_matter_translocation_jsb
+
 
   ! ====================================================================================================== !
   !
-  !> Implementation of "aggregate" for task "alcc"
-  !
-  SUBROUTINE aggregate_alcc(tile, options)
-
-    dsl4jsb_Use_memory(FAGE_)
-    ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
-    ! -------------------------------------------------------------------------------------------------- !
-    INTEGER  :: iblk, ics, ice
-    CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
-    dsl4jsb_Def_memory(FAGE_)
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_alcc'
-    ! -------------------------------------------------------------------------------------------------- !
-
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    IF(tile%Is_process_active(FAGE_)) THEN
-      weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-      dsl4jsb_Get_memory(FAGE_)
-      dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
-    END IF
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggregate_alcc
-
-  ! ====================================================================================================== !
-  !
-  !> Redistribution of losses and gains of a forest pft to its age-classes if running with age classes
+  !> Redistribution of losses and gains of a forest pft to its age-classes if running with age classes.
   !
   SUBROUTINE redistribute_cover_fraction_changes_of_forest_pft(tile, options, cf_diff, i_first_child, gained_area, lost_area)
     USE mo_fage_interface,         ONLY: apply_fract_per_age_change_for_alcc_forest_gain, &
       &                                  distribute_forest_loss_from_alcc
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile          !< forest pft for which the routine is called
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile          !< Forest pft for which the routine is called
     TYPE(t_jsb_task_options),   INTENT(in)    :: options       !< Additional run-time parameters
-    REAL(wp),                   INTENT(in)    :: cf_diff(:)    !< to be distributed changes of cover fractions
+    REAL(wp),                   INTENT(in)    :: cf_diff(:)    !< To be distributed changes of cover fractions
     INTEGER,                    INTENT(in)    :: i_first_child
-       !< index of first child tile in gained and lost area matrices
-    REAL(wp),                   INTENT(inout) :: gained_area(:,:) !< gained_area matrix for lcc calculations
-    REAL(wp),                   INTENT(inout) :: lost_area(:,:)   !< lost_area matrix for lcc calculations
+       !< Index of first child tile in gained and lost area matrices
+    REAL(wp),                   INTENT(inout) :: gained_area(:,:) !< Gained area matrix for lcc calculations
+    REAL(wp),                   INTENT(inout) :: lost_area(:,:)   !< Lost area matrix for lcc calculations
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':redistribute_cover_fraction_changes_of_forest_pft'
 
-    CLASS(t_jsb_tile_abstract), POINTER :: age_class_tile
-    TYPE(t_jsb_model), POINTER          :: model
-
-    REAL(wp), DIMENSION(options%nc) :: this_loss, this_gain
-
-    INTEGER  :: iblk, ics, ice, nc
+    REAL(wp), DIMENSION(options%nc) :: this_loss !< Area loss of forest PFT to be distributed to its children (age classes)
+    REAL(wp), DIMENSION(options%nc) :: this_gain !< Area gains of forest PFT to be distributed to its children (age classes)
     ! -------------------------------------------------------------------------------------------------- !
-
-    nc = options%nc
-    age_class_tile => tile%Get_first_child_tile()
-
     this_loss(:) = -1_wp * MIN(cf_diff(:), 0._wp)
     this_gain(:) = MAX(cf_diff(:), 0._wp)
 
@@ -501,14 +691,14 @@ CONTAINS
   SUBROUTINE handle_dynamic_pfts(tile, options, initial_area, gained_area, lost_area)
     USE mo_nlcc_process,      ONLY: fract_small
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile             !< Parent tile for which the routine is called
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options          !< Additional run-time parameters
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile              !< Parent tile for which the routine is called
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options           !< Additional run-time parameters
     REAL(wp),                   INTENT(inout) :: initial_area(:,:) !< Initial_area matrix for lcc calculations
     REAL(wp),                   INTENT(inout) :: gained_area(:,:)  !< Gained_area matrix for lcc calculations
     REAL(wp),                   INTENT(inout) :: lost_area(:,:)    !< Lost_area matrix for lcc calculations
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER  :: ic, i_tile                                !< Looping indices
-    TYPE(t_jsb_model), POINTER          :: model
+    TYPE(t_jsb_model), POINTER          :: model          !< Current instance of the model
     CLASS(t_jsb_tile_abstract), POINTER :: current_tile   !< Pointer on currently investigated tile7
     REAL(wp), DIMENSION(options%nc)     :: current_fract  !< Cover fraction if current tile
     REAL(wp), DIMENSION(options%nc)     :: area_dynamic   !< Cover fraction correction
@@ -568,6 +758,7 @@ CONTAINS
     END DO
 
   END SUBROUTINE handle_dynamic_pfts
+
 
   ! ====================================================================================================== !
   !> #### Check and if required correct gained and lost areas
