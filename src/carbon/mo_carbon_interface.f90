@@ -1199,17 +1199,17 @@ CONTAINS
 
     IF (model%Is_process_enabled(SB_CARBON_)) THEN
       CALL recalc_per_tile_vars(tile, options, &
-      & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
-      & c_crop_harvest = c_crop_harvest(:),                                       &
-      & c_leaf = c_leaf(:), c_fineroot = c_fineroot(:),                 &
-      & c_fruit = c_fruit(:), c_seedbed = c_seedbed(:), &
-      & c_sapwood = c_sapwood(:), c_heartwood = c_heartwood(:),                 &
-      & c_coarseroot = c_coarseroot(:), &
-      & litterfall_leaf = litterfall_leaf(:), litterfall_fineroot = litterfall_fineroot(:), &
-      & litterfall_fruit = litterfall_fruit(:), litterfall_seedbed = litterfall_seedbed(:), &
-      & litterfall_sapwood = litterfall_sapwood(:), litterfall_heartwood = litterfall_heartwood(:), &
-      & litterfall_coarseroot = litterfall_coarseroot(:), sb_pool_ag_litter(:) = sb_pool_ag_litter(:), &
-      & sb_pool_bg_litter(:) = sb_pool_bg_litter(:), sb_pool_bg_humus(:) = sb_pool_bg_humus(:))
+        & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
+        & c_crop_harvest = c_crop_harvest(:),                                       &
+        & c_leaf = c_leaf(:), c_fineroot = c_fineroot(:),                 &
+        & c_fruit = c_fruit(:), c_seedbed = c_seedbed(:), &
+        & c_sapwood = c_sapwood(:), c_heartwood = c_heartwood(:),                 &
+        & c_coarseroot = c_coarseroot(:), &
+        & litterfall_leaf = litterfall_leaf(:), litterfall_fineroot = litterfall_fineroot(:), &
+        & litterfall_fruit = litterfall_fruit(:), litterfall_seedbed = litterfall_seedbed(:), &
+        & litterfall_sapwood = litterfall_sapwood(:), litterfall_heartwood = litterfall_heartwood(:), &
+        & litterfall_coarseroot = litterfall_coarseroot(:), sb_pool_ag_litter(:) = sb_pool_ag_litter(:), &
+        & sb_pool_bg_litter(:) = sb_pool_bg_litter(:), sb_pool_bg_humus(:) = sb_pool_bg_humus(:))
     ELSE
       CALL recalc_per_tile_vars(tile, options, &
         & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
