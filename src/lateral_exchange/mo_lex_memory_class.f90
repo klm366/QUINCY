@@ -1,4 +1,4 @@
-!> Contains the memory class for the lex process.
+!> Contains the memory class for the lateral exchange process.
 !>
 !> ICON-Land
 !>
@@ -11,7 +11,23 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!>#### Contains memory definitions for lex
+!>#### Memory definitions for lateral exchange process
+!>
+!> The module defines the data structure [[t_lex_memory]] that contains the lateral exchange
+!> memory. Each tile of the LEX process has its own version of this memory.
+!> Variables added to the structure are easily accessible in the process routines of the
+!> LEX and other processes, e.g. with 'dsl4jsb_Get_var2D_onChunk(LEX_, slope_eff)'
+!> for using variable 'slope_eff'.
+!>
+!> With the [[t_jsb_memory:Add_var]] calls, memory is allocated for
+!> the global variable arrays on CPUs. It is also ensured that the correct variable
+!> patches are available on different MPI processes, and the variable is made available
+!> on GPUs, in case the model is compiled to be run on GPUs.
+!> Besides, calling [[t_jsb_memory:Add_var]] enables writing selected variables to output
+!> files and adds the necessary variables to the list of restart file variables.
+!>
+!> Subroutine [[Init_lex_memory]] is a type-bound procedure of [[t_lex_memory]]. It is
+!> is called within the initialization phase for all tiles of the LEX process.
 !>
 MODULE mo_lex_memory_class
 #ifndef __NO_JSBACH__
@@ -36,14 +52,16 @@ MODULE mo_lex_memory_class
 
   PUBLIC :: t_lex_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 40
+  INTEGER, PARAMETER :: max_no_of_vars = 40  !< Maximum number of 'Add_var' calls in this module
 
-  !> Type definition for memory
+  !> Memory of the LEX process:
+  !> _Note for the ford documentation_: The table lists the general jsbach memory variables
+  !>   ([[t_jsb_memory]]) as well as its extension by the LEX process variables.
   TYPE, EXTENDS(t_jsb_memory) :: t_lex_memory
 
     ! Common variables independent of lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & slope_eff,            &  !< effective slope (micro- and macro-scale) [/]
+      & slope_eff,            &  !< effective slope (micro- and macro-scale) []
       & fact_lag_srf,         &  !< effective lag for lateral surface fluxes [s-1]
       & fact_lag_blg,         &  !< effective lag for lateral sub-surface fluxes [s-1]
       & wtr_runoff_in,        &  !< surface runoff received from adjacent tiles [kg m-2 s-1]
@@ -56,14 +74,14 @@ MODULE mo_lex_memory_class
       & h_offset_ct,          &  !< difference in surface elevation between adjacent tiles [m]
       & length_scale_ct,      &  !< char. length scale of srf. heterogeneity [m]
       & length_iface_ct,      &  !< char. interface length between adjacent tiles [m m-2]
-      & microcon_ctc_ct,      &  !< micro-scale connectivity factors for direct contact [/]
-      & microcon_hfp_srf_ct,  &  !< micro-scale connectivity factors for surface hydrological flow paths [/]
-      & microcon_hfp_blg_ct,  &  !< micro-scale connectivity factors for below-ground hydrological flow paths [/]
-      & macrocon_hfp_srf_ct,  &  !< macro-scale connectivity factors for surface hydrological flow paths [/]
-      & macrocon_hfp_blg_ct,  &  !< macro-scale connectivity factors for below-ground hydrological flow paths [/]
-      & fract_latflow_srf_ct, &  !< fraction of lateral (srf) flow to adjacent tile [/]
-      & fract_latflow_blg_ct, &  !< fraction of lateral (below ground) flow to adjacent tile [/]
-      & micro_slope_ct,       &  !< micro-scale slope between connected tiles [/]
+      & microcon_ctc_ct,      &  !< micro-scale connectivity factors for direct contact []
+      & microcon_hfp_srf_ct,  &  !< micro-scale connectivity factors for surface hydrological flow paths []
+      & microcon_hfp_blg_ct,  &  !< micro-scale connectivity factors for below-ground hydrological flow paths []
+      & macrocon_hfp_srf_ct,  &  !< macro-scale connectivity factors for surface hydrological flow paths []
+      & macrocon_hfp_blg_ct,  &  !< macro-scale connectivity factors for below-ground hydrological flow paths []
+      & fract_latflow_srf_ct, &  !< fraction of lateral (srf) flow to adjacent tile []
+      & fract_latflow_blg_ct, &  !< fraction of lateral (below ground) flow to adjacent tile []
+      & micro_slope_ct,       &  !< micro-scale slope between connected tiles []
       & wtr_infil_in_sl,      &  !< infiltration from adjacent tiles [kg m-2 s-1]
       & wtr_drainage_in_sl,   &  !< drainage received from adjacent tiles [kg m-2 s-1]
       & wtr_diffusion_in_sl,  &  !< diffusion (water) received from adjacent tile [kg m-2 s-1]
@@ -82,31 +100,42 @@ MODULE mo_lex_memory_class
 
 CONTAINS
 
+  ! ============================================================================================== !
+  !>
+  !>#### Initialization of the lateral exchange process memory
+  !>
+  !> In this subroutine we initialize the memory of the lateral exchange process.
+  !> The subroutine is a type-bound procedure of [[t_lex_memory]]. It is called within the
+  !> initialization phase for all tiles needed by the lateral exchange process ([[mo_jsb_tile:init_tile]]:
+  !> 'CALL this%mem(iproc)%p%Init(TRIM(process_name), ...)').
+  !>
   SUBROUTINE Init_lex_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
-    CLASS(t_lex_memory), INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),    INTENT(in)    :: prefix
-    CHARACTER(len=*),    INTENT(in)    :: suffix
-    INTEGER,             INTENT(in)    :: lct_ids(:)
-    INTEGER,             INTENT(in)    :: lib_id     !< id of primary lct in lctlib
-    INTEGER,             INTENT(in)    :: model_id
+    CLASS(t_lex_memory), INTENT(inout), TARGET :: mem  !< Memory of the lex process
+    CHARACTER(len=*),    INTENT(in)    :: prefix       !< Prefix for variable names in output/restart files,
+                                                       !< i.e. process name
+    CHARACTER(len=*),    INTENT(in)    :: suffix       !< Suffix for variable names in output/restart files,
+                                                       !< i.e. corresponding tile name
+    INTEGER,             INTENT(in)    :: lct_ids(:)   !< Land cover type IDs
+    INTEGER,             INTENT(in)    :: lib_id       !< ID of the tile's primary land cover type (e.g. LAND_TYPE)
+    INTEGER,             INTENT(in)    :: model_id     !< ID of the current model instance
 
-    dsl4jsb_Def_config(LEX_)
+    dsl4jsb_Def_config(LEX_)                           !< Configurable settings of the lateral exchange process
 
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
-    TYPE(t_jsb_vgrid), POINTER :: tiles                        ! Vertical grid
-    TYPE(t_jsb_vgrid), POINTER :: soil_w                       ! Vertical grid
+    TYPE(t_jsb_model), POINTER :: model                !< This instance of ICON-Land
+    TYPE(t_jsb_grid),  POINTER :: hgrid                !< Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface, &           !< Vertical grid for surface variables (vertical dimension = 1)
+      &                           tiles,   &           !< Vertical grid for connected tiles
+      &                           soil_w               !< Vertical grid for soil hydrology
 
-    INTEGER :: table
-    TYPE(t_grib2) :: grib2_desc
+    INTEGER :: table                                   !< Grib code table ID
+    TYPE(t_grib2) :: grib2_desc                        !< Grib2 related metadata
 
-    LOGICAL  :: l_lex
+    LOGICAL  :: l_lex                                  !< Is lateral exchange active?
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_lex_memory'
 
@@ -121,8 +150,12 @@ CONTAINS
     tiles   => Get_vgrid('connecttiles')
     soil_w  => Get_vgrid('soil_depth_water')
 
-    ! Common variables
+    ! Variables defined on all tiles
+    ! -------------------------------
 
+    !> Only a few selected variables are available in grib format. For these variables official WMO grib codes
+    !> are defined. Note, that the code triplet '255, 255, 255' used for most jsbach output variables is rather
+    !> a placeholder.
     IF (TRIM(mem%owner_tile_name) == 'box') THEN
       grib2_desc = t_grib2(1,0,202, grib_bits)
     ELSE
@@ -131,10 +164,9 @@ CONTAINS
 
     l_lex = dsl4jsb_Config(LEX_)%active
 
-    ! add your common variables here e.g:
     CALL mem%Add_var( 'slope_eff', mem%slope_eff,                                     &
         & hgrid, surface,                                                             &
-        & t_cf('slope_eff', '/', 'effective slope (micro- and macro-scale)'),         &
+        & t_cf('slope_eff', '',  'effective slope (micro- and macro-scale)'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                     &
         & loutput=l_lex, output_level=FULL,                                           &
@@ -150,10 +182,10 @@ CONTAINS
 
     CALL mem%Add_var( 'fact_lag_blg', mem%fact_lag_blg,                               &
         & hgrid, surface,                                                             &
-        & t_cf('fact_lag_blg', '/', 'effective lag for lateral sub-surface fluxes'),  &
+        & t_cf('fact_lag_blg', '', 'effective lag for lateral sub-surface fluxes'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                     &
-        & loutput=l_lex, output_level=BASIC,                                           &
+        & loutput=l_lex, output_level=BASIC,                                          &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var( 'wtr_runoff_out', mem%wtr_runoff_out,                                   &
@@ -198,7 +230,7 @@ CONTAINS
 
     CALL mem%Add_var( 'h_offset_ct', mem%h_offset_ct,                                          &
         & hgrid, tiles,                                                                        &
-        & t_cf('h_offset_ct', '/', 'difference in surface elevation between adjacent tiles'),  &
+        & t_cf('h_offset_ct', 'm', 'difference in surface elevation between adjacent tiles'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                              &
         & loutput=l_lex, output_level=FULL,                                                    &
@@ -222,39 +254,44 @@ CONTAINS
 
     CALL mem%Add_var( 'microcon_ctc_ct', mem%microcon_ctc_ct,                 &
         & hgrid, tiles,                                                       &
-        & t_cf('microcon_ctc_ct', '/', 'micro-scale connectivity factors for direct contact'),    &
+        & t_cf('microcon_ctc_ct', '',                                         &
+        &      'micro-scale connectivity factors for direct contact'),        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix, l_aggregate_all=.TRUE.,                             &
         & loutput=l_lex, output_level=FULL,                                   &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'microcon_hfp_srf_ct', mem%microcon_hfp_srf_ct,                                    &
+    CALL mem%Add_var( 'microcon_hfp_srf_ct', mem%microcon_hfp_srf_ct,                            &
         & hgrid, tiles,                                                                          &
-        & t_cf('microcon_hfp_srf_ct', '/', 'micro-scale connectivity factors for surface hydrological flow paths'),   &
+        & t_cf('microcon_hfp_srf_ct', '',                                                        &
+        &      'micro-scale connectivity factors for surface hydrological flow paths'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
         & loutput=l_lex, output_level=FULL,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'microcon_hfp_blg_ct', mem%microcon_hfp_blg_ct,                                    &
+    CALL mem%Add_var( 'microcon_hfp_blg_ct', mem%microcon_hfp_blg_ct,                            &
         & hgrid, tiles,                                                                          &
-        & t_cf('microcon_hfp_blg_ct', '/', 'micro-scale connectivity factors for below-ground hydrological flow paths'),   &
+        & t_cf('microcon_hfp_blg_ct', '',                                                        &
+        &      'micro-scale connectivity factors for below-ground hydrological flow paths'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
         & loutput=l_lex, output_level=FULL,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'macrocon_hfp_srf_ct', mem%macrocon_hfp_srf_ct,                 &
+    CALL mem%Add_var( 'macrocon_hfp_srf_ct', mem%macrocon_hfp_srf_ct,         &
         & hgrid, tiles,                                                       &
-        & t_cf('macrocon_hfp_srf_ct', '/', 'macro-scale connectivity factors for surface hydrological flow paths'),    &
+        & t_cf('macrocon_hfp_srf_ct', '',                                     &
+        &      'macro-scale connectivity factors for surface hydrological flow paths'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix, l_aggregate_all=.TRUE.,                             &
         & loutput=l_lex, output_level=FULL,                                   &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'macrocon_hfp_blg_ct', mem%macrocon_hfp_blg_ct,                 &
+    CALL mem%Add_var( 'macrocon_hfp_blg_ct', mem%macrocon_hfp_blg_ct,         &
         & hgrid, tiles,                                                       &
-        & t_cf('macrocon_hfp_blg_ct', '/', 'macro-scale connectivity factors for below-ground hydrological flow paths'),    &
+        & t_cf('macrocon_hfp_blg_ct', '',                                     &
+        &      'macro-scale connectivity factors for below-ground hydrological flow paths'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix, l_aggregate_all=.TRUE.,                             &
         & loutput=l_lex, output_level=FULL,                                   &
@@ -262,7 +299,7 @@ CONTAINS
 
     CALL mem%Add_var( 'fract_latflow_srf_ct', mem%fract_latflow_srf_ct,                          &
         & hgrid, tiles,                                                                          &
-        & t_cf('fract_latflow_srf_ct', '/', 'fraction of lateral (srf) flow to adjacent tile'),  &
+        & t_cf('fract_latflow_srf_ct', '', 'fraction of lateral (srf) flow to adjacent tile'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
         & loutput=l_lex, output_level=FULL,                                                      &
@@ -270,7 +307,7 @@ CONTAINS
 
     CALL mem%Add_var( 'fract_latflow_blg_ct', mem%fract_latflow_blg_ct,                          &
         & hgrid, tiles,                                                                          &
-        & t_cf('fract_latflow_blg_ct', '/',                                                      &
+        & t_cf('fract_latflow_blg_ct', '',                                                       &
         & 'fraction of lateral (below ground) flow to adjacent tile'),                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
@@ -279,7 +316,7 @@ CONTAINS
 
     CALL mem%Add_var( 'micro_slope_ct', mem%micro_slope_ct,                          &
         & hgrid, tiles,                                                              &
-        & t_cf('micro_slope_ct', '/', 'micro-scale slope between connected tiles'),  &
+        & t_cf('micro_slope_ct', '', 'micro-scale slope between connected tiles'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                    &
         & loutput=l_lex, output_level=FULL,                                          &
