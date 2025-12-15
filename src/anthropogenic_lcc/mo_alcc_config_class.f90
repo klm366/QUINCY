@@ -29,9 +29,11 @@ MODULE mo_alcc_config_class
 
   TYPE, EXTENDS(t_jsb_config)      :: t_alcc_config
      INTEGER                       :: nr_of_pfts
-     CHARACTER(len=filename_max-7) :: alcc_filename_prefix
+     CHARACTER(len=filename_max-7) :: alcc_filename_prefix, alcc_transitions_filename_prefix
        !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
      CHARACTER(len=SHORT_NAME_LEN) :: scheme
+     CHARACTER(len=15), DIMENSION(9)  :: trans_names  
+        !< specifies the transition types used in case of 'transitions' scheme
      LOGICAL                       :: l_daily_alcc
        !< Determines if land use change is to be applied on a daily (TRUE) or annual (FALSE) basis.
        ! Note: This also determines the year of the land use maps file to read in: in case of "annual" the file for
@@ -61,11 +63,17 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     LOGICAL                       :: active, lrestart_cont
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
-    CHARACTER(len=filename_max-7) :: alcc_filename_prefix
+    CHARACTER(len=filename_max-7) :: alcc_filename_prefix, alcc_transitions_filename_prefix
     CHARACTER(len=SHORT_NAME_LEN) :: scheme
     LOGICAL                       :: l_daily_alcc
     TYPE(t_jsb_vgrid), POINTER    :: pft_layer
+    TYPE(t_jsb_vgrid), POINTER    :: trans_layer
     INTEGER                       :: i, nr_of_pfts
+    CHARACTER(len=15), PARAMETER  :: trans_names(12) = [character(len=15) :: &      !< names of transition types 
+            'c3crop2c4crop', 'c3crop2pasture', 'c3crop2natural',  & 
+            'c4crop2c3crop', 'c4crop2pasture', 'c4crop2natural',  & 
+            'pasture2c3crop', 'pasture2c4crop', 'pasture2natural', &
+            'natural2c3crop', 'natural2c4crop', 'natural2pasture']
 
     NAMELIST /jsb_alcc_nml/      &
          active,                 &
@@ -73,7 +81,9 @@ CONTAINS
          ic_filename,            &
          bc_filename,            &
          alcc_filename_prefix,   &
+         alcc_transitions_filename_prefix, &
          scheme,                 &
+         trans_names,            &
          l_daily_alcc,           &
          nr_of_pfts
 
@@ -90,8 +100,9 @@ CONTAINS
     bc_filename          = 'bc_land_alcc.nc'
     ic_filename          = 'ic_land_alcc.nc'
     alcc_filename_prefix = 'bc_land_frac_11pfts_'
+    alcc_transitions_filename_prefix = 'LUH_transitions_'
     nr_of_pfts           = 11
-    scheme               = 'maps'
+    scheme               = 'maps'        ! options: 'maps', 'transitions'
     l_daily_alcc         = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -106,7 +117,9 @@ CONTAINS
     config%ic_filename          = ic_filename
     config%bc_filename          = bc_filename
     config%alcc_filename_prefix = alcc_filename_prefix
+    config%alcc_transitions_filename_prefix = alcc_transitions_filename_prefix
     config%scheme               = scheme
+    config%trans_names          = trans_names
     config%l_daily_alcc         = l_daily_alcc
     config%nr_of_pfts           = nr_of_pfts
 
@@ -123,6 +136,20 @@ CONTAINS
           &                       //' reading the land cover map of the current year to be applied in the first timestep.')
       END IF
 
+    CASE ('transitions')
+      CALL message(TRIM(routine), 'Reading land use change from transitions data.')
+      DO i = 1, SIZE(trans_names)
+        CALL message(TRIM(routine), 'Transition type (' // TRIM(ADJUSTL(trans_names(i))) // ')')
+      END DO
+      config%scheme=tolower(config%scheme)
+
+      IF(l_daily_alcc) THEN
+        CALL message(TRIM(routine), '... land use change will be applied on a daily basis.')
+      ELSE
+        CALL message(TRIM(routine), '... land use change will be applied on an annual basis.')
+      END IF
+
+
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
     END SELECT
@@ -133,6 +160,11 @@ CONTAINS
     pft_layer  => new_vgrid('pfts', ZAXIS_GENERIC, nr_of_pfts, &
       & levels=(/ (REAL(i,kind=wp),i=1,nr_of_pfts) /), units='')
     CALL register_vgrid(pft_layer)
+
+    trans_layer  => new_vgrid('transitions', ZAXIS_GENERIC, SIZE(trans_names), &
+      & levels=(/ (REAL(i,kind=wp),i=1,SIZE(trans_names)) /), units='')
+    CALL register_vgrid(trans_layer)
+
 
   END SUBROUTINE Init_alcc_config
 

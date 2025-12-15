@@ -89,6 +89,7 @@ CONTAINS
     dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_memory(ALCC_)
     dsl4jsb_Real3D_onDomain :: cf_target_year
+    dsl4jsb_Real3D_onDomain :: transition_rate
     REAL(wp),       POINTER :: ptr_2D(:,:)  ! tmp pointer
     REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! In case of relative fracts in map files: cf of the veg tile
 
@@ -96,11 +97,13 @@ CONTAINS
     INTEGER                 :: i_max_area
     REAL(wp)                :: cf_sum
 
-    INTEGER :: target_year, iblk, ic
+    INTEGER :: target_year, iblk, ic, idx
     INTEGER :: current_year, i_tile, npft, no_omp_thread, nproma, nblks
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: filename_land_use_data
+    CHARACTER(len=filename_max) :: filename_land_transitions_data
     CHARACTER(len=VARNAME_LEN)  :: varname_within_file
+    CHARACTER(len=15), DIMENSION(:), ALLOCATABLE :: trans_names
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_land_use_data'
     ! -------------------------------------------------------------------------------------------------- !
     model => Get_model(model_id)
@@ -239,6 +242,34 @@ CONTAINS
         END DO
         DEALLOCATE(target_cf)
       END IF
+
+    CASE('transitions')
+      ALLOCATE(trans_names(SIZE(dsl4jsb_Config(ALCC_)%trans_names)))
+      trans_names = dsl4jsb_Config(ALCC_)%trans_names
+
+      dsl4jsb_Get_var3D_onDomain(ALCC_, transition_rate)  
+
+      WRITE(filename_land_use_data,'(a,I4.4,a)') TRIM(dsl4jsb_Config(ALCC_)%alcc_transitions_filename_prefix), current_year, ".nc"
+      CALL message(TRIM(routine), 'filename_land_use_data: '//TRIM(filename_land_use_data))
+
+      input_file = jsb_netcdf_open_input(TRIM(filename_land_use_data), model%grid_id)
+
+      DO idx = 1, SIZE(trans_names)
+        CALL message(TRIM(routine), 'Transition type (' // TRIM(ADJUSTL(trans_names(idx))) // ')')
+      END DO
+
+
+      DO idx = 1, SIZE(trans_names)
+        ptr_2D => input_file%Read_2d(variable_name = TRIM(trans_names(idx)), &
+          & fill_array = transition_rate(:, idx, :) )
+      END DO
+
+      CALL input_file%Close()
+
+      ! todo-AKN: add checks on transition rates? assertions?
+      ! todo-AKN: apply cf_correction if required?
+
+
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )
     END SELECT

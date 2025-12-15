@@ -35,12 +35,13 @@ MODULE mo_alcc_memory_class
 
   PUBLIC :: t_alcc_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 5
+  INTEGER, PARAMETER :: max_no_of_vars = 5   ! AKN: Is this needed?
 
   TYPE, EXTENDS(t_jsb_memory) :: t_alcc_memory
 
     TYPE(t_jsb_var_real3d) :: &
       & cf_target_year,       & !< Target cover fractions derived from annually read land use data []
+      & transition_rate,    & !< Transition rates for different transition types []
       & cf_delta                !< Change in cover fractions calculated from cf_target_year []
                                 !< Change can be daily or annually, depending on if daily or annual alcc (l_daily_alcc) []
 
@@ -72,6 +73,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid               ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER  :: pft_vgrid           ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER  :: trans_vgrid         ! Vertical grid used for transitions
     INTEGER                     :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_alcc_memory'
@@ -84,6 +86,7 @@ CONTAINS
     ! Set pointers to variables in the "grid"
     hgrid   => Get_grid(mem%grid_id)
     pft_vgrid    => Get_vgrid('pfts')
+    trans_vgrid  => Get_vgrid('transitions')
 
 !    dsl4jsb_Get_config(ALCC_)
 
@@ -97,6 +100,14 @@ CONTAINS
     CALL mem%Add_var('cf_delta', mem%cf_delta,                                            &
       & hgrid, pft_vgrid,                                                                 &
       & t_cf('cf_delta', '', 'Change in cover fractions (daily or annually).'),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=FULL,                                                                &
+      & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var('transition_rate', mem%transition_rate,                                            &
+      & hgrid, trans_vgrid,                                                                 &
+      & t_cf('transition_rate', '', 'Transition rates for different transition types.'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=FULL,                                                                &
