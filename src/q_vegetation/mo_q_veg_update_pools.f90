@@ -89,7 +89,6 @@ CONTAINS
     LOGICAL  :: config_flag_log_negative_vegpool                !< debug option of veg config
     LOGICAL  :: config_l_use_product_pools, config_active_q_syl, config_active_q_agr
     LOGICAL  :: lctlib_ForestFlag, lctlib_CropFlag
-    REAL(wp), ALLOCATABLE :: emissions_els_umols(:,:)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -130,8 +129,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: lai_max
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
-    ! Q_DFIRE_ 3D
-    dsl4jsb_Real3D_onChunk      :: emissions_els
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: npp
@@ -275,8 +272,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai_max)                    ! in
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                ! in
-    ! Q_DFIRE_ 3D
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, emissions_els)         ! in
     ! VEG 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                  ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, npp)                                  ! out
@@ -466,19 +461,6 @@ CONTAINS
         veg_pool_mt(ix_labile, ixN15, ic) = veg_pool_mt(ix_labile, ixN15, ic) - veg_exudation_mt(ixN15, ic)
       END DO
 
-      !> 1.X Update veg_litterfall + litterfall from disturbances
-      DO ic = 1, nc
-        DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
-          IF (model%config%is_element_used(id_elem)) THEN
-            ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
-            DO ix_comp = 1, nr_of_veg_bgcm_comp
-              veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
-                  veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
-            END DO ! ix_comp = 1, nr_of_veg_bgcm_comp
-          END IF ! model%config%is_element_used(id_elem)) THEN
-        END DO ! id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
-      END DO ! ic = 1, nc
-
       !>  1.8 Update plant biogeochemical pools with growth, litterfall due to natural processes and establishment
       !>
       DO ic = 1, nc
@@ -503,7 +485,6 @@ CONTAINS
         END DO
       END DO
 
-      !< 1.7.1 Update dist_fire pools with veg_fire_emissions
       IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
         DO ic = 1, nc
           DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
@@ -727,15 +708,18 @@ CONTAINS
       net_biosphere_production(ic) = net_biosphere_production(ic) &
         & + gross_assimilation(ic) &
         & - maint_respiration(ic)   - growth_respiration(ic) - n_processing_respiration(ic) &
-        & - herbivory_leaf_resp(ic) - herbivory_fruit_resp(ic)
+        & - herbivory_leaf_resp(ic) - herbivory_fruit_resp(ic) &
+        & - SUM((veg_fire_emissions_mt(:,ixC,ic)) / dtime * 1000000._wp )
       net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) &
         & + gross_assimilation_C13(ic) &
         & - maint_respiration_c13(ic)   - growth_respiration_c13(ic) - n_processing_respiration_c13(ic) &
-        & - herbivory_leaf_resp_c13(ic) - herbivory_fruit_resp_c13(ic)
+        & - herbivory_leaf_resp_c13(ic) - herbivory_fruit_resp_c13(ic) &
+        & - SUM((veg_fire_emissions_mt(:,ixC13,ic)) / dtime * 1000000._wp )
       net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) &
         & + gross_assimilation_C14(ic) &
         & - maint_respiration_c14(ic)   - growth_respiration_c14(ic) - n_processing_respiration_c14(ic) &
-        & - herbivory_leaf_resp_c14(ic) - herbivory_fruit_resp_c14(ic)
+        & - herbivory_leaf_resp_c14(ic) - herbivory_fruit_resp_c14(ic) &
+        & - SUM((veg_fire_emissions_mt(:,ixC14,ic)) / dtime * 1000000._wp )
 
       ! biological N fixation (VEG_ and SB_ processes)
       biological_n_fixation(ic)    = biological_n_fixation(ic) + n_fixation(ic)
@@ -751,19 +735,6 @@ CONTAINS
       END IF
     END DO
     !$ACC END PARALLEL LOOP
-
-    ! Account for spitfire emissions
-    IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN ! Is spitfire enabled?
-      ALLOCATE(emissions_els_umols, mold=emissions_els)
-      emissions_els_umols = emissions_els * 1000000._wp / dtime ! mols to micro-mols s-1
-      !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
-      DO ic = 1, nc
-        net_biosphere_production(ic) = net_biosphere_production(ic) + emissions_els_umols(ic,ixC)
-        net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) + emissions_els_umols(ic,ixC13)
-        net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) + emissions_els_umols(ic,ixC14)
-      END DO
-      !$ACC END PARALLEL LOOP
-    END IF
 
   END SUBROUTINE update_veg_pools
 

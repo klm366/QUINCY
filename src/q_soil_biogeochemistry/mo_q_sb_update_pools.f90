@@ -32,9 +32,8 @@ MODULE mo_q_sb_update_pools
     &                                   SB_BGCM_TRANSPORT_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_MYCO_EXPORT_ID, &
     &                                   SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID
-
+  USE mo_q_dfire_constants,       ONLY: df_sf_spq_layer_top_sl !< Top soil layer used by spitfire
   USE mo_q_dfire_util,            ONLY: dfire_update_pools
-  USE mo_q_dfire_constants,       ONLY: df_sf_spq_layer_top_sl
 
   IMPLICIT NONE
 
@@ -1173,11 +1172,14 @@ CONTAINS
     !>
     !>   see also 'update_veg_pools()'
     net_biosphere_production(:) = net_biosphere_production(:) &
-      &          - SUM((het_respiration(:,:) + lateral_loss_dom_carbon_sl(:,:)) * soil_depth_sl(:,:), DIM = 2)
+      &          - SUM((het_respiration(:,:) + lateral_loss_dom_carbon_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
+      &          - SUM((SUM(sb_fire_emissions_mt(:,ixC,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._wp
     net_biosphere_production_c13(:) = net_biosphere_production_c13(:) &
-      &          - SUM((het_respiration_c13(:,:) + lateral_loss_dom_carbon13_sl(:,:)) * soil_depth_sl(:,:), DIM = 2)
+      &          - SUM((het_respiration_c13(:,:) + lateral_loss_dom_carbon13_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
+      &          - SUM((SUM(sb_fire_emissions_mt(:,ixC13,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._wp
     net_biosphere_production_c14(:) = net_biosphere_production_c14(:) &
-      &          - SUM((het_respiration_c14(:,:) + lateral_loss_dom_carbon14_sl(:,:)) * soil_depth_sl(:,:), DIM = 2)
+      &          - SUM((het_respiration_c14(:,:) + lateral_loss_dom_carbon14_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
+      &          - SUM((SUM(sb_fire_emissions_mt(:,ixC14,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._wp
     ! biological N fixation (VEG_ and SB_ processes)
     biological_n_fixation(:)    = biological_n_fixation &
       &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)

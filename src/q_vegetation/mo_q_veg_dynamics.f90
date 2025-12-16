@@ -84,6 +84,7 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
+    dsl4jsb_Def_mt2L2D :: veg_fire_litterfall_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(Q_AGR_)
@@ -161,6 +162,7 @@ CONTAINS
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_FIRE_LITTERFALL_ID, veg_fire_litterfall_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)         ! in
@@ -249,7 +251,8 @@ CONTAINS
         & lai_tvegdyn_mavg(:)                             , &
         & fpc(:)                                          , &
         & mortality_rate_fire(:)                          , &
-        & veg_pool_mt(:,:,:)                              , & ! in
+        & veg_pool_mt(:,:,:)                              , & 
+        & veg_fire_litterfall_mt(:,:,:)                   , & ! in
         & veg_litterfall_mt(:,:,:)                        , & ! inout
         & mortality_rate(:)                               )   ! out
     END IF
@@ -472,6 +475,7 @@ CONTAINS
     & fpc                       , &
     & mortality_rate_fire       , &
     & veg_pool_mt               , &
+    & veg_fire_litterfall_mt   , &
     & veg_litterfall_mt         , &
     & mortality_rate )
 
@@ -491,6 +495,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: fpc                        !< foliage projective cover
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: mortality_rate_fire        !< Probability of mortality of dist_fire [-]
     REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)         !< bgcm veg_pool
+    REAL(wp),                 INTENT(in)    :: veg_fire_litterfall_mt(:,:,:)   !< bgcm flux: veg_fire_litterfall
     REAL(wp),                 INTENT(inout) :: veg_litterfall_mt(:,:,:)   !< bgcm flux: veg_litterfall
     REAL(wp), DIMENSION(nc),  INTENT(out)   :: mortality_rate             !< current mortality rate (1/timestep)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -608,6 +613,19 @@ CONTAINS
         END IF
       END DO
     END DO
+
+    !> 3.0 add fire disturbance into litterfall
+    DO ic = 1, nc
+      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+        IF (is_element_used(ielem)) THEN
+          ix_elem = elements_index_map(ielem)    ! get element index in bgcm
+          DO ix_comp = 1, n_veg_bgcm_comp
+            veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
+                                                      veg_fire_litterfall_mt(ix_comp, ix_elem, ic) 
+          END DO ! ix_comp = 1, n_veg_bgcm_comp
+        END IF ! model%config%is_element_used(ielem)) THEN
+      END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+    END DO ! ic = 1, nc
   END SUBROUTINE calc_veg_mortality
 
   ! ======================================================================================================= !
