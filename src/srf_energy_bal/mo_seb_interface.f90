@@ -216,7 +216,7 @@ CONTAINS
       CALL update_surface_energy_lake(tile, options)
     ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
       CALL update_surface_energy_land(tile, options)
-    ELSE IF (model%config%use_tmx .OR. model%config%use_tile_seb) THEN
+    ELSE IF (model%config%use_tmx) THEN
       CALL update_surface_energy_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type '//TRIM(tile%lcts(1)%name)//' on tile '//TRIM(tile%name))
@@ -271,15 +271,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SEB_, heat_cap,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, le_phase_change, weighted_by_fract)
 
-    IF (model%config%use_tile_seb) THEN
-      dsl4jsb_Aggregate_onChunk(SEB_, t_acoef,      weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(SEB_, t_bcoef,      weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(SEB_, q_acoef,      weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(SEB_, q_bcoef,      weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(SEB_, pch,          weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(SEB_, drag_srf,     weighted_by_fract)
-    END IF
-
     IF (model%config%use_lakes) THEN
       dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,     weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SEB_, s_lwtr,     weighted_by_fract)
@@ -326,7 +317,7 @@ CONTAINS
       ! No Asselin filter for lake tile
     ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
       CALL update_asselin_land(tile, options)
-    ELSE IF (model%config%use_tmx .OR. model%config%use_tile_seb) THEN
+    ELSE IF (model%config%use_tmx) THEN
       CALL update_asselin_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
@@ -405,8 +396,7 @@ CONTAINS
 
     IF (tile%contains_lake) THEN
       CALL update_surface_fluxes_lake(tile, options)
-    ELSE IF ((tile%is_land .AND. .NOT. model%config%use_tmx) .OR. &
-      &       tile%contains_vegetation .OR. tile%contains_glacier) THEN
+    ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
       CALL update_surface_fluxes_land(tile, options)
     ELSE IF (model%config%use_tmx) THEN
       CALL update_surface_fluxes_land(tile, options)

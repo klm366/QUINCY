@@ -2683,9 +2683,6 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(TURB_, ch)
         dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)       ! in
         dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef)       ! in
-      ELSE IF (model%config%use_tile_seb) THEN
-        dsl4jsb_Get_var2D_onChunk(SEB_,  q_acoef)       ! in
-        dsl4jsb_Get_var2D_onChunk(SEB_,  q_bcoef)       ! in
       ELSE
         dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef_wtr)   ! in
         dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef_wtr)   ! in
@@ -2776,13 +2773,8 @@ CONTAINS
       !  Land tiles
       ! --------------
 
-      IF (model%config%use_tile_seb) THEN
-        dsl4jsb_Get_var2D_onChunk(SEB_,  q_acoef)       ! in
-        dsl4jsb_Get_var2D_onChunk(SEB_,  q_bcoef)       ! in
-      ELSE
-        dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)       ! in
-        dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef)       ! in
-      END IF
+      dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)             ! in
+      dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef)             ! in
       dsl4jsb_Get_var2D_onChunk(SEB_,  qsat_star)           ! in
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_q_air)          ! in
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_srf)       ! in
@@ -2791,11 +2783,7 @@ CONTAINS
       IF (model%config%use_tmx) THEN
         dsl4jsb_Get_var2D_onChunk(TURB_, ch)
       ELSE
-        IF (model%config%use_tile_seb) THEN
-          dsl4jsb_Get_var2D_onChunk(SEB_,  drag_srf)          ! in
-        ELSE
-          dsl4jsb_Get_var2D_onChunk(A2L_,  drag_srf)          ! in
-        END IF
+        dsl4jsb_Get_var2D_onChunk(A2L_,  drag_srf)          ! in
       END IF
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  evapotrans_lnd)    ! out
@@ -3110,11 +3098,7 @@ CONTAINS
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_var2D_onChunk(TURB_, ch)            ! in
     ELSE
-      IF (model%config%use_tile_seb) THEN
-        dsl4jsb_Get_var2D_onChunk(SEB_,  drag_srf)          ! in
-      ELSE
-        dsl4jsb_Get_var2D_onChunk(A2L_,  drag_srf)          ! in
-      END IF
+      dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)       ! in
     END IF
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)            ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)        ! in
