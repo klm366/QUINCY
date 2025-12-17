@@ -700,7 +700,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
 
-    IF (model%config%init_from_ifs .AND. dsl4jsb_Config(SSE_)%l_freeze) THEN
+    IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
 
       dsl4jsb_Get_var3D_onDomain(SSE_,   t_soil_sl)
       dsl4jsb_Get_var3D_onDomain(HYDRO_, matric_pot_sl)

@@ -198,11 +198,7 @@ CONTAINS
     REAL(wp)                    :: nml_ea_decomposition
     REAL(wp)                    :: nml_ed_decomposition
 
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /soil_biogeochemistry_ctl/       &
-#else
-    NAMELIST /jsb_sb_nml/                     &
-#endif
+    NAMELIST /lnd_sb_nml/                     &
                       active                    , &
                       lrestart_cont             , &
                       ic_filename               , &
@@ -305,13 +301,8 @@ CONTAINS
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('soil_biogeochemistry_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, soil_biogeochemistry_ctl)
-#else
-    nml_unit = position_nml('jsb_sb_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_sb_nml)
-#endif
+    nml_unit = position_nml('lnd_sb_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_sb_nml)
 
     CALL close_nml(nml_handler)
 
