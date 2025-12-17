@@ -63,7 +63,7 @@ MODULE mo_hydro_config_class
                                 !< i.e. avg. time before water reaches tributary [s]
       & ret_macro_srf,        & !< Assumed retention time for surface runoff,
                                 !< i.e. avg. time before water reaches tributary [s]
-      & k_brock,              & !< Hydraulic conductivity of bedrock
+      & k_brock,              & !< Hydraulic conductivity of bedrock [m s-1]
       & min_alt_drain           !< Minimum active layer for bottom drainage
 
     CHARACTER(len=10)     ::  &
@@ -107,7 +107,7 @@ MODULE mo_hydro_config_class
                                 !< 'ignore' (0):  short, one-line warning,</br>
                                 !< 'logging' (1): detailed debugging output,</br>
                                 !< 'error' (2):   debugging output and model stop
-      & bot_drain_mode
+      & bot_drain_mode          !< different implementations of bottom drainage behavior
 
     ! quincy
     INTEGER     :: quincy_nsoil_w   !< number of soil layers for soil water calculations (equivalent 'quincy_nsoil_e' in SSE_)
@@ -172,7 +172,7 @@ CONTAINS
       & w_soil_wilt_fract,    & !< Relative root zone moisture at wilting point
       & ret_macro_blg,        & !< Retention time for below ground runoff [s]
       & ret_macro_srf,        & !< Retention time for surface runoff [s]
-      & k_brock,              &
+      & k_brock,              & !< Hydraulic conductivity of bedrock [m s-1]
       & min_alt_drain
     CHARACTER(len=16) :: &
       & scheme_stom_cond,     & !< Scheme to compute stomatal conductance
@@ -193,7 +193,7 @@ CONTAINS
       & l_ponds                 !< True: represent subgrid scale surface depressions that might
                                 !< form small ponds
     INTEGER :: &
-      & bot_drain_mode
+      & bot_drain_mode          !< different implementations of bottom drainage behavior
 
     ! quincy
     REAL(wp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< intial estimate of soil profile using the upper bound of each soil layer [m]
@@ -279,7 +279,7 @@ CONTAINS
     snow_depth_max         = -1.0_wp             ! -1: no limitation
     ret_macro_blg          = 432000._wp          ! [s]
     ret_macro_srf          = 36000._wp           ! [s]
-    k_brock                = 1.E-6_wp
+    k_brock                = 1.E-6_wp            ! [m s-1]
     min_alt_drain          = 0._wp
     scheme_stom_cond       = 'echam5'
     l_read_initial_moist   = .FALSE.
