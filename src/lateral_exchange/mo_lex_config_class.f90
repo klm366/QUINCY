@@ -1,4 +1,4 @@
-!> Contains structures and methods for lex config
+!> Contains structures and methods for lateral exchange process configuration
 !>
 !> ICON-Land
 !>
@@ -11,41 +11,55 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!>#### Contains namelist information of lex
+!>#### Configuration of the lateral exchange process
+!>
+!> The module defines the data structure [[t_lex_config]] that contains the lateral exchange
+!> configuration, i.e. all lateral exchange variables that are configurable via namelist.
+!> In subroutine [[Init_lex_config]] we read the lateral exchange namelist 'jsb_lex_nml'
+!> and set the lateral exchange configuration data structure accordingly. We also perform
+!> some consistency checks.
 !>
 MODULE mo_lex_config_class
 #ifndef __NO_JSBACH__
-  ! -------------------------------------------------------------------------------------------------------
-  ! Used variables of module
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
-  ! -------------------------------------------------------------------------------------------------------
-  ! Module variables
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_lex_config
+  !> The data structure contains all configurable parameters of the LEX process. It extends
+  !> [[mo_jsb_config_class:t_jsb_config]], a data structure containing basic parameters defined
+  !> for all ICON-Land processes.
+  !>
+  !> _Note for the ford documentation_: The table lists the general parameters of
+  !> [[mo_jsb_config_class:t_jsb_config]] as well as the parameters specific to the lateral exchange
+  !> actually defined in [[t_lex_config]].
 
+  ! TODO: Currently a lot of switches are defined to conviniently turn on/off different lateral exchange
+  !       processes for testing. In future versions of the model the amount of switches should be reduced
   TYPE, EXTENDS(t_jsb_config) :: t_lex_config
-     LOGICAL                  :: &
-       & l_runoff_trns,          & !< enable lateral surface runoff between tiles
-       & l_drainage_trns,        & !< enable lateral drainage between tiles
-       & l_infil_trns,           & !< enable lateral infiltration between tiles
-       & l_snow_trns,            & !< enable lateral transport of snow between tiles
-       & l_dffsn_wtr,            & !< enable diffusive water exchange between tiles
-       & l_dffsn_nrg,            & !< enable diffusive heat exchange between tiles
-       & l_cnvctn_nrg,           & !< enable convective (via movement of water) heat exchange between tiles
-       & l_wellmixed,            & !< Making assumption of well-mixed tile distribution (microcon_ctc accounting for cover fractions)
-       & l_prtlcon,              & !< Allowing for tiles to be only partially connected to downstream tiles
-       & l_macrtrns,             &
-       & l_micrtrns,             &
-       & l_nested,               & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself
-       & l_dpr4ponds,            & !< if no tile-specific pond fraction / depth is provided assume depressions to be ponds
-       & l_noslope_dpr             !< if no tile-specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero
-    INTEGER                     :: ncontis !< number of connected tiles used in setup
+    LOGICAL                   :: &
+      & l_runoff_trns,           & !< en/disable lateral surface runoff between tiles
+      & l_drainage_trns,         & !< en/disable lateral drainage between tiles
+      & l_infil_trns,            & !< en/disable lateral infiltration of pond water in neighbouring soil tile
+      & l_snow_trns,             & !< en/disable lateral transport of snow between tiles
+      & l_dffsn_wtr,             & !< en/disable diffusive water exchange between tiles
+      & l_dffsn_nrg,             & !< en/disable diffusive heat exchange between tiles
+      & l_cnvctn_nrg,            & !< en/disable advective (via movement of water) heat exchange between tiles
+      & l_wellmixed,             & !< T: tiles fractions are assumed to be well-mixed in the grid cell
+      & l_prtlcon,               & !< T: tiles can be only partially connected to downstream tiles
+      & l_macrtrns,              & !< en/disable macro-scale lateral transport between tiles
+      & l_micrtrns,              & !< en/disable micro-scale lateral transport between tiles
+      & l_nested,                & !< T: nested setup in which an encompassed tile may sourround another tile
+      & l_dpr4ponds,             & !< T: depressions characteristics are used for ponds characteristics
+                                   !< if no tile-specific pond fraction / depth is provided
+      & l_noslope_dpr              !< T: if no tile-specific macro-slope is provided, the slope on
+                                   !< depression tiles (h_surf < 0) is set to zero
+    INTEGER                   :: &
+      & ncontis                    !< number of connected tiles used in setup
 
    CONTAINS
      PROCEDURE :: Init => Init_lex_config
@@ -54,9 +68,18 @@ MODULE mo_lex_config_class
   CHARACTER(len=*), PARAMETER :: modname = 'mo_lex_config_class'
 
 CONTAINS
-  ! -------------------------------------------------------------------------------------------------------
-  !> Initialize lex process
-  !!
+  ! ============================================================================================== !
+  !>
+  !>#### Configuration of the lateral exchange process
+  !>
+  !> In this subroutine we configure the lateral exchange process based on the settings in the lateral
+  !> exchange namelist 'jsb_lex_nml'. Init_lex_config is a type-bound procedure of [[t_lex_config]].
+  !> It is called during the initialization phase from [[mo_jsb_model_class:Configure_model_processes]]
+  !> ('CALL this%processes(iproc)%p%Configure()').
+  !>
+  !> _Note_: For a more extensive documentation of the namelist parameters please check the
+  !> configuration data type [[t_lex_config]].
+  !>
   SUBROUTINE Init_lex_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
@@ -66,54 +89,67 @@ CONTAINS
 
     CLASS(t_lex_config), INTENT(inout) :: config
 
-    LOGICAL                     :: active
-    INTEGER                     :: ncontis
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    !--------------------------------------------------------------------------------------------------------
+    ! Namelist parameters
+    !
     LOGICAL                     :: &
-       & l_runoff_trns,            & !< enable lateral surface runoff between tiles
-       & l_drainage_trns,          & !< enable lateral drainage between tiles
-       & l_infil_trns,             & !< enable lateral infiltration between tiles
-       & l_snow_trns,              & !< enable lateral transport of snow between tiles
-       & l_dffsn_wtr,              & !< enable diffusive water exchange between tiles
-       & l_dffsn_nrg,              & !< enable diffusive heat exchange between tiles
-       & l_cnvctn_nrg,             & !< enable convective (via movement of water) heat exchange between tiles
-       & l_wellmixed,              & !< Making assumption of well-mixed tile distribution (microcon_ctc accounting for cover fractions)
-       & l_prtlcon,                & !< Allowing for tiles to be only partially connected to downstream tiles
-       & l_macrtrns,               &
-       & l_micrtrns,               &
-       & l_nested,                 & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself
-       & l_dpr4ponds,              & !< if no tile -specific pond fraction / depth is provided assume depressions to be ponds
-       & l_noslope_dpr               !< if no tile -specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero
-
-    TYPE(t_jsb_vgrid), POINTER  :: tile_layer
+      & active                      !< T: LEX process is active
+    INTEGER                     :: ncontis
+    CHARACTER(len=filename_max) :: & !< Name of input file with initial conditions
+      & ic_filename,               & !< Name of input file with boundary conditions
+      & bc_filename
+    LOGICAL                     :: &
+      & l_runoff_trns,           & !< en/disable lateral surface runoff between tiles
+      & l_drainage_trns,         & !< en/disable lateral drainage between tiles
+      & l_infil_trns,            & !< en/disable lateral infiltration of pond water in neighbouring soil tile
+      & l_snow_trns,             & !< en/disable lateral transport of snow between tiles
+      & l_dffsn_wtr,             & !< en/disable diffusive water exchange between tiles
+      & l_dffsn_nrg,             & !< en/disable diffusive heat exchange between tiles
+      & l_cnvctn_nrg,            & !< en/disable advective (via movement of water) heat exchange between tiles
+      & l_wellmixed,             & !< T: tiles fractions are assumed to be well-mixed in the grid cell
+      & l_prtlcon,               & !< T: tiles can be only partially connected to downstream tiles
+      & l_macrtrns,              & !< en/disable macro-scale lateral transport between tiles
+      & l_micrtrns,              & !< en/disable micro-scale lateral transport between tiles
+      & l_nested,                & !< T: nested setup in which an encompassed tile may sourround another tile
+      & l_dpr4ponds,             & !< T: depressions characteristics are used for ponds characteristics
+                                   !< if no tile-specific pond fraction / depth is provided
+      & l_noslope_dpr              !< T: if no tile-specific macro-slope is provided, the slope on
+                                   !< depression tiles (h_surf < 0) is set to zero
 
     NAMELIST /jsb_lex_nml/      &
-         active,                & !< process is active
-         ncontis,               & !< number of connected tiles used in setup
-         l_runoff_trns,         & !< enable lateral surface runoff between tiles
-         l_drainage_trns,       & !< enable lateral drainage between tiles
-         l_infil_trns,          & !< enable lateral infiltration between tiles
-         l_snow_trns,           & !< enable lateral transport of snow between tiles
-         l_dffsn_wtr,           & !< enable diffusive water exchange between tiles
-         l_dffsn_nrg,           & !< enable diffusive heat exchange between tiles
-         l_cnvctn_nrg,          & !< enable convective (via movement of water) heat exchange between tiles
-         l_wellmixed,           & !< Making assumption of well-mixed tile distribution (microcon_ctc accounting for cover fractions)
-         l_prtlcon,             & !< Allowing for tiles to be only partially connected to downstream tiles
+         active,                &
+         ncontis,               &
+         l_runoff_trns,         &
+         l_drainage_trns,       &
+         l_infil_trns,          &
+         l_snow_trns,           &
+         l_dffsn_wtr,           &
+         l_dffsn_nrg,           &
+         l_cnvctn_nrg,          &
+         l_wellmixed,           &
+         l_prtlcon,             &
          l_macrtrns,            &
          l_micrtrns,            &
-         l_nested,              & !< Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself
-         l_dpr4ponds,           & !< if no tile -specific pond fraction / depth is provided assume depressions to be ponds
-         l_noslope_dpr            !< if no tile -specific macro-slope is provided, the slope on depression tiles (h_surf < 0) is set to zero
+         l_nested,              &
+         l_dpr4ponds,           &
+         l_noslope_dpr
 
-    INTEGER :: nml_handler, nml_unit, istat, i
+    INTEGER ::       &
+      & nml_handler, &  !< Handle to deal with namelist file
+      & nml_unit,    &  !< IO unit of the namelist file
+      & istat,       &  !< Status flag
+      & i               !< Loop variable
+
+    TYPE(t_jsb_vgrid), POINTER  :: tile_layer !< Grid axis used for connected tiles
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_lex_config'
 
     CALL message(TRIM(routine), 'Starting lex configuration')
 
-
-    ! Set defaults
-    active              = .FALSE.
+    !>
+    !> Default values are defined for all namelist parameters.
+    !
+    active              = .FALSE.  !< LEX process is inactive by default
     ncontis             = 0
     l_runoff_trns       = .TRUE.
     l_drainage_trns     = .TRUE.
@@ -130,12 +166,22 @@ CONTAINS
     l_dpr4ponds         = .TRUE.
     l_noslope_dpr       = .TRUE.
 
+    ! Open the file containing the lateral exchange namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
+    ! Find and read the lateral exchange namelist
+    ! The parameters defined in the namelist overwrite the default values defined above.
     nml_unit = position_nml('jsb_lex_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_lex_nml)
 
     CALL close_nml(nml_handler)
+
+    !> After reading the namelist, all configurable parameters for the lateral exchange - default
+    !> parameters and values set in the namelist - are stored in the configuration data structure
+    !> 'config' to make them easily accessible in all ICON-Land process modules ("dsl4jsb_Use_config(LEX_)").
+    !>
+    !> The specific choice of parameters is printed to the experiment's log file to document the
+    !> setup. The simulation is stopped if the numbers of connected tiles is not provided via namelist.
 
     config%active              = active
     config%l_runoff_trns       = l_runoff_trns
@@ -155,11 +201,10 @@ CONTAINS
 
     IF (.NOT. active) RETURN
 
-    ! get number of connected tiles from model config
     IF (ncontis == 0) THEN
-      CALL finish(TRIM(routine), 'Trying to configure lateral exchange between tiles, without connected tiles.')
+      CALL finish(TRIM(routine), 'Number of connected tiles needs to be defined via namelist.')
     ELSE
-      config%ncontis           = ncontis
+      config%ncontis = ncontis
     END IF
 
     IF (l_runoff_trns) THEN
@@ -205,7 +250,7 @@ CONTAINS
     END IF
 
     IF (l_wellmixed) THEN
-      CALL message(TRIM(routine), 'Making assumption of well-mixed tile distribution (microcon_ctc accounting for cover fractions)')
+      CALL message(TRIM(routine), 'Tile fractions are assumed to be well-mixed within the grid cell')
     ELSE
       CALL message(TRIM(routine), 'Microcon_ctc based exclusivly on values of matrix elements')
     END IF
@@ -217,9 +262,10 @@ CONTAINS
     END IF
 
     IF (l_nested) THEN
-      CALL message(TRIM(routine), 'Assuming a nested constellation in which an encompassed tile may sourround 1 tile itself')
+      CALL message(TRIM(routine), 'Assuming a nested setup in which an encompassed tile may sourround another tile')
     ELSE
-      CALL message(TRIM(routine), 'Nested constellations are being ignored and geomtry is calculated exclusivly based on the characteristics of two tiles)')
+      CALL message(TRIM(routine), 'Nested constellations are being ignored and '// &
+        & 'geometry is calculated exclusivly based on the characteristics of two tiles)')
     END IF
 
     IF (l_dpr4ponds) THEN
@@ -234,10 +280,11 @@ CONTAINS
       CALL message(TRIM(routine), 'Slope is set to steepness for depressions (if no tile specific values are provided)')
     END IF
 
-    ! Create vertical axis
-    tile_layer  => new_vgrid('connecttiles', ZAXIS_GENERIC, ncontis, levels=(/ (REAL(i,kind=wp),i=1,ncontis) /), units='')
+    !< Create additional axis for connected tiles
+    ! This axis is not a vertical axis in the usual sense, required to organize lateral interactions between tiles
+    tile_layer  => new_vgrid('connecttiles', ZAXIS_GENERIC, ncontis, &
+      & levels=(/ (REAL(i,kind=wp),i=1,ncontis) /), units='')
     CALL register_vgrid(tile_layer)
-
 
   END SUBROUTINE Init_lex_config
 

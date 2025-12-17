@@ -409,8 +409,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_snow_soil      !< Amount of snow on the ground [m water equivalent]
     dsl4jsb_Real2D_onChunk :: snow_soil_dens     !< Snow density [kg m-3]
     dsl4jsb_Real2D_onChunk :: steepness          !< Parameter representing subgrid scale slopes []
-    dsl4jsb_Real2D_onChunk :: slope_eff
-    dsl4jsb_Real2D_onChunk :: fact_lag_srf
+    dsl4jsb_Real2D_onChunk :: slope_eff          !< Effective slope used for lateral flow calculations []
+    dsl4jsb_Real2D_onChunk :: fact_lag_srf       !< Normalized lag for lateral surface fluxes [s-1]
     dsl4jsb_Real2D_onChunk :: fract_pond         !< Actual pond fraction []
     dsl4jsb_Real2D_onChunk :: fract_pond_max     !< Maximum pond fraction []
     dsl4jsb_Real2D_onChunk :: weq_pond_max       !< Maximum Water/ice in pond reservoir [m water equivalent]
@@ -421,7 +421,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: pond_melt          !< Amount of pond ice melting [m water equivalent]
     dsl4jsb_Real2D_onChunk :: wtr_pond_net_flx   !< Net water inflow into ponds [kg m-2 s-1]
     dsl4jsb_Real2D_onChunk :: weq_snow           !< Amount of snow [m water equivalent]
-    dsl4jsb_Real2D_onChunk :: new_snow_soil
+    dsl4jsb_Real2D_onChunk :: new_snow_soil      !< Snowfall to soil within time step [m]
     dsl4jsb_Real2D_onChunk :: snow_accum         !< Snow budget change within time step [m water equivalent]
     dsl4jsb_Real2D_onChunk :: fract_snow         !< Snow cover fraction
     dsl4jsb_Real2D_onChunk :: weq_snow_can       !< Amount of snow on canopy [m water equivalent]
@@ -444,7 +444,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: drainage           !< Drainage [kg m-2 s-1]
     dsl4jsb_Real2D_onChunk :: runoff_glac        !< Runoff from glaciers [kg m-2 s-1]
     dsl4jsb_Real2D_onChunk :: water_to_soil      !< Water available for infiltration into the soil [m]
-    dsl4jsb_Real2D_onChunk :: water_to_soil_lex
+    dsl4jsb_Real2D_onChunk :: water_to_soil_lex  !< Lateral surface water inflow from connected tiles [m]
     dsl4jsb_Real2D_onChunk :: weq_glac           !< Glacier depth [m water equivalent]
 
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl           !< Amount of soil water [m]
@@ -772,6 +772,7 @@ CONTAINS
       ret_macro_srf = dsl4jsb_Config(HYDRO_)%ret_macro_srf
 
       IF (tile%Is_process_calculated(LEX_)) THEN
+        ! Lateral flow is passed onto connected tiles based on effective slope and lag factor
         l_latflow_to_streamflow = .FALSE.
         dsl4jsb_Get_memory(LEX_)
         dsl4jsb_Get_var2D_onChunk(LEX_, slope_eff)     ! in
@@ -783,6 +784,7 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
+        ! No lateral flow to connected tiles, all surface runoff goes directly to streamflow
         l_latflow_to_streamflow = .TRUE.
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
@@ -1670,12 +1672,13 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     IF (tile%Is_process_calculated(LEX_)) THEN
+      ! Lateral flow is passed onto connected tiles based on effective slope and lag factor
       l_latflow_to_streamflow = .FALSE.
       dsl4jsb_Get_memory(LEX_)
       slope_used   = dsl4jsb_var2D_onChunk (LEX_, slope_eff)
       flowlag_used = MIN(dtime * dsl4jsb_var2D_onChunk (LEX_, fact_lag_blg), 0.5_wp)
     ELSE
-      ! Set to true, until HydroTiles are implemented
+      ! No lateral flow to connected tiles, all surface runoff/drainage goes directly to streamflow
       l_latflow_to_streamflow = .TRUE.
       ret_macro_blg = dsl4jsb_Config(HYDRO_)%ret_macro_blg
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -1706,7 +1709,7 @@ CONTAINS
         & dsl4jsb_Config(HYDRO_)%interpol_mean,                   & ! Interpolation scheme for hydraulic
                                                                     ! conductivity
         & dsl4jsb_Config(HYDRO_)%hydro_scale,                     & ! Subgrid scale inhomogeneity option
-        & dsl4jsb_Config(HYDRO_)%bot_drain_mode,                  &
+        & dsl4jsb_Config(HYDRO_)%bot_drain_mode,                  & ! Scheme for bottom layer drainage
         & model%config%model_scheme,                              &
         & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               & ! Rel. root zone moisture at wilting point []
         & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     & ! Soil depth until bedrock [m]
@@ -3382,10 +3385,10 @@ CONTAINS
       & wtr_skin, &                  !< (Liquid) water in the skin reservoir [m]
       & weq_snow, &                  !< Amount of snow [m water equivalent]
       & weq_pond, &                  !< Water/ice in pond reservoir [m water equivalent]
-      & water_to_soil_lex, &
+      & water_to_soil_lex, &         !< Lateral surface water inflow from connected tiles [m]
       & wtr_latflow_res_srf, &       !< Water content of intermediary reservoir representing lateral flow of
                                      !< surface runoff [m] (only with [[t_hydro_config:hydro_scale]]='Uniform')
-      & wtr_lex_net_srf,  &
+      & wtr_lex_net_srf,  &          !< Lateral exchange with connected tiles on the surface  [kg m-2 s-1]
       & weq_fluxes, &                !< Sum of all water fluxes [m3 s-1]
       & weq_land, &                  !< All liquid and frozen land water [m3]
       & weq_balance_err, &           !< Water imbalance within the time step [m3/(time step)]
@@ -3394,7 +3397,7 @@ CONTAINS
       & wtr_soil_sl, &               !< Amount of liquid water in the soil layers [m]
       & ice_soil_sl, &               !< Amount of ice in the soil layers [m]
       & wtr_latflow_res_sl, &        !< Amount of water in lateral flow reservoir [m]
-      & wtr_lex_net_sl
+      & wtr_lex_net_sl               !< Lateral exchange with connected tiles on soil layers  [kg m-2 s-1]
 
     REAL(wp), POINTER :: &
       & tile_fract(:), &             !< Fraction of the tile (rel. to the grid cell) []
@@ -3411,7 +3414,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: &
       & weq_soil, &                  !< Amount of water or ice in the soil [m water equivalent]
       & wtr_latflow_res, &           !< Amount of water in the reservoir representing lateral flow [m]
-      & wtr_latflow_net
+      & wtr_latflow_net              !< Lateral exchange with connected tiles on (surface + soil layers) [kg m-2 s-1]
 
     INTEGER :: &
       & iblk, &                      !< Number of current nproma block
