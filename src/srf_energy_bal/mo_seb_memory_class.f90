@@ -21,7 +21,7 @@ MODULE mo_seb_memory_class
   USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE
+  USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE, VEG_TYPE, GLACIER_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d
   USE mo_jsb_physical_constants, ONLY: tmelt
   USE mo_jsb_control,            ONLY: jsbach_runs_standalone
@@ -34,7 +34,7 @@ MODULE mo_seb_memory_class
 
   PUBLIC :: t_seb_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 50
+  INTEGER, PARAMETER :: max_no_of_vars = 56
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_seb_memory
@@ -60,7 +60,13 @@ MODULE mo_seb_memory_class
                                   !!  heat fluxes, e.g. ground heat flux)
       & le_phase_change,        & !< Latent energy due to phase changes at land surface              [J m-2]
       & net_srf_rad_balance,    & !< Net surface radiation balance                                   [W m-2]
-      & richardson                !< Richardson number (standalone model)                            []
+      & richardson,             & !< Richardson number (standalone model)                            []
+      & drag_srf              , &
+      & t_acoef               , &
+      & t_bcoef               , &
+      & q_acoef               , &
+      & q_bcoef               , &
+      & pch
     !
     ! Additional variables for LAND lct_type
     TYPE(t_jsb_var_real2d) ::   &
@@ -263,7 +269,54 @@ CONTAINS
         & initval_r=0.0_wp )
     END IF
 
-    IF (model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
+    IF (model%config%use_tile_seb) THEN
+
+      CALL mem%Add_var( 'drag_srf', mem%drag_srf,                              &
+        & hgrid, surface,                                                      &
+        & t_cf('surface_drag', '', ''),                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
+
+      CALL mem%Add_var( 'pch', mem%pch,                                        &
+        & hgrid, surface,                                                      &
+        & t_cf('pch', '', ''),                                                 &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
+
+      CALL mem%Add_var( 't_acoef', mem%t_acoef,                                &
+        & hgrid, surface,                                                      &
+        & t_cf('temperature_acoef', '', ''),                                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
+
+      CALL mem%Add_var( 't_bcoef', mem%t_bcoef,                                &
+        & hgrid, surface,                                                      &
+        & t_cf('temperature_acoef', '', ''),                                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
+
+      CALL mem%Add_var( 'q_acoef', mem%q_acoef,                                &
+        & hgrid, surface,                                                      &
+        & t_cf('specific_humidity_acoef', '', ''),                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
+
+      CALL mem%Add_var( 'q_bcoef', mem%q_bcoef,                                &
+        & hgrid, surface,                                                      &
+        & t_cf('specific_humidity_bcoef', '', ''),                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
+
+    END IF
+
+    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 .OR.  &
+      & One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0) THEN
       CALL mem%Add_var( 't_eff**4', mem%t_eff4,                                              &
         & hgrid, surface,                                                                    &
         & t_cf('surface_temperature_eff**4', 'K', 'effective surface temperature**4'),       &
@@ -276,7 +329,7 @@ CONTAINS
     ! Additional variables for LAND lct
     IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
       ! NOTE  temporary solution to run the SPQ_ process with SEB_ variables at PFT tiles
-      & .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+      & .OR. model%config%model_scheme == MODEL_QUINCY .OR. model%config%use_tile_seb) THEN
 
       CALL mem%Add_var( 's_star', mem%s_star,                                                &
         & hgrid, surface,                                                                    &
