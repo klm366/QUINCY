@@ -150,9 +150,9 @@ MODULE mo_hydro_init
       & fr_clay_deep     (:,:) => NULL(), & !< fraction of clay for deep soil index []
       & ifs_smi_sl     (:,:,:) => NULL(), & !< volumetric soil water (soil moisture index) from IFS []
       & ifs_weq_snow     (:,:) => NULL(), & !< snow on surface from IFS [m water equivalent]
-      & char_area        (:,:) => NULL(), & !< characteristic average size of tile features (e.g. depressions) [m2]
-      & char_h_srf       (:,:) => NULL(), & !< vertical offset of tile surface [m]
-      & char_slope       (:,:) => NULL(), & !< macro-scale slope of tile []
+      & char_area        (:,:) => NULL(), &
+      & char_h_srf       (:,:) => NULL(), &
+      & char_slope       (:,:) => NULL(), &
       & soil_sat_water_content(:,:) => NULL(), &  !< saturated water content (awc)
       & soil_theta_prescribe(:,:)   => NULL()     !< soil theta necessary for calc intial root-zone soil water
   END TYPE t_hydro_init_vars
@@ -178,7 +178,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
 
-    dsl4jsb_Def_config(LEX_)                                        !< Configurable parameters of the LEX process
+    dsl4jsb_Def_config(LEX_)
     model  => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(LEX_)
 
@@ -190,7 +190,6 @@ CONTAINS
     END IF
 #else
     IF (dsl4jsb_Config(LEX_)%active) THEN
-      ! Read initial and boundary conditions on each tile, in case tile-specific fields are provided.
       CALL hydro_read_init_vars(tile)
       CALL hydro_init_bc(tile)
       CALL hydro_init_ic(tile)
@@ -983,7 +982,7 @@ CONTAINS
       ALLOCATE(hydro_init_vars%char_area(nproma, nblks))
       ALLOCATE(hydro_init_vars%char_h_srf(nproma, nblks))
       ALLOCATE(hydro_init_vars%char_slope(nproma, nblks))
-      hydro_init_vars%char_area(:,:)  = missval
+      hydro_init_vars%char_area(:,:) = missval
       hydro_init_vars%char_h_srf(:,:) = missval
       hydro_init_vars%char_slope(:,:) = missval
     END IF

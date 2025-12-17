@@ -227,19 +227,28 @@ CONTAINS
 #endif
 
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)          ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)        ! IN/OUT (coupled/standalone)
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)        ! IN/OUT (coupled/standalone)
-    dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef)        ! IN/OUT (coupled/standalone)
-    dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef)        ! IN/OUT (coupled/standalone)
     dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)      ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)          ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)       ! IN
-    IF (jsb_standalone) THEN
-      dsl4jsb_Get_var2D_onChunk(A2L_,   pch)            ! -/OUT (coupled/standalone)
-      dsl4jsb_Get_var2D_onChunk(SEB_,   richardson)     ! -/OUT (coupled/standalone)
+    IF (model%config%use_tile_seb) THEN
+      dsl4jsb_Get_var2D_onChunk(SEB_,   t_acoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   t_bcoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   q_acoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   q_bcoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   pch)          ! -/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(SEB_,   richardson)   ! -/OUT (coupled/standalone)
     ELSE
-      pch => NULL()
-      richardson => NULL()
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef)      ! IN/OUT (coupled/standalone)
+      dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef)      ! IN/OUT (coupled/standalone)
+      IF (jsb_standalone) THEN
+        dsl4jsb_Get_var2D_onChunk(A2L_,   pch)            ! -/OUT (coupled/standalone)
+        dsl4jsb_Get_var2D_onChunk(SEB_,   richardson)     ! -/OUT (coupled/standalone)
+      ELSE
+        pch => NULL()
+        richardson => NULL()
+      END IF
     END IF
     dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_mean) ! IN
     dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_sum)           ! INOUT
@@ -299,7 +308,11 @@ CONTAINS
     IF (use_tmx) THEN
       drag_srf => NULL()
     ELSE
-      dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN/OUT (coupled/standalone)
+      IF (model%config%use_tile_seb) THEN
+        dsl4jsb_Get_var2D_onChunk(SEB_,   drag_srf)     ! IN/OUT (coupled/standalone)
+      ELSE
+        dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN/OUT (coupled/standalone)
+      END IF
     END IF
 
     !$ACC DATA ASYNC(acc_stream) &
@@ -1766,9 +1779,13 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
 
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)             ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)             ! in
-
+    IF (model%config%use_tile_seb) THEN
+      dsl4jsb_Get_var2D_onChunk(SEB_,   t_acoef)           ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_,   t_bcoef)           ! in
+    ELSE
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)           ! in
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)           ! in
+    END IF
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_star)              ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)            ! in
@@ -1787,7 +1804,11 @@ CONTAINS
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_var2D_onChunk(TURB_, ch)                 ! in
     ELSE
-      dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)            ! in
+      IF (model%config%use_tile_seb) THEN
+        dsl4jsb_Get_var2D_onChunk(SEB_, drag_srf)          ! in
+      ELSE
+        dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)          ! in
+      END IF
     END IF
 
     ! Compute new dry static energy at lowest atmospheric level by back-substitution

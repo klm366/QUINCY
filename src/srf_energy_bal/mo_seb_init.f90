@@ -88,7 +88,7 @@ CONTAINS
     dsl4jsb_Get_memory(SEB_)
 
 
-    IF (tile%contains_land .OR. model%config%use_tmx) THEN
+    IF (tile%contains_land .OR. model%config%use_tmx .OR. model%config%use_tile_seb) THEN
       dsl4jsb_Get_var2D_onDomain(SEB_, N_pseudo_soil_temp) ! OUT
       dsl4jsb_Get_var2D_onDomain(SEB_, F_pseudo_soil_temp) ! OUT
 #ifdef __QUINCY_STANDALONE__
