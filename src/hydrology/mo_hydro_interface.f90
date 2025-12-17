@@ -2180,6 +2180,7 @@ CONTAINS
     REAL(wp) :: wpi_pwp_soil_sl(options%nc, options%nsoil_w)      !< Volumetric amount of water and/or ice
                                                                   !< at wilting point [m] (???)
     REAL(wp) :: wtr_rootzone_pwp(options%nc)                      !< Amount of liquid water at wilting point [m]
+    REAL(wp) :: hlp1                                              !< helper variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -2267,6 +2268,31 @@ CONTAINS
         &   root_depth_sl(:,:), &     ! in
         &   wtr_rootzone_pwp(:) &     ! inout
         &   )
+
+    !> Available water is corrected by ice and supercooled water content below,
+    !> helping to ensure a consistent definition of water at permanent wilting point.
+    IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
+      CALL get_amount_in_rootzone(ice_soil_sl(:,:), &
+        &                         soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+      !$ACC   PRIVATE(hlp1)
+      DO ic = 1, nc
+        ! assume ice and supercooled water are distributed equally between water below and above the PWP
+        hlp1 = wtr_rootzone_pwp(ic) / wpi_rootzone_max(ic)
+        wtr_rootzone_pwp(ic) = MAX(wtr_rootzone_pwp(ic) - ice_rootzone(ic) * hlp1 - wtr_rootzone_scool_pot(ic) * hlp1, 0._wp)
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
+      CALL get_amount_in_rootzone(ice_soil_sl(:,:), &
+        &                         soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+      !$ACC   PRIVATE(hlp1)
+      DO ic = 1, nc
+        hlp1 = wtr_rootzone_pwp(ic) / wpi_rootzone_max(ic)
+        wtr_rootzone_pwp(ic) = MAX(wtr_rootzone_pwp(ic) - ice_rootzone(ic) * hlp1, 0._wp)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
     END SELECT
 #endif
 
@@ -2773,13 +2799,8 @@ CONTAINS
       !  Land tiles
       ! --------------
 
-      IF (model%config%use_tile_seb) THEN
-        dsl4jsb_Get_var2D_onChunk(SEB_,  q_acoef)       ! in
-        dsl4jsb_Get_var2D_onChunk(SEB_,  q_bcoef)       ! in
-      ELSE
-        dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)       ! in
-        dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef)       ! in
-      END IF
+      dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)             ! in
+      dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef)             ! in
       dsl4jsb_Get_var2D_onChunk(SEB_,  qsat_star)           ! in
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_q_air)          ! in
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_srf)       ! in
@@ -2788,11 +2809,7 @@ CONTAINS
       IF (model%config%use_tmx) THEN
         dsl4jsb_Get_var2D_onChunk(TURB_, ch)
       ELSE
-        IF (model%config%use_tile_seb) THEN
-          dsl4jsb_Get_var2D_onChunk(SEB_,  drag_srf)          ! in
-        ELSE
-          dsl4jsb_Get_var2D_onChunk(A2L_,  drag_srf)          ! in
-        END IF
+        dsl4jsb_Get_var2D_onChunk(A2L_,  drag_srf)          ! in
       END IF
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  evapotrans_lnd)    ! out
@@ -3107,11 +3124,7 @@ CONTAINS
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_var2D_onChunk(TURB_, ch)            ! in
     ELSE
-      IF (model%config%use_tile_seb) THEN
-        dsl4jsb_Get_var2D_onChunk(SEB_,  drag_srf)          ! in
-      ELSE
-        dsl4jsb_Get_var2D_onChunk(A2L_,  drag_srf)          ! in
-      END IF
+      dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)       ! in
     END IF
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)            ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)        ! in

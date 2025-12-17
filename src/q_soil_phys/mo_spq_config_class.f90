@@ -107,11 +107,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_snow_spq             ! snow layers
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_spq_config'
 
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /spq_ctl/       &
-#else
-    NAMELIST /jsb_spq_nml/   &
-#endif
+    NAMELIST /lnd_spq_nml/   &
                           active                  , &
                           spq_deactivate_spq      , &
                           lrestart_cont           , &
@@ -168,13 +164,8 @@ CONTAINS
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('spq_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, spq_ctl)
-#else
-    nml_unit = position_nml('jsb_spq_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_spq_nml)
-#endif
+    nml_unit = position_nml('lnd_spq_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_spq_nml)
 
     CALL close_nml(nml_handler)
 
