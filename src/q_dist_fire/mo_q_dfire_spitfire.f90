@@ -84,6 +84,8 @@ MODULE mo_q_dfire_spitfire
   USE mo_q_dfire_constants,       ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
                                       df_sf_omega_o_idx !< omega_o index from sf_calc_fuel_moisture output (array)
 
+  USE mo_q_dfire_constants,       ONLY: ixs_sf_dead_litter_fuel_pools
+
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
   USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture
   USE mo_q_dfire_sf_ignition_class,   ONLY: calc_q_sf_ignition, t_q_sf_ignitions
@@ -614,6 +616,7 @@ CONTAINS
 
     ! locals
     TYPE(t_q_sf_ignitions)  :: sf_ignitions
+    REAL(wp) :: w_oi(nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes with live grass [g DM m-2]
     REAL(wp) :: w_oi(nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
     REAL(wp) :: tot_lvg_fuel(nc)           !< Total livegrass fuel [g DM m-2]
     INTEGER :: ndeadpools
@@ -651,6 +654,7 @@ CONTAINS
 
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
     w_oi = SUM(dead_fuel, DIM=2) !< 2= dead fuel pools index, fuel class only
+    w_oi_no_lvg = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,:), DIM=2) !< 2= dead fuel pools index, fuel class only
 
     DO CONCURRENT (i=1:SIZE(live_grass_fuel,2), j=1:SIZE(live_grass_fuel,3)) !2=fuel pools dim, 3=fuel classes dim
       tot_lvg_fuel = SUM(live_grass_fuel(:,i,j)) ! sum multiple dimensions
@@ -658,8 +662,8 @@ CONTAINS
     !< Compute fuel moisture (omega_o, omega_nl)
     fuel_moisture = sf_calc_fuel_moisture(nc, nalphas, df_sf_fc_spread_nr, alphas, &
                                           nesterov_index, ab_moisture, &
-                                          w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
-                                          tot_lvg_fuel)
+                                          w_oi_no_lvg(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & ! exclude livegrass from dead fuel
+                                          tot_lvg_fuel) ! as it is accounted in tot_lvg_fuel
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
     !> Eq. 8 from Thonicke et al. (2010)
