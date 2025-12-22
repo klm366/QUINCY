@@ -91,11 +91,8 @@ CONTAINS
     LOGICAL   :: flag_stand_harvest       !< QS: if stand replacing harvest is enabled
     INTEGER   :: stand_replacing_year     !< QS: site specific stand replacing harvest year
 
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /q_syl_ctl/  &
-#else
-    NAMELIST /q_syl_nml/  &
-#endif
+    NAMELIST /lnd_q_syl_nml/  &
+
       & active,                   &
       & lrestart_cont,            &
       & ic_filename,              &
@@ -133,13 +130,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('q_syl_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, q_syl_ctl)
-#else
-    nml_unit = position_nml('q_syl_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, q_syl_nml)
-#endif
+    nml_unit = position_nml('lnd_q_syl_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_q_syl_nml)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config

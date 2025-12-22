@@ -65,11 +65,7 @@ CONTAINS
 
     LOGICAL   :: l_read_fertiliser
 
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /q_agr_ctl/  &
-#else
-    NAMELIST /q_agr_nml/  &
-#endif
+    NAMELIST /lnd_q_agr_nml/  &
       & active,                     &
       & lrestart_cont,              &
       & ic_filename,                &
@@ -94,13 +90,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('q_agr_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, q_agr_ctl)
-#else
-    nml_unit = position_nml('q_agr_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, q_agr_nml)
-#endif
+    nml_unit = position_nml('lnd_q_agr_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_q_agr_nml)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config

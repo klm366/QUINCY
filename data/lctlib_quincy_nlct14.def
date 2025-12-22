@@ -186,13 +186,11 @@ tau_mycorrhiza 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
         
 #vmax_uptake_n: vmax of N uptake (~micro-mol N / mol C / s) [714.28_wp ? old value]        
 # tuned with GLOBAL sitelists to make N uptake comparable with other C-N coupled TBMs (NMIP2) 
-#vmax_uptake_n 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04
-vmax_uptake_n 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.08 0.08 0.08 0.08
+vmax_uptake_n 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04
         
 #vmax_uptake_p: vmax of P uptake (~micro-mol P / mol C / s)        
 # tuned together with N, but needs further validation
-#vmax_uptake_p 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012 0.0012
-vmax_uptake_p 0.006 0.006 0.006 0.006 0.006 0.006 0.006 0.006 0.006 0.006 0.012 0.012 0.012 0.012
+vmax_uptake_p 0.006 0.006 0.006 0.006 0.006 0.006 0.006 0.006 0.006 0.006 0.012 0.012 0.006 0.006
         
 #bnf_base: base nitrogen fixation rate (g N / m2 / year)        
 # converted internally to mumol N m-2 s-1        
