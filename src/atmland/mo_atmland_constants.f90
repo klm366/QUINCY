@@ -40,7 +40,7 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: def_cos_angle               !< cosine of zenith angle
   REAL(wp),SAVE :: def_co2_mixing_ratio        !< atmospheric CO2 in ppm
   REAL(wp),SAVE :: def_co2_mixing_ratio_C13    !< atmospheric 13CO2 in ppm
-  REAL(wp),SAVE :: def_co2_mixing_ratio_C14    !< atmospheric 14CO2 in pp?
+  REAL(wp),SAVE :: def_co2_mixing_ratio_C14    !< atmospheric 14CO2 in 10^-12 ppm
   REAL(wp),SAVE :: def_co2_deltaC13            !< molar mixing ratio of 13C / 12C of atmospheric CO2
   REAL(wp),SAVE :: def_co2_deltaC14            !< molar mixing ratio of 14C / 12C of atmospheric CO2
 
@@ -99,9 +99,11 @@ CONTAINS
     def_fdiffuse              = 0.2_wp
     def_cos_angle             = 1.0_wp
     def_co2_mixing_ratio      = 380.0_wp
-    def_co2_deltaC13          = -7.5_wp
+    def_co2_deltaC13          = -6.6_wp     ! CMIP7 PI control 1850 reference value, cf. Graven, H. (2025) 
+                                            ! doi: 10.25981/ESGF.input4MIPs.CMIP7/2583902.
     def_co2_mixing_ratio_C13  = def_co2_mixing_ratio / (1._wp + 1._wp/calc_mixing_ratio_C13C12(def_co2_deltaC13))
-    def_co2_deltaC14          = -14.9_wp
+    def_co2_deltaC14          = -3.2_wp     ! CMIP7 PI control 1850 reference value for NH, cf. Graven, H. (2025)
+                                            ! doi: 10.25981/ESGF.input4MIPs.CMIP7/2583902.
     def_co2_mixing_ratio_C14  = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) * def_co2_mixing_ratio
 
     !$ACC UPDATE DEVICE(frac_vis_swtot_srf, frac_par_swvis_srf) ASYNC(1)
