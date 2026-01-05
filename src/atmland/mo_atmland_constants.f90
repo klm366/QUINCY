@@ -99,7 +99,7 @@ CONTAINS
     def_fdiffuse              = 0.2_wp
     def_cos_angle             = 1.0_wp
     def_co2_mixing_ratio      = 380.0_wp
-    def_co2_deltaC13          = -6.6_wp     ! CMIP7 PI control 1850 reference value, cf. Graven, H. (2025) 
+    def_co2_deltaC13          = -6.6_wp     ! CMIP7 PI control 1850 reference value, cf. Graven, H. (2025)
                                             ! doi: 10.25981/ESGF.input4MIPs.CMIP7/2583902.
     def_co2_mixing_ratio_C13  = def_co2_mixing_ratio / (1._wp + 1._wp/calc_mixing_ratio_C13C12(def_co2_deltaC13))
     def_co2_deltaC14          = -3.2_wp     ! CMIP7 PI control 1850 reference value for NH, cf. Graven, H. (2025)
