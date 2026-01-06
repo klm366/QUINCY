@@ -552,7 +552,6 @@ CONTAINS
     frac_consump_fcl = sf_spitfire % dead_frac_consump
 #ifdef __QUINCY_STANDALONE__
     DEALLOCATE(grid_cell_area)
-    DEALLOCATE(burnable_area)
 #endif
   END SUBROUTINE update_q_dfire_spitfire
 

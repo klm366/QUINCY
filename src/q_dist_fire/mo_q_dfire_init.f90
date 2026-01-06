@@ -77,6 +77,7 @@ CONTAINS
 
     dsl4jsb_Use_config(Q_DFIRE_)
     dsl4jsb_Use_memory(Q_DFIRE_)
+    dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ----------------------------------------------------------------------------------------------------- !
@@ -89,6 +90,7 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(Q_DFIRE_)
     dsl4jsb_Def_memory(Q_DFIRE_)
+    dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: dfire_pm_id                                  !< Selected precipitation method
     ! ----------------------------------------------------------------------------------------------------- !
@@ -147,6 +149,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: frac_consump_fcl
     dsl4jsb_Real2D_onDomain      :: ic_pop_dens
     dsl4jsb_Real3D_onDomain      :: ic_lightning_events_monthly
+    dsl4jsb_Real2D_onDomain      :: a2l_lightning_events
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
     ! ----------------------------------------------------------------------------------------------------- !
@@ -161,6 +164,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DFIRE_)
     dsl4jsb_Get_memory(Q_DFIRE_)
+    dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, nesterov_index)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, fdi)
@@ -217,6 +221,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, frac_consump_fcl)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, ic_pop_dens)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, ic_lightning_events_monthly)
+    dsl4jsb_Get_var2D_onDomain(A2L_, a2l_lightning_events)
     ! ----------------------------------------------------------------------------------------------------- !
     nesterov_index = 0._wp
     fdi = 0._wp
@@ -293,24 +298,21 @@ CONTAINS
     burnable_grass_pfts = dsl4jsb_Config(Q_DFIRE_)%burnable_grass_pfts
 
 #ifdef __QUINCY_STANDALONE__
-    ! quincy only
+    !> Quincy standalone only
+    !> Population density and lightning events inputs are both loaded in q_dfire_read_init_vars
     CALL q_dfire_read_init_vars(tile)
 
     ic_pop_dens = dfire_init_vars%pop_dens
-    lightning_events = dfire_init_vars%lightning_events(:,:,1)
+    a2l_lightning_events = dfire_init_vars%lightning_events(:,:,1)
 #else
-    ! IQ only
+    !> IQ only
+    !> -population density is loaded in q_dfire_read_init_vars
+    !> -lightning events are loaded in provide_lightning_events
     ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL q_dfire_read_init_vars(tile)
     END IF
-
-    !CALL spq_init_ic_bc(tile)
     ic_pop_dens = dfire_init_vars%pop_dens(1,1)
-
-!    IF (tile%Is_last_process_tile(Q_DFIRE_)) THEN
-    !  CALL spq_finalize_init_vars()
-!    END IF
 #endif
 
   END SUBROUTINE q_dfire_init
@@ -354,8 +356,8 @@ CONTAINS
     dsl4jsb_Get_config(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
 
-    dfire_init_vars%pop_dens(:,:) = dsl4jsb_Config(Q_DFIRE_)%pop_dens
-    dfire_init_vars%lightning_events(:,:,:) = dsl4jsb_Config(Q_DFIRE_)%lightning_events
+    dfire_init_vars%pop_dens(:,:) = dsl4jsb_Config(Q_DFIRE_)%density_human_population
+    dfire_init_vars%lightning_events(:,:,:) = dsl4jsb_Config(Q_DFIRE_)%lightning_frequency
   END SUBROUTINE q_dfire_read_init_vars
 #else
   ! ======================================================================================================= !
