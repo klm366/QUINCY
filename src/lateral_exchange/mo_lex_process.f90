@@ -922,7 +922,7 @@ CONTAINS
       &      heat_flx_lat_tle, heat_flx_lat_sbl            &
       &      )
 
-    USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
     USE mo_sse_constants, ONLY: vol_hcap_water
 
     INTEGER, INTENT(in)     ::     &
@@ -1067,10 +1067,11 @@ CONTAINS
             ! Since there is no way of knowing what vol_heat_cap_sl_new will be, the scheme assumes that
             ! the water content will change according to wtr_flx * dtime:
             ! vol_heat_cap_new = (vol_heat_cap_sl_old * (h-h_wtr) + vol_heat_cap_h2o * h_wtr) / h
-            ! Incomming water is assumed to have the same temperature as the soil layer it originates from.
+            ! Incoming water is assumed to have the same temperature as the soil layer it originates from
+            ! or a minimum of tmelt to be liquid.
 
-            d_t_wtr_soil_tle = t_sbl_rgrd - t_tle_rgrd
-            d_t_wtr_soil_sbl = t_tle_rgrd - t_sbl_rgrd
+            d_t_wtr_soil_tle = MAX(t_sbl_rgrd, tmelt) - t_tle_rgrd
+            d_t_wtr_soil_sbl = MAX(t_tle_rgrd, tmelt) - t_sbl_rgrd
 
             heat_flx_tle     = d_t_wtr_soil_tle * vol_hcap_water * wtr_flx_in_tle_regrid
             heat_flx_sbl     = d_t_wtr_soil_sbl * vol_hcap_water * wtr_flx_in_sbl_regrid
@@ -1081,14 +1082,14 @@ CONTAINS
             ! the water content will change according to wtr_flx * dtime.
             ! This makes the limits more restrictive, given that these are anyway very large margins.
             IF (     heat_flx_tle < 0._wp) THEN
-              heat_flx_tle   = MAX(heat_flx_tle, d_t_wtr_soil_tle * h_cap_soil_tle_rgrd * h / dtime)
+              heat_flx_tle   = MAX(heat_flx_tle, MAX(d_t_wtr_soil_tle, -10._wp) * h_cap_soil_tle_rgrd * h / dtime)
             ELSE IF (heat_flx_tle > 0._wp) THEN
-              heat_flx_tle   = MIN(heat_flx_tle, d_t_wtr_soil_tle * h_cap_soil_tle_rgrd * h / dtime)
+              heat_flx_tle   = MIN(heat_flx_tle, MIN(d_t_wtr_soil_tle,  10._wp) * h_cap_soil_tle_rgrd * h / dtime)
             END IF
             IF (     heat_flx_sbl < 0._wp) THEN
-              heat_flx_sbl   = MAX(heat_flx_sbl, d_t_wtr_soil_sbl * h_cap_soil_sbl_rgrd * h / dtime)
+              heat_flx_sbl   = MAX(heat_flx_sbl, MAX(d_t_wtr_soil_sbl, -10._wp) * h_cap_soil_sbl_rgrd * h / dtime)
             ELSE IF (heat_flx_sbl > 0._wp) THEN
-              heat_flx_sbl   = MIN(heat_flx_sbl, d_t_wtr_soil_sbl * h_cap_soil_sbl_rgrd * h / dtime)
+              heat_flx_sbl   = MIN(heat_flx_sbl, MIN(d_t_wtr_soil_sbl,  10._wp) * h_cap_soil_sbl_rgrd * h / dtime)
             END IF
 
             ! Diagnosing incoming-, outgoing- and net fluxes on tiles
@@ -1114,21 +1115,21 @@ CONTAINS
     ! Add the heat fluxes due to surface runoff / runon
     DO ic = 1, nc
       IF (l_compute(ic)) THEN
-        d_t_wtr_soil_tle = t_soil_sbl(ic,1) - t_soil_tle(ic,1)
-        d_t_wtr_soil_sbl = t_soil_tle(ic,1) - t_soil_sbl(ic,1)
+        d_t_wtr_soil_tle = MAX(t_soil_sbl(ic,1), tmelt) - t_soil_tle(ic,1)
+        d_t_wtr_soil_sbl = MAX(t_soil_tle(ic,1), tmelt) - t_soil_sbl(ic,1)
         heat_flx_tle = d_t_wtr_soil_tle * vol_hcap_water * wtr_inflx_lat_srf_tle(ic) / rhoh2o
         heat_flx_sbl = d_t_wtr_soil_sbl * vol_hcap_water * wtr_inflx_lat_srf_sbl(ic) / rhoh2o
 
         IF (     heat_flx_tle < 0._wp) THEN
-          heat_flx_tle   = MAX(heat_flx_tle, d_t_wtr_soil_tle * heat_cap_soil_tle(ic,1) * dz(1) / dtime)
+          heat_flx_tle   = MAX(heat_flx_tle, MAX(d_t_wtr_soil_tle, -10._wp) * heat_cap_soil_tle(ic,1) * dz(1) / dtime)
         ELSE IF (heat_flx_tle > 0._wp) THEN
-          heat_flx_tle   = MIN(heat_flx_tle, d_t_wtr_soil_tle * heat_cap_soil_tle(ic,1) * dz(1) / dtime)
+          heat_flx_tle   = MIN(heat_flx_tle, MIN(d_t_wtr_soil_tle,  10._wp) * heat_cap_soil_tle(ic,1) * dz(1) / dtime)
         END IF
 
         IF (     heat_flx_sbl < 0._wp) THEN
-          heat_flx_sbl   = MAX(heat_flx_sbl, d_t_wtr_soil_sbl * heat_cap_soil_sbl(ic,1) * dz(1) / dtime)
+          heat_flx_sbl   = MAX(heat_flx_sbl, MAX(d_t_wtr_soil_sbl, -10._wp) * heat_cap_soil_sbl(ic,1) * dz(1) / dtime)
         ELSE IF (heat_flx_sbl > 0._wp) THEN
-          heat_flx_sbl   = MIN(heat_flx_sbl, d_t_wtr_soil_sbl * heat_cap_soil_sbl(ic,1) * dz(1) / dtime)
+          heat_flx_sbl   = MIN(heat_flx_sbl, MIN(d_t_wtr_soil_sbl,  10._wp) * heat_cap_soil_sbl(ic,1) * dz(1) / dtime)
         END IF
 
         cnvctv_in_tle(ic,1)    = cnvctv_in_tle(ic,1)  + heat_flx_tle
