@@ -915,7 +915,11 @@ CONTAINS
     ELSE
       SELECT CASE (model_scheme)
       CASE (MODEL_JSBACH)
-        dsl4jsb_Get_var2D_onChunk(A2L_,   pch)               ! in
+        IF (model%config%use_tile_seb) THEN
+          dsl4jsb_Get_var2D_onChunk(SEB_,   pch)          ! in
+        ELSE
+          dsl4jsb_Get_var2D_onChunk(A2L_,   pch)          ! in
+        END IF
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           ch_tmp(ic) = pch(ic)
