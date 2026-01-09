@@ -33,7 +33,7 @@ MODULE mo_q_agr_memory_class
 
   PUBLIC :: t_q_agr_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 10
+  INTEGER, PARAMETER :: max_no_of_vars = 20
 
   ! ======================================================================================================= !
   !> Type definition for q_agr memory

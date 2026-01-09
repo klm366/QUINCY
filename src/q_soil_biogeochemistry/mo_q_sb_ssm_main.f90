@@ -54,6 +54,7 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_, Q_AGR_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
+    USE mo_q_agr_constants,       ONLY: qs_def_n_manure
     USE mo_q_assimi_constants,    ONLY: ic3phot
     USE mo_veg_constants,         ONLY: ITREE
     USE mo_q_sb_jsm_transport,    ONLY: calc_bioturbation_rate
@@ -965,15 +966,24 @@ CONTAINS
         & emission_n2_n15(:))
     ENDIF
 
-    ! 6.1 for lctlib type PASTURE, put manure addition to fertiliser variable
-    !>    manure forcing is only available in configurations with agriculture
+    ! 6.1 for lctlib type PASTURE, add manure to applied fertiliser variable
     !>
-    IF(lctlib%PastureFlag .AND. dsl4jsb_Config(Q_AGR_)%active) THEN
-      IF (lctlib%ps_pathway == ic3phot) THEN
-        n_manure(:) = n_manure_pasture_c3(:)
+    IF(lctlib%PastureFlag) THEN
+#ifdef __QUINCY_STANDALONE__
+      n_manure(:) = qs_def_n_manure
+#else
+      !> if AGR process is active, manure will be set there, otherwise
+      !> set manure to zero
+      IF (dsl4jsb_Config(Q_AGR_)%active) THEN
+        IF (lctlib%ps_pathway == ic3phot) THEN
+          n_manure(:) = n_manure_pasture_c3(:)
+        ELSE
+          n_manure(:) = n_manure_pasture_c4(:)
+        END IF
       ELSE
-        n_manure(:) = n_manure_pasture_c4(:)
+        n_manure(:) = 0.0_wp
       END IF
+#endif
       !> note that these fluxes are returned in micro-mol / m2 / s and don't need to
       !> be converted below (under point 7.0)
       CALL calc_manure_application_on_pasture( &
