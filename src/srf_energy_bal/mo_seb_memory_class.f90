@@ -285,7 +285,7 @@ CONTAINS
         & prefix, suffix,                                                                    &
         & lrestart=.FALSE.,                                                                  &
         & output_level=FULL,                                                                 &
-        & initval_r=2.9E5_wp )
+        & initval_r=2.9E5_wp)
 
       CALL mem%Add_var( 'qsat_star', mem%qsat_star,                                          &
         & hgrid, surface,                                                                    &
@@ -294,7 +294,7 @@ CONTAINS
         & prefix, suffix,                                                                    &
         & lrestart=.TRUE.,                                                                   &
         & output_level=FULL,                                                                 &
-        & initval_r=0.0075_wp )
+        & initval_r=0.0075_wp)
 
 #ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
