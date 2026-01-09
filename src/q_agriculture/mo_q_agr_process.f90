@@ -527,6 +527,7 @@ MODULE mo_q_agr_process
       & nd_crop_season_mavg, &
       & crop_season_per_year_mavg, &
       & n_fertiliser, &
+      & n_manure, &
       & fertiliser_nh4, &
       & fertiliser_nh4_n15, &
       & fertiliser_no3, &
@@ -536,7 +537,8 @@ MODULE mo_q_agr_process
     USE mo_jsb_math_constants,     ONLY: one_day
     USE mo_jsb_impl_constants,     ONLY: test_false_true
     USE mo_q_agr_constants,        ONLY: fcs_fertappl_day1, fcs_fertappl_day2, fcs_fertappl_day3, &
-                                         fcs_fertappl_day4, frac_fertil_nh4, frac_fertil_po4, eta_fertiliser
+                                         fcs_fertappl_day4, frac_fertil_nh4, frac_fertil_po4, eta_fertiliser, &
+                                         frac_manure_nh4, frac_manure_po4, eta_manure
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                         !< dimensions
@@ -544,6 +546,7 @@ MODULE mo_q_agr_process
     REAL(wp), INTENT(in)    :: nd_crop_season_mavg(:)     !< number of days this growing season has lasted
     REAL(wp), INTENT(in)    :: crop_season_per_year_mavg(:) !< average number of growing season per year (#/yr)
     REAL(wp), INTENT(in)    :: n_fertiliser(:)            !< annual N fertiliser rate (mol/m2/yr)
+    REAL(wp), INTENT(in)    :: n_manure(:)                !< annual N manure rate on crops (mol/m2/yr)
     REAL(wp), INTENT(inout) :: fertiliser_nh4(:),       & !< NH4 fertiliser application [micro mol / m2 / s]
       &                        fertiliser_nh4_n15(:),   & !< 15NH4 fertiliser application [micro mol / m2 / s]
       &                        fertiliser_no3(:),       & !< NO3 fertiliser application [micro mol / m2 / s]
@@ -570,19 +573,27 @@ MODULE mo_q_agr_process
       ELSE
         is_fertiliser_day = .FALSE.
       END IF
-      !> 2.0 Mineral fertiliser application for croplands
+      !> 2.0 Mineral fertiliser and manure application for croplands
       !>
       IF (is_fertiliser_day) THEN
         IF (crop_season_per_year_mavg(ic) > 1.5_wp) THEN
           hlp1 = n_fertiliser(ic) / one_day * 1.e6_wp / 4._wp / 2._wp ! conversion and split into 4 doses per crop cycle
+          hlp2 = n_manure(ic)     / one_day * 1.e6_wp / 4._wp / 2._wp ! conversion and split into 4 doses per crop cycle
         ELSE
           hlp1 = n_fertiliser(ic) / one_day * 1.e6_wp / 4._wp ! conversion and split into 4 doses
+          hlp2 = n_manure(ic)     / one_day * 1.e6_wp / 4._wp ! conversion and split into 4 doses
         END IF
-        fertiliser_nh4(ic) = hlp1 * frac_fertil_nh4
-        fertiliser_nh4_n15(ic) = fertiliser_nh4(ic) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser))
-        fertiliser_no3(ic) = hlp1 * (1._wp - frac_fertil_nh4)
-        fertiliser_no3_n15(ic) = fertiliser_no3(ic) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser))
-        fertiliser_po4(ic) = hlp1 * frac_fertil_po4
+        fertiliser_nh4(ic) = hlp1 * frac_fertil_nh4 + hlp2 * frac_manure_nh4
+        fertiliser_nh4_n15(ic) = hlp1 * frac_fertil_nh4 / &
+                                   ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser)) + &
+                                 hlp2 * frac_manure_nh4 / &
+                                   ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))
+        fertiliser_no3(ic) = hlp1 * (1._wp - frac_fertil_nh4) + hlp2 * (1._wp - frac_manure_nh4)
+        fertiliser_no3_n15(ic) = hlp1 * (1._wp - frac_fertil_nh4) / &
+                                   ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser)) + &
+                                 hlp2 * (1._wp - frac_manure_nh4) / &
+                                   ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))
+        fertiliser_po4(ic) = hlp1 * frac_fertil_po4 + hlp2 * frac_manure_po4
       END IF
     END DO
     !$ACC END PARALLEL LOOP

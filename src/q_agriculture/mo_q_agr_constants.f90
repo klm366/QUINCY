@@ -73,12 +73,15 @@ MODULE mo_q_agr_constants
     & fract_crop_to_slash          = def_parameters, &  !< initial mass of crops on planting, taken from the seed bed (mol/m2)
     & frac_fertil_nh4              = def_parameters, &  !< fraction of fertiliser applied that is NH4 (unitless)
     & frac_fertil_po4              = def_parameters, &  !< molar ratio of P fertiliser to N fertiliser application
+    & frac_manure_nh4              = def_parameters, &  !< fraction of manure applied that is NH4 (unitless)
+    & frac_manure_po4              = def_parameters, &  !< molar ratio of P manure to N manure application
     & fcs_fertappl_day1            = def_parameters, &  !< fraction of crop growing season when 1st fertiliser dose is applied
     & fcs_fertappl_day2            = def_parameters, &  !< fraction of crop growing season when 2nd fertiliser dose is applied
     & fcs_fertappl_day3            = def_parameters, &  !< fraction of crop growing season when 3rd fertiliser dose is applied
     & fcs_fertappl_day4            = def_parameters, &  !< fraction of crop growing season when 4th fertiliser dose is applied
     & canopy_mode_correction_factor= def_parameters, &  !< calibration factor to allow use of cttab_lai_max with all QUINCY modes
-    & eta_fertiliser               = def_parameters     !< fractionation of N15 due to NH3 volatilisation [per mill]
+    & eta_fertiliser               = def_parameters, &  !< N15 signature of mineral fertiliser [per mill]
+    & eta_manure                   = def_parameters     !< N15 signature of manure fertiliser  [per mill]
 
   ! phenology parameters for all crop types
   REAL(wp), SAVE :: &
@@ -157,8 +160,13 @@ CONTAINS
     frac_fertil_nh4                   = 7._wp / 8._wp               !< an global average value
     frac_fertil_po4                   = 0.5_wp * 0.4366197_wp * &   !< FAO statistic global N:P2O5 application
                                         molar_mass_N / molar_mass_P
+    frac_manure_nh4                   = 0.988_wp                    !< assuming manure cattle manure, and organic N = NH4,
+                                                                    !< Whalen et al. 2001, https://doi.org/10.1007/s003740100416
+    frac_manure_po4                   = 0.145_wp * &                !< assuming manure cattle manure, Whalen et al. 2001 https://doi.org/10.1007/s003740100416
+                                        molar_mass_N / molar_mass_P
     canopy_mode_correction_factor     = 0.8_wp                      !< tuned to get reasonable maximum LAI globally in CANOPY mode
-    eta_fertiliser                    = 0._wp                       !< not clear how to design this now
+    eta_fertiliser                    = 0._wp                       !< Bateman & Kelly, 2007, https://doi.org/10.1080/10256010701550732
+    eta_manure                        = 8._wp                       !< Bateman & Kelly, 2007, https://doi.org/10.1080/10256010701550732
 
     ! phenology and growth stage parameters (all AgroIBIS/CLM5)
     mavg_period_cropseason            = 20.0_wp                     !< AgroIBIS/CLM5
