@@ -705,10 +705,10 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = NONE, &
-          & loutput = .FALSE., &
+          & output_level = BASIC, &
+          & loutput = .TRUE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_wp, isteptype=TSTEP_CONSTANT )
 
         CALL mem%Add_var('soil_lay_depth_center_sl', mem%soil_lay_depth_center_sl, &
           & hgrid, soil_w, &

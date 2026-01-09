@@ -28,7 +28,7 @@ MODULE mo_sb_memory_class
   USE mo_lnd_bgcm_store_class,   ONLY: SB_BGCM_POOL_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
     &                                  SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
   USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
 
@@ -65,12 +65,12 @@ MODULE mo_sb_memory_class
     ! soil organic matter (som): dom & dom_assoc & mycorrhiza & microbial & residue & residue_assoc
     ! and below ground (bg) litter: bg parts of soluble_litter & polymeric_litter & woody_litter
     TYPE(t_jsb_var_real3d) ::  &
-      & sb_pool_total_bg_soil_c,   & !< sum of som and below ground litter (layers 2:nsoil) of sb_pool%*%carbon     [mol m-3]
-      & sb_pool_total_bg_soil_n,   & !< sum of som and below ground litter (layers 2:nsoil) of sb_pool%*%nitrogen   [mol m-3]
-      & sb_pool_total_bg_soil_p,   & !< sum of som and below ground litter (layers 2:nsoil) of sb_pool%*%phosphorus [mol m-3]
-      & sb_pool_total_bg_soil_c13, & !< sum of som and below ground litter (layers 2:nsoil) of sb_pool%*%carbon13   [mol m-3]
-      & sb_pool_total_bg_soil_c14, & !< sum of som and below ground litter (layers 2:nsoil) of sb_pool%*%carbon14   [mol m-3]
-      & sb_pool_total_bg_soil_n15    !< sum of som and below ground litter (layers 2:nsoil) of sb_pool%*%nitrogen15 [mol m-3]
+      & sb_pool_total_bg_soil_c,   & !< sum of som (1:nsoil) and below ground litter (2:nsoil) of sb_pool%*%carbon     [mol m-3]
+      & sb_pool_total_bg_soil_n,   & !< sum of som (1:nsoil) and below ground litter (2:nsoil) of sb_pool%*%nitrogen   [mol m-3]
+      & sb_pool_total_bg_soil_p,   & !< sum of som (1:nsoil) and below ground litter (2:nsoil) of sb_pool%*%phosphorus [mol m-3]
+      & sb_pool_total_bg_soil_c13, & !< sum of som (1:nsoil) and below ground litter (2:nsoil) of sb_pool%*%carbon13   [mol m-3]
+      & sb_pool_total_bg_soil_c14, & !< sum of som (1:nsoil) and below ground litter (2:nsoil) of sb_pool%*%carbon14   [mol m-3]
+      & sb_pool_total_bg_soil_n15    !< sum of som (1:nsoil) and below ground litter (2:nsoil) of sb_pool%*%nitrogen15 [mol m-3]
     ! Sum of above ground (ag) litter: ag parts of soluble_litter & polymeric_litter & woody_litter
     TYPE(t_jsb_var_real2d) ::        &
       & sb_pool_total_ag_litter_c,   & !< sum of above ground litter (soil layer 1) of sb_pool%*%carbon     [mol m-2]
@@ -79,9 +79,14 @@ MODULE mo_sb_memory_class
       & sb_pool_total_ag_litter_c13, & !< sum of above ground litter (soil layer 1) of sb_pool%*%carbon13   [mol m-2]
       & sb_pool_total_ag_litter_c14, & !< sum of above ground litter (soil layer 1) of sb_pool%*%carbon14   [mol m-2]
       & sb_pool_total_ag_litter_n15    !< sum of above ground litter (soil layer 1) of sb_pool%*%nitrogen15 [mol m-2]
-    ! various bgcm diagnostics
-    TYPE(t_jsb_var_real3d)  :: &
-      & sb_pool_woody_litter_c         !< woody litter or sb_pool [mol m-3]
+    ! Diagnostic only for TRENDY and CMIP, sum of above ground woody litter: woody_litter: coarse-woody debris (CWD)
+    TYPE(t_jsb_var_real2d)  :: &
+      & sb_pool_ag_woody_litter_c, &   !< woody litter (soil layer 1) of sb_pool%*%carbon     [mol m-2]
+      & sb_pool_ag_woody_litter_n, &   !< woody litter (soil layer 1) of sb_pool%*%nitrogen   [mol m-2]
+      & sb_pool_ag_woody_litter_p, &   !< woody litter (soil layer 1) of sb_pool%*%phosphorus [mol m-2]
+      & sb_pool_ag_woody_litter_c13, & !< woody litter (soil layer 1) of sb_pool%*%carbon13   [mol m-2]
+      & sb_pool_ag_woody_litter_c14, & !< woody litter (soil layer 1) of sb_pool%*%carbon14   [mol m-2]
+      & sb_pool_ag_woody_litter_n15    !< woody litter (soil layer 1) of sb_pool%*%nitrogen15 [mol m-2]
 
     !------------------------------------------------------------------------------------------------------ !
     !>pools 3D
@@ -379,6 +384,15 @@ MODULE mo_sb_memory_class
       & nhx_deposition_monthly,  &            !< surface downward reduced nitrogen deposition velocity [kg/m2/s]
       & noy_deposition_monthly,  &            !< surface downward oxidised nitrogen deposition velocity [kg/m2/s]
       & p_deposition_monthly                  !< surface downward reduced phosphorus deposition velocity [kg/m2/s]
+
+    ! Diagnostic global carbon sums e.g. for monitoring (only available with ICON)
+    TYPE(t_jsb_var_real1d) ::       &
+      & total_som_c_gsum, &                   !< global sum of all soil biogeochemistry carbon pools [Pg]
+      & total_inorg_n_gsum, &                 !< global sum of all plant accessible inorganic N pools [Tg]
+      & rh_gsum, &                            !< global sum of soil respiration [Pg yr-1]
+      & nbp_gsum, &                           !< global sum of net biosphere production [Pg yr-1]
+      & fnloss_gsum, &                        !< global sum of N losses [Tg yr-1]
+      & fn2o_gsum                             !< global sum of N2O emission [Tg yr-1]
 
   CONTAINS
     PROCEDURE :: Init => Init_sb_memory
@@ -705,7 +719,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
@@ -717,7 +731,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
@@ -849,7 +863,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
@@ -861,7 +875,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
@@ -879,13 +893,73 @@ CONTAINS
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_pool_woody_litter_c', mem%sb_pool_woody_litter_c, &
-        & hgrid, vgrid_soil_w, &
-        & t_cf('sb_pool_woody_litter_c', 'mol m-3', 'sb_pool woody litter'), &
+      CALL mem%Add_var('sb_pool_ag_woody_litter_c', mem%sb_pool_ag_woody_litter_c, &
+        & hgrid, surface, &
+        & t_cf('sb_pool_ag_woody_litter_c', 'mol m-3', 'sb_pool woody litter'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_pool_ag_woody_litter_n', mem%sb_pool_ag_woody_litter_n, &
+        & hgrid, surface, &
+        & t_cf('sb_pool_ag_woody_litter_n', 'mol m-3', 'sb_pool woody litter'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_pool_ag_woody_litter_p', mem%sb_pool_ag_woody_litter_p, &
+        & hgrid, surface, &
+        & t_cf('sb_pool_ag_woody_litter_p', 'mol m-3', 'sb_pool woody litter'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_pool_ag_woody_litter_c13', mem%sb_pool_ag_woody_litter_c13, &
+        & hgrid, surface, &
+        & t_cf('sb_pool_ag_woody_litter_c13', 'mol m-3', 'sb_pool woody litter'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = MEDIUM, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_pool_ag_woody_litter_c14', mem%sb_pool_ag_woody_litter_c14, &
+        & hgrid, surface, &
+        & t_cf('sb_pool_ag_woody_litter_c14', 'mol m-3', 'sb_pool woody litter'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = MEDIUM, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_pool_ag_woody_litter_n15', mem%sb_pool_ag_woody_litter_n15, &
+        & hgrid, surface, &
+        & t_cf('sb_pool_ag_woody_litter_n15', 'mol m-3', 'sb_pool woody litter'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
@@ -936,7 +1010,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp, &
@@ -948,7 +1022,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp, &
@@ -960,7 +1034,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp, &
@@ -1440,7 +1514,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1451,7 +1525,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1462,7 +1536,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1473,7 +1547,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1484,7 +1558,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1495,7 +1569,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1506,7 +1580,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1517,7 +1591,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1528,7 +1602,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1539,7 +1613,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1550,7 +1624,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1561,7 +1635,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1572,7 +1646,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1583,7 +1657,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1594,7 +1668,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1605,7 +1679,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1616,7 +1690,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1627,7 +1701,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1638,7 +1712,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1649,7 +1723,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1660,7 +1734,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1803,7 +1877,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
@@ -2523,7 +2597,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
@@ -2535,7 +2609,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
@@ -2547,7 +2621,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
@@ -2702,7 +2776,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp, &
@@ -3167,7 +3241,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = NONE, &
+        & output_level = BASIC, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
@@ -3189,7 +3263,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = NONE, &
+        & output_level = BASIC, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
@@ -3211,7 +3285,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = NONE, &
+        & output_level = FULL, &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
@@ -3397,6 +3471,58 @@ CONTAINS
         & l_aggregate_all = .TRUE.)
 
     ENDIF  ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)
+
+    IF (ASSOCIATED(mem%parent)) RETURN
+
+    ! Diagnostic global carbon sums for experiment monitoring - only calculated on top (i.e. box) tile
+    CALL mem%Add_var('total_som_c_gsum', mem%total_som_c_gsum,                                               &
+      & hgrid, surface,                                                                        &
+      & t_cf('total_som_c_gsum', 'Pg', 'Global sum of all soil C pools'),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_groups=['mon'],                                                                 &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
+    CALL mem%Add_var('total_inorg_n_gsum', mem%total_inorg_n_gsum,                                             &
+      & hgrid, surface,                                                                        &
+      & t_cf('total_inorg_n_gsum', 'Tg', 'Global sum of plant acc. soil inorganic N pools'),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_groups=['mon'],                                                                 &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
+    CALL mem%Add_var('rh_gsum', mem%rh_gsum,                                                        &
+      & hgrid, surface,                                                                        &
+      & t_cf('rh_gsum', 'Pg yr-1', 'Global sum of soil respiration'),                          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_groups=['mon'],                                                                 &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
+    CALL mem%Add_var('nbp_gsum', mem%nbp_gsum,                                                       &
+      & hgrid, surface,                                                                        &
+      & t_cf('nbp_gsum', 'Pg yr-1', 'Global sum of net biosphere production'),                 &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_groups=['mon'],                                                                 &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
+    CALL mem%Add_var('fnloss_gsum', mem%fnloss_gsum,                                                    &
+      & hgrid, surface,                                                                        &
+      & t_cf('fnloss_gsum', 'Pg yr-1', 'Global sum of nitrogen loss'),                         &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_groups=['mon'],                                                                 &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
+    CALL mem%Add_var('fn2o_gsum', mem%fn2o_gsum,                                                      &
+      & hgrid, surface,                                                                        &
+      & t_cf('fn2o_gsum', 'Tg yr-1', 'Global sum of n2o emission'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_groups=['mon'],                                                                 &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
   END SUBROUTINE Init_sb_memory
 
   ! ======================================================================================================= !
