@@ -41,17 +41,24 @@ MODULE mo_q_agr_memory_class
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_q_agr_memory
 
-    ! fertiliser application rate
+    ! actual variables used by the Q_AGR process
     TYPE(t_jsb_var_real2d) ::   &
       & crop_growth_phase, &             !< growth phase of crop [0 = Planting, 1 = Emergence, 2 = GrainFill,3 = Harvest]
       & gdd_mavg, &                 !< long-term average growing degree days [degC day]
       & nd_crop_season, &           !< number of days in this crop growing season [# days]
       & nd_crop_season_mavg, &      !< long-term average crop growing season length [# days]
-      & n_fertiliser_c3, &          !< N fertiliser application rate for C3 crops [mol m-2 yr-1]
-      & n_fertiliser_c4, &          !< N fertiliser application rate for C4 crops [mol m-2 yr-1]
       & crop_season_per_year, &      !< number of crop seasons (agricultural growing seasons) in the current year
       & crop_season_per_year_mavg, & !< long-term average number of crop seasons in a year
       & crop_type_index             !< crop type index (1-ncroptypes)
+
+    ! box-level variables to read and distribute fertiliser
+    TYPE(t_jsb_var_real2d) ::   &
+      & n_fertiliser_c3, &          !< N fertiliser application rate for C3 crops [mol m-2 yr-1]
+      & n_fertiliser_c4, &          !< N fertiliser application rate for C4 crops [mol m-2 yr-1]
+      & n_manure_crop_c3, &         !< N manure application rate for C3 crops [mol m-2 yr-1]
+      & n_manure_crop_c4, &         !< N manure application rate for C4 crops [mol m-2 yr-1]
+      & n_manure_pasture_c3, &      !< N manure application rate for C3 pasture [mol m-2 yr-1]
+      & n_manure_pasture_c4         !< N manure application rate for C4 pasture [mol m-2 yr-1]
 
   CONTAINS
     PROCEDURE :: Init => Init_q_agr_memory
@@ -118,6 +125,47 @@ CONTAINS
         & lrestart = .TRUE., &
         & output_level = NONE, &
         & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('n_manure_crop_c3', mem%n_manure_crop_c3, &
+        & hgrid, surface, &
+        & t_cf('n_manure_crop_c3', 'mol m-2 yr-1', 'N manure application rate for C3 crops'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & lrestart = .TRUE., &
+        & output_level = NONE, &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('n_manure_crop_c4', mem%n_manure_crop_c4, &
+        & hgrid, surface, &
+        & t_cf('n_manure_crop_c4', 'mol m-2 yr-1', 'N manure application rate for C4 crops'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & lrestart = .TRUE., &
+        & output_level = NONE, &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('n_manure_pasture_c3', mem%n_manure_pasture_c3, &
+        & hgrid, surface, &
+        & t_cf('n_manure_pasture_c3', 'mol m-2 yr-1', 'N manure application rate for C3 pastures'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & lrestart = .TRUE., &
+        & output_level = NONE, &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('n_manure_pasture_c4', mem%n_manure_pasture_c4, &
+        & hgrid, surface, &
+        & t_cf('n_manure_pasture_c4', 'mol m-2 yr-1', 'N manure application rate for C4 pastures'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & lrestart = .TRUE., &
+        & output_level = NONE, &
+        & initval_r = 0.0_wp)
+
     END IF
 
     IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN

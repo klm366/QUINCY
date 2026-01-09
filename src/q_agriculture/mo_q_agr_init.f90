@@ -182,6 +182,10 @@ CONTAINS
     dsl4jsb_Def_memory(Q_AGR_)
     dsl4jsb_Real2D_onDomain :: n_fertiliser_c3
     dsl4jsb_Real2D_onDomain :: n_fertiliser_c4
+    dsl4jsb_Real2D_onDomain :: n_manure_crop_c3
+    dsl4jsb_Real2D_onDomain :: n_manure_crop_c4
+    dsl4jsb_Real2D_onDomain :: n_manure_pasture_c3
+    dsl4jsb_Real2D_onDomain :: n_manure_pasture_c4
 
     ! -------------------------------------------------------------------------------------------------- !
     REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
@@ -199,6 +203,10 @@ CONTAINS
     dsl4jsb_Get_memory(Q_AGR_)
     dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_fertiliser_c3)
     dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_fertiliser_c4)
+    dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_crop_c3)
+    dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_crop_c4)
+    dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_pasture_c3)
+    dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_pasture_c4)
 
     IF (.NOT. dsl4jsb_Config(Q_AGR_)%l_read_fertiliser) THEN
       ! ... use background rate
@@ -230,6 +238,46 @@ CONTAINS
 
     !$ACC UPDATE DEVICE(n_fertiliser_c3, n_fertiliser_c4) ASYNC(1)
     !$ACC WAIT(1)
+
+    IF (.NOT. dsl4jsb_Config(Q_AGR_)%l_read_manure) THEN
+      ! no manure is applied if not provided as forcing
+      n_manure_crop_c3(:,:)    = 0.0_wp
+      n_manure_crop_c4(:,:)    = 0.0_wp
+      n_manure_pasture_c3(:,:) = 0.0_wp
+      n_manure_pasture_c4(:,:) = 0.0_wp
+
+    ELSE
+      ! search a file ending on the current year
+      current_year  = get_year(current_datetime)
+
+      !>
+      !> Assertion: routine currently expects filenames with 4 digits, and that manure is provided in the same input
+      !>            file as N fertiliser
+      !>
+      IF (( current_year > 9999) .OR. (current_year < 1000)) THEN
+        CALL finish(TRIM(routine), 'Violation of assertion: this routine currently expects filenames with 4 digits.')
+      END IF
+      WRITE (filename_fertiliser_data,'(a,a,I4.4,a)') &
+        & TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_filename_prefix), '_', current_year, ".nc"
+
+      input_file = jsb_netcdf_open_input(TRIM(filename_fertiliser_data), model%grid_id)
+      ptr_2D => input_file%Read_2d(variable_name='manure_c3crops', fill_array = n_manure_crop_c3(:,:))
+      ptr_2D => input_file%Read_2d(variable_name='manure_c4crops', fill_array = n_manure_crop_c4(:,:))
+      ptr_2D => input_file%Read_2d(variable_name='manure_c3past', fill_array = n_manure_pasture_c3(:,:))
+      ptr_2D => input_file%Read_2d(variable_name='manure_c4past', fill_array = n_manure_pasture_c4(:,:))
+      CALL input_file%Close()
+
+      ! Convert unit of manure to model unit (kg / ha to mol/m2)
+      n_manure_crop_c3(:,:)    = n_manure_crop_c3(:,:) / 10._wp / molar_mass_N
+      n_manure_crop_c4(:,:)    = n_manure_crop_c4(:,:) / 10._wp / molar_mass_N
+      n_manure_pasture_c3(:,:) = n_manure_pasture_c3(:,:) / 10._wp / molar_mass_N
+      n_manure_pasture_c4(:,:) = n_manure_pasture_c4(:,:) / 10._wp / molar_mass_N
+    END IF
+
+    !$ACC UPDATE DEVICE(n_manure_crop_c3, n_manure_crop_c4, n_manure_pasture_c3, n_manure_pasture_c4) ASYNC(1)
+    !$ACC WAIT(1)
+
+
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
 

@@ -71,7 +71,8 @@ CONTAINS
       & ic_filename,                &
       & bc_filename,                &
       & fertiliser_filename_prefix, &
-      & l_read_fertiliser
+      & l_read_fertiliser,          &
+      & l_read_manure
 
     INTEGER                     :: nml_handler, nml_unit, istat
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_q_agr_config'
@@ -86,6 +87,7 @@ CONTAINS
     fertiliser_filename_prefix    = 'bc_land_use_quincy'
     !
     l_read_fertiliser            = .FALSE.
+    l_read_manure                = .FALSE.
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
@@ -101,6 +103,7 @@ CONTAINS
     config%bc_filename                = bc_filename
     config%fertiliser_filename_prefix = fertiliser_filename_prefix
     config%l_read_fertiliser          = l_read_fertiliser
+    config%l_read_manure              = l_read_manure
 
     CALL close_nml(nml_handler)
 
