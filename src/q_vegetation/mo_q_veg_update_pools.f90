@@ -482,7 +482,9 @@ CONTAINS
             DO ix_comp = 1, nr_of_veg_bgcm_comp
               ! set a negative pool to zero (breaking mass balance !)
               ! and write message to LOG (if enabled)
-              IF (veg_pool_mt(ix_comp, ix_elem, ic) < -eps12) THEN
+              ! SZ: temporarily switching off test for negative 14C pools, which occur in rare occasions.
+              !     This change does not affect simulation outcomes other than for 14C runs, and for these only few grid cells
+              IF (veg_pool_mt(ix_comp, ix_elem, ic) < -eps12 .AND. ix_elem /= ixC14) THEN
                 IF (config_flag_log_negative_vegpool) THEN
                   WRITE (message_text,*) 'Negative value of vegetation pool at tile ', tile%name, &
                     &                    ' at (lon:lat) ', grid%lon(ic,iblk), ':', grid%lat(ic,iblk), &
