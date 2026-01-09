@@ -35,6 +35,7 @@ MODULE mo_q_agr_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_q_agr_config
     CHARACTER(len=filename_max) :: fertiliser_filename_prefix   !< IQ. Note: should NOT include an ending "_"
     LOGICAL   :: l_read_fertiliser
+    LOGICAL   :: l_read_manure
       !< determines if fertiliser data is to be read from a file (default FALSE) (ignored in QS)
 
   CONTAINS
@@ -64,6 +65,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: fertiliser_filename_prefix
 
     LOGICAL   :: l_read_fertiliser
+    LOGICAL   :: l_read_manure
 
     NAMELIST /lnd_q_agr_nml/  &
       & active,                     &

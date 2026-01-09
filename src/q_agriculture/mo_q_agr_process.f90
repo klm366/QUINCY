@@ -554,7 +554,7 @@ MODULE mo_q_agr_process
       &                        fertiliser_po4(:)          !< PO4 fertiliser application [micro mol / m2 / s]
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER        :: ic                !< loop over grid cells
-    REAL(wp)       :: hlp1
+    REAL(wp)       :: hlp1, hlp2
     LOGICAL        :: is_fertiliser_day
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_fertiliser_application'
     ! ----------------------------------------------------------------------------------------------------- !

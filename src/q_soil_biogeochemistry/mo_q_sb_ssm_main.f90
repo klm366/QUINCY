@@ -51,9 +51,10 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_, Q_AGR
+    USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_, Q_AGR_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
+    USE mo_q_assimi_constants,    ONLY: ic3phot
     USE mo_veg_constants,         ONLY: ITREE
     USE mo_q_sb_jsm_transport,    ONLY: calc_bioturbation_rate
     USE mo_q_sb_litter_processes, ONLY: calc_litter_partitioning
@@ -77,6 +78,7 @@ CONTAINS
     INTEGER                               :: nsoil_w              !< number of soil layers (water)
     INTEGER                               :: isoil                !< loop over nsoil_w
     INTEGER                               :: ic, is               !< loop over dimensions
+    REAL(wp), ALLOCATABLE, DIMENSION(:)   :: n_manure             !< local copy of manure fertiliser application
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: apparent_fast_som_cn      , &
                                              apparent_fast_som_np      , &
                                              fine_root_carbon_sl, &
@@ -97,6 +99,7 @@ CONTAINS
                                              k_desorpt_po4_act, &
                                              km_dip_biochem_po4_act, &
                                              qmax_po4_mineral_act
+    CLASS(t_jsb_tile_abstract), POINTER   :: box_tile      !< pointer to the box tile to get the fertiliser data
     REAL(wp)                              :: dtime
     INTEGER                               :: iblk, ics, ice, nc             !< dimensions
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_simple_model'
@@ -276,6 +279,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
+    CALL model%Get_top_tile(box_tile)
     vgrid_soil_w  => Get_vgrid('soil_depth_water')
     nsoil_w       =  vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
@@ -288,6 +292,7 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
+    ALLOCATE(n_manure(nc))
     ALLOCATE(apparent_fast_som_cn(nc, nsoil_w))
     ALLOCATE(apparent_fast_som_np(nc, nsoil_w))
     ALLOCATE(fine_root_carbon_sl(nc, nsoil_w))
@@ -969,7 +974,7 @@ CONTAINS
       !> be converted below (under point 7.0)
       CALL calc_manure_application_on_pasture( &
         & nc, &
-        & n_manure(:),
+        & n_manure(:), &
         & fertiliser_nh4(:), &
         & fertiliser_nh4_n15(:), &
         & fertiliser_no3(:), &
@@ -1075,6 +1080,7 @@ CONTAINS
 
     !------------------------------------------------------------------------------------------------------ !
     ! de-allocate local allocatable variables
+    DEALLOCATE(n_manure)
     DEALLOCATE(apparent_fast_som_cn)
     DEALLOCATE(apparent_fast_som_np)
     DEALLOCATE(fine_root_carbon_sl)
@@ -3625,6 +3631,7 @@ CONTAINS
     & fertiliser_po4)
 
     USE mo_jsb_math_constants,     ONLY: one_day, one_year
+    USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
     USE mo_q_agr_constants,        ONLY: frac_manure_nh4, frac_manure_po4, eta_manure
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                 INTENT(in)  :: nc                     !< dimensions
@@ -3642,7 +3649,7 @@ CONTAINS
 
       fertiliser_nh4(ic)     = n_manure(ic) * frac_manure_nh4 / one_year / one_day * 1.e6_wp
       fertiliser_nh4_n15(ic) = fertiliser_nh4(ic) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))
-      fertiliser_no3(ic)     = n_manure(ic) * (1._wp - frac_fertil_nh4) / one_year / one_day * 1.e6_wp
+      fertiliser_no3(ic)     = n_manure(ic) * (1._wp - frac_manure_nh4) / one_year / one_day * 1.e6_wp
       fertiliser_no3_n15(ic) = fertiliser_no3(ic) /  ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))
       fertiliser_po4(ic)     = n_manure(ic) * frac_manure_po4 / one_year / one_day * 1.e6_wp
 
