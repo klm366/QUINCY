@@ -286,11 +286,13 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
     ALLOCATE(n_manure(nc))
     ALLOCATE(apparent_fast_som_cn(nc, nsoil_w))
@@ -326,9 +328,11 @@ CONTAINS
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
     ! Q_AGR_ 2D
-    dsl4jsb_Get_memory_tile(Q_AGR_, box_tile)
-    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_manure_pasture_c3, box_tile) ! in
-    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_manure_pasture_c4, box_tile) ! in
+    IF(dsl4jsb_Config(Q_AGR_)%active) THEN
+      dsl4jsb_Get_memory_tile(Q_AGR_, box_tile)
+      dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_manure_pasture_c3, box_tile) ! in
+      dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_manure_pasture_c4, box_tile) ! in
+    END IF
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_,      unit_uptake_n_pot)
     dsl4jsb_Get_var2D_onChunk(VEG_,      unit_uptake_p_pot)
