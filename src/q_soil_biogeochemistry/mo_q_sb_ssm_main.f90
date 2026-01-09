@@ -51,7 +51,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_
+    USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_, Q_AGR
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_veg_constants,         ONLY: ITREE
@@ -59,11 +59,13 @@ CONTAINS
     USE mo_q_sb_litter_processes, ONLY: calc_litter_partitioning
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -108,11 +110,13 @@ CONTAINS
     dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: unit_uptake_n_pot
@@ -121,6 +125,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
     ! A2L_ 2D
     dsl4jsb_Real2D_onChunk :: p_deposition
+    ! Q_AGR_ 2D
+    dsl4jsb_Def_memory_tile(Q_AGR_, box_tile)
+    dsl4jsb_Real2D_onChunk :: n_manure_pasture_c3
+    dsl4jsb_Real2D_onChunk :: n_manure_pasture_c4
     ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     ! HYDRO_ 3D
@@ -131,6 +139,11 @@ CONTAINS
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl
     ! SB_ 2D
+    dsl4jsb_Real2D_onChunk :: fertiliser_nh4
+    dsl4jsb_Real2D_onChunk :: fertiliser_nh4_n15
+    dsl4jsb_Real2D_onChunk :: fertiliser_no3
+    dsl4jsb_Real2D_onChunk :: fertiliser_no3_n15
+    dsl4jsb_Real2D_onChunk :: fertiliser_po4
     dsl4jsb_Real2D_onChunk :: leaching_nh4_solute
     dsl4jsb_Real2D_onChunk :: leaching_nh4_n15_solute
     dsl4jsb_Real2D_onChunk :: leaching_no3_solute
@@ -307,6 +320,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
+    ! Q_AGR_ 2D
+    dsl4jsb_Get_memory_tile(Q_AGR_, box_tile)
+    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_manure_pasture_c3, box_tile) ! in
+    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_manure_pasture_c4, box_tile) ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_,      unit_uptake_n_pot)
     dsl4jsb_Get_var2D_onChunk(VEG_,      unit_uptake_p_pot)
@@ -322,6 +339,11 @@ CONTAINS
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_,      bulk_dens_sl)                ! in
     ! SB_ 2D
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_nh4)
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_nh4_n15)
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_no3)
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_no3_n15)
+    dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_po4)
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute)
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute)
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)
@@ -933,6 +955,27 @@ CONTAINS
         & emission_n2(:), &
         & emission_n2_n15(:))
     ENDIF
+
+    ! 6.1 for lctlib type PASTURE, put manure addition to fertiliser variable
+    !>    manure forcing is only available in configurations with agriculture
+    !>
+    IF(lctlib%PastureFlag .AND. dsl4jsb_Config(Q_AGR_)%active) THEN
+      IF (lctlib%ps_pathway == ic3phot) THEN
+        n_manure(:) = n_manure_pasture_c3(:)
+      ELSE
+        n_manure(:) = n_manure_pasture_c4(:)
+      END IF
+      !> note that these fluxes are returned in micro-mol / m2 / s and don't need to 
+      !> be converted below (under point 7.0)
+      CALL calc_manure_application_on_pasture( &
+        & nc, &
+        & n_manure(:),
+        & fertiliser_nh4(:), &
+        & fertiliser_nh4_n15(:), &
+        & fertiliser_no3(:), &
+        & fertiliser_no3_n15(:), &
+        & fertiliser_po4(:))
+    END IF
 
     !>7.0 unit conversion of rates and fluxes
     !>
@@ -3565,5 +3608,46 @@ CONTAINS
     END DO
   END SUBROUTINE calc_mycorrhiza_dynamics
 
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task to update_sb_simple_model
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> Subroutine to deal with pasture manure application
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE calc_manure_application_on_pasture( &
+    & nc, &
+    & n_manure, &
+    & fertiliser_nh4, &
+    & fertiliser_nh4_n15, &
+    & fertiliser_no3, &
+    & fertiliser_no3_n15, &
+    & fertiliser_po4)
+
+    USE mo_jsb_math_constants,     ONLY: one_day, one_year
+    USE mo_q_agr_constants,        ONLY: frac_manure_nh4, frac_manure_po4, eta_manure
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER,                 INTENT(in)  :: nc                     !< dimensions
+    REAL(wp), DIMENSION(nc), INTENT(in)  :: n_manure               !< manure application mol / m2 / yr
+    REAL(wp), DIMENSION(nc), INTENT(out) :: fertiliser_nh4, &      !< NH4 manure application [micro-mol / m2 / s]
+                                            fertiliser_nh4_n15, &  !< 15NH4 manure application [micro-mol / m2 / s]
+                                            fertiliser_no3, &      !< NO3 manure application [micro-mol / m2 / s]
+                                            fertiliser_no3_n15, &  !< 15NO3 manure application [micro-mol / m2 / s]
+                                            fertiliser_po4         !< PO4 manure application [micro-mol / m2 / s]
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER                              :: ic                     !< loop grid cells
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_manure_application_on_pasture'
+    ! ----------------------------------------------------------------------------------------------------- !
+    DO ic = 1,nc
+
+      fertiliser_nh4(ic)     = n_manure(ic) * frac_manure_nh4 / one_year / one_day * 1.e6_wp
+      fertiliser_nh4_n15(ic) = fertiliser_nh4(ic) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))
+      fertiliser_no3(ic)     = n_manure(ic) * (1._wp - frac_fertil_nh4) / one_year / one_day * 1.e6_wp
+      fertiliser_no3_n15(ic) = fertiliser_no3(ic) /  ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))
+      fertiliser_po4(ic)     = n_manure(ic) * frac_manure_po4 / one_year / one_day * 1.e6_wp
+
+   END DO
+
+  END SUBROUTINE calc_manure_application_on_pasture
 #endif
 END MODULE mo_q_sb_ssm_main
