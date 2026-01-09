@@ -965,7 +965,7 @@ CONTAINS
       ELSE
         n_manure(:) = n_manure_pasture_c4(:)
       END IF
-      !> note that these fluxes are returned in micro-mol / m2 / s and don't need to 
+      !> note that these fluxes are returned in micro-mol / m2 / s and don't need to
       !> be converted below (under point 7.0)
       CALL calc_manure_application_on_pasture( &
         & nc, &
