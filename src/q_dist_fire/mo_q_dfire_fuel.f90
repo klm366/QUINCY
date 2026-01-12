@@ -58,9 +58,7 @@ MODULE mo_q_dfire_fuel
   USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter
   USE mo_lnd_bgcm_idx,          ONLY: ix_leaf, ix_fruit, ix_labile, ix_reserve, ix_sap_wood, ix_heart_wood
   USE mo_q_dfire_sf_fuel_class, ONLY: t_sf_fuel_class
-  USE mo_q_dfire_sf_ros_class,  ONLY: calc_fbd
-
-  !USE mo_q_dfire_constants,       ONLY: live_fuel_frac => live_frac_allocation !< Live fraction ratio for live fuels
+  USE mo_q_dfire_sf_ros_class_tho2010, ONLY: calc_fbd
 
   !< Live fraction allocation for dead and live fuels
   USE mo_q_dfire_constants,     ONLY: df_sf_live_frac_tree, &

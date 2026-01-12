@@ -26,7 +26,7 @@
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_q_dfire_sf_ros_class
+MODULE mo_q_dfire_sf_ros_class_tho2010
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
@@ -439,4 +439,4 @@ CONTAINS
   END FUNCTION calc_fbd
 
 #endif
-END MODULE mo_q_dfire_sf_ros_class
+END MODULE mo_q_dfire_sf_ros_class_tho2010
