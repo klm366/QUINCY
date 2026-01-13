@@ -253,7 +253,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('gross_assimilation_cl', mem%gross_assimilation_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -264,7 +265,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('ftranspiration_sl', mem%ftranspiration_sl, &
         & hgrid, vgrid_soil_w, &
@@ -319,7 +321,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('gross_assimilation_C14', mem%gross_assimilation_C14, &
         & hgrid, surface, &
@@ -330,7 +333,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('net_assimilation', mem%net_assimilation, &
         & hgrid, surface, &
@@ -341,7 +345,8 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('net_assimilation_boc', mem%net_assimilation_boc, &
         & hgrid, surface, &
@@ -352,7 +357,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('maint_respiration_leaf', mem%maint_respiration_leaf, &
         & hgrid, surface, &
@@ -363,7 +369,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('net_assimilation_cl', mem%net_assimilation_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -374,7 +381,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('maint_respiration_leaf_cl', mem%maint_respiration_leaf_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -385,7 +393,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('beta_air', mem%beta_air, &
         & hgrid, surface, &
@@ -484,7 +493,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('vcmax_cl', mem%vcmax_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -495,7 +505,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('chlfl_yield_cl', mem%chlfl_yield_cl, &
         & hgrid, vgrid_canopy_q_assimi, &

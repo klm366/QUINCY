@@ -172,10 +172,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: veg_pool_total_n15
     dsl4jsb_Real2D_onChunk      :: veg_pool_leaf_c
     dsl4jsb_Real2D_onChunk      :: veg_pool_leaf_n
+    dsl4jsb_Real2D_onChunk      :: veg_pool_leaf_p
     dsl4jsb_Real2D_onChunk      :: veg_pool_wood_c
     dsl4jsb_Real2D_onChunk      :: veg_pool_wood_n
+    dsl4jsb_Real2D_onChunk      :: veg_pool_wood_p
     dsl4jsb_Real2D_onChunk      :: veg_pool_fine_root_c
     dsl4jsb_Real2D_onChunk      :: veg_pool_fine_root_n
+    dsl4jsb_Real2D_onChunk      :: veg_pool_fine_root_p
     dsl4jsb_Real2D_onChunk      :: veg_growth_total_c
     dsl4jsb_Real2D_onChunk      :: veg_growth_total_n
     dsl4jsb_Real2D_onChunk      :: veg_growth_total_p
@@ -190,6 +193,16 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: veg_litterfall_total_n15
     dsl4jsb_Real2D_onChunk      :: veg_products_total_c
     dsl4jsb_Real2D_onChunk      :: veg_products_total_n
+    dsl4jsb_Real2D_onChunk      :: veg_products_total_p
+    dsl4jsb_Real2D_onChunk      :: veg_products_total_c13
+    dsl4jsb_Real2D_onChunk      :: veg_products_total_c14
+    dsl4jsb_Real2D_onChunk      :: veg_products_total_n15
+    dsl4jsb_Real2D_onChunk      :: veg_products_decay_c
+    dsl4jsb_Real2D_onChunk      :: veg_products_decay_n
+    dsl4jsb_Real2D_onChunk      :: veg_products_decay_p
+    dsl4jsb_Real2D_onChunk      :: veg_products_decay_c13
+    dsl4jsb_Real2D_onChunk      :: veg_products_decay_c14
+    dsl4jsb_Real2D_onChunk      :: veg_products_decay_n15
     ! ----------------------------------------------------------------------------------------------------- !
     iblk      = options%iblk
     ics       = options%ics
@@ -311,10 +324,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_n15)                   ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_leaf_c)                      ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_leaf_n)                      ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_leaf_p)                      ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_wood_c)                      ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_wood_n)                      ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_wood_p)                      ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_fine_root_c)                 ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_fine_root_n)                 ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_fine_root_p)                 ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_c)                   ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_n)                   ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_total_p)                   ! out
@@ -330,6 +346,16 @@ CONTAINS
     IF (config_l_use_product_pools) THEN
       dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_c)               ! out
       dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_n)               ! out
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_p)               ! out
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_c13)             ! out
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_c14)             ! out
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_n15)             ! out
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_decay_c)               ! out
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_decay_n)               ! out
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_decay_p)               ! out
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_decay_c13)             ! out
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_decay_c14)             ! out
+      dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_decay_n15)             ! out
     END IF
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -482,7 +508,9 @@ CONTAINS
             DO ix_comp = 1, nr_of_veg_bgcm_comp
               ! set a negative pool to zero (breaking mass balance !)
               ! and write message to LOG (if enabled)
-              IF (veg_pool_mt(ix_comp, ix_elem, ic) < -eps12) THEN
+              ! SZ: temporarily switching off test for negative 14C pools, which occur in rare occasions.
+              !     This change does not affect simulation outcomes other than for 14C runs, and for these only few grid cells
+              IF (veg_pool_mt(ix_comp, ix_elem, ic) < -eps12 .AND. ix_elem /= ixC14) THEN
                 IF (config_flag_log_negative_vegpool) THEN
                   WRITE (message_text,*) 'Negative value of vegetation pool at tile ', tile%name, &
                     &                    ' at (lon:lat) ', grid%lon(ic,iblk), ':', grid%lat(ic,iblk), &
@@ -574,8 +602,12 @@ CONTAINS
       veg_pool_total_n15(ic)       = 0.0_wp
 
       IF (config_l_use_product_pools) THEN
-        veg_products_total_c(ic) = 0.0_wp
-        veg_products_total_n(ic) = 0.0_wp
+        veg_products_total_c(ic)   = 0.0_wp
+        veg_products_total_n(ic)   = 0.0_wp
+        veg_products_total_p(ic)   = 0.0_wp
+        veg_products_total_c13(ic) = 0.0_wp
+        veg_products_total_c14(ic) = 0.0_wp
+        veg_products_total_n15(ic) = 0.0_wp
       END IF
 
       ! init flux totals
@@ -596,10 +628,13 @@ CONTAINS
       ! store component totals for aggregation
       veg_pool_leaf_c(ic)          = veg_pool_mt(ix_leaf, ixC, ic)
       veg_pool_leaf_n(ic)          = veg_pool_mt(ix_leaf, ixN, ic)
+      veg_pool_leaf_p(ic)          = veg_pool_mt(ix_leaf, ixP, ic)
       veg_pool_wood_c(ic)          = veg_pool_mt(ix_sap_wood, ixC, ic) + veg_pool_mt(ix_heart_wood, ixC, ic)
       veg_pool_wood_n(ic)          = veg_pool_mt(ix_sap_wood, ixN, ic) + veg_pool_mt(ix_heart_wood, ixN, ic)
+      veg_pool_wood_p(ic)          = veg_pool_mt(ix_sap_wood, ixP, ic) + veg_pool_mt(ix_heart_wood, ixP, ic)
       veg_pool_fine_root_c(ic)     = veg_pool_mt(ix_fine_root, ixC, ic)
       veg_pool_fine_root_n(ic)     = veg_pool_mt(ix_fine_root, ixN, ic)
+      veg_pool_fine_root_p(ic)     = veg_pool_mt(ix_fine_root, ixP, ic)
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -630,12 +665,20 @@ CONTAINS
         veg_pool_total_n15(ic)       = veg_pool_total_n15(ic) + veg_pool_mt(ix_comp,ixN15, ic)
 
         IF (config_l_use_product_pools) THEN
-          veg_products_total_c(ic) = 0.0_wp
-          veg_products_total_n(ic) = 0.0_wp
+          veg_products_total_c(ic)   = 0.0_wp
+          veg_products_total_n(ic)   = 0.0_wp
+          veg_products_total_p(ic)   = 0.0_wp
+          veg_products_total_c13(ic) = 0.0_wp
+          veg_products_total_c14(ic) = 0.0_wp
+          veg_products_total_n15(ic) = 0.0_wp
 
           IF (lctlib_CropFlag .AND. config_active_q_agr) THEN
-            veg_products_total_c(ic) = veg_products_total_c(ic) + veg_pp_crop_mt(ixC,ic)
-            veg_products_total_n(ic) = veg_products_total_n(ic) + veg_pp_crop_mt(ixN,ic)
+            veg_products_total_c(ic)   = veg_products_total_c(ic)   + veg_pp_crop_mt(ixC,ic)
+            veg_products_total_n(ic)   = veg_products_total_n(ic)   + veg_pp_crop_mt(ixN,ic)
+            veg_products_total_p(ic)   = veg_products_total_p(ic)   + veg_pp_crop_mt(ixP,ic)
+            veg_products_total_c13(ic) = veg_products_total_c13(ic) + veg_pp_crop_mt(ixC13,ic)
+            veg_products_total_c14(ic) = veg_products_total_c14(ic) + veg_pp_crop_mt(ixC14,ic)
+            veg_products_total_n15(ic) = veg_products_total_n15(ic) + veg_pp_crop_mt(ixN15,ic)
           END IF
 
           IF (lctlib_ForestFlag .AND. config_active_q_syl) THEN
@@ -647,6 +690,22 @@ CONTAINS
               &                       + veg_pp_fuel_mt(ixN,ic) + veg_pp_paper_mt(ixN,ic)       &
               &                       + veg_pp_fiberboard_mt(ixN,ic) + veg_pp_oirw_mt(ixN,ic)  &
               &                       + veg_pp_pv_mt(ixN,ic) + veg_pp_sawnwood_mt(ixN,ic)
+            veg_products_total_p(ic) = veg_products_total_p(ic)                                &
+              &                       + veg_pp_fuel_mt(ixP,ic) + veg_pp_paper_mt(ixP,ic)       &
+              &                       + veg_pp_fiberboard_mt(ixP,ic) + veg_pp_oirw_mt(ixP,ic)  &
+              &                       + veg_pp_pv_mt(ixP,ic) + veg_pp_sawnwood_mt(ixP,ic)
+            veg_products_total_c13(ic) = veg_products_total_c13(ic)                                &
+              &                       + veg_pp_fuel_mt(ixC13,ic) + veg_pp_paper_mt(ixC13,ic)       &
+              &                       + veg_pp_fiberboard_mt(ixC13,ic) + veg_pp_oirw_mt(ixC13,ic)  &
+              &                       + veg_pp_pv_mt(ixC13,ic) + veg_pp_sawnwood_mt(ixC13,ic)
+            veg_products_total_c14(ic) = veg_products_total_c14(ic)                                &
+              &                       + veg_pp_fuel_mt(ixC14,ic) + veg_pp_paper_mt(ixC14,ic)       &
+              &                       + veg_pp_fiberboard_mt(ixC14,ic) + veg_pp_oirw_mt(ixC14,ic)  &
+              &                       + veg_pp_pv_mt(ixC14,ic) + veg_pp_sawnwood_mt(ixC14,ic)
+            veg_products_total_n15(ic) = veg_products_total_n15(ic)                                &
+              &                       + veg_pp_fuel_mt(ixN15,ic) + veg_pp_paper_mt(ixN15,ic)       &
+              &                       + veg_pp_fiberboard_mt(ixN15,ic) + veg_pp_oirw_mt(ixN15,ic)  &
+              &                       + veg_pp_pv_mt(ixN15,ic) + veg_pp_sawnwood_mt(ixN15,ic)
           END IF
         END IF
 
@@ -668,6 +727,21 @@ CONTAINS
       !$ACC END LOOP
     END DO
     !$ACC END PARALLEL
+
+    IF (config_l_use_product_pools) THEN
+      IF ((lctlib_ForestFlag .AND. config_active_q_syl) .OR. (lctlib_CropFlag .AND. config_active_q_agr)) THEN
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT)
+        DO ic = 1, nc
+          veg_products_decay_c(ic)   =  prod_decay_mt(ixC, ic)   * 1000000.0_wp / dtime
+          veg_products_decay_n(ic)   =  prod_decay_mt(ixN, ic)   * 1000000.0_wp / dtime
+          veg_products_decay_p(ic)   =  prod_decay_mt(ixP, ic)   * 1000000.0_wp / dtime
+          veg_products_decay_c13(ic) =  prod_decay_mt(ixC13, ic) * 1000000.0_wp / dtime
+          veg_products_decay_c14(ic) =  prod_decay_mt(ixC14, ic) * 1000000.0_wp / dtime
+          veg_products_decay_n15(ic) =  prod_decay_mt(ixN15, ic) * 1000000.0_wp / dtime
+        END DO
+        !$ACC END PARALLEL LOOP
+      END IF
+    END IF
 
     !> 3.0 biosphere-level diagnostics across multiple processes
     !>

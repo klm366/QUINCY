@@ -151,11 +151,7 @@ CONTAINS
     REAL(wp)                    :: nml_k1_root_alloc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /vegetation_ctl/       &
-#else
-    NAMELIST /jsb_veg_nml/          &
-#endif
+    NAMELIST /lnd_veg_nml/          &
       active,                       &
       lrestart_cont,                &
       ic_filename,                  &
@@ -220,13 +216,8 @@ CONTAINS
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('vegetation_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, vegetation_ctl)
-#else
-    nml_unit = position_nml('jsb_veg_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_veg_nml)
-#endif
+    nml_unit = position_nml('lnd_veg_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_veg_nml)
 
     CALL close_nml(nml_handler)
 

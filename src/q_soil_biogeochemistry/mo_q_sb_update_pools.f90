@@ -185,6 +185,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: sb_pool_total_ag_litter_c13
     dsl4jsb_Real2D_onChunk :: sb_pool_total_ag_litter_c14
     dsl4jsb_Real2D_onChunk :: sb_pool_total_ag_litter_n15
+    dsl4jsb_Real2D_onChunk :: sb_pool_ag_woody_litter_c
+    dsl4jsb_Real2D_onChunk :: sb_pool_ag_woody_litter_n
+    dsl4jsb_Real2D_onChunk :: sb_pool_ag_woody_litter_p
+    dsl4jsb_Real2D_onChunk :: sb_pool_ag_woody_litter_c13
+    dsl4jsb_Real2D_onChunk :: sb_pool_ag_woody_litter_c14
+    dsl4jsb_Real2D_onChunk :: sb_pool_ag_woody_litter_n15
     dsl4jsb_Real2D_onChunk :: fertiliser_nh4
     dsl4jsb_Real2D_onChunk :: fertiliser_nh4_n15
     dsl4jsb_Real2D_onChunk :: fertiliser_no3
@@ -329,7 +335,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: sb_pool_total_bg_soil_c13
     dsl4jsb_Real3D_onChunk :: sb_pool_total_bg_soil_c14
     dsl4jsb_Real3D_onChunk :: sb_pool_total_bg_soil_n15
-    dsl4jsb_Real3D_onChunk :: sb_pool_woody_litter_c
     dsl4jsb_Real3D_onChunk :: total_soil_n
     dsl4jsb_Real3D_onChunk :: total_soil_inorg_n
     dsl4jsb_Real3D_onChunk :: sb_bgcm_pool_microbial_c
@@ -470,6 +475,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_ag_litter_c13) ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_ag_litter_c14) ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_ag_litter_n15) ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_ag_woody_litter_c)   ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_ag_woody_litter_n)   ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_ag_woody_litter_p)   ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_ag_woody_litter_c13) ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_ag_woody_litter_c14) ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_ag_woody_litter_n15) ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_nh4)              ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_nh4_n15)          ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       fertiliser_no3)              ! in
@@ -616,7 +627,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_bg_soil_c13)   ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_bg_soil_c14)   ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_bg_soil_n15)   ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_woody_litter_c)      ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       total_soil_n)                ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       total_soil_inorg_n)          ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org_min_sl)             ! in
@@ -1144,7 +1154,12 @@ CONTAINS
     sb_pool_total_c14(:,:)        = SUM(sb_pool_mt(:, ixC14, :, :), DIM=1)
     sb_pool_total_n15(:,:)        = SUM(sb_pool_mt(:, ixN15, :, :), DIM=1)
 
-    sb_pool_woody_litter_c(:,:)   = sb_pool_mt(ix_woody_litter, ixC, :, :)
+    sb_pool_ag_woody_litter_c(:)   = sb_pool_mt(ix_woody_litter, ixC, :, 1)   * soil_depth_sl(:,1)
+    sb_pool_ag_woody_litter_n(:)   = sb_pool_mt(ix_woody_litter, ixN, :, 1)   * soil_depth_sl(:,1)
+    sb_pool_ag_woody_litter_p(:)   = sb_pool_mt(ix_woody_litter, ixP, :, 1)   * soil_depth_sl(:,1)
+    sb_pool_ag_woody_litter_c13(:) = sb_pool_mt(ix_woody_litter, ixC13, :, 1) * soil_depth_sl(:,1)
+    sb_pool_ag_woody_litter_c14(:) = sb_pool_mt(ix_woody_litter, ixC14, :, 1) * soil_depth_sl(:,1)
+    sb_pool_ag_woody_litter_n15(:) = sb_pool_mt(ix_woody_litter, ixN15, :, 1) * soil_depth_sl(:,1)
 
     CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_w, ixC, sb_pool_total_bg_soil_c)
     CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_w, ixN, sb_pool_total_bg_soil_n)

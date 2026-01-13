@@ -705,10 +705,10 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = NONE, &
-          & loutput = .FALSE., &
+          & output_level = BASIC, &
+          & loutput = .TRUE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_wp, isteptype=TSTEP_CONSTANT )
 
         CALL mem%Add_var('soil_lay_depth_center_sl', mem%soil_lay_depth_center_sl, &
           & hgrid, soil_w, &
@@ -1329,7 +1329,8 @@ CONTAINS
           & output_level = NONE, &
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('w_soil_root_pwp', mem%w_soil_root_pwp, &
           & hgrid, surface, &
@@ -1340,7 +1341,8 @@ CONTAINS
           & output_level = NONE, &
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('frac_w_lat_loss_sl', mem%frac_w_lat_loss_sl, &
           & hgrid, soil_w, &
