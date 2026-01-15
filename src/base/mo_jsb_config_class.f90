@@ -37,6 +37,7 @@ MODULE mo_jsb_config_class
     INTEGER                        :: npft                !< Number of PFTs
     LOGICAL                        :: use_tmx
     LOGICAL                        :: use_lakes
+    LOGICAL                        :: use_flake
     LOGICAL                        :: use_glacier
     LOGICAL                        :: check_child_cf      !< Assert that cover fractions of children tiles sum up to the tile cf
     INTEGER                        :: enforce_water_budget!< descriptor for water balance 'ignore', 'logging', or 'error'
@@ -129,6 +130,7 @@ CONTAINS
     CHARACTER(len=20)             :: model_scheme     !< model_scheme: jsbach / quincy
     LOGICAL                       :: use_tmx
     LOGICAL                       :: use_lakes
+    LOGICAL                       :: use_flake
     LOGICAL                       :: use_glacier
     LOGICAL                       :: check_child_cf
     CHARACTER(len=10)             :: enforce_water_budget
@@ -162,6 +164,7 @@ CONTAINS
       model_scheme, &
       use_tmx, &
       use_lakes, &
+      use_flake, &
       use_glacier, &
       check_child_cf, &
       enforce_water_budget, &
@@ -210,6 +213,7 @@ CONTAINS
     model_scheme               = "jsbach"
     use_tmx                    = .FALSE.
     use_lakes                  = .TRUE.
+    use_flake                  = .FALSE.
     use_glacier                = .TRUE.
     check_child_cf             = .FALSE.
     enforce_water_budget       = 'ignore'
@@ -299,6 +303,7 @@ CONTAINS
     ! set other namelist options
     model_config%use_tmx                    = use_tmx
     model_config%use_lakes                  = use_lakes
+    model_config%use_flake                  = use_flake
     model_config%use_glacier                = use_glacier
     model_config%check_child_cf             = check_child_cf
     model_config%quincy_model               = TRIM(quincy_model)

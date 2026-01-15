@@ -20,6 +20,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_a2l_memory_class,     ONLY: t_a2l_memory
   USE mo_l2a_memory_class,     ONLY: t_l2a_memory
   USE mo_seb_memory_class,     ONLY: t_seb_memory
+  USE mo_flake_memory_class,   ONLY: t_flake_memory
   USE mo_turb_memory_class,    ONLY: t_turb_memory
   USE mo_sse_memory_class,     ONLY: t_sse_memory
   USE mo_hydro_memory_class,   ONLY: t_hydro_memory
@@ -50,6 +51,8 @@ MODULE mo_jsb_process_factory_core
   USE mo_rad_config_class,     ONLY: t_rad_config
   USE mo_seb_interface,        ONLY: Register_seb_tasks
   USE mo_seb_config_class,     ONLY: t_seb_config
+  USE mo_flake_interface,      ONLY: Register_flake_tasks
+  USE mo_flake_config_class,   ONLY: t_flake_config
   USE mo_turb_interface,       ONLY: Register_turb_tasks
   USE mo_turb_config_class,    ONLY: t_turb_config
   USE mo_sse_interface,        ONLY: Register_sse_tasks
@@ -100,7 +103,7 @@ MODULE mo_jsb_process_factory_core
 #endif
 
   USE mo_jsb_process_class, ONLY: &
-    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
+    & A2L_, L2A_, SEB_, FLAKE_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
     & Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
@@ -110,7 +113,7 @@ MODULE mo_jsb_process_factory_core
   PUBLIC :: Create_process_memory
   PUBLIC :: Create_process, max_no_of_processes
 
-  INTEGER, PARAMETER :: max_no_of_processes = 42
+  INTEGER, PARAMETER :: max_no_of_processes = 43
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_factory_core'
 
@@ -144,6 +147,9 @@ CONTAINS
     CASE (SEB_)
       CALL Register_seb_tasks(return_ptr, model_id)
       ALLOCATE(t_seb_config::return_ptr%config)
+    CASE (FLAKE_)
+      CALL Register_flake_tasks(return_ptr, model_id)
+      ALLOCATE(t_flake_config::return_ptr%config)
     CASE (TURB_)
       CALL Register_turb_tasks(return_ptr, model_id)
       ALLOCATE(t_turb_config::return_ptr%config)
@@ -235,6 +241,7 @@ CONTAINS
     USE mo_a2l_memory_class,     ONLY: max_no_of_a2l_vars => max_no_of_vars
     USE mo_l2a_memory_class,     ONLY: max_no_of_l2a_vars => max_no_of_vars
     USE mo_seb_memory_class,     ONLY: max_no_of_seb_vars => max_no_of_vars
+    USE mo_flake_memory_class,   ONLY: max_no_of_flake_vars => max_no_of_vars
     USE mo_turb_memory_class,    ONLY: max_no_of_turb_vars => max_no_of_vars
     USE mo_sse_memory_class,     ONLY: max_no_of_sse_vars => max_no_of_vars
     USE mo_hydro_memory_class,   ONLY: max_no_of_hydro_vars => max_no_of_vars
@@ -273,6 +280,9 @@ CONTAINS
     CASE (SEB_)
       ALLOCATE(t_seb_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_seb_vars
+    CASE (FLAKE_)
+      ALLOCATE(t_flake_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_flake_vars
     CASE (TURB_)
       ALLOCATE(t_turb_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_turb_vars

@@ -17,7 +17,7 @@ MODULE mo_jsb_model_init
 
 #ifndef __NO_JSBACH__
 
-  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
+  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, FLAKE_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
     &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
@@ -147,6 +147,7 @@ CONTAINS
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_rad_init,            ONLY: rad_init
+    USE mo_flake_init,          ONLY: flake_init
     USE mo_carbon_init,         ONLY: carbon_init
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
@@ -296,6 +297,7 @@ CONTAINS
       CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")
       CALL model%Queue_task(HYDRO_,  "soil_properties")
       CALL model%Queue_task(SEB_,    "surface_energy")
+      CALL model%Queue_task(FLAKE_,  "flake_wbphysics")
       CALL model%Queue_task(HYDRO_,  "evaporation")
       CALL model%Queue_task(SEB_,    "surface_fluxes")
       IF (model%processes(ASSIMI_)%p%config%active) THEN
@@ -688,6 +690,10 @@ CONTAINS
 
       IF (tile%Is_process_active(SEB_)) THEN
         CALL seb_init(tile)
+      END IF
+
+      IF (tile%Is_process_active(FLAKE_)) THEN
+        CALL flake_init(tile)
       END IF
 
       IF (tile%Is_process_active(TURB_)) THEN

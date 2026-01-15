@@ -65,9 +65,10 @@ CONTAINS
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 #endif
 
-    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, FLAKE_, &
+    dsl4jsb_Use_processes SEB_, FLAKE_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
       &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_
 
+    dsl4jsb_Use_config(FLAKE_)
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
@@ -88,6 +89,7 @@ CONTAINS
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
 
+    dsl4jsb_Def_config(FLAKE_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(RAD_)

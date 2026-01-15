@@ -173,6 +173,9 @@ ELEMENTAL &
   !!
   !! out: q_effective
   !-----------------------------------------------------------------------------------------------------
+#ifndef _OPENACC
+ELEMENTAL &
+#endif
   REAL(wp) FUNCTION q_effective(qsat, qair, fsat, fair)
 !NEC$ always_inline
 
@@ -192,6 +195,9 @@ ELEMENTAL &
   !!
   !! out: surface_dry_static_energy
   !-----------------------------------------------------------------------------------------------------
+#ifndef _OPENACC
+ELEMENTAL &
+#endif
   REAL(wp) FUNCTION surface_dry_static_energy(t_srf, qsat_srf, cpd_or_cvd, jsb_standalone)
 
     !$ACC ROUTINE SEQ
@@ -244,6 +250,9 @@ ELEMENTAL &
   !!
   !! out: lwnet_from_lwdown
   !-----------------------------------------------------------------------------------------------------
+#ifndef _OPENACC
+ELEMENTAL &
+#endif
   REAL(wp) FUNCTION lwnet_from_lwdown(lwdown, t_srf)
 
     !$ACC ROUTINE SEQ
@@ -265,6 +274,9 @@ ELEMENTAL &
   !!
   !! out: heat_transfer_coef
   !-----------------------------------------------------------------------------------------------------
+#ifndef _OPENACC
+ELEMENTAL &
+#endif
   REAL(wp) FUNCTION heat_transfer_coef(drag, dtime, alpha)
 !NEC$ always_inline
 

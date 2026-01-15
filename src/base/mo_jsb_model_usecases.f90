@@ -24,7 +24,7 @@ MODULE mo_jsb_model_usecases
   USE mo_exception,           ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
-  USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
+  USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, FLAKE_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, SPQ_, &
     &                               Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
@@ -51,7 +51,9 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase'
 
-    IF (model%config%use_lakes) THEN
+    IF (model%config%use_flake) THEN
+      CALL message(TRIM(routine), 'Initializing model usecase "'//TRIM(model%config%usecase)//'" with FLAKE')
+    ELSE IF (model%config%use_lakes) THEN
       CALL message(TRIM(routine), 'Initializing model usecase "'//TRIM(model%config%usecase)//'" with lakes')
     ELSE
       CALL message(TRIM(routine), 'Initializing model usecase "'//TRIM(model%config%usecase)//'"')
@@ -290,7 +292,15 @@ CONTAINS
       CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
     END IF
 
-      IF (model%config%use_lakes) THEN
+      IF (model%config%use_flake) THEN
+        lake_tile => t_jsb_tile('lake', 'Lake tile', &
+          & processes=(/SEB_, FLAKE_, HYDRO_/), process_actions=(/ ON_TILE_, ON_TILE_, ON_TILE_/), &
+          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+        !$ACC ENTER DATA COPYIN(lake_tile, land_tile)
+      ELSE IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
           & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
           & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
@@ -359,7 +369,7 @@ CONTAINS
 
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
-    IF (model%config%use_lakes) NULLIFY(lake_tile)
+    IF (model%config%use_lakes .OR. model%config%use_flake) NULLIFY(lake_tile)
 
   END SUBROUTINE init_usecase_pfts
 
@@ -416,7 +426,14 @@ CONTAINS
       CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
     END IF
 
-      IF (model%config%use_lakes) THEN
+      IF (model%config%use_flake) THEN
+        lake_tile => t_jsb_tile('lake', 'Lake tile', &
+          & processes=(/SEB_, FLAKE_, TURB_, HYDRO_/), process_actions=(/ ON_TILE_, ON_TILE_, ON_TILE_, ON_TILE_/), &
+          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+        !$ACC ENTER DATA COPYIN(lake_tile, land_tile)
+      ELSE IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
           & processes=(/SEB_, TURB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_, ON_TILE_/), &
           & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
@@ -481,7 +498,7 @@ CONTAINS
 
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
-    IF (model%config%use_lakes) NULLIFY(lake_tile)
+    IF (model%config%use_lakes .OR. model%config%use_flake) NULLIFY(lake_tile)
 
   END SUBROUTINE init_usecase_pfts_tmx
 
