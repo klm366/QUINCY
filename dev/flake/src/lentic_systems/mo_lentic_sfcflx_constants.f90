@@ -14,7 +14,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_lentic_SfcFlx_constants
+MODULE mo_flake_SfcFlx_constants
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
@@ -69,7 +69,7 @@ MODULE mo_lentic_SfcFlx_constants
                                         ! currently not used] 
       z0u_ice_rough = 1.0E-03_wp        ! Aerodynamic roughness of the ice surface [m] (rough flow)
       
-    CHARACTER(len=*), PARAMETER, PRIVATE :: modname =  'mo_lentic_SfcFlx_constants'
+    CHARACTER(len=*), PARAMETER, PRIVATE :: modname =  'mo_flake_SfcFlx_constants'
   
 #endif     
-END MODULE mo_lentic_SfcFlx_constants
+END MODULE mo_flake_SfcFlx_constants

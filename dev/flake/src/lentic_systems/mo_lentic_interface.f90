@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the interfaces to the processes related to lentic systems
+!! @brief Contains the interfaces to the processes related to flake systems
 !!
 !! @author
 !!  Zoé Rehder, MPI-M Hamburg
@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_lentic_interface
+MODULE mo_flake_interface
 #ifndef __NO_JSBACH__
 
   ! -------------------------------------------------------------------------------------------------------
@@ -32,13 +32,13 @@ MODULE mo_lentic_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes LENTIC_, A2L_, SEB_, HYDRO_, RAD_
+  dsl4jsb_Use_processes FLAKE_, A2L_, SEB_, HYDRO_, RAD_
 
   ! Use of process configurations
-  dsl4jsb_Use_config(LENTIC_)
+  dsl4jsb_Use_config(FLAKE_)
 
   ! Use of process memories
-  dsl4jsb_Use_memory(LENTIC_)
+  dsl4jsb_Use_memory(FLAKE_)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
@@ -49,27 +49,27 @@ MODULE mo_lentic_interface
   
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_lentic_tasks !, t_lentic_process
+  PUBLIC :: Register_flake_tasks !, t_flake_process
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_lentic_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_flake_interface'
   
-  !> Type definition for lentic process
-!   TYPE, EXTENDS(t_jsb_process) :: t_lentic_process
+  !> Type definition for flake process
+!   TYPE, EXTENDS(t_jsb_process) :: t_flake_process
 !   CONTAINS
-!     PROCEDURE :: Register_tasks => Register_lentic_tasks        !< Registers tasks for lentic process
-!   END TYPE t_lentic_process
+!     PROCEDURE :: Register_tasks => Register_flake_tasks        !< Registers tasks for flake process
+!   END TYPE t_flake_process
   
-  !> Type definition for lentic task
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_lentic_wbphysics
+  !> Type definition for flake task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_flake_wbphysics
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_lentic_wbphysics    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_lentic_wbphysics !< Aggregates computed task variables
-  END TYPE tsk_lentic_wbphysics
+    PROCEDURE, NOPASS :: Integrate => update_flake_wbphysics    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_flake_wbphysics !< Aggregates computed task variables
+  END TYPE tsk_flake_wbphysics
   
-  !> Constructor interface for lentic_wbphysics
-  INTERFACE tsk_lentic_wbphysics
-    PROCEDURE Create_task_lentic_wbphysics                        !< Constructor function for task
-  END INTERFACE tsk_lentic_wbphysics
+  !> Constructor interface for flake_wbphysics
+  INTERFACE tsk_flake_wbphysics
+    PROCEDURE Create_task_flake_wbphysics                        !< Constructor function for task
+  END INTERFACE tsk_flake_wbphysics
 
   !X Repeat here for each additional task of the process the two blocks above ...
   
@@ -79,68 +79,68 @@ CONTAINS
   !! Constructors for tasks
   
   ! -------------------------------------------------------------------------------------------------------
-  !> Constructor for lentic task
+  !> Constructor for flake task
   !!
   !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "lentic"
+  !! @return        return_ptr   Instance of process task "flake"
   !!
-  FUNCTION Create_task_lentic_wbphysics(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_flake_wbphysics(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_lentic_wbphysics::return_ptr)
-    CALL return_ptr%Construct(name='lentic_wbphysics', process_id=LENTIC_, owner_model_id=model_id)
+    ALLOCATE(tsk_flake_wbphysics::return_ptr)
+    CALL return_ptr%Construct(name='flake_wbphysics', process_id=FLAKE_, owner_model_id=model_id)
 
-  END FUNCTION Create_task_lentic_wbphysics
+  END FUNCTION Create_task_flake_wbphysics
   
 
   !X Repeat here for each additional task of the process the function above ...
     
   ! -------------------------------------------------------------------------------------------------------
-  !> Register tasks for lentic process
+  !> Register tasks for flake process
   !!
-  !! @param[in,out] process      Instance of lentic process class  
+  !! @param[in,out] process      Instance of flake process class  
   !! @param[in]     model_id  Model id  
   !!
-  SUBROUTINE Register_lentic_tasks(process, model_id)
+  SUBROUTINE Register_flake_tasks(process, model_id)
 
     CLASS(t_jsb_process),    INTENT(inout) :: process
     INTEGER,                 INTENT(in)    :: model_id
 
-    CALL process%Register_task(tsk_lentic_wbphysics(model_id))
+    CALL process%Register_task(tsk_flake_wbphysics(model_id))
     !X Repeat the line above here for each additional task of the process ...
     
-  END SUBROUTINE Register_lentic_tasks
+  END SUBROUTINE Register_flake_tasks
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "lentic_wbphysics"
-  !! Task "lentic_wbphysics" <EXPLANATIION_OF_PROCESS>.
+  !! @brief Implementation of "update" for task "flake_wbphysics"
+  !! Task "flake_wbphysics" <EXPLANATIION_OF_PROCESS>.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE update_lentic_wbphysics(tile, options)
+  SUBROUTINE update_flake_wbphysics(tile, options)
     USE mo_util,                ONLY: real2string
 
     USE mo_jsb_grid,      ONLY: Get_grid  
     USE mo_phy_schemes,   ONLY: lwnet_from_lwdown, qsat, surface_dry_static_energy
 
 
-    USE mo_lentic_process, ONLY: calc_surface_temperature     , &
+    USE mo_flake_process, ONLY: calc_surface_temperature     , &
                                & calc_radflux                 , &
                                & calc_ice_water_heatfluxes    , &
                                & calc_lake_ice                , &
                                & calc_lake_temp_stratification
 
-    USE mo_lentic_SfcFlx_process, ONLY: calc_momsenlat
+    USE mo_flake_SfcFlx_process, ONLY: calc_momsenlat
 
-    USE mo_lentic_constants , ONLY : & 
+    USE mo_flake_constants , ONLY : & 
       rot_earth             , & ! Rotation rate of the earth [rad/s]
       tpl_T_f                   ! Fresh water freezing point [K]  
     
-    USE mo_lentic_parameters, ONLY : &
+    USE mo_flake_parameters, ONLY : &
       albedo_water_ref      , &
       albedo_blueice_ref    , & ! Blue ice
       albedo_whiteice_ref   , & ! White ice
@@ -162,17 +162,17 @@ CONTAINS
     INTEGER                     :: iblk, ics, ice, nc
     REAL(wp), POINTER           :: lat(:)
     REAL(wp)                    :: steplen!, dtime
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_lentic_wbphysics'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_flake_wbphysics'
     REAL(wp), PARAMETER         :: h_atmvars = 2._wp !< height of atmospheric forcing variables (wind_air, t_air, q_air)
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
 
     ! Declare pointers to process configs and memory
-    dsl4jsb_Def_config(LENTIC_)
+    dsl4jsb_Def_config(FLAKE_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(LENTIC_) 
+    dsl4jsb_Def_memory(FLAKE_) 
     dsl4jsb_Def_memory(HYDRO_) 
     dsl4jsb_Def_memory(RAD_) 
 
@@ -256,7 +256,7 @@ CONTAINS
     steplen = options%steplen
 
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(LENTIC_)) RETURN
+    IF (.NOT. tile%Is_process_active(FLAKE_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -264,7 +264,7 @@ CONTAINS
     grid => Get_grid(model%grid_id)
     lat  => grid%lat(ics:ice, iblk) 
     ! Get process memories
-    dsl4jsb_Get_memory(LENTIC_)
+    dsl4jsb_Get_memory(FLAKE_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -295,26 +295,26 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_wtr)        ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)       ! out
 
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, z0u_sf)           ! out
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, z0t_sf)           ! out
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, z0u_sf)           ! out
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, z0t_sf)           ! out
 
-    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, depth_w)         ! in
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, Q_bot)           ! in
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, fetch)           ! in
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, par_Coriolis)    ! out
-    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, pondtype)        ! in
+    ! dsl4jsb_Get_var2D_onChunk(FLAKE_, depth_w)         ! in
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, Q_bot)           ! in
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, fetch)           ! in
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, par_Coriolis)    ! out
+    ! dsl4jsb_Get_var2D_onChunk(FLAKE_, pondtype)        ! in
 
-    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_snow)        ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_lice)          ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_mnw)           ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_wml)           ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_bot)           ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, c_t)             ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ice)           ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, h_snow)          ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ml)            ! inout
+    ! dsl4jsb_Get_var2D_onChunk(FLAKE_, t_snow)        ! inout
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, t_lice)          ! inout
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, t_mnw)           ! inout
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, t_wml)           ! inout
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, t_bot)           ! inout
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, c_t)             ! inout
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, h_ice)           ! inout
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, h_snow)          ! inout
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, h_ml)            ! inout
     
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, w_star)          ! out
+    dsl4jsb_Get_var2D_onChunk(FLAKE_, w_star)          ! out
 
 
     ! ---------------------------
@@ -475,23 +475,23 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
-  END SUBROUTINE update_lentic_wbphysics
+  END SUBROUTINE update_flake_wbphysics
   
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! Implementation of "aggregate" for task "lentic"
+  !! Implementation of "aggregate" for task "flake"
   !! 
   !! @param[in,out] tile    Tile for which routine is executed.  
   !! @param[in]     options Additional run-time parameters.  
   !!
-  SUBROUTINE aggregate_lentic_wbphysics(tile, options)
+  SUBROUTINE aggregate_flake_wbphysics(tile, options)
 
     ! Arguments
     TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(LENTIC_)
+    dsl4jsb_Def_memory(FLAKE_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -499,7 +499,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     !X if necessary: REAL(wp) :: dtime, steplen
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_lentic_wbphysics'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_flake_wbphysics'
     
     ! Get local variables from options argument
     iblk = options%iblk
@@ -511,38 +511,38 @@ CONTAINS
     
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    dsl4jsb_Get_memory(LENTIC_)
+    dsl4jsb_Get_memory(FLAKE_)
 
     model             => Get_model(tile%owner_model_id)    
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(LENTIC_, h_ice,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LENTIC_, h_ml,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LENTIC_, h_snow,       weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(LENTIC_, T_sfc,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LENTIC_, t_lice,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LENTIC_, t_mnw,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LENTIC_, t_wml,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LENTIC_, t_bot,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LENTIC_, c_t,          weighted_by_fract) 
-    dsl4jsb_Aggregate_onChunk(LENTIC_, w_star,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LENTIC_, z0t_sf,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LENTIC_, z0u_sf,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LENTIC_, par_Coriolis, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(FLAKE_, h_ice,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(FLAKE_, h_ml,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(FLAKE_, h_snow,       weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(FLAKE_, T_sfc,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(FLAKE_, t_lice,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(FLAKE_, t_mnw,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(FLAKE_, t_wml,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(FLAKE_, t_bot,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(FLAKE_, c_t,          weighted_by_fract) 
+    dsl4jsb_Aggregate_onChunk(FLAKE_, w_star,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(FLAKE_, z0t_sf,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(FLAKE_, z0u_sf,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(FLAKE_, par_Coriolis, weighted_by_fract)
 
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_lentic_wbphysics
+  END SUBROUTINE aggregate_flake_wbphysics
 
   
   ! ================================================================================================================================
   !>
-  !! @brief Another task for "lentic"
+  !! @brief Another task for "flake"
   !!
   !! @param[in]     options Additional run-time parameters.  
   !! @param[in,out] tile    Tile for which routine is executed.
   !  ....
   
 #endif
-END MODULE mo_lentic_interface
+END MODULE mo_flake_interface

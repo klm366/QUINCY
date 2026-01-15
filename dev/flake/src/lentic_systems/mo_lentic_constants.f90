@@ -1,5 +1,5 @@
 !>
-!! @brief Contains constants for the lentic processes
+!! @brief Contains constants for the flake processes
 !!
 !! @author
 !!  Dmitrii Mironov, DWD
@@ -14,7 +14,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_lentic_constants
+MODULE mo_flake_constants
 #ifndef __NO_JSBACH__
 
 USE mo_kind, ONLY: wp
@@ -73,7 +73,7 @@ PUBLIC
       & Phi_T_pr0_2   = 20._wp/3._wp       ! Constant in the expression for the T shape-function derivative 
 
         
-      CHARACTER(len=*), PARAMETER, PRIVATE :: modname =  'mo_lentic_constants'
+      CHARACTER(len=*), PARAMETER, PRIVATE :: modname =  'mo_flake_constants'
 #endif 
   
-END MODULE mo_lentic_constants
+END MODULE mo_flake_constants

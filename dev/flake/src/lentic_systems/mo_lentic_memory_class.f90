@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the memory class for the lentic process.
+!! @brief Contains the memory class for the flake process.
 !!
 !! @author
 !!  Zoé Rehder, MPI-M Hamburg
@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_lentic_memory_class
+MODULE mo_flake_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
@@ -27,19 +27,19 @@ MODULE mo_lentic_memory_class
   !USE mo_jsb_physical_constants, ONLY: !X e.g: tmelt
   
   ! Use of prcesses in this module
-  dsl4jsb_Use_processes LENTIC_
+  dsl4jsb_Use_processes FLAKE_
 
   ! Use process configurations
-  dsl4jsb_Use_config(LENTIC_)
+  dsl4jsb_Use_config(FLAKE_)
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_lentic_memory, max_no_of_vars
+  PUBLIC :: t_flake_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars = 40
 
   !> Type definition for memory
-  TYPE, EXTENDS(t_jsb_memory) :: t_lentic_memory
+  TYPE, EXTENDS(t_jsb_memory) :: t_flake_memory
 
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -61,21 +61,21 @@ MODULE mo_lentic_memory_class
       !X add your 2D variables here e.g: & t_wtr,                & !< Lake surface temperature (water)     [K]
 
   CONTAINS
-    PROCEDURE :: Init => Init_lentic_memory
-  END TYPE t_lentic_memory
+    PROCEDURE :: Init => Init_flake_memory
+  END TYPE t_flake_memory
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_lentic_memory_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_flake_memory_class'
 
 CONTAINS
 
-  SUBROUTINE Init_lentic_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_flake_memory(mem, prefix, suffix, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
-    CLASS(t_lentic_memory), INTENT(inout), TARGET :: mem
+    CLASS(t_flake_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
@@ -86,7 +86,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_lentic_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_flake_memory'
 
     model => Get_model(model_id)
 
@@ -204,7 +204,7 @@ CONTAINS
         & output_level=FULL, initval_r=0.0_wp )
     END IF
 
-  END SUBROUTINE Init_lentic_memory
+  END SUBROUTINE Init_flake_memory
 
 #endif
-END MODULE mo_lentic_memory_class
+END MODULE mo_flake_memory_class

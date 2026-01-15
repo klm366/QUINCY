@@ -1,5 +1,5 @@
 !>
-!! @brief Contains parameters for the lentic processes
+!! @brief Contains parameters for the flake processes
 !!
 !! @author
 !!  Dmitrii Mironov, DWD
@@ -14,7 +14,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_lentic_parameters
+MODULE mo_flake_parameters
 #ifndef __NO_JSBACH__
   
     USE mo_kind,                ONLY: wp
@@ -24,7 +24,7 @@ MODULE mo_lentic_parameters
     PUBLIC
   
     ! ======================================================================================================= !
-    !> 1.0 general LENTIC_ parameters
+    !> 1.0 general FLAKE_ parameters
     !>
     ! ..
   
@@ -73,17 +73,17 @@ MODULE mo_lentic_parameters
     ! ..
 
     
-    CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_lentic_parameters'
+    CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_flake_parameters'
   
   CONTAINS
   
     ! the init_constants routines are called in mo_jsb_base:jsbach_setup_models() or :quincy_proc_parameter_init()
   
     ! ======================================================================================================= !
-    !> initialize JSBACH specific parameters for the process: lentic
+    !> initialize JSBACH specific parameters for the process: flake
     !>
-    SUBROUTINE init_lentic_parameters_jsbach
-      CHARACTER(len=*), PARAMETER :: routine = modname//':init_lentic_parameters_jsbach'
+    SUBROUTINE init_flake_parameters_jsbach
+      CHARACTER(len=*), PARAMETER :: routine = modname//':init_flake_parameters_jsbach'
 
       ! As a first step, keep lake depths constant
       depth_w   = 10.0_wp  
@@ -125,18 +125,18 @@ MODULE mo_lentic_parameters
       c_albice_MR = 95.6_wp ! (Mironov and Ritter 2004)
 
 
-    END SUBROUTINE init_lentic_parameters_jsbach
+    END SUBROUTINE init_flake_parameters_jsbach
   
     ! ======================================================================================================= !
-    !> initialize QUINCY specific parameters for the process: lentic
+    !> initialize QUINCY specific parameters for the process: flake
     !>
-    ! SUBROUTINE init_lentic_parameters_quincy
+    ! SUBROUTINE init_flake_parameters_quincy
     !   USE mo_jsb_physical_constants,    ONLY: Tzero
     !   ! ----------------------------------------------------------------------------------------------------- !
-    !   CHARACTER(len=*), PARAMETER :: routine = modname//':init_lentic_parameters_quincy'
+    !   CHARACTER(len=*), PARAMETER :: routine = modname//':init_flake_parameters_quincy'
   
-    ! END SUBROUTINE init_lentic_parameters_quincy
+    ! END SUBROUTINE init_flake_parameters_quincy
   
 #endif
-END MODULE mo_lentic_parameters
+END MODULE mo_flake_parameters
   

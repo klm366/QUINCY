@@ -1,5 +1,5 @@
 !>
-!! @brief Initialization of the the lentic memory.
+!! @brief Initialization of the the flake memory.
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg
@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_lentic_init
+MODULE mo_flake_init
 #ifndef __NO_JSBACH__
   
   USE mo_kind,              ONLY: wp
@@ -24,30 +24,30 @@ MODULE mo_lentic_init
   !USE mo_jsb_class,         ONLY: get_model
   !USE mo_jsb_io_netcdf,     ONLY: t_input_file !, jsb_netcdf_open_input
 
-  dsl4jsb_Use_processes LENTIC_
-  dsl4jsb_Use_config(LENTIC_)
-  dsl4jsb_Use_memory(LENTIC_)
+  dsl4jsb_Use_processes FLAKE_
+  dsl4jsb_Use_config(FLAKE_)
+  dsl4jsb_Use_memory(FLAKE_)
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: lentic_init
+  PUBLIC :: flake_init
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_lentic_init'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_flake_init'
 
 CONTAINS
 
   !
-  !> Intialize lentic process (after memory has been set up)
+  !> Intialize flake process (after memory has been set up)
   !
-  SUBROUTINE lentic_init(tile)
+  SUBROUTINE flake_init(tile)
     USE mo_jsb_time,         ONLY: timestep_in_days
-    USE mo_lentic_constants, ONLY : tpl_T_r, &
+    USE mo_flake_constants, ONLY : tpl_T_r, &
                                   & tpl_T_f
     
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':lentic_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':flake_init'
     
     dsl4jsb_Real2D_onDomain :: &
       & c_t   , &
@@ -61,20 +61,20 @@ CONTAINS
       !& T_snow, &
       & T_wML
 
-    dsl4jsb_Def_memory(LENTIC_)
-    dsl4jsb_Get_memory(LENTIC_)
+    dsl4jsb_Def_memory(FLAKE_)
+    dsl4jsb_Get_memory(FLAKE_)
 
     IF (tile%contains_lake) THEN
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, c_t)    ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, h_ice)  ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, h_ML)   ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, h_snow) ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, T_bot)  ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, T_lice) ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, T_mnw)  ! OUT
-      ! dsl4jsb_Get_var2D_onDomain(LENTIC_, T_sfc)  ! OUT
-      ! dsl4jsb_Get_var2D_onDomain(LENTIC_, T_snow) ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, T_wML)  ! OUT
+      dsl4jsb_Get_var2D_onDomain(FLAKE_, c_t)    ! OUT
+      dsl4jsb_Get_var2D_onDomain(FLAKE_, h_ice)  ! OUT
+      dsl4jsb_Get_var2D_onDomain(FLAKE_, h_ML)   ! OUT
+      dsl4jsb_Get_var2D_onDomain(FLAKE_, h_snow) ! OUT
+      dsl4jsb_Get_var2D_onDomain(FLAKE_, T_bot)  ! OUT
+      dsl4jsb_Get_var2D_onDomain(FLAKE_, T_lice) ! OUT
+      dsl4jsb_Get_var2D_onDomain(FLAKE_, T_mnw)  ! OUT
+      ! dsl4jsb_Get_var2D_onDomain(FLAKE_, T_sfc)  ! OUT
+      ! dsl4jsb_Get_var2D_onDomain(FLAKE_, T_snow) ! OUT
+      dsl4jsb_Get_var2D_onDomain(FLAKE_, T_wML)  ! OUT
 
       c_t         = 0.5_wp 
       h_ice       = 0.0_wp
@@ -89,8 +89,8 @@ CONTAINS
 
     END IF
 
-  END SUBROUTINE lentic_init
+  END SUBROUTINE flake_init
   
 #endif
-END MODULE mo_lentic_init
+END MODULE mo_flake_init
   

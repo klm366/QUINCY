@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the routines for the lentic processes based on FLake 
+!! @brief Contains the routines for the flake processes based on FLake 
 !!
 !! @author
 !!  Dmitrii Mironov, DWD
@@ -20,7 +20,7 @@
 !!  and other FLake variables one time step.
 !!  At the moment, the Euler explicit scheme is used.
 
-MODULE mo_lentic_process
+MODULE mo_flake_process
 #ifndef __NO_JSBACH__
   
     USE mo_kind,              ONLY: wp
@@ -35,7 +35,7 @@ MODULE mo_lentic_process
       &   calc_lake_temp_stratification, &
       &   calc_surface_temperature
 
-    CHARACTER(len=*), PARAMETER :: modname = 'mo_lentic_process'
+    CHARACTER(len=*), PARAMETER :: modname = 'mo_flake_process'
     
   CONTAINS
   
@@ -64,7 +64,7 @@ MODULE mo_lentic_process
       !  the mean radiation flux over the mixed layer,
       !  and the mean radiation flux over the thermocline.
 
-      USE mo_lentic_parameters , ONLY : & 
+      USE mo_flake_parameters , ONLY : & 
         depth_w               , & ! lake depth, constant as a first attempt
         h_Snow_min            , & ! Minimum snow thickness [m]
         h_Ice_min             , & ! Minimum ice thickness [m]
@@ -186,7 +186,7 @@ MODULE mo_lentic_process
       !  Computes the buoyancy parameter,
       !  using a quadratic equation of state for the fresh-water.
       
-      USE mo_lentic_constants,  ONLY: &
+      USE mo_flake_constants,  ONLY: &
         & tpl_T_r                   , & ! Temperature of maximum density of fresh water [K]
         & tpl_a_T                       ! Constant in the fresh-water equation of state [K^{-2}]
       
@@ -219,12 +219,12 @@ MODULE mo_lentic_process
       & Phi_T_pr0   & ! out
       )
 
-      USE mo_lentic_constants,  ONLY: &
+      USE mo_flake_constants,  ONLY: &
         & tpl_kappa_w,   &
         & Phi_T_pr0_1,   &
         & Phi_T_pr0_2
 
-      USE mo_lentic_parameters, ONLY: &
+      USE mo_flake_parameters, ONLY: &
         & depth_w,       &
         & h_Ice_min,     &
         & h_ML_min,      &
@@ -280,7 +280,7 @@ MODULE mo_lentic_process
       & l_ice_create & ! out
       )
     
-      USE mo_lentic_constants,  ONLY: &
+      USE mo_flake_constants,  ONLY: &
         & C_I_MR,        &
         & tpl_c_I,       &
         & tpl_kappa_I,   &
@@ -291,7 +291,7 @@ MODULE mo_lentic_process
         & Phi_I_pr1_lin, &
         & Phi_I_ast_MR
         
-      USE mo_lentic_parameters,  ONLY: &
+      USE mo_flake_parameters,  ONLY: &
         & C_I_lin,       &
         & c_small,       &
         & h_Ice_min,     &
@@ -458,7 +458,7 @@ MODULE mo_lentic_process
       & w_star_sfc            & ! out
       )
 
-      USE mo_lentic_constants,  ONLY: &
+      USE mo_flake_constants,  ONLY: &
         & c_cbl_1,      &
         & c_cbl_2,      &
         & c_sbl_ZM_i,   &
@@ -473,7 +473,7 @@ MODULE mo_lentic_process
         & tpl_T_f,      &
         & tpl_T_r
 
-      USE mo_lentic_parameters,  ONLY: &
+      USE mo_flake_parameters,  ONLY: &
         & c_small,      &
         & C_T_min,      &
         & C_T_max,      &
@@ -804,7 +804,7 @@ MODULE mo_lentic_process
       & T_wML,  & ! in
       & T_sfc   ) ! out
 
-      USE mo_lentic_parameters,  ONLY: &
+      USE mo_flake_parameters,  ONLY: &
         & h_Snow_min, &
         & h_Ice_min   
 
@@ -831,4 +831,4 @@ MODULE mo_lentic_process
     END SUBROUTINE calc_surface_temperature
 
 #endif
-END MODULE mo_lentic_process
+END MODULE mo_flake_process

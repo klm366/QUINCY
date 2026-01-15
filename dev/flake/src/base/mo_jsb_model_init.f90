@@ -20,7 +20,7 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, FAGE_, A2L_, VEG_, SB_, SPQ_, LENTIC_
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, FAGE_, A2L_, VEG_, SB_, SPQ_, FLAKE_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(FAGE_)
@@ -188,7 +188,7 @@ CONTAINS
     USE mo_turb_init,           ONLY: turb_init
     USE mo_sse_init,            ONLY: sse_init, init_soil_properties
     USE mo_hydro_init,          ONLY: hydro_init
-    USE mo_lentic_init,         ONLY: lentic_init
+    USE mo_flake_init,         ONLY: flake_init
     USE mo_rad_init,            ONLY: rad_init
     USE mo_atm2land_init,       ONLY: atm2land_init
     USE mo_assimi_init,         ONLY: assimi_init
@@ -370,7 +370,7 @@ CONTAINS
       END IF
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       CALL model%Queue_task(TURB_,   "surface_roughness")
-      CALL model%Queue_task(LENTIC_, "lentic_wbphysics")
+      CALL model%Queue_task(FLAKE_, "flake_wbphysics")
       CALL model%Queue_task(RAD_,    "albedo")
           ! Albedo is updated at the end of the time step, one time step before the radiation is updated in
           ! the atmosphere. Otherwise, in between, the albedo changes would be consindered in the jsbach
@@ -608,8 +608,8 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        IF (tile%Is_process_active(LENTIC_)) THEN
-          CALL lentic_init(tile)
+        IF (tile%Is_process_active(FLAKE_)) THEN
+          CALL flake_init(tile)
         END IF
       END SELECT
       IF (tile%Is_process_active(A2L_)) THEN

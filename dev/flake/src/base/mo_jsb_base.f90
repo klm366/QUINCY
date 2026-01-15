@@ -49,9 +49,9 @@ CONTAINS
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters_quincy, init_pheno_parameters_jsbach
     USE mo_spq_constants,       ONLY: init_spq_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
-    USE mo_lentic_parameters,   ONLY: init_lentic_parameters_jsbach
+    USE mo_flake_parameters,   ONLY: init_flake_parameters_jsbach
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, LENTIC_
+    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, FLAKE_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -63,7 +63,7 @@ CONTAINS
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
-    dsl4jsb_Use_config(LENTIC_)
+    dsl4jsb_Use_config(FLAKE_)
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
 
@@ -77,7 +77,7 @@ CONTAINS
     dsl4jsb_Def_config(FLCC_)
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
-    dsl4jsb_Def_config(LENTIC_)
+    dsl4jsb_Def_config(FLAKE_)
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
 
@@ -154,7 +154,7 @@ CONTAINS
            CALL init_pheno_parameters_jsbach
            CALL init_assimi_parameters_jsbach
            CALL init_rad_parameters_jsbach
-           CALL init_lentic_parameters_jsbach
+           CALL init_flake_parameters_jsbach
          END SELECT
        END IF
 
@@ -204,7 +204,7 @@ CONTAINS
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
         dsl4jsb_Get_config(PPLCC_)
-        dsl4jsb_Get_config(LENTIC_)
+        dsl4jsb_Get_config(FLAKE_)
       END SELECT
 
       ! Crosscheck process configs

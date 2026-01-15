@@ -18,7 +18,7 @@
 !!  where fluxes of momentum and of sensible and latent heat 
 !!  at the air-water or air-ice (air-snow) interface are computed. 
 
-MODULE mo_lentic_SfcFlx_process
+MODULE mo_flake_SfcFlx_process
 #ifndef __NO_JSBACH__
   USE mo_kind,              ONLY: wp
       
@@ -28,7 +28,7 @@ MODULE mo_lentic_SfcFlx_process
     &   calc_momsenlat              , &
     &   calc_roughness
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_lentic_SfcFlx_process'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_flake_SfcFlx_process'
 
   CONTAINS
 
@@ -59,7 +59,7 @@ MODULE mo_lentic_SfcFlx_process
                                             cpd                     , & !< Specific heat of air at constant pressure     [J kg^{-1} K^{-1}]
                                             grav                        !< Acceleration due to gravity [m s^{-2}]
 
-    USE mo_lentic_SfcFlx_constants,  ONLY : kappa_q_a               , & !< Molecular diffusivity of air for water vapour [m^{2} s^{-1}]  
+    USE mo_flake_SfcFlx_constants,  ONLY : kappa_q_a               , & !< Molecular diffusivity of air for water vapour [m^{2} s^{-1}]  
                                             c_free_conv             , & !< Constant in the expressions for fluxes in free convection 
                                             c_Karman                , & !< The von Karman constant 
                                             c_MO_u_exp              , & !< Constant of the MO theory (wind, exponent)
@@ -74,13 +74,13 @@ MODULE mo_lentic_SfcFlx_process
                                             Pr_neutral              , & !< Turbulent Prandtl number at neutral static stability 
                                             Sc_neutral                  !< Turbulent Schmidt number at neutral static stability
 
-    USE mo_lentic_parameters,        ONLY : c_accur_sf              , & !< A small number (accuracy)
+    USE mo_flake_parameters,        ONLY : c_accur_sf              , & !< A small number (accuracy)
                                             u_star_min_sf           , & !< Minimum value of friction velocity [m s^{-1}]
                                             u_wind_min_sf           , & !< Minimum wind speed [m s^{-1}]
                                             c_small                 , & !< A small number
                                             h_Ice_min                   !< Minimum ice thickness [m]
 
-    USE mo_lentic_constants,         ONLY : con_m                   , & !< Kinematic viscosity of dry air         [m^2/s]  
+    USE mo_flake_constants,         ONLY : con_m                   , & !< Kinematic viscosity of dry air         [m^2/s]  
                                             con_h                       !< Scalar conductivity of dry air         [m^2/s]  
 
     !$claw model-data
@@ -397,13 +397,13 @@ MODULE mo_lentic_SfcFlx_process
     !  in terms of the roughness Reynolds number (Andreas 2002).  
     
     USE mo_jsb_physical_constants,    ONLY: grav                        !< Acceleration due to gravity [m s^{-2}]
-    USE mo_lentic_constants,          ONLY: con_m                       !< Kinematic viscosity of dry air         [m^2/s]  
-    USE mo_lentic_parameters,         ONLY: c_accur_sf              , & !< A small number (accuracy)
+    USE mo_flake_constants,          ONLY: con_m                       !< Kinematic viscosity of dry air         [m^2/s]  
+    USE mo_flake_parameters,         ONLY: c_accur_sf              , & !< A small number (accuracy)
                                             h_Ice_min                ,& !< Minimum ice thickness [m]
                                             u_wind_min_sf               !< Minimum wind speed [m s^{-1}]
 
 
-    USE mo_lentic_SfcFlx_constants,  ONLY : c_Karman                , & !< The von Karman constant 
+    USE mo_flake_SfcFlx_constants,  ONLY : c_Karman                , & !< The von Karman constant 
                                             c_z0u_smooth            , & !< Constant in the expression for z0u (smooth flow) 
                                             c_z0u_rough             , & !< The Charnock constant in the expression for z0u (rough flow)
                                             c_z0u_rough_L           , & !< An increased Charnock constant (used as the upper limit)
@@ -512,4 +512,4 @@ MODULE mo_lentic_SfcFlx_process
 
       
 #endif
-  END MODULE mo_lentic_SfcFlx_process
+  END MODULE mo_flake_SfcFlx_process

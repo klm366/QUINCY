@@ -24,7 +24,7 @@ MODULE mo_jsb_process_factory
   USE mo_turb_memory_class,    ONLY: t_turb_memory
   USE mo_sse_memory_class,     ONLY: t_sse_memory
   USE mo_hydro_memory_class,   ONLY: t_hydro_memory
-  USE mo_lentic_memory_class,  ONLY: t_lentic_memory
+  USE mo_flake_memory_class,  ONLY: t_flake_memory
   USE mo_assimi_memory_class,  ONLY: t_assimi_memory
   USE mo_pheno_memory_class,   ONLY: t_pheno_memory
   USE mo_rad_memory_class,     ONLY: t_rad_memory
@@ -53,8 +53,8 @@ MODULE mo_jsb_process_factory
   USE mo_sse_config_class,     ONLY: t_sse_config
   USE mo_hydro_interface,      ONLY: Register_hydro_tasks
   USE mo_hydro_config_class,   ONLY: t_hydro_config
-  USE mo_lentic_interface,     ONLY: Register_lentic_tasks
-  USE mo_lentic_config_class,  ONLY: t_lentic_config
+  USE mo_flake_interface,     ONLY: Register_flake_tasks
+  USE mo_flake_config_class,  ONLY: t_flake_config
   USE mo_assimi_interface,     ONLY: Register_assimi_tasks
   USE mo_assimi_config_class,  ONLY: t_assimi_config
   USE mo_pheno_interface,      ONLY: Register_pheno_tasks
@@ -94,7 +94,7 @@ MODULE mo_jsb_process_factory
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, TLCC_, TCQ_, ALCC_, FAGE_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, LENTIC_
+    & PPLCC_, TLCC_, TCQ_, ALCC_, FAGE_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, FLAKE_
 
   IMPLICIT NONE
   PRIVATE
@@ -154,9 +154,9 @@ CONTAINS
     CASE (HYDRO_)
       CALL Register_hydro_tasks(return_ptr, model_id)
       ALLOCATE(t_hydro_config::return_ptr%config)
-    CASE (LENTIC_)
-      CALL Register_lentic_tasks(return_ptr, model_id)
-      ALLOCATE(t_lentic_config::return_ptr%config)
+    CASE (FLAKE_)
+      CALL Register_flake_tasks(return_ptr, model_id)
+      ALLOCATE(t_flake_config::return_ptr%config)
     CASE (ASSIMI_)
       CALL Register_assimi_tasks(return_ptr, model_id)
       ALLOCATE(t_assimi_config::return_ptr%config)
@@ -239,7 +239,7 @@ CONTAINS
     USE mo_turb_memory_class,    ONLY: max_no_of_turb_vars => max_no_of_vars
     USE mo_sse_memory_class,     ONLY: max_no_of_sse_vars => max_no_of_vars
     USE mo_hydro_memory_class,   ONLY: max_no_of_hydro_vars => max_no_of_vars
-    USE mo_lentic_memory_class,  ONLY: max_no_of_lentic_vars => max_no_of_vars
+    USE mo_flake_memory_class,  ONLY: max_no_of_flake_vars => max_no_of_vars
     USE mo_assimi_memory_class,  ONLY: max_no_of_assimi_vars => max_no_of_vars
     USE mo_pheno_memory_class,   ONLY: max_no_of_pheno_vars => max_no_of_vars
     USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
@@ -280,9 +280,9 @@ CONTAINS
     CASE (HYDRO_)
       ALLOCATE(t_hydro_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_hydro_vars
-    CASE (LENTIC_)
-      ALLOCATE(t_lentic_memory::return_ptr)
-      return_ptr%max_no_of_vars = max_no_of_lentic_vars
+    CASE (FLAKE_)
+      ALLOCATE(t_flake_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_flake_vars
     CASE (ASSIMI_)
       ALLOCATE(t_assimi_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_assimi_vars
