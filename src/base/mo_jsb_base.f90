@@ -49,6 +49,7 @@ CONTAINS
     USE mo_jsb_grid,            ONLY: Register_vgrid, Get_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, ZAXIS_GENERIC
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
+    USE mo_flake_parameters,    ONLY: init_flake_parameters_jsbach
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT
     USE mo_rad_parameters,      ONLY: init_rad_parameters
@@ -64,8 +65,8 @@ CONTAINS
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 #endif
 
-    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_, VEG_, ALCC_
+    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, FLAKE_, &
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -78,6 +79,7 @@ CONTAINS
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
     dsl4jsb_Use_config(ALCC_)
+    dsl4jsb_Def_config(FLAKE_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(SPQ_)
@@ -192,6 +194,7 @@ CONTAINS
          CASE (MODEL_JSBACH)
            CALL message(TRIM(routine), 'starting init of JSBACH process parameters')
            CALL init_pheno_parameters
+           CALL init_flake_parameters_jsbach
          END SELECT
        END IF
 
@@ -276,7 +279,7 @@ CONTAINS
         dsl4jsb_Get_config(FAGE_)
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
-
+        dsl4jsb_Get_config(FLAKE_)
       END SELECT
 
       IF (TRIM(model%config%tpe_scheme) /= '') THEN
@@ -285,6 +288,11 @@ CONTAINS
           CALL message('    ', '... using lakes')
         ELSE
           CALL message('    ', '... not using lakes')
+        END IF
+        IF (model%config%use_flake) THEN
+          CALL message('    ', '... using FLake')
+        ELSE
+          CALL message('    ', '... not using FLake')
         END IF
         IF (model%config%use_glacier) THEN
           CALL message('    ', '... using glaciers')
