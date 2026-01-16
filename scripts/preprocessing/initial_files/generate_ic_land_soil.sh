@@ -30,7 +30,6 @@ atmGridID=${atmGridID}
 
 path_bc=${bc_file_dir}
 work_dir=${work_dir}
-pool_prepare=${pool_prepare}
 
 cdo=${cdo}
 rm=$rm
@@ -51,30 +50,23 @@ echo "${prog}: Generating ${file_ic_soil}:"
 var_list="init_moist surf_temp layer_moist snow"
 
 # Preparations
-jan_surf_file=${pool_prepare}/05/ECHAM6/05_jan_surf.nc
 ini_mon=01
-${cdo}  ifthen land.nc -mul notglac.nc -remap,${icon_grid},wgt05.nc -setmisstodis \
-  -ifthen -selvar,SLM ${jan_surf_file} -selvar,WS ${jan_surf_file}  ${atmGridID}_WS.tmp
 
-# init_moist
-# ----------------------
-# Initial soil moisture is limited by the field capacity and should be higher than
-# 50% to prevent vegetation die back due to initialization.
-# In desert regions (veg_ratio_max < 20%), soil moisture is initialized below the
-# wilting point.
-${cdo} mul ${atmGridID}_soil_field_cap.keep ${atmGridID}_root_depth.keep \
-   field_cap_rootzone.tmp
-${cdo} ltc,0.2 ${atmGridID}_veg_ratio_max_12pfts.keep desert-mask.nc
-${cdo} ifthenelse desert-mask.nc \
-         -mulc,0.3 field_cap_rootzone.tmp \
-         -mulc,0.5 field_cap_rootzone.tmp  init_moist_min.tmp
-${cdo} -setattribute,init_moist@long_name="Soil water content" \
-    -setattribute,init_moist@units="m water equivalent" \
-    -setmissval,-9.e+33 -setname,init_moist \
-    -ifthen land.nc \
-    -min field_cap_rootzone.tmp -max ${atmGridID}_WS.tmp init_moist_min.tmp \
-    ${atmGridID}_init_moist.nc
+# Assume relative soil moisture from veg_ratio_max (1-desert)
+# We define masks for specific ranges of veg_ration_max, i.e. 0.0-0.5, 0.5-0.6, etc. ...
+${cdo} -setrtoc,-1.,0.0,0.0 -setrtoc,0.0,0.5,1.0 -setrtoc,0.5,1.0,-1. ${atmGridID}_veg_ratio_max.keep veg_ratio_max.00-05.tmp
+${cdo} -setrtoc,0.0,0.5,0.0 -setrtoc,0.5,0.6,1.0 -setrtoc,0.6,1.0,0.0 ${atmGridID}_veg_ratio_max.keep veg_ratio_max.05-06.tmp
+${cdo} -setrtoc,0.0,0.6,0.0 -setrtoc,0.6,0.9,1.0 -setrtoc,0.9,1.0,0.0 ${atmGridID}_veg_ratio_max.keep veg_ratio_max.06-09.tmp
+${cdo} -setrtoc,0.0,0.9,0.0 -setrtoc,0.9,.95,1.0 -setrtoc,.95,1.0,0.0 ${atmGridID}_veg_ratio_max.keep veg_ratio_max.09-95.tmp
+${cdo} -setrtoc,0.0,.95,0.0 -setrtoc,.99,1.0,1.0                      ${atmGridID}_veg_ratio_max.keep veg_ratio_max.95-10.tmp
+rm -f init_moist_rel.tmp
 
+# ... and assign a specific relative soil moisture values for each of the masks.
+${cdo} mul non-glac-land-mask.nc -enssum -mulc,0.35 veg_ratio_max.00-05.tmp \
+                                         -mulc,0.4  veg_ratio_max.05-06.tmp \
+                                         -mulc,0.5  veg_ratio_max.06-09.tmp \
+                                         -mulc,0.8  veg_ratio_max.09-95.tmp \
+                                                    veg_ratio_max.95-10.tmp init_moist_rel.tmp
 
 for var in ${var_list}; do
   {
@@ -83,23 +75,26 @@ for var in ${var_list}; do
   # ----------------------
     init_moist )
   # ----------------------
-      # Done above - outside parallel loop
+      # Relative rootzone soil moisture calculated above - outside parallel loop
+      # Convert relative to absolute soil moisture: [m3/m3] -> [m water equivalent]
+      ${cdo} -setattribute,init_moist@long_name="Soil water content" \
+          -setattribute,init_moist@units="m water equivalent" \
+          -setmissval,-9.e+33 -setname,init_moist \
+          -mul init_moist_rel.tmp \
+          -mul ${atmGridID}_soil_field_cap.keep  ${atmGridID}_root_depth.keep \
+          ${atmGridID}_${var}.nc
       ;;
   # ----------------------
     layer_moist )
   # ----------------------
       levels="0.065 0.319 1.232 4.134 9.834"
 
-      # Relative root zone moisture
-      ${cdo} setmisstoc,0. -div ${atmGridID}_init_moist.nc ${atmGridID}_root_depth.keep \
-          init_moist_rel.tmp
-
       above=0.
       for lev in ${levels}; do
          ldepth=$(echo "${lev} - ${above}" | bc)                    # Current layer depth
          ${cdo} minc,${lev} -subc,${above} ${atmGridID}_soil_depth.keep sdepth.tmp  # Soil depth in layer
          ${cdo} ifthenelse -gtc,0 sdepth.tmp \
-               -mul init_moist_rel.tmp sdepth.tmp \
+               -mul init_moist_rel.tmp -mul ${atmGridID}_soil_field_cap.keep sdepth.tmp \
                zero.nc   ${var}_${lev}.tmp1
          ncecat -u soillev ${var}_${lev}.tmp1 ${var}_${lev}.tmp2    # Add new record dimension "soillev"
          ncecat ${var}_${lev}.tmp2 ${var}_${lev}.tmp3               # Convert soilev to non-record dim.

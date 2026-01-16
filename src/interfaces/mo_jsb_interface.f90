@@ -38,7 +38,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_physical_constants, ONLY: cvdifts
   USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
-  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_
 
   IMPLICIT NONE
   PRIVATE
@@ -717,6 +717,8 @@ CONTAINS
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
 #ifndef __NO_QUINCY__
+    USE mo_q_veg_interface,    ONLY: global_q_veg_diagnostics
+    USE mo_q_sb_interface,     ONLY: global_q_sb_diagnostics
     USE mo_veg_util,           ONLY: test_carbon_conservation
 #endif
     dsl4jsb_Use_processes SEB_
@@ -813,6 +815,16 @@ CONTAINS
     IF (model%processes(PPLCC_)%p%config%active) THEN
       CALL global_pplcc_diagnostics(tile)
     END IF
+#ifndef __NO_QUINCY__
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      IF (model%processes(VEG_)%p%config%active) THEN
+        CALL global_q_veg_diagnostics(tile)
+      END IF
+      IF (model%processes(SB_)%p%config%active) THEN
+        CALL global_q_sb_diagnostics(tile)
+      END IF
+    END IF
+#endif
 
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())

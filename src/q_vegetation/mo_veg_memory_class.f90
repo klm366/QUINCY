@@ -32,7 +32,7 @@ MODULE mo_veg_memory_class
     &                                  VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID,                           &
     &                                  VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_HARVEST_TO_PROD_ID, VEG_BGCM_HARVEST_LITTER_ID
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
   USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
 
@@ -79,16 +79,31 @@ MODULE mo_veg_memory_class
       & veg_litterfall_total_c13  , &     !< sum of all veg_litterfall%*%carbon13    [mol m-2 timestep-1]
       & veg_litterfall_total_c14  , &     !< sum of all veg_litterfall%*%carbon14    [mol m-2 timestep-1]
       & veg_litterfall_total_n15          !< sum of all veg_litterfall%*%nitrogen15  [mol m-2 timestep-1]
+    !> special output for diagnostic purposes (TRENDY/CMIP)
     TYPE(t_jsb_var_real2d) :: &
       & veg_pool_leaf_c           , &     !< leaf carbon                  [mol m-2]
       & veg_pool_leaf_n           , &     !< leaf nitrogen                [mol m-2]
+      & veg_pool_leaf_p           , &     !< leaf phosphorus              [mol m-2]
       & veg_pool_wood_c           , &     !< sapwood + heartwood carbon   [mol m-2]
       & veg_pool_wood_n           , &     !< sapwood + heartwood nitrogen [mol m-2]
+      & veg_pool_wood_p           , &     !< sapwood + heartwood phosphorus [mol m-2]
       & veg_pool_fine_root_c      , &     !< fine root carbon             [mol m-2]
-      & veg_pool_fine_root_n              !< fine root nitrogen           [mol m-2]
+      & veg_pool_fine_root_n      , &     !< fine root nitrogen           [mol m-2]
+      & veg_pool_fine_root_p              !< fine root phosphorus         [mol m-2]
+    !> output for mass balance of products pool
     TYPE(t_jsb_var_real2d) :: &
       & veg_products_total_c, &           !< total c in product pools     [mol m-2]
-      & veg_products_total_n              !< total n in product pools     [mol m-2]
+      & veg_products_total_n, &           !< total n in product pools     [mol m-2]
+      & veg_products_total_p, &           !< total p in product pools     [mol m-2]
+      & veg_products_total_c13, &         !< total c13 in product pools   [mol m-2]
+      & veg_products_total_c14, &         !< total c14 in product pools   [mol m-2]
+      & veg_products_total_n15, &         !< total n15 in product pools   [mol m-2]
+      & veg_products_decay_c, &           !< C lost due to products decay [micro-mol m-2 s-1]
+      & veg_products_decay_n, &           !< N lost due to products decay [micro-mol m-2 s-1]
+      & veg_products_decay_p, &           !< P lost due to products decay [micro-mol m-2 s-1]
+      & veg_products_decay_c13, &         !< C13 lost due to products decay [micro-mol m-2 s-1]
+      & veg_products_decay_c14, &         !< C14 lost due to products decay [micro-mol m-2 s-1]
+      & veg_products_decay_n15            !< N15 lost due to products decay [micro-mol m-2 s-1]
     !------------------------------------------------------------------------------------------------------ !
     !>basic plant 2D
     !>
@@ -343,6 +358,16 @@ MODULE mo_veg_memory_class
       & net_biosphere_production_c13  , & !< Balance between carbon13 losses and gains [micro-mol CO2 m-2 s-1]
       & net_biosphere_production_c14  , & !< Balance between carbon14 losses and gains [micro-mol CO2 m-2 s-1]
       & biological_n_fixation         !< = n_fixation (VEG_) + SUM(asymb_n_fixation (SB_), across soil_layers) [micro-mol N m-2 s-1]
+
+    ! 1.13 Diagnostic global carbon sums e.g. for monitoring (only available with ICON)
+    TYPE(t_jsb_var_real1d) ::        &
+      & total_veg_c_gsum, &        ! Global sum of all vegetation carbon pools [PgC]
+      & total_prod_c_gsum, &       ! Global sum of all product carbon pools [PgC]
+      & lai_gmean, &               ! Global average of LAI [m2 m-2]
+      & fract_fpc_gmean, &         ! Global average of foliar projected coverage [unitless]
+      & gpp_gsum, &                ! Global sum of all GPP [PgC yr-1]
+      & npp_gsum, &                ! Global sum of all NPP [PgC yr-1]
+      & nuptake_gsum               ! Global sum of all vegetation N uptake [TgN yr-1]
 
   CONTAINS
     PROCEDURE :: Init => Init_veg_memory
@@ -812,7 +837,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_total_n', mem%veg_pool_total_n, &
         & hgrid, surface, &
@@ -823,7 +849,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_total_p', mem%veg_pool_total_p, &
         & hgrid, surface, &
@@ -831,10 +858,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_total_c13', mem%veg_pool_total_c13, &
         & hgrid, surface, &
@@ -842,10 +870,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_total_c14', mem%veg_pool_total_c14, &
         & hgrid, surface, &
@@ -853,10 +882,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_total_n15', mem%veg_pool_total_n15, &
         & hgrid, surface, &
@@ -867,7 +897,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       ! diagnostic variables specific to QUINCY pools in ICON-Land
       CALL mem%Add_var('veg_growth_total_c', mem%veg_growth_total_c, &
@@ -879,7 +910,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_growth_total_n', mem%veg_growth_total_n, &
         & hgrid, surface, &
@@ -890,7 +922,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_growth_total_p', mem%veg_growth_total_p, &
         & hgrid, surface, &
@@ -901,7 +934,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_growth_total_c13', mem%veg_growth_total_c13, &
         & hgrid, surface, &
@@ -912,7 +946,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_growth_total_c14', mem%veg_growth_total_c14, &
         & hgrid, surface, &
@@ -923,7 +958,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_growth_total_n15', mem%veg_growth_total_n15, &
         & hgrid, surface, &
@@ -934,7 +970,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       ! diagnostic variables specific to QUINCY pools in ICON-Land
       CALL mem%Add_var('veg_litterfall_total_c', mem%veg_litterfall_total_c, &
@@ -946,7 +983,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_litterfall_total_n', mem%veg_litterfall_total_n, &
         & hgrid, surface, &
@@ -957,7 +995,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_litterfall_total_p', mem%veg_litterfall_total_p, &
         & hgrid, surface, &
@@ -968,7 +1007,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_litterfall_total_c13', mem%veg_litterfall_total_c13, &
         & hgrid, surface, &
@@ -979,7 +1019,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_litterfall_total_c14', mem%veg_litterfall_total_c14, &
         & hgrid, surface, &
@@ -990,7 +1031,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_litterfall_total_n15', mem%veg_litterfall_total_n15, &
         & hgrid, surface, &
@@ -998,10 +1040,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_leaf_c', mem%veg_pool_leaf_c, &
         & hgrid, surface, &
@@ -1012,7 +1055,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_leaf_n', mem%veg_pool_leaf_n, &
         & hgrid, surface, &
@@ -1023,7 +1067,20 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('veg_pool_leaf_p', mem%veg_pool_leaf_p, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_leaf_p', 'mol m-2', 'vegetation pool leaf phosphorus'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_wood_c', mem%veg_pool_wood_c, &
         & hgrid, surface, &
@@ -1034,7 +1091,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_wood_n', mem%veg_pool_wood_n, &
         & hgrid, surface, &
@@ -1045,7 +1103,20 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('veg_pool_wood_p', mem%veg_pool_wood_p, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_wood_p', 'mol m-2', 'vegetation pool sapwood + heartwood phosphorus'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_fine_root_c', mem%veg_pool_fine_root_c, &
         & hgrid, surface, &
@@ -1056,7 +1127,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_fine_root_n', mem%veg_pool_fine_root_n, &
         & hgrid, surface, &
@@ -1067,7 +1139,20 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('veg_pool_fine_root_p', mem%veg_pool_fine_root_p, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_fine_root_p', 'mol m-2', 'vegetation pool fine root phosphorus'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
         CALL mem%Add_var('veg_products_total_c', mem%veg_products_total_c, &
@@ -1079,18 +1164,140 @@ CONTAINS
           & output_level = BASIC, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('veg_products_total_n', mem%veg_products_total_n, &
           & hgrid, surface, &
-          & t_cf('veg_products_total_n', 'mol m-2', 'total n in product pools'), &
+          & t_cf('veg_products_total_n', 'mol m-2', 'total N in product pools'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = BASIC, &
+          & loutput = .TRUE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('veg_products_total_p', mem%veg_products_total_p, &
+          & hgrid, surface, &
+          & t_cf('veg_products_total_p', 'mol m-2', 'total P in product pools'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .TRUE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('veg_products_total_c13', mem%veg_products_total_c13, &
+          & hgrid, surface, &
+          & t_cf('veg_products_total_c13', 'mol m-2', 'total C13 in product pools'), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
           & output_level = MEDIUM, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('veg_products_total_c14', mem%veg_products_total_c14, &
+          & hgrid, surface, &
+          & t_cf('veg_products_total_c14', 'mol m-2', 'total C14 in product pools'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = MEDIUM, &
+          & loutput = .TRUE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('veg_products_total_n15', mem%veg_products_total_n15, &
+          & hgrid, surface, &
+          & t_cf('veg_products_total_n15', 'mol m-2', 'total N15 in product pools'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .TRUE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('veg_products_decay_c', mem%veg_products_decay_c, &
+          & hgrid, surface, &
+          & t_cf('veg_products_decay_c', 'micro-mol m-2 s-1', 'C lost to atmosphere due to product decay'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = BASIC, &
+          & loutput = .TRUE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('veg_products_decay_n', mem%veg_products_decay_n, &
+          & hgrid, surface, &
+          & t_cf('veg_products_decay_n', 'micro-mol m-2 s-1', 'N lost from land due to product decay'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = BASIC, &
+          & loutput = .TRUE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('veg_products_decay_p', mem%veg_products_decay_p, &
+          & hgrid, surface, &
+          & t_cf('veg_products_decay_p', 'micro-mol m-2 s-1', 'P lost from land due to product decay'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .TRUE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('veg_products_decay_c13', mem%veg_products_decay_c13, &
+          & hgrid, surface, &
+          & t_cf('veg_products_decay_c13', 'micro-mol m-2 s-1', 'C13 lost to atmosphere due to product decay'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = MEDIUM, &
+          & loutput = .TRUE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('veg_products_decay_c14', mem%veg_products_decay_c14, &
+          & hgrid, surface, &
+          & t_cf('veg_products_decay_c14', 'micro-mol m-2 s-1', 'C14 lost to atmosphere due to product decay'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = MEDIUM, &
+          & loutput = .TRUE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('veg_products_decay_n15', mem%veg_products_decay_n15, &
+          & hgrid, surface, &
+          & t_cf('veg_products_decay_n15', 'micro-mol m-2 s-1', 'N15 lost from land due to product decay'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .TRUE., &
+          & lrestart = .FALSE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
       END IF
 
       ! --------------------------------------------------------------------------------------------------- !
@@ -1105,7 +1312,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('diameter', mem%diameter, &
         & hgrid, surface, &
@@ -1116,7 +1324,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('dens_ind', mem%dens_ind, &
         & hgrid, surface, &
@@ -1127,7 +1336,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       ! grib setting for: lai differentiation box tile and other tiles
       ! TODO this is done because ... (ask Reiner Schnur, MPI-M)
@@ -1146,7 +1356,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sai', mem%sai, &
         & hgrid, surface, &
@@ -1154,10 +1365,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & grib2_desc, &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('target_cn_leaf', mem%target_cn_leaf, &
         & hgrid, surface, &
@@ -1165,7 +1377,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1176,7 +1388,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1198,7 +1410,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1220,7 +1432,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1231,7 +1443,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1253,7 +1465,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1264,7 +1476,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1275,7 +1487,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1286,7 +1498,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1297,10 +1509,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('kstar_labile', mem%kstar_labile, &
         & hgrid, surface, &
@@ -1308,7 +1521,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1319,7 +1532,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1351,7 +1564,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1362,10 +1575,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('cumm_lai_cl', mem%cumm_lai_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -1373,10 +1587,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('target_cn_fine_root', mem%target_cn_fine_root, &
         & hgrid, surface, &
@@ -1384,7 +1599,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1395,7 +1610,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1406,7 +1621,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1417,7 +1632,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1428,7 +1643,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1439,7 +1654,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1450,7 +1665,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1461,7 +1676,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1472,10 +1687,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('fn_chl_cl', mem%fn_chl_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -1483,7 +1699,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
         & initval_r = 0.0_wp)
@@ -1494,7 +1710,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1505,7 +1721,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1516,7 +1732,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1538,7 +1754,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1549,10 +1765,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('maint_respiration', mem%maint_respiration, &
         & hgrid, surface, &
@@ -1563,7 +1780,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('maint_respiration_c13', mem%maint_respiration_c13, &
         & hgrid, surface, &
@@ -1574,7 +1792,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('maint_respiration_c14', mem%maint_respiration_c14, &
         & hgrid, surface, &
@@ -1585,7 +1804,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('growth_respiration', mem%growth_respiration, &
         & hgrid, surface, &
@@ -1596,7 +1816,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('growth_respiration_c13', mem%growth_respiration_c13, &
         & hgrid, surface, &
@@ -1607,7 +1828,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('growth_respiration_c14', mem%growth_respiration_c14, &
         & hgrid, surface, &
@@ -1618,7 +1840,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_transform_respiration', mem%n_transform_respiration, &
         & hgrid, surface, &
@@ -1629,7 +1852,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_fixation_respiration', mem%n_fixation_respiration, &
         & hgrid, surface, &
@@ -1640,7 +1864,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_processing_respiration', mem%n_processing_respiration, &
         & hgrid, surface, &
@@ -1651,7 +1876,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_processing_respiration_c13', mem%n_processing_respiration_c13, &
         & hgrid, surface, &
@@ -1662,7 +1888,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_processing_respiration_c14', mem%n_processing_respiration_c14, &
         & hgrid, surface, &
@@ -1673,7 +1900,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('npp', mem%npp, &
         & hgrid, surface, &
@@ -1684,7 +1912,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('npp_c13', mem%npp_c13, &
         & hgrid, surface, &
@@ -1692,10 +1921,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('npp_c14', mem%npp_c14, &
         & hgrid, surface, &
@@ -1703,10 +1933,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('uptake_nh4', mem%uptake_nh4, &
         & hgrid, surface, &
@@ -1717,7 +1948,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('uptake_nh4_n15', mem%uptake_nh4_n15, &
         & hgrid, surface, &
@@ -1728,7 +1960,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('uptake_no3', mem%uptake_no3, &
         & hgrid, surface, &
@@ -1739,7 +1972,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('uptake_no3_n15', mem%uptake_no3_n15, &
         & hgrid, surface, &
@@ -1750,7 +1984,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('uptake_po4', mem%uptake_po4, &
         & hgrid, surface, &
@@ -1761,7 +1996,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_fixation', mem%n_fixation, &
         & hgrid, surface, &
@@ -1772,7 +2008,8 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_fixation_n15', mem%n_fixation_n15, &
         & hgrid, surface, &
@@ -1783,7 +2020,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_leaf_n', mem%recycling_leaf_n, &
         & hgrid, surface, &
@@ -1794,7 +2032,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_leaf_n15', mem%recycling_leaf_n15, &
         & hgrid, surface, &
@@ -1805,7 +2044,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_leaf_p', mem%recycling_leaf_p, &
         & hgrid, surface, &
@@ -1816,7 +2056,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_fine_root_n', mem%recycling_fine_root_n, &
         & hgrid, surface, &
@@ -1827,7 +2068,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_fine_root_n15', mem%recycling_fine_root_n15, &
         & hgrid, surface, &
@@ -1838,7 +2080,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_fine_root_p', mem%recycling_fine_root_p, &
         & hgrid, surface, &
@@ -1849,7 +2092,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_heart_wood_n', mem%recycling_heart_wood_n, &
         & hgrid, surface, &
@@ -1860,7 +2104,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_heart_wood_n15', mem%recycling_heart_wood_n15, &
         & hgrid, surface, &
@@ -1871,7 +2116,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_heart_wood_p', mem%recycling_heart_wood_p, &
         & hgrid, surface, &
@@ -1882,7 +2128,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('net_growth', mem%net_growth, &
         & hgrid, surface, &
@@ -1893,7 +2140,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('herbivory_leaf_resp', mem%herbivory_leaf_resp, &
         & hgrid, surface, &
@@ -1904,7 +2152,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('herbivory_leaf_resp_c13', mem%herbivory_leaf_resp_c13, &
         & hgrid, surface, &
@@ -1915,7 +2164,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('herbivory_leaf_resp_c14', mem%herbivory_leaf_resp_c14, &
         & hgrid, surface, &
@@ -1926,7 +2176,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('herbivory_fruit_resp', mem%herbivory_fruit_resp, &
         & hgrid, surface, &
@@ -1937,7 +2188,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('herbivory_fruit_resp_c13', mem%herbivory_fruit_resp_c13, &
         & hgrid, surface, &
@@ -1948,7 +2200,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('herbivory_fruit_resp_c14', mem%herbivory_fruit_resp_c14, &
         & hgrid, surface, &
@@ -1959,7 +2212,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('fmaint_rate_root', mem%fmaint_rate_root, &
         & hgrid, surface, &
@@ -1967,7 +2221,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1978,7 +2232,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1989,7 +2243,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -2000,7 +2254,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -2011,7 +2265,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -2022,7 +2276,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -2033,7 +2287,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -2044,10 +2298,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('cost_n_uptake_root', mem%cost_n_uptake_root, &
         & hgrid, surface, &
@@ -2055,7 +2310,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -2077,7 +2332,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -2088,7 +2343,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -2099,7 +2354,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -2110,7 +2365,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -2132,7 +2387,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2143,7 +2398,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
         & initval_r = 0.0_wp)
@@ -2154,7 +2409,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
         & initval_r = 0.0_wp)
@@ -2165,7 +2420,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
         & initval_r = 0.0_wp)
@@ -2176,7 +2431,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
         & initval_r = 0.0_wp)
@@ -2187,7 +2442,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2198,7 +2453,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2209,7 +2464,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2220,7 +2475,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
         & initval_r = 0.0_wp)
@@ -2231,7 +2486,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
         & initval_r = 0.0_wp)
@@ -2242,7 +2497,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
         & initval_r = 0.0_wp)
@@ -2253,7 +2508,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
         & initval_r = 0.0_wp)
@@ -2264,7 +2519,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
         & initval_r = 0.0_wp)
@@ -2275,7 +2530,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2286,10 +2541,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('maint_respiration_tlabile_mavg', mem%maint_respiration_tlabile_mavg, &
         & hgrid, surface, &
@@ -2297,10 +2553,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('growth_req_n_tlabile_mavg', mem%growth_req_n_tlabile_mavg, &
         & hgrid, surface, &
@@ -2308,7 +2565,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2319,7 +2576,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2330,7 +2587,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2341,7 +2598,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2352,10 +2609,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('demand_uptake_n_tuptake_mavg', mem%demand_uptake_n_tuptake_mavg, &
         & hgrid, surface, &
@@ -2363,7 +2621,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2374,7 +2632,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2385,7 +2643,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2396,7 +2654,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2407,7 +2665,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2418,7 +2676,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2429,7 +2687,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
         & initval_r = 0.0_wp)
@@ -2440,7 +2698,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
         & initval_r = 0.0_wp)
@@ -2451,7 +2709,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
         & initval_r = 0.0_wp)
@@ -2462,7 +2720,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
         & initval_r = 0.0_wp)
@@ -2473,7 +2731,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
         & initval_r = 0.0_wp)
@@ -2484,7 +2742,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
         & initval_r = 0.0_wp)
@@ -2495,7 +2753,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
         & initval_r = 0.0_wp)
@@ -2506,7 +2764,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
         & initval_r = 0.0_wp)
@@ -2517,7 +2775,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
         & initval_r = 0.0_wp)
@@ -2528,7 +2786,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
         & initval_r = 0.0_wp)
@@ -2539,7 +2797,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2550,7 +2808,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2561,7 +2819,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2572,7 +2830,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
         & initval_r = 0.0_wp)
@@ -2583,7 +2841,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
         & initval_r = 0.0_wp)
@@ -2594,7 +2852,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2605,7 +2863,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2616,7 +2874,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2627,10 +2885,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_alloc, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_fixation_talloc_mavg', mem%n_fixation_talloc_mavg, &
         & hgrid, surface, &
@@ -2638,7 +2897,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_alloc, &
         & initval_r = 0.0_wp)
@@ -2905,7 +3164,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('lai_tvegdyn_mavg', mem%lai_tvegdyn_mavg, &
         & hgrid, surface, &
@@ -2916,7 +3176,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('beta_sinklim_ps_tacclim_mavg', mem%beta_sinklim_ps_tacclim_mavg, &
         & hgrid, surface, &
@@ -3025,7 +3286,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('net_biosphere_production_c14', mem%net_biosphere_production_c14, &
         & hgrid, surface, &
@@ -3033,10 +3295,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('net_biosphere_production_c13', mem%net_biosphere_production_c13, &
         & hgrid, surface, &
@@ -3044,10 +3307,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('biological_n_fixation', mem%biological_n_fixation, &
         & hgrid, surface, &
@@ -3058,9 +3322,72 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
     ENDIF  ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)
+
+    ! Diagnostic global carbon sums for experiment monitoring - only calculated on top (i.e. box) tile
+    IF (ASSOCIATED(mem%parent)) RETURN
+
+    CALL mem%Add_var('total_veg_c_gsum', mem%total_veg_c_gsum,                                 &
+      & hgrid, surface,                                                                        &
+      & t_cf('veg_total_c_gsum', 'Pg', 'Global sum of all vegetation C pools'),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_groups=['mon'],                                                                 &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
+    IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+      CALL mem%Add_var('total_prod_c_gsum', mem%total_prod_c_gsum,                             &
+        & hgrid, surface,                                                                      &
+        & t_cf('veg_prod_c_gsum', 'Pg', 'Global sum of all product C pools'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
+        & prefix, suffix,                                                                      &
+        & output_groups=['mon'],                                                               &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+    END IF
+
+    CALL mem%Add_var('lai_gmean', mem%lai_gmean,                                               &
+      & hgrid, surface,                                                                        &
+      & t_cf('lai_gmean', 'm2 m-2', 'Global average of LAI'),                                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_groups=['mon'],                                                                 &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
+    CALL mem%Add_var('fract_fpc_gmean', mem%fract_fpc_gmean,                                   &
+      & hgrid, surface,                                                                        &
+      & t_cf('fract_fpc_gmean', '1', 'Global average of foliar projected coverage'),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_groups=['mon'],                                                                 &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
+    CALL mem%Add_var('gpp_gsum', mem%gpp_gsum,                                                 &
+      & hgrid, surface,                                                                        &
+      & t_cf('gpp_gsum', 'Pg yr-1', 'Global sum of GPP'),                                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_groups=['mon'],                                                                 &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
+    CALL mem%Add_var('npp_gsum', mem%npp_gsum,                                                 &
+      & hgrid, surface,                                                                        &
+      & t_cf('npp_gsum', 'Pg yr-1', 'Global sum of NPP'),                                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_groups=['mon'],                                                                 &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
+    CALL mem%Add_var('nuptake_gsum', mem%nuptake_gsum,                                         &
+      & hgrid, surface,                                                                        &
+      & t_cf('nuptake_gsum', 'Tg yr-1', 'Global sum of N uptake by vegetation'),               &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_groups=['mon'],                                                                 &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
   END SUBROUTINE Init_veg_memory
 
   ! ======================================================================================================= !

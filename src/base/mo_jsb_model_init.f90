@@ -264,7 +264,8 @@ CONTAINS
         END IF
 
         IF (model%processes(ALCC_)%p%config%active) THEN
-          CALL model%Queue_task(ALCC_, "alcc")
+          CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
+          CALL model%Queue_task(ALCC_, "alcc_translocation")
         END IF
 
         ! Do postprocessing after all LCC tasks were executed
@@ -426,7 +427,8 @@ CONTAINS
           ! Call alcc for now only in CANOPY mode (i.e. without biogeochemistry enabled)
           IF (model%config%qmodel_id == QCANOPY) THEN
             IF (model%processes(ALCC_)%p%config%active) THEN
-              CALL model%Queue_task(ALCC_, "alcc")
+              CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
+              CALL model%Queue_task(ALCC_, "alcc_translocation")
             END IF
           END IF
 
@@ -539,7 +541,8 @@ CONTAINS
           ! Call alcc for now only in CANOPY mode (i.e. without biogeochemistry enabled)
           IF (model%config%qmodel_id == QCANOPY) THEN
             IF (model%processes(ALCC_)%p%config%active) THEN
-              CALL model%Queue_task(ALCC_, "alcc")
+              CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
+              CALL model%Queue_task(ALCC_, "alcc_translocation")
             END IF
           END IF
 

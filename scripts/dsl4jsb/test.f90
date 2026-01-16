@@ -57,6 +57,9 @@ PROGRAM example
   dsl4jsb_pool(CARBON_, pools%plant%green)%carbon
   dsl4jsb_Get_pool_var2d_onChunk(CARBON_, pools%soil, soil_respiration)
 
+  dsl4jsb_Get_lcc_relocations(WLCC_, lcc_relocations)
+  dsl4jsb_Get_lcc_area_matrix(initial_area)
+
   dsl4jsb_Def_mt2L2D :: veg_pool_mt
   dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
   ! veg_litterfall_mt => bgcm_store%Get_matrix_from_store_2l(VEG_BGCM_LITTERFALL_ID, ics, ice, iblk, tile%name)
