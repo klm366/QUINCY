@@ -528,6 +528,8 @@ CONTAINS
     model             => Get_model(tile%owner_model_id)    
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     dsl4jsb_Aggregate_onChunk(FLAKE_, h_ice,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(FLAKE_, h_ml,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(FLAKE_, h_snow,       weighted_by_fract)
@@ -542,6 +544,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(FLAKE_, z0u_sf,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(FLAKE_, par_Coriolis, weighted_by_fract)
 
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

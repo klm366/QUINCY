@@ -130,7 +130,7 @@ CONTAINS
     CHARACTER(len=20)             :: model_scheme     !< model_scheme: jsbach / quincy
     LOGICAL                       :: use_tmx
     LOGICAL                       :: use_lakes
-    LOGICAL                       :: use_flake
+    CHARACTER(len=10)             :: lake_scheme
     LOGICAL                       :: use_glacier
     LOGICAL                       :: check_child_cf
     CHARACTER(len=10)             :: enforce_water_budget
@@ -164,7 +164,7 @@ CONTAINS
       model_scheme, &
       use_tmx, &
       use_lakes, &
-      use_flake, &
+      lake_scheme, &
       use_glacier, &
       check_child_cf, &
       enforce_water_budget, &
@@ -213,7 +213,7 @@ CONTAINS
     model_scheme               = "jsbach"
     use_tmx                    = .FALSE.
     use_lakes                  = .TRUE.
-    use_flake                  = .FALSE.
+    lake_scheme                = "echam"
     use_glacier                = .TRUE.
     check_child_cf             = .FALSE.
     enforce_water_budget       = 'ignore'
@@ -303,7 +303,21 @@ CONTAINS
     ! set other namelist options
     model_config%use_tmx                    = use_tmx
     model_config%use_lakes                  = use_lakes
-    model_config%use_flake                  = use_flake
+    IF (use_lakes) THEN
+      SELECT CASE (tolower(TRIM(lake_scheme))) ! N.B. lake_scheme is read from namelist
+      CASE ("echam")
+        model_config%use_flake = .FALSE.
+        CALL message(routine, 'Using ECHAM lake scheme')
+      CASE ("flake")
+        model_config%use_flake = .TRUE.
+        CALL message(routine, 'Using FLake lake scheme')
+      CASE DEFAULT
+        CALL finish(TRIM(routine), 'lake_scheme == '//tolower(TRIM(lake_scheme))//' not available.')
+      END SELECT
+    ELSE
+      model_config%use_flake = .FALSE.
+      CALL message(routine, 'Not using lakes.')
+    END IF
     model_config%use_glacier                = use_glacier
     model_config%check_child_cf             = check_child_cf
     model_config%quincy_model               = TRIM(quincy_model)

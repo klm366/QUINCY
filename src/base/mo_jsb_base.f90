@@ -292,20 +292,11 @@ CONTAINS
           CALL message(routine, 'Activating FLake process because use_flake is TRUE...')
           dsl4jsb_Config(FLAKE_)%active = .TRUE.
         END IF
-        model%config%use_lakes = .FALSE.  ! lakes are handled by flake
       ELSE
         IF (model%Is_process_enabled(FLAKE_)) THEN
           CALL message(routine, 'Deactivating FLake process because use_flake is FALSE...')
           dsl4jsb_Config(FLAKE_)%active = .FALSE.
         END IF
-      END IF
-
-      IF (model%config%use_flake) THEN
-        CALL message('    ', '... using FLake lake model')
-      ELSE IF (model%config%use_lakes) THEN
-        CALL message('    ', '... using old lake model')
-      ELSE
-        CALL message('    ', '... not using lakes')
       END IF
 
       IF (model%config%use_glacier) THEN
