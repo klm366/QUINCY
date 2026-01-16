@@ -80,7 +80,6 @@ CONTAINS
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
     dsl4jsb_Use_config(ALCC_)
-    dsl4jsb_Def_config(FLAKE_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(SPQ_)
@@ -286,21 +285,33 @@ CONTAINS
 
       IF (TRIM(model%config%tpe_scheme) /= '') THEN
         CALL message(TRIM(routine), 'Running terraplanet experiment with scheme '//TRIM(model%config%tpe_scheme))
-        IF (model%config%use_lakes) THEN
-          CALL message('    ', '... using lakes')
-        ELSE
-          CALL message('    ', '... not using lakes')
+      END IF
+
+      IF (model%config%use_flake) THEN
+        IF (.NOT. model%Is_process_enabled(FLAKE_)) THEN
+          CALL message(routine, 'Activating FLake process because use_flake is TRUE...')
+          dsl4jsb_Config(FLAKE_)%active = .TRUE.
         END IF
-        IF (model%config%use_flake) THEN
-          CALL message('    ', '... using FLake')
-        ELSE
-          CALL message('    ', '... not using FLake')
+        model%config%use_lakes = .FALSE.  ! lakes are handled by flake
+      ELSE
+        IF (model%Is_process_enabled(FLAKE_)) THEN
+          CALL message(routine, 'Deactivating FLake process because use_flake is FALSE...')
+          dsl4jsb_Config(FLAKE_)%active = .FALSE.
         END IF
-        IF (model%config%use_glacier) THEN
-          CALL message('    ', '... using glaciers')
-        ELSE
-          CALL message('    ', '... not using glaciers')
-        END IF
+      END IF
+
+      IF (model%config%use_flake) THEN
+        CALL message('    ', '... using FLake lake model')
+      ELSE IF (model%config%use_lakes) THEN
+        CALL message('    ', '... using old lake model')
+      ELSE
+        CALL message('    ', '... not using lakes')
+      END IF
+
+      IF (model%config%use_glacier) THEN
+        CALL message('    ', '... using glaciers')
+      ELSE
+        CALL message('    ', '... not using glaciers')
       END IF
 
       ! --- check process dependencies

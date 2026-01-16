@@ -51,13 +51,11 @@ CONTAINS
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    !X e.g: LOGICAL                     :: use_alb_veg_simple
 
     NAMELIST /jsb_flake_nml/      &
          active,                      &
          ic_filename,                 &
          bc_filename                 
-         !X e.g: use_flake_veg_simple
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -66,10 +64,9 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting flake configuration')
 
     ! Set defaults
-    active              = .TRUE.
+    active              = .FALSE.
     bc_filename         = 'bc_land_flake.nc'
     ic_filename         = 'ic_land_flake.nc'
-    !X e.g: use_alb_veg_simple        = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -81,7 +78,6 @@ CONTAINS
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
-    !X e.g: config%use_alb_veg_simple        = use_alb_veg_simple
     
   END SUBROUTINE Init_flake_config
 
