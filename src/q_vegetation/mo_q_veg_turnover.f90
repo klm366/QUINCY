@@ -28,7 +28,9 @@ MODULE mo_q_veg_turnover
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_GROWTH_ID
+  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_GROWTH_ID, &
+                                        VEG_BGCM_SEED_BED_POOL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID, &
+                                        VEG_BGCM_SEED_BED_GROWTH_ID
 
   IMPLICIT NONE
 
@@ -70,6 +72,9 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_pool_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_growth_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
@@ -123,6 +128,9 @@ CONTAINS
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_POOL_ID, seed_bed_pool_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_GROWTH_ID, seed_bed_growth_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)            ! in
@@ -189,6 +197,7 @@ CONTAINS
       & lai(:)                                , & ! in
       & target_lai(:)                         , & ! in
       & veg_pool_mt(:,:,:)                    , & ! in
+      & seed_bed_pool_mt(:,:)                 , & ! in
       & recycling_leaf_n(:)                   , & ! inout
       & recycling_leaf_n15(:)                 , &
       & recycling_leaf_p(:)                   , &
@@ -198,6 +207,8 @@ CONTAINS
       & maint_respiration_leaf(:)             , &
       & veg_growth_mt(:,:,:)                  , & ! inout
       & veg_litterfall_mt(:,:,:)              , & ! inout
+      & seed_bed_growth_mt(:,:)               , & ! inout
+      & seed_bed_litterfall_mt(:,:)           , & ! inout
       & net_growth(:)                          )  ! out
 
   END SUBROUTINE update_veg_turnover
@@ -357,6 +368,7 @@ CONTAINS
     & lai                         , &
     & target_lai                  , &
     & veg_pool_mt                 , &
+    & seed_bed_pool_mt            , &
     & recycling_leaf_n            , &
     & recycling_leaf_n15          , &
     & recycling_leaf_p            , &
@@ -366,6 +378,8 @@ CONTAINS
     & maint_respiration_leaf      , &
     & veg_growth_mt               , &
     & veg_litterfall_mt           , &
+    & seed_bed_growth_mt          , &
+    & seed_bed_litterfall_mt      , &
     & net_growth                  )
 
     USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, fstore_leaf_max, igrass, icrop, ITREE
@@ -393,6 +407,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: lai                          !< the plant's LAI
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: target_lai                   !< the plant's annual maximum LAI
     REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)           !< bgcm veg_pool: current state of vegetation pools
+    REAL(wp),                 INTENT(in)    :: seed_bed_pool_mt(:,:)        !< bgcm seed_bed_pool: current state of seed bed pool
     REAL(wp), DIMENSION(nc),  INTENT(inout) :: recycling_leaf_n             !< foliar N returning to labile pool
     REAL(wp), DIMENSION(nc),  INTENT(inout) :: recycling_leaf_n15           !< foliar N15 returning to labile pool
     REAL(wp), DIMENSION(nc),  INTENT(inout) :: recycling_leaf_p             !< foliar P returning to labile pool
@@ -402,6 +417,8 @@ CONTAINS
     REAL(wp), DIMENSION(nc),  INTENT(inout) :: maint_respiration_leaf       !< leaf maintenance respiration [mumol C / m2 / s]
     REAL(wp),                 INTENT(inout) :: veg_growth_mt(:,:,:)         !< bgcm flux: current growth rate of vegetation pools
     REAL(wp),                 INTENT(inout) :: veg_litterfall_mt(:,:,:)     !< bgcm flux: current litter fall from vegetation pools
+    REAL(wp),                 INTENT(inout) :: seed_bed_growth_mt(:,:)      !< bgcm flux: current growth rate of seed bed pool
+    REAL(wp),                 INTENT(inout) :: seed_bed_litterfall_mt(:,:)  !< bgcm flux: current litter fall from seed bed pool
     REAL(wp), DIMENSION(nc),  INTENT(out)   :: net_growth                   !< current net growth [mumol C / m2 / s]
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: ic                               !< loop over chunk
@@ -601,10 +618,10 @@ CONTAINS
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN
         ix_elem = elements_index_map(ielem)    ! get element index in bgcm
-        veg_growth_mt(ix_seed_bed, ix_elem, :) = veg_growth_mt(ix_seed_bed, ix_elem, :) &
-          &                                      + veg_pool_mt(ix_fruit, ix_elem, :) * fturn(:)
-        veg_growth_mt(ix_fruit, ix_elem, :)    = veg_growth_mt(ix_fruit, ix_elem, :) &
-          &                                      - veg_pool_mt(ix_fruit, ix_elem, :) * fturn(:)
+        seed_bed_growth_mt(ix_elem, :)      = seed_bed_growth_mt(ix_elem, :) &
+          &                                   + veg_pool_mt(ix_fruit, ix_elem, :) * fturn(:)
+        veg_growth_mt(ix_fruit, ix_elem, :) = veg_growth_mt(ix_fruit, ix_elem, :) &
+          &                                   - veg_pool_mt(ix_fruit, ix_elem, :) * fturn(:)
       END IF
     END DO
     net_growth(:) = net_growth(:) - veg_pool_mt(ix_fruit, ixC, :) * fturn(:)
@@ -618,9 +635,9 @@ CONTAINS
       fturn(:) = 1.0_wp / lctlib_tau_seed_litter / one_day / one_year * dtime
     CASE (icrop)
       DO ic = 1,nc
-        IF (veg_pool_mt(ix_seed_bed, ixC, ic) > crop_planting_mass * fstore_seed_max) THEN
-          fturn(ic) = (veg_pool_mt(ix_seed_bed, ixC, ic) - crop_planting_mass * fstore_seed_max) &
-            &          / veg_pool_mt(ix_seed_bed, ixC, ic)
+        IF (seed_bed_pool_mt(ixC, ic) > crop_planting_mass * fstore_seed_max) THEN
+          fturn(ic) = (seed_bed_pool_mt(ixC, ic) - crop_planting_mass * fstore_seed_max) &
+            &          / seed_bed_pool_mt(ixC, ic)
         ELSE
           fturn(ic) = 0.0_wp
         END IF
@@ -630,8 +647,8 @@ CONTAINS
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN
         ix_elem = elements_index_map(ielem)    ! get element index in bgcm
-        veg_litterfall_mt(ix_seed_bed, ix_elem, :) = veg_litterfall_mt(ix_seed_bed, ix_elem, :) &
-          &                                          + veg_pool_mt(ix_seed_bed, ix_elem, :) * fturn(:)
+        seed_bed_litterfall_mt(ix_elem, :) = seed_bed_litterfall_mt(ix_elem, :) &
+          &                                  + seed_bed_pool_mt(ix_elem, :) * fturn(:)
       END IF
     END DO
 

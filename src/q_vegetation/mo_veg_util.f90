@@ -29,6 +29,7 @@ MODULE mo_veg_util
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, VEG_BGCM_LITTERFALL_ID, &
+    &                                   VEG_BGCM_SEED_BED_GROWTH_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID, &
     &                                   VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_RESERVE_USE_ID, &
     &                                   VEG_BGCM_HARVEST_LITTER_ID, VEG_BGCM_HARVEST_TO_PROD_ID
 
@@ -121,6 +122,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_growth_mt
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
     dsl4jsb_Def_mt1L2D :: veg_reserve_use_mt
@@ -150,6 +153,8 @@ CONTAINS
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_GROWTH_ID, seed_bed_growth_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
@@ -184,9 +189,11 @@ CONTAINS
         !$ACC END PARALLEL
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
-          veg_establishment_mt(ix_elem,ic) = zero
-          veg_exudation_mt(ix_elem,ic)     = zero
-          veg_reserve_use_mt(ix_elem,ic)   = zero
+          seed_bed_growth_mt(ix_elem,ic)     = zero
+          seed_bed_litterfall_mt(ix_elem,ic) = zero
+          veg_establishment_mt(ix_elem,ic)   = zero
+          veg_exudation_mt(ix_elem,ic)       = zero
+          veg_reserve_use_mt(ix_elem,ic)     = zero
 
           IF (config_l_use_pp) THEN
             IF (tile%Is_process_calculated(Q_SYL_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
