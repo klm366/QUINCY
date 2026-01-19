@@ -246,7 +246,7 @@ MODULE mo_q_agr_process
   SUBROUTINE calc_planting_flux( &
       & nc, &
       & crop_growth_phase, &
-      & veg_pool_seed_bed, &
+      & seed_bed_pool_mt, &
       & veg_establishment_mt)
 
     USE mo_lnd_bgcm_idx
@@ -254,7 +254,7 @@ MODULE mo_q_agr_process
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                        !< dimensions
     REAL(wp), INTENT(in)    :: crop_growth_phase(:)      !< growth phase (0 = planting)
-    REAL(wp), INTENT(in)    :: veg_pool_seed_bed(:,:)    !< bgcm vegetation seed-bed pool
+    REAL(wp), INTENT(in)    :: seed_bed_pool_mt(:,:)     !< bgcm seed-bed pool
     REAL(wp), INTENT(inout) :: veg_establishment_mt(:,:) !< bgcm flux of establishment
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER        :: ic                !< loop over grid cells
@@ -265,9 +265,9 @@ MODULE mo_q_agr_process
     ! if growth phase equal zero and there is a seed pool, add transfer initial planting mass to establishment
     ! flux
     DO ic = 1,nc
-      IF (INT(crop_growth_phase(ic)) == ix_planting .AND. veg_pool_seed_bed(ixC, ic) > eps8 ) THEN
-        planting_rate = MIN(crop_planting_mass, veg_pool_seed_bed(ixC, ic)) / veg_pool_seed_bed(ixC, ic)
-        veg_establishment_mt(:,ic) = veg_establishment_mt(:,ic) + planting_rate * veg_pool_seed_bed( :, ic)
+      IF (INT(crop_growth_phase(ic)) == ix_planting .AND. seed_bed_pool_mt(ixC, ic) > eps8 ) THEN
+        planting_rate = MIN(crop_planting_mass, seed_bed_pool_mt(ixC, ic)) / seed_bed_pool_mt(ixC, ic)
+        veg_establishment_mt(:,ic) = veg_establishment_mt(:,ic) + planting_rate * seed_bed_pool_mt(:, ic)
       END IF
     END DO
 

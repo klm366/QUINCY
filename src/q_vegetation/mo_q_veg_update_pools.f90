@@ -23,8 +23,9 @@ MODULE mo_q_veg_update_pools
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, &
-    &                                   VEG_BGCM_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, &
+  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_SEED_BED_POOL_ID, VEG_BGCM_GROWTH_ID, &
+    &                                   VEG_BGCM_SEED_BED_GROWTH_ID, VEG_BGCM_LITTERFALL_ID, &
+    &                                   VEG_BGCM_SEED_BED_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, &
     &                                   VEG_BGCM_RESERVE_USE_ID, VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, &
     &                                   VEG_BGCM_PP_FIBERBOARD_ID, VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID,  &
     &                                   VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_PP_CROP_ID
@@ -90,6 +91,9 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_pool_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_growth_mt
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
     dsl4jsb_Def_mt1L2D :: veg_reserve_use_mt
@@ -239,6 +243,9 @@ CONTAINS
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_POOL_ID, seed_bed_pool_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_GROWTH_ID, seed_bed_growth_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
@@ -486,6 +493,8 @@ CONTAINS
               veg_pool_mt(ix_comp, ix_elem, ic) = veg_pool_mt(ix_comp, ix_elem, ic) + veg_growth_mt(ix_comp, ix_elem, ic)
             END DO
           END IF
+        seed_bed_pool_mt(ix_elem, ic) = seed_bed_pool_mt(ix_elem, ic) - seed_bed_litterfall_mt(ix_elem, ic)
+        seed_bed_pool_mt(ix_elem, ic) = seed_bed_pool_mt(ix_elem, ic) + seed_bed_growth_mt(ix_elem, ic)
         END DO
       END DO
 
@@ -494,7 +503,7 @@ CONTAINS
           IF (model%config%is_element_used(id_elem)) THEN
             ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
             veg_pool_mt(ix_labile,   ix_elem, ic) = veg_pool_mt(ix_labile,   ix_elem, ic) + veg_establishment_mt(ix_elem, ic)
-            veg_pool_mt(ix_seed_bed, ix_elem, ic) = veg_pool_mt(ix_seed_bed, ix_elem, ic) - veg_establishment_mt(ix_elem, ic)
+            seed_bed_pool_mt(ix_elem, ic) = seed_bed_pool_mt(ix_elem, ic) - veg_establishment_mt(ix_elem, ic)
           END IF
         END DO
       END DO
@@ -523,6 +532,22 @@ CONTAINS
                 veg_pool_mt(ix_comp, ix_elem, ic) = 0.0_wp
               END IF
             END DO
+            ! set a negative pool to zero (breaking mass balance !)
+            ! and write message to LOG (if enabled)
+            ! SZ: temporarily switching off test for negative 14C pools, which occur in rare occasions.
+            !     This change does not affect simulation outcomes other than for 14C runs, and for these only few grid cells
+            IF (seed_bed_pool_mt(ix_elem, ic) < -eps12 .AND. ix_elem /= ixC14) THEN
+              IF (config_flag_log_negative_vegpool) THEN
+                WRITE (message_text,*) 'Negative value of seed bed pool at tile ', tile%name, &
+                  &                    ' at (lon:lat) ', grid%lon(ic,iblk), ':', grid%lat(ic,iblk), &
+                  &                    ', element: ', ix_elem, &
+                  &                    ', value ', seed_bed_pool_mt(ix_elem, ic), ' is set to zero here'
+                CALL message(TRIM(routine), message_text, all_print=.TRUE.)
+              END IF
+            END IF
+            IF (seed_bed_pool_mt(ix_elem, ic) < 0.0_wp) THEN
+              seed_bed_pool_mt(ix_elem, ic) = 0.0_wp
+            END IF
           END IF
         END DO
       END DO
@@ -534,6 +559,7 @@ CONTAINS
         DO ix_comp = 1, nr_of_veg_bgcm_comp
           veg_pool_mt(ix_comp, ixC14, ic) = veg_pool_mt(ix_comp, ixC14, ic) * (1._wp - lambda_C14 * dtime)
         END DO
+        seed_bed_pool_mt(ixC14, ic) = seed_bed_pool_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
 
         ! and if simulating with product pools also within these
         IF (config_l_use_product_pools) THEN
@@ -727,6 +753,32 @@ CONTAINS
       !$ACC END LOOP
     END DO
     !$ACC END PARALLEL
+
+    DO ic = 1, nc
+      ! adding seed bed pool for reporting and carbon conservation test to total vegetation pool
+      veg_pool_total_c(ic)   = veg_pool_total_c(ic) + seed_bed_pool_mt(ixC, ic)
+      veg_pool_total_n(ic)   = veg_pool_total_n(ic) + seed_bed_pool_mt(ixN, ic)
+      veg_pool_total_p(ic)   = veg_pool_total_p(ic) + seed_bed_pool_mt(ixP, ic)
+      veg_pool_total_c13(ic) = veg_pool_total_c13(ic) + seed_bed_pool_mt(ixC13, ic)
+      veg_pool_total_c14(ic) = veg_pool_total_c14(ic) + seed_bed_pool_mt(ixC14, ic)
+      veg_pool_total_n15(ic) = veg_pool_total_n15(ic) + seed_bed_pool_mt(ixN15, ic)
+
+      ! adding seed bed growth for reporting and carbon conservation test to total vegetation growth
+      veg_growth_total_c(ic)   = veg_growth_total_c(ic) + seed_bed_growth_mt(ixC, ic)
+      veg_growth_total_n(ic)   = veg_growth_total_n(ic) + seed_bed_growth_mt(ixN, ic)
+      veg_growth_total_p(ic)   = veg_growth_total_p(ic) + seed_bed_growth_mt(ixP, ic)
+      veg_growth_total_c13(ic) = veg_growth_total_c13(ic) + seed_bed_growth_mt(ixC13, ic)
+      veg_growth_total_c14(ic) = veg_growth_total_c14(ic) + seed_bed_growth_mt(ixC14, ic)
+      veg_growth_total_n15(ic) = veg_growth_total_n15(ic) + seed_bed_growth_mt(ixN15, ic)
+
+      ! adding seed bed litterfall for reporting and carbon conservation test to total vegetation litterfall
+      veg_litterfall_total_c(ic)   = veg_litterfall_total_c(ic) + seed_bed_litterfall_mt(ixC, ic)
+      veg_litterfall_total_n(ic)   = veg_litterfall_total_n(ic) + seed_bed_litterfall_mt(ixN, ic)
+      veg_litterfall_total_p(ic)   = veg_litterfall_total_p(ic) + seed_bed_litterfall_mt(ixP, ic)
+      veg_litterfall_total_c13(ic) = veg_litterfall_total_c13(ic) + seed_bed_litterfall_mt(ixC13, ic)
+      veg_litterfall_total_c14(ic) = veg_litterfall_total_c14(ic) + seed_bed_litterfall_mt(ixC14, ic)
+      veg_litterfall_total_n15(ic) = veg_litterfall_total_n15(ic) + seed_bed_litterfall_mt(ixN15, ic)
+    END DO
 
     IF (config_l_use_product_pools) THEN
       IF ((lctlib_ForestFlag .AND. config_active_q_syl) .OR. (lctlib_CropFlag .AND. config_active_q_agr)) THEN

@@ -20,7 +20,7 @@ MODULE mo_lnd_bgcm_idx
 
   USE mo_veg_config_class,        ONLY: VEG_PART_LEAF_IDX , VEG_PART_FINE_ROOT_IDX, VEG_PART_COARSE_ROOT_IDX, &
     &                                   VEG_PART_SAP_WOOD_IDX, VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, &
-    &                                   VEG_PART_RESERVE_IDX, VEG_PART_FRUIT_IDX, VEG_PART_SEED_BED_IDX
+    &                                   VEG_PART_RESERVE_IDX, VEG_PART_FRUIT_IDX
   USE mo_sb_config_class,         ONLY: SB_PART_DOM_IDX , SB_PART_DOM_ASSOC_IDX, SB_PART_SOLUBLE_LITTER_IDX, &
     &                                   SB_PART_POLYMERIC_LITTER_IDX, SB_PART_WOODY_LITTER_IDX, &
     &                                   SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, &
@@ -34,7 +34,7 @@ MODULE mo_lnd_bgcm_idx
   PUBLIC :: ixC, ixN, ixP, ixC13, ixC14, ixN15
   PUBLIC :: FIRST_ELEM_ID, LAST_ELEM_ID
   PUBLIC :: set_bgcm_element_idx
-  PUBLIC :: ix_leaf, ix_fine_root, ix_coarse_root, ix_sap_wood, ix_heart_wood, ix_labile, ix_reserve, ix_fruit, ix_seed_bed
+  PUBLIC :: ix_leaf, ix_fine_root, ix_coarse_root, ix_sap_wood, ix_heart_wood, ix_labile, ix_reserve, ix_fruit
   PUBLIC :: ix_dom, ix_dom_assoc, ix_soluable_litter, ix_polymeric_litter, ix_woody_litter, ix_mycorrhiza, &
     &       ix_microbial, ix_residue, ix_residue_assoc
 
@@ -54,7 +54,6 @@ MODULE mo_lnd_bgcm_idx
   INTEGER, PARAMETER :: ix_labile           = VEG_PART_LABILE_IDX
   INTEGER, PARAMETER :: ix_reserve          = VEG_PART_RESERVE_IDX
   INTEGER, PARAMETER :: ix_fruit            = VEG_PART_FRUIT_IDX
-  INTEGER, PARAMETER :: ix_seed_bed         = VEG_PART_SEED_BED_IDX
   ! SB_
   INTEGER, PARAMETER :: ix_dom              = SB_PART_DOM_IDX
   INTEGER, PARAMETER :: ix_dom_assoc        = SB_PART_DOM_ASSOC_IDX

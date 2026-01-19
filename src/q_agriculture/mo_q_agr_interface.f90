@@ -95,7 +95,7 @@ MODULE mo_q_agr_interface
   SUBROUTINE update_cropland_process(tile, options)
     USE mo_lnd_bgcm_idx
     USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-    USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, &
+    USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_SEED_BED_POOL_ID, VEG_BGCM_GROWTH_ID, &
       &                                   VEG_BGCM_LITTERFALL_ID, VEG_BGCM_ESTABLISHMENT_ID
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
@@ -175,6 +175,7 @@ MODULE mo_q_agr_interface
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt1L2D     :: veg_establishment_mt
     dsl4jsb_Def_mt2L2D     :: veg_pool_mt
+    dsl4jsb_Def_mt1L2D     :: seed_bed_pool_mt
     dsl4jsb_Def_mt2L2D     :: veg_growth_mt
     dsl4jsb_Def_mt2L2D     :: veg_litterfall_mt
     ! ----------------------------------------------------------------------------------------------------- !
@@ -279,6 +280,7 @@ MODULE mo_q_agr_interface
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)                           ! in
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_POOL_ID, seed_bed_pool_mt)             ! in
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)         ! inout
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)               ! inout
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)                       ! inout
@@ -304,11 +306,11 @@ MODULE mo_q_agr_interface
     !> - Determine establishment flux if this is a planting time step, and set whether the planted crop
     !>   is a N fixing crop (1) or not (0)
     !>
-    !$ACC UPDATE HOST(crop_growth_phase(:),veg_pool_mt(:,:,:),veg_establishment_mt(:,:)) ASYNC(1)
+    !$ACC UPDATE HOST(crop_growth_phase(:),seed_bed_pool_mt(:,:),veg_establishment_mt(:,:)) ASYNC(1)
     !$ACC WAIT(1)
     CALL calc_planting_flux(nc, &                            ! in
       &                      crop_growth_phase(:), &
-      &                      veg_pool_mt(ix_seed_bed,:,:), &
+      &                      seed_bed_pool_mt(:,:), &
       &                      veg_establishment_mt(:,:))      ! inout
     active_n_fixation(:) = set_crop_n_fixation_status(crop_type_index(:))
     !$ACC UPDATE DEVICE(veg_establishment_mt(:,:)) ASYNC(1)
