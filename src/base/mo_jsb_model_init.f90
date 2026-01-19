@@ -367,17 +367,15 @@ CONTAINS
     ! QPLANT:  PLANT  model mode - with additional tasks calculating vegetation biogeochemistry and dynamics
     ! QLAND:   LAND   model mode - adding tasks to calculate soil biogeochemistry
     !                              (on top of the tasks specific for the PLANT model mode)
-    !
-    ! Later a separated task queue set-up might be specified for QSOIL
-    ! # QSOIL:   SOIL   model mode - standalone soil biogeochemistry with forcing from vegetation
+    ! QSOIL:   SOIL   model mode - standalone soil biogeochemistry with forcing from vegetation
     !
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_config(VEG_)
       dsl4jsb_Get_config(SB_)
 
-      !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
+      !-- QLAND, QPLANT, QCANOPY and QSOIL can be ported from Quincy standalone (QS)
       IF (.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
-                .OR. (model%config%qmodel_id == QCANOPY))) THEN
+                .OR. (model%config%qmodel_id == QCANOPY) .OR. (model%config%qmodel_id == QSOIL))) THEN
         CALL finish(TRIM(routine), &
           & 'Unexpected / not yet implemented Quincy model mode: '//TRIM(model%config%quincy_model))
       END IF
@@ -388,15 +386,19 @@ CONTAINS
       IF (model%config%use_soil_phys_jsbach) THEN
 
         !-- set flux variables to zero
-        CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
-        CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
-        IF (model%config%qmodel_id == QLAND) THEN
-          CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
-        END IF
+        IF (model%config%qmodel_id == QSOIL) THEN
+          CALL model%Queue_task(SB_, "reset_sb_fluxes")               ! LAND AND SOIL
+        ELSE
+          CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
+          CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
+          IF (model%config%qmodel_id == QLAND) THEN
+            CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND AND SOIL
+          END IF
 
-        IF (is_time_restart(get_time_start())) THEN
-          !-- derive plant characteristics from restart variables
-          CALL model%Queue_task(VEG_, "plant_characteristics")
+          IF (is_time_restart(get_time_start())) THEN
+            !-- derive plant characteristics from restart variables
+            CALL model%Queue_task(VEG_, "plant_characteristics")
+          END IF
         END IF
 
         ! --------------- Any tasks that might change the land cover need to come first in the timestep
