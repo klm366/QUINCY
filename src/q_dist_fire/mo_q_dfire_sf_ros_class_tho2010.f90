@@ -97,8 +97,85 @@ MODULE mo_q_dfire_sf_ros_class_tho2010
     MODULE PROCEDURE :: create_sf_ros_init
   END INTERFACE t_sf_ros
 
+  TYPE :: t_sf_weighting_factors
+    REAL(wp), ALLOCATABLE :: Adeadj(:,:)  !< (#dead fuel classes, #nc)
+    REAL(wp), ALLOCATABLE :: Alivej(:,:)  !< (#live fuel classes, #nc)
+
+    REAL(wp), ALLOCATABLE :: Adead(:)  !< (#nc)
+    REAL(wp), ALLOCATABLE :: Alive(:)  !< (#nc)
+
+    REAL(wp), ALLOCATABLE :: At(:)      !< dead + live (#nc)
+
+    REAL(wp), ALLOCATABLE :: fdeadj(:,:) !< (#ndeadfuelclasses, #nc)
+    REAL(wp), ALLOCATABLE :: flivej(:,:) !< (#nlivefuelclasses, #nc)
+
+    REAL(wp), ALLOCATABLE :: fdead(:) !< #nc)
+    REAL(wp), ALLOCATABLE :: flive(:) !< (#nc)
+
+    REAL(wp), ALLOCATABLE :: gdeadj(:,:) !< (#ndeadfuelclasses, #nc)
+    REAL(wp), ALLOCATABLE :: glivej(:,:) !< (#nlivefuelclasses, #nc)
+  END TYPE t_sf_weighting_factors
+
+  INTERFACE t_sf_weighting_factors
+    MODULE PROCEDURE :: create_sf_weighting_factors
+  END INTERFACE t_sf_weighting_factors
 
 CONTAINS
+
+  !>
+  !> Constructor for weighting factors derived type
+  !>
+  FUNCTION t_sf_weighting_factors(nc, ndeadfc, nlivefc) RESULT (wfactors)
+    INTEGER, INTENT(in) :: nc
+    INTEGER, INTENT(in) :: ndeadfc !< 1 hr, 10 hr, ..., live grass, ...
+    INTEGER, INTENT(in) :: nlivefc !< 1 hr, 10 hr, ..., live grass, ...
+    TYPE(t_sf_weighting_factors) :: wfactors
+
+    ALLOCATE(wfactors % Adeadj(ndeadfc, nc))
+    ALLOCATE(wfactors % Alivej(nlivefc, nc))
+    ALLOCATE(wfactors % Adead(nc))
+    ALLOCATE(wfactors % Alive(nc))
+    ALLOCATE(wfactors % At(nc))
+    ALLOCATE(wfactors % fdeadj(ndeadfc, nc))
+    ALLOCATE(wfactors % flivej(nlivefc, nc))
+    ALLOCATE(wfactors % fdead(nc))
+    ALLOCATE(wfactors % flive(nc))
+    ALLOCATE(wfactors % gdeadj(ndeadfc, nc))
+    ALLOCATE(wfactors % glivej(nlivefc, nc))
+
+    wfactors % Adeadj = 0._wp
+    wfactors % Alivej = 0._wp
+    wfactors % Adead = 0._wp
+    wfactors % Alive = 0._wp
+    wfactors % At = 0._wp
+    wfactors % fdeadj = 0._wp
+    wfactors % flivej = 0._wp
+    wfactors % fdead = 0._wp
+    wfactors % flive = 0._wp
+    wfactors % gdeadj = 0._wp
+    wfactors % glivej = 0._wp
+  END FUNCTION t_sf_weighting_factors
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Constructor for f weighting factors derived type
+  !>
+  FUNCTION t_sf_f_weighting_factors(nc, nfuelclasses) RESULT (fwfactors)
+    INTEGER, INTENT(in) :: nc
+    INTEGER, INTENT(in) :: nfuelclasses !< 1 hr, 10 hr, ..., live grass, ...
+    TYPE(t_sf_f_weighting_factors) :: fwfactors
+
+    ALLOCATE(fwfactors%Aj(nfuelclasses, nc))
+    ALLOCATE(fwfactors%A(nc))
+    ALLOCATE(fwfactors%fj(nfuelclasses, nc))
+    ALLOCATE(fwfactors%f(nc))
+
+    fwfactors%Aj = 0._wp
+    fwfactors%A = 0._wp
+    fwfactors%fj = 0._wp
+    fwfactors%f = 0._wp
+  END FUNCTION t_sf_f_weighting_factors
 
   ! ======================================================================================================= !
   !>
@@ -437,6 +514,81 @@ CONTAINS
     fbd_accounting_fc = fuel_bulk_density * SUM(dead_fuel * df_sf_fuel_class_factors)
     fbd = fbd_accounting_fc / total_dead_fuel
   END FUNCTION calc_fbd
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate f weighting factors
+  !>
+  FUNCTION calc_f_weighting_factors(sigmas_dead, fuel_load_dead, part_dens) RESULT (wfactors)
+    REAL(wp), INTENT(in) :: sigmas_dead(:)    !< surface are to volume ratio (#fuel classes) [m2/m3]
+    REAL(wp), INTENT(in) :: fuel_load_dead(:,:) !< oven-dry fuel load (#fuel classes) [kg/m2]
+    REAL(wp), INTENT(in) :: sigmas_live(:)    !< surface are to volume ratio (#fuel classes) [m2/m3]
+    REAL(wp), INTENT(in) :: fuel_load_live(:,:) !< oven-dry fuel load (#fuel classes) [kg/m2]
+    REAL(wp), INTENT(in) :: part_dens         !< particle density [kg/m3]
+    TYPE(t_sf_weighting_factors) :: wfactors
+
+    INTEGER :: nc, ndeadfc, nlivefc
+
+    nc = SIZE(fuel_load_dead, DIM=2)
+    ndeadfc = SIZE(fuel_load_dead, DIM=1)
+    nlivefc = SIZE(fuel_load_live, DIM=1)
+
+    wfactors = t_sf_weighting_factors(nc, ndeadfc, nlivefc)
+
+    DO ic = 1, nc
+      wfactors % Adeadj(:,ic) = sigma_dead * fuel_load_dead(:,ic) / part_dens
+      wfactors % Alivej(:,ic) = sigma_live * fuel_load_live(:,ic) / part_dens
+      wfactors % Adead(ic) = SUM(wfactors % Adeadj(:,ic))
+      wfactors % Alive(ic) = SUM(wfactors % Alivej(:,ic))
+      wfactors % At(ic) = wfactors % Alive(ic) + wfactors % Adead(ic)
+      wfactors % fdeadj(:,ic) = wfactors % Adeadj(:,ic) / wfactors % Adead(ic)
+      wfactors % flivej(:,ic) = wfactors % Alivej(:,ic) / wfactors % Alive(ic)
+      wfactors % fdead(:,ic) = SUM(wfactors % fdeadj(:,ic))
+      wfactors % flive(:,ic) = SUM(wfactors % flivej(:,ic))
+      wfactors % gdeadj(:,ic) = calc_g_weighting_factors(wfactors % fdeadj(:,ic), sigmas_dead)
+      wfactors % glivej(:,ic) = calc_g_weighting_factors(wfactors % flivej(:,ic), sigmas_live)
+    END DO
+  END FUNCTION calc_f_weighting_factors
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate g weighting factors
+  !>
+  FUNCTION calc_g_weighting_factors(fs, sigmas) RESULT (gs)
+    REAL(wp), INTENT(in)  :: fs(:)     !< f weighting factor (#fuel classes) [-]
+    REAL(wp), INTENT(in)  :: sigmas(:) !< surface area to volume ratio (#fuel classes) [m2/m3]
+    REAL(wp), ALLOCATABLE :: gs(:)     !< g weighting factors (#fuel classes) [-]
+
+    INTEGER, PARAMETER :: NGLIM = 5
+    INTEGER :: nfuelclass
+    !< g partitions, Andrews PL et al. (2018), page 17
+    REAL(wp), PARAMETER :: glim(NGLIM) = [16._wp,48._wp,96._wp,1200._wp, HUGE(4.0_wp)]
+    REAL(wp) :: fsum(NGLIM)
+    INTEGER :: ifuel, ibin
+
+    fsum = 0.
+    gs = 0.
+    nfuelclass = SIZE(fs)
+
+    ! find f value for each j bin
+    do ifuel = 1, NFUELCLASS
+      do ibin = 1, NGLIM
+        if (sigma_dead(ifuel) < glim(ibin)) exit
+      end do
+      if (ibin == 1) cycle ! ignore 1st bin, so leave to 0
+      fsum(ibin) = fsum(ibin) + fs(ifuel)
+    end do
+
+    ! assign g value to each fuel class
+    do ifuel = 1, NFUELCLASS
+      do ibin = 1, NGLIM
+        if (sigma_dead(ifuel) < glim(ibin)) exit
+      end do
+      gs(ifuel) = fsum(ibin)
+    end do
+  END FUNCTION calc_g_weighting_factors
 
 #endif
 END MODULE mo_q_dfire_sf_ros_class_tho2010
