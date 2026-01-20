@@ -53,12 +53,14 @@ MODULE mo_q_agr_memory_class
 
     ! box-level variables to read and distribute fertiliser
     TYPE(t_jsb_var_real2d) ::   &
-      & n_fertiliser_c3, &          !< N fertiliser application rate for C3 crops [mol m-2 yr-1]
-      & n_fertiliser_c4, &          !< N fertiliser application rate for C4 crops [mol m-2 yr-1]
-      & n_manure_crop_c3, &         !< N manure application rate for C3 crops [mol m-2 yr-1]
-      & n_manure_crop_c4, &         !< N manure application rate for C4 crops [mol m-2 yr-1]
-      & n_manure_pasture_c3, &      !< N manure application rate for C3 pasture [mol m-2 yr-1]
-      & n_manure_pasture_c4         !< N manure application rate for C4 pasture [mol m-2 yr-1]
+      & nh4_fertiliser_c3crops, &   !< NH4 fertiliser application rate for C3 crops [mol m-2 yr-1]
+      & no3_fertiliser_c3crops, &   !< NO3 fertiliser application rate for C3 crops [mol m-2 yr-1]
+      & nh4_fertiliser_c4crops, &   !< NH4 fertiliser application rate for C4 crops [mol m-2 yr-1]
+      & no3_fertiliser_c4crops, &   !< NO3 fertiliser application rate for C4 crops [mol m-2 yr-1]
+      & nh4_fertiliser_pasture, &   !< NH4 fertiliser application rate for pasture [mol m-2 yr-1]
+      & no3_fertiliser_pasture, &   !< NO3 fertiliser application rate for pasture [mol m-2 yr-1]
+      & n_manure_crop, &            !< N manure application rate for crops [mol m-2 yr-1]
+      & n_manure_pasture            !< N manure application rate for pasture [mol m-2 yr-1]
 
   CONTAINS
     PROCEDURE :: Init => Init_q_agr_memory
@@ -81,7 +83,7 @@ CONTAINS
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
     USE mo_quincy_output_class, ONLY: unitless
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_q_agr_memory),    INTENT(inout), TARGET :: mem
+    CLASS(t_q_agr_memory),   INTENT(inout), TARGET :: mem
     CHARACTER(len=*),        INTENT(in)            :: prefix
     CHARACTER(len=*),        INTENT(in)            :: suffix
     INTEGER,                 INTENT(in)            :: lct_ids(:)
@@ -106,9 +108,9 @@ CONTAINS
     ! created memory depends on tile type
     IF ( .NOT. ASSOCIATED(mem%parent)) THEN
       ! memory to only create on the box tile
-      CALL mem%Add_var('n_fertiliser_c3', mem%n_fertiliser_c3, &
+      CALL mem%Add_var('nh4_fertiliser_c3crops', mem%nh4_fertiliser_c3crops, &
         & hgrid, surface, &
-        & t_cf('n_fertiliser_c3', 'mol m-2 yr-1', 'N fertiliser application rate for C3 crops'), &
+        & t_cf('nh4_fertiliser_c3crops', 'mol m-2 yr-1', 'NH4 fertiliser application rate for C3 crops'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -116,9 +118,9 @@ CONTAINS
         & output_level = NONE, &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('n_fertiliser_c4', mem%n_fertiliser_c4, &
+      CALL mem%Add_var('no3_fertiliser_c3crops', mem%no3_fertiliser_c3crops, &
         & hgrid, surface, &
-        & t_cf('n_fertiliser_c4', 'mol m-2 yr-1', 'N fertiliser application rate for C4 crops'), &
+        & t_cf('no3_fertiliser_c3crops', 'mol m-2 yr-1', 'NO3 fertiliser application rate for C3 crops'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -126,9 +128,9 @@ CONTAINS
         & output_level = NONE, &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('n_manure_crop_c3', mem%n_manure_crop_c3, &
+      CALL mem%Add_var('nh4_fertiliser_c4crops', mem%nh4_fertiliser_c4crops, &
         & hgrid, surface, &
-        & t_cf('n_manure_crop_c3', 'mol m-2 yr-1', 'N manure application rate for C3 crops'), &
+        & t_cf('nh4_fertiliser_c4crops', 'mol m-2 yr-1', 'NH4 fertiliser application rate for C4 crops'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -136,9 +138,9 @@ CONTAINS
         & output_level = NONE, &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('n_manure_crop_c4', mem%n_manure_crop_c4, &
+      CALL mem%Add_var('no3_fertiliser_c4crops', mem%no3_fertiliser_c4crops, &
         & hgrid, surface, &
-        & t_cf('n_manure_crop_c4', 'mol m-2 yr-1', 'N manure application rate for C4 crops'), &
+        & t_cf('no3_fertiliser_c4crops', 'mol m-2 yr-1', 'NO3 fertiliser application rate for C4 crops'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -146,9 +148,9 @@ CONTAINS
         & output_level = NONE, &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('n_manure_pasture_c3', mem%n_manure_pasture_c3, &
+      CALL mem%Add_var('nh4_fertiliser_pasture', mem%nh4_fertiliser_pasture, &
         & hgrid, surface, &
-        & t_cf('n_manure_pasture_c3', 'mol m-2 yr-1', 'N manure application rate for C3 pastures'), &
+        & t_cf('nh4_fertiliser_pasture', 'mol m-2 yr-1', 'NH4 fertiliser application rate for pastures'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -156,9 +158,29 @@ CONTAINS
         & output_level = NONE, &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('n_manure_pasture_c4', mem%n_manure_pasture_c4, &
+      CALL mem%Add_var('no3_fertiliser_pasture', mem%no3_fertiliser_pasture, &
         & hgrid, surface, &
-        & t_cf('n_manure_pasture_c4', 'mol m-2 yr-1', 'N manure application rate for C4 pastures'), &
+        & t_cf('no3_fertiliser_pasture', 'mol m-2 yr-1', 'NO3 fertiliser application rate for pastures'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & lrestart = .TRUE., &
+        & output_level = NONE, &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('n_manure_crop', mem%n_manure_crop, &
+        & hgrid, surface, &
+        & t_cf('n_manure_crop', 'mol m-2 yr-1', 'N manure application rate for crops'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & lrestart = .TRUE., &
+        & output_level = NONE, &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('n_manure_pasture', mem%n_manure_pasture, &
+        & hgrid, surface, &
+        & t_cf('n_manure_pasture', 'mol m-2 yr-1', 'N manure application rate for pastures'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

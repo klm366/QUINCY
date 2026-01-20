@@ -34,6 +34,7 @@ MODULE mo_q_agr_config_class
   !>
   TYPE, EXTENDS(t_jsb_config) :: t_q_agr_config
     CHARACTER(len=filename_max) :: fertiliser_filename_prefix   !< IQ. Note: should NOT include an ending "_"
+    CHARACTER(len=filename_max) :: fertiliser_data_source       !< IQ. Note: should NOT include an ending "_"
     LOGICAL   :: l_read_fertiliser
     LOGICAL   :: l_read_manure
       !< determines if fertiliser data is to be read from a file (default FALSE) (ignored in QS)
@@ -63,6 +64,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(len=filename_max) :: fertiliser_filename_prefix
+    CHARACTER(len=filename_max) :: fertiliser_data_source
 
     LOGICAL   :: l_read_fertiliser
     LOGICAL   :: l_read_manure
@@ -73,6 +75,7 @@ CONTAINS
       & ic_filename,                &
       & bc_filename,                &
       & fertiliser_filename_prefix, &
+      & fertiliser_data_source,     &
       & l_read_fertiliser,          &
       & l_read_manure
 
@@ -87,6 +90,7 @@ CONTAINS
     bc_filename                   = 'bc_land_use_static.nc'
     ic_filename                   = 'ic_land_agr.nc'
     fertiliser_filename_prefix    = 'bc_land_use_quincy'
+    fertiliser_data_source        = 'LUH'
     !
     l_read_fertiliser            = .FALSE.
     l_read_manure                = .FALSE.
@@ -104,6 +108,7 @@ CONTAINS
     config%ic_filename                = ic_filename
     config%bc_filename                = bc_filename
     config%fertiliser_filename_prefix = fertiliser_filename_prefix
+    config%fertiliser_data_source     = fertiliser_data_source
     config%l_read_fertiliser          = l_read_fertiliser
     config%l_read_manure              = l_read_manure
 

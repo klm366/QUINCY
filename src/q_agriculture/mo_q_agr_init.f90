@@ -56,7 +56,8 @@ CONTAINS
   !> Run agriculture init
   !>
   SUBROUTINE q_agr_init(tile)
-    USE mo_q_agr_constants,       ONLY: qs_def_n_fertiliser, ix_wheat, ix_tecorn, ix_trcorn, ix_trsoy
+    USE mo_q_agr_constants,       ONLY: qs_def_n_fertiliser, ix_wheat, ix_tecorn, ix_trcorn, ix_trsoy, &
+                                        frac_fertil_nh4
     USE mo_q_assimi_constants,    ONLY: ic3phot
     dsl4jsb_Use_memory(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -71,8 +72,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':q_agr_init'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory_tile(Q_AGR_, box_tile)
-    dsl4jsb_Real2D_onDomain :: n_fertiliser_c3
-    dsl4jsb_Real2D_onDomain :: n_fertiliser_c4
+    dsl4jsb_Real2D_onDomain :: nh4_fertiliser_c3crops
+    dsl4jsb_Real2D_onDomain :: no3_fertiliser_c3crops
+    dsl4jsb_Real2D_onDomain :: nh4_fertiliser_c4crops
+    dsl4jsb_Real2D_onDomain :: no3_fertiliser_c4crops
     dsl4jsb_Def_memory(Q_AGR_)
     dsl4jsb_Real2D_onDomain :: crop_type_index
     dsl4jsb_Def_config(Q_AGR_)
@@ -88,8 +91,10 @@ CONTAINS
     CALL model%Get_top_tile(box_tile)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory_tile(Q_AGR_, box_tile)
-    dsl4jsb_Get_var2D_onDomain_tile(Q_AGR_, n_fertiliser_c3, box_tile) ! out
-    dsl4jsb_Get_var2D_onDomain_tile(Q_AGR_, n_fertiliser_c4, box_tile) ! out
+    dsl4jsb_Get_var2D_onDomain_tile(Q_AGR_, nh4_fertiliser_c3crops, box_tile) ! out
+    dsl4jsb_Get_var2D_onDomain_tile(Q_AGR_, no3_fertiliser_c3crops, box_tile) ! out
+    dsl4jsb_Get_var2D_onDomain_tile(Q_AGR_, nh4_fertiliser_c4crops, box_tile) ! out
+    dsl4jsb_Get_var2D_onDomain_tile(Q_AGR_, no3_fertiliser_c4crops, box_tile) ! out
     dsl4jsb_Get_memory(Q_AGR_)
     dsl4jsb_Get_var2D_onDomain(Q_AGR_, crop_type_index)                ! out
     dsl4jsb_Get_config(Q_AGR_)
@@ -123,8 +128,10 @@ CONTAINS
     END IF
 
     ! default fertiliser used in QS (overwritten in IQ with constant or transient data in read_fertiliser_input)
-    n_fertiliser_c3(:,:) = qs_def_n_fertiliser
-    n_fertiliser_c4(:,:) = qs_def_n_fertiliser
+    nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * qs_def_n_fertiliser
+    no3_fertiliser_c3crops(:,:) = (1._wp - frac_fertil_nh4) * qs_def_n_fertiliser
+    nh4_fertiliser_c4crops(:,:) = frac_fertil_nh4 * qs_def_n_fertiliser
+    no3_fertiliser_c4crops(:,:) = (1._wp - frac_fertil_nh4) * qs_def_n_fertiliser
     ! ----------------------------------------------------------------------------------------------------- !
 #else
     !---- For IQ: Read crop type from bc file (fertiliser is also read but in the time-loop not in the init)
@@ -166,7 +173,7 @@ CONTAINS
     USE mo_jsb_time_iface,            ONLY: t_datetime
     USE mo_jsb_time,                  ONLY: is_time_experiment_start, get_year
     USE mo_jsb_io_netcdf,             ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_q_agr_constants,           ONLY: iq_background_n_fertiliser_rate
+    USE mo_q_agr_constants,           ONLY: iq_background_n_fertiliser_rate, frac_fertil_nh4
     USE mo_jsb_physical_constants,    ONLY: molar_mass_N
 
     dsl4jsb_Use_memory(Q_AGR_)
@@ -180,12 +187,14 @@ CONTAINS
 
     dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_memory(Q_AGR_)
-    dsl4jsb_Real2D_onDomain :: n_fertiliser_c3
-    dsl4jsb_Real2D_onDomain :: n_fertiliser_c4
-    dsl4jsb_Real2D_onDomain :: n_manure_crop_c3
-    dsl4jsb_Real2D_onDomain :: n_manure_crop_c4
-    dsl4jsb_Real2D_onDomain :: n_manure_pasture_c3
-    dsl4jsb_Real2D_onDomain :: n_manure_pasture_c4
+    dsl4jsb_Real2D_onDomain :: nh4_fertiliser_c3crops
+    dsl4jsb_Real2D_onDomain :: no3_fertiliser_c3crops
+    dsl4jsb_Real2D_onDomain :: nh4_fertiliser_c4crops
+    dsl4jsb_Real2D_onDomain :: no3_fertiliser_c4crops
+    dsl4jsb_Real2D_onDomain :: nh4_fertiliser_pasture
+    dsl4jsb_Real2D_onDomain :: no3_fertiliser_pasture
+    dsl4jsb_Real2D_onDomain :: n_manure_crop
+    dsl4jsb_Real2D_onDomain :: n_manure_pasture
 
     ! -------------------------------------------------------------------------------------------------- !
     REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
@@ -201,18 +210,24 @@ CONTAINS
 
     dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_memory(Q_AGR_)
-    dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_fertiliser_c3)
-    dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_fertiliser_c4)
-    dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_crop_c3)
-    dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_crop_c4)
-    dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_pasture_c3)
-    dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_pasture_c4)
+    dsl4jsb_Get_var2D_onDomain(Q_AGR_, nh4_fertiliser_c3crops)
+    dsl4jsb_Get_var2D_onDomain(Q_AGR_, no3_fertiliser_c3crops)
+    dsl4jsb_Get_var2D_onDomain(Q_AGR_, nh4_fertiliser_c4crops)
+    dsl4jsb_Get_var2D_onDomain(Q_AGR_, no3_fertiliser_c4crops)
+    dsl4jsb_Get_var2D_onDomain(Q_AGR_, nh4_fertiliser_pasture)
+    dsl4jsb_Get_var2D_onDomain(Q_AGR_, no3_fertiliser_pasture)
+    dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_crop)
+    dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_pasture)
 
     IF (.NOT. dsl4jsb_Config(Q_AGR_)%l_read_fertiliser) THEN
       ! ... use background rate
-      n_fertiliser_c3(:,:) = iq_background_n_fertiliser_rate
-      n_fertiliser_c4(:,:) = iq_background_n_fertiliser_rate
-
+      nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * iq_background_n_fertiliser_rate
+      no3_fertiliser_c3crops(:,:) = (1._wp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
+      nh4_fertiliser_c4crops(:,:) = frac_fertil_nh4 * iq_background_n_fertiliser_rate
+      no3_fertiliser_c4crops(:,:) = (1._wp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
+      ! no backround rate fertiliser on pasture
+      nh4_fertiliser_pasture(:,:) = 0.0_wp
+      no3_fertiliser_pasture(:,:) = 0.0_wp
     ELSE
       ! search a file ending on the current year
       current_year  = get_year(current_datetime)
@@ -226,27 +241,63 @@ CONTAINS
       WRITE (filename_fertiliser_data,'(a,a,I4.4,a)') &
         & TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_filename_prefix), '_', current_year, ".nc"
 
-      input_file = jsb_netcdf_open_input(TRIM(filename_fertiliser_data), model%grid_id)
-      ptr_2D => input_file%Read_2d(variable_name='fertl_c3crops', fill_array = n_fertiliser_c3(:,:))
-      ptr_2D => input_file%Read_2d(variable_name='fertl_c4crops', fill_array = n_fertiliser_c4(:,:))
-      CALL input_file%Close()
+      IF(TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_data_source)=='LUH') THEN
 
-      ! The actually applied fertiliser is the maximum of the default and the (converted) read fertiliser
-      n_fertiliser_c3(:,:) = MAX(iq_background_n_fertiliser_rate, n_fertiliser_c3(:,:) / 10._wp / molar_mass_N)
-      n_fertiliser_c4(:,:) = MAX(iq_background_n_fertiliser_rate, n_fertiliser_c4(:,:) / 10._wp / molar_mass_N)
+        input_file = jsb_netcdf_open_input(TRIM(filename_fertiliser_data), model%grid_id)
+        ptr_2D => input_file%Read_2d(variable_name='fertl_c3crops', fill_array = nh4_fertiliser_c3crops(:,:))
+        ptr_2D => input_file%Read_2d(variable_name='fertl_c4crops', fill_array = nh4_fertiliser_c4crops(:,:))
+        CALL input_file%Close()
+
+        ! The actually applied fertiliser is the maximum of the default and the (converted) read fertiliser
+        nh4_fertiliser_c3crops(:,:) = MAX(iq_background_n_fertiliser_rate, &
+                                          nh4_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N)
+        nn4_fertiliser_c4crops(:,:) = MAX(iq_background_n_fertiliser_rate, &
+                                          nh4_fertiliser_c4crops(:,:) / 10._wp / molar_mass_N)
+
+        ! split LUH fertiliser into NH4 and NO3, since it's not known from the data source
+        no3_fertiliser_c3crops(:,:) = (1._wp - frac_fertil_nh4) * nh4_fertiliser_c3crops(:,:)
+        no3_fertiliser_c4crops(:,:) = (1._wp - frac_fertil_nh4) * nh4_fertiliser_c4crops(:,:)
+        nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * nh4_fertiliser_c3crops(:,:)
+        no3_fertiliser_c4crops(:,:) = frac_fertil_nh4 * nh4_fertiliser_c4crops(:,:)
+
+        ! no fertiliser on pasture in this data set
+        nh4_fertiliser_pasture(:,:) = 0.0_wp
+        no3_fertiliser_pasture(:,:) = 0.0_wp
+
+      ELSE IF (TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_data_source)=='NMIP') THEN
+
+        input_file = jsb_netcdf_open_input(TRIM(filename_fertiliser_data), model%grid_id)
+        ptr_2D => input_file%Read_2d(variable_name='fertl_crops_nh4', fill_array = nh4_fertiliser_c3crops(:,:))
+        ptr_2D => input_file%Read_2d(variable_name='fertl_crops_no3', fill_array = no3_fertiliser_c3crops(:,:))
+        ptr_2D => input_file%Read_2d(variable_name='fertl_pasture_nh4', fill_array = nh4_fertiliser_pasture(:,:))
+        ptr_2D => input_file%Read_2d(variable_name='fertl_pasture_no3', fill_array = no3_fertiliser_pasture(:,:))
+        CALL input_file%Close()
+
+        ! The actually applied fertiliser is the maximum of the default and the (converted) read fertiliser
+        nh4_fertiliser_c3crops(:,:) = MAX(frac_fertil_nh4 * iq_background_n_fertiliser_rate, &
+                                          nh4_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N)
+        no3_fertiliser_c3crops(:,:) = MAX((1._wp - frac_fertil_nh4) * iq_background_n_fertiliser_rate, &
+                                          no3_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N)
+        ! NMIP does not provide information for C3 vs. C4 crops, assert rates are the same
+        nh4_fertiliser_c4crops(:,:) = nh4_fertiliser_c3crops(:,:)
+        no3_fertiliser_c4crops(:,:) = no3_fertiliser_c3crops(:,:)
+
+        ! The actually applied fertiliser is the (converted) read fertiliser, no background fertilisation assumed on pasture 
+        nh4_fertiliser_pasture(:,:) = nh4_fertiliser_pasture(:,:) / 10._wp / molar_mass_N
+        no3_fertiliser_pasture(:,:) = no3_fertiliser_pasture(:,:) / 10._wp / molar_mass_N
+
+      ELSE
+        CALL finish(TRIM(routine), 'Invalid fertiliser data source. Please check your settings.')
+      END IF
+
     END IF
 
-    !$ACC UPDATE DEVICE(n_fertiliser_c3, n_fertiliser_c4) ASYNC(1)
+    !$ACC UPDATE DEVICE(nh4_fertiliser_c3crops, nh4_fertiliser_c4crops, nh4_fertiliser_pasture) ASYNC(1)
+    !$ACC UPDATE DEVICE(no3_fertiliser_c3crops, no3_fertiliser_c4crops, no3_fertiliser_pasture) ASYNC(1)
     !$ACC WAIT(1)
 
-    IF (.NOT. dsl4jsb_Config(Q_AGR_)%l_read_manure) THEN
-      ! no manure is applied if not provided as forcing
-      n_manure_crop_c3(:,:)    = 0.0_wp
-      n_manure_crop_c4(:,:)    = 0.0_wp
-      n_manure_pasture_c3(:,:) = 0.0_wp
-      n_manure_pasture_c4(:,:) = 0.0_wp
-
-    ELSE
+    IF (TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_data_source)=='NMIP'.AND. &
+        dsl4jsb_Config(Q_AGR_)%l_read_manure) THEN
       ! search a file ending on the current year
       current_year  = get_year(current_datetime)
 
@@ -261,20 +312,21 @@ CONTAINS
         & TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_filename_prefix), '_', current_year, ".nc"
 
       input_file = jsb_netcdf_open_input(TRIM(filename_fertiliser_data), model%grid_id)
-      ptr_2D => input_file%Read_2d(variable_name='manure_c3crops', fill_array = n_manure_crop_c3(:,:))
-      ptr_2D => input_file%Read_2d(variable_name='manure_c4crops', fill_array = n_manure_crop_c4(:,:))
-      ptr_2D => input_file%Read_2d(variable_name='manure_c3past', fill_array = n_manure_pasture_c3(:,:))
-      ptr_2D => input_file%Read_2d(variable_name='manure_c4past', fill_array = n_manure_pasture_c4(:,:))
+      ptr_2D => input_file%Read_2d(variable_name='manure_crops', fill_array = n_manure_crop(:,:))
+      ptr_2D => input_file%Read_2d(variable_name='manure_pasture', fill_array = n_manure_pasture(:,:))
       CALL input_file%Close()
 
       ! Convert unit of manure to model unit (kg / ha to mol/m2)
-      n_manure_crop_c3(:,:)    = n_manure_crop_c3(:,:) / 10._wp / molar_mass_N
-      n_manure_crop_c4(:,:)    = n_manure_crop_c4(:,:) / 10._wp / molar_mass_N
-      n_manure_pasture_c3(:,:) = n_manure_pasture_c3(:,:) / 10._wp / molar_mass_N
-      n_manure_pasture_c4(:,:) = n_manure_pasture_c4(:,:) / 10._wp / molar_mass_N
+      n_manure_crop(:,:)    = n_manure_crop(:,:) / 10._wp / molar_mass_N
+      n_manure_pasture(:,:) = n_manure_pasture(:,:) / 10._wp / molar_mass_N
+    ELSE
+      ! no manure is applied if not provided as forcing
+      n_manure_crop(:,:)    = 0.0_wp
+      n_manure_pasture(:,:) = 0.0_wp
+
     END IF
 
-    !$ACC UPDATE DEVICE(n_manure_crop_c3, n_manure_crop_c4, n_manure_pasture_c3, n_manure_pasture_c4) ASYNC(1)
+    !$ACC UPDATE DEVICE(n_manure_crop, n_manure_pasture) ASYNC(1)
     !$ACC WAIT(1)
 
 

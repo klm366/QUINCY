@@ -130,10 +130,11 @@ MODULE mo_q_agr_interface
     dsl4jsb_Real2D_onChunk :: daylength_prev_day
 
     dsl4jsb_Def_memory_tile(Q_AGR_, box_tile)
-    dsl4jsb_Real2D_onChunk :: n_fertiliser_c3
-    dsl4jsb_Real2D_onChunk :: n_fertiliser_c4
-    dsl4jsb_Real2D_onChunk :: n_manure_crop_c3
-    dsl4jsb_Real2D_onChunk :: n_manure_crop_c4
+    dsl4jsb_Real2D_onChunk :: nh4_fertiliser_c3crops
+    dsl4jsb_Real2D_onChunk :: no3_fertiliser_c3crops
+    dsl4jsb_Real2D_onChunk :: nh4_fertiliser_c4crops
+    dsl4jsb_Real2D_onChunk :: no3_fertiliser_c4crops
+    dsl4jsb_Real2D_onChunk :: n_manure_crop
 
     dsl4jsb_Def_memory(Q_AGR_)
     dsl4jsb_Real2D_onChunk :: crop_type_index
@@ -187,8 +188,8 @@ MODULE mo_q_agr_interface
     REAL(wp)                   :: dtime                  !< timestep length
     TYPE(t_jsb_model), POINTER :: model
 
-    REAL(wp),     DIMENSION(options%nc) :: n_fertiliser  !< local fertiliser depending on if this is a c3 or c4 crop
-    REAL(wp),     DIMENSION(options%nc) :: n_manure      !< local manure application depending on if this is a c3 or c4 crop
+    REAL(wp),     DIMENSION(options%nc) :: nh4_fertiliser  !< local fertiliser depending on if this is a c3 or c4 crop
+    REAL(wp),     DIMENSION(options%nc) :: no3_fertiliser  !< local fertiliser depending on if this is a c3 or c4 crop
     CLASS(t_jsb_tile_abstract), POINTER :: box_tile      !< pointer to the box tile to get the fertiliser data
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_cropland_process'
@@ -225,10 +226,11 @@ MODULE mo_q_agr_interface
     dsl4jsb_Get_var2D_onChunk(A2L_, daylength_prev_day)           ! in
 
     dsl4jsb_Get_memory_tile(Q_AGR_, box_tile)
-    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_fertiliser_c3, box_tile) ! in
-    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_fertiliser_c4, box_tile) ! in
-    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_manure_crop_c3, box_tile) ! in
-    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_manure_crop_c4, box_tile) ! in
+    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, nh4_fertiliser_c3crops, box_tile) ! in
+    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, no3_fertiliser_c3crops, box_tile) ! in
+    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, nh4_fertiliser_c4crops, box_tile) ! in
+    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, no3_fertiliser_c4crops, box_tile) ! in
+    dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_manure_crop, box_tile)   ! in
 
     dsl4jsb_Get_memory(Q_AGR_)
     dsl4jsb_Get_var2D_onChunk(Q_AGR_, crop_type_index)            ! in
@@ -344,18 +346,19 @@ MODULE mo_q_agr_interface
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1,nc
       IF (lctlib_ps_pathway == ic3phot) THEN
-        n_fertiliser(ic) = n_fertiliser_c3(ic)
-        n_manure(ic)      = n_manure_crop_c3(ic)
+        nh4_fertiliser(ic) = nh4_fertiliser_c3crops(ic)
+        no3_fertiliser(ic) = no3_fertiliser_c3crops(ic)
       ELSE
-        n_fertiliser(ic) = n_fertiliser_c4(ic)
-        n_manure(ic)     = n_manure_crop_c4(ic)
+        nh4_fertiliser(ic) = nh4_fertiliser_c4crops(ic)
+        no3_fertiliser(ic) = no3_fertiliser_c4crops(ic)
       END IF
     END DO
     !$ACC END PARALLEL LOOP
 
     CALL calc_fertiliser_application(nc, nd_crop_season(:), nd_crop_season_mavg(:),                  & ! in
-      &                               crop_season_per_year_mavg(:), n_fertiliser(:),                 &
-      &                               n_manure(:), fertiliser_nh4(:), fertiliser_nh4_n15(:),         & ! in,2xout
+      &                               crop_season_per_year_mavg(:), nh4_fertiliser(:),               &
+      &                               no3_fertiliser(:), n_manure_crop(:),                           &
+      &                               fertiliser_nh4(:), fertiliser_nh4_n15(:),                      & ! out
       &                               fertiliser_no3(:), fertiliser_no3_n15(:),                      &
       &                               fertiliser_po4(:))
 
