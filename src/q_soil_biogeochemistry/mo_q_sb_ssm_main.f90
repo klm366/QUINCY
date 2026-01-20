@@ -78,7 +78,9 @@ CONTAINS
     INTEGER                               :: nsoil_w              !< number of soil layers (water)
     INTEGER                               :: isoil                !< loop over nsoil_w
     INTEGER                               :: ic, is               !< loop over dimensions
-    REAL(wp), ALLOCATABLE, DIMENSION(:)   :: n_manure             !< local copy of manure fertiliser application
+    REAL(wp)                              :: n_manure(options%nc) !< local copy of manure fertiliser application
+    REAL(wp)                              :: nh4_fertiliser(options%nc) !< local copy of manure fertiliser application
+    REAL(wp)                              :: no3_fertiliser(options%nc) !< local copy of manure fertiliser application
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: apparent_fast_som_cn      , &
                                              apparent_fast_som_np      , &
                                              fine_root_carbon_sl, &
@@ -295,7 +297,6 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ALLOCATE(n_manure(nc))
     ALLOCATE(apparent_fast_som_cn(nc, nsoil_w))
     ALLOCATE(apparent_fast_som_np(nc, nsoil_w))
     ALLOCATE(fine_root_carbon_sl(nc, nsoil_w))
@@ -972,13 +973,19 @@ CONTAINS
     IF(lctlib%PastureFlag) THEN
 #ifdef __QUINCY_STANDALONE__
       n_manure(:) = qs_def_n_manure
+      nh4_fertiliser(:) = 0.0_wp
+      no3_fertiliser(:) = 0.0_wp
 #else
       !> if AGR process is active, manure will be set there, otherwise
       !> set manure to zero
       IF (dsl4jsb_Config(Q_AGR_)%active) THEN
-          n_manure(:) = n_manure_pasture(:)
+        n_manure(:)       = n_manure_pasture(:)
+        nh4_fertiliser(:) = nh4_fertiliser_pasture(:)
+        no3_fertiliser(:) = no3_fertiliser_pasture(:)
       ELSE
         n_manure(:) = 0.0_wp
+        nh4_fertiliser(:) = 0.0_wp
+        no3_fertiliser(:) = 0.0_wp
       END IF
 #endif
       !> note that these fluxes are returned in micro-mol / m2 / s and don't need to
@@ -986,8 +993,8 @@ CONTAINS
       CALL calc_manure_application_on_pasture( &
         & nc, &
         & n_manure(:), &
-        & nh4_fertiliser_pasture(:), &
-        & no3_fertiliser_pasture(:), &
+        & nh4_fertiliser(:), &
+        & no3_fertiliser(:), &
         & fertiliser_nh4(:), &
         & fertiliser_nh4_n15(:), &
         & fertiliser_no3(:), &
@@ -1093,7 +1100,6 @@ CONTAINS
 
     !------------------------------------------------------------------------------------------------------ !
     ! de-allocate local allocatable variables
-    DEALLOCATE(n_manure)
     DEALLOCATE(apparent_fast_som_cn)
     DEALLOCATE(apparent_fast_som_np)
     DEALLOCATE(fine_root_carbon_sl)
