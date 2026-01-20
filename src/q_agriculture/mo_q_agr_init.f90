@@ -282,7 +282,7 @@ CONTAINS
         nh4_fertiliser_c4crops(:,:) = nh4_fertiliser_c3crops(:,:)
         no3_fertiliser_c4crops(:,:) = no3_fertiliser_c3crops(:,:)
 
-        ! The actually applied fertiliser is the (converted) read fertiliser, no background fertilisation assumed on pasture 
+        ! The actually applied fertiliser is the (converted) read fertiliser, no background fertilisation assumed on pasture
         nh4_fertiliser_pasture(:,:) = nh4_fertiliser_pasture(:,:) / 10._wp / molar_mass_N
         no3_fertiliser_pasture(:,:) = no3_fertiliser_pasture(:,:) / 10._wp / molar_mass_N
 
