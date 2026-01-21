@@ -251,7 +251,7 @@ CONTAINS
         ! The actually applied fertiliser is the maximum of the default and the (converted) read fertiliser
         nh4_fertiliser_c3crops(:,:) = MAX(iq_background_n_fertiliser_rate, &
                                           nh4_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N)
-        nn4_fertiliser_c4crops(:,:) = MAX(iq_background_n_fertiliser_rate, &
+        nh4_fertiliser_c4crops(:,:) = MAX(iq_background_n_fertiliser_rate, &
                                           nh4_fertiliser_c4crops(:,:) / 10._wp / molar_mass_N)
 
         ! split LUH fertiliser into NH4 and NO3, since it's not known from the data source
