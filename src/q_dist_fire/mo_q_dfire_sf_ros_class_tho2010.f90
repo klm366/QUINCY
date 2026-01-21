@@ -99,23 +99,36 @@ MODULE mo_q_dfire_sf_ros_class_tho2010
     MODULE PROCEDURE :: create_sf_ros_init
   END INTERFACE t_sf_ros
 
+  !< weight factor variable
+  TYPE :: t_fwvar_r1d
+    REAL(wp), ALLOCATABLE :: d(:) !< dead (#nc)
+    REAL(wp), ALLOCATABLE :: l(:) !< live (#nc)
+!    REAL(wp), ALLOCATABLE :: t(:) !< total, or dead + live (#nc)
+  END TYPE t_fwvar_r1d
+
+  INTERFACE t_fwvar_r1d
+    MODULE PROCEDURE :: create_fwvar_r1d
+  END INTERFACE t_fwvar_r1d
+
+  !< weight factor variable
+  TYPE :: t_fwvar_r2d
+    REAL(wp), ALLOCATABLE :: d(:,:) !< dead (#nc)
+    REAL(wp), ALLOCATABLE :: l(:,:) !< live (#nc)
+!    REAL(wp), ALLOCATABLE :: t(:,:) !< total, or dead + live (#nc)
+  END TYPE t_fwvar_r2d
+
+  INTERFACE t_fwvar_r2d
+    MODULE PROCEDURE :: create_fwvar_r2d
+  END INTERFACE t_fwvar_r2d
+
+
   TYPE :: t_sf_weighting_factors
-    REAL(wp), ALLOCATABLE :: Adeadj(:,:)  !< (#dead fuel classes, #nc)
-    REAL(wp), ALLOCATABLE :: Alivej(:,:)  !< (#live fuel classes, #nc)
-
-    REAL(wp), ALLOCATABLE :: Adead(:)  !< (#nc)
-    REAL(wp), ALLOCATABLE :: Alive(:)  !< (#nc)
-
-    REAL(wp), ALLOCATABLE :: At(:)      !< dead + live (#nc)
-
-    REAL(wp), ALLOCATABLE :: fdeadj(:,:) !< (#ndeadfuelclasses, #nc)
-    REAL(wp), ALLOCATABLE :: flivej(:,:) !< (#nlivefuelclasses, #nc)
-
-    REAL(wp), ALLOCATABLE :: fdead(:) !< #nc)
-    REAL(wp), ALLOCATABLE :: flive(:) !< (#nc)
-
-    REAL(wp), ALLOCATABLE :: gdeadj(:,:) !< (#ndeadfuelclasses, #nc)
-    REAL(wp), ALLOCATABLE :: glivej(:,:) !< (#nlivefuelclasses, #nc)
+    TYPE(t_fwvar_r2d)     :: Aij    !< (#fuel classes-dead, live-, #nc)
+    TYPE(t_fwvar_r1d)     :: Ai     !< (#nc)
+    REAL(wp), ALLOCATABLE :: At(:)  !< A_dead + A_live (#nc)
+    TYPE(t_fwvar_r2d)     :: fij    !< (#fuel classes-dead, live-, #nc)
+    TYPE(t_fwvar_r1d)     :: fi     !< (#nc)
+    TYPE(t_fwvar_r2d)     :: gij    !< (#nfuelclasses-dead, live-, #nc)
   END TYPE t_sf_weighting_factors
 
   INTERFACE t_sf_weighting_factors
@@ -127,57 +140,58 @@ CONTAINS
   !>
   !> Constructor for weighting factors derived type
   !>
-  FUNCTION t_sf_weighting_factors(nc, ndeadfc, nlivefc) RESULT (wfactors)
+  FUNCTION create_sf_weighting_factors(nc, ndeadfc, nlivefc) RESULT (wfactors)
     INTEGER, INTENT(in) :: nc
     INTEGER, INTENT(in) :: ndeadfc !< 1 hr, 10 hr, ..., live grass, ...
     INTEGER, INTENT(in) :: nlivefc !< 1 hr, 10 hr, ..., live grass, ...
     TYPE(t_sf_weighting_factors) :: wfactors
 
-    ALLOCATE(wfactors % Adeadj(ndeadfc, nc))
-    ALLOCATE(wfactors % Alivej(nlivefc, nc))
-    ALLOCATE(wfactors % Adead(nc))
-    ALLOCATE(wfactors % Alive(nc))
     ALLOCATE(wfactors % At(nc))
-    ALLOCATE(wfactors % fdeadj(ndeadfc, nc))
-    ALLOCATE(wfactors % flivej(nlivefc, nc))
-    ALLOCATE(wfactors % fdead(nc))
-    ALLOCATE(wfactors % flive(nc))
-    ALLOCATE(wfactors % gdeadj(ndeadfc, nc))
-    ALLOCATE(wfactors % glivej(nlivefc, nc))
 
-    wfactors % Adeadj = 0._wp
-    wfactors % Alivej = 0._wp
-    wfactors % Adead = 0._wp
-    wfactors % Alive = 0._wp
+    wfactors % Aij = t_fwvar_r2d(nc, ndeadfc, nlivefc)
+    wfactors % Ai = t_fwvar_r1d(nc)
     wfactors % At = 0._wp
-    wfactors % fdeadj = 0._wp
-    wfactors % flivej = 0._wp
-    wfactors % fdead = 0._wp
-    wfactors % flive = 0._wp
-    wfactors % gdeadj = 0._wp
-    wfactors % glivej = 0._wp
-  END FUNCTION t_sf_weighting_factors
+
+    wfactors % fij = t_fwvar_r2d(nc, ndeadfc, nlivefc)
+    wfactors % fi = t_fwvar_r1d(nc)
+
+    wfactors % gij = t_fwvar_r2d(nc, ndeadfc, nlivefc)
+  END FUNCTION create_sf_weighting_factors
 
 
   ! ======================================================================================================= !
   !>
-  !> Constructor for f weighting factors derived type
+  !> Constructor for t_fwvar
   !>
-  FUNCTION t_sf_f_weighting_factors(nc, nfuelclasses) RESULT (fwfactors)
+  FUNCTION create_fwvar_r1d(nc) RESULT (var)
     INTEGER, INTENT(in) :: nc
-    INTEGER, INTENT(in) :: nfuelclasses !< 1 hr, 10 hr, ..., live grass, ...
-    TYPE(t_sf_f_weighting_factors) :: fwfactors
+    TYPE(t_fwvar), INTENT(in) :: var
+    ALLOCATE(var%l(nc))
+    ALLOCATE(var%d(nc))
+!    ALLOCATE(var%t(nc))
+    var%l = 0._wp
+    var%d = 0._wp
+!    var%t = 0._wp
+  END FUNCTION create_fwvar_r1d
 
-    ALLOCATE(fwfactors%Aj(nfuelclasses, nc))
-    ALLOCATE(fwfactors%A(nc))
-    ALLOCATE(fwfactors%fj(nfuelclasses, nc))
-    ALLOCATE(fwfactors%f(nc))
 
-    fwfactors%Aj = 0._wp
-    fwfactors%A = 0._wp
-    fwfactors%fj = 0._wp
-    fwfactors%f = 0._wp
-  END FUNCTION t_sf_f_weighting_factors
+  ! ======================================================================================================= !
+  !>
+  !> Constructor for t_fwvar_r2d
+  !>
+  FUNCTION create_fwvar_r2d(nc, nddfc, nlvfc) RESULT (var)
+    INTEGER, INTENT(in) :: nc
+    INTEGER, INTENT(in) :: nddfc !< n dead fuel classes
+    INTEGER, INTENT(in) :: nlvfc !< n live fuel classes
+    TYPE(t_fwvar), INTENT(in) :: var
+    ALLOCATE(var%l(nddfc, nc))
+    ALLOCATE(var%d(nlvfc, nc))
+    !    ALLOCATE(var%t(nc))
+    var%l = 0._wp
+    var%d = 0._wp
+    !    var%t = 0._wp
+  END FUNCTION create_fwvar_r2d
+
 
   ! ======================================================================================================= !
   !>
@@ -196,7 +210,7 @@ CONTAINS
     REAL(wp), INTENT(in)                 :: moist_extinction(nc)        !< [0 to 1]
     REAL(wp), INTENT(in)                 :: fdi(nc)                     !< Fire dange index [0 to 1]
     TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac           !< [0 to 1]
-    REAL(wp), INTENT(in)                 :: w_oi(nc, nddfuels)          !< dead fuel load [kg DM m-2]
+    REAL(wp), INTENT(in)                 :: w_oi(nc, nddfuels)          !< dead fuel load [kg DM m-2], Note g -> kg
     REAL(wp), INTENT(in)                 :: lv_w_oi(nc, nlvfuels)       !< live fuel load [kg DM m-2]
 
     !< According to Pfeiffer et al. (2013), omega_n must be treated as omega_o
@@ -206,7 +220,8 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp) :: beta(nc), beta_op(nc)
-    REAL(wp) :: sigma(nc)                 !< Surface-area-to-volume-ratio [cm-1]
+    !REAL(wp) :: sigma(nc)                 !< Surface-area-to-volume-ratio [cm-1]
+    TYPE(t_fwvar_r1d) :: sigma                 !< Surface-area-to-volume-ratio [cm-1]
     REAL(wp) :: A_var(nc)
     REAL(wp) :: max_reaction_velocity(nc)
     REAL(wp) :: u_f_wind(nc)
@@ -215,6 +230,7 @@ CONTAINS
     INTEGER :: inc
     ! ----------------------------------------------------------------------------------------------------- !
     ros = t_sf_ros(nc)
+    sigma = t_fwvar_r1d(nc)
     ros%mean_fire_area = 0._wp
 
     !< Corrections from Oberhagemann et al. (2025)
@@ -228,12 +244,16 @@ CONTAINS
         u_f_wind(inc) = fwd_wind_factor(inc) * wind(inc) !< [m min-1]
 
         !<  (Table A1, 5th from Thonicke et al. (2010))
-        ros%net_fuel_load(:,ix_dead,inc) = (1._wp - df_sf_mineral_fract) * SUM(w_oi(inc,:) * wfactors % gdeadj(:,inc))
-        ros%net_fuel_load(:,ix_live,inc) = (1._wp - df_sf_mineral_fract) * SUM(lv_w_oi(inc,:) * wfactors % glivej(:,inc))
+        ros%net_fuel_load%d(:,inc) = (1._wp - df_sf_mineral_fract) * SUM(w_oi(inc,:) * wfactors % gdeadj(:,inc))
+        ros%net_fuel_load%l(:,inc) = (1._wp - df_sf_mineral_fract) * SUM(lv_w_oi(inc,:) * wfactors % glivej(:,inc))
 
         ros%fbd(inc) = fuel_bulk_density(inc) !< fuel bulk density [kg m-3], precomputed at mo_q_dfire_fuel.f90 + aggregation to         average
 
-        sigma(inc) = calc_sigma(df_sf_sigma_nr, nfuels, df_sigmas, w_oi(inc,:)) !< Table A1, 3rd equation [cm-1] from Thonicke et al. (2010)
+        !<
+        sigma%d(inc) = SUM(wfactors % fdead(inc) * df_sigmas_dead)
+        sigma%l(inc) = SUM(wfactors % flive(inc) * df_sigmas_live)
+        sigma%t(inc) = sigma%l(inc) + sigma%d(inc)
+
         !< (Table A1, 3rd from Thonicke et al. (2010))
         beta(inc) =  ros%fbd(inc) / df_sf_oven_dry_part_dens !< [-]
         !< Calculate beta_op (Eq. A6 from Thonicke et al. (2010))
@@ -551,17 +571,19 @@ CONTAINS
     wfactors = t_sf_weighting_factors(nc, ndeadfc, nlivefc)
 
     DO ic = 1, nc
-      wfactors % Adeadj(:,ic) = sigma_dead * fuel_load_dead(:,ic) / part_dens
-      wfactors % Alivej(:,ic) = sigma_live * fuel_load_live(:,ic) / part_dens
-      wfactors % Adead(ic) = SUM(wfactors % Adeadj(:,ic))
-      wfactors % Alive(ic) = SUM(wfactors % Alivej(:,ic))
-      wfactors % At(ic) = wfactors % Alive(ic) + wfactors % Adead(ic)
-      wfactors % fdeadj(:,ic) = wfactors % Adeadj(:,ic) / wfactors % Adead(ic)
-      wfactors % flivej(:,ic) = wfactors % Alivej(:,ic) / wfactors % Alive(ic)
-      wfactors % fdead(:,ic) = SUM(wfactors % fdeadj(:,ic))
-      wfactors % flive(:,ic) = SUM(wfactors % flivej(:,ic))
-      wfactors % gdeadj(:,ic) = calc_g_weighting_factors(wfactors % fdeadj(:,ic), sigmas_dead)
-      wfactors % glivej(:,ic) = calc_g_weighting_factors(wfactors % flivej(:,ic), sigmas_live)
+      wfactors % Aij % d(:,ic) = sigma_dead * fuel_load_dead(:,ic) / part_dens
+      wfactors % Aij % l(:,ic) = sigma_live * fuel_load_live(:,ic) / part_dens
+      wfactors % Ai % d(ic) = SUM(wfactors % Aij % d(:,ic))
+      wfactors % Ai % l(ic) = SUM(wfactors % Aij % l(:,ic))
+      wfactors % At(ic) = wfactors % Ai % l(ic) + wfactors % Ai % d(ic)
+
+      wfactors % fij % d(:,ic) = wfactors % Aij % d(:,ic) / wfactors % Ai % d(ic)
+      wfactors % fij % l(:,ic) = wfactors % Aij % d(:,ic) / wfactors % Ai % l(ic)
+      wfactors % fi % d(:,ic) = SUM(wfactors % fij % d(:,ic))
+      wfactors % fi % l(:,ic) = SUM(wfactors % fij % l(:,ic))
+
+      wfactors % gij % d(:,ic) = calc_g_weighting_factors(wfactors % fij % d(:,ic), sigmas_dead)
+      wfactors % gij % l(:,ic) = calc_g_weighting_factors(wfactors % fij % l(:,ic), sigmas_live)
     END DO
   END FUNCTION calc_weighting_factors
 
