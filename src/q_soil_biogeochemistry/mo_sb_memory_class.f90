@@ -258,9 +258,11 @@ MODULE mo_sb_memory_class
                             leaching_po4_solute, &                !< land to groundwater flux of PO4 [micro-mol m-2 s-1]
                             leaching_nh4_n15_solute, &            !< land to groundwater flux of 15NH4 [micro-mol m-2 s-1]
                             leaching_no3_n15_solute, &            !< land to groundwater flux of 15NO3 [micro-mol m-2 s-1]
+                            emission_nh3, &                       !< land to atmosphere flux of NOy [micro-mol m-2 s-1]
                             emission_noy, &                       !< land to atmosphere flux of NOy [micro-mol m-2 s-1]
                             emission_n2o, &                       !< land to atmosphere flux of N2O [micro-mol m-2 s-1]
                             emission_n2, &                        !< land to atmosphere flux of N2 [micro-mol m-2 s-1]
+                            emission_nh3_n15, &                   !< land to atmosphere flux of 15NOy [micro-mol m-2 s-1]
                             emission_noy_n15, &                   !< land to atmosphere flux of 15NOy [micro-mol m-2 s-1]
                             emission_n2o_n15, &                   !< land to atmosphere flux of 15N2O [micro-mol m-2 s-1]
                             emission_n2_n15                       !< land to atmosphere flux of 15N2 [micro-mol m-2 s-1]
@@ -374,7 +376,7 @@ MODULE mo_sb_memory_class
       & total_soil_inorg_n   !< nh4_solute + nh4_assoc + no3_solute [mol m-3]
 
     TYPE(t_jsb_var_real2d)  :: &
-      & ecosystem_total_n_loss     !< emission_noy + emission_n2o + emission_n2 + leaching_dom_nitrogen + leaching_nh4_solute + leaching_no3_solute
+      & ecosystem_total_n_loss     !< emission_nh3 + emission_noy + emission_n2o + emission_n2 + leaching_dom_nitrogen + leaching_nh4_solute + leaching_no3_solute
                                    !<  + lateral_loss_dom_nitrogen_sl + lateral_loss_nh4_solute_sl + lateral_loss_no3_solute_sl [micro-mol m-2 s-1]
 
     !------------------------------------------------------------------------------------------------------ !
@@ -2555,6 +2557,18 @@ CONTAINS
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
 
+      CALL mem%Add_var('emission_nh3', mem%emission_nh3, &
+        & hgrid, surface, &
+        & t_cf('emission_nh3', 'micro-mol m-2 s-1', 'land to atmosphere flux of NH3'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
+
       CALL mem%Add_var('emission_noy', mem%emission_noy, &
         & hgrid, surface, &
         & t_cf('emission_noy', 'micro-mol m-2 s-1', 'land to atmosphere flux of NOy'), &
@@ -2594,6 +2608,18 @@ CONTAINS
       CALL mem%Add_var('emission_noy_n15', mem%emission_noy_n15, &
         & hgrid, surface, &
         & t_cf('emission_noy_n15', 'micro-mol m-2 s-1', 'land to atmosphere flux of 15NOy'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('emission_nh3_n15', mem%emission_nh3_n15, &
+        & hgrid, surface, &
+        & t_cf('emission_nh3_n15', 'micro-mol m-2 s-1', 'land to atmosphere flux of 15NH3'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

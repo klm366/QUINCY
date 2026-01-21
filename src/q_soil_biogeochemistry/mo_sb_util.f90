@@ -118,9 +118,11 @@ CONTAINS
     dsl4jsb_var2D_onChunk(SB_, leaching_dom_nitrogen15)        = zero
     dsl4jsb_var2D_onChunk(SB_, leaching_nh4_n15_solute)        = zero
     dsl4jsb_var2D_onChunk(SB_, leaching_no3_n15_solute)        = zero
+    dsl4jsb_var2D_onChunk(SB_, emission_nh3)                   = zero
     dsl4jsb_var2D_onChunk(SB_, emission_noy)                   = zero
     dsl4jsb_var2D_onChunk(SB_, emission_n2o)                   = zero
     dsl4jsb_var2D_onChunk(SB_, emission_n2)                    = zero
+    dsl4jsb_var2D_onChunk(SB_, emission_nh3_n15)               = zero
     dsl4jsb_var2D_onChunk(SB_, emission_noy_n15)               = zero
     dsl4jsb_var2D_onChunk(SB_, emission_n2o_n15)               = zero
     dsl4jsb_var2D_onChunk(SB_, emission_n2_n15)                = zero
