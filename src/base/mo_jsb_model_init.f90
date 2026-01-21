@@ -383,22 +383,17 @@ CONTAINS
       !>
       !> quincy with jsbach soil physics (w/o tmx)
       !>
-      IF (model%config%use_soil_phys_jsbach) THEN
-
+      IF (model%config%use_soil_phys_jsbach .AND. (.NOT. model%config%qmodel_id == QSOIL)) THEN
         !-- set flux variables to zero
-        IF (model%config%qmodel_id == QSOIL) THEN
-          CALL model%Queue_task(SB_, "reset_sb_fluxes")               ! LAND AND SOIL
-        ELSE
-          CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
-          CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
-          IF (model%config%qmodel_id == QLAND) THEN
-            CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND AND SOIL
-          END IF
+        CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
+        CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
+        IF (model%config%qmodel_id == QLAND) THEN
+          CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND AND SOIL
+        END IF
 
-          IF (is_time_restart(get_time_start())) THEN
-            !-- derive plant characteristics from restart variables
-            CALL model%Queue_task(VEG_, "plant_characteristics")
-          END IF
+        IF (is_time_restart(get_time_start())) THEN
+          !-- derive plant characteristics from restart variables
+          CALL model%Queue_task(VEG_, "plant_characteristics")
         END IF
 
         ! --------------- Any tasks that might change the land cover need to come first in the timestep
@@ -500,7 +495,7 @@ CONTAINS
       !>
       !> quincy with SPQ_ soil physics process (fallback)
       !>
-      ELSE IF (.NOT. model%config%use_soil_phys_jsbach) THEN
+      ELSE IF ((.NOT. model%config%use_soil_phys_jsbach)  .AND. (.NOT. model%config%qmodel_id == QSOIL)) THEN
 
         !-- set flux variables to zero
         CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
@@ -601,6 +596,30 @@ CONTAINS
           CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")   ! LAND or PLANT
         END IF
 
+      ELSE IF (model%config%qmodel_id == QSOIL) THEN
+        !-- QSOIL
+        !! init/reset fluxes (with/to zero)
+        !!
+        CALL model%Queue_task(SB_, "reset_sb_fluxes")
+        IF (.NOT. model%config%use_soil_phys_jsbach) THEN
+          CALL model%Queue_task(SPQ_, "reset_spq_fluxes")
+        END IF
+
+        !! tasks that do not change area
+        !!
+        CALL model%Queue_task(SB_, "sb_rate_modifier")
+        IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+          CALL model%Queue_task(SB_, "sb_jsm")                  ! JSM
+        ELSE
+          CALL model%Queue_task(SB_, "sb_simple_model")         ! SSM
+        END IF
+        CALL model%Queue_task(SB_, "sb_pools")
+
+        !-- averaging variables in time ------------------------------------------------------------------- !
+        CALL model%Queue_task(RAD_, "rad_time_average")             ! ALL
+        CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")      ! ALL
+        CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
+        CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")   ! LAND or PLANT
       ELSE
         CALL finish(TRIM(routine), 'Some is wrong with the model%config%use_soil_phys_jsbach setting.')
       END IF ! T/F use_soil_phys_jsbach
