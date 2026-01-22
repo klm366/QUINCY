@@ -55,6 +55,15 @@ MODULE mo_q_sb_interface
   END TYPE tsk_reset_sb_fluxes
 
   ! ======================================================================================================= !
+  !>Type definition: read_soil_forcing task
+  !>
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_read_soil_forcing
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_read_soil_forcing  !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_read_soil_forcing    !< Aggregates computed task variables
+  END TYPE tsk_read_soil_forcing
+
+  ! ======================================================================================================= !
   !>Type definition: sb_rate_modifier task
   !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_sb_rate_modifier
@@ -107,6 +116,13 @@ MODULE mo_q_sb_interface
   END INTERFACE tsk_reset_sb_fluxes
 
   ! ======================================================================================================= !
+  !>Constructor interface: read_soil_forcing task
+  !>
+  INTERFACE tsk_read_soil_forcing
+    PROCEDURE Create_task_read_soil_forcing        !< Constructor function for task
+  END INTERFACE tsk_read_soil_forcing
+
+  ! ======================================================================================================= !
   !>Constructor interface: sb_rate_modifier task
   !>
   INTERFACE tsk_sb_rate_modifier
@@ -153,6 +169,7 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_reset_sb_fluxes(model_id))
+    CALL this%Register_task(tsk_read_soil_forcing(model_id))
     CALL this%Register_task(tsk_sb_rate_modifier(model_id))
     CALL this%Register_task(tsk_sb_simple_model(model_id))
     CALL this%Register_task(tsk_sb_jsm(model_id))
@@ -172,6 +189,19 @@ CONTAINS
     CALL return_ptr%Construct(name='reset_sb_fluxes', process_id=SB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_reset_sb_fluxes
+
+  ! ======================================================================================================= !
+  !>Constructor: read_soil_forcing task
+  !>
+  FUNCTION Create_task_read_soil_forcing(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_read_soil_forcing::return_ptr)
+    CALL return_ptr%Construct(name='read_soil_forcing', process_id=SB_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_read_soil_forcing
 
   ! ======================================================================================================= !
   !>Constructor: sb_rate_modifier task

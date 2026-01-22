@@ -760,7 +760,7 @@ CONTAINS
     USE mo_jsb_grid_class,            ONLY: t_jsb_grid
     USE mo_jsb_tile_class,            ONLY: t_jsb_tile_abstract
     USE mo_jsb_interface,             ONLY: jsbach_start_timestep, jsbach_finish_timestep
-    USE mo_jsb4_forcing,              ONLY: forcing_options, get_standalone_driver
+    USE mo_jsb4_forcing,              ONLY: forcing_options, get_standalone_driver, get_qsoil_forcing
     USE mo_orbit_solar,               ONLY: compute_cos_zenith_angle
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
@@ -768,10 +768,11 @@ CONTAINS
 
 #ifndef __NO_QUINCY__
     USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter, update_slow_sb_pool_accelerator_bookkeeping
-    USE mo_quincy_model_config,       ONLY: QCANOPY
+    USE mo_quincy_model_config,       ONLY: QCANOPY, QSOIL
     USE mo_isotope_util,              ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
-    dsl4jsb_Use_processes A2L_, HYDRO_, SPQ_
+    dsl4jsb_Use_processes A2L_, HYDRO_, SPQ_, SB_
     dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_config(SPQ_)
 #else
     dsl4jsb_Use_processes A2L_, HYDRO_
@@ -809,6 +810,7 @@ CONTAINS
 #ifndef __NO_QUINCY__
     ! quincy
     dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_config(SPQ_)
 
     dsl4jsb_Real2D_onDomain :: co2_mixing_ratio
@@ -1024,32 +1026,51 @@ CONTAINS
           dsl4jsb_Get_var2D_onDomain(SPQ_,   elevation)
         END IF
 
-        CALL get_standalone_driver( &
-          ! in
-          & model_id,                                                                  &
-          & model%config%model_scheme,                                                 &
-          & flag_snow,                                                                 &
-          & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
-          & elevation(:,:),                                                            &  ! elevation from HYDRO_ or SPQ_
-          & sinlat, coslat, lon, evapo_act2pot,                                        &
-          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
-          ! out
-          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
-          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
-          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
-          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
-          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
-          & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
-          & co2_air_dc13,                                                              &
-          & co2_air_Dc14                                                               &
-          & )
+        IF (model%config%qmodel_id /= QSOIL) THEN
+          ! QLAND, QPLANT, QCANOPY
+          CALL get_standalone_driver( &
+            ! in
+            & model_id,                                                                  &
+            & model%config%model_scheme,                                                 &
+            & flag_snow,                                                                 &
+            & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
+            & elevation(:,:),                                                            &  ! elevation from HYDRO_ or SPQ_
+            & sinlat, coslat, lon, evapo_act2pot,                                        &
+            & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
+            ! out
+            & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+            & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
+            & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
+            & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
+            & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
+            & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
+            & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
+            & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
+            & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
+            & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
+            & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
+            & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
+            & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
+            & co2_air_dc13,                                                              &
+            & co2_air_Dc14                                                               &
+            & )
+        ELSE
+          ! QSOIL
+          DO WHILE (ASSOCIATED(tile))
+            bgcm_store => tile%bgcm_store
+            dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+            CALL get_qsoil_forcing( &
+              ! in
+              & tile,                                                                  &
+              & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
+              & sinlat, coslat, lon,                                                       &
+              ! out
+              veg_litterfall_mt(ix_leaf, ixC,:)                                            &
+              ...
+              veg_litterfall_mt(ix_seed_bed, ixN15, :)
+              & )
+            CALL model%Goto_next_tile(tile)
+        END IF
 #endif
       END SELECT
 

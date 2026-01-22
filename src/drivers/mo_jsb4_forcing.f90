@@ -176,6 +176,7 @@ MODULE mo_jsb4_forcing
     INTEGER                  :: currentDayEnd = 0      !! Last time step in file corresponding to the current day
     INTEGER                  :: length_time_series     !! The number of time steps found in the data (only if my_process_is_stdio())
     REAL(wp), POINTER        :: data_read(:,:,:) => NULL()  !! Pointer to read data
+    REAL(wp), POINTER        :: data_read_3d(:,:,:,:) => NULL()  !! Pointer to read data
     REAL(wp), POINTER        :: timevalues(:) => NULL()     !! The values of the time variable (only if my_process_is_stdio())
     TYPE(t_input_file)       :: input_file
   END TYPE input_variable_type
@@ -199,10 +200,91 @@ MODULE mo_jsb4_forcing
      ! ... required for Quincy
      TYPE(input_variable_type) :: C13_concentr  !! relative difference from the standard ratio
      TYPE(input_variable_type) :: C14_concentr  !! relative difference from the standard ratio
-
   END TYPE forcing_input_type
-  TYPE(forcing_input_type), ALLOCATABLE, SAVE :: forcing_input(:)
+  
+  TYPE forcing_input_type_qsoil
+     ! ... required for QSOIL 2D
+     TYPE(input_variable_type) :: fineroot_C    !!
+     TYPE(input_variable_type) :: demand_uptake_n  !!
+     TYPE(input_variable_type) :: demand_uptake_p  !!
+     TYPE(input_variable_type) :: litterfall_leaf_C
+     TYPE(input_variable_type) :: litterfall_leaf_N
+     TYPE(input_variable_type) :: litterfall_leaf_P
+     TYPE(input_variable_type) :: litterfall_leaf_C13
+     TYPE(input_variable_type) :: litterfall_leaf_C14
+     TYPE(input_variable_type) :: litterfall_leaf_N15
 
+     TYPE(input_variable_type) :: litterfall_fine_root_C
+     TYPE(input_variable_type) :: litterfall_fine_root_N
+     TYPE(input_variable_type) :: litterfall_fine_root_P
+     TYPE(input_variable_type) :: litterfall_fine_root_C13
+     TYPE(input_variable_type) :: litterfall_fine_root_C14
+     TYPE(input_variable_type) :: litterfall_fine_root_N15
+
+     TYPE(input_variable_type) :: litterfall_coarse_root_C
+     TYPE(input_variable_type) :: litterfall_coarse_root_N
+     TYPE(input_variable_type) :: litterfall_coarse_root_P
+     TYPE(input_variable_type) :: litterfall_coarse_root_C13
+     TYPE(input_variable_type) :: litterfall_coarse_root_C14
+     TYPE(input_variable_type) :: litterfall_coarse_root_N15
+
+     TYPE(input_variable_type) :: litterfall_coarse_root_C
+     TYPE(input_variable_type) :: litterfall_coarse_root_N
+     TYPE(input_variable_type) :: litterfall_coarse_root_P
+     TYPE(input_variable_type) :: litterfall_coarse_root_C13
+     TYPE(input_variable_type) :: litterfall_coarse_root_C14
+     TYPE(input_variable_type) :: litterfall_coarse_root_N15
+
+     TYPE(input_variable_type) :: litterfall_sap_wood_C
+     TYPE(input_variable_type) :: litterfall_sap_wood_N
+     TYPE(input_variable_type) :: litterfall_sap_wood_P
+     TYPE(input_variable_type) :: litterfall_sap_wood_C13
+     TYPE(input_variable_type) :: litterfall_sap_wood_C14
+     TYPE(input_variable_type) :: litterfall_sap_wood_N15
+
+     TYPE(input_variable_type) :: litterfall_heart_wood_C
+     TYPE(input_variable_type) :: litterfall_heart_wood_N
+     TYPE(input_variable_type) :: litterfall_heart_wood_P
+     TYPE(input_variable_type) :: litterfall_heart_wood_C13
+     TYPE(input_variable_type) :: litterfall_heart_wood_C14
+     TYPE(input_variable_type) :: litterfall_heart_wood_N15
+
+     TYPE(input_variable_type) :: litterfall_labile_C
+     TYPE(input_variable_type) :: litterfall_labile_N
+     TYPE(input_variable_type) :: litterfall_labile_P
+     TYPE(input_variable_type) :: litterfall_labile_C13
+     TYPE(input_variable_type) :: litterfall_labile_C14
+     TYPE(input_variable_type) :: litterfall_labile_N15
+
+     TYPE(input_variable_type) :: litterfall_reserve_C
+     TYPE(input_variable_type) :: litterfall_reserve_N
+     TYPE(input_variable_type) :: litterfall_reserve_P
+     TYPE(input_variable_type) :: litterfall_reserve_C13
+     TYPE(input_variable_type) :: litterfall_reserve_C14
+     TYPE(input_variable_type) :: litterfall_reserve_N15
+
+     TYPE(input_variable_type) :: litterfall_fruit_C
+     TYPE(input_variable_type) :: litterfall_fruit_N
+     TYPE(input_variable_type) :: litterfall_fruit_P
+     TYPE(input_variable_type) :: litterfall_fruit_C13
+     TYPE(input_variable_type) :: litterfall_fruit_C14
+     TYPE(input_variable_type) :: litterfall_fruit_N15
+
+     TYPE(input_variable_type) :: litterfall_seed_bed_C
+     TYPE(input_variable_type) :: litterfall_seed_bed_N
+     TYPE(input_variable_type) :: litterfall_seed_bed_P
+     TYPE(input_variable_type) :: litterfall_seed_bed_C13
+     TYPE(input_variable_type) :: litterfall_seed_bed_C14
+     TYPE(input_variable_type) :: litterfall_seed_bed_N15
+     ! ... required for QSOIL 3D
+     TYPE(input_variable_type) :: t_soil_sl        !! soil temperature per layer
+     TYPE(input_variable_type) :: vol_porosity_sl  !! volumetric porosity per layer
+     TYPE(input_variable_type) :: wtr_soil_sl      !! soil water content
+     TYPE(input_variable_type) :: frac_wtr_transp_down_sl !! vertical water transport
+     TYPE(input_variable_type) :: frac_w_lat_loss_sl      !! lateral water loss
+  END TYPE forcing_input_type_qsoil
+  TYPE(forcing_input_type), ALLOCATABLE, SAVE :: forcing_input(:)
+  TYPE(forcing_input_type_qsoil), ALLOCATABLE, SAVE :: forcing_input_qsoil(:)
 CONTAINS
 
   ! ======================================================================================================= !
@@ -796,6 +878,21 @@ CONTAINS
     DEALLOCATE(help1, help2)
 
   END SUBROUTINE get_standalone_driver
+
+  ! ======================================================================================================= !
+  !>
+  !> Reads or updates the external forcing (depending on timestep and temporal resolution of the file)
+  !> and derives interface variables that drive the QSOIL model
+  !>
+  !> called by 'mo_jsbach_model:jsbach_model:run_one_timestep'
+  !>
+  SUBROUTINE get_qsoil_forcing
+  
+  
+  
+  
+  
+  END SUBROUTINE get_qsoil_forcing
 
   ! ======================================================================================================= !
   !>
