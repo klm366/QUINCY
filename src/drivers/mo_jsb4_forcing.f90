@@ -201,7 +201,7 @@ MODULE mo_jsb4_forcing
      TYPE(input_variable_type) :: C13_concentr  !! relative difference from the standard ratio
      TYPE(input_variable_type) :: C14_concentr  !! relative difference from the standard ratio
   END TYPE forcing_input_type
-  
+
   TYPE forcing_input_type_qsoil
      ! ... required for QSOIL 2D
      TYPE(input_variable_type) :: fineroot_C    !!
@@ -887,11 +887,7 @@ CONTAINS
   !> called by 'mo_jsbach_model:jsbach_model:run_one_timestep'
   !>
   SUBROUTINE get_qsoil_forcing
-  
-  
-  
-  
-  
+
   END SUBROUTINE get_qsoil_forcing
 
   ! ======================================================================================================= !
