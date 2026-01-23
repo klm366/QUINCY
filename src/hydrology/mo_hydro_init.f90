@@ -1421,11 +1421,6 @@ CONTAINS
           dsl4jsb_var_ptr(HYDRO_, macro_slope) = dsl4jsb_var_ptr(HYDRO_,steepness)
         END WHERE
       END IF
-    ELSE
-      ! This initialization is actually not necessary, as these variables are only used if LEX is active.
-      dsl4jsb_var_ptr(HYDRO_, char_area)   = 10000._wp
-      dsl4jsb_var_ptr(HYDRO_, char_h_surf) = 0.0_wp
-      dsl4jsb_var_ptr(HYDRO_, macro_slope) = dsl4jsb_var_ptr(HYDRO_, steepness)
     END IF
 
     !>     - Maximum depth and extent of surface water ponds

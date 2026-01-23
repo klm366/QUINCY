@@ -317,7 +317,6 @@ CONTAINS
     REAL(wp) :: ini_snow_dens                   !< Initial value for snow density
     LOGICAL  :: l_ponds                         !< Abreviation: Local variable for [[t_hydro_config:l_ponds]]
     LOGICAL  :: l_uniform                       !< Abreviation: True if [[t_hydro_config:hydro_scale]]=Uniform
-    LOGICAL  :: l_lex
     LOGICAL  :: lrestart_local                  !< add var to restart file, model specific (quincy/jsbach)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hydro_memory'
@@ -352,7 +351,6 @@ CONTAINS
       l_uniform = .FALSE.
     END IF
     l_ponds = dsl4jsb_Config(HYDRO_)%l_ponds
-    l_lex = dsl4jsb_Config(LEX_)%active
 
     ! set local lrestart switch to TRUE for the MODEL_QUINCY
     lrestart_local = .FALSE.

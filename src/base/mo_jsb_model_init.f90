@@ -793,28 +793,30 @@ CONTAINS
     !>         Initialize lateral exchange processes on each tile.
     !>         Tile fractions and Hydro needs to be initialized on all tiles
     !>
-    CALL model%Reset_tiles()
-    CALL model%Get_top_tile(tile)
+    IF (model%processes(LEX_)%p%config%active) THEN
+      CALL model%Reset_tiles()
+      CALL model%Get_top_tile(tile)
 
-    IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
+      IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
 
-    DO WHILE (ASSOCIATED(tile))
+      DO WHILE (ASSOCIATED(tile))
 
-      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        CALL model%Goto_next_tile(tile)
-        CYCLE
-      END IF
-
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_JSBACH)
-        IF (tile%Is_process_active(LEX_)) THEN
-          CALL lex_init(tile)
+        IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+          CALL model%Goto_next_tile(tile)
+          CYCLE
         END IF
-      END SELECT
 
-      CALL model%Goto_next_tile(tile)
-      ! ---------------------------------------------------------------------------------------------- !
-    END DO
+        SELECT CASE (model%config%model_scheme)
+        CASE (MODEL_JSBACH)
+          IF (tile%Is_process_active(LEX_)) THEN
+            CALL lex_init(tile)
+          END IF
+        END SELECT
+
+        CALL model%Goto_next_tile(tile)
+        ! ---------------------------------------------------------------------------------------------- !
+      END DO
+    END IF
 
     IF (model%config%ifs_input_file%is_open) CALL model%config%ifs_input_file%Close()
 
