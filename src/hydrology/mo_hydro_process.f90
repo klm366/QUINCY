@@ -1242,7 +1242,7 @@ CONTAINS
       & drain_slow_sl(nc,nsoil),    & !< Slow drainage component (below field capacity) [m]
       & drain_fast_sl(nc,nsoil),    & !< Fast drainage component (above field capacity) [m]
       & storage_change_sl(nc,nsoil),& !< Soil storage change term used in vertical water transport (m)
-      & wtr_mobile_sl(nc,nsoil),    & !< mobile soil water (above residual or supercooled water content) [m]
+      & wtr_mobile_sl(nc,nsoil),    & !< Mobile soil water (above residual or supercooled water content) [m]
       & hlp1(nc,nsoil),             & !< Helper array
       & hlp4(nc,nsoil),             & !< Helper array
       & hlp2(nc),                   & !< Helper array

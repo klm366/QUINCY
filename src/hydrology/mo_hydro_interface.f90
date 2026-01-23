@@ -963,7 +963,7 @@ CONTAINS
         & trans_tmp(:),                   & ! Transpiration [kg m-2 s-1]
         & rain(:),                        & ! Liquid precipitation [kg m-2 s-1]
         & snow(:),                        & ! Solid precipitation [kg m-2 s-1]
-        & water_to_soil_lex(:),           & ! inflow from connected tiles exeeding the pond storage [m]
+        & water_to_soil_lex(:),           & ! Inflow from connected tiles exceeding the pond storage [m]
         & wpi_rootzone(:),                & ! Actual content of water plus ice in the root zone [m]
         & wpi_rootzone_max(:),            & ! Maximum possible content of water plus ice in the root zone [m]
         & wtr_soil(:),                    & ! Soil water content until bedrock (aggregated from soil layers) [m]
@@ -980,7 +980,7 @@ CONTAINS
         & le_pc_remain(:),                & ! (Remaining) latent energy for phase change [J m-2]
         ! out
         & q_snocpymlt(:),                 & ! Heating due to snow melt on canopy [W m-2]
-        & new_snow_soil(:),               & ! new snow on the soil within time step [m water equivalent]
+        & new_snow_soil(:),               & ! New snow on the soil within time step [m water equivalent]
         & snow_accum(:),                  & ! Snow budget change within time step [m water equivalent]
         & snowmelt(:),                    & ! Snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
         & pond_freeze(:),                 & ! Amount of water freezing within ponds [kg m-2 s-1]
