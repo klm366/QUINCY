@@ -40,15 +40,12 @@ MODULE mo_q_dfire_sf_ros_ober_class
   USE mo_quincy_stats,          ONLY: stats_average_weight
   USE mo_jsb_math_constants,    ONLY: pi
 
+  USE mo_q_dfire_sf_ros_thon_class, ONLY: calc_opt_react_velocity, calc_prop_flux_ratio
+
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: t_sf_ros, t_sf_veget_cover_frac, sf_calc_rate_of_spread
-
-  PUBLIC :: calc_fbd, calc_sigma, &
-            calc_opt_react_velocity, calc_moist_damp_coeff, &
-            calc_prop_flux_ratio, calc_wind_factor, &
-            calc_length_to_breadth_ratio, calc_mean_fire_area
+  PUBLIC :: sf_calc_rate_of_spread
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_ober_class'
 
@@ -189,36 +186,110 @@ CONTAINS
   !>
   !> Do the science
   !>
-  FUNCTION sf_calc_rate_of_spread(nc, ndd, nlv, woi_dd, woi_lv, sigmas_dd, sigmas_lv, mask) RESULT(ros)
+  FUNCTION sf_calc_rate_of_spread(nc, ndd, nlv, &
+                                  sigmas_dd, sigmas_lv, &
+                                  woi_dd, woi_lv, &
+                                  mf_dd, mf_lv, &
+                                  fbd, &
+                                  mask) RESULT(ros)
     INTEGER, INTENT(in) :: nc
-    INTEGER, INTENT(in) :: ndd, nlv  !< number of dead fuel classes, number of live fuel classes
-    REAL(wp), INTENT(in) :: woi_dd(ndd), woi_lv(nlv) !< dead/live fuel load [kg DM m-1] -> notes units in kg (instead of g)
+    !< number of dead fuel classes (1h, 10hrs, 100 hrs, dry livegrass)
+    !< number of live fuel classes (wet livegrass, woody)
+    INTEGER, INTENT(in) :: ndd, nlv
+    REAL(wp), INTENT(in) :: woi_dd(ndd,nc), woi_lv(nlv,nc) !< dead/live fuel load [kg DM m-1] -> notes units in kg (instead of g)
     REAL(wp), INTENT(in) :: sigmas_dd(ndd), sigmas_lv(nlv) !< surface area to volume ratio [m2/m3]
-
+    REAL(wp), INTENT(in) :: mf_dd(ndd,nc), mf_lv(nlv,nc) !< Moisture content [-]
+    REAL(wp), INTENT(in) :: fbd(nc) !< Fuel bulk density [kg/m3]
     LOGICAL, INTENT(in) :: mask(nc)
+
+    INTEGER :: ic
+    REAL(wp) :: beta(nc), beta_op(nc), beta_ratio(nc) !< [-], [-], [-]
+    REAL(wp) :: gamma(nc), gamma_max(nc) !< [min-1], [min-1]
+    REAL(wp) :: A_var(nc) !< [-]
+    REAL(wp) :: xi(nc) !< propagating flux ratio [-]
     TYPE(t_fwvar_r1d) :: wn !< net fuel load [kg/m2]
+    TYPE(t_fwvar_r1d) :: mf !< moisture content [-]
+    TYPE(t_fwvar_r1d) :: rm !< fuel moisture ratio [0 to 1]
+    TYPE(t_fwvar_r1d) :: eta_m !< moisture dampening coefficient [?]
+    TYPE(t_fwvar_r1d) :: sigma !< surface area to volume ratio [m2/m3]
+    TYPE(t_fwvar_r1d) :: ir !< reaction intensity [KJ m-2 min-1]
     ! ----------------------------------------------------------------------------------------------------- !
     ros = t_sf_ros(nc)
     wn = t_fwvar_r1d(nc)
+    mf = t_fwvar_r1d(nc)
+    rm = t_fwvar_r1d(nc)
+    eta_m = t_fwvar_r1d(nc)
+    sigma = t_fwvar_r1d(nc, has_total=.TRUE.)
+    ir = t_fwvar_r1d(nc)
+    beta = 0._wp
+    beta_op = 0._wp
+    beta_ratio = 0._wp
+    gamma = 0._wp
+    gamma_max = 0._wp
 
     !< Corrections from Oberhagemann et al. (2025)
     wfactors = calc_weighting_factors(sigmas_dd, woi_dd, &
                                       sigmas_lv, woi_lv, &
                                       df_sf_oven_dry_part_dens)
 
-    DO inc = 1, nc
+    DO ic = 1, nc
       IF (mask(inc)) THEN
         ! CHARACTERISTICS DEAD/LIVE CATEGORIES
-        wn%d = SUM(wfactors%gij%d * woi_dd * (1._wp-df_sf_mineral_fract))
-        wn%l = SUM(wfactors%gij%l * woi_lv * (1._wp-df_sf_mineral_fract))
+        ! - net fuel load
+        wn%d(ic) = SUM(wfactors%gij%d(:,ic) * woi_dd(:,ic) * (1._wp-df_sf_mineral_fract))
+        wn%l(ic) = SUM(wfactors%gij%l(:,ic) * woi_lv(:,ic) * (1._wp-df_sf_mineral_fract))
+        ! - heat content, constant
+        ! - effective mineral content, constant (thonicke=0.01, from Scott and Reinhardt, 2001)
+        ! - mineral dampening coefficient, constant (thonicke=0.41739)
+        ! - moisture content
+        mf%d(ic) = SUM(wfactors%fij%d(:,ic) * mf_dd(:,ic))
+        mf%l(ic) = SUM(wfactors%fij%l(:,ic) * mf_lv(:,ic))
+        ! - moisture dampening coefficient (oberhagemann et al. (2025))
+        rm%d(ic) = MIN(1._wp, mf%d(ic) / me(ic)%d)
+        rm%l(ic) = MIN(1._wp, mf%l(ic) / me(ic)%l)
+        eta_m%d(ic) = 1._wp - (2.59_wp * rm%d(ic)) + (5.11_wp * (rm%d(ic)**2)) - (3.52_wp * (rm%d(ic)**3))
+        eta_m%l(ic) = 1._wp - (2.59_wp * rm%l(ic)) + (5.11_wp * (rm%l(ic)**2)) - (3.52_wp * (rm%l(ic)**3))
+        ! - surface area to volume ratio (sigma_i)
+        sigma%d(ic) = SUM(wfactors%fij%d(:,ic) * sigmas_dd)
+        sigma%l(ic) = SUM(wfactors%fij%l(:,ic) * sigmas_lv)
 
         ! FUEL BED CHARACTERISTICS
         ! calc:
         ! - surface are to volume ratio (sigmas)
-        ! - mean fuel bulk density (pb)
+        sigma%total(ic) = wfactors%fi%d(ic) * sigma%d(ic) + wfactors%fi%l(ic) * sigma%l(ic)
+        ! - mean fuel bulk density (pb), nothing to calculate
         ! - mean packing ratio (beta)
+        beta(ic) = fbd(ic) / df_sf_oven_dry_part_dens
         ! - optimum packing ratio (beta_op)
+        beta_op(ic) = 0.200395_wp * (sigma%total(ic) ** (-0.8189_wp))
         ! - relative packing ratio (beta/beta_op)
+        beta_ratio(ic) = beta(ic) / beta_op(ic)
+
+        ! WIND AND SLOPE
+        ! - slope factor
+        phi_s(ic) = 0._wp ! todo: not implemented
+        ! - wind factor
+        phi_w(ic) = calc_wind_factor(u_f_wind(ic), sigma%total(ic), beta(ic), beta_op(ic)) !< Eq. A5 from Thonicke et al. (2010) [-]
+        ! - wind limit
+        u_var(ic) = 0._wp ! todo: not sure about this
+
+        ! HEAT SOURCE
+        ! - max reaction velocity
+        gamma_max(ic) = 1._wp / (0.0591_wp  + 2.926_wp * sigma%total(inc) ** (-1.5_wp)) !< Table A1, 2nd equation from Thonicke et al. (2010) [min-1]
+        ! - optimum reaction velocity
+        A_var(ic) = 8.9033_wp * (sigma%total(inc) ** (-0.7913)) !< Table A1, 4th equation from Thonicke et al. (2010)
+        gamma(ic) = calc_opt_react_velocity(gamma_max(ic), beta(ic), beta_op(ic), A_var(ic)) ! Table A1, 1st equation from Thonicke et al. (2010) [min-1]
+        ! - reaction intensity
+        ir%d(ic) =  wn%d(inc) * df_sf_fuel_heat_content * eta_m%d(inc) * df_sf_mineral_damp_coeff !< [kJ m−2 min−1]
+        ir%l(ic) =  wn%l(inc) * df_sf_fuel_heat_content * eta_m%l(inc) * df_sf_mineral_damp_coeff !< [kJ m−2 min−1]
+        ir%total(ic) = gamma * (ir%d(ic) + ir%l(ic))
+        ! - propagating flux ratio
+        xi(ic) = calc_prop_flux_ratio(sigma%total(ic), beta(ic))
+        ! - no-wind, no-slope propagating flux
+        ! - heat source
+        heat_source(ic) = ir%total(ic) * xi(ic) * (1._wp + phi_w * phi_s)
+
+
       END IF ! IF (mask(inc)) THEN
     ENDDO ! DO inc = 1, nc
 
@@ -276,15 +347,36 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
+  !> Calculate wind factor (Eq. A5 from Thonicke et al. (2010))
+  !>
+  ELEMENTAL PURE FUNCTION calc_wind_factor(u_f_wind, sigma, beta, beta_op) RESULT (wind_factor)
+    REAL(wp), INTENT(in)        :: u_f_wind     !< Forward wind [m min-1]
+    REAL(wp), INTENT(in)        :: sigma        !< Surface area to volume ratio of the fuel [cm-1]
+    REAL(wp), INTENT(in)        :: beta         !< Packing ratio [-]
+    REAL(wp), INTENT(in)        :: beta_op      !< [-]
+    REAL(wp)                    :: wind_factor  !< Output [-]
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp)                    :: C_var, B_var, E_var
+    REAL(wp)                    :: beta_ratio
+    ! ----------------------------------------------------------------------------------------------------- !
+    C_var = 7.47_wp * exp(-0.8711_wp * (sigma**0.55_wp)) !< Eq. A8
+    B_var = 0.15988_wp * (sigma ** 0.54_wp) !< Eq. A7
+    E_var = 0.7515_wp * exp(-0.01094_wp * sigma) !< Eq. A9
+    beta_ratio = beta / beta_op
+    wind_factor = C_var * ((3.281_wp * u_f_wind) ** B_var) * (beta_ratio ** (-E_var))
+  END FUNCTION calc_wind_factor
+
+  ! ======================================================================================================= !
+  !>
   !> Calculate f weighting factors
   !>
   FUNCTION calc_weighting_factors(sigmas_dead, fuel_load_dead, &
                                   sigmas_live, fuel_load_live, part_dens) &
                                 RESULT (wfactors)
     REAL(wp), INTENT(in) :: sigmas_dead(:)      !< surface are to volume ratio (#fuel classes) [m2/m3]
-    REAL(wp), INTENT(in) :: fuel_load_dead(:,:) !< oven-dry fuel load (#fuel classes) [kg/m2]
+    REAL(wp), INTENT(in) :: fuel_load_dead(:,:) !< oven-dry fuel load (#fuel classes,#nc) [kg/m2]
     REAL(wp), INTENT(in) :: sigmas_live(:)      !< surface are to volume ratio (#fuel classes) [m2/m3]
-    REAL(wp), INTENT(in) :: fuel_load_live(:,:) !< oven-dry fuel load (#fuel classes) [kg/m2]
+    REAL(wp), INTENT(in) :: fuel_load_live(:,:) !< oven-dry fuel load (#fuel classes,#nc) [kg/m2]
     REAL(wp), INTENT(in) :: part_dens           !< particle density [kg/m3]
     TYPE(t_sf_weighting_factors) :: wfactors
 
