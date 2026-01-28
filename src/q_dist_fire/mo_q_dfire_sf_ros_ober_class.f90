@@ -13,9 +13,9 @@
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
-!> @brief Rate of spread based on Andrews PL (2018) and Thonicke et al. (2010)
+!> @brief Rate of spread based on Oberhagemann et al. (2025) and Thonicke et al. (2010)
 !>
-!>  Andres PL (2018) applies weighting factors on the fuel classes.
+!>  Oberhagemann et al. (2025) applies weighting factors on the fuel classes.
 !>
 !> @author
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
