@@ -103,6 +103,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_e, snow_e      ! Vertical grids
     INTEGER :: table
+    INTEGER :: lex_output_level  !< Output level for LEX variable (depends on [[t_lex_config:active]])
 
     LOGICAL  :: l_lex
 
@@ -125,7 +126,14 @@ CONTAINS
       snow_e  => Get_vgrid('snow_depth_energy')
     END IF
 
+    ! Define output levels for LEX variables
     l_lex = dsl4jsb_Config(LEX_)%active
+    IF (l_lex) THEN
+      lex_output_level = BASIC
+    ELSE
+      lex_output_level = NONE
+    END IF
+
 
     CALL mem%Add_var( 'vol_heat_cap', mem%vol_heat_cap,                 &
       & hgrid, surface,                                                      &
@@ -213,7 +221,7 @@ CONTAINS
       & t_cf('nrg_lex_net_sl', 'J m-2 s-1', 'Diffusive heat exchange with adjacent tile'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
       & prefix, suffix,                                                                      &
-      & loutput=l_lex, output_level=MEDIUM,                                                  &
+      & output_level=lex_output_level,                                                       &
       & lrestart=.FALSE., initval_r=0.0_wp)
 
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN

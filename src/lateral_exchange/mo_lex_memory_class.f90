@@ -201,7 +201,7 @@ CONTAINS
         & t_cf('wtr_runoff_in', 'kg m-2 s-1', 'surface runoff received from adjacent tiles'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                              &
-        & loutput=l_lex, output_level=BASIC,                                                   &
+        & loutput=l_lex, output_level=FULL,                                                    &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var( 'wtr_infil_out', mem%wtr_infil_out,                              &
@@ -225,7 +225,7 @@ CONTAINS
         & t_cf('weq_snowblow_in', 'kg m-2 s-1', 'snowblow from adjacent tiles'),       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                      &
-        & loutput=l_lex, output_level=BASIC,                                           &
+        & loutput=l_lex, output_level=FULL,                                            &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var( 'h_offset_ct', mem%h_offset_ct,                                          &
@@ -327,7 +327,7 @@ CONTAINS
         & t_cf('wtr_infil_in_sl', 'kg m-2 s-1', 'infiltration from adjacent tiles'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                      &
-        & loutput=l_lex, output_level=BASIC,                                           &
+        & loutput=l_lex, output_level=FULL,                                            &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var( 'wtr_drainage_out_sl', mem%wtr_drainage_out_sl,                        &
@@ -343,7 +343,7 @@ CONTAINS
         & t_cf('wtr_drainage_in_sl', 'kg m-2 s-1', 'drainage received from adjacent tiles'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                             &
-        & loutput=l_lex, output_level=BASIC,                                                  &
+        & loutput=l_lex, output_level=FULL,                                                   &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var( 'wtr_diffusion_out_sl', mem%wtr_diffusion_out_sl,                          &
@@ -361,7 +361,7 @@ CONTAINS
         & 'diffusion (water) received from adjacent tile'),                                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
-        & loutput=l_lex, output_level=BASIC,                                                     &
+        & loutput=l_lex, output_level=FULL,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var( 'nrg_diffusion_out_sl', mem%nrg_diffusion_out_sl,                          &
@@ -379,7 +379,7 @@ CONTAINS
         & 'diffusion (energy) received from adjacent tile'),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
-        & loutput=l_lex, output_level=BASIC,                                                     &
+        & loutput=l_lex, output_level=FULL,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var( 'nrg_convection_out_sl', mem%nrg_convection_out_sl,                        &
@@ -397,7 +397,7 @@ CONTAINS
         & 'convection (energy contained in water) received from adjacent tile'),                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix, l_aggregate_all=.TRUE.,                                                &
-        & loutput=l_lex, output_level=BASIC,                                                     &
+        & loutput=l_lex, output_level=FULL,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp)
 
   END SUBROUTINE Init_lex_memory
