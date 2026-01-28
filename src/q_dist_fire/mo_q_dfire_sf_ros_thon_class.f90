@@ -1,4 +1,4 @@
-!> QUINCY calculate fire rate of spread
+!> QUINCY calculate fire rate of spread using Oberhagemann et al. (2025) paper
 !>
 !> ICON-Land
 !>
@@ -20,13 +20,14 @@
 !>    - Appendix A (equations A1 to A9)
 !>
 !>  Most of the equations are based on Thonicke et al. (2010). Nonetheless, some equations are also
-!>  using Pfeiffer et al. (2013). In all cases, It is noted above each equation.
+!>  using Pfeiffer et al. (2013). Furter improvements are applied using Oberhagemann et al. (2025)
+!>  paper. Those includes weighting fuels accordingly.
 !>
 !> @author
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
 !>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
-MODULE mo_q_dfire_sf_ros_class_tho2010
+MODULE mo_q_dfire_sf_ros_thon_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
@@ -55,7 +56,7 @@ MODULE mo_q_dfire_sf_ros_class_tho2010
             calc_prop_flux_ratio, calc_wind_factor, &
             calc_length_to_breadth_ratio, calc_mean_fire_area
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_thon_class'
 
   !< Vegetation cover fraction
   TYPE t_sf_veget_cover_frac
@@ -67,8 +68,6 @@ MODULE mo_q_dfire_sf_ros_class_tho2010
     MODULE PROCEDURE :: create_veget_cover_frac
   END INTERFACE t_sf_veget_cover_frac
 
-  INTEGER, PARAMETER :: ix_dead = 1
-  INTEGER, PARAMETER :: ix_live = 2
 
   !< Rate of spread characteristics type
   TYPE t_sf_ros
@@ -90,7 +89,7 @@ MODULE mo_q_dfire_sf_ros_class_tho2010
     REAL(wp), ALLOCATABLE :: pre_ign_heat(:)       !< the amount of heat required to ignite a given mass of fuel [kJ kg−1]
 
     REAL(wp), ALLOCATABLE :: opt_react_velo(:)     !< Optimum reaction velocity [min-1]
-    REAL(wp), ALLOCATABLE :: net_fuel_load(:,:)    !< Amount of fuel after substraction of its mineral content [kg m-2] (#dead/live, #nc)
+    REAL(wp), ALLOCATABLE :: net_fuel_load(:)      !< Amount of fuel after substraction of its mineral content [kg m-2]
     REAL(wp), ALLOCATABLE :: moist_damp_coeff(:)   !< Moisture dampening coefficient [-]
     REAL(wp), ALLOCATABLE :: mineral_damp_coeff(:) !< Mineral dampening coefficient [-]
   END TYPE t_sf_ros
@@ -99,99 +98,8 @@ MODULE mo_q_dfire_sf_ros_class_tho2010
     MODULE PROCEDURE :: create_sf_ros_init
   END INTERFACE t_sf_ros
 
-  !< weight factor variable
-  TYPE :: t_fwvar_r1d
-    REAL(wp), ALLOCATABLE :: d(:) !< dead (#nc)
-    REAL(wp), ALLOCATABLE :: l(:) !< live (#nc)
-!    REAL(wp), ALLOCATABLE :: t(:) !< total, or dead + live (#nc)
-  END TYPE t_fwvar_r1d
-
-  INTERFACE t_fwvar_r1d
-    MODULE PROCEDURE :: create_fwvar_r1d
-  END INTERFACE t_fwvar_r1d
-
-  !< weight factor variable
-  TYPE :: t_fwvar_r2d
-    REAL(wp), ALLOCATABLE :: d(:,:) !< dead (#nc)
-    REAL(wp), ALLOCATABLE :: l(:,:) !< live (#nc)
-!    REAL(wp), ALLOCATABLE :: t(:,:) !< total, or dead + live (#nc)
-  END TYPE t_fwvar_r2d
-
-  INTERFACE t_fwvar_r2d
-    MODULE PROCEDURE :: create_fwvar_r2d
-  END INTERFACE t_fwvar_r2d
-
-
-  TYPE :: t_sf_weighting_factors
-    TYPE(t_fwvar_r2d)     :: Aij    !< (#fuel classes-dead, live-, #nc)
-    TYPE(t_fwvar_r1d)     :: Ai     !< (#nc)
-    REAL(wp), ALLOCATABLE :: At(:)  !< A_dead + A_live (#nc)
-    TYPE(t_fwvar_r2d)     :: fij    !< (#fuel classes-dead, live-, #nc)
-    TYPE(t_fwvar_r1d)     :: fi     !< (#nc)
-    TYPE(t_fwvar_r2d)     :: gij    !< (#nfuelclasses-dead, live-, #nc)
-  END TYPE t_sf_weighting_factors
-
-  INTERFACE t_sf_weighting_factors
-    MODULE PROCEDURE :: create_sf_weighting_factors
-  END INTERFACE t_sf_weighting_factors
 
 CONTAINS
-
-  !>
-  !> Constructor for weighting factors derived type
-  !>
-  FUNCTION create_sf_weighting_factors(nc, ndeadfc, nlivefc) RESULT (wfactors)
-    INTEGER, INTENT(in) :: nc
-    INTEGER, INTENT(in) :: ndeadfc !< 1 hr, 10 hr, ..., live grass, ...
-    INTEGER, INTENT(in) :: nlivefc !< 1 hr, 10 hr, ..., live grass, ...
-    TYPE(t_sf_weighting_factors) :: wfactors
-
-    ALLOCATE(wfactors % At(nc))
-
-    wfactors % Aij = t_fwvar_r2d(nc, ndeadfc, nlivefc)
-    wfactors % Ai = t_fwvar_r1d(nc)
-    wfactors % At = 0._wp
-
-    wfactors % fij = t_fwvar_r2d(nc, ndeadfc, nlivefc)
-    wfactors % fi = t_fwvar_r1d(nc)
-
-    wfactors % gij = t_fwvar_r2d(nc, ndeadfc, nlivefc)
-  END FUNCTION create_sf_weighting_factors
-
-
-  ! ======================================================================================================= !
-  !>
-  !> Constructor for t_fwvar
-  !>
-  FUNCTION create_fwvar_r1d(nc) RESULT (var)
-    INTEGER, INTENT(in) :: nc
-    TYPE(t_fwvar), INTENT(in) :: var
-    ALLOCATE(var%l(nc))
-    ALLOCATE(var%d(nc))
-!    ALLOCATE(var%t(nc))
-    var%l = 0._wp
-    var%d = 0._wp
-!    var%t = 0._wp
-  END FUNCTION create_fwvar_r1d
-
-
-  ! ======================================================================================================= !
-  !>
-  !> Constructor for t_fwvar_r2d
-  !>
-  FUNCTION create_fwvar_r2d(nc, nddfc, nlvfc) RESULT (var)
-    INTEGER, INTENT(in) :: nc
-    INTEGER, INTENT(in) :: nddfc !< n dead fuel classes
-    INTEGER, INTENT(in) :: nlvfc !< n live fuel classes
-    TYPE(t_fwvar), INTENT(in) :: var
-    ALLOCATE(var%l(nddfc, nc))
-    ALLOCATE(var%d(nlvfc, nc))
-    !    ALLOCATE(var%t(nc))
-    var%l = 0._wp
-    var%d = 0._wp
-    !    var%t = 0._wp
-  END FUNCTION create_fwvar_r2d
-
 
   ! ======================================================================================================= !
   !>
@@ -199,20 +107,17 @@ CONTAINS
   !>
   !> Do the science
   !>
-  FUNCTION sf_calc_rate_of_spread(nc, nddfuels, nlvfuels, fuel_bulk_density, fwd_wind_factor, wind, moist_extinction, fdi, &
-                                        veg_cover_frac, w_oi, lv_w_oi, omega_o, mask) RESULT(ros)
+  FUNCTION sf_calc_rate_of_spread(nc, nfuels, fuel_bulk_density, fwd_wind_factor, wind, moist_extinction, fdi, &
+                                        veg_cover_frac, w_oi, omega_o, mask) RESULT(ros)
     INTEGER, INTENT(in)                  :: nc
-    INTEGER, INTENT(in)                  :: nddfuels                    !< 1, 10 and 100 hours fuel classes, live grass
-    INTEGER, INTENT(in)                  :: nlvfuels                    !< live grass, woody fuels
+    INTEGER, INTENT(in)                  :: nfuels                      !< 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)                 :: fuel_bulk_density(nc)       !< [kg m-3]
     REAL(wp), INTENT(in)                 :: fwd_wind_factor(nc)         !< [0 to 1]
     REAL(wp), INTENT(in)                 :: wind(nc)                    !< [m min-1]
     REAL(wp), INTENT(in)                 :: moist_extinction(nc)        !< [0 to 1]
     REAL(wp), INTENT(in)                 :: fdi(nc)                     !< Fire dange index [0 to 1]
     TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac           !< [0 to 1]
-    REAL(wp), INTENT(in)                 :: w_oi(nc, nddfuels)          !< dead fuel load [kg DM m-2], Note g -> kg
-    REAL(wp), INTENT(in)                 :: lv_w_oi(nc, nlvfuels)       !< live fuel load [kg DM m-2]
-
+    REAL(wp), INTENT(in)                 :: w_oi(nc, nfuels)            !< [g DM m-2]
     !< According to Pfeiffer et al. (2013), omega_n must be treated as omega_o
     REAL(wp), INTENT(in)                 :: omega_o(nc)                 !< [0 to 1] (#nc)
     LOGICAL, INTENT(in)                  :: mask(nc)                    !< True =  compute gridcell(s)
@@ -220,23 +125,15 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp) :: beta(nc), beta_op(nc)
-    !REAL(wp) :: sigma(nc)                 !< Surface-area-to-volume-ratio [cm-1]
-    TYPE(t_fwvar_r1d) :: sigma                 !< Surface-area-to-volume-ratio [cm-1]
+    REAL(wp) :: sigma(nc)                 !< Surface-area-to-volume-ratio [cm-1]
     REAL(wp) :: A_var(nc)
     REAL(wp) :: max_reaction_velocity(nc)
     REAL(wp) :: u_f_wind(nc)
-    TYPE(t_sf_weighting_factors) :: wfactors
-    REAL(wp), PARAMETER :: units_g_to_kg = 1000._wp
+
     INTEGER :: inc
     ! ----------------------------------------------------------------------------------------------------- !
     ros = t_sf_ros(nc)
-    sigma = t_fwvar_r1d(nc)
     ros%mean_fire_area = 0._wp
-
-    !< Corrections from Oberhagemann et al. (2025)
-    wfactors = calc_weighting_factors(df_sigmas_dead, w_oi, &
-                                      df_sigmas_live, lv_w_oi, &
-                                      df_sf_oven_dry_part_dens)
 
     DO inc = 1, nc
       IF (mask(inc)) THEN
@@ -244,16 +141,11 @@ CONTAINS
         u_f_wind(inc) = fwd_wind_factor(inc) * wind(inc) !< [m min-1]
 
         !<  (Table A1, 5th from Thonicke et al. (2010))
-        ros%net_fuel_load%d(:,inc) = (1._wp - df_sf_mineral_fract) * SUM(w_oi(inc,:) * wfactors % gdeadj(:,inc))
-        ros%net_fuel_load%l(:,inc) = (1._wp - df_sf_mineral_fract) * SUM(lv_w_oi(inc,:) * wfactors % glivej(:,inc))
-
+        ros%net_fuel_load(inc) = (1._wp - df_sf_mineral_fract) * SUM(w_oi(inc,:))
+        ros%net_fuel_load(inc) = sf_convert_units("g", "kg", ros%net_fuel_load(inc))
         ros%fbd(inc) = fuel_bulk_density(inc) !< fuel bulk density [kg m-3], precomputed at mo_q_dfire_fuel.f90 + aggregation to         average
 
-        !<
-        sigma%d(inc) = SUM(wfactors % fdead(inc) * df_sigmas_dead)
-        sigma%l(inc) = SUM(wfactors % flive(inc) * df_sigmas_live)
-        sigma%t(inc) = sigma%l(inc) + sigma%d(inc)
-
+        sigma(inc) = calc_sigma(df_sf_sigma_nr, nfuels, df_sigmas, w_oi(inc,:)) !< Table A1, 3rd equation [cm-1] from Thonicke et al. (2010)
         !< (Table A1, 3rd from Thonicke et al. (2010))
         beta(inc) =  ros%fbd(inc) / df_sf_oven_dry_part_dens !< [-]
         !< Calculate beta_op (Eq. A6 from Thonicke et al. (2010))
@@ -511,7 +403,7 @@ CONTAINS
   FUNCTION calc_sigma(nsigma, nfuels, sigmas, woi) RESULT (sigma)
     INTEGER, INTENT(in)  :: nsigma, nfuels                    !<
     REAL(wp), INTENT(in) :: sigmas(nsigma)                    !<
-    REAL(wp), INTENT(in) :: woi(nfuels)                       !< dead fuel [kg m-2]
+    REAL(wp), INTENT(in) :: woi(nfuels)             !< dead fuel [kg m-2]
     REAL(wp)             :: sigma                             !< output [cm-1]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)             :: total_woi
@@ -547,84 +439,5 @@ CONTAINS
     fbd = fbd_accounting_fc / total_dead_fuel
   END FUNCTION calc_fbd
 
-
-  ! ======================================================================================================= !
-  !>
-  !> Calculate f weighting factors
-  !>
-  FUNCTION calc_weighting_factors(sigmas_dead, fuel_load_dead, &
-                                  sigmas_live, fuel_load_live, part_dens) &
-                                RESULT (wfactors)
-    REAL(wp), INTENT(in) :: sigmas_dead(:)      !< surface are to volume ratio (#fuel classes) [m2/m3]
-    REAL(wp), INTENT(in) :: fuel_load_dead(:,:) !< oven-dry fuel load (#fuel classes) [kg/m2]
-    REAL(wp), INTENT(in) :: sigmas_live(:)      !< surface are to volume ratio (#fuel classes) [m2/m3]
-    REAL(wp), INTENT(in) :: fuel_load_live(:,:) !< oven-dry fuel load (#fuel classes) [kg/m2]
-    REAL(wp), INTENT(in) :: part_dens           !< particle density [kg/m3]
-    TYPE(t_sf_weighting_factors) :: wfactors
-
-    INTEGER :: nc, ndeadfc, nlivefc
-
-    nc = SIZE(fuel_load_dead, DIM=2)
-    ndeadfc = SIZE(fuel_load_dead, DIM=1)
-    nlivefc = SIZE(fuel_load_live, DIM=1)
-
-    wfactors = t_sf_weighting_factors(nc, ndeadfc, nlivefc)
-
-    DO ic = 1, nc
-      wfactors % Aij % d(:,ic) = sigma_dead * fuel_load_dead(:,ic) / part_dens
-      wfactors % Aij % l(:,ic) = sigma_live * fuel_load_live(:,ic) / part_dens
-      wfactors % Ai % d(ic) = SUM(wfactors % Aij % d(:,ic))
-      wfactors % Ai % l(ic) = SUM(wfactors % Aij % l(:,ic))
-      wfactors % At(ic) = wfactors % Ai % l(ic) + wfactors % Ai % d(ic)
-
-      wfactors % fij % d(:,ic) = wfactors % Aij % d(:,ic) / wfactors % Ai % d(ic)
-      wfactors % fij % l(:,ic) = wfactors % Aij % d(:,ic) / wfactors % Ai % l(ic)
-      wfactors % fi % d(:,ic) = SUM(wfactors % fij % d(:,ic))
-      wfactors % fi % l(:,ic) = SUM(wfactors % fij % l(:,ic))
-
-      wfactors % gij % d(:,ic) = calc_g_weighting_factors(wfactors % fij % d(:,ic), sigmas_dead)
-      wfactors % gij % l(:,ic) = calc_g_weighting_factors(wfactors % fij % l(:,ic), sigmas_live)
-    END DO
-  END FUNCTION calc_weighting_factors
-
-
-  ! ======================================================================================================= !
-  !>
-  !> Calculate g weighting factors
-  !>
-  FUNCTION calc_g_weighting_factors(fs, sigmas) RESULT (gs)
-    REAL(wp), INTENT(in)  :: fs(:)     !< f weighting factor (#fuel classes) [-]
-    REAL(wp), INTENT(in)  :: sigmas(:) !< surface area to volume ratio (#fuel classes) [m2/m3]
-    REAL(wp), ALLOCATABLE :: gs(:)     !< g weighting factors (#fuel classes) [-]
-
-    INTEGER, PARAMETER :: NGLIM = 5
-    INTEGER :: nfuelclass
-    !< g partitions, Andrews PL et al. (2018), page 17
-    REAL(wp), PARAMETER :: glim(NGLIM) = [16._wp,48._wp,96._wp,1200._wp, HUGE(4.0_wp)]
-    REAL(wp) :: fsum(NGLIM)
-    INTEGER :: ifuel, ibin
-
-    fsum = 0.
-    gs = 0.
-    nfuelclass = SIZE(fs)
-
-    ! find f value for each j bin
-    do ifuel = 1, NFUELCLASS
-      do ibin = 1, NGLIM
-        if (sigma_dead(ifuel) < glim(ibin)) exit
-      end do
-      if (ibin == 1) cycle ! ignore 1st bin, so leave to 0
-      fsum(ibin) = fsum(ibin) + fs(ifuel)
-    end do
-
-    ! assign g value to each fuel class
-    do ifuel = 1, NFUELCLASS
-      do ibin = 1, NGLIM
-        if (sigma_dead(ifuel) < glim(ibin)) exit
-      end do
-      gs(ifuel) = fsum(ibin)
-    end do
-  END FUNCTION calc_g_weighting_factors
-
 #endif
-END MODULE mo_q_dfire_sf_ros_class_tho2010
+END MODULE mo_q_dfire_sf_ros_thon_class
