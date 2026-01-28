@@ -206,15 +206,15 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !> 0.2 If this is a resumed or warm-start run...
     !>
-    restartAttributes => NULL()
-    IF (isRestart()) THEN
-      CALL message('','Read restart file meta data ...')
-      ! Reads attributes and namelists for all available domains from restart file.
-      ! These namelist values will overwrite the model default, and will later be overwritten if the user has
-      ! specified something different for this integration.
-      CALL read_restart_header(TRIM(get_my_process_name()))
-    ENDIF
-
+!    restartAttributes => NULL()
+!    IF (isRestart()) THEN
+!      CALL message('','Read restart file meta data ...')
+!      ! Reads attributes and namelists for all available domains from restart file.
+!      ! These namelist values will overwrite the model default, and will later be overwritten if the user has
+!      ! specified something different for this integration.
+!      CALL read_restart_header(TRIM(get_my_process_name()))
+!    ENDIF
+!
     ! ----------------------------------------------------------------------------------------------------- !
     !> 1.0 read namelists
     !>
@@ -300,7 +300,7 @@ CONTAINS
     !> 6.0 I/O initialization
     !>
     ! This won't RETURN on dedicated restart PEs, starting their main loop instead.
-    CALL detachRestartProcs(ltimer)
+!    CALL detachRestartProcs(ltimer)
     CALL init_io_processes()
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -353,50 +353,50 @@ CONTAINS
     ! Constructing data for lon-lat interpolation
     ! CALL compute_lonlat_intp_coeffs(p_patch(1:), p_int_state(1:)) ! inout, inout
 
-    CALL allocate_vct_atmo(p_patch(1)%nlevp1)
+!    CALL allocate_vct_atmo(p_patch(1)%nlevp1)
 
     IF (timers_level > 4) CALL timer_stop(timer_compute_coeffs)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 11.0 setup and init external forcing
     !>
-    IF (force_from_observations()) CALL setup_forcing(no_models)  ! @TODO this might always be TRUE with icon-land standalone
-    DO jg=1,no_models
-      model => Get_model(jg)
-      CALL jsbach_setup_grid(jg, p_patch(jg), type='icon')
-      CALL jsbach_setup_tiles(jg)
-      CALL jsbach_init(jg)
-      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, dtime)
-    END DO
-    CALL jsbach_label_run(.TRUE.)
+!    IF (force_from_observations()) CALL setup_forcing(no_models)  ! @TODO this might always be TRUE with icon-land standalone
+!    DO jg=1,no_models
+!      model => Get_model(jg)
+!      CALL jsbach_setup_grid(jg, p_patch(jg), type='icon')
+!      CALL jsbach_setup_tiles(jg)
+!      CALL jsbach_init(jg)
+!      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, dtime)
+!    END DO
+!    CALL jsbach_label_run(.TRUE.)
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 12.0 restart a simulation
-    !>
-    IF (isRestart()) THEN
-      !
-      ! This is a resumed integration. Read model state from restart file(s).
-      !
-      IF (timers_level > 4) CALL timer_start(timer_read_restart)
-      DO jg = 1,n_dom
-        IF (p_patch(jg)%ldom_active) THEN
-          CALL read_restart_files( p_patch(jg), n_dom)
-        END IF
-      END DO
-      CALL message(TRIM(routine),'normal exit from read_restart_files')
-
-      IF (timers_level > 4) CALL timer_stop(timer_read_restart)
-
-      DO jg=1,no_models
-        CALL jsbach_init_after_restart(jg)
-      END DO
-
-    END IF
+!    !> 12.0 restart a simulation
+!    !>
+!    IF (isRestart()) THEN
+!      !
+!      ! This is a resumed integration. Read model state from restart file(s).
+!      !
+!      IF (timers_level > 4) CALL timer_start(timer_read_restart)
+!      DO jg = 1,n_dom
+!        IF (p_patch(jg)%ldom_active) THEN
+!          CALL read_restart_files( p_patch(jg), n_dom)
+!        END IF
+!      END DO
+!      CALL message(TRIM(routine),'normal exit from read_restart_files')
+!
+!      IF (timers_level > 4) CALL timer_stop(timer_read_restart)
+!
+!      DO jg=1,no_models
+!        CALL jsbach_init_after_restart(jg)
+!      END DO
+!
+!    END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 13.0 Prepare output
     !>
-    CALL configure_gribout(grid_generatingCenter, grid_generatingSubcenter, n_dom)
+!    CALL configure_gribout(grid_generatingCenter, grid_generatingSubcenter, n_dom)
     CALL configure_io()
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -404,9 +404,9 @@ CONTAINS
     !>
     !>   @NOTE all add_vars must be finished before calling this routine.
     !>
-    IF (output_mode%l_nml) THEN
-      CALL parse_variable_groups()
-    END IF
+!    IF (output_mode%l_nml) THEN
+!      CALL parse_variable_groups()
+!    END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 13.2 If async IO is in effect, init_name_list_output is a collective call
@@ -422,20 +422,20 @@ CONTAINS
       sim_step_info%dtime  = dtime
       sim_step_info%jstep0 = 0
 
-      CALL getAttributesForRestarting(restartAttributes)
+!      CALL getAttributesForRestarting(restartAttributes)
       ! get start counter for time loop from restart file:
-      IF (restartAttributes%is_init) &
-        & CALL restartAttributes%get("jstep", sim_step_info%jstep0)
-      CALL init_name_list_output(sim_step_info)
-      CALL create_mipz_level_selections(output_file)
-      CALL create_vertical_axes(output_file)
+!      IF (restartAttributes%is_init) &
+!        & CALL restartAttributes%get("jstep", sim_step_info%jstep0)
+!      CALL init_name_list_output(sim_step_info)
+!      CALL create_mipz_level_selections(output_file)
+!      CALL create_vertical_axes(output_file)
 
     END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 13.3 Initialize reset-Action, i.e. assign variables to action object
     !>
-    CALL reset_act%initialize(ACTION_RESET)
+!    CALL reset_act%initialize(ACTION_RESET)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 13.4 Optional: detailed print-out of some variable info  !
@@ -463,7 +463,7 @@ CONTAINS
       CALL update_statistics(lacc=.TRUE.)
       ! --
       IF (output_mode%l_nml) THEN
-          CALL write_name_list_output(jstep=0, lacc=.TRUE.)
+!          CALL write_name_list_output(jstep=0, lacc=.TRUE.)
       END IF
 
     END IF ! not isRestart()
@@ -474,20 +474,20 @@ CONTAINS
     sim_time = getElapsedSimTimeInSeconds(mtime_current)
 
     ! allocate temporary variable for restarting purposes
-    IF (output_mode%l_nml) THEN
-      ALLOCATE(output_jfile(SIZE(output_file)), STAT=error_status)
-      IF (error_status /= SUCCESS)  CALL finish (routine, 'ALLOCATE failed!')
-    ENDIF
+!    IF (output_mode%l_nml) THEN
+!      ALLOCATE(output_jfile(SIZE(output_file)), STAT=error_status)
+!      IF (error_status /= SUCCESS)  CALL finish (routine, 'ALLOCATE failed!')
+!    ENDIF
 
     mtime_old     => newDatetime(mtime_current) ! in
 
-    restartDescriptor => createRestartDescriptor("jsbach")
-    jstep0 = 0
-    CALL getAttributesForRestarting(restartAttributes)
-    IF (isRestart()) THEN
-      ! get start counter for time loop from restart file:
-      CALL restartAttributes%get("jstep", jstep0)
-    END IF
+!    restartDescriptor => createRestartDescriptor("jsbach")
+!    jstep0 = 0
+!    CALL getAttributesForRestarting(restartAttributes)
+!    IF (isRestart()) THEN
+!      ! get start counter for time loop from restart file:
+!      CALL restartAttributes%get("jstep", jstep0)
+!    END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 14.1 for debug purposes print var lists: for msg_level >= 13 short and for >= 20 long format
@@ -569,125 +569,125 @@ CONTAINS
     !>
     !> 17.0 time loop for running ICON-Land
     !>
-    TIME_LOOP: DO
-      ! optional memory loggin
-      CALL memory_log_add
-
-      !TODO Compute mtime_forcing
-      mtime_current = mtime_current + model_time_step
-
-      ! store state of output files for restarting purposes
-      IF (output_mode%l_nml .AND. jstep>=0 ) THEN
-        DO i=1,SIZE(output_file)
-          output_jfile(i) = get_current_jfile(output_file(i)%out_event)
-        END DO
-      ENDIF
-
-      IF (msg_level > 2) THEN
-        lprint_timestep = .TRUE.
-      ELSE
-        lprint_timestep = MOD(jstep,timesteps_per_day(dtime,1)) == 0
-      ENDIF
-      ! always print the first and the last time step
-      lprint_timestep = lprint_timestep .OR. (jstep == jstep0+1) .OR. (jstep == jstep0+nsteps)
-
-      IF (lprint_timestep) THEN
-        WRITE(message_text,'(a,i8,a,i0,a,5(i2.2,a),i3.3)') &
-              &             'Time step: ', jstep, ' model time ',                                &
-              &             mtime_current%date%year,   '-', mtime_current%date%month,    '-',    &
-              &             mtime_current%date%day,    ' ', mtime_current%time%hour,     ':',    &
-              &             mtime_current%time%minute, ':', mtime_current%time%second,   '.',    &
-              &             mtime_current%time%ms
-        CALL message('',message_text)
-      ENDIF
-
-      ! set namelist output flag
-      l_nml_output = output_mode%l_nml .AND. jstep >= 0 .AND. istime4name_list_output(jstep)
-
-      ! --------------------------------------------------------------------------------------------------- !
-      !> 17.1 run ICON-Land for one timestep
-      !>
-      DO jg = 1,no_models
-        CALL run_one_timestep( &
-          & jg, &                   ! model
-          & p_patch(jg)%nblks_c, &  ! ..
-          & dtime, &                ! length of timestep in seconds
-          & mtime_current)          ! ..
-      END DO
-
-      ! update accumulated values
-      CALL update_statistics(lacc=.TRUE.)
-
-      IF (l_nml_output) THEN
-        CALL write_name_list_output(jstep, lacc=.TRUE.)
-      ENDIF
-
-      ! re-initialize MAX/MIN fields with 'resetval'
-      !   @NOTE must be done AFTER output
-      CALL reset_act%execute(slack=dtime, mtime_date=mtime_current)
-
-      ! --------------------------------------------------------------------------------------------------- !
-      !> 17.2 Write restart file
-      !>
-      !>  check whether time has come for writing restart file
-      !>
-      ! default is to assume we do not write a checkpoint/restart file
-      lwrite_checkpoint = .FALSE.
-      ! if the model is not supposed to write output, do not write checkpoints
-      IF (.NOT. output_mode%l_none ) THEN
-        ! to clarify the decision tree we use shorter and more expressive names:
-        l_isStartdate    = (time_config%tc_startdate == mtime_current)
-        l_isExpStopdate  = (time_config%tc_exp_stopdate == mtime_current)
-        l_isRestart      = is_event_active(restartEvent, mtime_current, proc0_offloading)
-        l_isCheckpoint   = is_event_active(checkpointEvent, mtime_current, proc0_offloading)
-        l_doWriteRestart = time_config%tc_write_restart
-        ! ...
-        IF ( &
-              !  if normal checkpoint or restart cycle has been reached, i.e. checkpoint+model stop
-              &         (l_isRestart .OR. l_isCheckpoint)                     &
-              &  .AND.                                                        &
-              !  and the current date differs from the start date
-              &        .NOT. l_isStartdate                                    &
-              &  .AND.                                                        &
-              !  and end of run has not been reached or restart writing has been disabled
-              &        (.NOT. l_isExpStopdate .OR. l_doWriteRestart)          &
-              & ) THEN
-          lwrite_checkpoint = .TRUE.
-        END IF
-      END IF
-      ! ..
-      IF (lwrite_checkpoint) THEN
-        DO jg=1,n_dom
-          CALL restartDescriptor%updatePatch(p_patch(jg), opt_ndom=n_dom)
-        END DO
-        ! finally write restart file
-        CALL restartDescriptor%writeRestart(mtime_current, jstep, opt_output_jfile = output_jfile)
-      END IF  ! lwrite_checkpoint
-      ! ...
-      IF (mtime_current >= time_config%tc_stopdate) THEN
-        ! leave time loop
-        EXIT TIME_LOOP
-      END IF
-
-      ! increase timestep by one
-      jstep = jstep + 1
-      ! step_in_forcing_file = step_in_forcing_file + 1
-      sim_time = getElapsedSimTimeInSeconds(mtime_current)
-    END DO TIME_LOOP
+!    TIME_LOOP: DO
+!      ! optional memory loggin
+!      CALL memory_log_add
+!
+!      !TODO Compute mtime_forcing
+!      mtime_current = mtime_current + model_time_step
+!
+!      ! store state of output files for restarting purposes
+!      IF (output_mode%l_nml .AND. jstep>=0 ) THEN
+!        DO i=1,SIZE(output_file)
+!          output_jfile(i) = get_current_jfile(output_file(i)%out_event)
+!        END DO
+!      ENDIF
+!
+!      IF (msg_level > 2) THEN
+!        lprint_timestep = .TRUE.
+!      ELSE
+!        lprint_timestep = MOD(jstep,timesteps_per_day(dtime,1)) == 0
+!      ENDIF
+!      ! always print the first and the last time step
+!      lprint_timestep = lprint_timestep .OR. (jstep == jstep0+1) .OR. (jstep == jstep0+nsteps)
+!
+!      IF (lprint_timestep) THEN
+!        WRITE(message_text,'(a,i8,a,i0,a,5(i2.2,a),i3.3)') &
+!              &             'Time step: ', jstep, ' model time ',                                &
+!              &             mtime_current%date%year,   '-', mtime_current%date%month,    '-',    &
+!              &             mtime_current%date%day,    ' ', mtime_current%time%hour,     ':',    &
+!              &             mtime_current%time%minute, ':', mtime_current%time%second,   '.',    &
+!              &             mtime_current%time%ms
+!        CALL message('',message_text)
+!      ENDIF
+!
+!      ! set namelist output flag
+!      l_nml_output = output_mode%l_nml .AND. jstep >= 0 .AND. istime4name_list_output(jstep)
+!
+!      ! --------------------------------------------------------------------------------------------------- !
+!      !> 17.1 run ICON-Land for one timestep
+!      !>
+!      DO jg = 1,no_models
+!        CALL run_one_timestep( &
+!          & jg, &                   ! model
+!          & p_patch(jg)%nblks_c, &  ! ..
+!          & dtime, &                ! length of timestep in seconds
+!          & mtime_current)          ! ..
+!      END DO
+!
+!      ! update accumulated values
+!      CALL update_statistics(lacc=.TRUE.)
+!
+!      IF (l_nml_output) THEN
+!        CALL write_name_list_output(jstep, lacc=.TRUE.)
+!      ENDIF
+!
+!      ! re-initialize MAX/MIN fields with 'resetval'
+!      !   @NOTE must be done AFTER output
+!      CALL reset_act%execute(slack=dtime, mtime_date=mtime_current)
+!
+!      ! --------------------------------------------------------------------------------------------------- !
+!      !> 17.2 Write restart file
+!      !>
+!      !>  check whether time has come for writing restart file
+!      !>
+!      ! default is to assume we do not write a checkpoint/restart file
+!      lwrite_checkpoint = .FALSE.
+!      ! if the model is not supposed to write output, do not write checkpoints
+!      IF (.NOT. output_mode%l_none ) THEN
+!        ! to clarify the decision tree we use shorter and more expressive names:
+!        l_isStartdate    = (time_config%tc_startdate == mtime_current)
+!        l_isExpStopdate  = (time_config%tc_exp_stopdate == mtime_current)
+!        l_isRestart      = is_event_active(restartEvent, mtime_current, proc0_offloading)
+!        l_isCheckpoint   = is_event_active(checkpointEvent, mtime_current, proc0_offloading)
+!        l_doWriteRestart = time_config%tc_write_restart
+!        ! ...
+!        IF ( &
+!              !  if normal checkpoint or restart cycle has been reached, i.e. checkpoint+model stop
+!              &         (l_isRestart .OR. l_isCheckpoint)                     &
+!              &  .AND.                                                        &
+!              !  and the current date differs from the start date
+!              &        .NOT. l_isStartdate                                    &
+!              &  .AND.                                                        &
+!              !  and end of run has not been reached or restart writing has been disabled
+!              &        (.NOT. l_isExpStopdate .OR. l_doWriteRestart)          &
+!              & ) THEN
+!          lwrite_checkpoint = .TRUE.
+!        END IF
+!      END IF
+!      ! ..
+!      IF (lwrite_checkpoint) THEN
+!        DO jg=1,n_dom
+!          CALL restartDescriptor%updatePatch(p_patch(jg), opt_ndom=n_dom)
+!        END DO
+!        ! finally write restart file
+!        CALL restartDescriptor%writeRestart(mtime_current, jstep, opt_output_jfile = output_jfile)
+!      END IF  ! lwrite_checkpoint
+!      ! ...
+!      IF (mtime_current >= time_config%tc_stopdate) THEN
+!        ! leave time loop
+!        EXIT TIME_LOOP
+!      END IF
+!
+!      ! increase timestep by one
+!      jstep = jstep + 1
+!      ! step_in_forcing_file = step_in_forcing_file + 1
+!      sim_time = getElapsedSimTimeInSeconds(mtime_current)
+!    END DO TIME_LOOP
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 18.0  ... @TODO describe
     !>
-    CALL deleteRestartDescriptor(restartDescriptor)
+!    CALL deleteRestartDescriptor(restartDescriptor)
 
     ! ..
     IF (ltimer) CALL timer_stop(timer_total)
 
     ! ..
-    IF (output_mode%l_nml) THEN
-      DEALLOCATE(output_jfile, STAT=error_status)
-      IF (error_status /= SUCCESS)  CALL finish (routine, 'DEALLOCATE failed!')
-    ENDIF
+!    IF (output_mode%l_nml) THEN
+!      DEALLOCATE(output_jfile, STAT=error_status)
+!      IF (error_status /= SUCCESS)  CALL finish (routine, 'DEALLOCATE failed!')
+!    ENDIF
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 19.0 deallocation of structure and variables
@@ -719,23 +719,23 @@ CONTAINS
     !>
     CALL memory_log_terminate
     CALL destruct_icon_communication()
-    CALL finalize_external_forcing(no_models)
+!    CALL finalize_external_forcing(no_models)
     CALL jsbach_finalize()
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 21.0 Delete variable lists
     !>
-    IF (output_mode%l_nml) THEN
-      CALL close_name_list_output
-    ENDIF
-#ifdef HAVE_CDI_PIO
-    IF (pio_type == pio_type_cdipio) THEN
-      prev_cdi_namespace = namespaceGetActive()
-      CALL namespaceSetActive(nml_io_cdi_pio_namespace)
-      CALL pioFinalize
-      CALL namespaceSetActive(prev_cdi_namespace)
-    END IF
-#endif
+!    IF (output_mode%l_nml) THEN
+!      CALL close_name_list_output
+!    ENDIF
+!#ifdef HAVE_CDI_PIO
+!    IF (pio_type == pio_type_cdipio) THEN
+!      prev_cdi_namespace = namespaceGetActive()
+!      CALL namespaceSetActive(nml_io_cdi_pio_namespace)
+!      CALL pioFinalize
+!      CALL namespaceSetActive(prev_cdi_namespace)
+!    END IF
+!#endif
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 22.0 finish message and print performance timers
