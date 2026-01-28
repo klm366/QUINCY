@@ -173,7 +173,7 @@ CONTAINS
     INTEGER, INTENT(in) :: nc
     INTEGER, INTENT(in) :: nddfc !< n dead fuel classes
     INTEGER, INTENT(in) :: nlvfc !< n live fuel classes
-    TYPE(t_fwvar), INTENT(in) :: var
+    TYPE(t_fwvar_r2d), INTENT(in) :: var
     ALLOCATE(var%l(nddfc, nc))
     ALLOCATE(var%d(nlvfc, nc))
     !    ALLOCATE(var%t(nc))
@@ -189,22 +189,36 @@ CONTAINS
   !>
   !> Do the science
   !>
-  FUNCTION sf_calc_rate_of_spread(nc, ndd_fls, nlv_fls, woi_dd, woi_lv, mask) RESULT(ros)
-    INTEGER, INTENT(in) :: nc, ndd_fls, nlv_fls
-    REAL(wp), INTENT(in) :: woi_dd(:), woi_lv(:) !< dead/live fuel load [kg DM m-1] -> notes units from g to kg
+  FUNCTION sf_calc_rate_of_spread(nc, ndd, nlv, woi_dd, woi_lv, sigmas_dd, sigmas_lv, mask) RESULT(ros)
+    INTEGER, INTENT(in) :: nc
+    INTEGER, INTENT(in) :: ndd, nlv  !< number of dead fuel classes, number of live fuel classes
+    REAL(wp), INTENT(in) :: woi_dd(ndd), woi_lv(nlv) !< dead/live fuel load [kg DM m-1] -> notes units in kg (instead of g)
+    REAL(wp), INTENT(in) :: sigmas_dd(ndd), sigmas_lv(nlv) !< surface area to volume ratio [m2/m3]
+
     LOGICAL, INTENT(in) :: mask(nc)
+    TYPE(t_fwvar_r1d) :: wn !< net fuel load [kg/m2]
     ! ----------------------------------------------------------------------------------------------------- !
     ros = t_sf_ros(nc)
-    sigma = t_fwvar_r1d(nc, has_total=.TRUE.)
+    wn = t_fwvar_r1d(nc)
 
     !< Corrections from Oberhagemann et al. (2025)
-    wfactors = calc_weighting_factors(df_sigmas_dead, w_oi, &
-                                      df_sigmas_live, lv_w_oi, &
+    wfactors = calc_weighting_factors(sigmas_dd, woi_dd, &
+                                      sigmas_lv, woi_lv, &
                                       df_sf_oven_dry_part_dens)
 
     DO inc = 1, nc
       IF (mask(inc)) THEN
+        ! CHARACTERISTICS DEAD/LIVE CATEGORIES
+        wn%d = SUM(wfactors%gij%d * woi_dd * (1._wp-df_sf_mineral_fract))
+        wn%l = SUM(wfactors%gij%l * woi_lv * (1._wp-df_sf_mineral_fract))
 
+        ! FUEL BED CHARACTERISTICS
+        ! calc:
+        ! - surface are to volume ratio (sigmas)
+        ! - mean fuel bulk density (pb)
+        ! - mean packing ratio (beta)
+        ! - optimum packing ratio (beta_op)
+        ! - relative packing ratio (beta/beta_op)
       END IF ! IF (mask(inc)) THEN
     ENDDO ! DO inc = 1, nc
 
