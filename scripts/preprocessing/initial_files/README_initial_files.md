@@ -68,3 +68,11 @@ to log in to an interactive node with sufficient memory before starting
 
 Even higher resolutions (**R2B10+**) exceed the memory of the levante nodes.
 We suggest to generate initial data for these resolutions on breeze4.
+However, hdpara files for the internal HD model may still need to be generated
+on levante. In this case first generate all other initial data on breeze4,
+then transfer to levante and run a second time to generate only the internal
+HD parameter file on levante. This may require use of the high memory nodes
+which can be setup by adding the following to the slurm headers of the job
+(removing the existing mem setting):
+#SBATCH --constraint=512G|1024G
+#SBATCH —mem=0 #Use all the memory on the node

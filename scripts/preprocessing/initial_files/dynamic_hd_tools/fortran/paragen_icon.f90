@@ -306,7 +306,8 @@ CONTAINS
 
          IF (ISLOPE.EQ.0) THEN
             ticoslinn(II) = para(II)%slope
-            WRITE(*,*) "Inner slope replaced by slope to the next grid"
+         ! ! Might be useful for debugging
+         !    WRITE(*,*) "Inner slope replaced by slope to the next grid"
          ENDIF
 !
 !        *** Kommentar ?
@@ -322,8 +323,9 @@ CONTAINS
 !
 !cc            VSAU = 0.01   (0.1 = 5.79 days auf 50 km)
             VSAU = 0.1
-            WRITE(*,*) "Achtung: II = ",II, "  ticodir = ",   &
-                 ticodir(II), "DX = ", para(II)%dis, "  und DH =", DH
+            ! ! Might be useful for debugging
+            ! WRITE(*,*) "Achtung: II = ",II, "  ticodir = ",   &
+            !      ticodir(II), "DX = ", para(II)%dis, "  und DH =", DH
          ELSE
             VSAU = C * (DH/para(II)%dis)**ALPHA
          ENDIF

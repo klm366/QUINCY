@@ -33,7 +33,7 @@ production_run=${13:=false}
 comp=gfortran
 
 #Setup working directory
-mkdir ${work_dir} || true
+mkdir -p ${work_dir}
 
 #Setup input file
 
