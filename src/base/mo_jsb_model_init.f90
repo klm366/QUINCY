@@ -598,15 +598,15 @@ CONTAINS
 
       ELSE IF (model%config%qmodel_id == QSOIL) THEN
         !-- QSOIL
+        !! read soil forcing data
+        CALL model%Queue_task(SB_, "read_soil_forcing")
+
         !! init/reset fluxes (with/to zero)
         !!
         CALL model%Queue_task(SB_, "reset_sb_fluxes")
         IF (.NOT. model%config%use_soil_phys_jsbach) THEN
           CALL model%Queue_task(SPQ_, "reset_spq_fluxes")
         END IF
-
-        ! !! read soil forcing data
-        ! CALL model%Queue_task(SB_, "read_soil_forcing")
 
         !! tasks that do not change area
         !!
@@ -619,10 +619,10 @@ CONTAINS
         CALL model%Queue_task(SB_, "sb_pools")
 
         !-- averaging variables in time ------------------------------------------------------------------- !
-        CALL model%Queue_task(RAD_, "rad_time_average")             ! ALL
-        CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")      ! ALL
-        CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
-        CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")   ! LAND or PLANT
+        CALL model%Queue_task(RAD_, "rad_time_average")
+        CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")
+        CALL model%Queue_task(VEG_, "tavrg_vegetation")
+        CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")
       ELSE
         CALL finish(TRIM(routine), 'Some is wrong with the model%config%use_soil_phys_jsbach setting.')
       END IF ! T/F use_soil_phys_jsbach

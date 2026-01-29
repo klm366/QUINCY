@@ -204,6 +204,8 @@ CONTAINS
                       ic_filename               , &
                       bc_filename               , &
                       bc_quincy_soil_filename   , &
+                      soilphysics_forcing_filename,   &
+                      veglitterfall_forcing_filename, &
                       deposition_filename_prefix, &
                       sb_model_scheme           , &
                       sb_nloss_scheme           , &
@@ -258,6 +260,8 @@ CONTAINS
     ic_filename                 = 'ic_land_sb.nc'
     bc_filename                 = 'bc_land_srf.nc'
     bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
+    soilphysics_forcing_filename   = 'bc_qsoil_physics.nc'
+    veglitterfall_forcing_filename = 'bc_qsoil_litterfall.nc'
     deposition_filename_prefix  = 'bc_land_npdep_quincy'
     sb_model_scheme             = "simple_1d"       ! simple_1d jsm
     sb_nloss_scheme             = "dynamic"         ! none fixed dynamic
@@ -312,6 +316,8 @@ CONTAINS
     config%ic_filename                     = ic_filename
     config%bc_filename                     = bc_filename
     config%bc_quincy_soil_filename         = bc_quincy_soil_filename
+    config%soilphysics_forcing_filename    = soilphysics_forcing_filename
+    config%veglitterfall_forcing_filename  = veglitterfall_forcing_filename
     config%deposition_filename_prefix      = deposition_filename_prefix
     config%sb_model_scheme                 = TRIM(sb_model_scheme)
     config%sb_nloss_scheme                 = TRIM(sb_nloss_scheme)

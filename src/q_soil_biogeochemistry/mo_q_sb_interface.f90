@@ -323,6 +323,191 @@ CONTAINS
 
   END SUBROUTINE update_time_average_soilbiogeochemistry
 
+  ! ======================================================================================================= !
+  !>Implementation of "integrate": read_soil_forcing task
+  !>
+  SUBROUTINE update_read_soil_forcing(tile, options)
+
+    USE mo_jsb_io_netcdf,           ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_util,                    ONLY: read_2D_var, read_3D_var
+    USE mo_lnd_bgcm_store,          ONLY: read_bgcm_from_file
+    USE mo_lnd_bgcm_idx
+    
+    dsl4jsb_Use_processes SB_
+    dsl4jsb_Use_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),      POINTER :: model            !< the model
+    TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store       !< the bgcm store of this tile
+    TYPE(t_input_file)              :: input_file       !< file with to be read veg state variables
+    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_w     !< vertical grid for sl variables
+    TYPE(t_datetime),       POINTER :: current_datetime !< date and time at the beginning of this time step
+    INTEGER                         :: isoil            !< soillayer index
+    INTEGER                         :: nsoil_w          !< number of soil layers (water)
+    REAL(wp),               POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables
+       
+
+    INTEGER :: iblk
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_read_soil_forcing'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt2L2D :: veg_pool_mt
+    dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
+    ! A2L_
+    dsl4jsb_Real2D_onChunk      :: nhx_deposition 
+    dsl4jsb_Real2D_onChunk      :: noy_deposition 
+    dsl4jsb_Real2D_onChunk      :: nhx_n15_deposition 
+    dsl4jsb_Real2D_onChunk      :: noy_n15_deposition 
+    dsl4jsb_Real2D_onChunk      :: p_deposition 
+    ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk      :: root_fraction_sl
+    ! HYDRO_ 3D
+    dsl4jsb_Real3D_onChunk      :: frac_wtr_transp_down_sl
+    dsl4jsb_Real3D_onChunk      :: frac_w_lat_loss_sl
+    dsl4jsb_Real3D_onChunk      :: wtr_soil_sl
+    dsl4jsb_Real3D_onChunk      :: vol_porosity_sl
+    ! SSE_ 3D
+    dsl4jsb_Real3D_onChunk      :: t_soil_sl
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    vgrid_soil_w => Get_vgrid('soil_depth_water')
+    nsoil_w = vgrid_soil_w%n_levels
+    iblk = options%iblk
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_var2D_onChunk(A2L_,  nhx_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_,  noy_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_,  nhx_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_,  noy_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_,  p_deposition)
+    dsl4jsb_Get_var2D_onChunk(VEG_,  demand_uptake_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_,  demand_uptake_p_tuptake_mavg)
+    dsl4jsb_Get_var3D_onChunk(VEG_,  root_fraction_sl)
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_transp_down_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on()) CALL message(TRIM(routine), ' for tile '//TRIM(tile%name))
+    
+    ! get the timestep information
+    current_datetime = options%current_datetime
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%soilphysics_forcing_filename), model%grid_id)
+    !> we need to get the time information from input file, and depending on the cycling years, e.g. 30yr, 
+    !> look for the correct line of forcing data
+
+    IF (ASSOCIATED(tile%bgcm_store)) THEN
+      bgcm_store => tile%bgcm_store
+      CALL read_bgcm_from_file(bgcm_store, SB_BGCM_POOL_ID, "sb", tile%name, routine, input_file, 'soillev', nsoil_w)
+    END IF
+
+    CALL read_3D_var(input_file, root_fraction_sl, 'veg_root_fraction_sl_'//tile%name, 'soillev', nsoil_w)
+    CALL read_3D_var(input_file, frac_wtr_transp_down_sl, 'sse_frac_wtr_transp_down_sl_'//tile%name, 'soillev', nsoil_w)
+    CALL read_3D_var(input_file, frac_w_lat_loss_sl, 'sse_frac_w_lat_loss_sl_'//tile%name, 'soillev', nsoil_w)
+    CALL read_3D_var(input_file, wtr_soil_sl, 'sse_wtr_soil_sl_'//tile%name, 'soillev', nsoil_w)
+    CALL read_3D_var(input_file, vol_porosity_sl, 'sse_vol_porosity_sl_'//tile%name, 'soillev', nsoil_w)
+    CALL read_3D_var(input_file, t_soil_sl, 'sse_t_soil_sl_'//tile%name, 'soillev', nsoil_w)
+
+    CALL read_2D_var(input_file, nhx_deposition, "a2l_nhx_deposition_"//tile%name)
+    CALL read_2D_var(input_file, noy_deposition, "a2l_noy_deposition_"//tile%name)
+    CALL read_2D_var(input_file, nhx_n15_deposition, "a2l_nhx_n15_deposition_"//tile%name)
+    CALL read_2D_var(input_file, noy_n15_deposition, "a2l_noy_n15_deposition_"//tile%name)
+    CALL read_2D_var(input_file, p_deposition, "a2l_p_deposition_"//tile%name)
+    CALL read_2D_var(input_file, demand_uptake_n_tuptake_mavg, "veg_demand_uptake_n_tuptake_mavg_"//tile%name)
+    CALL read_2D_var(input_file, demand_uptake_p_tuptake_mavg, "veg_demand_uptake_p_tuptake_mavg_"//tile%name)
+
+    CALL input_file%Close()
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%veglitterfall_forcing_filename), model%grid_id)
+
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_leaf, ixC, :), "veg_litterfall_leaf_C_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_leaf, ixN, :), "veg_litterfall_leaf_N_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_leaf, ixP, :), "veg_litterfall_leaf_P_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_leaf, ixC13, :), "veg_litterfall_leaf_C13_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_leaf, ixC14, :), "veg_litterfall_leaf_C14_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_leaf, ixN15, :), "veg_litterfall_leaf_N15_"//tile%name)
+
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fine_root, ixC, :), "veg_litterfall_fine_root_C_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fine_root, ixN, :), "veg_litterfall_fine_root_N_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fine_root, ixP, :), "veg_litterfall_fine_root_P_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fine_root, ixC13, :), "veg_litterfall_fine_root_C13_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fine_root, ixC14, :), "veg_litterfall_fine_root_C14_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fine_root, ixN15, :), "veg_litterfall_fine_root_N15_"//tile%name)
+
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_coarse_root, ixC, :), "veg_litterfall_coarse_root_C_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_coarse_root, ixN, :), "veg_litterfall_coarse_root_N_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_coarse_root, ixP, :), "veg_litterfall_coarse_root_P_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_coarse_root, ixC13, :), "veg_litterfall_coarse_root_C13_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_coarse_root, ixC14, :), "veg_litterfall_coarse_root_C14_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_coarse_root, ixN15, :), "veg_litterfall_coarse_root_N15_"//tile%name)
+
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_sap_wood, ixC, :), "veg_litterfall_sap_wood_C_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_sap_wood, ixN, :), "veg_litterfall_sap_wood_N_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_sap_wood, ixP, :), "veg_litterfall_sap_wood_P_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_sap_wood, ixC13, :), "veg_litterfall_sap_wood_C13_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_sap_wood, ixC14, :), "veg_litterfall_sap_wood_C14_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_sap_wood, ixN15, :), "veg_litterfall_sap_wood_N15_"//tile%name)
+
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_heart_wood, ixC, :), "veg_litterfall_heart_wood_C_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_heart_wood, ixN, :), "veg_litterfall_heart_wood_N_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_heart_wood, ixP, :), "veg_litterfall_heart_wood_P_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_heart_wood, ixC13, :), "veg_litterfall_heart_wood_C13_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_heart_wood, ixC14, :), "veg_litterfall_heart_wood_C14_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_heart_wood, ixN15, :), "veg_litterfall_heart_wood_N15_"//tile%name)
+
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fruit, ixC, :), "veg_litterfall_fruit_C_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fruit, ixN, :), "veg_litterfall_fruit_N_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fruit, ixP, :), "veg_litterfall_fruit_P_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fruit, ixC13, :), "veg_litterfall_fruit_C13_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fruit, ixC14, :), "veg_litterfall_fruit_C14_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fruit, ixN15, :), "veg_litterfall_fruit_N15_"//tile%name)
+
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_labile, ixC, :), "veg_litterfall_labile_C_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_labile, ixN, :), "veg_litterfall_labile_N_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_labile, ixP, :), "veg_litterfall_labile_P_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_labile, ixC13, :), "veg_litterfall_labile_C13_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_labile, ixC14, :), "veg_litterfall_labile_C14_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_labile, ixN15, :), "veg_litterfall_labile_N15_"//tile%name)
+
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_reserve, ixC, :), "veg_litterfall_reserve_C_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_reserve, ixN, :), "veg_litterfall_reserve_N_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_reserve, ixP, :), "veg_litterfall_reserve_P_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_reserve, ixC13, :), "veg_litterfall_reserve_C13_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_reserve, ixC14, :), "veg_litterfall_reserve_C14_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_reserve, ixN15, :), "veg_litterfall_reserve_N15_"//tile%name)
+
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_seed_bed, ixC, :), "veg_litterfall_seed_bed_C_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_seed_bed, ixN, :), "veg_litterfall_seed_bed_N_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_seed_bed, ixP, :), "veg_litterfall_seed_bed_P_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_seed_bed, ixC13, :), "veg_litterfall_seed_bed_C13_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_seed_bed, ixC14, :), "veg_litterfall_seed_bed_C14_"//tile%name)
+    CALL read_2D_var(input_file, veg_litterfall_mt(ix_seed_bed, ixN15, :), "veg_litterfall_seed_bed_N15_"//tile%name)
+
+    CALL input_file%Close()
+
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
+
+  END SUBROUTINE update_read_soil_forcing
   ! ------------------------------------------------------------------------------------------------------- !
   ! Wrappers for update routines from different module
   ! ------------------------------------------------------------------------------------------------------- !
@@ -398,6 +583,39 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
 
   END SUBROUTINE aggregate_reset_sb_fluxes
+
+  ! ======================================================================================================= !
+  !>Implementation of "aggregate": read_soil_forcing task
+  !>
+  SUBROUTINE aggregate_read_soil_forcing(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER                :: model
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(SB_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_read_soil_forcing'
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(SB_)
+
+    ! nothing to aggregate, yet
+
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
+
+  END SUBROUTINE aggregate_read_soil_forcing
 
   ! ======================================================================================================= !
   !>Implementation of "aggregate": sb_rate_modifier task
