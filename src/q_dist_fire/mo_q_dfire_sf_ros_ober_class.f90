@@ -45,7 +45,7 @@ MODULE mo_q_dfire_sf_ros_ober_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_rate_of_spread
+  PUBLIC :: sf_calc_rate_of_spread_ober
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_ober_class'
 
@@ -186,7 +186,7 @@ CONTAINS
   !>
   !> Do the science
   !>
-  FUNCTION sf_calc_rate_of_spread(nc, ndd, nlv, &
+  FUNCTION sf_calc_rate_of_spread_ober(nc, ndd, nlv, &
                                   sigmas_dd, sigmas_lv, &
                                   woi_dd, woi_lv, &
                                   mf_dd, mf_lv, &
@@ -327,7 +327,7 @@ CONTAINS
       END IF ! IF (mask(inc)) THEN
     ENDDO ! DO inc = 1, nc
 
-  END FUNCTION sf_calc_rate_of_spread
+  END FUNCTION sf_calc_rate_of_spread_ober
 
 
   ! ======================================================================================================= !

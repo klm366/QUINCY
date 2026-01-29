@@ -49,7 +49,7 @@ MODULE mo_q_dfire_sf_ros_thon_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: t_sf_ros, t_sf_veget_cover_frac, sf_calc_rate_of_spread
+  PUBLIC :: t_sf_ros, t_sf_veget_cover_frac, sf_calc_rate_of_spread_thon
 
   PUBLIC :: calc_fbd, calc_sigma, &
             calc_opt_react_velocity, calc_moist_damp_coeff, &
@@ -107,7 +107,7 @@ CONTAINS
   !>
   !> Do the science
   !>
-  FUNCTION sf_calc_rate_of_spread(nc, nfuels, fuel_bulk_density, fwd_wind_factor, wind, moist_extinction, fdi, &
+  FUNCTION sf_calc_rate_of_spread_thon(nc, nfuels, fuel_bulk_density, fwd_wind_factor, wind, moist_extinction, fdi, &
                                         veg_cover_frac, w_oi, omega_o, mask) RESULT(ros)
     INTEGER, INTENT(in)                  :: nc
     INTEGER, INTENT(in)                  :: nfuels                      !< 1, 10 and 100 hours fuel classes
@@ -192,7 +192,7 @@ CONTAINS
       END IF ! IF (mask(inc)) THEN
     ENDDO ! DO inc = 1, nc
 
-  END FUNCTION sf_calc_rate_of_spread
+  END FUNCTION sf_calc_rate_of_spread_thon
 
 
   ! ======================================================================================================= !

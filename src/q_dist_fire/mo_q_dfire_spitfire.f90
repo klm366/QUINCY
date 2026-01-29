@@ -90,7 +90,8 @@ MODULE mo_q_dfire_spitfire
   USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture
   USE mo_q_dfire_sf_ignition_class,   ONLY: calc_q_sf_ignition, t_q_sf_ignitions
   USE mo_q_dfire_sf_nesterov_class,   ONLY: calc_sf_nesterov_index
-  USE mo_q_dfire_sf_ros_thon_class,ONLY: t_sf_ros, t_sf_veget_cover_frac, sf_calc_rate_of_spread
+  USE mo_q_dfire_sf_ros_thon_class, ONLY: t_sf_ros, t_sf_veget_cover_frac, sf_calc_rate_of_spread_thon
+  USE mo_q_dfire_sf_ros_ober_class, ONLY: sf_calc_rate_of_spread_ober
   USE mo_q_dfire_sf_frac_consump_class, ONLY: sf_calc_frac_consump
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption
 
@@ -675,7 +676,7 @@ CONTAINS
 
     !> Fire rate of spread (IR, optimum reaction velocity, fuel bulk density, net fuel loading, ...)
     !> calculate the rate of spread following Thonicke et al. (2010)
-    spitfire % ros = sf_calc_rate_of_spread(nc, df_sf_fc_spread_nr, & !< 3 = fuel classes for 1, 10 and 100 hours
+    spitfire % ros = sf_calc_rate_of_spread_thon(nc, df_sf_fc_spread_nr, & !< 3 = fuel classes for 1, 10 and 100 hours
         lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
         wind_sf, moisture_extinction, spitfire % fdi, veg_cover_frac, &
         w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), fuel_moisture(:,df_sf_omega_o_idx), &
