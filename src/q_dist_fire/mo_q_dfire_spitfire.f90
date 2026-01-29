@@ -615,8 +615,8 @@ CONTAINS
 
     ! locals
     TYPE(t_q_sf_ignitions)  :: sf_ignitions
-    REAL(wp) :: w_oi(nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes with live grass [g DM m-2]
-    REAL(wp) :: w_oi(nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
+    REAL(wp) :: w_oi(nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes with live grass (included in 1 hr) [g DM m-2]
+    REAL(wp) :: w_oi_no_lvg(nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
     REAL(wp) :: tot_lvg_fuel(nc)           !< Total livegrass fuel [g DM m-2]
     INTEGER :: ndeadpools
     TYPE(t_sf_fuel_class) :: fuel_cls

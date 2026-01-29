@@ -34,11 +34,11 @@ MODULE mo_q_dfire_sf_ros_thon_class
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   !< Total number of sigmas (1,10,100) hours,  Pfeiffer el al. (2013), Eq. A18 - Used to calculate fuel bulk density
-  USE mo_q_dfire_constants,     ONLY: df_sf_sigma_nr, df_sf_fuel_class_factors
+  USE mo_q_dfire_constants,     ONLY: df_sf_sigma_tho_nr, df_sf_fuel_class_factors
   !<
   USE mo_q_dfire_constants,     ONLY: df_sf_fire_duration_thd
   !<  Rate of spread constants
-  USE mo_q_dfire_constants,     ONLY: df_sf_oven_dry_part_dens, df_sigmas, &
+  USE mo_q_dfire_constants,     ONLY: df_sf_oven_dry_part_dens, df_sigmas_tho, &
                                       df_sf_mineral_fract, df_sf_mineral_damp_coeff, &
                                       df_sf_fuel_heat_content
   USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
@@ -145,7 +145,7 @@ CONTAINS
         ros%net_fuel_load(inc) = sf_convert_units("g", "kg", ros%net_fuel_load(inc))
         ros%fbd(inc) = fuel_bulk_density(inc) !< fuel bulk density [kg m-3], precomputed at mo_q_dfire_fuel.f90 + aggregation to         average
 
-        sigma(inc) = calc_sigma(df_sf_sigma_nr, nfuels, df_sigmas, w_oi(inc,:)) !< Table A1, 3rd equation [cm-1] from Thonicke et al. (2010)
+        sigma(inc) = calc_sigma(df_sf_sigma_tho_nr, nfuels, df_sigmas_tho, w_oi(inc,:)) !< Table A1, 3rd equation [cm-1] from Thonicke et al. (2010)
         !< (Table A1, 3rd from Thonicke et al. (2010))
         beta(inc) =  ros%fbd(inc) / df_sf_oven_dry_part_dens !< [-]
         !< Calculate beta_op (Eq. A6 from Thonicke et al. (2010))

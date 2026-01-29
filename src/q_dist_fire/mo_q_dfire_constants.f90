@@ -206,8 +206,8 @@ MODULE mo_q_dfire_constants
   REAL(wp), PARAMETER :: df_sf_oven_dry_part_dens = 513._wp !< Table A1, Thonicke et al. (2010) [kg m-3]
 
   !< Total number of sigmas in Thonicke et al. (2010)
-  INTEGER, PARAMETER :: df_sf_sigma_nr = 3
-  REAL(wp), PARAMETER :: df_sigmas_dead(df_sf_sigma_nr) = (/ 66._wp, 3.58_wp, 0.98_wp /)
+  INTEGER, PARAMETER :: df_sf_sigma_tho_nr = 3
+  REAL(wp), PARAMETER :: df_sigmas_tho(df_sf_sigma_tho_nr) = (/ 66._wp, 3.58_wp, 0.98_wp /)
   !< Oberhagemann et al. (2025)
   INTEGER, PARAMETER :: df_sf_sigma_dd_nr = 4 !< Total number of sigmas (1,10,100 hours, live herbaceous)
   INTEGER, PARAMETER :: df_sf_sigma_lv_nr = 2 !< Total number of sigmas (live grass, live woody)
