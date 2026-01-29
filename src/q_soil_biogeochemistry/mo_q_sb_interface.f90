@@ -332,7 +332,7 @@ CONTAINS
     USE mo_util,                    ONLY: read_2D_var, read_3D_var
     USE mo_lnd_bgcm_store,          ONLY: read_bgcm_from_file
     USE mo_lnd_bgcm_idx
-    
+
     dsl4jsb_Use_processes SB_
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -347,7 +347,6 @@ CONTAINS
     INTEGER                         :: isoil            !< soillayer index
     INTEGER                         :: nsoil_w          !< number of soil layers (water)
     REAL(wp),               POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables
-       
 
     INTEGER :: iblk
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_read_soil_forcing'
@@ -361,11 +360,11 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     ! A2L_
-    dsl4jsb_Real2D_onChunk      :: nhx_deposition 
-    dsl4jsb_Real2D_onChunk      :: noy_deposition 
-    dsl4jsb_Real2D_onChunk      :: nhx_n15_deposition 
-    dsl4jsb_Real2D_onChunk      :: noy_n15_deposition 
-    dsl4jsb_Real2D_onChunk      :: p_deposition 
+    dsl4jsb_Real2D_onChunk      :: nhx_deposition
+    dsl4jsb_Real2D_onChunk      :: noy_deposition
+    dsl4jsb_Real2D_onChunk      :: nhx_n15_deposition
+    dsl4jsb_Real2D_onChunk      :: noy_n15_deposition
+    dsl4jsb_Real2D_onChunk      :: p_deposition
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
@@ -409,11 +408,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), ' for tile '//TRIM(tile%name))
-    
+
     ! get the timestep information
     current_datetime = options%current_datetime
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%soilphysics_forcing_filename), model%grid_id)
-    !> we need to get the time information from input file, and depending on the cycling years, e.g. 30yr, 
+    !> we need to get the time information from input file, and depending on the cycling years, e.g. 30yr,
     !> look for the correct line of forcing data
 
     IF (ASSOCIATED(tile%bgcm_store)) THEN
