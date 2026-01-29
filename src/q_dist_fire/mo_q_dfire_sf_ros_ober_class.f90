@@ -40,7 +40,7 @@ MODULE mo_q_dfire_sf_ros_ober_class
   USE mo_quincy_stats,          ONLY: stats_average_weight
   USE mo_jsb_math_constants,    ONLY: pi
 
-  USE mo_q_dfire_sf_ros_thon_class, ONLY: calc_opt_react_velocity, calc_prop_flux_ratio
+  USE mo_q_dfire_sf_ros_thon_class, ONLY: calc_opt_react_velocity, calc_prop_flux_ratio, calc_wind_factor
 
   IMPLICIT NONE
 
@@ -191,6 +191,7 @@ CONTAINS
                                   woi_dd, woi_lv, &
                                   mf_dd, mf_lv, &
                                   fbd, &
+                                  wind_damp_factor, wind, &
                                   mask) RESULT(ros)
     INTEGER, INTENT(in) :: nc
     !< number of dead fuel classes (1h, 10hrs, 100 hrs, dry livegrass)
@@ -200,19 +201,29 @@ CONTAINS
     REAL(wp), INTENT(in) :: sigmas_dd(ndd), sigmas_lv(nlv) !< surface area to volume ratio [m2/m3]
     REAL(wp), INTENT(in) :: mf_dd(ndd,nc), mf_lv(nlv,nc) !< Moisture content [-]
     REAL(wp), INTENT(in) :: fbd(nc) !< Fuel bulk density [kg/m3]
+    REAL(wp), INTENT(in) :: wind_damp_factor(nc) !< Wind speed dampening factor [-]
+    REAL(wp), INTENT(in) :: wind(nc) !< Wind speed [m min-1]
     LOGICAL, INTENT(in) :: mask(nc)
+    REAL(wp) :: ros(nc)
 
     INTEGER :: ic
+    REAL(wp) :: u_forward(nc)
     REAL(wp) :: beta(nc), beta_op(nc), beta_ratio(nc) !< [-], [-], [-]
     REAL(wp) :: gamma(nc), gamma_max(nc) !< [min-1], [min-1]
     REAL(wp) :: A_var(nc) !< [-]
+    REAL(wp) :: U_var(nc) !< wind speed at midflame height [m min-1]
     REAL(wp) :: xi(nc) !< propagating flux ratio [-]
+    REAL(wp) :: phi_w(nc), phi_s(nc) !< wind factor [-], wind limit [m min-1]
+    REAL(wp) :: heat_source(nc) !< Equations nominator [?]
+    REAL(wp) :: ros(nc) !< Rate of spread [m min-1]
     TYPE(t_fwvar_r1d) :: wn !< net fuel load [kg/m2]
     TYPE(t_fwvar_r1d) :: mf !< moisture content [-]
     TYPE(t_fwvar_r1d) :: rm !< fuel moisture ratio [0 to 1]
     TYPE(t_fwvar_r1d) :: eta_m !< moisture dampening coefficient [?]
     TYPE(t_fwvar_r1d) :: sigma !< surface area to volume ratio [m2/m3]
     TYPE(t_fwvar_r1d) :: ir !< reaction intensity [KJ m-2 min-1]
+    TYPE(t_fwvar_r2d) :: qig_ig !< Heat of preignition [kJ kg-1]
+    TYPE(t_fwvar_r2d) :: heat_sink !< Equations denominator [?]
     ! ----------------------------------------------------------------------------------------------------- !
     ros = t_sf_ros(nc)
     wn = t_fwvar_r1d(nc)
@@ -221,16 +232,24 @@ CONTAINS
     eta_m = t_fwvar_r1d(nc)
     sigma = t_fwvar_r1d(nc, has_total=.TRUE.)
     ir = t_fwvar_r1d(nc)
+    qig_iq = t_fwvar_r2d(nc, ndd, nlv)
+    u_forward = 0._wp
     beta = 0._wp
     beta_op = 0._wp
     beta_ratio = 0._wp
     gamma = 0._wp
     gamma_max = 0._wp
+    A_var = 0._wp
+    phi_w = 0._wp
+    phi_s = 0._wp
+    heat_source = 0._wp
+    ros = 0
 
     !< Corrections from Oberhagemann et al. (2025)
     wfactors = calc_weighting_factors(sigmas_dd, woi_dd, &
                                       sigmas_lv, woi_lv, &
                                       df_sf_oven_dry_part_dens)
+    U_var = wind * wind_damp_coef
 
     DO ic = 1, nc
       IF (mask(inc)) THEN
@@ -265,15 +284,8 @@ CONTAINS
         ! - relative packing ratio (beta/beta_op)
         beta_ratio(ic) = beta(ic) / beta_op(ic)
 
-        ! WIND AND SLOPE
-        ! - slope factor
-        phi_s(ic) = 0._wp ! todo: not implemented
-        ! - wind factor
-        phi_w(ic) = calc_wind_factor(u_f_wind(ic), sigma%total(ic), beta(ic), beta_op(ic)) !< Eq. A5 from Thonicke et al. (2010) [-]
-        ! - wind limit
-        u_var(ic) = 0._wp ! todo: not sure about this
 
-        ! HEAT SOURCE
+        ! HEAT SOURCE (RELATED)
         ! - max reaction velocity
         gamma_max(ic) = 1._wp / (0.0591_wp  + 2.926_wp * sigma%total(inc) ** (-1.5_wp)) !< Table A1, 2nd equation from Thonicke et al. (2010) [min-1]
         ! - optimum reaction velocity
@@ -286,10 +298,32 @@ CONTAINS
         ! - propagating flux ratio
         xi(ic) = calc_prop_flux_ratio(sigma%total(ic), beta(ic))
         ! - no-wind, no-slope propagating flux
-        ! - heat source
-        heat_source(ic) = ir%total(ic) * xi(ic) * (1._wp + phi_w * phi_s)
 
+        ! WIND AND SLOPE
+        ! - slope factor (defined in Rothermel but not implemented in paper)
+        phi_s(ic) = 0._wp
+        ! - wind limit
+        !< From Rothermel (1972), in Oberhagemann they use ...
+        !< wind speed limit according to Patricia L. Andrews et al. 2012.
+        IF (U_var(ic) / ir%total(ic) > 0.9_wp) U_var(ic) = 0.9_wp * ir%total(ic)
+        ! - wind factor
+        phi_w(ic) = calc_wind_factor(U_var(ic), sigma%total(ic), beta(ic), beta_op(ic)) !< Eq. A5 from Thonicke et al. (2010) [-]
 
+        ! HEAT SOURCE
+        IF (phi_w(ic) + phi_s(ic) > 0._wp) THEN
+          heat_source(ic) = ir%total(ic) * xi(ic) * (1._wp + phi_w(ic) + phi_s(ic))
+        ELSE
+          heat_source(ic) = ir%total(ic) * xi(ic)
+        END IF
+
+        ! HEAT SINK
+        qig_ij%d(:,ic) = 581._wp * 2594._wp * mf_dd(:,ic)
+        qig_ij%l(:,ic) = 581._wp * 2594._wp * mf_lv(:,ic)
+        heat_sink%d(ic) = SUM(wfactors%fij%d(:,ic) * exp(-4.528_wp / sigmas_dd(:)) * qig_ij%d(:,ic))
+        heat_sink%l(ic) = SUM(wfactors%fij%l(:,ic) * exp(-4.528_wp / sigmas_lv(:)) * qig_ij%l(:,ic))
+        heat_sink%total(ic) = fbd(ic) * (wfactors%fi%d(ic) * heat_sink%d(ic) + wfactors%fi%l(ic) * heat_sink%l(ic))
+
+        ros(ic) = heat_source(ic) / heat_sink%total(ic)
       END IF ! IF (mask(inc)) THEN
     ENDDO ! DO inc = 1, nc
 
