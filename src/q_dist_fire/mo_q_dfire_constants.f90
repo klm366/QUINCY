@@ -205,6 +205,10 @@ MODULE mo_q_dfire_constants
   REAL(wp), PARAMETER :: df_sf_frost_trhd = 4.0_wp !< Frost threshold, from source code (Thonicke et al. (2010), https://github.com/PIK-LPJmL/LPJmL/blob/811b1691c26645968803fab65f9e463d64d5f40b/src/spitfire/update_nesterov.c#L25)
   REAL(wp), PARAMETER :: df_sf_oven_dry_part_dens = 513._wp !< Table A1, Thonicke et al. (2010) [kg m-3]
 
+  !< Total number of sigmas in Thonicke et al. (2010)
+  INTEGER, PARAMETER :: df_sf_sigma_nr = 3
+  REAL(wp), PARAMETER :: df_sigmas_dead(df_sf_sigma_nr) = (/ 66._wp, 3.58_wp, 0.98_wp /)
+  !< Oberhagemann et al. (2025)
   INTEGER, PARAMETER :: df_sf_sigma_dd_nr = 4 !< Total number of sigmas (1,10,100 hours, live herbaceous)
   INTEGER, PARAMETER :: df_sf_sigma_lv_nr = 2 !< Total number of sigmas (live grass, live woody)
 
