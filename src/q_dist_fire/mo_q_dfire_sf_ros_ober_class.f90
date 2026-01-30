@@ -311,7 +311,7 @@ CONTAINS
         phi_w(ic) = calc_wind_factor(U_var(ic), sigma%total(ic), beta(ic), beta_op(ic)) !< Eq. A5 from Thonicke et al. (2010) [-]
 
         ! HEAT SOURCE
-        IF (phi_w(ic) + phi_s(ic) > 0._wp) THEN
+        IF (phi_w(ic) + phi_s(ic) > 0._wp) THEN !< if there is wind speed or slope then account for it
           heat_source(ic) = ir%total(ic) * xi(ic) * (1._wp + phi_w(ic) + phi_s(ic))
         ELSE
           heat_source(ic) = ir%total(ic) * xi(ic)

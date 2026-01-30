@@ -654,7 +654,9 @@ CONTAINS
 
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
     w_oi = SUM(dead_fuel, DIM=2) !< 2= dead fuel pools index, fuel class only
-    w_oi_no_lvg = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,:), DIM=2) !< 2= dead fuel pools index, fuel class only
+    ASSOCIATE ( ixs_litter_pools => ixs_sf_dead_litter_fuel_pools)
+      w_oi_no_lvg = SUM(dead_fuel(:,ixs_litter_pools,:), DIM=2) !< 2= fuel pools index, litter fuel class only
+    END ASSOCIATE
 
     DO CONCURRENT (i=1:SIZE(live_grass_fuel,2), j=1:SIZE(live_grass_fuel,3)) !2=fuel pools dim, 3=fuel classes dim
       tot_lvg_fuel = SUM(live_grass_fuel(:,i,j)) ! sum multiple dimensions
@@ -681,6 +683,30 @@ CONTAINS
         wind_sf, moisture_extinction, spitfire % fdi, veg_cover_frac, &
         w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), fuel_moisture(:,df_sf_omega_o_idx), &
         mask=has_fire_conditions)
+
+    ! concatenate litter + livegrass = dead fuel
+    ! woi_dd(#fuel classe, #nc)
+    ! todo: declare woi_dd, woi_lv
+    !REAL(wp), ALLOCATABLE :: woi_dd(:,:)
+    !REAL(wp), ALLOCATABLE :: woi_lv(:,:)
+    woi_dd(:,:) = [SUM(w_oi_no_lvg(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2), &
+                               SUM(live_grass(:,:,df_sf_fc_1hr_idx), DIM=2)] !< 2= fuel pools
+    woi_lv(:,:) = [0._wp, SUM(live_tree_fuel, DIM=2)] !< 2= fuel pool
+    ! Oberhagemann: moisture of extinction
+    me_dd = moisture_extinction ! litter [1hr, 10hrs, 100 hours, dry livegrass]
+    me_lv = moisture_extinction !< [wet livegrass, woody]
+    ! Oberhagemann: fuel moisture
+    mf_dd = fuel_moisture(:,df_sf_omega_o_idx)
+    mf_lv = fuel_moisture(:,df_sf_omega_o_idx) ! todo: compute as in Andrews PL 2018
+    spitfire % ros_ober = sf_calc_rate_of_spread_ober(&
+                          nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
+                          df_sigmas_dead, df_sigmas_live, &
+                          woi_dd, woi_lv, &
+                          mf_dd, mf_lv, & ! todo
+                          me_dd, me_lv, & ! todo
+                          lctlib_fuel_bulk_density, & ! todo: rename to fbd
+                          lctlib_fwd_wind_factor, wind_sf, & !< todo: rename to fwd_wind_factor
+                          mask=has_fire_conditions)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
     sf_ignitions = calc_q_sf_ignition(nc, density_human_population, &
