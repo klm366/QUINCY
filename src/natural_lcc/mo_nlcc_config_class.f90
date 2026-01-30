@@ -106,12 +106,6 @@ CONTAINS
       CALL message(TRIM(routine), message_text)
     END IF
 
-    ! Create vertical axis
-    npft=11 ! TODO here we can not grab it from tile%no_of_children or mem%no_of_children
-    pft_layer  => new_vgrid('pfts', ZAXIS_GENERIC, npft, &
-      & levels=(/ (REAL(i,kind=wp),i=1,npft) /), units='')
-    CALL Register_vgrid(pft_layer)
-
   END SUBROUTINE Init_nlcc_config
 
 #endif

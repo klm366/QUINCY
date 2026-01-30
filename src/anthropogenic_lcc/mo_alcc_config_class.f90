@@ -28,7 +28,6 @@ MODULE mo_alcc_config_class
   PUBLIC :: t_alcc_config
 
   TYPE, EXTENDS(t_jsb_config)      :: t_alcc_config
-     INTEGER                       :: nr_of_pfts
      CHARACTER(len=filename_max-7) :: alcc_filename_prefix
        !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
      CHARACTER(len=SHORT_NAME_LEN) :: scheme
@@ -65,7 +64,7 @@ CONTAINS
     CHARACTER(len=SHORT_NAME_LEN) :: scheme
     LOGICAL                       :: l_daily_alcc
     TYPE(t_jsb_vgrid), POINTER    :: pft_layer
-    INTEGER                       :: i, nr_of_pfts
+    INTEGER                       :: i
 
     NAMELIST /jsb_alcc_nml/      &
          active,                 &
@@ -74,8 +73,7 @@ CONTAINS
          bc_filename,            &
          alcc_filename_prefix,   &
          scheme,                 &
-         l_daily_alcc,           &
-         nr_of_pfts
+         l_daily_alcc
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -89,8 +87,7 @@ CONTAINS
     lrestart_cont        = .FALSE.       ! TRUE: Continue although ALCC variables are missing in restart file
     bc_filename          = 'bc_land_alcc.nc'
     ic_filename          = 'ic_land_alcc.nc'
-    alcc_filename_prefix = 'bc_land_frac_11pfts_'
-    nr_of_pfts           = 11
+    alcc_filename_prefix = 'bc_land_frac_'
     scheme               = 'maps'
     l_daily_alcc         = .TRUE.
 
@@ -108,7 +105,6 @@ CONTAINS
     config%alcc_filename_prefix = alcc_filename_prefix
     config%scheme               = scheme
     config%l_daily_alcc         = l_daily_alcc
-    config%nr_of_pfts           = nr_of_pfts
 
     SELECT CASE (TRIM(tolower(config%scheme)))
     CASE ('maps')
@@ -126,13 +122,6 @@ CONTAINS
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
     END SELECT
-
-    ! Create vertical axis
-    ! JN-TODO (RS...): currently I get nr_of_pfts from namelist -> better way? usecase?
-    ! -> + this grid might be useful in other contexts, too?
-    pft_layer  => new_vgrid('pfts', ZAXIS_GENERIC, nr_of_pfts, &
-      & levels=(/ (REAL(i,kind=wp),i=1,nr_of_pfts) /), units='')
-    CALL register_vgrid(pft_layer)
 
   END SUBROUTINE Init_alcc_config
 

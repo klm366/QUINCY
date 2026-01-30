@@ -1511,7 +1511,7 @@ CONTAINS
            npft = npft + 1 ! count PFTs
 
            ! Check consistency with PhenologyTypes (only for jsbach usecases)
-           IF (usecase == 'jsbach_lite' .OR. usecase == 'jsbach_pfts' .OR. usecase == 'jsbach_12pfts') THEN
+           IF (usecase == 'jsbach_lite' .OR. usecase == 'jsbach_pfts') THEN
              IF(lctlib(i)%naturalVegFlag .AND. &
                   (lctlib(i)%PhenologyType .LE.0 .OR. lctlib(i)%PhenologyType > 4) ) THEN
                 CALL finish('init_lctlib',&
@@ -1525,7 +1525,7 @@ CONTAINS
          END IF
 
          ! --- check consistency between landcover classes and specifications for the dynamic vegetation (only for jsbach usecases)
-         IF (usecase == 'jsbach_lite' .OR. usecase == 'jsbach_pfts' .OR. usecase == 'jsbach_12pfts') THEN
+         IF (usecase == 'jsbach_lite' .OR. usecase == 'jsbach_pfts') THEN
            IF (lctlib(i)%dynamic_pft  .AND. .NOT. lctlib(i)%NaturalVegFlag) THEN
               CALL finish('init_lctlib',&
                     'Inconsistent entries: Every DYNAMIC_PFT must belong to LandcoverClass "natural" in '//TRIM(lctlib_file_name))
@@ -1726,7 +1726,7 @@ CONTAINS
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
 #endif
-    ! jsbach_lite & jsbach_pfts & jsbach_12pfts
+    ! jsbach_lite & jsbach_pfts
     CASE DEFAULT
       nlct = nlct - 1
       ALLOCATE(return_value(nlct))
