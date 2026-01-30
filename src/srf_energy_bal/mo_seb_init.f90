@@ -73,7 +73,7 @@ CONTAINS
       F_pseudo_soil_temp = EXP(- timestep_in_days(model_id=tile%owner_model_id)/pheno_param_jsbach%EG_SG%tau_pseudo_soil)
       N_pseudo_soil_temp = 1._wp / (1._wp - F_pseudo_soil_temp)
 
-      !$ACC UPDATE DEVICE(F_pseudo_soil_temp, N_pseudo_soil_temp) ASYNC(1)
+      !$ACC UPDATE DEVICE(F_pseudo_soil_temp, N_pseudo_soil_temp)
     END IF
 
   END SUBROUTINE seb_init

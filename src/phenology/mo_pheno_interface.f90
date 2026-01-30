@@ -462,11 +462,11 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
         ! todo: adapt for GPU
-        !$ACC UPDATE HOST(old_c_state_sum_ta) ASYNC(1)
-        !$ACC WAIT(1)
+        !$ACC UPDATE HOST(old_c_state_sum_ta)
+        !$ACC WAIT
         CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
           & dummy_flux(:), cconservation_allom(:))
-        !$ACC UPDATE DEVICE(cconservation_allom) ASYNC(1)
+        !$ACC UPDATE DEVICE(cconservation_allom)
       END IF
 
       ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day

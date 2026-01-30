@@ -304,7 +304,7 @@ CONTAINS
       dsl4jsb_var2D_onDomain(RAD_,alb_nir_lnd) = AlbedoNirInitial
     END IF
 
-    !$ACC UPDATE ASYNC(1) &
+    !$ACC UPDATE &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_vis)) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_nir)) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_vis_lnd)) &
@@ -315,7 +315,7 @@ CONTAINS
     IF (tile%contains_soil) THEN
       dsl4jsb_var2D_onDomain(RAD_, alb_vis_soil) = rad_init_vars%alb_vis_soil
       dsl4jsb_var2D_onDomain(RAD_, alb_nir_soil) = rad_init_vars%alb_nir_soil
-      !$ACC UPDATE ASYNC(1) &
+      !$ACC UPDATE &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil), dsl4jsb_var2D_onDomain(RAD_, alb_vis_soil))
     END IF
 
@@ -335,7 +335,7 @@ CONTAINS
       ELSE
         dsl4jsb_var2D_onDomain(RAD_, alb_nir_can) = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
       END IF
-      !$ACC UPDATE ASYNC(1) &
+      !$ACC UPDATE &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(RAD_, alb_nir_can), dsl4jsb_var2D_onDomain(RAD_, alb_vis_can))
 
       ! The albedo of snow on canopy:
@@ -361,7 +361,7 @@ CONTAINS
         dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)   =  10.0_wp
         dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl)    =  10.0_wp
 
-        !$ACC UPDATE ASYNC(1) &
+        !$ACC UPDATE &
         !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)) &
         !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)) &
         !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)) &

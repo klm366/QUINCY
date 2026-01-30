@@ -179,7 +179,7 @@ CONTAINS
       dsl4jsb_var2D_onDomain(TURB_,rough_h_star) = 1._wp / LOG(dsl4jsb_Config(TURB_)%blending_height / &
         & (turb_init_vars%rough_m / dsl4jsb_Config(TURB_)%roughness_momentum_to_heat))**2
 
-      !$ACC UPDATE ASYNC(1) &
+      !$ACC UPDATE &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_m), dsl4jsb_var2D_onDomain(TURB_,rough_m_star)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_h), dsl4jsb_var2D_onDomain(TURB_,rough_h_star))
 

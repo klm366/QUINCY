@@ -503,17 +503,17 @@ CONTAINS
     DEALLOCATE(clay_spq_init_sl)
     DEALLOCATE(silt_spq_init_sl)
 
-    !$ACC UPDATE DEVICE(soil_depth(:,:), root_depth(:,:), t_srf_old(:,:), t_srf_new(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(temp_srf_eff_4(:,:), qsat_star(:,:), s_star(:,:), fact_q_air(:,:), fact_qsat_srf(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(z0h(:,:), z0m(:,:), w_skin(:,:), w_soil_root(:,:), w_soil_root_pwp(:,:), w_soil_root_fc(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(w_soil_root_theta(:,:), w_soil_root_pot(:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_center_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:), bulk_dens_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(heat_capa_sl(:,:,:), therm_cond_sl(:,:,:), w_soil_pwp_sl(:,:,:), w_soil_fc_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(w_soil_sat_sl(:,:,:), w_soil_sl(:,:,:), w_soil_pot_sl(:,:,:), w_ice_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(saxtonA(:,:,:), saxtonB(:,:,:), saxtonC(:,:,:), kdiff_sat_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), volume_min_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(t_snow_snl(:,:,:), t_soil_sl(:,:,:), elevation(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(soil_depth(:,:), root_depth(:,:), t_srf_old(:,:), t_srf_new(:,:))
+    !$ACC UPDATE DEVICE(temp_srf_eff_4(:,:), qsat_star(:,:), s_star(:,:), fact_q_air(:,:), fact_qsat_srf(:,:))
+    !$ACC UPDATE DEVICE(z0h(:,:), z0m(:,:), w_skin(:,:), w_soil_root(:,:), w_soil_root_pwp(:,:), w_soil_root_fc(:,:))
+    !$ACC UPDATE DEVICE(w_soil_root_theta(:,:), w_soil_root_pot(:,:), num_sl_above_bedrock(:,:))
+    !$ACC UPDATE DEVICE(soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_center_sl(:,:,:))
+    !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:), bulk_dens_sl(:,:,:))
+    !$ACC UPDATE DEVICE(heat_capa_sl(:,:,:), therm_cond_sl(:,:,:), w_soil_pwp_sl(:,:,:), w_soil_fc_sl(:,:,:))
+    !$ACC UPDATE DEVICE(w_soil_sat_sl(:,:,:), w_soil_sl(:,:,:), w_soil_pot_sl(:,:,:), w_ice_sl(:,:,:))
+    !$ACC UPDATE DEVICE(saxtonA(:,:,:), saxtonB(:,:,:), saxtonC(:,:,:), kdiff_sat_sl(:,:,:))
+    !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), volume_min_sl(:,:,:))
+    !$ACC UPDATE DEVICE(t_snow_snl(:,:,:), t_soil_sl(:,:,:), elevation(:,:))
 
   END SUBROUTINE spq_init_ic_bc
 

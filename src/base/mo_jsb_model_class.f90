@@ -667,11 +667,11 @@ CONTAINS
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
-            !$ACC UPDATE HOST(mem%vars(i)%p%ptr2d) ASYNC(1) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE HOST(mem%vars(i)%p%ptr2d) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
             ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
-            !$ACC UPDATE HOST(mem%vars(i)%p%ptr3d) ASYNC(1) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE HOST(mem%vars(i)%p%ptr3d) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
             ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           END IF
@@ -683,7 +683,7 @@ CONTAINS
 
     END DO
 
-    !$ACC WAIT(1)
+    !$ACC WAIT
 
   END SUBROUTINE Sync_vars_from_gpu_to_cpu
 
@@ -733,10 +733,10 @@ CONTAINS
         DO i=1,mem%no_of_vars
           ! IF (mem%vars(i)%p%is_in_restart) CALL message(routine//': cpu2gpu', TRIM(mem%vars(i)%p%full_name))
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
-            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr2d) ASYNC(1) IF(mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr2d) IF(mem%vars(i)%p%is_in_restart)
             CONTINUE
           ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
-            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr3d) ASYNC(1) IF(mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr3d) IF(mem%vars(i)%p%is_in_restart)
             CONTINUE
           END IF
         END DO

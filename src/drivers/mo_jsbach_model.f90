@@ -930,7 +930,7 @@ CONTAINS
       dsl4jsb_Get_var2d_onDomain(A2L_, co2_air)
 
       CALL compute_cos_zenith_angle(datetime_old, grid%patch, dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle))
-      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(A2L_, cos_zenith_angle)) ASYNC(1)
+      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(A2L_, cos_zenith_angle))
       ! Note: inquire_declination should only be called each time step after compute_cos_zenith_angle
 
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)

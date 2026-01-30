@@ -719,7 +719,7 @@ CONTAINS
           END IF
           child => child%Get_next_sibling_tile()
         END DO
-        !$ACC UPDATE DEVICE(tile%lcts(ilct)%fract) ASYNC(1)
+        !$ACC UPDATE DEVICE(tile%lcts(ilct)%fract)
       END DO
 
       CALL model%Goto_next_tile(tile)

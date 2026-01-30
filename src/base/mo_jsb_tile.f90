@@ -393,7 +393,7 @@ CONTAINS
             this%mem(iproc)%p%lrestart_cont = model%processes(iproc)%p%config%lrestart_cont
           END IF
         END IF
-        !$ACC UPDATE DEVICE(this%mem(iproc)%p) ASYNC(1)
+        !$ACC UPDATE DEVICE(this%mem(iproc)%p)
         !$ACC ENTER DATA CREATE(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
           !TODO: check if prefix is still needed ...
@@ -401,7 +401,7 @@ CONTAINS
         ELSE
           CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         END IF
-        !$ACC UPDATE DEVICE(this%mem(iproc)%p%vars) ASYNC(1)
+        !$ACC UPDATE DEVICE(this%mem(iproc)%p%vars)
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
 
@@ -415,14 +415,14 @@ CONTAINS
           END IF
           child_no = this%path(this%level)                ! Index of the child (i.e. the current tile; comes from state machine)
           parent_tile%mem(iproc)%p%children(child_no)%p => this%mem(iproc)%p
-          !$ACC UPDATE DEVICE(parent_tile%mem(iproc)%p%children(child_no)%p) ASYNC(1)
+          !$ACC UPDATE DEVICE(parent_tile%mem(iproc)%p%children(child_no)%p)
           __acc_attach(parent_tile%mem(iproc)%p%children(child_no)%p)
         END IF
 
       END IF
 
     END DO
-    !$ACC UPDATE DEVICE(this%mem) ASYNC(1)
+    !$ACC UPDATE DEVICE(this%mem)
 
   END SUBROUTINE Init_tile
 
@@ -573,7 +573,7 @@ CONTAINS
         CALL this%Set_fraction(fract=return_pointer(:,:))
         CALL this%Get_fraction(fract=hgrid%lsf(:,:))
         hgrid%lsm(:,:) = hgrid%lsf(:,:) > 0._wp
-        !$ACC UPDATE DEVICE(hgrid%lsf, hgrid%lsm) ASYNC(1)
+        !$ACC UPDATE DEVICE(hgrid%lsf, hgrid%lsm)
       END IF
       ! Close the input file
       CALL input_file%Close()
@@ -689,7 +689,7 @@ CONTAINS
             mem%vars(i)%p%child_idx(child_no) = 0
           END IF
         END DO
-        !$ACC UPDATE DEVICE(mem%vars(i)%p%child_idx) ASYNC(1)
+        !$ACC UPDATE DEVICE(mem%vars(i)%p%child_idx)
       END DO
 
     END DO

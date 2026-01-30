@@ -262,8 +262,8 @@ CONTAINS
     pheno_param_jsbach%FR%log_maxind          = 9.5_wp              !< citation or source ....  [ ? ]
     pheno_param_jsbach%FR%min_maxLAI          = 0.5_wp              !< citation or source ....  [ ? ]
 
-    !$ACC UPDATE DEVICE(pheno_param_jsbach) ASYNC(1)
-    !$ACC UPDATE ASYNC(1) &
+    !$ACC UPDATE DEVICE(pheno_param_jsbach)
+    !$ACC UPDATE &
     !$ACC   DEVICE(pheno_param_jsbach%all, pheno_param_jsbach%EG_SG, pheno_param_jsbach%EG)  &
     !$ACC   DEVICE(pheno_param_jsbach%SG,  pheno_param_jsbach%RG,    pheno_param_jsbach%GRS) &
     !$ACC   DEVICE(pheno_param_jsbach%CRP, pheno_param_jsbach%FR)

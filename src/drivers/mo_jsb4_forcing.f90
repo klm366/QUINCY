@@ -375,7 +375,7 @@ CONTAINS
 #endif
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%air_temp, t_air_C)
-      !$ACC UPDATE DEVICE(t_air_C) ASYNC(1)
+      !$ACC UPDATE DEVICE(t_air_C)
     ELSE
       ALLOCATE(tmin_data(nproma, nblks))
       ALLOCATE(tmax_data(nproma, nblks))
@@ -383,11 +383,11 @@ CONTAINS
 
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%air_temp_min, tmin_data)
-      !$ACC UPDATE DEVICE(tmin_data) ASYNC(1)
+      !$ACC UPDATE DEVICE(tmin_data)
 
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%air_temp_max, tmax_data)
-      !$ACC UPDATE DEVICE(tmax_data) ASYNC(1)
+      !$ACC UPDATE DEVICE(tmax_data)
 
         ! estimate temperature at time step from daily temperature maximum and temperature minimum
       CALL instantly_from_daily_temp_2(startblk, endblk, startidx, endidx, &
@@ -410,7 +410,7 @@ CONTAINS
     !>
     CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
       &                            forcing_input(model_id)%precipitation, temporary_data1)
-    !$ACC UPDATE DEVICE(temporary_data1) ASYNC(1)
+    !$ACC UPDATE DEVICE(temporary_data1)
 
     ! convert if required
     IF(forcing_options(model_id)%precip_in_mm_per_day) THEN
@@ -552,7 +552,7 @@ CONTAINS
       !$ACC ENTER DATA CREATE(rel_humidity)
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         &                            forcing_input(model_id)%rel_humidity, rel_humidity)
-      !$ACC UPDATE DEVICE(rel_humidity) ASYNC(1)
+      !$ACC UPDATE DEVICE(rel_humidity)
       ! check data
       hlp_r = MAXVAL(MAXVAL(rel_humidity,DIM=2))
       IF(hlp_r < 1._wp) THEN
@@ -627,7 +627,7 @@ CONTAINS
     CASE(QAIR_)
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%qair, q_air(:,:))
-      !$ACC UPDATE DEVICE(q_air) ASYNC(1)
+      !$ACC UPDATE DEVICE(q_air)
 
       ! constrain specific humidity to be lower than or equal to the saturation spec. humidity
       DO iblk = startblk, endblk
@@ -660,7 +660,7 @@ CONTAINS
 
     CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
       & forcing_input(model_id)%shortwave, temporary_data1)
-    !$ACC UPDATE DEVICE(temporary_data1) ASYNC(1)
+    !$ACC UPDATE DEVICE(temporary_data1)
 
 !$OMP PARALLEL
     CALL shortwave_from_direct_shortwave( &
@@ -704,7 +704,7 @@ CONTAINS
 #endif
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         & forcing_input(model_id)%longwave, lw_srf_down)
-      !$ACC UPDATE DEVICE(lw_srf_down) ASYNC(1)
+      !$ACC UPDATE DEVICE(lw_srf_down)
     ELSE
       ! jsbach3 driver: diurnal longwave downward radiation is generated such that the average radiation matches the
       ! observations but the diurnal cycle follows temperature to help calculation of a correct
@@ -712,7 +712,7 @@ CONTAINS
       ! this introduces uncertainty due to biases in the assumed dial course of temperature
       CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
         &                            forcing_input(model_id)%longwave, temporary_data1)
-      !$ACC UPDATE DEVICE(temporary_data1) ASYNC(1)
+      !$ACC UPDATE DEVICE(temporary_data1)
 
       IF (forcing_options(model_id)%air_temperature_as_timestep) THEN
 #ifdef _OPENACC
@@ -744,7 +744,7 @@ CONTAINS
     !>
     CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
       & forcing_input(model_id)%wind_speed, wind_10m)
-    !$ACC UPDATE DEVICE(wind_10m) ASYNC(1)
+    !$ACC UPDATE DEVICE(wind_10m)
 
 !$OMP PARALLEL DO PRIVATE(ic, iblk)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
@@ -761,7 +761,7 @@ CONTAINS
     !>
     CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
       & forcing_input(model_id)%CO2_concentr, CO2_air)
-    !$ACC UPDATE DEVICE(CO2_air) ASYNC(1)
+    !$ACC UPDATE DEVICE(CO2_air)
 
     ! and convert to correct unit
 !$OMP PARALLEL DO PRIVATE(ic, iblk)
@@ -784,7 +784,7 @@ CONTAINS
           & forcing_input(model_id)%C13_concentr, co2_air_dc13)
         CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
           & forcing_input(model_id)%C14_concentr, co2_air_Dc14)
-        !$ACC UPDATE DEVICE(co2_air_dc13, co2_air_Dc14) ASYNC(1)
+        !$ACC UPDATE DEVICE(co2_air_dc13, co2_air_Dc14)
       ELSE
 !$OMP PARALLEL DO PRIVATE(ic, iblk)
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
@@ -806,7 +806,7 @@ CONTAINS
           & forcing_input(model_id)%noy_dep, noy_deposition)
         CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
           & forcing_input(model_id)%p_dep, p_deposition)
-        !$ACC UPDATE DEVICE(nhx_deposition, noy_deposition, p_deposition) ASYNC(1)
+        !$ACC UPDATE DEVICE(nhx_deposition, noy_deposition, p_deposition)
 
         ! Convert from kg/m2/s -> mumol/m2/s
         ! -- This unit should have been tested above if specified correctly using expectedUnit

@@ -183,18 +183,18 @@ CONTAINS
     thermal_dissipation_enrg_constitutive_param_2   = 0.0773_wp   !< van der Tol 2014
     k_photochemistry_rate                           = 4.0_wp      !< van der Tol 2014
 
-    !$ACC UPDATE DEVICE(jmax2n, vcmax2n, pepc2n, chl2n, k1_fn_struc) ASYNC(1)
-    !$ACC UPDATE DEVICE(E0kc, E1kc, E0ko, E1ko, E0pcp, E1pcp, E0v, E1v) ASYNC(1)
-    !$ACC UPDATE DEVICE(t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max, Tref_pepc, Tbase_pepc) ASYNC(1)
-    !$ACC UPDATE DEVICE(alpha_i, pO2, CiCa_default_C3, CiCa_default_C4, ps_it_max, ci_max) ASYNC(1)
-    !$ACC UPDATE DEVICE(discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, discr_ps_a_C14, discr_ps_b_C14) ASYNC(1)
-    !$ACC UPDATE DEVICE(discr_ps_c_C14, discr_ps_phi) ASYNC(1)
-    !$ACC UPDATE DEVICE(ka, kn, soa_b, soa_t_s) ASYNC(1)
-    !$ACC UPDATE DEVICE(heat_dissipation_enrg_dep_param_1, heat_dissipation_enrg_dep_param_2) ASYNC(1)
-    !$ACC UPDATE DEVICE(heat_dissipation_enrg_dep_param_3) ASYNC(1)
-    !$ACC UPDATE DEVICE(k_fluorescence_rate, thermal_dissipation_enrg_constitutive_max_rate) ASYNC(1)
-    !$ACC UPDATE DEVICE(thermal_dissipation_enrg_constitutive_param_1, thermal_dissipation_enrg_constitutive_param_2) ASYNC(1)
-    !$ACC UPDATE DEVICE(k_photochemistry_rate) ASYNC(1)
+    !$ACC UPDATE DEVICE(jmax2n, vcmax2n, pepc2n, chl2n, k1_fn_struc)
+    !$ACC UPDATE DEVICE(E0kc, E1kc, E0ko, E1ko, E0pcp, E1pcp, E0v, E1v)
+    !$ACC UPDATE DEVICE(t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max, Tref_pepc, Tbase_pepc)
+    !$ACC UPDATE DEVICE(alpha_i, pO2, CiCa_default_C3, CiCa_default_C4, ps_it_max, ci_max)
+    !$ACC UPDATE DEVICE(discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, discr_ps_a_C14, discr_ps_b_C14)
+    !$ACC UPDATE DEVICE(discr_ps_c_C14, discr_ps_phi)
+    !$ACC UPDATE DEVICE(ka, kn, soa_b, soa_t_s)
+    !$ACC UPDATE DEVICE(heat_dissipation_enrg_dep_param_1, heat_dissipation_enrg_dep_param_2)
+    !$ACC UPDATE DEVICE(heat_dissipation_enrg_dep_param_3)
+    !$ACC UPDATE DEVICE(k_fluorescence_rate, thermal_dissipation_enrg_constitutive_max_rate)
+    !$ACC UPDATE DEVICE(thermal_dissipation_enrg_constitutive_param_1, thermal_dissipation_enrg_constitutive_param_2)
+    !$ACC UPDATE DEVICE(k_photochemistry_rate)
 
   END SUBROUTINE init_q_assimi_parameters
 

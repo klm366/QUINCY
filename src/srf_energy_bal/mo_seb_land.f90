@@ -302,8 +302,8 @@ CONTAINS
     ! Grid cells without a real land fraction lead to numerical problems. As the land tile is
     ! calculated globally, this occurs e.g. on complete ocean or complete lake grid cells.
     tile_fract_zero(:) = .NOT. grid%lsm(ics:ice,iblk) .OR. tile%fract(ics:ice,iblk) <= 0._wp
-    !$ACC UPDATE DEVICE (tile_fract_zero) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC UPDATE DEVICE (tile_fract_zero)
+    !$ACC WAIT
 
     IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
       lstart = .TRUE.

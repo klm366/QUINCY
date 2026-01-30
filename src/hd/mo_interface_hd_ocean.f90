@@ -220,8 +220,8 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL
-    !$ACC UPDATE HOST(buffer) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC UPDATE HOST(buffer)
+    !$ACC WAIT
 !$OMP END PARALLEL DO
 
     nbr_hor_cells = grid%ntotal

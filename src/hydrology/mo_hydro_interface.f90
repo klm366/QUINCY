@@ -1278,8 +1278,8 @@ CONTAINS
 
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
     l_fract(:) = tile_fract(:) > 0._wp
-    !$ACC UPDATE DEVICE(l_fract, tile_fract) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC UPDATE DEVICE(l_fract, tile_fract)
+    !$ACC WAIT
 
     CALL calc_soil_hydrology( &
       ! in

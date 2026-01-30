@@ -293,7 +293,7 @@ CONTAINS
 
     IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
       ldglac(:) = SPREAD(tile%is_glacier, DIM=1, ncopies=nc)
-      !$ACC UPDATE DEVICE(ldglac) ASYNC(1)
+      !$ACC UPDATE DEVICE(ldglac)
 
       CALL calc_soiltemp_old(                          &
         & nc,                                          &

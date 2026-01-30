@@ -690,7 +690,7 @@ CONTAINS
 
     dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev) = hydro_init_vars%oro_stddev
 
-    !$ACC UPDATE ASYNC(1) &
+    !$ACC UPDATE &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_,elevation)) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev))
 
@@ -793,7 +793,7 @@ CONTAINS
         dsl4jsb_var_ptr(HYDRO_, fract_org_sl) = hydro_init_vars%fract_org_sl
       END IF
 
-      !$ACC UPDATE ASYNC(1) &
+      !$ACC UPDATE &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_sat_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_pwp_sl)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_fc_sl)) &
@@ -831,7 +831,7 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max), dsl4jsb_Config(HYDRO_)%w_soil_limit)
       END IF
 
-      !$ACC UPDATE ASYNC(1) &
+      !$ACC UPDATE &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, root_depth)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max))
@@ -926,7 +926,7 @@ CONTAINS
       ! Initial soil water overflow (used in terra planet experiments)
       dsl4jsb_var2D_onDomain(HYDRO_, tpe_overflow) = 0._wp
 
-      !$ACC UPDATE ASYNC(1) &
+      !$ACC UPDATE &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_snow))      &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_snow_soil)) &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))   &
@@ -957,7 +957,7 @@ CONTAINS
         WHERE (dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl) <= 1.0e-10_wp)
           dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
         ENDWHERE
-        !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) ASYNC(1)
+        !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl))
       END IF
 
       ! update soil properties with organic layer fractions
@@ -993,7 +993,7 @@ CONTAINS
         & dsl4jsb_var3D_onDomain(HYDRO_, vol_wres_sl)      * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)  &
         & - dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl))
 
-      !$ACC UPDATE ASYNC(1) &
+      !$ACC UPDATE &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))      &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl))      &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl))  &
@@ -1015,8 +1015,8 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max) (:,  i)  )
       END DO
-      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max)) ASYNC(1)
-      !$ACC WAIT(1)
+      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max))
+      !$ACC WAIT
       ! Set maximum root zone moisture to 0.2 for glacier and ocean areas (where wpi_rootzone_max == 0)
       dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) = MERGE(       &
           & dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max), 0.2_wp, &
@@ -1025,7 +1025,7 @@ CONTAINS
         dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) = MIN( &
         & dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max), dsl4jsb_Config(HYDRO_)%w_soil_limit)
       END IF
-      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max)) ASYNC(1)
+      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max))
 
       ! Initialization of relative root zone soil moisture (only water, not ice).
       !   This is needed for the LoGro-P phenology, as phenology is updated before hydrology.
@@ -1044,10 +1044,10 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, ice_rootzone)   (:,  i)  )
       END DO
-      !$ACC UPDATE ASYNC(1) &
+      !$ACC UPDATE &
       !$ACC HOST(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)) &
       !$ACC HOST(dsl4jsb_var_ptr(HYDRO_, ice_rootzone))
-      !$ACC WAIT(1)
+      !$ACC WAIT
 
       ! Make sure wtr_rootzone is smaller than wpi_rootzone_max - ice_rootzone.
       ! Note: this corresponds to the maximum possible amount of liquid water in the root zone.
@@ -1056,7 +1056,7 @@ CONTAINS
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = MAX(0._wp, &
         & dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) - dsl4jsb_var2D_onDomain(HYDRO_, ice_rootzone))
       END WHERE
-      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)) ASYNC(1)
+      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone))
 
       ! Initialization of wtr_rootzone_rel
       !   This is re-calculated every time step in update_water_stress.
@@ -1068,7 +1068,7 @@ CONTAINS
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
       END WHERE
 
-      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel)) ASYNC(1)
+      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel))
 
     END IF ! Tile with vegetation
 
@@ -1209,7 +1209,7 @@ CONTAINS
       END DO
     END IF
 
-    !$ACC UPDATE ASYNC(1) &
+    !$ACC UPDATE &
     !$ACC   DEVICE(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl)         &
     !$ACC   DEVICE(matric_pot_sl, pore_size_index_sl, vol_field_cap_sl) &
     !$ACC   DEVICE(vol_p_wilt_sl, vol_wres_sl)
@@ -1288,7 +1288,7 @@ CONTAINS
         ice_soil_sl(:,:,:) = MAX(0._wp, MIN(ice_soil_sl(:,:,:), &
           &                             MAX(vol_porosity_sl (:,:,:) * soil_depth_sl(:,:,:), 0._wp) - wtr_soil_sl(:,:,:)))
 
-        !$ACC UPDATE DEVICE(wtr_soil_sl, ice_soil_sl) ASYNC(1)
+        !$ACC UPDATE DEVICE(wtr_soil_sl, ice_soil_sl)
       END IF
     END IF
 
@@ -1299,7 +1299,7 @@ CONTAINS
       root_depth(:,:) = MIN(root_depth(:,:), soil_depth(:,:))
       root_depth_sl(:,:,:) = soil_depth_to_layers_2d(root_depth(:,:), soil_w%dz(:))
 
-      !$ACC UPDATE DEVICE(root_depth, root_depth_sl) ASYNC(1)
+      !$ACC UPDATE DEVICE(root_depth, root_depth_sl)
     END IF
 
   END SUBROUTINE hydro_sanitize_state

@@ -352,10 +352,10 @@ CONTAINS
       END DO
       dsl4jsb_var2D_onDomain(SSE_, heat_cond) = &
         & dsl4jsb_var2D_onDomain(SSE_, vol_heat_cap) * dsl4jsb_var2D_onDomain(SSE_, thermal_diffusivity)
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SSE_,thermal_diffusivity)) ASYNC(1)
+      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SSE_,thermal_diffusivity))
     END IF
 
-    !$ACC UPDATE ASYNC(1) &
+    !$ACC UPDATE &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap)) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SSE_,heat_cond))
 
@@ -410,14 +410,14 @@ CONTAINS
       END DO
     END IF
 
-    !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl)) ASYNC(1)
+    !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
 
     ! IF (TRIM(tile%name) /= 'box') THEN
     IF ( model%config%use_tmx .OR. TRIM(tile%name) == 'land') THEN
       dsl4jsb_var2D_onDomain(SEB_,t)        = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
       dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 
-      !$ACC UPDATE ASYNC(1) &
+      !$ACC UPDATE &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SEB_,t_unfilt)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SEB_,t))
     END IF
@@ -662,7 +662,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       !$ACC UPDATE HOST(fract_water, fract_ice)
-      !$ACC WAIT(1)
+      !$ACC WAIT
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO ib = 1, nblks
@@ -705,7 +705,7 @@ CONTAINS
       DEALLOCATE(fract_water, fract_ice, vol_heat_cap_org_tmp)
     ELSE
 
-      !$ACC UPDATE DEVICE(vol_heat_cap) ASYNC(1)
+      !$ACC UPDATE DEVICE(vol_heat_cap)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3) ASYNC(1)
       DO is = 1, nsoil
         DO ib=1,nblks

@@ -145,7 +145,7 @@ CONTAINS
           ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm(nr_of_elements, nproma, nblks))
           !$ACC ENTER DATA CREATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm(:,:,:))
           this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm = 0.0_wp
-          !$ACC UPDATE DEVICE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm) ASYNC(1)
+          !$ACC UPDATE DEVICE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm)
 
           this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%nr_of_elems = nr_of_elements
           this%idx_in_store(idx_bgcm) = idx_1l_2d_bgcm
@@ -160,7 +160,7 @@ CONTAINS
           ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm(nr_of_elements, nproma, nsoil, nblks))
           !$ACC ENTER DATA CREATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm(:,:,:,:))
           this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm = 0.0_wp
-          !$ACC UPDATE DEVICE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm) ASYNC(1)
+          !$ACC UPDATE DEVICE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm)
 
           this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%nr_of_elems = nr_of_elements
           this%idx_in_store(idx_bgcm) = idx_1l_3d_bgcm
@@ -190,7 +190,7 @@ CONTAINS
             &                                                           nproma, nblks))
           !$ACC ENTER DATA CREATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm(:,:,:,:))
           this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm = 0.0_wp
-          !$ACC UPDATE DEVICE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm) ASYNC(1)
+          !$ACC UPDATE DEVICE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm)
 
           this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%nr_of_elems = nr_of_elements
           this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%nr_of_parts = nr_of_compartments
@@ -203,7 +203,7 @@ CONTAINS
             &                                                           nproma, nsoil, nblks))
           !$ACC ENTER DATA CREATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm(:,:,:,:,:))
           this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm = 0.0_wp
-          !$ACC UPDATE DEVICE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm) ASYNC(1)
+          !$ACC UPDATE DEVICE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm)
 
           this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%nr_of_elems = nr_of_elements
           this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%nr_of_parts = nr_of_compartments
@@ -275,7 +275,7 @@ CONTAINS
             ptr2D => this%store_1l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr2d(:,:)
 
             ptr3D(i_elem,ics:ice,iblk) = ptr2D(ics:ice,iblk)
-            !$ACC UPDATE DEVICE(ptr3D(i_elem,ics:ice,iblk)) ASYNC(1)
+            !$ACC UPDATE DEVICE(ptr3D(i_elem,ics:ice,iblk))
 
           ENDDO
         CASE(3)
@@ -289,7 +289,7 @@ CONTAINS
             ptr3D => this%store_1l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_1l_p(i_elem)%p%ptr3d(:,:,:)
 
             ptr4D(i_elem,ics:ice,:,iblk) = ptr3D(ics:ice,:,iblk)
-            !$ACC UPDATE DEVICE(ptr4D(i_elem,ics:ice,:,iblk)) ASYNC(1)
+            !$ACC UPDATE DEVICE(ptr4D(i_elem,ics:ice,:,iblk))
 
           ENDDO
         ENDSELECT
@@ -308,7 +308,7 @@ CONTAINS
               ptr2D => this%store_2l_2d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr2d(:,:)
 
               ptr4D(i_part,i_elem,ics:ice,iblk) = ptr2D(ics:ice,iblk)
-              !$ACC UPDATE DEVICE(ptr4D(i_part,i_elem,ics:ice,iblk)) ASYNC(1)
+              !$ACC UPDATE DEVICE(ptr4D(i_part,i_elem,ics:ice,iblk))
 
             ENDDO
           ENDDO
@@ -324,7 +324,7 @@ CONTAINS
               ptr3D => this%store_2l_3d_bgcms(this%idx_in_store(i_bgcm))%collection_2l_p(i_part, i_elem)%p%ptr3d(:,:,:)
 
               ptr5D(i_part,i_elem,ics:ice,:,iblk) = ptr3D(ics:ice,:,iblk)
-              !$ACC UPDATE DEVICE(ptr5D(i_part,i_elem,ics:ice,:,iblk)) ASYNC(1)
+              !$ACC UPDATE DEVICE(ptr5D(i_part,i_elem,ics:ice,:,iblk))
 
             ENDDO
           ENDDO

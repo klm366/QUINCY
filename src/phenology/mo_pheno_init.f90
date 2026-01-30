@@ -199,32 +199,32 @@ CONTAINS
 
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,:) = pheno_init_vars%lai_mon(:,:,:)
     !$ACC ENTER DATA ATTACH(dsl4jsb_memory(PHENO_)%lai_mon)
-    !$ACC UPDATE DEVICE(dsl4jsb_memory(PHENO_)%lai_mon) ASYNC(1)
+    !$ACC UPDATE DEVICE(dsl4jsb_memory(PHENO_)%lai_mon)
 
     ! Foliage projected cover climatology
     IF (debug_on()) CALL message(TRIM(routine), 'setting veg_fract ...')
     dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,:) = pheno_init_vars%fract_fpc_mon(:,:,:)
-    !$ACC UPDATE DEVICE(dsl4jsb_memory(PHENO_)%fract_fpc_mon) ASYNC(1)
+    !$ACC UPDATE DEVICE(dsl4jsb_memory(PHENO_)%fract_fpc_mon)
 
     ! Forest fraction
     IF (((dsl4jsb_Config(HYDRO_)%l_organic .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_socmap)) .OR. &
       &   dsl4jsb_Config(RAD_)%use_alb_veg_simple) THEN
       IF (debug_on()) CALL message(TRIM(routine), 'setting forest_fract ...')
       dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = pheno_init_vars%fract_forest
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest)) ASYNC(1)
+      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest))
     END IF
 
     ! Maximum foliage projected cover
     IF (debug_on()) CALL message(TRIM(routine), 'setting veg_ratio_max ...')
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = pheno_init_vars%fract_fpc_max
-    !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max)) ASYNC(1)
+    !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max))
 
     IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
       !JN 10.01.18: for now: set the maxLai for non forest types to the one from the Lctlib
       !             later one might think about allometric relation ships in other multi annual plants, too?
       IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
         dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) = dsl4jsb_Lctlib_param(MaxLAI)
-        !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom)) ASYNC(1)
+        !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom))
       END IF
 
       !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time for forest pfts
@@ -236,7 +236,7 @@ CONTAINS
         dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
           & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
       END IF
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction)) ASYNC(1)
+      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction))
     END IF
 
   END SUBROUTINE pheno_init_bc

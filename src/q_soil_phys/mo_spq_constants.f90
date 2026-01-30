@@ -189,7 +189,7 @@ CONTAINS
     t_soil_max_increase           = 5.0_wp        !< best guess (https://gitlab.dkrz.de/jsbach/jsbach/-/issues/190#note_204075)
     t_soil_max_decrease           = -5.0_wp       !< best guess (https://gitlab.dkrz.de/jsbach/jsbach/-/issues/190#note_204075)
 
-  !$ACC UPDATE DEVICE(w_snow_min) ASYNC(1)
+  !$ACC UPDATE DEVICE(w_snow_min)
 
   END SUBROUTINE init_spq_constants
 

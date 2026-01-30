@@ -440,7 +440,7 @@ CONTAINS
 
       this%fract_old(ics:ice, iblk) = this%fract(ics:ice, iblk)
       this%fract    (ics:ice, iblk) = fract(:)
-      !$ACC UPDATE DEVICE(this%fract(ics:ice,iblk), this%fract_old(ics:ice,iblk)) ASYNC(1)
+      !$ACC UPDATE DEVICE(this%fract(ics:ice,iblk), this%fract_old(ics:ice,iblk))
 
       IF (ASSOCIATED(this%parent)) THEN
         SELECT TYPE (parent=>this%parent)
@@ -468,7 +468,7 @@ CONTAINS
        & CALL finish(TRIM(routine), 'Dimension mismatch')
 
       this%fract_old(ics:ice, iblk) = fract_old(:)
-      !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk)) ASYNC(1)
+      !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk))
     END IF
 
   END SUBROUTINE Set_fraction_1d
@@ -492,7 +492,7 @@ CONTAINS
 
         this%fract_old(:,:) = this%fract(:,:)
         this%fract    (:,:) = fract(:,:)
-        !$ACC UPDATE DEVICE(this%fract, this%fract_old) ASYNC(1)
+        !$ACC UPDATE DEVICE(this%fract, this%fract_old)
 
         IF (ASSOCIATED(this%parent)) THEN
           SELECT TYPE (parent=>this%parent)
@@ -522,7 +522,7 @@ CONTAINS
 
       IF (ANY(fract_old(:,:) /= this%fract_old(:,:))) THEN
         this%fract_old(:,:) = fract_old(:,:)
-        !$ACC UPDATE DEVICE(this%fract_old) ASYNC(1)
+        !$ACC UPDATE DEVICE(this%fract_old)
       END IF
 
     END IF
@@ -750,7 +750,7 @@ CONTAINS
         current => current%next_sibling_tile
       END DO
 
-      !$ACC UPDATE DEVICE(this%fractions(ics:ice,iblk,:)) ASYNC(1)
+      !$ACC UPDATE DEVICE(this%fractions(ics:ice,iblk,:))
 
       !! Section for debugging
       !! It needs to be adapted to absolute tile fractions!
@@ -800,7 +800,7 @@ CONTAINS
         current => current%next_sibling_tile
       END DO
 
-      !$ACC UPDATE DEVICE(this%fractions(:,:,:)) ASYNC(1)
+      !$ACC UPDATE DEVICE(this%fractions(:,:,:))
 
       ! ALLOCATE(fract(ice-ics+1))
       ! ALLOCATE(fract_sum(ice-ics+1))

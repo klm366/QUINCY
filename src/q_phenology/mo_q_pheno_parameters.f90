@@ -45,7 +45,7 @@ CONTAINS
 
     gdd_t_air_threshold       = 5.0_wp + Tzero              !< citation or source ....  [ ? ]
 
-    !$ACC UPDATE DEVICE(gdd_t_air_threshold) ASYNC(1)
+    !$ACC UPDATE DEVICE(gdd_t_air_threshold)
 
   END SUBROUTINE init_q_pheno_parameters
 

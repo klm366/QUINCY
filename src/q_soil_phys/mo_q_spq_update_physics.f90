@@ -292,8 +292,8 @@ CONTAINS
     !!
     IF (dsl4jsb_Config(SPQ_)%flag_snow) THEN
 
-      !$ACC UPDATE HOST(snow(:), snow_height(:), snow_present_snl(:,:), w_snow_snl(:,:), snow_lay_thickness_snl(:,:)) ASYNC(1)
-      !$ACC WAIT(1)
+      !$ACC UPDATE HOST(snow(:), snow_height(:), snow_present_snl(:,:), w_snow_snl(:,:), snow_lay_thickness_snl(:,:))
+      !$ACC WAIT
       CALL calc_snow_accumulation(nc, &                                   ! in
                                   nsoil_sb, &                             ! in
                                   nsnow, &                                ! in
@@ -303,7 +303,7 @@ CONTAINS
                                   snow_present_snl(:,:), &                ! inout
                                   w_snow_snl(:,:), &                      ! inout
                                   snow_lay_thickness_snl(:,:))            ! inout
-      !$ACC UPDATE DEVICE(snow(:), snow_height(:), snow_present_snl(:,:), w_snow_snl(:,:), snow_lay_thickness_snl(:,:)) ASYNC(1)
+      !$ACC UPDATE DEVICE(snow(:), snow_height(:), snow_present_snl(:,:), w_snow_snl(:,:), snow_lay_thickness_snl(:,:))
 #ifdef _OPENACC
       snow_height(:) = -1.0E+22; snow_lay_thickness_snl(:,:) = -2.0E+33
 #endif
@@ -330,8 +330,8 @@ CONTAINS
     !$ACC   HOST(snow_melt_to_soil(:), fract_snow_soil(:)) &
     !$ACC   HOST(therm_cond_sl(:,:), t_soil_sl(:,:), w_soil_sl(:,:), w_soil_fc_sl(:,:)) &
     !$ACC   HOST(w_soil_pwp_sl(:,:), w_ice_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:), t_snow_snl(:,:)) &
-    !$ACC   HOST(w_snow_snl(:,:), snow_present_snl(:,:), snow_lay_thickness_snl(:,:)) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC   HOST(w_snow_snl(:,:), snow_present_snl(:,:), snow_lay_thickness_snl(:,:))
+    !$ACC WAIT
     CALL calc_surface_energy_balance(nc, nsoil_sb, nsnow, dtime, &
                                      steplen, &
                                      alpha, &
@@ -373,7 +373,7 @@ CONTAINS
     !$ACC   DEVICE(snow_melt_to_soil(:), fract_snow_soil(:)) &
     !$ACC   DEVICE(therm_cond_sl(:,:), t_soil_sl(:,:), w_soil_sl(:,:), w_soil_fc_sl(:,:)) &
     !$ACC   DEVICE(w_soil_pwp_sl(:,:), w_ice_sl(:,:), w_soil_freeze_flux(:,:), w_soil_melt_flux(:,:), t_snow_snl(:,:)) &
-    !$ACC   DEVICE(w_snow_snl(:,:), snow_present_snl(:,:), snow_lay_thickness_snl(:,:)) ASYNC(1)
+    !$ACC   DEVICE(w_snow_snl(:,:), snow_present_snl(:,:), snow_lay_thickness_snl(:,:))
 #ifdef _OPENACC
     lai(:) = -1.0E+11; w_soil_fc_sl(:,:) = -2.0E+36
 #endif
@@ -388,8 +388,8 @@ CONTAINS
     !$ACC   HOST(w_skin(:), w_soil_root(:), w_soil_root_theta(:), w_soil_root_pot(:), srf_runoff(:)) &
     !$ACC   HOST(drainage(:), gw_runoff(:), drainage_fraction(:), w_soil_sl(:,:), w_soil_pot_sl(:,:)) &
     !$ACC   HOST(drainage_sl(:,:), percolation_sl(:,:), gw_runoff_sl(:,:), t_soil_sl(:,:), w_ice_sl(:,:)) &
-    !$ACC   HOST(frac_w_lat_loss_sl(:,:), ftranspiration_sl(:,:)) ASYNC(1)
-    !$ACC WAIT(1)
+    !$ACC   HOST(frac_w_lat_loss_sl(:,:), ftranspiration_sl(:,:))
+    !$ACC WAIT
     CALL calc_soil_hydrology(nc, nsoil_sb, dtime, &
                              num_sl_above_bedrock, &
                              soil_lay_depth_ubound_sl(:,:), &                                      ! (upper bound > lower bound !)
@@ -413,7 +413,7 @@ CONTAINS
     !$ACC   DEVICE(w_skin(:), w_soil_root(:), w_soil_root_theta(:), w_soil_root_pot(:), srf_runoff(:)) &
     !$ACC   DEVICE(drainage(:), gw_runoff(:), drainage_fraction(:), w_soil_sl(:,:), w_soil_pot_sl(:,:)) &
     !$ACC   DEVICE(drainage_sl(:,:), percolation_sl(:,:), gw_runoff_sl(:,:), t_soil_sl(:,:), w_ice_sl(:,:)) &
-    !$ACC   DEVICE(frac_w_lat_loss_sl(:,:), ftranspiration_sl(:,:)) ASYNC(1)
+    !$ACC   DEVICE(frac_w_lat_loss_sl(:,:), ftranspiration_sl(:,:))
 #ifdef _OPENACC
     w_soil_root(:) = -1.0E+21; frac_w_lat_loss_sl(:,:) = -2.0E+14
 #endif

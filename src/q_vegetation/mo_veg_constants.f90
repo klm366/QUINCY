@@ -395,10 +395,10 @@ CONTAINS
       rfr_ratio_toc           = 1.2_wp                !< Kull & Kruijt 1998
       k_r2fr_chl              = 0.0012_wp - 0.012_wp  !< Kull & Kruijt 1998
 
-    !$ACC UPDATE DEVICE(t_maint_k1, t_maint_k2, t_maint_k3, min_height) ASYNC(1)
-    !$ACC UPDATE DEVICE(f_resp_acclim, t_acclim_zero, fmaint_rate_base, k_fpc, k_sai2lai) ASYNC(1)
-    !$ACC UPDATE DEVICE(carbon_per_dryweight_leaf, jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc_C4) ASYNC(1)
-    !$ACC UPDATE DEVICE(jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, k0_fn_pepc_C3, kfn_chl) ASYNC(1)
+    !$ACC UPDATE DEVICE(t_maint_k1, t_maint_k2, t_maint_k3, min_height)
+    !$ACC UPDATE DEVICE(f_resp_acclim, t_acclim_zero, fmaint_rate_base, k_fpc, k_sai2lai)
+    !$ACC UPDATE DEVICE(carbon_per_dryweight_leaf, jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc_C4)
+    !$ACC UPDATE DEVICE(jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, k0_fn_pepc_C3, kfn_chl)
     !$ACC UPDATE DEVICE(rfr_ratio_toc, k_r2fr_chl)
 
   END SUBROUTINE init_veg_constants
