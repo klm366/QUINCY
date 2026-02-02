@@ -83,15 +83,15 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), POINTER :: sibl, &  !< Sibling tile
       &                                    first    !< First tile
-    TYPE(t_jsb_model), POINTER :: model             !< model instance
-    TYPE(t_jsb_grid),  POINTER :: grid              !< model grid
-    TYPE(t_jsb_vgrid), POINTER :: connecttiles      !< grid for connected tiles
+    TYPE(t_jsb_model), POINTER :: model             !< Model instance
+    TYPE(t_jsb_grid),  POINTER :: grid              !< Model grid
+    TYPE(t_jsb_vgrid), POINTER :: connecttiles      !< Dimension for connected tiles
 
     LOGICAL :: has_loop     !< T: Flow matrix contains closed loop
 
     INTEGER ::                   &
-      &  nproma,                 &  !< nproma
-      &  nblks,                  &  !< nblocks
+      &  nproma,                 &  !< Grid cell vector length
+      &  nblks,                  &  !< Number of nproma blocks
       &  nsibl,                  &  !< number of siblings on current tile level
       &  nconti,                 &  !< number of connected tiles on current tile level
       &  it,                     &  !< counter for loop over tiles
@@ -105,7 +105,7 @@ CONTAINS
       &  lex_idf                    !< lex id of the first tile on current tile level
 
     REAL(wp), POINTER ::         &
-      &  test_matrix(:,:),       &  !< matrix used to check for inconsistances in base matrices
+      &  test_matrix(:,:),       &  !< matrix used to check for inconsistencies in base matrices
       &  cmx_micro_ctc(:,:),     &  !< base matrix for micro-scale connectivity via direct contact
       &  cmx_micro_hfp_srf(:,:), &  !< base matrix for micro-scale connectivity via surface hydrological flow paths
       &  cmx_micro_hfp_blg(:,:), &  !< base matrix for micro-scale connectivity via below-ground hydrological flow paths
@@ -231,7 +231,7 @@ CONTAINS
         CALL finish(TRIM(routine), '*** Lateral connection matrix not defined for usecase')
       END IF
 
-      !> Check the base matrices for inconsistancies
+      !> Check the base matrices for inconsistencies
       ! First check whether any matrix contains a closed loop
       test_matrix(:,:) = cmx_micro_hfp_srf(:,:)
       CALL check_flow_matrix(               &

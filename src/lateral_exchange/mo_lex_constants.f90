@@ -15,11 +15,11 @@
 !>
 !> This module contains base connection matrixes for the lateral exchange processes between tiles.
 !>
-!> Note! The 1-D arrays that need to be provided below are being reshaped to ntiles x ntiles matrixes
+!> Note! The 1-D arrays defined below are being reshaped to ntiles x ntiles matrixes
 !> in the lex_init routine: M = reshape(1-D_array, ntiles x ntiles, order=(/2,1/))
 !
-!> Note! Not all connectivties are directly used in the model. Some are adjusted based
-!> on their consistance with the topographic information provided.
+!> Note! Not all connectivities are directly used in the model. Some are adjusted to
+!> be consistent with the topographic information provided.
 !>
 !> Base connection matrixes:
 !> micro-vs. macro-scale: The separation between micro- and macro scale is somewhat ambiguous.
@@ -52,11 +52,11 @@
 !>
 !> For cmx_micro_ctc the sum of entries on a row may not exeed 1.
 !> Furthermore, the model does not (yet) properly consider nested configurations.
-!> The possibility for such setups are limited to a case in which a single surface feature SF1
+!> The possibilities for such setups are limited to a case in which a single surface feature SF1
 !> is fully encompassed by a second surface feature SF2, which, in turn,
 !> is encompassed by another (other) surface feature(s).
 !> If the model is set up for a cascade of connected tiles (l_nested = FALSE),
-!> the geometric relashionships can only be determined for each pair of tiles individually.
+!> the geometric relationships can only be determined for each pair of tiles individually.
 !>
 !> For cmx_micro_hfp_x and cmx_macro_hfp_x, indiviual matrix elements should not exceed 1.
 !> However, it is intended that the sum of the elements on a row can be larger than 1.
