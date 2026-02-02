@@ -312,12 +312,14 @@ CONTAINS
       &                           soil_w        !< Vertical grid for soil hydrology
 
     INTEGER :: table                            !< Grib code table ID
+    INTEGER :: pond_output_level                !< Output level for pond vars (depends on [[t_hydro_config:l_ponds]])
+    INTEGER :: lex_output_level                 !< Output level for LEX vars (depends on [[t_lex_config:active]])
     TYPE(t_grib2) :: grib2_desc                 !< Grib2 related metadata
 
     REAL(wp) :: ini_snow_dens                   !< Initial value for snow density
     LOGICAL  :: l_ponds                         !< Abreviation: Local variable for [[t_hydro_config:l_ponds]]
     LOGICAL  :: l_uniform                       !< Abreviation: True if [[t_hydro_config:hydro_scale]]=Uniform
-    LOGICAL  :: l_lex
+    LOGICAL  :: l_lex                           !< Abreviation: Local variable for [[t_lex_config:active]]
     LOGICAL  :: lrestart_local                  !< add var to restart file, model specific (quincy/jsbach)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hydro_memory'
@@ -353,6 +355,18 @@ CONTAINS
     END IF
     l_ponds = dsl4jsb_Config(HYDRO_)%l_ponds
     l_lex = dsl4jsb_Config(LEX_)%active
+
+    ! Define output levels for pond and LEX variables
+    IF (l_ponds) THEN
+      pond_output_level = BASIC
+    ELSE
+      pond_output_level = NONE
+    END IF
+    IF (l_lex) THEN
+      lex_output_level = BASIC
+    ELSE
+      lex_output_level = NONE
+    END IF
 
     ! set local lrestart switch to TRUE for the MODEL_QUINCY
     lrestart_local = .FALSE.
@@ -580,24 +594,21 @@ CONTAINS
       & t_cf('char_area', 'm2', 'characteristic area of tile'),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.TRUE., output_level=BASIC,                                         &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'char_h_surf', mem%char_h_surf,                                &
       & hgrid, surface,                                                              &
       & t_cf('char_h_surf', 'm', 'characteristic surface elevation of tile'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.TRUE., output_level=BASIC,                                         &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'macro_slope', mem%macro_slope,                                &
       & hgrid, surface,                                                              &
       & t_cf('macro_slope', '/', 'macro scale slope of tile'),                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.TRUE., output_level=BASIC,                                         &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     ! Additional variables if the tile contains land, i.e. the tile or sub-tiles are land tiles
     ! ------------------------------------------------
@@ -685,7 +696,6 @@ CONTAINS
     ! ------------------------------------------------
     IF ( (     One_of(VEG_TYPE,  lct_ids(:))    > 0 &
       &   .OR. One_of(BARE_TYPE, lct_ids(:))    > 0 &
-      &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE, lct_ids(:))    > 0 &
       &  ) ) THEN
 
@@ -1139,7 +1149,7 @@ CONTAINS
         & t_cf('wtr_lex_net_sl', 'kg m-2 s-1', 'Lateral exchange with connected tiles on soil layers'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
         & prefix, suffix,                                                                               &
-        & output_level=BASIC,                                                                           &
+        & output_level=lex_output_level,                                                                &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_latflow_res_srf', mem%wtr_latflow_res_srf,             &
@@ -1162,7 +1172,7 @@ CONTAINS
         & t_cf('water_to_soil_lex', 'm', 'Infiltratable water from connected tiles'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
         & prefix, suffix,                                                             &
-        & output_level=BASIC,                                                         &
+        & output_level=lex_output_level,                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_lex_net_srf', mem%wtr_lex_net_srf,                                         &
@@ -1170,7 +1180,7 @@ CONTAINS
         & t_cf('wtr_lex_net_srf', 'kg m-2 s-1', 'Lateral exchange with connected tiles on the surface'),&
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
         & prefix, suffix,                                                                               &
-        & output_level=BASIC,                                                                           &
+        & output_level=lex_output_level,                                                                &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('wtr_rootzone_rel', mem%wtr_rootzone_rel,                         &
@@ -1187,7 +1197,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
-        & output_level=BASIC,                                                          &
+        & output_level=pond_output_level,                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'weq_pond', mem%weq_pond,                                      &
@@ -1196,7 +1206,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
-        & output_level=BASIC,                                                          &
+        & output_level=pond_output_level,                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_pond', mem%wtr_pond,                                      &
@@ -1205,7 +1215,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
-        & output_level=BASIC,                                                          &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'ice_pond', mem%ice_pond,                                      &
@@ -1214,7 +1223,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
-        & output_level=BASIC,                                                          &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'pond_melt', mem%pond_melt,                                    &
