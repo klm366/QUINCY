@@ -37,6 +37,8 @@ MODULE mo_q_sb_interface
   dsl4jsb_Use_processes SB_, VEG_, HYDRO_
   dsl4jsb_Use_config(SB_)
   dsl4jsb_Use_memory(SB_)
+  dsl4jsb_Use_memory(A2L_)
+  dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_memory(HYDRO_)
 
@@ -329,13 +331,17 @@ CONTAINS
   SUBROUTINE update_read_soil_forcing(tile, options)
 
     USE mo_jsb_io_netcdf,           ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_lnd_bgcm_store,          ONLY: read_bgcm_from_file
+    USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store, get_bgcm_idx
     USE mo_lnd_bgcm_idx
     USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID
-    USE mo_jsb_time,                ONLY: get_date_components, get_year_day
+    USE mo_jsb_time,                ONLY: t_datetime, get_date_components, get_year_day
 
-    dsl4jsb_Use_processes SB_
-    dsl4jsb_Use_memory(VEG_)
+    ! dsl4jsb_Use_processes SB_
+    ! dsl4jsb_Use_memory(A2L_)
+    ! dsl4jsb_Use_memory(VEG_)
+    ! dsl4jsb_Use_memory(HYDRO_)
+    ! dsl4jsb_Use_memory(SSE_)
+    ! dsl4jsb_Use_config(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -343,16 +349,12 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER :: model            !< the model
     TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store       !< the bgcm store of this tile
     TYPE(t_input_file)              :: input_file       !< file with to be read veg state variables
-    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_w     !< vertical grid for sl variables
     TYPE(t_datetime),       POINTER :: current_datetime !< date and time at the beginning of this time step
-    REAL(wp),                       :: dtime
+    REAL(wp)                        :: dtime, year_instant
     INTEGER                         :: iblk    !< Dimensions of the horizontal grid
-    INTEGER                         :: nsoil_input_file !< Number of vertical soil layers as provided by the ic input file
-    INTEGER                         :: isoil            !< soillayer index
-    INTEGER                         :: nsoil_w          !< number of soil layers (water)
     INTEGER                         :: veg_pool_idx, litterfall_pool_idx
     INTEGER                         :: year, month, day, hour, minute, second, yearday, &
-                                       ith_timestep     !< the row number of current timestep in soil forcing
+                                    &  ith_timestep     !< the row number of current timestep in soil forcing
     REAL(wp), POINTER :: &
       & ptr_1D(:    ),   &                      !< Pointer to 1d variable
       & ptr_2D(:,  :),   &                      !< Pointer to 2d variable
@@ -368,6 +370,7 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_config(SB_)
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: nhx_deposition
     dsl4jsb_Real2D_onChunk      :: noy_deposition
@@ -387,11 +390,12 @@ CONTAINS
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
-    vgrid_soil_w => Get_vgrid('soil_depth_water')
-    nsoil_w = vgrid_soil_w%n_levels
     iblk = options%iblk
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -412,22 +416,18 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (debug_on()) CALL message(TRIM(routine), ' for tile '//TRIM(tile%name))
 
     !> get the timestep information of current timestep
     current_datetime = options%current_datetime
     dtime   = options%dtime
     CALL get_date_components(current_datetime, year, month, day, hour, minute, second)
+    year_instant = get_year_day(current_datetime)
     yearday = INT(year_instant)
     ith_timestep = IMerge_TIME2Sec(yearday, hour, minute, second)/int(dtime) + 1 ! the row number of current timestep in forcing file
-    
+
     !> 1.0 the first soil forcing file
     ! ----------------------------------------------------------------------------------------------------- !
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%soilphysics_forcing_filename), model%grid_id)
-    !> get the soil layer information from forcing file
-    ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of the bottom of each soil layer
-    nsoil_input_file = SIZE(ptr_1D)                          ! number of soil layers provided by the ic input file
 
     !> read the 3D forcing variables
     !> - Fraction of fineroot
@@ -579,7 +579,7 @@ CONTAINS
         & variable_name="veg_litterfall_fine_root_N15_"//tile%name,            &
         & start_timestep=ith_timestep, end_timestep=ith_timestep)
     veg_litterfall_mt(ix_fine_root, ixN15, :,:) = ptr_3D(:,:,1)
-    
+
     !> - litterfall coarse root
     ptr_3D => input_file%Read_2d_time(                  &
         & variable_name="veg_litterfall_coarse_root_C_"//tile%name,            &
@@ -605,7 +605,7 @@ CONTAINS
         & variable_name="veg_litterfall_coarse_root_N15_"//tile%name,            &
         & start_timestep=ith_timestep, end_timestep=ith_timestep)
     veg_litterfall_mt(ix_coarse_root, ixN15, :,:) = ptr_3D(:,:,1)
-    
+
     !> - litterfall sap wood
     ptr_3D => input_file%Read_2d_time(                  &
         & variable_name="veg_litterfall_sap_wood_C_"//tile%name,            &
@@ -631,7 +631,7 @@ CONTAINS
         & variable_name="veg_litterfall_sap_wood_N15_"//tile%name,            &
         & start_timestep=ith_timestep, end_timestep=ith_timestep)
     veg_litterfall_mt(ix_sap_wood, ixN15, :,:) = ptr_3D(:,:,1)
-    
+
     !> - litterfall heart wood
     ptr_3D => input_file%Read_2d_time(                  &
         & variable_name="veg_litterfall_heart_wood_C_"//tile%name,            &
@@ -657,7 +657,7 @@ CONTAINS
         & variable_name="veg_litterfall_heart_wood_N15_"//tile%name,            &
         & start_timestep=ith_timestep, end_timestep=ith_timestep)
     veg_litterfall_mt(ix_heart_wood, ixN15, :,:) = ptr_3D(:,:,1)
-    
+
     !> - litterfall fruit
     ptr_3D => input_file%Read_2d_time(                  &
         & variable_name="veg_litterfall_fruit_C_"//tile%name,            &
@@ -683,7 +683,7 @@ CONTAINS
         & variable_name="veg_litterfall_fruit_N15_"//tile%name,            &
         & start_timestep=ith_timestep, end_timestep=ith_timestep)
     veg_litterfall_mt(ix_fruit, ixN15, :,:) = ptr_3D(:,:,1)
-    
+
     !> - litterfall labile pool
     ptr_3D => input_file%Read_2d_time(                  &
         & variable_name="veg_litterfall_labile_C_"//tile%name,            &
@@ -709,7 +709,7 @@ CONTAINS
         & variable_name="veg_litterfall_labile_N15_"//tile%name,            &
         & start_timestep=ith_timestep, end_timestep=ith_timestep)
     veg_litterfall_mt(ix_labile, ixN15, :,:) = ptr_3D(:,:,1)
-    
+
     !> - litterfall reserve pool
     ptr_3D => input_file%Read_2d_time(                  &
         & variable_name="veg_litterfall_reserve_C_"//tile%name,            &
@@ -765,7 +765,30 @@ CONTAINS
     CALL input_file%Close()
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
+    ! ! IN
+    ! !$ACC UPDATE DEVICE(root_fraction_sl(:,:,:), num_sl_above_bedrock(:,:), bulk_dens_sl(:,:,:), vol_porosity_sl(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_center_sl(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:)) ASYNC(1)
 
+    ! ! IN-OUT
+    ! !$ACC UPDATE DEVICE(qmax_org_min_sl(:,:,:), qmax_po4_min_sl(:,:,:), qmax_nh4_min_sl(:,:,:), qmax_po4_om_sl(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(volume_min_sl(:,:,:)) ASYNC(1)
+
+    ! ! SB_
+    ! !$ACC UPDATE DEVICE(nh4_assoc(:,:,:), nh4_solute(:,:,:), no3_solute(:,:,:), po4_solute(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(nh4_n15_assoc(:,:,:), nh4_n15_solute(:,:,:), no3_n15_solute(:,:,:), bulk_soil_carbon_sl(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(soil_litter_carbon_sl(:,:,:), bulk_dens_corr_sl(:,:,:), qmax_org(:,:,:), qmax_po4(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(qmax_nh4(:,:,:), qmax_fast_po4(:,:,:), qmax_slow_po4(:,:,:), km_fast_po4(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(km_slow_po4(:,:,:), km_adsorpt_po4_sl(:,:,:), km_adsorpt_nh4_sl(:,:,:), k_bioturb(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(po4_assoc_fast(:,:,:), po4_assoc_slow(:,:,:), po4_occluded(:,:,:), ph_sl(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(Qmax_AlFe_cor(:,:,:), po4_primary(:,:,:), microbial_cue_eff_tmic_mavg(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(microbial_nue_eff_tmic_mavg(:,:,:), microbial_pue_eff_tmic_mavg(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(vmax_weath_mineral_sl(:,:,:), enzyme_frac_poly(:,:,:), enzyme_frac_residue(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(enzyme_frac_poly_c(:,:,:), enzyme_frac_poly_n(:,:,:), enzyme_frac_poly_p(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(dom_cn(:,:,:), dom_cp(:,:,:), fact_n_status_mic_c_growth(:,:,:)) ASYNC(1)
+    ! !$ACC UPDATE DEVICE(fact_p_status_mic_c_growth(:,:,:), enzyme_frac_AP(:,:,:)) ASYNC(1)
+
+    ! !$ACC UPDATE DEVICE(sb_pool_mt_domain(:,:,:,:,:)) ASYNC(1)
   END SUBROUTINE update_read_soil_forcing
   ! ------------------------------------------------------------------------------------------------------- !
   ! Wrappers for update routines from different module
