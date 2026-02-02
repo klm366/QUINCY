@@ -329,9 +329,10 @@ CONTAINS
   SUBROUTINE update_read_soil_forcing(tile, options)
 
     USE mo_jsb_io_netcdf,           ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_util,                    ONLY: read_2D_var, read_3D_var
     USE mo_lnd_bgcm_store,          ONLY: read_bgcm_from_file
     USE mo_lnd_bgcm_idx
+    USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID
+    USE mo_jsb_time,                ONLY: get_date_components, get_year_day
 
     dsl4jsb_Use_processes SB_
     dsl4jsb_Use_memory(VEG_)
@@ -344,16 +345,24 @@ CONTAINS
     TYPE(t_input_file)              :: input_file       !< file with to be read veg state variables
     TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_w     !< vertical grid for sl variables
     TYPE(t_datetime),       POINTER :: current_datetime !< date and time at the beginning of this time step
+    REAL(wp),                       :: dtime
+    INTEGER                         :: iblk    !< Dimensions of the horizontal grid
+    INTEGER                         :: nsoil_input_file !< Number of vertical soil layers as provided by the ic input file
     INTEGER                         :: isoil            !< soillayer index
     INTEGER                         :: nsoil_w          !< number of soil layers (water)
-    REAL(wp),               POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables
+    INTEGER                         :: veg_pool_idx, litterfall_pool_idx
+    INTEGER                         :: year, month, day, hour, minute, second, yearday, &
+                                       ith_timestep     !< the row number of current timestep in soil forcing
+    REAL(wp), POINTER :: &
+      & ptr_1D(:    ),   &                      !< Pointer to 1d variable
+      & ptr_2D(:,  :),   &                      !< Pointer to 2d variable
+      & ptr_3D(:,:,:),   &                      !< Pointer to 3d variable
+      & ptr_4D(:,:,:,:)                         !< Pointer to 4d variable
 
-    INTEGER :: iblk
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_read_soil_forcing'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
-    dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(VEG_)
@@ -388,9 +397,6 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
-    dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
-    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_,  nhx_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_,  noy_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_,  nhx_n15_deposition)
@@ -409,98 +415,352 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), ' for tile '//TRIM(tile%name))
 
-    ! get the timestep information
+    !> get the timestep information of current timestep
     current_datetime = options%current_datetime
+    dtime   = options%dtime
+    CALL get_date_components(current_datetime, year, month, day, hour, minute, second)
+    yearday = INT(year_instant)
+    ith_timestep = IMerge_TIME2Sec(yearday, hour, minute, second)/int(dtime) + 1 ! the row number of current timestep in forcing file
+    
+    !> 1.0 the first soil forcing file
+    ! ----------------------------------------------------------------------------------------------------- !
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%soilphysics_forcing_filename), model%grid_id)
-    !> we need to get the time information from input file, and depending on the cycling years, e.g. 30yr,
-    !> look for the correct line of forcing data
+    !> get the soil layer information from forcing file
+    ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of the bottom of each soil layer
+    nsoil_input_file = SIZE(ptr_1D)                          ! number of soil layers provided by the ic input file
 
-    IF (ASSOCIATED(tile%bgcm_store)) THEN
-      bgcm_store => tile%bgcm_store
-      CALL read_bgcm_from_file(bgcm_store, SB_BGCM_POOL_ID, "sb", tile%name, routine, input_file, 'soillev', nsoil_w)
-    END IF
+    !> read the 3D forcing variables
+    !> - Fraction of fineroot
+    ptr_4D => input_file%Read_3d_time(                  &
+        & variable_name='veg_root_fraction_sl_'//tile%name,          &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    root_fraction_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
 
-    CALL read_3D_var(input_file, root_fraction_sl, 'veg_root_fraction_sl_'//tile%name, 'soillev', nsoil_w)
-    CALL read_3D_var(input_file, frac_wtr_transp_down_sl, 'sse_frac_wtr_transp_down_sl_'//tile%name, 'soillev', nsoil_w)
-    CALL read_3D_var(input_file, frac_w_lat_loss_sl, 'sse_frac_w_lat_loss_sl_'//tile%name, 'soillev', nsoil_w)
-    CALL read_3D_var(input_file, wtr_soil_sl, 'sse_wtr_soil_sl_'//tile%name, 'soillev', nsoil_w)
-    CALL read_3D_var(input_file, vol_porosity_sl, 'sse_vol_porosity_sl_'//tile%name, 'soillev', nsoil_w)
-    CALL read_3D_var(input_file, t_soil_sl, 'sse_t_soil_sl_'//tile%name, 'soillev', nsoil_w)
+    !> - Fraction of vertical transport
+    ptr_4D => input_file%Read_3d_time(                  &
+        & variable_name='sse_frac_wtr_transp_down_sl_'//tile%name,   &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    frac_wtr_transp_down_sl(:,:,:) = ptr_4D(:,:,:,1)
 
-    CALL read_2D_var(input_file, nhx_deposition, "a2l_nhx_deposition_"//tile%name)
-    CALL read_2D_var(input_file, noy_deposition, "a2l_noy_deposition_"//tile%name)
-    CALL read_2D_var(input_file, nhx_n15_deposition, "a2l_nhx_n15_deposition_"//tile%name)
-    CALL read_2D_var(input_file, noy_n15_deposition, "a2l_noy_n15_deposition_"//tile%name)
-    CALL read_2D_var(input_file, p_deposition, "a2l_p_deposition_"//tile%name)
-    CALL read_2D_var(input_file, demand_uptake_n_tuptake_mavg, "veg_demand_uptake_n_tuptake_mavg_"//tile%name)
-    CALL read_2D_var(input_file, demand_uptake_p_tuptake_mavg, "veg_demand_uptake_p_tuptake_mavg_"//tile%name)
+    !> - Fraction of lateral water loss
+    ptr_4D => input_file%Read_3d_time(                  &
+        & variable_name='sse_frac_w_lat_loss_sl_'//tile%name,        &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    frac_w_lat_loss_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
+
+    !> - Water content
+    ptr_4D => input_file%Read_3d_time(                  &
+        & variable_name='sse_wtr_soil_sl_'//tile%name,              &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    wtr_soil_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
+
+    !> - Volumetric water content
+    ptr_4D => input_file%Read_3d_time(                  &
+        & variable_name='sse_vol_porosity_sl_'//tile%name,          &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    vol_porosity_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
+
+    !> - Soil temperature
+    ptr_4D => input_file%Read_3d_time(                  &
+        & variable_name='sse_t_soil_sl_'//tile%name,                &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    t_soil_sl(:,:,:) = ptr_4D(:,:,:,1)
+
+    !> read the 2D forcing variables
+    !> - nhx deposition
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="a2l_nhx_deposition_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    nhx_deposition(:,:) = ptr_3D(:,:,1)
+
+    !> - noy deposition
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="a2l_noy_deposition_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    noy_deposition(:,:) = ptr_3D(:,:,1)
+
+    !> - nhx n15 deposition
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="a2l_nhx_n15_deposition_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    nhx_n15_deposition(:,:) = ptr_3D(:,:,1)
+
+    !> - noy n15 deposition
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="a2l_noy_n15_deposition_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    noy_n15_deposition(:,:) = ptr_3D(:,:,1)
+
+    !> - p deposition
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="a2l_p_deposition_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    p_deposition(:,:) = ptr_3D(:,:,1)
+
+    !> - plant N uptake demand
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_demand_uptake_n_tuptake_mavg_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    demand_uptake_n_tuptake_mavg(:,:) = ptr_3D(:,:,1)
+
+    !> - plant P uptake demand
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_demand_uptake_p_tuptake_mavg_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    demand_uptake_p_tuptake_mavg(:,:) = ptr_3D(:,:,1)
 
     CALL input_file%Close()
 
+    !> 2.0 the second soil forcing file
+    ! ----------------------------------------------------------------------------------------------------- !
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%veglitterfall_forcing_filename), model%grid_id)
+    IF (ASSOCIATED(tile%bgcm_store)) THEN
+      bgcm_store => tile%bgcm_store
+      litterfall_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_LITTERFALL_ID, tile%name, routine)
+      veg_litterfall_mt => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(litterfall_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
+      veg_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile%name, routine)
+      veg_pool_mt => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(veg_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
+    END IF
 
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_leaf, ixC, :), "veg_litterfall_leaf_C_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_leaf, ixN, :), "veg_litterfall_leaf_N_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_leaf, ixP, :), "veg_litterfall_leaf_P_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_leaf, ixC13, :), "veg_litterfall_leaf_C13_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_leaf, ixC14, :), "veg_litterfall_leaf_C14_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_leaf, ixN15, :), "veg_litterfall_leaf_N15_"//tile%name)
+    !> - veg fineroot C
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_pool_fine_root_C_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_pool_mt(ix_fine_root, ixC, :,:) = ptr_3D(:,:,1)
 
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fine_root, ixC, :), "veg_litterfall_fine_root_C_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fine_root, ixN, :), "veg_litterfall_fine_root_N_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fine_root, ixP, :), "veg_litterfall_fine_root_P_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fine_root, ixC13, :), "veg_litterfall_fine_root_C13_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fine_root, ixC14, :), "veg_litterfall_fine_root_C14_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fine_root, ixN15, :), "veg_litterfall_fine_root_N15_"//tile%name)
+    !> - litterfall leaf
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_leaf_C_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_leaf, ixC, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_leaf_N_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_leaf, ixN, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_leaf_P_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_leaf, ixP, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_leaf_C13_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_leaf, ixC13, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_leaf_C14_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_leaf, ixC14, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_leaf_N15_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_leaf, ixN15, :,:) = ptr_3D(:,:,1)
 
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_coarse_root, ixC, :), "veg_litterfall_coarse_root_C_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_coarse_root, ixN, :), "veg_litterfall_coarse_root_N_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_coarse_root, ixP, :), "veg_litterfall_coarse_root_P_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_coarse_root, ixC13, :), "veg_litterfall_coarse_root_C13_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_coarse_root, ixC14, :), "veg_litterfall_coarse_root_C14_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_coarse_root, ixN15, :), "veg_litterfall_coarse_root_N15_"//tile%name)
+    !> - litterfall fine root
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_fine_root_C_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_fine_root, ixC, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_fine_root_N_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_fine_root, ixN, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_fine_root_P_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_fine_root, ixP, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_fine_root_C13_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_fine_root, ixC13, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_fine_root_C14_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_fine_root, ixC14, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_fine_root_N15_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_fine_root, ixN15, :,:) = ptr_3D(:,:,1)
+    
+    !> - litterfall coarse root
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_coarse_root_C_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_coarse_root, ixC, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_coarse_root_N_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_coarse_root, ixN, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_coarse_root_P_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_coarse_root, ixP, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_coarse_root_C13_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_coarse_root, ixC13, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_coarse_root_C14_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_coarse_root, ixC14, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_coarse_root_N15_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_coarse_root, ixN15, :,:) = ptr_3D(:,:,1)
+    
+    !> - litterfall sap wood
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_sap_wood_C_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_sap_wood, ixC, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_sap_wood_N_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_sap_wood, ixN, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_sap_wood_P_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_sap_wood, ixP, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_sap_wood_C13_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_sap_wood, ixC13, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_sap_wood_C14_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_sap_wood, ixC14, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_sap_wood_N15_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_sap_wood, ixN15, :,:) = ptr_3D(:,:,1)
+    
+    !> - litterfall heart wood
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_heart_wood_C_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_heart_wood, ixC, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_heart_wood_N_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_heart_wood, ixN, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_heart_wood_P_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_heart_wood, ixP, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_heart_wood_C13_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_heart_wood, ixC13, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_heart_wood_C14_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_heart_wood, ixC14, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_heart_wood_N15_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_heart_wood, ixN15, :,:) = ptr_3D(:,:,1)
+    
+    !> - litterfall fruit
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_fruit_C_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_fruit, ixC, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_fruit_N_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_fruit, ixN, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_fruit_P_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_fruit, ixP, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_fruit_C13_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_fruit, ixC13, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_fruit_C14_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_fruit, ixC14, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_fruit_N15_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_fruit, ixN15, :,:) = ptr_3D(:,:,1)
+    
+    !> - litterfall labile pool
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_labile_C_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_labile, ixC, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_labile_N_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_labile, ixN, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_labile_P_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_labile, ixP, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_labile_C13_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_labile, ixC13, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_labile_C14_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_labile, ixC14, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_labile_N15_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_labile, ixN15, :,:) = ptr_3D(:,:,1)
+    
+    !> - litterfall reserve pool
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_reserve_C_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_reserve, ixC, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_reserve_N_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_reserve, ixN, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_reserve_P_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_reserve, ixP, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_reserve_C13_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_reserve, ixC13, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_reserve_C14_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_reserve, ixC14, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_reserve_N15_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_reserve, ixN15, :,:) = ptr_3D(:,:,1)
 
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_sap_wood, ixC, :), "veg_litterfall_sap_wood_C_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_sap_wood, ixN, :), "veg_litterfall_sap_wood_N_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_sap_wood, ixP, :), "veg_litterfall_sap_wood_P_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_sap_wood, ixC13, :), "veg_litterfall_sap_wood_C13_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_sap_wood, ixC14, :), "veg_litterfall_sap_wood_C14_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_sap_wood, ixN15, :), "veg_litterfall_sap_wood_N15_"//tile%name)
-
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_heart_wood, ixC, :), "veg_litterfall_heart_wood_C_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_heart_wood, ixN, :), "veg_litterfall_heart_wood_N_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_heart_wood, ixP, :), "veg_litterfall_heart_wood_P_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_heart_wood, ixC13, :), "veg_litterfall_heart_wood_C13_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_heart_wood, ixC14, :), "veg_litterfall_heart_wood_C14_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_heart_wood, ixN15, :), "veg_litterfall_heart_wood_N15_"//tile%name)
-
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fruit, ixC, :), "veg_litterfall_fruit_C_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fruit, ixN, :), "veg_litterfall_fruit_N_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fruit, ixP, :), "veg_litterfall_fruit_P_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fruit, ixC13, :), "veg_litterfall_fruit_C13_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fruit, ixC14, :), "veg_litterfall_fruit_C14_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_fruit, ixN15, :), "veg_litterfall_fruit_N15_"//tile%name)
-
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_labile, ixC, :), "veg_litterfall_labile_C_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_labile, ixN, :), "veg_litterfall_labile_N_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_labile, ixP, :), "veg_litterfall_labile_P_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_labile, ixC13, :), "veg_litterfall_labile_C13_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_labile, ixC14, :), "veg_litterfall_labile_C14_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_labile, ixN15, :), "veg_litterfall_labile_N15_"//tile%name)
-
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_reserve, ixC, :), "veg_litterfall_reserve_C_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_reserve, ixN, :), "veg_litterfall_reserve_N_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_reserve, ixP, :), "veg_litterfall_reserve_P_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_reserve, ixC13, :), "veg_litterfall_reserve_C13_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_reserve, ixC14, :), "veg_litterfall_reserve_C14_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_reserve, ixN15, :), "veg_litterfall_reserve_N15_"//tile%name)
-
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_seed_bed, ixC, :), "veg_litterfall_seed_bed_C_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_seed_bed, ixN, :), "veg_litterfall_seed_bed_N_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_seed_bed, ixP, :), "veg_litterfall_seed_bed_P_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_seed_bed, ixC13, :), "veg_litterfall_seed_bed_C13_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_seed_bed, ixC14, :), "veg_litterfall_seed_bed_C14_"//tile%name)
-    CALL read_2D_var(input_file, veg_litterfall_mt(ix_seed_bed, ixN15, :), "veg_litterfall_seed_bed_N15_"//tile%name)
+    !> - litterfall seed bed
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_seed_bed_C_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_seed_bed, ixC, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_seed_bed_N_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_seed_bed, ixN, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_seed_bed_P_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_seed_bed, ixP, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_seed_bed_C13_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_seed_bed, ixC13, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_seed_bed_C14_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_seed_bed, ixC14, :,:) = ptr_3D(:,:,1)
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_litterfall_seed_bed_N15_"//tile%name,            &
+        & start_timestep=ith_timestep, end_timestep=ith_timestep)
+    veg_litterfall_mt(ix_seed_bed, ixN15, :,:) = ptr_3D(:,:,1)
 
     CALL input_file%Close()
 
@@ -965,6 +1225,30 @@ CONTAINS
     DEALLOCATE (scaling, in_domain, sb_pool_total_c_2d, het_respiration_2d)
 
   END SUBROUTINE global_q_sb_diagnostics
+
+  ! ======================================================================================================= !
+  !>
+  !> @TODO add docu
+  !>
+  FUNCTION IMerge_TIME2Sec (kd, kh, km, ks) RESULT (ix)
+    !+
+    !
+    ! IMerge_TIME2Sec [function, integer]
+    !    merge day, hour, minute and second to internal time
+    !    (
+    !    day    [integer] input (day of year, 0...364)
+    !    hour   [integer] input (hour of day, 0...23)
+    !    minute [integer] input (minute of hour, 0...59)
+    !    second [integer] input (second of minute, 0...59)
+    !    )
+    !
+    !-
+    INTEGER, INTENT(in) :: kd, kh, km, ks
+    INTEGER             :: ix
+
+    ix = kd*86400 + kh*3600 + km*60 + ks
+
+  END FUNCTION IMerge_TIME2Sec
 
 #endif
 END MODULE mo_q_sb_interface
