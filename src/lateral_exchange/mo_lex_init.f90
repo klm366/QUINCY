@@ -164,11 +164,12 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(LEX_)) RETURN
 
-    IF (debug_on()) CALL message(routine, 'Initializing variables for lateral exchange on tile ' // &
-      & TRIM(tile%name) // ' (lex_id=' // TRIM(int2string(tile%lcts(1)%lex_id)) // ')')
-
     ! Get LEX ID of current tile
     lex_idt = tile%lcts(1)%lex_id
+
+    IF (debug_on()) CALL message(routine, 'Initializing variables for lateral exchange on tile ' // &
+      & TRIM(tile%name) // ' (lex_id=' // TRIM(int2string(lex_idt)) // ')')
+
     IF (lex_idt > 0) THEN
 
       dsl4jsb_Get_memory(LEX_)

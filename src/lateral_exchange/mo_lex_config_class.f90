@@ -54,7 +54,7 @@ MODULE mo_lex_config_class
       & l_macrtrns,              & !< en/disable macro-scale lateral transport between tiles
       & l_micrtrns,              & !< en/disable micro-scale lateral transport between tiles
       & l_nested,                & !< T: nested setup in which a tile can be surrounded by another tile, which
-                                         again can be surrounded by other tiles
+                                   !<    again can be surrounded by other tiles
       & l_dpr4ponds,             & !< T: depression characteristics are used for pond characteristics
                                    !< if no tile-specific pond fraction / depth is provided
       & l_noslope_dpr              !< T: if no tile-specific macro-slope is provided, the slope on
@@ -99,7 +99,7 @@ CONTAINS
       & ncontis                      !< Number of connected tiles
     CHARACTER(len=filename_max) :: &
       & ic_filename,               & !< Name of input file with initial conditions
-      & bc_filename,               & !< Name of input file with boundary conditions
+      & bc_filename                  !< Name of input file with boundary conditions
     LOGICAL                     :: &
       & l_runoff_trns,           & !< en/disable lateral surface runoff to connected tiles
       & l_drainage_trns,         & !< en/disable lateral drainage to connected tiles
