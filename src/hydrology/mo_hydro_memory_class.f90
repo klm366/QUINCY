@@ -594,21 +594,24 @@ CONTAINS
       & t_cf('char_area', 'm2', 'characteristic area of tile'),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & lrestart=.TRUE., output_level=lex_output_level,                              &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'char_h_surf', mem%char_h_surf,                                &
       & hgrid, surface,                                                              &
       & t_cf('char_h_surf', 'm', 'characteristic surface elevation of tile'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & lrestart=.TRUE., output_level=lex_output_level,                              &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'macro_slope', mem%macro_slope,                                &
       & hgrid, surface,                                                              &
       & t_cf('macro_slope', '/', 'macro scale slope of tile'),                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & lrestart=.TRUE., output_level=lex_output_level,                              &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     ! Additional variables if the tile contains land, i.e. the tile or sub-tiles are land tiles
     ! ------------------------------------------------
@@ -1215,6 +1218,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & output_level=pond_output_level,                                                          &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'ice_pond', mem%ice_pond,                                      &
@@ -1223,6 +1227,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & output_level=pond_output_level,                                                          &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'pond_melt', mem%pond_melt,                                    &

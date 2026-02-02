@@ -99,13 +99,14 @@ MODULE mo_hydro_config_class
                                 !<    variations (default)</br>
                                 !< 'uniform' (2): assume uniform soil moisture distribution for the tile,
                                 !<   e.g. for applications like HydroTiles, HighRes or sitelevel
-      & enforce_water_budget    !< Logging level in case of water balance violations in the HYDRO process - overwrites
+      & enforce_water_budget, & !< Logging level in case of water balance violations in the HYDRO process - overwrites
                                 !< [[t_jsb_model_config:enforce_water_budget]] set in namelist 'jsb_model_nml' handling
                                 !< water balance issues of all ICON-Land processes.</br>
                                 !< default: 'unset': use setting from namelist 'jsb_model_nml'</br>
                                 !< 'ignore' (0):  short, one-line warning,</br>
                                 !< 'logging' (1): detailed debugging output,</br>
                                 !< 'error' (2):   debugging output and model stop
+      & bot_drain_mode          !< different implementations of bottom drainage behavior
 
     ! quincy
     INTEGER     :: quincy_nsoil_w   !< number of soil layers for soil water calculations (equivalent 'quincy_nsoil_e' in SSE_)
@@ -189,6 +190,8 @@ CONTAINS
       & l_infil_subzero,      & !< True: infiltration of surface water below zero degC possible
       & l_ponds                 !< True: represent subgrid scale surface depressions that might
                                 !< form small ponds
+    INTEGER :: &
+      & bot_drain_mode          !< different implementations of bottom drainage behavior
 
     ! quincy
     REAL(wp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< intial estimate of soil profile using the upper bound of each soil layer [m]
@@ -231,6 +234,7 @@ CONTAINS
       & interpol_mean,              &
       & pond_dynamics,              &
       & hydro_scale,                &
+      & bot_drain_mode,             &
 #ifdef __QUINCY_STANDALONE__
       & qs_soil_depth, &
       & qs_soil_awc_prescribe, &
@@ -283,6 +287,7 @@ CONTAINS
     l_glac_in_soil         = .FALSE.
     l_infil_subzero        = .TRUE.
     l_ponds                = .FALSE.
+    bot_drain_mode         = 1
     pond_dynamics          = "tanh"
     soilhydmodel           = "VanGenuchten"
     interpol_mean          = "upstream"
@@ -405,6 +410,25 @@ CONTAINS
       CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not thoroughly validated!!')
     ELSE
       CALL message(TRIM(routine), 'Experimental pond scheme is disabled.')
+    END IF
+
+    config%bot_drain_mode = bot_drain_mode
+    IF (bot_drain_mode == 2 .OR. bot_drain_mode == 4) THEN
+      CALL message(TRIM(routine), 'Bottom drainage in soil column depends on hyd. cond. of bedrock only')
+    ELSE
+      CALL message(TRIM(routine), 'Bottom drainage in soil column depends on hyd. cond. of bedrock and lowest layer')
+    END IF
+
+    IF (bot_drain_mode == 1 .OR. bot_drain_mode == 3) THEN
+      CALL message(TRIM(routine), 'Bottom drainage in retention storage depends on hyd. cond. of bedrock and lowest layer')
+    ELSE
+      CALL message(TRIM(routine), 'Bottom drainage in retention storage depends on hyd cond of bedrock only')
+    END IF
+
+    IF (bot_drain_mode == 1 .OR. bot_drain_mode == 2 .OR. bot_drain_mode == 5) THEN
+      CALL message(TRIM(routine), 'Lateral flow is removed before bottom drainage is calculated')
+    ELSE
+      CALL message(TRIM(routine), 'Bottom drainage is removed before lateral flow is calculated')
     END IF
 
     SELECT CASE(TRIM(tolower(soilhydmodel)))
