@@ -57,6 +57,12 @@ MODULE mo_q_dfire_config_class
     ENUMERATOR :: Q_DFIRE_MODEL_SF=1
   END ENUM
 
+  !> Rate of spread fire models
+  ENUM, BIND(C)
+    ENUMERATOR :: Q_DFIRE_ROS_THONICKE = 1 !< Thonicke et al. (2010)
+    ENUMERATOR :: Q_DFIRE_ROS_OBERHAGEMANN !< Oberhagemann et al. (2025)
+  END ENUM
+
   !< Precipitation method names for namelist
   CHARACTER(len=*), PARAMETER :: dfire_cfg_precip_method_daytime = "daytime"
   CHARACTER(len=*), PARAMETER :: dfire_cfg_precip_method_mavg = "mavg" !< Default
@@ -142,6 +148,8 @@ CONTAINS
     INTEGER                       :: dfire_model_id           !< fire model ID, derived from 'dfire_modelname'
     CHARACTER(len=20)             :: dfire_precip_method_name !< precipitation method name, from namelist
     INTEGER                       :: dfire_precip_method_id   !< precipitation method id (1=,2=,3=), internal
+    CHARACTER(len=100)            :: ros_modelname            !< name of rate of spread model
+    INTEGER                       :: ros_model_id             !< rate of spread ID, derived from 'ros_modelname'
     REAL(wp)                      :: density_human_population !< Ignition events
     REAL(wp)                      :: lightning_frequency      !<
     REAL(wp)                      :: a_nd                     !< 
@@ -186,6 +194,7 @@ CONTAINS
       & flag_dfire,                           &
       & dfire_modelname,                      &
       & dfire_precip_method_name,             &
+      & ros_modelname,                        &
       & density_human_population,             &
       & lightning_frequency,                  &
       & a_nd,                                 &
@@ -224,6 +233,7 @@ CONTAINS
     flag_dfire               = .FALSE.
     dfire_modelname          = 'spitfire'         ! [spitfire, ...]
     dfire_precip_method_name = TRIM(dfire_cfg_precip_method_mavg)  ! 'mavg'
+    ros_modelname            = 'thonicke'
     density_human_population = 55.0               ! Ignition events 
     lightning_frequency      = 0.000012           ! 
     a_nd                     = 0.000048           !
@@ -272,6 +282,7 @@ CONTAINS
     config%flag_dfire                = flag_dfire
     config%dfire_modelname           = TRIM(dfire_modelname)
     config%dfire_precip_method_name  = TRIM(dfire_precip_method_name)
+    config%ros_modelname             = TRIM(ros_modelname)
     config%density_human_population  = density_human_population       ! spitfire
     config%lightning_frequency       = lightning_frequency            ! 
     config%a_nd                      = a_nd                           !
@@ -305,6 +316,10 @@ CONTAINS
     ! set the fire precipitation method ID from 'dfire_precip_method_name'
     dfire_precip_method_id        = Get_Precip_Method_id(TRIM(config%dfire_precip_method_name))
     config%dfire_precip_method_id = dfire_precip_method_id
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! set the fire rate of spread method ID from 'ros_modelname'
+    ros_model_id = Get_dfire_ros_id(TRIM(config%ros_modelname))
+    config%ros_model_id = ros_model_id
     ! ----------------------------------------------------------------------------------------------------- !
     vgrid_dead_fuel_pools  => new_vgrid(df_sf_vgrid_dead_fuel_pools_name, zaxis_generic, sf_fuel_dead_fuel_nr, &
                                         longname='Dead fuel pools', &
@@ -349,6 +364,27 @@ CONTAINS
       CALL finish(routine,'Invalid fire model name. Use spitfire.')
     END SELECT
   END FUNCTION Get_dfire_model_id
+
+
+  ! ====================================================================================================== !
+  !>
+  !> Returns the id for this fire model name
+  !>
+  FUNCTION Get_dfire_ros_id(name) RESULT(return_value)
+    CHARACTER(len=*), INTENT(in) :: name
+    INTEGER                      :: return_value
+    ! ----------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_dfire_ros_id'
+    ! ----------------------------------------------------------------------------------------------------- !
+    SELECT CASE(tolower(TRIM(name)))
+    CASE ('thonicke')
+      return_value = Q_DFIRE_ROS_THONICKE
+    CASE ('oberhagemann')
+      return_value = Q_DFIRE_ROS_OBERHAGEMANN
+    CASE DEFAULT
+      CALL finish(routine,'Invalid fire Rate of Spread')
+    END SELECT
+  END FUNCTION Get_dfire_ros_id
 
 
   ! ====================================================================================================== !
