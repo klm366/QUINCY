@@ -96,7 +96,7 @@ CONTAINS
     REAL(wp), INTENT(in)                 :: wind(nc)                    !< [m min-1]
     REAL(wp), INTENT(in)                 :: moist_extinction(nc)        !< [0 to 1]
     REAL(wp), INTENT(in)                 :: fdi(nc)                     !< Fire dange index [0 to 1]
-    TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac           !< [0 to 1]
+    TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac           !< Vegetation cover fraction [0 to 1]
     REAL(wp), INTENT(in)                 :: woi_dd_lvg(nc, nddlv)       !< Dead fuel as live grass in 1 hour (1hr+dry livegrass, 10, 100 hours)
     REAL(wp), INTENT(in)                 :: woi_dd(nc, ndd)             !< Dead fuel (1hr, 10 hors, 100hrs, dry livegress) dead fuel [kg DM m-2], note in kg
     REAL(wp), INTENT(in)                 :: woi_lv(nc, nlv)             !< Live fuel (wet livegrass, woody) live fuel [kg DM m-2], note in kg
@@ -105,26 +105,30 @@ CONTAINS
     LOGICAL, INTENT(in)                  :: mask(nc)                    !< True =  compute gridcell(s)
     TYPE(t_sf_ros)                       :: ros                         !< output [-]
 
+    REAL(wp) :: u_f_wind(nc)  !< Wind speed at vegetation cover [m min-1]
+
+    !< Calculate wind speed (paragraph before eq. 10 from Thonicke et al. (2010))
+    u_f_wind = fwd_wind_factor * wind
+
     IF (ros_model == Q_DFIRE_ROS_THONICKE) THEN
       !> Fire rate of spread (IR, optimum reaction velocity, fuel bulk density, net fuel loading, ...)
       !> calculate the rate of spread following Thonicke et al. (2010)
       ros = sf_calc_rate_of_spread_thon(nc, nddlv, &
-                                      lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
-                                      wind_sf, me_dd, fdi, veg_cover_frac, &
+                                      lctlib_fuel_bulk_density, &
+                                      u_f_wind, me_dd, fdi, &
                                       woi_dd_lvg, &
                                       mf_dd, &
                                       mask=has_fire_conditions)
     ELSE IF (ros_model == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-
       ros = sf_calc_rate_of_spread_ober(&
-          nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
-          df_sigmas_dead, df_sigmas_live, &
-          woi_dd, woi_lv, &
-          mf_dd, mf_lv, & ! todo
-          me_dd, me_lv, & ! todo
-          lctlib_fuel_bulk_density, & ! todo: rename to fbd
-          lctlib_fwd_wind_factor, wind_sf, & !< todo: rename to fwd_wind_factor
-          mask=has_fire_conditions)
+                    nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
+                    df_sigmas_dead, df_sigmas_live, &
+                    woi_dd, woi_lv, & ! fuel
+                    mf_dd, mf_lv, &
+                    me_dd, me_lv, &
+                    lctlib_fuel_bulk_density, & ! todo: rename to fbd
+                    u_f_wind, &
+                    mask=has_fire_conditions)
 
     ELSE
       CALL finish("calc_spitfire", "Unexpected Rate of spread model found ('thonicke' or 'oberhagemann')")
@@ -139,13 +143,13 @@ CONTAINS
         veg_cover_frac%grass(inc))
 
     ros%fire_duration(inc) = 241._wp / (1._wp + 240._wp * exp(-11.06_wp * fdi(inc))) !< Eq. 14 from Thonicke et al. (2010) [min]
-    IF (fire_duration(inc) > df_sf_fire_duration_thd) THEN
-      fire_duration(inc) = df_sf_fire_duration_thd
+    IF (ros%fire_duration(inc) > df_sf_fire_duration_thd) THEN
+      ros%fire_duration(inc) = df_sf_fire_duration_thd
     END IF
-    ros%distance_travelled(inc) = (ros_forward(inc) + ros_backwards(inc)) * &
-        fire_duration(inc) !< (Eq. A42 from Pfeiffer et al. (2013)) [m]
+    ros%distance_travelled(inc) = (ros%ros_forward(inc) + ros%ros_backwards(inc)) * &
+        ros%fire_duration(inc) !< (Eq. A42 from Pfeiffer et al. (2013)) [m]
     !< mean fire area (Eq. 11 from Thonicke et al. (2010))
-    ros%mean_fire_area(inc) = calc_mean_fire_area(l2b_ratio(inc), distance_travelled(inc)) !< [ha]
+    ros%mean_fire_area(inc) = calc_mean_fire_area(ros%l2b_ratio(inc), ros%distance_travelled(inc)) !< [ha]
 
   END FUNCTION calc_rate_of_spread
 
@@ -289,5 +293,21 @@ CONTAINS
     fbd_accounting_fc = fuel_bulk_density * SUM(dead_fuel * df_sf_fuel_class_factors)
     fbd = fbd_accounting_fc / total_dead_fuel
   END FUNCTION calc_fbd
+
+
+  ! ======================================================================================================= !
+  !>
+  !> t_sf_veget_cover_frac constructor
+  !>
+  FUNCTION create_veget_cover_frac(nc, tree_cover_frac, grass_cover_frac) RESULT  (veg_cover_frac)
+    INTEGER, INTENT(in) :: nc
+    REAL(wp), INTENT(in) :: tree_cover_frac(nc)   !< [0 to 1]
+    REAL(wp), INTENT(in) :: grass_cover_frac(nc)  !< [0 to 1]
+    TYPE(t_sf_veget_cover_frac) :: veg_cover_frac
+
+    ALLOCATE(veg_cover_frac%tree, source = tree_cover_frac)
+    ALLOCATE(veg_cover_frac%grass, source = grass_cover_frac)
+  END FUNCTION create_veget_cover_frac
+
 #endif
 END MODULE mo_q_dfire_sf_ros_class

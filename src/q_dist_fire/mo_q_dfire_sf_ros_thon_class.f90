@@ -49,13 +49,10 @@ MODULE mo_q_dfire_sf_ros_thon_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: t_sf_ros, t_sf_veget_cover_frac, sf_calc_rate_of_spread_thon
-
+  PUBLIC :: sf_calc_rate_of_spread_thon
   PUBLIC :: calc_sigma, calc_length_to_breadth_ratio
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_thon_class'
-
-
 
 CONTAINS
 
@@ -65,16 +62,14 @@ CONTAINS
   !>
   !> Do the science
   !>
-  FUNCTION sf_calc_rate_of_spread_thon(nc, nfuels, fuel_bulk_density, fwd_wind_factor, wind, moist_extinction, fdi, &
-                                        veg_cover_frac, w_oi, omega_o, mask) RESULT(ros)
+  FUNCTION sf_calc_rate_of_spread_thon(nc, nfuels, fuel_bulk_density, u_f_wind, moist_extinction, fdi, &
+                                        w_oi, omega_o, mask) RESULT(ros)
     INTEGER, INTENT(in)                  :: nc
     INTEGER, INTENT(in)                  :: nfuels                      !< 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)                 :: fuel_bulk_density(nc)       !< [kg m-3]
-    REAL(wp), INTENT(in)                 :: fwd_wind_factor(nc)         !< [0 to 1]
-    REAL(wp), INTENT(in)                 :: wind(nc)                    !< [m min-1]
+    REAL(wp), INTENT(in)                 :: u_f_wind(nc)                    !< [m min-1]
     REAL(wp), INTENT(in)                 :: moist_extinction(nc)        !< [0 to 1]
     REAL(wp), INTENT(in)                 :: fdi(nc)                     !< Fire dange index [0 to 1]
-    TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac           !< [0 to 1]
     REAL(wp), INTENT(in)                 :: w_oi(nc, nfuels)            !< [kg DM m-2] Note in kg
     !< According to Pfeiffer et al. (2013), omega_n must be treated as omega_o
     REAL(wp), INTENT(in)                 :: omega_o(nc)                 !< [0 to 1] (#nc)
@@ -86,7 +81,6 @@ CONTAINS
     REAL(wp) :: sigma(nc)                 !< Surface-area-to-volume-ratio [cm-1]
     REAL(wp) :: A_var(nc)
     REAL(wp) :: max_reaction_velocity(nc)
-    REAL(wp) :: u_f_wind(nc)
 
     INTEGER :: inc
     ! ----------------------------------------------------------------------------------------------------- !
@@ -95,9 +89,6 @@ CONTAINS
 
     DO inc = 1, nc
       IF (mask(inc)) THEN
-        !< Calculate wind speed (paragraph before eq. 10 from Thonicke et al. (2010))
-        u_f_wind(inc) = fwd_wind_factor(inc) * wind(inc) !< [m min-1]
-
         !<  (Table A1, 5th from Thonicke et al. (2010))
         ros%net_fuel_load(inc) = (1._wp - df_sf_mineral_fract) * SUM(w_oi(inc,:))
         ros%fbd(inc) = fuel_bulk_density(inc) !< fuel bulk density [kg m-3], precomputed at mo_q_dfire_fuel.f90 + aggregation to         average
@@ -134,21 +125,6 @@ CONTAINS
     ENDDO ! DO inc = 1, nc
 
   END FUNCTION sf_calc_rate_of_spread_thon
-
-
-  ! ======================================================================================================= !
-  !>
-  !> t_sf_veget_cover_frac constructor
-  !>
-  FUNCTION create_veget_cover_frac(nc, tree_cover_frac, grass_cover_frac) RESULT  (veg_cover_frac)
-    INTEGER, INTENT(in) :: nc
-    REAL(wp), INTENT(in) :: tree_cover_frac(nc)   !< [0 to 1]
-    REAL(wp), INTENT(in) :: grass_cover_frac(nc)  !< [0 to 1]
-    TYPE(t_sf_veget_cover_frac) :: veg_cover_frac
-
-    ALLOCATE(veg_cover_frac%tree, source = tree_cover_frac)
-    ALLOCATE(veg_cover_frac%grass, source = grass_cover_frac)
-  END FUNCTION create_veget_cover_frac
 
 
   ! ======================================================================================================= !
