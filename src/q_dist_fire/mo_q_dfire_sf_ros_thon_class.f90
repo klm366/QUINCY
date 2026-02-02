@@ -117,7 +117,7 @@ CONTAINS
     REAL(wp), INTENT(in)                 :: moist_extinction(nc)        !< [0 to 1]
     REAL(wp), INTENT(in)                 :: fdi(nc)                     !< Fire dange index [0 to 1]
     TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac           !< [0 to 1]
-    REAL(wp), INTENT(in)                 :: w_oi(nc, nfuels)            !< [g DM m-2]
+    REAL(wp), INTENT(in)                 :: w_oi(nc, nfuels)            !< [kg DM m-2] Note in kg
     !< According to Pfeiffer et al. (2013), omega_n must be treated as omega_o
     REAL(wp), INTENT(in)                 :: omega_o(nc)                 !< [0 to 1] (#nc)
     LOGICAL, INTENT(in)                  :: mask(nc)                    !< True =  compute gridcell(s)
@@ -142,7 +142,6 @@ CONTAINS
 
         !<  (Table A1, 5th from Thonicke et al. (2010))
         ros%net_fuel_load(inc) = (1._wp - df_sf_mineral_fract) * SUM(w_oi(inc,:))
-        ros%net_fuel_load(inc) = sf_convert_units("g", "kg", ros%net_fuel_load(inc))
         ros%fbd(inc) = fuel_bulk_density(inc) !< fuel bulk density [kg m-3], precomputed at mo_q_dfire_fuel.f90 + aggregation to         average
 
         sigma(inc) = calc_sigma(df_sf_sigma_tho_nr, nfuels, df_sigmas_tho, w_oi(inc,:)) !< Table A1, 3rd equation [cm-1] from Thonicke et al. (2010)
@@ -403,7 +402,7 @@ CONTAINS
   FUNCTION calc_sigma(nsigma, nfuels, sigmas, woi) RESULT (sigma)
     INTEGER, INTENT(in)  :: nsigma, nfuels                    !<
     REAL(wp), INTENT(in) :: sigmas(nsigma)                    !<
-    REAL(wp), INTENT(in) :: woi(nfuels)             !< dead fuel [kg m-2]
+    REAL(wp), INTENT(in) :: woi(nfuels)                       !< dead fuel [kg m-2]
     REAL(wp)             :: sigma                             !< output [cm-1]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)             :: total_woi

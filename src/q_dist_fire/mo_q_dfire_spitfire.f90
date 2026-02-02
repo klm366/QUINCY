@@ -692,12 +692,14 @@ CONTAINS
       spitfire % ros = sf_calc_rate_of_spread_thon(nc, df_sf_fc_spread_nr, & !< 3 = fuel classes for 1, 10 and 100 hours
         lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
         wind_sf, moisture_extinction, spitfire % fdi, veg_cover_frac, &
-        w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), fuel_moisture(:,df_sf_omega_o_idx), &
+        w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx) * df_sf_units_g_to_kg, &
+        fuel_moisture(:,df_sf_omega_o_idx), &
         mask=has_fire_conditions)
     ELSE IF (config%ros_mod_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-      ! concatenate litter + livegrass = dead fuel
+      !
       woi_dd(:,:) = [SUM(w_oi_no_lvg(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2), &
                                  SUM(live_grass(:,:,df_sf_fc_1hr_idx), DIM=2)] * df_sf_units_g_to_kg !< 2= fuel pools
+      !< No wet livegrass implemented
       woi_lv(:,:) = [0._wp, SUM(live_tree_fuel, DIM=2)] * df_sf_units_g_to_kg !< 2= fuel pool
       ! Oberhagemann: moisture of extinction
       me_dd = moisture_extinction ! litter [1hr, 10hrs, 100 hours, dry livegrass]
