@@ -63,8 +63,7 @@ MODULE mo_hydro_config_class
                                 !< i.e. avg. time before water reaches tributary [s]
       & ret_macro_srf,        & !< Assumed retention time for surface runoff,
                                 !< i.e. avg. time before water reaches tributary [s]
-      & k_brock,              & !< Hydraulic conductivity of bedrock [m s-1]
-      & min_alt_drain           !< Minimum active layer for bottom drainage
+      & k_brock                 !< Hydraulic conductivity of bedrock [m s-1]
 
     CHARACTER(len=10)     ::  &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance: 'echam5' is only option
@@ -100,14 +99,13 @@ MODULE mo_hydro_config_class
                                 !<    variations (default)</br>
                                 !< 'uniform' (2): assume uniform soil moisture distribution for the tile,
                                 !<   e.g. for applications like HydroTiles, HighRes or sitelevel
-      & enforce_water_budget, & !< Logging level in case of water balance violations in the HYDRO process - overwrites
+      & enforce_water_budget    !< Logging level in case of water balance violations in the HYDRO process - overwrites
                                 !< [[t_jsb_model_config:enforce_water_budget]] set in namelist 'jsb_model_nml' handling
                                 !< water balance issues of all ICON-Land processes.</br>
                                 !< default: 'unset': use setting from namelist 'jsb_model_nml'</br>
                                 !< 'ignore' (0):  short, one-line warning,</br>
                                 !< 'logging' (1): detailed debugging output,</br>
                                 !< 'error' (2):   debugging output and model stop
-      & bot_drain_mode          !< different implementations of bottom drainage behavior
 
     ! quincy
     INTEGER     :: quincy_nsoil_w   !< number of soil layers for soil water calculations (equivalent 'quincy_nsoil_e' in SSE_)
@@ -172,8 +170,7 @@ CONTAINS
       & w_soil_wilt_fract,    & !< Relative root zone moisture at wilting point
       & ret_macro_blg,        & !< Retention time for below ground runoff [s]
       & ret_macro_srf,        & !< Retention time for surface runoff [s]
-      & k_brock,              & !< Hydraulic conductivity of bedrock [m s-1]
-      & min_alt_drain
+      & k_brock                 !< Hydraulic conductivity of bedrock [m s-1]
     CHARACTER(len=16) :: &
       & scheme_stom_cond,     & !< Scheme to compute stomatal conductance
       & soilhydmodel,         & !< Model to calculate soil hydraulic properties
@@ -192,8 +189,6 @@ CONTAINS
       & l_infil_subzero,      & !< True: infiltration of surface water below zero degC possible
       & l_ponds                 !< True: represent subgrid scale surface depressions that might
                                 !< form small ponds
-    INTEGER :: &
-      & bot_drain_mode          !< different implementations of bottom drainage behavior
 
     ! quincy
     REAL(wp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< intial estimate of soil profile using the upper bound of each soil layer [m]
@@ -222,7 +217,6 @@ CONTAINS
       & ret_macro_blg,              &
       & ret_macro_srf,              &
       & k_brock,                    &
-      & min_alt_drain,              &
       & scheme_stom_cond,           &
       & l_read_initial_moist,       &
       & sanitize_restart,           &
@@ -237,7 +231,6 @@ CONTAINS
       & interpol_mean,              &
       & pond_dynamics,              &
       & hydro_scale,                &
-      & bot_drain_mode,             &
 #ifdef __QUINCY_STANDALONE__
       & qs_soil_depth, &
       & qs_soil_awc_prescribe, &
@@ -280,7 +273,6 @@ CONTAINS
     ret_macro_blg          = 432000._wp          ! [s]
     ret_macro_srf          = 36000._wp           ! [s]
     k_brock                = 1.E-6_wp            ! [m s-1]
-    min_alt_drain          = 0._wp
     scheme_stom_cond       = 'echam5'
     l_read_initial_moist   = .FALSE.
     sanitize_restart       = .FALSE.
@@ -291,7 +283,6 @@ CONTAINS
     l_glac_in_soil         = .FALSE.
     l_infil_subzero        = .TRUE.
     l_ponds                = .FALSE.
-    bot_drain_mode         = 1
     pond_dynamics          = "tanh"
     soilhydmodel           = "VanGenuchten"
     interpol_mean          = "upstream"
@@ -347,7 +338,6 @@ CONTAINS
     config%ret_macro_blg       = ret_macro_blg
     config%ret_macro_srf       = ret_macro_srf
     config%k_brock             = k_brock
-    config%min_alt_drain       = min_alt_drain
 
     config%scheme_stom_cond       = scheme_stom_cond
 
@@ -415,25 +405,6 @@ CONTAINS
       CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not thoroughly validated!!')
     ELSE
       CALL message(TRIM(routine), 'Experimental pond scheme is disabled.')
-    END IF
-
-    config%bot_drain_mode = bot_drain_mode
-    IF (bot_drain_mode == 2 .OR. bot_drain_mode == 4) THEN
-      CALL message(TRIM(routine), 'Bottom drainage in soil column depends on hyd. cond. of bedrock only')
-    ELSE
-      CALL message(TRIM(routine), 'Bottom drainage in soil column depends on hyd. cond. of bedrock and lowest layer')
-    END IF
-
-    IF (bot_drain_mode == 1 .OR. bot_drain_mode == 3) THEN
-      CALL message(TRIM(routine), 'Bottom drainage in retention storage depends on hyd. cond. of bedrock and lowest layer')
-    ELSE
-      CALL message(TRIM(routine), 'Bottom drainage in retention storage depends on hyd cond of bedrock only')
-    END IF
-
-    IF (bot_drain_mode == 1 .OR. bot_drain_mode == 2 .OR. bot_drain_mode == 5) THEN
-      CALL message(TRIM(routine), 'Lateral flow is removed before bottom drainage is calculated')
-    ELSE
-      CALL message(TRIM(routine), 'Bottom drainage is removed before lateral flow is calculated')
     END IF
 
     SELECT CASE(TRIM(tolower(soilhydmodel)))

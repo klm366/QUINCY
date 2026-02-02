@@ -1709,7 +1709,6 @@ CONTAINS
         & dsl4jsb_Config(HYDRO_)%interpol_mean,                   & ! Interpolation scheme for hydraulic
                                                                     ! conductivity
         & dsl4jsb_Config(HYDRO_)%hydro_scale,                     & ! Subgrid scale inhomogeneity option
-        & dsl4jsb_Config(HYDRO_)%bot_drain_mode,                  & ! Scheme for bottom layer drainage
         & model%config%model_scheme,                              &
         & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               & ! Rel. root zone moisture at wilting point []
         & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     & ! Soil depth until bedrock [m]
@@ -1782,7 +1781,6 @@ CONTAINS
         & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
         & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
         & dsl4jsb_Config(HYDRO_)%hydro_scale,                     & ! choice of hydrological scale scheme
-        & dsl4jsb_Config(HYDRO_)%bot_drain_mode,                  &
         & model%config%model_scheme,                              &
         & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
         & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
