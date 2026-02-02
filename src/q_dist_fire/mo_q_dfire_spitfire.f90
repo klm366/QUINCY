@@ -564,6 +564,7 @@ CONTAINS
   !> Run science
   !>
   SUBROUTINE calc_spitfire(nc, nalphas, nfuelclasses, dtime, one_day, & ! in
+                  config_ros_model, &
                   lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
                   density_human_population, a_nd, lightning_frequency, & ! ignition events
                   const_calorific_heat_content, const_i_surface_thd, &
@@ -580,6 +581,8 @@ CONTAINS
                   mask)
     INTEGER, INTENT(in)   :: nc, nalphas, nfuelclasses
     REAL(wp), INTENT(in)  :: dtime, one_day
+
+    INTEGER, INTENT(in)   :: config_ros_model                      !< Select ROS implementation
 
     REAL(wp), INTENT(in)  :: lctlib_fuel_bulk_density(nc)          !< Fuel bulk density [kg m-3]
     REAL(wp), INTENT(in)  :: lctlib_fwd_wind_factor(nc)            !< Forward wind factor [0 to 1]
@@ -618,17 +621,16 @@ CONTAINS
 
     ! locals
     TYPE(t_q_sf_ignitions)  :: sf_ignitions
-    REAL(wp) :: w_oi(nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes with live grass (included in 1 hr) [g DM m-2]
-    REAL(wp) :: w_oi_no_lvg(nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
-    REAL(wp) :: tot_lvg_fuel(nc)           !< Total livegrass fuel [g DM m-2]
+    REAL(wp), ALLOCATABLE :: w_oi(:,:)      !< Dead fuel by fuel classes (litter only)  [g DM m-2]
+    REAL(wp), ALLOCATABLE :: dry_lvg(:,:,:) !< Dry live grass, considered dead fuel [g DM m-2] (#nc,#livegrass fuel pools, #fuel classes)
+    REAL(wp) :: tot_lvg_fuel(nc)            !< Total livegrass fuel [g DM m-2]
     INTEGER :: ndeadpools
-    TYPE(t_sf_fuel_class) :: fuel_cls
-    LOGICAL  :: has_dead_fuel(nc)          !< True = dead fuel
-    LOGICAL  :: has_fire_conditions(nc)    !< 1, 10, 100 and 1000 hours
+    LOGICAL  :: has_dead_fuel(nc)           !< True = dead fuel
+    LOGICAL  :: has_fire_conditions(nc)     !< 1, 10, 100 and 1000 hours
 
     !< Oberhagemann related
-    REAL(wp), ALLOCATABLE :: woi_dd(:,:) !< [kg DM m-2] (#fuel classes, #nc) Note in kg
-    REAL(wp), ALLOCATABLE :: woi_lv(:,:) !< [kg DM m-2] (#fuel classes, #nc) Note in kg
+    REAL(wp), ALLOCATABLE :: woi_dd(:,:) !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, dimensions reversed
+    REAL(wp), ALLOCATABLE :: woi_lv(:,:) !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, ...
     REAL(wp), ALLOCATABLE :: me_dd(:,:) !< Moisture of extinction [-] (#fuel classes, #nc)
     REAL(wp), ALLOCATABLE :: me_lv(:,:)
     REAL(wp), ALLOCATABLE :: mf_dd(:,:) !< Fuel moisture [-] (#fuel classes, #nc)
@@ -663,18 +665,17 @@ CONTAINS
         mask= has_fire_conditions)
 
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
-    w_oi = SUM(dead_fuel, DIM=2) !< 2= dead fuel pools index, fuel class only
-    ASSOCIATE ( ixs_litter_pools => ixs_sf_dead_litter_fuel_pools)
-      w_oi_no_lvg = SUM(dead_fuel(:,ixs_litter_pools,:), DIM=2) !< 2= fuel pools index, litter fuel class only
-    END ASSOCIATE
+    w_oi = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,:), DIM=2) !< 2= fuel pools index, litter pools only
+    dry_lvg = SUM(dead_fuel(:,ixs_sf_dead_livegrass_fuel_pools,:), DIM=2)
 
-    DO CONCURRENT (i=1:SIZE(live_grass_fuel,2), j=1:SIZE(live_grass_fuel,3)) !2=fuel pools dim, 3=fuel classes dim
-      tot_lvg_fuel = SUM(live_grass_fuel(:,i,j)) ! sum multiple dimensions
+    DO CONCURRENT (i=1:SIZE(dry_lvg,2), j=1:SIZE(dry_lvg,3)) !2=fuel pools dim, 3=fuel classes dim
+      tot_lvg_fuel = SUM(dry_lvg(:,i,j)) ! sum multiple dimensions
     END DO
+
     !< Compute fuel moisture (omega_o, omega_nl)
     fuel_moisture = sf_calc_fuel_moisture(nc, nalphas, df_sf_fc_spread_nr, alphas, &
                                           nesterov_index, ab_moisture, &
-                                          w_oi_no_lvg(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & ! exclude livegrass from dead fuel
+                                          w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & ! exclude livegrass from dead fuel
                                           tot_lvg_fuel) ! as it is accounted in tot_lvg_fuel
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
@@ -686,41 +687,30 @@ CONTAINS
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions = has_fire_conditions .AND. (spitfire % fdi > 1.e-6_wp)
 
-    IF (config%ros_mod_id == Q_DFIRE_ROS_THONICKE) THEN
-      !> Fire rate of spread (IR, optimum reaction velocity, fuel bulk density, net fuel loading, ...)
-      !> calculate the rate of spread following Thonicke et al. (2010)
-      spitfire % ros = sf_calc_rate_of_spread_thon(nc, df_sf_fc_spread_nr, & !< 3 = fuel classes for 1, 10 and 100 hours
-        lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
-        wind_sf, moisture_extinction, spitfire % fdi, veg_cover_frac, &
-        w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx) * df_sf_units_g_to_kg, &
-        fuel_moisture(:,df_sf_omega_o_idx), &
-        mask=has_fire_conditions)
-    ELSE IF (config%ros_mod_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-      !
-      woi_dd(:,:) = [SUM(w_oi_no_lvg(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2), &
-                                 SUM(live_grass(:,:,df_sf_fc_1hr_idx), DIM=2)] * df_sf_units_g_to_kg !< 2= fuel pools
-      !< No wet livegrass implemented
-      woi_lv(:,:) = [0._wp, SUM(live_tree_fuel, DIM=2)] * df_sf_units_g_to_kg !< 2= fuel pool
-      ! Oberhagemann: moisture of extinction
-      me_dd = moisture_extinction ! litter [1hr, 10hrs, 100 hours, dry livegrass]
-      me_lv = moisture_extinction !< [wet livegrass, woody]
-      ! Oberhagemann: fuel moisture
-      mf_dd = fuel_moisture(:,df_sf_omega_o_idx)
-      mf_lv = fuel_moisture(:,df_sf_omega_o_idx) ! todo: compute as in Andrews PL 2018
-      spitfire % ros_ober = sf_calc_rate_of_spread_ober(&
-                            nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
-                            df_sigmas_dead, df_sigmas_live, &
-                            woi_dd, woi_lv, &
-                            mf_dd, mf_lv, & ! todo
-                            me_dd, me_lv, & ! todo
-                            lctlib_fuel_bulk_density, & ! todo: rename to fbd
-                            lctlib_fwd_wind_factor, wind_sf, & !< todo: rename to fwd_wind_factor
-                            mask=has_fire_conditions)
+    !< dead fuel (1 hr, 10 hrs, 100 hrs litter and dry livegrass)
+    woi_dd(:,:) = w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx) * df_sf_units_g_to_kg
+    woi_dd(:,df_sf_fc_1hr_idx) = SUM(dry_lvg(:,:,df_sf_fc_1hr_idx), DIM=2) * df_sf_units_g_to_kg  !< 2= fuel pools
 
-    ELSE
-      CALL finish("calc_spitfire", "Unexpected ROS fire model found")
-    END IF
+    !< (Wet livegrass implemented, woody)
+    !< Wet livegrass is:
+    !< -Not accounted in Thonicke's et al. 2010)
+    !< -Not yet implemented in Oberhagemann
+    woi_lv(:,:) = [0._wp, SUM(live_tree_fuel, DIM=2)] * df_sf_units_g_to_kg !< 2= fuel pool
+    me_dd = moisture_extinction ! litter [1hr, 10hrs, 100 hours, dry livegrass]
+    me_lv = moisture_extinction !< [wet livegrass, woody]
+    ! Oberhagemann: fuel moisture
+    mf_dd = fuel_moisture(:,df_sf_omega_o_idx)
+    mf_lv = fuel_moisture(:,df_sf_omega_o_idx) ! todo: compute as in Andrews PL 2018
 
+    spitfire % ros = sf_calc_rate_of_spread(nc, df_sf_fc_spread_nr, & !< 3 = fuel classes for 1, 10 and 100 hours
+                                config_ros_model, &
+                                lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
+                                wind_sf, moisture_extinction, spitfire % fdi, veg_cover_frac, &
+                                w_oi, & ! dead fuel with 1 hour dry livegrass
+                                woi_dd, woi_lv, & !< dead fuel with 1..100 hours and live grass
+                                mf_dd, mf_lv, &
+                                me_dd, me_lv, &
+                                mask=has_fire_conditions)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
     sf_ignitions = calc_q_sf_ignition(nc, density_human_population, &

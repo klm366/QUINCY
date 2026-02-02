@@ -88,7 +88,14 @@ MODULE mo_q_dfire_constants
                   t_sf_fuel_dead_fuel_res_assoc_ix        !< from sb_pool_mt ( Optional)
   END ENUM
 
-  INTEGER, PARAMETER :: ixs_sf_dead_litter_fuel_pools(7) = [t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix, &
+  INTEGER, PARAMETER :: ixs_sf_dead_livegrass_fuel_pools(5) = [t_sf_fuel_dead_fuel_grass_leaf_ix, &
+                                                  t_sf_fuel_dead_fuel_grass_sap_ix, &
+                                                  t_sf_fuel_dead_fuel_grass_labile_ix, &
+                                                  t_sf_fuel_dead_fuel_grass_reserve_ix, &
+                                                  t_sf_fuel_dead_fuel_grass_fruit_ix ]
+
+
+  INTEGER, PARAMETER :: (7) = [t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix, &
       t_sf_fuel_dead_fuel_dom_assoc_ix, t_sf_fuel_dead_fuel_dom_ix, t_sf_fuel_dead_fuel_soluable_ix, &
       t_sf_fuel_dead_fuel_res_ix, t_sf_fuel_dead_fuel_res_assoc_ix]
 
