@@ -201,7 +201,7 @@ CONTAINS
 
     ! -------------------------------------------------------------------------------------------------- !
     REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
-    REAL(wp), ALLOCATABLE       :: hlp1(:,:) 
+    REAL(wp), ALLOCATABLE       :: hlp1(:,:)
     INTEGER                     :: current_year
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: filename_fertiliser_data
