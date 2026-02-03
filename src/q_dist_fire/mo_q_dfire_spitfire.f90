@@ -623,7 +623,7 @@ CONTAINS
 
     ! locals
     TYPE(t_q_sf_ignitions)  :: sf_ignitions
-    REAL(wp), ALLOCATABLE :: w_oi(:,:)      !< Dead fuel by fuel classes (litter only)  [g DM m-2]
+    REAL(wp) :: w_oi(nc,df_sf_fc_spread_nr)      !< Dead fuel by spread fuel classes (litter only)  [g DM m-2]
     REAL(wp), ALLOCATABLE :: dry_lvg(:,:) !< Dry live grass, considered dead fuel [g DM m-2] (#nc,#livegrass fuel pools, #fuel classes)
     REAL(wp) :: tot_lvg_fuel(nc)            !< Total livegrass fuel [g DM m-2]
     INTEGER :: ndeadpools
@@ -632,8 +632,8 @@ CONTAINS
     REAL(wp) :: tot_lvt_fuel(nc)            !< Total amount of live tree fuel [g DM m-2]
 
     !< Oberhagemann related
-    REAL(wp), ALLOCATABLE :: woi_dd(:,:) !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, dimensions reversed
-    REAL(wp), ALLOCATABLE :: woi_lv(:,:) !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, ...
+    REAL(wp) :: woi_dd(nc,df_sf_sigma_dd_nr) !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, dimensions reversed
+    REAL(wp) :: woi_lv(nc,df_sf_sigma_lv_nr) !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, ...
     REAL(wp), ALLOCATABLE :: me_dd(:,:) !< Moisture of extinction [-] (#fuel classes, #nc)
     REAL(wp), ALLOCATABLE :: me_lv(:,:)
     REAL(wp), ALLOCATABLE :: mf_dd(:,:) !< Fuel moisture [-] (#fuel classes, #nc)
@@ -668,14 +668,14 @@ CONTAINS
         mask= has_fire_conditions)
 
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
-    w_oi = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,:), DIM=2) !< 2= fuel pools index, litter pools only
+    w_oi = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
     dry_lvg = SUM(dead_fuel(:,ixs_sf_dead_livegrass_fuel_pools,:), DIM=2)
     tot_lvg_fuel = SUM(dry_lvg, DIM=2) ! 2 = fuel classes 
 
     !< Compute fuel moisture (omega_o, omega_nl)
     fuel_moisture = sf_calc_fuel_moisture(nc, nalphas, df_sf_fc_spread_nr, alphas, &
                                           nesterov_index, ab_moisture, &
-                                          w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), & ! exclude livegrass from dead fuel
+                                          w_oi, & ! exclude livegrass from dead fuel
                                           tot_lvg_fuel) ! as it is accounted in tot_lvg_fuel
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
@@ -688,8 +688,8 @@ CONTAINS
     has_fire_conditions = has_fire_conditions .AND. (spitfire % fdi > 1.e-6_wp)
 
     !< dead fuel (1 hr, 10 hrs, 100 hrs litter and dry livegrass)
-    woi_dd(:,:) = w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx) * df_sf_units_g_to_kg
-    woi_dd(:,df_sf_fc_1hr_idx) = dry_lvg(:,df_sf_fc_1hr_idx) * df_sf_units_g_to_kg  !< 2= fuel pools
+    woi_dd(:,1:3) = w_oi * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
+    woi_dd(:,4) = dry_lvg(:,df_sf_fc_1hr_idx) * df_sf_units_g_to_kg  !< 4 = dry livegrass
 
     !< (Wet livegrass implemented, woody)
     !< Wet livegrass is:
@@ -698,29 +698,20 @@ CONTAINS
     DO CONCURRENT (i=1:SIZE(live_tree_fuel,2), j=1:SIZE(live_tree_fuel,3)) !2=fuel pools, 3=fuel classes 
       tot_lvt_fuel = SUM(live_tree_fuel(:,i,j)) ! sum multiple dimensions
     END DO
-    woi_lv(:,1) = 0._wp * df_sf_units_g_to_kg !< 1 = wet livegrass
+    woi_lv(:,1) = 0._wp !< 1 = wet livegrass, not yet implemented
     woi_lv(:,2) = tot_lvt_fuel * df_sf_units_g_to_kg !< 2= woody fuel
-    me_dd(:,1) = moisture_extinction ! litter [1hr, 10hrs, 100 hours, dry livegrass]
-    me_dd(:,2) = moisture_extinction ! litter [1hr, 10hrs, 100 hours, dry livegrass]
-    me_dd(:,3) = moisture_extinction ! litter [1hr, 10hrs, 100 hours, dry livegrass]
-    me_dd(:,4) = moisture_extinction ! litter [1hr, 10hrs, 100 hours, dry livegrass]
-    me_lv(:,1) = moisture_extinction !< [wet livegrass, woody]
-    me_lv(:,2) = moisture_extinction !< [wet livegrass, woody]
+    me_dd = SPREAD( moisture_extinction, DIM=1, NCOPIES=df_sf_sigma_dd_nr ) !< litter [1hr, 10hrs, 100 hours, dry livegrass]
+    me_lv = SPREAD( moisture_extinction, DIM=1, NCOPIES=df_sf_sigma_lv_nr ) !< [wet livegrass, woody] 
     ! Oberhagemann: fuel moisture
-    mf_dd(:,1) = fuel_moisture(:,df_sf_omega_o_idx) ! todo: use SPREAD(...) instead
-    mf_dd(:,2) = fuel_moisture(:,df_sf_omega_o_idx)
-    mf_dd(:,3) = fuel_moisture(:,df_sf_omega_o_idx)
-    mf_dd(:,4) = fuel_moisture(:,df_sf_omega_o_idx)
-    mf_lv(:,1) = fuel_moisture(:,df_sf_omega_o_idx) ! todo: compute as in Andrews PL 2018
-    mf_lv(:,2) = fuel_moisture(:,df_sf_omega_o_idx) ! todo: compute as in Andrews PL 2018
+    mf_dd = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=1, NCOPIES=df_sf_sigma_dd_nr ) ! litter [1hr, 10hrs, 100 hours, dry livegrass]
+    mf_lv = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=1, NCOPIES=df_sf_sigma_lv_nr ) ! todo: compute as in Andrews PL 2018 
 
-    spitfire % ros = sf_calc_rate_of_spread(nc, df_sf_fc_spread_nr, & !< 3 = fuel classes for 1+livegrass, 10 and 100 hours (thonicke's related)
+    spitfire % ros = sf_calc_rate_of_spread(nc, & 
                                 df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, & ! oberhagemann related
                                 config_ros_model_id, & !< Select Rate of spread implementation
                                 lctlib_fuel_bulk_density, &
                                 lctlib_fwd_wind_factor, wind_sf, &
                                 moisture_extinction, spitfire % fdi, veg_cover_frac, &
-                                w_oi, &   !< (1hr litter + dry livegrass, 10hrs litter, 100hrs litter)
                                 woi_dd, & !< (1hr litter, 10hrs litter, 100hrs litter, dry livegrass)
                                 woi_lv, & !< (wet livegrass, woody) 
                                 mf_dd, mf_lv, & !< Fuel moisture
