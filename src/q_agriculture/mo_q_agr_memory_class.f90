@@ -230,7 +230,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & lrestart = .TRUE., &
-        & initval_r = 150.0_wp)
+        & initval_r = 30.0_wp)
 
       CALL mem%Add_var('crop_season_per_year', mem%crop_season_per_year, &
         & hgrid, surface, &

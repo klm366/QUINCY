@@ -525,7 +525,7 @@ MODULE mo_q_agr_process
       & nc, &
       & nd_crop_season, &
       & nd_crop_season_mavg, &
-      & crop_season_per_year_mavg, &
+      & crop_season_per_year, &
       & nh4_fertiliser, &
       & no3_fertiliser, &
       & n_manure, &
@@ -545,7 +545,7 @@ MODULE mo_q_agr_process
     INTEGER,  INTENT(in)    :: nc                         !< dimensions
     REAL(wp), INTENT(in)    :: nd_crop_season(:)          !< number of days this growing season has lasted
     REAL(wp), INTENT(in)    :: nd_crop_season_mavg(:)     !< number of days this growing season has lasted
-    REAL(wp), INTENT(in)    :: crop_season_per_year_mavg(:) !< average number of growing season per year (#/yr)
+    REAL(wp), INTENT(in)    :: crop_season_per_year(:)    !< current number of growing season per year (#/yr)
     REAL(wp), INTENT(in)    :: nh4_fertiliser(:)          !< annual NH4 fertiliser rate (mol/m2/yr)
     REAL(wp), INTENT(in)    :: no3_fertiliser(:)          !< annual NO3 fertiliser rate (mol/m2/yr)
     REAL(wp), INTENT(in)    :: n_manure(:)                !< annual N manure rate on crops (mol/m2/yr)
@@ -556,7 +556,7 @@ MODULE mo_q_agr_process
       &                        fertiliser_po4(:)          !< PO4 fertiliser application [micro mol / m2 / s]
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER        :: ic                !< loop over grid cells
-    REAL(wp)       :: hlp1
+    REAL(wp)       :: hlp1, hlp2, hlp3, hlp4
     LOGICAL        :: is_fertiliser_day
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_fertiliser_application'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -567,22 +567,24 @@ MODULE mo_q_agr_process
       !>     the first application day is forced to be the first day after planting to avoid fertilisation
       !>     outside the growing season
       !>
-      IF (FLOOR(nd_crop_season(ic)) == MAX(1,FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day1)) &
-          .OR. FLOOR(nd_crop_season(ic)) == FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day2)   &
-          .OR. FLOOR(nd_crop_season(ic)) == FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day3)   &
-          .OR. FLOOR(nd_crop_season(ic)) == FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day4)) THEN
+      hlp1 = nd_crop_season(ic) - MAX(1,FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day1))
+      hlp2 = nd_crop_season(ic) - FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day2)
+      hlp3 = nd_crop_season(ic) - FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day3)
+      hlp4 = nd_crop_season(ic) - FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day4)
+
+      IF ((hlp1 > eps4 .AND. hlp1 < 1.0_wp + eps4) &
+          .OR. (hlp2 > eps4 .AND. hlp2 < 1.0_wp + eps4) &
+          .OR. (hlp3 > eps4 .AND. hlp3 < 1.0_wp + eps4) &
+          .OR. (hlp4 > eps4 .AND. hlp4 < 1.0_wp + eps4)) THEN
         is_fertiliser_day = .TRUE.
       ELSE
         is_fertiliser_day = .FALSE.
       END IF
       !> 2.0 Mineral fertiliser and manure application for croplands
       !>
-      IF (is_fertiliser_day) THEN
-        IF (crop_season_per_year_mavg(ic) > 1.5_wp) THEN
-          hlp1 = 1._wp / one_day * 1.e6_wp / 4._wp / 2._wp ! unit conversion and split into 4 doses per crop cycle
-        ELSE
-          hlp1 = 1._wp / one_day * 1.e6_wp / 4._wp ! unit conversion and split into 4 doses
-        END IF
+      ! Only apply fertiliser in the first cropping season of each year
+      IF (is_fertiliser_day .AND. crop_season_per_year(ic) == 1.0_wp) THEN
+        hlp1 = 1._wp / one_day * 1.e6_wp / 4._wp ! unit conversion and split into 4 doses
         ! combination of ammoniunm added as inorganic and organic fertiliser
         fertiliser_nh4(ic) = (nh4_fertiliser(ic) + frac_manure_nh4 * n_manure(ic)) * hlp1
         fertiliser_nh4_n15(ic) = (nh4_fertiliser(ic) / &

@@ -356,7 +356,7 @@ MODULE mo_q_agr_interface
     !$ACC END PARALLEL LOOP
 
     CALL calc_fertiliser_application(nc, nd_crop_season(:), nd_crop_season_mavg(:),                  & ! in
-      &                               crop_season_per_year_mavg(:), nh4_fertiliser(:),               &
+      &                               crop_season_per_year(:), nh4_fertiliser(:),                    &
       &                               no3_fertiliser(:), n_manure_crop(:),                           &
       &                               fertiliser_nh4(:), fertiliser_nh4_n15(:),                      & ! out
       &                               fertiliser_no3(:), fertiliser_no3_n15(:),                      &

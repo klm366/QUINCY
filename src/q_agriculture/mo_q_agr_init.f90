@@ -175,6 +175,7 @@ CONTAINS
     USE mo_jsb_io_netcdf,             ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_q_agr_constants,           ONLY: iq_background_n_fertiliser_rate, frac_fertil_nh4
     USE mo_jsb_physical_constants,    ONLY: molar_mass_N
+    USE mo_jsb_math_constants,        ONLY: eps8
 
     dsl4jsb_Use_memory(Q_AGR_)
     ! -------------------------------------------------------------------------------------------------- !
@@ -273,12 +274,26 @@ CONTAINS
         ptr_2D => input_file%Read_2d(variable_name='fertl_pasture_no3', fill_array = no3_fertiliser_pasture(:,:))
         CALL input_file%Close()
 
+        ! Convert unit from kg N ha-1 yr-1 to mol N m-2 yr-1
+        nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N
+        no3_fertiliser_c3crops(:,:) = no3_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N
+           
         ! The actually applied fertiliser is the maximum of the default and the (converted) read fertiliser
-        nh4_fertiliser_c3crops(:,:) = MAX(frac_fertil_nh4 * iq_background_n_fertiliser_rate, &
-                                          nh4_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N)
-        no3_fertiliser_c3crops(:,:) = MAX((1._wp - frac_fertil_nh4) * iq_background_n_fertiliser_rate, &
-                                          no3_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N)
+        ! Use nh4_fertiliser_c4crops as a temporary variable
+        nh4_fertiliser_c4crops(:,:) = nh4_fertiliser_c3crops(:,:) + no3_fertiliser_c3crops(:,:)
+        ! If fertiliser is zero in the input, applying the minimum fertiliser rate and default NH4/NO3 ratio
+        WHERE(nh4_fertiliser_c4crops(:,:) <= eps8) 
+          nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * iq_background_n_fertiliser_rate
+          no3_fertiliser_c3crops(:,:) = (1._wp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
+        ! IF fertiliser is non-zero but low, applying the minimum fertiliser rate but original NH4/NO3 ratio
+        ELSEWHERE(nh4_fertiliser_c4crops(:,:) > eps8 .AND. nh4_fertiliser_c4crops(:,:) <= iq_background_n_fertiliser_rate)
+          nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / nh4_fertiliser_c4crops(:,:) &
+                                        * iq_background_n_fertiliser_rate
+          no3_fertiliser_c3crops(:,:) = no3_fertiliser_c3crops(:,:) / nh4_fertiliser_c4crops(:,:) &
+                                        * iq_background_n_fertiliser_rate
+        ENDWHERE
         ! NMIP does not provide information for C3 vs. C4 crops, assert rates are the same
+        ! Clean the temporary nh4_fertiliser_c4crops and use it to represent C4 crop nh4 fertiliser again
         nh4_fertiliser_c4crops(:,:) = nh4_fertiliser_c3crops(:,:)
         no3_fertiliser_c4crops(:,:) = no3_fertiliser_c3crops(:,:)
 
