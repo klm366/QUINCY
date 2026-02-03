@@ -185,6 +185,8 @@ CONTAINS
     TYPE(t_jsb_model),            POINTER :: model
     TYPE(t_jsb_grid),             POINTER :: hgrid
     CLASS(t_jsb_tile_abstract),   POINTER :: tile
+    INTEGER                               :: nproma
+    INTEGER                               :: nblks
 
     dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_memory(Q_AGR_)
@@ -199,12 +201,16 @@ CONTAINS
 
     ! -------------------------------------------------------------------------------------------------- !
     REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
+    REAL(wp), ALLOCATABLE       :: hlp1(:,:) 
     INTEGER                     :: current_year
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: filename_fertiliser_data
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_fertiliser_input'
     ! -------------------------------------------------------------------------------------------------- !
     model => Get_model(model_id)
+    hgrid  => Get_grid(model%grid_id)
+    nproma = hgrid%Get_nproma()
+    nblks  = hgrid%Get_nblks()
     CALL model%Get_top_tile(tile)
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
@@ -219,6 +225,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(Q_AGR_, no3_fertiliser_pasture)
     dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_crop)
     dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_pasture)
+
+    ALLOCATE(hlp1(nproma, nblk))
 
     IF (.NOT. dsl4jsb_Config(Q_AGR_)%l_read_fertiliser) THEN
       ! ... use background rate
@@ -273,24 +281,23 @@ CONTAINS
         ptr_2D => input_file%Read_2d(variable_name='fertl_pasture_nh4', fill_array = nh4_fertiliser_pasture(:,:))
         ptr_2D => input_file%Read_2d(variable_name='fertl_pasture_no3', fill_array = no3_fertiliser_pasture(:,:))
         CALL input_file%Close()
-
-        ! Convert unit from kg N ha-1 yr-1 to mol N m-2 yr-1
-        nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N
-        no3_fertiliser_c3crops(:,:) = no3_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N
            
-        ! The actually applied fertiliser is the maximum of the default and the (converted) read fertiliser
-        ! Use nh4_fertiliser_c4crops as a temporary variable
-        nh4_fertiliser_c4crops(:,:) = nh4_fertiliser_c3crops(:,:) + no3_fertiliser_c3crops(:,:)
+        ! The actually applied fertiliser is the maximum of the default and the read fertiliser
+        hlp1(:,:) = nh4_fertiliser_c3crops(:,:) + no3_fertiliser_c3crops(:,:)
         ! If fertiliser is zero in the input, applying the minimum fertiliser rate and default NH4/NO3 ratio
-        WHERE(nh4_fertiliser_c4crops(:,:) <= eps8) 
+        WHERE(hlp1(:,:) <= eps8)
           nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * iq_background_n_fertiliser_rate
           no3_fertiliser_c3crops(:,:) = (1._wp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
         ! IF fertiliser is non-zero but low, applying the minimum fertiliser rate but original NH4/NO3 ratio
-        ELSEWHERE(nh4_fertiliser_c4crops(:,:) > eps8 .AND. nh4_fertiliser_c4crops(:,:) <= iq_background_n_fertiliser_rate)
-          nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / nh4_fertiliser_c4crops(:,:) &
+        ELSEWHERE(hlp1(:,:) > eps8 .AND. hlp1(:,:) <= iq_background_n_fertiliser_rate * 10._wp * molar_mass_N)
+          nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / hlp1(:,:) &
                                         * iq_background_n_fertiliser_rate
-          no3_fertiliser_c3crops(:,:) = no3_fertiliser_c3crops(:,:) / nh4_fertiliser_c4crops(:,:) &
+          no3_fertiliser_c3crops(:,:) = no3_fertiliser_c3crops(:,:) / hlp1(:,:) &
                                         * iq_background_n_fertiliser_rate
+        ELSEWHERE
+          ! Convert unit from kg N ha-1 yr-1 to mol N m-2 yr-1
+          nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N
+          no3_fertiliser_c3crops(:,:) = no3_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N
         ENDWHERE
         ! NMIP does not provide information for C3 vs. C4 crops, assert rates are the same
         ! Clean the temporary nh4_fertiliser_c4crops and use it to represent C4 crop nh4 fertiliser again
@@ -344,7 +351,7 @@ CONTAINS
     !$ACC UPDATE DEVICE(n_manure_crop, n_manure_pasture) ASYNC(1)
     !$ACC WAIT(1)
 
-
+    DEALLOCATE(hlp1)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
 
