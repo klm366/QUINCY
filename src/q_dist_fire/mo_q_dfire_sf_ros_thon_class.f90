@@ -34,23 +34,25 @@ MODULE mo_q_dfire_sf_ros_thon_class
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   !< Total number of sigmas (1,10,100) hours,  Pfeiffer el al. (2013), Eq. A18 - Used to calculate fuel bulk density
-  USE mo_q_dfire_constants,     ONLY: df_sf_sigma_tho_nr, df_sf_fuel_class_factors
+  USE mo_q_dfire_constants,     ONLY: df_sf_sigma_tho_nr
   !<
-  USE mo_q_dfire_constants,     ONLY: df_sf_fire_duration_thd
   !<  Rate of spread constants
   USE mo_q_dfire_constants,     ONLY: df_sf_oven_dry_part_dens, df_sigmas_tho, &
                                       df_sf_mineral_fract, df_sf_mineral_damp_coeff, &
                                       df_sf_fuel_heat_content
-  USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
 
   USE mo_quincy_stats,          ONLY: stats_average_weight
-  USE mo_jsb_math_constants,    ONLY: pi
+  USE mo_q_dfire_sf_ros_eqs,    ONLY: calc_opt_react_velocity, &
+                                       calc_prop_flux_ratio, &
+                                       calc_wind_factor 
+  USE mo_q_dfire_sf_ros_type,  ONLY: t_sf_ros
+
 
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC :: sf_calc_rate_of_spread_thon
-  PUBLIC :: calc_sigma, calc_length_to_breadth_ratio
+  PUBLIC :: calc_sigma
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_thon_class'
 
@@ -125,57 +127,6 @@ CONTAINS
     ENDDO ! DO inc = 1, nc
 
   END FUNCTION sf_calc_rate_of_spread_thon
-
-
-  ! ======================================================================================================= !
-  !>
-  !> Initialize t_sf_ros to 0
-  !>
-  FUNCTION create_sf_ros_init(nc) RESULT(sf_ros)
-    INTEGER, INTENT(in)                  :: nc        !< Total number of gridcells
-    TYPE(t_sf_ros)                       :: sf_ros    !< output [-]
-    ! ----------------------------------------------------------------------------------------------------- !
-    sf_ros%nc = nc
-    ALLOCATE(sf_ros%ros_forward(nc))
-    ALLOCATE(sf_ros%ros_backwards(nc))
-    ALLOCATE(sf_ros%distance_travelled(nc))
-    ALLOCATE(sf_ros%l2b_ratio(nc))
-    ALLOCATE(sf_ros%fire_duration(nc))
-    ALLOCATE(sf_ros%mean_fire_area(nc))
-
-    ALLOCATE(sf_ros%reaction_intensity(nc))
-    ALLOCATE(sf_ros%prop_flux_ratio(nc))
-    ALLOCATE(sf_ros%wind_factor(nc))
-    ALLOCATE(sf_ros%fbd(nc))
-    ALLOCATE(sf_ros%eff_heating_number(nc))
-    ALLOCATE(sf_ros%pre_ign_heat(nc))
-
-    ALLOCATE(sf_ros%opt_react_velo(nc))
-    ALLOCATE(sf_ros%net_fuel_load(nc))
-    ALLOCATE(sf_ros%moist_damp_coeff(nc))
-    ALLOCATE(sf_ros%mineral_damp_coeff(nc))
-
-    sf_ros%ros_forward(:) = 0._wp
-    sf_ros%ros_backwards(:) = 0._wp
-    sf_ros%distance_travelled(:) = 0._wp
-    sf_ros%l2b_ratio(:) = 0._wp
-    sf_ros%fire_duration(:) = 0._wp
-    sf_ros%mean_fire_area = 0._wp
-
-    sf_ros%reaction_intensity(:) = 0._wp
-    sf_ros%prop_flux_ratio(:) = 0._wp
-    sf_ros%wind_factor(:) = 0._wp
-    sf_ros%fbd(:) = 0._wp
-    sf_ros%eff_heating_number(:) = 0._wp
-    sf_ros%pre_ign_heat(:) = 0._wp
-
-    sf_ros%opt_react_velo(:) = 0._wp
-    sf_ros%net_fuel_load(:) = 0._wp
-    sf_ros%moist_damp_coeff(:) = 0._wp
-    sf_ros%mineral_damp_coeff(:) = 0._wp
-  END FUNCTION create_sf_ros_init
-
-
 
 
   ! ======================================================================================================= !

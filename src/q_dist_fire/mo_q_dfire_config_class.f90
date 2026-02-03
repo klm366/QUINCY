@@ -46,7 +46,7 @@ MODULE mo_q_dfire_config_class
   PRIVATE
 
   PUBLIC :: t_q_dfire_config
-  PUBLIC :: Q_DFIRE_MODEL_SF
+  PUBLIC :: Q_DFIRE_MODEL_SF, Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
   !>
   !> Fire models
@@ -77,6 +77,9 @@ MODULE mo_q_dfire_config_class
     LOGICAL           :: flag_dfire                  !< on/off disturbance fire process [boolean]
     CHARACTER(len=20) :: dfire_modelname             !< name of fire model to run
     INTEGER           :: dfire_model_id              !< fire model ID
+
+    CHARACTER(len=20) :: ros_modelname               !< name of rate of spread implementation
+    INTEGER           :: ros_model_id                !< Rate of spread implementation ID
 
     CHARACTER(len=20) :: dfire_precip_method_name    !< precipitation method name, from namelist
     INTEGER           :: dfire_precip_method_id      !< precipitation method id (1=,2=,3=), internal
@@ -148,7 +151,7 @@ CONTAINS
     INTEGER                       :: dfire_model_id           !< fire model ID, derived from 'dfire_modelname'
     CHARACTER(len=20)             :: dfire_precip_method_name !< precipitation method name, from namelist
     INTEGER                       :: dfire_precip_method_id   !< precipitation method id (1=,2=,3=), internal
-    CHARACTER(len=100)            :: ros_modelname            !< name of rate of spread model
+    CHARACTER(len=20)             :: ros_modelname            !< name of rate of spread model
     INTEGER                       :: ros_model_id             !< rate of spread ID, derived from 'ros_modelname'
     REAL(wp)                      :: density_human_population !< Ignition events
     REAL(wp)                      :: lightning_frequency      !<
@@ -233,7 +236,7 @@ CONTAINS
     flag_dfire               = .FALSE.
     dfire_modelname          = 'spitfire'         ! [spitfire, ...]
     dfire_precip_method_name = TRIM(dfire_cfg_precip_method_mavg)  ! 'mavg'
-    ros_modelname            = 'thonicke'
+    ros_modelname            = 'thonicke'         ! thonicke or oberhagemann
     density_human_population = 55.0               ! Ignition events 
     lightning_frequency      = 0.000012           ! 
     a_nd                     = 0.000048           !
