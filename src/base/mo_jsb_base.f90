@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -36,6 +36,7 @@ CONTAINS
   !>
   SUBROUTINE jsbach_setup_models(master_namelist_filename)
 
+    USE mo_kind,                ONLY: wp
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       &                               jsbach_runs_standalone, jsbach_is_restarted
     USE mo_jsb_parallel,        ONLY: init_parallel_iface, Get_omp_no_of_threads
@@ -46,7 +47,7 @@ CONTAINS
     USE mo_jsb_time,            ONLY: init_time
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,            ONLY: Register_vgrid, Get_vgrid
-    USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
+    USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, ZAXIS_GENERIC
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT
@@ -102,10 +103,12 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w, snow_e
 
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: pft_layer                    ! Vertical grid
 
     INTEGER :: no_of_models, model_idx, iproc
     INTEGER :: nsoil_e, nsoil_w, nsnow_e
     INTEGER :: model_scheme
+    INTEGER :: i
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_models'
 
@@ -243,6 +246,15 @@ CONTAINS
         END IF
       END IF
       CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
+
+      ! We here use the vertical grid infrastructure for a PFT dimension. This
+      ! dimension is needed in setups with changing PFT fractions.
+      IF (model%Is_process_enabled(PPLCC_)) THEN
+        pft_layer => new_vgrid('pfts', ZAXIS_GENERIC, model%config%npft, &
+          & levels=(/ (REAL(i,kind=wp),i=1,model%config%npft) /), units='')
+        CALL register_vgrid(pft_layer)
+      END IF
+      CALL model%Set_options(npft=model%config%npft)
 
       ! Crosscheck process configs
       IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
@@ -419,7 +431,7 @@ CONTAINS
     ! quincy model with 13 PFT tiles incl. bare soil
     CASE ('quincy_13_pfts_for_coupling', 'quincy_13_pfts')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
-    ! jsbach_lite & jsbach_pfts & jsbach_12pfts
+    ! jsbach_lite & jsbach_pfts
     CASE DEFAULT
       lctlib_filename = 'lctlib_nlct21.def'
     END SELECT

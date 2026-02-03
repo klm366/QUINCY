@@ -3,7 +3,11 @@
 # !>#### ICON-Land
 # !>
 # !> ------------------------------------------------------------------------
-# !> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+<<<<<<< Updated upstream
+# !> Copyright (C) 2004-2026, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss
+=======
+# !> Copyright (C) 2013-2026, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss
+>>>>>>> Stashed changes
 # !> Contact information: <https://icon-model.org>
 # !>
 # !> See AUTHORS.TXT for a list of authors  
