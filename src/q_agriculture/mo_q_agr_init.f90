@@ -281,7 +281,7 @@ CONTAINS
         ptr_2D => input_file%Read_2d(variable_name='fertl_pasture_nh4', fill_array = nh4_fertiliser_pasture(:,:))
         ptr_2D => input_file%Read_2d(variable_name='fertl_pasture_no3', fill_array = no3_fertiliser_pasture(:,:))
         CALL input_file%Close()
-           
+
         ! The actually applied fertiliser is the maximum of the default and the read fertiliser
         hlp1(:,:) = nh4_fertiliser_c3crops(:,:) + no3_fertiliser_c3crops(:,:)
         ! If fertiliser is zero in the input, applying the minimum fertiliser rate and default NH4/NO3 ratio
