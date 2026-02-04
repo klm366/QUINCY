@@ -125,7 +125,7 @@ CONTAINS
         config%nlev_sn          = nlev_sn 
         config%itype_nix_start  = itype_nix_start
         config%min_height_layer = min_height_layer
-        config%max_height_lyer  = max_height_layer
+        config%max_height_layer = max_height_layer
 
       ! ----------------------------------------------------------------------------------------------------- !
       ! Add NIX specific vertical grid

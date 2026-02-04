@@ -146,7 +146,7 @@ CONTAINS
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_rad_init,            ONLY: rad_init
-    USE mo_nix_init,            ONLY: nix_init
+    USE mo_nix_init_jsb,        ONLY: nix_init
     USE mo_carbon_init,         ONLY: carbon_init
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
@@ -574,7 +574,7 @@ CONTAINS
         END IF
 
         IF (tile%Is_process_active(NIX_)) THEN
-          CALL nix_init(tile)
+          CALL nix_init(1)
         END IF
 
 #ifndef __NO_QUINCY__

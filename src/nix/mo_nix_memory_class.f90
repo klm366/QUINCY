@@ -17,6 +17,8 @@ MODULE mo_nix_memory_class
   USE mo_kind,             ONLY: wp
   USE mo_util,             ONLY: One_of
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
+  USE mo_nix_types,        ONLY: t_jsb_nix
+
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_int2d
   USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
 
@@ -31,24 +33,29 @@ MODULE mo_nix_memory_class
 
   PUBLIC :: t_nix_memory, max_no_of_vars
 
+
   INTEGER, PARAMETER :: max_no_of_vars = 7
+
 
   TYPE, EXTENDS(t_jsb_memory) :: t_nix_memory
 
- ! Main prognostic variables describing the state of the snow cover - Note: These are also input/output therefore  mandatory
-    TYPE(t_jsb_var_real3d)  :: &
-      &  t_sn                , & ! snow element temperature             [ K ]
-      &  t_sn_n              , & ! snow nodal temperature               [ K ]
-      &  theta_i_sn          , & ! volumetric ice content               [ - ]
-      &  theta_w_sn          , & ! volumetric water content             [ - ]
-      &  theta_a_sn          , & ! volumetric air content               [ - ]
-      &  dzm_sn                  ! snow layer thickness                 [ m ]
 
-    TYPE(t_jsb_var_int2d)   :: &
-      &  top_sn                  ! snow nodal temperature id             [ - ]
+! ! Main prognostic variables describing the state of the snow cover - Note: These are also input/output therefore  mandatory
+!    TYPE(t_jsb_var_real3d)  :: &
+!      &  t_sn                , & ! snow element temperature             [ K ]
+!      &  t_sn_n              , & ! snow nodal temperature               [ K ]
+!      &  theta_i_sn          , & ! volumetric ice content               [ - ]
+!      &  theta_w_sn          , & ! volumetric water content             [ - ]
+!      &  theta_a_sn          , & ! volumetric air content               [ - ]
+!      &  dzm_sn                  ! snow layer thickness                 [ m ]
+!
+!    TYPE(t_jsb_var_int2d)   :: &
+!      &  top_sn                  ! snow nodal temperature id             [ - ]
 
   CONTAINS
-    PROCEDURE :: Init => Init_nix_memory
+
+   PROCEDURE :: Init => Init_nix_memory
+
   END TYPE t_nix_memory
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_nix_memory_class'
