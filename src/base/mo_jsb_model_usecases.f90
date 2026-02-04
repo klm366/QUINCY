@@ -807,7 +807,7 @@ CONTAINS
     !$ACC ENTER DATA COPYIN(box_tile)
 
     ! IF PPLCC is active, then PPLCC should run for Quincy
-    ! ... for now it will only be used to provide tree area to the Q_SYL_ process ...
+    ! Note: it is not only used for LCC processes but also to provide tree area to the Q_SYL_ process
     IF (model%processes(PPLCC_)%p%config%active) THEN
       CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
     END IF
@@ -1011,7 +1011,7 @@ CONTAINS
 #endif
 
     ! IF PPLCC is active, then PPLCC should run for Quincy
-    ! ... for now it will only be used to provide tree area to the Q_SYL_ process ...
+    ! Note: it is not only used for LCC processes but also to provide tree area to the Q_SYL_ process
     IF (model%processes(PPLCC_)%p%config%active) THEN
       CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
     END IF

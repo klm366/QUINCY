@@ -277,7 +277,7 @@ CONTAINS
       END IF
 
 #ifdef _OPENACC
-      CALL finish(routine, 'Quincy not ported to GPU in coupled mode, yet. Stop.')
+      CALL finish(routine, 'Quincy has not been tested on GPU in coupled mode so far.')
 
       IF (model%config%qmodel_id /= QCANOPY) THEN
         CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
@@ -751,7 +751,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
 #ifndef __NO_QUINCY__
-    ! TBD: this is only required if restart or output is written for this timestep!
     ! BGCMs need to be copied back to the variables from the matrices on which calculations are conducted
     CALL model%Write_back_to_bgcms()
 #endif

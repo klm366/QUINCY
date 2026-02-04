@@ -16,14 +16,9 @@
 !>
 !> Note:
 !>
-!>       1. This module takes advantage of the handling of the integrate and aggregate routines, which both
-!>          call the same routines in this module (integrate = aggregate).
-!>          Thereby each tile is processed by the same routine for the tasks of this process.
-!>
-!>       2. currently only 2D variables are dealt with -- if also 3D variables need to be conserved,
-!>          these will anyway have to specially be dealt with in the concept and thus need to be
-!>          identified with an own cqt e.g. distinguish WATER_2D_CQ_TYPE and WATER_3D_CQ_TYPE?
-!>          Also, integration of pool-structure might need some additional work.
+!>       This module takes advantage of the handling of the integrate and aggregate routines, which both
+!>       call the same routines in this module (integrate = aggregate).
+!>       Thereby, each tile is processed by the same routine for the tasks of this process.
 !>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
@@ -34,17 +29,26 @@ MODULE mo_pplcc_interface
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
+  USE mo_util,            ONLY: int2string
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH
-  USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
+  USE mo_jsb_class,           ONLY: Get_model
+  USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   !USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
-  USE mo_jsb_process_class,  ONLY: t_jsb_process
-  USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
+  USE mo_jsb_process_class,   ONLY: t_jsb_process
+  USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
+  USE mo_jsb_var_class,       ONLY: REAL2D, REAL3D
 
   USE mo_jsb_time,          ONLY: is_newday
   USE mo_jsb_cqt_class,     ONLY: Get_cqt_name, LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
-    &                             BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
+    &                             BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE, &
+    &                             IQ_2L2D_POOL_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE, &
+    &                             IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE
+
+#ifndef __NO_QUINCY__
+  USE mo_quincy_model_config, ONLY: QCANOPY
+  USE mo_quincy_output_class, ONLY: unit_sb_pool, unit_sb_flux, unit_veg_pool_flux
+#endif
 
   USE mo_carbon_interface,  ONLY: recalc_carbon_per_tile_vars
 
@@ -79,8 +83,8 @@ MODULE mo_pplcc_interface
   !> Type definition for pplcc post task (postprocessing for lcc)
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_pplcc_post_lcc
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_pplcc_post_lcc  !< does postprocessing for lcc processes on leaves
-    PROCEDURE, NOPASS :: Aggregate => update_pplcc_post_lcc  !< does postprocessing for lcc processes on other nodes
+    PROCEDURE, NOPASS :: Integrate => update_pplcc_post_lcc  !< post-processing for lcc processes on leaves
+    PROCEDURE, NOPASS :: Aggregate => update_pplcc_post_lcc  !< post-processing for lcc processes on other nodes
   END TYPE tsk_pplcc_post_lcc
 
   !> Constructor interface for pplcc post task (postprocessing for lcc)
@@ -157,7 +161,8 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc) :: conversion_factor
 
-    INTEGER  :: iblk, ics, ice, cqt_id, i_cqt, i_cq_var
+    INTEGER  :: nc   !< Number of cells in current block
+    INTEGER  :: iblk, ics, ice, ic, cqt_id, i_cqt, i_cq_var
     REAL(wp) :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_pplcc_pre_lcc'
 
@@ -176,6 +181,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
+    nc      = options%nc
     dtime   = options%dtime
 
     model => Get_model(tile%owner_model_id)
@@ -186,9 +192,27 @@ CONTAINS
     ! If not newday, do nothing
     IF (.NOT. is_newday(options%current_datetime,dtime)) RETURN
 
+    ! If no lcc process is running this task does not need to be executed
+    IF (.NOT. model%Do_fractions_change()) RETURN
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     IF (tile%Has_conserved_quantities()) THEN
+
+#ifndef __NO_QUINCY__
+      IF (model%config%model_scheme == MODEL_QUINCY) THEN
+
+        IF (model%config%qmodel_id == QCANOPY) THEN
+          ! If running in CANOPY configuration nothing needs to be conserved because the states are prescribed
+          RETURN
+        END IF
+
+        ! For the quincy model the variables need to be up to date with the content of the matrices before they are converted
+        IF (ASSOCIATED(tile%bgcm_store)) THEN
+          CALL tile%bgcm_store%Write_matrices_to_bgcm_vars(tile%name, ics, ice, iblk)
+        END IF
+      END IF
+#endif
 
       ! Iterate over all cq types and their vars and convert
       DO i_cqt = 1,tile%nr_of_cqts
@@ -225,6 +249,36 @@ CONTAINS
 
             conversion_factor(:) = conversion_factor(:) * veg_fract_correction(:) * fract_fpc_max(:)
 
+#ifndef __NO_QUINCY__
+          CASE (IQ_2L2D_POOL_CQ_TYPE, IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE)
+            ! in the current implementation of quincy to be conserved variables are only available on the pft tiles
+            IF (.NOT. index(tile%name, 'pft') /= 0) THEN
+              CALL finish(TRIM(routine), 'Violation of precondition: for quincy cq types are only expected for pft tiles, ' &
+                & //' but found on '// trim(tile%name))
+            END IF
+
+            IF ((cqt_id == IQ_2L2D_POOL_CQ_TYPE) .OR. (cqt_id == IQ_1L2D_POOL_CQ_TYPE)) THEN
+              ! in quincy the 2D pool type variables are in mol per tile
+              expected_string_in_unit = 'mol m-2'
+            ELSE IF(cqt_id == IQ_FLUX_CQ_TYPE) THEN
+              expected_string_in_unit = unit_veg_pool_flux
+            ELSE IF(cqt_id == IQ_SL_POOL_CQ_TYPE) THEN
+              ! in quincy the 3D pool type variables are in mol per tile and layer
+              expected_string_in_unit = unit_sb_pool
+            ELSE IF(cqt_id == IQ_SL_FLUX_CQ_TYPE) THEN
+              ! in quincy the 3D flux type variables are in mol per tile and layer per timestep-1
+              expected_string_in_unit = unit_sb_flux
+            END IF
+
+            ! Tile fractions in quincy are currently only modified by the alcc process
+            ! thus only conserved quantities on cells where a tile fraction is modified by alcc need to be converted
+            DO ic = 1,nc
+              IF (.NOT. tile%l_fract_alcc_change(ics+ic-1, iblk)) THEN
+                conversion_factor(ic) = 1.0_wp
+              END IF
+            END DO
+#endif
+
           ! CASE (WATER_CQ_TYPE)
           CASE DEFAULT
             !>
@@ -234,26 +288,48 @@ CONTAINS
         END SELECT
 
         ! Convert all variables of this type
-        DO i_cq_var=1,tile%conserved_quantities(i_cqt)%p%no_of_vars
-          ! Assertion: variable needs to contain substring expected for this type
-          this_unit = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%unit
+        DO i_cq_var = 1,tile%conserved_quantities(i_cqt)%p%no_of_vars
+          ! Assert expected unit
+          this_unit = tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%unit
           IF (.NOT. INDEX(TRIM(this_unit), expected_string_in_unit) > 0) THEN
             CALL finish(TRIM(routine), 'Violation of assertion: variable does not have the expected unit, ' &
               & // 'unit is expected to contain ' // expected_string_in_unit // ' but '// trim(this_unit) // ' does not.')
           END IF
 
           IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), '..... and var '// &
-            & TRIM(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%name))
+              & TRIM(tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%full_name))
 
           !JN-TODO: make a function in a new process module? -> DSL?!
-          tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
-            & = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
-            &   * conversion_factor(:)
-
-          ! for bookkeeping I would have wanted to change the unit, but seems not to be intended to be changed
+          ! Note: for bookkeeping I would have wanted to change the unit, but seems not to be intended to be changed
+          SELECT CASE (tile%conserved_quantities(i_cqt)%p%var_type)
+          CASE (REAL2D)
+            tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr2d(ics:ice,iblk) &
+              & = tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr2d(ics:ice,iblk) &
+              &   * conversion_factor(:)
+          CASE (REAL3D)
+            DO ic = ics,ice
+              tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr3d(ic,:,iblk) &
+                & = tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr3d(ic,:,iblk) &
+                &   * conversion_factor(ic-ics+1)
+            END DO
+          CASE DEFAULT
+            CALL finish(TRIM(routine), 'Unexpected variable type for conserved quantity variable, ' &
+                & // 'expected 2 or 3 dimensions but found ' // int2string(tile%conserved_quantities(i_cqt)%p%var_type)// &
+                & ' for cqt '//TRIM(Get_cqt_name(tile%conserved_quantities(i_cqt)%p%type_id)) // ', please check!')
+          END SELECT
         END DO
       END DO
-    END IF
+
+#ifndef __NO_QUINCY__
+      IF (model%config%model_scheme == MODEL_QUINCY) THEN
+        ! The bgcm matrices need to be updated after conversion because they are required in the alcc interface
+        IF (ASSOCIATED(tile%bgcm_store)) THEN
+          CALL tile%bgcm_store%Store_bgcm_vars_in_matrices(tile%name, ics, ice, iblk)
+        END IF
+      END IF
+#endif
+
+    END IF ! IF (tile%Has_conserved_quantities())
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -279,7 +355,7 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc) :: conversion_factor
 
-    INTEGER  :: iblk, ics, ice, i_cqt, i_cq_var, cqt_id
+    INTEGER  :: iblk, ics, ice, ic, i_cqt, i_cq_var, cqt_id, nc
     REAL(wp) :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_pplcc_post_lcc'
 
@@ -296,6 +372,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     dtime   = options%dtime
+    nc      = options%nc
 
     model => Get_model(tile%owner_model_id)
 
@@ -313,11 +390,26 @@ CONTAINS
     ! If process is not calculated on this tile, conversions are not necessary
     IF (.NOT. tile%Is_process_calculated(PPLCC_)) RETURN
 
+    ! Also: if no lcc process is running this task does not further needs to be executed
+    IF (.NOT. model%Do_fractions_change()) RETURN
+
     IF (tile%Has_conserved_quantities()) THEN
 
-      ! Iterate over all cq types and their vars and convert and change unit
+#ifndef __NO_QUINCY__
+      IF (model%config%model_scheme == MODEL_QUINCY) THEN
+        IF (model%config%qmodel_id == QCANOPY) THEN
+          ! If running in CANOPY configuration nothing needs to be conserved because the states are prescribed
+          RETURN
+        END IF
+        ! Since the lcc framework mainly working on the variables and only on additionally synchronised
+        ! chuncks of selected matrices no sync from matrix to variables should be conducted before post lcc conversion
+      END IF
+#endif
+
+      ! Iterate over all cq types and their vars and convert
       DO i_cqt = 1,tile%nr_of_cqts
-      ! current tile fraction is required for several types of conserved quantities
+
+        ! conversion of m2 tile to m2 box is required for several types of conserved quantities
         CALL tile%Get_fraction(ics, ice, iblk, fract=conversion_factor(:))
 
         ! conversion depends on the cq type
@@ -329,14 +421,14 @@ CONTAINS
             ! in the current implementation of jsb4 carbon variables are only available on the pft tiles
             IF (.NOT. index(tile%name, 'pft') /= 0) THEN
               CALL finish(TRIM(routine), 'Violation of precondition: carbon cq types only expected for pft tiles, ' &
-                & //' but found on '// trim(tile%name))
+                  & //' but found on '// trim(tile%name))
             END IF
 
             ! in jsb4 the carbon variables are specified as mol per canopy, therefore adapt the conversion factor
             ! -> Assert that PHENO memory is available on this tile
             IF (.NOT. tile%Has_process_memory(PHENO_)) THEN
               CALL finish(TRIM(routine), 'Violation of precondition: carbon cq types require pheno vars for conversion, ' &
-                & //' but pheno memory is not available for '// trim(tile%name))
+                  & //' but pheno memory is not available for '// trim(tile%name))
             END IF
 
             !- Set pointers to memory on the current tile
@@ -345,6 +437,20 @@ CONTAINS
             dsl4jsb_Get_var2D_onChunk(PHENO_, veg_fract_correction)    ! in
             dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)           ! in
             conversion_factor(:) = conversion_factor(:) * veg_fract_correction(:) * fract_fpc_max(:)
+
+          CASE (IQ_2L2D_POOL_CQ_TYPE, IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE)
+            ! in the current implementation of quincy to be conserved variables are only available on the pft tiles
+            IF (.NOT. index(tile%name, 'pft') /= 0) THEN
+              CALL finish(TRIM(routine), 'Violation of precondition: for quincy cq types are only expected for pft tiles, ' &
+                  & //' but found on '// trim(tile%name))
+            END IF
+            ! Tile fractions in quincy are currently only modified by the alcc process
+            ! thus only conserved quantities on cells where a tile fraction is modified by alcc need to be converted
+            DO ic = 1,nc
+              IF (.NOT. tile%l_fract_alcc_change(ics+ic-1, iblk)) THEN
+                conversion_factor(ic) = 1.0_wp
+              END IF
+            END DO
 
           ! CASE (WATER_CQ_TYPE)
           CASE DEFAULT
@@ -355,21 +461,38 @@ CONTAINS
         END SELECT
 
         ! Convert all variables of this type
-        DO i_cq_var=1,tile%conserved_quantities(i_cqt)%p%no_of_vars
+        DO i_cq_var = 1,tile%conserved_quantities(i_cqt)%p%no_of_vars
 
           IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), '..... and var '// &
-            & TRIM(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%name))
+              & TRIM(tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%full_name))
 
           !JN-TODO: make a function in new process module?
-          ! only do the conversion where the conversion factor is not zero
-          WHERE(conversion_factor(:) > 0.0)
-            tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
-              & = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
-              &   / conversion_factor(:)
-          ELSEWHERE
-            tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) = 0.0
-          END WHERE
-
+          SELECT CASE (tile%conserved_quantities(i_cqt)%p%var_type)
+          CASE (REAL2D)
+            ! only do the conversion where the conversion factor is not zero
+            WHERE (conversion_factor(:) > 0.0_wp)
+              tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr2d(ics:ice,iblk) &
+                & = tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr2d(ics:ice,iblk) &
+                &   / conversion_factor(:)
+            ELSEWHERE
+              tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr2d(ics:ice,iblk) = 0.0_wp
+            END WHERE
+          CASE (REAL3D)
+            DO ic = ics,ice
+              IF (conversion_factor(ic-ics+1) > 0.0_wp) THEN
+                ! only do the conversion where the conversion factor is not zero
+                tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr3d(ic,:,iblk) &
+                  & = tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr3d(ic,:,iblk) &
+                  &   / conversion_factor(ic-ics+1)
+              ELSE
+                tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr3d(ic,:,iblk) = 0.0_wp
+              END IF
+            END DO
+          CASE DEFAULT
+            CALL finish(TRIM(routine), 'Unexpected variable type for conserved quantity variable, ' &
+                & // 'expected 2 or 3 dimensions but found ' // int2string(tile%conserved_quantities(i_cqt)%p%var_type)// &
+                & ' for cqt '//TRIM(Get_cqt_name(tile%conserved_quantities(i_cqt)%p%type_id)) // ', please check!')
+          END SELECT
         END DO
       END DO
 
@@ -377,7 +500,16 @@ CONTAINS
         CALL recalc_carbon_per_tile_vars(tile, options)
       END IF
 
-    END IF
+#ifndef __NO_QUINCY__
+      IF (model%config%model_scheme == MODEL_QUINCY) THEN
+        ! For the quincy model the matrices need to be updated after post lcc conversion
+        IF (ASSOCIATED(tile%bgcm_store)) THEN
+          CALL tile%bgcm_store%Store_bgcm_vars_in_matrices(tile%name, ics, ice, iblk)
+        END IF
+      END IF
+#endif
+
+    END IF ! IF (tile%Has_conserved_quantities())
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -440,7 +572,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)        ! in
       correction_factor(:) = fract_fpc_max(:)
     ELSE
-      correction_factor(:) = 1.0_wp !TODO: get the corresponding variable from quincy
+      correction_factor(:) = 1.0_wp ! Note: In quincy all state variables are defined for 100% of the cover fraction
     END IF
 
     dsl4jsb_Get_var2D_onChunk(PPLCC_, tree_fract)           ! out

@@ -106,22 +106,24 @@ CONTAINS
     config%scheme               = scheme
     config%l_daily_alcc         = l_daily_alcc
 
-    SELECT CASE (TRIM(tolower(config%scheme)))
-    CASE ('maps')
-      CALL message(TRIM(routine), 'Reading land use data from maps.')
-      config%scheme=tolower(config%scheme)
+    IF (config%active) THEN
+      SELECT CASE (TRIM(tolower(config%scheme)))
+      CASE ('maps')
+        CALL message(TRIM(routine), 'Reading land use data from maps.')
+        config%scheme=tolower(config%scheme)
 
-      IF (l_daily_alcc) THEN
-        CALL message(TRIM(routine), '... land use change will be applied on a daily basis, reading next years land cover map' &
-          &                       //' as target land cover to reach by the end of the year.')
-      ELSE
-        CALL message(TRIM(routine), '... land use change will be applied on an annual basis,' &
-          &                       //' reading the land cover map of the current year to be applied in the first timestep.')
-      END IF
+        IF (l_daily_alcc) THEN
+          CALL message(TRIM(routine), '... land use change will be applied on a daily basis, reading next years land cover map' &
+            &                       //' as target land cover to reach by the end of the year.')
+        ELSE
+          CALL message(TRIM(routine), '... land use change will be applied on an annual basis,' &
+            &                       //' reading the land cover map of the current year to be applied in the first timestep.')
+        END IF
 
-    CASE DEFAULT
-      CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
-    END SELECT
+      CASE DEFAULT
+        CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
+      END SELECT
+    END IF
 
   END SUBROUTINE Init_alcc_config
 

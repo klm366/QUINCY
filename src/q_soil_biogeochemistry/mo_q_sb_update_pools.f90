@@ -1209,7 +1209,7 @@ CONTAINS
       &          - SUM((het_respiration_c14(:,:) + lateral_loss_dom_carbon14_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
       &          - leaching_dom_carbon14(:)
     ! biological N fixation (VEG_ and SB_ processes)
-    biological_n_fixation(:)    = biological_n_fixation &
+    biological_n_fixation(:)    = biological_n_fixation(:) &
       &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)
 
     !> 15.0 spin-up accelerator

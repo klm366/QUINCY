@@ -67,8 +67,8 @@ MODULE mo_lnd_bgcm_store_class
       & VEG_BGCM_PP_PV_ID,           &   !< vegetation bgcm plywood and veneer product pool
       & VEG_BGCM_PP_SAWNWOOD_ID,     &   !< vegetation bgcm sawnwood product pool
       & VEG_BGCM_PROD_DECAY_ID,      &   !< vegetation bgcm flux from product pool decay
-      & VEG_BGCM_HARVEST_TO_PROD_ID, &   !< vegetation bgcm flux to product pools
-      & VEG_BGCM_HARVEST_LITTER_ID    !< vegetation bgcm flux due to harvest
+      & VEG_BGCM_HARVEST_TO_PROD_ID, &   !< vegetation bgcm flux to product pools (used for local harvest and anthropogenic lcc)
+      & VEG_BGCM_HARVEST_LITTER_ID       !< vegetation bgcm flux due to harvest (used for local harvest and anthropogenic lcc)
   END ENUM
 
   ! ======================================================================================================= !
