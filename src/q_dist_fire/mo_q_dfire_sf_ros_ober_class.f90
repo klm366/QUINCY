@@ -40,6 +40,7 @@ MODULE mo_q_dfire_sf_ros_ober_class
   USE mo_jsb_math_constants,    ONLY: pi
 
   USE mo_q_dfire_sf_ros_eqs,    ONLY: calc_opt_react_velocity, calc_prop_flux_ratio, calc_wind_factor
+  USE mo_q_dfire_sf_ros_type,   ONLY: t_sf_ros
 
   IMPLICIT NONE
 
@@ -141,8 +142,8 @@ CONTAINS
     INTEGER, INTENT(in) :: nddfc !< n dead fuel classes
     INTEGER, INTENT(in) :: nlvfc !< n live fuel classes
     TYPE(t_fwvar_r2d) :: var
-    ALLOCATE(var%l(nddfc, nc))
-    ALLOCATE(var%d(nlvfc, nc))
+    ALLOCATE(var%l(nc, nddfc))
+    ALLOCATE(var%d(nc, nlvfc))
     !    ALLOCATE(var%t(nc))
     var%l = 0._wp
     var%d = 0._wp
@@ -175,7 +176,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: fbd(nc) !< Fuel bulk density [kg/m3]
     REAL(wp), INTENT(in) :: u_f_wind(nc) !< Wind speed at midflame height [m min-1]
     LOGICAL, INTENT(in) :: mask(nc)
-    REAL(wp) :: ros(nc) !< Output: rate of spread [m min-1]
+    TYPE(t_sf_ros) :: ros(nc) !< Output: rate of spread [m min-1]
 
     INTEGER :: ic
     REAL(wp) :: u_forward(nc)
@@ -226,22 +227,22 @@ CONTAINS
       IF (mask(ic)) THEN
         ! CHARACTERISTICS DEAD/LIVE CATEGORIES
         ! - net fuel load
-        wn%d(ic) = SUM(wfactors%gij%d(:,ic) * woi_dd(:,ic) * (1._wp-df_sf_mineral_fract))
-        wn%l(ic) = SUM(wfactors%gij%l(:,ic) * woi_lv(:,ic) * (1._wp-df_sf_mineral_fract))
+        wn%d(ic) = SUM(wfactors%gij%d(ic,:) * woi_dd(ic,:) * (1._wp-df_sf_mineral_fract))
+        wn%l(ic) = SUM(wfactors%gij%l(ic,:) * woi_lv(ic,:) * (1._wp-df_sf_mineral_fract))
         ! - heat content, constant
         ! - effective mineral content, constant (thonicke=0.01, from Scott and Reinhardt, 2001)
         ! - mineral dampening coefficient, constant (thonicke=0.41739)
         ! - moisture content
-        mf%d(ic) = SUM(wfactors%fij%d(:,ic) * mf_dd(:,ic))
-        mf%l(ic) = SUM(wfactors%fij%l(:,ic) * mf_lv(:,ic))
+        mf%d(ic) = SUM(wfactors%fij%d(ic,:) * mf_dd(ic,:))
+        mf%l(ic) = SUM(wfactors%fij%l(ic,:) * mf_lv(ic,:))
         ! - moisture dampening coefficient (oberhagemann et al. (2025))
         rm%d(ic) = MIN(1._wp, mf%d(ic) / me_dd(ic))
         rm%l(ic) = MIN(1._wp, mf%l(ic) / me_lv(ic))
         eta_m%d(ic) = 1._wp - (2.59_wp * rm%d(ic)) + (5.11_wp * (rm%d(ic)**2)) - (3.52_wp * (rm%d(ic)**3))
         eta_m%l(ic) = 1._wp - (2.59_wp * rm%l(ic)) + (5.11_wp * (rm%l(ic)**2)) - (3.52_wp * (rm%l(ic)**3))
         ! - surface area to volume ratio (sigma_i)
-        sigma%d(ic) = SUM(wfactors%fij%d(:,ic) * sigmas_dd)
-        sigma%l(ic) = SUM(wfactors%fij%l(:,ic) * sigmas_lv)
+        sigma%d(ic) = SUM(wfactors%fij%d(ic,:) * sigmas_dd)
+        sigma%l(ic) = SUM(wfactors%fij%l(ic,:) * sigmas_lv)
 
         ! FUEL BED CHARACTERISTICS
         ! calc:
@@ -288,15 +289,27 @@ CONTAINS
         END IF
 
         ! HEAT SINK
-        qig_ij%d(:,ic) = 581._wp * 2594._wp * mf_dd(:,ic)
-        qig_ij%l(:,ic) = 581._wp * 2594._wp * mf_lv(:,ic)
-        heat_sink%d(ic) = SUM(wfactors%fij%d(:,ic) * exp(-4.528_wp / sigmas_dd(:)) * qig_ij%d(:,ic))
-        heat_sink%l(ic) = SUM(wfactors%fij%l(:,ic) * exp(-4.528_wp / sigmas_lv(:)) * qig_ij%l(:,ic))
+        qig_ij%d(ic,:) = 581._wp * 2594._wp * mf_dd(ic,:)
+        qig_ij%l(ic,:) = 581._wp * 2594._wp * mf_lv(ic,:)
+        heat_sink%d(ic) = SUM(wfactors%fij%d(ic,:) * exp(-4.528_wp / sigmas_dd(:)) * qig_ij%d(ic,:))
+        heat_sink%l(ic) = SUM(wfactors%fij%l(ic,:) * exp(-4.528_wp / sigmas_lv(:)) * qig_ij%l(ic,:))
         heat_sink%total(ic) = fbd(ic) * (wfactors%fi%d(ic) * heat_sink%d(ic) + wfactors%fi%l(ic) * heat_sink%l(ic))
 
         ros(ic) = heat_source(ic) / heat_sink%total(ic)
       END IF ! IF (mask(ic)) THEN
     ENDDO ! DO ic = 1, nc
+
+    ros%ros_forward = ros
+    ros%reaction_intensity = ir%total
+    ros%prop_flux_ratio = xi
+    ros%wind_factor=phi_w
+    !ros%eff_heting_number = epsilon ! todo: exp(-4.528 / sigmas)
+    !ros%pre_ign_heat = qig ! dead, live
+    ros%opt_react_velo = gamma
+    !ros%max_react_velo = gamma_max
+    !ros%net_fuel_load = wn ! dead, live
+    !ros%moist_damp_coeff  = eta_m  ! dead, live
+    ros%mineral_damp_coeff = df_sf_mineral_damp_coeff
 
   END FUNCTION sf_calc_rate_of_spread_ober
 
@@ -324,19 +337,19 @@ CONTAINS
     wfactors = t_sf_weighting_factors(nc, ndeadfc, nlivefc)
 
     DO ic = 1, nc
-      wfactors % Aij % d(:,ic) = sigmas_dead * fuel_load_dead(:,ic) / part_dens
-      wfactors % Aij % l(:,ic) = sigmas_live * fuel_load_live(:,ic) / part_dens
-      wfactors % Ai % d(ic) = SUM(wfactors % Aij % d(:,ic))
-      wfactors % Ai % l(ic) = SUM(wfactors % Aij % l(:,ic))
+      wfactors % Aij % d(ic,:) = sigmas_dead * fuel_load_dead(ic,:) / part_dens
+      wfactors % Aij % l(ic,:) = sigmas_live * fuel_load_live(ic,:) / part_dens
+      wfactors % Ai % d(ic) = SUM(wfactors % Aij % d(ic,:))
+      wfactors % Ai % l(ic) = SUM(wfactors % Aij % l(ic,:))
       wfactors % At(ic) = wfactors % Ai % l(ic) + wfactors % Ai % d(ic)
 
-      wfactors % fij % d(:,ic) = wfactors % Aij % d(:,ic) / wfactors % Ai % d(ic)
-      wfactors % fij % l(:,ic) = wfactors % Aij % d(:,ic) / wfactors % Ai % l(ic)
-      wfactors % fi % d(ic) = SUM(wfactors % fij % d(:,ic))
-      wfactors % fi % l(ic) = SUM(wfactors % fij % l(:,ic))
+      wfactors % fij % d(ic,:) = wfactors % Aij % d(ic,:) / wfactors % Ai % d(ic)
+      wfactors % fij % l(ic,:) = wfactors % Aij % d(ic,:) / wfactors % Ai % l(ic)
+      wfactors % fi % d(ic) = SUM(wfactors % fij % d(ic,:))
+      wfactors % fi % l(ic) = SUM(wfactors % fij % l(ic,:))
 
-      wfactors % gij % d(:,ic) = calc_g_weighting_factors(wfactors % fij % d(:,ic), sigmas_dead)
-      wfactors % gij % l(:,ic) = calc_g_weighting_factors(wfactors % fij % l(:,ic), sigmas_live)
+      wfactors % gij % d(ic,:) = calc_g_weighting_factors(wfactors % fij % d(ic,:), sigmas_dead)
+      wfactors % gij % l(ic,:) = calc_g_weighting_factors(wfactors % fij % l(ic,:), sigmas_live)
     END DO
   END FUNCTION calc_weighting_factors
 
