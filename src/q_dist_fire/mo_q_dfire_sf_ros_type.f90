@@ -1,4 +1,4 @@
-!> QUINCY Rate of spread derived type 
+!> QUINCY
 !>
 !> ICON-Land
 !>
@@ -13,7 +13,7 @@
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
-!> @brief Rate of spread derived type 
+!> @brief Rate of spread derived type t_sf_ros
 !>
 !> @author
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
@@ -26,32 +26,12 @@ MODULE mo_q_dfire_sf_ros_type
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
 
-!  USE mo_q_dfire_config_class,      ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
-!  USE mo_q_dfire_sf_ros_ober_class, ONLY: sf_calc_rate_of_spread_ober
-!  USE mo_q_dfire_sf_ros_thon_class, ONLY: sf_calc_rate_of_spread_thon
-
-!  USE mo_q_dfire_constants,         ONLY: df_sf_fire_duration_thd
-!  USE mo_q_dfire_constants,         ONLY: df_sf_sigma_dd_nr, df_sf_sigma_lv_nr
-!  USE mo_q_dfire_constants,         ONLY: df_sigmas_dead, df_sigmas_live
-
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC :: t_sf_ros
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_type'
-
-
-  !< Vegetation cover fraction
-!  TYPE t_sf_veget_cover_frac
-!    REAL(wp), ALLOCATABLE :: tree(:) !< How much of tree covers the tile [0 to 1]
-!    REAL(wp), ALLOCATABLE :: grass(:) !< How much grass covers the tile [0 to 1]
-!  END TYPE t_sf_veget_cover_frac
-
-!  INTERFACE t_sf_veget_cover_frac
-!    MODULE PROCEDURE :: create_veget_cover_frac
-!  END INTERFACE t_sf_veget_cover_frac
-
 
   !< Rate of spread characteristics type
   TYPE t_sf_ros

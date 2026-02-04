@@ -91,6 +91,8 @@ CONTAINS
     REAL(wp), ALLOCATABLE                :: woi_dd_lvg(:,:)             !< Dead fuel as live grass in 1 hour (1hr+dry livegrass, 10, 100 hours) User in Thonicke's [kg DM m-2]
     REAL(wp) :: u_f_wind(nc)  !< Wind speed at vegetation cover [m min-1]
     INTEGER  :: inc
+    INTEGER, PARAMETER :: ix_lvg = 4
+    INTEGER, PARAMETER :: ix_1hr = 1, ix_100hrs=3
 
     !< Calculate wind speed (paragraph before eq. 10 from Thonicke et al. (2010))
     u_f_wind = fwd_wind_factor * wind
@@ -99,8 +101,8 @@ CONTAINS
       !> Fire rate of spread (IR, optimum reaction velocity, fuel bulk density, net fuel loading, ...)
       !> calculate the rate of spread following Thonicke et al. (2010)
       ALLOCATE(woi_dd_lvg(nc, ndd+1)) !< litter fuel classes + dry livegrass
-      woi_dd_lvg(:,1:3) = woi_dd(:,1:3)
-      woi_dd_lvg(:,1) = woi_dd_lvg(:,1) +  woi_dd(:,4)
+      woi_dd_lvg(:,ix_1hr:ix_100hrs) = woi_dd(:,ix_1hr:ix_100hrs)
+      woi_dd_lvg(:,ix_1hr) = woi_dd_lvg(:,ix_1hr) +  woi_dd(:,ix_lvg)
 
 !      ros = sf_calc_rate_of_spread_thon(nc, nddlv, &
 !                                      fuel_bulk_density, &
