@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -75,11 +75,7 @@ CONTAINS
     INTEGER                     :: icanopy
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_canopy_q_assimi
 
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /assimilation_ctl/  &
-#else
-    NAMELIST /q_assimi_nml/  &
-#endif
+    NAMELIST /lnd_q_assimi_nml/  &
       & active,                   &
       & lrestart_cont,            &
       & ic_filename,              &
@@ -103,20 +99,15 @@ CONTAINS
     ic_filename                   = 'ic_land_assimi.nc'
     ncanopy                       = 10           ! (default for FAPAR based canopy layers would be 10)
     flag_optimal_Nfraction        = .FALSE.      ! .TRUE. .FALSE.
-    flag_t_resp_acclimation       = .FALSE.      ! .TRUE. .FALSE.
-    flag_t_jmax_acclimation       = .FALSE.      ! .TRUE. .FALSE.
+    flag_t_resp_acclimation       = .TRUE.       ! .TRUE. .FALSE.
+    flag_t_jmax_acclimation       = .TRUE.       ! .TRUE. .FALSE.
     canopy_layer_scheme           = "fapar"      !
     canopy_conductance_scheme     = "medlyn"
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit    = position_nml('assimilation_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, assimilation_ctl)
-#else
-    nml_unit    = position_nml('q_assimi_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, q_assimi_nml)
-#endif
+    nml_unit    = position_nml('lnd_q_assimi_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_q_assimi_nml)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                       = active

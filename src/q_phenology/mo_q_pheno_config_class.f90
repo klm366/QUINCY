@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -55,11 +55,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: bc_filename
     REAL(wp)                    :: lai_max         !< init lai_max Q_PHENO_ memory variable
                                                    !! in case this value is less than zero, the lctlib value is used
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /phenology_ctl/  &
-#else
-    NAMELIST /q_pheno_nml/  &
-#endif
+    NAMELIST /lnd_q_pheno_nml/  &
       & active,               &
       & lrestart_cont,        &
       & ic_filename,          &
@@ -80,13 +76,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('phenology_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, phenology_ctl)
-#else
-    nml_unit = position_nml('q_pheno_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, q_pheno_nml)
-#endif
+    nml_unit = position_nml('lnd_q_pheno_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_q_pheno_nml)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                     = active

@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -16,6 +16,7 @@ MODULE mo_jsb_time
 
   USE mo_kind,           ONLY: wp
   USE mo_exception,      ONLY: message, message_text, finish
+  USE mo_jsb_control,    ONLY: jsbach_runs_standalone
   USE mo_jsb_time_iface, ONLY: t_datetime, deallocateDatetime, get_time_previous, get_time_next, &
                                get_date_components, get_time_start, &
                                get_time_dt, is_time_experiment_start, get_time_experiment_start, is_time_restart, &
@@ -292,7 +293,7 @@ CONTAINS
     IF (PRESENT(dt)) THEN
       dt_loc = dt
     ELSE IF (PRESENT(model_id)) THEN
-      dt_loc = get_time_dt(model_id)
+      dt_loc = get_time_dt(model_id, jsbach_runs_standalone())
     ELSE
       CALL finish(routine, 'Must provide either dt oder model_id')
     END IF
@@ -313,7 +314,7 @@ CONTAINS
     IF (PRESENT(dt)) THEN
       dt_loc = dt
     ELSE IF (PRESENT(model_id)) THEN
-      dt_loc = get_time_dt(model_id)
+      dt_loc = get_time_dt(model_id, jsbach_runs_standalone())
     ELSE
       CALL finish(routine, 'Must provide either dt oder model_id')
     END IF

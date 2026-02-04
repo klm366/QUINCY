@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -77,6 +77,7 @@ MODULE mo_q_agr_constants
     & fcs_fertappl_day2            = def_parameters, &  !< fraction of crop growing season when 2nd fertiliser dose is applied
     & fcs_fertappl_day3            = def_parameters, &  !< fraction of crop growing season when 3rd fertiliser dose is applied
     & fcs_fertappl_day4            = def_parameters, &  !< fraction of crop growing season when 4th fertiliser dose is applied
+    & canopy_mode_correction_factor= def_parameters, &  !< calibration factor to allow use of cttab_lai_max with all QUINCY modes
     & eta_fertiliser               = def_parameters     !< fractionation of N15 due to NH3 volatilisation [per mill]
 
   ! phenology parameters for all crop types
@@ -120,7 +121,7 @@ MODULE mo_q_agr_constants
   !$ACC DECLARE CREATE(qs_def_n_fertiliser, iq_background_n_fertiliser_rate, crop_planting_mass)
   !$ACC DECLARE CREATE(fstore_seed_min, fstore_seed_max)
   !$ACC DECLARE CREATE(max_harvesting_rate, fract_crop_to_slash, frac_fertil_nh4, frac_fertil_po4, fcs_fertappl_day1)
-  !$ACC DECLARE CREATE(fcs_fertappl_day2, fcs_fertappl_day3, fcs_fertappl_day4, eta_fertiliser)
+  !$ACC DECLARE CREATE(fcs_fertappl_day2, fcs_fertappl_day3, fcs_fertappl_day4, canopy_mode_correction_factor, eta_fertiliser)
   !$ACC DECLARE CREATE(mavg_period_cropseason, gdd_t_thres_dormseason, cttab_t_thres_planting)
   !$ACC DECLARE CREATE(cttab_t_thres_gdd_gs, cttab_gdd_mat_min, cttab_gdd_mat_max, cttab_gdd_max)
   !$ACC DECLARE CREATE(cttab_fgdd_mat, cttab_nd_gs_max, cttab_nd_dorm_max, cttab_min_daylength)
@@ -156,6 +157,7 @@ CONTAINS
     frac_fertil_nh4                   = 7._wp / 8._wp               !< an global average value
     frac_fertil_po4                   = 0.5_wp * 0.4366197_wp * &   !< FAO statistic global N:P2O5 application
                                         molar_mass_N / molar_mass_P
+    canopy_mode_correction_factor     = 0.8_wp                      !< tuned to get reasonable maximum LAI globally in CANOPY mode
     eta_fertiliser                    = 0._wp                       !< not clear how to design this now
 
     ! phenology and growth stage parameters (all AgroIBIS/CLM5)
@@ -209,7 +211,7 @@ CONTAINS
 
     !$ACC UPDATE DEVICE(qs_def_n_fertiliser, iq_background_n_fertiliser_rate) ASYNC(1)
     !$ACC UPDATE DEVICE(fstore_seed_min, fstore_seed_max) ASYNC(1)
-    !$ACC UPDATE DEVICE(crop_planting_mass, max_harvesting_rate) ASYNC(1)
+    !$ACC UPDATE DEVICE(crop_planting_mass, max_harvesting_rate, canopy_mode_correction_factor) ASYNC(1)
     !$ACC UPDATE DEVICE(fract_crop_to_slash, frac_fertil_nh4, frac_fertil_po4, fcs_fertappl_day1) ASYNC(1)
     !$ACC UPDATE DEVICE(fcs_fertappl_day2, fcs_fertappl_day3, fcs_fertappl_day4, eta_fertiliser) ASYNC(1)
     !$ACC UPDATE DEVICE(mavg_period_cropseason, gdd_t_thres_dormseason, cttab_t_thres_planting) ASYNC(1)

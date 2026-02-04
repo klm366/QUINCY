@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -29,8 +29,9 @@ MODULE mo_jsb_lcc
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_varlist,         ONLY: VARNAME_LEN
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
+  USE mo_jsb_var_class,       ONLY: REAL2D, REAL3D
 
-  USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc, t_jsb_lcc_var_p
+  USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc, t_jsb_lcc_var_p, max_tolerated_cf_mismatch
   USE mo_jsb_task_class,      ONLY: t_jsb_task_options
   USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan_p
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
@@ -173,6 +174,10 @@ CONTAINS
           ALLOCATE(lcc_relocations%passive_vars_cqt(nr_of_passive_vars))
           ALLOCATE(lcc_relocations%passive_vars_process_id(nr_of_passive_vars))
 
+          ALLOCATE(lcc_relocations%initial_area(nproma, nr_of_tiles, nblks))
+          ALLOCATE(lcc_relocations%gained_area(nproma, nr_of_tiles, nblks))
+          ALLOCATE(lcc_relocations%lost_area(nproma, nr_of_tiles, nblks))
+
           ALLOCATE(active_var_process_ids(nr_of_active_vars))
           active_var_process_ids = 0
 
@@ -285,65 +290,67 @@ CONTAINS
 
     DEALLOCATE(is_descendant, active_var_process_ids)
 
-    ! JN-TODO: following code is only a check! Could e.g. be surrounded by debug flag or similar (to else disable check)
-    !>
-    !> Assert: check against potential active and required passive variables for each process with active vars
-    !>
-    !
-    ! ... to enable active relocation, a process needs to 'expect' the variables assumed as active by a lcc process
-    !     in order to provide a method to relocate them to passive variables. Passive variables used in an active
-    !     relocation are therefore required to be passive on the calling lcc process.
-    DO i_proc = 1, lcc_relocations%nr_of_procs_with_active_vars
-      this_proc_name = TRIM(lcc_relocations%unique_proc_names_active_vars(i_proc))
-      this_process_id = Get_process_id(this_proc_name)
+    IF (debug_on()) THEN
+      ! Following code is only a check! Therefore, its surrounded by debug flag, but could also have an own enable/disable check
+      !>
+      !> Assert: check against potential active and required passive variables for each process with active vars
+      !>
+      !
+      ! ... to enable active relocation, a process needs to 'expect' the variables assumed as active by a lcc process
+      !     in order to provide a method to relocate them to passive variables. Passive variables used in an active
+      !     relocation are therefore required to be passive on the calling lcc process.
+      DO i_proc = 1, lcc_relocations%nr_of_procs_with_active_vars
+        this_proc_name = TRIM(lcc_relocations%unique_proc_names_active_vars(i_proc))
+        this_process_id = Get_process_id(this_proc_name)
 
-      ! Count and collect active vars for this process
-      nr_of_active_vars_this_proc = COUNT( lcc_relocations%active_vars_process_id == this_process_id )
-      ALLOCATE(active_vars_this_proc(nr_of_active_vars_this_proc))
-      ind = 0
-      DO i_var = 1, lcc_relocations%nr_of_active_vars
-        IF (lcc_relocations%active_vars_process_id(i_var) == this_process_id) THEN
-          ind = ind + 1
-          active_vars_this_proc(ind) = TRIM(lcc_relocations%active_vars(i_var)%p%name)
+        ! Count and collect active vars for this process
+        nr_of_active_vars_this_proc = COUNT( lcc_relocations%active_vars_process_id == this_process_id )
+        ALLOCATE(active_vars_this_proc(nr_of_active_vars_this_proc))
+        ind = 0
+        DO i_var = 1, lcc_relocations%nr_of_active_vars
+          IF (lcc_relocations%active_vars_process_id(i_var) == this_process_id) THEN
+            ind = ind + 1
+            active_vars_this_proc(ind) = TRIM(lcc_relocations%active_vars(i_var)%p%name)
+          ENDIF
+        ENDDO
+
+        ! and of passive vars of this proc
+        nr_of_passive_vars_this_proc = COUNT(lcc_relocations%passive_vars_process_id == this_process_id)
+        IF(nr_of_passive_vars_this_proc == 0) THEN
+          ! Assertion: if there is an active var, at least one passive var is required, too.
+          CALL finish(TRIM(routine), TRIM(lcc_relocations%name) &
+            & // ' contains actively relocated variables for ' // TRIM(this_proc_name) &
+            & // ' but no passively relocated sink variable for this proc - please check!')
         ENDIF
-      ENDDO
+        ALLOCATE(passive_vars_this_proc(nr_of_passive_vars_this_proc))
+        ind = 0
+        DO i_var = 1, lcc_relocations%nr_of_passive_vars
+          IF (lcc_relocations%passive_vars_process_id(i_var) == this_process_id) THEN
+            ind = ind + 1
+            passive_vars_this_proc(ind) = TRIM(lcc_relocations%passive_vars(i_var)%p%name)
+          ENDIF
+        ENDDO
 
-      ! and of passive vars of this proc
-      nr_of_passive_vars_this_proc = COUNT(lcc_relocations%passive_vars_process_id == this_process_id)
-      IF(nr_of_passive_vars_this_proc == 0) THEN
-        ! Assertion: if there is an active var, at least one passive var is required, too.
-        CALL finish(TRIM(routine), TRIM(lcc_relocations%name) &
-          & // ' contains actively relocated variables for ' // TRIM(this_proc_name) &
-          & // ' but no passively relocated sink variable for this proc - please check!')
-      ENDIF
-      ALLOCATE(passive_vars_this_proc(nr_of_passive_vars_this_proc))
-      ind = 0
-      DO i_var = 1, lcc_relocations%nr_of_passive_vars
-        IF (lcc_relocations%passive_vars_process_id(i_var) == this_process_id) THEN
-          ind = ind + 1
-          passive_vars_this_proc(ind) = TRIM(lcc_relocations%passive_vars(i_var)%p%name)
-        ENDIF
-      ENDDO
+        ! and check them
+        SELECT CASE(tolower(this_proc_name))
 
-      ! and check them
-      SELECT CASE(tolower(this_proc_name))
+        CASE ('carbon')
+          CALL check_active_lcc_vars(lcc_relocations, this_proc_name, active_vars_this_proc, carbon_potential_active_vars)
+          CALL check_passive_lcc_vars(lcc_relocations, this_proc_name, passive_vars_this_proc, carbon_required_passive_vars)
 
-      CASE ('carbon')
-        CALL check_active_lcc_vars(lcc_relocations, this_proc_name, active_vars_this_proc, carbon_potential_active_vars)
-        CALL check_passive_lcc_vars(lcc_relocations, this_proc_name, passive_vars_this_proc, carbon_required_passive_vars)
+        CASE DEFAULT
+          !>
+          !> Assertion: Each process that has actively relocated conserved quantities needs
+          !>            to provide lists with potential active and required passive vars
+          !>
+          CALL finish(TRIM(routine), this_proc_name &
+            & // ' contains variables that are actively relocated by ' // TRIM(lcc_relocations%name) &
+            & // ' but did not specify lists with potential active and required passive vars - please check!')
+        END SELECT
 
-      CASE DEFAULT
-        !>
-        !> Assertion: Each process that has actively relocated conserved quantities needs
-        !>            to provide lists with potential active and required passive vars
-        !>
-        CALL finish(TRIM(routine), this_proc_name &
-          & // ' contains variables that are actively relocated by ' // TRIM(lcc_relocations%name) &
-          & // ' but did not specify lists with potential active and required passive vars - please check!')
-      END SELECT
-
-      DEALLOCATE(active_vars_this_proc, passive_vars_this_proc)
-    ENDDO ! i_proc
+        DEALLOCATE(active_vars_this_proc, passive_vars_this_proc)
+      END DO ! i_proc
+    END IF
 
   END SUBROUTINE init_lcc
 
@@ -420,11 +427,25 @@ CONTAINS
 
     ! reset relocation arrays
     DO i_var = 1,lcc_relocations%nr_of_active_vars
-      lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,:,iblk) = 0.0_wp
-    ENDDO
+      IF (lcc_relocations%active_vars(i_var)%p%var_type == REAL2D) THEN
+        lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,:,iblk) = 0.0_wp
+      ELSE IF (lcc_relocations%active_vars(i_var)%p%var_type == REAL3D) THEN
+        lcc_relocations%active_vars(i_var)%p%relocate_this_3D(ics:ice,:,:,iblk) = 0.0_wp
+      ELSE
+        CALL finish(TRIM(routine), 'Not supported variable type: '// &
+            & int2string(lcc_relocations%active_vars(i_var)%p%var_type)//'. Please check!')
+      END IF
+    END DO
     DO i_var = 1,lcc_relocations%nr_of_passive_vars
-      lcc_relocations%passive_vars(i_var)%p%relocate_this(ics:ice,:,iblk) = 0.0_wp
-    ENDDO
+      IF (lcc_relocations%passive_vars(i_var)%p%var_type == REAL2D) THEN
+        lcc_relocations%passive_vars(i_var)%p%relocate_this(ics:ice,:,iblk) = 0.0_wp
+      ELSE IF (lcc_relocations%passive_vars(i_var)%p%var_type == REAL3D) THEN
+        lcc_relocations%passive_vars(i_var)%p%relocate_this_3D(ics:ice,:,:,iblk) = 0.0_wp
+      ELSE
+        CALL finish(TRIM(routine), 'Not supported variable type: '// &
+            & int2string(lcc_relocations%passive_vars(i_var)%p%var_type)// '. Please check!')
+      END IF
+    END DO
 
   END SUBROUTINE init_lcc_reloc
 
@@ -463,8 +484,8 @@ CONTAINS
     !>
     !> Assertion: lost area is >= 0.0_wp and <= 1.0_wp
     !>
-    IF (ANY(lost_area < 0.0_wp) .OR. ANY(lost_area > 1.0_wp) &
-      & .OR. ANY(initial_area < 0.0_wp) .OR. ANY(initial_area > 1.0_wp)) THEN
+    IF (ANY(lost_area < 0.0_wp) .OR. ANY(lost_area > 1.0_wp + max_tolerated_cf_mismatch) &
+      & .OR. ANY(initial_area < 0.0_wp) .OR. ANY(initial_area > 1.0_wp + max_tolerated_cf_mismatch)) THEN
       CALL finish(TRIM(routine), 'Violation of assertion: Area arrays have values out of range ([0.0, 1.0]). Please check!')
     ENDIF
     !>
@@ -472,9 +493,9 @@ CONTAINS
     !>
     ! -> JN-TODO: we might want/need to discuss the concept of the e-10 areas here
     IF (ANY((initial_area - lost_area) < -EPSILON(1._wp) )) THEN
-      CALL message(routine, 'Violation of assertion: Lost area exceeds available area ' &
-        & //'for lcc process '// TRIM(lcc_relocations%name))
-      WRITE (message_text,*) 'MINVAL: ', MINVAL(initial_area-lost_area), ' at ', MINLOC(initial_area-lost_area), &
+      WRITE (message_text,*) 'Violation of assertion: Lost area exceeds available area' &
+        & //' for lcc process '// TRIM(lcc_relocations%name) &
+        & //' -- MINVAL: ', MINVAL(initial_area-lost_area), ' at ', MINLOC(initial_area-lost_area), &
         & ' (nc,tile)'
       CALL finish(routine, message_text)
     ENDIF
@@ -499,10 +520,10 @@ CONTAINS
   !
   !> End the relocation upon lcc (distribute all to be transferred matter - passive relocation only!)
   !>
-  !> Note: the concept here is that the to be distributed area is collected of ALL shrinking tiles
+  !> Note: the concept here is that the to be distributed matter is collected of ALL shrinking tiles
   !>       i.e. if there are several shrinking tiles in the call
   !>            then there is no directed movement from tile_x -> tile_y
-  !>            but sum (shrinking tiles) -> per extending tiles prop. to sum (extending tiles)
+  !>            but sum (matter on shrinking tiles) -> per extending tiles prop. to sum (of extending tile area)
   !
   SUBROUTINE end_lcc_reloc(lcc_relocations, options, gained_area)
 
@@ -515,7 +536,9 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':end_lcc_reloc'
 
+    LOGICAL :: not_zero     !< Boolean to check if any active variable still carries not translocated matter
     INTEGER :: i_var, i_tile, iblk, ics, ice, nc, nr_of_tiles
+    INTEGER :: i_dim, n_dim !< index and number of additional dimension in case of REAL3D typed passive variables
     REAL(wp) :: passive_var_sum(options%nc), gained_area_sum(options%nc)
     ! -------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
@@ -540,7 +563,18 @@ CONTAINS
     !>
     DO i_var = 1,lcc_relocations%nr_of_active_vars
       DO i_tile = 1,nr_of_tiles
-        IF(ANY(lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,i_tile,iblk) /= 0.0_wp)) THEN
+        not_zero = .TRUE.
+
+        IF (lcc_relocations%active_vars(i_var)%p%var_type == REAL2D) THEN
+          not_zero = ANY(lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,i_tile,iblk) /= 0.0_wp)
+        ELSE IF (lcc_relocations%active_vars(i_var)%p%var_type == REAL3D) THEN
+          not_zero = ANY(lcc_relocations%active_vars(i_var)%p%relocate_this_3D(ics:ice,:,i_tile,iblk) /= 0.0_wp)
+        ELSE
+          CALL finish(TRIM(routine), 'Not supported variable type: '// &
+              & int2string(lcc_relocations%active_vars(i_var)%p%var_type)// '. Please check!')
+        END IF
+
+        IF (not_zero) THEN
           CALL finish(TRIM(routine), 'Violation of assertion: All active variables need to already have been ' &
             & // 'relocated upon call of this routine. However, found != 0.0 values for active var '           &
             & // TRIM(lcc_relocations%active_vars(i_var)%p%name) // ' on tile '                                &
@@ -552,16 +586,36 @@ CONTAINS
 
     DO i_var = 1,lcc_relocations%nr_of_passive_vars
       ! Matter from passive variables is proportionally distributed to these passive variables on extending tiles
-      passive_var_sum = SUM(lcc_relocations%passive_vars(i_var)%p%relocate_this(ics:ice,:,iblk), DIM=2)
-      DO i_tile = 1,nr_of_tiles
-        WHERE(gained_area(:, i_tile) > 0.0_wp)
-          lcc_relocations%passive_vars(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &
-            & = lcc_relocations%passive_vars(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &
-            & + passive_var_sum(:) * (gained_area(:, i_tile) / gained_area_sum(:))
-        END WHERE
-      ENDDO
-      lcc_relocations%passive_vars(i_var)%p%relocate_this(ics:ice,:,iblk) = 0.0_wp
-    ENDDO
+      IF (lcc_relocations%passive_vars(i_var)%p%var_type == REAL2D) THEN
+        passive_var_sum(:) = SUM(lcc_relocations%passive_vars(i_var)%p%relocate_this(ics:ice,:,iblk), DIM=2)
+        DO i_tile = 1,nr_of_tiles
+          WHERE (gained_area(:, i_tile) > 0.0_wp)
+            lcc_relocations%passive_vars(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &
+              & = lcc_relocations%passive_vars(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &
+              & + passive_var_sum(:) * (gained_area(:, i_tile) / gained_area_sum(:))
+          END WHERE
+        END DO
+        lcc_relocations%passive_vars(i_var)%p%relocate_this(ics:ice,:,iblk) = 0.0_wp
+
+      ELSE IF (lcc_relocations%passive_vars(i_var)%p%var_type == REAL3D) THEN
+        n_dim = SIZE(lcc_relocations%passive_vars(i_var)%p%relocate_this_3D(ics:ice,:,:,iblk), DIM=2)
+
+        DO i_dim = 1,n_dim
+          passive_var_sum(:) = SUM(lcc_relocations%passive_vars(i_var)%p%relocate_this_3D(ics:ice,i_dim,:,iblk), DIM=2)
+          DO i_tile = 1,nr_of_tiles
+            WHERE (gained_area(:, i_tile) > 0.0_wp)
+              lcc_relocations%passive_vars(i_var)%p%var_on_tile(i_tile)%p%ptr3d(ics:ice,i_dim,iblk) &
+                & = lcc_relocations%passive_vars(i_var)%p%var_on_tile(i_tile)%p%ptr3d(ics:ice,i_dim,iblk) &
+                & + passive_var_sum(:) * (gained_area(:, i_tile) / gained_area_sum(:))
+            END WHERE
+          END DO
+          lcc_relocations%passive_vars(i_var)%p%relocate_this_3D(ics:ice,i_dim,:,iblk) = 0.0_wp
+        END DO
+      ELSE
+        CALL finish(TRIM(routine), 'Not supported variable type: '// &
+            & int2string(lcc_relocations%passive_vars(i_var)%p%var_type)// '. Please check!')
+      END IF
+    END DO
 
   END SUBROUTINE end_lcc_reloc
 
@@ -723,6 +777,8 @@ CONTAINS
     CHARACTER(len=*),       INTENT(inout) :: var_names(:)
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_var), POINTER  :: a_lcc_var
+    INTEGER :: extra_dim
+    CHARACTER(len=*), PARAMETER :: routine = modname//':add_cq_to_lcc_structure'
     ! -------------------------------------------------------------------------------------------------- !
 
     cqt_of_vars(i_of_kind) = conserved_quantities(i_cqt)%p%type_id
@@ -730,14 +786,26 @@ CONTAINS
 
     ALLOCATE(a_lcc_var)
     var_list(i_of_kind)%p => a_lcc_var
-    var_list(i_of_kind)%p%name = conserved_quantities(i_cqt)%p%cq_vars_2D(i_var)%p%name
+    var_list(i_of_kind)%p%name = conserved_quantities(i_cqt)%p%cq_vars(i_var)%p%name
+    var_list(i_of_kind)%p%standard_name = conserved_quantities(i_cqt)%p%cq_vars(i_var)%p%standard_name
+    var_list(i_of_kind)%p%var_type = conserved_quantities(i_cqt)%p%var_type
+    var_list(i_of_kind)%p%transfer_all = conserved_quantities(i_cqt)%p%transfer_all
     var_names(i_of_kind) = var_list(i_of_kind)%p%name
 
     ALLOCATE(var_list(i_of_kind)%p%var_on_tile(nr_of_tiles))
-    var_list(i_of_kind)%p%var_on_tile(i_tile)%p => conserved_quantities(i_cqt)%p%cq_vars_2D(i_var)%p
+    var_list(i_of_kind)%p%var_on_tile(i_tile)%p => conserved_quantities(i_cqt)%p%cq_vars(i_var)%p
 
-    ALLOCATE(var_list(i_of_kind)%p%relocate_this(nproma,nr_of_tiles,nblks))
-    var_list(i_of_kind)%p%relocate_this(:,:,:) = 0.0_wp
+    IF (conserved_quantities(i_cqt)%p%var_type == REAL2D) THEN
+      ALLOCATE(var_list(i_of_kind)%p%relocate_this(nproma,nr_of_tiles,nblks))
+      var_list(i_of_kind)%p%relocate_this(:,:,:) = 0.0_wp
+    ELSE IF (conserved_quantities(i_cqt)%p%var_type == REAL3D) THEN
+      extra_dim = SIZE(conserved_quantities(i_cqt)%p%cq_vars(i_var)%p%ptr3d,DIM=2)
+      ALLOCATE(var_list(i_of_kind)%p%relocate_this_3D(nproma,extra_dim,nr_of_tiles,nblks))
+      var_list(i_of_kind)%p%relocate_this_3D(:,:,:,:) = 0.0_wp
+    ELSE
+      CALL finish(TRIM(routine), 'Not supported variable type: '// &
+          & int2string(conserved_quantities(i_cqt)%p%var_type)// '. Please check!')
+    END IF
 
   END SUBROUTINE add_cq_to_lcc_structure
 
@@ -770,24 +838,24 @@ CONTAINS
     nr_of_vars_on_cq = conserved_quantities(i_cqt)%p%no_of_vars
     DO i_var = 1,nr_of_vars_on_cq
       i_var_this_tile = i_var_this_tile + 1
+      thisName = conserved_quantities(i_cqt)%p%cq_vars(i_var)%p%standard_name
 
-      thisName = conserved_quantities(i_cqt)%p%cq_vars_2D(i_var)%p%name
       has_searched_var = .FALSE.
       DO i = 1,nr_of_vars
-        IF(TRIM(var_list(i)%p%name) .EQ. TRIM(thisName)) THEN
+        IF (TRIM(var_list(i)%p%standard_name) .EQ. TRIM(thisName)) THEN
           has_searched_var = .TRUE.
-          var_list(i)%p%var_on_tile(i_tile)%p => conserved_quantities(i_cqt)%p%cq_vars_2D(i_var)%p
+          var_list(i)%p%var_on_tile(i_tile)%p => conserved_quantities(i_cqt)%p%cq_vars(i_var)%p
           EXIT
-        ENDIF
-      ENDDO
+        END IF
+      END DO
       ! Assertion: all passive and active variables need to exist on all tiles
       IF (.NOT. has_searched_var) THEN
         CALL finish(TRIM(routine), &
           & 'Violation of assertion: Conceptually each tile needs to contain the same active and passive vars. ' &
           & //this_case //' var ' // TRIM(thisName) // ' of tile ' // TRIM(this_tile_name) // &
           & ' does not exist on tile ' // first_involved_child_name //'. Please check.' )
-      ENDIF
-    ENDDO
+      END IF
+    END DO
 
   END SUBROUTINE collect_pointers_for_cqs
 
@@ -807,28 +875,60 @@ CONTAINS
     INTEGER,                    INTENT(in)    :: nr_of_tiles, nr_of_vars
     TYPE(t_jsb_lcc_var_p),      INTENT(inout) :: var_list(:)
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER :: ics, ice, iblk, i_var, i_tile
-    REAL(wp) :: to_be_transferred(options%nc)
+    INTEGER :: i_dim, n_dim !< index and number of additional dimension in case of REAL3D typed passive variables
+    INTEGER :: nc, ic, ics, ice, iblk, i_var, i_tile
+    REAL(wp) :: to_be_transferred
+    CHARACTER(len=*), PARAMETER :: routine = modname//':collect_to_be_transferred_matter'
     ! -------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
+    nc      = options%nc
 
     DO i_var = 1,nr_of_vars
       DO i_tile = 1,nr_of_tiles
-        to_be_transferred(:) = 0.0_wp
-        WHERE(lost_area(:, i_tile) > 0.0_wp)
-          ! collect to be transferred matter
-          to_be_transferred(:) = var_list(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &
-            &   * (lost_area(:, i_tile) / initial_area(:, i_tile))
-          var_list(i_var)%p%relocate_this(ics:ice,i_tile,iblk) = to_be_transferred(:)
-          ! and subtract it
-          var_list(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &
-            & = var_list(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) - to_be_transferred(:)
-        END WHERE
-      ENDDO
-    ENDDO
+        DO ic = 1,nc
+          IF (lost_area(ic, i_tile) > 0.0_wp) THEN
+            ! collect to be transferred matter
+            IF (var_list(i_var)%p%var_type == REAL2D) THEN
+              ! Depending on the transfer_all flag either all matter from the variable is transferred
+              ! or only a share proportionally to the lost area
+              IF (var_list(i_var)%p%transfer_all) THEN
+                to_be_transferred = var_list(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics+ic-1,iblk)
+              ELSE
+                to_be_transferred = var_list(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics+ic-1,iblk) &
+                  &   * (lost_area(ic, i_tile) / initial_area(ic, i_tile))
+              END IF
+              var_list(i_var)%p%relocate_this(ics+ic-1,i_tile,iblk) = to_be_transferred
+              ! and subtract it
+              var_list(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics+ic-1,iblk) &
+                & = var_list(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics+ic-1,iblk) - to_be_transferred
+
+            ELSE IF (var_list(i_var)%p%var_type == REAL3D) THEN
+              n_dim = SIZE(var_list(i_var)%p%var_on_tile(i_tile)%p%ptr3d(ics+ic-1,:,iblk))
+              DO i_dim = 1, n_dim
+                ! Depending on the transfer_all flag either all matter from the variable is transferred
+                ! or only a share proportionally to the lost area
+                IF (var_list(i_var)%p%transfer_all) THEN
+                  to_be_transferred = var_list(i_var)%p%var_on_tile(i_tile)%p%ptr3d(ics+ic-1,i_dim,iblk)
+                ELSE
+                  to_be_transferred = var_list(i_var)%p%var_on_tile(i_tile)%p%ptr3d(ics+ic-1,i_dim,iblk) &
+                    &   * (lost_area(ic, i_tile) / initial_area(ic, i_tile))
+                END IF
+                var_list(i_var)%p%relocate_this_3D(ics+ic-1,i_dim,i_tile,iblk) = to_be_transferred
+                ! and subtract it
+                var_list(i_var)%p%var_on_tile(i_tile)%p%ptr3d(ics+ic-1,i_dim,iblk) &
+                  & = var_list(i_var)%p%var_on_tile(i_tile)%p%ptr3d(ics+ic-1,i_dim,iblk) - to_be_transferred
+              END DO
+            ELSE
+              CALL finish(TRIM(routine), 'Not supported variable type: '// &
+                  & int2string(var_list(i_var)%p%var_type)// '. Please check!')
+            END IF
+          END IF
+        END DO
+      END DO
+    END DO
 
   END SUBROUTINE collect_to_be_transferred_matter
 

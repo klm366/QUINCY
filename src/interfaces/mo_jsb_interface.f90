@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -38,7 +38,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_physical_constants, ONLY: cvdifts
   USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
-  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_
 
   IMPLICIT NONE
   PRIVATE
@@ -277,7 +277,7 @@ CONTAINS
       END IF
 
 #ifdef _OPENACC
-      CALL finish(routine, 'Quincy not ported to GPU in coupled mode, yet. Stop.')
+      CALL finish(routine, 'Quincy has not been tested on GPU in coupled mode so far.')
 
       IF (model%config%qmodel_id /= QCANOPY) THEN
         CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
@@ -498,11 +498,13 @@ CONTAINS
 
     INTEGER :: nc
     INTEGER :: no_omp_thread
+    LOGICAL :: ltimer
 
     ! ---------------------------
     ! Go
 
-    IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_jsbach(model_id))
+    ltimer = PRESENT(km) .AND. (timer_on() .OR. l_timer_host)
+    IF (ltimer) CALL timer_start(timer_jsbach(model_id))
 
     no_omp_thread = Get_omp_thread()
 
@@ -577,7 +579,7 @@ CONTAINS
     IF (debug_on('basic') .AND. iblk == 1) &
       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
 
-    IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model_id))
+    IF (ltimer) CALL timer_stop(timer_jsbach(model_id))
 
   END SUBROUTINE interface_tmx
 
@@ -715,6 +717,8 @@ CONTAINS
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
 #ifndef __NO_QUINCY__
+    USE mo_q_veg_interface,    ONLY: global_q_veg_diagnostics
+    USE mo_q_sb_interface,     ONLY: global_q_sb_diagnostics
     USE mo_veg_util,           ONLY: test_carbon_conservation
 #endif
     dsl4jsb_Use_processes SEB_
@@ -747,7 +751,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
 #ifndef __NO_QUINCY__
-    ! TBD: this is only required if restart or output is written for this timestep!
     ! BGCMs need to be copied back to the variables from the matrices on which calculations are conducted
     CALL model%Write_back_to_bgcms()
 #endif
@@ -769,7 +772,7 @@ CONTAINS
     ! Carbon conservation test Quincy
     CALL model%Get_top_tile(tile)
     IF ((model%config%model_scheme == MODEL_QUINCY) .AND. (model%config%qmodel_id == QLAND)) THEN
-      CALL test_carbon_conservation(tile, model%options(no_omp_thread))
+      CALL test_carbon_conservation(tile, model%options(no_omp_thread)%dtime)
     END IF
 #endif
 
@@ -811,6 +814,16 @@ CONTAINS
     IF (model%processes(PPLCC_)%p%config%active) THEN
       CALL global_pplcc_diagnostics(tile)
     END IF
+#ifndef __NO_QUINCY__
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      IF (model%processes(VEG_)%p%config%active) THEN
+        CALL global_q_veg_diagnostics(tile)
+      END IF
+      IF (model%processes(SB_)%p%config%active) THEN
+        CALL global_q_sb_diagnostics(tile)
+      END IF
+    END IF
+#endif
 
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())

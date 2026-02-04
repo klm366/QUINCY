@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -24,6 +24,7 @@ MODULE mo_q_agr_interface
   USE mo_exception,           ONLY: message, finish, message_text
   USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_quincy_model_config, ONLY: QCANOPY
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_process_class,   ONLY: t_jsb_process
@@ -94,7 +95,8 @@ MODULE mo_q_agr_interface
   SUBROUTINE update_cropland_process(tile, options)
     USE mo_lnd_bgcm_idx
     USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-    USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_ESTABLISHMENT_ID
+    USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_SEED_BED_POOL_ID, VEG_BGCM_GROWTH_ID, &
+      &                                   VEG_BGCM_LITTERFALL_ID, VEG_BGCM_ESTABLISHMENT_ID
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -104,7 +106,8 @@ MODULE mo_q_agr_interface
     USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments
     USE mo_q_assimi_constants,      ONLY: ic3phot
     USE mo_q_agr_process,           ONLY: calc_crop_phenology, calc_planting_flux, set_crop_n_fixation_status, &
-      &                                   update_crop_growth_phase, calc_crop_allocation_factors, calc_fertiliser_application
+      &                                   update_crop_growth_phase, calc_crop_allocation_factors, calc_fertiliser_application, &
+      &                                   calc_crop_leaf_mass_change_canopy_mode
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_lnd_bgcm_store),     POINTER       :: bgcm_store                 !< the bgcm store of this tile
@@ -172,10 +175,13 @@ MODULE mo_q_agr_interface
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt1L2D     :: veg_establishment_mt
     dsl4jsb_Def_mt2L2D     :: veg_pool_mt
+    dsl4jsb_Def_mt1L2D     :: seed_bed_pool_mt
+    dsl4jsb_Def_mt2L2D     :: veg_growth_mt
+    dsl4jsb_Def_mt2L2D     :: veg_litterfall_mt
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                    :: ic, iblk, ics, ice, nc !< loop counter / dimensions
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb          !< Vertical grid
-    INTEGER                    :: nsoil_sb               !< number of soil layers as used/defined by the SB_ process
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_w           !< Vertical grid
+    INTEGER                    :: nsoil_w               !< number of soil layers as used/defined by the SB_ process
     INTEGER                    :: nr_of_veg_bgcm_comp    !< dim for veg compartments
     REAL(wp)                   :: dtime                  !< timestep length
     TYPE(t_jsb_model), POINTER :: model
@@ -205,8 +211,8 @@ MODULE mo_q_agr_interface
     ice   = options%ice
     iblk  = options%iblk
     dtime = options%dtime
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
     nr_of_veg_bgcm_comp = get_number_of_veg_compartments()
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -273,8 +279,11 @@ MODULE mo_q_agr_interface
 
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
-    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)                           ! inout
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)                           ! in
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_POOL_ID, seed_bed_pool_mt)             ! in
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)         ! inout
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)               ! inout
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)                       ! inout
 
     ! ----------------------------------------------------------------------------------------------------- !
     !>
@@ -297,11 +306,14 @@ MODULE mo_q_agr_interface
     !> - Determine establishment flux if this is a planting time step, and set whether the planted crop
     !>   is a N fixing crop (1) or not (0)
     !>
+    !$ACC UPDATE HOST(crop_growth_phase(:),seed_bed_pool_mt(:,:),veg_establishment_mt(:,:)) ASYNC(1)
+    !$ACC WAIT(1)
     CALL calc_planting_flux(nc, &                            ! in
       &                      crop_growth_phase(:), &
-      &                      veg_pool_mt(ix_seed_bed,:,:), &
+      &                      seed_bed_pool_mt(:,:), &
       &                      veg_establishment_mt(:,:))      ! inout
     active_n_fixation(:) = set_crop_n_fixation_status(crop_type_index(:))
+    !$ACC UPDATE DEVICE(veg_establishment_mt(:,:)) ASYNC(1)
     ! ----------------------------------------------------------------------------------------------------- !
     !>
     !> - Update crop growth phase
@@ -325,11 +337,16 @@ MODULE mo_q_agr_interface
     !>
     !> - Apply fertiliser if today is a fertiliser day
     !>
-    IF (lctlib_ps_pathway == ic3phot) THEN
-      n_fertiliser(:) = n_fertiliser_c3
-    ELSE
-      n_fertiliser(:) = n_fertiliser_c4
-    END IF
+    !$ACC DATA CREATE(n_fertiliser) ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1,nc
+      IF (lctlib_ps_pathway == ic3phot) THEN
+        n_fertiliser(ic) = n_fertiliser_c3(ic)
+      ELSE
+        n_fertiliser(ic) = n_fertiliser_c4(ic)
+      END IF
+    END DO
+    !$ACC END PARALLEL LOOP
 
     CALL calc_fertiliser_application(nc, nd_crop_season(:), nd_crop_season_mavg(:),                  & ! in
       &                               crop_season_per_year_mavg(:), n_fertiliser(:),                 &
@@ -337,6 +354,27 @@ MODULE mo_q_agr_interface
       &                               fertiliser_no3(:), fertiliser_no3_n15(:),                      &
       &                               fertiliser_po4(:))
 
+    ! ----------------------------------------------------------------------------------------------------- !
+    !>
+    !> - update growth and litterfall of leaves (only QCANOPY model, in QPLANT/QLAND this is done in Q_VEG)
+    !>
+    SELECT CASE (model%config%qmodel_id)
+      CASE (QCANOPY)
+    !$ACC UPDATE HOST(crop_type_index(:),crop_growth_phase(:),gdd(:), gdd_mavg(:))&
+    !$ACC   HOST(veg_pool_mt(:,:,:),veg_growth_mt(:,:,:),veg_litterfall_mt(:, :, :)) ASYNC(1)
+    !$ACC WAIT(1)
+        CALL calc_crop_leaf_mass_change_canopy_mode(nc, dtime, lctlib_sla, lctlib_cn_leaf,        & ! in
+          &                             lctlib_np_leaf, crop_type_index(:), crop_growth_phase(:), &
+          &                             gdd(:), gdd_mavg(:), veg_pool_mt(ix_leaf, ixC, :),        & ! in
+          &                             veg_growth_mt(ix_leaf, ixC, :),                           & ! inout
+          &                             veg_growth_mt(ix_leaf, ixN, :),                           &
+          &                             veg_growth_mt(ix_leaf, ixP, :),                           &
+          &                             veg_litterfall_mt(ix_leaf, ixC, :),                       &
+          &                             veg_litterfall_mt(ix_leaf, ixN, :),                       &
+          &                             veg_litterfall_mt(ix_leaf, ixP, :))                         ! inout
+    END SELECT
+    !$ACC UPDATE DEVICE(veg_growth_mt(:,:,:),veg_litterfall_mt(:,:,:)) ASYNC(1)
+    !$ACC END DATA
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
 
   END SUBROUTINE update_cropland_process

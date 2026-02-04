@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -1906,7 +1906,7 @@ CONTAINS
   !>
   SUBROUTINE sat_specific_humidity(temp, pressure, qsat)
 
-    USE mo_phy_schemes, ONLY: qsat_water
+    USE mo_phy_schemes, ONLY: qsat_mixed
 
     REAL(wp), INTENT(IN) :: temp(:)      ! Air temperature at level [K]
     REAL(wp), INTENT(IN) :: pressure(:)  ! Pressure at level [Pa]
@@ -1927,7 +1927,7 @@ CONTAINS
         CALL finish(TRIM(routine), TRIM(message_text))
       ELSE
 #endif
-        qsat(ic) = qsat_water(temp(ic), pressure(ic), use_convect_tables=.TRUE.)
+        qsat(ic) = qsat_mixed(temp(ic), pressure(ic))
 #ifndef _OPENACC
       ENDIF
 #endif
@@ -1940,7 +1940,7 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_phy_schemes, ONLY: qsat_water
+    USE mo_phy_schemes, ONLY: qsat_mixed
 
     ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
     ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
@@ -1957,7 +1957,7 @@ CONTAINS
 !          & 'Temperature out of bound: ', temp(i), 'K. One thing to check: consistency of land-sea mask and forcing.'
 !        CALL finish(TRIM(routine), TRIM(message_text))
     ELSE
-      qsat = qsat_water(temp, pressure, use_convect_tables=.TRUE.)
+      qsat = qsat_mixed(temp, pressure)
     ENDIF
 
   END SUBROUTINE sat_specific_humidity_scalar
@@ -2056,8 +2056,7 @@ CONTAINS
   !
   SUBROUTINE vapour_pressure_from_evapor(startblk, endblk, startidx, endidx, evapo_ratio_mean, Tmin, Tair, vpress)
 
-    ! USE mo_phy_schemes, ONLY: sat_pres_water
-    USE mo_phy_schemes, ONLY: tlucua, jptlucu1, jptlucu2
+    USE mo_phy_schemes, ONLY: sat_pres_mixed
 
     INTEGER,  INTENT(IN) :: startblk, endblk, startidx(:), endidx(:)
     REAL(wp), INTENT(IN) :: evapo_ratio_mean(:,:)  !! fe(d-1) of Eq. (1)
@@ -2083,7 +2082,7 @@ CONTAINS
       !$ACC LOOP GANG VECTOR
       DO ic = ics, ice
 
-        !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
+        !Assertion: the expected temperature range is indirectly defined by the tlucua bounds in convect tables -> consistency check
 #ifndef _OPENACC
         IF (Tmin(ic,ib) + tmelt < 50._wp .OR. Tmin(ic,ib) + tmelt > 400._wp) THEN
           WRITE (message_text,*) &
@@ -2097,11 +2096,8 @@ CONTAINS
         ENDIF
 #endif
 
-        !jsb3: rdv = eps
-        evapo_sat_min = tlucua(INT(1000._wp * (Tmin(ic,ib) + tmelt)))/rdv ! saturation pressure at minimum temperature
-        evapo_sat     = tlucua(INT(1000._wp * (Tair(ic,ib) + tmelt)))/rdv ! saturation pressure at actual temperature
-        ! evapo_sat_min = sat_pres_water(Tmin(i,j) + tmelt) ! saturation pressure at minimum temperature
-        ! evapo_sat     = sat_pres_water(Tair(i,j) + tmelt) ! saturation pressure at actual temperature
+        evapo_sat_min = sat_pres_mixed(Tmin(ic,ib) + tmelt) ! saturation pressure at minimum temperature
+        evapo_sat     = sat_pres_mixed(Tair(ic,ib) + tmelt) ! saturation pressure at actual temperature
         e0_vap = evapo_sat_min * (h0 + (1._wp - h0) * evapo_ratio_mean(ic,ib))                               ! Eq. (2) from above
         vpress(ic,ib) = e0_vap + h1 * evapo_ratio_mean(ic,ib) * (evapo_sat - evapo_sat_min) ! Eq. (3) from above
 

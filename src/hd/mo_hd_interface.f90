@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -598,14 +598,16 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       ! global integrals
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
-      DO blk = 1, nblks
-        DO jc = 1, nproma
-          ztemp(jc,blk) = discharge(jc,blk) * in_domain(jc,blk)
+      IF (debug_hd) THEN
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
+        DO blk = 1, nblks
+          DO jc = 1, nproma
+            ztemp(jc,blk) = discharge(jc,blk) * in_domain(jc,blk)
+          END DO
         END DO
-      END DO
-      !$ACC END PARALLEL LOOP
-      global_discharge       = global_sum_array(ztemp, lacc=.TRUE.)
+        !$ACC END PARALLEL LOOP
+        global_discharge = global_sum_array(ztemp, lacc=.TRUE.)
+      END IF
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma

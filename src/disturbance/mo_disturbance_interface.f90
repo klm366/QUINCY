@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -145,6 +145,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                :: model
+    LOGICAL :: use_tmx
     LOGICAL :: newday, exp_start
     INTEGER :: iblk, ic, nc, ics, ice
 
@@ -203,6 +204,8 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    use_tmx = model%config%use_tmx
+
     ! Get process configurations
     dsl4jsb_Get_config(DISTURB_)
 
@@ -244,7 +247,7 @@ CONTAINS
     persist = persist_rel_hum ** (1._wp/REAL(timesteps_per_day(options%dtime),wp))
 
     ! Update climate buffer variables each time step
-    q_rel_air(:) = get_relative_humidity_air(q_air(:), t_unfilt(:), press_srf(:))
+    q_rel_air(:) = get_relative_humidity_air(q_air(:), t_unfilt(:), press_srf(:), use_tmx)
     !$ACC WAIT(1)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)

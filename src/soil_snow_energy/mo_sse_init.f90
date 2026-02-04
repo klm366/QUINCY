@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -15,10 +15,10 @@ MODULE mo_sse_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,               ONLY: wp
-  USE mo_exception,          ONLY: message
+  USE mo_exception,          ONLY: message, finish
   USE mo_jsb_control,        ONLY: debug_on
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -67,6 +67,7 @@ MODULE mo_sse_init
       & fr_sand_deep(:,:  ) => Null(), &
       & fr_silt_deep(:,:  ) => Null(), &
       & fr_clay_deep(:,:  ) => Null(), &
+      & bulk_density(:,:  ) => NULL(), &
       & t_srf_mon   (:,:,:) => NULL(), &
       & ifs_tsoil   (:,:,:) => NULL(), &
       & ifs_tskin   (:,:  ) => NULL()
@@ -85,9 +86,15 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
 #ifdef __QUINCY_STANDALONE__
+    model  => Get_model(tile%owner_model_id)
+    IF (model%config%use_soil_phys_jsbach) THEN
+      CALL qs_sse_init_bc(tile)
+      CALL sse_init_ic(tile)
+    END IF
 #else
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL sse_read_init_vars(tile)
@@ -116,6 +123,7 @@ CONTAINS
     IF (ASSOCIATED(sse_init_vars%fr_sand_deep)) DEALLOCATE(sse_init_vars%fr_sand_deep)
     IF (ASSOCIATED(sse_init_vars%fr_silt_deep)) DEALLOCATE(sse_init_vars%fr_silt_deep)
     IF (ASSOCIATED(sse_init_vars%fr_clay_deep)) DEALLOCATE(sse_init_vars%fr_clay_deep)
+    IF (ASSOCIATED(sse_init_vars%bulk_density)) DEALLOCATE(sse_init_vars%bulk_density)
 
     IF (ASSOCIATED(sse_init_vars%t_srf_mon))    DEALLOCATE(sse_init_vars%t_srf_mon)
 
@@ -179,7 +187,8 @@ CONTAINS
         & sse_init_vars%fr_clay     (nproma, nblks    ), &
         & sse_init_vars%fr_sand_deep(nproma, nblks    ), &
         & sse_init_vars%fr_silt_deep(nproma, nblks    ), &
-        & sse_init_vars%fr_clay_deep(nproma, nblks    )  &
+        & sse_init_vars%fr_clay_deep(nproma, nblks    ), &
+        & sse_init_vars%bulk_density(nproma, nblks    )  &
         & )
 
       sse_init_vars%fr_sand     (:,:)   = missval
@@ -188,11 +197,13 @@ CONTAINS
       sse_init_vars%fr_sand_deep(:,:)   = missval
       sse_init_vars%fr_silt_deep(:,:)   = missval
       sse_init_vars%fr_clay_deep(:,:)   = missval
+      sse_init_vars%bulk_density(:,:)   = missval
     END IF ! l_soil_texture
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename), model%grid_id)
 
     ! soil texture information
+    !
     IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
       ptr_2D => input_file%Read_2d(             &
         & variable_name='FR_SAND',              &
@@ -223,6 +234,27 @@ CONTAINS
         & variable_name='SUB_FR_CLAY',              &
         & fill_array = sse_init_vars%fr_clay_deep)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+
+#ifndef __NO_QUINCY__
+      ! quincy
+      ! read 'bulk density' values from quincy specific input file
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        ! close jsbach input file
+        CALL input_file%Close()
+        ! open quincy input file
+        input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_quincy_soil_filename), model%grid_id)
+
+        ! bulk density
+        !
+        ptr_2D => input_file%Read_2d(  &
+          & variable_name='BLDFIE',    &
+          & fill_array = sse_init_vars%bulk_density)
+        sse_init_vars%bulk_density(:,:) = MERGE(ptr_2D, 1000.0_wp, ptr_2D > 0.0_wp)
+
+        ! quincy input file may be closed below
+    END SELECT
+#endif
 
       ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
       CALL soil_init_from_texture( &
@@ -311,31 +343,124 @@ CONTAINS
     END IF
 
   END SUBROUTINE sse_read_init_vars
+#endif
+
+#ifdef __QUINCY_STANDALONE__
+  SUBROUTINE qs_sse_init_bc(tile)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    TYPE(t_jsb_model), POINTER :: model
+    CHARACTER(len=*), PARAMETER :: routine = modname//':qs_sse_init_bc'
+
+    dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
+
+    dsl4jsb_Real2D_onDomain :: vol_heat_cap
+    dsl4jsb_Real2D_onDomain :: heat_cond
+    dsl4jsb_Real3D_onDomain :: sand_sl
+    dsl4jsb_Real3D_onDomain :: silt_sl
+    dsl4jsb_Real3D_onDomain :: clay_sl
+    dsl4jsb_Real3D_onDomain :: bulk_dens_sl
+
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting QS soil energy boundary conditions for tile '//TRIM(tile%name))
+
+    model => get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
+
+    dsl4jsb_Get_var2D_onDomain(SSE_, vol_heat_cap)
+    dsl4jsb_Get_var2D_onDomain(SSE_, heat_cond)
+    dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)
+    dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)
+    dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)
+    dsl4jsb_Get_var3D_onDomain(SSE_, bulk_dens_sl)
+
+    ! Assertion that 'l_soil_texture' option is set to the same value in SSE_ and HYDRO_
+    IF (dsl4jsb_Config(SSE_)%l_soil_texture .NEQV. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
+      CALL finish (TRIM(routine), 'The value of l_soil_texture differs between SSE_ and HYDRO_ '//TRIM(tile%name))
+    END IF
+
+    !> sand
+    !>
+    sand_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_soil_sand
+    !> silt
+    !>
+    silt_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_soil_silt
+    !> clay
+    !>
+    clay_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_soil_clay
+    !> bulk density
+    !>
+    bulk_dens_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_bulk_density
+
+    ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
+    CALL soil_init_from_texture( &
+      &     heat_cap_sand, heat_cap_silt, heat_cap_clay, heat_cap_oc, &
+      &     sand_sl(:,1,:), silt_sl(:,1,:), clay_sl(:,1,:), &
+      &     sand_sl(:,1,:), silt_sl(:,1,:), clay_sl(:,1,:), &
+      &     vol_heat_cap(:,:))
+
+    ! calculate soil heat conductivity incl. organic fraction
+    CALL soil_init_from_texture( &
+      &     heat_cond_sand, heat_cond_silt, heat_cond_clay, heat_cond_oc,                                      &
+      &     sand_sl(:,1,:), silt_sl(:,1,:), clay_sl(:,1,:), &
+      &     sand_sl(:,1,:), silt_sl(:,1,:), clay_sl(:,1,:), &
+      &     heat_cond(:,:))
+
+  END SUBROUTINE qs_sse_init_bc
+#endif
 
   SUBROUTINE sse_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
 
     INTEGER :: iblk
+    INTEGER :: nsoil
 
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_vgrid), POINTER :: soil_e
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init_bc'
 
-    model => get_model(tile%owner_model_id)
+    ! SSE_ 3D
+    dsl4jsb_Real3D_onDomain :: sand_sl
+    dsl4jsb_Real3D_onDomain :: silt_sl
+    dsl4jsb_Real3D_onDomain :: clay_sl
+    dsl4jsb_Real3D_onDomain :: bulk_dens_sl
 
-    ! Get soil config
-    dsl4jsb_Get_config(SSE_)
+    model => get_model(tile%owner_model_id)
+    soil_e => Get_vgrid('soil_depth_energy')
+
+    nsoil = soil_e%n_levels
 
     IF (.NOT. tile%Is_process_active(SSE_)) RETURN
-
     IF (debug_on()) CALL message(TRIM(routine), 'Setting soil energy boundary conditions for tile '//TRIM(tile%name))
 
-    ! Get soil memory of the tile
+    ! Get process config
+    dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_config(HYDRO_)
+    ! Get process memory
     dsl4jsb_Get_memory(SSE_)
+
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      ! SSE_ 3D
+      dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)
+      dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)
+      dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)
+      dsl4jsb_Get_var3D_onDomain(SSE_, bulk_dens_sl)
+    END SELECT
+#endif
 
     ! Volumetric heat capacity of dry soil [J/(m^3*K)]
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. dsl4jsb_Config(SSE_)%l_soil_texture) THEN
@@ -358,6 +483,41 @@ CONTAINS
         & dsl4jsb_var2D_onDomain(SSE_, vol_heat_cap) * dsl4jsb_var2D_onDomain(SSE_, thermal_diffusivity)
       !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SSE_,thermal_diffusivity)) ASYNC(1)
     END IF
+
+#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
+        ! sand
+        !
+        sand_sl(:,:,:) = SPREAD(sse_init_vars%fr_sand(:,:), DIM = 2, ncopies = nsoil)
+        ! silt
+        !
+        silt_sl(:,:,:) = SPREAD(sse_init_vars%fr_silt(:,:), DIM = 2, ncopies = nsoil)
+        ! clay
+        !
+        clay_sl(:,:,:) = SPREAD(sse_init_vars%fr_clay(:,:), DIM = 2, ncopies = nsoil)
+        ! bulk density
+        !
+        bulk_dens_sl(:,:,:) = SPREAD(sse_init_vars%bulk_density(:,:), DIM = 2, ncopies = nsoil)
+
+        ! Assertion that 'l_soil_texture' option is set to the same value in SSE_ and HYDRO_
+        IF (.NOT. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
+          CALL finish (TRIM(routine), 'The setting of l_soil_texture differs between SSE_ and HYDRO_ '//TRIM(tile%name))
+        END IF
+      ELSE
+        sand_sl(:,:,:)      = 0.3_wp
+        silt_sl(:,:,:)      = 0.4_wp
+        clay_sl(:,:,:)      = 0.3_wp
+        bulk_dens_sl(:,:,:) = 1500.0_wp
+
+        CALL message(TRIM(routine), 'QUINCY model: SSE_ l_soil_texture is FALSE '//TRIM(tile%name))
+        CALL message(TRIM(routine), 'Setting soil properties (sand,silt,clay,bulk_density) to default values '//TRIM(tile%name))
+      END IF
+
+      !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), bulk_dens_sl(:,:,:)) ASYNC(1)
+    END SELECT
+#endif
 
     !$ACC UPDATE ASYNC(1) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap)) &
@@ -407,12 +567,16 @@ CONTAINS
       CALL ifs2soil(sse_init_vars%ifs_tsoil(:,:,:), ifs_soil_depth(:), dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,:), soil_e%ubounds(:))
 
     ELSE
+#ifdef __QUINCY_STANDALONE__
+      dsl4jsb_var_ptr(SSE_,t_soil_sl) = 273.15_wp
+#else
       DO iblk=1,SIZE(sse_init_vars%t_srf_mon, DIM=2)
         CALL init_soil_temperature(                   &
           & soil_e%levels(:),                         &
           & sse_init_vars%t_srf_mon(:,iblk,1:12),     &
           & dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,iblk))
       END DO
+#endif
     END IF
 
     !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl)) ASYNC(1)
@@ -432,9 +596,11 @@ CONTAINS
 
     ! Note: called from model_init now
     ! CALL init_soil_properties(tile)
+#ifdef __QUINCY_STANDALONE__
+    CALL init_soil_properties(tile)
+#endif
 
   END SUBROUTINE sse_init_ic
-#endif
 
   SUBROUTINE init_soil_properties(tile)
 
@@ -549,7 +715,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
 
-    IF (model%config%init_from_ifs .AND. dsl4jsb_Config(SSE_)%l_freeze) THEN
+    IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
 
       dsl4jsb_Get_var3D_onDomain(SSE_,   t_soil_sl)
       dsl4jsb_Get_var3D_onDomain(HYDRO_, matric_pot_sl)

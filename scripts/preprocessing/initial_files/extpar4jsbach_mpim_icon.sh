@@ -3,7 +3,7 @@
 # ICON-Land
 #
 # ---------------------------------------
-# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+# Copyright (C) 2013-2026, MPI-M, MPI-BGC
 #
 # Contact: icon-model.org
 # Authors: AUTHORS.md
@@ -92,6 +92,7 @@ binary_soil=extpar_soil_to_buffer.exe
 binary_flake=extpar_flake_to_buffer.exe
 binary_alb=extpar_alb_to_buffer.py
 binary_era=extpar_era_to_buffer.py
+binary_cdnc=extpar_cdnc_to_buffer.py
 
 cat > INPUT_grid_org << EOF
 &GRID_DEF
@@ -216,6 +217,11 @@ raw_data_ahf='AHF_2006_2.5min_latreverse.nc'
 
 buffer_ahf='AHF_BUFFER.nc'
 output_ahf='AHF_extpar_ICON.nc'
+
+# CDNC data
+raw_data_cdnc='modis_cdnc_climatology_BR17_37mu_adjusted.nc'
+buffer_cdnc='cdnc_BUFFER.nc'
+
 
 # create input namelists
 cat > INPUT_AOT << EOF
@@ -413,6 +419,14 @@ input_alb = {
     'alb_output_file': '${output_alb}',
 }
 EOF
+#---
+cat >> namelist.py << EOF
+input_cdnc= {
+    'raw_data_cdnc_path': '${datadir}/cdnc',
+    'raw_data_cdnc_filename': '${raw_data_cdnc}',
+    'cdnc_buffer_file': '${buffer_cdnc}',
+}
+EOF
 #_______________________________________________________________________________
 # consistency check
 cat > INPUT_CHECK << EOF
@@ -444,11 +458,9 @@ then
     ${bindir}/${binary_isa}
 fi
 
-# Note: Due to a data gap between 60 and 62 degree South between the Merit and
-#    Rema data sets, the GLOBE topography needs to be generated even if the
-#    Merit-Rema topography has been chosen. Besides, the flake raw data is
-#    based on GLOBE data, thus the GLOBE data land see mask (FR_LAND_TOPO)
-#    needs to be used to correctly identify the lakes.
+# Note: The GLOBE topography needs to be generated even if the Merit-Rema topography
+#    has been chosen, as the FLAKE raw data is based on GLOBE data and the GLOBE
+#    land see mask (FR_LAND_TOPO) needs to be used to correctly identify the lakes.
 cp INPUT_ORO_GLOBE INPUT_ORO
 echo "$0: run ${bindir}/${binary_topo} with GLOBE data"
 ${bindir}/${binary_topo}
@@ -461,29 +473,10 @@ if [[ ${topo_data} == "Merit-Rema" ]]; then
 
   # Merge Merit-Rema and GLOBE data
   # -------------------------------
-  # A: Fill Merit-Rema data gap between 62 and 60S with GLOBE data
-  echo "$0: Fill MERIT orography with GLOBE data in the region from 62 to 60 degrees south"
-
-  # Extract orographic variables from GLOBE and MERIT output files
-  varlist="HSURF,SSO_STDH,SSO_SIGMA,SSO_THETA,SSO_GAMMA,Z0_TOPO,FR_LAND_TOPO"
-  cdo selvar,${varlist}  ${buffer_merit} ${buffer_merit}.vars.tmp
-  cdo selvar,${varlist}  ${buffer_globe} ${buffer_globe}.vars.tmp
-
-  # Create the masks for GLOBE (62-60S) and Merit-Rema (rest of the globe)
-  cdo selvar,lat ${buffer_merit} lat.tmp
-  cdo add -lec,-62 lat.tmp -gec,-60 lat.tmp ${buffer_merit}.mask.tmp
-  cdo nec,1 ${buffer_merit}.mask.tmp ${buffer_globe}.mask.tmp
-
-  # Merge both data sets
-  cdo add -mul ${buffer_merit}.vars.tmp ${buffer_merit}.mask.tmp \
-          -mul ${buffer_globe}.vars.tmp ${buffer_globe}.mask.tmp ${buffer_merit}.filled.tmp
-
-  cdo replace ${buffer_merit} ${buffer_merit}.filled.tmp ${buffer_topo}.tmp
-
-  # B: Replace FR_LAND_TOPO of Merit-Rema by GLOBE data to correctly identify lakes
-  #    in the flake module
+  # Replace FR_LAND_TOPO of Merit-Rema by GLOBE data to correctly identify lakes
+  # in the flake module
   echo "$0: Replace FR_LAND_TOPO from Merit-Rema by GLOBE land fraction"
-  cdo replace ${buffer_topo}.tmp -selvar,FR_LAND_TOPO ${buffer_globe} ${buffer_topo}
+  $cdo replace ${buffer_merit} -selvar,FR_LAND_TOPO ${buffer_globe} ${buffer_topo}
 
   mv ${buffer_topo} ${buffer_merit}
 
@@ -500,6 +493,7 @@ ${bindir}/${binary_lu}
 ${bindir}/${binary_cru}
 ${bindir}/${binary_aot}
 ${bindir}/${binary_era}
+${bindir}/${binary_cdnc}
 set +x
 
 # The consistency check requires the output of

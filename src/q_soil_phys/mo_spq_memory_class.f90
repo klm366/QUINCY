@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -125,8 +125,7 @@ CONTAINS
     USE mo_quincy_output_class, ONLY: unitless
     USE mo_jsb_physical_constants, ONLY: &
       & Tzero,                           &
-      & dens_snow,                       & ! Density of snow (l_dynsnow=.FALSE.)
-      & dens_snow_min                      ! Density of fresh snow (l_dynsnow=.TRUE.)
+      & dens_snow                          ! Density of snow (l_dynsnow=.FALSE.)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_spq_memory), INTENT(inout), TARGET  :: mem             !< spq memory
     CHARACTER(len=*),     INTENT(in)            :: prefix          !< process name
@@ -138,7 +137,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb                ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_w                 ! Vertical grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_snow_spq               ! Vertical grid
     INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_spq_memory'
@@ -147,7 +146,7 @@ CONTAINS
     table          =  tables(1)
     hgrid          => Get_grid(model%grid_id)
     surface        => Get_vgrid('surface')
-    vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
+    vgrid_soil_w   => Get_vgrid('soil_depth_water')
     vgrid_snow_spq => Get_vgrid('snow_layer_spq')
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -219,7 +218,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart=.TRUE., &
-        & initval_r=0.0_wp)
+        & initval_r=0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('interception', mem%interception, &
         & hgrid, surface, &
@@ -230,7 +230,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('evapopot', mem%evapopot, &
         & hgrid, surface, &
@@ -241,7 +242,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('evaporation', mem%evaporation, &
         & hgrid, surface, &
@@ -252,7 +254,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('evaporation_snow', mem%evaporation_snow, &
         & hgrid, surface, &
@@ -263,7 +266,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('srf_runoff', mem%srf_runoff, &
         & hgrid, surface, &
@@ -274,7 +278,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('drainage', mem%drainage, &
         & hgrid, surface, &
@@ -285,7 +290,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('gw_runoff', mem%gw_runoff, &
         & hgrid, surface, &
@@ -296,7 +302,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('drainage_fraction', mem%drainage_fraction, &
         & hgrid, surface, &
@@ -310,7 +317,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('gw_runoff_sl', mem%gw_runoff_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('gw_runoff_sl', 'kg m-2 s-1', 'lateral groundwater runoff per layer'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -318,10 +325,11 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('drainage_sl', mem%drainage_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('drainage_sl', 'kg m-2 s-1', 'drainage of soil layers'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -329,10 +337,11 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('saxtonA', mem%saxtonA, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('saxtonA', unitless, 'coefficient in moisture-tension relationship'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -343,7 +352,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('saxtonB', mem%saxtonB, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('saxtonB', unitless, 'coefficient in moisture-tension relationship'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -354,7 +363,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('saxtonC', mem%saxtonC, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('saxtonC', unitless, 'exponent of moisture-conductivity relationship'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -365,7 +374,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('kdiff_sat_sl', mem%kdiff_sat_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('kdiff_sat_sl', 'm s-1', 'saturated hydraulic conductivity'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -373,7 +382,8 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sensible_heat_flx', mem%sensible_heat_flx, &
         & hgrid, surface, &
@@ -384,7 +394,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('latent_heat_flx', mem%latent_heat_flx, &
         & hgrid, surface, &
@@ -395,7 +406,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('ground_heat_flx', mem%ground_heat_flx, &
         & hgrid, surface, &
@@ -406,7 +418,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('ground_heat_flx_old', mem%ground_heat_flx_old, &
         & hgrid, surface, &
@@ -417,32 +430,35 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('w_soil_freeze_flux', mem%w_soil_freeze_flux, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('w_soil_freeze_flux', '-', 'Water flux from liquid to ice from freezing'), &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('w_soil_freeze_flux', 'm', 'Water flux from liquid to ice from freezing'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('w_soil_melt_flux', mem%w_soil_melt_flux, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('w_soil_melt_flux', '-', 'Water transfer from ice to liquid from melting'), &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('w_soil_melt_flux', 'm', 'Water transfer from ice to liquid from melting'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('heat_capa_sl', mem%heat_capa_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('heat_capa_sl', 'J kg-1', 'soil heat capacity'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -453,7 +469,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('therm_cond_sl', mem%therm_cond_sl, &
-        & hgrid, vgrid_soil_sb, &
+        & hgrid, vgrid_soil_w, &
         & t_cf('therm_cond_sl', 'W m-2 K-1', 'soil thermal conductivity'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
@@ -472,7 +488,8 @@ CONTAINS
           & output_level = FULL, &
           &  loutput = .TRUE., &
           &  lrestart = .TRUE., &
-          &  initval_r = 0.0_wp) ! initvalue
+          &  initval_r = 0.0_wp, &  ! initvalue
+          & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var( 'snow_soil_heat_flux', mem%snow_soil_heat_flux, &
           &  hgrid, surface, &
@@ -483,7 +500,8 @@ CONTAINS
           & output_level = FULL, &
           &  loutput = .FALSE., &
           &  lrestart = .TRUE., &
-          &  initval_r = 0.0_wp) ! initvalue
+          &  initval_r = 0.0_wp, & ! initvalue
+          &  l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('snow_srf_heat_flux', mem%snow_srf_heat_flux, &
           &  hgrid, surface, &
@@ -494,7 +512,8 @@ CONTAINS
           & output_level = FULL, &
           &  loutput = .FALSE., &
           &  lrestart = .TRUE., &
-          &  initval_r = 0.0_wp) ! initvalue
+          &  initval_r = 0.0_wp, &  ! initvalue
+          &  l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('snow_melt_to_soil', mem%snow_melt_to_soil, &
           &  hgrid, surface, &
@@ -505,7 +524,8 @@ CONTAINS
           & output_level = FULL, &
           &  loutput = .FALSE., &
           &  lrestart = .TRUE., &
-          &  initval_r = 0.0_wp) ! initvalue
+          &  initval_r = 0.0_wp, &  ! initvalue
+          &  l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('snow_present_snl', mem%snow_present_snl, &
           &  hgrid, vgrid_snow_spq, &
@@ -527,7 +547,8 @@ CONTAINS
           & output_level = FULL, &
           &  loutput = .FALSE., &
           &  lrestart = .TRUE., &
-          &  initval_r = 0.0_wp) ! initvalue
+          &  initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('w_snow_snl', mem%w_snow_snl, &
           &  hgrid, vgrid_snow_spq, &
@@ -538,7 +559,8 @@ CONTAINS
           & output_level = FULL, &
           &  loutput = .FALSE., &
           &  lrestart = .TRUE., &
-          &  initval_r = 0.0_wp) ! initvalue
+          &  initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('snow_lay_thickness_snl', mem%snow_lay_thickness_snl, &
           &  hgrid, vgrid_snow_spq, &
@@ -549,7 +571,8 @@ CONTAINS
           & output_level = FULL, &
           &  loutput = .FALSE., &
           &  lrestart = .TRUE., &
-          &  initval_r = 0.0_wp) ! initvalue
+          &  initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('w_snow_max_snl', mem%w_snow_max_snl, &
           &  hgrid, vgrid_snow_spq, &
@@ -560,7 +583,8 @@ CONTAINS
           & output_level = FULL, &
           &  loutput = .FALSE., &
           &  lrestart = .TRUE., &
-          &  initval_r = 0.0_wp) ! initvalue
+          &  initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('w_liquid_snl', mem%w_liquid_snl, &
           &  hgrid, vgrid_snow_spq, &
@@ -571,7 +595,8 @@ CONTAINS
           & output_level = FULL, &
           &  loutput = .FALSE., &
           &  lrestart = .TRUE., &
-          &  initval_r = 0.0_wp) ! initvalue
+          &  initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
 
     END IF ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)
 

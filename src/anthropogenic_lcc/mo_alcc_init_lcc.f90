@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -20,10 +20,15 @@ MODULE mo_alcc_init_lcc
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
+  USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
+  USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_lcc,             ONLY: init_lcc, count_descendants_for_up_to_2layers, &
     &                               collect_names_of_descendant_leaves_up_to_2layers
   USE mo_jsb_cqt_class,       ONLY: LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
-    &                               BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
+    &                               BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE, &
+    &                               IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE
+
+  dsl4jsb_Use_processes ALCC_
 
   IMPLICIT NONE
   PRIVATE
@@ -32,9 +37,6 @@ MODULE mo_alcc_init_lcc
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_init_lcc_class'
   CHARACTER(len=*), PARAMETER :: procname = 'alcc'
-
-  INTEGER, PARAMETER :: nr_of_active_cqts = 1
-  INTEGER, PARAMETER :: nr_of_passive_cqts = 4
 
 CONTAINS
 
@@ -47,22 +49,36 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER          :: model           !< Current instance of the model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':alcc_init_lcc'
 
-    INTEGER :: active_cqts(nr_of_active_cqts)
-    INTEGER :: passive_cqts(nr_of_passive_cqts)
+    INTEGER, ALLOCATABLE :: active_cqts(:)
+    INTEGER, ALLOCATABLE :: passive_cqts(:)
     INTEGER :: nr_of_descendants
 
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: involved_tiles(:)
     ! -------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
 
-    ! JN-TODO: reconsider what to define here and how
-    IF (.NOT. tile%name .EQ. 'veg') RETURN
+    ! Note: as it is currently implemented alcc needs to run on the veg tile.
+    IF (.NOT. ((TRIM(tile%name) .EQ. 'veg') .AND. tile%Is_process_calculated(ALCC_))) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    active_cqts = (/ LIVE_CARBON_CQ_TYPE /)
-    passive_cqts = (/ PRODUCT_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, FLUX_C_CQ_TYPE /)
+    IF (model%config%model_scheme == MODEL_JSBACH) THEN
+      ALLOCATE(active_cqts(1))
+      ALLOCATE(passive_cqts(4))
+
+      active_cqts = (/ LIVE_CARBON_CQ_TYPE /)
+      passive_cqts = (/ PRODUCT_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, FLUX_C_CQ_TYPE /)
+    ELSE IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      ! Note: due to the complexity of the bgcms the lcc framework is not used for active relocation with quincy.
+      !       Active variables are instead explicitly relocated within the alcc update task.
+      ALLOCATE(active_cqts(0))
+      ALLOCATE(passive_cqts(4))
+      passive_cqts = (/ IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE /)
+    END IF
 
     ! alcc runs on the leave tiles
     IF (tile%Has_children()) THEN

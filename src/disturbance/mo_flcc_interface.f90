@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -109,7 +109,7 @@ CONTAINS
     INTEGER  :: i, j, i_tile, iblk, ics, ice, nc
     INTEGER  :: nr_of_tiles, nr_of_lcc_events, nr_of_combined_tiles
     REAL(wp) :: dtime
-    REAL(wp), ALLOCATABLE :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
+    REAL(wp), POINTER :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
 
     REAL(wp), DIMENSION(options%nc) :: current_fract
     REAL(wp) :: fire_fract_wood_2_atmos, conversion_fact, transfer_fract
@@ -161,11 +161,13 @@ CONTAINS
     dsl4jsb_Get_lcc_relocations(FLCC_, lcc_relocations)
     nr_of_tiles = lcc_relocations%nr_of_tiles
 
-    ! Allocate area vectors
-    ALLOCATE(initial_area(nc, nr_of_tiles))
-    ALLOCATE(lost_area(nc, nr_of_tiles))
-    ALLOCATE(gained_area(nc, nr_of_tiles))
+    ! Init area vectors
+    dsl4jsb_Get_lcc_area_matrix(initial_area)
+    dsl4jsb_Get_lcc_area_matrix(lost_area)
+    dsl4jsb_Get_lcc_area_matrix(gained_area)
     initial_area(:,:) = 0.0_wp
+    lost_area(:,:) = 0.0_wp
+    gained_area(:,:) = 0.0_wp
 
     !>
     !> 2. Two possibilities:
@@ -368,11 +370,6 @@ CONTAINS
 
       END IF ! ... only to be conducted if there is any area movement
     END DO ! outer loop enclosing one full lcc-cycle: depending on if are movement is to be "separate" or mixed
-
-    !>
-    !> 6. Deallocate area vectors
-    !>
-    DEALLOCATE(lost_area, gained_area, initial_area)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

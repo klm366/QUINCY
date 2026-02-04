@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -120,7 +120,7 @@ CONTAINS
   !>
   SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -157,7 +157,7 @@ CONTAINS
       &      'Gross photosynthesis on canopy ground area'),                        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
       & prefix, suffix,                                                            &
-      & output_level=BASIC,                                                        &
+      & output_level=FULL,                                                         &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('gross_assimilation', mem%gross_assimilation,                                                &
@@ -173,7 +173,7 @@ CONTAINS
       & t_cf('dark_respiration_ca', 'mol(CO2)/m^2(canopy ground) / s', 'Dark_respiration on canopy ground area'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
-      & output_level=BASIC,                                                                                       &
+      & output_level=FULL,                                                                                        &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('dark_respiration', mem%dark_respiration,                                                    &
@@ -189,7 +189,7 @@ CONTAINS
       & t_cf('NPP_pot_rate_ca', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_pot_rate_ca'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & output_level=BASIC,                                                               &
+      & output_level=FULL,                                                                &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('npp_sum_year', mem%NPP_sum_year,                                    &
@@ -197,7 +197,6 @@ CONTAINS
       & t_cf('NPP_sum_year', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_sum_year'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & output_level=BASIC,                                                               &
       & lrestart=.TRUE., initval_r=1.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('npp_mean_5year', mem%NPP_mean_5year,                                &
@@ -205,7 +204,7 @@ CONTAINS
       & t_cf('NPP_mean_5year', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_mean_5year'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & output_level=BASIC,                                                               &
+      & output_level=MEDIUM,                                                              &
       & lrestart=.TRUE., initval_r=-1000.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('land_cover_class', mem%land_cover_class,                            &
@@ -213,7 +212,6 @@ CONTAINS
       & t_cf('land_cover_class', '', 'land_cover_class'),                                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & output_level=BASIC,                                                               &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('bclimit_min_cold_mmtemp', mem%bclimit_min_cold_mmtemp,              &
@@ -221,7 +219,7 @@ CONTAINS
       & t_cf('bclimit_min_cold_mmtemp', '', 'bclimit_min_cold_mmtemp'),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & output_level=BASIC,                                                               &
+      & output_level=MEDIUM,                                                              &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('bclimit_max_cold_mmtemp', mem%bclimit_max_cold_mmtemp,              &
@@ -229,7 +227,7 @@ CONTAINS
       & t_cf('bclimit_max_cold_mmtemp', '', 'bclimit_max_cold_mmtemp'),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & output_level=BASIC,                                                               &
+      & output_level=MEDIUM,                                                              &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('bclimit_max_warm_mmtemp', mem%bclimit_max_warm_mmtemp,              &
@@ -237,7 +235,7 @@ CONTAINS
       & t_cf('bclimit_max_warm_mmtemp', '', 'bclimit_max_warm_mmtemp'),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & output_level=BASIC,                                                               &
+      & output_level=MEDIUM,                                                              &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('bclimit_min_temprange', mem%bclimit_min_temprange,                  &
@@ -245,7 +243,7 @@ CONTAINS
       & t_cf('bclimit_min_temprange', '', 'bclimit_min_temprange'),                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & output_level=BASIC,                                                               &
+      & output_level=MEDIUM,                                                              &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('bclimit_min_gdd', mem%bclimit_min_gdd,                              &
@@ -253,7 +251,7 @@ CONTAINS
       & t_cf('bclimit_min_gdd', '', 'bclimit_min_gdd'),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & output_level=BASIC,                                                               &
+      & output_level=MEDIUM,                                                              &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('tau_c_woods', mem%tau_c_woods,                                      &
@@ -261,7 +259,6 @@ CONTAINS
       & t_cf('tau_c_woods', '', 'tau_c_woods'),                                           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & output_level=BASIC,                                                               &
       & lrestart=.FALSE., initval_r=10000.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('scaling_fact_cl', mem%scaling_fact_cl,               &
@@ -330,6 +327,7 @@ CONTAINS
       & prefix, suffix,                                                                            &
       & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3 CO2_conc_leaf_acc
 
+    !TODO: add unit and longname
     CALL mem%Add_var('canopy_cond_unlimited', mem%canopy_cond_unlimited,       &
       & hgrid, surface,                                                        &
       & t_cf('canopy_conductance_unlimited', '', ''),                          &

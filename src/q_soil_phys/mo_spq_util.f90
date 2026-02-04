@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -89,8 +89,8 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb        !< Vertical grid
-    INTEGER                               :: nsoil_sb             !< number of soil layers
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_w         !< Vertical grid
+    INTEGER                               :: nsoil_w              !< number of soil layers
     INTEGER                               :: isoil, ic
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_spq_fluxes'
@@ -114,8 +114,8 @@ CONTAINS
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(HYDRO_)
     model  => Get_model(tile%owner_model_id)
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
     ! --------------------------------------------------------------------------------------------------------
     dsl4jsb_Get_var2D_onChunk(HYDRO_, transpiration)
     dsl4jsb_Get_var3D_onChunk(SPQ_,   w_soil_freeze_flux)
@@ -128,7 +128,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-    DO isoil = 1, nsoil_sb
+    DO isoil = 1, nsoil_w
       DO ic = 1, nc
         w_soil_freeze_flux(ic,isoil) = zero
         w_soil_melt_flux(ic,isoil)   = zero

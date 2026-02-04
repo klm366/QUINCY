@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -19,7 +19,11 @@ MODULE mo_rad_memory_class
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
-
+#ifndef __NO_QUINCY__
+  USE mo_jsb_process_class,ONLY: VEG_, Q_ASSIMI_
+  dsl4jsb_Use_config(VEG_)
+  dsl4jsb_Use_config(Q_ASSIMI_)
+#endif
   dsl4jsb_Use_processes SEB_, HYDRO_
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(HYDRO_)
@@ -92,19 +96,20 @@ MODULE mo_rad_memory_class
                                 !   .FALSE.: taken from lctlib file (AlbedoCanopyVIS)
       & alb_nir_can,          & !< Albedo of canopy (without snow cover) in NIR range. Is never calculated:
                                 !< If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyNIR)
-      & sky_view_fract,       & ! Fraction of bare ground below vegetation (without accounting for stems) that is "visible" for the sun
-      & sky_view_fract_stem,  & ! Fraction of soil below vegetation which is (for the sun) covered by stems but not by LAI
+      & sky_view_fract,       & ! Fraction of bare ground below vegetation (without accounting for stems) that is "visible" for the sun (JSB only)
+      & sky_view_fract_stem,  & ! Fraction of soil below vegetation which is (for the sun) covered by stems but not by LAI (JSB only)
       & snow_age,             & ! Factor used to calculate snow ageing [-]
       !
-      & par,                  & ! sw_par_down from atmosphere in [W/m^2]
-      & par_down_mol,         & ! Downward PAR flux in mol(photons)/(m^2 s) but only for current time step/"delta_time"
-      & faPAR,                & ! fraction of PAR absorbed by the canopy and per leaf area
-      ! & par_down_mol_nacc,    & ! incoming PAR accumulated (over output timestep) in mol(photons)/(m^2)
-      ! & par_down_mol_tavg,    & ! incoming PAR (mean value over output timestep) [MOL PHOTONS/M^2 S]
-      & soil_reflectivity_par,& ! Soil reflectivity in the PAR region but only for current time step/"delta_time"
-      & fract_par_direct        ! Fraction of direct PAR
+      & par,                  & ! sw_par_down from atmosphere in [W/m^2] (JSB only)
+      & par_down_mol,         & ! Downward PAR flux in mol(photons)/(m^2 s) but only for current time step/"delta_time" (JSB only)
+      & faPAR,                & ! fraction of PAR absorbed by the canopy and per leaf area (JSB only)
+      ! & par_down_mol_nacc,    & ! incoming PAR accumulated (over output timestep) in mol(photons)/(m^2) (JSB only)
+      ! & par_down_mol_tavg,    & ! incoming PAR (mean value over output timestep) [MOL PHOTONS/M^2 S] (JSB only)
+      & soil_reflectivity_par,& ! Soil reflectivity in the PAR region but only for current time step/"delta_time" (JSB only)
+      & fract_par_direct        ! Fraction of direct PAR (JSB only)
       ! & apar_nacc
 
+    ! Further variables only used with JSBACH
     TYPE(t_jsb_var_real3d) :: & ! alt: (nland, ncanopy, ntiles)
       & lai_cl,               & ! LAI per canopy layer; preliminarily, should later be put to another process...
       & faPAR_cl,             & ! Absorbed PAR per canopy layer and per leaf area [fraction of irradiance]
@@ -124,17 +129,8 @@ MODULE mo_rad_memory_class
 
     ! QUINCY additional variables
     TYPE(t_jsb_var_real2d)  :: &
-      & albedo,                &        !< total surface albedo [unitless]
-      & albedo_noon                     !< albedo at local solar noon, value is modified only every 24h [unitless]
-
-    TYPE(t_jsb_var_real2d)  :: &
-      & arad_vis_soil,                & !< radiation in VIS range absorbed by the soil [W m-2]
-      & arad_nir_soil                   !< radiation in NIR range absorbed by the soil [W m-2]
-
-    TYPE(t_jsb_var_real2d)  :: &
-      & arad_vis_can,                 & !< radiation in VIS range absorbed by the canopy [W m-2]
-      & arad_nir_can,                 & !< radiation in NIR range absorbed by the canopy [W m-2]
-      & appfd                           !< absorbed Photosynthetically Active Photon Flux Density (a.k.a. faPAR) [micro-mol m-2 s-1]
+      & albedo_noon,           &        !< albedo at local solar noon, value is modified only every 24h [unitless]
+      & fapar_noon                      !< fraction of absorbed photosynthetically active radiation by the canopy (per ground area) at solar noon
 
     TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(ncanopy)
       & ppfd_sunlit_cl                , & !< Photosynthetically Active Photon Flux Density on sunlit leaves [micro-mol m-2 s-1]
@@ -147,14 +143,6 @@ MODULE mo_rad_memory_class
       & ppfd_shaded_tfrac_mavg_cl     , & !< average PPFD on shaded leaves at tfrac-timescale [micro-mol m-2 s-1]
       & ppfd_sunlit_tcnl_mavg_cl      , & !< average PPFD on sunlit leaves at tcnl-timescale [micro-mol m-2 s-1]
       & ppfd_shaded_tcnl_mavg_cl          !< average PPFD on shaded leaves at tcnl-timescale [micro-mol m-2 s-1]
-
-    TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(ncanopy)
-      & arad_sunlit_vis_cl          , & !< absorbed radiation in visible band on sunlit leaves [W m-2]
-      & arad_shaded_vis_cl          , & !< absorbed radiation in visible band on shaded leaves [W m-2]
-      & fleaf_sunlit_vis_cl         , & !< fraction of leaves that are sunlit in VIS band [unitless]
-      & arad_sunlit_nir_cl          , & !< absorbed radiation in NIR band on sunlit leaves [W m-2]
-      & arad_shaded_nir_cl          , & !< absorbed radiation in NIR band on shaded leaves [W m-2]
-      & fleaf_sunlit_nir_cl             !< fraction of leaves that are sunlit in NIR band [unitless]
 
     ! 3D Radiative transfer variables (appended by _sp for spectral_bands)
     TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(nspec)
@@ -192,6 +180,10 @@ CONTAINS
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(HYDRO_)
+#ifndef __NO_QUINCY__
+    dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(Q_ASSIMI_)
+#endif
 
     TYPE(t_jsb_model), POINTER  :: model                        !< model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        !< Horizontal grid
@@ -199,6 +191,9 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_spectral               !< Vertical grid used to display the sprectal bands of light
     INTEGER                     :: table                        !< ...
     LOGICAL                     :: l_ponds
+    LOGICAL                     :: restart_veg_optimal               !< if true: write restart variables for QUINCY VEG optimality code
+    LOGICAL                     :: restart_veg_optimal_n_fractions   !< if true: write restart (optimise n fractions)
+    LOGICAL                     :: restart_veg_optimal_stoichiometry !< if true: write restart (optimise allocation)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_memory'
 
@@ -208,6 +203,15 @@ CONTAINS
     table        = tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
+#ifndef __NO_QUINCY__
+    dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(Q_ASSIMI_)
+#endif
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! determine which variables are required in the restart
+    restart_veg_optimal = .FALSE.
+    restart_veg_optimal_n_fractions = .FALSE.
+    restart_veg_optimal_stoichiometry = .FALSE.
     SELECT CASE (model%config%model_scheme)
 #ifndef __QUINCY_STANDALONE__
     CASE (MODEL_JSBACH)
@@ -216,6 +220,14 @@ CONTAINS
 #ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       canopy_layer   => Get_vgrid('q_canopy_layer')
+      IF (dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction) THEN
+        restart_veg_optimal = .TRUE.
+        restart_veg_optimal_n_fractions = .TRUE.
+      END IF
+      IF (TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) == "optimal") THEN
+        restart_veg_optimal = .TRUE.
+        restart_veg_optimal_stoichiometry = .TRUE.
+      END IF
 #endif
     END SELECT
 #ifdef __QUINCY_STANDALONE__
@@ -423,114 +435,116 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'sky_view_fract', mem%sky_view_fract,                &
-        & hgrid, surface,                                                    &
-        & t_cf('sky_view_fract', '', ''),                                    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+      IF (model%config%model_scheme == MODEL_JSBACH) THEN
+        CALL mem%Add_var( 'sky_view_fract', mem%sky_view_fract,                &
+          & hgrid, surface,                                                    &
+          & t_cf('sky_view_fract', '', ''),                                    &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
-      CALL mem%Add_var( 'sky_view_fract_stem', mem%sky_view_fract_stem,      &
-        & hgrid, surface,                                                    &
-        & t_cf('sky_view_fract_stem', '', ''),                               &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+        CALL mem%Add_var( 'sky_view_fract_stem', mem%sky_view_fract_stem,      &
+          & hgrid, surface,                                                    &
+          & t_cf('sky_view_fract_stem', '', ''),                               &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
-      CALL mem%Add_var( 'par', mem%par,                                      &
-        & hgrid, surface,                                                    &
-        & t_cf('Downward PAR flux in [W/m^2]', '', ''),                      &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=MEDIUM,                                               &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+        CALL mem%Add_var( 'par', mem%par,                                      &
+          & hgrid, surface,                                                    &
+          & t_cf('Downward PAR flux in [W/m^2]', '', ''),                      &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & output_level=MEDIUM,                                               &
+          & lrestart=.FALSE., initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'par_down_mol', mem%par_down_mol,                    &
-        & hgrid, surface,                                                    &
-        & t_cf('Downward PAR flux in mol (photons)', '', ''),                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=MEDIUM,                                               &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
+        CALL mem%Add_var( 'par_down_mol', mem%par_down_mol,                    &
+          & hgrid, surface,                                                    &
+          & t_cf('Downward PAR flux in mol (photons)', '', ''),                &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & output_level=MEDIUM,                                               &
+          & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
 
-      CALL mem%Add_var( 'fapar', mem%faPAR,                                  &
-        & hgrid, surface,                                                    &
-        & t_cf('Fraction of PAR absorbed by the canopy', '', ''),            &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=BASIC,                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        CALL mem%Add_var( 'fapar', mem%faPAR,                                  &
+          & hgrid, surface,                                                    &
+          & t_cf('Fraction of PAR absorbed by the canopy', '', ''),            &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & output_level=BASIC,                                                &
+          & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      ! CALL mem%Add_var( 'par_down_mol_nacc', mem%par_down_mol_nacc,          &
-      !   & hgrid, surface,                                                    &
-      !   & t_cf('Incoming PAR accumulated (over output timestep)', '', ''),   &
-      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-      !   & prefix, suffix,                                                    &
-      !   & lrestart=.TRUE., initval_r=0.0_wp )
+        ! CALL mem%Add_var( 'par_down_mol_nacc', mem%par_down_mol_nacc,          &
+        !   & hgrid, surface,                                                    &
+        !   & t_cf('Incoming PAR accumulated (over output timestep)', '', ''),   &
+        !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        !   & prefix, suffix,                                                    &
+        !   & lrestart=.TRUE., initval_r=0.0_wp )
 
-      ! CALL mem%Add_var( 'par_down_mol_tavg', mem%par_down_mol_tavg,          &
-      !   & hgrid, surface,                                                    &
-      !   & t_cf('Incoming PAR (mean value over output timestep)', '', ''),    &
-      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-      !   & prefix, suffix,                                                    &
-      !   & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
+        ! CALL mem%Add_var( 'par_down_mol_tavg', mem%par_down_mol_tavg,          &
+        !   & hgrid, surface,                                                    &
+        !   & t_cf('Incoming PAR (mean value over output timestep)', '', ''),    &
+        !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        !   & prefix, suffix,                                                    &
+        !   & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
 
-      CALL mem%Add_var( 'soil_reflectivity_par', mem%soil_reflectivity_par,      &
-        & hgrid, surface,                                                        &
-        & t_cf('Soil reflectivity in the PAR region', '', ''),                   &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-        & prefix, suffix,                                                        &
-        & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL mem%Add_var( 'soil_reflectivity_par', mem%soil_reflectivity_par,      &
+          & hgrid, surface,                                                        &
+          & t_cf('Soil reflectivity in the PAR region', '', ''),                   &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+          & prefix, suffix,                                                        &
+          & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'fract_par_direct', mem%fract_par_direct,            &
-        & hgrid, surface,                                                    &
-        & t_cf('Fraction of direct PAR', '', ''),                            &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.5_wp )
+        CALL mem%Add_var( 'fract_par_direct', mem%fract_par_direct,            &
+          & hgrid, surface,                                                    &
+          & t_cf('Fraction of direct PAR', '', ''),                            &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & loutput=.TRUE., lrestart=.FALSE., initval_r=0.5_wp )
 
-      CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
-        & hgrid, canopy_layer,                                               &
-        & t_cf('LAI for each canopy layer', '', ''),                         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+        CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
+          & hgrid, canopy_layer,                                               &
+          & t_cf('LAI for each canopy layer', '', ''),                         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & lrestart=.FALSE., initval_r=0.0_wp )
 
-      CALL mem%Add_var('fapar_cl', mem%faPAR_cl,                                  &
-        & hgrid, canopy_layer,                                                    &
-        & t_cf('Absorbed PAR per canopy layer [fraction of irradiance]', '', ''), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
-        & prefix, suffix,                                                         &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+        CALL mem%Add_var('fapar_cl', mem%faPAR_cl,                                  &
+          & hgrid, canopy_layer,                                                    &
+          & t_cf('Absorbed PAR per canopy layer [fraction of irradiance]', '', ''), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+          & prefix, suffix,                                                         &
+          & lrestart=.FALSE., initval_r=0.0_wp )
 
-      CALL mem%Add_var('apar_per_lai_cl', mem%apar_per_lai_cl,               &
-        & hgrid, canopy_layer,                                               &
-        & t_cf('Absorbed PAR per canopy layer (LAI area).', '', ''),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+        CALL mem%Add_var('apar_per_lai_cl', mem%apar_per_lai_cl,               &
+          & hgrid, canopy_layer,                                               &
+          & t_cf('Absorbed PAR per canopy layer (LAI area).', '', ''),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
 
-      !  CALL mem%Add_var('apar_per_lai_cl_nacc', mem%apar_per_lai_cl_nacc,                 &
-      !    & hgrid, canopy_layer,                                                           &
-      !    & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
-      !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
-      !    & prefix, suffix,                                                                &
-      !    & lrestart=.TRUE., initval_r=0.0_wp )
+        !  CALL mem%Add_var('apar_per_lai_cl_nacc', mem%apar_per_lai_cl_nacc,                 &
+        !    & hgrid, canopy_layer,                                                           &
+        !    & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
+        !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        !    & prefix, suffix,                                                                &
+        !    & lrestart=.TRUE., initval_r=0.0_wp )
 
-      !  CALL mem%Add_var('apar_per_lai_cl_tavg', mem%apar_per_lai_cl_tavg,                &
-      !    & hgrid, canopy_layer,                                                          &
-      !    & t_cf('PAR absorbed by the canopy (mean value over output timestep)', '', ''), &
-      !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
-      !    & prefix, suffix,                                                               &
-      !    & lrestart=.FALSE., initval_r=0.0_wp )
+        !  CALL mem%Add_var('apar_per_lai_cl_tavg', mem%apar_per_lai_cl_tavg,                &
+        !    & hgrid, canopy_layer,                                                          &
+        !    & t_cf('PAR absorbed by the canopy (mean value over output timestep)', '', ''), &
+        !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+        !    & prefix, suffix,                                                               &
+        !    & lrestart=.FALSE., initval_r=0.0_wp )
 
-      !  CALL mem%Add_var('apar_nacc', mem%apar_nacc,                                       &
-      !    & hgrid, surface,                                                                &
-      !    & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
-      !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
-      !    & prefix, suffix,                                                                &
-      !    & lrestart=.TRUE., initval_r=0.0_wp )
-    END IF
+        !  CALL mem%Add_var('apar_nacc', mem%apar_nacc,                                       &
+        !    & hgrid, surface,                                                                &
+        !    & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
+        !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        !    & prefix, suffix,                                                                &
+        !    & lrestart=.TRUE., initval_r=0.0_wp )
+      END IF ! IF (model%config%model_scheme == MODEL_JSBACH)
+    END IF ! IF containes VEG or LAND
 
     ! Additional variables for lakes
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 ) THEN
@@ -616,79 +630,29 @@ CONTAINS
           & initval_r=0.0_wp )
       END IF
 
-      ! Additional variables for QUINCY vegetation
+      ! Additional variables for QUINCY
+      CALL mem%Add_var('albedo_noon', mem%albedo_noon, &
+        & hgrid, surface, &
+        & t_cf('albedo_noon', unitless, 'albedo at local solar noon'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fapar_noon', mem%fapar_noon, &
+        & hgrid, surface, &
+        & t_cf('fapar_noon', unitless, 'fraction of absorbed photosynthetically active radiation at solar noon'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
       IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
         & ) THEN
-
-        CALL mem%Add_var('albedo', mem%albedo, &
-          & hgrid, surface, &
-          & t_cf('albedo', unitless, 'total surface albedo'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('albedo_noon', mem%albedo_noon, &
-          & hgrid, surface, &
-          & t_cf('albedo_noon', unitless, 'albedo at local solar noon'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('arad_vis_soil', mem%arad_vis_soil, &
-          & hgrid, surface, &
-          & t_cf('arad_vis_soil', 'W m-2', 'radiation in VIS range absorbed by the soil'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('arad_nir_soil', mem%arad_nir_soil, &
-          & hgrid, surface, &
-          & t_cf('arad_nir_soil', 'W m-2', 'radiation in NIR range absorbed by the soil'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('arad_vis_can', mem%arad_vis_can, &
-          & hgrid, surface, &
-          & t_cf('arad_vis_can', 'W m-2', 'radiation in VIS range absorbed by the canopy'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('arad_nir_can', mem%arad_nir_can, &
-          & hgrid, surface, &
-          & t_cf('arad_nir_can', 'W m-2', 'radiation in NIR range absorbed by the canopy'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('appfd', mem%appfd, &
-          & hgrid, surface, &
-          & t_cf('appfd', 'micro-mol m-2 s-1', 'absorbed Photosynthetically Active Photon Flux Density (faPAR)'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
 
         CALL mem%Add_var('ppfd_sunlit_cl', mem%ppfd_sunlit_cl, &
           & hgrid, canopy_layer, &
@@ -696,8 +660,8 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
+          & output_level = NONE, &
+          & lrestart = .FALSE., &
           & initval_r = 0.0_wp)
 
         CALL mem%Add_var('ppfd_shaded_cl', mem%ppfd_shaded_cl, &
@@ -706,8 +670,8 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
+          & output_level = NONE, &
+          & lrestart = .FALSE., &
           & initval_r = 0.0_wp)
 
         CALL mem%Add_var('ppfd_sunlit_daytime_cl', mem%ppfd_sunlit_daytime_cl, &
@@ -716,8 +680,8 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
+          & output_level = NONE, &
+          & lrestart = restart_veg_optimal, &
           & initval_r = 0.0_wp)
 
         CALL mem%Add_var('ppfd_shaded_daytime_cl', mem%ppfd_shaded_daytime_cl, &
@@ -726,8 +690,8 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
+          & output_level = NONE, &
+          & lrestart = restart_veg_optimal, &
           & initval_r = 0.0_wp)
 
         CALL mem%Add_var('ppfd_sunlit_daytime_dacc_cl', mem%ppfd_sunlit_daytime_dacc_cl, &
@@ -736,8 +700,8 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
+          & output_level = NONE, &
+          & lrestart = restart_veg_optimal, &
           & initval_r = 0.0_wp)
 
         CALL mem%Add_var('ppfd_shaded_daytime_dacc_cl', mem%ppfd_shaded_daytime_dacc_cl, &
@@ -747,8 +711,8 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
+          & output_level = NONE, &
+          & lrestart = restart_veg_optimal, &
         & initval_r = 0.0_wp)
 
         CALL mem%Add_var('ppfd_sunlit_tfrac_mavg_cl', mem%ppfd_sunlit_tfrac_mavg_cl, &
@@ -757,8 +721,8 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
+          & output_level = NONE, &
+          & lrestart = restart_veg_optimal_n_fractions, &
           & initval_r = 0.0_wp)
 
         CALL mem%Add_var('ppfd_shaded_tfrac_mavg_cl', mem%ppfd_shaded_tfrac_mavg_cl, &
@@ -767,8 +731,8 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
+          & output_level = NONE, &
+          & lrestart = restart_veg_optimal_n_fractions, &
           & initval_r = 0.0_wp)
 
         CALL mem%Add_var('ppfd_sunlit_tcnl_mavg_cl', mem%ppfd_sunlit_tcnl_mavg_cl, &
@@ -777,8 +741,8 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
+          & output_level = NONE, &
+          & lrestart = restart_veg_optimal_stoichiometry, &
           & initval_r = 0.0_wp)
 
         CALL mem%Add_var('ppfd_shaded_tcnl_mavg_cl', mem%ppfd_shaded_tcnl_mavg_cl, &
@@ -787,69 +751,10 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
+          & output_level = NONE, &
+          & lrestart = restart_veg_optimal_stoichiometry, &
           & initval_r = 0.0_wp)
 
-        CALL mem%Add_var('arad_sunlit_vis_cl', mem%arad_sunlit_vis_cl, &
-          & hgrid, canopy_layer, &
-          & t_cf('arad_sunlit_vis_cl', 'W m-2', 'absorbed radiation in visible band on sunlit leaves'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('arad_shaded_vis_cl', mem%arad_shaded_vis_cl, &
-          & hgrid, canopy_layer, &
-          & t_cf('arad_shaded_vis_cl', 'W m-2', 'absorbed radiation in visible band on shaded leaves'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('fleaf_sunlit_vis_cl', mem%fleaf_sunlit_vis_cl, &
-          & hgrid, canopy_layer, &
-          & t_cf('fleaf_sunlit_vis_cl', unitless, 'fraction of leaves that are sunlit in VIS band'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('arad_sunlit_nir_cl', mem%arad_sunlit_nir_cl, &
-          & hgrid, canopy_layer, &
-          & t_cf('arad_sunlit_nir_cl', 'W m-2', 'absorbed radiation in NIR band on sunlit leaves'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('arad_shaded_nir_cl', mem%arad_shaded_nir_cl, &
-          & hgrid, canopy_layer, &
-          & t_cf('arad_shaded_nir_cl', 'W m-2', 'absorbed radiation in NIR band on shaded leaves'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('fleaf_sunlit_nir_cl', mem%fleaf_sunlit_nir_cl, &
-          & hgrid, canopy_layer, &
-          & t_cf('fleaf_sunlit_nir_cl', unitless, 'fraction of leaves that are sunlit in NIR band'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
       END IF   ! land/vegetation var (for quincy)
     END SELECT
 #endif
