@@ -632,6 +632,7 @@ CONTAINS
     REAL(wp) :: tot_lvt_fuel(nc)            !< Total amount of live tree fuel [g DM m-2]
 
     !< Oberhagemann related
+    REAL(wp) :: woi_ddm(nc,df_sf_fc_spread_nr) !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, dimensions reversed
     REAL(wp) :: woi_dd(nc,df_sf_sigma_dd_nr) !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, dimensions reversed
     REAL(wp) :: woi_lv(nc,df_sf_sigma_lv_nr) !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, ...
     REAL(wp), ALLOCATABLE :: me_dd(:,:) !< Moisture of extinction [-] (#fuel classes, #nc)
@@ -687,8 +688,10 @@ CONTAINS
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions = has_fire_conditions .AND. (spitfire % fdi > 1.e-6_wp)
 
+    woi_ddm(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx) = woi_dd(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx)
+    woi_ddm(:,df_sf_fc_1hr_idx) = woi_ddm(:,df_sf_fc_1hr_idx) +  woi_dd(:,4) !< 4= dry livegrass index
     !< dead fuel (1 hr, 10 hrs, 100 hrs litter and dry livegrass)
-    woi_dd(:,1:3) = w_oi * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
+    woi_dd(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx) = w_oi * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
     woi_dd(:,4) = dry_lvg(:,df_sf_fc_1hr_idx) * df_sf_units_g_to_kg  !< 4 = dry livegrass
 
     !< (Wet livegrass implemented, woody)
@@ -706,14 +709,16 @@ CONTAINS
     mf_dd = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=1, NCOPIES=df_sf_sigma_dd_nr ) ! litter [1hr, 10hrs, 100 hours, dry livegrass]
     mf_lv = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=1, NCOPIES=df_sf_sigma_lv_nr ) ! todo: compute as in Andrews PL 2018 
 
-    spitfire % ros = sf_calc_rate_of_spread(nc, & 
+    spitfire % ros = sf_calc_rate_of_spread(nc, &
+                                df_sf_fc_spread_nr, &  ! mixed dead fuel with livegrass (
                                 df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, & ! oberhagemann related
                                 config_ros_model_id, & !< Select Rate of spread implementation
                                 lctlib_fuel_bulk_density, &
                                 lctlib_fwd_wind_factor, wind_sf, &
                                 moisture_extinction, spitfire % fdi, veg_cover_frac, &
-                                woi_dd, & !< (1hr litter, 10hrs litter, 100hrs litter, dry livegrass)
-                                woi_lv, & !< (wet livegrass, woody) 
+                                woi_ddm, & !< Mixed dead fuel (1hr litter+livegrass, 10hrs litter, 100hrs litter)
+                                woi_dd, &  !< Dead fuel (1hr litter, 10hrs litter, 100hrs litter, dry livegrass)
+                                woi_lv, &  !< Live fuel (wet livegrass, woody) 
                                 mf_dd, mf_lv, & !< Fuel moisture
                                 me_dd, me_lv, & !< Fuel moisture of extincton
                                 mask=has_fire_conditions)

@@ -62,15 +62,17 @@ MODULE mo_q_dfire_sf_ros_class
 CONTAINS
 
 
-  FUNCTION sf_calc_rate_of_spread(nc, ndd, nlv, &
+  FUNCTION sf_calc_rate_of_spread(nc, nddm, ndd, nlv, &
                   ros_model, &
                   fuel_bulk_density, fwd_wind_factor, wind, moist_extinction, fdi, &
                   veg_cover_frac, &
+                  woi_ddm, &
                   woi_dd, woi_lv, &
                   mf_dd, mf_lv, &
                   me_dd, me_lv, &
                   mask) RESULT (ros)
     INTEGER, INTENT(in)                  :: nc
+    INTEGER, INTENT(in)                  :: nddm                        !< Mixed dead fuel classes (1+dry livegrass, 10, 100)
     INTEGER, INTENT(in)                  :: ndd                         !< Dead fuel classes (1, 10, 100, dry livegrass)
     INTEGER, INTENT(in)                  :: nlv                         !< Live fuel classes (wet livegrass, woody)
     INTEGER, INTENT(in)                  :: ros_model                   !< ROS model implementation
@@ -80,6 +82,7 @@ CONTAINS
     REAL(wp), INTENT(in)                 :: moist_extinction(nc)        !< [0 to 1]
     REAL(wp), INTENT(in)                 :: fdi(nc)                     !< Fire dange index [0 to 1]
     TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac           !< Vegetation cover fraction [0 to 1]
+    REAL(wp), INTENT(in)                 :: woi_ddm(nc, nddm)           !< Mixed dead fuel with livegrass (1hr+dry livegrass, 10hrs, 100hrs) [kg DM m-2], note in kg, used in Oberhagemann
     REAL(wp), INTENT(in)                 :: woi_dd(nc, ndd)             !< Dead fuel (1hr, 10 hors, 100hrs, dry livegress) dead fuel [kg DM m-2], note in kg, used in Oberhagemann
     REAL(wp), INTENT(in)                 :: woi_lv(nc, nlv)             !< Live fuel (wet livegrass, woody) live fuel [kg DM m-2], note in kg
     REAL(wp), INTENT(in)                 :: mf_dd(nc, ndd) 
@@ -88,7 +91,6 @@ CONTAINS
     LOGICAL, INTENT(in)                  :: mask(nc)                    !< True =  compute gridcell(s)
     TYPE(t_sf_ros)                       :: ros                         !< output [-]
 
-    REAL(wp), ALLOCATABLE                :: woi_dd_lvg(:,:)             !< Dead fuel as live grass in 1 hour (1hr+dry livegrass, 10, 100 hours) User in Thonicke's [kg DM m-2]
     REAL(wp) :: u_f_wind(nc)  !< Wind speed at vegetation cover [m min-1]
     INTEGER  :: inc
     INTEGER, PARAMETER :: ix_lvg = 4
@@ -100,16 +102,16 @@ CONTAINS
     IF (ros_model == Q_DFIRE_ROS_THONICKE) THEN
       !> Fire rate of spread (IR, optimum reaction velocity, fuel bulk density, net fuel loading, ...)
       !> calculate the rate of spread following Thonicke et al. (2010)
-      ALLOCATE(woi_dd_lvg(nc, ndd+1)) !< litter fuel classes + dry livegrass
-      woi_dd_lvg(:,ix_1hr:ix_100hrs) = woi_dd(:,ix_1hr:ix_100hrs)
-      woi_dd_lvg(:,ix_1hr) = woi_dd_lvg(:,ix_1hr) +  woi_dd(:,ix_lvg)
+!      ALLOCATE(woi_ddm(nc, nddm)) !< 3= fuel classes with mixed livegrass into 1 hour
+!      woi_ddm(:,ix_1hr:ix_100hrs) = woi_dd(:,ix_1hr:ix_100hrs)
+!      woi_ddm(:,ix_1hr) = woi_ddm(:,ix_1hr) +  woi_dd(:,ix_lvg)
 
-!      ros = sf_calc_rate_of_spread_thon(nc, nddlv, &
-!                                      fuel_bulk_density, &
-!                                      u_f_wind, me_dd, fdi, &
-!                                      woi_dd_lvg, &
-!                                      mf_dd(:,1), &
-!                                      mask)
+      ros = sf_calc_rate_of_spread_thon(nc, nddm, &
+                                      fuel_bulk_density, &
+                                      u_f_wind, me_dd, fdi, &
+                                      woi_ddm, &
+                                      mf_dd(:,ix_1hr), &
+                                      mask)
     ELSE IF (ros_model == Q_DFIRE_ROS_OBERHAGEMANN) THEN
       ros = sf_calc_rate_of_spread_ober(&
                     nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
@@ -121,7 +123,7 @@ CONTAINS
                     u_f_wind, &
                     mask)
     ELSE
-      CALL finish("calc_spitfire", "Unexpected Rate of spread model found ('thonicke' or 'oberhagemann')")
+      CALL finish("sf_calc_rate_of_spread", "Unexpected Rate of spread model found")
     END IF
 
     DO inc=1, nc
