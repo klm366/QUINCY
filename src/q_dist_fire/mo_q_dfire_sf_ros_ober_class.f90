@@ -175,8 +175,8 @@ CONTAINS
     REAL(wp), INTENT(in) :: me_dd(nc), me_lv(nc) !< Moisture of extinction [-]
     REAL(wp), INTENT(in) :: fbd(nc) !< Fuel bulk density [kg/m3]
     REAL(wp), INTENT(in) :: u_f_wind(nc) !< Wind speed at midflame height [m min-1]
-    LOGICAL, INTENT(in) :: mask(nc)
-    TYPE(t_sf_ros) :: ros(nc) !< Output: rate of spread [m min-1]
+    LOGICAL, INTENT(in)  :: mask(nc)
+    TYPE(t_sf_ros)       :: ros !< Output: rate of spread [m min-1]
 
     INTEGER :: ic
     REAL(wp) :: u_forward(nc)
@@ -187,6 +187,7 @@ CONTAINS
     REAL(wp) :: xi(nc) !< propagating flux ratio [-]
     REAL(wp) :: phi_w(nc), phi_s(nc) !< wind factor [-], wind limit [m min-1]
     REAL(wp) :: heat_source(nc) !< Equations nominator [?]
+    REAL(wp) :: ros_forward(nc) !< Forward rate of spread [m min-1]
     TYPE(t_fwvar_r1d) :: wn !< net fuel load [kg/m2]
     TYPE(t_fwvar_r1d) :: mf !< moisture content [-]
     TYPE(t_fwvar_r1d) :: rm !< fuel moisture ratio [0 to 1]
@@ -215,7 +216,8 @@ CONTAINS
     phi_w = 0._wp
     phi_s = 0._wp
     heat_source = 0._wp
-    ros = 0
+    ros_forward = 0._wp
+    ros = t_sf_ros(nc)
 
     !< Corrections from Oberhagemann et al. (2025)
     wfactors = calc_weighting_factors(sigmas_dd, woi_dd, &
@@ -295,11 +297,11 @@ CONTAINS
         heat_sink%l(ic) = SUM(wfactors%fij%l(ic,:) * exp(-4.528_wp / sigmas_lv(:)) * qig_ij%l(ic,:))
         heat_sink%total(ic) = fbd(ic) * (wfactors%fi%d(ic) * heat_sink%d(ic) + wfactors%fi%l(ic) * heat_sink%l(ic))
 
-        ros(ic) = heat_source(ic) / heat_sink%total(ic)
+        ros%ros_forward(ic) = heat_source(ic) / heat_sink%total(ic)
       END IF ! IF (mask(ic)) THEN
     ENDDO ! DO ic = 1, nc
 
-    ros%ros_forward = ros
+!    ros%ros_forward =  ros_forward    
     ros%reaction_intensity = ir%total
     ros%prop_flux_ratio = xi
     ros%wind_factor=phi_w

@@ -111,7 +111,7 @@ CONTAINS
 !                                      mf_dd(:,1), &
 !                                      mask)
     ELSE IF (ros_model == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-      ros%ros_forward = sf_calc_rate_of_spread_ober(&
+      ros = sf_calc_rate_of_spread_ober(&
                     nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
                     df_sigmas_dead, df_sigmas_live, &
                     woi_dd, woi_lv, & ! fuel
