@@ -612,8 +612,8 @@ CONTAINS
   !>
   !> Read the bgcm with the given id from the given file
   !>
-  SUBROUTINE read_bgcm_from_file(this, bgcm_id, process_name, tile_name, caller, input_file, name_extdim, size_extdim)
-    USE mo_jsb_io_netcdf,           ONLY: t_input_file
+  SUBROUTINE read_bgcm_from_file(this, bgcm_id, process_name, tile_name, caller, input_file, name_extdim, size_extdim, dt_step)
+    USE mo_jsb_io_netcdf,           ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_util,                    ONLY: read_2D_var, read_3D_var
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_lnd_bgcm_store),    INTENT(IN)    :: this         !< this bgcm store instance
@@ -624,6 +624,7 @@ CONTAINS
     TYPE(t_input_file),         INTENT(INOUT) :: input_file   !< file to read passed bgcm from
     CHARACTER(len=*), OPTIONAL, INTENT(IN)    :: name_extdim  !< name of the variable in the file
     INTEGER, OPTIONAL,          INTENT(IN)    :: size_extdim  !< size of additional dim for bgcms with 3dims
+    INTEGER, OPTIONAL,          INTENT(IN)    :: dt_step      !< timestep information for file with time dimension
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER :: bgcm_idx                   !< index of this bgcm in the store
     INTEGER :: i_part                     !< index of compartment
@@ -631,6 +632,7 @@ CONTAINS
     INTEGER :: i_dim3                     !< third dim index
     REAL(wp), POINTER :: ptr2D(:,:)       !< temporary pointers for 2D variables (elements)
     REAL(wp), POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables (elements)
+    REAL(wp), POINTER :: ptr4D(:,:,:,:)   !< temporary pointers for 4D variables (elements)
     CHARACTER(len=:), ALLOCATABLE :: elem_name
     CHARACTER(len=:), ALLOCATABLE :: compartment_name
     CHARACTER(len=:), ALLOCATABLE :: bgcm_var_name_prefix
@@ -644,7 +646,7 @@ CONTAINS
 
     bgcm_var_name_prefix = process_name//'_'//TRIM(this%bgc_material_name(bgcm_idx))
 
-    IF (this%nr_of_dimensions(bgcm_idx) == 3 .AND. (.NOT. (PRESENT(size_extdim) .AND. PRESENT(name_extdim)))) THEN
+    IF (this%nr_of_dimensions(bgcm_idx) == 3 .AND. (.NOT. ((PRESENT(size_extdim) .AND. PRESENT(name_extdim)) .OR. (PRESENT(dt_step))))) THEN
       CALL finish(TRIM(routine), 'Please pass the size and the name of the additional dimension in order to read the 3D' &
         &   // ' bgcm '//TRIM(this%bgc_material_name(bgcm_idx))//' on tile '//TRIM(tile_name)//'!')
     END IF
@@ -681,7 +683,14 @@ CONTAINS
             elem_name = TRIM(this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%element_shortname(i_elem))
             var_name = bgcm_var_name_prefix//'_'//compartment_name//'_'//elem_name//'_'//TRIM(tile_name)
             ptr2D => this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_2l_p(i_part, i_elem)%p%ptr2d(:,:)
-            CALL read_2D_var(input_file, ptr2D, var_name)
+            IF (PRESENT(dt_step)) THEN
+              ptr3D => input_file%Read_2d_time(                  &
+                & variable_name=var_name,            &
+                & start_time_step=dt_step, end_time_step=dt_step)
+              ptr2D = ptr3D(:,:,1)
+            ELSE
+              CALL read_2D_var(input_file, ptr2D, var_name)
+            END IF
           END DO
         END DO
       CASE(3)
@@ -692,7 +701,14 @@ CONTAINS
             elem_name = TRIM(this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%element_shortname(i_elem))
             var_name = bgcm_var_name_prefix//'_'//compartment_name//'_'//elem_name//'_'//TRIM(tile_name)
             ptr3D => this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%collection_2l_p(i_part, i_elem)%p%ptr3d(:,:,:)
-            CALL read_3D_var(input_file, ptr3D, var_name, name_extdim, size_extdim)
+            IF (PRESENT(dt_step)) THEN
+              ptr4D => input_file%Read_3d_time(                  &
+                & variable_name=var_name,            &
+                & start_time_step=dt_step, end_time_step=dt_step)
+              ptr3D = ptr4D(:,:,:,1)
+            ELSE
+              CALL read_3D_var(input_file, ptr3D, var_name, name_extdim, size_extdim)
+            END IF
           END DO
         END DO
       END SELECT

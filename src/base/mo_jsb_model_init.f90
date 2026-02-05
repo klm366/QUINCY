@@ -373,7 +373,7 @@ CONTAINS
       dsl4jsb_Get_config(VEG_)
       dsl4jsb_Get_config(SB_)
 
-      !-- QLAND, QPLANT, QCANOPY and QSOIL can be ported from Quincy standalone (QS)
+      !-- QLAND, QPLANT, QCANOPY and QSOIL
       IF (.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
                 .OR. (model%config%qmodel_id == QCANOPY) .OR. (model%config%qmodel_id == QSOIL))) THEN
         CALL finish(TRIM(routine), &
@@ -388,7 +388,7 @@ CONTAINS
         CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
         CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
         IF (model%config%qmodel_id == QLAND) THEN
-          CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND AND SOIL
+          CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
         END IF
 
         IF (is_time_restart(get_time_start())) THEN
@@ -608,8 +608,6 @@ CONTAINS
           CALL model%Queue_task(SPQ_, "reset_spq_fluxes")
         END IF
 
-        !! tasks that do not change area
-        !!
         CALL model%Queue_task(SB_, "sb_rate_modifier")
         IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
           CALL model%Queue_task(SB_, "sb_jsm")                  ! JSM
