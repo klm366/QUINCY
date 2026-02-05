@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -195,6 +195,7 @@ CONTAINS
     !$ACC UPDATE DEVICE(k_fluorescence_rate, thermal_dissipation_enrg_constitutive_max_rate) ASYNC(1)
     !$ACC UPDATE DEVICE(thermal_dissipation_enrg_constitutive_param_1, thermal_dissipation_enrg_constitutive_param_2) ASYNC(1)
     !$ACC UPDATE DEVICE(k_photochemistry_rate) ASYNC(1)
+    !$ACC WAIT(1)
 
   END SUBROUTINE init_q_assimi_parameters
 

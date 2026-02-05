@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -112,11 +112,11 @@ CONTAINS
     REAL(wp),         INTENT(inout)           :: ppfd_sunlit_cl(:,:)   !< absorbed Photosynthetically Active Photon Flux Density on sunlit leafes (average over time)
     REAL(wp),         INTENT(inout)           :: ppfd_shaded_cl(:,:)   !< absorbed Photosynthetically Active Photon Flux Density on shaded leafes (average over time)
     REAL(wp),         INTENT(inout)           :: fleaf_sunlit_cl(:,:)  !< fraction of sunlit leaves (average over time)
-    REAL(wp),         INTENT(inout)           :: fn_rub_cl(:,:)        !< fraction of N in Rubisco
-    REAL(wp),         INTENT(inout)           :: fn_et_cl(:,:)         !< fraction of N in Electron Transport
-    REAL(wp),         INTENT(inout)           :: fn_pepc_cl(:,:)       !< fraction of N in PepC
+    REAL(wp),         INTENT(out)             :: fn_rub_cl(:,:)        !< fraction of N in Rubisco
+    REAL(wp),         INTENT(out)             :: fn_et_cl(:,:)         !< fraction of N in Electron Transport
+    REAL(wp),         INTENT(out)             :: fn_pepc_cl(:,:)       !< fraction of N in PepC
     REAL(wp),         INTENT(inout)           :: fn_chl_cl(:,:)        !< fraction of N in Chloroplast
-    REAL(wp),         INTENT(inout)           :: fn_oth_cl(:,:)        !< fraction of N not associated with PS
+    REAL(wp),         INTENT(out)             :: fn_oth_cl(:,:)        !< fraction of N not associated with PS
     REAL(wp),         INTENT(out)             :: lai_cl(:,:)           !< LAI of canopy layer
     REAL(wp),         INTENT(out)             :: cumm_lai_cl(:,:)      !< cummlative LAI above canopy layer
     REAL(wp),         INTENT(out)             :: leaf_nitrogen_cl(:,:) !< total N in canopy layer (mmol N/m2)
@@ -952,7 +952,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: r_gas_dryair
     USE mo_rad_parameters,         ONLY: rad2ppfd, kbl0_vis
     USE mo_q_assimi_constants,     ONLY: ic3phot, ic4phot
-    USE mo_atmland_util,           ONLY: calc_spec_humidity_sat
+    USE mo_phy_schemes,            ONLY: qsat_mixed
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1030,7 +1030,7 @@ CONTAINS
                                                           q_sat                     , &
                                                           hlp0 ! calc_photosynthesis dummy output
 
-    INTEGER                                            :: icanopy !< looping
+    INTEGER                                            :: ic, icanopy !< looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_marginal_canopy_flux_increment'
 
 
@@ -1097,11 +1097,11 @@ CONTAINS
                             ppfd_sunlit_cl          = loc_ppfd_sunlit_cl(:,:)     , & ! inout
                             ppfd_shaded_cl          = loc_ppfd_shaded_cl(:,:)     , &
                             fleaf_sunlit_cl         = loc_fleaf_sunlit_cl(:,:)    , &
-                            fn_rub_cl               = fn_rub_new_cl(:,:)          , &
+                            fn_rub_cl               = fn_rub_new_cl(:,:)          , & ! out
                             fn_et_cl                = fn_et_new_cl(:,:)           , &
                             fn_pepc_cl              = fn_pepc_new_cl(:,:)         , &
-                            fn_chl_cl               = fn_chl_new_cl(:,:)          , &
-                            fn_oth_cl               = fn_oth_new_cl(:,:)          , & ! inout
+                            fn_chl_cl               = fn_chl_new_cl(:,:)          , & ! inout (in case of optimality, else out)
+                            fn_oth_cl               = fn_oth_new_cl(:,:)          , & ! out
                             lai_cl                  = lai_new_cl(:,:)             , & ! out
                             cumm_lai_cl             = cumm_lai_new_cl(:,:)        , & ! out
                             leaf_nitrogen_cl        = leaf_nitrogen_new_cl(:,:)   , & ! out
@@ -1163,7 +1163,9 @@ CONTAINS
 
     !> 3.2 Calculate increment in net water loss from increased LAI
     !!
-    q_sat(:) = calc_spec_humidity_sat(t_air(:), press_srf(:))
+    DO ic=1,nc
+      q_sat(ic) = qsat_mixed(t_air(ic), press_srf(ic))
+    END DO
     WHERE(canopy_cond(:) > eps8 .AND. canopy_cond_new(:) > eps8)
        unit_transpiration(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
                                 (q_sat(:) - q_air(:)) / (1._wp / canopy_cond_new(:) + 1._wp / aerodyn_cond(:) ) - &

@@ -3,7 +3,7 @@
 # ICON-Land
 #
 # ---------------------------------------
-# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+# Copyright (C) 2013-2026, MPI-M, MPI-BGC
 #
 # Contact: icon-model.org
 # Authors: AUTHORS.md
@@ -36,7 +36,7 @@ if ! mkdir -p $wrkdir ; then
 fi
 cd $wrkdir
 
-cdo="cdo -s -f nc4 -b F64"
+cdo="$cdo -f nc4 -b F64"
 
 echo '------------------------------------------------------------------'
 echo "$0: Working directory: $(pwd)"

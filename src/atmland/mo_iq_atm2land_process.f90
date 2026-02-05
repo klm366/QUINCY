@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -32,8 +32,8 @@ CONTAINS
   !>
   !> updates local time and updates or resets quincys daytime counter depending on the local time
   !>
-  PURE ELEMENTAL SUBROUTINE update_local_time_and_daytime_counter( &
-      &                       global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter, local_time_day_seconds)
+  PURE ELEMENTAL SUBROUTINE update_local_time_and_daytime_counter( global_seconds_day, dtime, lon, swpar_srf_down, &
+      &                                                            daytime_counter, daylength_prev_day, local_time_day_seconds)
 
     !$ACC ROUTINE SEQ
 
@@ -43,6 +43,7 @@ CONTAINS
     REAL(wp),  INTENT(in)        :: lon                    !< longitude
     REAL(wp),  INTENT(in)        :: swpar_srf_down         !< current shortwave surface downward flux
     REAL(wp),  INTENT(inout)     :: daytime_counter        !< nr of timesteps of current day with sunlight
+    REAL(wp),  INTENT(inout)     :: daylength_prev_day     !< time of previous day with light available
     REAL(wp),  INTENT(inout)     :: local_time_day_seconds !< seconds passed on this day (local cell time)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER  :: time_shift_in_hours
@@ -52,6 +53,7 @@ CONTAINS
 
     ! reset the daytime_counter if last timestep was midnight
     IF (ABS(local_time_day_seconds - dtime) < eps1) THEN
+      daylength_prev_day = daytime_counter * dtime
       daytime_counter = 0.0_wp
     ENDIF
 

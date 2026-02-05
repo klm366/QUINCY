@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -19,21 +19,17 @@ MODULE mo_util
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish
 
-#ifdef __QUINCY_STANDALONE__
-#else
   USE mo_math_utilities, ONLY: tdma_solver_vec ! TODO from ICON, mo_math_utilities should be replaced once
                                                !      libmath-support is an external library
-#endif
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, tolower, int2string, real2string, logical2string, &
-    &       report_memory_usage, soil_init_from_texture
+    &       report_memory_usage, soil_init_from_texture, tdma_solver_vec
 
-#ifdef __QUINCY_STANDALONE__
-#else
-  PUBLIC :: tdma_solver_vec
+#ifndef __QUINCY_STANDALONE__
+  PUBLIC :: read_2D_var, read_3D_var
 #endif
 
   INTERFACE one_of
@@ -371,6 +367,54 @@ CONTAINS
     END IF
 
   END SUBROUTINE report_memory_usage
+
+#ifndef __QUINCY_STANDALONE__
+  ! ====================================================================================================== !
+  !
+  !> Small helper to read given 2D variable from given netcdf file
+  !
+  ! ======================================================================================================= !
+  SUBROUTINE read_2D_var(input_file, ptr2D, var_name)
+    USE mo_jsb_io_netcdf,           ONLY: t_input_file
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_input_file),      INTENT(INOUT) :: input_file !< file to read passed var from
+    REAL(wp), POINTER,       INTENT(IN)    :: ptr2D(:,:) !< var pointer
+    CHARACTER(*),            INTENT(IN)    :: var_name   !< name of the variable in the file
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp), POINTER :: return_2D(:,:)   !< temporary pointer used to "call" the netcdf reading routine
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    return_2D => input_file%Read_2d(variable_name = var_name)
+    ptr2D(:,:) = return_2D(:,:)
+
+  END SUBROUTINE read_2D_var
+
+  ! ====================================================================================================== !
+  !
+  !> Small helper to read given 3D variable from given netcdf file
+  !
+  ! ======================================================================================================= !
+  SUBROUTINE read_3D_var(input_file, ptr3D, var_name, name_extdim, size_extdim)
+    USE mo_jsb_io_netcdf,           ONLY: t_input_file
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_input_file),      INTENT(INOUT) :: input_file   !< file to read passed var from
+    REAL(wp), POINTER,       INTENT(IN)    :: ptr3D(:,:,:) !< var pointer
+    CHARACTER(*),            INTENT(IN)    :: var_name     !< name of the variable in the file
+    CHARACTER(*),            INTENT(IN)    :: name_extdim  !< name of the variable in the file
+    INTEGER,                 INTENT(IN)    :: size_extdim  !< size of additional dim
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER           :: i_dim3            !< third dim index
+    REAL(wp), POINTER :: return_3D(:,:, :) !< temporary pointer used to "call" the netcdf reading routine
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    DO i_dim3 = 1,size_extdim
+      return_3D => input_file%Read_2d_extdim(variable_name=var_name, &
+        & start_extdim=i_dim3, end_extdim=i_dim3, extdim_name=name_extdim)
+      ptr3D(:,i_dim3,:) = return_3D(:,:,1)
+    END DO
+
+  END SUBROUTINE read_3D_var
+#endif
 
 #endif
 END MODULE mo_util

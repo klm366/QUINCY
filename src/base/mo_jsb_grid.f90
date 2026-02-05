@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -103,6 +103,7 @@ CONTAINS
 
     !$ACC ENTER DATA CREATE(vgrid, vgrid%levels, vgrid%lbounds, vgrid%ubounds, vgrid%dz)
     !$ACC UPDATE DEVICE(vgrid%levels, vgrid%lbounds, vgrid%ubounds, vgrid%dz) ASYNC(1)
+    !$ACC WAIT(1)
   END SUBROUTINE Register_vgrid
 
   FUNCTION Get_grid(id) RESULT(grid)

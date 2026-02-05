@@ -3,7 +3,7 @@
 # ICON-Land
 #
 # ---------------------------------------
-# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+# Copyright (C) 2013-2026, MPI-M, MPI-BGC
 #
 # Contact: icon-model.org
 # Authors: AUTHORS.md
@@ -13,7 +13,7 @@
 #
 set -e
 #
-cdo="cdo -s -f nc4"
+cdo="$cdo -f nc4"
 ISLM=2     # Choice of land seamask variable: 1=slm, 2=cell_sea_land_mask
 
 export LD_LIBRARY_PATH="/sw/spack-levante/netcdf-fortran-4.5.3-l2ulgp/lib":${LD_LIBRARY_PATH}
@@ -110,7 +110,7 @@ ${CRES}/wetlands_${CRES}.nc
 EOF1
 #
 # Compile RDF program
-rm paragen_icon_driver || true
+rm -f paragen_icon_driver
 #Compile ICON paragen driver
 if [[ $(uname -s) == "Darwin" ]]; then
   netcdf_f="/usr/local/Cellar/netcdf-fortran/4.6.0"
@@ -173,7 +173,7 @@ EOF2
 #
   EXP=1
   echo 'Create HD-ICON Parameter file for' $EXP
-  cdo setpartabn,hd_partab.txt  fdir_icon.nc hd_para_icon_${EXP}_pre.nc
+  $cdo setpartabn,hd_partab.txt  fdir_icon.nc hd_para_icon_${EXP}_pre.nc
 #
 # Remove temporary files
   rm fdir_icon.nc
@@ -197,7 +197,7 @@ EOF2
     ln -s ${base_data_dir}/${bifurcated_rdirs} bifurcated_next_cell_index_for_upstream_cell.nc
   fi
   cp hd_para_icon_${EXP}_pre.nc hdpara_icon.nc
-  rm hd_up || true
+  rm -f hd_up
   gfortran -o hd_up ${fortran_src_dir}/upstream_cell_icon.f90 -I${netcdf_f}/include/ -L${netcdf_f}/lib -lnetcdff
   if ${use_bifurcations}; then
     ./hd_up 1

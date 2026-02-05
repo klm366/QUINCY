@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -199,7 +199,6 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
 
     model => Get_model(tile%owner_model_id)
 

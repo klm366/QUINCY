@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -14,6 +14,7 @@
 MODULE mo_carbon_process
 #ifndef __NO_JSBACH__
 
+  USE mo_jsb_control,      ONLY: acc_stream
   USE mo_kind,             ONLY: wp
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
                                & days_per_year, sec_per_year, sec_per_day,        &
@@ -754,7 +755,7 @@ CONTAINS
 
     nc = SIZE(burned_fract)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(non_woody_litter, fraction)
     DO ic = 1, nc
       non_woody_litter = c_green(ic) + c_reserve(ic)
@@ -901,7 +902,7 @@ CONTAINS
     ! Initializations
     nc = SIZE(damaged_fract)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(non_woody_litter, fraction)
     DO ic = 1, nc
 
@@ -1448,7 +1449,7 @@ CONTAINS
 
     INTEGER :: ic
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, SIZE(fract_fpc_max)
       Cpool_per_tile(ic) = Cpool_per_canopy(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
     END DO

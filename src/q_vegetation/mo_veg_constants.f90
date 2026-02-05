@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -106,6 +106,7 @@ MODULE mo_veg_constants
       kappa_f_demand_nc    , & !< fraction of maximum labile nitrogen concentration at which uptake is reduced to 50%
       kappa_f_demand_pn    , & !< fraction of maximum labile phosphorus  concentration at which uptake is reduced to 50%
       k_f_demand           , & !< k in nutrient uptake response funktion to labile nutrient concentration
+      omega_nutrient_demand, & !< the safety ratio margin when comparing the targeted and real labile N:C or P:C (unitless)
       k1_temp_bnf          , & !< k1 .. k4 factors in temperature response function of nitrogenase activity
       k2_temp_bnf          , &
       k3_temp_bnf          , &
@@ -115,8 +116,6 @@ MODULE mo_veg_constants
       transform_cost_org   , & !< N transformation costs of converting organic N to organic N (mol C / mol N)
       f_nacq_no3           , & !< fractions of NO3 and NH4 uptake based on transformation costs
       f_nacq_nh4           , &
-      vmax_symb_bnf        , & !< maximum rate of N fixation (micro-mol N / mol C fine root / s )
-      km_symb_bnf          , & !< half_saturating cost of the response of N fixation (mol C / mol N)
       k_cost_symb_bnf      , & !< cost of symbiotic N fixation (mol C / mol N)
       t_opt_symb_bnf       , & !< optimal temperature for BNF (K)
       ea_symb_bnf          , & !< activation energy for symbiotic N fixation (J mol-1)
@@ -138,8 +137,7 @@ MODULE mo_veg_constants
   REAL(wp), SAVE :: &
       min_lai                , & !< minimum LAI beyond which all leaves are shed
       target_lai_max         , & !< maximum LAI target for reserve use calculations
-      max_leaf_shedding_rate , & !< maximum rate of leaf shedding (1/days)
-      k_leafon_canopy            !< scaling coefficient for leaf on in CANOPY-only model
+      max_leaf_shedding_rate     !< maximum rate of leaf shedding (1/days)
 
   ! vegetation dynamics
   REAL(wp), SAVE :: &
@@ -177,7 +175,7 @@ MODULE mo_veg_constants
       k3_fruit_alloc              , & !< parameter in the Weibull function controlling fruit growth; ~micro-mol C / m2 / s
       ! minimum fraction of allocation going to fruit (flowers etc.)
       k1_fruit_alloc              , & !< minimum fraction of allocation going to fruit (flowers etc.)
-      w_root_lim_max              , & !< value of the root water limitation below which root allocation starts responding
+      k1_root_alloc               , & !< value of relative root zone water below which root allocation starts responding
       leaf2root_min_ratio         , & !< minimum leaf to root ratio for dynamic allocation
       leaf2root_max_ratio             !< maximum leaf to root ratio for dynamic allocation
 
@@ -190,6 +188,7 @@ MODULE mo_veg_constants
 
   ! parameters used for product pool decay
   REAL(wp), SAVE :: &
+      tau_pp_crop,       & !< exponential time constants for the decay of the crop harvest product pool
       tau_pp_fuelwood,   & !< exponential time constants for the decay of the fuel product pool
       tau_pp_paper,      & !< exponential time constants for the decay of the paper product pool
       tau_pp_fiberboard, & !< exponential time constants for the decay of the fiberboard product pool
@@ -217,7 +216,8 @@ MODULE mo_veg_constants
   ! need to be parameters (i.e. constant across model runtime)
   INTEGER, PARAMETER ::    &
       itree         = 1,   &
-      igrass        = 2
+      igrass        = 2,   &
+      icrop         = 3
 
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_veg_constants'
@@ -307,6 +307,7 @@ CONTAINS
       kappa_f_demand_nc           = 0.75_wp
       kappa_f_demand_pn           = 0.9_wp
       k_f_demand                  = 2.0_wp
+      omega_nutrient_demand       = 0.15_wp ! tuned to leave a flexiable space between the targeted and actual labile CN or NP ratios
       k1_temp_bnf                 = 1.25_wp
       k2_temp_bnf                 = -3.62_wp
       k3_temp_bnf                 = 0.27_wp
@@ -316,8 +317,6 @@ CONTAINS
       transform_cost_org          = 1.0_wp    / (molar_mass_C/molar_mass_N)
       f_nacq_nh4                  = transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4)
       f_nacq_no3                  = transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4)
-      vmax_symb_bnf               = 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day * one_year) * 1.e6_wp  ! Meyerholt et. al 2016
-      km_symb_bnf                 = 5.0_wp    / (molar_mass_C/molar_Mass_N)                                   ! Meyerholt et. al 2016
       k_cost_symb_bnf             = 12.75_wp  / (molar_mass_C/molar_mass_N)     ! Average value from Kern 2021
       t_opt_symb_bnf              = 32.0_wp+273.15_wp  ! calibrated from Bytnerowicz et al. 2022
       ea_symb_bnf                 = 72000._wp          ! calibrated from Bytnerowicz et al. 2022
@@ -338,7 +337,6 @@ CONTAINS
       min_lai                     = 0.1_wp
       target_lai_max              = 5.0_wp
       max_leaf_shedding_rate      = 0.05_wp
-      k_leafon_canopy             = 0.2_wp
 
   ! vegetation dynamics
       background_mort_rate_tree   = 0.01_wp
@@ -368,7 +366,7 @@ CONTAINS
       k1_fruit_alloc              = 0.01_wp
       k3_fruit_alloc              = 0.1_wp
       k4_fruit_alloc              = 2.0_wp
-      w_root_lim_max              = 0.8_wp
+      k1_root_alloc               = 0.8_wp
       leaf2root_min_ratio         = 0.2_wp
       leaf2root_max_ratio         = 15.0_wp
 
@@ -378,13 +376,14 @@ CONTAINS
       delta_n_leaf                = 0.0048_wp       ! 0.0001 (changed to account for multiplication with dtime/one_day in the code)
 
     ! parameters used for product pool decay [years] - these need to be > 0.0_wp
-    ! following values are all taken from Nuetzel (2021, LMU master thesis)
-      tau_pp_fuelwood = 0.53
-      tau_pp_paper = 1.50
-      tau_pp_fiberboard = 13.2
-      tau_pp_oirw = 16.5
-      tau_pp_pv = 24.9
-      tau_pp_sawnwood = 49.9
+      tau_pp_crop = 1.0_wp ! made up by SZ
+      ! following values are all taken from Nuetzel (2021, LMU master thesis)
+      tau_pp_fuelwood = 0.53_wp
+      tau_pp_paper = 1.50_wp
+      tau_pp_fiberboard = 13.2_wp
+      tau_pp_oirw = 16.5_wp
+      tau_pp_pv = 24.9_wp
+      tau_pp_sawnwood = 49.9_wp
 
     ! parameters used for herbivory
     ! calibrated from data in McNaugton et al. 1989, Nature 341, 142-144, and Cyr and Pace, 1993, Nature 361, 148-150
@@ -403,7 +402,8 @@ CONTAINS
     !$ACC UPDATE DEVICE(f_resp_acclim, t_acclim_zero, fmaint_rate_base, k_fpc, k_sai2lai) ASYNC(1)
     !$ACC UPDATE DEVICE(carbon_per_dryweight_leaf, jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc_C4) ASYNC(1)
     !$ACC UPDATE DEVICE(jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, k0_fn_pepc_C3, kfn_chl) ASYNC(1)
-    !$ACC UPDATE DEVICE(rfr_ratio_toc, k_r2fr_chl)
+    !$ACC UPDATE DEVICE(rfr_ratio_toc, k_r2fr_chl) ASYNC(1)
+    !$ACC WAIT(1)
 
   END SUBROUTINE init_veg_constants
 

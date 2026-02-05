@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -193,9 +193,9 @@ MODULE mo_pheno_parameters
   ! create object
   TYPE(t_PhenologyParameters), SAVE :: pheno_param_jsbach
 
-  !$acc declare create(pheno_param_jsbach%all, pheno_param_jsbach%EG_SG, pheno_param_jsbach%EG, &
-  !$acc pheno_param_jsbach%SG, pheno_param_jsbach%RG, pheno_param_jsbach%GRS, pheno_param_jsbach%CRP,   &
-  !$acc pheno_param_jsbach%FR, pheno_param_jsbach)
+  !$ACC DECLARE CREATE(pheno_param_jsbach%all, pheno_param_jsbach%EG_SG, pheno_param_jsbach%EG) &
+  !$ACC   CREATE(pheno_param_jsbach%SG, pheno_param_jsbach%RG, pheno_param_jsbach%GRS, pheno_param_jsbach%CRP) &
+  !$ACC   CREATE(pheno_param_jsbach%FR, pheno_param_jsbach)
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_pheno_parameters'
 
@@ -261,8 +261,8 @@ CONTAINS
 
     !$ACC UPDATE DEVICE(pheno_param_jsbach) ASYNC(1)
     !$ACC UPDATE ASYNC(1) &
-    !$ACC   DEVICE(pheno_param_jsbach%all, pheno_param_jsbach%EG_SG, pheno_param_jsbach%EG)  &
-    !$ACC   DEVICE(pheno_param_jsbach%SG,  pheno_param_jsbach%RG,    pheno_param_jsbach%GRS) &
+    !$ACC   DEVICE(pheno_param_jsbach%all, pheno_param_jsbach%EG_SG, pheno_param_jsbach%EG) &
+    !$ACC   DEVICE(pheno_param_jsbach%SG, pheno_param_jsbach%RG, pheno_param_jsbach%GRS) &
     !$ACC   DEVICE(pheno_param_jsbach%CRP, pheno_param_jsbach%FR)
 
   END SUBROUTINE init_pheno_parameters

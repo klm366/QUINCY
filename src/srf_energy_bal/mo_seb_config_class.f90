@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -32,8 +32,11 @@ MODULE mo_seb_config_class
      REAL(wp)                    :: coef_ril_tm1           !< Weighting factor for Richardson numbers at different steps ...
      REAL(wp)                    :: coef_ril_t             !< ... used to calculate a drag coefficient that approximates ...
      REAL(wp)                    :: coef_ril_tp1           !< ... the drag coefficient at time t, but helps to maintain stability.
+     REAL(wp)                    :: eb_threshold           !< Energy balance residuals greater than this threshold lead to
+                                                           !< diagnostic logging. Negative threshold: no printing.
      LOGICAL                     :: l_ice_on_lakes         !< Whether to use ice on lakes
      INTEGER                     :: niter_tmx              !< For tmx: number of iterations in seb solver
+     LOGICAL                     :: l_skin_temp            !< Activate skin-temperature formulation.
    CONTAINS
      PROCEDURE :: Init => Init_seb_config
   END type t_seb_config
@@ -51,9 +54,11 @@ CONTAINS
     LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     CHARACTER(len=10)           :: scheme_albedo
-    REAL(wp)                    :: lake_mixed_layer_depth, lake_min_ice_depth, coef_ril_tm1, coef_ril_t, coef_ril_tp1
+    REAL(wp)                    :: lake_mixed_layer_depth, lake_min_ice_depth, eb_threshold, &
+      &                            coef_ril_tm1, coef_ril_t, coef_ril_tp1
     LOGICAL                     :: l_ice_on_lakes
     INTEGER                     :: niter_tmx
+    LOGICAL                     :: l_skin_temp
 
     NAMELIST /jsb_seb_nml/         &
       active,                      &
@@ -65,8 +70,10 @@ CONTAINS
       coef_ril_tm1,                &
       coef_ril_t,                  &
       coef_ril_tp1,                &
+      eb_threshold,                &
       l_ice_on_lakes,              &
-      niter_tmx
+      niter_tmx,                   &
+      l_skin_temp
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -80,13 +87,15 @@ CONTAINS
     ic_filename     = 'ic_land_srf.nc'
     bc_filename     = 'bc_land_srf.nc'
     scheme_albedo   = 'echam5'
-    coef_ril_tm1    = 0.50_wp
-    coef_ril_t      = 0.25_wp
-    coef_ril_tp1    = 0.25_wp
+    coef_ril_tm1    = 0.15_wp
+    coef_ril_t      = 0.70_wp
+    coef_ril_tp1    = 0.15_wp
+    eb_threshold    = -1.0_wp  ! Negative values correspond to no printouts
     lake_mixed_layer_depth = 10._wp
     lake_min_ice_depth     = 0.05_wp
     l_ice_on_lakes  = .TRUE.
     niter_tmx       = 0
+    l_skin_temp     = .FALSE.   ! default for QUINCY: TRUE
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -103,10 +112,16 @@ CONTAINS
     config%coef_ril_tm1              = coef_ril_tm1
     config%coef_ril_t                = coef_ril_t
     config%coef_ril_tp1              = coef_ril_tp1
+    config%eb_threshold              = eb_threshold
     config%l_ice_on_lakes            = l_ice_on_lakes
     config%niter_tmx                 = niter_tmx
+    config%l_skin_temp               = l_skin_temp
 
     CALL close_nml(nml_handler)
+
+    IF (l_skin_temp) THEN
+      CALL message(TRIM(routine), 'Skin temperature formulation is activated')
+    END IF
 
   END SUBROUTINE Init_seb_config
 
