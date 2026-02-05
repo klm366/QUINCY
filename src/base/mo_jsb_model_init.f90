@@ -441,14 +441,15 @@ CONTAINS
           END IF
         END IF
 
-        IF (model%config%qmodel_id == QLAND) THEN
-          CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
-        END IF
-
         CALL model%Queue_task(RAD_,       "surface_radiation")
         CALL model%Queue_task(Q_PHENO_,   "q_phenology")
         CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
         CALL model%Queue_task(HYDRO_,     "soil_properties")
+
+        IF (model%config%qmodel_id == QLAND) THEN
+          CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
+        END IF
+
         CALL model%Queue_task(SEB_,       "surface_energy")
         CALL model%Queue_task(HYDRO_,     "evaporation")
         CALL model%Queue_task(SEB_,       "surface_fluxes")
