@@ -2,7 +2,6 @@
 #SBATCH --account=
 #SBATCH --job-name=pp_jsb2ilamb
 #SBATCH --partition=shared
-#SBATCH --exclusive
 #SBATCH --time=20:00:00
 #SBATCH --output=./pp_jsb2ilamb.%j.log
 #SBATCH --error=./pp_jsb2ilamb.%j.log
@@ -12,8 +11,8 @@ set -e
 # using iLamb (see https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2018MS001354)
 # -----------------------------------------------------------------------------------------------------
 
-VARLIST='albedo,biomass,co2,cSoil,evspsbl,gpp,hfdsl,hfls,hfss,lai,mrro,mrsos,pr,reco,rhums,rlds,rlns,rlus,rns,rsds,rsns,rsus,swe,tas,twsa'
-TRGGRID='r192x96'
+VARLIST='biomass,burntArea,co2,cSoil,dist,evspsbl,gpp,hfdsl,hfls,hfss,lai,mrro,mrsos,nbp,pr,reco,rhums,rlds,rlns,rns,rsds,rsns,swe,tas,tsl,twsa'
+TRGGRID='r360x180'
 MOL2G_C=12.01
 GM2_2_MGHA=0.01
 
@@ -38,8 +37,8 @@ PARACHECK=true
 DATA="missing"
 EXPID="missing"
 PERD="none"
-MASK=$(ls /pool/data/ICON/grids/public/mpim/0049/land/r0100/bc_land_frac_11pfts_1979.nc)
-SOIL=$(ls /pool/data/ICON/grids/public/mpim/0049/land/r0100/bc_land_soil.nc)
+MASK=$(ls /pool/data/ICON/grids/public/mpim/0049/land/r0103/bc_land_frac.nc)
+SOIL=$(ls /pool/data/ICON/grids/public/mpim/0049/land/r0103/bc_land_soil.nc)
 
 while $PARACHECK; do
   case $1 in
@@ -81,18 +80,16 @@ TASKLIST="$(mktemp -u --tmpdir=.)_tasklist.cdo"
 for VAR in $(echo ${VARLIST//,/ }); do
     case $VAR in
         # *** Radiation and Energy Cycle
-        albedo  ) echo "albedo  = (a2l_swvis_srf_down_box + a2l_swnir_srf_down_box - rad_sw_srf_net_box) / (a2l_swvis_srf_down_box + a2l_swnir_srf_down_box);" >> $TASKLIST ;;
-        hfdsl   ) echo "hfdsl   = - sse_grnd_hflx_box;" >> $TASKLIST ;;
+        hfdsl   ) echo "hfdsl   = sse_grnd_hflx_box * -1;" >> $TASKLIST ;;
         hfls    ) echo "hfls    = seb_latent_hflx_box * -1;"   >> $TASKLIST ;;
         hfss    ) echo "hfss    = seb_sensible_hflx_box * -1;" >> $TASKLIST ;;
         rlds    ) echo "rlds    = a2l_lw_srf_down_box;" >> $TASKLIST ;;
         rlns    ) echo "rlns    = rad_lw_srf_net_box;" >> $TASKLIST ;;
-        rlus    ) echo "rlus    = a2l_lw_srf_down_box - rad_lw_srf_net_box;" >> $TASKLIST ;;
         rns     ) echo "rns     = rad_rad_srf_net_box;" >> $TASKLIST ;;
         rsds    ) echo "rsds    = a2l_swvis_srf_down_box + a2l_swnir_srf_down_box;" >> $TASKLIST ;;
         rsns    ) echo "rsns    = rad_sw_srf_net_box;" >> $TASKLIST ;;
-        rsus    ) echo "rsus    = a2l_swvis_srf_down_box + a2l_swnir_srf_down_box - rad_sw_srf_net_box;" >> $TASKLIST ;;
         tas     ) echo "tas     = seb_t_box;"                  >> $TASKLIST ;;
+        tsl     ) echo "tsl     = sse_t_soil_sl_box;" >> $TASKLIST ;;
         # *** Hydrology Cycle
         evspsbl ) echo "evspsbl = hydro_evapotrans_box * -1;"             >> $TASKLIST ;;
         mrro    ) echo "mrro    = hydro_runoff_box + hydro_drainage_box;" >> $TASKLIST ;;
@@ -102,12 +99,15 @@ for VAR in $(echo ${VARLIST//,/ }); do
         swe     ) echo "swe     = hydro_weq_snow_box;"                    >> $TASKLIST ;;
         twsa    ) echo "twsa    = (vertsum(hydro_wtr_soil_sl_box) + vertsum(hydro_ice_soil_sl_box) + hydro_weq_snow_box) * 1000;" >> $TASKLIST ;;
         # *** Ecosystem and Carbon Cycle
-        biomass ) echo "biomass = carbon_c_sum_veg_ta_box * ${MOL2G_C} * ${GM2_2_MGHA};" >> $TASKLIST ;;
-        co2     ) echo "co2     = a2l_co2_air_box * 1000 * 1000;"                        >> $TASKLIST ;;
-        cSoil   ) echo "cSoil   = (carbon_c_sum_litter_bg_ta_box + carbon_c_sum_humus_ta_box) * ${MOL2G_C} / 1000;" >> $TASKLIST ;;
-        gpp     ) echo "gpp     = carbon_gpp_ydaymean_ta_box * ${MOL2G_C} * 86400;"      >> $TASKLIST ;;
-        lai     ) echo "lai     = pheno_lai_box;"                                        >> $TASKLIST ;;
-        reco    ) echo "reco    = ( - carbon_soil_respiration_ta_box + assimi_dark_respiration_box) * ${MOL2G_C} * 86400 + carbon_co2_l2a_herb_ta_box * 1000 * 86400;"            >> $TASKLIST ;;
+        biomass   ) echo "biomass = carbon_c_sum_veg_ta_box * ${MOL2G_C} * ${GM2_2_MGHA};" >> $TASKLIST ;;
+        burntArea ) echo "burntArea = disturb_burned_fract_box * 100;" >> $TASKLIST ;;
+        co2       ) echo "co2     = a2l_co2_air_box * 1000 * 1000;"                        >> $TASKLIST ;;
+        cSoil     ) echo "cSoil   = (carbon_c_sum_litter_bg_ta_box + carbon_c_sum_humus_ta_box) * ${MOL2G_C} / 1000;" >> $TASKLIST ;;
+        dist      ) echo "dist    = disturb_burned_fract_box * fuel_fuel_box * ${MOL2G_C};" >> $TASKLIST ;;
+        gpp       ) echo "gpp     = carbon_gpp_ydaymean_ta_box * ${MOL2G_C} * 86400;"      >> $TASKLIST ;;
+        lai       ) echo "lai     = pheno_lai_box;"                                        >> $TASKLIST ;;
+        nbp       ) echo "nbp     = (carbon_npp_pot_ydaymean_ta_box + carbon_soil_respiration_ta_box) * ${MOL2G_C} * 86400 - carbon_co2_l2a_herb_ta_box * 1000 * 86400;" >> $TASKLIST ;;
+        reco      ) echo "reco    = ( - carbon_soil_respiration_ta_box + carbon_gpp_ydaymean_ta_box - carbon_npp_pot_ydaymean_ta_box) * ${MOL2G_C} * 86400 + carbon_co2_l2a_herb_ta_box * 1000 * 86400;" >> $TASKLIST ;;
         # *** Capture missing variables
         *       ) echo "Postprocessing for variable ${VAR} not yet implemented in $0" && exit 1 ;;
     esac
@@ -119,14 +119,14 @@ PARTAB="$(mktemp -u --tmpdir=.)_partab.txt"
 if [ ! -f $PARTAB ]; then
 cat > $PARTAB << EOF
 &parameter
-  name = albedo
-  long_name = "Land surface albedo"
-  units = "unitless"
-/
-&parameter
   name = biomass
   long_name = "Total vegetation biomass"
   units = "Mg ha-1"
+/
+&parameter
+  name = burntArea
+  long_name = "Burnt Area Fraction"
+  units = "%"
 /
 &parameter
   name = co2
@@ -137,6 +137,11 @@ cat > $PARTAB << EOF
   name = cSoil
   long_name = "Total Soil Carbon"
   units = "kg m-2"
+/
+&parameter
+  name = dist
+  long_name = "Wildfire disturbance carbon flux"
+  units = "g m-2 month-1"
 /
 &parameter
   name = evspsbl
@@ -179,6 +184,11 @@ cat > $PARTAB << EOF
   units = "kg m-2"
 /
 &parameter
+  name = nbp
+  long_name = "Global Net Ecosystem Carbon Balance"
+  units = "g m-2 d-1"
+/
+&parameter
   name = pr
   long_name = "Total precipitation"
   units = "kg m-2 s-1"
@@ -204,11 +214,6 @@ cat > $PARTAB << EOF
   units = "W m-2"
 /
 &parameter
-  name = rlus
-  long_name = "Surface Upward LW Radiation"
-  units = "W m-2"
-/
-&parameter
   name = rns
   long_name = "Surface Net Radiation"
   units = "W m-2"
@@ -224,11 +229,6 @@ cat > $PARTAB << EOF
   units = "W m-2"
 /
 &parameter
-  name = rsus
-  long_name = "Surface Upward SW Radiation"
-  units = "W m-2"
-/
-&parameter
   name = swe
   long_name = "Snow water equivalent"
   units = "m"
@@ -236,6 +236,11 @@ cat > $PARTAB << EOF
 &parameter
   name = tas
   long_name = "Surface temperature"
+  units = "K"
+/
+&parameter
+  name = tsl
+  long_name = "Soil Layer Temperature"
   units = "K"
 /
 &parameter
@@ -269,8 +274,8 @@ cdo -s --reduce_dim -copy ${TEMPID}_data.nc ${TEMPID}_squeezed.nc && rm ${TEMPID
 
 # -----------------------------------------------------------------------------------------------------
 # Special post-processing steps for individual variables
-if [[ $VARLIST =~ "twsa" ]]; then
-    $cdo merge -sub -selname,twsa ${TEMPID}_data.nc -timmean -selname,twsa ${TEMPID}_data.nc -delname,twsa ${TEMPID}_data.nc ${TEMPID}_special.nc && \
+if [[ $VARLIST =~ "nbp" ]]; then
+    $cdo merge -sub -selname,nbp ${TEMPID}_data.nc -divdpm -selname,dist ${TEMPID}_data.nc -delname,nbp ${TEMPID}_data.nc ${TEMPID}_special.nc && \
       mv ${TEMPID}_special.nc ${TEMPID}_data.nc
 fi
 
