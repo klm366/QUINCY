@@ -126,9 +126,11 @@ CONTAINS
     var%l = 0._wp
     var%d = 0._wp
 
-    IF (PRESENT(has_total) .AND. has_total) THEN
+    IF (PRESENT(has_total)) THEN
+    IF (has_total) THEN
       ALLOCATE(var%total(nc))
       var%total = 0._wp
+    ENDIF
     END IF
   END FUNCTION create_fwvar_r1d
 
@@ -142,11 +144,11 @@ CONTAINS
     INTEGER, INTENT(in) :: nddfc !< n dead fuel classes
     INTEGER, INTENT(in) :: nlvfc !< n live fuel classes
     TYPE(t_fwvar_r2d) :: var
-    ALLOCATE(var%l(nc, nddfc))
-    ALLOCATE(var%d(nc, nlvfc))
+    ALLOCATE(var%d(nc, nddfc))
+    ALLOCATE(var%l(nc, nlvfc))
     !    ALLOCATE(var%t(nc))
-    var%l = 0._wp
     var%d = 0._wp
+    var%l = 0._wp
     !    var%t = 0._wp
   END FUNCTION create_fwvar_r2d
 
@@ -169,9 +171,9 @@ CONTAINS
     !< number of dead fuel classes (1h, 10hrs, 100 hrs, dry livegrass)
     !< number of live fuel classes (wet livegrass, woody)
     INTEGER, INTENT(in) :: ndd, nlv
-    REAL(wp), INTENT(in) :: woi_dd(ndd,nc), woi_lv(nlv,nc) !< dead/live fuel load [kg DM m-1] -> notes units in kg (instead of g)
+    REAL(wp), INTENT(in) :: woi_dd(nc,ndd), woi_lv(nc,nlv) !< dead/live fuel load [kg DM m-1] -> notes units in kg (instead of g)
     REAL(wp), INTENT(in) :: sigmas_dd(ndd), sigmas_lv(nlv) !< surface area to volume ratio [m2/m3]
-    REAL(wp), INTENT(in) :: mf_dd(ndd,nc), mf_lv(nlv,nc) !< Fuel moisture content [-]
+    REAL(wp), INTENT(in) :: mf_dd(nc,ndd), mf_lv(nc,nlv) !< Fuel moisture content [-]
     REAL(wp), INTENT(in) :: me_dd(nc), me_lv(nc) !< Moisture of extinction [-]
     REAL(wp), INTENT(in) :: fbd(nc) !< Fuel bulk density [kg/m3]
     REAL(wp), INTENT(in) :: u_f_wind(nc) !< Wind speed at midflame height [m min-1]
@@ -203,7 +205,7 @@ CONTAINS
     rm = t_fwvar_r1d(nc)
     eta_m = t_fwvar_r1d(nc)
     sigma = t_fwvar_r1d(nc, has_total=.TRUE.)
-    ir = t_fwvar_r1d(nc)
+    ir = t_fwvar_r1d(nc, has_total=.TRUE.)
     qig_ij = t_fwvar_r2d(nc, ndd, nlv)
     heat_sink = t_fwvar_r1d(nc, has_total=.TRUE.)
     u_forward = 0._wp
@@ -218,6 +220,7 @@ CONTAINS
     heat_source = 0._wp
     ros_forward = 0._wp
     ros = t_sf_ros(nc)
+    xi = 0._wp
 
     !< Corrections from Oberhagemann et al. (2025)
     wfactors = calc_weighting_factors(sigmas_dd, woi_dd, &
@@ -324,17 +327,17 @@ CONTAINS
                                   sigmas_live, fuel_load_live, part_dens) &
                                 RESULT (wfactors)
     REAL(wp), INTENT(in) :: sigmas_dead(:)      !< surface are to volume ratio (#fuel classes) [m2/m3]
-    REAL(wp), INTENT(in) :: fuel_load_dead(:,:) !< oven-dry fuel load (#fuel classes,#nc) [kg/m2]
+    REAL(wp), INTENT(in) :: fuel_load_dead(:,:) !< oven-dry fuel load (#nc, #fuel classes) [kg/m2]
     REAL(wp), INTENT(in) :: sigmas_live(:)      !< surface are to volume ratio (#fuel classes) [m2/m3]
-    REAL(wp), INTENT(in) :: fuel_load_live(:,:) !< oven-dry fuel load (#fuel classes,#nc) [kg/m2]
+    REAL(wp), INTENT(in) :: fuel_load_live(:,:) !< oven-dry fuel load (#nc, #fuel classesc) [kg/m2]
     REAL(wp), INTENT(in) :: part_dens           !< particle density [kg/m3]
     TYPE(t_sf_weighting_factors) :: wfactors
 
     INTEGER :: nc, ndeadfc, nlivefc, ic
 
-    nc = SIZE(fuel_load_dead, DIM=2)
-    ndeadfc = SIZE(fuel_load_dead, DIM=1)
-    nlivefc = SIZE(fuel_load_live, DIM=1)
+    nc = SIZE(fuel_load_dead, DIM=1)
+    ndeadfc = SIZE(fuel_load_dead, DIM=2)
+    nlivefc = SIZE(fuel_load_live, DIM=2)
 
     wfactors = t_sf_weighting_factors(nc, ndeadfc, nlivefc)
 
@@ -345,8 +348,10 @@ CONTAINS
       wfactors % Ai % l(ic) = SUM(wfactors % Aij % l(ic,:))
       wfactors % At(ic) = wfactors % Ai % l(ic) + wfactors % Ai % d(ic)
 
-      wfactors % fij % d(ic,:) = wfactors % Aij % d(ic,:) / wfactors % Ai % d(ic)
-      wfactors % fij % l(ic,:) = wfactors % Aij % d(ic,:) / wfactors % Ai % l(ic)
+      IF (wfactors % Ai % d(ic) > 0._wp)  &
+        wfactors % fij % d(ic,:) = wfactors % Aij % d(ic,:) / wfactors % Ai % d(ic)
+      IF (wfactors % Ai % l(ic) > 0._wp)  &
+        wfactors % fij % l(ic,:) = wfactors % Aij % l(ic,:) / wfactors % Ai % l(ic)
       wfactors % fi % d(ic) = SUM(wfactors % fij % d(ic,:))
       wfactors % fi % l(ic) = SUM(wfactors % fij % l(ic,:))
 
@@ -372,6 +377,7 @@ CONTAINS
     REAL(wp) :: fsum(NGLIM)
     INTEGER :: ifuel, ibin
 
+    ALLOCATE(gs(SIZE(fs)))
     fsum = 0.
     gs = 0.
     nfuelclass = SIZE(fs)
