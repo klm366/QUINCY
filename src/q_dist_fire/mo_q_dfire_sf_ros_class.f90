@@ -87,7 +87,8 @@ CONTAINS
     REAL(wp), INTENT(in)                 :: woi_lv(nc, nlv)             !< Live fuel (wet livegrass, woody) live fuel [kg DM m-2], note in kg
     REAL(wp), INTENT(in)                 :: mf_dd(nc, ndd) 
     REAL(wp), INTENT(in)                 :: mf_lv(nc, nlv)              !< Fuel moisture [0 to 1] (#nc,#live fuel classes -Oberhagemann-)
-    REAL(wp), INTENT(in)                 :: me_dd(nc), me_lv(nc)        !< Moisture of extinction [0 to 1] (#nc)
+    REAL(wp), INTENT(in)                 :: me_dd(nc)                   !< Moisture of extinction [0 to 1] (#nc,#dead fuel classes)
+    REAL(wp), INTENT(in)                 :: me_lv(nc)                   !< Moisture of extinction [0 to 1] (#nc,#live fuel classes)
     LOGICAL, INTENT(in)                  :: mask(nc)                    !< True =  compute gridcell(s)
     TYPE(t_sf_ros)                       :: ros                         !< output [-]
 
@@ -102,10 +103,6 @@ CONTAINS
     IF (ros_model == Q_DFIRE_ROS_THONICKE) THEN
       !> Fire rate of spread (IR, optimum reaction velocity, fuel bulk density, net fuel loading, ...)
       !> calculate the rate of spread following Thonicke et al. (2010)
-!      ALLOCATE(woi_ddm(nc, nddm)) !< 3= fuel classes with mixed livegrass into 1 hour
-!      woi_ddm(:,ix_1hr:ix_100hrs) = woi_dd(:,ix_1hr:ix_100hrs)
-!      woi_ddm(:,ix_1hr) = woi_ddm(:,ix_1hr) +  woi_dd(:,ix_lvg)
-
       ros = sf_calc_rate_of_spread_thon(nc, nddm, &
                                       fuel_bulk_density, &
                                       u_f_wind, me_dd, fdi, &

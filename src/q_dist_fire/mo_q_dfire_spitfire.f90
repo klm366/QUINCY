@@ -87,7 +87,6 @@ MODULE mo_q_dfire_spitfire
   USE mo_q_dfire_constants,       ONLY: ixs_sf_dead_litter_fuel_pools, ixs_sf_dead_livegrass_fuel_pools
   USE mo_q_dfire_constants,       ONLY: df_sf_units_g_to_kg
   USE mo_q_dfire_constants,       ONLY: df_sf_sigma_dd_nr, df_sf_sigma_lv_nr
-  USE mo_q_dfire_config_class,    ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
   USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture
@@ -632,13 +631,13 @@ CONTAINS
     REAL(wp) :: tot_lvt_fuel(nc)            !< Total amount of live tree fuel [g DM m-2]
 
     !< Oberhagemann related
-    REAL(wp) :: woi_ddm(nc,df_sf_fc_spread_nr) !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, dimensions reversed
-    REAL(wp) :: woi_dd(nc,df_sf_sigma_dd_nr) !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, dimensions reversed
-    REAL(wp) :: woi_lv(nc,df_sf_sigma_lv_nr) !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, ...
-    REAL(wp), ALLOCATABLE :: me_dd(:,:) !< Moisture of extinction [-] (#fuel classes, #nc)
-    REAL(wp), ALLOCATABLE :: me_lv(:,:)
-    REAL(wp), ALLOCATABLE :: mf_dd(:,:) !< Fuel moisture [-] (#fuel classes, #nc)
-    REAL(wp), ALLOCATABLE :: mf_lv(:,:)
+    REAL(wp) :: woi_ddm(nc,df_sf_fc_spread_nr)  !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, dimensions reversed
+    REAL(wp) :: woi_dd(nc,df_sf_sigma_dd_nr)    !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, dimensions reversed
+    REAL(wp) :: woi_lv(nc,df_sf_sigma_lv_nr)    !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, ...
+    REAL(wp) :: me_dd(nc)                       !< Moisture of extinction [-] (#nc)
+    REAL(wp) :: me_lv(nc)
+    REAL(wp) :: mf_dd(nc,df_sf_sigma_dd_nr)     !< Fuel moisture [-] (#nc,#fuel classes)
+    REAL(wp) :: mf_lv(nc,df_sf_sigma_lv_nr)
 
     INTEGER                               :: i, j
 
@@ -688,11 +687,12 @@ CONTAINS
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions = has_fire_conditions .AND. (spitfire % fdi > 1.e-6_wp)
 
-    woi_ddm(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx) = woi_dd(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx)
-    woi_ddm(:,df_sf_fc_1hr_idx) = woi_ddm(:,df_sf_fc_1hr_idx) +  woi_dd(:,4) !< 4= dry livegrass index
     !< dead fuel (1 hr, 10 hrs, 100 hrs litter and dry livegrass)
     woi_dd(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx) = w_oi * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
     woi_dd(:,4) = dry_lvg(:,df_sf_fc_1hr_idx) * df_sf_units_g_to_kg  !< 4 = dry livegrass
+    !< mixed dead fuel (1 hr+livg, 10 hrs, 100 hrs)
+    woi_ddm(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx) = woi_dd(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx)
+    woi_ddm(:,df_sf_fc_1hr_idx) = woi_ddm(:,df_sf_fc_1hr_idx) +  woi_dd(:,4) !< 4= dry livegrass index
 
     !< (Wet livegrass implemented, woody)
     !< Wet livegrass is:
@@ -703,14 +703,14 @@ CONTAINS
     END DO
     woi_lv(:,1) = 0._wp !< 1 = wet livegrass, not yet implemented
     woi_lv(:,2) = tot_lvt_fuel * df_sf_units_g_to_kg !< 2= woody fuel
-    me_dd = SPREAD( moisture_extinction, DIM=1, NCOPIES=df_sf_sigma_dd_nr ) !< litter [1hr, 10hrs, 100 hours, dry livegrass]
-    me_lv = SPREAD( moisture_extinction, DIM=1, NCOPIES=df_sf_sigma_lv_nr ) !< [wet livegrass, woody] 
+    me_dd = moisture_extinction 
+    me_lv = moisture_extinction ! todo: oberhagemann to calculate
     ! Oberhagemann: fuel moisture
-    mf_dd = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=1, NCOPIES=df_sf_sigma_dd_nr ) ! litter [1hr, 10hrs, 100 hours, dry livegrass]
-    mf_lv = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=1, NCOPIES=df_sf_sigma_lv_nr ) ! todo: compute as in Andrews PL 2018 
+    mf_dd = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=2, NCOPIES=df_sf_sigma_dd_nr ) ! litter [1hr, 10hrs, 100 hours, dry livegrass]
+    mf_lv = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=2, NCOPIES=df_sf_sigma_lv_nr ) ! todo: compute as in Andrews PL 2018 
 
     spitfire % ros = sf_calc_rate_of_spread(nc, &
-                                df_sf_fc_spread_nr, &  ! mixed dead fuel with livegrass (
+                                df_sf_fc_spread_nr, &  ! mixed dead fuel with livegrass 
                                 df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, & ! oberhagemann related
                                 config_ros_model_id, & !< Select Rate of spread implementation
                                 lctlib_fuel_bulk_density, &

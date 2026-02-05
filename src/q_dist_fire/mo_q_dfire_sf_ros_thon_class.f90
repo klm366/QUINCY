@@ -69,7 +69,7 @@ CONTAINS
     INTEGER, INTENT(in)                  :: nc
     INTEGER, INTENT(in)                  :: nfuels                      !< 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)                 :: fuel_bulk_density(nc)       !< [kg m-3]
-    REAL(wp), INTENT(in)                 :: u_f_wind(nc)                    !< [m min-1]
+    REAL(wp), INTENT(in)                 :: u_f_wind(nc)                !< [m min-1]
     REAL(wp), INTENT(in)                 :: moist_extinction(nc)        !< [0 to 1]
     REAL(wp), INTENT(in)                 :: fdi(nc)                     !< Fire dange index [0 to 1]
     REAL(wp), INTENT(in)                 :: w_oi(nc, nfuels)            !< [kg DM m-2] Note in kg
