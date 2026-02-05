@@ -156,10 +156,10 @@ CONTAINS
     dsl4jsb_Get_memory(NIX_)
 
     ! Get fields from memory
-    dsl4jsb_Get_var3D_onChunk(NIX_,      t_sn)            !< inout
-    dsl4jsb_Get_var3D_onChunk(NIX_,      dzm_sn)          !< inout
+    dsl4jsb_Get_var3D_onChunk_nix(NIX_,      t_sn)            !< inout
+    dsl4jsb_Get_var3D_onChunk_nix(NIX_,      dzm_sn)          !< inout
 
-    dsl4jsb_Get_var2D_onChunk(NIX_,      top_sn)          !< inout
+    dsl4jsb_Get_var2D_onChunk_nix(NIX_,      top_sn)          !< inout
 
     ! ---------------------------
     ! Go

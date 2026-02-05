@@ -124,6 +124,10 @@ macros = {
         re.compile(r"dsl4jsb_Get_var2D_onChunk *\((.*?)_ *, *(.*?) *\)", re.IGNORECASE),
         r"\2 => \1__mem%\2%ptr(ics:ice,iblk)",
     ],
+    "get_var2d_onchunk_nix": [
+        re.compile(r"dsl4jsb_Get_var2D_onChunk_nix *\((.*?)_ *, *(.*?) *\)", re.IGNORECASE),
+        r"\2 => \1__mem%tnix%\2%ptr(ics:ice,iblk)",
+    ],
     "get_var2d_onchunk_tile": [
         re.compile(
             r"dsl4jsb_Get_var2D_onChunk_tile *\((.*?)_ *, *(.*?) *, *(.*?) *\)",
@@ -141,6 +145,10 @@ macros = {
     "get_var3d_onchunk": [
         re.compile(r"dsl4jsb_Get_var3D_onChunk *\((.*?)_ *, *(.*?) *\)", re.IGNORECASE),
         r"\2 => \1__mem%\2%ptr(ics:ice,:,iblk)",
+    ],
+    "get_var3d_onchunk_nix": [
+        re.compile(r"dsl4jsb_Get_var3D_onChunk_nix *\((.*?)_ *, *(.*?) *\)", re.IGNORECASE),
+        r"\2 => \1__mem%tnix%\2%ptr(ics:ice,:,iblk)",
     ],
     "var2d_onchunk": [
         re.compile(r"dsl4jsb_var2D_onChunk *\((.*?)_ *, *(.*?) *\)", re.IGNORECASE),
