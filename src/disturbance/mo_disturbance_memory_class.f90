@@ -113,7 +113,7 @@ CONTAINS
       & t_cf('q_rel_air_climbuf_yday', '-', 'Relative humiditiy of lowest air layer smoothed in time    &
                                                & at the end of the last day.'),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
-      & prefix, suffix,                                                                                 &
+      & prefix, suffix, output_level=BASIC,                                                             &
       & lrestart=.FALSE., initval_r=50.0_wp ) ! initval taken from JSBACH3
 
     CALL mem%Add_var( 'prev_day_max_wind_10m', mem%prev_day_max_wind_10m,         &

@@ -101,7 +101,7 @@ for VAR in $(echo ${VARLIST//,/ }); do
         # *** Ecosystem and Carbon Cycle
         biomass   ) echo "biomass = carbon_c_sum_veg_ta_box * ${MOL2G_C} * ${GM2_2_MGHA};" >> $TASKLIST ;;
         burntArea ) echo "burntArea = disturb_burned_fract_box * 100;" >> $TASKLIST ;;
-        co2       ) echo "co2     = a2l_co2_air_box * 1000 * 1000;"                        >> $TASKLIST ;;
+        co2       ) echo "co2     = a2l_co2_air_mol_box * 1.0e+6;"                        >> $TASKLIST ;;
         cSoil     ) echo "cSoil   = (carbon_c_sum_litter_bg_ta_box + carbon_c_sum_humus_ta_box) * ${MOL2G_C} / 1000;" >> $TASKLIST ;;
         dist      ) echo "dist    = disturb_burned_fract_box * fuel_fuel_box * ${MOL2G_C};" >> $TASKLIST ;;
         gpp       ) echo "gpp     = carbon_gpp_ydaymean_ta_box * ${MOL2G_C} * 86400;"      >> $TASKLIST ;;
