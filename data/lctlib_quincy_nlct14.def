@@ -3,7 +3,11 @@
 # !>#### ICON-Land
 # !>
 # !> ------------------------------------------------------------------------
-# !> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+<<<<<<< Updated upstream
+# !> Copyright (C) 2004-2026, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss
+=======
+# !> Copyright (C) 2013-2026, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss
+>>>>>>> Stashed changes
 # !> Contact information: <https://icon-model.org>
 # !>
 # !> See AUTHORS.TXT for a list of authors  
@@ -184,9 +188,9 @@ tau_mycorrhiza 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
 # N uptake parameters        
 #         
         
-#vmax_uptake_n: vmax of N uptake (~micro-mol N / mol C / s) [714.28_wp ? old value]        
+#vmax_uptake_n: vmax of N uptake (~micro-mol N / mol C / s)        
 # tuned with GLOBAL sitelists to make N uptake comparable with other C-N coupled TBMs (NMIP2) 
-vmax_uptake_n 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04
+vmax_uptake_n 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.12 0.12 0.06 0.06
         
 #vmax_uptake_p: vmax of P uptake (~micro-mol P / mol C / s)        
 # tuned together with N, but needs further validation
@@ -218,7 +222,7 @@ lambda_est_light 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5
 k_est_light 2.0 2.0 4.0 4.0 2.0 4.0 4.0 4.0 4.0 4.0 4.0 4.0 4.0 4.0
         
 #seed_size: seed size (mol C)        
-seed_size 0.5 0.5 0.5 0.5 0.5 0.5 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1
+seed_size 0.5 0.5 0.5 0.5 0.5 0.5 0.1 0.1 0.1 0.1 0.1 0.1 0.0 0.0
        
 #k1_mort_greff: asymptotic growth efficiency mortality rate (1/yr)
 k1_mort_greff 0.05 0.05 0.3 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05

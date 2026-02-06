@@ -4,7 +4,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -14,10 +14,7 @@
 !>
 !>#### Contains conserved quantity types (CQTs) and the type for cqt collection (used on tiles)
 !>
-!> NOTE: currently only 2D variables are dealt with -- if also 3D variables need to be conserved,
-!>       these will have to specially be dealt with in the concept and thus need to be
-!>       identified with an onw cqt e.g. distinguish WATER_2D_CQ_TYPE and WATER_3D_CQ_TYPE?
-!>       Furthermore, integration of pool-structure might need some additional work.
+!> NOTE: 2D and 3D variables cannot be of the same CQT
 !>
 MODULE mo_jsb_cqt_class
 #ifndef __NO_JSBACH__
@@ -31,6 +28,7 @@ MODULE mo_jsb_cqt_class
 
   PUBLIC :: WATER_CQ_TYPE
   PUBLIC :: FLUX_C_CQ_TYPE, LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE
+  PUBLIC :: IQ_2L2D_POOL_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE, IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE
   PUBLIC :: Get_number_of_types, Get_cqt_name, t_jsb_consQuan, t_jsb_consQuan_p, max_cqt_name_length
 
   ENUM, BIND(C)
@@ -41,17 +39,26 @@ MODULE mo_jsb_cqt_class
       & BG_DEAD_C_CQ_TYPE,        &
       & PRODUCT_CARBON_CQ_TYPE,   &
       & FLUX_C_CQ_TYPE,           &
+      & IQ_2L2D_POOL_CQ_TYPE,     & !< conserved quincy quantity type for two layer 2D pool type
+      & IQ_1L2D_POOL_CQ_TYPE,     & !< conserved quincy quantity type for one layer 2D pool type
+      & IQ_FLUX_CQ_TYPE,          & !< conserved quincy quantity type for fluxes
+      & IQ_SL_POOL_CQ_TYPE,       & !< conserved quincy quantity of soil layered pool type
+      & IQ_SL_FLUX_CQ_TYPE,       & !< conserved quincy quantity of soil layered flux type
       & LAST_CQ_TYPE ! needs to always be the last -- it is only used to determine the max number of types
   END ENUM
 
   !> Type used on tiles to collect conserved quantities from the process memories of the tile
   !
   TYPE :: t_jsb_consQuan
-    INTEGER :: type_id = -1     !< one of the CQ_TYPEs found in mo_jsb_cqt_class
-    INTEGER :: no_of_vars = 0   !< number of vars - required for allocation of cq_vars_2D
-    INTEGER :: last_index_used = 0 !< last index used - required for filling of cq_vars_2D
-    INTEGER, ALLOCATABLE :: associated_process(:) !< process to which each CQ in cq_vars_2D belongs
-    TYPE(t_jsb_var_p), ALLOCATABLE :: cq_vars_2D(:)
+    INTEGER :: type_id = -1           !< one of the CQ_TYPEs found in mo_jsb_cqt_class
+    INTEGER :: var_type = 0           !< var type (supported: REAL2D or REAL3D) -- all cq vars of one cqt should have the same var type
+    LOGICAL :: transfer_all = .FALSE. !< Flag indicating if all matter should be collected (true) or if matter
+                                      !< should only be collected proportionally to the lost area (false, default)
+                                      !< -- all cq vars of one cqt should have the same transfer_all setting
+    INTEGER :: no_of_vars = 0         !< number of vars - required for allocation of cq_vars
+    INTEGER :: last_index_used = 0    !< last index used - required for filling of cq_vars
+    INTEGER, ALLOCATABLE :: associated_process(:) !< process to which each CQ in cq_vars belongs
+    TYPE(t_jsb_var_p), ALLOCATABLE :: cq_vars(:)
         !< collection of all variables of a certain CQT potentially from different process memories
   END TYPE t_jsb_consQuan
   TYPE :: t_jsb_consQuan_p
@@ -100,6 +107,16 @@ CONTAINS
         return_value = 'product_carbon'
       CASE (FLUX_C_CQ_TYPE)
         return_value = 'carbon_flux'
+      CASE (IQ_2L2D_POOL_CQ_TYPE)
+        return_value = 'quincy_bgcm_2L2D_pool'
+      CASE (IQ_1L2D_POOL_CQ_TYPE)
+        return_value = 'quincy_bgcm_1L2D_pool'
+      CASE (IQ_FLUX_CQ_TYPE)
+        return_value = 'quincy_bgcm_flux'
+      CASE (IQ_SL_POOL_CQ_TYPE)
+        return_value = 'quincy_sl_bgcm_pool'
+      CASE (IQ_SL_FLUX_CQ_TYPE)
+        return_value = 'quincy_sl_bgcm_flux'
       CASE DEFAULT
         CALL finish(TRIM(routine), 'No name specified for cq type of id '//int2string(id))
     END SELECT

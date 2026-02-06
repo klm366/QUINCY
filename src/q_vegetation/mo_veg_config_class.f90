@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -33,8 +33,7 @@ MODULE mo_veg_config_class
   PRIVATE
   PUBLIC :: t_veg_config, Get_number_of_veg_compartments
   PUBLIC :: VEG_PART_LEAF_IDX , VEG_PART_FINE_ROOT_IDX, VEG_PART_COARSE_ROOT_IDX, VEG_PART_SAP_WOOD_IDX, &
-    &       VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, VEG_PART_RESERVE_IDX, VEG_PART_FRUIT_IDX, &
-    &       VEG_PART_SEED_BED_IDX
+    &       VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, VEG_PART_RESERVE_IDX, VEG_PART_FRUIT_IDX
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the vegetation process, derived from t_jsb_config
@@ -102,7 +101,6 @@ MODULE mo_veg_config_class
       & VEG_PART_LABILE_IDX,      &   !< labile
       & VEG_PART_RESERVE_IDX,     &   !< reserve
       & VEG_PART_FRUIT_IDX,       &   !< fruit
-      & VEG_PART_SEED_BED_IDX,    &   !< seed bed
       & LAST_VEG_PART_IDX ! needs to be the last -- it is used to determine the number of compartments
   END ENUM
 
@@ -151,11 +149,7 @@ CONTAINS
     REAL(wp)                    :: nml_k1_root_alloc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /vegetation_ctl/       &
-#else
-    NAMELIST /jsb_veg_nml/          &
-#endif
+    NAMELIST /lnd_veg_nml/          &
       active,                       &
       lrestart_cont,                &
       ic_filename,                  &
@@ -220,13 +214,8 @@ CONTAINS
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('vegetation_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, vegetation_ctl)
-#else
-    nml_unit = position_nml('jsb_veg_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_veg_nml)
-#endif
+    nml_unit = position_nml('lnd_veg_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_veg_nml)
 
     CALL close_nml(nml_handler)
 

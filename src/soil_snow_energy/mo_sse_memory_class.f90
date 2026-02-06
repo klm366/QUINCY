@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -208,7 +208,8 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level=BASIC,                                                  &
-        & initval_r=0._wp, l_aggregate_all=.TRUE. )
+        & initval_r=0._wp, &
+        & l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 't_snow', mem%t_snow,                                  &
         & hgrid, snow_e,                                                       &
@@ -271,7 +272,8 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & initval_r=0.0_wp, &
+      & l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'thaw_depth_max', mem%thaw_depth_max,                  &
       & hgrid, surface,                                                      &
@@ -280,7 +282,8 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
       & output_level=BASIC, &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & initval_r=0.0_wp, &
+      & l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'thaw_depth_max_ym1', mem%thaw_depth_max_ym1,          &
       & hgrid, surface,                                                      &
@@ -289,7 +292,8 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
       & output_level=NONE, &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & initval_r=0.0_wp, &
+      & l_aggregate_all=.TRUE. )
 
 #ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
@@ -303,7 +307,8 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sand_sl', mem%sand_sl, &
         & hgrid, soil_e, &
