@@ -412,7 +412,7 @@ MODULE mo_pheno_process
                                 previous_day_NPP_pot_rate_ca, &
                                 pseudo_soil_temp,      &
                                 water_stress_factor,   & ! Water stress factor within root zone (1 == no stress).
-                                                         ! R: in JSBACH3 wurde für Crops immer der soil layer 1,
+                                                         ! R: in JSBACH3 wurde fuer Crops immer der soil layer 1,
                                                          !    d.h. der oberste Layer verwendet!
                                 previous_day_temp_min, &
                                 previous_day_temp_max
