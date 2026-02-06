@@ -209,8 +209,6 @@ CONTAINS
       & bc_sso_filename,            &
       & w_skin_max,                 &
       & w_soil_limit,               &
-      & w_soil_crit_fract,          &
-      & w_soil_wilt_fract,          &
       & snow_depth_max,             &
       & ret_macro_blg,              &
       & ret_macro_srf,              &
@@ -264,8 +262,6 @@ CONTAINS
     bc_sso_filename        = 'bc_land_sso.nc'
     w_skin_max             = 2.E-4_wp            ! 0.2 mm corresponds to Roesch et al. 2001
     w_soil_limit           = -1.0_wp
-    w_soil_crit_fract      = 0.75_wp
-    w_soil_wilt_fract      = 0.35_wp
     snow_depth_max         = -1.0_wp             ! -1: no limitation
     ret_macro_blg          = 432000._wp          ! [s]
     ret_macro_srf          = 36000._wp           ! [s]
@@ -319,12 +315,6 @@ CONTAINS
 
     config%w_soil_limit        = w_soil_limit
     CALL message(TRIM(routine), 'Upper limit for maximum soil moisture content: '//TRIM(real2string(w_soil_limit)))
-
-    config%w_soil_crit_fract   = w_soil_crit_fract
-    CALL message(TRIM(routine), 'Fraction of field capacity at critical point: '//TRIM(real2string(w_soil_crit_fract)))
-
-    config%w_soil_wilt_fract   = w_soil_wilt_fract
-    CALL message(TRIM(routine), 'Fraction of field capacity at permanent wilting point: '//TRIM(real2string(w_soil_wilt_fract)))
 
     config%snow_depth_max      = snow_depth_max
     IF (snow_depth_max >= 0._wp) THEN

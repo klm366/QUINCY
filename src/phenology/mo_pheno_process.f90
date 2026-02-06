@@ -381,7 +381,7 @@ MODULE mo_pheno_process
                                   pseudo_soil_temp,             & ! <- in
                                   LaiMax_corrected,             & ! <- in
                                   previous_day_NPP_pot_rate_ca, & ! <- in
-                                  w_soil_filling,               & ! <- in
+                                  water_stress_factor,          & ! <- in
                                   previous_day_temp_min,        & ! <- in
                                   previous_day_temp_max,        & ! <- in
                                   lctlib_specificLeafArea_C,    & ! <- in
@@ -411,7 +411,7 @@ MODULE mo_pheno_process
                                 LaiMax_corrected,   &
                                 previous_day_NPP_pot_rate_ca, &
                                 pseudo_soil_temp,      &
-                                w_soil_filling,        & ! Fractional filling of the soil water buckets.
+                                water_stress_factor,   & ! Water stress factor within root zone (1 == no stress).
                                                          ! R: in JSBACH3 wurde fuer Crops immer der soil layer 1,
                                                          !    d.h. der oberste Layer verwendet!
                                 previous_day_temp_min, &
@@ -590,14 +590,14 @@ MODULE mo_pheno_process
         ! conditions. (Note: addition of 0.001 for numerical reasons)
         IF(growth_phase_CRP > -0.5_wp                           & ! there is ANY growth phase of any crop..
                   .AND.                                         &
-           w_soil_filling > pheno_param_jsbach%all%wilt_point + 1E-3_wp & ! soil water is above wilt point
+           water_stress_factor > 1E-3_wp                        & ! root zone moisture is above wilting point
            ) THEN
 
                 ! If also temperature is fine growth should start at least with seed value ( < laiMax) if upper soil layer
                 ! has at least a little bit water
                 IF(pseudo_soil_temp > pheno_param_jsbach%CRP%crit_temp) THEN ! it is warm enough
                    IF(lai < pheno_param_jsbach%all%laiSeed .AND.           & ! the lai is smaller than lai of seed..
-                      w_soil_filling > pheno_param_jsbach%CRP%sproud) THEN   ! and a critical fract. of soil water bucket level is reached
+                      water_stress_factor > pheno_param_jsbach%CRP%sproud) THEN   ! and a critical fract. of soil water bucket level is reached
                       lai = MIN(LaiMax_corrected-EPSILON(1.0_wp),pheno_param_jsbach%all%laiSeed) ! => at least with seed value ( < laiMax)
                    ENDIF
 
@@ -625,12 +625,12 @@ MODULE mo_pheno_process
         !  (addition of 0.001 for numerical reasons)
         IF (pseudo_soil_temp > pheno_param_jsbach%CRP%crit_temp         & ! it is warm enough..
                   .AND.                                         &
-           w_soil_filling > pheno_param_jsbach%all%wilt_point + 1E-3_wp & ! and soil water is above wilt point
+           water_stress_factor > 1E-3_wp                        & ! and root zone moisture is above wilting point
           ) THEN
                ! growth should start at least with with seed value ( < laiMax) if upper soil layer has at least a little bit
                ! water
-               IF(lai < pheno_param_jsbach%all%laiSeed .AND.             & ! the lai is smaller than lai of seed..
-                  w_soil_filling > pheno_param_jsbach%CRP%sproud) THEN     ! and a critical fraction of soil water bucket level is reached
+               IF(lai < pheno_param_jsbach%all%laiSeed .AND.             &  ! the lai is smaller than lai of seed..
+                  water_stress_factor > pheno_param_jsbach%CRP%sproud) THEN ! water stress factor exceeds sprouting threshold
                      lai = MIN(LaiMax_corrected-EPSILON(1.0_wp),pheno_param_jsbach%all%laiSeed)
                ENDIF
 
@@ -655,7 +655,7 @@ MODULE mo_pheno_process
 
 
   SUBROUTINE calc_raingreen_phenology(timeStep_in_days,      & ! <- in
-                                                w_soil_filling,        & ! <- in
+                                                water_stress_factor,   & ! <- in
                                                 LaiMax_corrected,      & ! <- in
                                                 previous_day_NPP_pot_rate_ca, & ! <- in
                                                 lai )                    ! <- inout
@@ -671,9 +671,9 @@ MODULE mo_pheno_process
 
      REAL(wp), intent(in)    :: timeStep_in_days
 
-     REAL(wp), intent(in)    ::                   &
-                                w_soil_filling,   &
-                                LaiMax_corrected, &
+     REAL(wp), intent(in)    ::                      &
+                                water_stress_factor, &
+                                LaiMax_corrected,    &
                                 previous_day_NPP_pot_rate_ca
 
      REAL(wp), intent(inout) :: lai  ! Total LAI.
@@ -682,8 +682,7 @@ MODULE mo_pheno_process
      !  LOCAL VARIABLES
      REAL(wp)          :: xtmp,   &       ! argument to calls of get_letItDie
                                           ! (necessary to allow for inlining of these functions)
-                          grRate, &       ! argument to calls of get_letItGrow
-                          average_filling ! average filling of the soil buckets
+                          grRate          ! argument to calls of get_letItGrow
 
      !-----------------------------------------------------------------------
      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
@@ -695,19 +694,18 @@ MODULE mo_pheno_process
      ! R: Note, as in JSBACH3 all soil layers had the same water content we skiped the soil layers for w_soil_filling in JSBACH4
      !    (see update_phenology). Therefore, the following line is unnecessary.
      !average_filling = SUM(w_soil_filling(j,1:nsoil,i)) / REAL(nsoil,wp)
-     average_filling = w_soil_filling
 
-     IF (average_filling > pheno_param_jsbach%all%wilt_point + 1E-3_wp) THEN  ! IF soil water is above wilt point
+     IF (water_stress_factor > 1E-3_wp) THEN  ! IF root zone moisture above wilting point
                                                                               ! (Note: addition of 1E-3_dp for numerical reasons)
         IF (lai < pheno_param_jsbach%all%laiSeed &                              ! IF LAI dropped below seed value..
                    .AND.                 &
-            average_filling > pheno_param_jsbach%RG%bucketFill_leafout) THEN     ! and there is sufficient water
+            water_stress_factor > pheno_param_jsbach%RG%water_stress_leafout) THEN     ! and there is sufficient water
                lai = MIN(LaiMax_corrected-EPSILON(1.0),pheno_param_jsbach%all%laiSeed) ! => then start growth at least with seed value
                                                                                        ! but smaller than LAIMax
         END IF
         IF(previous_day_NPP_pot_rate_ca > 0._wp) THEN   ! If yesterdays net production is positive
            grRate = pheno_param_jsbach%RG%growthRate
-           xtmp   = get_shedRate_RG(average_filling)
+           xtmp   = get_shedRate_RG(water_stress_factor)
            lai    = get_letItGrow(timeStep_in_days, lai, grRate, xtmp, LaiMax_corrected) ! start growing.
         END IF
      ELSE                                                             ! soil water below wilt point
@@ -718,12 +716,12 @@ MODULE mo_pheno_process
    END SUBROUTINE calc_raingreen_phenology
 
 
-  SUBROUTINE calc_grass_phenology(t_air_in_Celcius,      & ! <- in
-                                            timeStep_in_days,      & ! <- in
-                                            w_soil_filling,        & ! <- in
-                                            LaiMax_corrected,      & ! <- in
-                                            previous_day_NPP_pot_rate_ca, & ! <- in
-                                            lai )                    ! <- inout
+  SUBROUTINE calc_grass_phenology(t_air_in_Celcius,             & ! <- in
+                                  timeStep_in_days,             & ! <- in
+                                  water_stress_factor,          & ! <- in
+                                  LaiMax_corrected,             & ! <- in
+                                  previous_day_NPP_pot_rate_ca, & ! <- in
+                                  lai )                           ! <- inout
 
     !$ACC ROUTINE SEQ
 
@@ -737,7 +735,7 @@ MODULE mo_pheno_process
      REAL(wp), intent(in)    :: timeStep_in_days
      REAL(wp), intent(in)    ::                   &
                                 t_air_in_Celcius, &
-                                w_soil_filling,   &
+                                water_stress_factor,   &
                                 LaiMax_corrected, &
                                 previous_day_NPP_pot_rate_ca
 
@@ -758,8 +756,8 @@ MODULE mo_pheno_process
 
      IF (t_air_in_Celcius > pheno_param_jsbach%GRS%crit_temp   & ! IF temperature is fine..
                       .AND.                                    & ! and..
-         w_soil_filling > pheno_param_jsbach%all%wilt_point  + 1E-3_wp & ! there is sufficient moisture in upper soil layer
-        ) THEN                                                           ! (Note: addition of 1E-3_dp for numerical reasons)
+         water_stress_factor > 1E-3_wp &                         ! there is sufficient moisture in upper soil layer
+        ) THEN                                                   ! (Note: addition of 1E-3_dp for numerical reasons)
 
           IF(lai < pheno_param_jsbach%all%laiSeed) THEN
              lai = MIN(LaiMax_corrected-EPSILON(1.0),pheno_param_jsbach%all%laiSeed) ! start growth at least with seed, value, but smaller
@@ -958,25 +956,25 @@ MODULE mo_pheno_process
 
   ! --- shedRate_RG ---------------------------------------------------------------------------------------------------------------
   !
-  ! Computes the shedding rate for the raingreens during wet season as a function of the soil water gauge
-  ! The idea is, that for high water availability (bucket filling > bucketFill_critical) leafs are shedded only because of their
-  ! aging. Below this critical value the shedding rate increases because the plants adapt to lower water availability. At the
-  ! wilting point the shedding is so large, that it is larger than the assumed fixed growth rate.
+  ! Computes the shedding rate for the raingreens during wet season as a function of water stress.
+  ! The idea is, that for high water availability (water stress factor > water_stress_critical) leafs are shedded
+  ! only because of their aging. Below this critical value the shedding rate increases because the plants adapt
+  ! to lower water availability. At the wilting point, the shedding (water stress factor == 0) is so large,
+  ! that it is larger than the assumed fixed growth rate.
   !
-  REAL(wp) FUNCTION get_shedRate_RG(bucket_filling)
+  REAL(wp) FUNCTION get_shedRate_RG(water_stress_factor)
 
     USE mo_pheno_parameters,  ONLY: pheno_param_jsbach
 
-    REAL(wp), INTENT(in) :: bucket_filling     ! average filling of the soil water buckets
+    REAL(wp), INTENT(in) :: water_stress_factor ! water stress factor within the root zone
 
     REAL(wp)             :: shedRate, slope
 
     !$ACC ROUTINE SEQ
 
-    slope    = pheno_param_jsbach%RG%growthRate / &
-      &        (pheno_param_jsbach%RG%bucketFill_critical - pheno_param_jsbach%all%wilt_point)
+    slope    = pheno_param_jsbach%RG%growthRate / pheno_param_jsbach%RG%water_stress_critical
     shedRate = pheno_param_jsbach%RG%growthRate + pheno_param_jsbach%RG%shedRate_aging - &
-      &        slope * (bucket_filling - pheno_param_jsbach%all%wilt_point)
+      &        slope * water_stress_factor
     get_shedRate_RG = MIN( MAX( pheno_param_jsbach%RG%shedRate_aging , shedRate) , &
       &                    pheno_param_jsbach%RG%growthRate + pheno_param_jsbach%RG%shedRate_aging)
 

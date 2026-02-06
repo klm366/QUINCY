@@ -805,8 +805,7 @@ CONTAINS
       & fract_fpc,              &
       & fract_snow,             &
       & fract_wet,              &
-      & wtr_rootzone_avail_max, &
-      & wtr_rootzone_avail,     &
+      & water_stress,           &
       & fact_q_air,             &
       & fact_qsat_srf,          &
       & fact_qsat_trans_srf,    &
@@ -838,10 +837,8 @@ CONTAINS
       fact_qsat_soil(options%nc),  &
       fact_qair_veg(options%nc),   &
       fact_qair_soil(options%nc),  &
-      zfract_fpc(options%nc),      &
-      w_soil_wilt_fract_config
-    REAL(wp) ::                    &
-      rel_hum,                     &
+      zfract_fpc(options%nc)
+    REAL(wp) :: rel_hum,           &
       weq_wsat_sl1,                &
       weq_wres_sl1
     REAL(wp) ::                    &
@@ -956,8 +953,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)              ! in
       SELECT CASE (model_scheme)
       CASE (MODEL_JSBACH)
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail_max) ! in
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail)     ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,  water_stress)           ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_depth_sl)          ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_porosity_sl)        ! in
         dsl4jsb_Get_var3D_onChunk(HYDRO_,  vol_wres_sl)            ! in
@@ -989,16 +985,11 @@ CONTAINS
         ELSE
           dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited)         ! in
         END IF
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1,nc
-          canopy_conductance(ic) = canopy_cond_limited(ic)
-        END DO
-        !$ACC END PARALLEL LOOP
-        w_soil_wilt_fract_config = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
-          mask(ic) = wtr_rootzone_avail(ic) > w_soil_wilt_fract_config * wtr_rootzone_avail_max(ic)
+          canopy_conductance(ic) = canopy_cond_limited(ic)
+          mask(ic) = water_stress(ic) >= 1._wp
         END DO
         !$ACC END PARALLEL LOOP
 #endif

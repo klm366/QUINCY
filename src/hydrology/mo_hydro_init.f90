@@ -1686,9 +1686,10 @@ CONTAINS
       ! -------------------------------------------------------------------------------------------------- !
       !
       !> - Set maximum root zone soil moisture (water plus ice)
-      !  Note: This corresponds to the water content at field capacity.
+      !  Note: wpi_rootzone_max corresponds to a fully saturated soil (all pores are filled with
+      !   water or ice). The plant water stress computation later accounts for ice and field capacity.
       dsl4jsb_var2D_onDomain(HYDRO_, wpi_rootzone_max) = &
-        & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth
+        & hydro_init_vars%vol_porosity * hydro_init_vars%root_depth
 
       ! Recalculate maximum root zone soil moisture in case a maximum was set (default is no limit)
       IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
@@ -1929,7 +1930,7 @@ CONTAINS
       !       This assumes that plants retract/extents their roots immediately if the soil freezes/thaws.
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max), 2)
           CALL get_amount_in_rootzone( &
-          & dsl4jsb_var_ptr(HYDRO_, wtr_soil_fc_sl)   (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, vol_porosity_sl)  (:,:,i) * dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)(:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)    (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, wpi_rootzone_max) (:,  i)  )

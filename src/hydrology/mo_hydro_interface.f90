@@ -1672,7 +1672,6 @@ CONTAINS
                                                                     ! conductivity
         & dsl4jsb_Config(HYDRO_)%hydro_scale,                     & ! Subgrid scale inhomogeneity option
         & model%config%model_scheme,                              &
-        & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               & ! Rel. root zone moisture at wilting point []
         & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     & ! Soil depth until bedrock [m]
         & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     & ! Root depth [m]
         & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     & ! Saturated hydraulic conductivity [m/s]
@@ -1743,7 +1742,6 @@ CONTAINS
         & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
         & dsl4jsb_Config(HYDRO_)%hydro_scale,                     & ! choice of hydrological scale scheme
         & model%config%model_scheme,                              &
-        & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
         & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
         & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
         & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
@@ -2094,8 +2092,9 @@ CONTAINS
 
     dsl4jsb_Real3D_onChunk :: soil_depth_sl          !< Soil depth until bedrock within the soil layers [m]
     dsl4jsb_Real3D_onChunk :: root_depth_sl          !< Root depth within the soil layers [m]
+    dsl4jsb_Real3D_onChunk :: vol_porosity_sl        !< Volumetric soil porosity []
     dsl4jsb_Real3D_onChunk :: vol_field_cap_sl       !< Volumetric soil field capacity []
-    dsl4jsb_Real3D_onChunk :: vol_p_wilt_sl          !< Volumetric permanent wilting point []
+    dsl4jsb_Real3D_onChunk :: vol_p_wilt_sl          !< Volumetric soil wilting point []
     dsl4jsb_Real2D_onChunk :: wtr_rootzone           !< Liquid water content in the root zone [m]
     dsl4jsb_Real2D_onChunk :: ice_rootzone           !< Frozen water content in the root zone [m]
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl            !< Liquid water content in soil layers [m]
@@ -2125,17 +2124,21 @@ CONTAINS
       & is                                           !< Looping index for soil layers
 
     REAL(wp) :: &
-      & config_w_soil_crit_fract, &                  !< Below this critical relative soil moisture, plants
-                                                     !< start to suffer from water stress.
-      & config_w_soil_wilt_fract                     !< Below this relative soil moisture (wilting point)
-                                                     !< transpiration is no longer possible.
+      & wtr_wsat_sl(options%nc,options%nsoil_w),                & !< Water content (without ice) at saturation [m]
+      & wtr_field_cap_sl(options%nc,options%nsoil_w),           & !< Water content (without ice) at field capacity [m]
+      & wtr_p_wilt_sl(options%nc,options%nsoil_w),              & !< Water content (without ice) at wilting point [m]
+      & wtr_unavail_sl(options%nc,options%nsoil_w)                !< Water that is unavailable for plants [m]
+
     REAL(wp) :: &
-      & wtr_soil_pot_scool_sl_min(options%nc, options%nsoil_w), & !< Actual amount of supercooled water [m]
-      & wpi_fcap_soil_sl(options%nc, options%nsoil_w)             !< Volumetric amount of water and/or ice
+      & wpi_fcap_soil_sl(options%nc, options%nsoil_w),          & !< Volumetric amount of water and/or ice
                                                                   !< at field capacity [m] (???)
-    REAL(wp) :: wpi_pwp_soil_sl(options%nc, options%nsoil_w)      !< Volumetric amount of water and/or ice
+      & wpi_pwp_soil_sl(options%nc, options%nsoil_w)              !< Volumetric amount of water and/or ice
                                                                   !< at wilting point [m] (???)
-    REAL(wp) :: wtr_rootzone_pwp(options%nc)                      !< Amount of liquid water at wilting point [m]
+
+    REAL(wp) :: &
+      & wtr_rootzone_fc(options%nc),          & !< Root zone water content (without ice) content at field capacity [m]
+      & wtr_rootzone_pwp(options%nc)            !< Plant unavailable water content of the root zone [m]
+
     REAL(wp) :: hlp1                                              !< helper variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
@@ -2161,15 +2164,16 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
 
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)          ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_porosity_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_field_cap_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_p_wilt_sl)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pot_scool_sl)  ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone)           ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wpi_rootzone_max)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)           ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone)           ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    ice_rootzone)           ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_scool_pot) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_scool_act) ! out
@@ -2178,38 +2182,86 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_plant_avail_rel)    ! out
 
-    ! Define plain local variables, needed on GPUs
-    config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
-    config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
-
-    !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min, wpi_fcap_soil_sl) &
-    !$ACC   CREATE(wpi_pwp_soil_sl, wtr_rootzone_pwp) ASYNC(acc_stream)
-
     !> Water stress is calculated from the ratio between the actual plant available water
     !> "wtr_rootzone_avail" and the maximum potentielly available water "wtr_rootzone_avail_max" between the
     !> wilting point and the "critical" soil moisture, where plants feel no water limitation.
     !>
 
-    ! Calculate actual plant available water
-    !
-    CALL get_amount_in_rootzone(wtr_soil_sl(:,:),  &
-      &                         soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
+    ! Calculate soil water within the root zone
+    CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
+    CALL get_amount_in_rootzone(ice_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
 
-    ! Calculate root zone field capacity
-    !
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+    !$ACC DATA CREATE(wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_unavail_sl) &
+    !$ACC   CREATE(wtr_rootzone_fc, wtr_rootzone_pwp) ASYNC(acc_stream)
+
+    ! Compute soil properties for the ice-free part of each soil layer
+    !>
+    !> All soil water content thresholds are reduced by the amount of ice - otherwise plants suffer constant water
+    !> stress in permafrost-regions. Besides, we also subtract the amount of potential supercooled water, as
+    !> supercooled water is not accounted as plant available water.
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+    !$ACC LOOP GANG VECTOR COLLAPSE(2)
     DO is = 1, nsoil
       DO ic = 1, nc
-        wpi_fcap_soil_sl(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
+        wtr_wsat_sl(ic,is) = MAX(vol_porosity_sl (ic,is) * soil_depth_sl(ic,is) - ice_soil_sl(ic,is), 0._wp)
+        IF (vol_porosity_sl(ic,is) > 0._wp) THEN
+          wtr_field_cap_sl(ic,is) = wtr_wsat_sl(ic,is) * (vol_field_cap_sl(ic,is) / vol_porosity_sl(ic,is))
+          wtr_p_wilt_sl(ic,is)    = wtr_wsat_sl(ic,is) * (vol_p_wilt_sl(ic,is)    / vol_porosity_sl(ic,is))
+          wtr_unavail_sl(ic,is)   = MAX(wtr_p_wilt_sl(ic,is), wtr_soil_pot_scool_sl(ic,is))
+        ELSE
+          wtr_field_cap_sl(ic,is) = 0._wp
+          wtr_p_wilt_sl(ic,is)    = 0._wp
+        END IF
       END DO
     END DO
+    !$ACC END PARALLEL
+
+    ! Calculate thresholds for water stress factor
+    CALL get_amount_in_rootzone(wtr_field_cap_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_fc(:))
+    CALL get_amount_in_rootzone(wtr_unavail_sl(:,:),   soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_pwp(:))
+
+    ! Calculate water stress factor
+    ! In order to be consistent with the definition of plant water stress, we use 0.75 of the field capacity as the
+    ! "critical" soil moisture content above which plants feel no water stress.
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic=1,nc
+      water_stress(ic) = &
+        & get_water_stress_factor(wtr_rootzone(ic), 0.75_wp * wtr_rootzone_fc(ic), wtr_rootzone_pwp(ic))
+    END DO
     !$ACC END PARALLEL LOOP
-    CALL get_amount_in_rootzone(wpi_fcap_soil_sl(:,:),  &
-      &  soil_depth_sl(:,:), root_depth_sl(:,:), wpi_rootzone_max(:))
+
+    !> The logistic growth phenology (LoGro-P; compare [[mo_pheno_interface:update_phenology_logrop]]) has
+    !> a different approach to account for water stress: there we use the relative soil moisture as measure
+    !> for water stress directly, instead of using the water stress factor.
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic= 1, nc
+      wtr_rootzone_avail_max(ic) = wtr_rootzone_fc(ic) - wtr_rootzone_pwp(ic)
+      wtr_rootzone_avail(ic)     = wtr_rootzone(ic)
+      IF (wtr_rootzone_avail_max(ic) > 0._wp) THEN
+        wtr_rootzone_rel(ic) =  MIN(wtr_rootzone_avail(ic) / wtr_rootzone_avail_max(ic), 1._wp)
+      ELSE
+        ! wpi_rootzone_max is zero for glacier tiles
+        wtr_rootzone_rel(ic) = 0._wp
+      END IF
+    END DO
+    !$ACC END PARALLEL LOOP
 
 #ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
+      !$ACC DATA CREATE(wpi_fcap_soil_sl, wpi_pwp_soil_sl) ASYNC(acc_stream)
+
+      ! Calculate root zone field capacity
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          wpi_fcap_soil_sl(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+      CALL get_amount_in_rootzone(wpi_fcap_soil_sl(:,:),  &
+        &  soil_depth_sl(:,:), root_depth_sl(:,:), wpi_rootzone_max(:))
+
       ! Compute minimum plant available water in the root zone water based on soil permanent wilting point
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
@@ -2225,132 +2277,31 @@ CONTAINS
         &   wtr_rootzone_pwp(:) &     ! inout
         &   )
 
-    !> Available water is corrected by ice and supercooled water content below,
-    !> helping to ensure a consistent definition of water at permanent wilting point.
-    IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
-      CALL get_amount_in_rootzone(ice_soil_sl(:,:), &
-        &                         soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
-      !$ACC   PRIVATE(hlp1)
-      DO ic = 1, nc
-        ! assume ice and supercooled water are distributed equally between water below and above the PWP
-        hlp1 = wtr_rootzone_pwp(ic) / wpi_rootzone_max(ic)
-        wtr_rootzone_pwp(ic) = MAX(wtr_rootzone_pwp(ic) - ice_rootzone(ic) * hlp1 - wtr_rootzone_scool_pot(ic) * hlp1, 0._wp)
-      END DO
-      !$ACC END PARALLEL LOOP
-    ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
-      CALL get_amount_in_rootzone(ice_soil_sl(:,:), &
-        &                         soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
-      !$ACC   PRIVATE(hlp1)
-      DO ic = 1, nc
-        hlp1 = wtr_rootzone_pwp(ic) / wpi_rootzone_max(ic)
-        wtr_rootzone_pwp(ic) = MAX(wtr_rootzone_pwp(ic) - ice_rootzone(ic) * hlp1, 0._wp)
-      END DO
-      !$ACC END PARALLEL LOOP
-    END IF
-    END SELECT
-#endif
-
-    !> By plant available water we mean the liquid water content of the root zone, not including supercooled
-    !> water. However, water below the wilting point is included - although it is not available to plants.
-
-    IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
-      ! Calculate the potential amount of supercooled water within the root zone. This is the amount of
-      ! supercooled water that could remain liquid with current temperatures, if there was enough soil water
-      ! (compare [[mo_sse_process:Get_liquid_max]]).
-      CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl(:,:),  &
-        &                         soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_pot(:))
-
-      ! Calculate the actual amount of supercooled water within the root zone.
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
-      DO is=1,nsoil
-        DO ic=1,nc
-          wtr_soil_pot_scool_sl_min(ic,is) = MIN(wtr_soil_pot_scool_sl(ic,is), wtr_soil_sl(ic,is))
+      !> Available water is corrected by ice and supercooled water content below,
+      !> helping to ensure a consistent definition of water at permanent wilting point.
+      IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
+        CALL get_amount_in_rootzone(ice_soil_sl(:,:), &
+          &                         soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+        !$ACC   PRIVATE(hlp1)
+        DO ic = 1, nc
+          ! assume ice and supercooled water are distributed equally between water below and above the PWP
+          hlp1 = wtr_rootzone_pwp(ic) / wpi_rootzone_max(ic)
+          wtr_rootzone_pwp(ic) = MAX(wtr_rootzone_pwp(ic) - ice_rootzone(ic) * hlp1 - wtr_rootzone_scool_pot(ic) * hlp1, 0._wp)
         END DO
-      END DO
-      !$ACC END PARALLEL LOOP
-      CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl_min(:,:),  &
-        &                         soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_act(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-
-      ! Subtract the supercooled water from the plant available water, as supercooled water is not available
-      ! for plants.
-      DO ic=1,nc
-        wtr_rootzone_avail(ic) = MAX(wtr_rootzone(ic) - wtr_rootzone_scool_act(ic), 0._wp)
-      END DO
-      !$ACC END PARALLEL LOOP
-    ELSE
-      ! In setups without soil water phase changes all (liquid) water of the root zone is available to plants
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic=1,nc
-        wtr_rootzone_avail(ic) = wtr_rootzone(ic)
-      END DO
-      !$ACC END PARALLEL LOOP
-    END IF
-
-    ! Calculate the soil field capacity
-    !>
-    !> As the actual root zone moisture, the potential root zone moisture is reduced by the amount of ice
-    !> - otherwise plants suffer constant water stress in permafrost-regions. Besides, we also subtract the
-    !> amount of potential supercooled water, as supercooled water is not accounted as plant available water.
-    !> As for the actual available water, water below the wilting point is not subtracted from the
-    !> potentially available water.
-
-    IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
-      CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
-                               &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic=1,nc
-        wtr_rootzone_avail_max(ic) = MAX(wpi_rootzone_max(ic) - ice_rootzone(ic) - wtr_rootzone_scool_pot(ic), 0._wp)
-      END DO
-      !$ACC END PARALLEL LOOP
-    ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
-      CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
-                               &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic=1,nc
-        wtr_rootzone_avail_max(ic) = MAX(wpi_rootzone_max(ic) - ice_rootzone(ic), 0._wp)
-      END DO
-      !$ACC END PARALLEL LOOP
-    ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic=1,nc
-        wtr_rootzone_avail_max(ic) = wpi_rootzone_max(ic)
-      END DO
-      !$ACC END PARALLEL LOOP
-    END IF
-
-    ! Calculate water stress factor
-    !
-    ! TODO: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic=1,nc
-      water_stress(ic) = &
-        & get_water_stress_factor(wtr_rootzone_avail(ic), wtr_rootzone_avail_max(ic), &
-            &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
-    END DO
-    !$ACC END PARALLEL LOOP
-
-    ! Calculate relative soil moisture
-    !>
-    !> The logistic growth phenology (LoGro-P; compare [[mo_pheno_interface:update_phenology_logrop]]) has
-    !> a different approach to account for water stress: there we use the relative soil moisture as measure
-    !> for water stress directly, instead of using the water stress factor.
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic= 1, nc
-      IF (wtr_rootzone_avail_max(ic) > 0._wp) THEN
-        wtr_rootzone_rel(ic) =  MIN(wtr_rootzone_avail(ic) / wtr_rootzone_avail_max(ic), 1._wp)
-      ELSE
-        ! wpi_rootzone_max is zero for glacier tiles
-        wtr_rootzone_rel(ic) = 0._wp
+        !$ACC END PARALLEL LOOP
+      ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
+        CALL get_amount_in_rootzone(ice_soil_sl(:,:), &
+          &                         soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+        !$ACC   PRIVATE(hlp1)
+        DO ic = 1, nc
+          hlp1 = wtr_rootzone_pwp(ic) / wpi_rootzone_max(ic)
+          wtr_rootzone_pwp(ic) = MAX(wtr_rootzone_pwp(ic) - ice_rootzone(ic) * hlp1, 0._wp)
+        END DO
+        !$ACC END PARALLEL LOOP
       END IF
-    END DO
-    !$ACC END PARALLEL LOOP
 
-#ifndef __NO_QUINCY__
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_QUINCY)
       ! Calculate relative soil moisture (used in Quincy Vegetation)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc

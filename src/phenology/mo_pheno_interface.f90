@@ -226,7 +226,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: t_air
     dsl4jsb_Real2D_onChunk :: NPP_pot_rate_ca
-    dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel
+    dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: lat
     dsl4jsb_Real2D_onChunk :: heat_sum_SG
     dsl4jsb_Real2D_onChunk :: heat_sum_EG
@@ -355,7 +355,7 @@ CONTAINS
     ! Set pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(A2L_,      t_air)                  ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_pot_rate_ca)        ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)       ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)           ! in
 
     dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_mean) ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_min)  ! in
@@ -607,7 +607,7 @@ CONTAINS
           & pseudo_soil_temp(ic),             & ! in
           & LaiMax_corrected(ic),             & ! in
           & previous_day_NPP_pot_rate_ca(ic), & ! in
-          & wtr_rootzone_rel(ic),             & ! in
+          & water_stress(ic),                 & ! in
           & previous_day_temp_min(ic),        & ! in
           & previous_day_temp_max(ic),        & ! in
           & specificLeafArea_C_param,         & ! in
@@ -629,7 +629,7 @@ CONTAINS
       DO ic = 1, nc
         CALL calc_raingreen_phenology(        &
           & timestep,                         & ! in
-          & wtr_rootzone_rel(ic),             & ! in
+          & water_stress(ic),                 & ! in
           & LaiMax_corrected(ic),             & ! in
           & previous_day_NPP_pot_rate_ca(ic), & ! in
           & lai(ic)                           & ! inout
@@ -647,7 +647,7 @@ CONTAINS
         CALL calc_grass_phenology(            &
           & t_air_in_Celcius(ic),             & ! in
           & timestep,                         & ! in
-          & wtr_rootzone_rel(ic),             & ! in
+          & water_stress(ic),                 & ! in
           & LaiMax_corrected(ic),             & ! in
           & previous_day_NPP_pot_rate_ca(ic), & ! in
           & lai(ic)                           & ! inout

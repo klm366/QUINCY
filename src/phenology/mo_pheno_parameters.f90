@@ -51,10 +51,8 @@ MODULE mo_pheno_parameters
   TYPE t_GeneralParams
     REAL(wp) :: &
       & LAI_negligible = def_parameters,   & ! [-] Below this value an LAI is considered to be zero.
-      & laiSeed = def_parameters,          & ! [-] Seed value used for the LAI to have a non-zero starting value
+      & laiSeed = def_parameters             ! [-] Seed value used for the LAI to have a non-zero starting value
                                              ! whenever the vegetation starts growing.
-      & wilt_point = def_parameters          ! [-] Critical fraction of soil water bucket level: below this value
-                                             !  growth of grasses, raingreens and crops stops (wilting point).
   END TYPE t_GeneralParams
 
   !> Parameters that are common to the evergreen and raingreen phenology type
@@ -128,11 +126,11 @@ MODULE mo_pheno_parameters
                                                 ! longevity)
       & growthRate = def_parameters,          & ! [1/days] Growth rate (only active during wet season; modified by
                                                 ! leaf shedding)
-      & bucketFill_critical = def_parameters, & ! [fraction] If bucket filling drops below this value, the shedding
+      & water_stress_critical = def_parameters, & ! [fraction] If water stress factor drops below this value, the shedding
                                                 ! rate is increased
                                                 ! so that plant growth is reduced until it gets zero at the wilting
                                                 ! point
-      & bucketFill_leafout = def_parameters     ! [fraction] The critical bucket filling at which plant start
+      & water_stress_leafout = def_parameters   ! [fraction] The water stress factor at which plant start
                                                 ! growing leaves (>= wiltingt point)
   END TYPE t_raingreen_param
 
@@ -211,7 +209,6 @@ CONTAINS
 
     pheno_param_jsbach%all%LAI_negligible     = 1.0E-05_wp          !< citation or source ....  [-]
     pheno_param_jsbach%all%laiSeed            = 0.40_wp             !< citation or source ....  [-]
-    pheno_param_jsbach%all%wilt_point         = 0.35_wp             !< citation or source ....  [-]
 
     pheno_param_jsbach%EG_SG%tau_pseudo_soil  = 10.0_wp             !< citation or source ....  [days]
     pheno_param_jsbach%EG_SG%max_chill_days   = 365.0_wp            !< citation or source ....  [days]
@@ -239,8 +236,8 @@ CONTAINS
     pheno_param_jsbach%RG%shedRate_drySeason  = 1.20E-01_wp         !< citation or source ....  [1/days]
     pheno_param_jsbach%RG%shedRate_aging      = 5.0E-03_wp          !< citation or source ....  [1/days]
     pheno_param_jsbach%RG%growthRate          = 8.0E-02_wp          !< citation or source ....  [1/days]
-    pheno_param_jsbach%RG%bucketFill_critical = 6.50E-01_wp         !< citation or source ....  [fraction]
-    pheno_param_jsbach%RG%bucketFill_leafout  = 4.00E-01_wp         !< citation or source ....  [fraction]
+    pheno_param_jsbach%RG%water_stress_critical=7.50E-01_wp         !< citation or source ....  [fraction]
+    pheno_param_jsbach%RG%water_stress_leafout= 1.25E-01_wp         !< citation or source ....  [fraction]
 
     pheno_param_jsbach%GRS%crit_temp          = 4.0_wp              !< citation or source ....  [Celsius]
     pheno_param_jsbach%GRS%shedRate_growth    = 1.50E-02_wp         !< citation or source ....  [1/days]
@@ -249,7 +246,7 @@ CONTAINS
 
     pheno_param_jsbach%CRP%crit_temp          = 10.0_wp             !< citation or source ....  [Celsius]
     pheno_param_jsbach%CRP%gdd_temp           = 6.0_wp              !< citation or source ....  [Celsius]
-    pheno_param_jsbach%CRP%sproud             = 0.37_wp             !< citation or source ....  [-]
+    pheno_param_jsbach%CRP%sproud             = 0.05_wp             !< citation or source ....  [-]
     pheno_param_jsbach%CRP%heat_sum_harvest   = 1300.0_wp           !< citation or source ....  [Degree days]
     pheno_param_jsbach%CRP%shedRate_growth    = 0.03333_wp          !< citation or source ....  [1/days]
     pheno_param_jsbach%CRP%shedRate_rest      = 0.1428_wp           !< citation or source ....  [1/days]
