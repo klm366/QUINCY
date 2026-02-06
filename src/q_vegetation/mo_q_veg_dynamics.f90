@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -27,7 +27,8 @@ MODULE mo_q_veg_dynamics
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, &
-    &                                   VEG_BGCM_LITTERFALL_ID, VEG_BGCM_ESTABLISHMENT_ID
+    &                                   VEG_BGCM_LITTERFALL_ID, VEG_BGCM_ESTABLISHMENT_ID, &
+    &                                   VEG_BGCM_SEED_BED_POOL_ID, VEG_BGCM_SEED_BED_GROWTH_ID
 
   IMPLICIT NONE
 
@@ -80,6 +81,8 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_pool_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_growth_mt
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
@@ -151,6 +154,8 @@ CONTAINS
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_POOL_ID, seed_bed_pool_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_GROWTH_ID, seed_bed_growth_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
@@ -270,7 +275,7 @@ CONTAINS
         veg_growth_mt(ix_sap_wood,ix_elem,:)   = veg_growth_mt(ix_sap_wood,ix_elem,:)   * (1._wp - mortality_rate(:))
         veg_growth_mt(ix_heart_wood,ix_elem,:) = veg_growth_mt(ix_heart_wood,ix_elem,:) * (1._wp - mortality_rate(:))
         veg_growth_mt(ix_fruit,ix_elem,:)      = veg_growth_mt(ix_fruit,ix_elem,:)      * (1._wp - mortality_rate(:))
-        veg_growth_mt(ix_seed_bed,ix_elem,:)   = veg_growth_mt(ix_seed_bed,ix_elem,:)   * (1._wp - mortality_rate(:))
+        seed_bed_growth_mt(ix_elem,:)          = seed_bed_growth_mt(ix_elem,:)          * (1._wp - mortality_rate(:))
       END IF
     END DO
     !>
@@ -331,7 +336,7 @@ CONTAINS
             & t_air_week_mavg(:)                  , &
             & fpc(:)                              , &
             & rfr_ratio_boc_tvegdyn_mavg(:)       , &
-            & veg_pool_mt(ix_seed_bed,:,:)        , & ! in
+            & seed_bed_pool_mt(:,:)               , & ! in
             & veg_establishment_mt(:,:)           )   ! inout
         ELSE
           ! Stand replacing harvest in QS is an exceptional case in which the establishment is initialised in a particular way
@@ -341,14 +346,14 @@ CONTAINS
           ! but limit to actual available seed pool to avoid generating mass
           ! NB: This might need to be revised for particular case studies
           DO ic = 1, nc
-            IF (veg_pool_mt(ix_seed_bed, ixC, ic) > eps8) THEN
-              hlp1(ic) = MIN(0.1_wp * lctlib%seed_size, veg_pool_mt(ix_seed_bed, ixC, ic)) / veg_pool_mt(ix_seed_bed, ixC, ic)
+            IF (seed_bed_pool_mt(ixC, ic) > eps8) THEN
+              hlp1(ic) = MIN(0.1_wp * lctlib%seed_size, seed_bed_pool_mt(ixC, ic)) / seed_bed_pool_mt(ixC, ic)
             END IF
           END DO
           DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
             IF (model%config%is_element_used(ielem)) THEN
               ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-              veg_establishment_mt(ix_elem, :) = hlp1(:) * veg_pool_mt(ix_seed_bed, ix_elem, :)
+              veg_establishment_mt(ix_elem, :) = hlp1(:) * seed_bed_pool_mt(ix_elem, :)
             END IF
           END DO
         END IF
@@ -561,30 +566,26 @@ CONTAINS
     !>
     DO ic = 1,nc
       DO ix_comp = 1,n_veg_bgcm_comp
-        ! seed bed pool remains unaffected from mortality
-        ! TODO: needs proper implementation of looping over bgcm compartments
-        IF (ix_comp /= ix_seed_bed) THEN
-          ! loop over bgcm elements and soil layers
-          DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-            IF (is_element_used(ielem)) THEN
-              ix_elem = elements_index_map(ielem)    ! get element index in bgcm
-              ! Only the fraction of veg pool not yet lost to litterfall is available for mortality.
-              ! If remaining biomass is smaller than litterfall + mortality put remaining biomass to litter,
-              ! else reduce biomass by mortality rate
-              hlp1 = veg_pool_mt(ix_comp, ix_elem, ic) * mortality_rate(ic)
-              IF (veg_pool_mt(ix_comp, ix_elem, ic) - veg_litterfall_mt(ix_comp, ix_elem, ic) - hlp1 <= 0.0_wp) THEN
-                veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
-                  &                                       + (veg_pool_mt(ix_comp, ix_elem, ic)    &
-                  &                                         - veg_litterfall_mt(ix_comp, ix_elem, ic))
-              ELSE
-                veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
-                  &                                       + (veg_pool_mt(ix_comp, ix_elem, ic)    &
-                  &                                         * mortality_rate(ic))
-              END IF
-              veg_litterfall_mt(ix_comp, ix_elem, ic) = MAX(0.0_wp, veg_litterfall_mt(ix_comp, ix_elem, ic))
+        ! loop over bgcm elements and soil layers
+        DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+          IF (is_element_used(ielem)) THEN
+            ix_elem = elements_index_map(ielem)    ! get element index in bgcm
+            ! Only the fraction of veg pool not yet lost to litterfall is available for mortality.
+            ! If remaining biomass is smaller than litterfall + mortality put remaining biomass to litter,
+            ! else reduce biomass by mortality rate
+            hlp1 = veg_pool_mt(ix_comp, ix_elem, ic) * mortality_rate(ic)
+            IF (veg_pool_mt(ix_comp, ix_elem, ic) - veg_litterfall_mt(ix_comp, ix_elem, ic) - hlp1 <= 0.0_wp) THEN
+              veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
+                &                                       + (veg_pool_mt(ix_comp, ix_elem, ic)    &
+                &                                         - veg_litterfall_mt(ix_comp, ix_elem, ic))
+            ELSE
+              veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
+                &                                       + (veg_pool_mt(ix_comp, ix_elem, ic)    &
+                &                                         * mortality_rate(ic))
             END IF
-          END DO
-        END IF
+            veg_litterfall_mt(ix_comp, ix_elem, ic) = MAX(0.0_wp, veg_litterfall_mt(ix_comp, ix_elem, ic))
+          END IF
+        END DO
       END DO
     END DO
   END SUBROUTINE calc_veg_mortality
@@ -784,7 +785,7 @@ CONTAINS
     & t_air_week_mavg             , &
     & fpc                         , &
     & rfr_ratio_boc_tvegdyn_mavg  , &
-    & veg_pool_mt_seed_bed        , &
+    & seed_bed_pool_mt            , &
     & veg_establishment_mt         )
 
     USE mo_veg_constants,               ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist, &
@@ -801,7 +802,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: t_air_week_mavg              !< weekly air temperature [K]
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: fpc                          !< folage projective cover
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg   !< red-farred ratio at the bottom of the canopy
-    REAL(wp),                 INTENT(in)    :: veg_pool_mt_seed_bed(:,:)    !< bgcm veg_pool: seed_bed in vegetation pool
+    REAL(wp),                 INTENT(in)    :: seed_bed_pool_mt(:,:)        !< bgcm: seed_bed pool
     REAL(wp),                 INTENT(inout) :: veg_establishment_mt(:,:)    !< bgcm flux: vegetation establishment
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: ielem              !< loop over bgcm elements
@@ -850,7 +851,7 @@ CONTAINS
       IF (is_element_used(ielem)) THEN
         ix_elem = elements_index_map(ielem)    ! get element index in bgcm
         veg_establishment_mt(ix_elem, :) = veg_establishment_mt(ix_elem, :) &
-          &                                + veg_pool_mt_seed_bed(ix_elem, :) * establishment_rate(:)
+          &                                + seed_bed_pool_mt(ix_elem, :) * establishment_rate(:)
       END IF
     END DO
   END SUBROUTINE calc_veg_establishment

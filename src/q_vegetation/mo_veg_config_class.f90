@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -33,8 +33,7 @@ MODULE mo_veg_config_class
   PRIVATE
   PUBLIC :: t_veg_config, Get_number_of_veg_compartments
   PUBLIC :: VEG_PART_LEAF_IDX , VEG_PART_FINE_ROOT_IDX, VEG_PART_COARSE_ROOT_IDX, VEG_PART_SAP_WOOD_IDX, &
-    &       VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, VEG_PART_RESERVE_IDX, VEG_PART_FRUIT_IDX, &
-    &       VEG_PART_SEED_BED_IDX
+    &       VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, VEG_PART_RESERVE_IDX, VEG_PART_FRUIT_IDX
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the vegetation process, derived from t_jsb_config
@@ -102,7 +101,6 @@ MODULE mo_veg_config_class
       & VEG_PART_LABILE_IDX,      &   !< labile
       & VEG_PART_RESERVE_IDX,     &   !< reserve
       & VEG_PART_FRUIT_IDX,       &   !< fruit
-      & VEG_PART_SEED_BED_IDX,    &   !< seed bed
       & LAST_VEG_PART_IDX ! needs to be the last -- it is used to determine the number of compartments
   END ENUM
 
