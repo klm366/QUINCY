@@ -226,7 +226,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_crop)
     dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_pasture)
 
-    ALLOCATE(hlp1(nproma, nblk))
+    ALLOCATE(hlp1(nproma, nblks))
 
     IF (.NOT. dsl4jsb_Config(Q_AGR_)%l_read_fertiliser) THEN
       ! ... use background rate
