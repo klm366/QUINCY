@@ -2523,7 +2523,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = restart_veg_optimal, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('t_jmax_opt_daytime', mem%t_jmax_opt_daytime, &
