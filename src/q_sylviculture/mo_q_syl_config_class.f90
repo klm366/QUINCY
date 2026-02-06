@@ -118,7 +118,7 @@ CONTAINS
     ic_filename                   = 'ic_land_syl.nc'
     !
     harvest_filename_prefix       = 'bc_land_use_quincy'
-    harvest_scheme                = 'constant'  ! possible varlues: constant, reference or transient
+    harvest_scheme                = 'none'  ! possible values: none, constant, reference or transient
     l_daily_harvest               = .TRUE.  ! determines if harvest is to be applied on a daily (TRUE) or annual (FALSE) basis
     ! for now arbitrary default fraction used if not read from a map (annual change, relative to whole gridcell)
     harvest_fraction              = 0.05_wp
@@ -153,6 +153,9 @@ CONTAINS
 
     ! Set harvest scheme
     SELECT CASE (tolower(TRIM(harvest_scheme)))
+    CASE ("none")
+      CALL message(TRIM(routine), 'Running with process active but no global harvest.')
+      config%harvest_scheme = 0.0_wp
     CASE ("constant")
       CALL message(TRIM(routine), 'Running with constant global harvest.')
       config%harvest_scheme = CONST_HARV

@@ -65,7 +65,7 @@ CONTAINS
 #endif
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_, VEG_, ALCC_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -77,9 +77,11 @@ CONTAINS
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
+    dsl4jsb_Use_config(ALCC_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(SPQ_)
+    dsl4jsb_Use_config(VEG_)
 #endif
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
@@ -94,9 +96,11 @@ CONTAINS
     dsl4jsb_Def_config(FLCC_)
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
+    dsl4jsb_Def_config(ALCC_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(SPQ_)
+    dsl4jsb_Def_config(VEG_)
 #endif
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
@@ -289,6 +293,21 @@ CONTAINS
         END IF
       END IF
 
+      ! --- check process dependencies
+#ifdef _OPENACC
+      ! If running on GPU assert that required processes are ported
+      IF (model%Do_fractions_change()) THEN
+        CALL finish(routine, 'The LCC framework has not yet been ported to GPU.')
+      END IF
+#endif
+
+      IF (model%Do_fractions_change()) THEN
+        IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
+          CALL message(TRIM(routine), 'Activating PPLCC_ process since some process changes fractions')
+        END IF
+        dsl4jsb_Config(PPLCC_)%active = .TRUE.
+      END IF
+
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         ! There are several jsbach processes for which active is set to TRUE as default, however, these are not required for IQ:
@@ -303,6 +322,18 @@ CONTAINS
             CALL message(TRIM(routine), 'Activating PPLCC_ process because it is required by the active Q_SYL_ process')
           END IF
           dsl4jsb_Config(PPLCC_)%active = .TRUE.
+        END IF
+
+        ! If running with product pools the ALCC process does require the Q_SYL process to be running
+        dsl4jsb_Get_config(ALCC_)
+        dsl4jsb_Get_config(VEG_)
+        IF (dsl4jsb_Config(ALCC_)%active .AND. dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+          IF (.NOT. model%Is_process_enabled(Q_SYL_)) THEN
+            CALL message(TRIM(routine), &
+                & 'Activating Q_SYL_ process because it is required when ALCC_ is active and uses product pools. '//&
+                & 'Note: default settings are used for Q_SYL')
+          END IF
+          dsl4jsb_Config(Q_SYL_)%active = .TRUE.
         END IF
 
         !... assert that syl is only active in land or plant mode
@@ -335,13 +366,6 @@ CONTAINS
 #endif
 
       CASE (MODEL_JSBACH)
-
-        IF (model%Do_fractions_change()) THEN
-          IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
-            CALL message(TRIM(routine), 'Activating PPLCC_ process since some process changes fractions')
-          END IF
-          dsl4jsb_Config(PPLCC_)%active = .TRUE.
-        END IF
 
         IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN
           CALL message(TRIM(routine), 'Using canopy albedo from ini file '//TRIM(dsl4jsb_Config(RAD_)%bc_filename)//&

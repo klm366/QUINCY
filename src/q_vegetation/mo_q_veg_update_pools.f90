@@ -50,7 +50,7 @@ CONTAINS
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QCANOPY
-    USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, Q_SYL_
+    USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, Q_SYL_, ALCC_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid, t_jsb_grid
     USE mo_jsb_grid,                        ONLY: Get_vgrid, Get_grid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14
@@ -59,6 +59,7 @@ CONTAINS
     USE mo_veg_constants,                   ONLY: eta_nfixation, max_leaf_shedding_rate
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(ALCC_)
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
@@ -84,8 +85,7 @@ CONTAINS
     REAL(wp) :: hlp
     INTEGER  :: lctlib_phenology_type
     LOGICAL  :: config_flag_log_negative_vegpool                !< debug option of veg config
-    LOGICAL  :: config_l_use_product_pools, config_active_q_syl, config_active_q_agr
-    LOGICAL  :: lctlib_ForestFlag, lctlib_CropFlag
+    LOGICAL  :: config_l_use_product_pools, is_active_SYL_or_ALCC, is_active_AGR_or_ALCC
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -109,6 +109,7 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: prod_decay_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
@@ -221,10 +222,10 @@ CONTAINS
     vgrid_soil_w          => Get_vgrid('soil_depth_water')
     nsoil_w               =  vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_config(Q_SYL_)
     dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
@@ -234,10 +235,18 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     config_flag_log_negative_vegpool = dsl4jsb_Config(VEG_)%flag_log_negative_vegpool
     config_l_use_product_pools = dsl4jsb_Config(VEG_)%l_use_product_pools
-    config_active_q_syl        = dsl4jsb_Config(Q_SYL_)%active
-    config_active_q_agr        = dsl4jsb_Config(Q_AGR_)%active
-    lctlib_ForestFlag   = dsl4jsb_Lctlib_param(ForestFlag)
-    lctlib_CropFlag     = dsl4jsb_Lctlib_param(CropFlag)
+
+    is_active_AGR_or_ALCC = .FALSE.
+    is_active_SYL_or_ALCC = .FALSE.
+    IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
+      IF (dsl4jsb_Config(Q_AGR_)%active .OR. dsl4jsb_Config(ALCC_)%active) THEN
+        is_active_AGR_or_ALCC = .TRUE.
+      END IF
+      IF (dsl4jsb_Config(Q_SYL_)%active .OR. dsl4jsb_Config(ALCC_)%active) THEN
+        is_active_SYL_or_ALCC = .TRUE.
+      END IF
+    END IF
+    ! ----------------------------------------------------------------------------------------------------- !
 
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -252,22 +261,19 @@ CONTAINS
     dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
 
     IF (config_l_use_product_pools) THEN
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PROD_DECAY_ID, prod_decay_mt)
 
-      IF ((lctlib_ForestFlag .AND. config_active_q_syl) .OR. (lctlib_CropFlag .AND. config_active_q_agr)) THEN
-        dsl4jsb_Get_mt1L2D(VEG_BGCM_PROD_DECAY_ID, prod_decay_mt)
+      IF (is_active_AGR_or_ALCC) THEN
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_CROP_ID, veg_pp_crop_mt)
+      END IF
 
-        IF (lctlib_CropFlag) THEN
-          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_CROP_ID, veg_pp_crop_mt)
-        END IF
-
-        IF (lctlib_ForestFlag) THEN
-          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FUEL_ID, veg_pp_fuel_mt)
-          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PAPER_ID, veg_pp_paper_mt)
-          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FIBERBOARD_ID, veg_pp_fiberboard_mt)
-          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_OIRW_ID, veg_pp_oirw_mt)
-          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PV_ID, veg_pp_pv_mt)
-          dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_SAWNWOOD_ID, veg_pp_sawnwood_mt)
-        END IF
+      IF (is_active_SYL_or_ALCC) THEN
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FUEL_ID, veg_pp_fuel_mt)
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PAPER_ID, veg_pp_paper_mt)
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FIBERBOARD_ID, veg_pp_fiberboard_mt)
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_OIRW_ID, veg_pp_oirw_mt)
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PV_ID, veg_pp_pv_mt)
+        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_SAWNWOOD_ID, veg_pp_sawnwood_mt)
       END IF
     END IF
     ! ----------------------------------------------------------------------------------------------------- !
@@ -564,11 +570,11 @@ CONTAINS
         ! and if simulating with product pools also within these
         IF (config_l_use_product_pools) THEN
 
-          IF (lctlib_CropFlag .AND. config_active_q_agr) THEN
+          IF (is_active_AGR_or_ALCC) THEN
             veg_pp_crop_mt(ixC14, ic) = veg_pp_crop_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
           END IF
 
-          IF (lctlib_ForestFlag .AND. config_active_q_syl) THEN
+          IF (is_active_SYL_or_ALCC) THEN
             veg_pp_fuel_mt(ixC14, ic) = veg_pp_fuel_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
             veg_pp_paper_mt(ixC14, ic) = veg_pp_paper_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
             veg_pp_fiberboard_mt(ixC14, ic) = veg_pp_fiberboard_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
@@ -698,7 +704,7 @@ CONTAINS
           veg_products_total_c14(ic) = 0.0_wp
           veg_products_total_n15(ic) = 0.0_wp
 
-          IF (lctlib_CropFlag .AND. config_active_q_agr) THEN
+          IF (is_active_AGR_or_ALCC) THEN
             veg_products_total_c(ic)   = veg_products_total_c(ic)   + veg_pp_crop_mt(ixC,ic)
             veg_products_total_n(ic)   = veg_products_total_n(ic)   + veg_pp_crop_mt(ixN,ic)
             veg_products_total_p(ic)   = veg_products_total_p(ic)   + veg_pp_crop_mt(ixP,ic)
@@ -707,7 +713,7 @@ CONTAINS
             veg_products_total_n15(ic) = veg_products_total_n15(ic) + veg_pp_crop_mt(ixN15,ic)
           END IF
 
-          IF (lctlib_ForestFlag .AND. config_active_q_syl) THEN
+          IF (is_active_SYL_or_ALCC) THEN
             veg_products_total_c(ic) = veg_products_total_c(ic)                                &
               &                       + veg_pp_fuel_mt(ixC,ic) + veg_pp_paper_mt(ixC,ic)       &
               &                       + veg_pp_fiberboard_mt(ixC,ic) + veg_pp_oirw_mt(ixC,ic)  &
@@ -754,6 +760,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       ! adding seed bed pool for reporting and carbon conservation test to total vegetation pool
       veg_pool_total_c(ic)   = veg_pool_total_c(ic) + seed_bed_pool_mt(ixC, ic)
@@ -779,20 +786,19 @@ CONTAINS
       veg_litterfall_total_c14(ic) = veg_litterfall_total_c14(ic) + seed_bed_litterfall_mt(ixC14, ic)
       veg_litterfall_total_n15(ic) = veg_litterfall_total_n15(ic) + seed_bed_litterfall_mt(ixN15, ic)
     END DO
+    !$ACC END PARALLEL LOOP
 
     IF (config_l_use_product_pools) THEN
-      IF ((lctlib_ForestFlag .AND. config_active_q_syl) .OR. (lctlib_CropFlag .AND. config_active_q_agr)) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT)
-        DO ic = 1, nc
-          veg_products_decay_c(ic)   =  prod_decay_mt(ixC, ic)   * 1000000.0_wp / dtime
-          veg_products_decay_n(ic)   =  prod_decay_mt(ixN, ic)   * 1000000.0_wp / dtime
-          veg_products_decay_p(ic)   =  prod_decay_mt(ixP, ic)   * 1000000.0_wp / dtime
-          veg_products_decay_c13(ic) =  prod_decay_mt(ixC13, ic) * 1000000.0_wp / dtime
-          veg_products_decay_c14(ic) =  prod_decay_mt(ixC14, ic) * 1000000.0_wp / dtime
-          veg_products_decay_n15(ic) =  prod_decay_mt(ixN15, ic) * 1000000.0_wp / dtime
-        END DO
-        !$ACC END PARALLEL LOOP
-      END IF
+      !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
+      DO ic = 1, nc
+        veg_products_decay_c(ic)   =  prod_decay_mt(ixC, ic)   * 1000000.0_wp / dtime
+        veg_products_decay_n(ic)   =  prod_decay_mt(ixN, ic)   * 1000000.0_wp / dtime
+        veg_products_decay_p(ic)   =  prod_decay_mt(ixP, ic)   * 1000000.0_wp / dtime
+        veg_products_decay_c13(ic) =  prod_decay_mt(ixC13, ic) * 1000000.0_wp / dtime
+        veg_products_decay_c14(ic) =  prod_decay_mt(ixC14, ic) * 1000000.0_wp / dtime
+        veg_products_decay_n15(ic) =  prod_decay_mt(ixN15, ic) * 1000000.0_wp / dtime
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     !> 3.0 biosphere-level diagnostics across multiple processes
@@ -822,13 +828,10 @@ CONTAINS
       biological_n_fixation(ic)    = biological_n_fixation(ic) + n_fixation(ic)
 
       IF (config_l_use_product_pools) THEN
-        IF ((lctlib_ForestFlag .AND. config_active_q_syl) .OR.  &
-            & (lctlib_CropFlag .AND. config_active_q_agr)) THEN
-          ! The product pool decay is a loss to the atmosphere (prod_decay_mt unit is mol m-2 timestep-1)
-          net_biosphere_production(ic)     = net_biosphere_production(ic)     - (prod_decay_mt(ixC,ic) * 1000000.0_wp / dtime)
-          net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - (prod_decay_mt(ixC13,ic) * 1000000.0_wp / dtime)
-          net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - (prod_decay_mt(ixC14,ic) * 1000000.0_wp / dtime)
-        END IF
+        ! The product pool decay is a loss to the atmosphere (prod_decay_mt unit is mol m-2 timestep-1)
+        net_biosphere_production(ic)     = net_biosphere_production(ic)     - (prod_decay_mt(ixC,ic) * 1000000.0_wp / dtime)
+        net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - (prod_decay_mt(ixC13,ic) * 1000000.0_wp / dtime)
+        net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - (prod_decay_mt(ixC14,ic) * 1000000.0_wp / dtime)
       END IF
     END DO
     !$ACC END PARALLEL LOOP

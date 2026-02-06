@@ -2218,6 +2218,9 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_c_mavg
     dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_n_mavg
     dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_p_mavg
+    dsl4jsb_Real3D_onDomain :: nh4_assoc
+    dsl4jsb_Real3D_onDomain :: po4_assoc_slow
+    dsl4jsb_Real3D_onDomain :: po4_primary
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
     vgrid_soil_w => Get_vgrid('soil_depth_water')
@@ -2228,6 +2231,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SB_, microbial_cue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onDomain(SB_, microbial_nue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onDomain(SB_, microbial_pue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onDomain(SB_, nh4_assoc)
+    dsl4jsb_Get_var3D_onDomain(SB_, po4_assoc_slow)
+    dsl4jsb_Get_var3D_onDomain(SB_, po4_primary)
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == 'jsm') THEN
       dsl4jsb_Get_var3D_onDomain(SB_, enzyme_frac_poly_c_mavg)
       dsl4jsb_Get_var3D_onDomain(SB_, enzyme_frac_poly_n_mavg)
@@ -2246,6 +2252,10 @@ CONTAINS
     CALL read_3D_var(input_file, microbial_cue_eff_tmic_mavg, 'sb_microbial_cue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_w)
     CALL read_3D_var(input_file, microbial_nue_eff_tmic_mavg, 'sb_microbial_nue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_w)
     CALL read_3D_var(input_file, microbial_pue_eff_tmic_mavg, 'sb_microbial_pue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_w)
+
+    CALL read_3D_var(input_file, nh4_assoc, 'sb_nh4_assoc_'//tile%name, 'soillev', nsoil_w)
+    CALL read_3D_var(input_file, po4_assoc_slow, 'sb_po4_primary_'//tile%name, 'soillev', nsoil_w)
+    CALL read_3D_var(input_file, po4_primary, 'sb_po4_assoc_slow_'//tile%name, 'soillev', nsoil_w)
 
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == 'jsm') THEN
       CALL read_3D_var(input_file, enzyme_frac_poly_c_mavg, 'sb_enzyme_frac_poly_c_mavg_'//tile%name, 'soillev', nsoil_w)

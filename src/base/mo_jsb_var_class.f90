@@ -48,6 +48,7 @@ MODULE mo_jsb_var_class
 #endif
       :: ptr3d(:,:,:) => NULL()
     CHARACTER(len=VARNAME_LEN)    :: name                      ! Name of variable
+    CHARACTER(len=VARNAME_LEN)    :: standard_name             ! Standard name of the variable
     CHARACTER(len=VARNAME_LEN)    :: full_name                 ! Full name of variable in varlist, including prefix and suffix
     CHARACTER(len=:), ALLOCATABLE :: unit
     INTEGER                       :: type                      ! REAL1D / REAL2D / REAL3D
@@ -63,8 +64,10 @@ MODULE mo_jsb_var_class
     REAL(dp)                      :: missval
     LOGICAL                       :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
                                                                ! of those where variable doesn't exist
-    LOGICAL                       :: is_conserved_quan = .FALSE. ! Whether variable carries a to-be-conserved quantity
-    INTEGER                       :: cons_quan_type_id = -1    ! id identifying the type of the conserved quantity
+    LOGICAL                       :: is_conserved_quan = .FALSE. !< Whether variable carries a to-be-conserved quantity
+    INTEGER                       :: cons_quan_type_id = -1      !< id identifying the type of the conserved quantity
+    LOGICAL                       :: transfer_all = .FALSE.      !< Flag indicating if all matter should be collected (true) or if
+                                                                 !< matter should only be collected proportionally to the lost area
     LOGICAL                       :: is_in_output  = .FALSE.   ! Whether variable is requested to be written to output
     LOGICAL                       :: is_in_restart = .FALSE.   ! Whether variable is requested to be written to restart file
   CONTAINS

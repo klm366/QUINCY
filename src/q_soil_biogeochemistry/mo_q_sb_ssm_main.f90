@@ -54,7 +54,6 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
-    USE mo_veg_constants,         ONLY: ITREE
     USE mo_q_sb_jsm_transport,    ONLY: calc_bioturbation_rate
     USE mo_q_sb_litter_processes, ONLY: calc_litter_partitioning
     ! ----------------------------------------------------------------------------------------------------- !
@@ -715,6 +714,7 @@ CONTAINS
 
     !>  3.1 Calculation of asymbiotic N fixation rate
     !>
+    asymb_n_fixation(:,:) = 0.0_wp  ! init variable for all indices (also if is > num_sl_above_bedrock(ic))
     DO ic = 1,nc
       DO is = 1,INT(num_sl_above_bedrock(ic))
         asymb_n_fixation(ic, is) = calc_asymb_n_fixation( &
@@ -856,19 +856,18 @@ CONTAINS
     !>  3.6 formation of metabolic and strucutral litter by woody liter decay and
     !>     associated respiration, net mineralisation fluxes
     !>
-    IF (lctlib%growthform == ITREE) THEN
-      CALL calc_litter_formation_from_woody_decay( &
-        & nc, &                               ! in
-        & nsoil_w, &
-        & sb_loss_mt(:,:,:,:), &              ! in
-        & het_respiration(:,:), &             ! inout
-        & het_respiration_c13(:,:), &
-        & het_respiration_c14(:,:), &
-        & net_mineralisation_nh4(:,:), &
-        & net_mineralisation_po4(:,:), &
-        & net_mineralisation_nh4_n15(:,:), &
-        & sb_formation_mt(:,:,:,:) )          ! inout
-    ENDIF
+    CALL calc_litter_formation_from_woody_decay( &
+      & nc, &                               ! in
+      & nsoil_w, &
+      & sb_loss_mt(:,:,:,:), &              ! in
+      & het_respiration(:,:), &             ! inout
+      & het_respiration_c13(:,:), &
+      & het_respiration_c14(:,:), &
+      & net_mineralisation_nh4(:,:), &
+      & net_mineralisation_po4(:,:), &
+      & net_mineralisation_nh4_n15(:,:), &
+      & sb_formation_mt(:,:,:,:) )          ! inout
+
 
     !>4.0 Mycorrhiza dynamics
     !>

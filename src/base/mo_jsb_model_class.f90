@@ -561,7 +561,7 @@ CONTAINS
           ics = grid%Get_col_start(iblk)
           ! index of gridcell at end of the chunk
           ice = grid%Get_col_end(iblk)
-          CALL tile%bgcm_store%Write_stored_matrices_to_bgcms(tile%name, ics, ice, iblk)
+          CALL tile%bgcm_store%Write_matrices_to_bgcm_vars(tile%name, ics, ice, iblk)
         ENDDO
       ENDIF
 

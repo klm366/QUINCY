@@ -23,7 +23,7 @@ MODULE mo_q_veg_plant_characteristics
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, VEG_BGCM_LITTERFALL_ID
+  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID
 
   IMPLICIT NONE
   PRIVATE
@@ -88,8 +88,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_plant_characteristics'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
-    dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
-    dsl4jsb_Def_mt2L2D :: veg_growth_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(Q_ASSIMI_)
@@ -167,8 +165,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
-    dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
-    dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_ASSIMI_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_air_tfrac_mavg)       ! in
@@ -265,6 +261,7 @@ CONTAINS
         ! reset delta_dens_ind to zero in cases plant characteristics are updated several times in the timestep
         delta_dens_ind(ic) = 0.0_wp
 
+        ! In CANOPY mode dens_ind is zero and height is a pft specific lctlib constant
         IF (dens_ind(ic) > eps8) THEN
           diameter(ic)  = calc_diameter_from_woody_biomass(lctlib_allom_k1                     , &
             &                                              lctlib_allom_k2                     , &
