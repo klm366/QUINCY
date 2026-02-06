@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -141,7 +141,7 @@ CONTAINS
     dsl4jsb_Get_config(ALCC_)
 
     npft = tile%Get_no_of_children()
-    IF (.NOT. npft .EQ. dsl4jsb_Config(ALCC_)%nr_of_pfts) THEN
+    IF (.NOT. npft .EQ. model%config%npft) THEN
       CALL finish(TRIM(routine), &
         & 'Violation of assertion: Expected nr of pfts for alcc operations '&
         & //'did not match number of veg tile children, please check.')

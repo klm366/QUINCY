@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -30,7 +30,7 @@ MODULE mo_q_sb_update_pools
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
     &                                   SB_BGCM_TRANSPORT_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_MYCO_EXPORT_ID
-  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID
+  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID
 
   IMPLICIT NONE
 
@@ -112,6 +112,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_formation_mt
@@ -387,6 +388,7 @@ CONTAINS
     ! And get them from the store
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_FORMATION_ID, sb_formation_mt)
@@ -1092,12 +1094,13 @@ CONTAINS
       & - sb_delta_pools_mt(ixN15,:,:)
 
     !! fluxes
-    total_flux_carbon(:) = SUM(veg_litterfall_mt(:,ixC,:), DIM=1) + veg_exudation_mt(ixC,:)               &
+    total_flux_carbon(:) = SUM(veg_litterfall_mt(:,ixC,:), DIM=1) + seed_bed_litterfall_mt(ixC,:) + veg_exudation_mt(ixC,:) &
       & - SUM(sb_mycorrhiza_export_mt(ixC,:,:) * soil_depth_sl(:,:), DIM=2)                   &
       & - SUM(lateral_loss_dom_carbon_sl(:,:) * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_wp  &
       & - (leaching_dom_carbon(:) + SUM(het_respiration(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime / 1.e6_wp   ! DIM=2: sum only over dimension 2, i.e., soil layers
 
     total_flux_nitrogen(:) = SUM(veg_litterfall_mt(:,ixN,:), DIM=1)                            &
+      & + seed_bed_litterfall_mt(ixN,:)                                                        &
       & + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp                &
       & + (nhx_deposition(:) + noy_deposition(:)) * dtime/1.e6_wp                              &
       & + (fertiliser_nh4(:) + fertiliser_no3(:)) * dtime / 1.e6_wp                            &
@@ -1112,6 +1115,7 @@ CONTAINS
       & + SUM(plant_uptake_no3_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp
 
     total_flux_phosphorus(:) = SUM(veg_litterfall_mt(:,ixP,:), DIM=1) + p_deposition(:) * dtime/1.e6_wp &
+      & + seed_bed_litterfall_mt(ixP,:)                                                                 &
       & + veg_exudation_mt(ixP,:) + fertiliser_po4(:) * dtime / 1.e6_wp                                 &
       & - SUM(sb_mycorrhiza_export_mt(ixP,:,:) * soil_depth_sl(:,:), DIM=2)                             &
       & - SUM(lateral_loss_dom_phosphorus_sl(:,:) * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_wp        &
@@ -1120,15 +1124,18 @@ CONTAINS
       & + SUM(plant_uptake_po4_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp
 
     total_flux_carbon13(:) = SUM(veg_litterfall_mt(:,ixC13,:), DIM=1) + veg_exudation_mt(ixC13,:)   &
+      & + seed_bed_litterfall_mt(ixC13,:)                                                           &
       & - SUM(sb_mycorrhiza_export_mt(ixC13,:,:) * soil_depth_sl(:,:), DIM=2)                       &
       & - SUM(lateral_loss_dom_carbon13_sl(:,:) * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_wp      &
       & - (leaching_dom_carbon13(:) + SUM(het_respiration_c13(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime / 1.e6_wp
     total_flux_carbon14(:) = SUM(veg_litterfall_mt(:,ixC14,:), DIM=1) + veg_exudation_mt(ixC14,:)   &
+      & + seed_bed_litterfall_mt(ixC14,:)                                                           &
       & - SUM(sb_mycorrhiza_export_mt(ixC14,:,:) * soil_depth_sl(:,:), DIM=2)                       &
       & - SUM(lateral_loss_dom_carbon14_sl(:,:) * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_wp      &
       & - (leaching_dom_carbon14(:) + SUM(het_respiration_c14(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime / 1.e6_wp
 
     total_flux_nitrogen15(:) = SUM(veg_litterfall_mt(:,ixN15,:), DIM=1)                          &
+      & + seed_bed_litterfall_mt(ixN15,:)                                                        &
       & + SUM(asymb_n_fixation_n15(:,:) * soil_depth_sl(:,:), DIM=2) *dtime/1.e6_wp              &
       & + (nhx_deposition(:) + noy_deposition(:))                                                &
       &    / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) *dtime/1.e6_wp                  &
@@ -1202,7 +1209,7 @@ CONTAINS
       &          - SUM((het_respiration_c14(:,:) + lateral_loss_dom_carbon14_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
       &          - leaching_dom_carbon14(:)
     ! biological N fixation (VEG_ and SB_ processes)
-    biological_n_fixation(:)    = biological_n_fixation &
+    biological_n_fixation(:)    = biological_n_fixation(:) &
       &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)
 
     !> 15.0 spin-up accelerator

@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -34,6 +34,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=40)              :: usecase
     CHARACTER(len=20)              :: model_scheme_char   !< model_scheme from namelist (used in mo_jsb_lctlib_class)
     INTEGER                        :: model_scheme        !< model_scheme as integer
+    INTEGER                        :: npft                !< Number of PFTs
     LOGICAL                        :: use_tmx
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
@@ -135,6 +136,7 @@ CONTAINS
     INTEGER                       :: qmodel_id
     CHARACTER(len=filename_max)   :: fract_filename
     CHARACTER(len=40)             :: usecase
+    INTEGER                       :: npft
     CHARACTER(len=SHORT_NAME_LEN) :: tpe_scheme
     CHARACTER(len=SHORT_NAME_LEN) :: hsm_mode
     CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)
@@ -165,6 +167,7 @@ CONTAINS
       enforce_water_budget, &
       quincy_model, &
       usecase, &
+      npft, &
       tpe_scheme, &
       hsm_mode, &
       fract_filename, &
@@ -217,6 +220,7 @@ CONTAINS
     grid_filename              = ''
     grid_name                  = ''
     usecase                    = ''
+    npft                       = 0
     tpe_scheme                 = ''
     hsm_mode                   = 'simple'
     fract_filename             = 'bc_land_frac.nc'
@@ -300,6 +304,7 @@ CONTAINS
     model_config%quincy_model               = TRIM(quincy_model)
     model_config%qmodel_id                  = qmodel_id
     model_config%usecase                    = usecase
+    model_config%npft                       = npft
     model_config%tpe_scheme                 = tpe_scheme
     model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename

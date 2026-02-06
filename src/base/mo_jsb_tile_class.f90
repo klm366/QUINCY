@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -108,7 +108,8 @@ MODULE mo_jsb_tile_class
                                                                       !< names must be either "fract[_max]_"//tile%name,
                                                                       !< or specified by fract_varname (in the use case).
     CHARACTER(LEN=20)                     :: fract_varname                 !< Name of variable containing fractions for this tile
-    LOGICAL,                  ALLOCATABLE :: l_fract_children_changed(:,:) !< indicates whether the fraction is changed
+    LOGICAL,                  ALLOCATABLE :: l_fract_children_changed(:,:) !< indicates whether the fraction is changed (aggregator)
+    LOGICAL,                  ALLOCATABLE :: l_fract_alcc_change(:,:)      !< indicates whether the fraction will be changed by alcc
     TYPE(t_jsb_aggregator_p), ALLOCATABLE :: aggregators(:)                !< List of possible aggregators for this tile
     !
     INTEGER                               :: nr_of_cqts = 0                !< number of conserved quantity types in use on the tile

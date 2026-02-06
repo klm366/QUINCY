@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -250,6 +250,7 @@ CONTAINS
 
     var%ptr => var%ptr1d
     var%name = TRIM(name)
+    var%standard_name = TRIM(cf%standard_name)
     var%unit = TRIM(cf%units)
     var%type = REAL1D
     var%missval = missval_r_loc
@@ -281,7 +282,7 @@ CONTAINS
 
   SUBROUTINE t_jsb_memory_add_var_r2d(mem, name, var,           &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
-    loutput, lcontainer, cons_quan_type_id,                     &
+    loutput, lcontainer, cons_quan_type_id, transfer_all,       &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, l_aggregate_all,              &
     output_level, output_groups, verbose                        &
@@ -300,7 +301,8 @@ CONTAINS
     CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
-    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of a conserved quantity (mo_jsb_cqt_class)
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   !< type id of a conserved quantity (mo_jsb_cqt_class)
+    LOGICAL,              INTENT(in), OPTIONAL :: transfer_all        !< transfer all or only a proportion of matter upon lcc
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
@@ -409,6 +411,7 @@ CONTAINS
 
     var%ptr => var%ptr2d
     var%name = TRIM(name)
+    var%standard_name = TRIM(cf%standard_name)
     var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
     var%type = REAL2D
@@ -429,6 +432,7 @@ CONTAINS
       var%is_conserved_quan = .TRUE.
       var%cons_quan_type_id = cons_quan_type_id
     END IF
+    IF (PRESENT(transfer_all)) var%transfer_all = transfer_all
 
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
@@ -457,7 +461,7 @@ CONTAINS
   SUBROUTINE t_jsb_memory_add_var_r3d(mem, name, var,            &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,              &
     extra_dim_n, loutput, lcontainer,                            &
-    cons_quan_type_id,                                           &
+    cons_quan_type_id, transfer_all,                             &
     lrestart, lrestart_cont, initval_r, isteptype,               &
     resetval_r, lmiss, missval_r, l_aggregate_all,               &
     output_level, output_groups, verbose                         &
@@ -477,6 +481,7 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
     INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of a conserved quantity (mo_jsb_cqt_class)
+    LOGICAL,              INTENT(in), OPTIONAL :: transfer_all        !< transfer all or only a proportion of matter upon lcc
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
@@ -603,6 +608,7 @@ CONTAINS
 
     var%ptr => var%ptr3d
     var%name = TRIM(name)
+    var%standard_name = TRIM(cf%standard_name)
     var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
     var%type = REAL3D
@@ -623,6 +629,7 @@ CONTAINS
       var%is_conserved_quan = .TRUE.
       var%cons_quan_type_id = cons_quan_type_id
     END IF
+    IF (PRESENT(transfer_all)) var%transfer_all = transfer_all
 
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
@@ -649,11 +656,12 @@ CONTAINS
   END SUBROUTINE t_jsb_memory_add_var_r3d
 
   RECURSIVE SUBROUTINE t_jsb_memory_add_pool(mem, pool,         &
-    hgrid, vgrid_2d, vgrid_3d, grib1, grib2, prefix, suffix,             &
+    hgrid, vgrid_2d, vgrid_3d, grib1, grib2, prefix, suffix,    &
     loutput, lcontainer,                                        &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, l_aggregate_all,              &
-    output_level, verbose                                       &
+    output_level, verbose,                                      &
+    cons_quan_type_id, transfer_all                             &
     )
 
     CLASS(t_jsb_memory),   INTENT(inout)        :: mem                 ! memory structure
@@ -678,6 +686,8 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
     INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   !< if this is a conserved quantity this specifies the type
+    LOGICAL,              INTENT(in), OPTIONAL :: transfer_all        !< transfer all or only a proportion of matter upon lcc
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
@@ -713,14 +723,14 @@ CONTAINS
             & loutput=loutput, lcontainer=lcontainer,                                        &
             & lrestart=lrestart_loc, lrestart_cont=lrestart_cont, initval_r=initval_r, isteptype=isteptype,          &
             & resetval_r=resetval_r, lmiss=lmiss, missval_r=missval_r, l_aggregate_all=l_aggregate_all,              &
-            & output_level=output_level, verbose=verbose)
+            & output_level=output_level, verbose=verbose, cons_quan_type_id=cons_quan_type_id, transfer_all=transfer_all )
         TYPE IS (t_jsb_var_real3d)
           CALL mem%Add_var(selected_element%element_shortname, selected_element,       &
             & hgrid, vgrid_3d, cf, grib1, grib2, prefix//'_'//pool%shortname, suffix,  &
             & loutput=loutput, lcontainer=lcontainer,                                        &
             & lrestart=lrestart_loc, lrestart_cont=lrestart_cont, initval_r=initval_r, isteptype=isteptype,          &
             & resetval_r=resetval_r, lmiss=lmiss, missval_r=missval_r, l_aggregate_all=l_aggregate_all,              &
-            & output_level=output_level, verbose=verbose)
+            & output_level=output_level, verbose=verbose, cons_quan_type_id=cons_quan_type_id, transfer_all=transfer_all)
         END SELECT
       END DO
     END IF
@@ -732,7 +742,7 @@ CONTAINS
           & loutput=loutput, lcontainer=lcontainer,                                        &
           & lrestart=lrestart, lrestart_cont=lrestart_cont, initval_r=initval_r, isteptype=isteptype,              &
           & resetval_r=resetval_r, lmiss=lmiss, missval_r=missval_r, l_aggregate_all=l_aggregate_all,              &
-          & output_level=output_level, verbose=verbose)
+          & output_level=output_level, verbose=verbose, cons_quan_type_id=cons_quan_type_id, transfer_all=transfer_all)
       END DO
     END IF
 
@@ -839,6 +849,7 @@ CONTAINS
       var%ptr => var%ptr2d
       __acc_attach(var%ptr)
       var%name = TRIM(name)
+      var%standard_name = TRIM(cf%standard_name)
       var%full_name = TRIM(name_loc)
       var%type = REAL2D
       var%missval = missval_r_loc

@@ -3,7 +3,7 @@
 # ICON-Land
 #
 # ---------------------------------------
-# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+# Copyright (C) 2013-2026, MPI-M, MPI-BGC
 #
 # Contact: icon-model.org
 # Authors: AUTHORS.md
@@ -33,7 +33,7 @@ comp=gfortran
 if [[ $OSTYPE = "darwin"* ]]; then
 	cdo=${HOME}/anaconda3/envs/dyhdenv/bin/cdo
 else
-	cdo=cdo
+	cdo=$cdo
 fi
 
 # **** Zusammenfassen der Parameterdateien in Inputdatei hdpara.srv
