@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -31,6 +31,7 @@ MODULE mo_sb_memory_class
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
   USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
+  USE mo_jsb_cqt_class,          ONLY: IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE
 
   IMPLICIT NONE
   PRIVATE
@@ -480,7 +481,7 @@ CONTAINS
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,     ONLY: t_jsb_model
     USE mo_jsb_class,           ONLY: Get_model
-    USE mo_quincy_output_class, ONLY: unitless
+    USE mo_quincy_output_class, ONLY: unitless, unit_sb_pool, unit_sb_flux
     dsl4jsb_Use_config(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_sb_memory),   INTENT(inout), TARGET :: mem             !< SB_ memory
@@ -495,8 +496,6 @@ CONTAINS
     TYPE(t_jsb_vgrid),               POINTER :: surface                     !< Vertical grid
     TYPE(t_jsb_vgrid),               POINTER :: vgrid_soil_w                !< Vertical grid
     TYPE(t_jsb_vgrid),               POINTER :: vgrid_month                 !< Vertical grid
-    CHARACTER(len=30)                        :: unit_sb_pool                !< unit of element var
-    CHARACTER(len=30)                        :: unit_sb_flux                !< unit of element var
     INTEGER                                  :: elem_idx_map(LAST_ELEM_ID)  !< element mapper ID -> IND
     INTEGER                                  :: table                       !< ...
     INTEGER                                  :: output_level_local          !< add var to BASIC output_level, model specific (ssm/jsm)
@@ -516,10 +515,6 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
 
     ! ----------------------------------------------------------------------------------------------------- !
-    ! init local variables
-    unit_sb_pool = "mol m-3"
-    unit_sb_flux = "mol m-3 timestep-1"
-
     ! set output/restart options for the ssm/jsm soil model
     output_level_local   = FULL
     output_switch_local  = .FALSE.
@@ -629,21 +624,24 @@ CONTAINS
       CALL mem%bgc_material%Set_paths()
 
       ! add variables to bgc_material
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbpool, &
-        & hgrid, surface, vgrid_soil_w,                                                               &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-        & prefix, suffix,                                                                              &
-        & output_level = FULL,                                                                       &
-        & loutput = .TRUE.,                                                                            &
-        & lrestart = .TRUE.,                                                                           &
+      CALL mem%Add_var(mem%sb_bgcm_main%sbbpool,                                 &
+        & hgrid, surface, vgrid_soil_w,                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & output_level = FULL,                                                   &
+        & loutput = .TRUE.,                                                      &
+        & lrestart = .TRUE.,                                                     &
+        & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE,                                &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbformation, &
-        & hgrid, surface, vgrid_soil_w,                                                               &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-        & prefix, suffix,                                                                              &
-        & output_level = FULL,                                                                       &
-        & loutput = .TRUE.,                                                                            &
-        & lrestart = .FALSE.,                                                                          &
+      CALL mem%Add_var(mem%sb_bgcm_main%sbbformation,                            &
+        & hgrid, surface, vgrid_soil_w,                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & output_level = FULL,                                                   &
+        & loutput = .TRUE.,                                                      &
+        & lrestart = .FALSE.,                                                    &
+        & cons_quan_type_id = IQ_SL_FLUX_CQ_TYPE,                                &
+        & transfer_all = .TRUE.,                                                 &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%sb_bgcm_main%sbbloss, &
         & hgrid, surface, vgrid_soil_w,                                                               &
@@ -987,6 +985,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
 
@@ -999,6 +998,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
 
@@ -1011,6 +1011,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
 
@@ -1059,6 +1060,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
 
@@ -1071,6 +1073,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
 
@@ -1083,6 +1086,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
 
@@ -1131,6 +1135,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
 
@@ -1143,6 +1148,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
 
@@ -1155,6 +1161,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
 
@@ -1167,6 +1174,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
 
@@ -1179,6 +1187,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
+        & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
 

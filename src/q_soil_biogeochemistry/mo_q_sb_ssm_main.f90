@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -24,7 +24,7 @@ MODULE mo_q_sb_ssm_main
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID
+  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, SB_BGCM_TRANSPORT_ID, &
     &                                   SB_BGCM_MYCO_EXPORT_ID
 
@@ -54,7 +54,6 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
-    USE mo_veg_constants,         ONLY: ITREE
     USE mo_q_sb_jsm_transport,    ONLY: calc_bioturbation_rate
     USE mo_q_sb_litter_processes, ONLY: calc_litter_partitioning
     ! ----------------------------------------------------------------------------------------------------- !
@@ -101,6 +100,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_formation_mt
     dsl4jsb_Def_mt2L3D :: sb_loss_mt
@@ -299,6 +299,7 @@ CONTAINS
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_FORMATION_ID, sb_formation_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
@@ -713,6 +714,7 @@ CONTAINS
 
     !>  3.1 Calculation of asymbiotic N fixation rate
     !>
+    asymb_n_fixation(:,:) = 0.0_wp  ! init variable for all indices (also if is > num_sl_above_bedrock(ic))
     DO ic = 1,nc
       DO is = 1,INT(num_sl_above_bedrock(ic))
         asymb_n_fixation(ic, is) = calc_asymb_n_fixation( &
@@ -854,19 +856,18 @@ CONTAINS
     !>  3.6 formation of metabolic and strucutral litter by woody liter decay and
     !>     associated respiration, net mineralisation fluxes
     !>
-    IF (lctlib%growthform == ITREE) THEN
-      CALL calc_litter_formation_from_woody_decay( &
-        & nc, &                               ! in
-        & nsoil_w, &
-        & sb_loss_mt(:,:,:,:), &              ! in
-        & het_respiration(:,:), &             ! inout
-        & het_respiration_c13(:,:), &
-        & het_respiration_c14(:,:), &
-        & net_mineralisation_nh4(:,:), &
-        & net_mineralisation_po4(:,:), &
-        & net_mineralisation_nh4_n15(:,:), &
-        & sb_formation_mt(:,:,:,:) )          ! inout
-    ENDIF
+    CALL calc_litter_formation_from_woody_decay( &
+      & nc, &                               ! in
+      & nsoil_w, &
+      & sb_loss_mt(:,:,:,:), &              ! in
+      & het_respiration(:,:), &             ! inout
+      & het_respiration_c13(:,:), &
+      & het_respiration_c14(:,:), &
+      & net_mineralisation_nh4(:,:), &
+      & net_mineralisation_po4(:,:), &
+      & net_mineralisation_nh4_n15(:,:), &
+      & sb_formation_mt(:,:,:,:) )          ! inout
+
 
     !>4.0 Mycorrhiza dynamics
     !>
@@ -914,7 +915,8 @@ CONTAINS
       & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
       & soil_depth_sl(:,:), &
       & root_fraction_sl(:,:), &
-      & veg_litterfall_mt(:,:,:), &                   ! in
+      & veg_litterfall_mt(:,:,:), &
+      & seed_bed_litterfall_mt(:,:), &                ! in
       & sb_formation_mt(:,:,:,:) )                    ! inout
 
     !>6.0 for 'sb_model = fixed': estimate N losses

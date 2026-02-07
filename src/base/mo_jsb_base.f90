@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -36,6 +36,7 @@ CONTAINS
   !>
   SUBROUTINE jsbach_setup_models(master_namelist_filename)
 
+    USE mo_kind,                ONLY: wp
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       &                               jsbach_runs_standalone, jsbach_is_restarted
     USE mo_jsb_parallel,        ONLY: init_parallel_iface, Get_omp_no_of_threads
@@ -46,7 +47,7 @@ CONTAINS
     USE mo_jsb_time,            ONLY: init_time
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,            ONLY: Register_vgrid, Get_vgrid
-    USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
+    USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, ZAXIS_GENERIC
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT
@@ -64,7 +65,7 @@ CONTAINS
 #endif
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_, VEG_, ALCC_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -76,9 +77,11 @@ CONTAINS
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
+    dsl4jsb_Use_config(ALCC_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(SPQ_)
+    dsl4jsb_Use_config(VEG_)
 #endif
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
@@ -93,19 +96,23 @@ CONTAINS
     dsl4jsb_Def_config(FLCC_)
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
+    dsl4jsb_Def_config(ALCC_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(SPQ_)
+    dsl4jsb_Def_config(VEG_)
 #endif
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w, snow_e
 
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: pft_layer                    ! Vertical grid
 
     INTEGER :: no_of_models, model_idx, iproc
     INTEGER :: nsoil_e, nsoil_w, nsnow_e
     INTEGER :: model_scheme
+    INTEGER :: i
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_models'
 
@@ -244,6 +251,15 @@ CONTAINS
       END IF
       CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
 
+      ! We here use the vertical grid infrastructure for a PFT dimension. This
+      ! dimension is needed in setups with changing PFT fractions.
+      IF (model%Is_process_enabled(PPLCC_)) THEN
+        pft_layer => new_vgrid('pfts', ZAXIS_GENERIC, model%config%npft, &
+          & levels=(/ (REAL(i,kind=wp),i=1,model%config%npft) /), units='')
+        CALL register_vgrid(pft_layer)
+      END IF
+      CALL model%Set_options(npft=model%config%npft)
+
       ! Crosscheck process configs
       IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
         & .AND. (nsoil_e /= nsoil_w)) THEN
@@ -277,6 +293,21 @@ CONTAINS
         END IF
       END IF
 
+      ! --- check process dependencies
+#ifdef _OPENACC
+      ! If running on GPU assert that required processes are ported
+      IF (model%Do_fractions_change()) THEN
+        CALL finish(routine, 'The LCC framework has not yet been ported to GPU.')
+      END IF
+#endif
+
+      IF (model%Do_fractions_change()) THEN
+        IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
+          CALL message(TRIM(routine), 'Activating PPLCC_ process since some process changes fractions')
+        END IF
+        dsl4jsb_Config(PPLCC_)%active = .TRUE.
+      END IF
+
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         ! There are several jsbach processes for which active is set to TRUE as default, however, these are not required for IQ:
@@ -291,6 +322,18 @@ CONTAINS
             CALL message(TRIM(routine), 'Activating PPLCC_ process because it is required by the active Q_SYL_ process')
           END IF
           dsl4jsb_Config(PPLCC_)%active = .TRUE.
+        END IF
+
+        ! If running with product pools the ALCC process does require the Q_SYL process to be running
+        dsl4jsb_Get_config(ALCC_)
+        dsl4jsb_Get_config(VEG_)
+        IF (dsl4jsb_Config(ALCC_)%active .AND. dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+          IF (.NOT. model%Is_process_enabled(Q_SYL_)) THEN
+            CALL message(TRIM(routine), &
+                & 'Activating Q_SYL_ process because it is required when ALCC_ is active and uses product pools. '//&
+                & 'Note: default settings are used for Q_SYL')
+          END IF
+          dsl4jsb_Config(Q_SYL_)%active = .TRUE.
         END IF
 
         !... assert that syl is only active in land or plant mode
@@ -323,13 +366,6 @@ CONTAINS
 #endif
 
       CASE (MODEL_JSBACH)
-
-        IF (model%Do_fractions_change()) THEN
-          IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
-            CALL message(TRIM(routine), 'Activating PPLCC_ process since some process changes fractions')
-          END IF
-          dsl4jsb_Config(PPLCC_)%active = .TRUE.
-        END IF
 
         IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN
           CALL message(TRIM(routine), 'Using canopy albedo from ini file '//TRIM(dsl4jsb_Config(RAD_)%bc_filename)//&
@@ -419,7 +455,7 @@ CONTAINS
     ! quincy model with 13 PFT tiles incl. bare soil
     CASE ('quincy_13_pfts_for_coupling', 'quincy_13_pfts')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
-    ! jsbach_lite & jsbach_pfts & jsbach_12pfts
+    ! jsbach_lite & jsbach_pfts
     CASE DEFAULT
       lctlib_filename = 'lctlib_nlct21.def'
     END SELECT
