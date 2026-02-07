@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -211,6 +211,16 @@ CONTAINS
     dsl4jsb_var3D_onChunk(SB_, denitrification_n2o_n15)          = zero
     dsl4jsb_var3D_onChunk(SB_, denitrification_n2_n15)           = zero
     dsl4jsb_var3D_onChunk(SB_, asymb_n_fixation_n15)             = zero
+    ! temp
+    dsl4jsb_var3D_onChunk(SB_, litter_formation_poly_c_sl)       = zero
+    dsl4jsb_var3D_onChunk(SB_, litter_formation_woody_c_sl)      = zero
+    dsl4jsb_var3D_onChunk(SB_, litter_formation_soluble_c_sl)    = zero
+    dsl4jsb_var3D_onChunk(SB_, litter_formation_poly_n_sl)       = zero
+    dsl4jsb_var3D_onChunk(SB_, litter_formation_woody_n_sl)      = zero
+    dsl4jsb_var3D_onChunk(SB_, litter_formation_soluble_n_sl)    = zero
+    dsl4jsb_var3D_onChunk(SB_, litter_formation_poly_p_sl)       = zero
+    dsl4jsb_var3D_onChunk(SB_, litter_formation_woody_p_sl)      = zero
+    dsl4jsb_var3D_onChunk(SB_, litter_formation_soluble_p_sl)    = zero
 
   END SUBROUTINE reset_sb_fluxes
 

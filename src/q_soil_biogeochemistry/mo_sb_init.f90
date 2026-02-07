@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -1597,10 +1597,10 @@ CONTAINS
             ! calc fraction of mineral-associated C in the soil
             ! initialize the mineral-associated organic carbon (MOC) of soil layer by a fraction coefficient and the maximum sortion capacity
             ! assuming the fraction coefficient frac_mineral_assoc_soil_c decreases with soil depth
-            frac_mineral_assoc_soil_c  = EXP(-is / (NINT(num_sl_above_bedrock(ic, iblk)) * k_sl_conv_moc_corr) )
+            frac_mineral_assoc_soil_c  = EXP(-is / (NINT(num_sl_above_bedrock(ic, iblk)) * k_sl_conv_moc_corr) ) * 0.5_wp
             ! deep soil is initialised with very low MOC, corrected by k_deep_soil_moc_corr
             IF (soil_lay_depth_ubound_sl(ic, is, iblk) > z_deep_soil_moc_corr) THEN
-              frac_mineral_assoc_soil_c = frac_mineral_assoc_soil_c * k_deep_soil_moc_corr
+              frac_mineral_assoc_soil_c = frac_mineral_assoc_soil_c * MAX(0.0001_wp, 10._wp**(-soil_lay_depth_ubound_sl(ic, is, iblk)))
             END IF
             sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = qmax_org_fine_particle(ic, is, iblk) &
               &                                                      * (clay_sl(ic, is, iblk) + silt_sl(ic, is, iblk)) &
@@ -1655,7 +1655,7 @@ CONTAINS
             !     total stable C pool (arr_hlp8)
             ELSE IF ((arr_hlp7(ic, is, iblk) + arr_hlp8(ic, is, iblk)) > 1._wp) THEN
               arr_hlp9(ic, is, iblk) = (1._wp - arr_hlp7(ic, is, iblk)) * fact_repartition_om_init_cond1 * &
-                &                     qmax_org_fine_particle(ic, is, iblk) * &
+                &                     qmax_org_fine_particle(ic, is, iblk) * frac_mineral_assoc_soil_c * &
                 &                     (clay_sl(ic, is, iblk) + silt_sl(ic, is, iblk)) * bulk_dens_sl(ic, is, iblk)
               arr_hlp8(ic, is, iblk) = (1._wp - arr_hlp7(ic, is, iblk)) * (1._wp - fact_repartition_om_init_cond1) * &
                 &                     rho_bulk_org * 1000._wp * carbon_per_dryweight_SOM / molar_mass_C
@@ -1680,7 +1680,7 @@ CONTAINS
             !     arr_hlp8: the predefined mineral-associated OM content
             ELSE
               arr_hlp9(ic, is, iblk) = (1._wp - arr_hlp7(ic, is, iblk) - arr_hlp8(ic, is, iblk)) &
-              &                     * qmax_org_fine_particle(ic, is, iblk) &
+              &                     * qmax_org_fine_particle(ic, is, iblk) * frac_mineral_assoc_soil_c &
               &                     * (clay_sl(ic, is, iblk) + silt_sl(ic, is, iblk)) * bulk_dens_sl(ic, is, iblk)
               arr_hlp8(ic, is, iblk) &
               & = (sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk) + sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk))
@@ -1746,10 +1746,10 @@ CONTAINS
       !! if we need to fix it also for NH4, and PO4, we need to modify calc_qmax_texture with the following code
       DO ic = 1,nproma
         DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
-          frac_mineral_assoc_soil_c  = EXP(-is / (INT(num_sl_above_bedrock(ic, iblk)) * k_sl_conv_moc_corr) )
+          frac_mineral_assoc_soil_c  = EXP(-is / (INT(num_sl_above_bedrock(ic, iblk)) * k_sl_conv_moc_corr) ) * 0.5_wp
           qmax_org_min_sl(ic, is, iblk) = qmax_org_min_sl(ic, is, iblk) * frac_mineral_assoc_soil_c
           IF (soil_lay_depth_ubound_sl(ic, is, iblk) > z_deep_soil_moc_corr) THEN
-            qmax_org_min_sl(ic, is, iblk) = qmax_org_min_sl(ic, is, iblk) * k_deep_soil_moc_corr
+            qmax_org_min_sl(ic, is, iblk) = qmax_org_min_sl(ic, is, iblk) * MAX(0.0001_wp, 10._wp**(-soil_lay_depth_ubound_sl(ic, is, iblk)))
           ENDIF
         END DO
       END DO
@@ -2218,6 +2218,9 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_c_mavg
     dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_n_mavg
     dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_p_mavg
+    dsl4jsb_Real3D_onDomain :: nh4_assoc
+    dsl4jsb_Real3D_onDomain :: po4_assoc_slow
+    dsl4jsb_Real3D_onDomain :: po4_primary
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
     vgrid_soil_w => Get_vgrid('soil_depth_water')
@@ -2228,6 +2231,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SB_, microbial_cue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onDomain(SB_, microbial_nue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onDomain(SB_, microbial_pue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onDomain(SB_, nh4_assoc)
+    dsl4jsb_Get_var3D_onDomain(SB_, po4_assoc_slow)
+    dsl4jsb_Get_var3D_onDomain(SB_, po4_primary)
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == 'jsm') THEN
       dsl4jsb_Get_var3D_onDomain(SB_, enzyme_frac_poly_c_mavg)
       dsl4jsb_Get_var3D_onDomain(SB_, enzyme_frac_poly_n_mavg)
@@ -2246,6 +2252,10 @@ CONTAINS
     CALL read_3D_var(input_file, microbial_cue_eff_tmic_mavg, 'sb_microbial_cue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_w)
     CALL read_3D_var(input_file, microbial_nue_eff_tmic_mavg, 'sb_microbial_nue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_w)
     CALL read_3D_var(input_file, microbial_pue_eff_tmic_mavg, 'sb_microbial_pue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_w)
+
+    CALL read_3D_var(input_file, nh4_assoc, 'sb_nh4_assoc_'//tile%name, 'soillev', nsoil_w)
+    CALL read_3D_var(input_file, po4_assoc_slow, 'sb_po4_primary_'//tile%name, 'soillev', nsoil_w)
+    CALL read_3D_var(input_file, po4_primary, 'sb_po4_assoc_slow_'//tile%name, 'soillev', nsoil_w)
 
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == 'jsm') THEN
       CALL read_3D_var(input_file, enzyme_frac_poly_c_mavg, 'sb_enzyme_frac_poly_c_mavg_'//tile%name, 'soillev', nsoil_w)
