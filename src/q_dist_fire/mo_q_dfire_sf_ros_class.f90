@@ -124,6 +124,8 @@ CONTAINS
     END IF
 
     DO inc=1, nc
+      IF (.NOT. mask(inc)) CYCLE !< skip gridcell
+
       !< ( Eq. 10 from Thonicke et al. (2010))
       ros%ros_backwards(inc) = ros%ros_forward(inc) * exp(-0.012_wp * u_f_wind(inc)) !< [m min-1]
 
