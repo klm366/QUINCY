@@ -716,9 +716,9 @@ CONTAINS
                                 lctlib_fuel_bulk_density, &
                                 lctlib_fwd_wind_factor, wind_sf, &
                                 moisture_extinction, spitfire % fdi, veg_cover_frac, &
-                                woi_ddm, & !< Mixed dead fuel (1hr litter+livegrass, 10hrs litter, 100hrs litter)
-                                woi_dd, &  !< Dead fuel (1hr litter, 10hrs litter, 100hrs litter, dry livegrass)
-                                woi_lv, &  !< Live fuel (wet livegrass, woody) 
+                                woi_ddm, & !< Mixed dead fuel (1hr litter+livegrass, 10hrs litter, 100hrs litter), used in Thonicke
+                                woi_dd, &  !< Dead fuel (1hr litter, 10hrs litter, 100hrs litter, dry livegrass), used in Oberhagemann
+                                woi_lv, &  !< Live fuel (wet livegrass, woody), used in Oberhagemann
                                 mf_dd, mf_lv, & !< Fuel moisture
                                 me_dd, me_lv, & !< Fuel moisture of extincton
                                 mask=has_fire_conditions)
