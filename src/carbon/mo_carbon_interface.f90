@@ -36,7 +36,7 @@ MODULE mo_carbon_interface
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day,                    &
                                    i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, &
                                    i_lctlib_nonsoluble, i_lctlib_humus,             &
-                                   i_WoodLitSize, i_RootDistBeta, i_FracInunMin
+                                   i_WoodLitSize, i_RootDistBeta, i_FracInunMin, permafrost_threshold
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
   dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, NLCC_, A2L_, L2A_, TOP_, CH4_, SSE_, HYDRO_
@@ -163,9 +163,9 @@ CONTAINS
     USE mo_carbon_shared,            ONLY: calc_plant_c
     USE mo_carbon_process,           ONLY: calc_soil_c
     USE mo_carbon_process_methane,   ONLY: calc_methane_soil_c
-    USE mo_carbon_process_vertical,  ONLY: calc_vertical_soil_c, depth_to_layers
+    USE mo_carbon_process_vertical,  ONLY: calc_vertical_soil_c, depth_to_layers, check_permafrost, determine_root_dist
     USE mo_jsb_time,                 ONLY: is_newday, is_newyear, timesteps_per_day, &
-                                           is_time_experiment_start
+                                           is_time_experiment_start, is_time_restart
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -175,7 +175,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     TYPE(t_jsb_grid),  POINTER   :: grid
     TYPE(t_jsb_vgrid), POINTER   :: soil_c
-    LOGICAL                      :: lstart, new_day, new_year
+    LOGICAL                      :: lstart, lresume, new_day, new_year
     LOGICAL                      :: nlcc_is_enabled    ! helper needed on DWD NEC
     INTEGER                      :: iblk, ics, ice, nc, ic, is, nsoil
     INTEGER                      :: tmp_timesteps_per_day
@@ -206,8 +206,11 @@ CONTAINS
     REAL(wp), ALLOCATABLE  :: layer_depth(:)            ! soil layer depth
     REAL(wp), ALLOCATABLE  :: layer_thick(:)            ! soil layer thickness
 
-    REAL(wp), ALLOCATABLE  :: soil_depth_thaw(:)      ! either soil or thaw depth
+    REAL(wp), ALLOCATABLE  :: soil_depth_thaw(:)        ! either soil or thaw depth
     REAL(wp), ALLOCATABLE  :: soil_depth_thaw_sl(:,:)
+    REAL(wp), ALLOCATABLE  :: thaw_depth(:)             ! maximum thaw depth / active layer depth
+    REAL(wp), ALLOCATABLE  :: thaw_depth_sl(:,:)
+!     REAL(wp), ALLOCATABLE  :: tmp_root(:)
 
     REAL(wp), DIMENSION(options%nc) :: frac_inun_loc
 
@@ -245,61 +248,61 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
 
     dsl4jsb_Real2D_onChunk ::  cflux_c_greenwood_2_litter           ! Carbon flux from the veget. to the litter pools
-                                                     ! [mol(C)/m^2(canopy) s]
-    dsl4jsb_Real2D_onChunk ::  c_green           ! C-pool for leaves, fine roots, vegetative organs and
-                                                     ! other green (living) parts of vegetation [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_reserve         ! C-pool for carbohydrate reserve (sugars, starches) that
-                                                     ! allows plants to survive bad times[mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_woods           ! C-pool for stems, thick roots and other (dead) structural
-                                                     !  material of living plants [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_crop_harvest    ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
+                                                      ! [mol(C)/m^2(canopy) s]
+    dsl4jsb_Real2D_onChunk ::  c_green                ! C-pool for leaves, fine roots, vegetative organs and
+                                                      ! other green (living) parts of vegetation [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_reserve              ! C-pool for carbohydrate reserve (sugars, starches) that
+                                                      ! allows plants to survive bad times[mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_woods                ! C-pool for stems, thick roots and other (dead) structural
+                                                      !  material of living plants [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_crop_harvest         ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
 
     !SIZE CLASS 1
-    dsl4jsb_Real2D_onChunk ::  c_acid_ag1        ! Yasso above ground litter-pool for acid soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_acid_ag1             ! Yasso above ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_water_ag1       ! Yasso above ground litter-pool for water soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_water_ag1            ! Yasso above ground litter-pool for water soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag1     ! Yasso above ground litter-pool for ethanol soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag1          ! Yasso above ground litter-pool for ethanol soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag1  ! Yasso above ground litter-pool for non-soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag1       ! Yasso above ground litter-pool for non-soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_acid_bg1        ! Yasso below ground litter-pool for acid soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_acid_bg1             ! Yasso below ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_water_bg1       ! Yasso below ground litter-pool for water soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_water_bg1            ! Yasso below ground litter-pool for water soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg1     ! Yasso below ground litter-pool for ethanol soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg1          ! Yasso below ground litter-pool for ethanol soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg1  ! Yasso below ground litter-pool for non-soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg1       ! Yasso below ground litter-pool for non-soluble litter
                                                       ! [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_humus_1         ! Yasso below ground litter-pool for slow C compartment
+    dsl4jsb_Real2D_onChunk ::  c_humus_1              ! Yasso below ground litter-pool for slow C compartment
                                                       !  [mol(C)/m^2(canopy)]
     !SIZE CLASS 2
-    dsl4jsb_Real2D_onChunk ::  c_acid_ag2        ! Yasso above ground litter-pool for acid soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_acid_ag2             ! Yasso above ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_water_ag2       ! Yasso above ground litter-pool for water soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_water_ag2            ! Yasso above ground litter-pool for water soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag2     ! Yasso above ground litter-pool for ethanol soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag2          ! Yasso above ground litter-pool for ethanol soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag2  ! Yasso above ground litter-pool for non-soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag2       ! Yasso above ground litter-pool for non-soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_acid_bg2        ! Yasso below ground litter-pool for acid soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_acid_bg2             ! Yasso below ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_water_bg2       ! Yasso below ground litter-pool for water soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_water_bg2            ! Yasso below ground litter-pool for water soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg2     ! Yasso below ground litter-pool for ethanol soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg2          ! Yasso below ground litter-pool for ethanol soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2  ! Yasso below ground litter-pool for non-soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2       ! Yasso below ground litter-pool for non-soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_humus_2         ! Yasso below ground litter-pool for slow C compartment
+    dsl4jsb_Real2D_onChunk ::  c_humus_2              ! Yasso below ground litter-pool for slow C compartment
                                                       !  [mol(C)/m^2(canopy)]
 
-    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum  ! Annual sum of humus decomposed in YASSO (leaf)
+    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum   ! Annual sum of humus decomposed in YASSO (leaf)
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum  ! Annual sum of humus decomposed in YASSO (wood)
+    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum   ! Annual sum of humus decomposed in YASSO (wood)
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum    ! Annual sum of cflux into humus in YASSO (leaf)
+    dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum     ! Annual sum of cflux into humus in YASSO (leaf)
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum    ! Annual sum of cflux into humus in YASSO (wood)
+    dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum     ! Annual sum of cflux into humus in YASSO (wood)
                                                       !  [mol(C)/m^2(canopy)]
 
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
@@ -390,17 +393,22 @@ CONTAINS
     !
     dsl4jsb_Real3D_onChunk :: soil_respiration_oxic_sl
     dsl4jsb_Real3D_onChunk :: soil_respiration_anox_sl
+    !
+    dsl4jsb_Real2D_onChunk :: YASSO_debug
+    dsl4jsb_Real3D_onChunk :: YASSO_debug_sl
+    dsl4jsb_Real3D_onChunk :: root_dist_sl
+    dsl4jsb_Real3D_onChunk :: max_layer_sl
 
     ! climatic soil conditions
     dsl4jsb_Real3D_onChunk :: t_soil_sl
+    dsl4jsb_Real3D_onChunk :: t_max_soil_year
+    dsl4jsb_Real3D_onChunk :: permafrost_layer
     dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl
 
     ! active layer thickness, soil depth
     dsl4jsb_Real2D_onChunk :: max_thaw_prev_year      ! previous year active layer thickness
     dsl4jsb_Real2D_onChunk :: soil_depth              ! soil depth
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-!     dsl4jsb_Real2D_onChunk :: soil_depth_thaw
-!     dsl4jsb_Real3D_onChunk :: soil_depth_thaw_sl
 
     dsl4jsb_Real2D_onChunk :: thaw_cycle_prev
 
@@ -423,8 +431,6 @@ CONTAINS
     dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-!     WRITE(message_text,*) 'Time: ', dtime
-!     CALL message(TRIM(routine), message_text)
 
     model => Get_model(tile%owner_model_id)
     grid  => Get_grid(model%grid_id)
@@ -456,6 +462,9 @@ CONTAINS
 
       ALLOCATE(soil_depth_thaw(nc))
       ALLOCATE(soil_depth_thaw_sl(nc,nsoil))
+      ALLOCATE(thaw_depth(nc))
+      ALLOCATE(thaw_depth_sl(nc,nsoil))
+!       ALLOCATE(tmp_root(nsoil))
     END IF
 
 
@@ -501,6 +510,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2)        ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout
+    !
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YASSO_debug)          ! inout
     !
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_1_sum) ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_2_sum) ! inout
@@ -563,10 +574,16 @@ CONTAINS
       !
       dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)                ! in
       dsl4jsb_Get_var2D_onChunk(NLCC_,    max_thaw_prev_year)       ! in
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  t_max_soil_year)          ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  permafrost_layer)         ! inout
 
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_rel_sl)          ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   soil_depth)               ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)            ! in
+
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  root_dist_sl)             ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  max_layer_sl)             ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  YASSO_debug_sl)           ! inout
     END IF
 
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
@@ -604,6 +621,7 @@ CONTAINS
 
     ! dynveg a.k.a. vegetation_lcc
     lstart   = is_time_experiment_start(options%current_datetime)
+    lresume  = is_time_restart(options%current_datetime)
     new_day  = is_newday(options%current_datetime, dtime)
     new_year = is_newyear(options%current_datetime, dtime)
 
@@ -612,9 +630,6 @@ CONTAINS
     N_pseudo_temp   = 1._wp - F_pseudo_temp
     F_pseudo_precip = EXP(-dtime / (15._wp * 86400._wp))
     N_pseudo_precip = 1._wp - F_pseudo_precip
-
-!     WRITE(message_text,*) 'F, N pseudo_temp: ', F_pseudo_temp, N_pseudo_temp
-!     CALL message(TRIM(routine), message_text)
 
     ! ---------------------------
     ! Go
@@ -685,22 +700,33 @@ CONTAINS
       pseudo_temp(ic)   = t_air(ic)             * N_pseudo_temp    +  F_pseudo_temp   * pseudo_temp(ic)
       pseudo_precip(ic) = (rain(ic) + snow(ic)) * N_pseudo_precip  +  F_pseudo_precip * pseudo_precip(ic)
 
-!       WRITE(message_text,*) 'pseudo_temp (ic): ', pseudo_temp(ic), ic
-!       CALL message(TRIM(routine), message_text)
-
-
       IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
         pseudo_t_soil_sl(ic,:)       = t_soil_sl(ic,:)         * N_pseudo_temp    +  F_pseudo_temp   * pseudo_t_soil_sl(ic,:)
         pseudo_wtr_soil_rel_sl(ic,:) = wtr_soil_rel_sl(ic,:)   * N_pseudo_temp    +  F_pseudo_precip * pseudo_wtr_soil_rel_sl(ic,:)
       END IF
     END DO
-!     WRITE(message_text,*) 'pseudo_temp: ', pseudo_temp
-!     CALL message(TRIM(routine), message_text)
     !$ACC END LOOP
     !$ACC END PARALLEL
+
     IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
       soil_depth_thaw = MIN(soil_depth, max_thaw_prev_year)
-      soil_depth_thaw_sl = depth_to_layers(soil_depth_thaw, layer_thick)
+      max_layer_sl = depth_to_layers(soil_depth_thaw, layer_thick)
+      thaw_depth = max_thaw_prev_year;
+      thaw_depth_sl = depth_to_layers(thaw_depth, layer_thick);
+    END IF
+
+    ! Check if permafrost
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      DO ic = 1, nc
+        DO is = 1, nsoil
+          CALL check_permafrost((new_year .OR. lstart .OR. lresume), t_soil_sl(ic,is), t_max_soil_year(ic,is), permafrost_layer(ic,is))
+        END DO
+!         IF (new_year .OR. lstart .OR. lresume) THEN
+!           tmp_root(:) = determine_root_dist(max_layer_sl(ic,:), layer_depth, &
+!                                           dsl4jsb_Lctlib_param(root_dist_beta), permafrost_layer(ic,:))
+!           root_dist_sl(ic,:) = (0.9_wp * root_dist_sl(ic,:)) + (0.1_wp * tmp_root(:))
+!         END IF
+      END DO
     END IF
 
     ! All per tile variables need to be re-calculated in case they are written to output
@@ -921,6 +947,28 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
+      ! clear C from frozen pools
+      IF ((dsl4jsb_Config(CARBON_)%on_soillev) .AND. (dsl4jsb_Config(CARBON_)%clear_frozen) .AND. (lresume .OR. lstart)) THEN
+        CALL message(TRIM(routine), 'update_C_NPP_pot_allocation: Clearing frozen C')
+        DO ic = 1, nc
+          DO is = 1, nsoil
+!             IF (thaw_depth_sl(ic,is) .LT. 0.005_wp) THEN
+            IF (permafrost_layer(ic,is) > permafrost_threshold) THEN
+              c_acid_bg1_sl(ic,is)       = 0._wp
+              c_water_bg1_sl(ic,is)      = 0._wp
+              c_ethanol_bg1_sl(ic,is)    = 0._wp
+              c_nonsoluble_bg1_sl(ic,is) = 0._wp
+              c_acid_bg2_sl(ic,is)       = 0._wp
+              c_water_bg2_sl(ic,is)      = 0._wp
+              c_ethanol_bg2_sl(ic,is)    = 0._wp
+              c_nonsoluble_bg2_sl(ic,is) = 0._wp
+              c_humus_1_sl(ic,is)        = 0._wp
+              c_humus_2_sl(ic,is)        = 0._wp
+            END IF
+          END DO    ! is
+        END DO    ! ic
+      END IF
+
       IF (.NOT. dsl4jsb_Config(CARBON_)%on_soillev) THEN
         IF (dsl4jsb_Config(CH4_)%active) THEN
           ! For now, peatlands are not included - therefore always .FALSE.
@@ -1040,10 +1088,10 @@ CONTAINS
           CALL calc_vertical_soil_c(sec_per_day,                              &
                nsoil, layer_depth, layer_thick,                               & ! in
                LeafLit_coefV, WoodLit_coefV, MiscPar,                         & ! in
-               dsl4jsb_Config(CARBON_)%mix_ag_2_bg,                           & ! in
-               dsl4jsb_Config(CARBON_)%do_diffusion,                          & ! in
-               dsl4jsb_Config(CARBON_)%mix_rate_modifier,                     & ! in
-               dsl4jsb_Config(CARBON_)%diff_coeff_modifier,                   & ! in
+!                dsl4jsb_Config(CARBON_)%mix_ag_2_bg,                           & ! in
+!                dsl4jsb_Config(CARBON_)%do_diffusion,                          & ! in
+               dsl4jsb_Config(CARBON_)%resp_rate_modifier,                    & ! in
+!                dsl4jsb_Config(CARBON_)%diff_coeff_modifier,                   & ! in
                !
                temp                         = pseudo_temp_yDay(ic),           & ! in
                precip                       = pseudo_precip_yDay(ic),         & ! in
@@ -1055,8 +1103,13 @@ CONTAINS
 !                wt_peat                      = peat_water_table(ic),           & ! in
                !
                soil_depth                   = soil_depth(ic),                 & ! in
+               soil_depth_sl                = soil_depth_sl(ic,:),            & ! in
                max_depth                    = soil_depth_thaw(ic),            & ! in
-               max_depth_sl                 = soil_depth_thaw_sl(ic,:),       & ! in
+               max_depth_sl                 = max_layer_sl(ic,:),             & ! in
+               thaw_depth                   = thaw_depth(ic),                 & ! in
+               thaw_depth_sl                = thaw_depth_sl(ic,:),            & ! in
+               root_dist_sl                 = root_dist_sl(ic,:),             & ! inout
+               permafrost_layer             = permafrost_layer(ic,:),         & ! in
                !
                woodLitter                   = cflux_c_wood_2_litter(ic),      & ! in
                leafLitter                   = cflux_c_green_2_litter(ic),     & ! in
@@ -1080,6 +1133,9 @@ CONTAINS
                c_ethanol_bg2_sl             = c_ethanol_bg2_sl(ic,:),         & ! inout
                c_nonsoluble_bg2_sl          = c_nonsoluble_bg2_sl(ic,:),      & ! inout
                c_humus_2_sl                 = c_humus_2_sl(ic,:),             & ! inout
+               !
+               Y_debug                      = YASSO_debug(ic),                & ! inout
+               Y_debug_sl                   = YASSO_debug_sl(ic,:),           & ! inout
                !
                c_decomp_humus_1_sum         = c_decomp_humus_1_sum(ic),       & ! out
                c_decomp_humus_2_sum         = c_decomp_humus_2_sum(ic),       & ! out
@@ -1244,6 +1300,7 @@ CONTAINS
       DEALLOCATE(layer_thick)
       DEALLOCATE(soil_depth_thaw)
       DEALLOCATE(soil_depth_thaw_sl)
+!       DEALLOCATE(tmp_root)
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1351,10 +1408,14 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_soilresp_2_atm_ta, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_herb_2_atm_ta,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_npp_2_atm_yday_ta, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_temp,               weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_precip,             weighted_by_fract)
 
     ! variables for NLCC process
     dsl4jsb_Aggregate_onChunk(CARBON_, max_green_bio,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, sla,                      weighted_by_fract)
+
+    dsl4jsb_Aggregate_onChunk(CARBON_, YASSO_debug,      weighted_by_fract)
 
     IF (dsl4jsb_Config(CH4_)%active) THEN
       dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_oxic_ta,      weighted_by_fract)
@@ -1378,6 +1439,16 @@ CONTAINS
 
       dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_oxic_sl_ta,      weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_anox_sl_ta,      weighted_by_fract)
+
+      dsl4jsb_Aggregate_onChunk(CARBON_, root_dist_sl,             weighted_by_fract)             ! inout
+      dsl4jsb_Aggregate_onChunk(CARBON_, max_layer_sl,             weighted_by_fract)             ! inout
+
+      dsl4jsb_Aggregate_onChunk(CARBON_, permafrost_layer,         weighted_by_fract)             ! inout
+      dsl4jsb_Aggregate_onChunk(CARBON_, YASSO_debug_sl,           weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_t_soil_sl_yDay,    weighted_by_fract)             ! inout
+      dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_wtr_soil_rel_sl_yDay, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_t_soil_sl,         weighted_by_fract)             ! inout
+      dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_wtr_soil_rel_sl,   weighted_by_fract)
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

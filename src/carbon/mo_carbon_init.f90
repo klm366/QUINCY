@@ -167,6 +167,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':carbon_read_cpools'
 
+    LOGICAL, PARAMETER :: log_this = .FALSE.
+
     model => get_model(tile%owner_model_id)
 
     ! Get carbon memory and config  of the tile
@@ -189,8 +191,14 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(CARBON_)%ic_filename), model%grid_id)
 
     IF (.NOT. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      IF (log_this) THEN
+        CALL message(TRIM(routine), 'Reading carbon pools 1D soil.')
+      END IF
       DO i=1,npools
         invar_name = 'carbon_'//TRIM(Cpool_name_flat(i))//'_'//TRIM(tile%name)
+        IF (log_this) THEN
+          CALL message(TRIM(routine), '  Reading : '//invar_name)
+        END IF
 
         SELECT CASE(Cpool_name_flat(i))
         CASE ("c_green")
@@ -246,9 +254,15 @@ CONTAINS
 
       END DO
     ELSE
+      IF (log_this) THEN
+        CALL message(TRIM(routine), 'Reading carbon pools depth-resolved soil.')
+      END IF
       DO i=1,npools
         invar_name = 'carbon_'//TRIM(Cpool_name_deep(i))//'_'//TRIM(tile%name)
         invar_3D = .false.
+        IF (log_this) THEN
+          CALL message(TRIM(routine), '  Reading : '//invar_name)
+        END IF
 
         SELECT CASE(Cpool_name_deep(i))
         CASE ("c_green")
@@ -306,6 +320,9 @@ CONTAINS
         END SELECT
 
         IF (invar_3D == .false.) THEN
+          IF (log_this) THEN
+            CALL message(TRIM(routine), 'Reading 2d: '//invar_name)
+          END IF
           return_pointer => input_file%Read_2d(        &
             & variable_name = invar_name,              &
             & fill_array = memory_pointer )
@@ -313,6 +330,9 @@ CONTAINS
           memory_pointer(:,:) = &
             & MERGE( memory_pointer(:,:), 0._wp,  memory_pointer(:,:) >= 0._wp)
         ELSE
+          IF (log_this) THEN
+            CALL message(TRIM(routine), 'Reading 3d: '//invar_name)
+          END IF
           DO is=1,nsoil
             return_pointer3d => input_file%Read_2d_extdim( &
               & variable_name = invar_name,     &

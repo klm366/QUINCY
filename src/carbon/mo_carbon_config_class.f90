@@ -19,6 +19,7 @@ MODULE mo_carbon_config_class
   USE mo_exception,         ONLY: message, message_text
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
+  USE mo_util,              ONLY: real2string, int2string, logical2string
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
@@ -39,10 +40,8 @@ MODULE mo_carbon_config_class
     REAL(wp) :: fire_fract_wood_2_atmos
     LOGICAL  :: on_soillev          ! Carbon determind on vertical grid: soil layers
     LOGICAL  :: consider_anaerobic  ! Consider anaerobic conditions
-    LOGICAL  :: mix_ag_2_bg         ! mix ag litter into bg litter
-    LOGICAL  :: do_diffusion        ! diffusion switch
-    REAL(wp) :: mix_rate_modifier
-    REAL(wp) :: diff_coeff_modifier
+    LOGICAL  :: clear_frozen
+    REAL(wp) :: resp_rate_modifier
 
    CONTAINS
      PROCEDURE :: Init => Init_carbon_config
@@ -73,10 +72,8 @@ CONTAINS
     LOGICAL                     :: read_cpools, diag_humus_fluxes
     LOGICAL                     :: on_soillev
     LOGICAL                     :: consider_anaerobic
-    LOGICAL                     :: mix_ag_2_bg
-    LOGICAL                     :: do_diffusion
-    REAL(wp)                    :: mix_rate_modifier
-    REAL(wp)                    :: diff_coeff_modifier
+    LOGICAL                     :: clear_frozen
+    REAL(wp)                    :: resp_rate_modifier
 
     REAL(wp)                    :: fire_fract_wood_2_atmos
     ! LOGICAL           :: lemissions
@@ -92,22 +89,23 @@ CONTAINS
          fire_fract_wood_2_atmos,  &
          on_soillev,               &
          consider_anaerobic,       &
-         mix_ag_2_bg,              &
-         do_diffusion,             &
-         mix_rate_modifier,        &
-         diff_coeff_modifier
+         clear_frozen,             &
+         resp_rate_modifier  
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
     REAL(wp), POINTER :: ptr_1D(:)
     REAL(wp), ALLOCATABLE :: depths(:), mids(:)
     INTEGER :: nsoil
+    LOGICAL :: log_this
 
     TYPE(t_jsb_vgrid), POINTER :: soil_c
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_carbon_config'
 
     CALL message(TRIM(routine), 'Starting carbon configuration')
+
+    log_this = .TRUE.
 
     ! Set defaults
     active                 = .FALSE.
@@ -120,10 +118,8 @@ CONTAINS
     fire_fract_wood_2_atmos = FireFracWood2Atmos
     on_soillev             = .FALSE.
     consider_anaerobic     = .FALSE.
-    mix_ag_2_bg            = .FALSE.
-    do_diffusion           = .FALSE.
-    mix_rate_modifier      = 1._wp
-    diff_coeff_modifier    = 1._wp
+    clear_frozen           = .FALSE.
+    resp_rate_modifier      = 1._wp
 
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -132,6 +128,23 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, jsb_carbon_nml)
 
     CALL close_nml(nml_handler)
+
+    IF (log_this) THEN
+      IF (active) THEN
+        CALL message(TRIM(routine),'Carbon cycle is active.')
+        CALL message(TRIM(routine),'  lrestart_cont      : '//logical2string(lrestart_cont))
+        CALL message(TRIM(routine),'  read_cpools        : '//logical2string(read_cpools))
+        CALL message(TRIM(routine),'  on_soillev         : '//logical2string(on_soillev))
+        CALL message(TRIM(routine),'  diag_humus_fluxes  : '//logical2string(diag_humus_fluxes))
+        CALL message(TRIM(routine),'  consider_anaerobic : '//logical2string(consider_anaerobic))
+        CALL message(TRIM(routine),'  clear_frozen       : '//logical2string(clear_frozen))
+        CALL message(TRIM(routine),'  resp_rate_modifier : '//real2string(resp_rate_modifier))
+        CALL message(TRIM(routine),'  ic from            : '//ic_filename)
+        CALL message(TRIM(routine),'  bc from            : '//bc_filename)
+      ELSE
+        CALL message(TRIM(routine),'Carbon cycle is not active.')
+      END IF
+    END IF
 
     ! Write resulting values in config memory
     config%active                 = active
@@ -144,10 +157,8 @@ CONTAINS
     config%fire_fract_wood_2_atmos = fire_fract_wood_2_atmos
     config%on_soillev             = on_soillev
     config%consider_anaerobic     = consider_anaerobic
-    config%mix_ag_2_bg            = mix_ag_2_bg
-    config%do_diffusion           = do_diffusion
-    config%mix_rate_modifier      = mix_rate_modifier
-    config%diff_coeff_modifier    = diff_coeff_modifier
+    config%clear_frozen           = clear_frozen
+    config%resp_rate_modifier     = resp_rate_modifier
 
 
     IF (on_soillev) THEN

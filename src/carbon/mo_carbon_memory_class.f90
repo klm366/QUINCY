@@ -99,7 +99,7 @@ MODULE mo_carbon_memory_class
 
       !
       LAI_sum,                    & ! used to accumulate LAI over a day
-      NPP_pot_sum,                    & ! used to accumulated NPP-Rate over a day
+      NPP_pot_sum,                & ! used to accumulated NPP-Rate over a day
       GPP_sum,                    & ! used to accumulated GPP-Rate over a day
       GPP_ann_sum,                & ! used to accumulated GPP-Rate over a year
       !runoff_sum,                 & ! used to accumulate runoff over a day.  R: Nicht notwendig in JS4.
@@ -260,8 +260,13 @@ MODULE mo_carbon_memory_class
       c_humus_2_sl,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(canopy)]
       soil_respiration_oxic_sl, & ! mean daily rate of heterotrophic (oxid soils) respiration [mol m-2(canopy)].
                                   ! Without N limitation! Only with methane processes active
-      soil_respiration_anox_sl    ! mean daily rate of heterotrophic (anoxid soils) respiration [mol m-2(canopy)].
+      soil_respiration_anox_sl, & ! mean daily rate of heterotrophic (anoxid soils) respiration [mol m-2(canopy)].
                                   ! Without N limitation! Only with methane processes active
+      root_dist_sl,             & ! root distribution on soil layers
+      max_layer_sl,             & ! max layer thickness (soil / thaw depth dependent)
+      t_max_soil_year,          & ! maximum soi ltamperature in year
+      permafrost_layer            ! permafrost status layer
+
 
     ! YASSO on soil layers, as tile average
     TYPE(t_jsb_var_real3d) ::        &
@@ -282,6 +287,11 @@ MODULE mo_carbon_memory_class
       soil_respiration_anox_sl_ta    ! mean daily rate of heterotrophic (anoxid soils) respiration [mol m-2(tile)].
                                      ! Without N limitation! Only with methane processes active
 
+    ! YASSO debugging output
+    TYPE(t_jsb_var_real2d) ::        &
+      YASSO_debug
+    TYPE(t_jsb_var_real3d) ::        &
+      YASSO_debug_sl
 
   CONTAINS
     PROCEDURE :: Init => Init_carbon_memory
@@ -1182,6 +1192,14 @@ CONTAINS
       & output_level=BASIC,                                                       &
       & loutput=.TRUE.,lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    CALL mem%Add_var('YASSO_debug', mem%YASSO_debug,                              &
+      & hgrid, surface,                                                           &
+      & t_cf('YASSO_debug', '', 'Debug output on surface'),                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+      & prefix, suffix,                                                           &
+      & output_level=FULL,                                                        &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
     IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
       ! Soil level pools for vertical C separation
       ! Yasso 1: Green carbon pools
@@ -1380,6 +1398,49 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+
+      CALL mem%Add_var('root_dist_sl', mem%root_dist_sl,  &
+        & hgrid, soil_c,                                                          &
+        & t_cf('root_dist_sl', '', 'Root distribution on soil layers'),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL,                                                      &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+      CALL mem%Add_var('max_layer_sl', mem%max_layer_sl,  &
+        & hgrid, soil_c,                                                          &
+        & t_cf('max_layer_sl', '', 'Maximum soil layer thickness'),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL,                                                      &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+      CALL mem%Add_var('t_max_soil_year', mem%t_max_soil_year,  &
+        & hgrid, soil_c,                                                          &
+        & t_cf('t_max_soil_year', '', 'Maximum soil temperature in year'),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=NONE,                                                      &
+        & lrestart_cont = .TRUE.,                                                 &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+        CALL mem%Add_var('permafrost_layer', mem%permafrost_layer,  &
+        & hgrid, soil_c,                                                          &
+        & t_cf('permafrost_layer', '', 'Layer permafrost status'),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL,                                                      &
+        & lrestart_cont = .TRUE.,                                                 &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+    CALL mem%Add_var('YASSO_debug_sl', mem%YASSO_debug_sl,  &
+        & hgrid, soil_c,                                                          &
+        & t_cf('YASSO_debug_sl', '', 'Debug output on soil layers'),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL,                                                      &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     END IF

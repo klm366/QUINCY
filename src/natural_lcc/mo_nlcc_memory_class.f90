@@ -63,6 +63,7 @@ MODULE mo_nlcc_memory_class
       & pot_fpc, &
       & cover_fract_pot, &
       & cover_fract, &
+      & npp_pft, &
       & bio_exist
     ! Additional variables for LAND lct_type
 !!$  TR  TYPE(t_jsb_var_real2d) :: &
@@ -275,6 +276,15 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var('npp_pft', mem%npp_pft,                                  &
+      & hgrid, pft_vgrid,                                                     &
+      & t_cf('npp_pft', 'mol/m2/s', 'NPP per PFT'),                           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & output_level=FULL,                                                    &
+      & lrestart_cont = .TRUE.,                                               &
       & initval_r=0.0_wp )
 
   END SUBROUTINE Init_nlcc_memory

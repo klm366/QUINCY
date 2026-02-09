@@ -79,6 +79,7 @@ CONTAINS
 !   local variables
     REAL(wp) :: prev_day_mean_temp                ! air temperature of previous day [K]
     REAL(wp) :: prev_month_mean_temp              ! air temperature of previous month [K]
+    REAL(wp), PARAMETER :: averaging_time = 10.0_wp   ! [yrs] averaging time for thaw depth calculation
 
 
     ! GDD
@@ -108,7 +109,8 @@ CONTAINS
     IF (.NOT. new_year .OR. lstart) THEN
        max_thaw_year = MAX(max_thaw_year, thaw_depth)
     ELSE
-       max_thaw_prev_year = max_thaw_year
+!        max_thaw_prev_year = max_thaw_year
+       max_thaw_prev_year = (((averaging_time-1.0_wp)/averaging_time)*max_thaw_prev_year) + ((1.0_wp/averaging_time)*max_thaw_year)
        max_thaw_year = 0._wp
        max_thaw_year = MAX(max_thaw_year, thaw_depth)
     ENDIF

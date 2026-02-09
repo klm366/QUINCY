@@ -125,7 +125,8 @@ MODULE mo_carbon_constants
   ! decomposition modifier parameters for temperature and depth modifier
   REAL(wp), PARAMETER :: Q10     = 1.5_wp         ! Q10 for deep soil C decomposition, based on CLM
 !   REAL(wp), PARAMETER :: ref_dep = 0.5_wp         ! reference depth for depth dependence of decomposition, based on CLM 4.5
-  REAL(wp), PARAMETER :: ref_dep = 10._wp         ! reference depth for depth dependence of decomposition, based on CLM 5.0
+!   REAL(wp), PARAMETER :: ref_dep = 10._wp         ! reference depth for depth dependence of decomposition, based on CLM 5.0
+  REAL(wp), PARAMETER :: ref_dep = 1000._wp       ! reference depth to remove depth dependence of decomposition
 
   ! decomposition modifiers for oxic / anoxic soils
   REAL(wp), PARAMETER :: d_anox = 0.35_wp         ! decomposition modifier for anaerobic decomposition
@@ -147,6 +148,10 @@ MODULE mo_carbon_constants
   REAL(wp), PARAMETER   :: moist_p_a                 = 0.575_wp
   REAL(wp), PARAMETER   :: moist_p_b                 = 1.5_wp
   REAL(wp), PARAMETER   :: moist_p_d                 = 3.0_wp
+
+!   REAL(wp), PARAMETER   :: minimum_layer_thickness   = 0.00005_wp     ! [m] ignore layers thinner than this threshold
+  REAL(wp), PARAMETER   :: minimum_layer_thickness   = 0.05_wp     ! [m] ignore layers thinner than this threshold
+  REAL(wp), PARAMETER   :: permafrost_threshold      = 0.1_wp      ! threshold in the permafrost_layer variable to consider a layer permafrost
 
   ! ------------------------------------------------------------------------------------------
   ! Ratio of C mass to biomass (Spitfire and emission of chemical species by fire)

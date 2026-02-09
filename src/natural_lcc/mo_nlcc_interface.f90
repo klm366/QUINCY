@@ -139,27 +139,27 @@ CONTAINS
     REAL(wp) :: accelerate_nlcc
     REAL(wp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_nlcc'
-    REAL(wp), POINTER  ::  var_collect(:,:)
+    REAL(wp), POINTER     ::  var_collect(:,:)
     LOGICAL, ALLOCATABLE  :: is_woody(:,:)
     LOGICAL, ALLOCATABLE  :: is_grass(:,:)
     LOGICAL, ALLOCATABLE  :: is_pasture(:,:)
     LOGICAL, ALLOCATABLE  :: is_crop(:,:)
     LOGICAL, ALLOCATABLE  :: is_dynamic(:,:)
-    REAL(wp), POINTER  ::  bclimit_min_cold_mmtemp(:,:)
-    REAL(wp), POINTER  ::  bclimit_max_cold_mmtemp(:,:)
-    REAL(wp), POINTER  ::  bclimit_max_warm_mmtemp(:,:)
-    REAL(wp), POINTER  ::  bclimit_min_temprange(:,:)
-    REAL(wp), POINTER  ::  bclimit_min_gdd(:,:)
-    REAL(wp), POINTER  ::  bclimit_min_snow(:,:)
-    REAL(wp), POINTER  ::  tau_c_woods(:,:)
-    REAL(wp), POINTER  ::  NPP_mean_5year(:,:)
-    REAL(wp), POINTER  ::  burned_fract(:,:)
-    REAL(wp), POINTER  ::  damaged_fract(:,:)
-    REAL(wp), POINTER  ::  max_green_bio(:,:)
-    REAL(wp), POINTER  ::  sla(:,:)
-    REAL(wp), ALLOCATABLE  ::  cover_fract_pot_previous_year(:,:)
-    REAL(wp), ALLOCATABLE  ::  cover_fract_sum(:)
-    REAL(wp), ALLOCATABLE  :: fract_fpc_max(:,:)
+    REAL(wp), POINTER     :: bclimit_min_cold_mmtemp(:,:)
+    REAL(wp), POINTER     :: bclimit_max_cold_mmtemp(:,:)
+    REAL(wp), POINTER     :: bclimit_max_warm_mmtemp(:,:)
+    REAL(wp), POINTER     :: bclimit_min_temprange(:,:)
+    REAL(wp), POINTER     :: bclimit_min_gdd(:,:)
+    REAL(wp), POINTER     :: bclimit_min_snow(:,:)
+    REAL(wp), POINTER     :: tau_c_woods(:,:)
+    REAL(wp), POINTER     :: NPP_mean_5year(:,:)
+    REAL(wp), POINTER     :: burned_fract(:,:)
+    REAL(wp), POINTER     :: damaged_fract(:,:)
+    REAL(wp), POINTER     :: max_green_bio(:,:)
+    REAL(wp), POINTER     :: sla(:,:)
+    REAL(wp), ALLOCATABLE :: cover_fract_pot_previous_year(:,:)
+    REAL(wp), ALLOCATABLE :: cover_fract_sum(:)
+    REAL(wp), ALLOCATABLE :: fract_fpc_max(:,:)
 
     ! Declare process memories
     dsl4jsb_Def_config(NLCC_)
@@ -185,6 +185,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: cover_fract_pot
     dsl4jsb_Real3D_onChunk :: cover_fract
     dsl4jsb_Real3D_onChunk :: bio_exist
+    dsl4jsb_Real3D_onChunk :: npp_pft
     dsl4jsb_Real2D_onChunk :: gdd_sum_year
     dsl4jsb_Real2D_onChunk :: gdd_prev_year
     dsl4jsb_Real2D_onChunk :: max_snow_year
@@ -249,6 +250,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract_pot)  ! inout
     dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract)      ! inout
     dsl4jsb_Get_var3D_onChunk(NLCC_,bio_exist)        ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,npp_pft)          ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)       ! inout
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
@@ -373,6 +375,8 @@ CONTAINS
        pot_fpc(:,:) = act_fpc(:,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
     ENDIF
 
+    npp_pft(:,:) = NPP_mean_5year(:,:)
+
     ! annual calculations
     IF (new_year) THEN
        DO itile = 1,no_children
@@ -388,7 +392,7 @@ CONTAINS
        cover_fract_pot_previous_year(:,:) = cover_fract_pot(:,:)
        CALL fpc_to_cover_fract_pot(nc, no_children, is_dynamic(:,:), is_woody(:,:), &
                                    act_fpc(:,:), bare_fpc(:), cover_fract_pot(:,:))
-       IF (.NOT. lstart) THEN
+       IF ((.NOT. lstart) .AND. dsl4jsb_Config(NLCC_)%update_cover_fract) THEN
           ! new cover fractions
           CALL cover_fract_pot_to_cover_fract(nc, no_children, is_dynamic(:,:), is_woody(:,:), is_pasture(:,:), is_crop(:,:), &
                                               cover_fract_pot(:,:), cover_fract_pot_previous_year(:,:), cover_fract(:,:))
@@ -426,7 +430,7 @@ CONTAINS
     DEALLOCATE(is_woody, is_grass, is_pasture, is_crop, is_dynamic)
     DEALLOCATE(bclimit_min_cold_mmtemp, bclimit_max_cold_mmtemp, &
                bclimit_max_warm_mmtemp, bclimit_min_temprange, bclimit_min_gdd, bclimit_min_snow, tau_c_woods)
-    IF (new_year .AND. .NOT. lstart) DEALLOCATE(fract_fpc_max)
+    IF (new_year .AND. .NOT. lstart .AND. dsl4jsb_Config(NLCC_)%update_cover_fract) DEALLOCATE(fract_fpc_max)
     DEALLOCATE(NPP_mean_5year)
     DEALLOCATE(burned_fract, damaged_fract)
     DEALLOCATE(max_green_bio, sla)
@@ -476,6 +480,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(NLCC_, max_mmtemp20,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(NLCC_, gdd_prev_year,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(NLCC_, max_snow_prev_year,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(NLCC_, max_thaw_prev_year,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(NLCC_, bare_fpc,              weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(NLCC_, desert_fpc,            weighted_by_fract)
 
@@ -484,6 +489,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(NLCC_, cover_fract_pot,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(NLCC_, cover_fract,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(NLCC_, bio_exist,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(NLCC_, npp_pft,               weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
