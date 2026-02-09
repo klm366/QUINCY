@@ -403,5 +403,68 @@ CONTAINS
     end do
   END FUNCTION calc_g_weighting_factors
 
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate live fuel moisture of extinction
+  !> USDA Forest Service RMRS-GTR-371. 2018 Table 6a
+  !>
+  FUNCTION calc_live_me(nc, ndd, nlv, mf_dd, me_dd, woi_dd, woi_lv, sigmas_dd, sigmas_lv) RESULT (me)
+    INTEGER, INTENT(in) :: nc, ndd, nlv
+    REAL(wp), INTENT(in) :: mf_dd(nc,ndd) !< Dead fuel moisture [-]
+    REAL(wp), INTENT(in) :: me_dd(nc) !< Dead fuel moisture of extinction [-]
+    REAL(wp), INTENT(in) :: woi_dd(nc,ndd), woi_lv(nc,nlv) !< dead/live fuel load [kg DM m-2]
+    REAL(wp), INTENT(in) :: sigmas_dd(ndd), sigmas_lv(nlv) !< Surface area to volume ratio [-]
+    REAL(wp) :: me(nc)
+
+    INTEGER :: is
+    REAL(wp) :: w(nc) !< dead-to-live load ratio [-]
+    REAL(wp) :: wdead(nc,ndd), wlive(nc,nlv) !< dead/live fuel load [kg DM m-2]
+    REAL(wp) :: mfdead(nc) !< fine dead fuel moisture [-]
+    INTEGER, PARAMETER :: ndd_ff = 2 !< number of fine dead fuel moisture (1hr, livegrass)
+    INTEGER, PARAMETER :: ix_ff(ndd_ff) = [1,4] !< 1=1hr, 4=live grass
+
+    w = 0._wp
+    mfdead = 0._wp
+
+    ! calc dead-to-live load ratio
+    DO is=1, ndd
+      wdead(:,is) = woi_dd(:,is) * exp((-138._wp/df_sf_units_ft_to_cm)/sigmas_dd(is))
+    END DO
+    DO is=1, nlv
+      wlive(:,is) = woi_lv(:,is) * exp((-500._wp/df_sf_units_ft_to_cm)/sigmas_lv(is))
+    END DO
+    WHERE (SUM(wlive, DIM=2) > 0._wp) w = SUM(wdead, DIM=2) / SUM(wlive, DIM=2)
+
+    !< Note: only account for 1hr and dry livegrass
+    mfdead = calc_fine_dead_fuel_moisture(nc, ndd_ff, mf_dd(:,ix_ff), woi_dd(:,ix_ff), sigmas_dd(ix_ff))
+
+    me = 2.9_wp * w * (1._wp - mfdead / me_dd) - 0.226_wp
+    me = MAX(me, me_dd)
+  END FUNCTION calc_live_me
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate fine dead fuel moisture
+  !> USDA Forest Service RMRS-GTR-371. 2018 Table 6a
+  !>
+  FUNCTION calc_fine_dead_fuel_moisture(nc, ndd, mf_dd, woi_dd, sigmas_dd) RESULT (mfdead)
+    INTEGER, INTENT(in) :: nc, ndd
+    REAL(wp), INTENT(in) :: mf_dd(nc,ndd) !< Dead fuel moisture [-]
+    REAL(wp), INTENT(in) :: woi_dd(nc,ndd) !< Dead fuel load [kg DM m-2]
+    REAL(wp), INTENT(in) :: sigmas_dd(ndd) !< Surface area to volume ratio [-]
+    REAL(wp) :: mfdead(nc) !< fine dead fuel moisture [-]
+
+    REAL(wp) :: mffm_dd(nc,ndd)
+    REAL(wp) :: woi_sum(nc,ndd)
+    INTEGER :: is
+
+    DO is=1, ndd
+      mffm_dd(:,is) = mf_dd(:,is) * woi_dd(:,is) * exp(-138._wp/df_sf_units_ft_to_cm/sigmas_dd(ix))
+      woi_sum(:,is) = woi_dd(:,is) * exp(-138._wp/df_sf_units_ft_to_cm/sigmas_dd(ix))
+    END DO
+    mfdead = SUM(mffm_dd) / SUM(woi_sum)
+  END FUNCTION calc_fine_dead_fuel_moisture
 #endif
 END MODULE mo_q_dfire_sf_ros_ober_class
