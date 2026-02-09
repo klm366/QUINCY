@@ -122,6 +122,7 @@ MODULE mo_q_dfire_constants
   ! Kelvin vs Celsius conversion
   REAL(wp), PARAMETER :: df_sf_units_c_to_k = 273.15_wp               !< conversion from degrees Celsius to kelvin
   REAL(wp), PARAMETER :: df_sf_units_k_to_c = -df_sf_units_c_to_k     !< conversion from degrees kelvin to Celsius
+  REAL(wp), PARAMETER :: df_sf_units_ft_to_cm = 30.48_wp              !< conversion from feet to cm
 
   ! Kg/m2/s to mm/day units conversion (precipitation)
   INTEGER, PARAMETER :: df_sk_units_kgm2s_to_mmday = 60*60*24         !<
@@ -212,18 +213,18 @@ MODULE mo_q_dfire_constants
   REAL(wp), PARAMETER :: df_sf_frost_trhd = 4.0_wp !< Frost threshold, from source code (Thonicke et al. (2010), https://github.com/PIK-LPJmL/LPJmL/blob/811b1691c26645968803fab65f9e463d64d5f40b/src/spitfire/update_nesterov.c#L25)
   REAL(wp), PARAMETER :: df_sf_oven_dry_part_dens = 513._wp !< Table A1, Thonicke et al. (2010) [kg m-3]
 
-  !< Total number of sigmas in Thonicke et al. (2010)
+  !< Total number of sigmas in Thonicke et al. (2010) [cm-1]
   INTEGER, PARAMETER :: df_sf_sigma_tho_nr = 3
   REAL(wp), PARAMETER :: df_sigmas_tho(df_sf_sigma_tho_nr) = (/ 66._wp, 3.58_wp, 0.98_wp /)
   !< Oberhagemann et al. (2025)
   INTEGER, PARAMETER :: df_sf_sigma_dd_nr = 4 !< Total number of sigmas (1,10,100 hours, live herbaceous)
   INTEGER, PARAMETER :: df_sf_sigma_lv_nr = 2 !< Total number of sigmas (live grass, live woody)
 
-  !< Surface area to volume ratio (Oberhagemann et al. (2025))
+  !< Surface area to volume ratio (Oberhagemann et al. (2025)) [cm-1]
   REAL(wp), PARAMETER :: df_sigmas_dead(df_sf_sigma_dd_nr) = (/ 66._wp, 3.58_wp, 0.98_wp, 66._wp/) !< 1 hr, 10 hrs, 100 hrs, live herbaceous (to burn due to low moisture)
   !< Live woody is skipped from implementation in latest source code version (lpjml 5.7.10 - spitfire 1.9)
   !< However, live woody used value 1500 ft2/ft3 -> 42 m2/m3, loosely averaged from fuel models Andrews pl (2018)
-  REAL(wp), PARAMETER :: df_sigmas_live(df_sf_sigma_lv_nr) = (/ 66._wp, 42._wp/) !< (live herbaceous, live woody)
+  REAL(wp), PARAMETER :: df_sigmas_live(df_sf_sigma_lv_nr) = (/ 66._wp, 42._wp/) * df_sf_units_ft_to_cm !< (live herbaceous, live woody) [cm-1]
 
   REAL(wp), PARAMETER :: df_sf_mineral_fract = 0.055_wp !< Total mineral content of fuel (fraction, S_T in Thonicke et al. (2010), Table A1) [0 to 1]
   REAL(wp), PARAMETER :: df_sf_mineral_damp_coeff = 0.41739_wp !< Table A1, Thonicke et al. (2010) [0 to 1]

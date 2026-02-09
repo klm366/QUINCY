@@ -294,8 +294,8 @@ CONTAINS
         END IF
 
         ! HEAT SINK
-        qig_ij%d(ic,:) = 581._wp * 2594._wp * mf_dd(ic,:)
-        qig_ij%l(ic,:) = 581._wp * 2594._wp * mf_lv(ic,:)
+        qig_ij%d(ic,:) = 581._wp + 2594._wp * mf_dd(ic,:)
+        qig_ij%l(ic,:) = 581._wp + 2594._wp * mf_lv(ic,:)
         heat_sink%d(ic) = SUM(wfactors%fij%d(ic,:) * exp(-4.528_wp / sigmas_dd(:)) * qig_ij%d(ic,:))
         heat_sink%l(ic) = SUM(wfactors%fij%l(ic,:) * exp(-4.528_wp / sigmas_lv(:)) * qig_ij%l(ic,:))
         heat_sink%total(ic) = fbd(ic) * (wfactors%fi%d(ic) * heat_sink%d(ic) + wfactors%fi%l(ic) * heat_sink%l(ic))
@@ -358,6 +358,7 @@ CONTAINS
       wfactors % gij % d(ic,:) = calc_g_weighting_factors(wfactors % fij % d(ic,:), sigmas_dead)
       wfactors % gij % l(ic,:) = calc_g_weighting_factors(wfactors % fij % l(ic,:), sigmas_live)
     END DO
+
   END FUNCTION calc_weighting_factors
 
 
@@ -366,6 +367,8 @@ CONTAINS
   !> Calculate g weighting factors
   !>
   FUNCTION calc_g_weighting_factors(fs, sigmas) RESULT (gs)
+    USE mo_q_dfire_constants, ONLY: feet_to_cm => df_sf_units_ft_to_cm 
+
     REAL(wp), INTENT(in)  :: fs(:)     !< f weighting factor (#fuel classes) [-]
     REAL(wp), INTENT(in)  :: sigmas(:) !< surface area to volume ratio (#fuel classes) [m2/m3]
     REAL(wp), ALLOCATABLE :: gs(:)     !< g weighting factors (#fuel classes) [-]
@@ -373,7 +376,7 @@ CONTAINS
     INTEGER, PARAMETER :: NGLIM = 5
     INTEGER :: nfuelclass
     !< g partitions, Andrews PL et al. (2018), page 17
-    REAL(wp), PARAMETER :: glim(NGLIM) = [16._wp,48._wp,96._wp,1200._wp, HUGE(4.0_wp)]
+    REAL(wp), PARAMETER :: glim(NGLIM) = [16._wp,48._wp,96._wp,1200._wp, HUGE(4.0_wp)] / feet_to_cm 
     REAL(wp) :: fsum(NGLIM)
     INTEGER :: ifuel, ibin
 
