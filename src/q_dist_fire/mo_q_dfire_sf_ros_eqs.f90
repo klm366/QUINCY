@@ -111,7 +111,7 @@ CONTAINS
     REAL(wp), INTENT(in)        :: u_f_wind     !< Forward wind [m min-1]
     REAL(wp), INTENT(in)        :: sigma        !< Surface area to volume ratio of the fuel [cm-1]
     REAL(wp), INTENT(in)        :: beta         !< Packing ratio [-]
-    REAL(wp), INTENT(in)        :: beta_op      !< [-]
+    REAL(wp), INTENT(in)        :: beta_op      !< Optimum packing ratio [-]
     REAL(wp)                    :: wind_factor  !< Output [-]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)                    :: C_var, B_var, E_var
