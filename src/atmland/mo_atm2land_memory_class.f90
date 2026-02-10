@@ -89,6 +89,8 @@ MODULE mo_a2l_memory_class
       & noy_n15_deposition    , &  !< surface downward oxidised nitrogen-15 deposition velocity [mumol m-2 sec-1]
       & p_deposition               !< surface downward reduced phosphorus deposition velocity [mumol m-2 sec-1]
 
+    TYPE(t_jsb_var_real2d) ::   ndep_mavg !< 20-yr averages of total N deposition
+
     ! For calculation of the timestep after local midnight (1st timestep of the new day)
     TYPE(t_jsb_var_real2d) ::     &
       & daytime_counter         , &  !< number of timesteps of current day with light available [#]
@@ -559,6 +561,17 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('ndep_mavg', mem%ndep_mavg, &
+        & hgrid, surface, &
+        & t_cf('ndep_mavg', 'mumol m-2 sec-1', '20-yr averages of total N deposition'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & output_level=BASIC, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('daytime_counter', mem%daytime_counter, &

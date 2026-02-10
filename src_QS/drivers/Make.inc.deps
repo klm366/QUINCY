@@ -1,0 +1,36 @@
+#!> list of module dependencies
+#!>
+#!> QUINCY standalone
+#!>
+#!> ---------------------------------------
+#!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
+#!>
+#!> Contact: https://doi.org/10.17871/quincy-model-2019
+#!> Authors: AUTHORS.md
+#!> See LICENSES/ for license information
+#!> SPDX-License-Identifier: BSD-3-Clause
+#!> ---------------------------------------
+
+quincy_qs_model_driver.o: \
+  mo_kind.o \
+  mo_util.o \
+  mo_qs_time_util.o \
+  mo_exception.o \
+  mo_io_units.o \
+  mo_qs_model_interface.o \
+  mo_jsb_math_constants.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_class.o \
+  mo_jsb_model_class.o \
+  mo_quincy_model_config.o \
+  mo_jsb_base.o \
+  mo_jsb_model_init.o \
+  mo_qs_forcing.o \
+  mo_qs_atmland_forcing.o \
+  mo_qs_atm2land_memory_class.o \
+  mo_q_syl_config_class.o \
+  mo_qs_output_txt.o \
+  mo_qs_output_txt_util.o \
+  mo_qs_output_netcdf4.o \
+  mo_lookup_tables_constants.o \
+  mo_qs_icon_adapter.o

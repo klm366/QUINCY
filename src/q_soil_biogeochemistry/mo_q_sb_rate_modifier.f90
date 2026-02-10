@@ -37,12 +37,14 @@ CONTAINS
   SUBROUTINE update_sb_rate_modifier(tile, options)
 
     USE mo_jsb_class,              ONLY: Get_model
-    USE mo_jsb_process_class,      ONLY: SB_, HYDRO_, SSE_
+    USE mo_jsb_process_class,      ONLY: SB_, HYDRO_, SSE_, A2L_
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
+    USE mo_jsb_time,               ONLY: get_year, get_day
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_physical_constants, ONLY: Tzero
+    USE mo_jsb_math_constants,     ONLY: eps1
     USE mo_sb_constants,           ONLY: ea_depolymerisation, ea_mic_uptake, ea_sorption, ea_desorption, ea_hsc, &
       &                                  kmr_depolymerisation, kmr_mic_uptake, kmr_hsc, kmr_sorption, &
       &                                  ea_nitrification, ed_nitrification, ea_denitrification, ea_gasdiffusion, &
@@ -52,9 +54,11 @@ CONTAINS
     USE mo_veg_constants,          ONLY: ea_symb_bnf, ed_symb_bnf, t_opt_symb_bnf
     USE mo_phy_schemes,            ONLY: calc_peaked_arrhenius_function
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -65,15 +69,21 @@ CONTAINS
     REAL(wp)                          :: w_soil_fc_sl       !< soil state helper, different for "jsbach soil-physics" / SPQ_
     INTEGER                           :: iblk, ics, ice, nc !< dimensions
     INTEGER                           :: is, ic             !< dimensions looping
+    REAL(wp)                          :: dtime              !< timestep length
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_rate_modifier'
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! SB_
+    dsl4jsb_Real2D_onChunk :: ph_old
+    dsl4jsb_Real2D_onChunk :: delta_ph
     dsl4jsb_Real3D_onChunk :: rtm_decomposition
     dsl4jsb_Real3D_onChunk :: rtm_depolymerisation
+    dsl4jsb_Real3D_onChunk :: rph_decomposition
     dsl4jsb_Real3D_onChunk :: rtm_mic_uptake
     dsl4jsb_Real3D_onChunk :: rtm_plant_uptake
     dsl4jsb_Real3D_onChunk :: rtm_sorption
@@ -107,11 +117,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: vol_field_cap_sl
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk :: t_soil_sl
+    ! A2L_ 2D
+    dsl4jsb_Real2D_onChunk :: local_time_day_seconds
     ! ----------------------------------------------------------------------------------------------------- !
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+    dtime = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
@@ -120,12 +133,17 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_var2D_onChunk(SB_,       ph_old)                      ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       delta_ph)                    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_decomposition)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)        ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       rph_decomposition)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_mic_uptake)              ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_plant_uptake)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)                ! out
@@ -159,6 +177,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_field_cap_sl)            ! in
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)                    ! in
+    !A2L_ 2D
+    dsl4jsb_Get_var2D_onChunk(A2L_,      local_time_day_seconds)      ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     DO ic = 1,nc
@@ -182,6 +202,23 @@ CONTAINS
           &                                                          ed_decomposition, &
           &                                                          t_ref_decomposition)
         rmm_decomposition(ic, is)    = MAX(1._wp - wtr_soil_pot_sl(ic, is) / kmr_decomposition, 0.0_wp)
+        IF (dsl4jsb_Config(SB_)%flag_ph_on_som .AND. (.NOT. model%config%l_transient_spinup)) THEN ! transient simulation
+          IF (dsl4jsb_Config(SB_)%flag_ph_future) THEN
+            IF (get_year(options%current_datetime) >= 2014) THEN
+              IF (get_day(options%current_datetime) == 1 .AND. ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
+                rph_decomposition(ic, is)    = rph_decomposition(ic, is) * calc_ph_decom_function(ph_old(ic),delta_ph(ic))
+              END IF
+            ELSE ! 1851-2014
+              rph_decomposition(ic, is) = 1.0_wp
+            END IF
+          ELSE ! not future
+            IF (get_day(options%current_datetime) == 1 .AND. ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
+              rph_decomposition(ic, is)    = rph_decomposition(ic, is) * calc_ph_decom_function(ph_old(ic),delta_ph(ic))
+            END IF
+          END IF ! if future or not
+        ELSE
+           rph_decomposition(ic, is) = 1.0_wp
+        END IF
         !>  1.2 JSM
         !>
         rtm_depolymerisation(ic, is) = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_depolymerisation, &
@@ -490,6 +527,34 @@ CONTAINS
     ENDIF
 
   END FUNCTION calc_moisture_modifier
+
+  ELEMENTAL FUNCTION calc_ph_decom_function(ph, delta_ph) RESULT(rate_modifier)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    REAL(wp), INTENT(in)  :: ph, delta_ph        !< soil pH
+    REAL(wp)              :: rate_modifier       !< rate modifier [unitless]
+    ! ---------------------------
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_ph_decom_function'
+
+!    rate_modifier = MAX(MIN((1.0_wp / (1.0_wp + exp(-(ph_sl - 5.3453_wp)/0.8643_wp))),1.0_wp),0.01_wp) + 0.2488_wp
+    IF(ph > 6.0_wp) THEN
+       rate_modifier = 1.0_wp
+    ELSE
+       rate_modifier = 1.0_wp + 0.3_wp * delta_ph ! delta_ph is negative
+    END IF
+
+!    IF (ph > 4.5_wp .AND. ph <= 6.0_wp) THEN
+!       rate_modifier = 1.0_wp + 0.25_wp * delta_ph ! delta_ph is negative
+!    END IF
+
+!    IF (ph <= 4.5_wp) THEN
+!       rate_modifier = 1.0_wp + 0.35_wp * delta_ph ! delta_ph is negative
+!    END IF
+
+  END FUNCTION calc_ph_decom_function
 
 #endif
 END MODULE mo_q_sb_rate_modifier

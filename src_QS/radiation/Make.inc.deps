@@ -1,0 +1,117 @@
+#!> list of module dependencies
+#!>
+#!> QUINCY standalone
+#!>
+#!> ---------------------------------------
+#!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
+#!>
+#!> Contact: https://doi.org/10.17871/quincy-model-2019
+#!> Authors: AUTHORS.md
+#!> See LICENSES/ for license information
+#!> SPDX-License-Identifier: BSD-3-Clause
+#!> ---------------------------------------
+
+mo_rad_config_class.o: \
+  mo_kind.o \
+  mo_qs_icon_adapter.o \
+  mo_exception.o \
+  mo_io_units.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_jsb_io.o \
+  mo_jsb_control.o \
+  mo_jsb_config_class.o
+
+mo_rad_constants.o: \
+  mo_kind.o
+
+mo_rad_init.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_jsb_control.o \
+  mo_jsb_model_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_jsb_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_io_netcdf.o \
+  mo_jsb_io.o \
+  mo_rad_config_class.o \
+  mo_rad_constants.o \
+  mo_rad_memory_class.o
+
+mo_rad_interface.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_jsb_time.o \
+  mo_exception.o \
+  mo_jsb_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_physical_constants.o \
+  mo_rad_process.o \
+  mo_rad_config_class.o \
+  mo_seb_config_class.o \
+  mo_hydro_config_class.o \
+  mo_rad_memory_class.o \
+  mo_seb_memory_class.o \
+  mo_hydro_memory_class.o \
+  mo_sb_memory_class.o \
+  mo_rad_parameters.o \
+  mo_jsb_math_constants.o \
+  mo_atm2land_memory_class.o \
+  mo_veg_memory_class.o \
+  mo_q_pheno_memory_class.o \
+  mo_jsb_impl_constants.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_lnd_time_averages.o \
+  mo_lnd_bgcm_idx.o \
+  mo_lnd_bgcm_store.o \
+  mo_lnd_bgcm_store_class.o
+
+mo_rad_memory_class.o: \
+  mo_kind.o \
+  mo_util.o \
+  mo_jsb_memory_class.o \
+  mo_jsb_var_class.o \
+  mo_jsb_lct_class.o \
+  mo_jsb_varlist.o \
+  mo_jsb_io.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_jsb_model_class.o \
+  mo_jsb_class.o \
+  mo_jsb_process_class.o \
+  mo_hydro_config_class.o \
+  mo_quincy_output_class.o \
+  mo_rad_constants.o
+
+mo_rad_parameters.o: \
+  mo_kind.o \
+  mo_jsb_impl_constants.o
+
+mo_rad_process.o: \
+  mo_kind.o \
+  mo_phy_schemes.o \
+  mo_jsb_physical_constants.o \
+  mo_rad_constants.o \
+  mo_jsb_math_constants.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_rad_parameters.o \
+  mo_rad_memory_class.o \
+  mo_hydro_memory_class.o \
+  mo_veg_memory_class.o \
+  mo_atm2land_memory_class.o

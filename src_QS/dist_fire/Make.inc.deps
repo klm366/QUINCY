@@ -1,0 +1,125 @@
+#!> list of module dependencies
+#!>
+#!> QUINCY standalone
+#!>
+#!> ---------------------------------------
+#!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
+#!>
+#!> Contact: https://doi.org/10.17871/quincy-model-2019
+#!> Authors: AUTHORS.md
+#!> See LICENSES/ for license information
+#!> SPDX-License-Identifier: BSD-3-Clause
+#!> ---------------------------------------
+
+mo_dfire_interface.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_process_class.o \
+  mo_dfire_sf_fuel.o \
+  mo_dfire_sf_ignition.o \
+  mo_dfire_sf_spread.o \
+  mo_dfire_sf_effects.o \
+  mo_dfire_sf_feedback.o \
+  mo_dfire_memory_class.o
+
+mo_dfire_sf_fuel.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_dfire_config_class.o \
+  mo_dfire_memory_class.o
+
+mo_dfire_sf_ignition.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_dfire_config_class.o \
+  mo_dfire_memory_class.o
+
+mo_dfire_sf_spread.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_dfire_memory_class.o
+
+mo_dfire_sf_effects.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_dfire_memory_class.o
+
+mo_dfire_sf_feedback.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_dfire_memory_class.o
+
+mo_dfire_memory_class.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_jsb_class.o \
+  mo_jsb_memory_class.o \
+  mo_jsb_var_class.o \
+  mo_jsb_varlist.o \
+  mo_jsb_io.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_jsb_model_class.o
+
+mo_dfire_config_class.o: \
+  mo_exception.o \
+  mo_io_units.o \
+  mo_kind.o \
+  mo_util.o \
+  mo_jsb_config_class.o \
+  mo_qs_icon_adapter.o
+
+mo_dfire_constants.o: \
+  mo_kind.o
+
+mo_dfire_init.o: \
+    mo_kind.o \
+    mo_exception.o \
+    mo_jsb_control.o \
+    mo_jsb_class.o \
+    mo_jsb_lctlib_class.o \
+    mo_jsb_process_class.o \
+    mo_jsb_tile_class.o \
+    mo_jsb_model_class.o \
+    mo_dfire_config_class.o \
+    mo_dfire_memory_class.o

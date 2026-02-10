@@ -21,7 +21,7 @@ MODULE mo_q_sb_update_pools
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, message_text, finish
-  USE mo_jsb_math_constants,      ONLY: eps8, one_day, one_year
+  USE mo_jsb_math_constants,      ONLY: eps1, eps8, one_day, one_year
   USE mo_jsb_physical_constants,  ONLY: lambda_C14
 
   USE mo_sb_config_class,         ONLY: get_number_of_sb_compartments
@@ -56,6 +56,7 @@ CONTAINS
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
+    USE mo_jsb_time,               ONLY: get_year, get_day
     USE mo_quincy_model_config,    ONLY: QLAND, QSOIL
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
@@ -69,6 +70,7 @@ CONTAINS
     USE mo_q_sb_jsm_transport,     ONLY: calc_particle_fluxrate, calc_particle_transport_wrapper
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
     USE mo_spq_util,               ONLY: calc_qmax_texture
+    USE mo_jsb_physical_constants,        ONLY: molar_mass_N
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
 
@@ -94,6 +96,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: p_deposition_sl      !< ..
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: f_myc_sl             !< ..
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: hlp1, hlp2, hlp3     !< ..
+    REAL(wp)                              :: hlp
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: km_adsorpt_po4_act, qmax_po4_mineral_act, &
                                              km_fast_po4_act, qmax_fast_po4_act, &
                                              km_slow_po4_act, qmax_slow_po4_act, &
@@ -107,6 +110,7 @@ CONTAINS
     INTEGER                               :: nr_elements                    !< number of elements
     INTEGER                               :: nr_sb_parts                    !< number of sb compartments
     INTEGER                               :: nr_veg_parts                   !< number of veg compartments
+    INTEGER                               :: ph_cal_flag                    !< if update soil ph
     REAL(wp), ALLOCATABLE                 :: sb_pool_prev_timestep_hlp_mt(:,:,:,:) !< dim: compartments, elements, nc, nsoil
     REAL(wp), ALLOCATABLE                 :: sb_particle_transport_hlp_mt(:,:,:,:) !< dim: compartments, elements, nc, nsoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
@@ -136,7 +140,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: nhx_n15_deposition
     dsl4jsb_Real2D_onChunk :: noy_n15_deposition
     dsl4jsb_Real2D_onChunk :: p_deposition
+    dsl4jsb_Real2D_onChunk :: ndep_mavg
     dsl4jsb_Real2D_onChunk :: slow_sb_pool_accelerator_execute
+    dsl4jsb_Real2D_onChunk :: local_time_day_seconds
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: f_n_demand
     dsl4jsb_Real2D_onChunk :: f_p_demand
@@ -179,6 +185,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: emission_n2o_n15
     dsl4jsb_Real2D_onChunk :: emission_n2
     dsl4jsb_Real2D_onChunk :: emission_n2_n15
+    dsl4jsb_Real2D_onChunk :: delta_ph
+    dsl4jsb_Real2D_onChunk :: ph_old
     dsl4jsb_Real2D_onChunk :: ecosystem_total_n_loss
     dsl4jsb_Real2D_onChunk :: sb_pool_total_ag_litter_c
     dsl4jsb_Real2D_onChunk :: sb_pool_total_ag_litter_n
@@ -425,6 +433,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      nhx_n15_deposition)          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      noy_n15_deposition)          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      ndep_mavg)                   ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      local_time_day_seconds)      ! in
     IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
       dsl4jsb_Get_var2D_onChunk(A2L_,      slow_sb_pool_accelerator_execute)  !in
     ENDIF
@@ -470,6 +480,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o_n15)            ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2)                 ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2_n15)             ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       delta_ph)                    ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       ph_old)                      ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       ecosystem_total_n_loss)      ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_ag_litter_c)   ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       sb_pool_total_ag_litter_n)   ! out
@@ -649,6 +661,10 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_mineral_assoc_p)
     END IF
     !------------------------------------------------------------------------------------------------------ !
+
+    !>0.0 test, zero Ndep
+!      nhx_deposition(:) = 0.009_wp
+!      noy_deposition(:) = 0.009_wp
 
     !> 1.0 correct the plant uptake of nh4, no3 and po4 for soil model
     !>
@@ -1209,7 +1225,7 @@ CONTAINS
       &          - SUM((het_respiration_c14(:,:) + lateral_loss_dom_carbon14_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
       &          - leaching_dom_carbon14(:)
     ! biological N fixation (VEG_ and SB_ processes)
-    biological_n_fixation(:)    = biological_n_fixation(:) &
+    biological_n_fixation(:)    = biological_n_fixation &
       &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)
 
     !> 15.0 spin-up accelerator
@@ -1252,6 +1268,55 @@ CONTAINS
           END IF
         END DO
       END SELECT
+    END IF
+
+    !16.0 update soil ph against Ndep
+    ph_cal_flag = 0
+    IF (dsl4jsb_Config(SB_)%flag_ph .AND. (.NOT. model%config%l_transient_spinup)) THEN ! transient simulation
+      IF (dsl4jsb_Config(SB_)%flag_ph_future) THEN
+        IF (get_year(options%current_datetime) >= 2014 .AND. &
+            & get_day(options%current_datetime) == 1 .AND. &
+              ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
+            ph_cal_flag = 1
+        END IF
+      ELSE
+        IF (get_day(options%current_datetime) == 1 .AND. ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN ! the first timestep of each year
+            ph_cal_flag = 1
+        END IF
+      END IF
+    END IF
+
+    IF (ph_cal_flag == 1) THEN
+      DO ic = 1,nc
+        delta_ph(ic) = 0.0_wp
+        ph_old(ic) = ph_sl(ic,1)
+
+        ! the cumulative N deposition over 20 years
+        hlp = ndep_mavg(ic) * molar_mass_N * 1e-6 * 10.0_wp * 20.0_wp * 365.0_wp * 24.0_wp * 3600.0_wp ! from umol m-2 s-1 to kg ha-1 20yr-1
+        ! based on Chen et al. 2023
+        IF (ph_sl(ic,1) .ge. 7.5_wp .OR. ph_old(ic) .lt. 4.0_wp) THEN
+           delta_ph(ic) = 0.0_wp
+        END IF
+
+        IF (ph_sl(ic,1) .ge. 4.0_wp .AND. ph_old(ic) .lt. 5.0_wp) THEN
+           delta_ph(ic) = -0.064_wp * log10(hlp) + 0.0828_wp
+        END IF
+
+        IF (ph_sl(ic,1) .ge. 5.0_wp .AND. ph_old(ic) .lt. 6.6_wp) THEN
+           delta_ph(ic) = -0.164_wp * log10(hlp) + 0.244_wp
+        END IF
+
+        IF (ph_sl(ic,1) .ge. 6.6_wp .AND. ph_old(ic) .lt. 7.5_wp) THEN
+           delta_ph(ic) = -0.122_wp * log10(hlp) + 0.171_wp
+        END IF
+
+        delta_ph(ic) = MIN(0.0_wp, delta_ph(ic)) / 20.0_wp
+
+        ph_sl(ic,1) = ph_sl(ic,1) + delta_ph(ic)
+      END DO
+    ELSE 
+      delta_ph(:) = 0.0_wp
+      ph_old(:) = ph_sl(:,1)
     END IF
     !------------------------------------------------------------------------------------------------------ !
     DEALLOCATE(sb_particle_transport_hlp_mt, sb_pool_prev_timestep_hlp_mt)

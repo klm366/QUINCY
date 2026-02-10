@@ -54,6 +54,7 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
+    USE mo_veg_constants,         ONLY: ITREE
     USE mo_q_sb_jsm_transport,    ONLY: calc_bioturbation_rate
     USE mo_q_sb_litter_processes, ONLY: calc_litter_partitioning
     ! ----------------------------------------------------------------------------------------------------- !
@@ -152,6 +153,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: rtm_sorption
     dsl4jsb_Real3D_onChunk :: rtm_desorption
     dsl4jsb_Real3D_onChunk :: rtm_asymb_bnf
+    dsl4jsb_Real3D_onChunk :: rph_decomposition
     dsl4jsb_Real3D_onChunk :: rmm_decomposition
     dsl4jsb_Real3D_onChunk :: rmm_plant_uptake
     dsl4jsb_Real3D_onChunk :: rmm_hsc
@@ -344,6 +346,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_desorption)
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_asymb_bnf)
+    dsl4jsb_Get_var3D_onChunk(SB_,       rph_decomposition)
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_decomposition)
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_plant_uptake)
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_hsc)
@@ -563,6 +566,7 @@ CONTAINS
       & dsl4jsb_Config(SB_)%flag_mycorrhiza_org, &
       & rtm_decomposition(:,:), &
       & rmm_decomposition(:,:), &
+      & rph_decomposition(:,:), &
       & sb_pool_mt(:,:,:,:), &                      ! in
       & het_respiration(:,:), &                     ! inout
       & het_respiration_c13(:,:), &
@@ -714,7 +718,6 @@ CONTAINS
 
     !>  3.1 Calculation of asymbiotic N fixation rate
     !>
-    asymb_n_fixation(:,:) = 0.0_wp  ! init variable for all indices (also if is > num_sl_above_bedrock(ic))
     DO ic = 1,nc
       DO is = 1,INT(num_sl_above_bedrock(ic))
         asymb_n_fixation(ic, is) = calc_asymb_n_fixation( &
@@ -856,18 +859,19 @@ CONTAINS
     !>  3.6 formation of metabolic and strucutral litter by woody liter decay and
     !>     associated respiration, net mineralisation fluxes
     !>
-    CALL calc_litter_formation_from_woody_decay( &
-      & nc, &                               ! in
-      & nsoil_w, &
-      & sb_loss_mt(:,:,:,:), &              ! in
-      & het_respiration(:,:), &             ! inout
-      & het_respiration_c13(:,:), &
-      & het_respiration_c14(:,:), &
-      & net_mineralisation_nh4(:,:), &
-      & net_mineralisation_po4(:,:), &
-      & net_mineralisation_nh4_n15(:,:), &
-      & sb_formation_mt(:,:,:,:) )          ! inout
-
+    IF (lctlib%growthform == ITREE) THEN
+      CALL calc_litter_formation_from_woody_decay( &
+        & nc, &                               ! in
+        & nsoil_w, &
+        & sb_loss_mt(:,:,:,:), &              ! in
+        & het_respiration(:,:), &             ! inout
+        & het_respiration_c13(:,:), &
+        & het_respiration_c14(:,:), &
+        & net_mineralisation_nh4(:,:), &
+        & net_mineralisation_po4(:,:), &
+        & net_mineralisation_nh4_n15(:,:), &
+        & sb_formation_mt(:,:,:,:) )          ! inout
+    ENDIF
 
     !>4.0 Mycorrhiza dynamics
     !>
@@ -1754,6 +1758,7 @@ CONTAINS
     & flag_mycorrhiza_org, &
     & rtm_decomposition, &
     & rmm_decomposition, &
+    & rph_decomposition, &
     & sb_pool_mt, &
     & het_respiration, &
     & het_respiration_c13, &
@@ -1775,8 +1780,9 @@ CONTAINS
     LOGICAL,                            INTENT(in)    :: is_element_used(:)       !< is element in 'elements_index_map' used
     LOGICAL,                            INTENT(in)    :: flag_mycorrhiza_prim, &  !< from sb config
                                                          flag_mycorrhiza_org      !< from sb config
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rtm_decomposition, &     !< temperature response of decomposition
-                                                         rmm_decomposition        !< moisture response of decomposition
+    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)     :: rtm_decomposition, &     !< temperature response of decomposition
+                                                         rmm_decomposition, &     !< moisture response of decomposition
+                                                         rph_decomposition
     REAL(wp),                           INTENT(in)    :: sb_pool_mt(:,:,:,:)      !< sb_pool [mol / m3]
     REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: het_respiration, &       !< heterotrophic respiration [mol C / m3 / timestep]
                                                          het_respiration_c13, &   !< heterotrophic respiration [mol 13C / m3 / timestep]
@@ -1806,6 +1812,7 @@ CONTAINS
         !>
         sb_loss_mt(ix_soluable_litter, ix_elem, :, :) = sb_loss_mt(ix_soluable_litter, ix_elem, :, :) &
           &                                             + rtm_decomposition(:,:) * rmm_decomposition(:,:) &
+          &                                             * rph_decomposition(:,:) &
           &                                             / tau_metabolic_litter &
           &                                             * dtime * sb_pool_mt(ix_soluable_litter, ix_elem, :, :)
 
@@ -1813,6 +1820,7 @@ CONTAINS
         !>
         sb_loss_mt(ix_polymeric_litter, ix_elem, :, :) = sb_loss_mt(ix_polymeric_litter, ix_elem, :, :) &
           &                                              + rtm_decomposition(:,:) * rmm_decomposition(:,:) &
+          &                                              * rph_decomposition(:,:) &
           &                                              / tau_structural_litter &
           &                                              * dtime * sb_pool_mt(ix_polymeric_litter, ix_elem, :, :)
 
@@ -1820,6 +1828,7 @@ CONTAINS
         !>
         sb_loss_mt(ix_woody_litter, ix_elem, :, :) = sb_loss_mt(ix_woody_litter, ix_elem, :, :) &
           &                                          + rtm_decomposition(:,:) * rmm_decomposition(:,:) &
+          &                                          * rph_decomposition(:,:) &
           &                                          / tau_woody_litter &
           &                                          * dtime * sb_pool_mt(ix_woody_litter, ix_elem, :, :)
 
@@ -1827,6 +1836,7 @@ CONTAINS
         !>
         sb_loss_mt(ix_microbial, ix_elem, :, :) = sb_loss_mt(ix_microbial, ix_elem, :, :) &
           &                                       + rtm_decomposition(:,:) * rmm_decomposition(:,:) &
+          &                                       * rph_decomposition(:,:) &
           &                                       / tau_fast &
           &                                       * dtime * sb_pool_mt(ix_microbial, ix_elem, :, :)
       END IF  ! IF element is used
@@ -1875,6 +1885,7 @@ CONTAINS
         ix_elem = elements_index_map(ielem)    ! get element index in bgcm
         sb_loss_mt(ix_residue, ix_elem, :, :) = sb_loss_mt(ix_residue, ix_elem, :, :) &
           &                                     + rtm_decomposition(:,:) * rmm_decomposition(:,:) &
+          &                                     * rph_decomposition(:,:) &
           &                                     / tau_slow_act(:,:) &
           &                                     * dtime * sb_pool_mt(ix_residue, ix_elem, :, :)
       END IF  ! IF element is used

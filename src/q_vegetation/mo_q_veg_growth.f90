@@ -87,6 +87,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)   :: phi_phenology_base     !< relative pull from reserve due to phenology,
                                                                 !! calculated from carbon reserve flow (unitless)
     REAL(wp), DIMENSION(options%nc)   :: hlp1
+    REAL(wp), DIMENSION(options%nc)   :: ph_soil_root
     REAL(wp)                          :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     REAL(wp)                          :: dtime                  !< timestep length
     INTEGER                           :: ics, ice, nc           !< grid dimensions
@@ -157,6 +158,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: wtr_soil_pot_sl
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
+    dsl4jsb_Real3D_onChunk      :: ph_sl
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
@@ -359,6 +361,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_pot_sl)               ! in
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                          ! in
+    dsl4jsb_Get_var3D_onChunk(SB_, ph_sl)                             ! in
     ! RAD_ 3D
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                     ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                     ! in
@@ -480,6 +483,7 @@ CONTAINS
 
     !>0.8 calculate temperature of fine roots
     t_soil_root(:) = 0.0_wp
+    ph_soil_root(:) = ph_sl(:,1)
     DO isoil = 1,nsoil_w
       t_soil_root(:) = t_soil_root(:) + root_fraction_sl(:,isoil) * t_soil_sl(:,isoil)
     ENDDO
@@ -921,6 +925,7 @@ CONTAINS
       & falloc_fruit_crop(:)                              , &
       & k1_opt(:)                                         , &
       & k2_opt(:)                                         , &
+      & ph_soil_root(:)                                   , &
       & target_cn_leaf(:)                                 , &
       & target_cn_fine_root(:)                            , &
       & target_cn_coarse_root(:)                          , &
@@ -2668,6 +2673,7 @@ CONTAINS
                                       falloc_fruit_crop           , &
                                       k1_opt                      , &
                                       k2_opt                      , &
+                                      ph_soil_root                , &
                                       target_cn_leaf              , &
                                       target_cn_fine_root         , &
                                       target_cn_coarse_root       , &
@@ -2707,6 +2713,7 @@ CONTAINS
                                                falloc_fruit_crop       ,& !< fraction of allocation going to fruits in crops
                                                k1_opt                  ,& !< coefficient for optimal leaf:root ratio
                                                k2_opt                  ,& !< coefficient for optimal leaf:root ratio
+                                               ph_soil_root            ,& !< soil pH
                                                target_cn_leaf          ,& !< target C:N ratio for tissue type
                                                target_cn_fine_root     ,& !< target C:N ratio for tissue type
                                                target_cn_coarse_root   ,& !< target C:N ratio for tissue type
@@ -2724,6 +2731,7 @@ CONTAINS
     !------------------------------------------------------------------------------------------------------ !
     REAL(wp), DIMENSION(nc)     :: b_inc,                   & ! total and compartment-wise carbon increment (mol/dtime)
                                    all_inc,                 &
+                                   all_root_inc,            &
                                    leaf_carbon_inc,         &
                                    root_carbon_inc,         &
                                    sap_wood_carbon_inc,     &
@@ -2891,6 +2899,11 @@ CONTAINS
       WRITE(message_text,'(a,i4)') 'invalid growthform type ',lctlib_growthform
       CALL finish("mo_q_veg_growth",message_text)
     END SELECT
+
+!Discard the allocation scheme
+!    all_root_inc(:) = root_carbon_inc(:) + coarse_root_carbon_inc(:)
+!    root_carbon_inc(:) = root_carbon_inc(:) * calc_ph_root_ratio(ph_soil_root(:))
+!    coarse_root_carbon_inc(:) = all_root_inc(:) - root_carbon_inc(:)
 
     !> 1.3 Convert biomass increments to allocation fractions
     !! taking account of the previously calculated fraction of growth that goes to fruits
@@ -3399,6 +3412,25 @@ CONTAINS
     ENDDO
 
   END SUBROUTINE calc_root_distribution_change
+
+  ELEMENTAL FUNCTION calc_ph_root_ratio(soil_ph) RESULT(ratio_modifier)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    REAL(wp), INTENT(in)  :: soil_ph               !< soil pH
+    REAL(wp)              :: ratio_modifier      !< fine root / coarse root grwoth [unitless]
+    ! ---------------------------
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_ph_root_ratio'
+
+!    IF(soil_ph >= 6.0_wp) THEN
+       ratio_modifier = 1.0_wp
+!    ELSE
+!       ratio_modifier = MAX(MIN((1.0_wp / (1.0_wp + exp(-(soil_ph - 4.0_wp)/0.6_wp))),1.0_wp),0.01_wp)
+!    ENDIF
+
+  END FUNCTION calc_ph_root_ratio
 
 #endif
 END MODULE mo_q_veg_growth

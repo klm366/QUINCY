@@ -1,0 +1,42 @@
+#!> list of module dependencies
+#!>
+#!> QUINCY standalone
+#!>
+#!> ---------------------------------------
+#!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
+#!>
+#!> Contact: https://doi.org/10.17871/quincy-model-2019
+#!> Authors: AUTHORS.md
+#!> See LICENSES/ for license information
+#!> SPDX-License-Identifier: BSD-3-Clause
+#!> ---------------------------------------
+
+mo_atmland_constants.o: \
+  mo_kind.o \
+  mo_isotope_util.o
+
+mo_land2atm_memory_class.o: \
+  mo_kind.o \
+  mo_util.o \
+  mo_jsb_lct_class.o \
+  mo_jsb_io.o \
+  mo_jsb_grid.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_class.o \
+  mo_jsb_memory_class.o \
+  mo_jsb_var_class.o \
+  mo_jsb_varlist.o
+
+mo_atm2land_memory_class.o: \
+  mo_kind.o \
+  mo_util.o \
+  mo_jsb_lct_class.o \
+  mo_jsb_io.o \
+  mo_jsb_grid.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_class.o \
+  mo_jsb_memory_class.o \
+  mo_jsb_var_class.o \
+  mo_jsb_varlist.o

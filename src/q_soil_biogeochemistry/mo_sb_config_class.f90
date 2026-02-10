@@ -62,6 +62,9 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_prescribe_po4  !< TRUE: solute PO4 is kept at a prescribed level
     LOGICAL               :: flag_sb_interactive_n  !< TRUE: N cycle state affects C,P processes via stoichiometry or allocation changes
     LOGICAL               :: flag_sb_interactive_p  !< TRUE: P cycle state affects C,N processes via stoichiometry or allocation changes
+    LOGICAL               :: flag_ph                !< TRUE: allow soil ph change
+    LOGICAL               :: flag_ph_future         !< TRUE: change soil ph in the future simulation
+    LOGICAL               :: flag_ph_on_som         !< TRUE: allow soil ph effect on soil organic matter turnover
     ! mycorrhiza
     LOGICAL               :: flag_mycorrhiza
     LOGICAL               :: flag_mycorrhiza_org
@@ -169,6 +172,9 @@ CONTAINS
     LOGICAL                     :: flag_sb_prescribe_po4
     LOGICAL                     :: flag_sb_interactive_n
     LOGICAL                     :: flag_sb_interactive_p
+    LOGICAL                     :: flag_ph
+    LOGICAL                     :: flag_ph_future
+    LOGICAL                     :: flag_ph_on_som
     LOGICAL                     :: flag_mycorrhiza
     LOGICAL                     :: flag_mycorrhiza_org
     LOGICAL                     :: flag_mycorrhiza_prim
@@ -216,6 +222,9 @@ CONTAINS
                       flag_sb_prescribe_po4     , &
                       flag_sb_interactive_n     , &
                       flag_sb_interactive_p     , &
+                      flag_ph                   , &
+                      flag_ph_future            , &
+                      flag_ph_on_som            , &
                       flag_mycorrhiza           , &
                       flag_mycorrhiza_org       , &
                       flag_mycorrhiza_prim      , &
@@ -270,6 +279,9 @@ CONTAINS
     flag_sb_prescribe_po4       = .TRUE.
     flag_sb_interactive_n       = .TRUE.
     flag_sb_interactive_p       = .FALSE.
+    flag_ph                     = .FALSE.
+    flag_ph_future              = .FALSE.
+    flag_ph_on_som              = .FALSE.
     flag_mycorrhiza             = .FALSE.
     flag_mycorrhiza_org         = .FALSE.
     flag_mycorrhiza_prim        = .FALSE.
@@ -323,6 +335,9 @@ CONTAINS
     config%flag_sb_prescribe_po4           = flag_sb_prescribe_po4
     config%flag_sb_interactive_n           = flag_sb_interactive_n
     config%flag_sb_interactive_p           = flag_sb_interactive_p
+    config%flag_ph                         = flag_ph
+    config%flag_ph_future                  = flag_ph_future
+    config%flag_ph_on_som                  = flag_ph_on_som
     config%flag_mycorrhiza                 = flag_mycorrhiza
     config%flag_mycorrhiza_org             = flag_mycorrhiza_org
     config%flag_mycorrhiza_prim            = flag_mycorrhiza_prim

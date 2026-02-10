@@ -73,6 +73,7 @@ MODULE mo_veg_config_class
     LOGICAL          :: flag_log_c_conservation    !< debug option: test for C conservation tests and message to LOG file if failing
     LOGICAL          :: flag_veg_interactive_n     !< TRUE: N cycle state affects C,P processes via stoichiometry or allocation changes
     LOGICAL          :: flag_veg_interactive_p     !< TRUE: P cycle state affects C,N processes via stoichiometry or allocation changes
+    LOGICAL          :: flag_ph_on_fine_root       !< TRUE: allow ph effects on fine root 
 
     ! parameter calibration
     LOGICAL          :: flag_apply_nml_parameters  !< replace values of veg_constants parameters by the values of the below nml_* variables
@@ -136,6 +137,7 @@ CONTAINS
     LOGICAL                     :: flag_log_c_conservation
     LOGICAL                     :: flag_veg_interactive_n
     LOGICAL                     :: flag_veg_interactive_p
+    LOGICAL                     :: flag_ph_on_fine_root
     LOGICAL                     :: l_use_product_pools
     LOGICAL                     :: flag_apply_nml_parameters
     REAL(wp)                    :: nml_fmaint_rate_base
@@ -167,6 +169,7 @@ CONTAINS
       flag_log_c_conservation,      &
       flag_veg_interactive_n,       &
       flag_veg_interactive_p,       &
+      flag_ph_on_fine_root,         &
       l_use_product_pools,          &
       &   flag_apply_nml_parameters, &
       &   nml_fmaint_rate_base, &
@@ -200,6 +203,7 @@ CONTAINS
     flag_log_c_conservation   = .FALSE.
     flag_veg_interactive_n    = .TRUE.
     flag_veg_interactive_p    = .FALSE.
+    flag_ph_on_fine_root      = .FALSE.
     l_use_product_pools       = .FALSE.
     flag_apply_nml_parameters      = .FALSE.
     nml_fmaint_rate_base           = def_parameters
@@ -237,6 +241,7 @@ CONTAINS
     config%flag_log_c_conservation    = flag_log_c_conservation
     config%flag_veg_interactive_n     = flag_veg_interactive_n
     config%flag_veg_interactive_p     = flag_veg_interactive_p
+    config%flag_ph_on_fine_root       = flag_ph_on_fine_root
     config%l_use_product_pools        = l_use_product_pools
     config%flag_apply_nml_parameters      = flag_apply_nml_parameters
     config%nml_fmaint_rate_base           = nml_fmaint_rate_base

@@ -24,7 +24,7 @@ MODULE mo_q_veg_turnover
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
   USE mo_jsb_impl_constants,  ONLY: test_false_true
-  USE mo_jsb_math_constants,  ONLY: one_day, one_year, eps8, eps4
+  USE mo_jsb_math_constants,  ONLY: one_day, one_year, eps8, eps4, eps1
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
@@ -50,13 +50,18 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_
+    USE mo_jsb_time,              ONLY: get_year, get_day
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, SB_, A2L_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(Q_PHENO_)
+    dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -66,7 +71,7 @@ CONTAINS
     TYPE(t_lctlib_element),   POINTER :: lctlib                 !< land-cover-type library - parameter across pft's
     REAL(wp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
-    LOGICAL                           :: config_active_q_agr
+    LOGICAL                           :: config_active_q_agr, config_ph_on_fine_root, config_ph_future
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_turnover'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -76,10 +81,14 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_growth_mt
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_config(Q_AGR_)
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
@@ -103,6 +112,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n15
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
     dsl4jsb_Real2D_onChunk      :: net_growth
+    dsl4jsb_Real2D_onChunk      :: ph_fine_root_factor_acc
+    !SB_ 2D
+    dsl4jsb_Real2D_onChunk      :: ph_old
+    dsl4jsb_Real2D_onChunk      :: delta_ph
+    ! A2L_ 2D
+    dsl4jsb_Real2D_onChunk      :: local_time_day_seconds
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -115,13 +130,20 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_config(Q_AGR_)
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(A2L_)
     config_active_q_agr = dsl4jsb_Config(Q_AGR_)%active
+    config_ph_on_fine_root = dsl4jsb_Config(VEG_)%flag_ph_on_fine_root
+    config_ph_future = dsl4jsb_Config(SB_)%flag_ph_future
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -153,6 +175,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ph_fine_root_factor_acc)
+    !SB_ 2D
+    dsl4jsb_Get_var2D_onChunk(SB_, ph_old)
+    dsl4jsb_Get_var2D_onChunk(SB_, delta_ph)
+    !A2L_ 2D
+    dsl4jsb_Get_var2D_onChunk(A2L_,      local_time_day_seconds)      ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>1.0 Calculate nutrient flux from enzyme, RNA and other turnover in leaves and roots
@@ -179,8 +207,14 @@ CONTAINS
       & nc                                    , & ! in
       & dtime                                 , &
       & config_active_q_agr                   , &
+      & config_ph_on_fine_root                , &
+      & config_ph_future                      , &
       & model%config%elements_index_map(:)    , &
       & model%config%is_element_used(:)       , &
+      & model%config%l_transient_spinup       , &
+      & get_year(options%current_datetime)    , &
+      & get_day(options%current_datetime)     , & 
+      & local_time_day_seconds(:)             , &
       & lctlib%phenology_type                 , &
       & lctlib%growthform                     , &
       & lctlib%frac_sapwood_branch            , &
@@ -191,6 +225,9 @@ CONTAINS
       & lctlib%tau_sap_wood                   , &
       & lctlib%tau_fruit                      , &
       & lctlib%tau_seed_litter                , &
+      & ph_old(:)                             , & ! in
+      & delta_ph(:)                           , & ! in
+      & ph_fine_root_factor_acc(:)            , & ! inout
       & growing_season(:)                     , & ! in
       & root_phenology_type(:)                , & ! in
       & lai(:)                                , & ! in
@@ -350,8 +387,14 @@ CONTAINS
     & nc                          , &
     & dtime                       , &
     & config_active_q_agr         , &
+    & config_ph_on_fine_root      , &
+    & config_ph_future            , &
     & elements_index_map          , &
     & is_element_used             , &
+    & l_transient_spinup          , &
+    & time_year                   , &
+    & time_day                    , &
+    & local_time_day_seconds      , &
     & lctlib_phenology_type       , &
     & lctlib_growthform           , &
     & lctlib_frac_sapwood_branch  , &
@@ -362,6 +405,9 @@ CONTAINS
     & lctlib_tau_sap_wood         , &
     & lctlib_tau_fruit            , &
     & lctlib_tau_seed_litter      , &
+    & ph_old                      , &
+    & delta_ph                    , &
+    & ph_fine_root_factor_acc     , &
     & growing_season              , &
     & root_phenology_type         , &
     & lai                         , &
@@ -389,8 +435,14 @@ CONTAINS
     INTEGER,                  INTENT(in)    :: nc                           !< dimensions
     REAL(wp),                 INTENT(in)    :: dtime                        !< timestep length
     LOGICAL,                  INTENT(in)    :: config_active_q_agr          !< if Q_AGR_ process is activated
+    LOGICAL,                  INTENT(in)    :: config_ph_on_fine_root       !< if ph effect on fine root is activated
+    LOGICAL,                  INTENT(in)    :: config_ph_future             !< if ph effect in future or not
     INTEGER,                  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
     LOGICAL,                  INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
+    LOGICAL,                  INTENT(in)    :: l_transient_spinup           !< is spinup
+    INTEGER,                  INTENT(in)    :: time_year                    !< simulating year
+    INTEGER,                  INTENT(in)    :: time_day                     !< day of the year
+    REAL(wp), DIMENSION(nc),  INTENT(in)    :: local_time_day_seconds       !< second of the day
     INTEGER,                  INTENT(in)    :: lctlib_phenology_type        !< lctlib parameter
     INTEGER,                  INTENT(in)    :: lctlib_growthform            !< lctlib parameter
     REAL(wp),                 INTENT(in)    :: lctlib_frac_sapwood_branch   !< lctlib parameter
@@ -401,6 +453,9 @@ CONTAINS
     REAL(wp),                 INTENT(in)    :: lctlib_tau_sap_wood          !< lctlib parameter
     REAL(wp),                 INTENT(in)    :: lctlib_tau_fruit             !< lctlib parameter
     REAL(wp),                 INTENT(in)    :: lctlib_tau_seed_litter       !< lctlib parameter
+    REAL(wp), DIMENSION(nc),  INTENT(in)    :: ph_old                       !< soil ph
+    REAL(wp), DIMENSION(nc),  INTENT(in)    :: delta_ph                     !< delta ph
+    REAL(wp), DIMENSION(nc),  INTENT(inout) :: ph_fine_root_factor_acc      !< ph rate factor on fine root turnover
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: growing_season               !< whether the plant is in the growing season
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: root_phenology_type          !< category for trigger of end of growing season in grasses
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: lai                          !< the plant's LAI
@@ -540,6 +595,38 @@ CONTAINS
         END IF
       END DO
     END SELECT
+
+    ! soil pH effects on fine root
+    IF (config_ph_on_fine_root .AND. (.NOT. l_transient_spinup)) THEN ! transient simulation
+      IF (config_ph_future) THEN
+        IF (time_year >= 2014) THEN 
+          IF (time_day == 1) THEN 
+           DO ic = 1, nc
+             IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
+              ph_fine_root_factor_acc(ic) = ph_fine_root_factor_acc(ic) &
+                                            & * calc_ph_on_fine_root_turnover(ph_old(ic), delta_ph(ic))
+             END IF
+            END DO
+          END IF
+        ELSE ! 1851-2014
+          ph_fine_root_factor_acc(:) = 1.0_wp
+        END IF
+      ELSE !not future simulation
+        IF (time_day == 1) THEN
+          DO ic = 1, nc
+            IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
+              ph_fine_root_factor_acc(ic) = ph_fine_root_factor_acc(ic) &
+                                          & * calc_ph_on_fine_root_turnover(ph_old(ic), delta_ph(ic))
+            END IF
+          END DO
+        END IF
+      END IF ! if future or not
+    ELSE ! spin-up simulation
+      ph_fine_root_factor_acc(:) = 1.0_wp
+    END IF
+
+    fturn(:) = fturn(:) * ph_fine_root_factor_acc(:) 
+
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN
@@ -696,6 +783,39 @@ CONTAINS
       recycling_fract = resorp_fract_wood
     ENDSELECT
   END FUNCTION calc_phosphorus_recycling_fract
+
+  ELEMENTAL FUNCTION calc_ph_on_fine_root_turnover(ph, delta_ph) RESULT(ratio_modifier)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    REAL(wp), INTENT(in)  :: ph, delta_ph        !< soil pH. Note delta_ph is a negative value
+    REAL(wp)              :: ratio_modifier      !< fine root turnover enhancement [unitless]
+    ! ---------------------------
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_ph_root_ratio'
+
+    IF(ph > 5.5_wp) THEN
+       ratio_modifier = 1.0_wp
+    END IF
+
+    IF (ph > 5.0_wp .AND. ph <= 5.5_wp) THEN
+       ratio_modifier = 1.0_wp - 0.4164_wp * delta_ph
+    END IF
+
+    IF (ph > 4.5_wp .AND. ph <= 5.0_wp) THEN
+       ratio_modifier = 1.0_wp - 0.3739_wp * delta_ph
+    END IF
+
+    IF (ph > 4.0_wp .AND. ph <= 4.5_wp) THEN
+       ratio_modifier = 1.0_wp - 0.3658_wp * delta_ph
+    END IF
+
+    IF (ph <= 4.0_wp) THEN
+       ratio_modifier = 1.0_wp - 1.0517_wp * delta_ph
+    END IF
+
+  END FUNCTION calc_ph_on_fine_root_turnover
 
 #endif
 END MODULE mo_q_veg_turnover

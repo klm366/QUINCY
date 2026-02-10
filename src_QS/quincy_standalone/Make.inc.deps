@@ -1,0 +1,300 @@
+#!> list of module dependencies
+#!>
+#!> QUINCY standalone
+#!>
+#!> ---------------------------------------
+#!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
+#!>
+#!> Contact: https://doi.org/10.17871/quincy-model-2019
+#!> Authors: AUTHORS.md
+#!> See LICENSES/ for license information
+#!> SPDX-License-Identifier: BSD-3-Clause
+#!> ---------------------------------------
+
+mo_qs_time_util.o: \
+  mo_kind.o \
+  mo_util.o \
+  mo_jsb_math_constants.o \
+  mo_qs_output_txt.o
+
+mo_qs_atmland_constants.o: \
+  mo_kind.o \
+  mo_jsb_math_constants.o
+
+mo_qs_atmland_util.o: \
+  mo_kind.o \
+  mo_jsb_math_constants.o \
+  mo_qs_atmland_constants.o
+
+mo_qs_set_parameters.o: \
+  mo_kind.o \
+  mo_qs_icon_adapter.o \
+  mo_exception.o \
+  mo_jsb_io.o \
+  mo_jsb_model_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_lnd_time_averages.o \
+  mo_jsb_math_constants.o \
+  mo_q_assimi_parameters.o \
+  mo_q_assimi_constants.o \
+  mo_q_pheno_parameters.o \
+  mo_rad_parameters.o \
+  mo_jsb_physical_constants.o \
+  mo_spq_constants.o \
+  mo_spq_config_class.o \
+  mo_sb_constants.o \
+  mo_veg_constants.o
+
+mo_qs_output_netcdf4.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_util.o \
+  mo_jsb_model_class.o \
+  mo_jsb_config_class.o \
+  mo_jsb_class.o \
+  mo_quincy_model_config.o \
+  mo_jsb_var_class.o \
+  mo_jsb_varlist.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_lnd_bgcm_class.o \
+  mo_lnd_bgcm_idx.o \
+  mo_jsb_process_class.o \
+  mo_jsb_math_constants.o \
+  mo_quincy_output_class.o \
+  mo_land2atm_memory_class.o \
+  mo_atm2land_memory_class.o \
+  mo_q_assimi_memory_class.o \
+  mo_q_pheno_memory_class.o \
+  mo_phyd_memory_class.o \
+  mo_q_syl_memory_class.o \
+  mo_rad_memory_class.o \
+  mo_sb_config_class.o \
+  mo_sb_memory_class.o \
+  mo_spq_memory_class.o \
+  mo_sse_memory_class.o \
+  mo_hydro_memory_class.o \
+  mo_veg_memory_class.o \
+  mo_q_agr_config_class.o \
+  mo_q_syl_config_class.o \
+  mo_veg_config_class.o \
+  mo_phyd_config_class.o \
+  mo_phy_schemes.o
+
+mo_qs_output_txt.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_qs_output_txt_util.o \
+  mo_lnd_bgcm_idx.o \
+  mo_lnd_bgcm_store.o \
+  mo_lnd_bgcm_store_class.o \
+  mo_jsb_model_class.o \
+  mo_quincy_model_config.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_math_constants.o \
+  mo_jsb_physical_constants.o \
+  mo_jsb_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_jsb_process_class.o \
+  mo_qs_forcing.o \
+  mo_isotope_util.o \
+  mo_rad_parameters.o \
+  mo_sb_constants.o \
+  mo_veg_constants.o \
+  mo_spq_config_class.o \
+  mo_atm2land_memory_class.o \
+  mo_land2atm_memory_class.o \
+  mo_veg_memory_class.o \
+  mo_q_assimi_memory_class.o \
+  mo_q_pheno_memory_class.o \
+  mo_spq_memory_class.o \
+  mo_sse_memory_class.o \
+  mo_seb_memory_class.o \
+  mo_hydro_memory_class.o \
+  mo_sb_memory_class.o \
+  mo_rad_memory_class.o \
+  mo_phy_schemes.o \
+  mo_atmland_constants.o
+
+mo_qs_output_txt_util.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o
+
+mo_qs_model_interface.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_jsb_control.o \
+  mo_jsb_model_class.o \
+  mo_quincy_model_config.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_hsm_class.o \
+  mo_jsb_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_qs_test_canopy_model.o \
+  mo_qs_test_radiation_model.o \
+  mo_qs_output_txt.o \
+  mo_qs_output_netcdf4.o \
+  mo_dfire_config_class.o \
+  mo_dfire_interface.o \
+  mo_q_veg_interface.o \
+  mo_q_veg_canopy.o \
+  mo_q_assimi_interface.o \
+  mo_q_spq_interface.o \
+  mo_q_sb_interface.o \
+  mo_phyd_config_class.o \
+  mo_phyd_interface.o \
+  mo_q_agr_config_class.o \
+  mo_q_syl_config_class.o \
+  mo_q_syl_interface.o \
+  mo_q_pheno_process.o \
+  mo_q_veg_turnover.o \
+  mo_q_veg_dynamics.o \
+  mo_q_veg_growth.o \
+  mo_q_veg_update_pools.o \
+  mo_q_veg_products_decay.o \
+  mo_turb_interface.o \
+  mo_seb_interface.o \
+  mo_sse_interface.o \
+  mo_hydro_interface.o \
+  mo_spq_util.o \
+  mo_q_spq_update_turbulence.o \
+  mo_q_spq_update_physics.o \
+  mo_q_sb_rate_modifier.o \
+  mo_q_sb_ssm_main.o \
+  mo_q_sb_jsm_main.o \
+  mo_q_sb_update_pools.o \
+  mo_sb_util.o \
+  mo_rad_interface.o \
+  mo_atm2land_memory_class.o
+
+mo_qs_atmland_forcing.o: \
+  mo_kind.o \
+  mo_util.o \
+  mo_jsb_time.o \
+  mo_exception.o \
+  mo_jsb_control.o \
+  mo_lnd_bgcm_idx.o \
+  mo_lnd_bgcm_store.o \
+  mo_lnd_bgcm_store_class.o \
+  mo_jsb_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_math_constants.o \
+  mo_jsb_model_class.o \
+  mo_quincy_model_config.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_jsb_tile_class.o \
+  mo_qs_forcing.o \
+  mo_isotope_util.o \
+  mo_jsb_physical_constants.o \
+  mo_qs_atmland_util.o \
+  mo_qs_atmland_constants.o \
+  mo_atmland_constants.o \
+  mo_hydro_memory_class.o \
+  mo_sse_memory_class.o \
+  mo_spq_config_class.o \
+  mo_veg_memory_class.o \
+  mo_atm2land_memory_class.o
+
+mo_qs_test_canopy_model.o: \
+  mo_kind.o \
+  mo_lnd_bgcm_idx.o \
+  mo_lnd_bgcm_store.o \
+  mo_lnd_bgcm_store_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_rad_parameters.o \
+  mo_atmland_constants.o \
+  mo_phy_schemes.o \
+  mo_veg_util.o \
+  mo_jsb_physical_constants.o \
+  mo_q_assimi_config_class.o \
+  mo_rad_interface.o \
+  mo_q_veg_canopy.o \
+  mo_q_assimi_interface.o \
+  mo_veg_memory_class.o \
+  mo_atm2land_memory_class.o \
+  mo_rad_memory_class.o \
+  mo_q_assimi_memory_class.o \
+  mo_turb_memory_class.o
+
+mo_qs_test_radiation_model.o: \
+  mo_kind.o \
+  mo_lnd_bgcm_idx.o \
+  mo_lnd_bgcm_store.o \
+  mo_lnd_bgcm_store_class.o \
+  mo_jsb_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_atmland_constants.o \
+  mo_phy_schemes.o \
+  mo_jsb_physical_constants.o \
+  mo_q_veg_canopy.o \
+  mo_qs_rad_scope.o \
+  mo_q_assimi_config_class.o \
+  mo_rad_memory_class.o \
+  mo_veg_memory_class.o \
+  mo_hydro_memory_class.o \
+  mo_turb_memory_class.o \
+  mo_atm2land_memory_class.o
+
+mo_qs_process_init_util.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_jsb_math_constants.o \
+  mo_sb_constants.o
+
+mo_qs_forcing.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_jsb_math_constants.o \
+  mo_qs_icon_adapter.o \
+  mo_jsb_class.o \
+  mo_jsb_model_class.o
+
+mo_qs_rad_scope.o: \
+  mo_kind.o
+
+mo_qs_icon_adapter.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_namelist.o \
+  mo_io_units.o \
+  mo_physical_constants.o \
+  mo_jsb_math_constants.o \
+  mo_turb_vdiff_params.o \
+  mo_model_domain.o \
+  mo_io_config.o \
+  mo_aes_thermo.o \
+  mo_thdyn_functions.o \
+  mo_impl_constants.o \
+  mo_time_config.o
+
+mo_jsb4_forcing.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_jsb_model_class.o \
+  mo_jsb_class.o \
+  mo_jsb_physical_constants.o \
+  mo_util_string.o

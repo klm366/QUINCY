@@ -230,6 +230,8 @@ CONTAINS
     USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
     dsl4jsb_Use_processes SB_
     dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_processes A2L_
+    dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -248,6 +250,7 @@ CONTAINS
     dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! 3D SB_
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff
@@ -279,6 +282,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_c_mavg
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_n_mavg
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_p_mavg
+    !A2L
+    dsl4jsb_Real2D_onChunk      :: nhx_deposition
+    dsl4jsb_Real2D_onChunk      :: noy_deposition
+    dsl4jsb_Real2D_onChunk      :: ndep_mavg
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -297,6 +304,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! 3D SB_
     dsl4jsb_Get_var3D_onChunk(SB_,  microbial_cue_eff)                  ! in
@@ -330,6 +338,10 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(SB_,  residue_assoc_som_c_loss_mavg_sl)   ! out
       dsl4jsb_Get_var3D_onChunk(SB_,  assoc_dom_c_loss_mavg_sl)           ! out
     END IF
+    !A2L
+    dsl4jsb_Get_var2D_onChunk(A2L_,  nhx_deposition)                    ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,  noy_deposition)                    ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,  ndep_mavg)                         ! out
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
@@ -419,6 +431,9 @@ CONTAINS
                                                                       sb_loss_mt(ix_dom_assoc, ixC, :, :), &
                                                                       mavg_period_tresidual)
     END IF
+
+     ndep_mavg(:) = calc_time_mavg(dtime, ndep_mavg(:), nhx_deposition(:) + noy_deposition(:), mavg_period_yearly * 20.0_wp)
+
   END SUBROUTINE calculate_time_average_soilbiogeochemistry
 
 #endif
