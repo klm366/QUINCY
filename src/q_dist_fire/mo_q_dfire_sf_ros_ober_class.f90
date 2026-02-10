@@ -410,6 +410,8 @@ CONTAINS
   !> USDA Forest Service RMRS-GTR-371. 2018 Table 6a
   !>
   FUNCTION calc_live_me(nc, ndd, nlv, mf_dd, me_dd, woi_dd, woi_lv, sigmas_dd, sigmas_lv) RESULT (me)
+    USE mo_q_dfire_constants, ONLY: df_sf_units_ft_to_cm
+
     INTEGER, INTENT(in) :: nc, ndd, nlv
     REAL(wp), INTENT(in) :: mf_dd(nc,ndd) !< Dead fuel moisture [-]
     REAL(wp), INTENT(in) :: me_dd(nc) !< Dead fuel moisture of extinction [-]
@@ -450,6 +452,7 @@ CONTAINS
   !> USDA Forest Service RMRS-GTR-371. 2018 Table 6a
   !>
   FUNCTION calc_fine_dead_fuel_moisture(nc, ndd, mf_dd, woi_dd, sigmas_dd) RESULT (mfdead)
+    USE mo_q_dfire_constants, ONLY: df_sf_units_ft_to_cm
     INTEGER, INTENT(in) :: nc, ndd
     REAL(wp), INTENT(in) :: mf_dd(nc,ndd) !< Dead fuel moisture [-]
     REAL(wp), INTENT(in) :: woi_dd(nc,ndd) !< Dead fuel load [kg DM m-2]
@@ -461,8 +464,8 @@ CONTAINS
     INTEGER :: is
 
     DO is=1, ndd
-      mffm_dd(:,is) = mf_dd(:,is) * woi_dd(:,is) * exp(-138._wp/df_sf_units_ft_to_cm/sigmas_dd(ix))
-      woi_sum(:,is) = woi_dd(:,is) * exp(-138._wp/df_sf_units_ft_to_cm/sigmas_dd(ix))
+      mffm_dd(:,is) = mf_dd(:,is) * woi_dd(:,is) * exp(-138._wp/df_sf_units_ft_to_cm/sigmas_dd(is))
+      woi_sum(:,is) = woi_dd(:,is) * exp(-138._wp/df_sf_units_ft_to_cm/sigmas_dd(is))
     END DO
     mfdead = SUM(mffm_dd) / SUM(woi_sum)
   END FUNCTION calc_fine_dead_fuel_moisture
