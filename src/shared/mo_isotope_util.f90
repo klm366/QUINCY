@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -13,7 +13,6 @@
 !>
 !>#### Contains functions and subroutines to calculate isotope discrimination
 !>
-
 MODULE mo_isotope_util
 #ifndef __NO_JSBACH__
 

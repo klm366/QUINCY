@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -21,7 +21,7 @@ MODULE mo_carbon_interface
   ! Used variables of module
 
   ! Use of basic structures
-  USE mo_jsb_control,     ONLY: debug_on
+  USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, message_text, finish
 
@@ -421,7 +421,7 @@ CONTAINS
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
 
-    !$ACC DATA &
+    !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes)
 
     iblk  = options%iblk
@@ -640,7 +640,7 @@ CONTAINS
 
     ! Initializations
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       co2flux_npp_2_atm_yday_ta(ic)  = 0._wp
@@ -779,7 +779,7 @@ CONTAINS
 
     IF( .NOT. new_day .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         LAI_sum(ic)      = LAI_sum(ic)      + LAI(ic)
         NPP_pot_sum(ic)  = NPP_pot_sum(ic)  + NPP_pot_rate_ca(ic)
@@ -790,7 +790,7 @@ CONTAINS
     ! NEW DAY -- Carbon time step
     ELSE                                    ! A NEW DAY BEGINS and we DID NOT START AN
                                             ! TOTALLY NEW EXPERIMENT ==> perform carbon balance
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         ! First save before yesterday's and yesterday's means
         LAI_yyDayMean(ic)  = LAI_yDayMean(ic)
@@ -818,14 +818,14 @@ CONTAINS
       ! With forest regrowth the maximum LAI depends on location and can change over time.
       IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
         dsl4jsb_Get_var2D_onChunk(PHENO_, maxLAI_allom)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           MaxLai(ic) = maxLAI_allom(ic)
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
         lctlib_MaxLAI = dsl4jsb_Lctlib_param(MaxLAI)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           MaxLai(ic) = lctlib_MaxLAI
         END DO
@@ -907,7 +907,7 @@ CONTAINS
         IF (debug_on()) CALL message(TRIM(routine), 'ignoring anaerobic.')
       END IF
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         ! Now update the C pools
         CALL calc_plant_c( &
@@ -1172,13 +1172,13 @@ CONTAINS
       ! determine annual maximum content of green pool for NLCC process
       IF (model%Is_process_enabled(NLCC_)) THEN
         IF (new_year) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             max_green_bio(ic) = c_green(ic)
           END DO
           !$ACC END PARALLEL LOOP
         ELSE IF (new_day) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             max_green_bio(ic) = MAX(max_green_bio(ic), c_green(ic))
           END DO
@@ -1232,13 +1232,12 @@ CONTAINS
 
       ! cflux_herb_2_atm and soil_respiration are negative (fluxes away from land)
       ! thus + here instead of - to reduce NPP by these fluxes
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         current_fluxes(ic) = (NPP_act_yDayMean(ic) + cflux_herb_2_atm(ic) + soil_respiration(ic)) &
           &                   * sec_per_day * veg_fract_correction(ic) * fract_fpc_max(ic)
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC WAIT(1)
 
       CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
         & current_fluxes(:), cconservation_calcCpools(:))
@@ -1257,7 +1256,7 @@ CONTAINS
     !-------------------------------------------------------------------
     ! Note: carbon loss of biosphere means a positive CO2 flux to atmosphere (i.e. NEP and net CO2-flux have opposite signs)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       co2flux_npp_2_atm_ta(ic) = molarMassCO2_kg *                    & ! Conversion factor from mol to kg CO2
                  (- veg_fract_correction(ic) * fract_fpc_max(ic)      & ! Minus: atmosphere gain is positive
@@ -1277,7 +1276,6 @@ CONTAINS
                      * (NPP_act_yDayMean(ic)))                          ! therefore here additionaly the day mean
     END DO
     !$ACC END PARALLEL LOOP
-    !$ACC WAIT(1)
 
     ! Calculate diagnostic carbon sums
     CALL calculate_current_c_ta_state_sum(tile, options, c_sum_natural_ta(:),            &
@@ -1286,14 +1284,13 @@ CONTAINS
     ! Write lct information on variable to make it available on pft-tiles via function collect_var for NLCC process
     IF (model%Is_process_enabled(NLCC_)) THEN
       lctlib_specificLeafArea_C = dsl4jsb_Lctlib_param(specificLeafArea_C)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         sla(ic) = lctlib_specificLeafArea_C
       END DO
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC WAIT(1)
     !$ACC END DATA
     IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
       DEALLOCATE(layer_depth)
@@ -1343,6 +1340,8 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    CALL weighted_by_fract%BeginAggregate()
 
     dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yDayMean,          weighted_by_fract)
 
@@ -1451,6 +1450,8 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_wtr_soil_rel_sl,   weighted_by_fract)
     END IF
 
+    CALL weighted_by_fract%EndAggregate()
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_C_NPP_pot_allocation
@@ -1504,6 +1505,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    CALL weighted_by_fract%BeginAggregate()
+
     ! if running with FLCC (which runs on the veg tile)
     ! the co2flux_fire_all_2_atm_ta variable is changed on the leaves
     ! ... it therefore requires a carbon aggregation task on the leaves to run subsequent to the flcc task
@@ -1525,6 +1528,7 @@ CONTAINS
     ! dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_1_ta,            weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_2_ta,            weighted_by_fract)
 
+    CALL weighted_by_fract%EndAggregate()
 
   END SUBROUTINE aggregate_ta_vars_after_lcc
 
@@ -1680,7 +1684,7 @@ CONTAINS
 !       dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_anox_sl )
     END IF
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(refarea_scaling)
     DO ic = 1, nc
       refarea_scaling = oldRefArea(ic) / newRefArea(ic)
@@ -2436,7 +2440,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2_ta)     ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2_ta)            ! in
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       current_c_state_sum_ta(ic) = c_green_ta(ic) + c_woods_ta(ic) + c_reserve_ta(ic) + c_crop_harvest_ta(ic) + &
@@ -2536,7 +2540,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     !$ACC DATA CREATE(non_woody_litter, woody_litter, this_litter)
 
     ! Collect matter from potential active variables -- here unfortunately explicit
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       non_woody_litter(ic) = 0._wp
       woody_litter(ic) = 0._wp
@@ -2567,7 +2571,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
       IF (INDEX(carbon_required_passive_vars(i_pool), '1') > 0) THEN
         ! Pool name contains '1' => non woody C pool
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           this_litter(ic) = non_woody_litter(ic)
         END DO
@@ -2578,7 +2582,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
         litter_coefficient = dsl4jsb_Lctlib_param(LeafLit_coef(i_litter_coefficient))
       ELSE IF (INDEX(carbon_required_passive_vars(i_pool), '2') > 0) THEN
         ! Pool name contains '2' => woody C pool
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           this_litter(ic) = woody_litter(ic)
         END DO
@@ -2664,7 +2668,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
     dsl4jsb_Get_var2D_onChunk(PHENO_, veg_fract_correction)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(veg_fract_corr_scaling)
     DO ic = 1, nc
       veg_fract_corr_scaling = old_veg_fract_correction(ic) / veg_fract_correction(ic)
@@ -2804,7 +2808,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
     CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       Cconserve(ic) = Cconserve(ic) - old_c_state_sum_ta(ic) - cflux_ta(ic)
     END DO
@@ -2881,7 +2885,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_wp)) THEN
 
         ! CO2 flux due to npp, soil respiration and herbivory
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           C_flux_yday(ic) = &
             & - ((  co2flux_npp_2_atm_yday_ta(ic)  &
@@ -2893,7 +2897,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
         ! CO2 flux due to fire
         IF (model%Is_process_enabled(DISTURB_)) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             C_flux_yday(ic) =  C_flux_yday(ic) &
               & - co2flux_fire_all_2_atm_ta(ic) * sec_per_day / molarMassCO2_kg
@@ -2902,14 +2906,14 @@ END SUBROUTINE recalc_carbon_per_tile_vars
         END IF
 
         CALL calculate_current_c_ta_state_sum(tile, options, carbon_conservation_test)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           carbon_conservation_test(ic) = carbon_conservation_test(ic) - yday_c_state_sum(ic)  - C_flux_yday(ic)
         END DO
         !$ACC END PARALLEL LOOP
 
       ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           carbon_conservation_test(ic) = 0._wp
         END DO
@@ -2920,7 +2924,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
     END DO
 
-    !$ACC WAIT(1)
+    !$ACC WAIT(acc_stream)
     !$ACC END DATA
 
     DEALLOCATE(C_flux_yday)

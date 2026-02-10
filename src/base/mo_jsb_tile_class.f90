@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -26,7 +26,7 @@
 MODULE mo_jsb_tile_class
 #ifndef __NO_JSBACH__
 
-  USE mo_jsb_control,         ONLY: debug_on
+  USE mo_jsb_control,         ONLY: debug_on, acc_stream, acc_async_sync
   USE mo_kind,                ONLY: wp, dp
   USE mo_exception,           ONLY: message, finish
   USE mo_io_units,            ONLY: filename_max
@@ -62,6 +62,9 @@ MODULE mo_jsb_tile_class
   TYPE, ABSTRACT :: t_jsb_aggregator
     CHARACTER(len=25) :: name    !< Aggregators are distinguished by using unique names
   CONTAINS
+    ! Begin/End routines enable multi-stream OpenACC aggregation
+    PROCEDURE(begin_interface),        DEFERRED             :: BeginAggregate !< Start  multi-stream aggregation (useful for OpenACC)
+    PROCEDURE(end_interface),          DEFERRED             :: EndAggregate   !< Finish multi-stream aggregation (useful for OpenACC)
     PROCEDURE(aggregate_interface_2d), DEFERRED             :: Aggregate_2d !< Aggregate operator for 2d variables
     PROCEDURE(aggregate_interface_3d), DEFERRED             :: Aggregate_3d !< Aggregate operator for 3d variables
     GENERIC                                                 :: Aggregate => Aggregate_2d, Aggregate_3d
@@ -105,7 +108,8 @@ MODULE mo_jsb_tile_class
                                                                       !< names must be either "fract[_max]_"//tile%name,
                                                                       !< or specified by fract_varname (in the use case).
     CHARACTER(LEN=20)                     :: fract_varname                 !< Name of variable containing fractions for this tile
-    LOGICAL,                  ALLOCATABLE :: l_fract_children_changed(:,:) !< indicates whether the fraction is changed
+    LOGICAL,                  ALLOCATABLE :: l_fract_children_changed(:,:) !< indicates whether the fraction is changed (aggregator)
+    LOGICAL,                  ALLOCATABLE :: l_fract_alcc_change(:,:)      !< indicates whether the fraction will be changed by alcc
     TYPE(t_jsb_aggregator_p), ALLOCATABLE :: aggregators(:)                !< List of possible aggregators for this tile
     !
     INTEGER                               :: nr_of_cqts = 0                !< number of conserved quantity types in use on the tile
@@ -157,6 +161,7 @@ MODULE mo_jsb_tile_class
     PROCEDURE(Init_vars_interface),      DEFERRED :: Count_and_classify_bgc_materials
     PROCEDURE(Init_vars_interface),      DEFERRED :: Collect_bgc_materials
 #endif
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Check_child_cover_fractions
     PROCEDURE(Init_vars_interface),      DEFERRED :: Count_conserved_quantities
     PROCEDURE(Init_vars_interface),      DEFERRED :: Collect_conserved_variables
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
@@ -225,6 +230,15 @@ MODULE mo_jsb_tile_class
   ! Interfaces for deferred subroutines of abstract t_jsb_aggregator type
 
   ABSTRACT INTERFACE
+    SUBROUTINE begin_interface(this)
+      IMPORT :: t_jsb_aggregator
+      CLASS(t_jsb_aggregator),    INTENT(inout), TARGET :: this
+    END SUBROUTINE begin_interface
+    SUBROUTINE end_interface(this)
+      IMPORT :: t_jsb_aggregator
+      CLASS(t_jsb_aggregator),    INTENT(inout), TARGET :: this
+    END SUBROUTINE end_interface
+
     !> Interface for deferred subroutine `Aggregate_2d` of `t_jsb_aggregator`
     SUBROUTINE aggregate_interface_2d(this, tile, var, ics, ice, iblk, caller)
       IMPORT :: t_jsb_aggregator, t_jsb_tile_abstract, t_jsb_var_real2d
@@ -250,11 +264,15 @@ MODULE mo_jsb_tile_class
   !> Implementation of a concrete aggregator for aggregation by weighted fractions
   TYPE, EXTENDS(t_jsb_aggregator) :: t_jsb_aggregator_weighted_by_fract
     !> Variables needed to calculate aggregation weights
-    REAL(wp), ALLOCATABLE :: fractions(:,:,:) !< Weighting fraction for each child of tile @domain (nproma, nblock, no_children)
-    REAL(wp), ALLOCATABLE :: fract_sum(:,:)   !< Sum of fractions for fraction weighted averaging
-    REAL(wp), ALLOCATABLE :: data_sum(:,:)    !< Sum of data*fraction for fraction weighted averaging
+    REAL(wp), ALLOCATABLE :: fractions(:,:,:)          !< Weighting fraction for each child of tile @domain (nproma, nblock, no_children)
+    REAL(wp), POINTER     :: fract_sum(:,:) => NULL()  !< Sum of fractions for fraction weighted averaging
+    REAL(wp), POINTER     :: data_sum(:,:)  => NULL()  !< Sum of data*fraction for fraction weighted averaging
+
+    INTEGER :: stream, original_stream !< OpenACC variables for multi-stream aggregation
   CONTAINS
     !> Functions to make use of the aggregator
+    PROCEDURE :: BeginAggregate   => BeginAggregate_weighted_by_fract !< Start  multi-stream aggregation (useful for OpenACC)
+    PROCEDURE :: EndAggregate     => EndAggregate_weighted_by_fract   !< Finish multi-stream aggregation (useful for OpenACC)
     PROCEDURE :: Set_fractions_1d => Set_fractions_aggregator_1d  !< Set fraction field for chunk. TODO: Rename "1d" to "chunk"
     PROCEDURE :: Set_fractions_2d => Set_fractions_aggregator_2d  !< Set fraction field for entire domain. TODO: "2d"=>"domain"
     GENERIC   :: Set_fractions    => Set_fractions_1d, Set_fractions_2d !< Generic function to set tile fractions
@@ -440,7 +458,7 @@ CONTAINS
 
       this%fract_old(ics:ice, iblk) = this%fract(ics:ice, iblk)
       this%fract    (ics:ice, iblk) = fract(:)
-      !$ACC UPDATE DEVICE(this%fract(ics:ice,iblk), this%fract_old(ics:ice,iblk)) ASYNC(1)
+      !$ACC UPDATE DEVICE(this%fract(ics:ice,iblk:iblk+1), this%fract_old(ics:ice,iblk:iblk+1)) ASYNC(1)
 
       IF (ASSOCIATED(this%parent)) THEN
         SELECT TYPE (parent=>this%parent)
@@ -468,8 +486,10 @@ CONTAINS
        & CALL finish(TRIM(routine), 'Dimension mismatch')
 
       this%fract_old(ics:ice, iblk) = fract_old(:)
-      !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk)) ASYNC(1)
+      !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk:iblk+1)) ASYNC(1)
     END IF
+
+    !$ACC WAIT(1)
 
   END SUBROUTINE Set_fraction_1d
 
@@ -526,6 +546,8 @@ CONTAINS
       END IF
 
     END IF
+
+    !$ACC WAIT(1)
 
   END SUBROUTINE Set_fraction_2d
 
@@ -688,12 +710,14 @@ CONTAINS
 
     ALLOCATE(aggregator)
     aggregator%name = 'weighted_by_fract'
+    aggregator%original_stream = -1
+    aggregator%stream = acc_stream
 
     grid => Get_grid(grid_id)
     ALLOCATE(aggregator%fractions(grid%nproma, grid%nblks, no_of_children))
     ALLOCATE(aggregator%data_sum (grid%nproma, grid%nblks))
     ALLOCATE(aggregator%fract_sum(grid%nproma, grid%nblks))
-    !$ACC ENTER DATA CREATE(aggregator, aggregator%fractions, aggregator%data_sum, aggregator%fract_sum)
+    !$ACC ENTER DATA CREATE(aggregator, aggregator%fractions)
   END FUNCTION Create_aggregator_weighted_by_fract
 
   ! ======================================================================================================= !
@@ -712,16 +736,39 @@ CONTAINS
       !$ACC EXIT DATA DELETE(aggregator%fractions)
       DEALLOCATE(aggregator%fractions)
     END IF
-    IF (ALLOCATED(aggregator%data_sum)) THEN
-      !$ACC EXIT DATA DELETE(aggregator%data_sum)
+    IF (ASSOCIATED(aggregator%data_sum)) THEN
       DEALLOCATE(aggregator%data_sum)
     END IF
-    IF (ALLOCATED(aggregator%fract_sum)) THEN
-      !$ACC EXIT DATA DELETE(aggregator%fract_sum)
+    IF (ASSOCIATED(aggregator%fract_sum)) THEN
       DEALLOCATE(aggregator%fract_sum)
     END IF
 
   END SUBROUTINE Finalize_aggregator_weighted_by_fract
+
+  SUBROUTINE BeginAggregate_weighted_by_fract(this)
+    CLASS(t_jsb_aggregator_weighted_by_fract),    INTENT(inout), TARGET :: this
+
+    IF (this%stream /= acc_async_sync) THEN
+      this%original_stream = acc_stream
+      this%stream = this%original_stream + 1
+    END IF
+  END SUBROUTINE BeginAggregate_weighted_by_fract
+  SUBROUTINE EndAggregate_weighted_by_fract(this)
+    CLASS(t_jsb_aggregator_weighted_by_fract),    INTENT(inout), TARGET :: this
+    INTEGER :: stream, dummy
+
+    IF (this%original_stream /= -1) THEN
+      DO stream = this%original_stream + 1, this%stream - 1
+        !$ACC WAIT(stream) ASYNC(this%original_stream)
+      END DO
+      ! Dummy kernel for simpler graph dependency resolution
+      !$ACC PARALLEL ASYNC(this%original_stream)
+      dummy = 1
+      !$ACC END PARALLEL
+    END IF
+    this%original_stream = -1
+    this%stream = acc_stream
+  END SUBROUTINE EndAggregate_weighted_by_fract
 
   ! ====================================================================================================== !
   !
@@ -750,7 +797,7 @@ CONTAINS
         current => current%next_sibling_tile
       END DO
 
-      !$ACC UPDATE DEVICE(this%fractions(ics:ice,iblk,:)) ASYNC(1)
+      !$ACC UPDATE DEVICE(this%fractions(ics:ice,iblk,:))
 
       !! Section for debugging
       !! It needs to be adapted to absolute tile fractions!
@@ -800,7 +847,7 @@ CONTAINS
         current => current%next_sibling_tile
       END DO
 
-      !$ACC UPDATE DEVICE(this%fractions(:,:,:)) ASYNC(1)
+      !$ACC UPDATE DEVICE(this%fractions(:,:,:))
 
       ! ALLOCATE(fract(ice-ics+1))
       ! ALLOCATE(fract_sum(ice-ics+1))
@@ -833,6 +880,8 @@ CONTAINS
 
     REAL(wp), POINTER :: ptr(:,:)
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
+    REAL(wp), POINTER :: fract_sum(:,:)
+    REAL(wp), POINTER :: data_sum(:,:)
 
     INTEGER :: no_children, icount,ichild, i, iproc, j
     LOGICAL :: l_aggregate_all
@@ -885,7 +934,11 @@ CONTAINS
       END DO
     END IF
 
-    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs2d_cache, var) ASYNC(1)
+    data_sum  => this%data_sum
+    fract_sum => this%fract_sum
+
+    !$ACC WAIT(this%original_stream) ASYNC(this%stream) IF(this%original_stream /= -1)
+    !$ACC PARALLEL DEFAULT(PRESENT) CREATE(data_sum, fract_sum) ASYNC(this%stream)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
       ! If there is only one child nothing needs to be aggregated ...
@@ -898,8 +951,8 @@ CONTAINS
       ! With more then one child tile we need to do the weighted averaging.
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
-        this%data_sum (j,iblk) = 0._wp
-        this%fract_sum(j,iblk) = 0._wp
+        data_sum (j,iblk) = 0._wp
+        fract_sum(j,iblk) = 0._wp
       END DO
 
       ! Calculate the (weighted) sum of the data and the sum up the fractions
@@ -912,7 +965,7 @@ CONTAINS
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             ! Multilply variable of the child with the weight and add it to the data sum
-            this%data_sum(j,iblk) = this%data_sum(j,iblk) &
+            data_sum(j,iblk) = data_sum(j,iblk) &
               & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk)
             ! -> The cache is a huge array of pointers with i iterating over the number of children
             !    (second dim: number of variables, third dim: number of processes).
@@ -920,14 +973,14 @@ CONTAINS
             !      tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr2d(j,iblk)
 
             ! Add weight to the weight sum
-            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+            fract_sum(j,iblk) = fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
         ELSE IF (l_aggregate_all) THEN
           ! The variable is not defined on the this child tile, but we still want to consider its fraction
           ! (e.g. for fluxes in m-2, that are not calculated on all child tiles; same as adding value zero).
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
-            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+            fract_sum(j,iblk) = fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
         END IF
       END DO
@@ -948,7 +1001,7 @@ CONTAINS
       IF (icount == 1) THEN  ! Only one child tile needs to be considered.
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
-          IF (this%fract_sum(j,iblk) > 0._wp) THEN
+          IF (fract_sum(j,iblk) > 0._wp) THEN
             ! ichild: the only child that contained the variable
             var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
           END IF
@@ -956,9 +1009,9 @@ CONTAINS
       ELSE IF (icount > 1) THEN  ! Several child tiles need to be considered.
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
-          IF (this%fract_sum(j,iblk) > 0._wp) THEN
+          IF (fract_sum(j,iblk) > 0._wp) THEN
             ! Divide the data sum by the sum of the fractions
-            var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
+            var%ptr(j,iblk) = data_sum(j,iblk) / fract_sum(j,iblk)
           ! ELSE
           !   IF (TRIM(tile%name) == 'box') var%ptr(j,iblk) = -1.e4
           END IF
@@ -977,6 +1030,8 @@ CONTAINS
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//')')
     END IF
 
+    IF (this%original_stream /= -1) this%stream = this%stream + 1
+
   END SUBROUTINE Aggregate_weighted_by_fract_2d
 
 
@@ -994,6 +1049,8 @@ CONTAINS
 
     CLASS(t_jsb_var), POINTER :: ptr
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
+    REAL(wp), POINTER :: fract_sum(:,:)
+    REAL(wp), POINTER :: data_sum(:,:)
 
     INTEGER :: no_children, icount, ichild, i, iproc, ilev, nlev, j
     LOGICAL :: l_aggregate_all
@@ -1048,7 +1105,11 @@ CONTAINS
       END DO
     END IF
 
-    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs3d_cache, var) ASYNC(1)
+    data_sum  => this%data_sum
+    fract_sum => this%fract_sum
+
+    !$ACC WAIT(this%original_stream) ASYNC(this%stream) IF(this%original_stream /= -1)
+    !$ACC PARALLEL DEFAULT(PRESENT) CREATE(data_sum, fract_sum) ASYNC(this%stream)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
       ! If there is only one child nothing needs to be aggregated ...
@@ -1066,7 +1127,7 @@ CONTAINS
       ! With more then one child tile we need to do the weighted averaging.
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
-        this%fract_sum(j,iblk) = 0._wp
+        fract_sum(j,iblk) = 0._wp
       END DO
       !$ACC LOOP SEQ
       DO i=1,no_children
@@ -1074,7 +1135,7 @@ CONTAINS
         IF (var%child_idx(i) > 0) THEN
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
-            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+            fract_sum(j,iblk) = fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
         ELSE IF (l_aggregate_all) THEN
           ! The variable is not defined on the this child tile, but we still want to consider its fraction
@@ -1082,7 +1143,7 @@ CONTAINS
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
             ! Add weight for this child i to the weight sum
-            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+            fract_sum(j,iblk) = fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
         END IF
       END DO
@@ -1091,7 +1152,7 @@ CONTAINS
       DO ilev = 1, nlev
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
-          this%data_sum (j,iblk) = 0._wp
+          data_sum (j,iblk) = 0._wp
         END DO
 
         !$ACC LOOP SEQ
@@ -1100,7 +1161,7 @@ CONTAINS
             !$ACC LOOP GANG(STATIC: 1) VECTOR
             DO j = ics, ice
               ! Multilply variable of the child with the weight and add it to the data sum
-              this%data_sum(j,iblk) = this%data_sum(j,iblk) &
+              data_sum(j,iblk) = data_sum(j,iblk) &
                 & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk)
               ! -> The cache is a huge array of pointers with i iterating over the number of children.
               !    second dim: number of variables, third dim: number of processes
@@ -1115,7 +1176,7 @@ CONTAINS
         IF (icount == 1) THEN ! Only one child tile needs to be considered
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
-            IF (this%fract_sum(j,iblk) > 0._wp) THEN
+            IF (fract_sum(j,iblk) > 0._wp) THEN
               ! ichild: the only child that contained the variable
               var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
             END IF
@@ -1123,9 +1184,9 @@ CONTAINS
         ELSE IF (icount > 1) THEN ! Several child tiles need to be considered
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
-            IF (this%fract_sum(j,iblk) > 0._wp) THEN
+            IF (fract_sum(j,iblk) > 0._wp) THEN
               ! Divide the data sum by the sum of the fractions
-              var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
+              var%ptr(j,ilev,iblk) = data_sum(j,iblk) / fract_sum(j,iblk)
             END IF
           END DO
         ELSE
@@ -1142,6 +1203,8 @@ CONTAINS
     ELSE
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//')')
     END IF
+
+    IF (this%original_stream /= -1) this%stream = this%stream + 1
 
   END SUBROUTINE Aggregate_weighted_by_fract_3d
 

@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -19,13 +19,37 @@ MODULE mo_turb_constants
   IMPLICIT NONE
   PUBLIC
 
-  ! REAL(wp), PARAMETER ::          &
-  !   !
-  !   ! Parameters for roughness length
-  !   & blending_height          = 100._wp,  & !< Blending height [m]
-  !   & roughness_snow           = 0.001_wp, & !< Roughness length of snow-covered surfaces [m]
-  !   & roughness_bare           = 0.005_wp, & !< Roughness length of bare land surfaces [m]
-  !   & roughness_lai_saturation = 0.4_wp      !< factor in roughness length dependence on LAI (should be between 0.1 and 1)
+  ! vegetation parameters for turbulence calculations
+  REAL(wp), SAVE :: &
+    & veg_height_to_rough_momentum, &   !< factor for vegetation height to momentum [unitless]
+    & veg_min_roughness                 !< minimum vegetation roughness, similar to 'lctlib_MinVegRoughness' of jsbach
+
+
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_turb_constants'
+
+  !$ACC DECLARE CREATE(veg_height_to_rough_momentum, veg_min_roughness)
+
+CONTAINS
+
+  !-----------------------------------------------------------------------------------------------------
+  !> initialize constants used of the turbulence process
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE init_turb_constants
+    ! ---------------------------
+    ! 0.1 InOut
+    !
+    ! ---------------------------
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_turb_constants'
+
+    ! turbulence calculations
+    veg_height_to_rough_momentum  = 10.0_wp           !< expert knowledge
+    veg_min_roughness             = 0.1_wp            !< expert knowledge
+
+
+    !$ACC UPDATE DEVICE(veg_height_to_rough_momentum, veg_min_roughness)
+  END SUBROUTINE init_turb_constants
 
 #endif
 END MODULE mo_turb_constants

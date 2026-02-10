@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -36,7 +36,6 @@ MODULE mo_jsb_task_class
 
   TYPE t_jsb_task_options
     REAL(wp)                  :: dtime   = -1._wp
-    REAL(wp)                  :: steplen = -1._wp
     REAL(wp)                  :: alpha   = -1._wp !< Implicitness factor
     TYPE(t_datetime), POINTER :: current_datetime
     INTEGER                   :: iblk    = -1  ! Number of current block (chunk)
@@ -46,6 +45,7 @@ MODULE mo_jsb_task_class
     INTEGER                   :: nsoil_e = -1  !< Number of soil layers for energy
     INTEGER                   :: nsoil_w = -1  !< Number of soil layers for water
     INTEGER                   :: nsnow_e = -1  !< Number of snow layers for energy
+    INTEGER                   :: npft    =  0  !< Number of PFTs
   END TYPE t_jsb_task_options
 
 !!$  TYPE, EXTENDS(t_Message) :: t_jsb_task_msg

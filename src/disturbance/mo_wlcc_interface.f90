@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -107,7 +107,7 @@ CONTAINS
     INTEGER  :: i, j, i_tile, iblk, ics, ice, nc
     INTEGER  :: nr_of_tiles, nr_of_lcc_events, nr_of_combined_tiles
     REAL(wp) :: dtime, conversion_fact
-    REAL(wp), ALLOCATABLE :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
+    REAL(wp), POINTER :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
 
     REAL(wp), DIMENSION(options%nc) :: current_fract
 
@@ -157,12 +157,14 @@ CONTAINS
     dsl4jsb_Get_lcc_relocations(WLCC_, lcc_relocations)
     nr_of_tiles = lcc_relocations%nr_of_tiles
 
-
     ! Allocate area vectors
-    ALLOCATE(initial_area(nc, nr_of_tiles))
-    ALLOCATE(lost_area(nc, nr_of_tiles))
-    ALLOCATE(gained_area(nc, nr_of_tiles))
+    ! Init area vectors
+    dsl4jsb_Get_lcc_area_matrix(initial_area)
+    dsl4jsb_Get_lcc_area_matrix(lost_area)
+    dsl4jsb_Get_lcc_area_matrix(gained_area)
     initial_area(:,:) = 0.0_wp
+    lost_area(:,:) = 0.0_wp
+    gained_area(:,:) = 0.0_wp
 
     !>
     !> 2. Two possibilities:
@@ -328,11 +330,6 @@ CONTAINS
       ENDIF ! ... only to be conducted if there is any area movement
     ENDDO ! outer loop enclosing one full lcc-cycle: depending on if are movement is to be "separate" or mixed
 
-    !>
-    !> 6. Deallocate area vectors
-    !>
-    DEALLOCATE(lost_area, gained_area, initial_area)
-
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_wlcc
@@ -349,7 +346,6 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER  :: iblk, ics, ice
-    !X if necessary: REAL(wp) :: dtime, steplen
     CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
     dsl4jsb_Def_memory(FAGE_)
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_wlcc'
@@ -359,9 +355,6 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-
-    !X if necessary: dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 

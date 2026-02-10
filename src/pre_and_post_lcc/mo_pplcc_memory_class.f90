@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -63,7 +63,7 @@ MODULE mo_pplcc_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_pplcc_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_pplcc_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -76,6 +76,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)    :: model_id
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
@@ -98,7 +99,7 @@ CONTAINS
         .AND. TRIM(suffix) == 'box') THEN
       output_level = BASIC   ! Assign variable to basic output group
     ELSE
-      output_level = NONE    ! Do not assigne variable to an output group
+      output_level = NONE    ! Do not assign variable to an output group
     END IF
 
     ! Area fractions of selected groups of PFTs - only calculated on box tile
@@ -166,49 +167,49 @@ CONTAINS
       & t_cf('tree_area_gsum', 'Mio km2', 'Global tree area'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp)
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp)
     CALL mem%Add_var('shrub_area_gsum', mem%shrub_area_gsum,                   &
       & hgrid, surface,                                                        &
       & t_cf('shrub_area_gsum', 'Mio km2', 'Global shrub area'),               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp)
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp)
     CALL mem%Add_var('grass_area_gsum', mem%grass_area_gsum,                   &
       & hgrid, surface,                                                        &
       & t_cf('grass_area_gsum', 'Mio km2', 'Global grass area'),               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp)
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp)
     CALL mem%Add_var('crop_area_gsum', mem%crop_area_gsum,                     &
       & hgrid, surface,                                                        &
       & t_cf('crop_area_gsum', 'Mio km2', 'Global crop area'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp)
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp)
     CALL mem%Add_var('pasture_area_gsum', mem%pasture_area_gsum,               &
       & hgrid, surface,                                                        &
       & t_cf('pasture_area_gsum', 'Mio km2', 'Global pasture area'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp)
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp)
     CALL mem%Add_var('baresoil_area_gsum', mem%baresoil_area_gsum,             &
       & hgrid, surface,                                                        &
       & t_cf('baresoil_area_gsum', 'Mio km2', 'Global baresoil area'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp)
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp)
     CALL mem%Add_var('C3pft_area_gsum', mem%C3pft_area_gsum,                   &
       & hgrid, surface,                                                        &
       & t_cf('C3pft_area_gsum', 'Mio km2', 'Global area of C3 PFTs'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp)
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp)
     CALL mem%Add_var('C4pft_area_gsum', mem%C4pft_area_gsum,                   &
       & hgrid, surface,                                                        &
       & t_cf('C4pft_area_gsum', 'Mio km2', 'Global area of C4 PFTs'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp)
+      & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp)
 
   END SUBROUTINE Init_pplcc_memory
 

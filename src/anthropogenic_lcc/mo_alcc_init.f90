@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -76,7 +76,7 @@ CONTAINS
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
     USE mo_io_units,            ONLY: filename_max
     USE mo_jsb_parallel,        ONLY: Get_omp_thread
-    USE mo_jsb_lcc_class,       ONLY: min_tolerated_cf_mismatch
+    USE mo_jsb_lcc_class,       ONLY: max_tolerated_cf_mismatch
 
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
@@ -88,10 +88,15 @@ CONTAINS
 
     dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_memory(ALCC_)
-    dsl4jsb_Real3D_onDomain :: cf_current_year
+    dsl4jsb_Real3D_onDomain :: cf_target_year
     REAL(wp),       POINTER :: ptr_2D(:,:)  ! tmp pointer
-    REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! in case of relative fracts in map files: cf of the veg tile
+    REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! In case of relative fracts in map files: cf of the veg tile
 
+    REAL(wp), ALLOCATABLE   :: target_cf(:)
+    INTEGER                 :: i_max_area
+    REAL(wp)                :: cf_sum
+
+    INTEGER :: target_year, iblk, ic
     INTEGER :: current_year, i_tile, npft, no_omp_thread, nproma, nblks
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: filename_land_use_data
@@ -105,10 +110,10 @@ CONTAINS
     nproma = hgrid%nproma
     nblks  = hgrid%nblks
 
-    IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
     current_year  = get_year(current_datetime)
 
-    ! alcc is expected to run on the veg tile
+    ! Alcc is expected to run on the veg tile
     ! -> search for the veg tile
     CALL model%Get_top_tile(tile)
     DO WHILE (ASSOCIATED(tile))
@@ -121,7 +126,7 @@ CONTAINS
       IF (tile%name .EQ. 'veg') EXIT
 
       CALL model%Goto_next_tile(tile)
-    ENDDO
+    END DO
 
     !>
     !> Assertion: alcc is expected to run on the veg tile
@@ -129,91 +134,116 @@ CONTAINS
     IF (.NOT. ASSOCIATED(tile)) THEN
       CALL finish(TRIM(routine), &
         & 'Violation of assertion: veg tile required but not found in tile tree.')
-    ENDIF
+    END IF
 
     ALLOCATE(cf_correction(nproma, nblks))
 
     dsl4jsb_Get_config(ALCC_)
 
     npft = tile%Get_no_of_children()
-    IF (.NOT. npft .EQ. dsl4jsb_Config(ALCC_)%nr_of_pfts) THEN
+    IF (.NOT. npft .EQ. model%config%npft) THEN
       CALL finish(TRIM(routine), &
         & 'Violation of assertion: Expected nr of pfts for alcc operations '&
         & //'did not match number of veg tile children, please check.')
-    ENDIF
+    END IF
 
-    ! check if model runs with relative or absolute fractions
-    IF(model%config%relative_fractions_in_file) THEN
+    ! Check if model runs with relative or absolute fractions
+    IF (model%config%relative_fractions_in_file) THEN
       ! In this case read fractions have to be corrected with veg fract share
       CALL tile%Get_fraction(fract=cf_correction(:,:))
     ELSE
       ! If anyway already absolute fracts, cf_correction is not required
       cf_correction(:,:) = 1.0_wp
-    ENDIF
+    END IF
 
     ! Read land use data
     dsl4jsb_Get_memory(ALCC_)
-    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_current_year)
+    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_target_year)
 
-    !>
-    !> Assertion: alcc process currently expects filenames with 4 digits
-    !>
-    IF (( current_year > 9999) .OR. (current_year < 1000)) THEN
-      CALL finish(TRIM(routine), &
-        & 'Violation of assertion: alcc process currently expects filenames with 4 digits.')
-    ENDIF
-    WRITE(filename_land_use_data,'(a,I4.4,a)') &
-      & TRIM(dsl4jsb_Config(ALCC_)%alcc_filename_prefix), current_year, ".nc"
+    SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
+    CASE ('maps')
 
-    input_file = jsb_netcdf_open_input(TRIM(filename_land_use_data), model%grid_id)
+      ! The target year to read the annual land cover maps from depends on the application scheme
+      IF (dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
+        ! In case of daily land cover change, read next years pft-fraction from map file
+        ! - i.e. the pft fraction which should be reached at the end of the year
+        target_year = current_year + 1
+      ELSE
+        ! In case of annual land cover change, read the pft-fractions of the current year
+        target_year = current_year
+      END IF
 
-    current_tile => tile%Get_first_child_tile()
-    i_tile = 0
-    DO WHILE (ASSOCIATED(current_tile))
-      i_tile = i_tile + 1
+      ! Assert: alcc process currently expects filenames with 4 digits
+      IF ((target_year < 1000) .OR. ( target_year > 9999)) THEN
+        CALL finish(TRIM(routine), &
+          & 'Violation of assertion: alcc process currently expects filenames with 4 digits.')
+      END IF
 
-      SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
-      CASE ('maps')
-        !-- start: parts from Rainer Schnecks alcc implementation
-        ! Read this years pft-fraction from map file
+      WRITE(filename_land_use_data,'(a,I4.4,a)') TRIM(dsl4jsb_Config(ALCC_)%alcc_filename_prefix), target_year, ".nc"
+
+      input_file = jsb_netcdf_open_input(TRIM(filename_land_use_data), model%grid_id)
+
+      current_tile => tile%Get_first_child_tile()
+      i_tile = 0
+      DO WHILE (ASSOCIATED(current_tile))
+        i_tile = i_tile + 1
+
         IF (debug_on()) CALL message(TRIM(routine), '...reading annual cover_fract maps for '//TRIM(current_tile%name))
         WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
 
-        ptr_2D => input_file%Read_2d(variable_name=TRIM(varname_within_file), &
-          & fill_array = cf_current_year(:,i_tile,:) )
-        !-- end: rewritten remainder from Rainer Schnecks alcc implementation
+        ptr_2D => input_file%Read_2d(variable_name=TRIM(varname_within_file), fill_array = cf_target_year(:,i_tile,:))
 
-        ! potentially correct read values (if relative fracts in map, else cf_correction has been set to 1.0_wp)
-        cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * cf_correction
-      CASE DEFAULT
-        CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )
-      END SELECT
+        ! Scale target fractions (required in case of relative fractions (default),
+        ! - in case of absolute fractions the cf_correction has been set to 1.0_wp above)
+        cf_target_year(:,i_tile,:) = cf_target_year(:,i_tile,:) * cf_correction
 
-      ! Assert: fractions >= 0 and < 1
-      IF (ANY(cf_current_year(:,i_tile,:) < 0.0_wp)) THEN
+        ! Assert: fractions >= 0 and < 1
+        IF (ANY(cf_target_year(:,i_tile,:) < 0.0_wp)) THEN
+          CALL finish(TRIM(routine), &
+            & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for ' &
+            & // TRIM(current_tile%name)//'. Please check.')
+        END IF
+        IF (ANY(cf_target_year(:,i_tile,:) > 1.0_wp + max_tolerated_cf_mismatch)) THEN
+          CALL finish(TRIM(routine), &
+            & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for ' &
+            & // TRIM(current_tile%name)//'. Please check.')
+        END IF
+
+        current_tile => current_tile%Get_next_sibling_tile()
+      END DO
+
+      ! Cover fractions generally should not exceed 1.0_wp
+      cf_target_year(:,:,:) = MIN(cf_target_year(:,:,:), 1.0_wp)
+
+      CALL input_file%Close()
+
+      ! Assert: sum of absolute fractions needs to be <=1
+      ! Check for violations outside of the tolerated range (which are probably rather due to errors than precision)
+      IF (ANY(SUM(cf_target_year(:,:,:),DIM=2) > 1.0_wp + max_tolerated_cf_mismatch)) THEN
         CALL finish(TRIM(routine), &
-        & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for '&
-        & // TRIM(current_tile%name)//'. Please check.')
-      ENDIF
-      IF (ANY(cf_current_year(:,i_tile,:) > 1.0_wp + EPSILON(1._wp))) THEN
-        CALL finish(TRIM(routine), &
-        & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for '&
-        & // TRIM(current_tile%name)//'. Please check.')
-      ENDIF
-
-      current_tile => current_tile%Get_next_sibling_tile()
-    ENDDO
-
-    CALL input_file%Close()
+          & 'Violation of assertion: PFT fractions derived from '//TRIM(filename_land_use_data) &
+          & // ' sum to > 1.0_wp. Please check.')
+      END IF
+      ! Correct remaining mismatches
+      IF (ANY(SUM(cf_target_year(:,:,:),DIM=2) > 1.0_wp)) THEN
+        ALLOCATE(target_cf(npft))
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            target_cf(:) = cf_target_year(ic,:,iblk)
+            cf_sum = SUM(target_cf(:))
+            IF (cf_sum > 1.0_wp) THEN
+              i_max_area = MAXLOC(target_cf(:), DIM=1)
+              cf_target_year(ic,i_max_area,iblk) = cf_target_year(ic,i_max_area,iblk) - (cf_sum - 1.0_wp)
+            END IF
+          END DO
+        END DO
+        DEALLOCATE(target_cf)
+      END IF
+    CASE DEFAULT
+      CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )
+    END SELECT
 
     DEALLOCATE(cf_correction)
-
-    ! Assert: sum of absolute fractions needs to be <=1
-    IF (ANY(SUM(cf_current_year(:,:,:),DIM=2) > 1.0_wp + min_tolerated_cf_mismatch)) THEN
-      CALL finish(TRIM(routine), &
-      & 'Violation of assertion: PFT fractions derived from '//TRIM(filename_land_use_data) &
-      & //' sum to > 1.0_wp. Please check.')
-    ENDIF
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 

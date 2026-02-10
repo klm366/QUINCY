@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -28,8 +28,7 @@ MODULE mo_jsb_physical_constants
     & dens_org           = 1300._wp,   & !< Density of organic part of soil                                    [kg/m3]
     & dens_ice           = rhoi,       & !< Density of frozen water in soil (ice)                              [kg/m3]
     & dens_snow          = rhos,       & !< =300.0  Density of snow                                            [kg/m3]
-    & dens_snow_min      = 50._wp,     & !< Minimum density of snow (for fresh snow)                           [kg/m3]
-    & dens_snow_max      = 300._wp       !< Maximum density of snow                                            [kg/m3]
+    & dens_snow_min      = 50._wp        !< Minimum density of snow (for fresh snow)                           [kg/m3]
 
   REAL(wp), PARAMETER :: &
     molarMassDryAir = amd   * 1.e-3_wp, & ! 28.970e-3_wp. Mass [kg] per amount of substance [mol] of dry air

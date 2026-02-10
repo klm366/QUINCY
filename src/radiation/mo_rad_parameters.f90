@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -29,12 +29,6 @@ MODULE mo_rad_parameters
     & rho2sbeta = def_parameters, &              !< scaling factor of solar angle in reflection calculation
     & k_csf = def_parameters, &                  !< scaling factor in the crown-shape effect on clumping (Campbell & Norman, 1998, eq 15.35)
     & min_cos_zenith_angle_rad = def_parameters  !< minimum coszine zenith angle for radiation calculation
-
-  REAL(wp), SAVE :: &
-    & def_alb_vis_soil = def_parameters, &  !< default VIS albedo for soil
-    & def_alb_nir_soil = def_parameters, &  !< default NIR albedo for soil
-    & def_alb_vis_snow = def_parameters, &  !< default VIS albedo for snow
-    & def_alb_nir_snow = def_parameters     !< default NIR albedo for snow
 
   REAL(wp), SAVE :: &
     & albedo_stem_vis    = def_parameters, &  !< Stem albedo (visible range)                                  [-]
@@ -67,10 +61,6 @@ CONTAINS
     k_csf                     = 2.2_wp        !< Campbell & Norman 1998, eq 15.35
     min_cos_zenith_angle_rad  = 0.1736482_wp  !< corresponding to 10 deg solar elevation, below which the
                                               !! radiation equations are no longer valid
-    def_alb_vis_soil          = 0.15_wp       !< default from Bonan 2008
-    def_alb_nir_soil          = 0.30_wp       !< default from Bonan 2008
-    def_alb_vis_snow          = 0.6_wp        !< Literature research: from 0.2(old snow) to 0.9(new snow) | @TODO: could vary with snow age
-    def_alb_nir_snow          = 0.6_wp        !< Literature research: from 0.2(old snow) to 0.9(new snow) | @TODO: could vary with snow age
     albedo_stem_vis           = 0.16_wp       !< Belda et al. 2022, https://doi.org/10.5194/gmd-15-6709-2022
     albedo_stem_nir           = 0.39_wp       !< Belda et al. 2022, https://doi.org/10.5194/gmd-15-6709-2022
     kbl_stem                  = 0.999_wp      !< Belda et al. 2022, https://doi.org/10.5194/gmd-15-6709-2022

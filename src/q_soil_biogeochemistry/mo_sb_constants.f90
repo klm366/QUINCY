@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -51,7 +51,8 @@ MODULE mo_sb_constants
       kmr_hsc, &              !< scaling factor for the sensitivity of half-saturation constant to moisture limitation
       kmr_sorption, &         !< scaling factor for the sensitivity of surface adsorption to moisture limitation
       kmr_decomposition, &    !< minimum water potential for decomposition
-      kmr_asymb_bnf           !< minimum water potential for nfixation
+      kmr_asymb_bnf, &        !< minimum water potential for nfixation
+      min_rmm_gasdiffusion    !< minimum scaling factor on gas diffusion induced by soil moisture changes
 
     ! temperature response
   REAL(wp), SAVE :: &
@@ -166,12 +167,13 @@ MODULE mo_sb_constants
 
   ! nutrient uptake kinetics & ECA approach: simple_1d model
   REAL(wp), SAVE :: &
-      km1_up_nh4, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
-      km1_up_no3, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
-      km1_up_po4, &             !< low-affinity parameter for plant and mycorrhizal uptake [l/mol]  unit correct ?
+      km1_up_nh4, &             !< low-affinity parameter for plant and mycorrhizal uptake [mol/m3]
+      km1_up_no3, &             !< low-affinity parameter for plant and mycorrhizal uptake [mol/m3]
+      km1_up_po4, &             !< low-affinity parameter for plant and mycorrhizal uptake [mol/m3]
       km2_up_nh4, &             !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
       km2_up_no3, &             !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
-      km2_up_po4                !< high-affinity parameter for plant and mycorrhizal uptake [mol/l] unit correct ?
+      km2_up_po4, &             !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
+      fract_vmax_low_affinity   !< fraction of vmax for nutrient uptake of low affinity transporter system []
 
   ! nutrient uptake kinetics & ECA approach: additional jsm parameters
   REAL(wp), SAVE :: &
@@ -187,6 +189,8 @@ MODULE mo_sb_constants
       f_plant_carrier_n, &        !< ratio between plant N transport and fine root biomass, []
       vmax_nitrification_nh4, &   !< maximum nitrification capacity of nitrifiers [mol N / mol biomass C / s]
       vmax_denitrification_no3, & !< maximum nitrification capacity of denitrifiers [mol N / mol biomass C / s]
+      c_limit_on_nitrification_min, & !< minimal C limitation ratio on nitrification rates [-]
+      c_limit_on_denitrification_min, & !< minimal C limitation ratio on denitrification rates [-]
       km_nitrification_nh4, &     !< half-saturation concentration of nitrification [mol N / m3]
       km_denit_no3, &             !< half-saturation concentration of denitrification [mol N / m3]
       k_nit_carrier_n, &          !< ratio between N de/nitrifiers and microial biomass, [-]
@@ -219,6 +223,8 @@ MODULE mo_sb_constants
       km_adsorpt_sand_po4, &      !< Half-saturation concentration for PO4 adsorption to sand [mol P kg-1 fine mineral soil], ECA and Langmuir
       km_adsorpt_OM_po4, &        !< Half-saturation concentration for PO4 adsorption to OM, [mol P kg-1 OM], ECA and Langmuir
       k_deep_soil_moc_corr, &     !< numerical coefficient for correction of deep soil initialised with very low MOC, assuming the P sorption capacity of OM is one-tenth of mineral soil
+      k_sl_conv_moc_corr, &       !< numerical converter for number of soil layers in deep soil MOC correction [--], the original code is designed for 15-layer soil only
+      z_deep_soil_moc_corr, &     !< minimum depth [m] for correction of deep soil initialised with very low MOC, assuming the P sorption capacity of OM is one-tenth of mineral soil
       fact_repartition_om_init_cond1, &  !< re-partition factor when OM got over-saturation in SB_ init, soil condition 1 (see docu in sb_init)
       fact_repartition_om_init_cond2     !< re-partition factor when OM got over-saturation in SB_ init, soil condition 2 (see docu in sb_init)
 
@@ -365,6 +371,7 @@ CONTAINS
     kmr_sorption          = 0.001_wp                        ! Thum et al. 2019, GMD ???
     kmr_decomposition     = -2.0_wp                         ! Thum et al. 2019, GMD
     kmr_asymb_bnf         = -1.5_wp                         ! set to correspond to the permanent wilting point, SZ, 21/01/22
+    min_rmm_gasdiffusion  = 0.01_wp                         ! tuned to avoid no gas diffusion in water-saturated soil
 
     ! temperature response
     temp_freeze_thres_bio  = 2.0_wp           !< tuned for biological processes being not/active in frozen soils at about Tzero
@@ -398,7 +405,7 @@ CONTAINS
     ! fast and slow parameters for simple_1d SB model
     k_fast_som_cn_max       = 13._wp * molar_mass_N / molar_mass_C   ! Manzoni et al. 2008, slightly tighter than than (was 13)
     k_fast_som_cn_min       = 5._wp * molar_mass_N / molar_mass_C    ! Manzoni et al. 2008
-    f_fast_som_cn           = 51000.0_wp                             ! calibrated to correspond to CENTURY (minimum reached at 2gN/m2)
+    f_fast_som_cn           = 100000.0_wp                            ! tuned to make fast som C:N vary from minimum to maximum
     k_slow_som_cn           = 9._wp * molar_mass_N / molar_mass_C    ! textbook knowledge
     k_fast_som_np           = 14._wp * molar_mass_P / molar_mass_N   ! textbook knowledge
     kref_fast_som_np        = 0.1_wp                                 ! an average value chosen as reference level (SZ)
@@ -472,13 +479,14 @@ CONTAINS
     f_tau_myc               = 5.0_wp                                  !
 
     ! nutrient uptake kinetics & ECA approach: simple_1d model
-    km1_up_nh4 = 0.0416_wp                 ! Kronzucker et al. 1996, Plant Physiology
-    km2_up_nh4 = 1.0_wp                    ! Kronzucker et al. 1996, Plant Physiology
-    km1_up_no3 = 0.0416_wp                 ! Kronzucker et al. 1996, Plant Physiology
-    km2_up_no3 = 1.0_wp                    ! Kronzucker et al. 1996, Plant Physiology
-    km1_up_po4 = 0.0689_wp / 0.0003_wp     ! l/mol, corrected low affinity half-saturation, estimated based on Kavka and Polle 2016,
-                                           ! assuming Km for low-affinity transporter is 300 micro-mol/l
-    km2_up_po4 = 22.0_wp / 1.e6_wp         ! mol/l, Kavka and Polle 2016
+    km2_up_nh4 = 0.896_wp / molar_mass_N         ! from Zhu et al. 2017, consistent with km_plant_uptake_nh4 in JSM
+    km2_up_no3 = 0.672_wp / molar_mass_N         ! from Zhu et al. 2017, consistent with km_plant_uptake_no3 in JSM
+    km2_up_po4 = 0.067_wp / molar_mass_P         ! consistent with km_plant_uptake_po4 in JSM
+    km1_up_nh4 = km2_up_nh4 * 100.0_wp
+    km1_up_no3 = km2_up_no3 * 100.0_wp
+    km1_up_po4 = km2_up_po4 * 100.0_wp
+    fract_vmax_low_affinity = 0.01_wp            ! fraction of vmax for nutrient uptake of low affinity transporter system,
+                                                 ! tuned to make nutrient uptakes still slightly increase with larger nutrient pools even under the nutrient-rich condition
 
     ! additional jsm parameters
     vmax_mic_uptake_nh4       = 106.56_wp / 3600._wp * molar_mass_C     ! micro-mol / mol / s from Zhu et al. 2017, and references therein
@@ -495,6 +503,8 @@ CONTAINS
                                 molar_mass_N / one_day * molar_mass_C
     vmax_denitrification_no3  = 54._wp / &                              ! micro-mol / mol / s , Kemp and Dodds 2002
                                 molar_mass_N / one_day * molar_mass_C
+    c_limit_on_nitrification_min = 0.05_wp                               ! unitless, educated guess to avoid zero denitrification at depth
+    c_limit_on_denitrification_min = 0.05_wp                             ! unitless, educated guess to avoid zero denitrification at depth
     km_nitrification_nh4      = 0.019_wp / molar_mass_N                 ! mol / m3 , Kemp and Dodds 2002
     km_denit_no3              = 0.3_wp / molar_mass_N                   ! mol / m3 , Kemp and Dodds 2002
     k_nit_carrier_n           = 0.001_wp / 1000._wp                     ! estimated
@@ -519,16 +529,18 @@ CONTAINS
     qmax_po4_mineral          = 1.2_wp / molar_mass_P                   ! [mol P kg-1 soil], Olander and Vitousek 2005
     km_adsorpt_mineral_po4    = 0.070_wp / 1000._wp / molar_mass_P      ! [mol P kg-1 fine mineral soil], based on 0.332 [mg P l-1 soil solution]
                                                                         ! from literature data analysis, with .33 m wc and 1560 kg/m3 bulk density
-    qmax_po4_clay             = 0.283159_wp / molar_mass_P              ! [mol P kg-1 clay], literature review, a analogous predictor of Feox+Alox																	
+    qmax_po4_clay             = 0.283159_wp / molar_mass_P              ! [mol P kg-1 clay], literature review, a analogous predictor of Feox+Alox
     qmax_po4_silt             = 0.283159_wp / molar_mass_P              ! [mol P kg-1 silt], literature review, clay+silt
     qmax_po4_sand             = 0.140475_wp / molar_mass_P              ! [mol P kg-1 sand], literature review
     qmax_po4_OM               = 0.140475_wp / molar_mass_P              ! [mol P kg-1 OM], literature review,
     km_po4_ph                 = 0.4_wp                                  ! corrector for km_po4 calculation [--]
     km_adsorpt_clay_po4       = 315.445_wp / 1000000._wp / molar_mass_P ! [mol P L-1 kg-1 clay], from literature data analysis
     km_adsorpt_silt_po4       = 2.176_wp / 1000._wp / molar_mass_P      ! [mol P L-1 kg-1 silt], from literature data analysis
-    km_adsorpt_sand_po4       = 20._wp / 1000._wp / molar_mass_P        ! [mol P L-1 kg-1 sand], from literature data analysis																																	
+    km_adsorpt_sand_po4       = 20._wp / 1000._wp / molar_mass_P        ! [mol P L-1 kg-1 sand], from literature data analysis
     km_adsorpt_OM_po4         = 14._wp / 1000._wp / molar_mass_P        ! [mol P L-1 kg-1 OM], from literature data analysis
     k_deep_soil_moc_corr      = 0.01_wp                                 ! estimated, Yu et al. 2020, GMD
+    k_sl_conv_moc_corr        = 7._wp / 15._wp                          ! Yu et al. 2020, GMD
+    z_deep_soil_moc_corr      = 2._wp                                   ! estimated based on Yu et al. 2020, GMD
     fact_repartition_om_init_cond1 = 1.0_wp / 10.0_wp                   ! estimated, Yu et al. 2020, GMD
     fact_repartition_om_init_cond2 = 1.0_wp / 11.0_wp                   ! estimated, Yu et al. 2020, GMD
 
@@ -536,15 +548,15 @@ CONTAINS
     ea_nitrification          = 80000._wp                               ! Xu-Ri & Prentice, 2008, to fit their function
     ed_nitrification          = 200000._wp                              ! Xu-Ri & Prentice, 2008, to fit their function
     t_opt_nitrification       = 311.15_wp                               ! Xu-Ri & Prentice, 2008, to fit their function
-    f_nit_noy                 = 0.02_wp                                 ! Xu-Ri & Prentice, 2008
+    f_nit_noy                 = 0.04_wp                                 ! Xu-Ri & Prentice, 2008, take the high end to fit a reasonable global budget
     f_nit_n2o                 = 0.002_wp                                ! Xu-Ri & Prentice, 2008
     ea_denitrification        = 47000._wp                               ! Xu-Ri & Prentice, 2008, to fit their function
-    vmax_nitrification        = 0.4_wp / one_day * 1.e6_wp              ! Xu-Ri & Prentice, 2008, 10% / day at 20degC
-    vmax_denitrification      = 0.1_wp / one_day * 1.e6_wp              ! Xu-Ri & Prentice, 2008, 10% / day
+    vmax_nitrification        = 0.6_wp / one_day * 1.e6_wp              ! Xu-Ri & Prentice, 2008, 10% / day at 20degC, retuned to fit a reasonable global budget
+    vmax_denitrification      = 0.3_wp / one_day * 1.e6_wp              ! Xu-Ri & Prentice, 2008, 10% / day, retuned to fit a reasonable global budget
     km_denitrification_c      = 20.0_wp                                 ! ???
     km_denitrification_no3    = 0.083_wp * 1000.0_wp / molar_mass_N     ! Xu-Ri & Prentice, 2008
     f_denit_noy               = 0.002_wp                                ! Xu-Ri & Prentice, 2008
-    f_denit_n2o               = 0.02_wp                                 ! Xu-Ri & Prentice, 2008
+    f_denit_n2o               = 0.04_wp                                 ! Xu-Ri & Prentice, 2008, take the high end to fit a reasonable global budget
     ea_gasdiffusion           = 47000._wp                               ! Xu-Ri & Prentice, 2008, to fit their function
     lambda_anvf               = 1.3_wp                                  ! fitted from Zaehle et al. 2011, NatGeo
     k_anvf                    = 3.0_wp                                  ! fitted from Zaehle et al. 2011, NatGeo

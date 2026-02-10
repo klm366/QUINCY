@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -31,7 +31,7 @@ MODULE mo_fage_interface
   USE mo_fage_process,       ONLY: recalc_fract_per_age_proportionally
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes FAGE_
+  dsl4jsb_Use_processes FAGE_, NLCC_
   dsl4jsb_Use_memory(FAGE_)
 
   IMPLICIT NONE
@@ -106,6 +106,7 @@ CONTAINS
     USE mo_fage_process,       ONLY: recalc_fract_per_age_upon_ageing, synchronise_fracts
 
     dsl4jsb_Use_config(FAGE_)
+    dsl4jsb_Use_config(NLCC_)
 
     IMPLICIT NONE
 
@@ -123,12 +124,13 @@ CONTAINS
     INTEGER  :: i, iblk, ics, ice, nc
     INTEGER  :: nr_of_tiles, nacs, max_age
     REAL(wp) :: dtime
-    REAL(wp), ALLOCATABLE :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
+    REAL(wp), POINTER :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
 
     REAL(wp), DIMENSION(options%nc) :: current_fract
     REAL(wp), ALLOCATABLE :: ac_ubound(:)
 
     dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_memory(FAGE_)
     dsl4jsb_Real3D_onChunk :: fract_per_age
     dsl4jsb_Real2D_onChunk :: mean_age
@@ -147,6 +149,7 @@ CONTAINS
     ac_grid => Get_vgrid('age_classes_grid')
 
     dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_config(NLCC_)
     dsl4jsb_Get_memory(FAGE_)
 
     dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
@@ -173,6 +176,12 @@ CONTAINS
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(FAGE_)) RETURN
 
+    ! Consistency check
+    IF (model%Is_process_enabled(NLCC_)) THEN
+      CALL finish(routine, 'Setup ERROR: FAGE cannot be calculated with natural land cover change age (NLCC) enabled.')
+    END IF
+
+
     ! If not newyear, do nothing
     IF (.NOT. is_newyear(options%current_datetime,dtime)) RETURN
 
@@ -198,11 +207,13 @@ CONTAINS
       current_child => current_child%Get_next_sibling_tile()
     END DO
 
-    ! Allocate area vectors
-    ALLOCATE(initial_area(nc, nr_of_tiles))
-    ALLOCATE(lost_area(nc, nr_of_tiles))
-    ALLOCATE(gained_area(nc, nr_of_tiles))
+    ! Init area vectors
+    dsl4jsb_Get_lcc_area_matrix(initial_area)
+    dsl4jsb_Get_lcc_area_matrix(lost_area)
+    dsl4jsb_Get_lcc_area_matrix(gained_area)
     initial_area(:,:) = 0.0_wp
+    lost_area(:,:) = 0.0_wp
+    gained_area(:,:) = 0.0_wp
 
     !>
     !> 2. loop including init, start, end, dealloc moving area only from one age class to the next
@@ -273,12 +284,7 @@ CONTAINS
     END DO ! i = nacs,2,-1 -- movements from one age-class to the text starting with older classes
 
     !>
-    !> 6. Deallocate area vectors
-    !>
-    DEALLOCATE(lost_area, gained_area, initial_area, ac_ubound)
-
-    !>
-    !> 7. Further actions specific for ageing lcc process: shift fracts in fract_per_age vector
+    !> 6. Further actions specific for ageing lcc process: shift fracts in fract_per_age vector
     !>
     CALL recalc_fract_per_age_upon_ageing(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
 
@@ -313,7 +319,9 @@ CONTAINS
     dsl4jsb_Get_memory(FAGE_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    CALL weighted_by_fract%BeginAggregate()
     dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
