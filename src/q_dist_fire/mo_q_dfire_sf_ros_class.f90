@@ -32,7 +32,7 @@ MODULE mo_q_dfire_sf_ros_class
 
   USE mo_q_dfire_sf_ros_type,       ONLY: t_sf_ros
   USE mo_q_dfire_config_class,      ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
-  USE mo_q_dfire_sf_ros_ober_class, ONLY: sf_calc_rate_of_spread_ober
+  USE mo_q_dfire_sf_ros_ober_class, ONLY: sf_calc_rate_of_spread_ober, calc_live_me
   USE mo_q_dfire_sf_ros_thon_class, ONLY: sf_calc_rate_of_spread_thon
 
   USE mo_q_dfire_constants,         ONLY: df_sf_fire_duration_thd
@@ -110,7 +110,7 @@ CONTAINS
                                       mf_dd(:,ix_1hr), &
                                       mask)
     ELSE IF (ros_model == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-      me_lv = calc_live_me(nc, ndd, nlv, mf_dd, me_dd, woi_dd, woi_lv, df_sigmas_dd, df_sigmas_live)
+      me_lv = calc_live_me(nc, ndd, nlv, mf_dd, me_dd, woi_dd, woi_lv, df_sigmas_dead, df_sigmas_live)
 
       ros = sf_calc_rate_of_spread_ober(&
                     nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &

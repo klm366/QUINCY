@@ -45,7 +45,7 @@ MODULE mo_q_dfire_sf_ros_ober_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_rate_of_spread_ober
+  PUBLIC :: sf_calc_rate_of_spread_ober, calc_live_me
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_ober_class'
 
