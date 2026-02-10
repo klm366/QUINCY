@@ -409,7 +409,7 @@ CONTAINS
   !> Calculate live fuel moisture of extinction
   !> USDA Forest Service RMRS-GTR-371. 2018 Table 6a
   !>
-  FUNCTION calc_live_me(nc, ndd, nlv, mf_dd, me_dd, woi_dd, woi_lv, sigmas_dd, sigmas_lv) RESULT (me)
+  FUNCTION calc_live_me(nc, ndd, nlv, mf_dd, me_dd, woi_dd, woi_lv, sigmas_dd, sigmas_lv, mask) RESULT (me)
     USE mo_q_dfire_constants, ONLY: df_sf_units_ft_to_cm
 
     INTEGER, INTENT(in) :: nc, ndd, nlv
@@ -417,32 +417,58 @@ CONTAINS
     REAL(wp), INTENT(in) :: me_dd(nc) !< Dead fuel moisture of extinction [-]
     REAL(wp), INTENT(in) :: woi_dd(nc,ndd), woi_lv(nc,nlv) !< dead/live fuel load [kg DM m-2]
     REAL(wp), INTENT(in) :: sigmas_dd(ndd), sigmas_lv(nlv) !< Surface area to volume ratio [-]
+    LOGICAL, INTENT(in)  :: mask(nc)
     REAL(wp) :: me(nc)
 
-    INTEGER :: is
+    INTEGER :: is, ic
     REAL(wp) :: w(nc) !< dead-to-live load ratio [-]
     REAL(wp) :: wdead(nc,ndd), wlive(nc,nlv) !< dead/live fuel load [kg DM m-2]
+    REAL(wp) :: wdead_sum(nc), wlive_sum(nc) !< dead/live fuel load [kg DM m-2]
     REAL(wp) :: mfdead(nc) !< fine dead fuel moisture [-]
     INTEGER, PARAMETER :: ndd_ff = 2 !< number of fine dead fuel moisture (1hr, livegrass)
     INTEGER, PARAMETER :: ix_ff(ndd_ff) = [1,4] !< 1=1hr, 4=live grass
 
     w = 0._wp
     mfdead = 0._wp
+    me = 0._wp
+    wdead = 0._wp
+    wlive = 0._wp
 
     ! calc dead-to-live load ratio
     DO is=1, ndd
-      wdead(:,is) = woi_dd(:,is) * exp((-138._wp/df_sf_units_ft_to_cm)/sigmas_dd(is))
+      DO ic=1, nc
+        IF (mask(ic)) THEN
+          wdead(ic,is) = woi_dd(ic,is) * exp((-138._wp/df_sf_units_ft_to_cm)/sigmas_dd(is))
+        ENDIF 
+      END DO
     END DO
+
     DO is=1, nlv
-      wlive(:,is) = woi_lv(:,is) * exp((-500._wp/df_sf_units_ft_to_cm)/sigmas_lv(is))
+      DO ic=1, nc
+        IF (mask(ic)) THEN
+          wlive(ic,is) = woi_lv(ic,is) * exp((-500._wp/df_sf_units_ft_to_cm)/sigmas_lv(is))
+        ENDIF
+      ENDDO
     END DO
-    WHERE (SUM(wlive, DIM=2) > 0._wp) w = SUM(wdead, DIM=2) / SUM(wlive, DIM=2)
+
+    wdead_sum = SUM(wdead, DIM=2)
+    wlive_sum = SUM(wlive, DIM=2)
+
+    DO ic=1, nc
+      IF (mask(ic) .AND. wlive_sum(ic) > 0._wp) THEN
+        w(ic) = wdead_sum(ic) / wlive_sum(ic)
+      ENDIF
+    ENDDO
 
     !< Note: only account for 1hr and dry livegrass
-    mfdead = calc_fine_dead_fuel_moisture(nc, ndd_ff, mf_dd(:,ix_ff), woi_dd(:,ix_ff), sigmas_dd(ix_ff))
+    mfdead = calc_fine_dead_fuel_moisture(nc, ndd_ff, mf_dd(:,ix_ff), woi_dd(:,ix_ff), sigmas_dd(ix_ff), mask)
 
-    me = 2.9_wp * w * (1._wp - mfdead / me_dd) - 0.226_wp
-    me = MAX(me, me_dd)
+    DO ic=1, nc
+      IF (mask(ic)) THEN
+        me(ic) = 2.9_wp * w(ic) * (1._wp - mfdead(ic) / me_dd(ic)) - 0.226_wp
+        me(ic) = MAX(me(ic), me_dd(ic))
+      ENDIF
+    ENDDO
   END FUNCTION calc_live_me
 
 
@@ -451,23 +477,42 @@ CONTAINS
   !> Calculate fine dead fuel moisture
   !> USDA Forest Service RMRS-GTR-371. 2018 Table 6a
   !>
-  FUNCTION calc_fine_dead_fuel_moisture(nc, ndd, mf_dd, woi_dd, sigmas_dd) RESULT (mfdead)
+  FUNCTION calc_fine_dead_fuel_moisture(nc, ndd, mf_dd, woi_dd, sigmas_dd, mask) RESULT (mfdead)
     USE mo_q_dfire_constants, ONLY: df_sf_units_ft_to_cm
     INTEGER, INTENT(in) :: nc, ndd
     REAL(wp), INTENT(in) :: mf_dd(nc,ndd) !< Dead fuel moisture [-]
     REAL(wp), INTENT(in) :: woi_dd(nc,ndd) !< Dead fuel load [kg DM m-2]
     REAL(wp), INTENT(in) :: sigmas_dd(ndd) !< Surface area to volume ratio [-]
+    LOGICAL, INTENT(in)  :: mask(nc)
     REAL(wp) :: mfdead(nc) !< fine dead fuel moisture [-]
 
     REAL(wp) :: mffm_dd(nc,ndd)
-    REAL(wp) :: woi_sum(nc,ndd)
-    INTEGER :: is
+    REAL(wp) :: woi(nc,ndd)
+    REAL(wp) :: woi_sum(nc)
+    REAL(wp) :: mffm_sum(nc)
+    INTEGER :: is, ic
+
+    mffm_dd = 0._wp
+    woi = 0._wp
+    mfdead = 0._wp
 
     DO is=1, ndd
-      mffm_dd(:,is) = mf_dd(:,is) * woi_dd(:,is) * exp(-138._wp/df_sf_units_ft_to_cm/sigmas_dd(is))
-      woi_sum(:,is) = woi_dd(:,is) * exp(-138._wp/df_sf_units_ft_to_cm/sigmas_dd(is))
+      DO ic=1, nc
+        IF (mask(ic)) THEN
+          mffm_dd(ic,is) = mf_dd(ic,is) * woi_dd(ic,is) * exp(-138._wp/df_sf_units_ft_to_cm/sigmas_dd(is))
+          woi(ic,is) = woi_dd(ic,is) * exp(-138._wp/df_sf_units_ft_to_cm/sigmas_dd(is))
+        ENDIF
+      ENDDO
     END DO
-    mfdead = SUM(mffm_dd) / SUM(woi_sum)
+
+    mffm_sum = SUM(mffm_dd, DIM=2)
+    woi_sum = SUM(woi, DIM=2)
+
+    DO ic=1, nc
+      IF (mask(ic) .AND. woi_sum(ic) > 0._wp) THEN
+        mfdead(ic) = mffm_sum(ic) / woi_sum(ic)
+      ENDIF
+    ENDDO
   END FUNCTION calc_fine_dead_fuel_moisture
 #endif
 END MODULE mo_q_dfire_sf_ros_ober_class
