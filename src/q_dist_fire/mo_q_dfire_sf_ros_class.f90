@@ -69,7 +69,7 @@ CONTAINS
                   woi_ddm, &
                   woi_dd, woi_lv, &
                   mf_dd, mf_lv, &
-                  me_dd, me_lv, &
+                  me_dd, &
                   mask) RESULT (ros)
     INTEGER, INTENT(in)                  :: nc
     INTEGER, INTENT(in)                  :: nddm                        !< Mixed dead fuel classes (1+dry livegrass, 10, 100)
@@ -88,7 +88,6 @@ CONTAINS
     REAL(wp), INTENT(in)                 :: mf_dd(nc, ndd) 
     REAL(wp), INTENT(in)                 :: mf_lv(nc, nlv)              !< Fuel moisture [0 to 1] (#nc,#live fuel classes -Oberhagemann-)
     REAL(wp), INTENT(in)                 :: me_dd(nc)                   !< Moisture of extinction [0 to 1] (#nc,#dead fuel classes)
-    REAL(wp), INTENT(in)                 :: me_lv(nc)                   !< Moisture of extinction [0 to 1] (#nc,#live fuel classes)
     LOGICAL, INTENT(in)                  :: mask(nc)                    !< True =  compute gridcell(s)
     TYPE(t_sf_ros)                       :: ros                         !< output [-]
 
@@ -96,6 +95,7 @@ CONTAINS
     INTEGER  :: inc
     INTEGER, PARAMETER :: ix_lvg = 4
     INTEGER, PARAMETER :: ix_1hr = 1, ix_100hrs=3
+    REAL(wp) :: me_lv(nc) !< Moisture of extinction [0 to 1] (#nc,#live fuel classes)
 
     !< Calculate wind speed (paragraph before eq. 10 from Thonicke et al. (2010))
     u_f_wind = fwd_wind_factor * wind
@@ -110,6 +110,8 @@ CONTAINS
                                       mf_dd(:,ix_1hr), &
                                       mask)
     ELSE IF (ros_model == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+      me_lv = calc_live_me(nc, ndd, nlv, mf_dd, me_dd, woi_dd, woi_lv, df_sigmas_dd, df_sigmas_live)
+
       ros = sf_calc_rate_of_spread_ober(&
                     nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
                     df_sigmas_dead, df_sigmas_live, &

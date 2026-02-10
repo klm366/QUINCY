@@ -635,7 +635,6 @@ CONTAINS
     REAL(wp) :: woi_dd(nc,df_sf_sigma_dd_nr)    !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, dimensions reversed
     REAL(wp) :: woi_lv(nc,df_sf_sigma_lv_nr)    !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, ...
     REAL(wp) :: me_dd(nc)                       !< Moisture of extinction [-] (#nc)
-    REAL(wp) :: me_lv(nc)
     REAL(wp) :: mf_dd(nc,df_sf_sigma_dd_nr)     !< Fuel moisture [-] (#nc,#fuel classes)
     REAL(wp) :: mf_lv(nc,df_sf_sigma_lv_nr)
 
@@ -703,8 +702,7 @@ CONTAINS
     END DO
     woi_lv(:,1) = 0._wp !< 1 = wet livegrass, not yet implemented
     woi_lv(:,2) = tot_lvt_fuel * df_sf_units_g_to_kg !< 2= woody fuel
-    me_dd = moisture_extinction 
-    me_lv = moisture_extinction ! todo: oberhagemann to calculate
+    me_dd = moisture_extinction
     ! Oberhagemann: fuel moisture
     mf_dd = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=2, NCOPIES=df_sf_sigma_dd_nr ) ! litter [1hr, 10hrs, 100 hours, dry livegrass]
     mf_lv = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=2, NCOPIES=df_sf_sigma_lv_nr ) ! todo: compute as in Andrews PL 2018 
@@ -720,7 +718,7 @@ CONTAINS
                                 woi_dd, &  !< Dead fuel (1hr litter, 10hrs litter, 100hrs litter, dry livegrass), used in Oberhagemann
                                 woi_lv, &  !< Live fuel (wet livegrass, woody), used in Oberhagemann
                                 mf_dd, mf_lv, & !< Fuel moisture
-                                me_dd, me_lv, & !< Fuel moisture of extincton
+                                me_dd, & !< Fuel moisture of extincton
                                 mask=has_fire_conditions)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
