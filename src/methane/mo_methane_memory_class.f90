@@ -167,7 +167,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>initialize memory (variables) for the process: methane
   !>
-  SUBROUTINE Init_methane_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_methane_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, TSTEP_INSTANT, tables
@@ -177,11 +177,14 @@ CONTAINS
     USE mo_jsb_class,         ONLY: Get_model
     dsl4jsb_Use_config(CH4_)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_ch4_memory), INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),    INTENT(in)            :: prefix
-    CHARACTER(len=*),    INTENT(in)            :: suffix
-    INTEGER,             INTENT(in)            :: lct_ids(:)
-    INTEGER,             INTENT(in)            :: model_id
+    CLASS(t_ch4_memory),   INTENT(inout), TARGET :: mem   !< Memory of the methane process
+    CHARACTER(len=*),      INTENT(in)    :: prefix        !< Prefix for variable names in output/restart files,
+                                                          !< i.e. process name
+    CHARACTER(len=*),      INTENT(in)    :: suffix        !< Suffix for variable names in output/restart files,
+                                                          !< i.e. corresponding tile name
+    INTEGER,               INTENT(in)    :: lct_ids(:)    !< Land cover type IDs
+    INTEGER,               INTENT(in)    :: lib_id        !< ID of the tile's primary land cover type (e.g. LAND_TYPE)
+    INTEGER,               INTENT(in)    :: model_id      !< ID of the current model instance
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(CH4_)
     TYPE(t_jsb_model), POINTER  :: model

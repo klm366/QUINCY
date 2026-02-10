@@ -319,7 +319,7 @@ CONTAINS
           memory_pointer3d => CARBON__mem%c_humus_2_sl%ptr
         END SELECT
 
-        IF (invar_3D == .false.) THEN
+        IF (.NOT. invar_3D) THEN
           IF (log_this) THEN
             CALL message(TRIM(routine), 'Reading 2d: '//invar_name)
           END IF
