@@ -836,7 +836,11 @@ CONTAINS
           elem_name = TRIM(this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%element_shortname(i_elem))
           var_name = bgcm_var_name_prefix//'_'//elem_name//'_'//TRIM(tile_name)
           ptr2D => this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_1l_p(i_elem)%p%ptr2d(:,:)
-          CALL read_2D_var(input_file, ptr2D, var_name)
+          IF (PRESENT(dt_step)) THEN
+            CALL read_2D_time(input_file, ptr2D, var_name, dt_step)
+          ELSE
+            CALL read_2D_var(input_file, ptr2D, var_name)
+          END IF
         END DO
       CASE(3)
         ! 1level 3D
@@ -844,7 +848,11 @@ CONTAINS
           elem_name = TRIM(this%store_1l_3d_bgcms(this%idx_in_store(bgcm_idx))%element_shortname(i_elem))
           var_name = bgcm_var_name_prefix//'_'//elem_name//'_'//TRIM(tile_name)
           ptr3D => this%store_1l_3d_bgcms(this%idx_in_store(bgcm_idx))%collection_1l_p(i_elem)%p%ptr3d(:,:,:)
-          CALL read_3D_var(input_file, ptr3D, var_name, name_extdim, size_extdim)
+          IF (PRESENT(dt_step)) THEN
+            CALL read_3D_time(input_file, ptr3D, var_name, dt_step)
+          ELSE
+            CALL read_3D_var(input_file, ptr3D, var_name, name_extdim, size_extdim)
+          END IF
         END DO
       END SELECT
     CASE(2)
