@@ -788,8 +788,8 @@ CONTAINS
   !> Read the bgcm with the given id from the given file
   !>
   SUBROUTINE read_bgcm_from_file(this, bgcm_id, process_name, tile_name, caller, input_file, name_extdim, size_extdim, dt_step)
-    USE mo_jsb_io_netcdf,           ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_util,                    ONLY: read_2D_var, read_3D_var
+    USE mo_jsb_io_netcdf,           ONLY: t_input_file
+    USE mo_util,                    ONLY: read_2D_var, read_3D_var, read_2D_time, read_3D_time
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_lnd_bgcm_store),    INTENT(IN)    :: this         !< this bgcm store instance
     INTEGER,                    INTENT(IN)    :: bgcm_id      !< id of bgcm queried from the store
@@ -805,9 +805,9 @@ CONTAINS
     INTEGER :: i_part                     !< index of compartment
     INTEGER :: i_elem                     !< index of element
     INTEGER :: i_dim3                     !< third dim index
-    REAL(wp), POINTER :: ptr2D(:,:)       !< temporary pointers for 2D variables (elements)
-    REAL(wp), POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables (elements)
-    REAL(wp), POINTER :: ptr4D(:,:,:,:)   !< temporary pointers for 4D variables (elements)
+    REAL(wp), POINTER :: ptr2D(:,:)       !< temporary pointers for 2D variables
+    REAL(wp), POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables
+    REAL(wp), POINTER :: ptr4D(:,:,:,:)   !< temporary pointers for 4D variables
     CHARACTER(len=:), ALLOCATABLE :: elem_name
     CHARACTER(len=:), ALLOCATABLE :: compartment_name
     CHARACTER(len=:), ALLOCATABLE :: bgcm_var_name_prefix
@@ -821,7 +821,7 @@ CONTAINS
 
     bgcm_var_name_prefix = process_name//'_'//TRIM(this%bgc_material_name(bgcm_idx))
 
-    IF (this%nr_of_dimensions(bgcm_idx) == 3 .AND. (.NOT. ((PRESENT(size_extdim) .AND. PRESENT(name_extdim)) .OR. (PRESENT(dt_step))))) THEN
+    IF (this%nr_of_dimensions(bgcm_idx) == 3 .AND. (.NOT. (PRESENT(size_extdim) .AND. PRESENT(name_extdim)))) THEN
       CALL finish(TRIM(routine), 'Please pass the size and the name of the additional dimension in order to read the 3D' &
         &   // ' bgcm '//TRIM(this%bgc_material_name(bgcm_idx))//' on tile '//TRIM(tile_name)//'!')
     END IF
@@ -859,10 +859,7 @@ CONTAINS
             var_name = bgcm_var_name_prefix//'_'//compartment_name//'_'//elem_name//'_'//TRIM(tile_name)
             ptr2D => this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_2l_p(i_part, i_elem)%p%ptr2d(:,:)
             IF (PRESENT(dt_step)) THEN
-              ptr3D => input_file%Read_2d_time(                  &
-                & variable_name=var_name,            &
-                & start_time_step=dt_step, end_time_step=dt_step)
-              ptr2D = ptr3D(:,:,1)
+              CALL read_2D_time(input_file, ptr2D, var_name, dt_step)
             ELSE
               CALL read_2D_var(input_file, ptr2D, var_name)
             END IF
@@ -877,10 +874,7 @@ CONTAINS
             var_name = bgcm_var_name_prefix//'_'//compartment_name//'_'//elem_name//'_'//TRIM(tile_name)
             ptr3D => this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%collection_2l_p(i_part, i_elem)%p%ptr3d(:,:,:)
             IF (PRESENT(dt_step)) THEN
-              ptr4D => input_file%Read_3d_time(                  &
-                & variable_name=var_name,            &
-                & start_time_step=dt_step, end_time_step=dt_step)
-              ptr3D = ptr4D(:,:,:,1)
+              CALL read_3D_time(input_file, ptr3D, var_name, dt_step)
             ELSE
               CALL read_3D_var(input_file, ptr3D, var_name, name_extdim, size_extdim)
             END IF

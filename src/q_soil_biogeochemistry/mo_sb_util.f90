@@ -424,7 +424,6 @@ CONTAINS
   ! ======================================================================================================= !
   !> read soil forcing from input files
   !>
-#ifndef __NO_JSBACH__
 #ifndef  __QUINCY_STANDALONE__
   SUBROUTINE update_read_soil_forcing(tile, options)
 
@@ -437,7 +436,7 @@ CONTAINS
     USE mo_jsb_io_netcdf,           ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store, get_bgcm_idx, read_bgcm_from_file
     USE mo_lnd_bgcm_idx
-    USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID
+    USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
     USE mo_jsb_time,                ONLY: t_datetime, get_date_components, get_year_day
 
     dsl4jsb_Use_processes SB_
@@ -452,15 +451,16 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER :: model            !< the model
     TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store       !< the bgcm store of this tile
-    TYPE(t_input_file)              :: input_file       !< file with to be read veg state variables
+    TYPE(t_input_file)              :: input_file       !< file with to be read soil model forcing
     TYPE(t_datetime),       POINTER :: current_datetime !< date and time at the beginning of this time step
     REAL(wp)                        :: dtime, year_instant
-    INTEGER                         :: iblk    !< Dimensions of the horizontal grid
-    INTEGER                         :: veg_pool_idx, litterfall_pool_idx
+    INTEGER                         :: iblk             !< Dimensions of the horizontal grid
+    INTEGER                         :: veg_pool_idx, seedbed_litterfall_pool_idx
     INTEGER                         :: year, month, day, hour, minute, second, yearday, &
                                     &  ith_timestep     !< the row number of current timestep in soil forcing
-    REAL(wp), POINTER               :: veg_pool_mt_domain(:,:,:,:)      !< dim: compartments, elements, nc, nblks -- on domain!
-    REAL(wp), POINTER               :: veg_litterfall_mt_domain(:,:,:,:)      !< dim: compartments, elements, nc, nblks -- on domain!
+    REAL(wp), POINTER               :: veg_pool_mt_domain(:,:,:,:)            !< dim: compartments, elements, nc, nblks -- on domain!
+    REAL(wp), POINTER               :: veg_litterfall_mt_domain(:,:,:,:), &      !< dim: compartments, elements, nc, nblks -- on domain!
+                                       veg_seedbed_litterfall_mt_domain(:,:,:,:)
     REAL(wp), POINTER :: &
       & ptr_1D(:    ),   &                      !< Pointer to 1d variable
       & ptr_2D(:,  :),   &                      !< Pointer to 2d variable
@@ -619,8 +619,8 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%veglitterfall_forcing_filename), model%grid_id)
     IF (ASSOCIATED(tile%bgcm_store)) THEN
       bgcm_store => tile%bgcm_store
-      ! litterfall_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_LITTERFALL_ID, tile%name, routine)
-      ! veg_litterfall_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(litterfall_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
+      seedbed_litterfall_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_SEED_BED_LITTERFALL_ID, tile%name, routine)
+      veg_seedbed_litterfall_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(seedbed_litterfall_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
       veg_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile%name, routine)
       veg_pool_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(veg_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
     END IF
@@ -633,239 +633,39 @@ CONTAINS
 
     !> - veg_litterfall_mt_domain using read_bgcm_from_file
     CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_LITTERFALL_ID, "veg", tile%name, routine, input_file, dt_step = ith_timestep)
-    ! !> - litterfall leaf
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_leaf_C_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_leaf, ixC, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_leaf_N_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_leaf, ixN, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_leaf_P_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_leaf, ixP, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_leaf_C13_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_leaf, ixC13, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_leaf_C14_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_leaf, ixC14, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_leaf_N15_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_leaf, ixN15, :,:) = ptr_3D(:,:,1)
 
-    ! !> - litterfall fine root
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_fine_root_C_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_fine_root, ixC, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_fine_root_N_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_fine_root, ixN, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_fine_root_P_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_fine_root, ixP, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_fine_root_C13_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_fine_root, ixC13, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_fine_root_C14_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_fine_root, ixC14, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_fine_root_N15_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_fine_root, ixN15, :,:) = ptr_3D(:,:,1)
+    !> - litterfall seed bed
+    CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_SEED_BED_LITTERFALL_ID, "veg", tile%name, routine, input_file, dt_step = ith_timestep)
 
-    ! !> - litterfall coarse root
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_coarse_root_C_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_coarse_root, ixC, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_coarse_root_N_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_coarse_root, ixN, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_coarse_root_P_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_coarse_root, ixP, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_coarse_root_C13_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_coarse_root, ixC13, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_coarse_root_C14_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_coarse_root, ixC14, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_coarse_root_N15_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_coarse_root, ixN15, :,:) = ptr_3D(:,:,1)
-
-    ! !> - litterfall sap wood
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_sap_wood_C_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_sap_wood, ixC, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_sap_wood_N_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_sap_wood, ixN, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_sap_wood_P_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_sap_wood, ixP, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_sap_wood_C13_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_sap_wood, ixC13, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_sap_wood_C14_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_sap_wood, ixC14, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_sap_wood_N15_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_sap_wood, ixN15, :,:) = ptr_3D(:,:,1)
-
-    ! !> - litterfall heart wood
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_heart_wood_C_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_heart_wood, ixC, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_heart_wood_N_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_heart_wood, ixN, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_heart_wood_P_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_heart_wood, ixP, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_heart_wood_C13_"//tile%name,           &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_heart_wood, ixC13, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_heart_wood_C14_"//tile%name,           &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_heart_wood, ixC14, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_heart_wood_N15_"//tile%name,           &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_heart_wood, ixN15, :,:) = ptr_3D(:,:,1)
-
-    ! !> - litterfall fruit
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_fruit_C_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_fruit, ixC, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_fruit_N_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_fruit, ixN, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_fruit_P_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_fruit, ixP, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_fruit_C13_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_fruit, ixC13, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_fruit_C14_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_fruit, ixC14, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_fruit_N15_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_fruit, ixN15, :,:) = ptr_3D(:,:,1)
-
-    ! !> - litterfall labile pool
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_labile_C_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_labile, ixC, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_labile_N_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_labile, ixN, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_labile_P_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_labile, ixP, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_labile_C13_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_labile, ixC13, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_labile_C14_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_labile, ixC14, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_labile_N15_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_labile, ixN15, :,:) = ptr_3D(:,:,1)
-
-    ! !> - litterfall reserve pool
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_reserve_C_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_reserve, ixC, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_reserve_N_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_reserve, ixN, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_reserve_P_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_reserve, ixP, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_reserve_C13_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_reserve, ixC13, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_reserve_C14_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_reserve, ixC14, :,:) = ptr_3D(:,:,1)
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_reserve_N15_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_reserve, ixN15, :,:) = ptr_3D(:,:,1)
-
-    ! !> - litterfall seed bed
     ! ptr_3D => input_file%Read_2d_time(                  &
         ! & variable_name="veg_litterfall_seed_bed_C_"//tile%name,            &
         ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_seed_bed, ixC, :,:) = ptr_3D(:,:,1)
+    ! veg_seedbed_litterfall_mt_domain(ix_fine_root, ixC, :,:) = ptr_3D(:,:,1)
+
     ! ptr_3D => input_file%Read_2d_time(                  &
         ! & variable_name="veg_litterfall_seed_bed_N_"//tile%name,            &
         ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_seed_bed, ixN, :,:) = ptr_3D(:,:,1)
+    ! veg_seedbed_litterfall_mt_domain(ix_fine_root, ixN, :,:) = ptr_3D(:,:,1)
+
     ! ptr_3D => input_file%Read_2d_time(                  &
         ! & variable_name="veg_litterfall_seed_bed_P_"//tile%name,            &
         ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_seed_bed, ixP, :,:) = ptr_3D(:,:,1)
+    ! veg_seedbed_litterfall_mt_domain(ix_fine_root, ixP, :,:) = ptr_3D(:,:,1)
+
     ! ptr_3D => input_file%Read_2d_time(                  &
         ! & variable_name="veg_litterfall_seed_bed_C13_"//tile%name,            &
         ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_seed_bed, ixC13, :,:) = ptr_3D(:,:,1)
+    ! veg_seedbed_litterfall_mt_domain(ix_fine_root, ixC13, :,:) = ptr_3D(:,:,1)
+
     ! ptr_3D => input_file%Read_2d_time(                  &
         ! & variable_name="veg_litterfall_seed_bed_C14_"//tile%name,            &
         ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_seed_bed, ixC14, :,:) = ptr_3D(:,:,1)
+    ! veg_seedbed_litterfall_mt_domain(ix_fine_root, ixC14, :,:) = ptr_3D(:,:,1)
+
     ! ptr_3D => input_file%Read_2d_time(                  &
         ! & variable_name="veg_litterfall_seed_bed_N15_"//tile%name,            &
         ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_litterfall_mt_domain(ix_seed_bed, ixN15, :,:) = ptr_3D(:,:,1)
+    ! veg_seedbed_litterfall_mt_domain(ix_fine_root, ixN15, :,:) = ptr_3D(:,:,1)
 
     CALL input_file%Close()
 
@@ -895,7 +695,6 @@ CONTAINS
     ix = kd*86400 + kh*3600 + km*60 + ks
 
   END FUNCTION IMerge_TIME2Sec
-#endif
 #endif
 
 #endif

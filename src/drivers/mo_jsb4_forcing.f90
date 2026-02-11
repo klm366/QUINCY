@@ -199,8 +199,10 @@ MODULE mo_jsb4_forcing
      ! ... required for Quincy
      TYPE(input_variable_type) :: C13_concentr  !! relative difference from the standard ratio
      TYPE(input_variable_type) :: C14_concentr  !! relative difference from the standard ratio
+
   END TYPE forcing_input_type
   TYPE(forcing_input_type), ALLOCATABLE, SAVE :: forcing_input(:)
+
 CONTAINS
 
   ! ======================================================================================================= !
