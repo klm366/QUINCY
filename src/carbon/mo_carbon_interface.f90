@@ -446,10 +446,14 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(TOP_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(NLCC_)
+    IF (nlcc_is_enabled) THEN
+      dsl4jsb_Get_memory(NLCC_)
+    END IF
+    IF (dsl4jsb_Config(TOP_)%active) THEN
+      dsl4jsb_Get_memory(TOP_)
+    END IF
 
     IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
       soil_c => Get_vgrid('soil_depth_carbon')
@@ -604,6 +608,8 @@ CONTAINS
 
     IF (dsl4jsb_Config(TOP_)%active) THEN
       dsl4jsb_Get_var2D_onChunk(TOP_,     frac_inun )               ! in
+    ELSE
+      frac_inun => NULL()
     END IF
 
     ! Variables needed for methane process
