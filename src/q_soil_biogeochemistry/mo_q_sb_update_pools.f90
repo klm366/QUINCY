@@ -56,7 +56,7 @@ CONTAINS
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
-    USE mo_jsb_time,               ONLY: get_year, get_day
+    USE mo_jsb_time,               ONLY: get_year, get_day, get_secs_of_day
     USE mo_quincy_model_config,    ONLY: QLAND, QSOIL
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
@@ -142,7 +142,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: p_deposition
     dsl4jsb_Real2D_onChunk :: ndep_mavg
     dsl4jsb_Real2D_onChunk :: slow_sb_pool_accelerator_execute
-    dsl4jsb_Real2D_onChunk :: local_time_day_seconds
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: f_n_demand
     dsl4jsb_Real2D_onChunk :: f_p_demand
@@ -434,7 +433,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      noy_n15_deposition)          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      ndep_mavg)                   ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,      local_time_day_seconds)      ! in
     IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
       dsl4jsb_Get_var2D_onChunk(A2L_,      slow_sb_pool_accelerator_execute)  !in
     ENDIF
@@ -1276,11 +1274,11 @@ CONTAINS
       IF (dsl4jsb_Config(SB_)%flag_ph_future) THEN
         IF (get_year(options%current_datetime) >= 2014 .AND. &
             & get_day(options%current_datetime) == 1 .AND. &
-              ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
+              ABS(get_secs_of_day(options%current_datetime) - dtime) < eps1) THEN
             ph_cal_flag = 1
         END IF
       ELSE
-        IF (get_day(options%current_datetime) == 1 .AND. ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN ! the first timestep of each year
+        IF (get_day(options%current_datetime) == 1 .AND. ABS(get_secs_of_day(options%current_datetime) - dtime) < eps1) THEN ! the first timestep of each year
             ph_cal_flag = 1
         END IF
       END IF

@@ -37,11 +37,11 @@ CONTAINS
   SUBROUTINE update_sb_rate_modifier(tile, options)
 
     USE mo_jsb_class,              ONLY: Get_model
-    USE mo_jsb_process_class,      ONLY: SB_, HYDRO_, SSE_, A2L_
+    USE mo_jsb_process_class,      ONLY: SB_, HYDRO_, SSE_
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
-    USE mo_jsb_time,               ONLY: get_year, get_day
+    USE mo_jsb_time,               ONLY: get_year, get_day, get_secs_of_day
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_physical_constants, ONLY: Tzero
     USE mo_jsb_math_constants,     ONLY: eps1
@@ -76,7 +76,6 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
-    dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! SB_
     dsl4jsb_Real2D_onChunk :: ph_old
@@ -117,8 +116,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: vol_field_cap_sl
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk :: t_soil_sl
-    ! A2L_ 2D
-    dsl4jsb_Real2D_onChunk :: local_time_day_seconds
     ! ----------------------------------------------------------------------------------------------------- !
     iblk  = options%iblk
     ics   = options%ics
@@ -137,7 +134,6 @@ CONTAINS
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
-    dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(SB_,       ph_old)                      ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       delta_ph)                    ! in
@@ -177,8 +173,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_field_cap_sl)            ! in
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)                    ! in
-    !A2L_ 2D
-    dsl4jsb_Get_var2D_onChunk(A2L_,      local_time_day_seconds)      ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     DO ic = 1,nc
@@ -205,14 +199,16 @@ CONTAINS
         IF (dsl4jsb_Config(SB_)%flag_ph_on_som .AND. (.NOT. model%config%l_transient_spinup)) THEN ! transient simulation
           IF (dsl4jsb_Config(SB_)%flag_ph_future) THEN
             IF (get_year(options%current_datetime) >= 2014) THEN
-              IF (get_day(options%current_datetime) == 1 .AND. ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
+              IF (get_day(options%current_datetime) == 1 .AND. & 
+                    & ABS(get_secs_of_day(options%current_datetime) - dtime) < eps1) THEN
                 rph_decomposition(ic, is)    = rph_decomposition(ic, is) * calc_ph_decom_function(ph_old(ic),delta_ph(ic))
               END IF
             ELSE ! 1851-2014
               rph_decomposition(ic, is) = 1.0_wp
             END IF
           ELSE ! not future
-            IF (get_day(options%current_datetime) == 1 .AND. ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
+            IF (get_day(options%current_datetime) == 1 .AND. &
+                 & ABS(get_secs_of_day(options%current_datetime) - dtime) < eps1) THEN
               rph_decomposition(ic, is)    = rph_decomposition(ic, is) * calc_ph_decom_function(ph_old(ic),delta_ph(ic))
             END IF
           END IF ! if future or not

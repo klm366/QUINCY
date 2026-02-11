@@ -50,8 +50,8 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_time,              ONLY: get_year, get_day
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, SB_, A2L_
+    USE mo_jsb_time,              ONLY: get_year, get_day, get_secs_of_day
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, SB_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
@@ -61,7 +61,6 @@ CONTAINS
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(SB_)
-    dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -88,7 +87,6 @@ CONTAINS
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_memory(SB_)
-    dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
@@ -116,8 +114,6 @@ CONTAINS
     !SB_ 2D
     dsl4jsb_Real2D_onChunk      :: ph_old
     dsl4jsb_Real2D_onChunk      :: delta_ph
-    ! A2L_ 2D
-    dsl4jsb_Real2D_onChunk      :: local_time_day_seconds
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -140,7 +136,6 @@ CONTAINS
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(A2L_)
     config_active_q_agr = dsl4jsb_Config(Q_AGR_)%active
     config_ph_on_fine_root = dsl4jsb_Config(VEG_)%flag_ph_on_fine_root
     config_ph_future = dsl4jsb_Config(SB_)%flag_ph_future
@@ -179,8 +174,6 @@ CONTAINS
     !SB_ 2D
     dsl4jsb_Get_var2D_onChunk(SB_, ph_old)
     dsl4jsb_Get_var2D_onChunk(SB_, delta_ph)
-    !A2L_ 2D
-    dsl4jsb_Get_var2D_onChunk(A2L_,      local_time_day_seconds)      ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>1.0 Calculate nutrient flux from enzyme, RNA and other turnover in leaves and roots
@@ -214,7 +207,7 @@ CONTAINS
       & model%config%l_transient_spinup       , &
       & get_year(options%current_datetime)    , &
       & get_day(options%current_datetime)     , & 
-      & local_time_day_seconds(:)             , &
+      & get_secs_of_day(options%current_datetime), &
       & lctlib%phenology_type                 , &
       & lctlib%growthform                     , &
       & lctlib%frac_sapwood_branch            , &
@@ -394,7 +387,7 @@ CONTAINS
     & l_transient_spinup          , &
     & time_year                   , &
     & time_day                    , &
-    & local_time_day_seconds      , &
+    & time_day_seconds            , &
     & lctlib_phenology_type       , &
     & lctlib_growthform           , &
     & lctlib_frac_sapwood_branch  , &
@@ -442,7 +435,7 @@ CONTAINS
     LOGICAL,                  INTENT(in)    :: l_transient_spinup           !< is spinup
     INTEGER,                  INTENT(in)    :: time_year                    !< simulating year
     INTEGER,                  INTENT(in)    :: time_day                     !< day of the year
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: local_time_day_seconds       !< second of the day
+    REAL(wp),                 INTENT(in)    :: time_day_seconds             !< second of the day
     INTEGER,                  INTENT(in)    :: lctlib_phenology_type        !< lctlib parameter
     INTEGER,                  INTENT(in)    :: lctlib_growthform            !< lctlib parameter
     REAL(wp),                 INTENT(in)    :: lctlib_frac_sapwood_branch   !< lctlib parameter
@@ -601,24 +594,24 @@ CONTAINS
       IF (config_ph_future) THEN
         IF (time_year >= 2014) THEN 
           IF (time_day == 1) THEN 
-           DO ic = 1, nc
-             IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
-              ph_fine_root_factor_acc(ic) = ph_fine_root_factor_acc(ic) &
+            IF (ABS(time_day_seconds - dtime) < eps1) THEN
+               DO ic = 1, nc
+                 ph_fine_root_factor_acc(ic) = ph_fine_root_factor_acc(ic) &
                                             & * calc_ph_on_fine_root_turnover(ph_old(ic), delta_ph(ic))
+               END DO
              END IF
-            END DO
           END IF
         ELSE ! 1851-2014
           ph_fine_root_factor_acc(:) = 1.0_wp
         END IF
       ELSE !not future simulation
         IF (time_day == 1) THEN
-          DO ic = 1, nc
-            IF (ABS(local_time_day_seconds(ic) - dtime) < eps1) THEN
+         IF (ABS(time_day_seconds - dtime) < eps1) THEN
+           DO ic = 1, nc
               ph_fine_root_factor_acc(ic) = ph_fine_root_factor_acc(ic) &
                                           & * calc_ph_on_fine_root_turnover(ph_old(ic), delta_ph(ic))
-            END IF
-          END DO
+           END DO
+         END IF
         END IF
       END IF ! if future or not
     ELSE ! spin-up simulation

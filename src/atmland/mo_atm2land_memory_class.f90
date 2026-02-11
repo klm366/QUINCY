@@ -570,7 +570,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .TRUE., lrestart_cont=.TRUE.,&
         & output_level=BASIC, &
         & initval_r = 0.0_wp)
 

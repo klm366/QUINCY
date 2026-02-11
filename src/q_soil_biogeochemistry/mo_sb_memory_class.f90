@@ -2649,7 +2649,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE.,lrestart_cont=.TRUE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('ph_old', mem%ph_old, &
@@ -2660,7 +2660,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., lrestart_cont=.TRUE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('qmax_org', mem%qmax_org, &
@@ -3100,9 +3100,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., lrestart_cont=.TRUE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('vmax_weath_mineral_sl', mem%vmax_weath_mineral_sl, &
