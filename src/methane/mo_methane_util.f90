@@ -1,17 +1,16 @@
+!> Contains utitilties for the methane production and transport
 !>
-!! @brief Contains utitilties for the methane production and transport
-!!
-!! @author
-!!  Stiig Wilkenskjeld, MPI-M Hamburg
-!!
-!! @par Revision History
-!! Adopted from JSBACH3 code by Thomas Kleinen, 2023-21-03
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
 MODULE mo_methane_util
 #ifndef __NO_JSBACH__
 
