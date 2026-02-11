@@ -89,10 +89,10 @@ CONTAINS
     !---emission factor scaling
     scale_ISO            = 0.589_wp             ! isoprene
     scale_CO             = 0.863_wp             ! carbon monoxide
-    scale_NO             = 2.174_wp             ! nitric oxide 
-    !---temperature adjustment factor       
+    scale_NO             = 2.174_wp             ! nitric oxide
+    !---temperature adjustment factor
     beta_CO              = 0.08_wp              ! carbon monoxide
-    beta_NO              = 0.11_wp              ! nitric oxide 
+    beta_NO              = 0.11_wp              ! nitric oxide
     ! Relaxation times (doubly defined)
     relax_short_s        = -1._wp               ! Impossible value to indicate unused
     relax_long_s         = -1._wp               ! Impossible value to indicate unused

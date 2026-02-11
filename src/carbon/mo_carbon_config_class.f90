@@ -90,7 +90,7 @@ CONTAINS
          on_soillev,               &
          consider_anaerobic,       &
          clear_frozen,             &
-         resp_rate_modifier  
+         resp_rate_modifier
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file

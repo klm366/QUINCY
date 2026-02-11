@@ -198,7 +198,7 @@ CONTAINS
           res%flg(i) = IOR(res%flg(i),4)
         ENDIF
       ENDIF
-        
+
       dy = ye - ys
       dx = REAL(nintrp,wp)
 
@@ -382,7 +382,7 @@ CONTAINS
   END FUNCTION gamm_inv_p
 
   !------------------------------------------------------------------------------------
-  ! Returns the incomplete gamma function Q(a, x) ≡ 1 − P (a, x).
+  ! Returns the incomplete gamma function Q(a, x) == 1 - P (a, x).
   !$acc routine seq
   PURE FUNCTION gamm_q(a,x)
     REAL(wp), INTENT(in) :: a,x
@@ -408,7 +408,7 @@ CONTAINS
 
   !------------------------------------------------------------------------------------
   !   Returns the incomplete gamma function P (a, x) evaluated by its series representation as
-  !   gamser . Also RETURNs ln Γ(a) as gln.
+  !   gamser . Also RETURNs gamma function as gln.
   !$acc routine seq
   PURE SUBROUTINE gser(gamser,a,x,gln)
     REAL(wp), INTENT(inout) :: gamser, gln
@@ -444,7 +444,7 @@ CONTAINS
 
   !------------------------------------------------------------------------------------
   !   Returns the incomplete gamma function Q(a, x) evaluated by its continued fraction repre-
-  !   sentation as gammcf. Also RETURNs ln Γ(a) as gln.
+  !   sentation as gammcf. Also RETURNs the logarithm of the gamma function as gln.
   !   Parameters: ITMAX is the maximum allowed number of iterations; EPS is the relative accu-
   !   racy; FPMIN is a number near the smallest representable floating-point number.
   !$acc routine seq
@@ -465,7 +465,7 @@ CONTAINS
     b = x+1.-a
     !    Set up for evaluating continued fraction by modified
     c = 1./FPMIN
-    !    Lentz’s method (§5.2) with b0  =  0.
+    !    Lentz's method (5.2) with b0  =  0.
     d = 1./b
     h = d
     DO i = 1,ITMAX
@@ -494,7 +494,7 @@ CONTAINS
   PURE FUNCTION gamm_ln(xx)
     REAL(wp), INTENT(in) :: xx
     REAL(wp)             :: gamm_ln
-    ! Returns the value ln[Γ(xx )] for xx > 0.
+    ! Returns the logarithm of the gamma function for xx > 0.
 
     INTEGER        :: j
     REAL(wp)       :: ser,tmp,x,y

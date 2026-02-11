@@ -389,7 +389,7 @@ CONTAINS
     LOGICAL            :: exists_em_fac_iso            = .FALSE.
     LOGICAL            :: exists_em_fac_CO             = .FALSE.
     LOGICAL            :: exists_em_fac_NO             = .FALSE.
-    
+
     ! quincy model - start
     LOGICAL            :: exists_growthform = .FALSE.
     LOGICAL            :: exists_ps_pathway = .FALSE.

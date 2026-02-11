@@ -287,7 +287,7 @@ CONTAINS
 
     new_year  = is_newyear (options%current_datetime, options%dtime)
     new_day   = is_newday  (options%current_datetime, options%dtime)
-    
+
     !$ACC ENTER DATA ASYNC(acc_stream) &
     !$ACC   CREATE(snow_depth, snow_fract, t_soil_top) &
     !$ACC   CREATE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)

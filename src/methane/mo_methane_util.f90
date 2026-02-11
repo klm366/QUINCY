@@ -124,12 +124,12 @@ CONTAINS
   PURE REAL(wp) FUNCTION determine_henry_cc(GAS, temp)
     TYPE (t_specie_const), INTENT(in) :: GAS            ! Structure with constanst for a specific gass
     REAL(wp),              INTENT(in) :: temp           ! Soil temperature in layer [K]
-  
+
     ! Parameters
     CHARACTER(len=*), PARAMETER :: routine = modname//':determine_Henry_cc'
     REAL(wp), PARAMETER :: atm = 1._wp / p_sealevel  ! [atm/Pa] conversion factor for converting Pa in atm
     REAL(wp), PARAMETER :: r_gas_atm_l = argas * atm * 1000._wp  ! gas constant in [atm*l/K/mol]
-  
+
     ! locals
     REAL(wp)                          :: henry_coeff_inv ! Henry's T dependent coefficient, inverted
     REAL(wp)                          :: henry_coeff     ! non-inverted Henry coefficient
@@ -357,7 +357,7 @@ CONTAINS
 
     REAL(wp) :: T
 
-    T = TK - tmelt ! Convert to °C
+    T = TK - tmelt ! Convert to degC
 
     ! Constants are in [cm2 s-1]. convert to [m2 s-1] on the fly
     IF (PRESENT(D_air)) &
@@ -388,7 +388,7 @@ CONTAINS
     ELSE
       dst(1) = src(1)
     ENDIF
-    
+
   END SUBROUTINE add_surface_layer
 
   !!
@@ -421,7 +421,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':diffusion_cn'
 
     ! For diffusion calculation, we use a different layer counting scheme:
-    ! We add a surface layer at atmospheric CH4 concentration, therefore 
+    ! We add a surface layer at atmospheric CH4 concentration, therefore
     ! all soil layers are moved down by one
     ! surface layer has same thickness as first belowsurface layer
 
@@ -498,7 +498,7 @@ CONTAINS
     INTEGER , INTENT(in)    :: num_iLayers      ! no. of internal layers
     INTEGER,  INTENT(in)    :: mxlay_above_wt   ! (outside) layer number above water table
     REAL(wp), INTENT(in)    :: implicit_contrib ! implicit contribution to Crank-Nicolson integration
-    REAL(wp), INTENT(in)    :: src_GAS_conc(:)  ! source GAS concentration in layer [mol m-3] 
+    REAL(wp), INTENT(in)    :: src_GAS_conc(:)  ! source GAS concentration in layer [mol m-3]
     REAL(wp), INTENT(in)    :: kHCC(:)          ! dimensionless Henry coefficient relating aqueous to gaseous concentration
     REAL(wp), INTENT(in)    :: diff_coeff(:)    ! Layer diffusion coefficients [m2 s-1]
     REAL(wp), INTENT(in)    :: dz(:)            ! Layer thickness [m]
@@ -593,7 +593,7 @@ CONTAINS
         ! to impose no flux boundary condition
         D_below = 0._wp
       ELSE
-        ! for the layers above, downwards diffusivity is the weighted mean of the 
+        ! for the layers above, downwards diffusivity is the weighted mean of the
         ! diffusivity in the layer and the layer below
         D_below = (dz(iLayer  )*diff_coeff(iLayer  )  + &
                    dz(iLayer+1)*diff_coeff(iLayer+1)) / &

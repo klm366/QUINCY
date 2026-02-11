@@ -789,7 +789,7 @@ MODULE mo_pheno_process
                                     & GDD_base_temp,          & ! <- in Temperature above which growth take place (5 degC)
                                     & previous_day_temp_mean, & ! <- in
                                     & GDD_prev_year, GDD_sum)   ! <- inout
-                       
+
      LOGICAL,  INTENT(in)    :: is_newyear, is_newday
      REAL(wp), INTENT(in)    :: GDD_base_temp
      REAL(wp), INTENT(in)    :: previous_day_temp_mean

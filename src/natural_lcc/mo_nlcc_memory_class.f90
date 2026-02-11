@@ -165,7 +165,7 @@ CONTAINS
 
     CALL mem%Add_var('gdd_sum_year', mem%gdd_sum_year,                        &
       & hgrid, surface,                                                       &
-      & t_cf('gdd_sum_year', '°C days', 'gdd current year'),             &
+      & t_cf('gdd_sum_year', 'degC days', 'gdd current year'),                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                    &
@@ -173,7 +173,7 @@ CONTAINS
 
     CALL mem%Add_var('gdd_prev_year', mem%gdd_prev_year,                      &
       & hgrid, surface,                                                       &
-      & t_cf('gdd_prev_year', '°C days', 'gdd previous year'),          &
+      & t_cf('gdd_prev_year', 'degC days', 'gdd previous year'),              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=FULL,                                                    &

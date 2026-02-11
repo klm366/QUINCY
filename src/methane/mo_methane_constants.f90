@@ -33,7 +33,7 @@ MODULE mo_methane_constants
   CHARACTER(len=*), PARAMETER :: modname = 'mo_methane_constants'
 
   ! Types and constants for specific chemical species
-  ! Diffusivity constants expect temperature in °C
+  ! Diffusivity constants expect temperature in degC
   TYPE t_specie_const
     CHARACTER (LEN=10)         :: specie_name  ! Name of chemical specie
     REAL(wp)                   :: molarMass_kg ! Molar mass of the speice [kg mol-1]
