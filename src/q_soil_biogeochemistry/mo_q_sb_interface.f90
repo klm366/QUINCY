@@ -709,7 +709,7 @@ CONTAINS
     !  => Conversion from [mumol(N)/m^2/s] to [TgN/yr]
     !     1 mol C = molar_mass_N g N   => 1 Tg N = molar_mass_N * e-12 * e-6
     !     1 s times one_day (60*60*24) time one_year (365)
-    scaling(:,:) = molar_mass_C * 1.e-18_wp * one_day * one_year * notsea(:,:) * area(:,:) * in_domain(:,:)
+    scaling(:,:) = molar_mass_N * 1.e-18_wp * one_day * one_year * notsea(:,:) * area(:,:) * in_domain(:,:)
     IF (SB__mem%fnloss_gsum%is_in_output) &
           &  fnloss_gsum      = global_sum_array(ecosystem_total_n_loss(:,:) * scaling(:,:))
     IF (SB__mem%fn2o_gsum%is_in_output) &
