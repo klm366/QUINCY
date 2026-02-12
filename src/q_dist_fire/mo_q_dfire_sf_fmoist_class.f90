@@ -185,26 +185,15 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> calc_omega
-  !> Calculate the livegrass moisture from Oberhagemann et al. (2026), eq 4
-  !>
-  !> Eq. 6 from Thonicke et al. (2010)
-  !>
-  FUNCTION calc_livegrass_moisture_ober(nc) RESULT (lvg)
-
-  END FUNCTION calc_livegrass_moisture_ober
-
-
-  ! ======================================================================================================= !
-  !>
   !> calc_phenolgy_ober
   !> Calculate livegrass moisture based on Oberhagemann et al. (2025), related to equation 4.
   !>
-  FUNCTION calc_mflg_ober(nc, lfmc_p, comp_p, tair, sw_rad, wscal) RESULT (mf_lg)
+  FUNCTION calc_mflg_ober(nc, lfmc_p, comp_p, tair, sw_rad, water) RESULT (mf_lg)
     INTEGER, INTENT(in) :: nc
     REAL(wp), INTENT(in) :: tair(nc)     !< Air temperature [deg C]
     REAL(wp), INTENT(in) :: sw_rad(nc)   !< Shortwave-downward radiation [W m-2]
-    REAL(wp), INTENT(in) :: wscal(nc)    !< Daily water limiting function value [0 to 1]
+    REAL(wp), INTENT(in) :: water(nc)    !< Daily water availability: is a ratio between water
+                                         !< supply from soil moisture and atmospheric water demand [0 to 1]
     REAL(wp), INTENT(in) :: lfmc_p(3)    !< 3 = number of scaling factors parameters
                                          !< 1=a (min value), 2=b, 3=c
     REAL(wp), INTENT(in) :: comp_p(4, 3) !< 4=number of components(tmin, tmax, light, water), 3=number of function paremeters (slope,base,tau)
@@ -215,7 +204,7 @@ CONTAINS
     REAL(wp) :: klg(nc) !< scaling factor
     REAL(wp), PARAMETER :: klg_max = 2.5_wp
 
-    IF (.NOT. ALLOCATED(f_cold_old)) THEN
+    IF (.NOT. ALLOCATED(f_cold_old)) THEN ! initilize
       ALLOCATE(f_cold_old(nc), f_heat_old(nc), f_water_old(nc), f_light_old(nc))
       f_cold_old = f_cold
       f_heat_old = f_heat
@@ -226,7 +215,7 @@ CONTAINS
     !< Calc phenology
     f_cold = calc_f_comp_PFT(nc, comp_p(1,:), f_cold_old, tair)
     f_heat = calc_f_comp_PFT(nc, comp_p(2,:), f_head_old, tair)
-    f_water = calc_f_comp_PFT(nc, comp_p(3,:), f_water_old, wscal)
+    f_water = calc_f_comp_PFT(nc, comp_p(3,:), f_water_old, water)
     f_light = calc_f_comp_PFT(nc, comp_p(4,:), f_light_old, sw_rad)
     !< Forkel et al. (2014), eq. 5
     phen = f_cold * f_heat * f_water * f_light
