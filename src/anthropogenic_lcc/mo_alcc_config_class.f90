@@ -32,8 +32,8 @@ MODULE mo_alcc_config_class
      CHARACTER(len=filename_max-7) :: alcc_filename_prefix, alcc_transitions_filename_prefix
        !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
      CHARACTER(len=SHORT_NAME_LEN) :: scheme
-     CHARACTER(len=15), DIMENSION(9)  :: trans_names  
-        !< specifies the transition types used in case of 'transitions' scheme
+     CHARACTER(len=15), ALLOCATABLE  :: trans_names(:)  
+        !< specifies the transition types used in case of 'transition' scheme
      LOGICAL                       :: l_daily_alcc
        !< Determines if land use change is to be applied on a daily (TRUE) or annual (FALSE) basis.
        ! Note: This also determines the year of the land use maps file to read in: in case of "annual" the file for
@@ -69,11 +69,16 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER    :: pft_layer
     TYPE(t_jsb_vgrid), POINTER    :: trans_layer
     INTEGER                       :: i, nr_of_pfts
-    CHARACTER(len=15), PARAMETER  :: trans_names(12) = [character(len=15) :: &      !< names of transition types 
-            'c3crop2c4crop', 'c3crop2pasture', 'c3crop2natural',  & 
-            'c4crop2c3crop', 'c4crop2pasture', 'c4crop2natural',  & 
-            'pasture2c3crop', 'pasture2c4crop', 'pasture2natural', &
-            'natural2c3crop', 'natural2c4crop', 'natural2pasture']
+    ! To do AKN: define transition types depending on use case (jsbach_pfts, jsbach_12pfts, etc.)
+    !CHARACTER(len=15), PARAMETER  :: trans_names(12) = [character(len=15) :: &      !< names of transition types for use case 'jsbach_12pfts'
+    !        'c3crop2c4crop', 'c3crop2pasture', 'c3crop2natural',  & 
+    !        'c4crop2c3crop', 'c4crop2pasture', 'c4crop2natural',  & 
+    !        'pasture2c3crop', 'pasture2c4crop', 'pasture2natural', &
+    !        'natural2c3crop', 'natural2c4crop', 'natural2pasture']
+    CHARACTER(len=15), PARAMETER  :: trans_names(6) = [character(len=15) :: &      !< names of transition types for use case 'jsbach_pfts'
+            'crop2pasture', 'crop2natural',  & 
+            'pasture2crop', 'pasture2natural', &
+            'natural2crop', 'natural2pasture']
 
     NAMELIST /jsb_alcc_nml/      &
          active,                 &
@@ -83,7 +88,6 @@ CONTAINS
          alcc_filename_prefix,   &
          alcc_transitions_filename_prefix, &
          scheme,                 &
-         trans_names,            &
          l_daily_alcc,           &
          nr_of_pfts
 
@@ -102,7 +106,7 @@ CONTAINS
     alcc_filename_prefix = 'bc_land_frac_11pfts_'
     alcc_transitions_filename_prefix = 'LUH_transitions_'
     nr_of_pfts           = 11
-    scheme               = 'maps'        ! options: 'maps', 'transitions'
+    scheme               = 'maps'        ! options: 'maps', 'transition'
     l_daily_alcc         = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -119,6 +123,7 @@ CONTAINS
     config%alcc_filename_prefix = alcc_filename_prefix
     config%alcc_transitions_filename_prefix = alcc_transitions_filename_prefix
     config%scheme               = scheme
+    ALLOCATE(config%trans_names(SIZE(trans_names)))
     config%trans_names          = trans_names
     config%l_daily_alcc         = l_daily_alcc
     config%nr_of_pfts           = nr_of_pfts
@@ -136,7 +141,7 @@ CONTAINS
           &                       //' reading the land cover map of the current year to be applied in the first timestep.')
       END IF
 
-    CASE ('transitions')
+    CASE ('transition')
       CALL message(TRIM(routine), 'Reading land use change from transitions data.')
       DO i = 1, SIZE(trans_names)
         CALL message(TRIM(routine), 'Transition type (' // TRIM(ADJUSTL(trans_names(i))) // ')')

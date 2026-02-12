@@ -243,7 +243,7 @@ CONTAINS
         DEALLOCATE(target_cf)
       END IF
 
-    CASE('transitions')
+    CASE('transition')
       ALLOCATE(trans_names(SIZE(dsl4jsb_Config(ALCC_)%trans_names)))
       trans_names = dsl4jsb_Config(ALCC_)%trans_names
 
