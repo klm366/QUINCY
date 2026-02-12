@@ -807,7 +807,6 @@ CONTAINS
     INTEGER :: i_dim3                     !< third dim index
     REAL(wp), POINTER :: ptr2D(:,:)       !< temporary pointers for 2D variables
     REAL(wp), POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables
-    REAL(wp), POINTER :: ptr4D(:,:,:,:)   !< temporary pointers for 4D variables
     CHARACTER(len=:), ALLOCATABLE :: elem_name
     CHARACTER(len=:), ALLOCATABLE :: compartment_name
     CHARACTER(len=:), ALLOCATABLE :: bgcm_var_name_prefix

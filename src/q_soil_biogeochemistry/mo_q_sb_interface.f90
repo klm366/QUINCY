@@ -26,7 +26,7 @@ MODULE mo_q_sb_interface
   USE mo_jsb_model_class,             ONLY: t_jsb_model
   USE mo_jsb_tile_class,              ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
-  USE mo_jsb_process_class,           ONLY: t_jsb_process, SB_, HYDRO_, SSE_, VEG_, A2L_
+  USE mo_jsb_process_class,           ONLY: t_jsb_process
 
   ! "Integrate" routines
   USE mo_q_sb_rate_modifier,          ONLY: update_sb_rate_modifier_real => update_sb_rate_modifier
@@ -35,7 +35,7 @@ MODULE mo_q_sb_interface
   USE mo_q_sb_update_pools,           ONLY: update_sb_pools_real => update_sb_pools
   USE mo_sb_util,                     ONLY: update_read_soil_forcing_real => update_read_soil_forcing
 
-  dsl4jsb_Use_processes SB_, VEG_, HYDRO_
+  dsl4jsb_Use_processes SB_, VEG_, HYDRO_, SSE_, A2L_
   dsl4jsb_Use_config(SB_)
   dsl4jsb_Use_memory(SB_)
   dsl4jsb_Use_memory(A2L_)

@@ -455,15 +455,11 @@ CONTAINS
     TYPE(t_datetime),       POINTER :: current_datetime !< date and time at the beginning of this time step
     REAL(wp)                        :: dtime, year_instant
     INTEGER                         :: iblk             !< Dimensions of the horizontal grid
-    INTEGER                         :: veg_pool_idx, seedbed_litterfall_pool_idx
+    INTEGER                         :: veg_pool_idx
     INTEGER                         :: year, month, day, hour, minute, second, yearday, &
                                     &  ith_timestep     !< the row number of current timestep in soil forcing
     REAL(wp), POINTER               :: veg_pool_mt_domain(:,:,:,:)            !< dim: compartments, elements, nc, nblks -- on domain!
-    REAL(wp), POINTER               :: veg_litterfall_mt_domain(:,:,:,:), &      !< dim: compartments, elements, nc, nblks -- on domain!
-                                       veg_seedbed_litterfall_mt_domain(:,:,:,:)
     REAL(wp), POINTER :: &
-      & ptr_1D(:    ),   &                      !< Pointer to 1d variable
-      & ptr_2D(:,  :),   &                      !< Pointer to 2d variable
       & ptr_3D(:,:,:),   &                      !< Pointer to 3d variable
       & ptr_4D(:,:,:,:)                         !< Pointer to 4d variable
 
@@ -619,8 +615,6 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%veglitterfall_forcing_filename), model%grid_id)
     IF (ASSOCIATED(tile%bgcm_store)) THEN
       bgcm_store => tile%bgcm_store
-      seedbed_litterfall_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_SEED_BED_LITTERFALL_ID, tile%name, routine)
-      veg_seedbed_litterfall_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(seedbed_litterfall_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
       veg_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile%name, routine)
       veg_pool_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(veg_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
     END IF
@@ -636,36 +630,6 @@ CONTAINS
 
     !> - litterfall seed bed
     CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_SEED_BED_LITTERFALL_ID, "veg", tile%name, routine, input_file, dt_step = ith_timestep)
-
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_seed_bed_C_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_seedbed_litterfall_mt_domain(ix_fine_root, ixC, :,:) = ptr_3D(:,:,1)
-
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_seed_bed_N_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_seedbed_litterfall_mt_domain(ix_fine_root, ixN, :,:) = ptr_3D(:,:,1)
-
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_seed_bed_P_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_seedbed_litterfall_mt_domain(ix_fine_root, ixP, :,:) = ptr_3D(:,:,1)
-
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_seed_bed_C13_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_seedbed_litterfall_mt_domain(ix_fine_root, ixC13, :,:) = ptr_3D(:,:,1)
-
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_seed_bed_C14_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_seedbed_litterfall_mt_domain(ix_fine_root, ixC14, :,:) = ptr_3D(:,:,1)
-
-    ! ptr_3D => input_file%Read_2d_time(                  &
-        ! & variable_name="veg_litterfall_seed_bed_N15_"//tile%name,            &
-        ! & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    ! veg_seedbed_litterfall_mt_domain(ix_fine_root, ixN15, :,:) = ptr_3D(:,:,1)
 
     CALL input_file%Close()
 
