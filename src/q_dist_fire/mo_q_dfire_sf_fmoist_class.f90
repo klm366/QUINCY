@@ -37,6 +37,15 @@ MODULE mo_q_dfire_sf_fmoist_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 
+  !< GSI parameters, Forkel et al. (2014), Figure 2
+  !< "slope": slope of X limiting function tmax_sl */
+  !< "base" : inflection point of X limiting function (deg C) */
+  !< "tau"  : change rate of actual to previous day X limiting fct */
+  REAL(wp), PARAMETER :: gsi_heat(3) = [41.51_wp, 1.74_wp, 0.2_wp] ! base, slope, tau
+  REAL(wp), PARAMETER :: gsi_cold(3) = [7._wp, 0.2591_wp, 0.2_wp] ! base, slope, tau
+  REAL(wp), PARAMETER :: gsi_light(3) = [59.78_wp, 58._wp, 0.2_wp] ! base, slope, tau
+  REAL(wp), PARAMETER :: gsi_wtr(3) = [20.96_wp, 5.24_wp, 0.2_wp] ! base, slope, tau
+  INTEGER, PARAMETER :: ix_base = 1, ix_sl = 2, ix_tau=3
 CONTAINS
 
   !>
@@ -173,5 +182,86 @@ CONTAINS
     omega = exp(-alpha * nesterov_index)
   END FUNCTION calc_omega
 
+
+  ! ======================================================================================================= !
+  !>
+  !> calc_omega
+  !> Calculate the livegrass moisture from Oberhagemann et al. (2026), eq 4
+  !>
+  !> Eq. 6 from Thonicke et al. (2010)
+  !>
+  FUNCTION calc_livegrass_moisture_ober(nc) RESULT (lvg)
+
+  END FUNCTION calc_livegrass_moisture_ober
+
+
+  ! ======================================================================================================= !
+  !>
+  !> calc_phenolgy_ober
+  !> Calculate livegrass moisture based on Oberhagemann et al. (2025), related to equation 4.
+  !>
+  FUNCTION calc_mflg_ober(nc, lfmc_p, comp_p, tair, sw_rad, wscal) RESULT (mf_lg)
+    INTEGER, INTENT(in) :: nc
+    REAL(wp), INTENT(in) :: tair(nc)     !< Air temperature [deg C]
+    REAL(wp), INTENT(in) :: sw_rad(nc)   !< Shortwave-downward radiation [W m-2]
+    REAL(wp), INTENT(in) :: wscal(nc)    !< Daily water limiting function value [0 to 1]
+    REAL(wp), INTENT(in) :: lfmc_p(3)    !< 3 = number of scaling factors parameters
+                                         !< 1=a (min value), 2=b, 3=c
+    REAL(wp), INTENT(in) :: comp_p(4, 3) !< 4=number of components(tmin, tmax, light, water), 3=number of function paremeters (slope,base,tau)
+    REAL(wp) :: mf_lg(nc) ! Livegrass moisture [0.3 to 2.5]
+
+    REAL(wp) :: f_cold(nc), f_heat(nc), f_water(nc), f_light(nc) !< phenology components
+    REAL(wp), ALLOCATABLE, SAVE :: f_cold_old(:), f_heat_old(:), f_water_old(:), f_light_old(:) !< from previous timestep
+    REAL(wp) :: klg(nc) !< scaling factor
+    REAL(wp), PARAMETER :: klg_max = 2.5_wp
+
+    IF (.NOT. ALLOCATED(f_cold_old)) THEN
+      ALLOCATE(f_cold_old(nc), f_heat_old(nc), f_water_old(nc), f_light_old(nc))
+      f_cold_old = f_cold
+      f_heat_old = f_heat
+      f_water_old = f_water
+      f_light_old = f_light
+    END IF
+
+    !< Calc phenology
+    f_cold = calc_f_comp_PFT(nc, comp_p(1,:), f_cold_old, tair)
+    f_heat = calc_f_comp_PFT(nc, comp_p(2,:), f_head_old, tair)
+    f_water = calc_f_comp_PFT(nc, comp_p(3,:), f_water_old, wscal)
+    f_light = calc_f_comp_PFT(nc, comp_p(4,:), f_light_old, sw_rad)
+    !< Forkel et al. (2014), eq. 5
+    phen = f_cold * f_heat * f_water * f_light
+
+    !< save for next TS
+    f_cold_old = f_cold
+    f_heat_old = f_heat
+    f_water_old = f_water
+    f_light_old = f_light
+
+    ! klg scaling factor
+    klg = lfmc_p(2) + lfmc_p(3) * phen
+    WHERE (klg < lfmc_p(1)) klg = lfmc_p(1) !< set min value
+    WHERE (klg > klg_max)   klg = klg_max !< up to 250% livegrass moisture
+  END FUNCTION calc_mflg_ober
+
+
+  ! ======================================================================================================= !
+  !>
+  !> calc_limit_functions
+  !>
+  !> Paper: https://bg.copernicus.org/articles/11/7025/2014/bg-11-7025-2014.pdf, eqs. 6, 7, 8, 9
+  !> Component limiting function
+  !>
+  FUNCTION calc_f_comp_PFT(nc, params, f_old, comp) RESULT (f)
+    INTEGER, INTENT(in) :: nc
+    REAL(wp), INTENT(in) :: params(3) !< slope, base, tau
+    REAL(wp), INTENT(in) :: comp(nc) !< physical variable
+    REAL(wp) :: f(nc)
+
+    REAL(wp) :: term(nc)
+
+    term = 1.0_wp / (1._wp + exp(-params(1) * (comp - parmas(2))) ) !< 1=slope index, 2=base index
+    f = f_old + (term - f_old)  * params(3) !< 3 = tau index
+
+  END FUNCTION calc_f_comp_PFT
 #endif
 END MODULE mo_q_dfire_sf_fmoist_class
