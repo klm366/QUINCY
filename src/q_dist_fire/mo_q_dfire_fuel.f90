@@ -277,6 +277,17 @@ CONTAINS
 
     dead_fuel_fcl = fuel_cls % calc_dead_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
 
+    !< Calculate livegrass moisture when ROS oberagemann
+    IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+      lfmc_p = [0.3_wp, 0.195_wp, 1.555_wp] ! todo: add to lctlib
+      comp_p(1,:) = [0.91_wp, 6.418_wp, 0.2] !< t cold, todo: add to lctlib
+      comp_p(2,:) = [1.47_wp, 29.16_wp, 0.2] !< t heat, todo: add to lctlib
+      comp_p(3,:) = [64.23_wp, 69.9_wp, 0.4] !< water, todo: add to lctlib
+      comp_p(4,:) = [0.1_wp, 41.72_wp, 0.17] !< light, todo: add to lctlib
+      mflg_ober = calc_mflg_ober(nc, lfmc_p, comp_p, tair, sw_rad, ab_moisture)
+    END IF
+
+
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
     !> when accounting for the other pfts.
