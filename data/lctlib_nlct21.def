@@ -36,20 +36,20 @@
 NLCT 21    # number of landcover types                     
                      
 #----------------------------------------------------------------------------------------                     
-# LCT Glacier Tropical evergreen trees Tropical deciduous trees Extra-tropical evergren trees Extra-tropical-deciduous trees Temperate broadleaf evergreen trees Temperate broadleaf deciduous trees Coniferous evergreen trees Coniferous deciduous trees Raingreen shrubs Cold shrubs C3 grass C4 grass Pasture C3 pasture C4 pasture Tundra Swamp Crops C3 crops C4 crops
-# LCT 21 1 2 3 4 5 6 7 8 9 10 10 12 13 14 15 16 17 18 19 20 21
-# LCT 11 11 1 2 3 4     5 23 7 8   10  12 9  
-# LCT 14 C3C4 14 1 2   3 4 5 6 7  9 10    11 12 13  
-# LCT 14 14 1 2   3 4 5 6 7 23 9 10    11   12 13
+# LCT Glacier Tropical evergreen trees Tropical deciduous trees Extra-tropical evergren trees Extra-tropical-deciduous trees Temperate broadleaf evergreen trees Temperate broadleaf deciduous trees Coniferous evergreen trees Coniferous deciduous trees Raingreen shrubs Deciduous shrubs C3 grass C4 grass Pasture C3 pasture C4 pasture Tundra Swamp Crops C3 crops C4 crops
+# LCT 21 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21
+# LCT 11 11 1 2 3 4     5 6 7 8   10  12 9  
+# LCT 14 C3C4 14 1 2   3 4 5 6 7 8 9 10    11 12 13  
+# LCT 14 14 1 2   3 4 5 6 7 8 9 10    11   12 13
 #----------------------------------------------------------------------------------------                     
 #LctNumber: Landcover type index numbers (not used in the model)                     
-LctNumber 1 2 3 4 5 6 7 8 9 10 10 12 13 14 15 16 17 18 19 20 21
+LctNumber 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21
                      
 #LandcoverClass (bare soil: 0; glacier: 1; lake: 2; natural forest: 3; natural grassland: 4; other natural vegetation: 5; crops: 6; pastures: 7)                     
 LandcoverClass 1 3 3 3 3 3 3 3 3 5 5 4 4 7 7 7 5 5 6 6 6
                      
 #PhenologyType: Phenology type (none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grass: 4; crop: 5)                     
-PhenologyType 0 3 3 1 2 1 2 1 2 3 1 4 4 4 4 4 4 4 5 5 5
+PhenologyType 0 3 3 1 2 1 2 1 2 3 2 4 4 4 4 4 4 4 5 5 5
                      
 #NitrogenScalingFlag: Is nitrogen scaling needed? (no: 0; yes: 1)                     
 NitrogenScalingFlag 0 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0
@@ -58,10 +58,10 @@ NitrogenScalingFlag 0 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0
 C4flag 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 0 0 0 1
                      
 #CarboxRate: Maximum carboxylation rate at 25 Celsius [1.E-6 * Mol(CO2)/m^2/s] (s. Kattge et al. 2009)                     
-CarboxRate 0.0 39.0 31.0 44.0 66.0 61.4 57.7 62.5 39.1 61.7 44.0 78.2 8.0 78.2 78.2 8.0 21.6 40.6 100.7 100.7 39.0
+CarboxRate 0.0 39.0 31.0 44.0 66.0 61.4 57.7 62.5 39.1 61.7 54.0 78.2 8.0 78.2 78.2 8.0 21.6 40.6 100.7 100.7 39.0
                      
 #ETransport: Maximum electron transport rate at 25 Celsius [1.E-6 * Mol/m^2/s] (Jmax=1.9*Vmax for C3 plants)                     
-ETransport 0.0 74.1 58.9 83.6 125.4 116.7 109.7 118.8 74.3 117.2 83.6 148.6 140.0 148.6 148.6 140.0 41.0 77.1 191.3 191.3 700.0
+ETransport 0.0 74.1 58.9 83.6 125.4 116.7 109.7 118.8 74.3 117.2 102.6 148.6 140.0 148.6 148.6 140.0 41.0 77.1 191.3 191.3 700.0
                      
 #VegHeight: Vegetation height [m]; for non-vegetation value is arbitrary                     
 VegHeight 0.0 30.0 30.0 15.0 15.0 15.0 15.0 15.0 15.0 1.0 1.0 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
@@ -85,7 +85,7 @@ Fract_npp_2_reservePool 0.0 0.05 0.1 0.05 0.1 0.05 0.1 0.05 0.1 0.1 0.1 0.15 0.1
 Fract_npp_2_exudates 0.0 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
                      
 #Fract_green_2_herbivory: Maximum fraction of green cpool put into grazing                     
-Fract_green_2_herbivory 0.0 0.000822 0.000822 0.000137 0.000822 0.000822 0.000822 0.000137 0.000137 0.00164 0.000137 0.00164 0.00164 0.00164 0.00164 0.00164 0.000274 0.000274 0.000822 0.000822 0.000822
+Fract_green_2_herbivory 0.0 0.000822 0.000822 0.000137 0.000822 0.000822 0.000822 0.000137 0.000137 0.00164 0.000822 0.00164 0.00164 0.00164 0.00164 0.00164 0.000274 0.000274 0.000822 0.000822 0.000822
                      
 #Fract_C_litter_green2atmos: Fraction of Carbon from heterotrophic respiration that is emitted to the atmosphere.                     
 #                   (The rest enters slow pool.)                      
@@ -111,49 +111,49 @@ Max_C_content_woods 0.0 2997.25 2997.25 2397.8 1798.3 2397.8 1798.3 2397.8 1798.
 reserveC2leafC 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 4.0 4.0 4.0 4.0 4.0 2.0 2.0 4.0 4.0 4.0
                      
 #fract_wood_2_onsite: Fraction of wood that goes into the anthropogenically controlled onSite woody pool on converting natural PFTs to agricultural PFTs                      
-fract_wood_2_onsite 1.0 0.60 0.06 0.60 0.60 0.60 0.60 0.60 0.60 0.8 0.80 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
+fract_wood_2_onsite 1.0 0.60 0.06 0.60 0.60 0.60 0.60 0.60 0.60 0.8 0.8 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
                      
 #fract_wood_2_paper: Fraction of wood that goes into the paper (intermediately longlived) pool on converting natural PFTs to agricultural PFTs                     
-fract_wood_2_paper 0.0 0.40 0.40 0.30 0.30 0.30 0.30 0.30 0.30 0.2 0.20 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+fract_wood_2_paper 0.0 0.40 0.40 0.30 0.30 0.30 0.30 0.30 0.30 0.2 0.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
 #fract_wood_2_construction: Fraction of wood that goes into the construction (e.g. furniture, houses = longlived) pool on converting natural PFTs to agricultural PFTs                     
 fract_wood_2_construction 0.0 0.0 0.0 0.1000 0.1000 0.1000 0.1000 0.1000 0.1000 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
 #MaxLAI: Maximum LAI used in the LogoP scheme [m2/m2]                     
-MaxLAI 0.0 7.0 7.0 5.0 5.0 6.0 5.0 5.0 5.0 2.0 3.0 3.0 3.0 3.0 3.0 3.0 1.5 3.0 4.0 4.0 4.0
+MaxLAI 0.0 7.0 7.0 5.0 5.0 6.0 5.0 5.0 5.0 2.0 2.0 3.0 3.0 3.0 3.0 3.0 1.5 3.0 4.0 4.0 4.0
                      
 #StemArea: Area of stem and branches [m2/m2] (this is an optical parameter for the snow masking by forests)                     
 StemArea 0.0 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
 #specificLeafArea_C: Carbon content per leaf area in [m2(leaf)/mol(Carbon)]                     
-specificLeafArea_C 0.0 0.264 0.376 0.110 0.304 0.152 0.307 0.110 0.301 0.184 0.110 0.451 0.451 0.451 0.451 0.451 0.307 0.307 0.451 0.451 0.451
+specificLeafArea_C 0.0 0.264 0.376 0.110 0.304 0.152 0.307 0.110 0.301 0.184 0.307 0.451 0.451 0.451 0.451 0.451 0.307 0.307 0.451 0.451 0.451
                      
 #alpha_nr_ind: Parameter for self-thinning                       
-alpha_nr_ind 0.0 15.000 16.000 15.000 16.000 0.000 0.000 0.000 0.000 15.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
+alpha_nr_ind 0.0 15.000 16.000 15.000 16.000 0.000 0.000 0.000 0.000 15.000 16.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
                      
 #beta_nr_ind: Parameter for self-thinning                       
-beta_nr_ind 0.0 -0.580 -0.750 -0.460 -0.700 0.000 0.000 0.000 0.000 -0.520 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
+beta_nr_ind 0.0 -0.580 -0.750 -0.460 -0.700 0.000 0.000 0.000 0.000 -0.520 -0.650 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
                      
 #alpha_leaf: Parameter for relationship between total biomass per ind and leaf biomass                     
-alpha_leaf 0.0 -2.100 -3.000 -1.720 -3.000 0.000 0.000 0.000 0.000 -2.100 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
+alpha_leaf 0.0 -2.100 -3.000 -1.720 -3.000 0.000 0.000 0.000 0.000 -2.100 -3.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
                      
 #beta_leaf: Parameter for relationship between total biomass per ind and leaf biomass                     
-beta_leaf 0.0 0.760 0.830 0.760 0.850 0.000 0.000 0.000 0.000 0.780 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
+beta_leaf 0.0 0.760 0.830 0.760 0.850 0.000 0.000 0.000 0.000 0.780 0.830 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
                      
 #ClumpinessFactor: Factor to calculate vegetation clumpiness: veg_ratio=veg_ratio_max*(1-exp(-LAI_max/ClumpinessFactor)); arbitrary for non-vegetation but needs to be >0 to avoid division by zero                     
 ClumpinessFactor 1.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 3.0 3.0 3.0
                      
 #AlbedoCanopyVIS: Albedo of the canopy in the visible range                     
-AlbedoCanopyVIS 0 0.03 0.04 0.04 0.05 0.05 0.07 0.05 0.05 0.05 0.04 0.08 0.06 0.08 0.08 0.06 0.08 0.05 0.08 0.08 0.08
+AlbedoCanopyVIS 0 0.03 0.04 0.04 0.05 0.05 0.07 0.05 0.05 0.05 0.05 0.08 0.06 0.08 0.08 0.06 0.08 0.05 0.08 0.08 0.08
                      
 #AlbedoCanopyNIR: Albedo of the canopy in the near infrared range                     
-AlbedoCanopyNIR 0 0.22 0.23 0.23 0.26 0.25 0.28 0.26 0.26 0.25 0.23 0.35 0.33 0.33 0.35 0.33 0.33 0.25 0.33 0.35 0.33
+AlbedoCanopyNIR 0 0.22 0.23 0.23 0.26 0.25 0.28 0.26 0.26 0.25 0.28 0.35 0.33 0.33 0.35 0.33 0.33 0.25 0.33 0.35 0.33
                      
 #AlbedoLitterVIS: Albedo of litter in the visible range                     
-AlbedoLitterVIS 0.0 0.09 0.10 0.10 0.11 0.11 0.13 0.11 0.11 0.11 0.10 0.34 0.34 0.34 0.34 0.34 0.34 0.11 0.34 0.34 0.34
+AlbedoLitterVIS 0.0 0.09 0.10 0.10 0.11 0.11 0.13 0.11 0.11 0.11 0.11 0.34 0.34 0.34 0.34 0.34 0.34 0.11 0.34 0.34 0.34
                      
 #AlbedoLitterNIR: Albedo of litter in the near infrared range                     
-AlbedolitterNIR 0.0 0.16 0.17 0.16 0.19 0.19 0.22 0.20 0.20 0.19 0.16 0.34 0.34 0.34 0.34 0.34 0.34 0.19 0.34 0.34 0.34
+AlbedolitterNIR 0.0 0.16 0.17 0.16 0.19 0.19 0.22 0.20 0.20 0.19 0.22 0.34 0.34 0.34 0.34 0.34 0.34 0.19 0.34 0.34 0.34
                      
 #AlbedoSnowVisMin: Minimum snow albedo in the visible range                     
 AlbedoSnowVisMin 0.78 0.52 0.52 0.52 0.52 0.52 0.52 0.52 0.52 0.52 0.52 0.52 0.52 0.52 0.52 0.52 0.52 0.52 0.52 0.52 0.52
@@ -197,13 +197,13 @@ BCLIMIT_MAX_WARM_mmTEMP 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 
 BCLIMIT_MIN_TEMPRANGE -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0
                      
 #BCLIMIT_MIN_GDD: PFT-specific minimum growing degree days (at or above 5 deg C)                     
-BCLIMIT_MIN_GDD 0.0 0.0 0.0 400.0 400.0 0.0 0.0 0.0 0.0 900.0 50.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+BCLIMIT_MIN_GDD 0.0 0.0 0.0 400.0 400.0 0.0 0.0 0.0 0.0 900.0 350.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
 #BCLIMIT_MIN_SNOW: PFT-specific minimum snow height                     
 BCLIMIT_MIN_SNOW 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
 #GDD_BASE: PFT-specific GDD base                     
-GDD_BASE 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 0.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0
+GDD_BASE 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0
                      
 #UPPER_TLIM: PFT-specific upper limit of warmest-month temperature (used to calculate gdd_upper_tlim)                     
 UPPER_TLIM 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
@@ -216,7 +216,7 @@ UPPER_TLIM 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0
 KNORR_TAU_W 0.0 300.0 114.0 0.0 0.0 0.0 0.0 0.0 0.0 50.0 0.0 250.0 250.0 250.0 250.0 250.0 250.0 250.0 250.0 250.0 250.0
                      
 #KNORR_T_PHI: Temperature trigger for leaf growth [deg C]                     
-KNORR_T_PHI 0.00 0.00 0.00 9.21 9.21 9.21 9.21 9.21 9.21 0.00 1.92 1.92 1.92 1.92 1.92 1.92 1.92 1.92 1.92 1.92 1.92
+KNORR_T_PHI 0.00 0.00 0.00 9.21 9.21 9.21 9.21 9.21 9.21 0.00 8.02 1.92 1.92 1.92 1.92 1.92 1.92 1.92 1.92 1.92 1.92
                      
 #KNORR_T_R: Spread (sigma) of T_phi [deg C]                     
 KNORR_T_R 0.00 0.00 0.00 2.04 2.04 2.04 2.04 2.04 2.04 0.00 2.04 0.30 0.30 0.30 0.30 0.30 0.30 0.30 0.30 0.30 0.30
@@ -228,13 +228,13 @@ KNORR_DAY_C 0.00 0.00 0.00 13.37 13.37 13.70 13.37 13.37 13.37 0.00 13.37 0.00 0
 KNORR_DAY_R 0.00 0.00 0.00 0.48 0.48 0.48 0.48 0.48 0.48 0.00 0.48 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00
                      
 #KNORR_K_L: Inverse of leaf longevity [days-1]                     
-KNORR_K_L 0 0.07 0.07 1.30E-004 0.07 1.30E-004 0.07 5.00E-003 0.07 0.07 0.0001 0.07 0.07 0.07 0.07 0.07 0.07 0.07 0.07 0.07 0.07
+KNORR_K_L 0 0.07 0.07 1.30E-004 0.07 1.30E-004 0.07 5.00E-003 0.07 0.07 0.07 0.07 0.07 0.07 0.07 0.07 0.07 0.07 0.07 0.07 0.07
                      
 #KNORR_LEAF_GROWTH_RATE: Initial leaf growth rate [days-1]                     
 KNORR_LEAF_GROWTH_RATE 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37 0.37
                      
 #KNORR_MAX_LAI: Maximum LAI                     
-KNORR_MAX_LAI 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.20 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2
+KNORR_MAX_LAI 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2 4.2
                      
 #                     
 # Parameters for Yasso soil carbon                     
@@ -249,40 +249,23 @@ LitVeg_coef 0.6500 0.6500 0.7400 0.7400 0.6900 0.6900 0.7400 0.6900 0.7400 0.740
 #Sum (has to be 1) 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000
                      
 #LeafLit_coef: coefficient to distribute leaf litter into 5 classes of chemical composition                     
-LeafLit_coef 1.0000 0.4651 0.4651 0.4076 0.3900 0.3900 0.3900 0.4076 0.3180 0.3516 0.4076 0.6150 0.6150 0.6150 0.6150 0.6150 0.3900 0.6500 0.7357 0.7357 0.7357
- 0.0000 0.3040 0.3040 0.1887 0.3313 0.3313 0.3313 0.1887 0.3290 0.3941 0.1887 0.1730 0.1730 0.1730 0.1730 0.1730 0.3313 0.0700 0.0676 0.0676 0.0676
- 0.0000 0.0942 0.0942 0.1279 0.0879 0.0879 0.0879 0.1279 0.0990 0.1287 0.1279 0.0602 0.0602 0.0602 0.0602 0.0602 0.0879 0.0400 0.0337 0.0337 0.0337
- 0.0000 0.1367 0.1367 0.2758 0.1908 0.1908 0.1908 0.2758 0.2540 0.1256 0.2758 0.1518 0.1518 0.1518 0.1518 0.1518 0.1908 0.2400 0.1630 0.1630 0.1630
+LeafLit_coef 1.0000 0.4651 0.4651 0.4076 0.3900 0.3900 0.3900 0.4076 0.3180 0.3516 0.3516 0.6150 0.6150 0.6150 0.6150 0.6150 0.3900 0.6500 0.7357 0.7357 0.7357
+ 0.0000 0.3040 0.3040 0.1887 0.3313 0.3313 0.3313 0.1887 0.3290 0.3941 0.3941 0.1730 0.1730 0.1730 0.1730 0.1730 0.3313 0.0700 0.0676 0.0676 0.0676
+ 0.0000 0.0942 0.0942 0.1279 0.0879 0.0879 0.0879 0.1279 0.0990 0.1287 0.1287 0.0602 0.0602 0.0602 0.0602 0.0602 0.0879 0.0400 0.0337 0.0337 0.0337
+ 0.0000 0.1367 0.1367 0.2758 0.1908 0.1908 0.1908 0.2758 0.2540 0.1256 0.1256 0.1518 0.1518 0.1518 0.1518 0.1518 0.1908 0.2400 0.1630 0.1630 0.1630
  0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000
 #Sum (has to be 1) 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000
                      
 #WoodLit_coef: coefficient to distribute woody litter into 5 classes of chemical composition                     
-WoodLit_coef 1.0000 0.6500 0.6500 0.6900 0.7300 0.7300 0.7300 0.6900 0.6900 0.7300 0.6900 0.7300 0.7300 0.7300 0.7300 0.7300 0.7300 0.7300 0.7300 0.7300 0.7300
+WoodLit_coef 1.0000 0.6500 0.6500 0.6900 0.7300 0.7300 0.7300 0.6900 0.6900 0.7300 0.7300 0.7300 0.7300 0.7300 0.7300 0.7300 0.7300 0.7300 0.7300 0.7300 0.7300
  0.0000 0.0250 0.0250 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150
  0.0000 0.0250 0.0250 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150 0.0150
- 0.0000 0.3000 0.3000 0.2800 0.2400 0.2400 0.2400 0.2800 0.2800 0.2400 0.2800 0.2400 0.2400 0.2400 0.2400 0.2400 0.2400 0.2400 0.2400 0.2400 0.2400
+ 0.0000 0.3000 0.3000 0.2800 0.2400 0.2400 0.2400 0.2800 0.2800 0.2400 0.2400 0.2400 0.2400 0.2400 0.2400 0.2400 0.2400 0.2400 0.2400 0.2400 0.2400
  0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000
 #Sum (has to be 1) 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000
                      
 #WoodLitterSize:                     
 WoodLitterSize 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4
-                     
-#root_dist_beta:                     
-# cumulative root density distribution as                      
-# beta distribution according to Jackson et al. 1996                     
-root_dist_beta -99.000 0.962 0.961 0.976 0.966 0.966 0.966 0.976 0.966 0.964 0.964 0.943 0.972 -99.000 0.943 0.972 0.914 -99.000 0.961 0.943 0.972
-#                     
-# 0.943 for peatlands                     
-                     
-# emission factors for plant produced isoprene                     
-em_fac_iso 0.0 10000.0 10000.0 6000.0 3200.0 10000.0 10000.0 3200.0 3200.0 3400.0 6800.0 2000.0 350.0 1200.0 2000.0 350.0 0.0 0.0 1000.0 1000.0 1000.0
-                     
-# emission factors for plant produced CO                     
-em_fac_CO 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0
-                     
-# emission factors for plant produced NO                     
-em_fac_NO 0.0 5.0 5.0 6.0 5.0 5.0 5.0 5.0 5.0 30.0 30.0 70.0 70.0 70.0 70.0 70.0 0.0 0.0 70.0 70.0 70.0
-                     
                      
 #                     
 # Parameters for Spitfire fire algorithm (Thonicke et al. 2010)                     
