@@ -49,7 +49,7 @@ MODELS
   |        |------ hfss
   |                 |------ sim2_hfss.nc
 ```
-which needs to be extended to all simulations and variables that should be part of the evaluation. The script `pp_jsb2ilamb.bash` can extract the variables from each simulation and sort them into this directory structure. It needs to get at least an experiment name and the path to the `*lnd_basic*.nc` output stream files. Please use `./pp_jsb2ilamb.bash --help` to get an overview about its optional parameters. Those need to be adapted if you either analyse simulations which don't use the 0049-R2B4 grid or want to only use a subset of variables or timesteps.
+which needs to be extended to all simulations and variables that should be part of the evaluation. The script `postproc_jsbach-for-ilamb.sh` can extract the variables from each simulation and sort them into this directory structure. It needs to get at least an experiment name and the path to the `*lnd_basic*.nc` output stream files. Please use `./postproc_jsbach-for-ilamb.sh --help` to get an overview about its optional parameters. Those need to be adapted if you either analyse simulations which don't use the 0049-R2B4 grid or want to only use a subset of variables or timesteps.
 
 As next step, a configure script needs to be create to tell ILAMB which analysis to perform. It's basic structure follows this syntax
 ```yaml
@@ -73,7 +73,7 @@ Different topics are set using the `h1` level, while individual variables use th
 - `weight`
 - `cmap`
 - `mass_weighting`
-The file `ilamb-jsb.cfg` contains all currently supported variables.
+The file `ilamb-for-jsbach.cfg` contains all currently supported variables.
 
 After providing all this information, ILAMB is run as
 ```bash
