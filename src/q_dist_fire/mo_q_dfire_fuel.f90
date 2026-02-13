@@ -87,6 +87,7 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_
+    USE mo_q_dfire_spitfire,        ONLY: calc_ab_moisture
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -128,6 +129,16 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: sb_pool_in_gdm(:,:) !< Dead fuel (#nc,#dead fuel pools) [g DM m-2]
     TYPE(t_sf_fuel_class)                 :: fuel_cls
 
+    !< livegrass moisture content related vars
+    REAL(wp), ALLOCATABLE                 :: ab_soil_depth_sl(:,:)!(#nc, #df_sf_sl_dims_nr)!< above ground soil depth layers [m]
+    REAL(wp), ALLOCATABLE                 :: ab_w_soil_sl(:,:) !(#nc, #df_sf_sl_dims_nr)    !< above ground soil water content [m]
+    REAL(wp), ALLOCATABLE                 :: ab_w_soil_sat_sl(:,:) !(#nc, #df_sf_sl_dims_nr)!< above ground soil water saturation [m]
+    REAL(wp), ALLOCATABLE                 :: ab_moisture(:) !(#nc) top relative soil moisture layer [-]
+    REAL(wp), ALLOCATABLE                 :: mflg_ober(:) !< (#nc) livegrass moisture content [0.3 to 2.5]
+    REAL(wp), ALLOCATABLE                 :: t_air_in_c(:) !< (C) air temperature [0.3 to 2.5]
+    REAL(wp), ALLOCATABLE :: lfmc_p(:) !< parameters, load from lctlib
+    REAL(wp), ALLOCATABLE :: comp_p(:,:) !< component paramenters, load from lctlib
+
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -140,15 +151,17 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Real3D_onChunk      :: soil_depth_sl         ! in [m]
+    !< A2L_
+    dsl4jsb_Real2D_onChunk      :: t_air                 ! in [K]
+    dsl4jsb_Real2D_onChunk      :: swpar_srf_down        ! in [W -m-2]
+
+    dsl4jsb_Real3D_onChunk      :: wtr_soil_sl           ! soil water content [m]
+    dsl4jsb_Real3D_onChunk      :: wtr_soil_sat_sl       ! Soil water content at saturation (calculated from ...
+                                                         ! soil porosity, reduced by ice) [m]
+    dsl4jsb_Real3D_onChunk      :: soil_depth_sl         ! Soil depth until bedrock [m]
     dsl4jsb_Real2D_onChunk      :: height                ! in [m]
 
-!    dsl4jsb_Real3D_onChunk      :: live_fuel_1hr_lfp     ! out [g DM m-2]
-!    dsl4jsb_Real3D_onChunk      :: live_fuel_10hr_lfp    ! out [g DM m-2]
-!    dsl4jsb_Real3D_onChunk      :: live_fuel_100hr_lfp   ! out [g DM m-2]
-!    dsl4jsb_Real3D_onChunk      :: live_fuel_1000hr_lfp  ! out [g DM m-2]
-
-!    dsl4jsb_Real3D_onChunk      :: dead_fuel             ! out [g DM m-2]
+    !< Q_DFIRE_
     dsl4jsb_Real3D_onChunk      :: dead_fuel_1hr_dfp     ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: dead_fuel_10hr_dfp    ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: dead_fuel_100hr_dfp   ! out [g DM m-2]
@@ -190,19 +203,19 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, height)                ! in
+    dsl4jsb_Get_var3D_onChunk(A2L_, t_air)                ! in [K]
+    dsl4jsb_Get_var3D_onChunk(A2L_, swpar_srf_down)       ! in [W m-2]
 
-!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel)             ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sat_sl)    ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)      ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in
+
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_10hr_dfp)    ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_100hr_dfp)   ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1000hr_dfp)  ! out [g DM m-2]
 
-!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_1hr_lfp)          ! out [g DM m-2]
-!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_10hr_lfp)         ! out [g DM m-2]
-!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_100hr_lfp)        ! out [g DM m-2]
-!    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_fuel_1000hr_lfp)       ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp)    ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp)     ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp)    ! out [g DM m-2]
@@ -279,12 +292,22 @@ CONTAINS
 
     !< Calculate livegrass moisture when ROS oberagemann
     IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+      t_air_in_c = t_air - 273.13_wp !< degrees K to C
+
+      ab_soil_depth_sl(:,:) = soil_depth_sl(:, [df_sf_sl_indices])
+      ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
+      ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
+      ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl)
+
+      ALLOCATE(lfmc_p(3), comp_p(4,3))
+
+      !< test only
       lfmc_p = [0.3_wp, 0.195_wp, 1.555_wp] ! todo: add to lctlib
       comp_p(1,:) = [0.91_wp, 6.418_wp, 0.2] !< t cold, todo: add to lctlib
       comp_p(2,:) = [1.47_wp, 29.16_wp, 0.2] !< t heat, todo: add to lctlib
       comp_p(3,:) = [64.23_wp, 69.9_wp, 0.4] !< water, todo: add to lctlib
       comp_p(4,:) = [0.1_wp, 41.72_wp, 0.17] !< light, todo: add to lctlib
-      mflg_ober = calc_mflg_ober(nc, lfmc_p, comp_p, tair, sw_rad, ab_moisture)
+      mflg_ober = calc_mflg_ober(nc, lfmc_p, comp_p, t_air_in_c, swpar_srf_down, ab_moisture)
     END IF
 
 
