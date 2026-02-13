@@ -104,7 +104,7 @@ MODULE mo_q_dfire_spitfire
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_q_dfire_spitfire, sf_calc_fire_intensity, t_sf_spitfire
+  PUBLIC :: update_q_dfire_spitfire, sf_calc_fire_intensity, t_sf_spitfire, calc_ab_moisture
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_spitfire'
 
