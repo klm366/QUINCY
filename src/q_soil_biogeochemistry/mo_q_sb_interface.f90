@@ -526,6 +526,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_ag_woody_litter_c   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_ag_woody_litter_n   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_ag_woody_litter_p   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, ph_sl                       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, ph_old                      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, delta_ph                    , weighted_by_fract)
 
     ! VEG_ fluxes
     dsl4jsb_Aggregate_onChunk(VEG_,   net_biosphere_production      , weighted_by_fract)
