@@ -38,6 +38,7 @@ MODULE mo_q_dfire_sf_fmoist_class
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 
   !< GSI parameters, Forkel et al. (2014), Figure 2
+  !< Params from LPJml 5.7.10 - spitfire 1.9
   !< "slope": slope of X limiting function tmax_sl */
   !< "base" : inflection point of X limiting function (deg C) */
   !< "tau"  : change rate of actual to previous day X limiting fct */
