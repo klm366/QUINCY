@@ -175,9 +175,9 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_reset_sb_fluxes(model_id))
-#ifndef  __QUINCY_STANDALONE__                              
+#ifndef  __QUINCY_STANDALONE__
     CALL this%Register_task(tsk_read_soil_forcing(model_id))
-#endif      
+#endif
     CALL this%Register_task(tsk_sb_rate_modifier(model_id))
     CALL this%Register_task(tsk_sb_simple_model(model_id))
     CALL this%Register_task(tsk_sb_jsm(model_id))

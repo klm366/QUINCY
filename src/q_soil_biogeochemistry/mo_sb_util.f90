@@ -634,7 +634,7 @@ CONTAINS
 
     !> - litterfall seed bed
     CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_SEED_BED_LITTERFALL_ID, "veg", &
-        & tile%name, routine, input_file, dt_step = ith_timestep)                                                                 
+        & tile%name, routine, input_file, dt_step = ith_timestep)
 
     CALL input_file%Close()
 
