@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -26,9 +26,12 @@ MODULE mo_veg_util
   USE mo_exception,             ONLY: message, finish, message_text
   USE mo_jsb_math_constants,    ONLY: zero, eps8, eps1
 
+  USE mo_quincy_model_config,   ONLY: QLAND, QPLANT
+
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, VEG_BGCM_LITTERFALL_ID, &
+    &                                   VEG_BGCM_SEED_BED_GROWTH_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID, &
     &                                   VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_RESERVE_USE_ID, &
     &                                   VEG_BGCM_HARVEST_LITTER_ID, VEG_BGCM_HARVEST_TO_PROD_ID
 
@@ -50,12 +53,13 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_SYL_, Q_AGR_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_SYL_, Q_AGR_, ALCC_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(ALCC_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)    :: options      !< model options
@@ -69,7 +73,9 @@ CONTAINS
     INTEGER                           :: nr_of_elements         !< number of elements in veg bgcms
     INTEGER                           :: ic, id_elem, i_soil
     INTEGER                           :: ix_comp, ix_elem       !< loop index
+    INTEGER                           :: config_qmodel_id       !< ID for the used quincy mode (QLAND, QPLANT, QCANOPY)
     LOGICAL                           :: config_l_use_pp
+    LOGICAL                           :: is_active_harvest_process !< True if any harvest process (Q_SYL, ALCC, Q_AGR) is active
 
     dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
     dsl4jsb_Real2D_onChunk      :: maint_respiration
@@ -121,6 +127,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_growth_mt
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
     dsl4jsb_Def_mt1L2D :: veg_reserve_use_mt
@@ -129,6 +137,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(ALCC_)
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -145,22 +154,31 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_config(VEG_)
-    config_l_use_pp     = dsl4jsb_Config(VEG_)%l_use_product_pools
+    dsl4jsb_Get_config(ALCC_)
+    config_qmodel_id = model%config%qmodel_id
+    config_l_use_pp = dsl4jsb_Config(VEG_)%l_use_product_pools
+    is_active_harvest_process = .FALSE.
+    IF (tile%Is_process_calculated(Q_SYL_) .OR. tile%Is_process_calculated(Q_AGR_) .OR. dsl4jsb_Config(ALCC_)%active) THEN
+      is_active_harvest_process = .TRUE.
+    END IF
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_GROWTH_ID, seed_bed_growth_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
 
-    IF (tile%Is_process_calculated(Q_SYL_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
-      dsl4jsb_Get_mt2L2D(VEG_BGCM_HARVEST_LITTER_ID, veg_litter_flux_harvest_mt)
-
+    IF (config_qmodel_id == QLAND .OR. config_qmodel_id == QPLANT) THEN
       IF (config_l_use_pp) THEN
         dsl4jsb_Get_mt1L2D(VEG_BGCM_HARVEST_TO_PROD_ID, veg_pp_flux_harvest_mt)
       END IF
 
+      IF (is_active_harvest_process) THEN
+        dsl4jsb_Get_mt2L2D(VEG_BGCM_HARVEST_LITTER_ID, veg_litter_flux_harvest_mt)
+      END IF
     END IF
     nr_of_veg_compartments = SIZE(veg_litterfall_mt,1)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -174,24 +192,26 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO ix_comp = 1, nr_of_veg_compartments
           DO ic = 1, nc
-            veg_growth_mt(ix_comp,ix_elem,ic)      = zero
-            veg_litterfall_mt(ix_comp,ix_elem,ic)  = zero
-            IF (tile%Is_process_calculated(Q_SYL_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
-              veg_litter_flux_harvest_mt(ix_comp,ix_elem,ic)      = zero
+            veg_growth_mt(ix_comp,ix_elem,ic)     = zero
+            veg_litterfall_mt(ix_comp,ix_elem,ic) = zero
+            IF (config_qmodel_id == QLAND .OR. config_qmodel_id == QPLANT) THEN
+              IF (is_active_harvest_process) THEN
+                veg_litter_flux_harvest_mt(ix_comp,ix_elem,ic) = zero
+              END IF
             END IF
           END DO
         END DO
         !$ACC END PARALLEL
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
-          veg_establishment_mt(ix_elem,ic) = zero
-          veg_exudation_mt(ix_elem,ic)     = zero
-          veg_reserve_use_mt(ix_elem,ic)   = zero
+          seed_bed_growth_mt(ix_elem,ic)     = zero
+          seed_bed_litterfall_mt(ix_elem,ic) = zero
+          veg_establishment_mt(ix_elem,ic)   = zero
+          veg_exudation_mt(ix_elem,ic)       = zero
+          veg_reserve_use_mt(ix_elem,ic)     = zero
 
           IF (config_l_use_pp) THEN
-            IF (tile%Is_process_calculated(Q_SYL_) .OR. tile%Is_process_calculated(Q_AGR_)) THEN
-              veg_pp_flux_harvest_mt(ix_elem,ic)      = zero
-            END IF
+            veg_pp_flux_harvest_mt(ix_elem,ic) = zero
           END IF
         END DO
         !$ACC END PARALLEL
@@ -1105,7 +1125,9 @@ CONTAINS
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     TYPE(t_jsb_grid),         POINTER :: grid
     INTEGER                           :: iblk, ics, ice, nc, ic !< dimensions
-    REAL(wp),       ALLOCATABLE :: q_total_c_new(:)             !< helper variable
+    REAL(wp),             ALLOCATABLE :: q_total_c_new(:)       !< helper variable
+    REAL(wp),                 POINTER :: lat(:,:)               !< Grid cell center latitude [deg.]
+    REAL(wp),                 POINTER :: lon(:,:)               !< Grid cell center longitude [deg.]
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':test_carbon_conservation'
     ! ----------------------------------------------------------------------------------------------------- !
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1125,8 +1147,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(L2A_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
-    model  => Get_model(tile%owner_model_id)
-    grid => Get_grid(model%grid_id)
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    lat   => grid%lat(:,:)
+    lon   => grid%lon(:,:)
     ! ----------------------------------------------------------------------------------------------------- !
     ics = 1
     ice = grid%nproma
@@ -1172,9 +1196,14 @@ CONTAINS
 
           IF (dsl4jsb_Config(VEG_)%flag_log_c_conservation) THEN
             IF ((ABS(q_c_conservation_test(ic)) > 1.e-11_wp) .AND. (ABS(q_total_c(ic)) > 0.0_wp)) THEN
-              WRITE(message_text,*) 'Failed carbon conservation test: ', q_c_conservation_test(ic), &
-                & '; new total c: ', q_total_c_new(ic), '; old total c: ', q_total_c(ic),           &
-                & '; nbp ',  (net_biosphere_production(ic) * dtime / 1000000.0_wp)
+              WRITE(message_text,*) 'Failed carbon conservation test: ', q_c_conservation_test(ic), NEW_LINE('a'),   &
+                & '; new total c: ', q_total_c_new(ic), '; old total c: ', q_total_c(ic),                            &
+                & '; nbp ',  (net_biosphere_production(ic) * dtime / 1000000.0_wp), NEW_LINE('a'),                   &
+                & ' on lat =',    lat(ic,iblk), ' and lon =', lon(ic,iblk), NEW_LINE('a'),                           &
+                & ' with veg ', veg_pool_total_c(ic), ' and sb sum ', SUM(sb_pool_total_c(ic,:) * soil_depth_sl(ic,:))
+               IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+                 WRITE(message_text,*) TRIM(message_text),' and products ', veg_products_total_c(ic)
+               ENDIF
               CALL message(TRIM(routine), message_text, all_print=.TRUE.)
             END IF
           END IF
