@@ -30,7 +30,10 @@ MODULE mo_sb_util
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: reset_sb_fluxes, calculate_time_average_soilbiogeochemistry, update_read_soil_forcing
+  PUBLIC :: reset_sb_fluxes, calculate_time_average_soilbiogeochemistry
+#ifndef  __QUINCY_STANDALONE__
+  PUBLIC :: update_read_soil_forcing
+#endif
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_util'
 
@@ -422,7 +425,7 @@ CONTAINS
   END SUBROUTINE calculate_time_average_soilbiogeochemistry
 
   ! ======================================================================================================= !
-  !> read soil forcing from input files
+  !> read soil forcing from input files (ONLY for IQ)
   !>
 #ifndef  __QUINCY_STANDALONE__
   SUBROUTINE update_read_soil_forcing(tile, options)
@@ -620,16 +623,18 @@ CONTAINS
     END IF
 
     !> - veg fineroot C
-    ptr_3D => input_file%Read_2d_time(                  &
-        & variable_name="veg_pool_fine_root_C_"//tile%name,            &
+    ptr_3D => input_file%Read_2d_time(                      &
+        & variable_name="veg_pool_fine_root_C_"//tile%name, &
         & start_time_step=ith_timestep, end_time_step=ith_timestep)
     veg_pool_mt_domain(ix_fine_root, ixC, :,:) = ptr_3D(:,:,1)
 
     !> - veg_litterfall_mt_domain using read_bgcm_from_file
-    CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_LITTERFALL_ID, "veg", tile%name, routine, input_file, dt_step = ith_timestep)
+    CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_LITTERFALL_ID, "veg", &
+        & tile%name, routine, input_file, dt_step = ith_timestep)
 
     !> - litterfall seed bed
-    CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_SEED_BED_LITTERFALL_ID, "veg", tile%name, routine, input_file, dt_step = ith_timestep)
+    CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_SEED_BED_LITTERFALL_ID, "veg", &
+        & tile%name, routine, input_file, dt_step = ith_timestep)                                                                 
 
     CALL input_file%Close()
 

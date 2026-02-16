@@ -33,7 +33,9 @@ MODULE mo_q_sb_interface
   USE mo_q_sb_ssm_main,               ONLY: update_sb_simple_model_real => update_sb_simple_model
   USE mo_q_sb_jsm_main,               ONLY: update_sb_jsm_real => update_sb_jsm
   USE mo_q_sb_update_pools,           ONLY: update_sb_pools_real => update_sb_pools
+#ifndef  __QUINCY_STANDALONE__
   USE mo_sb_util,                     ONLY: update_read_soil_forcing_real => update_read_soil_forcing
+#endif
 
   dsl4jsb_Use_processes SB_, VEG_, HYDRO_, SSE_, A2L_
   dsl4jsb_Use_config(SB_)
@@ -56,7 +58,7 @@ MODULE mo_q_sb_interface
     PROCEDURE, NOPASS :: Integrate => update_reset_sb_fluxes  !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_reset_sb_fluxes    !< Aggregates computed task variables
   END TYPE tsk_reset_sb_fluxes
-
+#ifndef  __QUINCY_STANDALONE__
   ! ======================================================================================================= !
   !>Type definition: read_soil_forcing task
   !>
@@ -65,7 +67,7 @@ MODULE mo_q_sb_interface
     PROCEDURE, NOPASS :: Integrate => update_read_soil_forcing  !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_read_soil_forcing    !< Aggregates computed task variables
   END TYPE tsk_read_soil_forcing
-
+#endif
   ! ======================================================================================================= !
   !>Type definition: sb_rate_modifier task
   !>
@@ -121,10 +123,11 @@ MODULE mo_q_sb_interface
   ! ======================================================================================================= !
   !>Constructor interface: read_soil_forcing task
   !>
+#ifndef  __QUINCY_STANDALONE__
   INTERFACE tsk_read_soil_forcing
     PROCEDURE Create_task_read_soil_forcing        !< Constructor function for task
   END INTERFACE tsk_read_soil_forcing
-
+#endif
   ! ======================================================================================================= !
   !>Constructor interface: sb_rate_modifier task
   !>
@@ -172,7 +175,9 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_reset_sb_fluxes(model_id))
+#ifndef  __QUINCY_STANDALONE__                              
     CALL this%Register_task(tsk_read_soil_forcing(model_id))
+#endif      
     CALL this%Register_task(tsk_sb_rate_modifier(model_id))
     CALL this%Register_task(tsk_sb_simple_model(model_id))
     CALL this%Register_task(tsk_sb_jsm(model_id))
@@ -192,7 +197,7 @@ CONTAINS
     CALL return_ptr%Construct(name='reset_sb_fluxes', process_id=SB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_reset_sb_fluxes
-
+#ifndef  __QUINCY_STANDALONE__
   ! ======================================================================================================= !
   !>Constructor: read_soil_forcing task
   !>
@@ -205,7 +210,7 @@ CONTAINS
     CALL return_ptr%Construct(name='read_soil_forcing', process_id=SB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_read_soil_forcing
-
+#endif
   ! ======================================================================================================= !
   !>Constructor: sb_rate_modifier task
   !>
@@ -329,6 +334,7 @@ CONTAINS
   ! ------------------------------------------------------------------------------------------------------- !
   ! Wrappers for update routines from different module
   ! ------------------------------------------------------------------------------------------------------- !
+#ifndef  __QUINCY_STANDALONE__
   SUBROUTINE update_read_soil_forcing(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -337,7 +343,7 @@ CONTAINS
     CALL update_read_soil_forcing_real(tile, options)
 
   END SUBROUTINE update_read_soil_forcing
-
+#endif
   SUBROUTINE update_sb_rate_modifier(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -410,7 +416,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
 
   END SUBROUTINE aggregate_reset_sb_fluxes
-
+#ifndef  __QUINCY_STANDALONE__
   ! ======================================================================================================= !
   !>Implementation of "aggregate": read_soil_forcing task
   !>
@@ -443,7 +449,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
 
   END SUBROUTINE aggregate_read_soil_forcing
-
+#endif
   ! ======================================================================================================= !
   !>Implementation of "aggregate": sb_rate_modifier task
   !>
