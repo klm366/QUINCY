@@ -24,7 +24,7 @@ MODULE mo_q_dfire_sf_fmoist_class
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on
-  USE mo_exception,           ONLY: message
+  USE mo_exception,           ONLY: message, finish
   USE mo_q_dfire_sf_fuel_class, ONLY: sf_calc_has_any_fuel
   USE mo_quincy_stats,        ONLY: stats_average_weight
   !< Total number of fuel moisture(omega_o and omega_nl), omega_o index, omega_nl index
@@ -33,7 +33,7 @@ MODULE mo_q_dfire_sf_fmoist_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_fuel_moisture
+  PUBLIC :: sf_calc_fuel_moisture, calc_mflg_ober
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 
@@ -198,26 +198,28 @@ CONTAINS
     REAL(wp), INTENT(in) :: lfmc_p(3)    !< 3 = number of scaling factors parameters
                                          !< 1=a (min value), 2=b, 3=c
     REAL(wp), INTENT(in) :: comp_p(4, 3) !< 4=number of components(tmin, tmax, light, water), 3=number of function paremeters (slope,base,tau)
-    REAL(wp) :: mf_lg(nc) ! Livegrass moisture [0.3 to 2.5]
+    REAL(wp), ALLOCATABLE :: mf_lg(:) ! Livegrass moisture [0.3 to 2.5]
 
     REAL(wp) :: f_cold(nc), f_heat(nc), f_water(nc), f_light(nc) !< phenology components
     REAL(wp), ALLOCATABLE, SAVE :: f_cold_old(:), f_heat_old(:), f_water_old(:), f_light_old(:) !< from previous timestep
     REAL(wp) :: klg(nc) !< scaling factor
-    REAL(wp), PARAMETER :: klg_max = 2.5_wp
+    REAL(wp), PARAMETER :: mflg_max = 2.5_wp
+    REAL(wp) :: phen(nc)
 
     IF (.NOT. ALLOCATED(f_cold_old)) THEN ! initilize
       ALLOCATE(f_cold_old(nc), f_heat_old(nc), f_water_old(nc), f_light_old(nc))
-      f_cold_old = f_cold
-      f_heat_old = f_heat
-      f_water_old = f_water
-      f_light_old = f_light
+      f_cold_old = tair 
+      f_heat_old = tair
+      f_water_old = water
+      f_light_old = sw_rad 
     END IF
+    ALLOCATE(mf_lg(nc))
 
     !< Calc phenology
-    f_cold = calc_f_comp_PFT(nc, comp_p(1,:), f_cold_old, tair)
-    f_heat = calc_f_comp_PFT(nc, comp_p(2,:), f_head_old, tair)
-    f_water = calc_f_comp_PFT(nc, comp_p(3,:), f_water_old, water)
-    f_light = calc_f_comp_PFT(nc, comp_p(4,:), f_light_old, sw_rad)
+    f_cold = calc_f_comp_PFT(nc, comp_p(1,:), f_cold_old, tair, -1._wp)
+    f_heat = calc_f_comp_PFT(nc, comp_p(2,:), f_heat_old, tair, 1._wp)
+    f_light = calc_f_comp_PFT(nc, comp_p(3,:), f_light_old, sw_rad, -1._wp)
+    f_water = calc_f_comp_PFT(nc, comp_p(4,:), f_water_old, water, -1._wp)
     !< Forkel et al. (2014), eq. 5
     phen = f_cold * f_heat * f_water * f_light
 
@@ -229,8 +231,10 @@ CONTAINS
 
     ! klg scaling factor
     klg = lfmc_p(2) + lfmc_p(3) * phen
-    WHERE (klg < lfmc_p(1)) klg = lfmc_p(1) !< set min value
-    WHERE (klg > klg_max)   klg = klg_max !< up to 250% livegrass moisture
+
+    mf_lg = klg * phen
+    WHERE (mf_lg < lfmc_p(1)) mf_lg = lfmc_p(1) !< set min value
+    WHERE (mf_lg > mflg_max)  mf_lg = mflg_max !< up to 250% livegrass moisture
   END FUNCTION calc_mflg_ober
 
 
@@ -241,16 +245,26 @@ CONTAINS
   !> Paper: https://bg.copernicus.org/articles/11/7025/2014/bg-11-7025-2014.pdf, eqs. 6, 7, 8, 9
   !> Component limiting function
   !>
-  FUNCTION calc_f_comp_PFT(nc, params, f_old, comp) RESULT (f)
+  FUNCTION calc_f_comp_PFT(nc, params, f_old, comp, trend) RESULT (f)
     INTEGER, INTENT(in) :: nc
     REAL(wp), INTENT(in) :: params(3) !< slope, base, tau
+    REAL(wp), INTENT(in) :: f_old(nc)
     REAL(wp), INTENT(in) :: comp(nc) !< physical variable
+    REAL(wp), INTENT(in) :: trend !< slope increase(=1, heat)/decrease(-1, cold, light water)
     REAL(wp) :: f(nc)
 
-    REAL(wp) :: term(nc)
+    INTEGER, PARAMETER :: ix_sl=1, ix_base=2, ix_tau = 3
+    REAL(wp) :: term(nc) 
+    INTEGER :: ic
 
-    term = 1.0_wp / (1._wp + exp(-params(1) * (comp - parmas(2))) ) !< 1=slope index, 2=base index
-    f = f_old + (term - f_old)  * params(3) !< 3 = tau index
+    DO ic=1, nc
+      IF (-params(ix_sl) * (comp(ic) - params(ix_base)) < 200._wp) THEN ! Prevent exp overflow
+        term(ic) = 1.0_wp / (1._wp + exp(trend * params(ix_sl) * (comp(ic) - params(ix_base))) ) !< 1=slope index, 2=base index
+        f(ic) = f_old(ic) + (term(ic) - f_old(ic))  * params(ix_tau) !< 3 = tau index
+      ELSE
+        f(ic) = f_old(ic) * params(ix_tau)
+      ENDIF
+    ENDDO
 
   END FUNCTION calc_f_comp_PFT
 #endif
