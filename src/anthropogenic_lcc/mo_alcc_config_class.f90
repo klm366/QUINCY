@@ -32,8 +32,11 @@ MODULE mo_alcc_config_class
      CHARACTER(len=filename_max-7) :: alcc_filename_prefix, alcc_transitions_filename_prefix
        !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
      CHARACTER(len=SHORT_NAME_LEN) :: scheme
-     CHARACTER(len=15), ALLOCATABLE  :: trans_names(:)  
+     CHARACTER(len=15), ALLOCATABLE :: trans_names(:)  
         !< specifies the transition types used in case of 'transition' scheme
+     INTEGER, ALLOCATABLE          :: from_class(:), to_class(:), pft_class(:)
+        !< from_class and to_class specify which class (natural, pasture, crop) loses/gains area through a transition type
+        !< pft_class specifies which class each PFT belongs to
      LOGICAL                       :: l_daily_alcc
        !< Determines if land use change is to be applied on a daily (TRUE) or annual (FALSE) basis.
        ! Note: This also determines the year of the land use maps file to read in: in case of "annual" the file for
@@ -69,7 +72,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER    :: pft_layer
     TYPE(t_jsb_vgrid), POINTER    :: trans_layer
     INTEGER                       :: i, nr_of_pfts
-    ! To do AKN: define transition types depending on use case (jsbach_pfts, jsbach_12pfts, etc.)
+    ! Todo-AKN: fill trans_names, from_class, to_class and pft_class depending on use case (jsbach_pfts, jsbach_12pfts, etc.)
     !CHARACTER(len=15), PARAMETER  :: trans_names(12) = [character(len=15) :: &      !< names of transition types for use case 'jsbach_12pfts'
     !        'c3crop2c4crop', 'c3crop2pasture', 'c3crop2natural',  & 
     !        'c4crop2c3crop', 'c4crop2pasture', 'c4crop2natural',  & 
@@ -79,6 +82,13 @@ CONTAINS
             'crop2pasture', 'crop2natural',  & 
             'pasture2crop', 'pasture2natural', &
             'natural2crop', 'natural2pasture']
+    
+    INTEGER, PARAMETER            :: from_class(6) = [3, 3, 2, 2, 1, 1] 
+                                     !< index for class that loses area through a transition (1: natural, 2: pasture, 3: crop)
+    INTEGER, PARAMETER            :: to_class(6)   = [2, 1, 3, 1, 3, 2] 
+                                     !< index for class that gains area through a transition
+    INTEGER, PARAMETER            :: pft_class(11) = [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3] 
+                                     !< index that associates each PFT type with a class
 
     NAMELIST /jsb_alcc_nml/      &
          active,                 &
@@ -125,6 +135,9 @@ CONTAINS
     config%scheme               = scheme
     ALLOCATE(config%trans_names(SIZE(trans_names)))
     config%trans_names          = trans_names
+    config%from_class           = from_class
+    config%to_class             = to_class
+    config%pft_class            = pft_class
     config%l_daily_alcc         = l_daily_alcc
     config%nr_of_pfts           = nr_of_pfts
 
