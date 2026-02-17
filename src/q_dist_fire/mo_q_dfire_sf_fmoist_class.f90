@@ -208,10 +208,10 @@ CONTAINS
 
     IF (.NOT. ALLOCATED(f_cold_old)) THEN ! initilize
       ALLOCATE(f_cold_old(nc), f_heat_old(nc), f_water_old(nc), f_light_old(nc))
-      f_cold_old = tair 
-      f_heat_old = tair
-      f_water_old = water
-      f_light_old = sw_rad 
+      f_cold_old = 0._wp
+      f_heat_old = 0._wp
+      f_water_old = 0._wp
+      f_light_old = 0._wp
     END IF
     ALLOCATE(mf_lg(nc))
 
@@ -258,7 +258,7 @@ CONTAINS
     INTEGER :: ic
 
     DO ic=1, nc
-      IF (-params(ix_sl) * (comp(ic) - params(ix_base)) < 200._wp) THEN ! Prevent exp overflow
+      IF (trend * params(ix_sl) * (comp(ic) - params(ix_base)) < 200._wp) THEN ! Prevent exp overflow
         term(ic) = 1.0_wp / (1._wp + exp(trend * params(ix_sl) * (comp(ic) - params(ix_base))) ) !< 1=slope index, 2=base index
         f(ic) = f_old(ic) + (term(ic) - f_old(ic))  * params(ix_tau) !< 3 = tau index
       ELSE
