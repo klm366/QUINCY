@@ -21,7 +21,7 @@ MODULE mo_wlcc_init_lcc
   USE mo_jsb_lcc,             ONLY: init_lcc, count_descendants_for_up_to_2layers, &
     &                               collect_names_of_descendant_leaves_up_to_2layers
   USE mo_jsb_cqt_class,       ONLY: LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
-    &                               BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
+    &                               BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
 
   dsl4jsb_Use_processes WLCC_
 
@@ -33,7 +33,7 @@ MODULE mo_wlcc_init_lcc
   CHARACTER(len=*), PARAMETER :: modname = 'mo_wlcc_init_lcc_class'
 
   INTEGER, PARAMETER :: nr_of_active_cqts = 1
-  INTEGER, PARAMETER :: nr_of_passive_cqts = 4
+  INTEGER, PARAMETER :: nr_of_passive_cqts = 5
 
 CONTAINS
 
@@ -60,7 +60,8 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     active_cqts = (/ LIVE_CARBON_CQ_TYPE /)
-    passive_cqts = (/ AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE /)
+    passive_cqts = (/ AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, &
+      &               FLUX_C_CQ_TYPE /)
 
     ! WLCC disturbs area on the leave tiles
     IF (tile%Has_children()) THEN

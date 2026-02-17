@@ -27,7 +27,8 @@ MODULE mo_jsb_cqt_class
   PRIVATE
 
   PUBLIC :: WATER_CQ_TYPE
-  PUBLIC :: FLUX_C_CQ_TYPE, LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE
+  PUBLIC :: FLUX_C_CQ_TYPE, LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE
+  PUBLIC :: PRODUCT_CARBON_CQ_TYPE
   PUBLIC :: IQ_2L2D_POOL_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE, IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE
   PUBLIC :: Get_number_of_types, Get_cqt_name, t_jsb_consQuan, t_jsb_consQuan_p, max_cqt_name_length
 
@@ -37,6 +38,7 @@ MODULE mo_jsb_cqt_class
       & LIVE_CARBON_CQ_TYPE,      &
       & AG_DEAD_C_CQ_TYPE,        &
       & BG_DEAD_C_CQ_TYPE,        &
+      & BGLEV_DEAD_C_CQ_TYPE,     & !< conserved yasso quantity type for dead carbon on each soil layer
       & PRODUCT_CARBON_CQ_TYPE,   &
       & FLUX_C_CQ_TYPE,           &
       & IQ_2L2D_POOL_CQ_TYPE,     & !< conserved quincy quantity type for two layer 2D pool type
@@ -103,6 +105,8 @@ CONTAINS
         return_value = 'ag_dead_carbon'
       CASE (BG_DEAD_C_CQ_TYPE)
         return_value = 'bg_dead_carbon'
+      CASE (BGLEV_DEAD_C_CQ_TYPE)
+        return_value = 'bglev_dead_carbon'
       CASE (PRODUCT_CARBON_CQ_TYPE)
         return_value = 'product_carbon'
       CASE (FLUX_C_CQ_TYPE)
