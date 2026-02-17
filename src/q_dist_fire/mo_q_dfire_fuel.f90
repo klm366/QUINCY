@@ -53,12 +53,14 @@ MODULE mo_q_dfire_fuel
   USE mo_q_dfire_constants,     ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx, &
                                         df_sf_fc_spread_nr !< Spread fuel classes: 1, 10 and 100 hours
   USE mo_q_dfire_constants,     ONLY: ratio_as_dead_fuel !< variable sb pool ratios to dead fuel
+  USE mo_q_dfire_constants,     ONLY: df_sf_sl_indices, df_sf_sl_dims_nr
 
   USE mo_lnd_bgcm_idx,          ONLY: ixC
   USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter
   USE mo_lnd_bgcm_idx,          ONLY: ix_leaf, ix_fruit, ix_labile, ix_reserve, ix_sap_wood, ix_heart_wood
   USE mo_q_dfire_sf_fuel_class, ONLY: t_sf_fuel_class
   USE mo_q_dfire_sf_ros_eqs,    ONLY: calc_fbd
+  USE mo_q_dfire_config_class,  ONLY: Q_DFIRE_ROS_OBERHAGEMANN
 
   !< Live fraction allocation for dead and live fuels
   USE mo_q_dfire_constants,     ONLY: df_sf_live_frac_tree, &
@@ -66,6 +68,7 @@ MODULE mo_q_dfire_fuel
   USE mo_q_dfire_constants,     ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
 
   USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
+  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg_ober
 
   IMPLICIT NONE
 
@@ -86,7 +89,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_
+    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_, A2L_
     USE mo_q_dfire_spitfire,        ONLY: calc_ab_moisture
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
@@ -95,8 +98,10 @@ CONTAINS
     USE mo_jsb_math_constants,      ONLY: one_day
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
+    dsl4jsb_Use_memory(Q_DFIRE_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -148,6 +153,7 @@ CONTAINS
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
@@ -202,9 +208,10 @@ CONTAINS
     dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var3D_onChunk(A2L_, t_air)                ! in [K]
-    dsl4jsb_Get_var3D_onChunk(A2L_, swpar_srf_down)       ! in [W m-2]
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                ! in [K]
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)       ! in [W m-2]
 
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sat_sl)    ! in
@@ -294,6 +301,9 @@ CONTAINS
     IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
       t_air_in_c = t_air - 273.13_wp !< degrees K to C
 
+      allocate(ab_soil_depth_sl(nc,df_sf_sl_dims_nr))
+      allocate(ab_w_soil_sl(nc,df_sf_sl_dims_nr))
+      allocate(ab_w_soil_sat_sl(nc,df_sf_sl_dims_nr))
       ab_soil_depth_sl(:,:) = soil_depth_sl(:, [df_sf_sl_indices])
       ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
       ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
@@ -303,13 +313,13 @@ CONTAINS
 
       !< test only
       lfmc_p = [0.3_wp, 0.195_wp, 1.555_wp] ! todo: add to lctlib
-      comp_p(1,:) = [0.91_wp, 6.418_wp, 0.2] !< t cold, todo: add to lctlib
-      comp_p(2,:) = [1.47_wp, 29.16_wp, 0.2] !< t heat, todo: add to lctlib
-      comp_p(3,:) = [64.23_wp, 69.9_wp, 0.4] !< water, todo: add to lctlib
-      comp_p(4,:) = [0.1_wp, 41.72_wp, 0.17] !< light, todo: add to lctlib
+      comp_p(1,:) = [0.91_wp, 6.418_wp, 0.2_wp] !< t cold, todo: add to lctlib
+      comp_p(2,:) = [1.47_wp, 29.16_wp, 0.2_wp] !< t heat, todo: add to lctlib
+      comp_p(3,:) = [64.23_wp, 69.9_wp, 0.4_wp] !< light, todo: add to lctlib
+      comp_p(4,:) = [0.1_wp, 41.72_wp, 0.17_wp] !< water, todo: add to lctlib
       mflg_ober = calc_mflg_ober(nc, lfmc_p, comp_p, t_air_in_c, swpar_srf_down, ab_moisture)
+      WRITE(*,*) "fuel.f90:: update:: mflg_ober =", mflg_ober
     END IF
-
 
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
