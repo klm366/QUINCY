@@ -845,23 +845,31 @@ CONTAINS
     REAL(wp), INTENT(in)                :: ab_soil_depth_sl(:,:)      !< soil depth [m] (#nc, #above ground soil layers)
     REAL(wp), INTENT(in)                :: ab_wtr_soil_sl(:,:)        !< soil water content [m] (#nc, #above ground soil layers)
     REAL(wp), INTENT(in)                :: ab_wtr_wsat_sl(:,:)        !< soil water saturation [m] (#nc, #above ground soil layers)
-    LOGICAL, INTENT(in)                 :: mask(:)                    !< True = gridcell enabled
+    LOGICAL, INTENT(in), OPTIONAL       :: mask(:)                    !< True = gridcell enabled
     REAL(wp), ALLOCATABLE               :: ab_moisture(:)             !< Relative above ground soil moisture [-] (nc)
 
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
     INTEGER :: is, ic
     INTEGER :: nc, nsl
     REAL(wp), ALLOCATABLE :: ab_moisture_sl(:,:)
+    LOGICAL, ALLOCATABLE :: mask_in(:)
 
     nc = SIZE(ab_wtr_wsat_sl, DIM=1)
     nsl = SIZE(ab_wtr_wsat_sl, DIM=2) ! 2=soil layers index
     ALLOCATE(ab_moisture_sl, mold=ab_wtr_soil_sl)
 
+    ALLOCATE(mask_in(nc))
+    IF (PRESENT(mask)) THEN
+      mask_in=mask
+    ELSE
+      mask_in = .TRUE.
+    ENDIF
+
     !< Relative soil moisture for each above ground soil layers
     ab_moisture_sl = 0._wp
     DO is=1, nsl
       DO ic=1, nc
-        IF (mask(ic) .AND. ab_wtr_wsat_sl(ic,is)>0._wp) THEN
+        IF (mask_in(ic) .AND. ab_wtr_wsat_sl(ic,is)>0._wp) THEN
           ab_moisture_sl(ic,is) = ab_wtr_soil_sl(ic,is) / ab_wtr_wsat_sl(ic,is)
         END IF
       END DO
@@ -871,7 +879,7 @@ CONTAINS
     IF (.NOT. ALLOCATED(ab_moisture)) ALLOCATE(ab_moisture(nc))
     ab_moisture = 0._wp
     DO ic=1, nc
-      IF (mask(ic)) THEN
+      IF (mask_in(ic)) THEN
         ab_moisture(ic) = stats_average_weight(nsl, ab_moisture_sl(ic,:), ab_soil_depth_sl(ic,:))
       END IF
     ENDDO
