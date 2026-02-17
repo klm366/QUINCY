@@ -317,10 +317,6 @@ MODULE mo_sb_memory_class
                             litter_formation_poly_p_sl, &         !< formation rate of polymeric litter [mol P m-2 s-1]
                             litter_formation_woody_p_sl, &        !< formation rate of woody litter [mol P m-2 s-1]
                             litter_formation_soluble_p_sl         !< formation rate of soluble litter [mol P m-2 s-1]
-                                                                                                                     
-
-
-
     !------------------------------------------------------------------------------------------------------ !
     !>3D JSM pools | microbe, mineral-associated organic matter (Jena Soil Model)
     !>

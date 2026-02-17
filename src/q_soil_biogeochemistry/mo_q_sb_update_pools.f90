@@ -316,7 +316,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: litter_formation_soluble_n_sl
     dsl4jsb_Real3D_onChunk :: litter_formation_poly_p_sl
     dsl4jsb_Real3D_onChunk :: litter_formation_woody_p_sl
-    dsl4jsb_Real3D_onChunk :: litter_formation_soluble_p_sl                                                      
+    dsl4jsb_Real3D_onChunk :: litter_formation_soluble_p_sl
     dsl4jsb_Real3D_onChunk :: qmax_org
     dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: qmax_fast_po4
@@ -618,7 +618,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       litter_formation_soluble_n_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       litter_formation_poly_p_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       litter_formation_woody_p_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,       litter_formation_soluble_p_sl)                                                                  
+    dsl4jsb_Get_var3D_onChunk(SB_,       litter_formation_soluble_p_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_fast_po4)
@@ -1212,7 +1212,7 @@ CONTAINS
          litter_formation_woody_p_sl(ic, is)    = sb_formation_mt(ix_woody_litter, ixP, ic, is)     * soil_depth_sl(ic, is) / dtime
          litter_formation_soluble_p_sl(ic, is)  = sb_formation_mt(ix_soluable_litter, ixP, ic, is)  * soil_depth_sl(ic, is) / dtime
       ENDDO
-    ENDDO       
+    ENDDO
     !> 14.0 biosphere-level diagnostics (SB_ process)
     !>
 
