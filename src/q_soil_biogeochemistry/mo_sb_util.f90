@@ -540,25 +540,25 @@ CONTAINS
 
     !> - Fraction of vertical transport
     ptr_4D => input_file%Read_3d_time(                  &
-        & variable_name='sse_frac_wtr_transp_down_sl_'//tile%name,   &
+        & variable_name='hydro_frac_wtr_transp_down_sl_'//tile%name,   &
         & start_time_step=ith_timestep, end_time_step=ith_timestep)
     frac_wtr_transp_down_sl(:,:,:) = ptr_4D(:,:,:,1)
 
     !> - Fraction of lateral water loss
     ptr_4D => input_file%Read_3d_time(                  &
-        & variable_name='sse_frac_w_lat_loss_sl_'//tile%name,        &
+        & variable_name='hydro_frac_w_lat_loss_sl_'//tile%name,        &
         & start_time_step=ith_timestep, end_time_step=ith_timestep)
     frac_w_lat_loss_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
 
     !> - Water content
     ptr_4D => input_file%Read_3d_time(                  &
-        & variable_name='sse_wtr_soil_sl_'//tile%name,              &
+        & variable_name='hydro_wtr_soil_sl_'//tile%name,              &
         & start_time_step=ith_timestep, end_time_step=ith_timestep)
     wtr_soil_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
 
     !> - Volumetric water content
     ptr_4D => input_file%Read_3d_time(                  &
-        & variable_name='sse_vol_porosity_sl_'//tile%name,          &
+        & variable_name='hydro_vol_porosity_sl_'//tile%name,          &
         & start_time_step=ith_timestep, end_time_step=ith_timestep)
     vol_porosity_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
 
