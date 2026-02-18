@@ -299,6 +299,7 @@ CONTAINS
 
     !< Calculate livegrass moisture when ROS oberagemann
     IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+    IF (lctlib%growthform == igrass) THEN
       t_air_in_c = t_air - 273.13_wp !< degrees K to C
 
       allocate(ab_soil_depth_sl(nc,df_sf_sl_dims_nr))
@@ -315,11 +316,14 @@ CONTAINS
       lfmc_p = [0.3_wp, 0.195_wp, 1.555_wp] ! todo: add to lctlib
       comp_p(1,:) = [0.91_wp, 6.418_wp, 0.2_wp] !< t cold, todo: add to lctlib
       comp_p(2,:) = [1.47_wp, 29.16_wp, 0.2_wp] !< t heat, todo: add to lctlib
-      comp_p(3,:) = [64.23_wp, 69.9_wp, 0.4_wp] !< light, todo: add to lctlib
+      comp_p(3,:) = [64.23_wp, 69.9_wp, 0.95_wp] !< light, todo: add to lctlib
       comp_p(4,:) = [0.1_wp, 41.72_wp, 0.17_wp] !< water, todo: add to lctlib
-      mflg_ober = calc_mflg_ober(nc, lfmc_p, comp_p, t_air_in_c, swpar_srf_down, ab_moisture)
-      WRITE(*,*) "fuel.f90:: update:: mflg_ober =", mflg_ober
-    END IF
+      mflg_ober = calc_mflg_ober(nc, lfmc_p, comp_p, t_air_in_c, swpar_srf_down, ab_moisture*100._wp)
+    ELSE ! is tree
+      ALLOCATE(mflg_ober(nc))
+      mflg_ober = 0._wp
+    END IF ! is igrass
+    END IF ! is Q_DFIRE_ROS_OBERHAGEMANN
 
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
