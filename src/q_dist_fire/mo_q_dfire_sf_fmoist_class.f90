@@ -34,7 +34,7 @@ MODULE mo_q_dfire_sf_fmoist_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_fuel_moisture, calc_mflg_ober, t_gsi_param, t_gsi, t_lfmc
+  PUBLIC :: sf_calc_fuel_moisture, calc_mflg, t_gsi_param, t_gsi, t_lfmc
 
   !> GSI parameters
   TYPE :: t_gsi_param
@@ -67,21 +67,6 @@ MODULE mo_q_dfire_sf_fmoist_class
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 CONTAINS
 
-  !>
-  !> t_lfmc constructor
-  !>
-  FUNCTION create_lfmc_from_lctlib(lctlib) RESULT (lfmc)
-    TYPE(t_lctlib_element) :: lctlib
-    TYPE(t_lfmc) :: lfmc
-
-    lfmc % min = lctlib%q_lfmc_min
-    lfmc % max = lctlib%q_lfmc_max
-    lfmc % b = lctlib%q_lfmc_b
-    lfmc % c = lctlib%q_lfmc_c
-  END FUNCTION create_lfmc_from_lctlib
-
-
-  ! ======================================================================================================= !
   !>
   !> t_lfmc constructor
   !>
@@ -189,7 +174,7 @@ CONTAINS
     omegas(df_sf_omega_nl_idx) = 0._wp  !< omega_n,l: combine 1 hour dead fuel and live grass
 
     !< Calculate omega_n,l (dead 1hr + livegrass)
-    !< According to Thonicke et al. (2010) eq. B3, the omega_1hr and omega_lvg must be weighted in order to compute omega_n,l
+    !< According to Thonicke et al. (2010) eq. B3, the omega_1hr and lvg_moisture must be weighted in order to compute omega_n,l
 
     !< Compute omega_1hr
     weighted_alphas = 0._wp
@@ -201,11 +186,8 @@ CONTAINS
     END IF
 
     !< Compute alpha livegrass (Pfeiffer et al. (2013), Eq. A6 and A7)
-    omega_lvg = 0._wp
     alpha_lvg = 0._wp
     IF (has_live_fuel_lvg .AND. nesterov_index > 0._wp) THEN
-      !< Thonicke et al. (2010) Eq. B2
-      !omega_lvg = max(0._wp, (10._wp/9._wp) * litter_moisture - (1._wp / 9._wp) )
       !< Derived from Eq. 6 from Thonicke et al. (2010)
       alpha_lvg = - (log(lvg_moisture) / nesterov_index)
     END IF
@@ -215,7 +197,7 @@ CONTAINS
 
     !< Mixed 1 hour fuel class and livegrass
     omegas(df_sf_omega_nl_idx) = stats_average_weight(nr_fine_fuels, &
-                                                        [omega_lvg, omega_1hr], &
+                                                        [lvg_moisture, omega_1hr], &
                                                         [live_fuel_lvg, dead_fuel_1hr] )
 
     !< Calculate omega_o (1, 10, 100 and 1000 hours dead fuel + live grass)
@@ -260,28 +242,18 @@ CONTAINS
 
     INTEGER, INTENT(in) :: nc
     INTEGER, INTENT(in) :: method_id     !< method to use to calc livegrass moisture content
+    REAL(wp), INTENT(in) :: ab_moisture(nc) !< Above-ground soil moisture [0 to 1]
     TYPE(t_lfmc), INTENT(in) :: lfmc_par !< livegrass moisture parameters
     TYPE(t_gsi), INTENT(in) :: gsi_par   !< Parameters used to calculate gsi phenology
     REAL(wp), INTENT(in) :: tair(nc)     !< Air temperature [deg C]
     REAL(wp), INTENT(in) :: sw_rad(nc)   !< Shortwave-downward radiation [W m-2]
     REAL(wp), INTENT(in) :: water(nc)    !< Daily water availability: is a ratio between water
     !< supply from soil moisture and atmospheric water demand [0 to 100]%
-    REAL(wp), ALLOCATABLE :: mflg(nc)    ! Livegrass moisture [-]%
+    REAL(wp) :: mflg(nc)    ! Livegrass moisture [-]%
 
     !< Calculate livegrass moisture when ROS oberagemann
     IF (method_id == Q_DFIRE_LVG_OBERHAGEMANN) THEN
-
-!      t_air_in_c = t_air - df_sf_units_k_to_c !< degrees K to C
-!
-!      allocate(ab_soil_depth_sl(nc,df_sf_sl_dims_nr))
-!      allocate(ab_w_soil_sl(nc,df_sf_sl_dims_nr))
-!      allocate(ab_w_soil_sat_sl(nc,df_sf_sl_dims_nr))
-!      ab_soil_depth_sl(:,:) = soil_depth_sl(:, [df_sf_sl_indices])
-!      ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
-!      ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
-!      ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl) * 100._wp ! 100=convert fraction to 0 to 100 (%)
-
-      mflg = calc_mflg_ober(nc, lfmc_par, gsi_par, t_air_in_c, swpar_srf_down, ab_moisture)
+      mflg = calc_mflg_ober(nc, lfmc_par, gsi_par, tair, sw_rad, water)
     ELSE IF (method_id == Q_DFIRE_LVG_THONICKE) THEN
       !< Thonicke et al. (2010), eq. B2
       mflg = max(0._wp, (10._wp/9._wp) * ab_moisture - (1._wp / 9._wp) )
@@ -315,17 +287,17 @@ CONTAINS
     IF (.NOT. ALLOCATED(f_cold_old)) THEN ! initilize
       ALLOCATE(f_cold_old(nc), f_heat_old(nc), f_water_old(nc), f_light_old(nc))
       f_cold_old = calc_term(tair, - gsi_par%cold%slope, gsi_par%cold%base)! slope, base
-      f_heat_old = calc_term(tair, gsi_parm%heat%slope, gsi_parm%heat%base)
-      f_light_old = calc_term(sw_rad, -gsi_parm%light%slope, gsi_parm%light%base)
-      f_water_old = calc_term(water, -gsi_parm%water%slope, gsi_parm%water%base)
+      f_heat_old = calc_term(tair, gsi_par%heat%slope, gsi_par%heat%base)
+      f_light_old = calc_term(sw_rad, -gsi_par%light%slope, gsi_par%light%base)
+      f_water_old = calc_term(water, -gsi_par%water%slope, gsi_par%water%base)
     END IF
     ALLOCATE(mf_lg(nc))
 
     !< Calc phenology
-    f_cold = calc_f_comp_PFT(nc, gsi%cold, f_cold_old, tair, .FALSE.)
-    f_heat = calc_f_comp_PFT(nc, gsi%heat, f_heat_old, tair, .TRUE.)
-    f_light = calc_f_comp_PFT(nc, gsi%light, f_light_old, sw_rad, .FALSE.)
-    f_water = calc_f_comp_PFT(nc, gsi%water, f_water_old, water, .FALSE.)
+    f_cold = calc_f_comp_PFT(nc, gsi_par%cold, f_cold_old, tair, .FALSE.)
+    f_heat = calc_f_comp_PFT(nc, gsi_par%heat, f_heat_old, tair, .TRUE.)
+    f_light = calc_f_comp_PFT(nc, gsi_par%light, f_light_old, sw_rad, .FALSE.)
+    f_water = calc_f_comp_PFT(nc, gsi_par%water, f_water_old, water, .FALSE.)
     !< Forkel et al. (2014), eq. 5
     phen = f_cold * f_heat * f_water * f_light
 
@@ -336,9 +308,9 @@ CONTAINS
     f_light_old = f_light
 
     ! As paper's source code
-    mf_lg = lfmc_p(2) + lfmc_p(3) * phen
-    WHERE (mf_lg < lfmc_p(1)) mf_lg = lfmc_p(1) !< set min value
-    WHERE (mf_lg > mflg_max)  mf_lg = mflg_max !< up to 250% livegrass moisture
+    mf_lg = lfmc_par%b + lfmc_par%c * phen
+    WHERE (mf_lg < lfmc_par%min) mf_lg = lfmc_par%min !< set min value
+    WHERE (mf_lg > lfmc_par%max) mf_lg = lfmc_par%max !< up to 250% livegrass moisture
   END FUNCTION calc_mflg_ober
 
 

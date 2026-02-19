@@ -88,6 +88,9 @@ MODULE mo_q_dfire_config_class
     CHARACTER(len=20) :: ros_modelname               !< name of rate of spread implementation
     INTEGER           :: ros_model_id                !< Rate of spread implementation ID
 
+    CHARACTER(len=20) :: mflg_modelname              !< livegrass moisture model 
+    INTEGER           :: mflg_model_id               !< livegrass moisture model ID
+
     CHARACTER(len=20) :: dfire_precip_method_name    !< precipitation method name, from namelist
     INTEGER           :: dfire_precip_method_id      !< precipitation method id (1=,2=,3=), internal
 
@@ -160,6 +163,8 @@ CONTAINS
     INTEGER                       :: dfire_precip_method_id   !< precipitation method id (1=,2=,3=), internal
     CHARACTER(len=20)             :: ros_modelname            !< name of rate of spread model
     INTEGER                       :: ros_model_id             !< rate of spread ID, derived from 'ros_modelname'
+    CHARACTER(len=20)             :: mflg_modelname           !< livegrass moisture model 
+    INTEGER                       :: mflg_model_id            !< livegrass moisture model ID, derived from 'ros_modelname'
     REAL(wp)                      :: density_human_population !< Ignition events
     REAL(wp)                      :: lightning_frequency      !<
     REAL(wp)                      :: a_nd                     !<
@@ -205,6 +210,7 @@ CONTAINS
       & dfire_modelname,                      &
       & dfire_precip_method_name,             &
       & ros_modelname,                        &
+      & mflg_modelname,                       &
       & density_human_population,             &
       & lightning_frequency,                  &
       & a_nd,                                 &
@@ -244,6 +250,7 @@ CONTAINS
     dfire_modelname          = 'spitfire'         ! [spitfire, ...]
     dfire_precip_method_name = TRIM(dfire_cfg_precip_method_mavg)  ! 'mavg'
     ros_modelname            = 'thonicke'         ! thonicke or oberhagemann
+    mflg_modelname           = 'thonicke'         ! thonicke or oberhagemann
     density_human_population = 55.0               ! Ignition events
     lightning_frequency      = 0.000012           !
     a_nd                     = 0.000048           !
@@ -293,6 +300,7 @@ CONTAINS
     config%dfire_modelname           = TRIM(dfire_modelname)
     config%dfire_precip_method_name  = TRIM(dfire_precip_method_name)
     config%ros_modelname             = TRIM(ros_modelname)
+    config%mflg_modelname            = TRIM(mflg_modelname)
     config%density_human_population  = density_human_population       ! spitfire
     config%lightning_frequency       = lightning_frequency            !
     config%a_nd                      = a_nd                           !
@@ -330,6 +338,10 @@ CONTAINS
     ! set the fire rate of spread method ID from 'ros_modelname'
     ros_model_id = Get_dfire_ros_id(TRIM(config%ros_modelname))
     config%ros_model_id = ros_model_id
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! set the fire livegrass moisture method ID from 'mflg_modelname'
+    mflg_model_id = Get_dfire_mflg_id(TRIM(config%mflg_modelname))
+    config%mflg_model_id = mflg_model_id
     ! ----------------------------------------------------------------------------------------------------- !
     vgrid_dead_fuel_pools  => new_vgrid(df_sf_vgrid_dead_fuel_pools_name, zaxis_generic, sf_fuel_dead_fuel_nr, &
                                         longname='Dead fuel pools', &
@@ -378,7 +390,7 @@ CONTAINS
 
   ! ====================================================================================================== !
   !>
-  !> Returns the id for this fire model name
+  !> Returns the id for this Rate of spread model name
   !>
   FUNCTION Get_dfire_ros_id(name) RESULT(return_value)
     CHARACTER(len=*), INTENT(in) :: name
@@ -395,6 +407,27 @@ CONTAINS
       CALL finish(routine,'Invalid fire Rate of Spread')
     END SELECT
   END FUNCTION Get_dfire_ros_id
+
+
+  ! ====================================================================================================== !
+  !>
+  !> Returns the id for this livegrass moisture method name
+  !>
+  FUNCTION Get_dfire_mflg_id(name) RESULT(return_value)
+    CHARACTER(len=*), INTENT(in) :: name
+    INTEGER                      :: return_value
+    ! ----------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_dfire_mflg_id'
+    ! ----------------------------------------------------------------------------------------------------- !
+    SELECT CASE(tolower(TRIM(name)))
+    CASE ('thonicke')
+      return_value = Q_DFIRE_LVG_THONICKE
+    CASE ('oberhagemann')
+      return_value = Q_DFIRE_LVG_OBERHAGEMANN
+    CASE DEFAULT
+      CALL finish(routine,'Invalid livegrass moisture method found')
+    END SELECT
+  END FUNCTION Get_dfire_mflg_id
 
 
   ! ====================================================================================================== !

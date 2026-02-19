@@ -69,7 +69,7 @@ MODULE mo_q_dfire_fuel
 
   USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
   USE mo_q_dfire_constants,     ONLY: df_sf_units_k_to_c
-  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg_ober, t_gsi, t_lfmc
+  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg, t_gsi, t_lfmc
 
   IMPLICIT NONE
 
@@ -324,7 +324,7 @@ CONTAINS
       ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
       ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl) ! 100=convert fraction to 0 to 100 (%)
 
-      lvg_moisture = calc_mflg(nc, method_id, &
+      lvg_moisture = calc_mflg(nc, dsl4jsb_Config(Q_DFIRE_)%mflg_model_id, &
                               ab_moisture, & ! thonicke
                               lfmc_par, gsi_par, & ! oberhagemann
                               t_air_in_c, swpar_srf_down, ab_moisture * 100._wp)
