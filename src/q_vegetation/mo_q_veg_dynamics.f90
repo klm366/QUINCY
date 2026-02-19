@@ -252,7 +252,7 @@ CONTAINS
         & lai_tvegdyn_mavg(:)                             , &
         & fpc(:)                                          , &
         & mortality_rate_fire(:)                          , &
-        & veg_pool_mt(:,:,:)                              , & 
+        & veg_pool_mt(:,:,:)                              , &
         & veg_fire_litterfall_mt(:,:,:)                   , & ! in
         & veg_litterfall_mt(:,:,:)                        , & ! inout
         & mortality_rate(:)                               )   ! out
