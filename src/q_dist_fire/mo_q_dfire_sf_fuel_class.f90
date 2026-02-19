@@ -55,7 +55,7 @@ MODULE mo_q_dfire_sf_fuel_class
   USE mo_lnd_bgcm_idx,        ONLY: ix_woody_litter, ix_polymeric_litter, ix_leaf, ix_fruit, &
                                       ix_sap_wood, ix_heart_wood, ix_labile, ix_reserve, &
                                       ix_dom_assoc, ix_dom, ix_soluable_litter, ix_residue, ix_residue_assoc
-  
+
   IMPLICIT NONE
 
 
@@ -97,7 +97,7 @@ MODULE mo_q_dfire_sf_fuel_class
     PROCEDURE :: Count_dead_fuel_pools
   END TYPE t_sf_fuel_class
 
-  
+
   INTERFACE t_sf_fuel_class
     MODULE PROCEDURE :: create_fuel_class
   END INTERFACE t_sf_fuel_class

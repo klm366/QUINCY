@@ -138,7 +138,7 @@ CONTAINS
 
     REAL(wp)                              :: residue_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #dead pools, #elements) [mol m-2]
     REAL(wp)                              :: residue_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elements) [mol m-2]
-                                          
+
     REAL(wp)                              :: mass_imbalance_emitted_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #dead pools, #elems) [mol m-2]
     REAL(wp)                              :: mass_imbalance_emitted_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elems) [mol m-2]
 
@@ -200,7 +200,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: diameter                   ! in [?]
     dsl4jsb_Real2D_onChunk                :: height                     ! in [?]
     dsl4jsb_Real3D_onChunk                :: soil_depth_sl              ! in [m]
-    
+
     dsl4jsb_Real3D_onChunk                :: veg_fire_litterfall_total_els ! out [umol X m-2 s-1]
     dsl4jsb_Real3D_onChunk                :: veg_fire_emissions_total_els ! out [umol X m-2 s-1]
     dsl4jsb_Real3D_onChunk                :: sb_fire_emissions_total_els ! out [umol X m-2 s-1]
@@ -233,7 +233,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts(1)%lib_id) 
+    lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (lctlib%PastureFlag) RETURN !< do not run this routine at tiles like "pasture pft"
@@ -397,12 +397,12 @@ CONTAINS
       dbh(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
 
       is_fire_intense_enough = is_fire_intense_enough .AND. &
-                                (tile_fract > 0._wp) .AND. & ! tile is empty, skip 
+                                (tile_fract > 0._wp) .AND. & ! tile is empty, skip
                                 (height > 0._wp) ! height is not yet initialized, skip
 
       CALL calc_prob_mortality(nc, df_sf_fc_spread_nr, &
                                     lctlib%q_crown_length, lctlib%q_crown_damage_p, lctlib%q_crown_damage_r_ck, &
-                                    lctlib%q_scorch_height_f, & 
+                                    lctlib%q_scorch_height_f, &
                                     lctlib%q_bark_thickness_par1, lctlib%q_bark_thickness_par2, &
                                     height * dsl4jsb_Config(Q_DFIRE_)%tree_height_factor, & ! Tree characteristics
                                     dbh * dsl4jsb_Config(Q_DFIRE_)%tree_diameter_factor, &
@@ -410,7 +410,7 @@ CONTAINS
                                     w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
                                     dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
                                     prob_mort, & ! output
-                                    mask_opt=is_fire_intense_enough) 
+                                    mask_opt=is_fire_intense_enough)
 
       fc_live = sf_calc_live_fuel_consumption(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
                                               prob_mort % prop_ck, &
@@ -442,7 +442,7 @@ CONTAINS
       End If
     END IF
 
-    !< Recalculate dead fuel consumption at a PFT level 
+    !< Recalculate dead fuel consumption at a PFT level
     fc_dead_cls = sf_calc_dead_fuel_consumption(area_burned_fract, dead_frac_consumption, &
                                                 dead_fuel_fcl, mask=is_fire_intense_enough)
 
@@ -477,7 +477,7 @@ CONTAINS
                           emissions_dead_spc, emissions_dead_el, & ! out
                           mask=is_fire_intense_enough)
     CALL sf_calc_emissions(lctlib_emission_factors, & !in
-                          fc_live, & 
+                          fc_live, &
                           fc_live_el, &
                           emissions_live_spc, emissions_live_el, & ! out
                           mask=is_fire_intense_enough)
@@ -571,7 +571,7 @@ CONTAINS
 
     IF (residue < 0._wp) THEN
       mass_overflow = ABS(residue)
-      residue = 0._wp 
+      residue = 0._wp
     END IF
     ! Use for debugging
     !DO ic=1, SIZE(residue, DIM=1) ! 1= nc dimension index

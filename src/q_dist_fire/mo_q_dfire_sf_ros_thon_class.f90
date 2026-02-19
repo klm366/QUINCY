@@ -44,7 +44,7 @@ MODULE mo_q_dfire_sf_ros_thon_class
   USE mo_quincy_stats,          ONLY: stats_average_weight
   USE mo_q_dfire_sf_ros_eqs,    ONLY: calc_opt_react_velocity, &
                                        calc_prop_flux_ratio, &
-                                       calc_wind_factor 
+                                       calc_wind_factor
   USE mo_q_dfire_sf_ros_type,  ONLY: t_sf_ros
 
 

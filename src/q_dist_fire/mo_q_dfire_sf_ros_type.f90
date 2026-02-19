@@ -67,7 +67,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Initialize t_sf_ros 
+  !> Initialize t_sf_ros
   !>
   FUNCTION create_sf_ros_init(nc) RESULT(sf_ros)
     INTEGER, INTENT(in)                  :: nc        !< Total number of gridcells

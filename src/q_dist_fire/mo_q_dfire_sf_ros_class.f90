@@ -43,7 +43,7 @@ MODULE mo_q_dfire_sf_ros_class
 
   PRIVATE
   PUBLIC :: sf_calc_rate_of_spread, t_sf_veget_cover_frac !, calc_length_to_breadth_ratio, calc_opt_react_velocity, &
-                !calc_prop_flux_ratio, calc_wind_factor 
+                !calc_prop_flux_ratio, calc_wind_factor
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_class'
 
@@ -85,7 +85,7 @@ CONTAINS
     REAL(wp), INTENT(in)                 :: woi_ddm(nc, nddm)           !< Mixed dead fuel with livegrass (1hr+dry livegrass, 10hrs, 100hrs) [kg DM m-2], note in kg, used in Oberhagemann
     REAL(wp), INTENT(in)                 :: woi_dd(nc, ndd)             !< Dead fuel (1hr, 10 hors, 100hrs, dry livegress) dead fuel [kg DM m-2], note in kg, used in Oberhagemann
     REAL(wp), INTENT(in)                 :: woi_lv(nc, nlv)             !< Live fuel (wet livegrass, woody) live fuel [kg DM m-2], note in kg
-    REAL(wp), INTENT(in)                 :: mf_dd(nc, ndd) 
+    REAL(wp), INTENT(in)                 :: mf_dd(nc, ndd)
     REAL(wp), INTENT(in)                 :: mf_lv(nc, nlv)              !< Fuel moisture [0 to 1] (#nc,#live fuel classes -Oberhagemann-)
     REAL(wp), INTENT(in)                 :: me_dd(nc)                   !< Moisture of extinction [0 to 1] (#nc,#dead fuel classes)
     LOGICAL, INTENT(in)                  :: mask(nc)                    !< True =  compute gridcell(s)

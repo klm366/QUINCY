@@ -357,16 +357,16 @@ CONTAINS
     LOGICAL, INTENT(in)           :: ispositive !< true: increase, false=decrease
     REAL(wp) :: f(nc)
 
-    REAL(wp) :: term(nc) 
+    REAL(wp) :: term(nc)
     INTEGER :: ic
     REAL(wp) :: slope
     REAL(wp) :: tau_30min
 
     IF (ispositive) THEN
       slope = params%slope ! slope increase
-    ELSE 
+    ELSE
       slope = -params%slope ! slope decrease
-    ENDIF 
+    ENDIF
 
     ASSOCIATE(base => params%base, tau_daily => params%tau)
       tau_30min = 1._wp - (1._wp - tau_daily)**(1.0_wp / 48.0_wp)
@@ -382,7 +382,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> calc_term 
+  !> calc_term
   !>
   ELEMENTAL PURE FUNCTION calc_term(comp, slope, base) RESULT (f)
      REAL(wp), INTENT(in) :: comp

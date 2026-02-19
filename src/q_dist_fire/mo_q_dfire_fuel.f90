@@ -203,7 +203,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
-    lctlib => model%lctlib(tile%lcts(1)%lib_id) 
+    lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
     IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (lctlib%PastureFlag) RETURN !< do not run this routine at tiles like "pasture pft"

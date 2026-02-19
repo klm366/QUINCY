@@ -1,7 +1,7 @@
 !>
 !>  @par Copyright
 !>    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!>    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!>    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !>    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !>
 !>    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !>
 !>    You should have received a copy of the GNU General Public License
 !>    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!> 
+!>
 !> @brief Contains structures and methods for config of the dist_fire process
 !>
 !>  -flag_ros_f_prescribed
@@ -94,7 +94,7 @@ MODULE mo_q_dfire_config_class
     REAL(wp)          :: density_human_population    !< average human population density in the grid cell [individuals km-2]
     REAL(wp)          :: lightning_frequency         !< avrg number of all lightnings [ha-1 d-1]
     REAL(wp)          :: a_nd                        !< Propensity of people to produce ignition events (Eq. 3, Thonicke et al. (2010))
-                                                     !< [ignitions indivual-1 d-1]      
+                                                     !< [ignitions indivual-1 d-1]
     REAL(wp)          :: fract_crown_scorch(4)       !< Fraction of live fuel consumed in crown scorch. 4=fuel classes
 
     ! input data
@@ -127,7 +127,7 @@ MODULE mo_q_dfire_config_class
   CONTAINS
     PROCEDURE :: Init => Init_q_dfire_config
   END type t_q_dfire_config
-  
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_config_class'
 
 CONTAINS
@@ -162,7 +162,7 @@ CONTAINS
     INTEGER                       :: ros_model_id             !< rate of spread ID, derived from 'ros_modelname'
     REAL(wp)                      :: density_human_population !< Ignition events
     REAL(wp)                      :: lightning_frequency      !<
-    REAL(wp)                      :: a_nd                     !< 
+    REAL(wp)                      :: a_nd                     !<
     REAL(wp)                      :: fract_crown_scorch(4)    !< Fraction of live fuel consumption from crown scorch
     CHARACTER(len=filename_max)   :: ic_popdens_filename
     CHARACTER(len=filename_max)   :: ic_lightning_events_filename
@@ -172,7 +172,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_fuel_classes
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_fuel_moisture
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_months_in_year
-    
+
     REAL(wp)                      :: ratio_polymeric_litter_to_dead_fuel !< Ratio polymeric litter to include as dead fuels
     REAL(wp)                      :: ratio_dom_assoc_to_dead_fuel       !< Ratio to include dom_assoc as dead fuel
     REAL(wp)                      :: ratio_dom_to_dead_fuel             !< Ratio to include dom as dead fuel
@@ -244,8 +244,8 @@ CONTAINS
     dfire_modelname          = 'spitfire'         ! [spitfire, ...]
     dfire_precip_method_name = TRIM(dfire_cfg_precip_method_mavg)  ! 'mavg'
     ros_modelname            = 'thonicke'         ! thonicke or oberhagemann
-    density_human_population = 55.0               ! Ignition events 
-    lightning_frequency      = 0.000012           ! 
+    density_human_population = 55.0               ! Ignition events
+    lightning_frequency      = 0.000012           !
     a_nd                     = 0.000048           !
     ic_popdens_filename      = "ic_popdens.nc"
     ic_lightning_events_filename = "ic_lightning_events.nc"
@@ -268,7 +268,7 @@ CONTAINS
     burnable_pfts            = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! Tree and grass PFTs
                                 .FALSE., .FALSE., .FALSE., .FALSE., .FALSE.]
     burnable_grass_pfts      = [.FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .TRUE.,  .TRUE.,  .FALSE.,& ! grass only PFTs
-                                .FALSE., .FALSE., .FALSE., .FALSE.] 
+                                .FALSE., .FALSE., .FALSE., .FALSE.]
     burnable_tree_pfts       = [.TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .FALSE., .FALSE., .FALSE.,& ! tree only PFTs
                                 .FALSE., .FALSE., .FALSE., .FALSE.]
 
@@ -294,11 +294,11 @@ CONTAINS
     config%dfire_precip_method_name  = TRIM(dfire_precip_method_name)
     config%ros_modelname             = TRIM(ros_modelname)
     config%density_human_population  = density_human_population       ! spitfire
-    config%lightning_frequency       = lightning_frequency            ! 
+    config%lightning_frequency       = lightning_frequency            !
     config%a_nd                      = a_nd                           !
     config%ic_popdens_filename       = TRIM(ic_popdens_filename)
     config%ic_lightning_events_filename = TRIM(ic_lightning_events_filename)
-    config%fract_crown_scorch        = fract_crown_scorch             ! 
+    config%fract_crown_scorch        = fract_crown_scorch             !
     config%ratio_polymeric_litter_to_dead_fuel = ratio_polymeric_litter_to_dead_fuel ! spitfire
     config%ratio_dom_assoc_to_dead_fuel        = ratio_dom_assoc_to_dead_fuel          ! spitfire
     config%ratio_dom_to_dead_fuel              = ratio_dom_to_dead_fuel                ! spitfire

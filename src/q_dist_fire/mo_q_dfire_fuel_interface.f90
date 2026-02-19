@@ -1,7 +1,7 @@
 !>
 !>  @par Copyright
 !>    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!>    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!>    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !>    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !>
 !>    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !>
 !>    You should have received a copy of the GNU General Public License
 !>    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!> 
+!>
 !> @brief Contains the interface to the dfire processes
 !>
 !> @author
@@ -151,7 +151,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
 #ifndef __QUINCY_STANDALONE__
-    IF (dsl4jsb_Config(Q_DFIRE_)%flag_wa_custom) THEN ! only account for custom pfts (e.g tree and grass), 
+    IF (dsl4jsb_Config(Q_DFIRE_)%flag_wa_custom) THEN ! only account for custom pfts (e.g tree and grass),
                                                       ! WA is done over this PFTs
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, moisture_extinction  , weighted_by_fract, burnable_pfts, "veg")
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, fwd_wind_factor      , weighted_by_fract, burnable_pfts, "veg")
@@ -246,7 +246,7 @@ CONTAINS
     ! Go aggregate
     ! ----------------------------------------------------------------------------------------------------- !
 #ifndef __QUINCY_STANDALONE__
-    IF (dsl4jsb_Config(Q_DFIRE_)%flag_wa_custom) THEN ! only account for custom pfts (e.g tree and grass), 
+    IF (dsl4jsb_Config(Q_DFIRE_)%flag_wa_custom) THEN ! only account for custom pfts (e.g tree and grass),
                                                       ! WA is done over this PFTs
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, veg_fire_litterfall_total_els , weighted_by_fract, burnable_pfts, "veg")
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, veg_fire_emissions_total_els  , weighted_by_fract, burnable_pfts, "veg")

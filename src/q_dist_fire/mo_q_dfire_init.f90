@@ -1,7 +1,7 @@
 !>
 !>  @par Copyright
 !>    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!>    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!>    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !>    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !>
 !>    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !>
 !>    You should have received a copy of the GNU General Public License
 !>    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!> 
+!>
 !> @brief Initialization of the the dfire memory.
 !>
 !> @author
@@ -94,14 +94,14 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: dfire_pm_id                                  !< Selected precipitation method
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Real2D_onDomain      :: mask_is_fire_intense_enough 
+    dsl4jsb_Real2D_onDomain      :: mask_is_fire_intense_enough
     dsl4jsb_Real2D_onDomain      :: precip_daytime
     dsl4jsb_Real2D_onDomain      :: precip_daytime_old
     dsl4jsb_Real2D_onDomain      :: precip_qc_mavg
     dsl4jsb_Real2D_onDomain      :: precip_daily_mmd
     dsl4jsb_Real2D_onDomain      :: precip_mavg
 
-    dsl4jsb_Real2D_onDomain      :: t_air_min 
+    dsl4jsb_Real2D_onDomain      :: t_air_min
     dsl4jsb_Real2D_onDomain      :: t_air_max
     dsl4jsb_Real2D_onDomain      :: t_air_min_old
     dsl4jsb_Real2D_onDomain      :: t_air_max_old
@@ -111,7 +111,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: ros_f
     dsl4jsb_Real2D_onDomain      :: ros_b
     dsl4jsb_Real2D_onDomain      :: mean_fire_area
-    dsl4jsb_Real2D_onDomain      :: fire_duration 
+    dsl4jsb_Real2D_onDomain      :: fire_duration
 
     dsl4jsb_Real2D_onDomain      :: area_burned
     dsl4jsb_Real2D_onDomain      :: area_burned_fract
@@ -497,7 +497,7 @@ CONTAINS
         !>
         ptr_3D => input_file%Read_2D_time(variable_name='HRMC_COM_FR')
         DO i_month = 1,12
-          ! Data is loaded as #events km-2 day-1 
+          ! Data is loaded as #events km-2 day-1
           ! Units conversion from km-2 to ha-1
           ic_lightning_events_monthly(:,i_month,:) = ptr_3D(:,:,i_month) / 100.
         END DO

@@ -1,7 +1,7 @@
 !>
 !>  @par Copyright
 !>    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!>    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!>    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !>    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !>
 !>    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !>
 !>    You should have received a copy of the GNU General Public License
 !>    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!> 
+!>
 !> @brief Contains structures and methods for config of the q_dist_fire_fuel process
 !>
 !> @author
@@ -47,7 +47,7 @@ MODULE mo_q_dfire_fuel_config_class
   CONTAINS
     PROCEDURE :: Init => Init_q_dfire_fuel_config
   END type t_q_dfire_fuel_config
-  
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel_config_class'
 
 CONTAINS

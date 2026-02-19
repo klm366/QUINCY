@@ -226,7 +226,7 @@ CONTAINS
     wfactors = calc_weighting_factors(sigmas_dd, woi_dd, &
                                       sigmas_lv, woi_lv, &
                                       df_sf_oven_dry_part_dens)
-    U_var = u_f_wind 
+    U_var = u_f_wind
 
     DO ic = 1, nc
       IF (mask(ic)) THEN
@@ -304,7 +304,7 @@ CONTAINS
       END IF ! IF (mask(ic)) THEN
     ENDDO ! DO ic = 1, nc
 
-!    ros%ros_forward =  ros_forward    
+!    ros%ros_forward =  ros_forward
     ros%reaction_intensity = ir%total
     ros%prop_flux_ratio = xi
     ros%wind_factor=phi_w
@@ -367,7 +367,7 @@ CONTAINS
   !> Calculate g weighting factors
   !>
   FUNCTION calc_g_weighting_factors(fs, sigmas) RESULT (gs)
-    USE mo_q_dfire_constants, ONLY: feet_to_cm => df_sf_units_ft_to_cm 
+    USE mo_q_dfire_constants, ONLY: feet_to_cm => df_sf_units_ft_to_cm
 
     REAL(wp), INTENT(in)  :: fs(:)     !< f weighting factor (#fuel classes) [-]
     REAL(wp), INTENT(in)  :: sigmas(:) !< surface area to volume ratio (#fuel classes) [m2/m3]
@@ -376,7 +376,7 @@ CONTAINS
     INTEGER, PARAMETER :: NGLIM = 5
     INTEGER :: nfuelclass
     !< g partitions, Andrews PL et al. (2018), page 17
-    REAL(wp), PARAMETER :: glim(NGLIM) = [16._wp,48._wp,96._wp,1200._wp, HUGE(4.0_wp)] / feet_to_cm 
+    REAL(wp), PARAMETER :: glim(NGLIM) = [16._wp,48._wp,96._wp,1200._wp, HUGE(4.0_wp)] / feet_to_cm
     REAL(wp) :: fsum(NGLIM)
     INTEGER :: ifuel, ibin
 
@@ -439,7 +439,7 @@ CONTAINS
       DO ic=1, nc
         IF (mask(ic)) THEN
           wdead(ic,is) = woi_dd(ic,is) * exp((-138._wp/df_sf_units_ft_to_cm)/sigmas_dd(is))
-        ENDIF 
+        ENDIF
       END DO
     END DO
 

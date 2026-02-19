@@ -84,7 +84,7 @@ CONTAINS
     ALLOCATE(sf_pm%F_scorch_height)
     sf_pm%pm_fire => pm_fire
     sf_pm%pm_tau => pm_tau
-    sf_pm%tau_l => tau_l 
+    sf_pm%tau_l => tau_l
     sf_pm%tau_c => tau_c
     sf_pm%bark_thickness => bark_thickness
     sf_pm%prop_ck => prop_ck
@@ -138,7 +138,7 @@ CONTAINS
                               lctlib_F_scorch_height, lctlib_par1, lctlib_par2, &
                               height, dbh, i_surface, dead_fuel, frac_consump, &
                               prob_mort, &
-                              mask_opt) 
+                              mask_opt)
     INTEGER, INTENT(in)  :: nc
     INTEGER, INTENT(in)  :: nfuels                          !< Dead fuel classes
     REAL(wp), INTENT(in) :: lctlib_crown_length             !< Crown length of woody PFT [m]
