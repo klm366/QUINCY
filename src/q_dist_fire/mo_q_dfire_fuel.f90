@@ -322,9 +322,12 @@ CONTAINS
       ab_soil_depth_sl(:,:) = soil_depth_sl(:, [df_sf_sl_indices])
       ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
       ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
-      ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl) * 100._wp ! 100=convert fraction to 0 to 100 (%)
+      ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl) ! 100=convert fraction to 0 to 100 (%)
 
-      lvg_moisture = calc_mflg(nc, method_id, ab_moisture, lfmc_par, gsi_par, t_air_in_c, swpar_srf_down, ab_moisture)
+      lvg_moisture = calc_mflg(nc, method_id, &
+                              ab_moisture, & ! thonicke
+                              lfmc_par, gsi_par, & ! oberhagemann
+                              t_air_in_c, swpar_srf_down, ab_moisture * 100._wp)
     ELSE ! is tree
       lvg_moisture = 0._wp
     END IF ! is_grass / is_tree
