@@ -622,7 +622,7 @@ CONTAINS
           ix_elem = elements_index_map(ielem)    ! get element index in bgcm
           DO ix_comp = 1, n_veg_bgcm_comp
             veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
-                                                      veg_fire_litterfall_mt(ix_comp, ix_elem, ic) 
+                                                      veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
           END DO ! ix_comp = 1, n_veg_bgcm_comp
         END IF ! model%config%is_element_used(ielem)) THEN
       END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
