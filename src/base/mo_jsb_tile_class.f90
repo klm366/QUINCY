@@ -1566,7 +1566,7 @@ CONTAINS
 
   ! ====================================================================================================== !
   !>
-  !> Aggregation of a 2d variable from the child tiles by sum all 
+  !> Aggregation of a 2d variable from the child tiles by sum all
   !>
   SUBROUTINE Aggregate_sum_2d(this, tile, var, ics, ice, iblk, caller, mask, mask_on_tile)
 
@@ -1688,7 +1688,7 @@ CONTAINS
       !   CALL finish(TRIM(routine),  '    ... this should not happen')
       ! END IF
 
-      ! Output sum data 
+      ! Output sum data
       !
       IF (icount == 1) THEN  ! Only one child tile needs to be considered.
         !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1699,8 +1699,8 @@ CONTAINS
       ELSE IF (icount > 1) THEN  ! Several child tiles need to be considered.
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
-          ! Output computed data 
-          var%ptr(j,iblk) = this%data_sum(j,iblk) 
+          ! Output computed data
+          var%ptr(j,iblk) = this%data_sum(j,iblk)
         END DO
       ELSE
         STOP 'Aggregate_sum_2d: This should not happen (icount=0)!'
@@ -2131,8 +2131,8 @@ CONTAINS
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + 1.0_wp
           END DO ! j = ics, ice
-        END IF ! var%child_idx(i) > 0 
-      END DO 
+        END IF ! var%child_idx(i) > 0
+      END DO
 
       ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
       ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
