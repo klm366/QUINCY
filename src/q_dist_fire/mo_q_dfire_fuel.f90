@@ -189,6 +189,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: fuel_bulk_density    ! out [kg m-3]
     dsl4jsb_Real2D_onChunk      :: moisture_extinction  ! out [0 to 1]
     dsl4jsb_Real2D_onChunk      :: fwd_wind_factor      ! out [0 to 1]
+
+    dsl4jsb_Real2D_onChunk      :: lvg_moisture      ! out [0 to 2.5]%
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -238,6 +240,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, fuel_bulk_density)     ! out [kg m-3]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, moisture_extinction)   ! out [0 to 1]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, fwd_wind_factor)       ! out [0 to 1]
+
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, lvg_moisture)       ! out [0 to 2.5]%
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -308,26 +312,33 @@ CONTAINS
 
     dead_fuel_fcl = fuel_cls % calc_dead_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
 
-    !< Calculate livegrass moisture when ROS oberagemann
-    IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-      IF (lctlib%growthform == igrass) THEN
-        t_air_in_c = t_air - 273.13_wp !< degrees K to C
+    ALLOCATE(mflg(nc))
+    IF (lctlib%growthform == igrass) THEN
 
-        allocate(ab_soil_depth_sl(nc,df_sf_sl_dims_nr))
-        allocate(ab_w_soil_sl(nc,df_sf_sl_dims_nr))
-        allocate(ab_w_soil_sat_sl(nc,df_sf_sl_dims_nr))
-        ab_soil_depth_sl(:,:) = soil_depth_sl(:, [df_sf_sl_indices])
-        ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
-        ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
-        ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl) * 100._wp ! 100=convert fraction to 0 to 100 (%)
+      !< Calculate livegrass moisture when ROS oberagemann
+      IF (dsl4jsb_Config(Q_DFIRE_)%mflg_model_id == Q_DFIRE_LVG_OBERHAGEMANN) THEN
 
-        mflg_ober = calc_mflg_ober(nc, lfmc_par, gsi_par, t_air_in_c, swpar_srf_down, ab_moisture)
-      ELSE ! is tree
-        ALLOCATE(mflg_ober(nc))
-        mflg_ober = 0._wp
-      END IF ! is igrass
-    END IF ! is Q_DFIRE_ROS_OBERHAGEMANN
+          t_air_in_c = t_air - 273.13_wp !< degrees K to C
 
+          allocate(ab_soil_depth_sl(nc,df_sf_sl_dims_nr))
+          allocate(ab_w_soil_sl(nc,df_sf_sl_dims_nr))
+          allocate(ab_w_soil_sat_sl(nc,df_sf_sl_dims_nr))
+          ab_soil_depth_sl(:,:) = soil_depth_sl(:, [df_sf_sl_indices])
+          ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
+          ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
+          ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl) * 100._wp ! 100=convert fraction to 0 to 100 (%)
+
+          lvg_moisture = calc_mflg_ober(nc, lfmc_par, gsi_par, t_air_in_c, swpar_srf_down, ab_moisture)
+
+      ELSE IF (dsl4jsb_Config(Q_DFIRE_)%mflg_model_id == Q_DFIRE_LVG_THONICKE) THEN
+        !< Thonicke et al. (2010)
+        lvg_moisture = max(0._wp, (10._wp/9._wp) * ab_moisture - (1._wp / 9._wp) ) ! todo: move to function into fmoist_class.f90
+      ELSE
+        CALL finish("update_fuel", "Unexpected mflg model found")
+      END IF ! is Q_DFIRE_ROS_OBERHAGEMANN
+    ELSE ! is tree
+      lvg_moisture = 0._wp
+    END IF ! is igrass
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
     !> when accounting for the other pfts.
@@ -366,4 +377,3 @@ CONTAINS
 
 #endif
 END MODULE mo_q_dfire_fuel
-

@@ -315,6 +315,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: fuel_bulk_density          ! in [kg m-3]
     dsl4jsb_Real2D_onChunk                :: moisture_extinction        ! in [-]
     dsl4jsb_Real2D_onChunk                :: fwd_wind_factor            ! in [-]
+    dsl4jsb_Real2D_onChunk                :: lvg_moisture               ! in [0 to 2.5]%
 
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_1hr ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: dead_fuel_consumption_10hr ! out [g DM m-2]
@@ -398,6 +399,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, fuel_bulk_density)   ! in [kg m-3]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, moisture_extinction) ! in [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, fwd_wind_factor)     ! in [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, lvg_moisture)        ! in [0 to 2.5]%
 
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, reaction_intensity)     ! out
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, prop_flux_ratio)        ! out
@@ -502,8 +504,8 @@ CONTAINS
                         df_sf_isurface_extinc_th, &
                         df_sf_alphas, &
                         moisture_extinction, &
-                        ab_moisture, & ! soil properties
-                        burnable_area_ha, &
+                        lvg_moisture, &
+                        burnable_area_ha, & ! soil properties
                         dead_fuel_fcl, live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
                         t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
                         veg_cover_frac, &
@@ -571,8 +573,8 @@ CONTAINS
                   const_calorific_heat_content, const_i_surface_thd, &
                   alphas, &
                   moisture_extinction, &
-                  ab_moisture, & ! soil properties
-                  grid_cell_area, & 
+                  lvg_moisture, &
+                  grid_cell_area, & ! fuel properties
                   dead_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
                   t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
                   veg_cover_frac, & ! in
@@ -597,7 +599,7 @@ CONTAINS
 
     REAL(wp), INTENT(in)  :: alphas(nalphas)                       !< Drying parameter for 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)  :: moisture_extinction(:)                !< Moisture of extinction threshold [0 to 1]
-    REAL(wp), INTENT(in)  :: ab_moisture(nc)                       !< above ground relative soil moisture [0 to 1]
+    REAL(wp), INTENT(in)  :: lvg_moisture(nc)                      !< live grass moisture content [0 to 2.5]%
 
     REAL(wp), INTENT(in)  :: grid_cell_area(nc)                    !< Gridcell area [ha]
 
@@ -673,7 +675,7 @@ CONTAINS
 
     !< Compute fuel moisture (omega_o, omega_nl)
     fuel_moisture = sf_calc_fuel_moisture(nc, nalphas, df_sf_fc_spread_nr, alphas, &
-                                          nesterov_index, ab_moisture, &
+                                          nesterov_index, lvg_moisture, &
                                           w_oi, & ! exclude livegrass from dead fuel
                                           tot_lvg_fuel) ! as it is accounted in tot_lvg_fuel
 
