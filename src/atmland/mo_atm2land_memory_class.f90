@@ -89,7 +89,7 @@ MODULE mo_a2l_memory_class
       & noy_n15_deposition    , &  !< surface downward oxidised nitrogen-15 deposition velocity [mumol m-2 sec-1]
       & p_deposition               !< surface downward reduced phosphorus deposition velocity [mumol m-2 sec-1]
 
-    ! FIRE 
+    ! FIRE
     TYPE(t_jsb_var_real2d) ::   &
       & a2l_lightning_events       !< Spitfire related process. Note: when moved to dfire process data is not read on time.
                                                                   !<
