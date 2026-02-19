@@ -68,6 +68,7 @@ MODULE mo_q_dfire_fuel
   USE mo_q_dfire_constants,     ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
 
   USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
+  USE mo_q_dfire_constants,     ONLY: df_sf_units_k_to_c
   USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg_ober, t_gsi, t_lfmc
 
   IMPLICIT NONE
@@ -313,11 +314,7 @@ CONTAINS
     dead_fuel_fcl = fuel_cls % calc_dead_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
 
     IF (lctlib%growthform == igrass) THEN
-
-      !< Calculate livegrass moisture when ROS oberagemann
-      !IF (dsl4jsb_Config(Q_DFIRE_)%mflg_model_id == Q_DFIRE_LVG_OBERHAGEMANN) THEN
-
-      t_air_in_c = t_air - 273.13_wp !< degrees K to C
+      t_air_in_c = t_air - df_sf_units_k_to_c !< degrees K to C
 
       allocate(ab_soil_depth_sl(nc,df_sf_sl_dims_nr))
       allocate(ab_w_soil_sl(nc,df_sf_sl_dims_nr))
@@ -327,17 +324,11 @@ CONTAINS
       ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
       ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl) * 100._wp ! 100=convert fraction to 0 to 100 (%)
 
-      !    lvg_moisture = calc_mflg_ober(nc, lfmc_par, gsi_par, t_air_in_c, swpar_srf_down, ab_moisture)
       lvg_moisture = calc_mflg(nc, method_id, ab_moisture, lfmc_par, gsi_par, t_air_in_c, swpar_srf_down, ab_moisture)
-      !ELSE IF (dsl4jsb_Config(Q_DFIRE_)%mflg_model_id == Q_DFIRE_LVG_THONICKE) THEN
-        !< Thonicke et al. (2010)
-      !  lvg_moisture = max(0._wp, (10._wp/9._wp) * ab_moisture - (1._wp / 9._wp) ) ! todo: move to function into fmoist_class.f90
-      !ELSE
-      !  CALL finish("update_fuel", "Unexpected mflg model found")
-      !END IF ! is Q_DFIRE_ROS_OBERHAGEMANN
     ELSE ! is tree
       lvg_moisture = 0._wp
-    END IF ! is igrass
+    END IF ! is_grass / is_tree
+
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
     !> when accounting for the other pfts.
