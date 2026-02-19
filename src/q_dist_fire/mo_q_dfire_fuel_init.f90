@@ -111,6 +111,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: F_scorch_height
     dsl4jsb_Real2D_onDomain      :: crown_length
     dsl4jsb_Real2D_onDomain      :: tree_height
+    dsl4jsb_Real2D_onDomain      :: lvg_moisture
 
     dsl4jsb_Real3D_onDomain      :: veg_fire_litterfall_total_els
     dsl4jsb_Real3D_onDomain      :: veg_fire_emissions_total_els
@@ -165,6 +166,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, F_scorch_height)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, crown_length)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, tree_height)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_FUEL_, lvg_moisture)
 
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, fuel_consumption_els)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, emissions_spc)
@@ -217,6 +219,7 @@ CONTAINS
     F_scorch_height = 0._wp
     crown_length = 0._wp
     tree_height = 0._wp
+    lvg_moisture = 0._wp
 
     fuel_consumption_els = 0._wp
     emissions_spc = 0._wp

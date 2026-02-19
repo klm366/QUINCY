@@ -168,6 +168,8 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp  , weighted_by_fract, burnable_tree_pfts, "veg")
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp , weighted_by_fract, burnable_tree_pfts, "veg")
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp, weighted_by_fract, burnable_tree_pfts, "veg")
+
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, lvg_moisture, weighted_by_fract, burnable_tree_pfts, "veg")
     ELSE ! weighting average for including all PFTs (tree, grass, crop, pasture, baresoil, ...)
 #endif
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, moisture_extinction  , weighted_by_fract)
@@ -185,6 +187,8 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp    , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp   , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp  , weighted_by_fract)
+
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, lvg_moisture  , weighted_by_fract)
 #ifndef __QUINCY_STANDALONE__
     ENDIF
 #endif
@@ -244,12 +248,6 @@ CONTAINS
 #ifndef __QUINCY_STANDALONE__
     IF (dsl4jsb_Config(Q_DFIRE_)%flag_wa_custom) THEN ! only account for custom pfts (e.g tree and grass), 
                                                       ! WA is done over this PFTs
-!      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp  , weighted_by_fract, burnable_grass_pfts)
-!      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp   , weighted_by_fract, burnable_tree_pfts)
-!      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp  , weighted_by_fract, burnable_tree_pfts)
-!      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp , weighted_by_fract, burnable_tree_pfts)
-!      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp, weighted_by_fract, burnable_tree_pfts)
-
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, veg_fire_litterfall_total_els , weighted_by_fract, burnable_pfts, "veg")
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, veg_fire_emissions_total_els  , weighted_by_fract, burnable_pfts, "veg")
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, sb_fire_emissions_total_els   , weighted_by_fract, burnable_pfts, "veg")
@@ -281,12 +279,6 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, overflow_els, weighted_by_fract, burnable_pfts, "veg")
     ELSE
 #endif
-!      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp    , weighted_by_fract)
-!      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp     , weighted_by_fract)
-!      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp    , weighted_by_fract)
-!      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp   , weighted_by_fract)
-!      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp  , weighted_by_fract)
-
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, veg_fire_litterfall_total_els , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, veg_fire_emissions_total_els , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, sb_fire_emissions_total_els , weighted_by_fract)
@@ -315,7 +307,6 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, emissions_els, weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, residue_els, weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, overflow_els, weighted_by_fract)
-
 #ifndef __QUINCY_STANDALONE__
     ENDIF
 #endif

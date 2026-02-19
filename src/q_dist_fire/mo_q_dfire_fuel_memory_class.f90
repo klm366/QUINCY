@@ -93,6 +93,8 @@ MODULE mo_q_dfire_fuel_memory_class
     TYPE(t_jsb_var_real2d)  :: crown_length               !< Crown length of woody PFT [m]
     TYPE(t_jsb_var_real2d)  :: tree_height                !< Tree height [m]
 
+    TYPE(t_jsb_var_real2d)  :: lvg_moisture               !< Livegrass moisture content [0 to 2.5]%
+
     TYPE(t_jsb_var_real3d)  :: fuel_consumption_els       !< Fuel consumption per elements (#nc,#elements) [umol m-2 s-1]
     TYPE(t_jsb_var_real3d)  :: emissions_spc              !< Fire emissions per species (nc, #species) [g X m-2 s-1]
     TYPE(t_jsb_var_real3d)  :: emissions_els              !< Fire emissions per elements (nc, #elements) [umolX m-2 s-1]
@@ -494,6 +496,18 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('lvg_moisture', mem%lvg_moisture, &
+        & hgrid, vgrid_surface, &
+        & t_cf('lvg_moisture', '%', 'Livegrass moisture content'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
 
     CALL mem%Add_var('fuel_consumption_els', mem%fuel_consumption_els, &
         & hgrid, vgrid_elements, &
