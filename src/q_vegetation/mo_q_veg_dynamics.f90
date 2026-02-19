@@ -133,7 +133,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c13
     dsl4jsb_Real2D_onChunk      :: herbivory_fruit_resp_c14
     ! Q_DFIRE_FUEL_ 2D
-    dsl4jsb_Real2D_onChunk      :: pm_fire 
+    dsl4jsb_Real2D_onChunk      :: pm_fire
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
