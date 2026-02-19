@@ -68,7 +68,7 @@ MODULE mo_q_dfire_fuel
   USE mo_q_dfire_constants,     ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
 
   USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
-  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg_ober
+  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg_ober, t_gsi, t_lfmc
 
   IMPLICIT NONE
 
@@ -76,6 +76,9 @@ MODULE mo_q_dfire_fuel
   PUBLIC :: update_q_dfire_fuel
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel'
+
+  TYPE(t_gsi), SAVE, ALLOCATABLE :: gsi_par
+  TYPE(t_lfmc), SAVE, ALLOCATABLE :: lfmc_par
 
 CONTAINS
 
@@ -283,6 +286,14 @@ CONTAINS
       live_fuel_frac => df_sf_live_frac_grass
     END IF
 
+    IF (.NOT. ALLOCATED(gsi_par)) THEN
+      !< Encapsulate livegrass moisture parameters
+      !< to calculate Oberhagemann et al. (2025)
+      ALLOCATE(gsi_par, lfmc_par)
+      gsi_par = t_gsi(lctlib)
+      lfmc_par = t_lfmc(lctlib)
+    END IF
+
     sb_pool_slim = sb_pool_mt(:,ixC,:,df_sf_spq_layer_top_sl)
     ALLOCATE(sb_pool_in_gdm, mold=sb_pool_slim) ! unsure why is needed, otherwise NAG compiler raises an error. function should be allocated dead_fuel
     sb_pool_in_gdm = sf_convert_units("molC/m3", "gDM/m2", sb_pool_slim, aux = top_soil_depth_sl, nc_dim_opt=2)
@@ -299,30 +310,22 @@ CONTAINS
 
     !< Calculate livegrass moisture when ROS oberagemann
     IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-    IF (lctlib%growthform == igrass) THEN
-      t_air_in_c = t_air - 273.13_wp !< degrees K to C
+      IF (lctlib%growthform == igrass) THEN
+        t_air_in_c = t_air - 273.13_wp !< degrees K to C
 
-      allocate(ab_soil_depth_sl(nc,df_sf_sl_dims_nr))
-      allocate(ab_w_soil_sl(nc,df_sf_sl_dims_nr))
-      allocate(ab_w_soil_sat_sl(nc,df_sf_sl_dims_nr))
-      ab_soil_depth_sl(:,:) = soil_depth_sl(:, [df_sf_sl_indices])
-      ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
-      ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
-      ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl)
+        allocate(ab_soil_depth_sl(nc,df_sf_sl_dims_nr))
+        allocate(ab_w_soil_sl(nc,df_sf_sl_dims_nr))
+        allocate(ab_w_soil_sat_sl(nc,df_sf_sl_dims_nr))
+        ab_soil_depth_sl(:,:) = soil_depth_sl(:, [df_sf_sl_indices])
+        ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
+        ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
+        ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl) * 100._wp ! 100=convert fraction to 0 to 100 (%)
 
-      ALLOCATE(lfmc_p(3), comp_p(4,3))
-
-      !< test only
-      lfmc_p = [0.3_wp, 0.195_wp, 1.555_wp] ! todo: add to lctlib
-      comp_p(1,:) = [0.91_wp, 6.418_wp, 0.2_wp] !< t cold, todo: add to lctlib
-      comp_p(2,:) = [1.47_wp, 29.16_wp, 0.2_wp] !< t heat, todo: add to lctlib
-      comp_p(3,:) = [64.23_wp, 69.9_wp, 0.95_wp] !< light, todo: add to lctlib
-      comp_p(4,:) = [0.1_wp, 41.72_wp, 0.17_wp] !< water, todo: add to lctlib
-      mflg_ober = calc_mflg_ober(nc, lfmc_p, comp_p, t_air_in_c, swpar_srf_down, ab_moisture*100._wp)
-    ELSE ! is tree
-      ALLOCATE(mflg_ober(nc))
-      mflg_ober = 0._wp
-    END IF ! is igrass
+        mflg_ober = calc_mflg_ober(nc, lfmc_par, gsi_par, t_air_in_c, swpar_srf_down, ab_moisture)
+      ELSE ! is tree
+        ALLOCATE(mflg_ober(nc))
+        mflg_ober = 0._wp
+      END IF ! is igrass
     END IF ! is Q_DFIRE_ROS_OBERHAGEMANN
 
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.

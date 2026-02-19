@@ -27,36 +27,93 @@ MODULE mo_q_dfire_sf_fmoist_class
   USE mo_exception,           ONLY: message, finish
   USE mo_q_dfire_sf_fuel_class, ONLY: sf_calc_has_any_fuel
   USE mo_quincy_stats,        ONLY: stats_average_weight
+  USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element
   !< Total number of fuel moisture(omega_o and omega_nl), omega_o index, omega_nl index
   USE mo_q_dfire_constants,   ONLY: df_sf_omegas_nr, df_sf_omega_o_idx, df_sf_omega_nl_idx
 
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_fuel_moisture, calc_mflg_ober, t_gsi_param
+  PUBLIC :: sf_calc_fuel_moisture, calc_mflg_ober, t_gsi_param, t_gsi, t_lfmc
 
   INTEGER, PARAMETER :: nparams = 3
+
+  !> GSI parameters
   TYPE :: t_gsi_param
-    REAL(wp) :: tmin(nparams)
-    REAL(wp) :: tmax(nparams)
-    REAL(wp) :: light(nparams)
-    REAL(wp) :: water(nparams)
+    REAL(wp) :: slope
+    REAL(wp) :: base
+    REAL(wp) :: tau
   END TYPE t_gsi_param
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
+  !> GSI phenology components
+  TYPE :: t_gsi
+    TYPE(t_gsi_param) :: cold
+    TYPE(t_gsi_param) :: heat
+    TYPE(t_gsi_param) :: light
+    TYPE(t_gsi_param) :: water
+  END TYPE t_gsi
 
-  !< GSI parameters, Forkel et al. (2014), Figure 2
-  !< Params from LPJml 5.7.10 - spitfire 1.9
-  !< "slope": slope of X limiting function tmax_sl */
-  !< "base" : inflection point of X limiting function (deg C) */
-  !< "tau"  : change rate of actual to previous day X limiting fct */
-  REAL(wp), PARAMETER :: gsi_heat(3) = [41.51_wp, 1.74_wp, 0.2_wp] ! base, slope, tau
-  REAL(wp), PARAMETER :: gsi_cold(3) = [7._wp, 0.2591_wp, 0.2_wp] ! base, slope, tau
-  REAL(wp), PARAMETER :: gsi_light(3) = [59.78_wp, 58._wp, 0.2_wp] ! base, slope, tau
-  REAL(wp), PARAMETER :: gsi_wtr(3) = [20.96_wp, 5.24_wp, 0.2_wp] ! base, slope, tau
-  INTEGER, PARAMETER :: ix_base = 1, ix_sl = 2, ix_tau=3
+  INTERFACE t_gsi
+    MODULE PROCEDURE :: create_gsi_from_lctlib
+  END INTERFACE t_gsi
+
+  !> Livegrass fuel moisture content paremeters
+  TYPE :: t_lfmc
+    REAL(wp) :: min, max, b, c
+  END TYPE t_lfmc
+
+  INTERFACE t_lfmc
+    MODULE PROCEDURE :: create_lfmc_from_lctlib
+  END INTERFACE
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 CONTAINS
 
+  !>
+  !> t_lfmc constructor
+  !>
+  FUNCTION create_lfmc_from_lctlib(lctlib) RESULT (lfmc)
+    TYPE(t_lctlib_element) :: lctlib
+    TYPE(t_lfmc) :: lfmc
+
+    lfmc % min = lctlib%q_lfmc_min
+    lfmc % max = lctlib%q_lfmc_max
+    lfmc % b = lctlib%q_lfmc_b
+    lfmc % c = lctlib%q_lfmc_c
+  END FUNCTION create_lfmc_from_lctlib
+
+
+  ! ======================================================================================================= !
+  !>
+  !> t_lfmc constructor
+  !>
+  FUNCTION create_lfmc_from_lctlib(lctlib) RESULT (lfmc)
+    TYPE(t_lctlib_element) :: lctlib
+    TYPE(t_lfmc) :: lfmc
+
+    lfmc % min = lctlib%q_lfmc_min
+    lfmc % max = lctlib%q_lfmc_max
+    lfmc % b = lctlib%q_lfmc_b
+    lfmc % c = lctlib%q_lfmc_c
+  END FUNCTION create_lfmc_from_lctlib
+
+
+  ! ======================================================================================================= !
+  !>
+  !> t_gsi constructor
+  !>
+  FUNCTION create_gsi_from_lctlib(lctlib) RESULT (gsi)
+    TYPE(t_lctlib_element) :: lctlib
+    TYPE(t_gsi) :: gsi
+
+    gsi % cold = t_gsi_param( lctlib%q_tmin_slope, lctlib%q_tmin_base, lctlib%q_tmin_tau)
+    gsi % heat = t_gsi_param( lctlib%q_tmax_slope, lctlib%q_tmax_base, lctlib%q_tmax_tau)
+    gsi % light = t_gsi_param( lctlib%q_light_slope, lctlib%q_light_base, lctlib%q_light_tau)
+    gsi % water = t_gsi_param( lctlib%q_water_slope, lctlib%q_water_base, lctlib%q_water_tau)
+  END FUNCTION create_gsi_from_lctlib
+
+
+  ! ======================================================================================================= !
   !>
   !> Fuel moisture calculation:
   !> - omega_o: dead fuel for 1, 10 and 100 hours + live grass (accounted for 1 hour)
@@ -197,36 +254,35 @@ CONTAINS
   !> calc_phenolgy_ober
   !> Calculate livegrass moisture based on Oberhagemann et al. (2025), related to equation 4.
   !>
-  FUNCTION calc_mflg_ober(nc, lfmc_p, comp_p, tair, sw_rad, water) RESULT (mf_lg)
+  FUNCTION calc_mflg_ober(nc, lfmc_par, gsi_par, tair, sw_rad, water) RESULT (mf_lg)
     INTEGER, INTENT(in) :: nc
+    TYPE(t_lfmc), INTENT(in) :: lfmc_par !< livegrass moisture parameters
+    TYPE(t_gsi), INTENT(in) :: gsi_par   !< Parameters used to calculate gsi phenology
     REAL(wp), INTENT(in) :: tair(nc)     !< Air temperature [deg C]
     REAL(wp), INTENT(in) :: sw_rad(nc)   !< Shortwave-downward radiation [W m-2]
     REAL(wp), INTENT(in) :: water(nc)    !< Daily water availability: is a ratio between water
                                          !< supply from soil moisture and atmospheric water demand [0 to 100]%
-    REAL(wp), INTENT(in) :: lfmc_p(3)    !< 3 = number of scaling factors parameters
-                                         !< 1=a (min value), 2=b, 3=c
-    REAL(wp), INTENT(in) :: comp_p(4, 3) !< 4=number of components(tmin, tmax, light, water), 3=number of function paremeters (slope,base,tau)
     REAL(wp), ALLOCATABLE :: mf_lg(:) ! Livegrass moisture [0.3 to 2.5]
 
     REAL(wp) :: f_cold(nc), f_heat(nc), f_water(nc), f_light(nc) !< phenology components
     REAL(wp), ALLOCATABLE, SAVE :: f_cold_old(:), f_heat_old(:), f_water_old(:), f_light_old(:) !< from previous timestep
-    REAL(wp), PARAMETER :: mflg_max = 2.5_wp
+    !REAL(wp), PARAMETER :: mflg_max = 2.5_wp
     REAL(wp) :: phen(nc)
 
     IF (.NOT. ALLOCATED(f_cold_old)) THEN ! initilize
       ALLOCATE(f_cold_old(nc), f_heat_old(nc), f_water_old(nc), f_light_old(nc))
-      f_cold_old = calc_term(tair, -comp_p(1,1), comp_p(1,2))
-      f_heat_old = calc_term(tair, comp_p(2,1), comp_p(2,2))
-      f_light_old = calc_term(sw_rad, -comp_p(3,1), comp_p(3,2))
-      f_water_old = calc_term(water, -comp_p(4,1), comp_p(4,2))
+      f_cold_old = calc_term(tair, - gsi_par%cold%slope, gsi_par%cold%base)! slope, base
+      f_heat_old = calc_term(tair, gsi_parm%heat%slope, gsi_parm%heat%base)
+      f_light_old = calc_term(sw_rad, -gsi_parm%light%slope, gsi_parm%light%base)
+      f_water_old = calc_term(water, -gsi_parm%water%slope, gsi_parm%water%base)
     END IF
     ALLOCATE(mf_lg(nc))
 
     !< Calc phenology
-    f_cold = calc_f_comp_PFT(nc, comp_p(1,:), f_cold_old, tair, .FALSE.)
-    f_heat = calc_f_comp_PFT(nc, comp_p(2,:), f_heat_old, tair, .TRUE.)
-    f_light = calc_f_comp_PFT(nc, comp_p(3,:), f_light_old, sw_rad, .FALSE.)
-    f_water = calc_f_comp_PFT(nc, comp_p(4,:), f_water_old, water, .FALSE.)
+    f_cold = calc_f_comp_PFT(nc, gsi%cold, f_cold_old, tair, .FALSE.)
+    f_heat = calc_f_comp_PFT(nc, gsi%heat, f_heat_old, tair, .TRUE.)
+    f_light = calc_f_comp_PFT(nc, gsi%light, f_light_old, sw_rad, .FALSE.)
+    f_water = calc_f_comp_PFT(nc, gsi%water, f_water_old, water, .FALSE.)
     !< Forkel et al. (2014), eq. 5
     phen = f_cold * f_heat * f_water * f_light
 
@@ -251,32 +307,31 @@ CONTAINS
   !> Component limiting function
   !>
   FUNCTION calc_f_comp_PFT(nc, params, f_old, comp, ispositive) RESULT (f)
-    INTEGER, INTENT(in) :: nc
-    REAL(wp), TARGET, INTENT(in) :: params(3) !< slope, base, tau
-    REAL(wp), INTENT(in) :: f_old(nc) !< previous TS value
-    REAL(wp), INTENT(in) :: comp(nc) !< physical variable
-    LOGICAL, INTENT(in) :: ispositive !< true: increase, false=decrease
+    INTEGER, INTENT(in)           :: nc
+    TYPE(t_gsi_param), INTENT(in) :: params
+    REAL(wp), INTENT(in)          :: f_old(nc) !< previous TS value
+    REAL(wp), INTENT(in)          :: comp(nc) !< physical variable
+    LOGICAL, INTENT(in)           :: ispositive !< true: increase, false=decrease
     REAL(wp) :: f(nc)
 
-    INTEGER, PARAMETER :: ix_sl=1, ix_base=2, ix_tau = 3
     REAL(wp) :: term(nc) 
     INTEGER :: ic
     REAL(wp) :: slope
     REAL(wp) :: tau_30min
 
     IF (ispositive) THEN
-      slope = params(ix_sl) ! slope increase
+      slope = params%slope ! slope increase
     ELSE 
-      slope = -params(ix_sl) ! slope decrease
+      slope = -params%slope ! slope decrease
     ENDIF 
 
-    ASSOCIATE(base => params(ix_base), tau_daily => params(ix_tau))
-    tau_30min = 1._wp - (1._wp - tau_daily)**(1.0_wp / 48.0_wp)
+    ASSOCIATE(base => params%base, tau_daily => params%tau)
+      tau_30min = 1._wp - (1._wp - tau_daily)**(1.0_wp / 48.0_wp)
 
-    DO ic=1, nc
-      term(ic) = calc_term(comp(ic), slope, base) 
-      f(ic) = f_old(ic) + (term(ic) - f_old(ic))  * tau_30min ! params(ix_tau) !< 3 = tau index
-    ENDDO
+      DO ic=1, nc
+        term(ic) = calc_term(comp(ic), slope, base)
+        f(ic) = f_old(ic) + (term(ic) - f_old(ic))  * tau_30min
+      ENDDO
     END ASSOCIATE
 
   END FUNCTION calc_f_comp_PFT
