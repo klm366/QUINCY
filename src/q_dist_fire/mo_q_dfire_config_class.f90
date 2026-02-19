@@ -47,6 +47,7 @@ MODULE mo_q_dfire_config_class
 
   PUBLIC :: t_q_dfire_config
   PUBLIC :: Q_DFIRE_MODEL_SF, Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
+  PUBLIC :: Q_DFIRE_LVG_THONICKE, Q_DFIRE_LVG_OBERHAGEMANN
 
   !>
   !> Fire models
@@ -61,6 +62,12 @@ MODULE mo_q_dfire_config_class
   ENUM, BIND(C)
     ENUMERATOR :: Q_DFIRE_ROS_THONICKE = 1 !< Thonicke et al. (2010)
     ENUMERATOR :: Q_DFIRE_ROS_OBERHAGEMANN !< Oberhagemann et al. (2025)
+  END ENUM
+
+  !> live grass moisture content models
+  ENUM, BIND(C)
+    ENUMERATOR :: Q_DFIRE_LVG_THONICKE = 1 !< Thonicke et al. (2010)
+    ENUMERATOR :: Q_DFIRE_LVG_OBERHAGEMANN !< Oberhagemann et al. (2025)
   END ENUM
 
   !< Precipitation method names for namelist

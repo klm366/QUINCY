@@ -36,8 +36,6 @@ MODULE mo_q_dfire_sf_fmoist_class
   PRIVATE
   PUBLIC :: sf_calc_fuel_moisture, calc_mflg_ober, t_gsi_param, t_gsi, t_lfmc
 
-  INTEGER, PARAMETER :: nparams = 3
-
   !> GSI parameters
   TYPE :: t_gsi_param
     REAL(wp) :: slope
@@ -249,6 +247,49 @@ CONTAINS
 
     omega = exp(-alpha * nesterov_index)
   END FUNCTION calc_omega
+
+
+  ! ======================================================================================================= !
+  !>
+  !> calc_mflg
+  !> Calculate livegrass moisture content (
+  !>
+  FUNCTION calc_mflg(nc, method_id, ab_moisture, lfmc_par, gsi_par, tair, sw_rad, water) RESULT (mflg)
+    USE mo_q_dfire_constants, ONLY: df_sf_units_k_to_c
+    USE mo_q_dfire_config_class, ONLY: Q_DFIRE_LVG_OBERHAGEMANN, Q_DFIRE_LVG_THONICKE
+
+    INTEGER, INTENT(in) :: nc
+    INTEGER, INTENT(in) :: method_id     !< method to use to calc livegrass moisture content
+    TYPE(t_lfmc), INTENT(in) :: lfmc_par !< livegrass moisture parameters
+    TYPE(t_gsi), INTENT(in) :: gsi_par   !< Parameters used to calculate gsi phenology
+    REAL(wp), INTENT(in) :: tair(nc)     !< Air temperature [deg C]
+    REAL(wp), INTENT(in) :: sw_rad(nc)   !< Shortwave-downward radiation [W m-2]
+    REAL(wp), INTENT(in) :: water(nc)    !< Daily water availability: is a ratio between water
+    !< supply from soil moisture and atmospheric water demand [0 to 100]%
+    REAL(wp), ALLOCATABLE :: mflg(nc)    ! Livegrass moisture [-]%
+
+    !< Calculate livegrass moisture when ROS oberagemann
+    IF (method_id == Q_DFIRE_LVG_OBERHAGEMANN) THEN
+
+!      t_air_in_c = t_air - df_sf_units_k_to_c !< degrees K to C
+!
+!      allocate(ab_soil_depth_sl(nc,df_sf_sl_dims_nr))
+!      allocate(ab_w_soil_sl(nc,df_sf_sl_dims_nr))
+!      allocate(ab_w_soil_sat_sl(nc,df_sf_sl_dims_nr))
+!      ab_soil_depth_sl(:,:) = soil_depth_sl(:, [df_sf_sl_indices])
+!      ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
+!      ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
+!      ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl) * 100._wp ! 100=convert fraction to 0 to 100 (%)
+
+      mflg = calc_mflg_ober(nc, lfmc_par, gsi_par, t_air_in_c, swpar_srf_down, ab_moisture)
+    ELSE IF (method_id == Q_DFIRE_LVG_THONICKE) THEN
+      !< Thonicke et al. (2010), eq. B2
+      mflg = max(0._wp, (10._wp/9._wp) * ab_moisture - (1._wp / 9._wp) )
+    ELSE
+      CALL finish("update_fuel", "Unexpected live grass moisture content model found")
+    END IF ! is Q_DFIRE_ROS_OBERHAGEMANN
+  END FUNCTION calc_mflg
+
 
 
   ! ======================================================================================================= !
