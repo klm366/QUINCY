@@ -250,7 +250,14 @@ MODULE mo_jsb_lctlib_class
                 q_fwd_wind_factor            , &
                 q_moisture_extinction
 
-
+    ! Oberhagemann et al. (2025)
+    ! GSI phenology parameters (for live grass moisture calculation)
+    REAL(wp) :: q_tmin_slope, q_tmin_base, q_tmin_tau, &
+                q_tmax_slope, q_tmax_base, q_tmax_tau, &
+                q_light_slope, q_light_base, q_light_tau, &
+                q_water_slope, q_water_base, q_water_tau
+    !< Live grass moisture parameters, Oberhagemann et al. (2025)
+    REAL(wp) :: q_lfmc_min, q_lfmc_max, q_lfmc_b, q_lfmc_c
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
 
   END TYPE t_lctlib_element
@@ -485,6 +492,23 @@ CONTAINS
     LOGICAL            :: exists_q_emissions_nh3_mol = .FALSE.
     LOGICAL            :: exists_q_emissions_n2o_mol = .FALSE.
     LOGICAL            :: exists_q_emissions_n2_mol = .FALSE.
+    LOGICAL            :: exists_q_tmin_slope = .FALSE.
+    LOGICAL            :: exists_q_tmin_base = .FALSE.
+    LOGICAL            :: exists_q_tmin_tau = .FALSE.
+    LOGICAL            :: exists_q_tmax_slope = .FALSE.
+    LOGICAL            :: exists_q_tmax_base = .FALSE.
+    LOGICAL            :: exists_q_tmax_tau = .FALSE.
+    LOGICAL            :: exists_q_light_slope = .FALSE.
+    LOGICAL            :: exists_q_light_base = .FALSE.
+    LOGICAL            :: exists_q_light_tau = .FALSE.
+    LOGICAL            :: exists_q_water_slope = .FALSE.
+    LOGICAL            :: exists_q_water_base = .FALSE.
+    LOGICAL            :: exists_q_water_tau = .FALSE.
+
+    LOGICAL            :: exists_q_lfmc_min = .FALSE.
+    LOGICAL            :: exists_q_lfmc_max = .FALSE.
+    LOGICAL            :: exists_q_lfmc_b = .FALSE.
+    LOGICAL            :: exists_q_lfmc_c = .FALSE.
     ! quincy model - end
 
     !> Read lctlib data and eventually allocate also memory for lctlib data on io-processor
@@ -1117,6 +1141,55 @@ CONTAINS
           CASE ('q_emissions_n2_mol')
             READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_n2_mol
             exists_q_emissions_n2_mol = .TRUE.
+          CASE ('q_tmin_slope')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_tmin_slope
+            exists_q_tmin_slope = .TRUE.
+          CASE ('q_tmin_base')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_tmin_base
+            exists_q_tmin_base = .TRUE.
+          CASE ('q_tmin_tau')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_tmin_tau
+            exists_q_tmin_tau = .TRUE.
+          CASE ('q_tmax_slope')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_tmax_slope
+            exists_q_tmax_slope = .TRUE.
+          CASE ('q_tmax_base')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_tmax_base
+            exists_q_tmax_base = .TRUE.
+          CASE ('q_tmax_tau')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_tmax_tau
+            exists_q_tmax_tau = .TRUE.
+          CASE ('q_light_slope')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_light_slope
+            exists_q_light_slope = .TRUE.
+          CASE ('q_light_base')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_light_base
+            exists_q_light_base = .TRUE.
+          CASE ('q_light_tau')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_light_tau
+            exists_q_light_tau = .TRUE.
+          CASE ('q_water_slope')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_water_slope
+            exists_q_water_slope = .TRUE.
+          CASE ('q_water_base')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_water_base
+            exists_q_water_base = .TRUE.
+          CASE ('q_water_tau')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_water_tau
+            exists_q_water_tau = .TRUE.
+
+          CASE ('q_lfmc_min')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_lfmc_min
+            exists_q_lfmc_min = .TRUE.
+          CASE ('q_lfmc_max')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_lfmc_max
+            exists_q_lfmc_max = .TRUE.
+          CASE ('q_lfmc_b')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_lfmc_b
+            exists_q_lfmc_b = .TRUE.
+          CASE ('q_lfmc_c')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_lfmc_c
+            exists_q_lfmc_c = .TRUE.
           CASE default
             ! nothing to do
           END SELECT
@@ -1460,6 +1533,38 @@ CONTAINS
             CALL finish('init_lctlib','No data for q_emissions_n2o_mol found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_q_emissions_n2_mol) &
             CALL finish('init_lctlib','No data for q_emissions_n2_mol found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_tmin_slope) &
+            CALL finish('init_lctlib','No data for q_tmin_slope found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_tmin_base) &
+            CALL finish('init_lctlib','No data for q_tmin_base found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_tmin_tau) &
+            CALL finish('init_lctlib','No data for q_tmin_tau found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_tmax_slope) &
+            CALL finish('init_lctlib','No data for q_tmax_slope found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_tmax_base) &
+            CALL finish('init_lctlib','No data for q_tmax_base found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_tmax_tau) &
+            CALL finish('init_lctlib','No data for q_tmax_tau found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_light_slope) &
+            CALL finish('init_lctlib','No data for q_light_slope found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_light_base) &
+            CALL finish('init_lctlib','No data for q_light_base found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_light_tau) &
+            CALL finish('init_lctlib','No data for q_light_tau found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_water_slope) &
+            CALL finish('init_lctlib','No data for q_water_slope found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_water_base) &
+            CALL finish('init_lctlib','No data for q_water_base found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_water_tau) &
+            CALL finish('init_lctlib','No data for q_water_tau found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_lfmc_min) &
+            CALL finish('init_lctlib','No data for q_lfmc_min found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_lfmc_max) &
+            CALL finish('init_lctlib','No data for q_lfmc_max found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_lfmc_b) &
+            CALL finish('init_lctlib','No data for q_lfmc_b found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_lfmc_c) &
+            CALL finish('init_lctlib','No data for q_lfmc_c found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
 #endif
@@ -1836,6 +1941,23 @@ CONTAINS
         CALL p_bcast(lctlib(:)%q_emissions_nh3_mol, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_emissions_n2o_mol, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_emissions_n2_mol, p_io, mpi_comm)
+
+        CALL p_bcast(lctlib(:)%q_tmin_slope, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_tmin_base, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_tmin_tau, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_tmax_slope, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_tmax_base, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_tmax_tau, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_light_slope, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_light_base, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_light_tau, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_water_slope, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_water_base, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_water_tau, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_lfmc_min, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_lfmc_max, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_lfmc_b, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_lfmc_c, p_io, mpi_comm)
       END IF
 #endif
     END IF

@@ -33,7 +33,15 @@ MODULE mo_q_dfire_sf_fmoist_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_fuel_moisture, calc_mflg_ober
+  PUBLIC :: sf_calc_fuel_moisture, calc_mflg_ober, t_gsi_param
+
+  INTEGER, PARAMETER :: nparams = 3
+  TYPE :: t_gsi_param
+    REAL(wp) :: tmin(nparams)
+    REAL(wp) :: tmax(nparams)
+    REAL(wp) :: light(nparams)
+    REAL(wp) :: water(nparams)
+  END TYPE t_gsi_param
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 
