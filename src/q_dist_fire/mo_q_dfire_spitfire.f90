@@ -69,7 +69,7 @@ MODULE mo_q_dfire_spitfire
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_LOSS_ID, SB_BGCM_POOL_ID
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
-  USE mo_q_dfire_constants,       ONLY: df_sf_sl_dims_nr, df_sf_sl_indices !< Soil related constants: top soil moisture layers 
+  USE mo_q_dfire_constants,       ONLY: df_sf_sl_dims_nr, df_sf_sl_indices !< Soil related constants: top soil moisture layers
 
   USE mo_q_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix
   USE mo_q_dfire_constants,       ONLY: df_sf_max_density_human_pop
@@ -127,7 +127,7 @@ MODULE mo_q_dfire_spitfire
     REAL(wp), ALLOCATABLE :: fc_dead_cls(:,:,:)         !< dead fuel consumption (#nc, #dead pools, #fuels classes) [g DM m-2]
     REAL(wp), ALLOCATABLE :: i_surface(:)               !< Fire intensity [kW m-1]
 
-    LOGICAL, ALLOCATABLE  :: is_fire_intense_enough(:)  !< mask, TRUE= fire intensity is strong enough to exist 
+    LOGICAL, ALLOCATABLE  :: is_fire_intense_enough(:)  !< mask, TRUE= fire intensity is strong enough to exist
   END TYPE t_sf_spitfire
 
   INTERFACE t_sf_spitfire
@@ -147,7 +147,7 @@ CONTAINS
   FUNCTION create_sf_spitfire(nc, nfuels, ndeadpools) RESULT (sf_spitfire)
     INTEGER, INTENT(in) :: nc          !< #Gridcells
     INTEGER, INTENT(in) :: nfuels      !< # fuel classes
-    INTEGER, INTENT(in) :: ndeadpools  !< # dead fuel pools 
+    INTEGER, INTENT(in) :: ndeadpools  !< # dead fuel pools
     TYPE(t_sf_spitfire) :: sf_spitfire !< Output
 
     ALLOCATE(sf_spitfire % e_n_ignitions(nc))
@@ -232,7 +232,7 @@ CONTAINS
     REAL(wp)                              :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
     REAL(wp)                              :: t_air_min_c(options%nc)                      !< Minimum daily temperature [Celsius]
     REAL(wp)                              :: t_air_max_c(options%nc)                      !< Maximum daily temperature [Celsius]
-    REAL(wp)                              :: burnable_area_ha(options%nc)                 !< Burnable area [ha] 
+    REAL(wp)                              :: burnable_area_ha(options%nc)                 !< Burnable area [ha]
     LOGICAL, PARAMETER                    :: are_all_pfts_wave =.FALSE. ! todo: replace by config option, flag_wa_pfts=all|only
 
     TYPE(t_sf_spitfire)                   :: sf_spitfire
@@ -272,7 +272,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk                :: pot_burn_area     ! Potential burnable area (forest and grass areas) [m2?]
 
-    dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! Mask relative to gridcell to define whether the current 
+    dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! Mask relative to gridcell to define whether the current
                                                                ! fire is intense enough to exist  TRUE=1, FALSE=0 [-]
     dsl4jsb_Real2D_onChunk                :: nesterov_index    ! inout [Celsius 2]
     dsl4jsb_Real2D_onChunk                :: ab_moisture_diag  ! out [-]
@@ -595,7 +595,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: lightning_frequency(nc)               !< Lightning frequency [ha-1 d-1]
 
     REAL(wp), INTENT(in)  :: const_calorific_heat_content          !< Fuel calorific heat content [kJ kg-1]
-    REAL(wp), INTENT(in)  :: const_i_surface_thd                   !< Fire intensity threshold [kW m-1] 
+    REAL(wp), INTENT(in)  :: const_i_surface_thd                   !< Fire intensity threshold [kW m-1]
 
     REAL(wp), INTENT(in)  :: alphas(nalphas)                       !< Drying parameter for 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)  :: moisture_extinction(:)                !< Moisture of extinction threshold [0 to 1]
@@ -671,7 +671,7 @@ CONTAINS
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
     w_oi = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
     dry_lvg = SUM(dead_fuel(:,ixs_sf_dead_livegrass_fuel_pools,:), DIM=2)
-    tot_lvg_fuel = SUM(dry_lvg, DIM=2) ! 2 = fuel classes 
+    tot_lvg_fuel = SUM(dry_lvg, DIM=2) ! 2 = fuel classes
 
     !< Compute fuel moisture (omega_o, omega_nl)
     fuel_moisture = sf_calc_fuel_moisture(nc, nalphas, df_sf_fc_spread_nr, alphas, &
@@ -699,7 +699,7 @@ CONTAINS
     !< Wet livegrass is:
     !< -Not accounted in Thonicke's et al. 2010)
     !< -Not yet implemented in Oberhagemann
-    DO CONCURRENT (i=1:SIZE(live_tree_fuel,2), j=1:SIZE(live_tree_fuel,3)) !2=fuel pools, 3=fuel classes 
+    DO CONCURRENT (i=1:SIZE(live_tree_fuel,2), j=1:SIZE(live_tree_fuel,3)) !2=fuel pools, 3=fuel classes
       tot_lvt_fuel = SUM(live_tree_fuel(:,i,j)) ! sum multiple dimensions
     END DO
     woi_lv(:,1) = 0._wp !< 1 = wet livegrass, not yet implemented
@@ -707,10 +707,10 @@ CONTAINS
     me_dd = moisture_extinction
     ! Oberhagemann: fuel moisture
     mf_dd = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=2, NCOPIES=df_sf_sigma_dd_nr ) ! litter [1hr, 10hrs, 100 hours, dry livegrass]
-    mf_lv = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=2, NCOPIES=df_sf_sigma_lv_nr ) ! todo: compute as in Andrews PL 2018 
+    mf_lv = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=2, NCOPIES=df_sf_sigma_lv_nr ) ! todo: compute as in Andrews PL 2018
 
     spitfire % ros = sf_calc_rate_of_spread(nc, &
-                                df_sf_fc_spread_nr, &  ! mixed dead fuel with livegrass 
+                                df_sf_fc_spread_nr, &  ! mixed dead fuel with livegrass
                                 df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, & ! oberhagemann related
                                 config_ros_model_id, & !< Select Rate of spread implementation
                                 lctlib_fuel_bulk_density, &
