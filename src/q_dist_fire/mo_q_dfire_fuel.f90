@@ -53,7 +53,7 @@ MODULE mo_q_dfire_fuel
   USE mo_q_dfire_constants,     ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx, &
                                         df_sf_fc_spread_nr !< Spread fuel classes: 1, 10 and 100 hours
   USE mo_q_dfire_constants,     ONLY: ratio_as_dead_fuel !< variable sb pool ratios to dead fuel
-  USE mo_q_dfire_constants,     ONLY: df_sf_sl_indices, df_sf_sl_dims_nr
+  USE mo_q_dfire_constants,     ONLY: df_sf_sl_indices => sl_ixs, df_sf_sl_dims_nr
 
   USE mo_lnd_bgcm_idx,          ONLY: ixC
   USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter
@@ -139,14 +139,8 @@ CONTAINS
     TYPE(t_sf_fuel_class)                 :: fuel_cls
 
     !< livegrass moisture content related vars
-    REAL(wp), ALLOCATABLE                 :: ab_soil_depth_sl(:,:)!(#nc, #df_sf_sl_dims_nr)!< above ground soil depth layers [m]
-    REAL(wp), ALLOCATABLE                 :: ab_w_soil_sl(:,:) !(#nc, #df_sf_sl_dims_nr)    !< above ground soil water content [m]
-    REAL(wp), ALLOCATABLE                 :: ab_w_soil_sat_sl(:,:) !(#nc, #df_sf_sl_dims_nr)!< above ground soil water saturation [m]
     REAL(wp), ALLOCATABLE                 :: ab_moisture(:) !(#nc) top relative soil moisture layer [-]
-    REAL(wp), ALLOCATABLE                 :: mflg_ober(:) !< (#nc) livegrass moisture content [0.3 to 2.5]
     REAL(wp), ALLOCATABLE                 :: t_air_in_c(:) !< (C) air temperature [0.3 to 2.5]
-    REAL(wp), ALLOCATABLE :: lfmc_p(:) !< parameters, load from lctlib
-    REAL(wp), ALLOCATABLE :: comp_p(:,:) !< component paramenters, load from lctlib
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -315,19 +309,12 @@ CONTAINS
 
     IF (lctlib%growthform == igrass) THEN
       t_air_in_c = t_air - df_sf_units_k_to_c !< degrees K to C
-
-      allocate(ab_soil_depth_sl(nc,df_sf_sl_dims_nr))
-      allocate(ab_w_soil_sl(nc,df_sf_sl_dims_nr))
-      allocate(ab_w_soil_sat_sl(nc,df_sf_sl_dims_nr))
-      ab_soil_depth_sl(:,:) = soil_depth_sl(:, [df_sf_sl_indices])
-      ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
-      ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
-      ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl) ! 100=convert fraction to 0 to 100 (%)
+      ab_moisture = calc_ab_moisture(soil_depth_sl(:,sl_ixs), w_soil_sl(:,sl_ixs), w_soil_sat_sl(:,sl_ixs))
 
       lvg_moisture = calc_mflg(nc, dsl4jsb_Config(Q_DFIRE_)%mflg_model_id, &
                               ab_moisture, & ! thonicke
                               lfmc_par, gsi_par, & ! oberhagemann
-                              t_air_in_c, swpar_srf_down, ab_moisture * 100._wp)
+                              t_air_in_c, swpar_srf_down, ab_moisture * 100._wp) !< 100, required conversion from 0.5 to 50%
     ELSE ! is tree
       lvg_moisture = 0._wp
     END IF ! is_grass / is_tree
