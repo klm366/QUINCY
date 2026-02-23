@@ -549,14 +549,14 @@ CONTAINS
     ed_nitrification          = 200000._wp                              ! Xu-Ri & Prentice, 2008, to fit their function
     t_opt_nitrification       = 311.15_wp                               ! Xu-Ri & Prentice, 2008, to fit their function
     f_nit_noy                 = 0.04_wp                                 ! Xu-Ri & Prentice, 2008, take the high end to fit a reasonable global budget
-    f_nit_n2o                 = 0.002_wp                                ! Xu-Ri & Prentice, 2008
+    f_nit_n2o                 = 0.003_wp                                ! Xu-Ri & Prentice, 2008
     ea_denitrification        = 47000._wp                               ! Xu-Ri & Prentice, 2008, to fit their function
     vmax_nitrification        = 0.6_wp / one_day * 1.e6_wp              ! Xu-Ri & Prentice, 2008, 10% / day at 20degC, retuned to fit a reasonable global budget
     vmax_denitrification      = 0.3_wp / one_day * 1.e6_wp              ! Xu-Ri & Prentice, 2008, 10% / day, retuned to fit a reasonable global budget
     km_denitrification_c      = 20.0_wp                                 ! ???
     km_denitrification_no3    = 0.083_wp * 1000.0_wp / molar_mass_N     ! Xu-Ri & Prentice, 2008
     f_denit_noy               = 0.002_wp                                ! Xu-Ri & Prentice, 2008
-    f_denit_n2o               = 0.04_wp                                 ! Xu-Ri & Prentice, 2008, take the high end to fit a reasonable global budget
+    f_denit_n2o               = 0.06_wp                                 ! Xu-Ri & Prentice, 2008, take the high end to fit a reasonable global budget
     ea_gasdiffusion           = 47000._wp                               ! Xu-Ri & Prentice, 2008, to fit their function
     lambda_anvf               = 1.3_wp                                  ! fitted from Zaehle et al. 2011, NatGeo
     k_anvf                    = 3.0_wp                                  ! fitted from Zaehle et al. 2011, NatGeo
