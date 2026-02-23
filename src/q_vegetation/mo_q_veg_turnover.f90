@@ -436,7 +436,7 @@ CONTAINS
     !>0.9 init output variable
     !>
     net_growth(:) = 0.0_wp
-    fturn_leaf(:) = 0.0_wp
+
     !>1.0 foliage turnover, including recycling of nutrients
     !>
     ! flat rate for evergreens, dual rates for deciduous (senescence after the growing season)
