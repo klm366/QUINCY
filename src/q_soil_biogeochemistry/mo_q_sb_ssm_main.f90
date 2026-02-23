@@ -689,7 +689,7 @@ CONTAINS
       & nsoil_w, &
       & dtime, &
       & num_sl_above_bedrock(:), &
-      & dsl4jsb_Config(SB_)%flag_sb_prescribe_po4, &
+      & dsl4jsb_Config(SB_)%flag_sb_interactive_p, &
       & rtm_decomposition(:,:), &
       & rmm_decomposition(:,:), &
       & km_dip_biochem_po4_act(:,:), &
@@ -1895,7 +1895,7 @@ CONTAINS
                                         nsoil_w, &
                                         dtime, &
                                         num_sl_above_bedrock, &
-                                        flag_sb_prescribe_po4, &
+                                        flag_sb_interactive_p, &
                                         rtm_decomposition, &
                                         rmm_decomposition, &
                                         km_dip_biochem_po4_act, &
@@ -1925,7 +1925,7 @@ CONTAINS
     INTEGER,                           INTENT(in)  :: nsoil_w                       !< number of soil layers (water)
     REAL(wp),                          INTENT(in)  :: dtime                         !< timestep length
     REAL(wp), DIMENSION(nc),           INTENT(in)  :: num_sl_above_bedrock          !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    LOGICAL,                           INTENT(in)  :: flag_sb_prescribe_po4         !< whether or not solute PO4 is prescribed
+    LOGICAL,                           INTENT(in)  :: flag_sb_interactive_p         !< whether or not solute PO4 is causing biochem_mineralisation_po4
     REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)  :: rtm_decomposition, &          !< temperature response of decomposition
                                                       rmm_decomposition, &          !< moisture response of decomposition
                                                       km_dip_biochem_po4_act, &     !< actual half-saturation soluble P for biochem_mineralisation_po4 [mol P / m3]
@@ -1978,7 +1978,7 @@ CONTAINS
 
     !> 2.0 Calculate potential P biomineralisation from slow organic P pool (mol /m3 / timestep)
     !!
-    IF(.NOT. flag_sb_prescribe_po4) THEN
+    IF (flag_sb_interactive_p) THEN
       DO ic = 1,nc
         DO is = 1,INT(num_sl_above_bedrock(ic))
           hlp1(ic, is) = km_dip_biochem_po4_act(ic, is) / (km_dip_biochem_po4_act(ic, is) + po4_solute(ic, is))
