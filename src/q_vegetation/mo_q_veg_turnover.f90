@@ -154,6 +154,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)
     ! ----------------------------------------------------------------------------------------------------- !
+
     !>1.0 Calculate nutrient flux from enzyme, RNA and other turnover in leaves and roots
     !>
     CALL calc_nutrient_recycling( &
@@ -435,7 +436,7 @@ CONTAINS
     !>0.9 init output variable
     !>
     net_growth(:) = 0.0_wp
-
+    fturn_leaf(:) = 0.0_wp
     !>1.0 foliage turnover, including recycling of nutrients
     !>
     ! flat rate for evergreens, dual rates for deciduous (senescence after the growing season)

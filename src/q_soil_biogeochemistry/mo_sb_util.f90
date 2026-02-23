@@ -455,7 +455,6 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER :: model            !< the model
     TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store       !< the bgcm store of this tile
     TYPE(t_input_file)              :: input_file       !< file with to be read soil model forcing
-    TYPE(t_datetime),       POINTER :: current_datetime !< date and time at the beginning of this time step
     REAL(wp)                        :: dtime, year_instant
     INTEGER                         :: iblk             !< Dimensions of the horizontal grid
     INTEGER                         :: veg_pool_idx
@@ -520,10 +519,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SSE_, t_soil_sl)
 
     !> get the timestep information of current timestep
-    current_datetime = options%current_datetime
     dtime   = options%dtime
-    CALL get_date_components(current_datetime, year, month, day, hour, minute, second)
-    year_instant = get_year_day(current_datetime)
+    CALL get_date_components(options%current_datetime, year, month, day, hour, minute, second)
+    year_instant = get_year_day(options%current_datetime)
     yearday = INT(year_instant)
     ith_timestep = IMerge_TIME2Sec(yearday, hour, minute, second)/int(dtime) + 1 ! the row number of current timestep in forcing file
 
@@ -538,67 +536,6 @@ CONTAINS
         & start_time_step=ith_timestep, end_time_step=ith_timestep)
     root_fraction_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
 
-    !> - Fraction of vertical transport
-    ptr_4D => input_file%Read_3d_time(                  &
-        & variable_name='hydro_frac_wtr_transp_down_sl_'//tile%name,   &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    frac_wtr_transp_down_sl(:,:,:) = ptr_4D(:,:,:,1)
-
-    !> - Fraction of lateral water loss
-    ptr_4D => input_file%Read_3d_time(                  &
-        & variable_name='hydro_frac_w_lat_loss_sl_'//tile%name,        &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    frac_w_lat_loss_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
-
-    !> - Water content
-    ptr_4D => input_file%Read_3d_time(                  &
-        & variable_name='hydro_wtr_soil_sl_'//tile%name,              &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    wtr_soil_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
-
-    !> - Volumetric water content
-    ptr_4D => input_file%Read_3d_time(                  &
-        & variable_name='hydro_vol_porosity_sl_'//tile%name,          &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    vol_porosity_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
-
-    !> - Soil temperature
-    ptr_4D => input_file%Read_3d_time(                  &
-        & variable_name='sse_t_soil_sl_'//tile%name,                &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    t_soil_sl(:,:,:) = ptr_4D(:,:,:,1)
-
-    !> read the 2D forcing variables
-    !> - nhx deposition
-    ptr_3D => input_file%Read_2d_time(                  &
-        & variable_name="a2l_nhx_deposition_"//tile%name,            &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    nhx_deposition(:,:) = ptr_3D(:,:,1)
-
-    !> - noy deposition
-    ptr_3D => input_file%Read_2d_time(                  &
-        & variable_name="a2l_noy_deposition_"//tile%name,            &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    noy_deposition(:,:) = ptr_3D(:,:,1)
-
-    !> - nhx n15 deposition
-    ptr_3D => input_file%Read_2d_time(                  &
-        & variable_name="a2l_nhx_n15_deposition_"//tile%name,            &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    nhx_n15_deposition(:,:) = ptr_3D(:,:,1)
-
-    !> - noy n15 deposition
-    ptr_3D => input_file%Read_2d_time(                  &
-        & variable_name="a2l_noy_n15_deposition_"//tile%name,            &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    noy_n15_deposition(:,:) = ptr_3D(:,:,1)
-
-    !> - p deposition
-    ptr_3D => input_file%Read_2d_time(                  &
-        & variable_name="a2l_p_deposition_"//tile%name,            &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    p_deposition(:,:) = ptr_3D(:,:,1)
-
     !> - plant N uptake demand
     ptr_3D => input_file%Read_2d_time(                  &
         & variable_name="veg_demand_uptake_n_tuptake_mavg_"//tile%name,            &
@@ -610,6 +547,70 @@ CONTAINS
         & variable_name="veg_demand_uptake_p_tuptake_mavg_"//tile%name,            &
         & start_time_step=ith_timestep, end_time_step=ith_timestep)
     demand_uptake_p_tuptake_mavg(:,:) = ptr_3D(:,:,1)
+
+    !> - variables not on tile level
+    IF (tile%name(1:3) /= 'pft') THEN
+      !> - Fraction of vertical transport
+      ptr_4D => input_file%Read_3d_time(                  &
+          & variable_name='hydro_frac_wtr_transp_down_sl_'//tile%name,   &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      frac_wtr_transp_down_sl(:,:,:) = ptr_4D(:,:,:,1)
+
+      !> - Fraction of lateral water loss
+      ptr_4D => input_file%Read_3d_time(                  &
+          & variable_name='hydro_frac_w_lat_loss_sl_'//tile%name,        &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      frac_w_lat_loss_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
+
+      !> - Water content
+      ptr_4D => input_file%Read_3d_time(                  &
+          & variable_name='hydro_wtr_soil_sl_'//tile%name,              &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      wtr_soil_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
+
+      !> - Volumetric water content
+      ptr_4D => input_file%Read_3d_time(                  &
+          & variable_name='hydro_vol_porosity_sl_'//tile%name,          &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      vol_porosity_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
+
+      !> - Soil temperature
+      ptr_4D => input_file%Read_3d_time(                  &
+          & variable_name='sse_t_soil_sl_'//tile%name,                &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      t_soil_sl(:,:,:) = ptr_4D(:,:,:,1)
+
+      !> read the 2D forcing variables
+      !> - nhx deposition
+      ptr_3D => input_file%Read_2d_time(                  &
+          & variable_name="a2l_nhx_deposition_"//tile%name,            &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      nhx_deposition(:,:) = ptr_3D(:,:,1)
+
+      !> - noy deposition
+      ptr_3D => input_file%Read_2d_time(                  &
+          & variable_name="a2l_noy_deposition_"//tile%name,            &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      noy_deposition(:,:) = ptr_3D(:,:,1)
+
+      !> - nhx n15 deposition
+      ptr_3D => input_file%Read_2d_time(                  &
+          & variable_name="a2l_nhx_n15_deposition_"//tile%name,            &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      nhx_n15_deposition(:,:) = ptr_3D(:,:,1)
+
+      !> - noy n15 deposition
+      ptr_3D => input_file%Read_2d_time(                  &
+          & variable_name="a2l_noy_n15_deposition_"//tile%name,            &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      noy_n15_deposition(:,:) = ptr_3D(:,:,1)
+
+      !> - p deposition
+      ptr_3D => input_file%Read_2d_time(                  &
+          & variable_name="a2l_p_deposition_"//tile%name,            &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      p_deposition(:,:) = ptr_3D(:,:,1)
+    END IF
 
     CALL input_file%Close()
 
@@ -624,7 +625,7 @@ CONTAINS
 
     !> - veg fineroot C
     ptr_3D => input_file%Read_2d_time(                      &
-        & variable_name="veg_pool_fine_root_C_"//tile%name, &
+        & variable_name="veg_veg_bgcm_pool_fine_root_C_"//tile%name, &
         & start_time_step=ith_timestep, end_time_step=ith_timestep)
     veg_pool_mt_domain(ix_fine_root, ixC, :,:) = ptr_3D(:,:,1)
 

@@ -1082,35 +1082,37 @@ CONTAINS
       CASE (MODEL_QUINCY)
 
 #ifdef _OPENACC
-        IF (model%config%qmodel_id /= QCANOPY) &
+        IF (model%config%qmodel_id /= QCANOPY .OR. model%config%qmodel_id /= QSOIL) &
           & CALL finish(routine, 'QUINCY is currently only ported to GPU for the CANOPY mode. '//model%config%quincy_model)
 #endif
 
-        ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
-        dsl4jsb_Get_var2d_onDomain(A2L_, co2_mixing_ratio)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-        DO iblk = 1, nblks
-          DO ic = 1, nproma
-            co2_mixing_ratio(ic, iblk) = co2_air_mol(ic, iblk) * 1000000._wp
+        IF (model%config%qmodel_id /= QSOIL) THEN
+          ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
+          dsl4jsb_Get_var2d_onDomain(A2L_, co2_mixing_ratio)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+              co2_mixing_ratio(ic, iblk) = co2_air_mol(ic, iblk) * 1000000._wp
+            ENDDO
           ENDDO
-        ENDDO
-        !$ACC END PARALLEL LOOP
-        dsl4jsb_Get_var2d_onDomain(A2L_, CO2_mixing_ratio_c13)
-        dsl4jsb_Get_var2d_onDomain(A2L_, CO2_mixing_ratio_c14)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) PRIVATE(hlp1)
-        DO iblk = 1, nblks
-          DO ic = 1, nproma
-            hlp1 = calc_mixing_ratio_C13C12(co2_air_dc13(ic, iblk))
-            CO2_mixing_ratio_c13(ic, iblk)  = co2_mixing_ratio(ic, iblk) / (1._wp + 1._wp / hlp1)
-            hlp1 = calc_mixing_ratio_C14C(co2_air_dc13(ic, iblk), co2_air_Dc14(ic, iblk))
-            CO2_mixing_ratio_c14(ic, iblk) = co2_mixing_ratio(ic, iblk) * hlp1
+          !$ACC END PARALLEL LOOP
+          dsl4jsb_Get_var2d_onDomain(A2L_, CO2_mixing_ratio_c13)
+          dsl4jsb_Get_var2d_onDomain(A2L_, CO2_mixing_ratio_c14)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) PRIVATE(hlp1)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+              hlp1 = calc_mixing_ratio_C13C12(co2_air_dc13(ic, iblk))
+              CO2_mixing_ratio_c13(ic, iblk)  = co2_mixing_ratio(ic, iblk) / (1._wp + 1._wp / hlp1)
+              hlp1 = calc_mixing_ratio_C14C(co2_air_dc13(ic, iblk), co2_air_Dc14(ic, iblk))
+              CO2_mixing_ratio_c14(ic, iblk) = co2_mixing_ratio(ic, iblk) * hlp1
+            END DO
           END DO
-        END DO
-        !$ACC END PARALLEL LOOP
+          !$ACC END PARALLEL LOOP
 
-        !$ACC WAIT(1)
-        !$ACC EXIT DATA DELETE(co2_air_dc13, co2_air_Dc14)
-        DEALLOCATE(co2_air_dc13, co2_air_Dc14)
+          !$ACC WAIT(1)
+          !$ACC EXIT DATA DELETE(co2_air_dc13, co2_air_Dc14)
+          DEALLOCATE(co2_air_dc13, co2_air_Dc14)
+        END IF
 
         ! Update local time and daytime counter
         dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
