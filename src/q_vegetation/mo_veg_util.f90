@@ -1200,8 +1200,10 @@ CONTAINS
                 & '; new total c: ', q_total_c_new(ic), '; old total c: ', q_total_c(ic),                            &
                 & '; nbp ',  (net_biosphere_production(ic) * dtime / 1000000.0_wp), NEW_LINE('a'),                   &
                 & ' on lat =',    lat(ic,iblk), ' and lon =', lon(ic,iblk), NEW_LINE('a'),                           &
-                & ' with ', veg_pool_total_c(ic), ' and sb sum ', SUM(sb_pool_total_c(ic,:) * soil_depth_sl(ic,:)),  &
-                & ' and ', veg_products_total_c(ic)
+                & ' with veg ', veg_pool_total_c(ic), ' and sb sum ', SUM(sb_pool_total_c(ic,:) * soil_depth_sl(ic,:))
+               IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+                 WRITE(message_text,*) TRIM(message_text),' and products ', veg_products_total_c(ic)
+               END IF
               CALL message(TRIM(routine), message_text, all_print=.TRUE.)
             END IF
           END IF
