@@ -102,12 +102,12 @@ CONTAINS
   !> - omega_o: dead fuel for 1, 10 and 100 hours + live grass (accounted for 1 hour)
   !> - omega_n,l: 1 hour dead fuel + live grass
   !>
-  FUNCTION sf_calc_fuel_moisture(nc, nalphas, nfuels, alphas, nesterov_index, lvg_moisture, w_oi, live_fuel_lvg) &
+  FUNCTION sf_calc_fuel_moisture(nc, nalphas, nfuels, alphas, nesterov_index, litter_moisture, w_oi, live_fuel_lvg) &
                                       RESULT (fuel_moisture)
     INTEGER, INTENT(in)                 :: nc, nalphas, nfuels        !< Number of gridcells, number of alpha params, number of fuels used to calc fuel moisture
     REAL(wp), INTENT(in)                :: alphas(nalphas)            !< Drying parameter for 1, 10 and 100 hours fuel class [Celsius-2]
     REAL(wp), INTENT(in)                :: nesterov_index(nc)         !< Nesterov index = Dryness index [Celsius^2]
-    REAL(wp), INTENT(in)                :: lvg_moisture(nc)           !< Livegrass moisture content [0 to 2.5]%
+    REAL(wp), INTENT(in)                :: litter_moisture(nc)        !< Relative litter moisture content, approximated by relative top-layer soil moisture content (== w_s,1) [0 to 1]
     REAL(wp), INTENT(in)                :: w_oi(nc,nfuels)            !< Dead fuel involved in the calculation of fuel moisture [g DM m-2]
     REAL(wp), INTENT(in)                :: live_fuel_lvg(nc)          !< Total live grass fuel [g DM m-2]
     REAL(wp)                            :: fuel_moisture(nc, df_sf_omegas_nr) !< output [0 to 1]
@@ -126,7 +126,7 @@ CONTAINS
     DO inc = 1, nc
       IF (has_live_fuel_lvg(inc) .OR. has_dead_fuel(inc)) THEN
         omegas(inc,:) = calc_all_omegas(nalphas, nfuels, alphas, nesterov_index(inc), &
-            lvg_moisture(inc), live_fuel_lvg(inc), w_oi(inc,:))
+            litter_moisture(inc), live_fuel_lvg(inc), w_oi(inc,:))
       END IF
     END DO
 
@@ -140,12 +140,12 @@ CONTAINS
   !> following Thonicke et al. (2010) Eq. 6 with adaptations based on Pfeiffer et al. (2013).
   !>
   PURE FUNCTION calc_all_omegas(nalphas, nfuels, alphas, nesterov_index, &
-                                lvg_moisture, &
+                                litter_moisture, &
                                 live_fuel_lvg, w_oi) RESULT(omegas)
     INTEGER, INTENT(in)  :: nalphas, nfuels         !< Number of alpha params, number of fuel classes
     REAL(wp), INTENT(in) :: alphas(nalphas)         !< Drying parameter for 1, 10, 100 hours fuel classes [Celsius^2]
     REAL(wp), INTENT(in) :: nesterov_index          !< Nesterov index [Celsius^2]
-    REAL(wp), INTENT(in) :: lvg_moisture            !< livegrass moisture content [0 to 2.5]%
+    REAL(wp), INTENT(in) :: litter_moisture         !< Relative litter moisture content, approximated by relative top-layer soil moisture content (== w_s,1) [0 to 1]
     REAL(wp), INTENT(in) :: live_fuel_lvg           !< Livegrass fuel [g DM m-2]
     REAL(wp), INTENT(in) :: w_oi(nfuels)            !< Total dead fuel (1, 10 and 100 hours) [g DM m-2]
     REAL(wp)             :: omegas(df_sf_omegas_nr) !< output 1=omega_o, 2=omega_n_l
@@ -156,7 +156,7 @@ CONTAINS
     INTEGER, PARAMETER :: ix_alpha_1hr = 1
     INTEGER, PARAMETER :: nr_fine_fuels = 2         !< 1 hour dead fuel + livegrass
 
-    REAL(wp) :: omega_1hr
+    REAL(wp) :: omega_lvg, omega_1hr
 
     REAL(wp) :: alpha_lvg, alpha_1hr
     REAL(wp) :: alphas_o(nr_fuels), alpha_o_weighted, weighted_alphas
@@ -188,8 +188,10 @@ CONTAINS
     !< Compute alpha livegrass (Pfeiffer et al. (2013), Eq. A6 and A7)
     alpha_lvg = 0._wp
     IF (has_live_fuel_lvg .AND. nesterov_index > 0._wp) THEN
+      !< Thonicke et al. (2010) Eq. B2
+      omega_lvg = max(0._wp, (10._wp/9._wp) * litter_moisture - (1._wp / 9._wp) )
       !< Derived from Eq. 6 from Thonicke et al. (2010)
-      alpha_lvg = - (log(lvg_moisture) / nesterov_index)
+      alpha_lvg = - (log(omega_lvg) / nesterov_index)
     END IF
 
     !< Calculate 1hr fuel moisture

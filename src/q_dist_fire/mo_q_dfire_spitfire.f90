@@ -504,8 +504,8 @@ CONTAINS
                         df_sf_isurface_extinc_th, &
                         df_sf_alphas, &
                         moisture_extinction, &
-                        lvg_moisture, &
-                        burnable_area_ha, & ! soil properties
+                        ab_moisture, & ! soil properties
+                        burnable_area_ha, &
                         dead_fuel_fcl, live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
                         t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
                         veg_cover_frac, &
@@ -599,7 +599,7 @@ CONTAINS
 
     REAL(wp), INTENT(in)  :: alphas(nalphas)                       !< Drying parameter for 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)  :: moisture_extinction(:)                !< Moisture of extinction threshold [0 to 1]
-    REAL(wp), INTENT(in)  :: lvg_moisture(nc)                      !< live grass moisture content [0 to 2.5]%
+    REAL(wp), INTENT(in)  :: ab_moisture(nc)                       !< above ground relative soil moisture [0 to 1]
 
     REAL(wp), INTENT(in)  :: grid_cell_area(nc)                    !< Gridcell area [ha]
 
@@ -675,7 +675,7 @@ CONTAINS
 
     !< Compute fuel moisture (omega_o, omega_nl)
     fuel_moisture = sf_calc_fuel_moisture(nc, nalphas, df_sf_fc_spread_nr, alphas, &
-                                          nesterov_index, lvg_moisture, &
+                                          nesterov_index, ab_moisture, &
                                           w_oi, & ! exclude livegrass from dead fuel
                                           tot_lvg_fuel) ! as it is accounted in tot_lvg_fuel
 
