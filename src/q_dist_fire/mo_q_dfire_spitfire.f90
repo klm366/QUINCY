@@ -69,7 +69,7 @@ MODULE mo_q_dfire_spitfire
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_LOSS_ID, SB_BGCM_POOL_ID
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
-  USE mo_q_dfire_constants,       ONLY: df_sf_sl_dims_nr, df_sf_sl_indices !< Soil related constants: top soil moisture layers
+  USE mo_q_dfire_constants,       ONLY: df_sf_sl_dims_nr, df_sf_sl_indices => sl_ixs !< Soil related constants: top soil moisture layers
 
   USE mo_q_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix
   USE mo_q_dfire_constants,       ONLY: df_sf_max_density_human_pop
@@ -215,9 +215,6 @@ CONTAINS
     REAL(wp), POINTER                     :: tile_fract(:) ! [%]
     LOGICAL                               :: mask_is_tile_enabled(options%nc)
 
-    REAL(wp)                              :: ab_soil_depth_sl(options%nc,df_sf_sl_dims_nr)!< above ground soil depth layers [m]
-    REAL(wp)                              :: ab_w_soil_sl(options%nc,df_sf_sl_dims_nr)    !< above ground soil water content [m]
-    REAL(wp)                              :: ab_w_soil_sat_sl(options%nc,df_sf_sl_dims_nr)!< above ground soil water saturation [m]
     REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
 
     TYPE(t_sf_veget_cover_frac)           :: veg_cover_frac                               !< Vegetation cover
@@ -479,16 +476,13 @@ CONTAINS
     t_air_max_c = sf_convert_units("Kelvin", "Celsius", t_air_max)
     t_air_min_c = sf_convert_units("Kelvin", "Celsius", t_air_min)
     precip_daily_mmd = sf_convert_units("kg m-2 s-1", "mm/day", precip_daily)
-
     wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
 
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
 
-    ab_soil_depth_sl(:,:) = soil_depth_sl(:, [df_sf_sl_indices])
-    ab_w_soil_sl(:,:) = wtr_soil_sl(:, [df_sf_sl_indices])
-    ab_w_soil_sat_sl(:,:) = wtr_soil_sat_sl(:, [df_sf_sl_indices])
-    ab_moisture = calc_ab_moisture(ab_soil_depth_sl, ab_w_soil_sl, ab_w_soil_sat_sl, mask=mask_is_tile_enabled)
+    ab_moisture = calc_ab_moisture(soil_depth_sl(:,sl_ixs), wtr_soil_sl(:,sl_ixs), wtr_soil_sat_sl(:,sl_ixs), &
+                                    mask=mask_is_tile_enabled)
 
     ! Load input data: rate of human-caused ignitions per person [#ign indiv-1 d-]
     ! Todo: further research on this data, currently taken from a paper.
