@@ -682,13 +682,14 @@ CONTAINS
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions = has_fire_conditions .AND. (spitfire % fdi > 1.e-6_wp)
 
+    !< Oberhagemann related variables
     !< dead fuel (1 hr, 10 hrs, 100 hrs litter and dry livegrass)
     woi_dd(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx) = w_oi * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
     woi_dd(:,4) = dry_lvg(:,df_sf_fc_1hr_idx) * df_sf_units_g_to_kg  !< 4 = dry livegrass
     !< mixed dead fuel (1 hr+livg, 10 hrs, 100 hrs)
     woi_ddm(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx) = woi_dd(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx)
     woi_ddm(:,df_sf_fc_1hr_idx) = woi_ddm(:,df_sf_fc_1hr_idx) +  woi_dd(:,4) !< 4= dry livegrass index
-
+    !< Oberhagemann related variables
     !< (Wet livegrass implemented, woody)
     !< Wet livegrass is:
     !< -Not accounted in Thonicke's et al. 2010)
