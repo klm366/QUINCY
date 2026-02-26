@@ -94,7 +94,6 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_, A2L_
-    USE mo_q_dfire_spitfire,        ONLY: calc_ab_moisture
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -138,10 +137,6 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: sb_pool_in_gdm(:,:) !< Dead fuel (#nc,#dead fuel pools) [g DM m-2]
     TYPE(t_sf_fuel_class)                 :: fuel_cls
 
-    !< livegrass moisture content related vars
-    REAL(wp), ALLOCATABLE                 :: ab_moisture(:) !(#nc) top relative soil moisture layer [-]
-    REAL(wp), ALLOCATABLE                 :: t_air_in_c(:) !< (C) air temperature [0.3 to 2.5]
-
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -156,12 +151,6 @@ CONTAINS
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
     !< A2L_
-    dsl4jsb_Real2D_onChunk      :: t_air                 ! in [K]
-    dsl4jsb_Real2D_onChunk      :: swpar_srf_down        ! in [W -m-2]
-
-    dsl4jsb_Real3D_onChunk      :: wtr_soil_sl           ! soil water content [m]
-    dsl4jsb_Real3D_onChunk      :: wtr_soil_sat_sl       ! Soil water content at saturation (calculated from ...
-                                                         ! soil porosity, reduced by ice) [m]
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl         ! Soil depth until bedrock [m]
     dsl4jsb_Real2D_onChunk      :: height                ! in [m]
 
@@ -184,8 +173,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: fuel_bulk_density    ! out [kg m-3]
     dsl4jsb_Real2D_onChunk      :: moisture_extinction  ! out [0 to 1]
     dsl4jsb_Real2D_onChunk      :: fwd_wind_factor      ! out [0 to 1]
-
-    dsl4jsb_Real2D_onChunk      :: lvg_moisture      ! out [0 to 2.5]%
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -210,11 +197,6 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                ! in [K]
-    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)       ! in [W m-2]
-
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sat_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)      ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in
 
@@ -235,8 +217,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, fuel_bulk_density)     ! out [kg m-3]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, moisture_extinction)   ! out [0 to 1]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, fwd_wind_factor)       ! out [0 to 1]
-
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, lvg_moisture)       ! out [0 to 2.5]%
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -285,14 +265,6 @@ CONTAINS
       live_fuel_frac => df_sf_live_frac_grass
     END IF
 
-    IF (.NOT. ALLOCATED(gsi_par)) THEN
-      !< Encapsulate livegrass moisture parameters
-      !< to calculate Oberhagemann et al. (2025)
-      ALLOCATE(gsi_par, lfmc_par)
-      gsi_par = t_gsi(lctlib)
-      lfmc_par = t_lfmc(lctlib)
-    END IF
-
     sb_pool_slim = sb_pool_mt(:,ixC,:,df_sf_spq_layer_top_sl)
     ALLOCATE(sb_pool_in_gdm, mold=sb_pool_slim) ! unsure why is needed, otherwise NAG compiler raises an error. function should be allocated dead_fuel
     sb_pool_in_gdm = sf_convert_units("molC/m3", "gDM/m2", sb_pool_slim, aux = top_soil_depth_sl, nc_dim_opt=2)
@@ -306,18 +278,6 @@ CONTAINS
                             ratio_as_dead_fuel)
 
     dead_fuel_fcl = fuel_cls % calc_dead_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
-
-    IF (lctlib%growthform == igrass) THEN
-      t_air_in_c = t_air - df_sf_units_k_to_c !< degrees K to C
-      ab_moisture = calc_ab_moisture(soil_depth_sl(:,sl_ixs), w_soil_sl(:,sl_ixs), w_soil_sat_sl(:,sl_ixs))
-
-      lvg_moisture = calc_mflg(nc, dsl4jsb_Config(Q_DFIRE_)%mflg_model_id, &
-                              ab_moisture, & ! thonicke
-                              lfmc_par, gsi_par, & ! oberhagemann
-                              t_air_in_c, swpar_srf_down, ab_moisture * 100._wp) !< 100, required conversion from 0.5 to 50%
-    ELSE ! is tree
-      lvg_moisture = 0._wp
-    END IF ! is_grass / is_tree
 
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
