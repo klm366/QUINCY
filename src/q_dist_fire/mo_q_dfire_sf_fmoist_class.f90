@@ -34,7 +34,7 @@ MODULE mo_q_dfire_sf_fmoist_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_fuel_moisture, calc_mflg, t_gsi_param, t_gsi, t_lfmc
+  PUBLIC :: sf_calc_fuel_moisture, t_gsi_param, t_gsi, t_lfmc
 
   !> GSI parameters
   TYPE :: t_gsi_param
@@ -43,7 +43,7 @@ MODULE mo_q_dfire_sf_fmoist_class
     REAL(wp) :: tau
   END TYPE t_gsi_param
 
-  !> GSI phenology components
+  !> GSI phenology components, from Oberhagemann et al. (2025)
   TYPE :: t_gsi
     TYPE(t_gsi_param) :: cold
     TYPE(t_gsi_param) :: heat
@@ -55,7 +55,7 @@ MODULE mo_q_dfire_sf_fmoist_class
     MODULE PROCEDURE :: create_gsi_from_lctlib
   END INTERFACE t_gsi
 
-  !> Livegrass fuel moisture content paremeters
+  !> Livegrass fuel moisture content paremeters from Oberhagemann et al. (2025)
   TYPE :: t_lfmc
     REAL(wp) :: min, max, b, c
   END TYPE t_lfmc
@@ -63,6 +63,14 @@ MODULE mo_q_dfire_sf_fmoist_class
   INTERFACE t_lfmc
     MODULE PROCEDURE :: create_lfmc_from_lctlib
   END INTERFACE
+
+  TYPE :: t_mf !< fuel moisture
+    !< oberhagemann et al. (2025)
+    REAL(wp), ALLOCATABLE :: dead(:,:) !< dead fuel moisture (#nc,#dead fuel moisture -1hr, 10hrs, 100hrs, dry livegrass- )
+    REAL(wp), ALLOCATABLE :: live(:,:) !< live fuel moisture (wet livegrass, woody)
+    !< thonicke et al. (2010)
+    REAL(wp), POINTER :: thonicke(:,:) !< fuel moisture (mixed-1,10,100 and lvg-, fine fuels-1hr and lvg-)
+  END TYPE t_mf
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 CONTAINS
@@ -220,7 +228,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> calc_omega
-  !> Calculate the fuel moisture
+  !> Calculate the dead fuel moisture
   !>
   !> Eq. 6 from Thonicke et al. (2010)
   !>
@@ -235,43 +243,71 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> calc_mflg
-  !> Calculate livegrass moisture content (
+  !> sf_calc_fuel_moisture_ober
+  !> Calculate the fuel moisture as in Oberhagemann et al. (2025)
   !>
-  FUNCTION calc_mflg(nc, method_id, ab_moisture, lfmc_par, gsi_par, tair, sw_rad, water) RESULT (mflg)
-    USE mo_q_dfire_constants, ONLY: df_sf_units_k_to_c
-    USE mo_q_dfire_config_class, ONLY: Q_DFIRE_LVG_OBERHAGEMANN, Q_DFIRE_LVG_THONICKE
+  FUNCTION sf_calc_fuel_moisture_ober(nc, ndd, nlv, &
+                                        nsigdd, nsiglv, &
+                                        sigmas_dd, sigmas_lv, &
+                                        nesterov_index, &
+                                        lfmc_par, phen) RESULT (mf)
+    INTEGER, INTENT(in)       :: nc, ndd, nlv
+    INTEGER, INTENT(in)       :: nsigdd, nsiglv
+    REAL(wp), INTENT(in)      :: sigmas_dd, sigmas_lv    !< surface area to voluem ratio for dead and live fuels [?]
+    REAL(wp), INTENT(in)      :: nesterov_index(nc)      !< Nesterov index = Dryness index [Celsius^2]
+    TYPE(t_lfmc), INTENT(in)  :: lfmc_par                !< livegrass moisture parameters
+    REAL(wp), INTENT(in)      :: phen(nc)                !< Livegrass phenological status [0 to 1]
+    TYPE(t_mf) :: mf
 
-    INTEGER, INTENT(in) :: nc
-    INTEGER, INTENT(in) :: method_id     !< method to use to calc livegrass moisture content
-    REAL(wp), INTENT(in) :: ab_moisture(nc) !< Above-ground soil moisture [0 to 1]
-    TYPE(t_lfmc), INTENT(in) :: lfmc_par !< livegrass moisture parameters
-    TYPE(t_gsi), INTENT(in) :: gsi_par   !< Parameters used to calculate gsi phenology
-    REAL(wp), INTENT(in) :: tair(nc)     !< Air temperature [deg C]
-    REAL(wp), INTENT(in) :: sw_rad(nc)   !< Shortwave-downward radiation [W m-2]
-    REAL(wp), INTENT(in) :: water(nc)    !< Daily water availability: is a ratio between water
-    !< supply from soil moisture and atmospheric water demand [0 to 100]%
-    REAL(wp) :: mflg(nc)    ! Livegrass moisture [-]%
+    REAL(wp), ALLOCATABLE :: mf_lvg(:) !< Live grass fuel moisture [0 to 2.5]%
+    REAL(wp), ALLOCATABLE :: alphasdd(:) !<  [deg C-2]
+    INTEGER, PARAMETER :: ix_1hr=1, ix_10=2, ix_100hr=3, ix_clvg=4  ! litter 1hr, 10 hrs, 100 hrs and cured livegrass
+    INTEGER, PARAMETER :: ix_lvg=1, ix_wdy=2                        ! livegrass, woody
 
-    !< Calculate livegrass moisture when ROS oberagemann
-    IF (method_id == Q_DFIRE_LVG_OBERHAGEMANN) THEN
-      mflg = calc_mflg_ober(nc, lfmc_par, gsi_par, tair, sw_rad, water)
-    ELSE IF (method_id == Q_DFIRE_LVG_THONICKE) THEN
-      !< Thonicke et al. (2010), eq. B2
-      mflg = max(0._wp, (10._wp/9._wp) * ab_moisture - (1._wp / 9._wp) )
-    ELSE
-      CALL finish("update_fuel", "Unexpected live grass moisture content model found")
-    END IF ! is Q_DFIRE_ROS_OBERHAGEMANN
-  END FUNCTION calc_mflg
+    mf_lvg = calc_mflg_ober(lfmc_par, phen)
+    mf = t_mf(nc, ndd, nlv)
+    alphasdd = calc_alphas(sigmas_dd)
 
+    mf%dead(:,ix_1hr) = calc_omega(alphasdd(ix_1hr), nesterov_index) ! Same method as Thonicke et al. (2010), but declared obsolete though
+    mf%dead(:,ix_10hr) = calc_omega(alphasdd(ix_10hr), nesterov_index) !
+    mf%dead(:,ix_100hr) = calc_omega(alphasdd(ix_100hr), nesterov_index) !
+    mf%dead(:,ix_clvg) = mf%dead(:,ix_1hr) ! Same as in Oberhagemann et al. (2025), fuelload.c
+
+    mf%live(:,ix_lvg) = mf_lvg ! live grass
+    mf%live(:,ix_wdy) = 0._wp  ! Same method as Oberhagemann, not yet implemented.
+  END FUNCTION sf_calc_fuel_moisture_ober
 
 
   ! ======================================================================================================= !
   !>
-  !> calc_phenolgy_ober
+  !> calc_alphas
+  !> Calculate alphas from Thonicke et. al. (2010).
+  !> Alphas are the inverse proportion to their Surface-area-to-volume ratios. [deg Celsius-2]
+  !>
+  FUNCTION calc_alphas(sigmas) RESULT (alphas)
+    REAL(wp), INTENT(in)  :: sigmas(:) !< Surface-area-to-volume ratio [cm2/cm3]
+    REAL(wp), ALLOCATABLE :: alphas(:) !< Inverse proportionto to their SAV [deg Celsius-2]
+    REAL(wp), PARAMETER :: init_alpha = 0.001_wp
+    INTEGER :: isig
+    REAL(wp) :: ratio
+
+    ratio = 1.
+    ALLOCATE(alphas, mold=sigmas)
+
+    alphas(1) = init_alpha
+    DO isig = 2, SIZE(sigmas)
+      ratio = ratio * sigmas(isig-1) / sigmas(isig)
+      alphas(isig) = alphas(1) / ratio
+    END DO
+  END FUNCTION calc_alphas
+
+
+  ! ======================================================================================================= !
+  !>
+  !> calc_mflg_with_gsi_ober
   !> Calculate livegrass moisture based on Oberhagemann et al. (2025), related to equation 4.
   !>
-  FUNCTION calc_mflg_ober(nc, lfmc_par, gsi_par, tair, sw_rad, water) RESULT (mf_lg)
+  FUNCTION calc_mflg_with_gsi_ober(nc, lfmc_par, gsi_par, tair, sw_rad, water) RESULT (mf_lg)
     INTEGER, INTENT(in) :: nc
     TYPE(t_lfmc), INTENT(in) :: lfmc_par !< livegrass moisture parameters
     TYPE(t_gsi), INTENT(in) :: gsi_par   !< Parameters used to calculate gsi phenology
@@ -308,6 +344,24 @@ CONTAINS
     f_heat_old = f_heat
     f_water_old = f_water
     f_light_old = f_light
+
+    ! As paper's source code, eq. 4, todo: remove and rename to calc_gsi_phen
+    mf_lg = lfmc_par%b + lfmc_par%c * phen
+    WHERE (mf_lg < lfmc_par%min) mf_lg = lfmc_par%min !< set min value
+    WHERE (mf_lg > lfmc_par%max) mf_lg = lfmc_par%max !< up to 250% livegrass moisture
+  END FUNCTION calc_mflg_with_gsi_ober
+
+
+  ! ======================================================================================================= !
+  !>
+  !> calc_mflg_ober
+  !> Calculate livegrass moisture based on Oberhagemann et al. (2025), eq. 4.
+  !>
+  FUNCTION calc_mflg_ober(nc, lfmc_par, phen) RESULT (mf_lg)
+    INTEGER, INTENT(in) :: nc
+    TYPE(t_lfmc), INTENT(in) :: lfmc_par  !< livegrass moisture parameters
+    REAL(wp), INTENT(in) :: phen(nc)      !< Livegrass phenological status [0 to 1]
+    REAL(wp), ALLOCATABLE :: mf_lg(:)     ! Livegrass moisture [0.3 to 2.5]
 
     ! As paper's source code
     mf_lg = lfmc_par%b + lfmc_par%c * phen
