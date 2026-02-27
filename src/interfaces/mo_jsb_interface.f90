@@ -18,7 +18,7 @@ MODULE mo_jsb_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: message, finish !,message_text
+  USE mo_exception,           ONLY: message, finish !, message_text
   ! USE mo_util_string,         ONLY: int2string
 
   USE mo_jsb_control,         ONLY: debug_on, timer_on, l_timer_host, timer_jsbach, jsbach_runs_standalone
@@ -29,12 +29,13 @@ MODULE mo_jsb_interface
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
 #ifndef __NO_QUINCY__
-  USE mo_quincy_model_config, ONLY: QLAND, QCANOPY
+  USE mo_quincy_model_config, ONLY: QLAND, QCANOPY, QSOIL
 #endif
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
-  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_newday, &
-                                    is_time_experiment_start, is_time_restart
+  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_newday, get_year, &
+      &                             is_time_experiment_start, is_time_restart, execute_quincy_sb_accelerator_this_timestep, &
+      &                             executed_quincy_sb_accelerator_previous_timestep
   USE mo_jsb_physical_constants, ONLY: cvdifts
   USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
@@ -623,6 +624,7 @@ CONTAINS
     USE mo_sb_init,             ONLY : provide_n_and_p_deposition
     USE mo_q_syl_init,          ONLY : read_harvest_fraction
     USE mo_q_agr_init,          ONLY : read_fertiliser_input
+    USE mo_jsb_math_constants,  ONLY : eps1
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
@@ -631,6 +633,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),  POINTER :: model
     INTEGER                     :: no_omp_thread
+    INTEGER                     :: current_year     !< The current year (requried for Quincy SB_ slow-pool spinup-accelerator control)
+    INTEGER                     :: nr_years_passed  !< Years passed since start of Quincy SB_ slow-pool spinup-accelerator (if used)
+    INTEGER                     :: nr_of_executions !< How often the Quincy SB_ slow-pool spinup-accelerator could be executed (if used)
+                                                    !< given its intervall and its the start year
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_start_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
@@ -656,25 +662,58 @@ CONTAINS
     END IF
 
 #ifndef __NO_QUINCY__
-    IF (model%config%model_scheme == MODEL_QUINCY .AND. model%config%qmodel_id == QLAND) THEN
-
-      ! For the Q_SYL_ and the Q_AGR_ process data might have to be read once a year / at the beginning of a simulation
-      IF ((is_newyear(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime))) THEN
-        IF (model%processes(Q_SYL_)%p%config%active) THEN
-          CALL read_harvest_fraction(model_id, current_datetime)
-        END IF
-        IF (model%processes(Q_AGR_)%p%config%active) THEN
-          CALL read_fertiliser_input(model_id, current_datetime)
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      IF (model%config%qmodel_id == QLAND) THEN
+        ! For the Q_SYL_ and the Q_AGR_ process data might have to be read once a year / at the beginning of a simulation
+        IF ((is_newyear(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime))) THEN
+          IF (model%processes(Q_SYL_)%p%config%active) THEN
+            CALL read_harvest_fraction(model_id, current_datetime)
+          END IF
+          IF (model%processes(Q_AGR_)%p%config%active) THEN
+            CALL read_fertiliser_input(model_id, current_datetime)
+          END IF
         END IF
       END IF
 
-      ! For the SB process data on n and p deposition might have to be read once a year / at the beginning of a simulation
-      ! and might need to be updated once a month
-      IF ((is_newmonth(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime)) &
-          & .AND. model%processes(SB_)%p%config%active) THEN
-        CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
-      END IF
-    END IF
+      IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QSOIL) THEN
+        ! For the SB process data on n and p deposition might have to be read once a year / at the beginning of a simulation
+        ! and might need to be updated once a month
+        IF ((is_newmonth(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime)) &
+            & .AND. model%processes(SB_)%p%config%active) THEN
+          CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
+        END IF
+
+        ! For the SB process also check if the SB_ slow-pool spinup-accelerator has been or should be executed
+        IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
+          ! Check if it has been running in the previous timestep
+          IF (execute_quincy_sb_accelerator_this_timestep) THEN
+            execute_quincy_sb_accelerator_this_timestep = .FALSE.
+            executed_quincy_sb_accelerator_previous_timestep = .TRUE.
+          ELSE
+            executed_quincy_sb_accelerator_previous_timestep = .FALSE.
+          END IF
+
+          ! Check if it should be executed this timestep
+          IF (is_newyear(current_datetime, dtime)) THEN
+            current_year  = get_year(current_datetime)
+            IF (current_year >= model%config%slow_sb_pool_spinup_accelerator_start_year) THEN
+              ! 2. The year needs to be a multiple of the accelerator frequency
+              IF (MOD(current_year - model%config%slow_sb_pool_spinup_accelerator_start_year, &
+                  &     model%config%slow_sb_pool_spinup_accelerator_frequency) < eps1 ) THEN
+                ! 3. And the maximum number of executions should not be exceeded
+                nr_years_passed = current_year - model%config%slow_sb_pool_spinup_accelerator_start_year
+                nr_of_executions = nr_years_passed / model%config%slow_sb_pool_spinup_accelerator_frequency
+                IF (nr_of_executions < model%config%slow_sb_pool_spinup_accelerator_max_executions) THEN
+                  execute_quincy_sb_accelerator_this_timestep = .TRUE.
+
+                  CALL message(TRIM(routine), 'Execute QUINCY SB_ slow-pool spinup-accelerator this timestep.')
+                END IF
+              END IF
+            END IF
+          END IF ! IF new year
+        END IF ! IF running with SB_ slow-pool spinup-accelerator
+      END IF ! IF QSOIL or QLAND mode
+    END IF ! IF QUINCY MODEL
 #endif
 
     ! If this is .true., old graphs will be invalidated and the new ones will be captured
