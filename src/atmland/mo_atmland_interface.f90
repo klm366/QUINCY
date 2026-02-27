@@ -96,7 +96,7 @@ CONTAINS
     USE mtime,                     ONLY: datetime
     USE mo_time_config,            ONLY: time_config
     USE mo_jsb_time,               ONLY: get_secs_of_day, get_year, is_newyear
-    USE mo_iq_atm2land_process,    ONLY: update_local_time_and_daytime_counter, update_slow_sb_pool_accelerator_bookkeeping
+    USE mo_iq_atm2land_process,    ONLY: update_local_time_and_daytime_counter
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     USE mo_atmland_constants,      ONLY: def_co2_deltaC13, def_co2_deltaC14
 #endif
@@ -115,7 +115,7 @@ CONTAINS
 
     dsl4jsb_Def_memory(A2L_)
 
-    INTEGER  :: iblk, ics, ice, nc, i
+    INTEGER  :: iblk, ics, ice, nc, i, ic
     REAL(wp) :: dtime
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
@@ -127,10 +127,6 @@ CONTAINS
     TYPE(datetime),    POINTER :: mtime_current !< elapsed simulation time
     INTEGER  :: global_seconds_day, current_year
     REAL(wp) :: co2_dC13_constant, co2_dC14_constant
-    LOGICAL :: run_spinup_accelerator                    !< model configuration: if running with slow sb pool spin-up accelerator
-    INTEGER :: sb_pool_spinup_accelerator_max_executions !< bookkeeping configurations for the spin-up accelerator: max number of executions
-    INTEGER :: sb_pool_spinup_accelerator_frequency      !< bookkeeping configurations for the spin-up accelerator: frequency of executions
-    INTEGER :: sb_pool_spinup_accelerator_start_year     !< bookkeeping configurations for the spin-up accelerator: start year of executions
 #endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
@@ -179,9 +175,7 @@ CONTAINS
       & CO2_mixing_ratio_C14_ptr,             &
       & daytime_counter_ptr,                  &
       & daylength_prev_day_ptr,               &
-      & local_time_day_seconds_ptr,           &
-      & slow_sb_pool_accelerator_execute_ptr, &
-      & slow_sb_pool_accelerator_execution_counter_ptr
+      & local_time_day_seconds_ptr
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
@@ -200,14 +194,9 @@ CONTAINS
 
     IF (model_scheme == MODEL_QUINCY) THEN
 #ifndef __NO_QUINCY__
-
       mtime_current => time_config%tc_current_date
       global_seconds_day = NINT(get_secs_of_day(mtime_current))  ! TODO time steps w/ fractional seconds not supported by quincy, yet!
       current_year = get_year(mtime_current)
-      run_spinup_accelerator = model%config%flag_slow_sb_pool_spinup_accelerator
-      sb_pool_spinup_accelerator_max_executions = model%config%slow_sb_pool_spinup_accelerator_max_executions
-      sb_pool_spinup_accelerator_frequency = model%config%slow_sb_pool_spinup_accelerator_frequency
-      sb_pool_spinup_accelerator_start_year = model%config%slow_sb_pool_spinup_accelerator_start_year
 #endif
     END IF
 
@@ -336,10 +325,6 @@ CONTAINS
       daytime_counter_ptr         => dsl4jsb_var2D_onChunk(A2L_, daytime_counter)
       daylength_prev_day_ptr      => dsl4jsb_var2D_onChunk(A2L_, daylength_prev_day)
       local_time_day_seconds_ptr  => dsl4jsb_var2D_onChunk(A2L_, local_time_day_seconds)
-      IF (run_spinup_accelerator) THEN
-        slow_sb_pool_accelerator_execute_ptr           => dsl4jsb_var2D_onChunk(A2L_, slow_sb_pool_accelerator_execute)
-        slow_sb_pool_accelerator_execution_counter_ptr => dsl4jsb_var2D_onChunk(A2L_, slow_sb_pool_accelerator_execution_counter)
-      END IF
 
       IF (PRESENT(co2_dC13) .OR. PRESENT(co2_dC14)) THEN
         CALL finish(TRIM(routine), 'As soon as 13C or 14C are provided by the atmosphere,' &
@@ -594,22 +579,8 @@ CONTAINS
     IF (model_scheme == MODEL_QUINCY) THEN
 #ifndef __NO_QUINCY__
       ! Update local time and the daytime counter
-      CALL update_local_time_and_daytime_counter( &
-        &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter_ptr, daylength_prev_day_ptr, local_time_day_seconds_ptr)
-
-      ! In case that we run with spin-up acceleration we need to update the accelerator bookkeeping
-      IF (run_spinup_accelerator) THEN
-        ! in most years the spin-up will not be accelerated
-        slow_sb_pool_accelerator_execute_ptr(:) = 0.0_wp
-
-        IF (is_newyear(mtime_current, dtime)) THEN
-          CALL finish(TRIM(routine), 'This functionality has so far not been tested within a coupled run, but should be!')
-
-          CALL update_slow_sb_pool_accelerator_bookkeeping( dtime, current_year, &
-            & sb_pool_spinup_accelerator_max_executions, sb_pool_spinup_accelerator_frequency, sb_pool_spinup_accelerator_start_year, &
-            & slow_sb_pool_accelerator_execution_counter_ptr, slow_sb_pool_accelerator_execute_ptr)
-        END IF
-      END IF
+      CALL update_local_time_and_daytime_counter(global_seconds_day, dtime, lon, swpar_srf_down, &
+          &                                      daytime_counter_ptr, daylength_prev_day_ptr, local_time_day_seconds_ptr)
 #endif
     END IF
   END SUBROUTINE update_atm2land
