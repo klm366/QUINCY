@@ -33,31 +33,19 @@ MODULE mo_nix_memory_class
 
   PUBLIC :: t_nix_memory, max_no_of_vars
 
-
   INTEGER, PARAMETER :: max_no_of_vars = 7
 
 
   TYPE, EXTENDS(t_jsb_memory) :: t_nix_memory
 
-    TYPE(t_jsb_nix) :: tnix !< NIX memory variables
-
-! ! Main prognostic variables describing the state of the snow cover - Note: These are also input/output therefore  mandatory
-!    TYPE(t_jsb_var_real3d)  :: &
-!      &  t_sn                , & ! snow element temperature             [ K ]
-!      &  t_sn_n              , & ! snow nodal temperature               [ K ]
-!      &  theta_i_sn          , & ! volumetric ice content               [ - ]
-!      &  theta_w_sn          , & ! volumetric water content             [ - ]
-!      &  theta_a_sn          , & ! volumetric air content               [ - ]
-!      &  dzm_sn                  ! snow layer thickness                 [ m ]
-!
-!    TYPE(t_jsb_var_int2d)   :: &
-!      &  top_sn                  ! snow nodal temperature id             [ - ]
+    TYPE(t_jsb_nix)             :: tnix          !< NIX memory variables
 
   CONTAINS
 
    PROCEDURE :: Init => Init_nix_memory
 
   END TYPE t_nix_memory
+
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_nix_memory_class'
 
