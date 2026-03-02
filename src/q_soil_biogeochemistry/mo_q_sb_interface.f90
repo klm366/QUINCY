@@ -696,7 +696,7 @@ CONTAINS
           &  total_som_c_gsum = global_sum_array(sb_pool_total_c_2d(:,:) * scaling(:,:))
     ! Calculate global carbon inventories, if requested for output
     !  => Conversion from [mol(N)/m^2] to [TgN]
-    !     1 mol C = molar_mass_N g N   => 1 Pg N = molar_mass_N * e-12
+    !     1 mol N = molar_mass_N g N   => 1 Pg N = molar_mass_N * e-12
     scaling(:,:) = molar_mass_N * 1.e-12_wp * notsea(:,:) * area(:,:) * in_domain(:,:)
     IF (SB__mem%total_som_c_gsum%is_in_output) &
           &  total_inorg_n_gsum = global_sum_array(total_soil_inorg_n_2d(:,:) * scaling(:,:))
@@ -711,9 +711,9 @@ CONTAINS
     IF (SB__mem%nbp_gsum%is_in_output)   &
           &  nbp_gsum         = global_sum_array(net_biosphere_production(:,:) * scaling(:,:))
     !  => Conversion from [mumol(N)/m^2/s] to [TgN/yr]
-    !     1 mol C = molar_mass_N g N   => 1 Tg N = molar_mass_N * e-12 * e-6
+    !     1 mol N = molar_mass_N g N   => 1 Tg N = molar_mass_N * e-12 * e-6
     !     1 s times one_day (60*60*24) time one_year (365)
-    scaling(:,:) = molar_mass_C * 1.e-18_wp * one_day * one_year * notsea(:,:) * area(:,:) * in_domain(:,:)
+    scaling(:,:) = molar_mass_N * 1.e-18_wp * one_day * one_year * notsea(:,:) * area(:,:) * in_domain(:,:)
     IF (SB__mem%fnloss_gsum%is_in_output) &
           &  fnloss_gsum      = global_sum_array(ecosystem_total_n_loss(:,:) * scaling(:,:))
     IF (SB__mem%fn2o_gsum%is_in_output) &

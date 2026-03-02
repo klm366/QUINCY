@@ -63,6 +63,7 @@ CONTAINS
     USE mo_jsb_process_class,      ONLY: A2L_, SEB_, TURB_, HYDRO_, HYDRO_, VEG_, SSE_, Q_ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
+    USE mo_jsb_time,               ONLY: execute_quincy_sb_accelerator_this_timestep
     USE mo_jsb_math_constants,     ONLY: eps1, eps8
     USE mo_sb_constants
     USE mo_q_sb_jsm_processes,     ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_Psorption_parameter, &
@@ -141,7 +142,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: noy_n15_deposition
     dsl4jsb_Real2D_onChunk :: p_deposition
     dsl4jsb_Real2D_onChunk :: ndep_mavg
-    dsl4jsb_Real2D_onChunk :: slow_sb_pool_accelerator_execute
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: f_n_demand
     dsl4jsb_Real2D_onChunk :: f_p_demand
@@ -433,9 +433,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      noy_n15_deposition)          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      ndep_mavg)                   ! in
-    IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
-      dsl4jsb_Get_var2D_onChunk(A2L_,      slow_sb_pool_accelerator_execute)  !in
-    ENDIF
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_,   f_n_demand)                     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_,   f_p_demand)                     ! in
@@ -1226,19 +1223,15 @@ CONTAINS
     biological_n_fixation(:)    = biological_n_fixation &
       &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)
 
-    !> 15.0 spin-up accelerator
+    !> 15.0 SB_ slow-pool spin-up accelerator
     !>
     IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
       SELECT CASE(model%config%qmodel_id)
       ! only execute spin-up accelerator when running in LAND or SOIL mode
       CASE(QLAND, QSOIL)
-        DO ic = 1,nc
-          ! Determine if running a spin-up with acceleration
-          IF (ABS(slow_sb_pool_accelerator_execute(ic) - 1.0_wp) < eps8) THEN
-            IF (debug_on() .AND. iblk == 1 .AND. ic == 1) &
-              & CALL message(TRIM(routine), 'Accelerate spin up for '//TRIM(tile%name)//' ...', all_print=.TRUE.)
-
-            ! accelerate spinup
+        IF (execute_quincy_sb_accelerator_this_timestep) THEN
+          DO ic = 1,nc
+            ! run SB_ slow-pool spinup-accelerator
             IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
               ! simple_1d: residual pool
               CALL calc_accelerated_slow_soil_pool_spinup(nsoil_w, dtime, soil_depth_sl(ic,:), &
@@ -1263,8 +1256,8 @@ CONTAINS
                 &       assoc_dom_c_loss_mavg_sl(ic,:), &
                 &       sb_pool_mt(ix_dom_assoc,:,ic,:))
             END IF ! simple soil or jsm
-          END IF
-        END DO
+          END DO
+        END IF
       END SELECT
     END IF
 
