@@ -767,7 +767,7 @@ CONTAINS
     USE mo_jsb_subset,                ONLY: ON_CHUNK
 
 #ifndef __NO_QUINCY__
-    USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter, update_slow_sb_pool_accelerator_bookkeeping
+    USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter
     USE mo_quincy_model_config,       ONLY: QCANOPY, QSOIL
     USE mo_isotope_util,              ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     dsl4jsb_Use_processes A2L_, HYDRO_, SPQ_

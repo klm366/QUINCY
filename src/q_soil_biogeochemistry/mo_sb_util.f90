@@ -442,6 +442,8 @@ CONTAINS
     USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
     USE mo_jsb_time,                ONLY: t_datetime, get_date_components, get_year_day
 
+    USE mo_util,                    ONLY: int2string
+
     dsl4jsb_Use_processes SB_
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(VEG_)
@@ -524,7 +526,7 @@ CONTAINS
     year_instant = get_year_day(options%current_datetime)
     yearday = INT(year_instant)
     ith_timestep = IMerge_TIME2Sec(yearday, hour, minute, second)/int(dtime) + 1 ! the row number of current timestep in forcing file
-
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading the forcing at timestep '//int2string(ith_timestep)//' ... at day '//int2string(yearday)//' ...')
     !> 1.0 the first soil forcing file
     ! ----------------------------------------------------------------------------------------------------- !
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%soilphysics_forcing_filename), model%grid_id)
@@ -662,7 +664,7 @@ CONTAINS
     INTEGER, INTENT(in) :: kd, kh, km, ks
     INTEGER             :: ix
 
-    ix = kd*86400 + kh*3600 + km*60 + ks
+    ix = (kd-1)*86400 + kh*3600 + km*60 + ks
 
   END FUNCTION IMerge_TIME2Sec
 #endif
