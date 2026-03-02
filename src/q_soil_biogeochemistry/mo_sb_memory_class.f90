@@ -1638,10 +1638,10 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., lrestart_cont=.TRUE., &
+        & initval_r = 1.0_wp)
 
       CALL mem%Add_var('rmm_decomposition', mem%rmm_decomposition, &
         & hgrid, vgrid_soil_w, &
@@ -2650,7 +2650,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE.,lrestart_cont=.TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('ph_old', mem%ph_old, &
         & hgrid, surface, &
@@ -2661,7 +2662,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., lrestart_cont=.TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('qmax_org', mem%qmax_org, &
         & hgrid, vgrid_soil_w, &
@@ -3103,7 +3105,8 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., lrestart_cont=.TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('vmax_weath_mineral_sl', mem%vmax_weath_mineral_sl, &
         & hgrid, vgrid_soil_w, &

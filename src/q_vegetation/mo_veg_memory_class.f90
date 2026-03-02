@@ -2427,10 +2427,10 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., lrestart_cont=.TRUE., &
+        & initval_r = 1.0_wp)
 
       CALL mem%Add_var('fleaf_sunlit_daytime_cl', mem%fleaf_sunlit_daytime_cl, &
         & hgrid, vgrid_canopy_q_assimi, &

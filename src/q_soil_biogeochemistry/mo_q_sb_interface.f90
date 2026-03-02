@@ -529,6 +529,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, ph_sl                       , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, ph_old                      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, delta_ph                    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rph_decomposition           , weighted_by_fract)
 
     ! VEG_ fluxes
     dsl4jsb_Aggregate_onChunk(VEG_,   net_biosphere_production      , weighted_by_fract)

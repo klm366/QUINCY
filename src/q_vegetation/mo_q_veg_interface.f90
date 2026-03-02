@@ -683,6 +683,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_fine_root_c        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_fine_root_n        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_fine_root_p        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, ph_fine_root_factor_acc     , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggregate_veg_pools
