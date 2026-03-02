@@ -1240,7 +1240,7 @@ CONTAINS
         & t_cf('wtr_rootzone_scool_pot', 'm', 'Potentially supercooled water content in root zone'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
         & prefix, suffix,                                                                            &
-        & lrestart=lrestart_local,                                                                   &
+        & lrestart=lrestart_local, lrestart_cont=.TRUE.,                                             &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_rootzone_scool_act', mem%wtr_rootzone_scool_act,            &
