@@ -307,19 +307,7 @@ MODULE mo_sb_memory_class
                             assoc_dom_c14_form_mavg_sl, &         !< time-averaged associated dom C formation rate [micro-mol m-3 s-1]
                             residue_som_c_loss_mavg_sl, &         !< time-averaged residual som C loss rate [micro-mol m-3 s-1]
                             residue_assoc_som_c_loss_mavg_sl, &   !< time-averaged residual associated som C loss rate [micro-mol m-3 s-1]
-                            assoc_dom_c_loss_mavg_sl, &           !< time-averaged associated dom C loss rate [micro-mol m-3 s-1]
-                            litter_formation_poly_c_sl, &         !< formation rate of polymeric litter [mol C m-2 s-1]
-                            litter_formation_woody_c_sl, &        !< formation rate of woody litter [mol C m-2 s-1]
-                            litter_formation_soluble_c_sl, &      !< formation rate of soluble litter [mol C m-2 s-1]
-                            litter_formation_poly_n_sl, &         !< formation rate of polymeric litter [mol N m-2 s-1]
-                            litter_formation_woody_n_sl, &        !< formation rate of woody litter [mol N m-2 s-1]
-                            litter_formation_soluble_n_sl, &      !< formation rate of soluble litter [mol N m-2 s-1]
-                            litter_formation_poly_p_sl, &         !< formation rate of polymeric litter [mol P m-2 s-1]
-                            litter_formation_woody_p_sl, &        !< formation rate of woody litter [mol P m-2 s-1]
-                            litter_formation_soluble_p_sl         !< formation rate of soluble litter [mol P m-2 s-1]
-
-
-
+                            assoc_dom_c_loss_mavg_sl              !< time-averaged associated dom C loss rate [micro-mol m-3 s-1]
     !------------------------------------------------------------------------------------------------------ !
     !>3D JSM pools | microbe, mineral-associated organic matter (Jena Soil Model)
     !>
