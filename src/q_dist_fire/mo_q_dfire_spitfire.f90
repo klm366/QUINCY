@@ -626,13 +626,6 @@ CONTAINS
     LOGICAL  :: has_fire_conditions(nc)     !< 1, 10, 100 and 1000 hours
     REAL(wp) :: tot_lvt_fuel(nc)            !< Total amount of live tree fuel [g DM m-2]
 
-    !< Oberhagemann related
-    REAL(wp) :: woi_ddm(nc,df_sf_fc_spread_nr)  !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, dimensions reversed
-    REAL(wp) :: woi_dd(nc,df_sf_sigma_dd_nr)    !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, dimensions reversed
-    REAL(wp) :: woi_lv(nc,df_sf_sigma_lv_nr)    !< [kg DM m-2] (#fuel classes, #nc) Note: in kg, ...
-    REAL(wp) :: me_dd(nc)                       !< Moisture of extinction [-] (#nc)
-    REAL(wp) :: mf_dd(nc,df_sf_sigma_dd_nr)     !< Fuel moisture [-] (#nc,#fuel classes)
-    REAL(wp) :: mf_lv(nc,df_sf_sigma_lv_nr)
 
     !< Thonicke related
     REAL(wp), ALLOCATABLE :: dead_fuel_litter(:,:) !< Dead fuel litter [g DM m-2] (#nc,#fuel classes-1,10,100-)
@@ -690,6 +683,24 @@ CONTAINS
                                     spitfire%ros, &
                                     mask=has_fire_conditions) !< optional
     ELSE IF (ros_model == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+      DO CONCURRENT (i=1:SIZE(live_tree_fuel,2), j=1:SIZE(live_tree_fuel,3)) !2=fuel pools, 3=fuel classes
+        tot_live_tree_fuel = SUM(live_tree_fuel(:,i,j)) ! sum multiple dimensions
+      END DO
+
+      CALL calc_spitfire_oberhagemann(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
+          df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
+          df_sigmas_dead, df_sigmas_live, &
+          nesterov_index, &
+          lctlib_fuel_bulk_density, &
+          moisture_extinction, &
+          u_f_wind, &
+          dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
+          tot_dead_fuel_grass, & ! (#nc) 1 hour only
+          tot_live_fuel_tree, & ! total live fuel tree (#nc)
+          fuel_moisture, & ! outputs
+          spitfire % fdi, &
+          soutfure % ros, &
+          mask = has_fire_conditions) ! optional
     ELSE
     END IF
 
@@ -807,38 +818,62 @@ CONTAINS
   !>
   !> Calculate spitfire Oberhagemann's implementation
   !>
-  SUBROUTINE calc_spitfire_oberhagemann()
-    !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
-    w_oi = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
-    dry_lvg = SUM(dead_fuel(:,ixs_sf_dead_livegrass_fuel_pools,:), DIM=2)
-    tot_lvg_fuel = SUM(dry_lvg, DIM=2) ! 2 = fuel classes
+  !>
+  !>
+  SUBROUTINE calc_spitfire_oberhagemann(nc, ndd, nlv, nsigdd, nsiglv, &
+                  sigmas_dd, sigmas_lv, &
+                  nesterov_index, &
+                  fuel_bulk_density, &
+                  moisture_extinction, &
+                  u_f_wind, &
+                  dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
+                  tot_dead_fuel_grass, & ! (#nc) 1 hour only
+                  tot_live_fuel_tree, & ! total live fuel tree (#nc)
+                  fuel_moisture, & ! outputs
+                  fdi, &
+                  ros, &
+                  mask) ! optional
+
+    INTEGER, INTENT(in) :: nc, ndd, nlv
+    INTEGER, INTENT(in) :: nsigdd, nsiglv
+    REAL(wp), INTENT(in) :: sigmas_dd(:), sigmas_lv(:) !< Surface area to volume ratio [cm2/cm3]
+    REAL(wp), INTENT(in) :: nesterov_index(:) !< Dryness index [deg C2]
+    REAL(wp), INTENT(in) :: fuel_bulk_density(:) !< Fuel bulk density [kg m-3]
+    REAL(wp), INTENT(in) :: moisture_extinction(:) !< Dead moisture of extinction [%]
+    REAL(wp), INTENT(in) :: u_f_wind(:) !< Wind speed at vegetation cover [m min-1]
+    REAL(wp), INTENT(in) :: dead_fuel_litter(:,:) !< [g DM m-2] (#nc,#Spread fuel classes-1,10,100 hours-)
+    REAL(wp), INTENT(in) :: tot_dead_fuel_grass(:) !< [g DM m-2]
+    REAL(wp), INTENT(in) :: tot_live_fuel_tree(:) !< [g DM m-2]
+    TYPE(t_mf), INTENT(out) :: fuel_moisture !< Fuel moisture
+    REAL(wp), INTENT(out) :: fdi(:) !< Fire danger index [%]
+    TYPE(t_sf_ros), INTENT(out) :: ros !< Rate of spread [-]
+    LOGICAL, OPTIONAL :: mask(:) !< True: gridcell enabled
+
+    REAL(wp) :: woi_dd(nc,nsigdd)    !< [kg DM m-2] (#nc, #sigma classes-1,10,100hrs,cured lvg-) Note: in kg
+    REAL(wp) :: woi_lv(nc,nsiglv)    !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
+    REAL(wp) :: me_dd(nc)            !< Dead moisture of extinction [-] (#nc)
+    REAL(wp) :: me_lv(nc)            !< Live moisture of extinction [-] (#nc)
+    REAL(wp) :: mf_dd(nc,nsigdd)     !< Fuel moisture [-] (#nc,#sigma classes)
+    REAL(wp) :: mf_lv(nc,nsiglv)
+
+    INTEGER, PARAMETER :: ix_sigdd_lvg = 4
+    INTEGER, PARAMETER :: ix_siglv_lvg = 1
+    INTEGER, PARAMETER :: ix_siglv_wdy = 2
 
     fuel_moisture = sf_calc_fuel_moisture_ober(nc, ndd, nlv, &
                       nsigdd, nsiglv, &
                       sigmas_dd, sigmas_lv, &
                       nesterov_index)
 
-    !< Oberhagemann related variables
-    !< dead fuel (1 hr, 10 hrs, 100 hrs litter and dry livegrass)
-    woi_dd(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx) = w_oi * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
-    woi_dd(:,4) = dry_lvg(:,df_sf_fc_1hr_idx) * df_sf_units_g_to_kg  !< 4 = dry livegrass
-    !< mixed dead fuel (1 hr+livg, 10 hrs, 100 hrs)
-    woi_ddm(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx) = woi_dd(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx)
-    woi_ddm(:,df_sf_fc_1hr_idx) = woi_ddm(:,df_sf_fc_1hr_idx) +  woi_dd(:,4) !< 4= dry livegrass index
-    !< Oberhagemann related variables
-    !< (Wet livegrass implemented, woody)
-    !< Wet livegrass is:
-    !< -Not accounted in Thonicke's et al. 2010)
-    !< -Not yet implemented in Oberhagemann
-    DO CONCURRENT (i=1:SIZE(live_tree_fuel,2), j=1:SIZE(live_tree_fuel,3)) !2=fuel pools, 3=fuel classes
-      tot_lvt_fuel = SUM(live_tree_fuel(:,i,j)) ! sum multiple dimensions
-    END DO
-    woi_lv(:,1) = 0._wp !< 1 = wet livegrass, not yet implemented
-    woi_lv(:,2) = tot_lvt_fuel * df_sf_units_g_to_kg !< 2= woody fuel
+    woi_dd(:,:) = dead_fuel_litter * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
+    woi_dd(:,ix_sigdd_lvg) = tot_dead_fuel_grass * df_sf_units_g_to_kg  !< 4 = dry livegrass
+
+    woi_lv(:,ix_siglv_lvg) = 0._wp !< 1 = wet livegrass, not yet implemented
+    woi_lv(:,ix_siglv_wdy) = tot_live_fuel_tree * df_sf_units_g_to_kg !< 2= woody fuel
 
     ! Oberhagemann: fuel moisture
-    mf_dd = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=2, NCOPIES=df_sf_sigma_dd_nr ) ! litter [1hr, 10hrs, 100 hours, dry livegrass]
-    mf_lv = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=2, NCOPIES=df_sf_sigma_lv_nr ) ! todo: compute as in Andrews PL 2018
+    mf_dd = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=2, NCOPIES=nsigdd ) ! litter [1hr, 10hrs, 100 hours, dry livegrass]
+    mf_lv = SPREAD( fuel_moisture(:,df_sf_omega_o_idx), DIM=2, NCOPIES=nsiglv )
 
     me_dd = moisture_extinction
     me_lv = calc_live_me(nc, ndd, nlv, mf_dd, me_dd, woi_dd, woi_lv, df_sigmas_dead, df_sigmas_live, mask)
@@ -856,7 +891,7 @@ CONTAINS
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
     !> Eq. 8 from Thonicke et al. (2010)
     WHERE(moisture_extinction > 0._wp)
-      spitfire % fdi = max(0._wp, 1._wp  - (fuel_moisture(:, df_sf_omega_o_idx) / moisture_extinction))
+      fdi = max(0._wp, 1._wp  - (fuel_moisture(:, df_sf_omega_o_idx) / moisture_extinction))
     ENDWHERE
 
   END SUBROUTINE calc_spitfire_oberhagemann
