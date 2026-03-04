@@ -166,6 +166,7 @@ CONTAINS
                                   me_dd, me_lv, &
                                   fbd, &
                                   u_f_wind, &
+                                  fm_weighted, &
                                   mask) RESULT(ros)
     INTEGER, INTENT(in) :: nc
     !< number of dead fuel classes (1h, 10hrs, 100 hrs, dry livegrass)
@@ -177,6 +178,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: me_dd(nc), me_lv(nc) !< Moisture of extinction [-]
     REAL(wp), INTENT(in) :: fbd(nc) !< Fuel bulk density [kg/m3]
     REAL(wp), INTENT(in) :: u_f_wind(nc) !< Wind speed at midflame height [m min-1]
+    REAL(wp), INTENT(out) :: fm_weighted(nc) !< Fuel moisture weighted over all fuel classes [%]
     LOGICAL, INTENT(in)  :: mask(nc)
     TYPE(t_sf_ros)       :: ros !< Output: rate of spread [m min-1]
 
@@ -240,6 +242,7 @@ CONTAINS
         ! - moisture content
         mf%d(ic) = SUM(wfactors%fij%d(ic,:) * mf_dd(ic,:))
         mf%l(ic) = SUM(wfactors%fij%l(ic,:) * mf_lv(ic,:))
+        mf%total(ic) = wfactors%fi%l(ic) * mf%l(ic) + wfactors%fi%d(ic) * mf%d(ic)
         ! - moisture dampening coefficient (oberhagemann et al. (2025))
         rm%d(ic) = MIN(1._wp, mf%d(ic) / me_dd(ic))
         rm%l(ic) = MIN(1._wp, mf%l(ic) / me_lv(ic))
@@ -315,6 +318,7 @@ CONTAINS
     !ros%net_fuel_load = wn ! dead, live
     !ros%moist_damp_coeff  = eta_m  ! dead, live
     ros%mineral_damp_coeff = df_sf_mineral_damp_coeff
+    fm_weighted = mf%total
 
   END FUNCTION sf_calc_rate_of_spread_ober
 
@@ -426,7 +430,7 @@ CONTAINS
     REAL(wp) :: wdead_sum(nc), wlive_sum(nc) !< dead/live fuel load [kg DM m-2]
     REAL(wp) :: mfdead(nc) !< fine dead fuel moisture [-]
     INTEGER, PARAMETER :: ndd_ff = 2 !< number of fine dead fuel moisture (1hr, livegrass)
-    INTEGER, PARAMETER :: ix_ff(ndd_ff) = [1,4] !< 1=1hr, 4=live grass
+    INTEGER, PARAMETER :: ix_ff(ndd_ff) = [1,4] !< 1=1hr, 4=dead live grass
 
     w = 0._wp
     mfdead = 0._wp

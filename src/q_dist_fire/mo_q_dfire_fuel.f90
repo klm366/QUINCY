@@ -53,7 +53,7 @@ MODULE mo_q_dfire_fuel
   USE mo_q_dfire_constants,     ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx, &
                                         df_sf_fc_spread_nr !< Spread fuel classes: 1, 10 and 100 hours
   USE mo_q_dfire_constants,     ONLY: ratio_as_dead_fuel !< variable sb pool ratios to dead fuel
-  USE mo_q_dfire_constants,     ONLY: df_sf_sl_indices => sl_ixs, df_sf_sl_dims_nr
+  USE mo_q_dfire_constants,     ONLY: df_sf_sl_dims_nr
 
   USE mo_lnd_bgcm_idx,          ONLY: ixC
   USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter
@@ -69,7 +69,7 @@ MODULE mo_q_dfire_fuel
 
   USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
   USE mo_q_dfire_constants,     ONLY: df_sf_units_k_to_c
-  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg, t_gsi, t_lfmc
+!  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg, t_gsi, t_lfmc
 
   IMPLICIT NONE
 
@@ -78,8 +78,8 @@ MODULE mo_q_dfire_fuel
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel'
 
-  TYPE(t_gsi), SAVE, ALLOCATABLE :: gsi_par
-  TYPE(t_lfmc), SAVE, ALLOCATABLE :: lfmc_par
+!  TYPE(t_gsi), SAVE, ALLOCATABLE :: gsi_par
+!  TYPE(t_lfmc), SAVE, ALLOCATABLE :: lfmc_par
 
 CONTAINS
 

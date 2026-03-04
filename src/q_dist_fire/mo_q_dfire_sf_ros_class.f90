@@ -112,15 +112,15 @@ CONTAINS
     ELSE IF (ros_model == Q_DFIRE_ROS_OBERHAGEMANN) THEN
       me_lv = calc_live_me(nc, ndd, nlv, mf_dd, me_dd, woi_dd, woi_lv, df_sigmas_dead, df_sigmas_live, mask)
 
-      ros = sf_calc_rate_of_spread_ober(&
-                    nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
-                    df_sigmas_dead, df_sigmas_live, &
-                    woi_dd, woi_lv, & ! fuel
-                    mf_dd, mf_lv, &
-                    me_dd, me_lv, &
-                    fuel_bulk_density, &
-                    u_f_wind, &
-                    mask)
+!      ros = sf_calc_rate_of_spread_ober(&
+!                    nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
+!                    df_sigmas_dead, df_sigmas_live, &
+!                    woi_dd, woi_lv, & ! fuel
+!                    mf_dd, mf_lv, &
+!                    me_dd, me_lv, &
+!                    fuel_bulk_density, &
+!                    u_f_wind, &
+!                    mask)
     ELSE
       CALL finish("sf_calc_rate_of_spread", "Unexpected Rate of spread model found")
     END IF

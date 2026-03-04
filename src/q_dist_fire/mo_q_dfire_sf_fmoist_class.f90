@@ -34,7 +34,7 @@ MODULE mo_q_dfire_sf_fmoist_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_fuel_moisture, t_gsi_param, t_gsi, t_lfmc
+  PUBLIC :: sf_calc_fuel_moisture, sf_calc_fuel_moisture_ober, t_gsi_param, t_gsi, t_lfmc, t_mf
 
   !> GSI parameters
   TYPE :: t_gsi_param
@@ -68,13 +68,32 @@ MODULE mo_q_dfire_sf_fmoist_class
     !< oberhagemann et al. (2025)
     REAL(wp), ALLOCATABLE :: dead(:,:) !< dead fuel moisture (#nc,#dead fuel moisture -1hr, 10hrs, 100hrs, dry livegrass- )
     REAL(wp), ALLOCATABLE :: live(:,:) !< live fuel moisture (wet livegrass, woody)
-    !< thonicke et al. (2010)
-    REAL(wp), POINTER :: thonicke(:,:) !< fuel moisture (mixed-1,10,100 and lvg-, fine fuels-1hr and lvg-)
+    !< Weighted fuel moisture
+    REAL(wp), POINTER :: val(:) !< weighted fuel moisture (mixed-1,10,100 and lvg-, fine fuels-1hr and lvg-)
   END TYPE t_mf
+
+  INTERFACE t_mf
+    MODULE PROCEDURE :: create_t_mf
+  END INTERFACE
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 CONTAINS
 
+  !>
+  !> t_mf constructor
+  !>
+  FUNCTION create_t_mf(nc, ndd, nlv) RESULT (mf)
+    INTEGER, INTENT(in) :: nc, ndd, nlv
+    TYPE(t_mf) :: mf
+
+    ALLOCATE(mf%dead(nc,ndd))
+    ALLOCATE(mf%live(nc,nlv))
+    mf%dead = 0._wp
+    mf%live = 0._wp
+  END FUNCTION create_t_mf
+
+
+  ! ======================================================================================================= !
   !>
   !> t_lfmc constructor
   !>
@@ -207,7 +226,7 @@ CONTAINS
 
     !< Mixed 1 hour fuel class and livegrass
     omegas(df_sf_omega_nl_idx) = stats_average_weight(nr_fine_fuels, &
-                                                        [lvg_moisture, omega_1hr], &
+                                                        [omega_lvg, omega_1hr], &
                                                         [live_fuel_lvg, dead_fuel_1hr] )
 
     !< Calculate omega_o (1, 10, 100 and 1000 hours dead fuel + live grass)
@@ -247,24 +266,23 @@ CONTAINS
   !> Calculate the fuel moisture as in Oberhagemann et al. (2025)
   !>
   FUNCTION sf_calc_fuel_moisture_ober(nc, ndd, nlv, &
-                                        nsigdd, nsiglv, &
-                                        sigmas_dd, sigmas_lv, &
-                                        nesterov_index, &
-                                        lfmc_par, phen) RESULT (mf)
+                                        sigmas_dd, &
+                                        nesterov_index) &
+!                                        lfmc_par, phen) &
+                                        RESULT (mf)
     INTEGER, INTENT(in)       :: nc, ndd, nlv
-    INTEGER, INTENT(in)       :: nsigdd, nsiglv
-    REAL(wp), INTENT(in)      :: sigmas_dd, sigmas_lv    !< surface area to voluem ratio for dead and live fuels [?]
+    REAL(wp), INTENT(in)      :: sigmas_dd(:)            !< surface area to voluem ratio for dead and live fuels [cm2/cm3]
     REAL(wp), INTENT(in)      :: nesterov_index(nc)      !< Nesterov index = Dryness index [Celsius^2]
-    TYPE(t_lfmc), INTENT(in)  :: lfmc_par                !< livegrass moisture parameters
-    REAL(wp), INTENT(in)      :: phen(nc)                !< Livegrass phenological status [0 to 1]
+!    TYPE(t_lfmc), INTENT(in)  :: lfmc_par                !< livegrass moisture parameters
+!    REAL(wp), INTENT(in)      :: phen(nc)                !< Livegrass phenological status [0 to 1]
     TYPE(t_mf) :: mf
 
     REAL(wp), ALLOCATABLE :: mf_lvg(:) !< Live grass fuel moisture [0 to 2.5]%
     REAL(wp), ALLOCATABLE :: alphasdd(:) !<  [deg C-2]
-    INTEGER, PARAMETER :: ix_1hr=1, ix_10=2, ix_100hr=3, ix_clvg=4  ! litter 1hr, 10 hrs, 100 hrs and cured livegrass
+    INTEGER, PARAMETER :: ix_1hr=1, ix_10hr=2, ix_100hr=3, ix_clvg=4  ! litter 1hr, 10 hrs, 100 hrs and cured livegrass
     INTEGER, PARAMETER :: ix_lvg=1, ix_wdy=2                        ! livegrass, woody
 
-    mf_lvg = calc_mflg_ober(lfmc_par, phen)
+!    mf_lvg = calc_mflg_ober(nc, lfmc_par, phen)
     mf = t_mf(nc, ndd, nlv)
     alphasdd = calc_alphas(sigmas_dd)
 
@@ -273,7 +291,7 @@ CONTAINS
     mf%dead(:,ix_100hr) = calc_omega(alphasdd(ix_100hr), nesterov_index) !
     mf%dead(:,ix_clvg) = mf%dead(:,ix_1hr) ! Same as in Oberhagemann et al. (2025), fuelload.c
 
-    mf%live(:,ix_lvg) = mf_lvg ! live grass
+    mf%live(:,ix_lvg) = 0._wp !mf_lvg ! todo: live grass
     mf%live(:,ix_wdy) = 0._wp  ! Same method as Oberhagemann, not yet implemented.
   END FUNCTION sf_calc_fuel_moisture_ober
 
