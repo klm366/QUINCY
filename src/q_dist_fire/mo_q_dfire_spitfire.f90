@@ -631,12 +631,12 @@ CONTAINS
     LOGICAL  :: has_fire_conditions(nc)     !< 1, 10, 100 and 1000 hours
     REAL(wp) :: tot_lvt_fuel(nc)            !< Total amount of live tree fuel [g DM m-2]
 
-
     !< Thonicke related
     REAL(wp), ALLOCATABLE :: dead_fuel_litter(:,:) !< Dead fuel litter [g DM m-2] (#nc,#fuel classes-1,10,100-)
     REAL(wp), ALLOCATABLE :: dead_fuel_grass(:,:) !< Dead fuel grass [g DM m-2] (#nc,#fuel classes-1,10,100,1000-)
     REAL(wp), ALLOCATABLE :: tot_dead_fuel_grass(:) !< Total dead fuel grass [g DM m-2] (#nc)
     REAL(wp), ALLOCATABLE :: tot_live_fuel_tree(:) !< Total live fuel tree [g DM m-2] (#nc)
+    REAL(wp), ALLOCATABLE :: w_all(:,:) !< fuel moisture (or omega) [%] (#nc,#fuel classes-1,10,100,1000hrs-)
     !< Oberhagemann related
     TYPE(t_mf), ALLOCATABLE :: fuel_moisture_ober
     !< ROS related
@@ -714,7 +714,7 @@ CONTAINS
           mask = has_fire_conditions) ! optional
 
 ! TODO: fuel moisture passed to main structure
-!      fuel_moisture = 
+!      fuel_moisture =
     ELSE
       CALL finish("calc_spitfire", "Unexpected fire sub-model found")
     END IF
@@ -740,10 +740,28 @@ CONTAINS
                           spitfire % area_burned_fract, & !< out
                           mask=has_fire_conditions) !< in, optional
 
+    IF (config_ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
+      ALLOCATE(w_all(nc,nfuelclasses))
+      ASSOCIATE(w_o => fuel_moisture(:,df_sf_omega_o_idx), w_nl => fuel_moisture(:,df_sf_omega_nl_idx))
+        w_all(:,1) = w_nl ! 1hr
+        w_all(:,2) = w_o ! 10hrs
+        w_all(:,3) = w_o ! 100hrs
+        w_all(:,4) = w_o ! 1000hrs
+      END ASSOCIATE
+    ELSE IF (config_ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+      ALLOCATE(w_all(nc,nfuelclasses))
+      w_all(:,1) = fuel_moisture_ober%dead(:,1) ! 1hr
+      w_all(:,2) = fuel_moisture_ober%dead(:,1) ! 10hr
+      w_all(:,3) = fuel_moisture_ober%dead(:,1) ! 100hr
+      w_all(:,4) = fuel_moisture_ober%val(:)    ! for 1000hr
+    ELSE
+      CALL finish("calc_spitfire", "Unexpected fire sub-model found")
+    END IF
+
     !< Fraction of consumption used to calculate dead fuel consumption (Thonicke et al. (2010),
     !< extracted from equations B1, B4, B5 and B6)
-    spitfire % dead_frac_consump = sf_calc_frac_consump(nc, nfuelclasses, moisture_extinction, &
-                                                      fuel_moisture, mask=has_fire_conditions)
+    spitfire % dead_frac_consump = sf_calc_frac_consump_ober(nc, nfuelclasses, moisture_extinction, &
+        w_all, mask=has_fire_conditions)
 
     !< Calculate dead fuel consumption for the 1h, 10h and 100h fuel classes,
     !< following Thonicke et al. (2010), Appendix B. and well as custom modifications.

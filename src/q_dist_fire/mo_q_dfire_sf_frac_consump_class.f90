@@ -48,24 +48,20 @@ CONTAINS
     INTEGER, INTENT(in)                   :: nc                            !< Total number of gridcell(s)
     INTEGER, INTENT(in)                   :: nfuelclasses                  !< Total number of fuel classes
     REAL(wp), INTENT(in)                  :: moist_extinction(nc)          !< Moisture of extinction [0 to 1]
-    REAL(wp), INTENT(in)                  :: fuel_moisture(:,:)            !< Fuel moisture [0 to 1] (#nc,#omegas)
+    REAL(wp), INTENT(in)                  :: fuel_moisture(nc,nfuelclasses)!< Fuel moisture [%] (#nc,#fuel classes-1,10,100,1000 hours-)
     LOGICAL, INTENT(in)                   :: mask(nc)                      !< True = gridcells to compute
     REAL(wp)                              :: frac_consump(nc,nfuelclasses) !< Fraction of consumption [0 to 1]
 
-    REAL(wp) :: omega_n_l(nc) !< Fuel moisture for 1 hour and grass [0 to 1]
-    REAL(wp) :: omega_o(nc)   !< Fuel moisture for 1, 10, 100 hours fuel classes and grass [0 to 1]
     INTEGER :: ic
 
     frac_consump = 0._wp
-    omega_n_l(:) = fuel_moisture(:,df_sf_omega_o_idx)
-    omega_o(:) = fuel_moisture(:,df_sf_omega_nl_idx)
 
     DO ic=1, nc
       IF (mask(ic)) THEN
-        frac_consump(ic,df_sf_fc_1hr_idx) = calc_1hr(omega_n_l(ic), moist_extinction(ic))
-        frac_consump(ic,df_sf_fc_10hr_idx) = calc_10hr(omega_o(ic), moist_extinction(ic))
-        frac_consump(ic,df_sf_fc_100hr_idx) = calc_100hr(omega_o(ic), moist_extinction(ic))
-        frac_consump(ic,df_sf_fc_1000hr_idx) = calc_1000hr(omega_o(ic), moist_extinction(ic))
+        frac_consump(ic,df_sf_fc_1hr_idx) = calc_1hr(fuel_moisture(ic,df_sf_fc_1hr_idx), moist_extinction(ic))
+        frac_consump(ic,df_sf_fc_10hr_idx) = calc_10hr(fuel_moisture(ic,df_sf_fc_10hr_idx), moist_extinction(ic))
+        frac_consump(ic,df_sf_fc_100hr_idx) = calc_100hr(fuel_moisture(ic,df_sf_fc_100hr_idx), moist_extinction(ic))
+        frac_consump(ic,df_sf_fc_1000hr_idx) = calc_1000hr(fuel_moisture(ic,df_sf_fc_1000hr_idx), moist_extinction(ic))
       END IF
     END DO
   END FUNCTION sf_calc_frac_consump
