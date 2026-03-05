@@ -22,8 +22,7 @@ MODULE mo_jsb_lcc
 #ifndef __NO_JSBACH__
 
   USE mo_exception,           ONLY: finish, message, message_text
-  USE mo_util,                ONLY: int2string, one_of
-  USE mo_util_string,         ONLY: tolower
+  USE mo_util,                ONLY: int2string, one_of, tolower
   USE mo_kind,                ONLY: wp
 
   USE mo_jsb_control,         ONLY: debug_on

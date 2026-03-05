@@ -18,7 +18,7 @@ MODULE mo_alcc_config_class
 
   USE mo_exception,          ONLY: message, finish
   USE mo_io_units,           ONLY: filename_max
-  USE mo_util_string,        ONLY: tolower
+  USE mo_util,               ONLY: tolower
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
   USE mo_kind,               ONLY: wp
   USE mo_jsb_config_class,   ONLY: t_jsb_config

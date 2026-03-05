@@ -110,7 +110,7 @@ CONTAINS
 
     USE mo_jsb_namelist_iface,  ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_impl_constants,  ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
-    USE mo_util_string,         ONLY: tolower
+    USE mo_util,                ONLY: tolower
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, Get_quincy_model_config_id
 #endif

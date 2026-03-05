@@ -19,7 +19,7 @@ MODULE mo_jsb_interface
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish !, message_text
-  ! USE mo_util_string,         ONLY: int2string
+  ! USE mo_util,         ONLY: int2string
 
   USE mo_jsb_control,         ONLY: debug_on, timer_on, l_timer_host, timer_jsbach, jsbach_runs_standalone
   USE mo_timer,               ONLY: timer_start, timer_stop
