@@ -585,29 +585,25 @@ CONTAINS
   !>
   !> calculations of soil-biogeochemical diagnostic global sums
   !>
-  SUBROUTINE global_q_sb_diagnostics(tile)
+  SUBROUTINE global_q_sb_diagnostics(tile, land_area_scaling)
 
     USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N
     USE mo_jsb_math_constants,      ONLY: one_day, one_year
-    USE mo_sync,                    ONLY: global_sum_array
     USE mo_jsb_grid,                ONLY: Get_grid, Get_vgrid
+    USE mo_sync,                    ONLY: global_sum_array
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
+    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp) :: scaling(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+    REAL(wp) :: sb_pool_total_c_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+    REAL(wp) :: total_soil_inorg_n_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+    REAL(wp) :: het_respiration_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
+    TYPE(t_jsb_vgrid), POINTER :: soil_w
 
-    ! Local variables
-    !
-    TYPE(t_jsb_model), POINTER      :: model
-    TYPE(t_jsb_grid),  POINTER      :: grid
-    TYPE(t_jsb_vgrid), POINTER      :: soil_w
-
-    REAL(wp), POINTER      :: area(:,:)
-    REAL(wp), POINTER      :: notsea(:,:)
-    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
-    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
-    REAL(wp), ALLOCATABLE  :: scaling (:,:)
-    REAL(wp), ALLOCATABLE  :: sb_pool_total_c_2d(:,:)
-    REAL(wp), ALLOCATABLE  :: total_soil_inorg_n_2d(:,:)
-    REAL(wp), ALLOCATABLE  :: het_respiration_2d(:,:)
     REAL(wp), POINTER      :: total_som_c_gsum(:)
     REAL(wp), POINTER      :: total_inorg_n_gsum(:)
     REAL(wp), POINTER      :: rh_gsum(:)
@@ -617,7 +613,7 @@ CONTAINS
     INTEGER                :: nsoil, is
 
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_q_sb_diagnostics'
-
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -635,9 +631,6 @@ CONTAINS
     grid   => Get_grid(model%grid_id)
     soil_w => Get_vgrid('soil_depth_water')
     nsoil  = soil_w%n_levels
-    area         => grid%area(:,:)
-    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
@@ -661,18 +654,9 @@ CONTAINS
     fn2o_gsum               => SB__mem%fn2o_gsum%ptr(:)              ! out
     fnloss_gsum             => SB__mem%fnloss_gsum%ptr(:)            ! out
 
-    ! Domain Mask - to mask all halo cells for global sums (otherwise these cells are counted twice)
-    ALLOCATE(in_domain(grid%nproma,grid%nblks))
-    ALLOCATE(scaling(grid%nproma,grid%nblks))
-    ALLOCATE(sb_pool_total_c_2d(grid%nproma, grid%nblks))
-    ALLOCATE(total_soil_inorg_n_2d(grid%nproma, grid%nblks))
-    ALLOCATE(het_respiration_2d(grid%nproma, grid%nblks))
-
-    WHERE (is_in_domain(:,:))
-      in_domain = 1._wp
-    ELSEWHERE
-      in_domain = 0._wp
-    END WHERE
+#ifdef _OPENACC
+    CALL message(routine, 'NOTE: global SB_ diagnostics not ported to GPU.')
+#endif
 
     ! Sum soil layers
     sb_pool_total_c_2d(:,:) = 0._wp
@@ -687,35 +671,33 @@ CONTAINS
     ! Calculate global carbon inventories, if requested for output
     !  => Conversion from [mol(C)/m^2] to [PgC]
     !     1 mol C = molar_mass_C g C   => 1 Pg C = molar_mass_C * e-15
-    scaling(:,:) = molar_mass_C * 1.e-15_wp * notsea(:,:) * area(:,:) * in_domain(:,:)
+    scaling(:,:) = land_area_scaling(:,:) * molar_mass_C * 1.e-15_wp
     IF (SB__mem%total_som_c_gsum%is_in_output) &
-          &  total_som_c_gsum = global_sum_array(sb_pool_total_c_2d(:,:) * scaling(:,:))
+        & total_som_c_gsum = global_sum_array(sb_pool_total_c_2d(:,:) * scaling(:,:))
     ! Calculate global carbon inventories, if requested for output
     !  => Conversion from [mol(N)/m^2] to [TgN]
     !     1 mol N = molar_mass_N g N   => 1 Pg N = molar_mass_N * e-12
-    scaling(:,:) = molar_mass_N * 1.e-12_wp * notsea(:,:) * area(:,:) * in_domain(:,:)
+    scaling(:,:) = land_area_scaling(:,:) * molar_mass_N * 1.e-12_wp
     IF (SB__mem%total_som_c_gsum%is_in_output) &
-          &  total_inorg_n_gsum = global_sum_array(total_soil_inorg_n_2d(:,:) * scaling(:,:))
+        & total_inorg_n_gsum = global_sum_array(total_soil_inorg_n_2d(:,:) * scaling(:,:))
 
     ! Calculate global fluxes, if requested for output
     !  => Conversion from [mumol(C)/m^2/s] to [PgC/yr]
     !     1 mol C = molar_mass_C g C   => 1 Pg C = molar_mass_C * e-15 * e-6
     !     1 s times one_day (60*60*24) time one_year (365)
-    scaling(:,:) = molar_mass_C * 1.e-21_wp * one_day * one_year * notsea(:,:) * area(:,:) * in_domain(:,:)
-    IF (SB__mem%rh_gsum%is_in_output)   &
-          &  rh_gsum          = global_sum_array(het_respiration_2d(:,:) * scaling(:,:))
-    IF (SB__mem%nbp_gsum%is_in_output)   &
-          &  nbp_gsum         = global_sum_array(net_biosphere_production(:,:) * scaling(:,:))
+    scaling(:,:) = land_area_scaling(:,:) * molar_mass_C * 1.e-21_wp * one_day * one_year
+    IF (SB__mem%rh_gsum%is_in_output) &
+        & rh_gsum  = global_sum_array(het_respiration_2d(:,:) * scaling(:,:))
+    IF (SB__mem%nbp_gsum%is_in_output) &
+        & nbp_gsum = global_sum_array(net_biosphere_production(:,:) * scaling(:,:))
     !  => Conversion from [mumol(N)/m^2/s] to [TgN/yr]
     !     1 mol N = molar_mass_N g N   => 1 Tg N = molar_mass_N * e-12 * e-6
     !     1 s times one_day (60*60*24) time one_year (365)
-    scaling(:,:) = molar_mass_N * 1.e-18_wp * one_day * one_year * notsea(:,:) * area(:,:) * in_domain(:,:)
+    scaling(:,:) = land_area_scaling(:,:) * molar_mass_N * 1.e-18_wp * one_day * one_year
     IF (SB__mem%fnloss_gsum%is_in_output) &
-          &  fnloss_gsum      = global_sum_array(ecosystem_total_n_loss(:,:) * scaling(:,:))
+        & fnloss_gsum = global_sum_array(ecosystem_total_n_loss(:,:) * scaling(:,:))
     IF (SB__mem%fn2o_gsum%is_in_output) &
-          &  fn2o_gsum        = global_sum_array(emission_n2o(:,:) * scaling(:,:))
-
-    DEALLOCATE (scaling, in_domain, sb_pool_total_c_2d, het_respiration_2d)
+        & fn2o_gsum   = global_sum_array(emission_n2o(:,:) * scaling(:,:))
 
   END SUBROUTINE global_q_sb_diagnostics
 

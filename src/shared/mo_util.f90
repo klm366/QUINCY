@@ -26,7 +26,7 @@ MODULE mo_util
   PRIVATE
 
   PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, &
-    &       report_memory_usage, soil_init_from_texture, tdma_solver_vec
+    &       report_memory_usage, soil_init_from_texture, tdma_solver_vec, scaled_global_sum_2D
   PUBLIC :: toupper, tolower, int2string, real2string, logical2string, separator
 
 #ifndef __QUINCY_STANDALONE__
@@ -226,6 +226,45 @@ CONTAINS
     END IF
 
   END SUBROUTINE report_memory_usage
+
+
+  ! ====================================================================================================== !
+  !
+  !> Calculate the scaled global sum of a given 2D variable using passed 2D and 1D scaling factors
+  !
+  ! ======================================================================================================= !
+  SUBROUTINE scaled_global_sum_2D(scaled_global_sum, var_ptr, scaling_2D, scaling_factor, acc_stream)
+
+    USE mo_sync,                    ONLY: global_sum_array
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp),          INTENT(out) :: scaled_global_sum(:) !< Scaled variable
+    REAL(wp), POINTER, INTENT(in)  :: var_ptr(:,:)         !< Variable pointer
+    REAL(wp),          INTENT(in)  :: scaling_2D(:,:)      !< 2D scaling factor
+    REAL(wp),          INTENT(in)  :: scaling_factor       !< Additional scaling factor
+    INTEGER,           INTENT(in)  :: acc_stream           !< ACC stream - passed to avoid cyclic
+                                                           !< dependencies
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp) :: scaled_variable(SIZE(scaling_2D,1), SIZE(scaling_2D,2))
+    INTEGER  :: blk, jc, nblks, nproma
+    ! ----------------------------------------------------------------------------------------------------- !
+    nblks  = SIZE(scaling_2D,2)
+    nproma = SIZE(scaling_2D,1)
+
+    !$ACC DATA ASYNC(acc_stream) CREATE(scaled_variable)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
+    DO blk = 1, nblks
+      DO jc = 1, nproma
+        scaled_variable(jc,blk) = scaling_2D(jc,blk) * var_ptr(jc,blk)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+    scaled_global_sum(:) = global_sum_array(scaled_variable(:,:), lacc=.TRUE.) * scaling_factor
+
+    !$ACC END DATA
+
+  END SUBROUTINE scaled_global_sum_2D
+
 
 #ifndef __QUINCY_STANDALONE__
   ! ====================================================================================================== !
