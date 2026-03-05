@@ -82,7 +82,8 @@ MODULE mo_q_dfire_spitfire
                                       df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx !< fuel classes indices
 
   USE mo_q_dfire_constants,       ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
-                                      df_sf_omega_o_idx !< omega_o index from sf_calc_fuel_moisture output (array)
+                                      df_sf_omega_o_idx, & !< omega_o index from sf_calc_fuel_moisture output (array)
+                                      df_sf_omega_nl_idx
 
   USE mo_q_dfire_constants,       ONLY: ixs_sf_dead_litter_fuel_pools, ixs_sf_dead_livegrass_fuel_pools
   USE mo_q_dfire_constants,       ONLY: df_sf_units_g_to_kg
@@ -712,9 +713,6 @@ CONTAINS
           spitfire % fdi, &
           spitfire % ros, &
           mask = has_fire_conditions) ! optional
-
-! TODO: fuel moisture passed to main structure
-!      fuel_moisture =
     ELSE
       CALL finish("calc_spitfire", "Unexpected fire sub-model found")
     END IF
@@ -753,14 +751,14 @@ CONTAINS
       w_all(:,1) = fuel_moisture_ober%dead(:,1) ! 1hr
       w_all(:,2) = fuel_moisture_ober%dead(:,1) ! 10hr
       w_all(:,3) = fuel_moisture_ober%dead(:,1) ! 100hr
-      w_all(:,4) = fuel_moisture_ober%val(:)    ! for 1000hr
+      w_all(:,4) = fuel_moisture_ober%dead(:,1) ! for 1000hr
     ELSE
       CALL finish("calc_spitfire", "Unexpected fire sub-model found")
     END IF
 
     !< Fraction of consumption used to calculate dead fuel consumption (Thonicke et al. (2010),
     !< extracted from equations B1, B4, B5 and B6)
-    spitfire % dead_frac_consump = sf_calc_frac_consump_ober(nc, nfuelclasses, moisture_extinction, &
+    spitfire % dead_frac_consump = sf_calc_frac_consump(nc, nfuelclasses, moisture_extinction, &
         w_all, mask=has_fire_conditions)
 
     !< Calculate dead fuel consumption for the 1h, 10h and 100h fuel classes,
