@@ -504,7 +504,8 @@ CONTAINS
                         df_sf_isurface_extinc_th, &
                         df_sf_alphas, &
                         moisture_extinction, &
-                        ab_moisture, & ! soil properties
+                        ab_moisture, &
+                        lvg_moisture, &
                         burnable_area_ha, &
                         dead_fuel_fcl, live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
                         t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
@@ -950,7 +951,7 @@ CONTAINS
     i_surface = 0._wp
 
     DO inc = 1, nc
-      IF (mask(inc)) THEN
+      IF (mask(inc) .AND. area_burned_fract(inc) > 0._wp) THEN
         !< Calculate the intensity of a surface fire at the flaming front (eq. 15 from Thonicke et al. (2010))
         i_surface(inc) = calorific_heat_content * (tot_fc_dead(inc) * ros_forward(inc)) / &
             (1000._wp * area_burned_fract(inc) * 60._wp)

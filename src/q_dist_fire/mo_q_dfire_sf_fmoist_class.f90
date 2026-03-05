@@ -34,7 +34,7 @@ MODULE mo_q_dfire_sf_fmoist_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_fuel_moisture, sf_calc_fuel_moisture_ober, t_gsi_param, t_gsi, t_lfmc, t_mf
+  PUBLIC :: sf_calc_fuel_moisture, sf_calc_fuel_moisture_ober, t_gsi_param, t_gsi, t_lfmc, t_mf, calc_mflg_ober
 
   !> GSI parameters
   TYPE :: t_gsi_param
@@ -207,6 +207,7 @@ CONTAINS
     weighted_alphas = 0._wp
     omega_1hr = 0._wp
     alpha_1hr = 0._wp
+    omega_lvg = 0._wp
     IF (has_dead_fuel_1hr) THEN
       alpha_1hr = alphas(ix_alpha_1hr)
       omega_1hr = calc_omega(alpha_1hr, nesterov_index)
