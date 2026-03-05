@@ -69,7 +69,7 @@ MODULE mo_q_dfire_fuel
 
   USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
   USE mo_q_dfire_constants,     ONLY: df_sf_units_k_to_c
-!  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg, t_gsi, t_lfmc
+  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg_ober, t_gsi, t_lfmc
 
   IMPLICIT NONE
 
@@ -78,8 +78,8 @@ MODULE mo_q_dfire_fuel
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel'
 
-!  TYPE(t_gsi), SAVE, ALLOCATABLE :: gsi_par
-!  TYPE(t_lfmc), SAVE, ALLOCATABLE :: lfmc_par
+  TYPE(t_gsi), SAVE, ALLOCATABLE :: gsi_par
+  TYPE(t_lfmc), SAVE, ALLOCATABLE :: lfmc_par
 
 CONTAINS
 
@@ -93,7 +93,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_, A2L_
+    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_, A2L_, Q_PHENO_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -104,6 +104,7 @@ CONTAINS
     dsl4jsb_Use_memory(Q_DFIRE_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(Q_DFIRE_)
@@ -146,6 +147,7 @@ CONTAINS
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
@@ -153,6 +155,7 @@ CONTAINS
     !< A2L_
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl         ! Soil depth until bedrock [m]
     dsl4jsb_Real2D_onChunk      :: height                ! in [m]
+    dsl4jsb_Real2D_onChunk      :: growing_season        ! in [%]
 
     !< Q_DFIRE_
     dsl4jsb_Real3D_onChunk      :: dead_fuel_1hr_dfp     ! out [g DM m-2]
@@ -173,6 +176,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: fuel_bulk_density    ! out [kg m-3]
     dsl4jsb_Real2D_onChunk      :: moisture_extinction  ! out [0 to 1]
     dsl4jsb_Real2D_onChunk      :: fwd_wind_factor      ! out [0 to 1]
+    dsl4jsb_Real2D_onChunk      :: lvg_moisture         ! out [%], note: allowed up to 250%
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -195,10 +199,12 @@ CONTAINS
     dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)      ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in
+    dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)   ! in [%]
 
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_10hr_dfp)    ! out [g DM m-2]
@@ -217,6 +223,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, fuel_bulk_density)     ! out [kg m-3]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, moisture_extinction)   ! out [0 to 1]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, fwd_wind_factor)       ! out [0 to 1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, lvg_moisture)          ! out [%]
+
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -310,6 +318,16 @@ CONTAINS
       live_tree_fuel_100hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx)
       live_tree_fuel_1000hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
     END IF
+
+    !< Oberhagemann related, required to calculate livegrass moisture at PFT level due to PFT parameters
+    lvg_moisture = 0._wp
+    isgrass: IF (lctlib%growthform == igrass) THEN
+      isoberhagemann: IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+        lfmc_par = t_lfmc(lctlib)
+        lvg_moisture = calc_mflg_ober(nc, lfmc_par, growing_season)
+      ELSE
+      END IF isoberhagemann
+    END IF isgrass
 
     NULLIFY(live_fuel_frac)
   END SUBROUTINE update_q_dfire_fuel
