@@ -574,6 +574,7 @@ CONTAINS
                   alphas, &
                   moisture_extinction, &
                   ab_moisture, &
+                  lvg_moisture, &
                   grid_cell_area, & ! fuel properties
                   dead_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
                   t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
@@ -600,6 +601,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: alphas(nalphas)                       !< Drying parameter for 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)  :: moisture_extinction(:)                !< Moisture of extinction threshold [0 to 1]
     REAL(wp), INTENT(in)  :: ab_moisture(nc)                       !< above ground relative soil moisture [0 to 1]
+    REAL(wp), INTENT(in)  :: lvg_moisture(nc)                      !< live grass fuel moisture [%], note: up to 250%
 
     REAL(wp), INTENT(in)  :: grid_cell_area(nc)                    !< Gridcell area [ha]
 
@@ -709,6 +711,7 @@ CONTAINS
           dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
           tot_dead_fuel_grass, & ! (#nc) 1 hour only
           tot_live_fuel_tree, & ! total live fuel tree (#nc)
+          lvg_moisture, & ! live grass moisture pre-calculated at fuel.f90
           fuel_moisture_ober, & ! outputs
           spitfire % fdi, &
           spitfire % ros, &
@@ -860,6 +863,7 @@ CONTAINS
                   dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
                   tot_dead_fuel_grass, & ! (#nc) 1 hour only
                   tot_live_fuel_tree, & ! total live fuel tree (#nc)
+                  lvg_moisture, &
                   fuel_moisture, & ! outputs
                   fdi, &
                   ros, &
@@ -875,6 +879,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: dead_fuel_litter(:,:) !< [g DM m-2] (#nc,#Spread fuel classes-1,10,100 hours-)
     REAL(wp), INTENT(in) :: tot_dead_fuel_grass(:) !< [g DM m-2]
     REAL(wp), INTENT(in) :: tot_live_fuel_tree(:) !< [g DM m-2]
+    REAL(wp), INTENT(in) :: lvg_moisture(:) !< [%], Note: up to 250%
     TYPE(t_mf), INTENT(out) :: fuel_moisture !< Fuel moisture
     REAL(wp), INTENT(out) :: fdi(:) !< Fire danger index [%]
     TYPE(t_sf_ros), INTENT(out) :: ros !< Rate of spread [-]
@@ -891,6 +896,7 @@ CONTAINS
 
     fuel_moisture = sf_calc_fuel_moisture_ober(nc, ndd, nlv, &
                       sigmas_dd, &
+                      lvg_moisture, &
                       nesterov_index)
 
     woi_dd(:,:) = dead_fuel_litter * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs

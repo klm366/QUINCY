@@ -267,14 +267,14 @@ CONTAINS
   !>
   FUNCTION sf_calc_fuel_moisture_ober(nc, ndd, nlv, &
                                         sigmas_dd, &
+                                        lvg_moisture, &
                                         nesterov_index) &
 !                                        lfmc_par, phen) &
                                         RESULT (mf)
     INTEGER, INTENT(in)       :: nc, ndd, nlv
     REAL(wp), INTENT(in)      :: sigmas_dd(:)            !< surface area to voluem ratio for dead and live fuels [cm2/cm3]
+    REAL(wp), INTENT(in)      :: lvg_moisture(nc)        !< live grass fuel moisture [%]
     REAL(wp), INTENT(in)      :: nesterov_index(nc)      !< Nesterov index = Dryness index [Celsius^2]
-!    TYPE(t_lfmc), INTENT(in)  :: lfmc_par                !< livegrass moisture parameters
-!    REAL(wp), INTENT(in)      :: phen(nc)                !< Livegrass phenological status [0 to 1]
     TYPE(t_mf) :: mf
 
     REAL(wp), ALLOCATABLE :: mf_lvg(:) !< Live grass fuel moisture [0 to 2.5]%
@@ -291,7 +291,7 @@ CONTAINS
     mf%dead(:,ix_100hr) = calc_omega(alphasdd(ix_100hr), nesterov_index) !
     mf%dead(:,ix_clvg) = mf%dead(:,ix_1hr) ! Same as in Oberhagemann et al. (2025), fuelload.c
 
-    mf%live(:,ix_lvg) = 0._wp !mf_lvg ! todo: live grass
+    mf%live(:,ix_lvg) = lvg_moisture
     mf%live(:,ix_wdy) = 0._wp  ! Same method as Oberhagemann, not yet implemented.
   END FUNCTION sf_calc_fuel_moisture_ober
 
