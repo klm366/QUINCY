@@ -169,7 +169,7 @@ CONTAINS
     ! In the standalone model, these exchange parameters are computed in mo_forcing using rough_m and then
     ! passed to the first call of JSBACH. Therefore, we need rough_m from the ini file for the standalone model.
     ! We also need rough_m for runs without PFTs, e.g. jsbach_lite, on vegetation tiles that are not PFTs (e.g. veg_tile)
-    IF (jsbach_runs_standalone() .OR. (tile%contains_vegetation .AND. tile%lcts(1)%lib_id == 0)) THEN
+    IF (model%config%use_tmx .OR. jsbach_runs_standalone() .OR. (tile%contains_vegetation .AND. tile%lcts(1)%lib_id == 0)) THEN
 
       IF (debug_on()) CALL message(TRIM(routine), &
           'Initializing turb memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))

@@ -552,8 +552,10 @@ CONTAINS
         IF (dsl4jsb_Config(TURB_)%l_roughness_lai) THEN
 
           config_roughness_lai_saturation  = dsl4jsb_Config(TURB_)%roughness_lai_saturation
-          lctlib_MinVegRoughness           = dsl4jsb_Lctlib_param(MinVegRoughness)
-          lctlib_MaxVegRoughness           = dsl4jsb_Lctlib_param(MaxVegRoughness)
+          !lctlib_MinVegRoughness           = dsl4jsb_Lctlib_param(MinVegRoughness)
+          !lctlib_MaxVegRoughness           = dsl4jsb_Lctlib_param(MaxVegRoughness)
+          lctlib_MinVegRoughness           = MIN(1._wp, dsl4jsb_Lctlib_param(MinVegRoughness))
+          lctlib_MaxVegRoughness           = MIN(1._wp, dsl4jsb_Lctlib_param(MaxVegRoughness))
 
           SELECT CASE (model_scheme)
 #ifndef __QUINCY_STANDALONE__
@@ -584,7 +586,8 @@ CONTAINS
 #ifndef __NO_QUINCY__
           IF (model%config%model_scheme == MODEL_QUINCY) CALL finish(TRIM(routine), 'QUINCY: roughness calc. should depend on LAI')
 #endif
-          lctlib_VegRoughness = dsl4jsb_Lctlib_param(VegRoughness)
+          !lctlib_VegRoughness = dsl4jsb_Lctlib_param(VegRoughness)
+          lctlib_VegRoughness = MIN(1._wp,dsl4jsb_Lctlib_param(VegRoughness))
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             rough_veg_star_local(ic) = 1._wp / LOG(config_blending_height / lctlib_VegRoughness) ** 2
