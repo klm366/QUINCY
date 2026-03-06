@@ -754,6 +754,9 @@ CONTAINS
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
+#ifndef __NO_JSBACH_LAND_ICE__
+    USE mo_interface_land_ice, ONLY: interface_land_ice
+#endif
 #ifndef __NO_QUINCY__
     USE mo_veg_util,           ONLY: test_carbon_conservation
 #endif
@@ -822,6 +825,14 @@ CONTAINS
     IF (.NOT. linit) THEN
       ! Do not couple to ocean during initialisation step.
       CALL interface_hd_ocean(tile, model%options(no_omp_thread))
+    END IF
+#endif
+
+#ifndef __NO_JSBACH_LAND_ICE__
+    IF (.NOT. linit) THEN
+      ! Do not couple to ice-sheet model during initialisation step.
+      CALL model%Get_top_tile(tile)
+      CALL interface_land_ice(tile, model%options(no_omp_thread))
     END IF
 #endif
 
