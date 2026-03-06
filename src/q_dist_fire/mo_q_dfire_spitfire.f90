@@ -720,6 +720,12 @@ CONTAINS
     ELSE
       CALL finish("calc_spitfire", "Unexpected fire sub-model found")
     END IF
+    CALL sf_calc_rate_of_spread(nc, &
+                  lctlib_fwd_wind_factor, wind_sf, &
+                  spitfire % fdi, &
+                  veg_cover_frac, &
+                  has_fire_conditions, &
+                  spitfire % ros)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
     sf_ignitions = calc_q_sf_ignition(nc, density_human_population, &
@@ -752,10 +758,10 @@ CONTAINS
       END ASSOCIATE
     ELSE IF (config_ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
       ALLOCATE(fuel_moisture_for_fc(nc,nfuelclasses))
-      fuel_moisture_for_fc(:,1) = fuel_moisture_ober%dead(:,1) ! 1hr
-      fuel_moisture_for_fc(:,2) = fuel_moisture_ober%dead(:,1) ! 10hr
-      fuel_moisture_for_fc(:,3) = fuel_moisture_ober%dead(:,1) ! 100hr
-      fuel_moisture_for_fc(:,4) = fuel_moisture_ober%dead(:,1) ! for 1000hr
+      fuel_moisture_for_fc(:,1) = fuel_moisture_ober%val(:) ! 1hr
+      fuel_moisture_for_fc(:,2) = fuel_moisture_ober%val(:) ! 10hr
+      fuel_moisture_for_fc(:,3) = fuel_moisture_ober%val(:) ! 100hr
+      fuel_moisture_for_fc(:,4) = fuel_moisture_ober%val(:) ! for 1000hr
     ELSE
       CALL finish("calc_spitfire", "Unexpected fire sub-model found")
     END IF
