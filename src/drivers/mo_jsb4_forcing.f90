@@ -30,7 +30,7 @@ MODULE mo_jsb4_forcing
   USE mo_math_constants,         ONLY: pi
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message, message_text, finish
-  USE mo_util_string,            ONLY: tolower, int2string, real2string
+  USE mo_util,                   ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, vtmpc1, rdv
   USE mo_jsb_physical_constants, ONLY: grav, tmelt, rd, amco2, amd, rvd1, molar_mass_N, molar_mass_P
   USE mo_orbit_solar,            ONLY: inquire_declination

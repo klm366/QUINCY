@@ -185,7 +185,7 @@ CONTAINS
 
   FUNCTION t_jsb_pool_find_element_position_by_name(this, element_name) RESULT(pos)
 
-    USE mo_util_string, ONLY: tolower
+    USE mo_util,       ONLY: tolower
 
     CLASS(t_jsb_pool), INTENT(in) :: this
     CHARACTER(LEN=*),  INTENT(in) :: element_name
