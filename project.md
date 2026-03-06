@@ -9,7 +9,7 @@ src_dir: ./src
 include: ./doc/include
 exclude: cdipio.inc
          jsb4_driver_echam.f90
-page_dir: ./doc/guide
+page_dir:
 media_dir: ./doc/media
 output_dir: ./doc/html
 docmark: <

@@ -1,18 +1,16 @@
 ---
-title: QUINCY: Science Overview 
+title: QUINCY Science Overview
+order: 2
 ---
 
 ### The QUINCY model 
 
-<figure>
-  <img src="../../../media/QUINCY-high-res.png" 
-  style="float: left; border:thick" width="50%" name="fig_quincy_schematic" 
-  alt="QUINCY schematic">
-  <figcaption> Fig 1: Schematic representation of biogeochemical, water and energy flows in QUINCY; as published in Thum et al. 2019</figcaption>
-</figure>
+![Schematic representation of biogeochemical, water and energy flows in QUINCY; as published in Thum et al. 2019](/media/QUINCY-high-res.png){.lightbox #fig-quincy-schematic width="70%" fig-alt="QUINCY schematic"}
 
-@note
-**QUINCY (QUantifying Interactions between terrestrial Nutrient CYcles and the climate system) v1** (Thum et al. 2019) has been developed to include a consistent representation of element cycling (in terms of carbon (C), nitrogen (N), and phosphorus (P)) in terrestrial ecosystems, as well as their interaction with the terrestrial water and energy balance suitable for the modelling of land-atmosphere interactions (<a href="fig_quincy_schematic">[Fig. 1]</a>). QUINCY was originally described by Thum et al. (2019) as a stand-alone ecosystem model, but has now integrated into the ICON-Land infrastructure and shares its physical process representation as well as the software infrastructure. It follows a modular structure to facilitate the consistent testing of multiple hypothesis for one particular process. This page gives a broad overview of model features, whereas the detailed description can be found [here](./quincy_documentationhtml). 
+:::{.callout-note}
+**QUINCY (QUantifying Interactions between terrestrial Nutrient CYcles and the climate system) v1** (Thum et al. 2019) has been developed to include a consistent representation of element cycling (in terms of carbon (C), nitrogen (N), and phosphorus (P)) in terrestrial ecosystems, as well as their interaction with the terrestrial water and energy balance suitable for the modelling of land-atmosphere interactions (@fig-quincy-schematic). QUINCY was originally described by Thum et al. (2019) as a stand-alone ecosystem model, but has now integrated into the ICON-Land infrastructure and shares its physical process representation as well as the software infrastructure. It follows a modular structure to facilitate the consistent testing of multiple hypothesis for one particular process. This page gives a broad overview of model features, whereas the detailed description can be found [here](./quincy_documentationhtml). 
+:::
+
 ---  
  
 ### Vegetation processes

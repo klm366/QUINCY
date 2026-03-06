@@ -1,8 +1,11 @@
 ---
-title: ICON-Land Guide
+title: ICON-Land Guide (new)
+order: 3
 ---
 
-@warning These pages are under construction!
+:::{.callout-warning}
+These pages are under construction!
+:::
 
 # Guide to ICON-Land and JSBACH
 

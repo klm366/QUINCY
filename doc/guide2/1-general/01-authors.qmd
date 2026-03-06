@@ -1,0 +1,6 @@
+---
+title: Authors
+order: 1
+---
+
+{{< include ../../../AUTHORS.md >}}

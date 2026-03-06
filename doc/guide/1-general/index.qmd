@@ -2,7 +2,7 @@
 title: General Information
 ---
 
-{!ABOUT.md!}
+{{< include ../../../ABOUT.md >}}
 
 ---
 

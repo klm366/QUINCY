@@ -1,0 +1,52 @@
+project:
+  type: website
+  render:
+    - "*.qmd"
+    - "!guide/2-science-guide/02-quincy/quincy_documentation.md"
+    - "!guide/2-science-guide/02-quincy/index.md"
+    - "!guide/2-science-guide/index.md"
+    - "!index.md"
+  resources:
+    - media/
+website:
+  title: ICON-Land Guide
+  description: Guide to ICON-Land and JSBACH
+  cookie-consent:
+    type: express
+    policy-url: file:///privacy-policy.html
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - about.qmd
+  sidebar:
+    contents: auto
+
+    #filters:
+    #  - ./test.lua
+
+    #number-sections: true
+
+#crossref:
+#  sec-labels: alpha A
+#  subref-labels: roman i
+
+format:
+  html:
+    theme:
+      light:
+        - cosmo
+        - brand
+      dark:
+        - slate
+        # - brand
+    css: resources/styles.css
+    toc: true
+    #include-in-header: mathjax_chapnum2.html
+    #include-in-header: mathjax0.html
+    #include-in-header: mathjax.html
+    #  pdf:
+    #include-in-header:
+    #  - text: |
+    #      \usepackage{mathtools}
+

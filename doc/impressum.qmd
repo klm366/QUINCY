@@ -1,8 +1,11 @@
 ---
 title: Imprint/Service Provider Identification
+order: 4
 ---
 
-@note The following provides mandatory data concerning the service provider of this website, obligations with regard to data protection, as well as other important legal references involving the Internet site of the Max Planck Institute for Biogeochemistry (www.bgc-jena.mpg.de) as required by German law.
+:::{.callout-note}
+The following provides mandatory data concerning the service provider of this website, obligations with regard to data protection, as well as other important legal references involving the Internet site of the Max Planck Institute for Biogeochemistry (www.bgc-jena.mpg.de) as required by German law.
+:::
 
 ## Service Provider
 The service provider of this Internet site within the legal meaning of the term is the registered association Max Planck Society for the Advancement of Science e.V.

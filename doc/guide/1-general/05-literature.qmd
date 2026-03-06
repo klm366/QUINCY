@@ -1,7 +1,10 @@
 ---
 title: Literature List
 ---
-@note: This is a list of publications extracted from PuRE searching for JSBACH. It needs to be better organised.
+
+:::{.callout-note}
+This is a list of publications extracted from PuRE searching for JSBACH. It needs to be better organised.
+:::
 
 Dallmeyer, A., M. Claussen, and J. Otto. 2010.
 “<span class="nocase">Contribution of oceanic and vegetation feedbacks
