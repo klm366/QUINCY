@@ -676,12 +676,11 @@ CONTAINS
 
     !> Fuel moisture and ROS
     u_f_wind = lctlib_fwd_wind_factor * wind_sf
+    dead_fuel_litter = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
+    !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
+    dead_fuel_grass = SUM(dead_fuel(:,ixs_sf_dead_livegrass_fuel_pools,:), DIM=2) !< 2=fuel pools
+    tot_dead_fuel_grass = SUM(dead_fuel_grass, DIM=2) ! 2 = fuel classes
     IF (config_ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
-
-      !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
-      dead_fuel_litter = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
-      dead_fuel_grass = SUM(dead_fuel(:,ixs_sf_dead_livegrass_fuel_pools,:), DIM=2) !< 2=fuel pools
-      tot_dead_fuel_grass = SUM(dead_fuel_grass, DIM=2) ! 2 = fuel classes
 
       CALL calc_spitfire_thonicke(nc, nalphas, df_sf_fc_spread_nr, &
                                     alphas, &
@@ -698,6 +697,7 @@ CONTAINS
       ALLOCATE(fuel_moisture_ober)
       fuel_moisture_ober = t_mf(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr)
 
+      ALLOCATE(tot_live_fuel_tree(nc))
       DO CONCURRENT (i=1:SIZE(live_tree_fuel,2), j=1:SIZE(live_tree_fuel,3)) !2=fuel pools, 3=fuel classes
         tot_live_fuel_tree = SUM(live_tree_fuel(:,i,j)) ! sum multiple dimensions
       END DO
@@ -876,7 +876,8 @@ CONTAINS
                   ros, &
                   mask) ! optional
 
-    INTEGER, INTENT(in) :: nc, ndd, nlv
+    INTEGER, INTENT(in) :: nc
+    INTEGER, INTENT(in) :: ndd, nlv
     INTEGER, INTENT(in) :: nsigdd, nsiglv
     REAL(wp), INTENT(in) :: sigmas_dd(:), sigmas_lv(:) !< Surface area to volume ratio [cm2/cm3]
     REAL(wp), INTENT(in) :: nesterov_index(:) !< Dryness index [deg C2]
