@@ -26,7 +26,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, SPQ_, &
-    &                               Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                               Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, LAND_ICE_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -155,6 +155,9 @@ CONTAINS
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
             & fract_varname='fract_glac')
+          IF (model%config%use_land_ice .AND. model%processes(LAND_ICE_)%p%config%active) THEN
+            CALL glacier_tile%Set_process_action(LAND_ICE_, ON_TILE_)
+          END IF
           !$ACC ENTER DATA COPYIN(glacier_tile)
         END IF
 
@@ -217,6 +220,9 @@ CONTAINS
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
             & fract_varname='fract_glac')
+          IF (model%config%use_land_ice .AND. model%processes(LAND_ICE_)%p%config%active) THEN
+            CALL glacier_tile%Set_process_action(LAND_ICE_, ON_TILE_)
+          END IF
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes=(/PHENO_/), process_actions=(/ON_TILE_/), &
@@ -312,6 +318,9 @@ CONTAINS
             & process_actions = (/ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+          IF (model%config%use_land_ice .AND. model%processes(LAND_ICE_)%p%config%active) THEN
+            CALL glacier_tile%Set_process_action(LAND_ICE_, ON_TILE_)
+          END IF
           !$ACC ENTER DATA COPYIN(glacier_tile)
         END IF
 
@@ -435,6 +444,9 @@ CONTAINS
             & processes       = (/SEB_,     TURB_,    HYDRO_,   SSE_/), &
             & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
+          IF (model%config%use_land_ice .AND. model%processes(LAND_ICE_)%p%config%active) THEN
+            CALL glacier_tile%Set_process_action(LAND_ICE_, ON_TILE_)
+          END IF
           !$ACC ENTER DATA COPYIN(glacier_tile)
         END IF
 
@@ -589,6 +601,9 @@ CONTAINS
             & process_actions = (/ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+          IF (model%config%use_land_ice .AND. model%processes(LAND_ICE_)%p%config%active) THEN
+            CALL glacier_tile%Set_process_action(LAND_ICE_, ON_TILE_)
+          END IF
           !$ACC ENTER DATA COPYIN(glacier_tile)
         END IF
 
@@ -853,6 +868,9 @@ CONTAINS
           & process_actions = (/ON_TILE_, ON_TILE_/), &
           & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
           ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+        IF (model%config%use_land_ice .AND. model%processes(LAND_ICE_)%p%config%active) THEN
+          CALL glacier_tile%Set_process_action(LAND_ICE_, ON_TILE_)
+        END IF
         !$ACC ENTER DATA COPYIN(glacier_tile)
       END IF
     END IF
@@ -1047,6 +1065,9 @@ CONTAINS
         & process_actions = (/ON_TILE_, ON_TILE_/), &
         & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
         ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+      IF (model%config%use_land_ice .AND. model%processes(LAND_ICE_)%p%config%active) THEN
+        CALL glacier_tile%Set_process_action(LAND_ICE_, ON_TILE_)
+      END IF
       !$ACC ENTER DATA COPYIN(glacier_tile)
     END IF
 

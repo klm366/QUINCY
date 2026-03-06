@@ -19,7 +19,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
-    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, LAND_ICE_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -345,6 +345,9 @@ CONTAINS
           ! In the albedo update time step the albedo should be updated after the SEB process, so that also
           ! the SEB remains consistent within this time step.
       CALL model%Queue_task(HYDRO_,  "water_balance")
+      IF (model%processes(LAND_ICE_)%p%config%active) THEN
+        CALL model%Queue_task(LAND_ICE_, "land_ice_update_smb")
+      END IF
       CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
       CALL model%Queue_task(SEB_,    "energy_balance")
 

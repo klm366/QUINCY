@@ -33,6 +33,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_fage_memory_class,    ONLY: t_fage_memory
   USE mo_alcc_memory_class,    ONLY: t_alcc_memory
   USE mo_nlcc_memory_class,    ONLY: t_nlcc_memory
+  USE mo_land_ice_memory_class, ONLY: t_land_ice_memory
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
@@ -82,6 +83,8 @@ MODULE mo_jsb_process_factory_core
   USE mo_wlcc_config_class,     ONLY: t_wlcc_config
   USE mo_nlcc_interface,        ONLY: Register_nlcc_tasks
   USE mo_nlcc_config_class,     ONLY: t_nlcc_config
+  USE mo_land_ice_interface,    ONLY: Register_land_ice_tasks
+  USE mo_land_ice_config_class, ONLY: t_land_ice_config
 #ifndef __NO_QUINCY__
   USE mo_q_assimi_interface,    ONLY: Register_q_assimi_tasks
   USE mo_q_assimi_config_class, ONLY: t_q_assimi_config
@@ -102,7 +105,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
-    & Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    & Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, LAND_ICE_
 
   IMPLICIT NONE
   PRIVATE
@@ -195,6 +198,9 @@ CONTAINS
       return_ptr%l_changes_fractions = .TRUE.
       CALL Register_nlcc_tasks(return_ptr, model_id)
       ALLOCATE(t_nlcc_config::return_ptr%config)
+    CASE (LAND_ICE_)
+      CALL Register_land_ice_tasks(return_ptr, model_id)
+      ALLOCATE(t_land_ice_config::return_ptr%config)
 #ifndef __NO_QUINCY__
     CASE (Q_ASSIMI_)
       CALL Register_q_assimi_tasks(return_ptr, model_id)
@@ -248,6 +254,7 @@ CONTAINS
     USE mo_fage_memory_class,    ONLY: max_no_of_fage_vars => max_no_of_vars
     USE mo_alcc_memory_class,    ONLY: max_no_of_alcc_vars => max_no_of_vars
     USE mo_nlcc_memory_class,    ONLY: max_no_of_nlcc_vars => max_no_of_vars
+    USE mo_land_ice_memory_class, ONLY: max_no_of_land_ice_vars
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 #endif
@@ -317,6 +324,9 @@ CONTAINS
     CASE (NLCC_)
       ALLOCATE(t_nlcc_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_nlcc_vars
+    CASE (LAND_ICE_)
+      ALLOCATE(t_land_ice_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_land_ice_vars
 #ifndef __NO_QUINCY__
     CASE (Q_ASSIMI_)
       ALLOCATE(t_q_assimi_memory::return_ptr)
