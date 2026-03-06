@@ -3703,7 +3703,6 @@ CONTAINS
 
   END SUBROUTINE aggregate_water_balance
 
-#ifndef __QUINCY_STANDALONE__
   ! ======================================================================================================== !
   !>
   !>#### Global diagnostics of the hydrology process
@@ -3713,24 +3712,27 @@ CONTAINS
   !> available, the routine is called from [[mo_jsb_interface:jsbach_finish_timestep]], after the loop
   !> over the nproma blocks.
   !>
-  SUBROUTINE global_hydrology_diagnostics(tile)
+  SUBROUTINE global_hydrology_diagnostics(tile, global_land_area, in_domain, land_area_scaling)
 
-    USE mo_sync,                  ONLY: global_sum_array
-    USE mo_jsb_grid,              ONLY: Get_grid
-    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
-
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    ! Local variables
-    !
+    USE mo_util,                    ONLY: scaled_global_sum_2D
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
+    REAL(wp),                   INTENT(in) :: global_land_area       !< Global land area
+    REAL(wp),                   INTENT(in) :: in_domain(:,:)         !< Mask out halo cells
+    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(HYDRO_)      !< Configurable parameters of the hydrology process
     dsl4jsb_Def_memory(HYDRO_)      !< Memory of the hydrology process
 
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_hydrology_diagnostics'
+    TYPE(t_jsb_model), POINTER   :: model
+    TYPE(t_jsb_grid),  POINTER   :: grid
+
+    REAL(wp), POINTER            :: notsea(:,:)
+    REAL(wp)                     :: scaling(SIZE(in_domain,1), SIZE(in_domain,2))
+    REAL(wp)                     :: gsum_weq_balance_err_count(1)
+    CHARACTER(len=*),  PARAMETER :: routine = modname//':global_hydrology_diagnostics'
 
     ! Pointers to variables in memory
-
     dsl4jsb_Real2D_onDomain :: transpiration    !< Transpiration [kg m-2 s-1]
     dsl4jsb_Real2D_onDomain :: evapotrans       !< Evapotranspiration [kg m-2 s-1]
     dsl4jsb_Real2D_onDomain :: weq_land         !< Total amount of liquid or frozen water of the land [m3]
@@ -3752,16 +3754,12 @@ CONTAINS
     REAL(wp), POINTER       :: weq_snow_gsum(:)            !< Global snow amount on non-glacier land [Gt]
     REAL(wp), POINTER       :: weq_balance_err_gsum(:)     !< Global land water balance error [m3/(time step)]
 
-    TYPE(t_jsb_model), POINTER      :: model               !< This instance of ICON-Land
-    TYPE(t_jsb_grid),  POINTER      :: grid                !< The ICON-Land horizontal grid
-
-    REAL(wp), POINTER      :: area(:,:)                    !< Grid cell area [m2]
-    REAL(wp), POINTER      :: notsea(:,:)                  !< Land mask (1: land incl. lakes; 0: ocean)
-    LOGICAL,  POINTER      :: is_in_domain(:,:)            !< True: cell in domain; False: halo cell
-    REAL(wp), ALLOCATABLE  :: in_domain (:,:)              !< 1: cell in domain; 0: halo cell
-    REAL(wp), ALLOCATABLE  :: scaling (:,:)                !< Scaling factor: Land area of the cells
-    REAL(wp)               :: global_land_area             !< Global land are [m3]
-
+    INTEGER  :: blk, jc, nblks, nproma
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    nblks  = grid%nblks
+    nproma = grid%nproma
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  transpiration)              ! in
@@ -3774,20 +3772,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  weq_balance_err)            ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  weq_balance_err_count)      ! in
 
-    trans_gmean          => HYDRO__mem%trans_gmean%ptr(:)           ! out
-    evapotrans_gmean     => HYDRO__mem%evapotrans_gmean%ptr(:)      ! out
-    weq_land_gsum        => HYDRO__mem%weq_land_gsum%ptr(:)         ! out
-    discharge_ocean_gsum => HYDRO__mem%discharge_ocean_gsum%ptr(:)  ! out
-    wtr_rootzone_rel_gmean => HYDRO__mem%wtr_rootzone_rel_gmean%ptr(:)  ! out
-    fract_snow_gsum      => HYDRO__mem%fract_snow_gsum%ptr(:)       ! out
-    weq_snow_gsum        => HYDRO__mem%weq_snow_gsum%ptr(:)         ! out
-    weq_balance_err_gsum => HYDRO__mem%weq_balance_err_gsum%ptr(:)  ! out
-
-    model => Get_model(tile%owner_model_id)
-    grid  => Get_grid(model%grid_id)
-    area         => grid%area(:,:)
-    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-    notsea       => tile%fract(:,:)     ! Fraction of the box tile
+    trans_gmean            => HYDRO__mem%trans_gmean%ptr(:)            ! out
+    evapotrans_gmean       => HYDRO__mem%evapotrans_gmean%ptr(:)       ! out
+    weq_land_gsum          => HYDRO__mem%weq_land_gsum%ptr(:)          ! out
+    discharge_ocean_gsum   => HYDRO__mem%discharge_ocean_gsum%ptr(:)   ! out
+    wtr_rootzone_rel_gmean => HYDRO__mem%wtr_rootzone_rel_gmean%ptr(:) ! out
+    fract_snow_gsum        => HYDRO__mem%fract_snow_gsum%ptr(:)        ! out
+    weq_snow_gsum          => HYDRO__mem%weq_snow_gsum%ptr(:)          ! out
+    weq_balance_err_gsum   => HYDRO__mem%weq_balance_err_gsum%ptr(:)   ! out
 
     dsl4jsb_Get_config(HYDRO_)
 
@@ -3795,66 +3787,81 @@ CONTAINS
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
-    ! Domain Mask - to mask all halo cells for global sums (otherwise these cells are counted twice)
-    ALLOCATE (in_domain(grid%nproma,grid%nblks))
-    WHERE (is_in_domain(:,:))
-      in_domain = 1._wp
-    ELSEWHERE
-      in_domain = 0._wp
-    END WHERE
-
-    ALLOCATE (scaling(grid%nproma,grid%nblks))
-
+    !$ACC DATA ASYNC(acc_stream) CREATE(scaling)
 
     ! Calculate global land variables, if requested for output
     ! -------------------------------
+    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
 
-    IF (HYDRO__mem%trans_gmean%is_in_output .OR. HYDRO__mem%evapotrans_gmean%is_in_output &
-      & .OR. HYDRO__mem%wtr_rootzone_rel_gmean%is_in_output) THEN
-
-      ! Global land area
-      global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
-
-      ! Weighting factor for each grid cell corresponding to its area fraction
-      scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
-
+    IF (HYDRO__mem%weq_land_gsum%is_in_output .OR. HYDRO__mem%weq_balance_err_gsum%is_in_output) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
+      DO blk = 1, nblks
+        DO jc = 1, nproma
+          scaling(jc,blk) = in_domain(jc,blk) * notsea(jc,blk)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
-    IF (HYDRO__mem%trans_gmean%is_in_output)           &
-      &  trans_gmean          = global_sum_array(transpiration(:,:)   * scaling(:,:)) / global_land_area
-    IF (HYDRO__mem%evapotrans_gmean%is_in_output)      &
-      &  evapotrans_gmean     = global_sum_array(evapotrans(:,:)      * scaling(:,:)) / global_land_area
+    IF (HYDRO__mem%trans_gmean%is_in_output) THEN
+      CALL scaled_global_sum_2D(trans_gmean, transpiration, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%trans_gmean%ptr(:))
+    END IF
+    IF (HYDRO__mem%evapotrans_gmean%is_in_output) THEN
+      CALL scaled_global_sum_2D(evapotrans_gmean, evapotrans, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%evapotrans_gmean%ptr(:))
+    END IF
+
     ! Unit transformation from [m3] to [km3]: 1.e-9
-    IF (HYDRO__mem%weq_land_gsum%is_in_output)         &
-      &  weq_land_gsum        = global_sum_array(weq_land(:,:)  * notsea(:,:) * in_domain(:,:)) * 1.e-9_wp
-    ! Unit transformation from [m3/s] to [Sv] (1 Sv = 1.e6 m3/s)
-    IF (HYDRO__mem%discharge_ocean_gsum%is_in_output)  &
-      &  discharge_ocean_gsum = global_sum_array(discharge_ocean(:,:) * in_domain(:,:)) * 1.e-6_wp
-    IF (HYDRO__mem%wtr_rootzone_rel_gmean%is_in_output)  &
-      &  wtr_rootzone_rel_gmean = global_sum_array(wtr_rootzone_rel(:,:) * scaling(:,:)) / global_land_area
+    IF (HYDRO__mem%weq_land_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(weq_land_gsum, weq_land, scaling, 1.e-9_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%weq_land_gsum%ptr(:))
+    END IF
+
+    ! Unit transformation from [m3] to [km3]: 1.e-9
+    IF (HYDRO__mem%discharge_ocean_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(discharge_ocean_gsum, discharge_ocean, in_domain, 1.e-6_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%discharge_ocean_gsum%ptr(:))
+    END IF
+
+    IF (HYDRO__mem%wtr_rootzone_rel_gmean%is_in_output) THEN
+      CALL scaled_global_sum_2D(wtr_rootzone_rel_gmean, wtr_rootzone_rel, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%wtr_rootzone_rel_gmean%ptr(:))
+    END IF
+
     ! Unit transformation from [m2] to [Mio km2]: 1.e-12
-    IF (HYDRO__mem%fract_snow_gsum%is_in_output)       &
-      &  fract_snow_gsum      = global_sum_array(fract_snow(:,:)      * scaling(:,:)) * 1.e-12_wp
+    IF (HYDRO__mem%fract_snow_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(fract_snow_gsum, fract_snow, land_area_scaling, 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%fract_snow_gsum%ptr(:))
+    END IF
+
     ! Unit transformation from [m water equivalent](= [t]) to [Gt]: 1.e-9
-    IF (HYDRO__mem%weq_snow_gsum%is_in_output)         &
-      &  weq_snow_gsum        = global_sum_array(weq_snow(:,:)        * scaling(:,:)) * 1.e-9_wp
+    IF (HYDRO__mem%weq_snow_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(weq_snow_gsum, weq_snow, land_area_scaling, 1.e-9_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%weq_snow_gsum%ptr(:))
+    END IF
+
     ! No unit transformation [m3]: 1
-    IF (HYDRO__mem%weq_balance_err_gsum%is_in_output)  &
-      &  weq_balance_err_gsum = global_sum_array(weq_balance_err(:,:) * notsea(:,:) * in_domain(:,:))
+    IF (HYDRO__mem%weq_balance_err_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(weq_balance_err_gsum, weq_balance_err, scaling, 1.0_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%weq_balance_err_gsum%ptr(:))
+    END IF
 
     IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget == WB_IGNORE .AND. print_wb_warning) THEN
-      IF (global_sum_array(weq_balance_err_count(:,:) * in_domain(:,:)) > 0.5_wp) THEN
+      CALL scaled_global_sum_2D(gsum_weq_balance_err_count, weq_balance_err_count, in_domain, 1.0_wp, acc_stream)
+
+      IF (gsum_weq_balance_err_count(1) > 0.5_wp) THEN
         CALL message (TRIM(routine), 'Water balance issues detected. '// &
-          & 'Consider rerun the simulation with enforce_water_budget = "logging" for more details.')
+            & 'Consider rerun the simulation with enforce_water_budget = "logging" for more details.')
         ! Don't repeat this warning during this simulation period
         print_wb_warning = .FALSE.
       END IF
     END IF
 
-    DEALLOCATE (scaling, in_domain)
+    !$ACC WAIT(acc_stream)
+    !$ACC END DATA
 
   END SUBROUTINE global_hydrology_diagnostics
-#endif
 
 #endif
 END MODULE mo_hydro_interface

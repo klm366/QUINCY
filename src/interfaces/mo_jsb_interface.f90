@@ -19,7 +19,7 @@ MODULE mo_jsb_interface
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish !, message_text
-  ! USE mo_util_string,         ONLY: int2string
+  ! USE mo_util,         ONLY: int2string
 
   USE mo_jsb_control,         ONLY: debug_on, timer_on, l_timer_host, timer_jsbach, jsbach_runs_standalone
   USE mo_timer,               ONLY: timer_start, timer_stop
@@ -39,7 +39,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_physical_constants, ONLY: cvdifts
   USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
-  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_, SEB_, HYDRO_, PHENO_, PPLCC_
 
   IMPLICIT NONE
   PRIVATE
@@ -744,26 +744,16 @@ CONTAINS
     USE mo_util,        ONLY: report_memory_usage
     USE mo_jsb_control, ONLY: get_debug_memory_level
     USE mo_jsb_time,    ONLY: is_newmonth
-    USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
-    USE mo_seb_interface,      ONLY: global_seb_diagnostics, seb_check_temperature_range
-    USE mo_hydro_interface,    ONLY: global_hydrology_diagnostics
-    USE mo_pheno_interface,    ONLY: global_phenology_diagnostics
-    USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
-    USE mo_pplcc_interface,    ONLY: global_pplcc_diagnostics
+    USE mo_carbon_interface,   ONLY: yday_carbon_conservation_test
+    USE mo_seb_interface,      ONLY: seb_check_temperature_range
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
 #ifndef __NO_QUINCY__
-    USE mo_q_veg_interface,    ONLY: global_q_veg_diagnostics
-    USE mo_q_sb_interface,     ONLY: global_q_sb_diagnostics
     USE mo_veg_util,           ONLY: test_carbon_conservation
 #endif
-    dsl4jsb_Use_processes SEB_
-    dsl4jsb_Use_processes HYDRO_
-    dsl4jsb_Use_processes PHENO_
-    dsl4jsb_Use_processes PPLCC_
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -837,32 +827,7 @@ CONTAINS
 ! #endif
 
     ! Global diagnostics
-    !TODO: go through all processes.
-    IF (model%processes(SEB_)%p%config%active) THEN
-      CALL global_seb_diagnostics(tile)
-    END IF
-    IF (model%processes(HYDRO_)%p%config%active) THEN
-      CALL global_hydrology_diagnostics(tile)
-    END IF
-    IF (model%processes(PHENO_)%p%config%active) THEN
-      CALL global_phenology_diagnostics(tile)
-    END IF
-    IF (model%processes(CARBON_)%p%config%active) THEN
-      CALL global_carbon_diagnostics(tile)
-    END IF
-    IF (model%processes(PPLCC_)%p%config%active) THEN
-      CALL global_pplcc_diagnostics(tile)
-    END IF
-#ifndef __NO_QUINCY__
-    IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      IF (model%processes(VEG_)%p%config%active) THEN
-        CALL global_q_veg_diagnostics(tile)
-      END IF
-      IF (model%processes(SB_)%p%config%active) THEN
-        CALL global_q_sb_diagnostics(tile)
-      END IF
-    END IF
-#endif
+    CALL global_diagnostics(tile)
 
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())
@@ -878,6 +843,120 @@ CONTAINS
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
   END SUBROUTINE jsbach_finish_timestep
+
+
+  ! ======================================================================================================== !
+  !>
+  !>#### Routine encapsulating the call of global land diagnostic routines on the different processes
+  !>
+  !> Calculates area scaling factors and calls global diagnostic routines for active processes which
+  !> provide such a routine
+  !>
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE global_diagnostics(tile)
+
+    USE mo_jsb_control,         ONLY: acc_stream
+    USE mo_sync,                ONLY: global_sum_array
+    USE mo_jsb_grid,            ONLY: Get_grid
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+    USE mo_jsb_process_factory, ONLY: max_no_of_processes
+
+    USE mo_seb_interface,      ONLY: global_seb_diagnostics
+    USE mo_hydro_interface,    ONLY: global_hydrology_diagnostics
+    USE mo_pheno_interface,    ONLY: global_phenology_diagnostics
+    USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
+    USE mo_pplcc_interface,    ONLY: global_pplcc_diagnostics
+
+#ifndef __NO_QUINCY__
+    USE mo_q_veg_interface,    ONLY: global_q_veg_diagnostics
+    USE mo_q_sb_interface,     ONLY: global_q_sb_diagnostics
+#endif
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile  !< Current tile
+    ! ----------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_diagnostics'
+
+    TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_jsb_grid),  POINTER      :: grid
+
+    INTEGER                :: iproc, jc, blk
+    REAL(wp), POINTER      :: area(:,:)
+    REAL(wp), POINTER      :: notsea(:,:)
+    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
+    REAL(wp), ALLOCATABLE  :: in_domain(:,:)    ! 1._wp: cell in domain, 0._wp: halo cell
+                                                ! - to mask all halo cells for global sums (otherwise these cells are counted twice)
+    REAL(wp), ALLOCATABLE  :: area_scaling(:,:)
+    REAL(wp), ALLOCATABLE  :: land_area_scaling(:,:)
+    REAL(wp)               :: global_land_area
+    ! ----------------------------------------------------------------------------------------------------- !
+    notsea => tile%fract(:,:)   ! fraction of the box tile: notsea
+    model  => Get_model(tile%owner_model_id)
+    grid   => Get_grid(model%grid_id)
+    area         => grid%area(:,:)
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
+
+    ALLOCATE (in_domain(grid%nproma,grid%nblks), area_scaling(grid%nproma,grid%nblks), land_area_scaling(grid%nproma,grid%nblks))
+    !$ACC ENTER DATA CREATE(in_domain, area_scaling, land_area_scaling) ASYNC(acc_stream)
+
+    ! Calculate global land area
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
+    DO blk = 1, grid%nblks
+      DO jc = 1, grid%nproma
+        IF (is_in_domain(jc,blk)) THEN
+          in_domain(jc,blk) = 1._wp
+        ELSE
+          in_domain(jc,blk) = 0._wp
+        END IF
+
+        area_scaling(jc,blk) = area(jc,blk) * in_domain(jc,blk)
+        land_area_scaling(jc,blk) = area_scaling(jc,blk) * notsea(jc,blk)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    global_land_area = global_sum_array(land_area_scaling, lacc=.TRUE.)
+
+    DO iproc = 1, max_no_of_processes
+      IF (ASSOCIATED(model%processes(iproc)%p)) THEN
+        IF (ASSOCIATED(model%processes(iproc)%p%config)) THEN
+          IF (model%processes(iproc)%p%config%active) THEN
+            SELECT CASE (iproc)
+            CASE (SEB_)
+              CALL global_seb_diagnostics(tile, global_land_area, land_area_scaling)
+            CASE (HYDRO_)
+              CALL global_hydrology_diagnostics(tile, global_land_area, in_domain, land_area_scaling)
+            CASE (PHENO_)
+              CALL global_phenology_diagnostics(tile, global_land_area, land_area_scaling)
+            CASE (CARBON_)
+              CALL global_carbon_diagnostics(tile, land_area_scaling)
+            CASE (PPLCC_)
+              CALL global_pplcc_diagnostics(tile, area_scaling)
+            END SELECT
+#ifndef __NO_QUINCY__
+            IF (model%config%model_scheme == MODEL_QUINCY) THEN
+              SELECT CASE (iproc)
+              CASE (VEG_)
+                CALL global_q_veg_diagnostics(tile, global_land_area, land_area_scaling)
+              CASE (SB_)
+                CALL global_q_sb_diagnostics(tile, land_area_scaling)
+              END SELECT
+            END IF
+#endif
+          END IF
+        END IF
+      END IF
+    END DO
+
+    !$ACC WAIT(acc_stream)
+    !$ACC EXIT DATA DELETE(in_domain, area_scaling, land_area_scaling) ASYNC(acc_stream)
+    DEALLOCATE (area_scaling, in_domain, land_area_scaling)
+
+  END SUBROUTINE global_diagnostics
+
 
   ! ====================================================================================================== !
   !
