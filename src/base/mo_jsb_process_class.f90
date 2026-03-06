@@ -28,7 +28,7 @@ MODULE mo_jsb_process_class
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     &       PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
-    &       Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &       Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, LAND_ICE_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -54,7 +54,7 @@ MODULE mo_jsb_process_class
   ENUM, BIND(C)
     ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
       &           FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
-      &           Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+      &           Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, LAND_ICE_
   END ENUM
 
   ! Process actions
@@ -127,6 +127,8 @@ CONTAINS
       return_value = 'sb'
     CASE (SPQ_)
       return_value = 'spq'
+    CASE (LAND_ICE_)
+      return_value = 'land_ice'
     CASE DEFAULT
       return_value = ''
     END SELECT
@@ -193,6 +195,8 @@ CONTAINS
       return_value = SB_
     CASE ('spq')
       return_value = SPQ_
+    CASE ('land_ice')
+      return_value = LAND_ICE_
     CASE DEFAULT
       return_value = 0
     END SELECT
