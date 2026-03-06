@@ -38,6 +38,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_tmx
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
+    LOGICAL                        :: use_land_ice        !< Couple glacier tile to an external land-ice model (e.g. Elmer/Ice)
     LOGICAL                        :: check_child_cf      !< Assert that cover fractions of child tiles sum up to the tile cf
     INTEGER                        :: enforce_water_budget!< descriptor for water balance 'ignore', 'logging', or 'error'
     CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
@@ -130,6 +131,7 @@ CONTAINS
     LOGICAL                       :: use_tmx
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
+    LOGICAL                       :: use_land_ice
     LOGICAL                       :: check_child_cf
     CHARACTER(len=10)             :: enforce_water_budget
     CHARACTER(len=10)             :: quincy_model
@@ -163,6 +165,7 @@ CONTAINS
       use_tmx, &
       use_lakes, &
       use_glacier, &
+      use_land_ice, &
       check_child_cf, &
       enforce_water_budget, &
       quincy_model, &
@@ -211,6 +214,7 @@ CONTAINS
     use_tmx                    = .FALSE.
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
+    use_land_ice               = .FALSE.
     check_child_cf             = .FALSE.
     enforce_water_budget       = 'ignore'
     quincy_model               = 'land'
@@ -300,6 +304,7 @@ CONTAINS
     model_config%use_tmx                    = use_tmx
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
+    model_config%use_land_ice               = use_land_ice
     model_config%check_child_cf             = check_child_cf
     model_config%quincy_model               = TRIM(quincy_model)
     model_config%qmodel_id                  = qmodel_id
