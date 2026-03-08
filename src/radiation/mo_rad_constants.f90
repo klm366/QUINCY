@@ -70,6 +70,10 @@ MODULE mo_rad_constants
    & AlbedoLakeIceMax        = 0.75_wp,    &
    & AlbedoLakeSnowMin       = 0.65_wp,    &
    & AlbedoLakeSnowMax       = 0.80_wp,    &
+   & AlbedoLakeWaterFlake    = 0.20_wp,    & ! Albedo of open lake water (FLAKE)
+   & AlbedoLakeWhiteIce      = 0.60_wp,    & ! Albedo of white ice (FLAKE)
+   & AlbedoLakeBlueIce       = 0.10_wp,    & ! Albedo of blue ice (FLAKE)
+   & AlbedoLakeIceExp        = 95.6_wp,    & ! Constant in interpolation formula for ice albedo (FLAKE)
     !
     ! Parameters of glacier scheme albedo
    & AlbedoGlacierVisMin  = 0.76_wp,       & ! Albedo of glacier in the visible range at the melting point

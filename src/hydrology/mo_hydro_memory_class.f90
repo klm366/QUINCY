@@ -44,7 +44,7 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_varlist,      ONLY: NONE, BASIC, MEDIUM, FULL
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes HYDRO_, SSE_, SEB_
+  dsl4jsb_Use_processes HYDRO_, SSE_
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_processes ASSIMI_
 #endif
@@ -52,7 +52,6 @@ MODULE mo_hydro_memory_class
   ! Use process configurations
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_config(SSE_)
-  dsl4jsb_Use_config(SEB_)
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_config(ASSIMI_)
 #endif
@@ -292,7 +291,6 @@ CONTAINS
 
     dsl4jsb_Def_config(HYDRO_)              !< Configurable settings of the hydrology process
     dsl4jsb_Def_config(SSE_)                !< Configurable settings of the soil and snow energy process
-    dsl4jsb_Def_config(SEB_)                !< Configurable settings of surface energy balance process
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_config(ASSIMI_)             !< Configurable settings of the assimilation process
 #endif
@@ -322,7 +320,6 @@ CONTAINS
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
-    dsl4jsb_Get_config(SEB_)
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Get_config(ASSIMI_)
 #endif
@@ -1413,7 +1410,7 @@ CONTAINS
         & lrestart=.FALSE.,                                                        &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      IF (model%config%l_ice_on_lakes) THEN
         CALL mem%Add_var( 'evapo_ice', mem%evapo_ice,                              &
           & hgrid, surface,                                                        &
           & t_cf('evapo_ice', 'kg m-2 s-1', 'Evaporation from lake ice'),          &

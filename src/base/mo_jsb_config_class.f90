@@ -38,6 +38,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_tmx
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_flake
+    LOGICAL                        :: l_ice_on_lakes      !< Whether to use ice on lakes
     LOGICAL                        :: use_glacier
     LOGICAL                        :: check_child_cf      !< Assert that cover fractions of children tiles sum up to the tile cf
     INTEGER                        :: enforce_water_budget!< descriptor for water balance 'ignore', 'logging', or 'error'
@@ -131,6 +132,7 @@ CONTAINS
     LOGICAL                       :: use_tmx
     LOGICAL                       :: use_lakes
     CHARACTER(len=10)             :: lake_scheme
+    LOGICAL                       :: l_ice_on_lakes
     LOGICAL                       :: use_glacier
     LOGICAL                       :: check_child_cf
     CHARACTER(len=10)             :: enforce_water_budget
@@ -165,6 +167,7 @@ CONTAINS
       use_tmx, &
       use_lakes, &
       lake_scheme, &
+      l_ice_on_lakes, &
       use_glacier, &
       check_child_cf, &
       enforce_water_budget, &
@@ -214,6 +217,7 @@ CONTAINS
     use_tmx                    = .FALSE.
     use_lakes                  = .TRUE.
     lake_scheme                = "echam"
+    l_ice_on_lakes             = .TRUE.
     use_glacier                = .TRUE.
     check_child_cf             = .FALSE.
     enforce_water_budget       = 'ignore'
@@ -318,6 +322,7 @@ CONTAINS
       model_config%use_flake = .FALSE.
       CALL message(routine, 'Not using lakes.')
     END IF
+    model_config%l_ice_on_lakes             = l_ice_on_lakes
     model_config%use_glacier                = use_glacier
     model_config%check_child_cf             = check_child_cf
     model_config%quincy_model               = TRIM(quincy_model)

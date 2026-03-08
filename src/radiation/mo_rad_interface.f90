@@ -36,7 +36,7 @@ MODULE mo_rad_interface
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes A2L_, RAD_, SEB_, HYDRO_
+  dsl4jsb_Use_processes A2L_, RAD_, SEB_, HYDRO_, FLAKE_
 
   ! Use process configurations
   dsl4jsb_Use_config(RAD_)
@@ -315,7 +315,7 @@ CONTAINS
         & )
 
       ! Ice on lake
-      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      IF (model%config%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(SEB_, t_lice)       ! in
         dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)   ! in
         dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)  ! in
@@ -443,7 +443,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(RAD_, lw_srf_net,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lwtr,   weighted_by_fract)
 
-    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+    IF (model%config%l_ice_on_lakes) THEN
       dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lice,   weighted_by_fract)
     END IF
 
@@ -893,7 +893,8 @@ CONTAINS
     USE mo_rad_process,         ONLY: &
       & get_surface_albedo_simple, calc_soil_albedo, calc_pond_albedo, calc_alb_lwtr, calc_alb_lice, &
       & calc_glacier_albedo, calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
-      & Has_minimal_radiation, calc_snow_age, get_litter_carbon, get_soil_carbon
+      & Has_minimal_radiation, calc_snow_age, get_litter_carbon, get_soil_carbon, &
+      & calc_alb_lwtr_flake, calc_alb_lice_flake
 #ifndef __NO_QUINCY__
     USE mo_rad_process,         ONLY: calc_canopy_radiation_budget
 #endif
@@ -995,6 +996,7 @@ CONTAINS
       & albedo_lwtr,           &
       & fract_lice,            &
       & t_lice,                &
+      & t_lwtr,                &
       & weq_snow_lice,         &
       & albedo_lice
 
@@ -1327,52 +1329,82 @@ CONTAINS
     !!
     !!
     IF (tile%is_lake) THEN
-      dsl4jsb_Get_var2D_onChunk(SEB_,   t_lice)       ! in
-      dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lwtr)  ! inout
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic=1,nc
-        CALL calc_alb_lwtr( &
-          & l_day(ic),       & ! in
-          & albedo_lwtr(ic)  & ! inout
-          & )
-      END DO
-      !$ACC END PARALLEL LOOP
+      IF (tile%Is_process_active(FLAKE_)) THEN
 
-      ! Ice on lake
-      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-        dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_lice)  ! in
-        dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)     ! in
-        dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)    ! inout
+        dsl4jsb_Get_var2D_onChunk(SEB_,   t_lwtr)       ! in
+        dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lwtr)  ! inout
+        dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)  ! inout
+        dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)   ! in
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
-          CALL calc_alb_lice(    &
-            & l_day(ic),         & ! in
-            & t_lice(ic),        & ! in
-            & weq_snow_lice(ic), & ! in
-            & albedo_lice(ic)    & ! inout
+          CALL calc_alb_lwtr_flake( &
+            & l_day(ic),            & ! in
+            & albedo_lwtr(ic)       & ! inout
+            & )
+          CALL calc_alb_lice_flake( &
+            & l_day(ic),            & ! in
+            & t_lwtr(ic),           & ! in
+            & albedo_lice(ic)       & ! inout
+            & )
+          IF(l_day(ic)) THEN
+            alb_vis(ic) = (1._wp - fract_lice(ic)) * albedo_lwtr(ic) + fract_lice(ic) * albedo_lice(ic)
+            alb_nir(ic) = alb_vis(ic)
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP
+
+      ELSE
+
+        dsl4jsb_Get_var2D_onChunk(SEB_,   t_lice)       ! in
+        dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lwtr)  ! inout
+
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic=1,nc
+          CALL calc_alb_lwtr( &
+            & l_day(ic),       & ! in
+            & albedo_lwtr(ic)  & ! inout
             & )
         END DO
         !$ACC END PARALLEL LOOP
 
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          IF(l_day(ic)) THEN
-            alb_vis(ic) = (1._wp - fract_lice(ic)) * albedo_lwtr(ic) + fract_lice(ic) * albedo_lice(ic)
-            alb_nir(ic) = alb_vis(ic)  ! TODO
-          END IF
-        END DO
-        !$ACC END PARALLEL LOOP
-      ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          IF(l_day(ic)) THEN
-            alb_vis(ic) = albedo_lwtr(ic)
-            alb_nir(ic) = alb_vis(ic)  ! TODO
-          END IF
-        END DO
-        !$ACC END PARALLEL LOOP
+        ! Ice on lake
+        IF (model%config%l_ice_on_lakes) THEN
+          dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_lice)  ! in
+          dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)     ! in
+          dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)    ! inout
+
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+          DO ic=1,nc
+            CALL calc_alb_lice(    &
+              & l_day(ic),         & ! in
+              & t_lice(ic),        & ! in
+              & weq_snow_lice(ic), & ! in
+              & albedo_lice(ic)    & ! inout
+              & )
+          END DO
+          !$ACC END PARALLEL LOOP
+
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+          DO ic = 1, nc
+            IF(l_day(ic)) THEN
+              alb_vis(ic) = (1._wp - fract_lice(ic)) * albedo_lwtr(ic) + fract_lice(ic) * albedo_lice(ic)
+              alb_nir(ic) = alb_vis(ic)  ! TODO
+            END IF
+          END DO
+          !$ACC END PARALLEL LOOP
+        ELSE
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+          DO ic = 1, nc
+            IF(l_day(ic)) THEN
+              alb_vis(ic) = albedo_lwtr(ic)
+              alb_nir(ic) = alb_vis(ic)  ! TODO
+            END IF
+          END DO
+          !$ACC END PARALLEL LOOP
+        END IF
+
       END IF
 
     !> 3.0 glacier

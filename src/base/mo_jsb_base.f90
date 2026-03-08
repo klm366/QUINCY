@@ -49,7 +49,7 @@ CONTAINS
     USE mo_jsb_grid,            ONLY: Register_vgrid, Get_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, ZAXIS_GENERIC
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
-    USE mo_flake_parameters,    ONLY: init_flake_parameters_jsbach
+    USE mo_flake_parameters,    ONLY: init_flake_parameters
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT
     USE mo_rad_parameters,      ONLY: init_rad_parameters
@@ -195,9 +195,12 @@ CONTAINS
          CASE (MODEL_JSBACH)
            CALL message(TRIM(routine), 'starting init of JSBACH process parameters')
            CALL init_pheno_parameters
-           CALL init_flake_parameters_jsbach
          END SELECT
-       END IF
+         IF (model%config%use_flake) THEN
+           CALL message(TRIM(routine), 'initializing FLake parameters since use_flake is TRUE...')
+           CALL init_flake_parameters
+         END IF
+       END IF ! model_idx == 1
 
        CALL message(TRIM(routine), 'New jsbach model: '//TRIM(model%shortname))
        CALL message('     ', '... ID: '//TRIM(int2string(model%id)))

@@ -276,7 +276,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(SEB_, s_lwtr,     weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SEB_, qsat_lwtr,  weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SEB_, fract_lice, weighted_by_fract)
-      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      IF (model%config%l_ice_on_lakes) THEN
         dsl4jsb_Aggregate_onChunk(SEB_, t_lice,     weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(SEB_, s_lice,     weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(SEB_, qsat_lice,  weighted_by_fract)
@@ -449,7 +449,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_lnd,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_wtr,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_wtr,  weighted_by_fract)
-    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+    IF (model%config%l_ice_on_lakes) THEN
       dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_ice,    weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
     END IF

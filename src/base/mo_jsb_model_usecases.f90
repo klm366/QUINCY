@@ -52,11 +52,11 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase'
 
     IF (model%config%use_flake) THEN
-      CALL message(TRIM(routine), 'Initializing model usecase "'//TRIM(model%config%usecase)//'" with FLAKE')
+      CALL message(TRIM(routine), 'Initializing model usecase '//TRIM(model%config%usecase)//' with FLAKE lake model')
     ELSE IF (model%config%use_lakes) THEN
-      CALL message(TRIM(routine), 'Initializing model usecase "'//TRIM(model%config%usecase)//'" with lakes')
+      CALL message(TRIM(routine), 'Initializing model usecase '//TRIM(model%config%usecase)//' with ECHAM lake model')
     ELSE
-      CALL message(TRIM(routine), 'Initializing model usecase "'//TRIM(model%config%usecase)//'"')
+      CALL message(TRIM(routine), 'Initializing model usecase '//TRIM(model%config%usecase)//' without lake model')
     END IF
 
     ! select usecase based on namelist option

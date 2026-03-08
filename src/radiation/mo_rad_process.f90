@@ -23,7 +23,9 @@ MODULE mo_rad_process
   PUBLIC ::                        &
     & calc_radiation_surface_net,  &
     & calc_par,                    &
-    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation, calc_snow_age,                 &
+    & calc_alb_lwtr, calc_alb_lice, &
+    & calc_alb_lwtr_flake, calc_alb_lice_flake, &
+    & calc_glacier_albedo, Has_minimal_radiation, calc_snow_age,                 &
     & calc_soil_albedo, calc_pond_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos_of_vegtile, &
     & get_surface_albedo_simple, get_litter_carbon, get_soil_carbon
 #ifndef __NO_QUINCY__
@@ -569,6 +571,75 @@ CONTAINS
     END IF
 
   END SUBROUTINE calc_alb_lice
+  !
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_alb_lwtr_flake( &
+    & l_day,                      &
+    & alb_lwtr                    &
+    & )
+
+    !$ACC ROUTINE SEQ
+
+    ! Use declarations
+    USE mo_rad_constants, ONLY: AlbedoLakeWaterFlake
+
+    ! Arguments
+    LOGICAL,  INTENT(in)    :: &
+      & l_day
+    REAL(wp), INTENT(inout) :: &
+      & alb_lwtr
+
+    ! ---------------------------
+    ! Go
+
+    IF (.NOT. l_day) RETURN
+
+    alb_lwtr = AlbedoLakeWaterFlake
+
+  END SUBROUTINE calc_alb_lwtr_flake
+  !
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_alb_lice_flake( &
+    & l_day,                      &
+    & t,                          &
+    & alb_lice                    &
+    & )
+
+    !$ACC ROUTINE SEQ
+
+    ! Use declarations
+    USE mo_rad_constants,          ONLY: AlbedoLakeWhiteIce, AlbedoLakeBlueIce, AlbedoLakeIceExp
+    USE mo_jsb_physical_constants, ONLY: tmelt
+
+    ! Arguments
+    LOGICAL,  INTENT(in)    :: &
+      & l_day
+    REAL(wp), INTENT(in)    :: &
+      & t
+    REAL(wp), INTENT(inout) :: &
+      & alb_lice
+
+    ! Local variables
+    REAL(wp) :: albedo_factor
+
+    ! ---------------------------
+    ! Go
+
+    IF (.NOT. l_day) RETURN
+
+    ! Formula from Mironov and Ritter (2004) as used in FLake
+    albedo_factor = EXP(-AlbedoLakeIceExp * (tmelt - t) / tmelt)
+    alb_lice      = AlbedoLakeWhiteIce * (1._wp - albedo_factor) + AlbedoLakeBlueIce * albedo_factor
+
+  END SUBROUTINE calc_alb_lice_flake
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !

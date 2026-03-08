@@ -2805,7 +2805,7 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END IF
 
-      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN          ! Lake ice is activated in the model setup
+      IF (model%config%l_ice_on_lakes) THEN          ! Lake ice is activated in the model setup
         IF (.NOT. model%config%use_tmx) THEN
           dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef_ice)     ! in
           dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef_ice)     ! in
@@ -2974,7 +2974,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, transpiration,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_lnd,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_wtr,          weighted_by_fract)
-    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+    IF (model%config%l_ice_on_lakes) THEN
       dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_ice,        weighted_by_fract)
     END IF
 
@@ -3151,7 +3151,7 @@ CONTAINS
     !> On the lake tile we only need to calculate the snow fraction on lake ice. (The lake ice fraction is
     !> calculated in [[mo_seb_lake:update_surface_energy_lake]].)
     IF (tile%is_lake) THEN
-      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      IF (model%config%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_snow_lice)    ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_lice)  ! out
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -3417,7 +3417,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow_soil,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow_can,   weighted_by_fract)
-    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+    IF (model%config%l_ice_on_lakes) THEN
       dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow_lice,  weighted_by_fract)
     END IF
 

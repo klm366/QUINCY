@@ -301,7 +301,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    IF (tile%is_lake .AND. dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+    IF (tile%is_lake .AND. model%config%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! in
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(qsat_lice)
         DO ic = 1, nc
@@ -654,7 +654,7 @@ CONTAINS
 
     ELSE IF (tile%contains_lake) THEN
 
-      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      IF (model%config%l_ice_on_lakes) THEN
         dsl4jsb_Get_memory(SEB_)
         dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice) ! IN
 

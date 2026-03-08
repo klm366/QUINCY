@@ -141,12 +141,8 @@ CONTAINS
       tpl_T_f                   ! Fresh water freezing point [K]  
     
     USE mo_flake_parameters, ONLY : &
-      albedo_water_ref      , &
-      albedo_blueice_ref    , & ! Blue ice
-      albedo_whiteice_ref   , & ! White ice
       h_Ice_min             , & ! Minimum ice thickness
-      h_Snow_min            , & ! Minimum snow thickness
-      c_albice_MR               ! Constant in the interpolation formula for the ice albedo (Mironov and Ritter 2004)
+      h_Snow_min                ! Minimum snow thickness
 
     USE mo_jsb_physical_constants, ONLY: &
       & rhoh2o, & !> [kg/m3]  density of liquid water !! = tpl_rho_w_r
@@ -294,8 +290,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)     ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)     ! in
 
-    dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lwtr)        ! out
-    dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)        ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lwtr)        ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)        ! in
 
     dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)    ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_ice)    ! out 
@@ -339,12 +335,8 @@ CONTAINS
     par_Coriolis = 2.0_wp*rot_earth*SIN(lat(:)*3.1416_wp/180_wp)
 
     !  Set albedos of the lake water, lake ice and snow
+    !  They are now computed in the RAD process
 
-    albedo_lwtr = albedo_water_ref
-    ! Use empirical formulation proposed by Mironov and Ritter (2004) for GME 
-    !_nu albedo_lice   = albedo_whiteice_ref 
-    albedo_lice   = EXP(-c_albice_MR*(tpl_T_f-T_lwtr)/tpl_T_f)
-    albedo_lice   = albedo_whiteice_ref*(1._wp-albedo_lice) + albedo_blueice_ref*albedo_lice
     ! Snow is not considered
     albedo_snow  = albedo_lice
     

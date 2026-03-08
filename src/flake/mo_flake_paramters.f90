@@ -80,10 +80,10 @@ MODULE mo_flake_parameters
     ! the init_constants routines are called in mo_jsb_base:jsbach_setup_models() or :quincy_proc_parameter_init()
   
     ! ======================================================================================================= !
-    !> initialize JSBACH specific parameters for the process: flake
+    !> initialize JSBACH specific parameters for the FLALE_ process
     !>
-    SUBROUTINE init_flake_parameters_jsbach
-      CHARACTER(len=*), PARAMETER :: routine = modname//':init_flake_parameters_jsbach'
+    SUBROUTINE init_flake_parameters
+      CHARACTER(len=*), PARAMETER :: routine = modname//':init_flake_parameters'
 
       ! As a first step, keep lake depths constant
       depth_w   = 10.0_wp  
@@ -125,18 +125,8 @@ MODULE mo_flake_parameters
       c_albice_MR = 95.6_wp ! (Mironov and Ritter 2004)
 
 
-    END SUBROUTINE init_flake_parameters_jsbach
-  
-    ! ======================================================================================================= !
-    !> initialize QUINCY specific parameters for the process: flake
-    !>
-    ! SUBROUTINE init_flake_parameters_quincy
-    !   USE mo_jsb_physical_constants,    ONLY: Tzero
-    !   ! ----------------------------------------------------------------------------------------------------- !
-    !   CHARACTER(len=*), PARAMETER :: routine = modname//':init_flake_parameters_quincy'
-  
-    ! END SUBROUTINE init_flake_parameters_quincy
-  
+    END SUBROUTINE init_flake_parameters
+    
 #endif
 END MODULE mo_flake_parameters
   
