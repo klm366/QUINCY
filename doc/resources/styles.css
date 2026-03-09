@@ -1,1 +1,67 @@
 /* css styles */
+
+/* Make mjx-container block-level for proper equation number alignment */
+mjx-container[display="true"] {
+  display: block !important;
+  max-width: none !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+
+/* Add scrolling to all paragraphs/divs in content area */
+#quarto-document-content p,
+#quarto-document-content div,
+article p,
+article div,
+main p,
+main div {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}
+
+/* Exception for citation popups - allow normal overflow */
+.tippy-content p,
+.tippy-content div,
+.tippy-box p,
+.tippy-box div {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+/* Style the scrollbars */
+#quarto-document-content p::-webkit-scrollbar,
+#quarto-document-content div::-webkit-scrollbar,
+article p::-webkit-scrollbar,
+article div::-webkit-scrollbar {
+  height: 8px;
+}
+
+#quarto-document-content p::-webkit-scrollbar-thumb,
+#quarto-document-content div::-webkit-scrollbar-thumb,
+article p::-webkit-scrollbar-thumb,
+article div::-webkit-scrollbar-thumb {
+  background: #999;
+  border-radius: 4px;
+}
+
+#quarto-document-content p::-webkit-scrollbar-track,
+#quarto-document-content div::-webkit-scrollbar-track,
+article p::-webkit-scrollbar-track,
+article div::-webkit-scrollbar-track {
+  background: #e0e0e0;
+}
+
+/* Fix references section to prevent text cutoff */
+#refs,
+#refs p,
+#refs div,
+.references,
+.references p,
+.references div,
+div[role="doc-bibliography"],
+div[role="doc-bibliography"] p,
+div[role="doc-bibliography"] div {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}

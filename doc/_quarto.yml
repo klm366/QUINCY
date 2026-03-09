@@ -22,10 +22,11 @@ website:
   sidebar:
     contents: auto
 
-    #filters:
-    #  - ./test.lua
+filters:
+  - auto-subeqn.lua
 
-    #number-sections: true
+number-sections: true
+number-depth: 2
 
 #crossref:
 #  sec-labels: alpha A
@@ -42,6 +43,7 @@ format:
         # - brand
     css: resources/styles.css
     toc: true
+    include-in-header: mathjax-config.html
     #include-in-header: mathjax_chapnum2.html
     #include-in-header: mathjax0.html
     #include-in-header: mathjax.html
