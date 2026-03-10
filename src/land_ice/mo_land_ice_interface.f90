@@ -158,33 +158,33 @@ CONTAINS
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
 
-    ! Get input variables from SEB
-    dsl4jsb_Get_var2D_onChunk(SEB_,   t_srf_unfilt)        ! IN
-    dsl4jsb_Get_var2D_onChunk(SEB_,   grnd_hflx)           ! IN
-
-    ! Get input variables from HYDRO
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)           ! IN
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, precip_rain)          ! IN
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, precip_snow)          ! IN
-
-    ! Get output variables in LAND_ICE
-    dsl4jsb_Get_var2D_onChunk(LAND_ICE_, surface_temp)           ! OUT
-    dsl4jsb_Get_var2D_onChunk(LAND_ICE_, surface_mass_balance)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(LAND_ICE_, ground_heat_flux)       ! OUT
-    dsl4jsb_Get_var2D_onChunk(LAND_ICE_, rainfall_rate)          ! OUT
-    dsl4jsb_Get_var2D_onChunk(LAND_ICE_, snowfall_rate)          ! OUT
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic = 1, nc
-      surface_temp(ic)           = t_srf_unfilt(ic)
-      ground_heat_flux(ic)       = grnd_hflx(ic)
-      rainfall_rate(ic)          = precip_rain(ic)
-      snowfall_rate(ic)          = precip_snow(ic)
-      ! SMB = snowfall - sublimation/evaporation (evapotrans is negative for sublimation)
-      ! Note: a more refined SMB calculation may be needed depending on the ice-sheet model requirements
-      surface_mass_balance(ic)   = precip_snow(ic) + evapotrans(ic)
-    END DO
-    !$ACC END PARALLEL LOOP
+!     ! Get input variables from SEB
+!     dsl4jsb_Get_var2D_onChunk(SEB_,   t_srf_unfilt)        ! IN
+!     dsl4jsb_Get_var2D_onChunk(SEB_,   grnd_hflx)           ! IN
+!
+!     ! Get input variables from HYDRO
+!     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)           ! IN
+!     dsl4jsb_Get_var2D_onChunk(HYDRO_, precip_rain)          ! IN
+!     dsl4jsb_Get_var2D_onChunk(HYDRO_, precip_snow)          ! IN
+!
+!     ! Get output variables in LAND_ICE
+!     dsl4jsb_Get_var2D_onChunk(LAND_ICE_, surface_temp)           ! OUT
+!     dsl4jsb_Get_var2D_onChunk(LAND_ICE_, surface_mass_balance)   ! OUT
+!     dsl4jsb_Get_var2D_onChunk(LAND_ICE_, ground_heat_flux)       ! OUT
+!     dsl4jsb_Get_var2D_onChunk(LAND_ICE_, rainfall_rate)          ! OUT
+!     dsl4jsb_Get_var2D_onChunk(LAND_ICE_, snowfall_rate)          ! OUT
+!
+!     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+!     DO ic = 1, nc
+!       surface_temp(ic)           = t_srf_unfilt(ic)
+!       ground_heat_flux(ic)       = grnd_hflx(ic)
+!       rainfall_rate(ic)          = precip_rain(ic)
+!       snowfall_rate(ic)          = precip_snow(ic)
+!       ! SMB = snowfall - sublimation/evaporation (evapotrans is negative for sublimation)
+!       ! Note: a more refined SMB calculation may be needed depending on the ice-sheet model requirements
+!       surface_mass_balance(ic)   = precip_snow(ic) + evapotrans(ic)
+!     END DO
+!     !$ACC END PARALLEL LOOP
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -216,11 +216,11 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(LAND_ICE_, surface_temp,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LAND_ICE_, surface_mass_balance, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LAND_ICE_, ground_heat_flux,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LAND_ICE_, rainfall_rate,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LAND_ICE_, snowfall_rate,        weighted_by_fract)
+!     dsl4jsb_Aggregate_onChunk(LAND_ICE_, surface_temp,         weighted_by_fract)
+!     dsl4jsb_Aggregate_onChunk(LAND_ICE_, surface_mass_balance, weighted_by_fract)
+!     dsl4jsb_Aggregate_onChunk(LAND_ICE_, ground_heat_flux,     weighted_by_fract)
+!     dsl4jsb_Aggregate_onChunk(LAND_ICE_, rainfall_rate,        weighted_by_fract)
+!     dsl4jsb_Aggregate_onChunk(LAND_ICE_, snowfall_rate,        weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
