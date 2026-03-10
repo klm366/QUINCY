@@ -127,7 +127,7 @@ function Math(el)
     end)
     
     el.text = text
-  elseif text:match("\\label{eq:") and not text:match("\\tag{") and not text:match("\\begin{align}") then
+  elseif text:match("\\label{eq-") and not text:match("\\tag{") and not text:match("\\begin{align}") then
     -- Regular single equation with label but no tag and no align - add tag and count it
     equation_counter = equation_counter + 1
     local base_num = string.format("%d.%d", current_section, equation_counter)
@@ -153,7 +153,7 @@ function Math(el)
     
     text = table.concat(lines, "\n")
     el.text = text
-  elseif text:match("\\label{eq:") and not text:match("\\tag{") then
+  elseif text:match("\\label{eq-") and not text:match("\\tag{") then
     -- Regular equation with label but no tag - just count it (for align blocks already processed)
     equation_counter = equation_counter + 1
   elseif text:match("\\begin{align}") and not text:match("\\tag{") and not text:match("\\label{") then
