@@ -156,6 +156,7 @@ MODULE mo_q_dfire_constants
                   t_sf_fuel_live_fuel_fruit_ix
   END ENUM
 
+  ! Fuel allocation from pools into dead/live fuel
   INTEGER, PARAMETER :: sf_fuel_classes_nr = 4 !< 1, 10, 100, 1000
   REAL(wp), PARAMETER :: sf_slow_fuel(sf_fuel_classes_nr) = [0.045_wp, 0.075_wp, 0.21_wp, 0.67_wp]
   REAL(wp), PARAMETER :: sf_fast_fuel(sf_fuel_classes_nr) = [1._wp, 0._wp, 0._wp, 0._wp]
@@ -217,8 +218,18 @@ MODULE mo_q_dfire_constants
   INTEGER, PARAMETER :: df_sf_sigma_tho_nr = 3
   REAL(wp), PARAMETER :: df_sigmas_tho(df_sf_sigma_tho_nr) = (/ 66._wp, 3.58_wp, 0.98_wp /)
   !< Oberhagemann et al. (2025)
-  INTEGER, PARAMETER :: df_sf_sigma_dd_nr = 4 !< Total number of sigmas (1,10,100 hours, live herbaceous)
+  INTEGER, PARAMETER :: df_sf_sigma_dd_nr = 5 !< Total number of sigmas (1,10, 100, 1000 hours and live herbaceous)
+  INTEGER, PARAMETER :: df_sf_sigma_dd_ros_nr = 4 !< Total number of sigmas (1,10, 100 hours and live herbaceous)
   INTEGER, PARAMETER :: df_sf_sigma_lv_nr = 2 !< Total number of sigmas (live grass, live woody)
+  INTEGER, PARAMETER :: df_sf_ix_sigma_dd_1hr = 1
+  INTEGER, PARAMETER :: df_sf_ix_sigma_dd_10hr = 2
+  INTEGER, PARAMETER :: df_sf_ix_sigma_dd_100hr = 3
+  INTEGER, PARAMETER :: df_sf_ix_sigma_dd_1000hr = 4
+  INTEGER, PARAMETER :: df_sf_ix_sigma_dd_clvg = 5
+  INTEGER, PARAMETER :: df_sf_ix_sigma_lv_lvg = 1
+  INTEGER, PARAMETER :: df_sf_ix_sigma_lv_wdy = 1
+  INTEGER, PARAMETER :: df_sf_ix_sigma_dd_ff(2) = [df_sf_ix_sigma_dd_1hr, df_sf_ix_sigma_dd_clvg] ! fine fuels
+  INTEGER, PARAMETER :: df_sf_ix_sigma_dd_ros(4) = [df_sf_ix_sigma_dd_1hr, df_sf_ix_sigma_dd_10hr, df_sf_ix_sigma_dd_100hr, df_sf_ix_sigma_dd_clvg] ! fuel moistre involved fire rate of spread
 
   !< Surface area to volume ratio (Oberhagemann et al. (2025)) [cm-1]
   REAL(wp), PARAMETER :: df_sigmas_dead(df_sf_sigma_dd_nr) = (/ 66._wp, 3.58_wp, 0.98_wp, 66._wp/) !< 1 hr, 10 hrs, 100 hrs, live herbaceous (to burn due to low moisture)

@@ -87,7 +87,7 @@ MODULE mo_q_dfire_spitfire
 
   USE mo_q_dfire_constants,       ONLY: ixs_sf_dead_litter_fuel_pools, ixs_sf_dead_livegrass_fuel_pools
   USE mo_q_dfire_constants,       ONLY: df_sf_units_g_to_kg
-  USE mo_q_dfire_constants,       ONLY: df_sf_sigma_dd_nr, df_sf_sigma_lv_nr
+  USE mo_q_dfire_constants,       ONLY: df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, df_sf_ix_sigma_dd_ros
   USE mo_q_dfire_constants,       ONLY: df_sigmas_dead, df_sigmas_live
   USE mo_q_dfire_config_class,    ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
@@ -703,7 +703,7 @@ CONTAINS
       END DO
 
       CALL calc_spitfire_oberhagemann(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
-          df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
+!          df_sf_sigma_dd_ros_nr, df_sf_sigma_lv_nr, &
           df_sigmas_dead, df_sigmas_live, &
           nesterov_index, &
           lctlib_fuel_bulk_density, &
@@ -861,7 +861,8 @@ CONTAINS
   !>
   !>
   !>
-  SUBROUTINE calc_spitfire_oberhagemann(nc, ndd, nlv, nsigdd, nsiglv, &
+  SUBROUTINE calc_spitfire_oberhagemann(nc, &
+                  ndd, nlv, &
                   sigmas_dd, sigmas_lv, &
                   nesterov_index, &
                   fuel_bulk_density, &
@@ -876,9 +877,16 @@ CONTAINS
                   ros, &
                   mask) ! optional
 
+    USE mo_q_dfire_constants, ONLY: ixs_ros => df_sf_ix_sigma_dd_ros, &
+                                    ix_clvg => df_sf_ix_sigma_dd_clvg, &
+                                     ix_1hr => df_sf_ix_sigma_dd_1hr, &
+                                    ix_10hr => df_sf_ix_sigma_dd_10hr, &
+                                   ix_100hr => df_sf_ix_sigma_dd_100hr, &
+                                     ix_lvg => df_sf_ix_sigma_lv_lvg, &
+                                     ix_wdy => df_sf_ix_sigma_lv_wdy
+
     INTEGER, INTENT(in) :: nc
-    INTEGER, INTENT(in) :: ndd, nlv
-    INTEGER, INTENT(in) :: nsigdd, nsiglv
+    INTEGER, INTENT(in) :: ndd, nlv !< number of fuel classes (1 to 1000 hours ...)
     REAL(wp), INTENT(in) :: sigmas_dd(:), sigmas_lv(:) !< Surface area to volume ratio [cm2/cm3]
     REAL(wp), INTENT(in) :: nesterov_index(:) !< Dryness index [deg C2]
     REAL(wp), INTENT(in) :: fuel_bulk_density(:) !< Fuel bulk density [kg m-3]
@@ -893,34 +901,35 @@ CONTAINS
     TYPE(t_sf_ros), INTENT(out) :: ros !< Rate of spread [-]
     LOGICAL, OPTIONAL :: mask(:) !< True: gridcell enabled
 
-    REAL(wp) :: woi_dd(nc,nsigdd)    !< [kg DM m-2] (#nc, #sigma classes-1,10,100hrs,cured lvg-) Note: in kg
-    REAL(wp) :: woi_lv(nc,nsiglv)    !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
+    REAL(wp) :: woi_dd(nc,ndd)    !< [kg DM m-2] (#nc, #sigma classes-1,10,100hrs,cured lvg-) Note: in kg
+    REAL(wp) :: woi_lv(nc,nlv)    !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
     REAL(wp) :: me_dd(nc)            !< Dead moisture of extinction [-] (#nc)
     REAL(wp) :: me_lv(nc)            !< Live moisture of extinction [-] (#nc)
-
-    INTEGER, PARAMETER :: ix_sigdd_lvg = 4
-    INTEGER, PARAMETER :: ix_siglv_lvg = 1
-    INTEGER, PARAMETER :: ix_siglv_wdy = 2
 
     fuel_moisture = sf_calc_fuel_moisture_ober(nc, ndd, nlv, &
                       sigmas_dd, &
                       lvg_moisture, &
                       nesterov_index)
 
-    woi_dd(:,:) = dead_fuel_litter * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
-    woi_dd(:,ix_sigdd_lvg) = tot_dead_fuel_grass * df_sf_units_g_to_kg  !< 4 = dry livegrass
+    woi_dd = 0._wp
+    woi_dd(:,ixs_1hr) = dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
+    woi_dd(:,ixs_10hr) = dead_fuel_litter(:,ix_10hr) * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
+    woi_dd(:,ixs_100hr) = dead_fuel_litter(:,ix_100hr) * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
+    woi_dd(:,ix_clvg) = tot_dead_fuel_grass * df_sf_units_g_to_kg  !< 4 = dry livegrass
 
-    woi_lv(:,ix_siglv_lvg) = 0._wp !< 1 = wet livegrass, not yet implemented
-    woi_lv(:,ix_siglv_wdy) = tot_live_fuel_tree * df_sf_units_g_to_kg !< 2= woody fuel
+    woi_lv(:,ix_lvg) = 0._wp !< 1 = wet livegrass, not yet implemented
+    woi_lv(:,ix_wdy) = tot_live_fuel_tree * df_sf_units_g_to_kg !< 2= woody fuel
 
     me_dd = moisture_extinction
-    me_lv = calc_live_me(nc, ndd, nlv, fuel_moisture%dead, me_dd, woi_dd, woi_lv, sigmas_dd, sigmas_lv, mask)
+    me_lv = calc_live_me(nc, ndd, nlv, fuel_moisture%dead(:,ixs_ros), &
+                          me_dd, woi_dd(:,ixs_ros), woi_lv, sigmas_dd, sigmas_lv, mask)
 
+    !< only involved ROS fuel (and FM)
     ros = sf_calc_rate_of_spread_ober(&
-        nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
+        nc, nlv, &
         sigmas_dd, sigmas_lv, &
-        woi_dd, woi_lv, & ! fuels
-        fuel_moisture%dead, fuel_moisture%live, &
+        woi_dd(:,ixs_ros), woi_lv, & ! fuels
+        fuel_moisture%dead(:,ixs_ros), fuel_moisture%live, &
         me_dd, me_lv, &
         fuel_bulk_density, &
         u_f_wind, &

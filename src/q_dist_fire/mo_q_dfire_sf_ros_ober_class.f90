@@ -160,7 +160,7 @@ CONTAINS
   !> Do the science
   !>
   FUNCTION sf_calc_rate_of_spread_ober(nc, ndd, nlv, &
-                                  sigmas_dd, sigmas_lv, &
+!                                  sigmas_dd, sigmas_lv, &
                                   woi_dd, woi_lv, &
                                   mf_dd, mf_lv, &
                                   me_dd, me_lv, &
