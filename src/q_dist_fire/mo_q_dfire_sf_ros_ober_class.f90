@@ -160,7 +160,7 @@ CONTAINS
   !> Do the science
   !>
   FUNCTION sf_calc_rate_of_spread_ober(nc, ndd, nlv, &
-!                                  sigmas_dd, sigmas_lv, &
+                                  sigmas_dd, sigmas_lv, &
                                   woi_dd, woi_lv, &
                                   mf_dd, mf_lv, &
                                   me_dd, me_lv, &
@@ -203,7 +203,7 @@ CONTAINS
     TYPE(t_sf_weighting_factors) :: wfactors
     ! ----------------------------------------------------------------------------------------------------- !
     wn = t_fwvar_r1d(nc)
-    mf = t_fwvar_r1d(nc)
+    mf = t_fwvar_r1d(nc, has_total=.TRUE.)
     rm = t_fwvar_r1d(nc)
     eta_m = t_fwvar_r1d(nc)
     sigma = t_fwvar_r1d(nc, has_total=.TRUE.)

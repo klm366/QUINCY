@@ -67,17 +67,9 @@ MODULE mo_q_dfire_sf_fmoist_class
   TYPE :: t_mf !< fuel moisture
     !< oberhagemann et al. (2025)
     REAL(wp), ALLOCATABLE :: dead(:,:) !< dead fuel moisture (#nc,#dead fuel moisture -1hr, 10hrs, 100hrs, 1000hrs, dry livegrass- )
-    REAL(wp), ALLOCATABLE :: dead_1hr(:) !< dead fuel moisture (#nc)
-    REAL(wp), ALLOCATABLE :: dead_10hr(:) !< dead fuel moisture (#nc)
-    REAL(wp), ALLOCATABLE :: dead_100hr(:) !< dead fuel moisture (#nc)
-    REAL(wp), ALLOCATABLE :: dead_1000hr(:) !< dead fuel moisture (#nc)
-    REAL(wp), ALLOCATABLE :: dead_lvg(:) !< dead fuel moisture (#nc)
-
     REAL(wp), ALLOCATABLE :: live(:,:) !< live fuel moisture (#nc, -wet livegrass, woody-)
-    REAL(wp), ALLOCATABLE :: live_lvg(:) !< live fuel moisture (#nc)
-    REAL(wp), ALLOCATABLE :: live_wdy(:) !< live fuel moisture (#nc)
     !< Weighted fuel moisture
-    REAL(wp), POINTER :: val(:) !< weighted fuel moisture (mixed-1,10,100 and lvg-, fine fuels-1hr and lvg-)
+    REAL(wp), ALLOCATABLE :: val(:) !< weighted fuel moisture (mixed-1,10,100 and lvg-, fine fuels-1hr and lvg-)
   END TYPE t_mf
 
   INTERFACE t_mf
@@ -96,8 +88,10 @@ CONTAINS
 
     ALLOCATE(mf%dead(nc,ndd))
     ALLOCATE(mf%live(nc,nlv))
+    ALLOCATE(mf%val(nc))
     mf%dead = 0._wp
     mf%live = 0._wp
+    mf%val = 0._wp
   END FUNCTION create_t_mf
 
 
