@@ -283,7 +283,7 @@ CONTAINS
     !< PFT related, todo: no need to redefine at every time step
     IF (lctlib%growthform == itree) THEN
       live_fuel_frac => df_sf_live_frac_tree
-    ELSE !< %growthform == igrass
+    ELSE IF (lctlib%growthform == igrass) THEN
       live_fuel_frac => df_sf_live_frac_grass
     END IF
 
