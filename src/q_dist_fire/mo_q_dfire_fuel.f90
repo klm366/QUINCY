@@ -321,13 +321,12 @@ CONTAINS
 
     !< Oberhagemann related, required to calculate livegrass moisture at PFT level due to PFT parameters
     lvg_moisture = 0._wp
-    isgrass: IF (lctlib%growthform == igrass) THEN
-      isoberhagemann: IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+    IF (lctlib%growthform == igrass) THEN
+      IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
         lfmc_par = t_lfmc(lctlib)
         lvg_moisture = calc_mflg_ober(nc, lfmc_par, growing_season)
-      ELSE
-      END IF isoberhagemann
-    END IF isgrass
+      END IF
+    END IF
 
     NULLIFY(live_fuel_frac)
   END SUBROUTINE update_q_dfire_fuel
