@@ -76,6 +76,7 @@ MODULE mo_q_dfire_sf_fuel_class
     INTEGER :: nc
     INTEGER, ALLOCATABLE :: growth_form(:)    !< itree, igrass ! todo: remove, not necessary
     TYPE(t_sf_litter_ratios) :: litter_ratios !< Litter ratio [0 to 1]
+    REAL(wp), ALLOCATABLE :: cured_lvg_fract  !< Fraction of live grass considered dead fuel [0 to 1], Thonicke=1, Oberhagemann=0 to 1
     INTEGER :: ndeadpools                     !< Total number of dead pools
 
     !< Available pools
@@ -112,7 +113,9 @@ CONTAINS
   !> Either tree or grass is allocated according to "growth_form"
   !>
   FUNCTION create_fuel_class(nc, growth_form, dead_fuel_frac, live_fuel_frac, &
-                                  dead_fuel_mt, live_fuel_mt, litter_ratios) &
+                                  dead_fuel_mt, live_fuel_mt, &
+                                  litter_ratios, &
+                                  cured_lvg_fract) &
                                   RESULT (fuel)
     INTEGER, INTENT(in)           :: nc
     INTEGER, INTENT(in)           :: growth_form(:)                  !< itree, igrass (#nc)
@@ -121,6 +124,7 @@ CONTAINS
     REAL(wp), INTENT(in)          :: live_fuel_mt(:,:)               !< bgcm live fuel (#pool, #nc) [g DM m-2]
     REAL(wp), INTENT(in)          :: dead_fuel_mt(:,:)               !< bgcm dead fuel (#pool, #nc) [g DM m-2]
     TYPE(t_sf_litter_ratios), INTENT(in) :: litter_ratios            !< Litter ratios for sb_pool [0 to 1]
+    REAL(wp), INTENT(in)          :: cured_lvg_fract(:)              !< Cured live grass ratio [0 to 1] (#nc)
     TYPE(t_sf_fuel_class)         :: fuel                            !< output [gDM m-2]
 
     fuel%nc = nc
@@ -128,6 +132,9 @@ CONTAINS
     fuel%litter_ratios = litter_ratios
 
     fuel%ndeadpools = sf_fuel_dead_fuel_nr !< woody litter + live grass pools (+ polymeric litter, won't be used if woody litter only)
+
+    ALLOCATE(fuel%cured_lvg_fract(nc))
+    fuel%cured_lvg_fract = cured_lvg_fract
 
     ALLOCATE(fuel%live(nc, sf_fuel_live_fuel_nr))
     ALLOCATE(fuel%dead(nc, fuel%ndeadpools))
@@ -195,15 +202,20 @@ CONTAINS
 
       !< livegrass: leaf, sap wood, labile, reserve, fruit
       dead_fuel(:,t_sf_fuel_dead_fuel_grass_leaf_ix,ifuel) = grass_fuel(:,t_sf_fuel_live_fuel_leaf_ix,ifuel) * &
-                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_leaf_ix)
+                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_leaf_ix) * &
+                                                        this%cured_lvg_fract
       dead_fuel(:,t_sf_fuel_dead_fuel_grass_sap_ix,ifuel) = grass_fuel(:,t_sf_fuel_live_fuel_sap_wood_ix,ifuel) * &
-                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_sap_wood_ix)
+                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_sap_wood_ix) * &
+                                                        this%cured_lvg_fract
       dead_fuel(:,t_sf_fuel_dead_fuel_grass_labile_ix,ifuel) = grass_fuel(:,t_sf_fuel_live_fuel_labile_ix,ifuel) * &
-                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_labile_ix)
+                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_labile_ix) * &
+                                                        this%cured_lvg_fract
       dead_fuel(:,t_sf_fuel_dead_fuel_grass_reserve_ix,ifuel) = grass_fuel(:,t_sf_fuel_live_fuel_reserve_ix,ifuel) * &
-                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_reserve_ix)
+                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_reserve_ix) * &
+                                                        this%cured_lvg_fract
       dead_fuel(:,t_sf_fuel_dead_fuel_grass_fruit_ix,ifuel) = grass_fuel(:,t_sf_fuel_live_fuel_fruit_ix,ifuel) * &
-                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_fruit_ix)
+                                                        this%live_frac(ifuel,t_sf_fuel_live_fuel_fruit_ix) * &
+                                                        this%cured_lvg_fract
     END DO
 
   END FUNCTION Calc_dead_fuel
@@ -271,15 +283,15 @@ CONTAINS
       IF (this % growth_form(ic) == igrass) THEN
         DO ifuel = 1, df_sf_fc_full_nr
           grass_fuel(ic,t_sf_fuel_live_fuel_leaf_ix, ifuel) = this%live(ic,t_sf_fuel_live_fuel_leaf_ix) * &
-              this%live_frac(ifuel,t_sf_fuel_live_fuel_leaf_ix)
+              this%live_frac(ifuel,t_sf_fuel_live_fuel_leaf_ix) * (1._wp - this%cured_lvg_fract)
           grass_fuel(ic,t_sf_fuel_live_fuel_sap_wood_ix, ifuel) = this%live(ic,t_sf_fuel_live_fuel_sap_wood_ix) * &
-              this%live_frac(ifuel,t_sf_fuel_live_fuel_sap_wood_ix)
+              this%live_frac(ifuel,t_sf_fuel_live_fuel_sap_wood_ix) * (1._wp - this%cured_lvg_fract)
           grass_fuel(ic,t_sf_fuel_live_fuel_labile_ix, ifuel) = this%live(ic,t_sf_fuel_live_fuel_labile_ix) * &
-              this%live_frac(ifuel,t_sf_fuel_live_fuel_labile_ix)
+              this%live_frac(ifuel,t_sf_fuel_live_fuel_labile_ix) * (1._wp - this%cured_lvg_fract)
           grass_fuel(ic,t_sf_fuel_live_fuel_reserve_ix, ifuel) = this%live(ic,t_sf_fuel_live_fuel_reserve_ix) * &
-              this%live_frac(ifuel,t_sf_fuel_live_fuel_reserve_ix)
+              this%live_frac(ifuel,t_sf_fuel_live_fuel_reserve_ix) * (1._wp - this%cured_lvg_fract)
           grass_fuel(ic,t_sf_fuel_live_fuel_fruit_ix, ifuel) = this%live(ic,t_sf_fuel_live_fuel_fruit_ix) * &
-              this%live_frac(ifuel,t_sf_fuel_live_fuel_fruit_ix)
+              this%live_frac(ifuel,t_sf_fuel_live_fuel_fruit_ix) * (1._wp - this%cured_lvg_fract)
         END DO
       END IF
     END DO
