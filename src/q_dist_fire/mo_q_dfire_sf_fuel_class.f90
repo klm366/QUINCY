@@ -86,12 +86,10 @@ MODULE mo_q_dfire_sf_fuel_class
     REAL(wp), ALLOCATABLE :: dead_frac(:,:)   !< Precompute fuel fraction allocation from each sb_pool_mt (#fuel classes, #dead pools) [0 to 1], sum(dead_frac,pool) = 1
   CONTAINS
     PROCEDURE :: Calc_dead_fuel               !< (#nc, #dead pools, #fuel classes) [g DM m-2]
-!    PROCEDURE :: Calc_live_fuel               !< (#nc, #live pools, #fuel classes) [g DM m-2]
     PROCEDURE :: Calc_live_grass_fuel         !< (#nc, #live pools, #fuel classes) [g DM m-2]
     PROCEDURE :: Calc_live_tree_fuel          !< (#nc, #live pools, #fuel classes) [g DM m-2]
 
     !< Same as above but aggregated
-!    PROCEDURE :: Calc_total_live_fuel         !< (#nc) [gDM m-2]
     PROCEDURE :: Calc_total_live_tree_fuel    !< (#nc) [gDM m-2]
     PROCEDURE :: Calc_total_live_grass_fuel   !< (#nc) [gDM m-2]
 
@@ -221,18 +219,6 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Calculate live fuel by fuel pool and fuel class
-  !>
-!  FUNCTION Calc_live_fuel(this) RESULT (live_fuel)
-!    CLASS(t_sf_fuel_class), INTENT(in) :: this
-!    REAL(wp) :: live_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr)
-
-!    live_fuel = this % Calc_live_tree_fuel()
-!  END FUNCTION Calc_live_fuel
-
-
-  ! ======================================================================================================= !
-  !>
   !> Calculate live tree fuel, by pool and fuel class
   !>
   FUNCTION Calc_live_tree_fuel(this) RESULT (tree_fuel)
@@ -294,23 +280,6 @@ CONTAINS
       END IF
     END DO
   END FUNCTION Calc_live_grass_fuel
-
-
-  ! ======================================================================================================= !
-  !>
-  !> Calculate total live tree fuel
-  !>
-  !> In case growth_form is grass, then it returns 0
-  !>
-!  FUNCTION Calc_total_live_fuel(this) RESULT (total_live_fuel)
- !   CLASS(t_sf_fuel_class), INTENT(in) :: this
- !   REAL(wp) :: total_live_fuel(this%nc)          !< output
- !   REAL(wp), ALLOCATABLE :: live_fuel(:,:,:)       !< (#nc, #live fuel pools, #fuel class) [gDM m-2]!
-
-!    ALLOCATE(live_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr))
-!    live_fuel = this%Calc_live_fuel()
-!    total_live_fuel = sf_calc_aggr_fuels(live_fuel)
-!  END FUNCTION Calc_total_live_fuel
 
 
   ! ======================================================================================================= !
