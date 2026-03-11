@@ -126,6 +126,7 @@ CONTAINS
     REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2?]
     REAL(wp), POINTER                     :: tile_fract_ref(:) ! [%]
     REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:) !< Top soil depth layer [m]
+    REAL(wp)                              :: cured_lvg_fract(nc) !< Cured live grass fraction considered as dead fuel [%]
 
     REAL(wp), POINTER, CONTIGUOUS         :: live_fuel_frac(:,:) !< live fuel classes allocation from veg_pool (#fuel classes,#live pools)
     REAL(wp), ALLOCATABLE                 :: sb_pool_slim(:,:) !< debug only  (#pools, #nc)
@@ -266,6 +267,19 @@ CONTAINS
     END IF
 #endif
 
+    !< Oberhagemann related, required to calculate livegrass moisture at PFT level due to PFT parameters
+    lvg_moisture = 0._wp
+    cured_lvg_fract = 1._wp !< Thonicke's considers all live grass as dead fuel.
+    IF (lctlib%growthform == igrass) THEN
+      IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+        lfmc_par = t_lfmc(lctlib)
+        lvg_moisture = calc_mflg_ober(nc, lfmc_par, growing_season)
+
+        !< Oberhagemann et al. (2025), Section "Improvements to the treatment of live grass moisture in SPITFIRE", page 2023
+        cured_lvg_fract = max(0._wp, min(1._wp, (lvg_moisture - 0.3_wp) / (1.2_wp - 0.3_wp)))
+      END IF
+    END IF
+
     !< PFT related, todo: no need to redefine at every time step
     IF (lctlib%growthform == itree) THEN
       live_fuel_frac => df_sf_live_frac_tree
@@ -283,7 +297,7 @@ CONTAINS
     fuel_cls = t_sf_fuel_class(nc, lctlib_growthform, &
                             dead_fuel_frac, live_fuel_frac, &
                             sb_pool_in_gdm, veg_pool_in_gdm, &
-                            ratio_as_dead_fuel)
+                            ratio_as_dead_fuel, cured_lvg_fract)
 
     dead_fuel_fcl = fuel_cls % calc_dead_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
 
@@ -317,18 +331,6 @@ CONTAINS
       live_tree_fuel_10hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx)
       live_tree_fuel_100hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx)
       live_tree_fuel_1000hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
-    END IF
-
-    !< Oberhagemann related, required to calculate livegrass moisture at PFT level due to PFT parameters
-    lvg_moisture = 0._wp
-    IF (lctlib%growthform == igrass) THEN
-      IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-        lfmc_par = t_lfmc(lctlib)
-        lvg_moisture = calc_mflg_ober(nc, lfmc_par, growing_season)
-
-        !< Oberhagemann et al. (2025), Section "Improvements to the treatment of live grass moisture in SPITFIRE", page 2023
-        cured_lvg_fract = max(0._wp, min(1._wp, (lvg_moisture - 0.3_wp) / (1.2_wp - 0.3_wp)))
-      END IF
     END IF
 
     NULLIFY(live_fuel_frac)
