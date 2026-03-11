@@ -270,6 +270,7 @@ CONTAINS
     !< Oberhagemann related, required to calculate livegrass moisture at PFT level due to PFT parameters
     lvg_moisture = 0._wp
     cured_lvg_fract = 1._wp !< Thonicke's considers all live grass as dead fuel.
+
     IF (lctlib%growthform == igrass) THEN
       IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
         lfmc_par = t_lfmc(lctlib)
@@ -323,9 +324,7 @@ CONTAINS
     IF (lctlib%growthform == igrass) THEN
       live_grass_fuel_fcl = fuel_cls % calc_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
       live_grass_fuel_1hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx)
-    END IF
-
-    IF (lctlib%growthform == itree) THEN
+    ELSE IF (lctlib%growthform == itree) THEN
       live_tree_fuel_fcl = fuel_cls % calc_live_tree_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
       live_tree_fuel_1hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1hr_idx)
       live_tree_fuel_10hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx)
