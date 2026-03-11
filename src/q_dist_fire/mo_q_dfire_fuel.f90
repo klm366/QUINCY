@@ -126,7 +126,7 @@ CONTAINS
     REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2?]
     REAL(wp), POINTER                     :: tile_fract_ref(:) ! [%]
     REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:) !< Top soil depth layer [m]
-    REAL(wp)                              :: cured_lvg_fract(nc) !< Cured live grass fraction considered as dead fuel [%]
+    REAL(wp)                              :: cured_lvg_fract(options%nc) !< Cured live grass fraction considered as dead fuel [%]
 
     REAL(wp), POINTER, CONTIGUOUS         :: live_fuel_frac(:,:) !< live fuel classes allocation from veg_pool (#fuel classes,#live pools)
     REAL(wp), ALLOCATABLE                 :: sb_pool_slim(:,:) !< debug only  (#pools, #nc)
