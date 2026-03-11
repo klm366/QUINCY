@@ -925,7 +925,8 @@ CONTAINS
                       sigmas_dd, &
                       lvg_moisture, &
                       dead_fuel_litter, &
-                      nesterov_index)
+                      nesterov_index, &
+                      mask)
 
     woi_dd = 0._wp
     woi_dd(:,ix_1hr) = dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg
