@@ -708,7 +708,7 @@ CONTAINS
         tot_live_fuel_tree = SUM(live_tree_fuel(:,i,j)) ! sum multiple dimensions
       END DO
 
-      CALL calc_spitfire_oberhagemann(nc, & 
+      CALL calc_spitfire_oberhagemann(nc, &
           df_sf_sigma_dd_nr, & ! all dead fuel classes
           df_sf_sigma_dd_ros_nr, & ! dead fuel classes involved in fire spread
           df_sf_sigma_lv_nr, & ! live fuel classes
@@ -726,8 +726,8 @@ CONTAINS
           spitfire % ros, &
           mask = has_fire_conditions) ! optional
 
-       !< used in thonicke's implementation 
-       fuel_moisture = 0._wp 
+       !< used in thonicke's implementation
+       fuel_moisture = 0._wp
     ELSE
       CALL finish("calc_spitfire", "Unexpected fire sub-model found")
     END IF
@@ -894,7 +894,8 @@ CONTAINS
                                     ix_10hr => df_sf_ix_sigma_dd_10hr, &
                                    ix_100hr => df_sf_ix_sigma_dd_100hr, &
                                      ix_lvg => df_sf_ix_sigma_lv_lvg, &
-                                     ix_wdy => df_sf_ix_sigma_lv_wdy
+                                     ix_wdy => df_sf_ix_sigma_lv_wdy, &
+                                 nlitros => df_sf_sigma_dd_ros_litter_nr ! number of dead litter fuel classes involved in fire spread -1 to 100 hours-
 
     INTEGER, INTENT(in) :: nc
     INTEGER, INTENT(in) :: ndd !< number of fuel classes (1 to 1000 hours ...)
@@ -919,17 +920,17 @@ CONTAINS
     REAL(wp) :: me_dd(nc)            !< Dead moisture of extinction [-] (#nc)
     REAL(wp) :: me_lv(nc)            !< Live moisture of extinction [-] (#nc)
 
-
     fdi = 0._wp
-    fuel_moisture = sf_calc_fuel_moisture_ober(nc, ndd, nlv, &
+    fuel_moisture = sf_calc_fuel_moisture_ober(nc, ndd, nlitros, nlv, &
                       sigmas_dd, &
                       lvg_moisture, &
+                      dead_fuel_litter, &
                       nesterov_index)
 
     woi_dd = 0._wp
-    woi_dd(:,ix_1hr) = dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
-    woi_dd(:,ix_10hr) = dead_fuel_litter(:,ix_10hr) * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
-    woi_dd(:,ix_100hr) = dead_fuel_litter(:,ix_100hr) * df_sf_units_g_to_kg !< 1 = 1hr, 3 = 100hrs
+    woi_dd(:,ix_1hr) = dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg
+    woi_dd(:,ix_10hr) = dead_fuel_litter(:,ix_10hr) * df_sf_units_g_to_kg
+    woi_dd(:,ix_100hr) = dead_fuel_litter(:,ix_100hr) * df_sf_units_g_to_kg
     woi_dd(:,ix_clvg) = tot_dead_fuel_grass * df_sf_units_g_to_kg  !< 4 = dry livegrass
 
     woi_lv = 0._wp

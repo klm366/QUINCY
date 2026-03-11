@@ -220,6 +220,7 @@ MODULE mo_q_dfire_constants
   !< Oberhagemann et al. (2025)
   INTEGER, PARAMETER :: df_sf_sigma_dd_nr = 5 !< Total number of sigmas (1,10, 100, 1000 hours and live herbaceous)
   INTEGER, PARAMETER :: df_sf_sigma_dd_ros_nr = 4 !< Total number of sigmas (1,10, 100 hours and live herbaceous)
+  INTEGER, PARAMETER :: df_sf_sigma_dd_ros_litter_nr = 3 !< Total number of sigmas (1,10, 100 hours)
   INTEGER, PARAMETER :: df_sf_sigma_lv_nr = 2 !< Total number of sigmas (live grass, live woody)
   INTEGER, PARAMETER :: df_sf_ix_sigma_dd_1hr = 1
   INTEGER, PARAMETER :: df_sf_ix_sigma_dd_10hr = 2

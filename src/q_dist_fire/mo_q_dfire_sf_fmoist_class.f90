@@ -268,9 +268,10 @@ CONTAINS
   !> sf_calc_fuel_moisture_ober
   !> Calculate the fuel moisture as in Oberhagemann et al. (2025)
   !>
-  FUNCTION sf_calc_fuel_moisture_ober(nc, ndd, nlv, &
+  FUNCTION sf_calc_fuel_moisture_ober(nc, ndd, nlitros, nlv, &
                                         sigmas_dd, &
                                         lvg_moisture, &
+                                        dead_fuel_litter_ros, &
                                         nesterov_index) &
                                         RESULT (mf)
     USE mo_q_dfire_constants, ONLY: ix_1hr => df_sf_ix_sigma_dd_1hr, & !< dead fuel moisture indices
@@ -281,26 +282,32 @@ CONTAINS
     USE mo_q_dfire_constants, ONLY: ix_lvg => df_sf_ix_sigma_lv_lvg, & ! live fuel moisture indices
                                         ix_wdy => df_sf_ix_sigma_lv_wdy
 
-    INTEGER, INTENT(in)       :: nc, ndd, nlv
+    INTEGER, INTENT(in)       :: nc
+    INTEGER, INTENT(in)       :: ndd !< Dead fuel classes
+    INTEGER, INTENT(in)       :: nlitros !< Dead litter fuel classes involved in fire spread -1 to 100 hours-
+    INTEGER, INTENT(in)       :: nlv !< Live fuel classes
     REAL(wp), INTENT(in)      :: sigmas_dd(:)            !< surface area to voluem ratio for dead and live fuels [cm2/cm3]
     REAL(wp), INTENT(in)      :: lvg_moisture(nc)        !< live grass fuel moisture [%]
+    REAL(wp), INTENT(in)      :: dead_fuel_litter_ros(nc,nlitros) !< dead fuel [g DM m-2] (#nc, #dead litter ros fuel classes -1 to 100 hours-)
     REAL(wp), INTENT(in)      :: nesterov_index(nc)      !< Nesterov index = Dryness index [Celsius^2]
     TYPE(t_mf) :: mf
 
     REAL(wp), ALLOCATABLE :: mf_lvg(:) !< Live grass fuel moisture [0 to 2.5]%
-    REAL(wp), ALLOCATABLE :: alphasdd(:) !<  [deg C-2]
+    REAL(wp), ALLOCATABLE :: alphas(:) !< [deg C-2]
+    REAL(wp), ALLOCATABLE :: alphas_weighted(:) !<  [deg C-2]
 
     mf = t_mf(nc, ndd, nlv)
-    alphasdd = calc_alphas(sigmas_dd)
+    alphas = calc_alphas(sigmas_dd(ix_1hr:ix_100hr))
+    alphas_weighted = stats_average_weight(nlitros, alphas, dead_fuel_litter_ros)
 
-    mf%dead(:,ix_1hr) = calc_omega(alphasdd(ix_1hr), nesterov_index)
-    mf%dead(:,ix_10hr) = mf%dead(:,ix_1hr)
-    mf%dead(:,ix_100hr) = mf%dead(:,ix_1hr)
-    mf%dead(:,ix_1000hr) = mf%dead(:,ix_1hr)
+    mf%dead(:,ix_1hr) = calc_omega(alphas_weighted, nesterov_index) !< Pfeiffer
+    mf%dead(:,ix_10hr) = mf%dead(:,ix_1hr) * 1.01_wp !< Andrews PL (2018), section 5.3.1, 2nd paragraph
+    mf%dead(:,ix_100hr) = mf%dead(:,ix_1hr) * 1.02_wp
+    mf%dead(:,ix_1000hr) = mf%dead(:,ix_1hr) * 1.02_wp
     mf%dead(:,ix_clvg) = mf%dead(:,ix_1hr) ! Same as in Oberhagemann et al. (2025), fuelload.c
 
     mf%live(:,ix_lvg) = lvg_moisture
-    mf%live(:,ix_wdy) = 0._wp  ! Same method as Oberhagemann, not yet implemented.
+    mf%live(:,ix_wdy) = 0._wp !  For later, for shrubs
   END FUNCTION sf_calc_fuel_moisture_ober
 
 
