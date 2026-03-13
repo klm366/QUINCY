@@ -280,7 +280,7 @@ CONTAINS
         lfmc_par = t_lfmc(lctlib)
         lvg_moisture = calc_mflg_ober(nc, lfmc_par, growing_season)
 
-        !< Oberhagemann et al. (2025), Section "Improvements to the treatment of live grass moisture in SPITFIRE", page 2023
+        !< Oberhagemann et al. (2025), Section "Improvements to the treatment of live grass moisture in SPITFIRE", page 2031-2032
         cured_lvg_fract = max(0._wp, min(1._wp, (lvg_moisture - 0.3_wp) / (1.2_wp - 0.3_wp)))
       END IF
     END IF
