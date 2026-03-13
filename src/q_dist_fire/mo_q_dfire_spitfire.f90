@@ -583,7 +583,7 @@ CONTAINS
                   ab_moisture, &
                   lvg_moisture, &
                   grid_cell_area, & ! fuel properties
-                  dead_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
+                  dead_fuel, cured_live_grass_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
                   t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
                   veg_cover_frac, & ! in
                   nesterov_index, & ! inout
@@ -619,6 +619,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: grid_cell_area(nc)                    !< Gridcell area [ha]
 
     REAL(wp), INTENT(in)  :: dead_fuel(:,:,:)                      !< Dead fuel (#nc,#dead fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), INTENT(in)  :: cured_live_grass_fuel(:,:,:)          !< Cured live grass fuel -considered as dea- (#nc,#dead fuel pools, #fuel classes) [g DM m-2]
     REAL(wp), INTENT(in)  :: live_grass_fuel(:,:,:)                !< Live grass fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
     REAL(wp), INTENT(in)  :: live_tree_fuel(:,:,:)                 !< Live tree fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
 
@@ -649,7 +650,6 @@ CONTAINS
 
     !< Thonicke related
     REAL(wp), ALLOCATABLE :: dead_fuel_litter(:,:) !< Dead fuel litter [g DM m-2] (#nc,#fuel classes-1,10,100-)
-    REAL(wp), ALLOCATABLE :: dead_fuel_grass(:,:) !< Dead fuel grass [g DM m-2] (#nc,#fuel classes-1,10,100,1000-)
     REAL(wp), ALLOCATABLE :: tot_dead_fuel_grass(:) !< Total dead fuel grass [g DM m-2] (#nc)
     REAL(wp), ALLOCATABLE :: tot_live_fuel_tree(:) !< Total live fuel tree [g DM m-2] (#nc)
     REAL(wp), ALLOCATABLE :: fuel_moisture_for_fc(:,:) !< fuel moisture (or omega) [%] (#nc,#fuel classes-1,10,100,1000hrs-)
@@ -690,8 +690,7 @@ CONTAINS
     u_f_wind = lctlib_fwd_wind_factor * wind_sf
     dead_fuel_litter = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
-    dead_fuel_grass = SUM(dead_fuel(:,ixs_sf_dead_livegrass_fuel_pools,:), DIM=2) !< 2=fuel pools
-    tot_dead_fuel_grass = SUM(dead_fuel_grass, DIM=2) ! 2 = fuel classes
+    tot_dead_fuel_grass = SUM(cured_live_grass_fuel, DIM=2) ! 2 = fuel classes
     IF (config_ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
       CALL calc_spitfire_thonicke(nc, nalphas, df_sf_fc_spread_nr, &
