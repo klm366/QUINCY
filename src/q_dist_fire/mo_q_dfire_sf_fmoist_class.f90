@@ -266,12 +266,13 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> sf_calc_fuel_moisture_ober
-  !> Calculate the fuel moisture as in Oberhagemann et al. (2025)
+  !> Calculate the fuel moisture as in Pfeiffer, Andrews PL and Oberhagemann
   !>
   FUNCTION sf_calc_fuel_moisture_ober(nc, ndd, nlitros, nlv, &
-                                        sigmas_dd, &
+                                        alphas_dd, &
                                         lvg_moisture, &
-                                        dead_fuel_litter_ros, &
+                                        dead_fuel_litter, &
+                                        dead_fuel_grass, &
                                         nesterov_index, &
                                         mask) &
                                         RESULT (mf)
@@ -284,32 +285,40 @@ CONTAINS
                                         ix_wdy => df_sf_ix_sigma_lv_wdy
 
     INTEGER, INTENT(in)       :: nc
-    INTEGER, INTENT(in)       :: ndd !< Dead fuel classes
-    INTEGER, INTENT(in)       :: nlitros !< Dead litter fuel classes involved in fire spread -1 to 100 hours-
-    INTEGER, INTENT(in)       :: nlv !< Live fuel classes
-    REAL(wp), INTENT(in)      :: sigmas_dd(:)            !< surface area to voluem ratio for dead and live fuels [cm2/cm3]
+    INTEGER, INTENT(in)       :: ndd                     !< Dead fuel classes
+    INTEGER, INTENT(in)       :: nlitros                 !< Dead litter fuel classes involved in fire spread -1 to 100 hours-
+    INTEGER, INTENT(in)       :: nlv                     !< Live fuel classes
+    REAL(wp), INTENT(in)      :: alphas_dd(4)            !< Drying parameter for dead fuels [cm2/cm3] (1, 10, 100 hours, cured livegrass)
     REAL(wp), INTENT(in)      :: lvg_moisture(nc)        !< live grass fuel moisture [%]
-    REAL(wp), INTENT(in)      :: dead_fuel_litter_ros(nc,nlitros) !< dead fuel [g DM m-2] (#nc, #dead litter ros fuel classes -1 to 100 hours-)
+    REAL(wp), INTENT(in)      :: dead_fuel_litter(nc,nlitros) !< dead fuel [g DM m-2] (#nc, #dead litter ros fuel classes -1 to 100 hours-)
+    REAL(wp), INTENT(in)      :: dead_fuel_grass(nc)     !< dead fuel grass [g DM m-2] (#nc)
     REAL(wp), INTENT(in)      :: nesterov_index(nc)      !< Nesterov index = Dryness index [Celsius^2]
     LOGICAL, INTENT(in)       :: mask(nc)
     TYPE(t_mf) :: mf
 
-    REAL(wp), ALLOCATABLE :: mf_lvg(:) !< Live grass fuel moisture [0 to 2.5]%
-    REAL(wp), ALLOCATABLE :: alphas(:) !< [deg C-2]
-    REAL(wp) :: alphas_weighted(nc) !<  [deg C-2]
+    REAL(wp) :: dead_fuel(nc,4) !< [g DM m-2]
+    REAL(wp) :: alphas_weighted_ros(nc) !<  [deg C-2]
+    REAL(wp) :: alphas_weighted_dd(nc) !<  [deg C-2]
+    REAL(wp) :: mf_10hr 
     INTEGER :: ic
 
     mf = t_mf(nc, ndd, nlv)
-    alphas = calc_alphas(sigmas_dd(ix_1hr:ix_100hr))
+    DO ic = 1, nc
+      dead_fuel(ic,:) = [dead_fuel_litter(ic,:), dead_fuel_grass(ic)]
+    ENDDO
+
     DO ic = 1, nc
       IF (.NOT. mask(ic)) CYCLE
 
-      alphas_weighted(ic) = stats_average_weight(nlitros, alphas, dead_fuel_litter_ros(ic,:))
+      alphas_weighted_ros(ic) = stats_average_weight(nlitros, alphas_dd(ix_1hr:ix_100hr), dead_fuel_litter(ic,:))
+      alphas_weighted_dd(ic) = stats_average_weight(4, alphas_dd, dead_fuel(ic,:))
 
-      mf%dead(ic,ix_1hr) = calc_omega(alphas_weighted(ic), nesterov_index(ic)) !< Pfeiffer
-      mf%dead(ic,ix_10hr) = mf%dead(ic,ix_1hr) * 1.01_wp !< Andrews PL (2018), section 5.3.1, 2nd paragraph
-      mf%dead(ic,ix_100hr) = mf%dead(ic,ix_1hr) * 1.02_wp
-      mf%dead(ic,ix_1000hr) = mf%dead(ic,ix_1hr) * 1.02_wp
+      mf_10hr = calc_omega(alphas_weighted_ros(ic), nesterov_index(ic))
+
+      mf%dead(ic,ix_1hr) = calc_omega(alphas_weighted_dd(ic), nesterov_index(ic)) !< Pfeiffer
+      mf%dead(ic,ix_10hr) = mf_10hr * 1.01_wp !< Andrews PL (2018), section 5.3.1, 2nd paragraph
+      mf%dead(ic,ix_100hr) = mf_10hr * 1.02_wp
+      mf%dead(ic,ix_1000hr) = mf_10hr * 1.02_wp
       mf%dead(ic,ix_clvg) = mf%dead(ic,ix_1hr) ! Same as in Oberhagemann et al. (2025), fuelload.c
 
     ENDDO

@@ -88,7 +88,7 @@ MODULE mo_q_dfire_spitfire
   USE mo_q_dfire_constants,       ONLY: ixs_sf_dead_litter_fuel_pools, ixs_sf_dead_livegrass_fuel_pools
   USE mo_q_dfire_constants,       ONLY: df_sf_units_g_to_kg
   USE mo_q_dfire_constants,       ONLY: df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, df_sf_sigma_dd_ros_nr
-  USE mo_q_dfire_constants,       ONLY: df_sigmas_dead, df_sigmas_live
+  USE mo_q_dfire_constants,       ONLY: df_sigmas_dead, df_sigmas_live, df_alphas_dead
   USE mo_q_dfire_config_class,    ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
@@ -712,6 +712,7 @@ CONTAINS
           df_sf_sigma_dd_nr, & ! all dead fuel classes
           df_sf_sigma_dd_ros_nr, & ! dead fuel classes involved in fire spread
           df_sf_sigma_lv_nr, & ! live fuel classes
+          df_alphas_dead, &
           df_sigmas_dead, df_sigmas_live, &
           nesterov_index, &
           lctlib_fuel_bulk_density, &
@@ -873,7 +874,10 @@ CONTAINS
   !>
   !>
   SUBROUTINE calc_spitfire_oberhagemann(nc, &
-                  ndd, nddros, nlv, &
+                  ndd, & ! 5=1,10,100,1000 hours, cured live grass
+                  nddros, & ! 4 = 1,10,100, cured live grass
+                  nlv, & ! 2=live grass, woody
+                  alphas_dd, &
                   sigmas_dd, sigmas_lv, &
                   nesterov_index, &
                   fuel_bulk_density, &
@@ -901,6 +905,7 @@ CONTAINS
     INTEGER, INTENT(in) :: ndd !< number of fuel classes (1 to 1000 hours ...)
     INTEGER, INTENT(in) :: nddros !< dead fuel classes involved in fire spread (1 to 100 hours and cured live grass)
     INTEGER, INTENT(in) :: nlv !< live fuel classes (live grass and woody)
+    REAL(wp), INTENT(in) :: alphas_dd(:) !< Drying parameter [deg C-2]
     REAL(wp), INTENT(in) :: sigmas_dd(:), sigmas_lv(:) !< Surface area to volume ratio [cm2/cm3]
     REAL(wp), INTENT(in) :: nesterov_index(:) !< Dryness index [deg C2]
     REAL(wp), INTENT(in) :: fuel_bulk_density(:) !< Fuel bulk density [kg m-3]
@@ -921,10 +926,14 @@ CONTAINS
     REAL(wp) :: me_lv(nc)            !< Live moisture of extinction [-] (#nc)
 
     fdi = 0._wp
-    fuel_moisture = sf_calc_fuel_moisture_ober(nc, ndd, nlitros, nlv, &
-                      sigmas_dd, &
+    fuel_moisture = sf_calc_fuel_moisture_ober(nc, &
+                      ndd, & ! 5 = 1, 10, 100, 1000 hours and cured live grass
+                      nlitros, & ! 3=1, 10 and 100 hours
+                      nlv, &
+                      alphas_dd, &
                       lvg_moisture, &
                       dead_fuel_litter, &
+                      tot_dead_fuel_grass, &
                       nesterov_index, &
                       mask)
 
