@@ -248,7 +248,8 @@ MODULE mo_jsb_lctlib_class
                 q_scorch_height_f            , &
                 q_fuel_bulk_density          , &
                 q_fwd_wind_factor            , &
-                q_moisture_extinction
+                q_moisture_extinction_thon   , &
+                q_moisture_extinction_ober
 
     ! Oberhagemann et al. (2025)
     ! GSI phenology parameters (for live grass moisture calculation)
@@ -478,7 +479,8 @@ CONTAINS
     LOGICAL            :: exists_MinVegRoughness = .FALSE.
     LOGICAL            :: exists_MaxVegRoughness = .FALSE.
     LOGICAL            :: exists_q_fuel_bulk_density = .FALSE.
-    LOGICAL            :: exists_q_moisture_extinction = .FALSE.
+    LOGICAL            :: exists_q_moisture_extinction_thon = .FALSE.
+    LOGICAL            :: exists_q_moisture_extinction_ober = .FALSE.
     LOGICAL            :: exists_q_fwd_wind_factor = .FALSE.
     LOGICAL            :: exists_q_crown_damage_r_ck = .FALSE.
     LOGICAL            :: exists_q_crown_damage_p = .FALSE.
@@ -1099,9 +1101,12 @@ CONTAINS
           CASE ('q_fuel_bulk_density')
             READ(line(pos:length),*) lctlib(1:nlct)%q_fuel_bulk_density
             exists_q_fuel_bulk_density = .TRUE.
-          CASE ('q_moisture_extinction')
-            READ(line(pos:length),*) lctlib(1:nlct)%q_moisture_extinction
-            exists_q_moisture_extinction = .TRUE.
+          CASE ('q_moisture_extinction_thon')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_moisture_extinction_thon
+            exists_q_moisture_extinction_thon = .TRUE.
+          CASE ('q_moisture_extinction_ober')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_moisture_extinction_ober
+            exists_q_moisture_extinction_ober = .TRUE.
           CASE ('q_fwd_wind_factor')
             READ(line(pos:length),*) lctlib(1:nlct)%q_fwd_wind_factor
             exists_q_fwd_wind_factor = .TRUE.
@@ -1505,8 +1510,10 @@ CONTAINS
           CALL finish('init_lctlib','No data for MaxVegRoughness found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_q_fuel_bulk_density) &
             CALL finish('init_lctlib','No data for q_fuel_bulk_density found in '//TRIM(lctlib_file_name))
-        IF(.NOT. exists_q_moisture_extinction) &
-            CALL finish('init_lctlib','No data for q_moisture_extinction found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_moisture_extinction_thon) &
+            CALL finish('init_lctlib','No data for q_moisture_extinction_thon found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_moisture_extinction_ober) &
+            CALL finish('init_lctlib','No data for q_moisture_extinction_ober found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_q_fwd_wind_factor) &
             CALL finish('init_lctlib','No data for q_fwd_wind_factor found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_q_crown_damage_r_ck) &
@@ -1927,7 +1934,8 @@ CONTAINS
         CALL p_bcast(lctlib(:)%MinVegRoughness, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%MaxVegRoughness, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_fuel_bulk_density, p_io, mpi_comm)
-        CALL p_bcast(lctlib(:)%q_moisture_extinction, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_moisture_extinction_thon, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_moisture_extinction_ober, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_fwd_wind_factor, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_crown_damage_r_ck, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%q_crown_damage_p, p_io, mpi_comm)

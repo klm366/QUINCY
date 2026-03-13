@@ -60,7 +60,7 @@ MODULE mo_q_dfire_fuel
   USE mo_lnd_bgcm_idx,          ONLY: ix_leaf, ix_fruit, ix_labile, ix_reserve, ix_sap_wood, ix_heart_wood
   USE mo_q_dfire_sf_fuel_class, ONLY: t_sf_fuel_class
   USE mo_q_dfire_sf_ros_eqs,    ONLY: calc_fbd
-  USE mo_q_dfire_config_class,  ONLY: Q_DFIRE_ROS_OBERHAGEMANN
+  USE mo_q_dfire_config_class,  ONLY: Q_DFIRE_ROS_OBERHAGEMANN, Q_DFIRE_LVG_THONICKE
 
   !< Live fraction allocation for dead and live fuels
   USE mo_q_dfire_constants,     ONLY: df_sf_live_frac_tree, &
@@ -242,7 +242,11 @@ CONTAINS
     fuel_bulk_density = 0._wp
     top_soil_depth_sl = soil_depth_sl(:,df_sf_spq_layer_top_sl)
     lctlib_growthform(:) = lctlib%growthform
-    moisture_extinction = lctlib%q_moisture_extinction ! aggregation: weighted over tile fraction
+    IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
+      moisture_extinction = lctlib%q_moisture_extinction_thon
+    ELSE IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+      moisture_extinction = lctlib%q_moisture_extinction_ober
+    END IF
     fwd_wind_factor = lctlib%q_fwd_wind_factor ! aggregation: weighted over tile fraction
 
     ! ----------------------------------------------------------------------------------------------------- !
