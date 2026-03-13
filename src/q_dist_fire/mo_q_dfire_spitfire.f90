@@ -229,6 +229,8 @@ CONTAINS
     REAL(wp)                              :: dead_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
     !< live grass fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
     REAL(wp)                              :: live_grass_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
+    !< cured live grass fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp)                              :: cured_live_grass_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
     !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
     REAL(wp)                              :: live_tree_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
 
@@ -306,6 +308,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: dead_fuel_1000hr_dfp       ! in [g DM m-2]
 
     dsl4jsb_Real3D_onChunk                :: live_grass_fuel_1hr_lfp    ! in [g DM m-2]
+    dsl4jsb_Real3D_onChunk                :: cured_live_grass_fuel_1hr_dfp    ! in [g DM m-2]
 
     dsl4jsb_Real3D_onChunk                :: live_tree_fuel_1hr_lfp     ! in [g DM m-2]
     dsl4jsb_Real3D_onChunk                :: live_tree_fuel_10hr_lfp    ! in [g DM m-2]
@@ -391,6 +394,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1000hr_dfp)  ! in [g DM m-2]
 
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp)    ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, cured_live_grass_fuel_1hr_dfp) ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp)     ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp)    ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp)   ! in [g DM m-2]
@@ -438,6 +442,7 @@ CONTAINS
 
     !< Init variables
     live_grass_fuel_fcl = 0._wp
+    cured_live_grass_fuel_fcl = 0._wp
 
     ! rebuild fuel variables
     dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp ! dead fuel
@@ -445,6 +450,7 @@ CONTAINS
     dead_fuel_fcl(:,:,df_sf_fc_100hr_idx) = dead_fuel_100hr_dfp
     dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1000hr_dfp
     live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx) = live_grass_fuel_1hr_lfp ! live grass fuel
+    cured_live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx) = cured_live_grass_fuel_1hr_dfp ! cured live grass fuel
     live_tree_fuel_fcl(:,:,df_sf_fc_1hr_idx) = live_tree_fuel_1hr_lfp ! live tree fuel
     live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx) = live_tree_fuel_10hr_lfp
     live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr_lfp

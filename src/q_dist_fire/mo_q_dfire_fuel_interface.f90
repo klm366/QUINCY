@@ -163,6 +163,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, dead_fuel_1000hr_dfp , weighted_by_fract, burnable_pfts, "veg")
 
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp  , weighted_by_fract, burnable_grass_pfts, "veg")
+      dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, cured_live_grass_fuel_1hr_dfp  , weighted_by_fract, burnable_grass_pfts, "veg")
 
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp   , weighted_by_fract, burnable_tree_pfts, "veg")
       dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp  , weighted_by_fract, burnable_tree_pfts, "veg")
@@ -182,6 +183,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, dead_fuel_1000hr_dfp , weighted_by_fract)
 
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp    , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, cured_live_grass_fuel_1hr_dfp    , weighted_by_fract)
 
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp     , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp    , weighted_by_fract)

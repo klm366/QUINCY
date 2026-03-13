@@ -67,7 +67,9 @@ MODULE mo_q_dfire_fuel_memory_class
     TYPE(t_jsb_var_real3d)  :: dead_fuel_100hr_dfp        !< 100hr dead fuel [g DM m-2], _dfp = dead fuel pools
     TYPE(t_jsb_var_real3d)  :: dead_fuel_1000hr_dfp       !< 1000hr dead fuel [g DM m-2], _dfp = dead fuel pools
 
-    TYPE(t_jsb_var_real3d)  :: live_grass_fuel_1hr_lfp    !< 1hr dead fuel (#nc, #nlivepools) [g DM m-2], _lfp = live fuel pools
+    TYPE(t_jsb_var_real3d)  :: live_grass_fuel_1hr_lfp    !< 1hr live grass fuel (#nc, #nlivepools) [g DM m-2], _lfp = live fuel pools
+    !< cured liveg grass is considered dead fuel
+    TYPE(t_jsb_var_real3d)  :: cured_live_grass_fuel_1hr_dfp !< 1hr cured dead fuel (#nc, #nlivepools) [g DM m-2], _lfp = dead fuel pools
 
     TYPE(t_jsb_var_real3d)  :: live_tree_fuel_1hr_lfp     !< 1hr dead fuel (#nc, #nlivepools) [g DM m-2], _lfp = live fuel pools
     TYPE(t_jsb_var_real3d)  :: live_tree_fuel_10hr_lfp    !< 10hr dead fuel [g DM m-2], _lfp = live fuel pools
@@ -205,6 +207,18 @@ CONTAINS
     CALL mem%Add_var('live_grass_fuel_1hr_lfp', mem%live_grass_fuel_1hr_lfp, &
         & hgrid, vgrid_live_fuel_pools, &
         & t_cf('live_grass_fuel_1hr_lfp', 'gDM m-2', '1 hours live grass fuel pools'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    ! live grass fuel pools
+    CALL mem%Add_var('cured_live_grass_fuel_1hr_dfp', mem%cured_live_grass_fuel_1hr_dfp, &
+        & hgrid, vgrid_dead_fuel_pools, &
+        & t_cf('cured_live_grass_fuel_1hr_dfp', 'gDM m-2', '1 hours cured live grass fuel pools'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
