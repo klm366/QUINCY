@@ -410,7 +410,7 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
@@ -467,7 +467,7 @@ CONTAINS
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(TURB_)) RETURN
 
-    IF (iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
@@ -525,7 +525,7 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
 
-    IF (iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
@@ -831,7 +831,7 @@ CONTAINS
 
     !$ACC END DATA
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_roughness
 
@@ -871,7 +871,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
@@ -903,7 +903,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_roughness
 
@@ -1263,7 +1263,7 @@ CONTAINS
 
     !$ACC END DATA
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_humidity_scaling
 
@@ -1293,7 +1293,7 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     dsl4jsb_Get_memory(TURB_)
 
@@ -1307,7 +1307,7 @@ CONTAINS
 
     CALL weighted_by_fract%EndAggregate()
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_humidity_scaling
 
