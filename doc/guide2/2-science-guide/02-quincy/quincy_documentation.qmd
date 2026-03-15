@@ -88,10 +88,10 @@ total leaf area, such that less N is allocated to the lower, darker canopy layer
 with observations of canopy N distribution [@Niinemets:1998].
 
 All soil state-variables (temperature, moisture, texture, soil biogeochemical pools) and fluxes are
-discretised into 15 soil layers (denoted by subscript $sl$). Layer thickness increases
-exponentially with increasing layer depth up to a total depth of 9.5 m, and with a minimum layer
-thickness for the top layer of 0.065 m. Fine roots and coarse roots are assumed to be distributed in
-exponentially decreasing density along the soil profile according to
+discretised into 15 soil layers (denoted by subscript $sl$). Layer thickness increases exponentially
+with increasing layer depth up to a total depth of 9.5 m, and with a minimum layer thickness for the
+top layer of 0.065 m. Fine roots and coarse roots are assumed to be distributed in exponentially
+decreasing density along the soil profile according to
 
 $$
 \label{eq:veg-root-distribution}
@@ -112,7 +112,8 @@ treated similarly across layers.
 ## Canopy nitrogen allocation {#sec-veg-foliar-N-fractions}
 
 The leaf area index ($LAI$) and canopy nitrogen content ($N_{leaf}$) are dynamic properties of the
-model, as described in Section , and are discretised to canopy layers given by $\Eqref{eq:veg-root-distribution}$. $N_{leaf,cl}$ is partitioned into photosynthetic and
+model, as described in Section , and are discretised to canopy layers given by
+$\Eqref{eq:veg-root-distribution}$. $N_{leaf,cl}$ is partitioned into photosynthetic and
 non-photosynthetic, or structural, N. The fraction of structural N ($fN_{struc,cl}$) is calculated
 as a function of the total leaf N in the respective canopy layer:
 
@@ -272,7 +273,8 @@ photosynthetic photon flux density (PPFD) penetrating sunlit or shaded foliage, 
 adsorbed radiation of the canopy layer ([Eq. 6.9](#eq-rad:a_shadesunlit)), and $k_a$ as well as
 $a_{chl}^n$ are parameters specified in @tbl-assimi:param.
 
-As [@Kull:1998cr] show, this system of equations ($\Eqref{eq:jmax}$ - $\Eqref{eq:ps-lightharvesting}$) can be solved to yield gross photosynthesis ($A _g$) for one canopy
+As [@Kull:1998cr] show, this system of equations ($\Eqref{eq:jmax}$ -
+$\Eqref{eq:ps-lightharvesting}$) can be solved to yield gross photosynthesis ($A _g$) for one canopy
 layer and light-class as:
 
 $$
@@ -288,7 +290,8 @@ $$
 ## Stomatal coupling {#sec-assimi-stomatal-coupling}
 
 The combination of leaf-level net photosynthesis ($A_{n,cl}$), stomatal conductance ($g_{s,cl}$),
-and leaf internal $\mathrm{CO_2}$ concentration ($c_{i,cl}$) satisfying $\Eqref{eq:stomatal-coupling}$ is sought iteratively for each canopy layer:
+and leaf internal $\mathrm{CO_2}$ concentration ($c_{i,cl}$) satisfying
+$\Eqref{eq:stomatal-coupling}$ is sought iteratively for each canopy layer:
 
 $$
 \label{eq:stomatal-coupling}
@@ -513,6 +516,7 @@ and $W_{soil,root}$ is calculated as the ratio between the current water content
 and the water content in the root zone at field capacity.
 
 In grasses, halms are assumed to be a proportion of leaf mass, and no height restrictions apply.
+
 $$
 \label{eq-l2s-grass}
 C_{leaf} = k_{htol} \times C_{sap\_wood}
@@ -1284,8 +1288,8 @@ F_{desorp,PO_4} &=f(T_{soil},E_{a,abs}) \times  k_{abs}   \times P_{lab} - f(T_{
 \end{align}
 $$
 
-where $k_{abs}$ and $k_{des}$ are the rate constants of (ab)sorption and desorption,
-and $E_{a,abs}$ and $E_{a,des}$ the respective activation energies.
+where $k_{abs}$ and $k_{des}$ are the rate constants of (ab)sorption and desorption, and $E_{a,abs}$
+and $E_{a,des}$ the respective activation energies.
 
 The adsorption ($F_{adsorp,PO_4}$) flux from soil solution to the soil adsorption sites is
 calculated assuming constant Langmuir equilibrium [@Barrow:1978] between soluble and adsorbed P:
@@ -1630,8 +1634,8 @@ $$
 r_{a}=(C_{h}\left|v_{h}\right|)^{-1}
 $$
 
-and depends on the transfer coefficient for heat $C_{h}$ [@Roeckner:2003wc]. and the absolute
-value of horizontal wind velocity $v_{h}$.
+and depends on the transfer coefficient for heat $C_{h}$ [@Roeckner:2003wc]. and the absolute value
+of horizontal wind velocity $v_{h}$.
 
 ## Surface and soil hydrology {#sec-sse-surface-hydrology}
 
@@ -1713,6 +1717,7 @@ Transpiration from the dry vegetation surfaces is
 $$
 E_{v}=\rho_{air}\frac{q_{a}-q_{s}(T_{s},p_{s})}{r_{a}+r}
 $$
+
 where stomatal resistance $r$ of the canopy is the inverse of the stomatal conductance of the
 canopy (see [Eq. 2.18](#eq-stomatal-coupling)).
 
