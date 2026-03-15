@@ -238,10 +238,44 @@ function Math(el)
   return el
 end
 
+-- Second-pass Para filter: inject a phantom display equation carrying the outer group label.
+-- After the Math filter runs, sub-equation lines have \label{outer_a}\tag{X.Ya} etc.
+-- This pass detects that pattern, strips the now-redundant floating \label{outer} from the
+-- align block, and prepends a separate $$\label{outer}\tag{X.Y}$$ equation so that
+-- \Eqref{outer} resolves to "X.Y" while each sub-equation still shows "X.Ya", "X.Yb", etc.
+local function inject_outer_label_phantom(el)
+  if #el.content ~= 1 then return nil end
+  local math_el = el.content[1]
+  if not (math_el.t == "Math" and math_el.mathtype == "DisplayMath") then return nil end
+
+  local text = math_el.text
+  if not text:match("\\begin{align}") then return nil end
+
+  -- Detect a processed sub-equation block by the presence of \label{outer_a}\tag{X.Ya}
+  local outer_label = text:match("\\label{([^}]+)_a}")
+  local base_num = text:match("\\tag{(%d+%.%d+)a}")
+  if not outer_label or not base_num then return nil end
+
+  -- Remove the floating outer \label{outer} to avoid a duplicate label alongside the phantom
+  local escaped = outer_label:gsub("([%(%)%.%%%+%-%*%?%[%^%$])", "%%%1")
+  local new_text = text:gsub("\\label{" .. escaped .. "}([%s]*\n?)", "%1", 1)
+
+  -- Hidden block: registers \label{outer} at X.Y without visible output.
+  -- Uses height:0/overflow:hidden (not display:none) so the browser can still
+  -- scroll to the anchor when following an \Eqref link.
+  local phantom = pandoc.RawBlock("html",
+    string.format('<div style="height:0;overflow:hidden;margin:0;padding:0">\\[\\label{%s}\\tag{%s}\\]</div>',
+      outer_label, base_num))
+  return {phantom, pandoc.Para({pandoc.Math("DisplayMath", new_text)})}
+end
+
 return {
   {
     Header = Header,
     Math = Math,
     traverse = 'topdown'
+  },
+  {
+    Para = inject_outer_label_phantom
   }
 }

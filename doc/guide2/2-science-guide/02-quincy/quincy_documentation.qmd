@@ -112,7 +112,7 @@ treated similarly across layers.
 ## Canopy nitrogen allocation {#sec-veg-foliar-N-fractions}
 
 The leaf area index ($LAI$) and canopy nitrogen content ($N_{leaf}$) are dynamic properties of the
-model, as described in Section , and are discretised to canopy layers given by $\Eqref{eq:veg-root-distribution_a}$. $N_{leaf,cl}$ is partitioned into photosynthetic and
+model, as described in Section , and are discretised to canopy layers given by $\Eqref{eq:veg-root-distribution}$ and $\Eqref{eq:veg-root-distribution_b}$. $N_{leaf,cl}$ is partitioned into photosynthetic and
 non-photosynthetic, or structural, N. The fraction of structural N ($fN_{struc,cl}$) is calculated
 as a function of the total leaf N in the respective canopy layer:
 
@@ -166,7 +166,7 @@ minimum of two potential rates, The electron-transport capacity limited carboxyl
 the Rubisco-limited rate of photosynthesis ($A_v$). $A_j$ is given by
 
 $$
-\label{eq-jmax}
+\label{eq:jmax}
 \begin{align}
 A_j=& m_1 \times J_{max}, where \\
 &m_1=\frac{c_i}{c_i+2\times \Gamma^{*}}, \\
@@ -179,7 +179,7 @@ where $c_i$ is the intercellular partial pressure of $\mathrm{CO_2}$ ($\mathrm{P
 2.18](#eq-stomatal_coupling)), and $\Gamma^{*}$ is the $\mathrm{CO_2}$ compensation point in the
 absence of dark respiration. $\beta_{sinklim}^{ps}$ is a signal to reduce photosynthesis in the case
 of C sink limitation ([Eq. 3.24](#eq-sinklim_c)) and $\beta_{soa}^{ps}$ is accounting for the effect
-of low-temperature acclimation in the evergreen species ([Eq. 3.27](#eq-veg:soa)). Excessive soil
+of low-temperature acclimation in the evergreen species ($\Eqref{eq:veg-soa}$). Excessive soil
 moisture constraints (as discussed in @Rogers:2017np) are assumed to reduce light-saturated
 photosynthetic activity by:
 
@@ -194,7 +194,7 @@ form described by [@June:2004kj], where $T_{jmax}^{opt}$ is the optimum temperat
 according to [@Friend:2010je], as follows:
 
 $$
-\label{eq-tjmax}
+\label{eq:tjmax}
 \begin{align}
 g_{jmax}(T_{air}) =& e^{-\left({\frac{T_{air}-\bar{T}_{jmax}^{opt}}{T_{\Omega}}}\right)^2},\\
 &T_{jmax}^{opt} = k0_{jmax}^{topt} + k1_{jmax}^{topt} \times T_{air}; T_{jmax,min}^{opt} < T_{jmax}^{opt} \le T_{jmax,max}^{opt},
@@ -202,7 +202,7 @@ g_{jmax}(T_{air}) =& e^{-\left({\frac{T_{air}-\bar{T}_{jmax}^{opt}}{T_{\Omega}}}
 $$
 
 where $T_{\Omega}$ is a PFT-specific parameter, $k0_{jmax}^{topt}$ and $k1_{jmax}^{topt}$ are
-parameters, $T_{air}$ is the air temperature, and $\bar{T}_{jmax}^{opt}$ in [Eq. 2.6](#eq-tjmax) is
+parameters, $T_{air}$ is the air temperature, and $\bar{T}_{jmax}^{opt}$ in $\Eqref{eq:tjmax}$ is
 the mean of the daytime $T_{jmax}^{opt}$ over the past few days ($\tau_{mavg}^{jmax}$), thereby
 accounting for temperature acclimation of photosynthesis as in [@Friend:2010je].
 
@@ -259,7 +259,7 @@ $$
 The light-harvesting limited rate of photosynthesis ($A_h$) can be written as
 
 $$
-\label{eq-ps-lightharvesting}
+\label{eq:ps-lightharvesting}
 \begin{align}
 A_h =&  m_1 \times \alpha_i \times PPFD_a,\\
 &PPFD_a = PPFD_0 (1-e^{-k_a \times C_{chl}}), where\\
@@ -272,8 +272,7 @@ photosynthetic photon flux density (PPFD) penetrating sunlit or shaded foliage, 
 adsorbed radiation of the canopy layer ([Eq. 6.9](#eq-rad:a_shadesunlit)), and $k_a$ as well as
 $a_{chl}^n$ are parameters specified in @tbl-assimi:param.
 
-As [@Kull:1998cr] show, this system of equations ([Eq. 2.4](#eq-jmax) - [Eq.
-2.12](#eq-ps_lightharvesting)) can be solved to yield gross photosynthesis ($A _g$) for one canopy
+As [@Kull:1998cr] show, this system of equations ($\Eqref{eq:jmax}$ - $\Eqref{eq:ps-lightharvesting}$) can be solved to yield gross photosynthesis ($A _g$) for one canopy
 layer and light-class as:
 
 $$
@@ -289,11 +288,10 @@ $$
 ## Stomatal coupling {#sec-assimi-stomatal-coupling}
 
 The combination of leaf-level net photosynthesis ($A_{n,cl}$), stomatal conductance ($g_{s,cl}$),
-and leaf internal $\mathrm{CO_2}$ concentration ($c_{i,cl}$) satisfying [Eq.
-2.18](#eq-stomatal_coupling) is sought iteratively for each canopy layer:
+and leaf internal $\mathrm{CO_2}$ concentration ($c_{i,cl}$) satisfying $\Eqref{eq:stomatal-coupling}$ is sought iteratively for each canopy layer:
 
 $$
-\label{eq-stomatal-coupling}
+\label{eq:stomatal-coupling}
 \begin{align}
 A_n &= (A_{g,sunlit} \times f_{sunlit} + A_{g,shaded} \times (1- f_{sunlit})) - R_l\\
 g_s &= [g_0 + g_1 \frac{A_n\beta_{air}\beta_{soil}^{gs}}{c_a}] \times R  \times T_{air} / p\\
@@ -732,7 +730,7 @@ of acclimation ($S$) to air temperature, which reduces photosynthesis in spring 
 reached [@Makela:2004]. $S$ is calculated as
 
 $$
-\label{eq-veg-soa}
+\label{eq:veg-soa}
 \frac{dS}{dt} = \frac{1}{\tau_{soa}}(T_{air}-S)
 $$
 
