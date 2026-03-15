@@ -23,19 +23,10 @@ table-prefix: Table
 order: 3
 ---
 
-This appendix includes a detailed model description with equations.
-@sec-structure with parameter
-@tbl-processes:mavg_period summarises the general structure
-and vertical discretisation of vegetation and soil. @sec-assimi describes
-the canopy processes, such as photosynthesis and stomatal coupling, with
-parameters in @tbl-assimi:param. @sec-veg introduces
-vegetation growth, turnover and dynamics and the corresponding
-parameters are in [Table 6.4](#tbl-veg:param). The soil biochemistry is
-described in @sec-soil_biogeochemistry, and its parameters are in
-[Table 6.7](#tbl-sb:param). @sec-rad describes the radiation scheme,
-surface energy balance and soil hydrology, with parameters described in
-[Table 6.11](#tbl-radsse:param). The PFT-specific parameters are in the
-[Table 6.12](#tbl-lctlib:description).
+The following presents an attempt to provide a complete overview on QUINCY v1. @sec-structure summarises the general structure
+and vertical discretisation of vegetation and soil. @sec-assimi describes the canopy processes, such as photosynthesis and
+stomatal coupling. @sec-veg introduces vegetation growth, turnover and dynamics. Soil biogeochemistry is described in
+@sec-soil_biogeochemistry. @sec-rad describes the simplified QUINCY radiation scheme, surface energy balance and soil hydrology.
 
 # General model structure and discretisation {#sec-structure}
 
