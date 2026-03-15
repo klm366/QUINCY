@@ -1595,11 +1595,6 @@ vertical flow of soluable biogeochemical pools.
 | $k_0^{chl}$ | chlorophyll distribution with canopy depth for C3/C4 plants | 6.0 / 15.0 | \- | [2.2](#eq:canopy_chl) | [@Zaehle:2010cz] |
 | $k_1^{chl}$ | chlorophyll distribution with canopy depth for C3/C4 plants | 3.6 / 4.4 | \- | [2.2](#eq:canopy_chl) | [@Zaehle:2010cz] |
 | $k_{fn}^{chl}$ | chlorophyll distribution with canopy depth | 0.7 | \- | [2.2](#eq:canopy_chl) | [@Friend2001-xy] |
-
-: Photosynthesis parameters {#tbl-assimi:param}
-
-| Symbol | Description | Value | Unit | Equation | Citation |
-|:----------------|:----------------|:----------------|:----------------|:---------------:|:----------------|
 | $E_0^{kc}$ | Scaling constant of $k_c$ | 38.05 | \- | [2.3](#eq:ps_t_sensitivity) | [@Bernacchi:2001wv] |
 | $E_1^{kc}$ | Activation energy of $k_c$ | 79.43 | $\mathrm{\frac{kJ}{mol}}$ | [2.3](#eq:ps_t_sensitivity) | [@Bernacchi:2001wv] |
 | $E_0^{ko}$ | Scaling constant of $k_o$ | 20.3 | \- | [2.3](#eq:ps_t_sensitivity) | [@Bernacchi:2001wv] |
@@ -1619,11 +1614,12 @@ vertical flow of soluable biogeochemical pools.
 | $O_i$ | Partial Pressure of $\mathrm{O_2}$ | 20.9 | kPa | [2.7](#eq:vcmax) | \- |
 | $c_{i,max}$ | Saturating Ci in C4 plants | 7800.0 | Pa | [2.9](#eq:pepc) | [@Friend:2009tf] |
 
-: Photosynthesis parameters (ctnd.) {#tbl-assimi:param2}
+: Photosynthesis parameters {#tbl-assimi:param}
 
 | Symbol | Description | Value | Unit | Equation | Citation |
 |:----------------|:----------------|:----------------|:----------------|:---------------:|:----------------|
 | **Respiration** |  |  |  |  |  |
+|  |  |  |  |  |  |
 | $f_{resp, growth}$ | Growth respiration fraction per unit new biomass | 0.25 | $\mathrm{\frac{mol C}{mol C}}$ | [3.1](#eq:veg:labile_pool_dynamics) | [@Sprugel1995-gy] |
 | $f_{resp, maint}^{\it non-woody}$ | Maintenance respiration rate for fine roots and leaves | 1.0 | $\mathrm{\frac{{\mu}mol CO_2}{mmol N \hspace{0.2em} s}}$ | [3.2](#eq:veg:respiration) | [@Sprugel1995-gy] |
 | $f_{resp, maint}^{\it woody}$ | Maintenance respiration rate for wood | 0.25 | $\mathrm{\frac{{\mu}mol CO_2}{mmol N\hspace{0.2em}  s}}$ | [3.2](#eq:veg:respiration) | [@Sprugel1995-gy] |
@@ -1648,11 +1644,6 @@ vertical flow of soluable biogeochemical pools.
 | $k4^{fruit}_{alloc}$ | Shape parameter in the fruit allocation response to reserve changes | 2.0 | \- | [3.10](#eq:veg:falloc_fruit) | This study |
 | $W^{alloc}_{soil,crit}$ | Fraction of root zone water at field capacity below which root allocation starts responding | 0.8 | \- | [3.12](#eq:veg:dynamic_alloc) | This study |
 | $k_{htol}$ | Stem mass to leaf mass ratio of grasses | 0.05 | \- | [3.13](#eq:l2s_grass) | [@Zaehle:2010cz] |
-
-: Vegetation growth and dynamics parameters {#tbl-veg:param}
-
-| Symbol | Description | Value | Unit | Equation | Citation |
-|:----------------|:----------------|:----------------|:----------------|:---------------:|:----------------|
 | **Stoichiometry** |  |  |  |  |  |
 | $C_m$ | Carbon mass per unit dry weight of leaves | 0.48 | $\mathrm{\frac{g C}{g DW}}$ | \- | [@Kattge:2011fc] |
 | $\chi_{root}^{C:N}$ | Relative C:N of fine roots compared to leaves | 0.85 | \- | Sect.  | [@Zaehle:2010cz] |
@@ -1680,11 +1671,6 @@ vertical flow of soluable biogeochemical pools.
 | $f_{store,max}^{root}$ | Maximum reserve storage in fine roots relative to fine root mass | 0.2 | \- | Sect. | This study |
 | $f_{store,max}^{wood}$ | maximum reserve storage in sap wood relative to sap wood mass | 0.15 | \- | Sect. | This study |
 | $k_{\Phi}^{inter}$ | threshold value of $\Phi^X_{maint}$ beyond which $\Phi^X_{store}$ is reduced | 0.75 | \- | [3.22](#eq:veg:phi_interact) | This study |
-
-: Vegetation growth and dynamics parameters (ctnd.) {#tbl-veg:param2}
-
-| Symbol | Description | Value | Unit | Equation | Citation |
-|:----------------|:----------------|:----------------|:----------------|:---------------:|:----------------|
 | **Phenology** |  |  |  |  |  |
 | $t_{air}^{GDD}$ | temperature threshold for the accumulation of growing degree days | $\mathrm{^\circ C}$ | 5 | \- | by convention |
 | $\tau_{soa}$ | time constant in calculation state of acclimation | 114 | $\mathrm{hours}$ | [3.27](#eq:veg:soa) | This study |
@@ -1708,7 +1694,7 @@ vertical flow of soluable biogeochemical pools.
 | $k1_{mort\_greff}$ | Asymptotic growth efficiency mortality rate | 0.05 | $\mathrm{year^{-1}}$ | [3.37](#eq:veg:mort_greff) | [@Sitch:2003wg] |
 | $k2_{mort\_greff}$ | Scaling coefficient for growth efficiency mortality rate | 0.3 | $\mathrm{\frac{m^2 \hspace{0.2em} yr}{mol C}}$ | [3.37](#eq:veg:mort_greff) | [@Sitch:2003wg] |
 
-: Vegetation growth and dynamics parameters (ctnd.) {#tbl-veg:param3}
+: Vegetation growth and dynamics parameters {#tbl-veg:param}
 
 | Symbol | Description | Value | Unit | Equation | Citation |
 |:----------------|:----------------|:----------------|:----------------|:---------------:|:----------------|
@@ -1735,11 +1721,6 @@ vertical flow of soluable biogeochemical pools.
 | $E_{a,decomp}$ | activation energy for decomposition | 53000.0 | $\mathrm{J mol^{-1}}$ | [4.15](#eq:sb:simple_som_turnover) | [@Ahrens:2015ie] |
 | $E_{d,decomp}$ | de-activation energy for decomposition | 100000.0 | $\mathrm{J mol^{-1}}$ | [4.15](#eq:sb:simple_som_turnover) | [@Ahrens:2015ie] |
 | $\Psi_{dec,min}$ | minimum water potential for decomposition | -2.0 | $\mathrm{MPa}$ | [4.15](#eq:sb:simple_som_turnover) | This study |
-
-: Soil biogeochemistry parameters {#tbl-sb:param}
-
-| Symbol | Description | Value | Unit | Equation | Citation |
-|:----------------|:----------------|:----------------|:----------------|:---------------:|:----------------|
 | **SOM dynamics** |  |  |  |  |  |
 | $\chi_{{SOM}_{fast,max}^{C:N}}$ | maximum C:N ratio of fast SOM | 15.27693 | $\frac{mol}{mol}$ | [4.16](#eq:sb:SOMCNfast) | [@Manzoni:2008hw] |
 | $\chi_{{SOM}_{fast,min}^{C:N}}$ | minimum C:N ratio of fast SOM | 5.830891 | $\frac{mol}{mol}$ | [4.16](#eq:sb:SOMCNfast) | [@Manzoni:2008hw] |
@@ -1771,11 +1752,6 @@ vertical flow of soluable biogeochemical pools.
 | $k_{demand}$ | Nutrient uptake response function to labile nutrient concentration | 2.0 | \- | [4.23](#eq:sb:simple_potential_uptake) | This study |
 | $N_{limit}^{BNF}$ | maximum sum of $\mathrm{NH_4}$ and $\mathrm{NO_3}$ at which BNF occurs | 0.05 | $\mathrm{\frac{mol N}{m^2}}$ | Sect. | [@Zaehle:2010cz] |
 | $v_{max,BNF}$ | Maximum rate of BNF | 0.005 | $\mathrm{\frac{mol N}{m^2 \hspace{0.2em} s}}$ | [4.24](#eq:sb:asymb_bnf) | [@Zaehle:2010cz] |
-
-: Soil biogeochemistry parameters (ctnd.) {#tbl-sb:param2}
-
-| Symbol | Description | Value | Unit | Equation | Citation |
-|:----------------|:----------------|:----------------|:----------------|:---------------:|:----------------|
 | **Nitrification, denitrification, and BNF parameters** |  |  |  |  |  |
 | $\lambda_{anvf}$ | Weibull function to relate anaerobic volume fraction to soil moisture | 1.3 | \- | [4.25](#eq:sb:simple_anaerobic_vf) | [@Zaehle:2010cz] |
 | $k_{anvf}$ | Weibull function to relate anaerobic volume fraction to soil moisture | 3.0 | \- | [4.25](#eq:sb:simple_anaerobic_vf) | [@Zaehle:2010cz] |
@@ -1807,7 +1783,7 @@ vertical flow of soluable biogeochemical pools.
 | $K^{sorb}_{m,om}$ | Half-saturation concentration for $\mathrm{PO_4}$ adsorption to OM | 0.045 | $\frac{mmol P}{kg \hspace{0.1em} OM}$ | [4.36](#eq:sb:Psorbpar) | see SI |
 | $K^{sorb}_{m,mineral}$ | Half-saturation concentration for $\mathrm{PO_4}$ adsorption to soil mineral | 0.00225 | $\frac{mmol P}{kg \hspace{0.1em} soil}$ | [4.36](#eq:sb:Psorbpar) | see SI |
 
-: Soil biogeochemistry parameters (ctnd.) {#tbl-sb:param3}
+: Soil biogeochemistry parameters {#tbl-sb:param}
 
 | Symbol | Description | Value | Unit | Equation | Citation |
 |:----------------|:----------------|:----------------|:----------------|:---------------:|:----------------|
@@ -1831,9 +1807,10 @@ vertical flow of soluable biogeochemical pools.
 : Parameters for the calculation of isotopic fractionation and mixing ratios calculation
 {#tbl-isotope:param}
 
-| **Albedo and fAPAR** |   |   |   |   |   |
+|  |  |  |  |  |  |
 |:----------------|-----------------|-----------------|-----------------|-----------------|-----------------|
 | Symbol | Description | Value | Unit | Equation | Citation |
+| **Albedo and fAPAR** |  |  |  |  |  |
 | $\rho^{sbeta}$ | Scaling factor of solar angle in reflection calculation | 1.6 | \- | [6.1](#eq:rad:leaf_albedo) | [@Spitters:1986tv] |
 | $k_{bl,0}^{vis}$ | Extinction coefficient over black leaves (VIS range) | 0.5 | \- | [6.2](#eq:rad:extinction_coef) | [@Spitters:1986tv] |
 | $k_{df,0}^{vis}$ | Extinction coefficient for diffuse radiation (VIS range) | 0.8 | \- | [6.2](#eq:rad:extinction_coef) | [@Spitters:1986tv] |
@@ -1879,11 +1856,6 @@ vertical flow of soluable biogeochemical pools.
 | $\tau_{seed, est}$ | Turnover time of the seed bed to establishment | years | [3.34](#eq:veg:flux_est) | This study |
 | $v_{max,NH_4|NO_3}$ | Maximum plant N uptake rate | $\mathrm{\frac{{\mu}mol \hspace{0.1em} N}{mol \hspace{0.1em} C \hspace{0.2em} s}}$ | [4.23](#eq:sb:simple_potential_uptake) | [@Zaehle:2010a] |
 | $v_{max,PO_4}$ | Maximum plant P uptake rate | $\mathrm{\frac{{\mu}mol \hspace{0.1em} P}{mol \hspace{0.1em} C \hspace{0.2em} s}}$ | [4.23](#eq:sb:simple_potential_uptake) | [@Kavka:2016] |
-
-: PFT-specific parameters {#tbl-lctlib:param}
-
-| Symbol | Description | Unit | Equation | Citation |
-|:------------------:|:-------------------|:-------------------|:------------------:|:------------------:|
 | $GDD_{req}^{max}$ | Maximum GDD requirement in the absence of chilling | $\mathrm{^\circ C \hspace{0.2em} days}$ | [3.26](#eq:phen:gdd) | This study |
 | $k^{GDD}_{dormance}$ | Response of GDD to number of dormant days | days$^{-1}$ | [3.26](#eq:phen:gdd) | This study |
 | $\beta_{soil}^{flush}$ | Soil water level inducing leaf flushing | \- | Sect. | This study |
@@ -1904,7 +1876,7 @@ vertical flow of soluable biogeochemical pools.
 | $k_{seed}$ | Seed size | $\mathrm{molC}$ | [3.39](#eq:veg:dens_ind) | This study |
 | $mort_{bg,PFT}$ | Background mortality rate | $\mathrm{year^{-1}}$ | [3.37](#eq:veg:mort_greff) | [@Sitch:2003wg] |
 
-: PFT-specific parameters (ctnd.) {#tbl-lctlib:param2}
+: PFT-specific parameters {#tbl-lctlib:param}
 
 | Parameter                | TrBE    | TeBE    | TrBR    | TeBS    | BNE     | BNS     | TeH     | TrH     |
 |:-------------------------|:--------|:--------|:--------|:--------|:--------|:--------|:--------|:--------|
@@ -1967,6 +1939,19 @@ vertical flow of soluable biogeochemical pools.
 
 # FLUXNET sites {#sec-appendix_fluxnet_table}
 
+| Number | Abbreviation | Description                                                         |
+|:------:|:------------:|:--------------------------------------------------------------------|
+|   1    |     TrBE     | Tropical broad-leaved evergeen                                      |
+|   2    |     TeBE     | Temperate broad-leaved evergreen                                    |
+|   3    |      BR      | (Tropical) broad-leaved rain deciduous (rain green)                 |
+|   4    |      BS      | (Temperate & Boreal) Broad-leaved winter deciduous (summer green)   |
+|   5    |      NE      | (Temperate & Boreal) Needle-leaved evergreen (coniferous evergreen) |
+|   6    |      NS      | Needle-leaved winter deciduous (summer green)                       |
+|   7    |     TeH      | C3 grass                                                            |
+|   8    |     TrH      | C4 grass                                                            |
+
+: Description of plant functional types used in the model {#tbl-pft_list}
+
 | Site   |  Long   |  Lat   | PFT  | Start | End  | Reference          |
 |:-------|:-------:|:------:|:----:|:-----:|:----:|:-------------------|
 | AT-Neu |  11.32  | 47.12  | TeH  | 2002  | 2005 | [@Wohlfahrt:2008a] |
@@ -1995,33 +1980,22 @@ vertical flow of soluable biogeochemical pools.
 | IT-Ro2 |  11.92  | 42.39  | TeBS | 2002  | 2006 | [@Tedeschi:2006]   |
 | IT-SRo |  10.28  | 43.73  | TeNE | 2003  | 2006 | [@Chiesi:2005]     |
 | NL-Loo |  5.74   | 52.17  | TeNE | 1997  | 2006 | [@Dolman:2002]     |
+| SE-Fla |  19.46  | 64.11  | BNE  | 2000  | 2002 | [@Lindroth:2008]   |
+| SE-Nor |  17.48  | 60.09  | BNE  | 1996  | 1997 | [@Lagergren:2008]  |
+| US-Blo | -120.63 | 38.90  | TeNE | 2000  | 2006 | [@Goldstein:2000]  |
+| US-Ha1 | -72.17  | 42.54  | TeBS | 1995  | 1999 | [@Urbanski:2007]   |
+| US-Ho1 | -68.74  | 45.20  | TeNE | 1996  | 2004 | [@Hollinger:1999]  |
+| US-MMS | -86.41  | 39.32  | TeBS | 2000  | 2005 | [@Schmid:2000]     |
+| US-MOz | -92.20  | 38.74  | TeBS | 2005  | 2006 | [@Gu:2006]         |
+| US-SRM | -110.87 | 31.82  | TeBE | 2004  | 2006 | [@Scott:2009]      |
+| US-Syv | -89.35  | 46.242 | TeNE | 2002  | 2004 | [@Desai:2005]      |
+| US-Ton | -120.97 | 38.43  | TeBE | 2002  | 2006 | [@Ma:2007]         |
+| US-Var | -120.95 | 38.41  | TrH  | 2001  | 2006 | [@Ma:2007]         |
+| US-WCr | -90.08  | 45.81  | TeBS | 2000  | 2005 | [@Cook:2004]       |
+| VU-Coc | 167.19  | -15.44 | TrBE | 2002  | 2003 | [@Roupsard:2006]   |
+| ZA-Kru |  31.50  | -25.02 | TrBR | 2001  | 2003 | [@Archibald:2010]  |
 
 : FLUXNET sites {#tbl-fluxnet_sites}
-
-| Site   |  Long   |  Lat   | PFT  | Start | End  | Reference         |
-|:-------|:-------:|:------:|:----:|:-----:|:----:|:------------------|
-| SE-Fla |  19.46  | 64.11  | BNE  | 2000  | 2002 | [@Lindroth:2008]  |
-| SE-Nor |  17.48  | 60.09  | BNE  | 1996  | 1997 | [@Lagergren:2008] |
-| US-Blo | -120.63 | 38.90  | TeNE | 2000  | 2006 | [@Goldstein:2000] |
-| US-Ha1 | -72.17  | 42.54  | TeBS | 1995  | 1999 | [@Urbanski:2007]  |
-| US-Ho1 | -68.74  | 45.20  | TeNE | 1996  | 2004 | [@Hollinger:1999] |
-| US-MMS | -86.41  | 39.32  | TeBS | 2000  | 2005 | [@Schmid:2000]    |
-| US-MOz | -92.20  | 38.74  | TeBS | 2005  | 2006 | [@Gu:2006]        |
-| US-SRM | -110.87 | 31.82  | TeBE | 2004  | 2006 | [@Scott:2009]     |
-| US-Syv | -89.35  | 46.242 | TeNE | 2002  | 2004 | [@Desai:2005]     |
-| US-Ton | -120.97 | 38.43  | TeBE | 2002  | 2006 | [@Ma:2007]        |
-| US-Var | -120.95 | 38.41  | TrH  | 2001  | 2006 | [@Ma:2007]        |
-| US-WCr | -90.08  | 45.81  | TeBS | 2000  | 2005 | [@Cook:2004]      |
-| VU-Coc | 167.19  | -15.44 | TrBE | 2002  | 2003 | [@Roupsard:2006]  |
-| ZA-Kru |  31.50  | -25.02 | TrBR | 2001  | 2003 | [@Archibald:2010] |
-
-: FLUXNET sites (continued) {#tbl-7.2}
-
-|  |  |  |
-|:-------------------:|:-------------------:|:---------------------------------------------------------|
-| Number | Abbreviation TrBE TeBE BR BS NE NS TeH TrH | Description Tropical broad-leaved evergeen Temperate broad-leaved evergreen (Tropical) broad-leaved rain deciduous (rain green) (Temperate & Boreal) Broad-leaved winter deciduous (summer green) (Temperate & Boreal) Needle-leaved evergreen (coniferous evergreen) Needle-leaved winter deciduous (summer green) C3 grass C4 grass |
-
-: {#tbl-7.3}
 
 | Variable                       |              Unit               | FI-Hyy | FR-Hes | AU-Tum | BR-Ma2 |
 |:-------------------------------|:-------------------------------:|-------:|-------:|-------:|-------:|
