@@ -1,5 +1,19 @@
 /* css styles */
 
+/* Pin the footer to the bottom of the viewport */
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1020;
+}
+
+/* Prevent page content from being hidden behind the fixed footer */
+body {
+  padding-bottom: 60px;
+}
+
 /* Make mjx-container block-level for proper equation number alignment */
 mjx-container[display="true"] {
   display: block !important;
