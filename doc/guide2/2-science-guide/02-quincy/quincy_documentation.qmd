@@ -88,7 +88,7 @@ total leaf area, such that less N is allocated to the lower, darker canopy layer
 with observations of canopy N distribution [@Niinemets:1998].
 
 All soil state-variables (temperature, moisture, texture, soil biogeochemical pools) and fluxes are
-discretised into 15 soil layers (denoted by subscript ($sl$). Layer thickness increases
+discretised into 15 soil layers (denoted by subscript $sl$). Layer thickness increases
 exponentially with increasing layer depth up to a total depth of 9.5 m, and with a minimum layer
 thickness for the top layer of 0.065 m. Fine roots and coarse roots are assumed to be distributed in
 exponentially decreasing density along the soil profile according to
@@ -112,7 +112,7 @@ treated similarly across layers.
 ## Canopy nitrogen allocation {#sec-veg-foliar-N-fractions}
 
 The leaf area index ($LAI$) and canopy nitrogen content ($N_{leaf}$) are dynamic properties of the
-model, as described in Section , and are discretised to canopy layers given by $\Eqref{eq:veg-root-distribution}$ and $\Eqref{eq:veg-root-distribution_b}$. $N_{leaf,cl}$ is partitioned into photosynthetic and
+model, as described in Section , and are discretised to canopy layers given by $\Eqref{eq:veg-root-distribution}$. $N_{leaf,cl}$ is partitioned into photosynthetic and
 non-photosynthetic, or structural, N. The fraction of structural N ($fN_{struc,cl}$) is calculated
 as a function of the total leaf N in the respective canopy layer:
 
