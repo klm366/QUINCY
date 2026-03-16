@@ -27,7 +27,8 @@ MODULE mo_jsb_grid_class
                                    get_nblks_domain         => get_nblks
   USE mo_jsb_grid_iface,     ONLY: get_lon_domain           => get_lon,           &
                                    get_lat_domain           => get_lat,           &
-                                   get_area_domain          => get_area
+                                   get_area_domain          => get_area,          &
+                                   get_coriolis_domain      => get_coriolis
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
 
   IMPLICIT NONE
@@ -51,6 +52,7 @@ MODULE mo_jsb_grid_class
     REAL(wp), POINTER             :: area(:,:) => NULL()
     LOGICAL,  ALLOCATABLE         :: lsm(:,:)
     REAL(wp), ALLOCATABLE         :: lsf(:,:)
+    REAL(wp), POINTER             :: coriolis(:,:)         !< Coriolis parameter at grid points [s^{-1}]
     INTEGER                       :: nblks = 1
     INTEGER                       :: nproma = 0
     INTEGER                       :: npromz = 0
@@ -160,6 +162,7 @@ CONTAINS
     ALLOCATE(new%lsm(new%nproma,new%nblks), new%lsf(new%nproma,new%nblks))
     new%lsm(:,:) = .TRUE.
     new%lsf(:,:) = 1.0_wp
+    new%coriolis => get_coriolis_domain    (patch)
 
     new%configured = .TRUE.
 

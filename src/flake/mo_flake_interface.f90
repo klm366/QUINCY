@@ -312,7 +312,6 @@ CONTAINS
     ! dsl4jsb_Get_var2D_onChunk(FLAKE_, depth_w)         ! in
     dsl4jsb_Get_var2D_onChunk(FLAKE_, Q_bot)           ! in
     dsl4jsb_Get_var2D_onChunk(FLAKE_, fetch)           ! in
-    dsl4jsb_Get_var2D_onChunk(FLAKE_, par_Coriolis)    ! out
     ! dsl4jsb_Get_var2D_onChunk(FLAKE_, pondtype)        ! in
 
     ! dsl4jsb_Get_var2D_onChunk(FLAKE_, t_snow)        ! inout
@@ -332,7 +331,7 @@ CONTAINS
     ! Go    
 
     !  Compute coriolis parameter
-    par_Coriolis = 2.0_wp*rot_earth*SIN(lat(:)*3.1416_wp/180_wp)
+    par_Coriolis => grid%coriolis(ics:ice, iblk)
 
     !  Set albedos of the lake water, lake ice and snow
     !  They are now computed in the RAD process
@@ -534,7 +533,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(FLAKE_, w_star,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(FLAKE_, z0t_sf,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(FLAKE_, z0u_sf,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(FLAKE_, par_Coriolis, weighted_by_fract)
 
     CALL weighted_by_fract%EndAggregate()
 

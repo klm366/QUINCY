@@ -54,7 +54,6 @@ MODULE mo_flake_memory_class
       & h_snow,       &  !< lake snow-layer height
       & fetch,        &  !< lake fetch
       & w_star,       &  !< convective velocity scale 
-      & par_Coriolis, & !< The Coriolis parameter [s^{-1}]
       & z0t_sf, &
       & z0u_sf, &
       & Q_bot!, & !< ! Heat flux through the water-bottom sediment interface [W m^{-2}]
@@ -127,13 +126,6 @@ CONTAINS
         & prefix, suffix,                                                              &
         & output_level=BASIC, initval_r=0.0_wp )
         
-      CALL mem%Add_var( 'par_Coriolis', mem%par_Coriolis,                              &
-        & hgrid, surface,                                                              &
-        & t_cf('par_Coriolis', 's-1', 'coriolis parameter'),                           &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & output_level=BASIC, initval_r=0.0_wp )
-
       ! CALL mem%Add_var( 'T_sfc', mem%T_sfc,                                            &
       !   & hgrid, surface,                                                              &
       !   & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr'),                   &

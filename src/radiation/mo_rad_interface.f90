@@ -1330,7 +1330,7 @@ CONTAINS
     !!
     IF (tile%is_lake) THEN
 
-      IF (tile%Is_process_active(FLAKE_)) THEN
+      IF (model%config%use_flake) THEN
 
         dsl4jsb_Get_var2D_onChunk(SEB_,   t_lwtr)       ! in
         dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lwtr)  ! inout
