@@ -1,27 +1,23 @@
 ---
-title: QUINCY Science Overview 
+title: QUINCY Overview
+order: 2
 ---
 
-### The QUINCY model 
-
-<figure>
-  <img src="../../../media/QUINCY-high-res.png" 
-  style="float: left; border:thick" width="50%" name="fig_quincy_schematic" 
-  alt="QUINCY schematic">
-  <figcaption> Fig 1: Schematic representation of biogeochemical, water and energy flows in QUINCY; as published in Thum et al. 2019</figcaption>
-</figure>
+![Schematic representation of biogeochemical, water and energy flows in QUINCY; as published in Thum et al. 2019](/media/QUINCY-high-res.png){.lightbox #fig-quincy-schematic width="70%" fig-alt="QUINCY schematic"}
 
 :::{.callout-note}
-**QUINCY (QUantifying Interactions between terrestrial Nutrient CYcles and the climate system) v1** (Thum et al. 2019) has been developed to include a consistent representation of element cycling (in terms of carbon (C), nitrogen (N), and phosphorus (P)) in terrestrial ecosystems, as well as their interaction with the terrestrial water and energy balance suitable for the modelling of land-atmosphere interactions (<a href="fig_quincy_schematic">[Fig. 1]</a>). QUINCY was originally described by Thum et al. (2019) as a stand-alone ecosystem model, but has now integrated into the ICON-Land infrastructure and shares its physical process representation as well as the software infrastructure. It follows a modular structure to facilitate the consistent testing of multiple hypothesis for one particular process. This page gives a broad overview of model features, whereas the detailed description can be found [here](./quincy_documentationhtml).
+**QUINCY (QUantifying Interactions between terrestrial Nutrient CYcles and the climate system) v1** (Thum et al. 2019) has been developed to represent a consistent treatment of the element cycling (in terms of carbon (C), nitrogen (N), and phosphorus (P)) in terrestrial ecosystems, as well as their interaction with the terrestrial water and energy balance suitable for the modelling of land-atmosphere interactions (@fig-quincy-schematic). QUINCY was originally described by Thum et al. (2019) as a stand-alone ecosystem model, but has now been fully integrated into the ICON-Land infrastructure and shares biophysical process representation with JSBACH. It follows a modular structure to facilitate the consistent testing of multiple hypothesis for one particular process.
 :::
 
 ---  
+
+The following gives a brief overview over the main features of QUINCY in ICON-Land. A detailed documentation of the scientific code of QUINCY can be found [here](./quincy_documentation.html).
  
 ### Vegetation processes
 
 Vegetation is characterised by an average individual representative of a
 plant functional type (PFT). The model considers
-eight broadly defined PFTs (see Tab.
+twelve broadly defined PFTs (see Tab.
 <a href="./quincy_documentation.html#tab_pft_list">[Table: A1]</a>), representing
 different leaf types (herbaceous, broadleaved, coniferous),
 phenology (evergreen, rain green, and summer green), as well as growth
@@ -73,7 +69,8 @@ Plant nutrient uptake is dependent on fine root biomass density, soil
 soluble nutrient concentrations, temperature and moisture as well as 
 plant internal nutrient demand (Zaehle and Friend, 2010; see Section 
 [Plant Nutrient Uptake](./quincy_documentation.html#plant-uptake-rates)). 
-Tissue growth follows a set of allometric equations describing 
+Symbiotic nitrogen fixation occurs in most PFTs as function of nitrogen update
+costs, root mass and temperature. Tissue growth follows a set of allometric equations describing
 size-dependent relationships of foliar, fine root, coarse root, sapwood and 
 fruit biomass (see Section [Allocation](./quincy_documentation.html#growth-partitioning)). 
 The allometric relationship between leaves and fine root responds to N, P
@@ -123,13 +120,13 @@ vegetation depends directly on the past vegetation ability to produce
 fruits, as the re-establishment is explicitly taking account of the
 available seed pool at the forest / grassland floor.
 
-### Soil hydrological and biogeochemical processes
+### Soil biogeochemical processes
 
 The vertical soil profile of physical and biogeochemical processes is
 explicitly represented, with exponentially increasing layer thickness
 with increasing soil depth. For each soil layer, temperature and moisture are calculated based on
 soil physical characteristics, and the transport and atmospheric
-exchange of energy and water (see Section [Soil Hydrology](./quincy_documentation.html#radiation-surface-energy-balance-and-soil-hydrology)). For each soil layer, the model
+exchange of energy and water (see scientific Documentation of JSBACH). For each soil layer, the model
 represents different organic pools (metabolic, structural, and woody
 litter, as well as fast and slow overturning soil organic matter (SOM)),
 as well as inorganic pools of N and P (soluble and minerally-absorbed 
@@ -164,6 +161,10 @@ weathering, and biomineralisation of P that is bound in the slow SOM
 pool. The adsorbed P is further absorbed into the soil matrix and
 gradually becomes an inactive form of P, occluded P, as proposed by
 (Walker and Syers 1976).
+
+### Land management
+
+to be added.
 
 ### Driving data
 

@@ -1,11 +1,14 @@
 ---
 title: Developer Guide
+listing:
+  id: developer-guide-listings
+  type: grid
+order: 4
 ---
 
-@todo Nothing here, yet.
-
-# Developer Guide {#4-developer-guide}
-
-1. [Coding Style](./01_coding.html)
-2. [Guide for inline documentation](./02_documentation.html)
+::: {#developer-guide-listings}
+:::
+::: {style="font-size: 0.8em; font-style: italic; text-align: left; margin-top: -10px;"}
+Images designed by [Freepik](https://www.freepik.com)
+:::
 

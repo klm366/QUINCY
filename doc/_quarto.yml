@@ -2,10 +2,6 @@ project:
   type: website
   render:
     - "*.qmd"
-    - "!guide/2-science-guide/02-quincy/quincy_documentation.md"
-    - "!guide/2-science-guide/02-quincy/index.md"
-    - "!guide/2-science-guide/index.md"
-    - "!index.md"
   resources:
     - media/
 website:

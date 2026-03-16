@@ -1,8 +1,0 @@
----
-title: Scientific Documention for JSBACH
-order: 1
----
-
-:::{.callout-warning}
-These pages are under construction!
-:::

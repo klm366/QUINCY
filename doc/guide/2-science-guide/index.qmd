@@ -1,7 +1,6 @@
 ---
 title: Science Guide
+order: 2
+listing:
+  type: default
 ---
-
-:::{.callout-warning}
-These pages are under construction!
-:::

@@ -1,4 +1,6 @@
 ---
 title: Coding Style
+image: /media/coding-style-guide.svg
+order: 1
 ---
 

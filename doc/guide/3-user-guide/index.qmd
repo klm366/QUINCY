@@ -1,6 +1,8 @@
 ---
 title: User Guide
+order: 3
 ---
 
-@todo Nothing here, yet.
-
+:::{.callout-note}
+Nothing here, yet.
+:::
