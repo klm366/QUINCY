@@ -2,7 +2,7 @@
 project: ICON-Land
 author: MPI-M, MPI-BGC
 author_description: [AUTHORS](page/1-general/02-authors.html)
-website: https://icon-model.org
+website: https://icon-land.org
 email: reiner.schnur@mpimet.mpg.de
 project_dir: .
 src_dir: ./src
