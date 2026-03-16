@@ -76,7 +76,6 @@ MODULE mo_flake_process
         extincoef_optic_ice   , & ! Optical characteristics of ice
         extincoef_optic_snow      ! Optical characteristics of snow 
 
-      !$claw model-data
       REAL (KIND = wp), INTENT(IN) ::   &
         ! depth_w       , & ! The lake depth [m]
         albedo_water  , & ! Albedo of the water surface 
@@ -97,8 +96,6 @@ MODULE mo_flake_process
         I_intm_h_D, & ! Mean radiation flux over the thermocline [W m^{-1}]
         I_snow,     & ! Radiation flux through the air-snow interface [W m^{-2}] (but maybe not needed) 
         I_w           ! Radiation flux through the ice-water or air-water interface [W m^{-2}]
-      !$claw end model-data
-
 
       !  Local variables of type INTEGER
       INTEGER  :: & ! Help variable(s)
@@ -192,10 +189,8 @@ MODULE mo_flake_process
       
       USE mo_jsb_physical_constants, ONLY: grav !> [m/s2] av. gravitational acceleration
 
-      !$claw model-data
       REAL(wp), INTENT(in)  :: T_water   ! Water temperature [K]
       REAL(wp), INTENT(out) :: buoypar   ! Buoyancy parameter [m s^{-2} K^{-1}]
-      !$claw end model-data
 
       ! ---------------------------
       ! Go
@@ -231,7 +226,6 @@ MODULE mo_flake_process
         & albedo_bot    
         
         
-      !$claw model-data
       REAL(wp), INTENT(in) :: h_ice,      & ! Ice thickness [m]
                             & h_ML,       & ! Thickness of the mixed-layer [m] 
                             & T_bot,      & ! Temperature at the water-bottom sediment interface [K] 
@@ -247,7 +241,6 @@ MODULE mo_flake_process
       REAL(wp),  INTENT(out) :: Q_w,       & ! Heat flux through the ice-water or air-water interface [W m^{-2}]
                               & Q_star,    & ! A generalized heat flux scale [W m^{-2}]
                               & Phi_T_pr0    ! d\Phi_T(0)/d\zeta   (thermocline)
-      !$claw end model-data
 
       ! ---------------------------
       ! Go
@@ -300,7 +293,6 @@ MODULE mo_flake_process
       
       USE mo_jsb_physical_constants,    ONLY: alf           !< Latent heat of fusion [J kg^{-1}]
 
-      !$claw model-data      
       REAL(wp), INTENT(in) ::   del_time, & ! The model time step [s]
                             &   I_ice, & ! Radiation flux through the snow-ice or air-ice interface [W m^{-2}]
                             &   I_w,   & ! Radiation flux through the ice-water or air-water interface [W m^{-2}]
@@ -486,7 +478,6 @@ MODULE mo_flake_process
       
       USE mo_jsb_physical_constants,    ONLY: clw     ! Specific heat capacity of liquid water [J/(K kg)]
 
-      !$claw model-data
       REAL(wp), INTENT(in) :: del_time,             & ! The model time step [s]
                             & h_ice,                & ! Ice thickness [m]
                             & I_bot,                & ! Radiation flux through the water-bottom sediment interface [W m^{-2}]
@@ -509,7 +500,6 @@ MODULE mo_flake_process
                                 & h_ML                    ! Thickness of the mixed-layer [m] 
 
       REAL(wp),  INTENT(out) :: w_star_sfc ! Convective velocity scale, using a generalized heat flux scale [m s^{-1}]
-      !$claw end model-data
 
       ! Local variables
       REAL(wp) :: C_T_p,              & ! Shape factor in previous timestep (thermocline)
@@ -808,14 +798,12 @@ MODULE mo_flake_process
         & h_Snow_min, &
         & h_Ice_min   
 
-      !$claw model-data
       REAL(wp), INTENT(in)  :: h_snow  ! Snow thickness [m]
       REAL(wp), INTENT(in)  :: T_snow  ! Snow temperature [K]
       REAL(wp), INTENT(in)  :: h_ice   ! Ice thickness [m]
       REAL(wp), INTENT(in)  :: T_ice   ! Ice temperature [K]
       REAL(wp), INTENT(in)  :: T_wML   ! Water temperature [K]
       REAL(wp), INTENT(out) :: T_sfc   ! Surface temperature [K]
-      !$claw end model-data
 
 
       

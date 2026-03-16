@@ -148,10 +148,6 @@ CONTAINS
       & rhoh2o, & !> [kg/m3]  density of liquid water !! = tpl_rho_w_r
       & cpd, cvd
 
-!!#ifdef SERIALIZE
-    !$claw verbatim USE mo_ser_common, ONLY: init
-!!#endif
-
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options

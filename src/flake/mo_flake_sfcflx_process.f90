@@ -83,7 +83,6 @@ MODULE mo_flake_SfcFlx_process
     USE mo_flake_constants,         ONLY : con_m                   , & !< Kinematic viscosity of dry air         [m^2/s]  
                                             con_h                       !< Scalar conductivity of dry air         [m^2/s]  
 
-    !$claw model-data
     REAL(wp), INTENT(in) ::  height_u   , & ! Height where wind is measured [m]
                           &  height_tq  , & ! Height where temperature and humidity are measured [m]
                           &  fetch      , & ! Typical wind fetch [m]
@@ -101,7 +100,6 @@ MODULE mo_flake_SfcFlx_process
                             & z0u_sf        , & ! Roughness length with respect to wind velocity [m]
                             & z0t_sf        , & ! Roughness length with respect to potential temperature [m]
                             & u_star_st         ! Friction velocity [m s^{-1}]
-    !$claw end model-data
 
     INTEGER, PARAMETER ::  n_iter_max     = 24  ! Maximum number of iterations 
     
@@ -432,7 +430,6 @@ MODULE mo_flake_SfcFlx_process
                                             Sc_neutral              , & !< Turbulent Schmidt number at neutral static stability
                                             z0u_ice_rough               !< Aerodynamic roughness of the ice surface [m] (rough flow)
 
-    !$claw model-data
     REAL(wp), INTENT(in) :: fetch    , & !< Typical wind fetch [m]
                             U_a      , & !< Wind speed [m s^{-1}]
                             u_star   , & !< Friction velocity in the surface air layer [m s^{-1}]
@@ -443,7 +440,6 @@ MODULE mo_flake_SfcFlx_process
                             z0u            , & !< Roughness length with respect to wind velocity [m]
                             z0t            , & !< Roughness length with respect to potential temperature [m]
                             z0q                !< Roughness length with respect to specific humidity [m]
-    !$claw end model-data
 
     !  Local variables
     REAL (KIND = wp) :: Re_s          , & !< Surface Reynolds number 
