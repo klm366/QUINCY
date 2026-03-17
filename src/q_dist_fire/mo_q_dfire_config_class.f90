@@ -112,17 +112,10 @@ MODULE mo_q_dfire_config_class
     LOGICAL           :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
     LOGICAL           :: flag_has_live_feedback      !< Flag to enable live fuel feedback from Spitfire into Quincy
     LOGICAL           :: flag_has_prob_mort_feedback !< Flag to enable live probability of mortality from Spitfire into Quincy (q_veg_dynamics.f90)
-    LOGICAL           :: flag_wa_custom              !< Flag to enable custom weighting average, defined at 'burnable_pfts'
     REAL(wp)          :: tree_height_factor          !< Tree height factor for spitfire
     REAL(wp)          :: tree_diameter_factor        !< Tree diameter factor for spitfire
     REAL(wp)          :: dead_fuel_factor            !< Dead fuel factor for spitfire
     REAL(wp)          :: live_fuel_factor            !< Live fuel factor for spitfire
-
-    LOGICAL           :: burnable_pfts(13)           !< Burnable PFTs. Those PFTs are then accounted for the weighting average
-                                                     !< from leaf to tile processes. This also involces the Burned area as it is influenced by the area.
-                                                     !< 13= number of PFTs. TODO: make it dynamic, to accomodate other configurations
-    LOGICAL           :: burnable_grass_pfts(13)     !< Burnable grass PFTs
-    LOGICAL           :: burnable_tree_pfts(13)      !< Burnable tree PFTs
 
   CONTAINS
     PROCEDURE :: Init => Init_q_dfire_config
@@ -182,14 +175,10 @@ CONTAINS
     LOGICAL                       :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
     LOGICAL                       :: flag_has_live_feedback      !< Flag to enable live fuel feedback from Spitfire into Quincy
     LOGICAL                       :: flag_has_prob_mort_feedback !< Flag to enable live probability of mortality from Spitfire into Quincy (q_veg_dynamics.f90)
-    LOGICAL                       :: flag_wa_custom              !< Flag to enable custom PFTs weighting average define at 'burnable_pfts'
     REAL(wp)                      :: tree_height_factor          !< Tree height factor for spitfire
     REAL(wp)                      :: tree_diameter_factor        !< Tree diameter factor for spitfire
     REAL(wp)                      :: dead_fuel_factor            !< Dead fuel factor for spitfire
     REAL(wp)                      :: live_fuel_factor            !< Live fuel factor for spitfire
-    LOGICAL                       :: burnable_pfts(13)           !< Burnable PFTs, used in aggregation and potential burnable area
-    LOGICAL                       :: burnable_grass_pfts(13)     !< Burnable grass PFTs, used in aggregation and potential burnable area
-    LOGICAL                       :: burnable_tree_pfts(13)      !< Burnable tree PFTs, used in aggregation and potential burnable area
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_q_dfire_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -220,15 +209,10 @@ CONTAINS
       & flag_has_dead_feedback,               &
       & flag_has_live_feedback,               &
       & flag_has_prob_mort_feedback,          &
-      & flag_wa_custom,                       &
       & tree_height_factor,                   &
       & tree_diameter_factor,                 &
       & dead_fuel_factor,                     &
-      & live_fuel_factor,                     &
-      & burnable_pfts,                        &
-      & burnable_grass_pfts,                  &
-      & burnable_tree_pfts
-
+      & live_fuel_factor
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! variables for reading model-options from namelist
@@ -259,19 +243,10 @@ CONTAINS
     flag_has_dead_feedback   = .TRUE.
     flag_has_live_feedback   = .TRUE.
     flag_has_prob_mort_feedback = .TRUE.
-    flag_wa_custom           = .FALSE.
     tree_height_factor       = 1._wp
     tree_diameter_factor     = 1._wp
     dead_fuel_factor         = 1.0_wp
     live_fuel_factor         = 1.0_wp
-    ! 13 PFTS: Tree,Tree,Tree,Tree,Tree,Tree,Grass,Grass,Pasture,Pasture,Crops,Crops,Bare-soil
-    burnable_pfts            = [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! Tree and grass PFTs
-                                .FALSE., .FALSE., .FALSE., .FALSE., .FALSE.]
-    burnable_grass_pfts      = [.FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .TRUE.,  .TRUE.,  .FALSE.,& ! grass only PFTs
-                                .FALSE., .FALSE., .FALSE., .FALSE.]
-    burnable_tree_pfts       = [.TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .TRUE.,  .FALSE., .FALSE., .FALSE.,& ! tree only PFTs
-                                .FALSE., .FALSE., .FALSE., .FALSE.]
-
     ! ----------------------------------------------------------------------------------------------------- !
     ! read the namelist
     ! &Q_DIST_FIRE_CTL
@@ -308,14 +283,10 @@ CONTAINS
     config%flag_has_dead_feedback    = flag_has_dead_feedback         !
     config%flag_has_live_feedback    = flag_has_live_feedback         !
     config%flag_has_prob_mort_feedback = flag_has_prob_mort_feedback  !
-    config%flag_wa_custom            = flag_wa_custom
     config%tree_height_factor        = tree_height_factor             !
     config%tree_diameter_factor      = tree_diameter_factor           !
     config%dead_fuel_factor          = dead_fuel_factor
     config%live_fuel_factor          = live_fuel_factor
-    config%burnable_pfts             = burnable_pfts
-    config%burnable_grass_pfts       = burnable_grass_pfts
-    config%burnable_tree_pfts        = burnable_tree_pfts
     ! ----------------------------------------------------------------------------------------------------- !
     CALL close_nml(nml_handler)
     ! ----------------------------------------------------------------------------------------------------- !
