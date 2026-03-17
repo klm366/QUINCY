@@ -1,18 +1,19 @@
 ---
-title: Current ICON-Land Projects
+title: ICON-Land Projects
 listing:
   id: general-projects-listings
   type: grid
 order: 4
+number-sections: false
 ---
+
+# Current ICON-Land Projects
+
 ::: {#general-projects-listings}
-:::
-::: {style="font-size: 0.8em; font-style: italic; text-align: left; margin-top: -10px;"}
-Images designed by [Freepik](https://www.freepik.com)
 :::
 ---
 
-# List of completed ICON-Land projects 
+# Completed ICON-Land Projects 
 
 | Acronym | Project Name | Funding Agency | Lifetime | ICON-Land PIs |
 |:---|:---|:---|:---|:---| 
