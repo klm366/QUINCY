@@ -227,7 +227,9 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: &
       & k_root_dist                   , &
       & k_som_fast_init               , &
-      & k_som_slow_init
+      & k_som_slow_init               , &
+      & ph_ndep_sen                   , &
+      & ph_ndep_int
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
 
   END TYPE t_lctlib_element
@@ -442,6 +444,8 @@ CONTAINS
     LOGICAL            :: exists_k_root_dist = .FALSE.
     LOGICAL            :: exists_k_som_fast_init = .FALSE.
     LOGICAL            :: exists_k_som_slow_init = .FALSE.
+    LOGICAL            :: exists_ph_ndep_sen = .FALSE.
+    LOGICAL            :: exists_ph_ndep_int = .FALSE.
     LOGICAL            :: exists_AlbedoLitterVIS = .FALSE.
     LOGICAL            :: exists_AlbedoLitterNIR = .FALSE.
     LOGICAL            :: exists_VegRoughness = .FALSE.
@@ -1013,6 +1017,12 @@ CONTAINS
           CASE ('k_som_slow_init')
             READ(line(pos:length),*) lctlib(1:nlct)%k_som_slow_init
             exists_k_som_slow_init = .TRUE.
+          CASE ('ph_ndep_sen')
+            READ(line(pos:length),*) lctlib(1:nlct)%ph_ndep_sen
+            exists_ph_ndep_sen = .TRUE.
+          CASE ('ph_ndep_int')
+            READ(line(pos:length),*) lctlib(1:nlct)%ph_ndep_int
+            exists_ph_ndep_int = .TRUE.
           ! jsbach parameter
           CASE ('albedolittervis')
             READ(line(pos:length),*) lctlib(1:nlct)%AlbedoLitterVIS
@@ -1340,6 +1350,11 @@ CONTAINS
           CALL finish('init_lctlib','No data for k_som_fast_init found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_k_som_slow_init) &
           CALL finish('init_lctlib','No data for k_som_slow_init found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_ph_ndep_sen) &
+          CALL finish('init_lctlib','No data for ph_ndep_sen found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_ph_ndep_int) &
+          CALL finish('init_lctlib','No data for ph_ndep_int found in '//TRIM(lctlib_file_name))
+
         IF (.NOT. exists_AlbedoLitterVIS) &
           & CALL finish('init_lctlib','No data for AlbedoLitterVIS found in '//TRIM(lctlib_file_name))
         IF (.NOT. exists_AlbedoLitterNIR) &
@@ -1706,6 +1721,8 @@ CONTAINS
         CALL p_bcast(lctlib(:)%k_root_dist, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%k_som_fast_init, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%k_som_slow_init, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%ph_ndep_sen, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%ph_ndep_int, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterVIS, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%AlbedoLitterNir, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%VegRoughness, p_io, mpi_comm)

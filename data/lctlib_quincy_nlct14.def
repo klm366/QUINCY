@@ -313,6 +313,12 @@ k_som_fast_init 10.0 8.0 10.0 7.0 5.0 5.7 5.0 7.0 5.0 5.0 7.0 7.0 7.0 7.0
 #k_som_slow_init: slow pools SOM init value, empirically calibrated values to equilibrium soil profiles (unitless)
 k_som_slow_init 3.5 2.3 4.0 2.0 2.0 2.0 2.0 2.5 2.0 2.0 2.5 2.5 2.5 2.5
 
+#ph_ndep_sen: the sensitivity of ph changes to n deposition
+ph_ndep_sen 0.192 0.192 0.192 0.192 0.192 0.192 0.498 0.498 0.498 0.498 0.275 0.275 0 0
+
+#ph_ndep_int: the interception of ph changes to n deposition
+ph_ndep_int 0.238 0.238 0.238 0.238 0.238 0.238 0.942 0.942 0.942 0.942 0.365 0.365 0 0
+
 #
 # the following parameters have been copied from the JSBACH lctlib file (lctlib_nlct21.def)
 # Quincy (nlct14) PFT -> JSBACH (nlct21) PFT

@@ -65,6 +65,7 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_ph                !< TRUE: allow soil ph change
     LOGICAL               :: flag_ph_future         !< TRUE: change soil ph in the future simulation
     LOGICAL               :: flag_ph_on_som         !< TRUE: allow soil ph effect on soil organic matter turnover
+    LOGICAL               :: flag_ph_sen_pft        !< TRUE: ph sensitivity to Ndep is PFT-specific; FALSE: sensitivity is pH-specific
     ! mycorrhiza
     LOGICAL               :: flag_mycorrhiza
     LOGICAL               :: flag_mycorrhiza_org
@@ -175,6 +176,7 @@ CONTAINS
     LOGICAL                     :: flag_ph
     LOGICAL                     :: flag_ph_future
     LOGICAL                     :: flag_ph_on_som
+    LOGICAL                     :: flag_ph_sen_pft
     LOGICAL                     :: flag_mycorrhiza
     LOGICAL                     :: flag_mycorrhiza_org
     LOGICAL                     :: flag_mycorrhiza_prim
@@ -225,6 +227,7 @@ CONTAINS
                       flag_ph                   , &
                       flag_ph_future            , &
                       flag_ph_on_som            , &
+                      flag_ph_sen_pft           , &
                       flag_mycorrhiza           , &
                       flag_mycorrhiza_org       , &
                       flag_mycorrhiza_prim      , &
@@ -282,6 +285,7 @@ CONTAINS
     flag_ph                     = .FALSE.
     flag_ph_future              = .FALSE.
     flag_ph_on_som              = .FALSE.
+    flag_ph_sen_pft             = .FALSE.
     flag_mycorrhiza             = .FALSE.
     flag_mycorrhiza_org         = .FALSE.
     flag_mycorrhiza_prim        = .FALSE.
@@ -338,6 +342,7 @@ CONTAINS
     config%flag_ph                         = flag_ph
     config%flag_ph_future                  = flag_ph_future
     config%flag_ph_on_som                  = flag_ph_on_som
+    config%flag_ph_sen_pft                 = flag_ph_sen_pft
     config%flag_mycorrhiza                 = flag_mycorrhiza
     config%flag_mycorrhiza_org             = flag_mycorrhiza_org
     config%flag_mycorrhiza_prim            = flag_mycorrhiza_prim

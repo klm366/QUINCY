@@ -1285,6 +1285,10 @@ CONTAINS
         ! the cumulative N deposition over 20 years
         hlp = ndep_mavg(ic) * molar_mass_N * 1e-6 * 10.0_wp * 20.0_wp * 365.0_wp * 24.0_wp * 3600.0_wp ! from umol m-2 s-1 to kg ha-1 20yr-1
         ! based on Chen et al. 2023
+        ! use PFT-specific sensitivity
+        IF (dsl4jsb_Config(SB_)%flag_ph_sen_pft) THEN  
+          delta_ph(ic)= -lctlib%ph_ndep_sen * log10(hlp) + lctlib%ph_ndep_int
+        ELSE ! use pH-specific sensitivity
         IF (ph_sl(ic,1) .ge. 7.5_wp .OR. ph_old(ic) .lt. 4.0_wp) THEN
            delta_ph(ic) = 0.0_wp
         END IF
@@ -1300,7 +1304,7 @@ CONTAINS
         IF (ph_sl(ic,1) .ge. 6.6_wp .AND. ph_old(ic) .lt. 7.5_wp) THEN
            delta_ph(ic) = -0.122_wp * log10(hlp) + 0.171_wp
         END IF
-
+        END IF
         delta_ph(ic) = MIN(0.0_wp, delta_ph(ic)) / 20.0_wp
 
         ph_sl(ic,1) = ph_sl(ic,1) + delta_ph(ic)
