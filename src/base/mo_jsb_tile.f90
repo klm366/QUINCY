@@ -440,7 +440,7 @@ CONTAINS
   SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
 
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
-    USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator_sum, t_jsb_aggregator_average
+    USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator_sum
     USE mo_jsb_varlist,         ONLY: jsb_add_var, VARNAME_LEN
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
@@ -459,7 +459,6 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
     TYPE(t_jsb_aggregator_sum), POINTER               :: aggregator_sum
-    TYPE(t_jsb_aggregator_average), POINTER           :: aggregator_average
     CLASS(t_jsb_aggregator),                  POINTER :: aggregator
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
@@ -597,8 +596,6 @@ CONTAINS
       CALL this%Register_aggregator(aggregator_weighted_by_fract)
       aggregator_sum => t_jsb_aggregator_sum(this%grid_id, this%Get_no_of_children())
       CALL this%Register_aggregator(aggregator_sum)
-      aggregator_average => t_jsb_aggregator_average(this%grid_id, this%Get_no_of_children())
-      CALL this%Register_aggregator(aggregator_average)
     END IF
 
     ! If tile has parent, put fractions of current tile into corresponding aggregator of parent
