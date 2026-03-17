@@ -3,6 +3,7 @@ title: ICON-Land Projects
 listing:
   id: general-projects-listings
   type: grid
+  grid-columns: 2
 order: 4
 number-sections: false
 ---
