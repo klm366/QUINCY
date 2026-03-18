@@ -140,11 +140,6 @@ MODULE mo_q_dfire_spitfire
     MODULE PROCEDURE :: create_sf_spitfire
   END INTERFACE t_sf_spitfire
 
-
-  TYPE t_sf_bgcm_2L3D_p ! todo: remove
-    REAL(wp), POINTER :: p(:,:,:,:) !< dims: (part,elem,nc,layer)
-  END TYPE t_sf_bgcm_2L3D_p
-
 CONTAINS
 
   !>
