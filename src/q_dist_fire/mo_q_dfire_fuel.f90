@@ -164,7 +164,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: dead_fuel_10hr_dfp    ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: dead_fuel_100hr_dfp   ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: dead_fuel_1000hr_dfp  ! out [g DM m-2]
-    dsl4jsb_Real3D_onChunk      :: cured_live_grass_fuel_1hr_lfp  ! out [g DM m-2]
+    dsl4jsb_Real3D_onChunk      :: cured_live_grass_fuel_1hr_dfp  ! out [g DM m-2]
 
     dsl4jsb_Real3D_onChunk      :: live_grass_fuel_1hr_lfp    ! out [g DM m-2]
 
@@ -331,7 +331,7 @@ CONTAINS
     IF (lctlib%growthform == igrass) THEN
       live_grass_fuel_fcl = fuel_cls % calc_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
       live_grass_fuel_1hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx)
-      cured_live_grass_fuel_fcl = fuels_cls % Calc_cured_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
+      cured_live_grass_fuel_fcl = fuel_cls % Calc_cured_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
       cured_live_grass_fuel_1hr_dfp = cured_live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx)
     ELSE IF (lctlib%growthform == itree) THEN
       live_tree_fuel_fcl = fuel_cls % calc_live_tree_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor

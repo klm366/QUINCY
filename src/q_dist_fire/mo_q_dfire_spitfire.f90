@@ -513,7 +513,8 @@ CONTAINS
                         ab_moisture, &
                         lvg_moisture, &
                         burnable_area_ha, &
-                        dead_fuel_fcl, live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
+                        dead_fuel_fcl, cured_live_grass_fuel_fcl, &
+                        live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
                         t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
                         veg_cover_frac, &
                         nesterov_index, & ! dryness
@@ -690,7 +691,7 @@ CONTAINS
     u_f_wind = lctlib_fwd_wind_factor * wind_sf
     dead_fuel_litter = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
-    tot_dead_fuel_grass = SUM(cured_live_grass_fuel, DIM=2) ! 2 = fuel classes
+    tot_dead_fuel_grass = SUM(cured_live_grass_fuel(:,:,ix_1hr), DIM=2) ! 2 = fuel classes
     IF (config_ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
       CALL calc_spitfire_thonicke(nc, nalphas, df_sf_fc_spread_nr, &
