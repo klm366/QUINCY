@@ -394,11 +394,14 @@ CONTAINS
 
       CASE (MODEL_JSBACH)
 
-        IF (model%Is_process_enabled(CH4_) .AND. dsl4jsb_Config(CH4_)%do_termite .AND. &
-            .NOT. model%Is_process_enabled(NLCC_)) THEN
+        IF (.NOT. model%Is_process_enabled(NLCC_) .AND. ( &
+          & (model%Is_process_enabled(CH4_)    .AND. dsl4jsb_Config(CH4_)%do_termite)    .OR. &  ! Termintes active
+          & (model%Is_process_enabled(CARBON_) .AND. dsl4jsb_Config(CARBON_)%on_soillev)      &  ! Yasso active
+          & )) THEN
           dsl4jsb_Config(NLCC_)%active = .TRUE.
           dsl4jsb_Config(NLCC_)%climbuf_only = .TRUE.
-          CALL message(TRIM(routine), 'Switching on nlcc process since methane process is active with do_termites')
+          CALL message(TRIM(routine), &
+            & 'Switching on nlcc process since YASSO is active or the methane process with do_termites')
         ENDIF
 
         IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN

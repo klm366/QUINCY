@@ -112,7 +112,6 @@ CONTAINS
 
     hgrid     => Get_grid(mem%grid_id)
     surface   => Get_vgrid('surface')
-    pft_vgrid => Get_vgrid('pfts')
 
     CALL mem%Add_var('temp_sum_day', mem%temp_sum_day,                        &
       & hgrid, surface,                                                       &
@@ -212,6 +211,8 @@ CONTAINS
 
     IF (dsl4jsb_config(NLCC_)%climbuf_only .OR. &
        .NOT. dsl4jsb_config(NLCC_)%active) RETURN
+
+    pft_vgrid => Get_vgrid('pfts')
 
     CALL mem%Add_var('act_fpc', mem%act_fpc,                                  &
       & hgrid, pft_vgrid,                                                     &
