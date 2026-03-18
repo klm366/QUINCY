@@ -115,7 +115,7 @@ MODULE mo_q_dfire_sf_fuel_class
     PROCEDURE :: Calc_dead_litter!(spread=?, sum_dead_pools=?)
     ! PROCEDURE :: has_dead_fuel(spread=yes)
     PROCEDURE :: Calc_total_cured_live_grass
-    ! PROCEDURE :: Calc_total_live_tree
+    PROCEDURE :: Calc_total_live_tree
   END TYPE t_sf_fuel_load
 
   INTERFACE t_sf_fuel_load
@@ -142,15 +142,72 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Constructor for t_sf_fuel_class
+  !> Select dead litter pools (so exclude cured live grass).
+  !>  spread = TRUE: it returns fuels classes involved in the spread of the fire (from 1 hr to 100 hours)
+  !>  spread = FALSE: it returns ALL fuel classes (from 1 hr to 1000 hours)
+  !>  sum_dead_pools = TRUE: it sums over dead litter pools. a2 is returned.
+  !>  sum_dead_pools = FALSE: it sums over dead litter pools. a3 is returned.
   !>
-  SUBROUTINE Calc_dead_litter(this, spread, sum_dead_pools, dead_fuel_litter)
+  SUBROUTINE Calc_dead_litter(this, spread, sum_dead_pools, dead_fuel_litter, a2, a3)
+      USE mo_q_dfire_constants, ONLY: ixs_litter => ixs_sf_dead_litter_fuel_pools
+
     CLASS(t_sf_fuel_load), INTENT(in) :: this
     LOGICAL, INTENT(in) :: spread
     LOGICAL, INTENT(in) :: sum_dead_pools
-    REAL(wp), INTENT(out) :: dead_fuel_litter(this%nc)
+    REAL(wp), ALLOCATABLE, INTENT(out) :: a2(:,:) ! (nc, nfuels)
+    REAL(wp), ALLOCATABLE, INTENT(out) :: a3(:,:,:) ! (nc, npools, nfuels)
 
+    INTEGER, PARAMETER :: ixs_fuels_all(4) = [1, 2, 3, 4]
+    INTEGER, PARAMETER :: ixs_fuels_spread(3) = [1, 2, 3]
+    INTEGER, ALLOCATABLE :: ixs_fuels(:)
+    INTEGER :: nc, nfuels, npools
+
+    nc = size(this%dead_fuel, 1)
+    npools = size(this%dead_fuel, 2)
+
+    IF (spread) THEN
+        ixs_fuels = ixs_fuels_spread
+    ELSE
+        ixs_fuels = ixs_fuels_all
+    ENDIF
+    nfuels = size(ixs_fuels)
+
+    IF (sum_dead_pools) THEN
+        ALLOCATE(a2(nc, ixs_fuels))
+        a2 = SUM(this%dead_fuel(:,ixs_litter,ixs_fuels), dim=2) !< sum over dead litter pools (so no cured live grass)
+    ELSE
+        ALLOCATE(a3(nc, npools, ixs_fuels))
+        a3 = this%dead_fuel(:,ixs_litter,ixs_fuels)
+    ENDIF
   END SUBROUTINE Calc_dead_litter
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate cured live grass load for all fuel classes and pools
+  !>
+  FUNCTION Calc_total_cured_live_grass(this) RESULT(cured_lvg)
+    USE mo_q_dfire_constants, ONLY:  ix_1hr => df_sf_ix_sigma_dd_1hr
+    CLASS(t_sf_fuel_load), INTENT(in) :: this ! [g DM m-2]
+    REAL(wp) :: cured_lvg(size(this%cured_live_grass,dim=1))
+    cured_lvg = SUM(this%cured_live_grass(:,:,ix_1hr), dim=2)
+  END FUNCTION Calc_total_cured_live_grass
+
+
+  ! ======================================================================================================= !
+  !>
+  !>
+  !>
+  FUNCTION Calc_total_live_tree(this) RESULT(tot_live_tree)
+      USE mo_q_dfire_constants, ONLY:  ix_1hr => df_sf_ix_sigma_dd_1hr
+    CLASS(t_sf_fuel_load), INTENT(in) :: this
+    REAL(wp) :: tot_live_tree(size(this%live_fuel_tree,dim=1)) ! 1=nc dimension [g DM m-2]
+    INTEGER :: i, j
+
+    DO CONCURRENT (i=1:SIZE(this%live_tree,2), j=1:SIZE(this%live_tree,3)) !2=fuel pools, 3=fuel classes
+      tot_live_tree = SUM(this%live_tree(:,i,j)) ! sum multiple dimensions
+    END DO
+  END FUNCTION Calc_total_live_tree
 
   ! ======================================================================================================= !
   !>
