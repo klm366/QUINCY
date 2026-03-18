@@ -41,7 +41,6 @@ MODULE mo_q_dfire_init
   USE mo_jsb_time,                ONLY: timestep_in_days
 #endif
   USE mo_jsb_process_class,       ONLY: Q_DFIRE_, SB_, A2L_
-  USE mo_q_dfire_constants,       ONLY: burnable_pfts, burnable_tree_pfts, burnable_grass_pfts
 
   IMPLICIT NONE
   PRIVATE
@@ -292,10 +291,6 @@ CONTAINS
     ratio_as_dead_fuel % soluable       = dsl4jsb_Config(Q_DFIRE_)%ratio_soluable_litter_to_dead_fuel
     ratio_as_dead_fuel % residue        = dsl4jsb_Config(Q_DFIRE_)%ratio_residue_to_dead_fuel
     ratio_as_dead_fuel % residue_assoc  = dsl4jsb_Config(Q_DFIRE_)%ratio_residue_assoc_to_dead_fuel
-
-    burnable_pfts = dsl4jsb_Config(Q_DFIRE_)%burnable_pfts
-    burnable_tree_pfts = dsl4jsb_Config(Q_DFIRE_)%burnable_tree_pfts
-    burnable_grass_pfts = dsl4jsb_Config(Q_DFIRE_)%burnable_grass_pfts
 
 #ifdef __QUINCY_STANDALONE__
     !> Quincy standalone only
