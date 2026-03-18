@@ -71,7 +71,8 @@ MODULE mo_q_dfire_sf_fuel_class
     MODULE PROCEDURE :: sf_calc_has_any_fuel_r2, sf_calc_has_any_fuel_r3
   END INTERFACE
 
-  !< Spitfire fuel pool class
+  !< Derive type to allocate fuels classes
+  !< todo: refactor to t_sf_fuel_alloc_class (improve naming consistency)
   TYPE :: t_sf_fuel_class
     INTEGER :: nc
     INTEGER, ALLOCATABLE :: growth_form(:)    !< itree, igrass ! todo: remove, not necessary
@@ -103,7 +104,53 @@ MODULE mo_q_dfire_sf_fuel_class
   END INTERFACE t_sf_fuel_class
 
 
+  !< Derived type to group precomputed fuels so those can be passed around
+  TYPE :: t_sf_fuel_load
+    REAL(wp), POINTER :: dead_fuel(:,:,:) => null() !< dead fuel load [g DM m-2] (nc, ndeadpools, nfuels)
+    REAL(wp), POINTER :: cured_live_grass(:,:) => null() !< cured live grass load [g DM m-2] (nc, ndeadpools)
+    REAL(wp), POINTER :: live_grass(:,:,:) => null() !< live grass load [g DM m-2] (nc, nlivepools)
+    REAL(wp), POINTER :: live_tree(:,:) => null() !< live tree load [g DM m-2] (nc, nlivepools, nfuels)
+  CONTAINS !< fuel transformations
+    ! PROCEDURE :: get_dead_fuel_pools
+    PROCEDURE :: Calc_dead_litter!(spread=?, sum_dead_pools=?)
+    ! PROCEDURE :: has_dead_fuel(spread=yes)
+    PROCEDURE :: Calc_total_cured_live_grass
+    ! PROCEDURE :: Calc_total_live_tree
+  END TYPE t_sf_fuel_load
+
+  INTERFACE t_sf_fuel_load
+    MODULE PROCEDURE :: create_fuel_load
+  END INTERFACE t_sf_fuel_load
+
 CONTAINS
+
+  !>
+  !> Constructor for t_sf_fuel_load
+  !>
+  FUNCTION create_fuel_load(dead_fuel, cured_live_grass, live_grass, live_tree) RESULT(fuel_load)
+    REAL(wp), INTENT(in) :: dead_fuel(:,:,:)
+    REAL(wp), INTENT(in) :: cured_live_grass(:,:,:)
+    REAL(wp), INTENT(in) :: live_grass(:,:)
+    REAL(wp), INTENT(in) :: live_tree(:,:,:)
+    TYPE(t_sf_fuel_load) :: fuel_load
+
+    fuel_load%dead_fuel => dead_fuel
+    fuel_load%cured_live_grass => cured_live_grass
+    fuel_load%live_grass => live_grass
+    fuel_load%live_tree => live_tree
+  END FUNCTION create_fuel_load
+
+  ! ======================================================================================================= !
+  !>
+  !> Constructor for t_sf_fuel_class
+  !>
+  SUBROUTINE Calc_dead_litter(this, spread, sum_dead_pools, dead_fuel_litter)
+    CLASS(t_sf_fuel_load), INTENT(in) :: this
+    LOGICAL, INTENT(in) :: spread
+    LOGICAL, INTENT(in) :: sum_dead_pools
+    REAL(wp), INTENT(out) :: dead_fuel_litter(this%nc)
+
+  END SUBROUTINE Calc_dead_litter
 
   ! ======================================================================================================= !
   !>

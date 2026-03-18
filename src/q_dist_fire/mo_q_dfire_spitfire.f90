@@ -91,7 +91,7 @@ MODULE mo_q_dfire_spitfire
   USE mo_q_dfire_constants,       ONLY: df_sigmas_dead, df_sigmas_live, df_alphas_dead
   USE mo_q_dfire_config_class,    ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
-  USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
+  USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels, t_sf_fuel_load
   USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture, t_mf, sf_calc_fuel_moisture_ober
   USE mo_q_dfire_sf_ignition_class,     ONLY: calc_q_sf_ignition, t_q_sf_ignitions
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
@@ -233,6 +233,7 @@ CONTAINS
     REAL(wp)                              :: cured_live_grass_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
     !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
     REAL(wp)                              :: live_tree_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
+    TYPE(t_sf_fuel_load)                  :: fuel_load
 
     REAL(wp)                              :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
     REAL(wp)                              :: t_air_min_c(options%nc)                      !< Minimum daily temperature [Celsius]
@@ -455,6 +456,7 @@ CONTAINS
     live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx) = live_tree_fuel_10hr_lfp
     live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr_lfp
     live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr_lfp
+    fuel_load = t_sf_fuel_load(dead_fuel_fcl, cured_live_grass_fuel_fcl, live_grass_fuel_fcl, live_tree_fuel_fcl)
 
     !< Init variables
     !< Make sure those values are set to 0, as it means there is no fire.
@@ -513,8 +515,9 @@ CONTAINS
                         ab_moisture, &
                         lvg_moisture, &
                         burnable_area_ha, &
-                        dead_fuel_fcl, cured_live_grass_fuel_fcl, &
-                        live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
+                        ! dead_fuel_fcl, cured_live_grass_fuel_fcl, &
+                        ! live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
+                        fuel_load, &
                         t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
                         veg_cover_frac, &
                         nesterov_index, & ! dryness
@@ -584,7 +587,8 @@ CONTAINS
                   ab_moisture, &
                   lvg_moisture, &
                   grid_cell_area, & ! fuel properties
-                  dead_fuel, cured_live_grass_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
+!                  dead_fuel, cured_live_grass_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
+                  fuel_load, &
                   t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
                   veg_cover_frac, & ! in
                   nesterov_index, & ! inout
@@ -619,10 +623,11 @@ CONTAINS
 
     REAL(wp), INTENT(in)  :: grid_cell_area(nc)                    !< Gridcell area [ha]
 
-    REAL(wp), INTENT(in)  :: dead_fuel(:,:,:)                      !< Dead fuel (#nc,#dead fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp), INTENT(in)  :: cured_live_grass_fuel(:,:,:)          !< Cured live grass fuel -considered as dea- (#nc,#dead fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp), INTENT(in)  :: live_grass_fuel(:,:,:)                !< Live grass fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp), INTENT(in)  :: live_tree_fuel(:,:,:)                 !< Live tree fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
+    ! REAL(wp), INTENT(in)  :: dead_fuel(:,:,:)                      !< Dead fuel (#nc,#dead fuel pools, #fuel classes) [g DM m-2]
+    ! REAL(wp), INTENT(in)  :: cured_live_grass_fuel(:,:,:)          !< Cured live grass fuel -considered as dea- (#nc,#dead fuel pools, #fuel classes) [g DM m-2]
+    ! REAL(wp), INTENT(in)  :: live_grass_fuel(:,:,:)                !< Live grass fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
+    ! REAL(wp), INTENT(in)  :: live_tree_fuel(:,:,:)                 !< Live tree fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
+    TYPE(t_sf_fuel_load), INTENT(in) :: fuel_load !< [g DM m-2]
 
     REAL(wp), INTENT(in)  :: t_air_min_c(nc), t_air_max_c(nc)      !< [Celsius], [Celsius], todo: refactor to t_weather derive type
     REAL(wp), INTENT(in)  :: precip_daily_mmd(nc)                  !< [mm d-1]
@@ -672,7 +677,7 @@ CONTAINS
     !< According to Thonicke et al. (2010), which is based on Rothermel et al.,
     !< fire spread depends on dead fuel availability. If there is no dead fuel,
     !< then fire cannot spread and we stop the calculation. The same applies if FDI is low.
-    has_dead_fuel = sf_calc_has_any_fuel(dead_fuel(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
+    has_dead_fuel = sf_calc_has_any_fuel(fuel_load%dead_fuel(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions = mask_tile_enabled .AND. has_dead_fuel
 
@@ -689,9 +694,9 @@ CONTAINS
 
     !> Fuel moisture and ROS
     u_f_wind = lctlib_fwd_wind_factor * wind_sf
-    dead_fuel_litter = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
+    dead_fuel_litter = SUM(fuel_load%dead_fuel(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
-    tot_dead_fuel_grass = SUM(cured_live_grass_fuel(:,:,ix_1hr), DIM=2) ! 2 = fuel classes
+    tot_dead_fuel_grass = SUM(fuel_load%cured_live_grass(:,:,ix_1hr), DIM=2) ! 2 = fuel classes
     IF (config_ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
       CALL calc_spitfire_thonicke(nc, nalphas, df_sf_fc_spread_nr, &
@@ -700,7 +705,8 @@ CONTAINS
                                     u_f_wind, &
                                     nesterov_index, ab_moisture, &
                                     moisture_extinction, &
-                                    dead_fuel_litter, tot_dead_fuel_grass, &
+                                    ! dead_fuel_litter, tot_dead_fuel_grass, &
+                                    fuel_load, &
                                     spitfire % fdi, & !< outputs
                                     fuel_moisture, &
                                     spitfire%ros, &
@@ -711,7 +717,7 @@ CONTAINS
 
       ALLOCATE(tot_live_fuel_tree(nc))
       DO CONCURRENT (i=1:SIZE(live_tree_fuel,2), j=1:SIZE(live_tree_fuel,3)) !2=fuel pools, 3=fuel classes
-        tot_live_fuel_tree = SUM(live_tree_fuel(:,i,j)) ! sum multiple dimensions
+        tot_live_fuel_tree = SUM(fuel_load%live_tree_fuel(:,i,j)) ! sum multiple dimensions
       END DO
 
       CALL calc_spitfire_oberhagemann(nc, &
@@ -724,9 +730,10 @@ CONTAINS
           lctlib_fuel_bulk_density, &
           moisture_extinction, &
           u_f_wind, &
-          dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
-          tot_dead_fuel_grass, & ! (#nc) 1 hour only
-          tot_live_fuel_tree, & ! total live fuel tree (#nc)
+          ! dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
+          ! tot_dead_fuel_grass, & ! (#nc) 1 hour only
+          ! tot_live_fuel_tree, & ! total live fuel tree (#nc)
+          fuel_load, &
           lvg_moisture, & ! live grass moisture pre-calculated at fuel.f90
           fuel_moisture_ober, & ! outputs
           spitfire % fdi, &
@@ -822,7 +829,8 @@ CONTAINS
                                     u_f_wind, &
                                     nesterov_index, ab_moisture, &
                                     moisture_extinction, &
-                                    dead_fuel_litter, tot_dead_fuel_grass, &
+                                    ! dead_fuel_litter, tot_dead_fuel_grass, &
+                                    fuel_load, &
                                     fdi, fuel_moisture, & !< output
                                     ros, &
                                     mask) !< optional
@@ -834,8 +842,9 @@ CONTAINS
     REAL(wp), INTENT(in)        :: nesterov_index(:) !< [deg C2]
     REAL(wp), INTENT(in)        :: ab_moisture(:) !< Aboveground soil moisture [%]
     REAL(wp), INTENT(in)        :: moisture_extinction(:) !< Dead moisture of extinction [%]
-    REAL(wp), INTENT(in)        :: dead_fuel_litter(:,:) !< Dead fuel litter [g DM m-2] (#nc,#fuel classes)
-    REAL(wp), INTENT(in)        :: tot_dead_fuel_grass(:) !< Total dead fuel grass [g DM m-2] (#nc)
+    ! REAL(wp), INTENT(in)        :: dead_fuel_litter(:,:) !< Dead fuel litter [g DM m-2] (#nc,#fuel classes)
+    ! REAL(wp), INTENT(in)        :: tot_dead_fuel_grass(:) !< Total dead fuel grass [g DM m-2] (#nc)
+    TYPE(t_sf_fuel_load), INTENT(in) :: fuel_load
 
     REAL(wp), INTENT(out)       :: fdi(:) !< Fire dange index [%]
     REAL(wp), INTENT(out)       :: fuel_moisture(:,:) !< Fuel moisture (#nc,#fuel moisture types) [%]
@@ -852,8 +861,8 @@ CONTAINS
     !< Compute fuel moisture (omega_o, omega_nl)
     fuel_moisture = sf_calc_fuel_moisture(nc, nalphas, nspread, alphas, &
                                           nesterov_index, ab_moisture, &
-                                          dead_fuel_litter, &
-                                          tot_dead_fuel_grass)
+                                          fuel_load%Calc_dead_litter(spread=.TRUE.), &
+                                          fuel_load%Calc_total_cured_live_grass)
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
     !> Eq. 8 from Thonicke et al. (2010)
@@ -867,7 +876,7 @@ CONTAINS
     ros = sf_calc_rate_of_spread_thon(nc, nspread, &
                       fuel_bulk_density, &
                       u_f_wind, moisture_extinction, fdi, &
-                      dead_fuel_litter * df_sf_units_g_to_kg, &
+                      fuel_load%Calc_dead_litter(spread=.TRUE.) * df_sf_units_g_to_kg, &
                       fuel_moisture(:,df_sf_omega_o_idx), &
                       has_fire_conditions)
   END SUBROUTINE calc_spitfire_thonicke
@@ -889,9 +898,10 @@ CONTAINS
                   fuel_bulk_density, &
                   moisture_extinction, &
                   u_f_wind, &
-                  dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
-                  tot_dead_fuel_grass, & ! (#nc) 1 hour only
-                  tot_live_fuel_tree, & ! total live fuel tree (#nc)
+                  ! dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
+                  ! tot_dead_fuel_grass, & ! (#nc) 1 hour only
+                  ! tot_live_fuel_tree, & ! total live fuel tree (#nc)
+                  fuel_load, &
                   lvg_moisture, &
                   fuel_moisture, & ! outputs
                   fdi, &
@@ -917,21 +927,25 @@ CONTAINS
     REAL(wp), INTENT(in) :: fuel_bulk_density(:) !< Fuel bulk density [kg m-3]
     REAL(wp), INTENT(in) :: moisture_extinction(:) !< Dead moisture of extinction [%]
     REAL(wp), INTENT(in) :: u_f_wind(:) !< Wind speed at vegetation cover [m min-1]
-    REAL(wp), INTENT(in) :: dead_fuel_litter(:,:) !< [g DM m-2] (#nc,#Spread fuel classes-1,10,100 hours-)
-    REAL(wp), INTENT(in) :: tot_dead_fuel_grass(:) !< [g DM m-2]
-    REAL(wp), INTENT(in) :: tot_live_fuel_tree(:) !< [g DM m-2]
+    ! REAL(wp), INTENT(in) :: dead_fuel_litter(:,:) !< [g DM m-2] (#nc,#Spread fuel classes-1,10,100 hours-)
+    ! REAL(wp), INTENT(in) :: tot_dead_fuel_grass(:) !< [g DM m-2]
+    ! REAL(wp), INTENT(in) :: tot_live_fuel_tree(:) !< [g DM m-2]
+    TYPE(t_sf_fuel_load), INTENT(in) :: fuel_load(:)
     REAL(wp), INTENT(in) :: lvg_moisture(:) !< [%], Note: up to 250%
     TYPE(t_mf), INTENT(out) :: fuel_moisture !< Fuel moisture
     REAL(wp), INTENT(out) :: fdi(:) !< Fire danger index [%]
     TYPE(t_sf_ros), INTENT(out) :: ros !< Rate of spread [-]
     LOGICAL, OPTIONAL :: mask(:) !< True: gridcell enabled
 
+    REAL(wp), ALLOCATABLE :: dead_fuel_litter(:,:) !< [g DM m-2] (#nc,#Spread fuel classes-1,10,100 hours-)
     REAL(wp) :: woi_dd(nc,ndd)    !< [kg DM m-2] (#nc, #sigma classes-1,10,100hrs,cured lvg-) Note: in kg
     REAL(wp) :: woi_lv(nc,nlv)    !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
     REAL(wp) :: me_dd(nc)            !< Dead moisture of extinction [-] (#nc)
     REAL(wp) :: me_lv(nc)            !< Live moisture of extinction [-] (#nc)
 
     fdi = 0._wp
+    dead_fuel_litter = fuel_load%Calc_dead_litter(spread=.TRUE., sum_dead_pools=.TRUE.)
+
     fuel_moisture = sf_calc_fuel_moisture_ober(nc, &
                       ndd, & ! 5 = 1, 10, 100, 1000 hours and cured live grass
                       nlitros, & ! 3=1, 10 and 100 hours
@@ -939,7 +953,7 @@ CONTAINS
                       alphas_dd, &
                       lvg_moisture, &
                       dead_fuel_litter, &
-                      tot_dead_fuel_grass, &
+                      fuel_load%Calc_total_cured_live_grass(), &
                       nesterov_index, &
                       mask)
 
