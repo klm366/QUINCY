@@ -551,7 +551,7 @@ CONTAINS
       & nsoil_w, &
       & dtime, &
       & num_sl_above_bedrock(:), &
-      & dsl4jsb_Config(SB_)%flag_sb_prescribe_po4, &  ! in
+      & dsl4jsb_Config(SB_)%flag_sb_interactive_p, &  ! in
       & sb_pool_mt(ix_microbial, ixC, :, :), &
       & sb_pool_mt(ix_microbial, ixN, :, :), &
       & sb_pool_mt(ix_microbial, ixP, :, :), &
@@ -782,6 +782,7 @@ CONTAINS
       &   lctlib%vmax_uptake_p, &
       &   "po4", &
       &   TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &   ! in
+      &   dsl4jsb_Config(SB_)%flag_sb_interactive_p, &
       &   sb_pool_mt(ix_microbial, ixC, :, :), fine_root_carbon_sl(:,:), po4_solute(:,:), &                ! in
       &   rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &                          ! in
       &   rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &        ! in
@@ -829,6 +830,7 @@ CONTAINS
       &   lctlib%vmax_uptake_n, &
       &   "nh4", &
       &   TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &   ! in
+      &   dsl4jsb_Config(SB_)%flag_sb_interactive_n, &
       &   sb_pool_mt(ix_microbial, ixC, :, :), fine_root_carbon_sl(:,:), nh4_solute(:,:), &                ! in
       &   rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &                          ! in
       &   rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &        ! in
@@ -878,6 +880,7 @@ CONTAINS
       &   lctlib%vmax_uptake_n, &
       &   "no3", &
       &   TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &   ! in
+      &   dsl4jsb_Config(SB_)%flag_sb_interactive_n, &
       &   sb_pool_mt(ix_microbial, ixC, :, :), fine_root_carbon_sl(:,:), no3_solute(:,:), &                  ! in
       &   rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &                            ! in
       &   rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &          ! in
@@ -1047,6 +1050,8 @@ CONTAINS
       & dtime, &
       & num_sl_above_bedrock(:), &
       & TRIM(dsl4jsb_Config(SB_)%bnf_scheme), &
+      & dsl4jsb_Config(SB_)%flag_sb_interactive_n, &  ! in
+      & dsl4jsb_Config(SB_)%flag_sb_interactive_p, &  ! in
       & rtm_mic_uptake(:,:), &
       & rmm_mic_uptake(:,:), &
       & rtm_hsc(:,:), &

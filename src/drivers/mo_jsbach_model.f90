@@ -767,7 +767,7 @@ CONTAINS
     USE mo_jsb_subset,                ONLY: ON_CHUNK
 
 #ifndef __NO_QUINCY__
-    USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter, update_slow_sb_pool_accelerator_bookkeeping
+    USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter
     USE mo_quincy_model_config,       ONLY: QCANOPY
     USE mo_isotope_util,              ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     dsl4jsb_Use_processes A2L_, HYDRO_, SPQ_
@@ -818,8 +818,6 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: daytime_counter
     dsl4jsb_Real2D_onDomain :: daylength_prev_day
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
-    dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execution_counter
-    dsl4jsb_Real2D_onDomain :: slow_sb_pool_accelerator_execute
 #endif
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
@@ -1126,36 +1124,6 @@ CONTAINS
         ENDDO
         !$ACC END PARALLEL LOOP
 
-        IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
-          dsl4jsb_Get_var2d_onDomain(A2L_, slow_sb_pool_accelerator_execute)
-
-          ! in most years the spin-up will not be accelerated
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-          DO iblk = 1, nblks
-            DO ic = 1, nproma
-              slow_sb_pool_accelerator_execute(ic, iblk) = 0.0_wp
-            ENDDO
-          ENDDO
-          !$ACC END PARALLEL LOOP
-
-          IF(is_newyear(datetime_new, dtime)) THEN
-            current_year = get_year(datetime_new)
-            dsl4jsb_Get_var2d_onDomain(A2L_, slow_sb_pool_accelerator_execution_counter)
-            accelerator_max_executions = model%config%slow_sb_pool_spinup_accelerator_max_executions
-            accelerator_frequency = model%config%slow_sb_pool_spinup_accelerator_frequency
-            accelerator_start_year = model%config%slow_sb_pool_spinup_accelerator_start_year
-
-            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-            DO iblk = 1, nblks
-              DO ic = 1, nproma
-                CALL update_slow_sb_pool_accelerator_bookkeeping( dtime, current_year, &
-                  & accelerator_max_executions, accelerator_frequency, accelerator_start_year, &
-                  & slow_sb_pool_accelerator_execution_counter(ic, iblk), slow_sb_pool_accelerator_execute(ic, iblk))
-              ENDDO
-            ENDDO
-            !$ACC END PARALLEL LOOP
-          END IF
-        END IF
       END SELECT
 #endif
 

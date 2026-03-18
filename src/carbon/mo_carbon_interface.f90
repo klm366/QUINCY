@@ -2943,22 +2943,17 @@ END SUBROUTINE recalc_carbon_per_tile_vars
   !!        called from jsbach_finish_timestep, after the loop over the nproma blocks.
   !! @param[in,out] tile    Tile for which routine is executed.
   !
-  SUBROUTINE global_carbon_diagnostics(tile)
+  SUBROUTINE global_carbon_diagnostics(tile, land_area_scaling)
 
-    USE mo_carbon_constants,      ONLY: molarMassC_kg, sec_per_year
-    USE mo_sync,                  ONLY: global_sum_array
-    USE mo_jsb_grid,              ONLY: Get_grid
-
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    ! Local variables
-    !
+    USE mo_carbon_constants,        ONLY: molarMassC_kg, sec_per_year
+    USE mo_util,                    ONLY: scaled_global_sum_2D
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
+    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(CARBON_)
 
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_carbon_diagnostics'
-
-    ! Pointers to variables in memory
 
     dsl4jsb_Real2D_onDomain :: C_sum_veg_ta
     dsl4jsb_Real2D_onDomain :: C_sum_litter_ag_ta
@@ -2977,17 +2972,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     REAL(wp), POINTER       :: NPP_act_yDayMean_gsum(:)
     REAL(wp), POINTER       :: GPP_yDayMean_gsum(:)
     REAL(wp), POINTER       :: soil_respiration_gsum(:)
-
-    TYPE(t_jsb_model), POINTER      :: model
-    TYPE(t_jsb_grid),  POINTER      :: grid
-
-    REAL(wp), POINTER      :: area(:,:)
-    REAL(wp), POINTER      :: notsea(:,:)
-    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
-    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
-    REAL(wp), ALLOCATABLE  :: scaling (:,:)
-
-
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_veg_ta)                ! in
     dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_litter_ag_ta)          ! in
@@ -3007,50 +2992,49 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     GPP_yDayMean_gsum     => CARBON__mem%GPP_yDayMean_gsum%ptr(:)     ! out
     soil_respiration_gsum => CARBON__mem%soil_respiration_gsum%ptr(:) ! out
 
-    model => Get_model(tile%owner_model_id)
-    grid  => Get_grid(model%grid_id)
-    area         => grid%area(:,:)
-    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
-
-!     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
-    IF (debug_on() ) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
-
-    ! Domain Mask - to mask all halo cells for global sums (otherwise these
-    ! cells are counted twice)
-    ALLOCATE (in_domain(grid%nproma,grid%nblks))
-    WHERE (is_in_domain(:,:))
-      in_domain = 1._wp
-    ELSEWHERE
-      in_domain = 0._wp
-    END WHERE
-
-    ALLOCATE (scaling(grid%nproma,grid%nblks))
 
     ! Calculate global carbon inventories, if requested for output
     !  => Conversion from [mol(C)/m^2] to [GtC]
     !     1 mol C = molarMassC_kg kg C   => 1 mol C = molarMassC_kg * e-12 Gt C
-    scaling(:,:) = molarMassC_kg * 1.e-12_wp * notsea(:,:) * area(:,:) * in_domain(:,:)
-    IF (CARBON__mem%C_sum_veg_gsum%is_in_output)        &
-      &  c_sum_veg_gsum        = global_sum_array(C_sum_veg_ta(:,:)        * scaling(:,:))
-    IF (CARBON__mem%C_sum_litter_ag_gsum%is_in_output)  &
-      &  c_sum_litter_ag_gsum  = global_sum_array(C_sum_litter_ag_ta(:,:)  * scaling(:,:))
-    IF (CARBON__mem%C_sum_litter_bg_gsum%is_in_output)  &
-      &  c_sum_litter_bg_gsum  = global_sum_array(C_sum_litter_bg_ta(:,:)  * scaling(:,:))
-    IF (CARBON__mem%C_sum_humus_gsum%is_in_output)      &
-      &  c_sum_humus_gsum      = global_sum_array(C_sum_humus_ta(:,:)      * scaling(:,:))
-    IF (CARBON__mem%C_sum_natural_gsum%is_in_output)    &
-      &  c_sum_natural_gsum    = global_sum_array(C_sum_natural_ta(:,:)    * scaling(:,:))
-    IF (CARBON__mem%NPP_act_yDayMean_gsum%is_in_output) &
-      &  NPP_act_yDayMean_gsum = global_sum_array(NPP_act_yDayMean_ta(:,:) * scaling(:,:) * sec_per_year)
-    IF (CARBON__mem%GPP_yDayMean_gsum%is_in_output)     &
-      &  GPP_yDayMean_gsum     = global_sum_array(GPP_yDayMean_ta(:,:)     * scaling(:,:) * sec_per_year)
-    IF (CARBON__mem%soil_respiration_gsum%is_in_output) &
-      &  soil_respiration_gsum = global_sum_array(soil_respiration_ta(:,:) * scaling(:,:) * sec_per_year)
+    IF (CARBON__mem%C_sum_veg_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(C_sum_veg_gsum, C_sum_veg_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_veg_gsum%ptr(:))
+    END IF
+    IF (CARBON__mem%C_sum_litter_ag_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(C_sum_litter_ag_gsum, C_sum_litter_ag_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_litter_ag_gsum%ptr(:))
+    END IF
+    IF (CARBON__mem%C_sum_litter_bg_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(C_sum_litter_bg_gsum, C_sum_litter_bg_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_litter_bg_gsum%ptr(:))
+    END IF
+    IF (CARBON__mem%C_sum_humus_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(C_sum_humus_gsum, C_sum_humus_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_humus_gsum%ptr(:))
+    END IF
+    IF (CARBON__mem%C_sum_natural_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(C_sum_natural_gsum, C_sum_natural_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_natural_gsum%ptr(:))
+    END IF
 
-    DEALLOCATE (scaling, in_domain)
+    ! ... fluxes * sec_per_year
+    IF (CARBON__mem%NPP_act_yDayMean_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(NPP_act_yDayMean_gsum, NPP_act_yDayMean_ta, land_area_scaling, &
+          & molarMassC_kg * 1.e-12_wp * sec_per_year, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%NPP_act_yDayMean_gsum%ptr(:))
+    END IF
+    IF (CARBON__mem%GPP_yDayMean_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(GPP_yDayMean_gsum, GPP_yDayMean_ta, land_area_scaling, &
+          & molarMassC_kg * 1.e-12_wp * sec_per_year, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%GPP_yDayMean_gsum%ptr(:))
+    END IF
+    IF (CARBON__mem%soil_respiration_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(soil_respiration_gsum, soil_respiration_ta, land_area_scaling, &
+          & molarMassC_kg * 1.e-12_wp * sec_per_year, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%soil_respiration_gsum%ptr(:))
+    END IF
 
   END SUBROUTINE global_carbon_diagnostics
 
