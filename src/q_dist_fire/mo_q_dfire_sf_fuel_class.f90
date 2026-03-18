@@ -111,9 +111,9 @@ MODULE mo_q_dfire_sf_fuel_class
     REAL(wp), POINTER :: live_grass(:,:,:) => null() !< live grass load [g DM m-2] (nc, nlivepools)
     REAL(wp), POINTER :: live_tree(:,:) => null() !< live tree load [g DM m-2] (nc, nlivepools, nfuels)
   CONTAINS !< fuel transformations
-    ! PROCEDURE :: get_dead_fuel_pools
-    PROCEDURE :: Calc_dead_litter!(spread=?, sum_dead_pools=?)
-    ! PROCEDURE :: has_dead_fuel(spread=yes)
+    PROCEDURE :: count_dead_fuel_pools
+    PROCEDURE :: Calc_dead_litter
+    PROCEDURE :: has_dead_fuel
     PROCEDURE :: Calc_total_cured_live_grass
     PROCEDURE :: Calc_total_live_tree
   END TYPE t_sf_fuel_load
@@ -192,6 +192,39 @@ CONTAINS
     REAL(wp) :: cured_lvg(size(this%cured_live_grass,dim=1))
     cured_lvg = SUM(this%cured_live_grass(:,:,ix_1hr), dim=2)
   END FUNCTION Calc_total_cured_live_grass
+
+
+  ! ======================================================================================================= !
+  !>
+  !> True if any dead fuel is present in the fuel load.
+  !>
+  FUNCTION has_dead_fuel(this, spread) RESULT(has_dead_fuel)
+    CLASS(t_sf_fuel_load), INTENT(in) :: this
+    LOGICAL, OPTIONAL, INTENT(in) :: spread
+    LOGICAL :: has_dead_fuel(this%dead_fuel, dim=1) ! 1 = nc dimension
+    LOGICAL :: is_spread
+
+    is_spread = .FALSE.
+    IF (PRESENT(spread)) is_spread = spread
+
+    has_dead_fuel = .FALSE.
+    IF (is_spread) THEN
+      has_dead_fuel = sf_calc_has_any_fuel(this%dead_fuel(:,:,1:3))
+    ELSE
+      has_dead_fuel = sf_calc_has_any_fuel(this%dead_fuel)
+    ENDIF
+  END FUNCTION has_dead_fuel
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Total number of dead fuel pools.
+  !>
+  FUNCTION count_dead_fuel_pools(this) RESULT(ndeadpools)
+    CLASS(t_sf_fuel_load), INTENT(in) :: this
+    INTEGER :: ndeadpools
+    ndeadpools = SIZE(this%dead_fuel, DIM=2)
+  END FUNCTION count_dead_fuel_pools
 
 
   ! ======================================================================================================= !

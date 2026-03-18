@@ -641,13 +641,9 @@ CONTAINS
 
     ! locals
     TYPE(t_q_sf_ignitions)  :: sf_ignitions
-    REAL(wp) :: w_oi(nc,df_sf_fc_spread_nr)      !< Dead fuel by spread fuel classes (litter only)  [g DM m-2]
-    REAL(wp), ALLOCATABLE :: dry_lvg(:,:) !< Dry live grass, considered dead fuel [g DM m-2] (#nc,#livegrass fuel pools, #fuel classes)
-    REAL(wp) :: tot_lvg_fuel(nc)            !< Total livegrass fuel [g DM m-2]
     INTEGER :: ndeadpools
     LOGICAL  :: has_dead_fuel(nc)           !< True = dead fuel
     LOGICAL  :: has_fire_conditions(nc)     !< 1, 10, 100 and 1000 hours
-    REAL(wp) :: tot_lvt_fuel(nc)            !< Total amount of live tree fuel [g DM m-2]
 
     !< Thonicke related
     REAL(wp), ALLOCATABLE :: fuel_moisture_for_fc(:,:) !< fuel moisture (or omega) [%] (#nc,#fuel classes-1,10,100,1000hrs-)
@@ -659,8 +655,7 @@ CONTAINS
     INTEGER                               :: i, j
 
     ! todo: deal with tile_frac = 0?
-
-    ndeadpools = SIZE(fuel_load%dead_fuel, DIM=2) ! 2=dead fuel pools !fuel_cls % Count_dead_fuel_pools()
+    ndeadpools = fuel_load%count_dead_fuel_pools()
     mask_tile_enabled = .TRUE.
     IF (PRESENT(mask)) THEN
       mask_tile_enabled = mask
@@ -669,7 +664,7 @@ CONTAINS
     !< According to Thonicke et al. (2010), which is based on Rothermel et al.,
     !< fire spread depends on dead fuel availability. If there is no dead fuel,
     !< then fire cannot spread and we stop the calculation. The same applies if FDI is low.
-    has_dead_fuel = sf_calc_has_any_fuel(fuel_load%dead_fuel(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
+    has_dead_fuel = fuel_load%has_dead_fuel(spread=.TRUE.)
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions = mask_tile_enabled .AND. has_dead_fuel
 
