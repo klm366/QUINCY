@@ -165,9 +165,12 @@ INTERFACE t_sf_ignitions
   MODULE PROCEDURE :: create_sf_ignitions
 END INTERFACE t_sf_ignitions
 
-
 !< Group fuel moisture related variables to pass in calc_spitfire
 TYPE :: t_sf_fuel_moisture
+    REAL(wp), POINTER :: alphas_thon(:) !< Drying parameter for 1, 10 and 100 hours fuel classes
+    REAL(wp), POINTER :: alphas_dead_ober(:)
+    REAL(wp), POINTER :: sigmas_dead_ober(:)
+    REAL(wp), POINTER :: sigmas_live_ober(:)
     REAL(wp), POINTER :: ab_moisture(:) !< above ground relative soil moisture [0 to 1]
     REAL(wp), POINTER :: lvg_moisture(:) !< live grass fuel moisture [%], note: up to 250%
     REAL(wp), POINTER :: moisture_extinction(:) !< Moisture of extinction threshold [0 to 1]
@@ -185,10 +188,19 @@ CONTAINS
   !> t_sf_spitfire constructor: Allocate and initialize
   !>
   FUNCTION create_sf_fuel_moisture(nc, nddsigmas, nlvsigmas, &
-                                   ab_moisture, lvg_moisture, moisture_extinction, fuel_moisture_thon, fuel_moisture_ober) RESULT (sf_fuel_moisture)
+                                    alphas_thon, &
+                                    alphas_dead_ober, sigmas_dead_ober, sigmas_live_ober, &
+                                    ab_moisture, lvg_moisture, &
+                                    moisture_extinction, &
+                                    fuel_moisture_thon, fuel_moisture_ober) &
+                                    RESULT (sf_fuel_moisture)
     INTEGER, INTENT(in) :: nc
     INTEGER, INTENT(in) :: nddsigmas
     INTEGER, INTENT(in) :: nlvsigmas
+    REAL(wp), POINTER, INTENT(in) :: alphas_thon(:)
+    REAL(wp), POINTER, INTENT(in) :: alphas_dead_ober(:)
+    REAL(wp), POINTER, INTENT(in) :: sigmas_dead_ober(:)
+    REAL(wp), POINTER, INTENT(in) :: sigmas_live_ober(:)
     REAL(wp), POINTER, INTENT(in) :: ab_moisture(:)
     REAL(wp), POINTER, INTENT(in) :: lvg_moisture(:)
     REAL(wp), POINTER, INTENT(in) :: moisture_extinction(:)
@@ -196,6 +208,10 @@ CONTAINS
     TYPE(t_mf), INTENT(in) :: fuel_moisture_ober(:)
     TYPE(t_sf_fuel_moisture) :: sf_fuel_moisture
 
+    sf_fuel_moisture % alphas_thon => alphas_thon
+    sf_fuel_moisture % alphas_dead_ober => alphas_dead_ober
+    sf_fuel_moisture % sigmas_dead_ober => sigmas_dead_ober
+    sf_fuel_moisture % sigmas_live_ober => sigmas_live_ober
     sf_fuel_moisture % ab_moisture => ab_moisture
     sf_fuel_moisture % lvg_moisture => lvg_moisture
     sf_fuel_moisture % moisture_extinction => moisture_extinction
@@ -591,15 +607,18 @@ CONTAINS
     ignitions = t_sf_ignitions(a_nd, ic_pop_dens, a2l_lightning_events, df_sf_max_density_human_pop)
 
     fuel_moisture_params = t_sf_fuel_moisture(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
-                                       ab_moisture, lvg_moisture, &
-                                       moisture_extinction, fuel_moisture)
+                                        df_sf_alphas, & ! thonicke
+                                        df_alphas_dead, & ! oberhagemann
+                                        df_sigmas_dead, & ! oberhagemann
+                                        df_sigmas_live, & ! oberhagemann
+                                        ab_moisture, lvg_moisture, &
+                                        moisture_extinction, fuel_moisture)
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         dsl4jsb_Config(Q_DFIRE_)%ros_model_id, &
                         fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
                         df_sf_calorific_heat_content, &
                         df_sf_isurface_extinc_th, &
-                        df_sf_alphas, &
                         fuel_moisture_params, &
                         burnable_area_ha, &
                         ignitions, &
@@ -662,11 +681,11 @@ CONTAINS
   !>
   !> Run science
   !>
-  SUBROUTINE calc_spitfire(nc, nalphas, nfuelclasses, dtime, one_day, & ! in
+  SUBROUTINE calc_spitfire(nc, nfuelclasses, dtime, one_day, & ! in
                   config_ros_model_id, &
                   lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
                   const_calorific_heat_content, const_i_surface_thd, &
-                  alphas, &
+                  ! alphas, &
                   fuel_moisture_params, &
                   grid_cell_area, & ! fuel properties
                   ignitions, &
@@ -682,7 +701,7 @@ CONTAINS
                                    ix_100hr => df_sf_ix_sigma_dd_100hr, &
                                   ix_1000hr => df_sf_ix_sigma_dd_1000hr
 
-    INTEGER, INTENT(in)   :: nc, nalphas, nfuelclasses
+    INTEGER, INTENT(in)   :: nc, nfuelclasses
     REAL(wp), INTENT(in)  :: dtime, one_day
 
     INTEGER, INTENT(in)   :: config_ros_model_id                   !< Select ROS implementation
@@ -693,7 +712,6 @@ CONTAINS
     REAL(wp), INTENT(in)  :: const_calorific_heat_content          !< Fuel calorific heat content [kJ kg-1]
     REAL(wp), INTENT(in)  :: const_i_surface_thd                   !< Fire intensity threshold [kW m-1]
 
-    REAL(wp), INTENT(in)  :: alphas(nalphas)                       !< Drying parameter for 1, 10 and 100 hours fuel classes
     TYPE(t_sf_fuel_moisture), INTENT(inout) :: fuel_moisture_params
 
     REAL(wp), INTENT(in)  :: grid_cell_area(nc)                    !< Gridcell area [ha]
@@ -756,8 +774,8 @@ CONTAINS
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
     IF (config_ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
-      CALL calc_spitfire_thonicke(nc, nalphas, df_sf_fc_spread_nr, &
-                                    alphas, &
+      CALL calc_spitfire_thonicke(nc, SIZE(fuel_moisture_params%alphas_thon), df_sf_fc_spread_nr, &
+                                    fuel_moisture_params%alphas_thon, &
                                     lctlib_fuel_bulk_density, &
                                     u_f_wind, &
                                     met%nesterov_index, &
@@ -774,8 +792,9 @@ CONTAINS
           df_sf_sigma_dd_nr, & ! all dead fuel classes
           df_sf_sigma_dd_ros_nr, & ! dead fuel classes involved in fire spread
           df_sf_sigma_lv_nr, & ! live fuel classes
-          df_alphas_dead, &
-          df_sigmas_dead, df_sigmas_live, &
+          fuel_moisture_params%alphas_dead_ober, &
+          fuel_moisture_params%sigmas_dead_ober, &
+          fuel_moisture_params%sigmas_live_ober, &
           met%nesterov_index, &
           lctlib_fuel_bulk_density, &
           fuel_moisture_params%moisture_extinction, &
@@ -823,7 +842,7 @@ CONTAINS
     IF (config_ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
       ALLOCATE(fuel_moisture_for_fc(nc,nfuelclasses))
       ASSOCIATE(w_o => fuel_moisture_params%fuel_moisture_thon(:,df_sf_omega_o_idx), &
-                w_nl => fuel_moisture_params%fuel_moisture(:,df_sf_omega_nl_idx))
+                w_nl => fuel_moisture_params%fuel_moisture_thon(:,df_sf_omega_nl_idx))
         fuel_moisture_for_fc(:,ix_1hr) = w_nl ! 1hr
         fuel_moisture_for_fc(:,ix_10hr) = w_o ! 10hrs
         fuel_moisture_for_fc(:,ix_100hr) = w_o ! 100hrs
