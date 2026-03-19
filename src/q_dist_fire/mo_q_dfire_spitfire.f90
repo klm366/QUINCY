@@ -140,6 +140,18 @@ MODULE mo_q_dfire_spitfire
     MODULE PROCEDURE :: create_sf_spitfire
   END INTERFACE t_sf_spitfire
 
+TYPE t_sf_met
+    REAL(wp), POINTER :: wind(:)                    !< Wind speed [m s-1]
+    REAL(wp), POINTER :: t_air_min_c(:)             !< Daily minimum air temperature [deg C]
+    REAL(wp), POINTER :: t_air_max_c(:)             !< Daily maximum air temperature [deg C]
+    REAL(wp), POINTER :: precip_daily_mmd(:)        !< Daily precipitation [mm/day]
+    REAL(wp), POINTER :: nesterov_index(:)          !< Dryness index [deg C2]
+END TYPE t_sf_met
+
+INTERFACE t_sf_met
+  MODULE PROCEDURE :: create_sf_met
+END INTERFACE t_sf_met
+
 CONTAINS
 
   !>
@@ -175,6 +187,27 @@ CONTAINS
     sf_spitfire % is_fire_intense_enough = .FALSE.
 
   END FUNCTION create_sf_spitfire
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Constructor for t_sf_met
+  !>
+  FUNCTION create_sf_met(wind, tmin, tmax, precip, ni) RESULT (sf_met)
+    REAL(wp), INTENT(in), POINTER :: wind(:)
+    REAL(wp), INTENT(in), POINTER :: tmin(:)
+    REAL(wp), INTENT(in), POINTER :: tmax(:)
+    REAL(wp), INTENT(in), POINTER :: precip(:)
+    REAL(wp), INTENT(in), POINTER :: ni(:)
+    TYPE(t_sf_met) :: sf_met
+
+    sf_met % wind => wind
+    sf_met % t_air_min_c => tmin
+    sf_met % t_air_max_c => tmax
+    sf_met % precip_daily_mmd => precip
+    sf_met % nesterov_index => ni
+  END FUNCTION create_sf_met
+
 
   ! ======================================================================================================= !
   !>
@@ -220,10 +253,11 @@ CONTAINS
 
     TYPE(t_sf_veget_cover_frac)           :: veg_cover_frac                               !< Vegetation cover
     TYPE(t_sf_fuel_load)                  :: fuel_load
+    TYPE(t_sf_met)                        :: met
 
-    REAL(wp)                              :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
-    REAL(wp)                              :: t_air_min_c(options%nc)                      !< Minimum daily temperature [Celsius]
-    REAL(wp)                              :: t_air_max_c(options%nc)                      !< Maximum daily temperature [Celsius]
+    REAL(wp), TARGET                      :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
+    REAL(wp), TARGET                      :: t_air_min_c(options%nc)                      !< Minimum daily temperature [Celsius]
+    REAL(wp), TARGET                      :: t_air_max_c(options%nc)                      !< Maximum daily temperature [Celsius]
     REAL(wp)                              :: burnable_area_ha(options%nc)                 !< Burnable area [ha]
 
     TYPE(t_sf_spitfire)                   :: sf_spitfire
@@ -473,6 +507,7 @@ CONTAINS
     t_air_min_c = sf_convert_units("Kelvin", "Celsius", t_air_min)
     precip_daily_mmd = sf_convert_units("kg m-2 s-1", "mm/day", precip_daily)
     wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
+    met = t_sf_met(wind_sf, t_air_min_c, t_air_max_c, precip_daily_mmd, nesterov_index)
 
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
@@ -498,9 +533,8 @@ CONTAINS
                         lvg_moisture, &
                         burnable_area_ha, &
                         fuel_load, &
-                        t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
+                        met, &
                         veg_cover_frac, &
-                        nesterov_index, & ! dryness
                         fuel_moisture, & ! fuel properties
                         sf_spitfire, &
                         mask=mask_is_tile_enabled)
@@ -568,9 +602,8 @@ CONTAINS
                   lvg_moisture, &
                   grid_cell_area, & ! fuel properties
                   fuel_load, &
-                  t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
+                  met, &
                   veg_cover_frac, & ! in
-                  nesterov_index, & ! inout
                   fuel_moisture, & ! out
                   spitfire, & ! out
                   mask)
@@ -603,14 +636,9 @@ CONTAINS
     REAL(wp), INTENT(in)  :: grid_cell_area(nc)                    !< Gridcell area [ha]
 
     TYPE(t_sf_fuel_load), INTENT(in) :: fuel_load !< [g DM m-2]
-
-    REAL(wp), INTENT(in)  :: t_air_min_c(nc), t_air_max_c(nc)      !< [Celsius], [Celsius], todo: refactor to t_weather derive type
-    REAL(wp), INTENT(in)  :: precip_daily_mmd(nc)                  !< [mm d-1]
-    REAL(wp), INTENT(in)  :: wind_sf(nc)                           !< [m min-1]
+    TYPE(t_sf_met), INTENT(inout) :: met
 
     TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac      !< Vegetation cover fraction [0 to 1]
-
-    REAL(wp), INTENT(INOUT) :: nesterov_index(nc)                  !< Dryness index [Celsius^2]
 
     REAL(wp), INTENT(out) :: fuel_moisture(nc,df_sf_omegas_nr)     !< Fuel moisture (#nc, #omega_nr (omega_o, omega_nl))
 
@@ -654,13 +682,13 @@ CONTAINS
     !> Calculate whether there are conditions for fire based on the Nesterov Index,
     !> following Thonicke et al. (2010) with modifications from Pfeiffer et al. (2013)
     !> and own changes for QUINCY.
-    nesterov_index = calc_sf_nesterov_index(nc, t_air_max_c, t_air_min_c, &
-        precip_daily_mmd, nesterov_index, &
+    nesterov_index = calc_sf_nesterov_index(nc, met%t_air_max_c, met%t_air_min_c, &
+        met%precip_daily_mmd, met%nesterov_index, &
         o_tsfactor = (dtime / one_day), &
         mask= has_fire_conditions)
 
     !> Fuel moisture and ROS
-    u_f_wind = lctlib_fwd_wind_factor * wind_sf
+    u_f_wind = lctlib_fwd_wind_factor * met%wind_sf
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
     IF (config_ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
@@ -670,7 +698,6 @@ CONTAINS
                                     u_f_wind, &
                                     nesterov_index, ab_moisture, &
                                     moisture_extinction, &
-                                    ! dead_fuel_litter, tot_dead_fuel_grass, &
                                     fuel_load, &
                                     spitfire % fdi, & !< outputs
                                     fuel_moisture, &
@@ -703,7 +730,7 @@ CONTAINS
       CALL finish("calc_spitfire", "Unexpected fire sub-model found")
     END IF
     CALL sf_calc_rate_of_spread(nc, &
-                  lctlib_fwd_wind_factor, wind_sf, &
+                  u_f_wind, &
                   spitfire % fdi, &
                   veg_cover_frac, &
                   has_fire_conditions, &
