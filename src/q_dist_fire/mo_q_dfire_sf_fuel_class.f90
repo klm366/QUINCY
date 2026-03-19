@@ -123,7 +123,7 @@ MODULE mo_q_dfire_sf_fuel_class
   END TYPE t_sf_fuel_load
 
   INTERFACE t_sf_fuel_load
-    MODULE PROCEDURE :: create_fuel_load_from_scratch
+    MODULE PROCEDURE :: create_fuel_load
   END INTERFACE t_sf_fuel_load
 
 CONTAINS
@@ -132,7 +132,7 @@ CONTAINS
   !> Constructor for t_sf_fuel_load.
   !> It packs arrays from IQ memory
   !>
-  FUNCTION create_fuel_load_from_scratch(nc, nddpools, nlvpools, nfclass, &
+  FUNCTION create_fuel_load(nc, nddpools, nlvpools, nfclass, &
                                 dd1hr, dd10hr, dd100hrs, dd1000hrs, &
                                 clvg, lvg, &
                                 lvt1hr, lvt10hr, lvt100hr, lvt1000hr) &
@@ -165,7 +165,7 @@ CONTAINS
     fuel_load%live_tree(:,:,ix_10hr) = lvt10hr
     fuel_load%live_tree(:,:,ix_100hr) = lvt100hr
     fuel_load%live_tree(:,:,ix_1000hr) = lvt1000hr
-  END FUNCTION create_fuel_load_from_scratch
+  END FUNCTION create_fuel_load
 
   ! ======================================================================================================= !
   !>
