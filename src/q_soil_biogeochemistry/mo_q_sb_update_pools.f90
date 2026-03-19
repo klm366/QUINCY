@@ -56,7 +56,7 @@ CONTAINS
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
-    USE mo_jsb_time,               ONLY: get_year, get_day, get_secs_of_day
+    USE mo_jsb_time,               ONLY: get_year, get_month, get_day, get_secs_of_day
     USE mo_quincy_model_config,    ONLY: QLAND, QSOIL
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
@@ -1266,12 +1266,15 @@ CONTAINS
     IF (dsl4jsb_Config(SB_)%flag_ph .AND. (.NOT. model%config%l_transient_spinup)) THEN ! transient simulation
       IF (dsl4jsb_Config(SB_)%flag_ph_future) THEN
         IF (get_year(options%current_datetime) >= 2014 .AND. &
+            & get_month(options%current_datetime) == 1 .AND. &
             & get_day(options%current_datetime) == 1 .AND. &
               ABS(get_secs_of_day(options%current_datetime) - dtime) < eps1) THEN
             ph_cal_flag = 1
         END IF
       ELSE
-        IF (get_day(options%current_datetime) == 1 .AND. ABS(get_secs_of_day(options%current_datetime) - dtime) < eps1) THEN ! the first timestep of each year
+        IF (get_month(options%current_datetime) == 1 .AND. &
+            & get_day(options%current_datetime) == 1 .AND. &
+            & ABS(get_secs_of_day(options%current_datetime) - dtime) < eps1) THEN ! the first timestep of each year
             ph_cal_flag = 1
         END IF
       END IF

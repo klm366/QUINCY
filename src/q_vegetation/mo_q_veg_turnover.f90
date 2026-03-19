@@ -50,7 +50,7 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_time,              ONLY: get_year, get_day, get_secs_of_day
+    USE mo_jsb_time,              ONLY: get_year, get_month, get_day, get_secs_of_day
     USE mo_jsb_process_class,     ONLY: VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, SB_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     ! ----------------------------------------------------------------------------------------------------- !
@@ -206,6 +206,7 @@ CONTAINS
       & model%config%is_element_used(:)       , &
       & model%config%l_transient_spinup       , &
       & get_year(options%current_datetime)    , &
+      & get_month(options%current_datetime)   , &
       & get_day(options%current_datetime)     , & 
       & get_secs_of_day(options%current_datetime), &
       & lctlib%phenology_type                 , &
@@ -386,6 +387,7 @@ CONTAINS
     & is_element_used             , &
     & l_transient_spinup          , &
     & time_year                   , &
+    & time_month                  , &
     & time_day                    , &
     & time_day_seconds            , &
     & lctlib_phenology_type       , &
@@ -434,7 +436,8 @@ CONTAINS
     LOGICAL,                  INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
     LOGICAL,                  INTENT(in)    :: l_transient_spinup           !< is spinup
     INTEGER,                  INTENT(in)    :: time_year                    !< simulating year
-    INTEGER,                  INTENT(in)    :: time_day                     !< day of the year
+    INTEGER,                  INTENT(in)    :: time_month                   !< simulating month
+    INTEGER,                  INTENT(in)    :: time_day                     !< simulating date
     REAL(wp),                 INTENT(in)    :: time_day_seconds             !< second of the day
     INTEGER,                  INTENT(in)    :: lctlib_phenology_type        !< lctlib parameter
     INTEGER,                  INTENT(in)    :: lctlib_growthform            !< lctlib parameter
@@ -594,7 +597,7 @@ CONTAINS
     IF (config_ph_on_fine_root .AND. (.NOT. l_transient_spinup)) THEN ! transient simulation
       IF (config_ph_future) THEN
         IF (time_year >= 2014) THEN 
-          IF (time_day == 1) THEN 
+          IF (time_month == 1 .AND. time_day == 1) THEN 
             IF (ABS(time_day_seconds - dtime) < eps1) THEN
                DO ic = 1, nc
                  ph_fine_root_factor_acc(ic) = ph_fine_root_factor_acc(ic) &
@@ -606,7 +609,7 @@ CONTAINS
           ph_fine_root_factor_acc(:) = 1.0_wp
         END IF
       ELSE !not future simulation
-        IF (time_day == 1) THEN
+        IF (time_month == 1 .AND. time_day == 1) THEN
          IF (ABS(time_day_seconds - dtime) < eps1) THEN
            DO ic = 1, nc
               ph_fine_root_factor_acc(ic) = ph_fine_root_factor_acc(ic) &

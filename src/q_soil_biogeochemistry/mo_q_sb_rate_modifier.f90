@@ -41,7 +41,7 @@ CONTAINS
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
-    USE mo_jsb_time,               ONLY: get_year, get_day, get_secs_of_day
+    USE mo_jsb_time,               ONLY: get_year, get_month, get_day, get_secs_of_day
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_physical_constants, ONLY: Tzero
     USE mo_jsb_math_constants,     ONLY: eps1
@@ -199,7 +199,8 @@ CONTAINS
         IF (dsl4jsb_Config(SB_)%flag_ph_on_som .AND. (.NOT. model%config%l_transient_spinup)) THEN ! transient simulation
           IF (dsl4jsb_Config(SB_)%flag_ph_future) THEN
             IF (get_year(options%current_datetime) >= 2014) THEN
-              IF (get_day(options%current_datetime) == 1 .AND. & 
+              IF (get_month(options%current_datetime) == 1 .AND. & 
+                    & get_day(options%current_datetime) == 1 .AND. &
                     & ABS(get_secs_of_day(options%current_datetime) - dtime) < eps1) THEN
                 rph_decomposition(ic, is)    = rph_decomposition(ic, is) * calc_ph_decom_function(ph_old(ic),delta_ph(ic))
               END IF
@@ -207,7 +208,8 @@ CONTAINS
               rph_decomposition(ic, is) = 1.0_wp
             END IF
           ELSE ! not future
-            IF (get_day(options%current_datetime) == 1 .AND. &
+            IF (get_month(options%current_datetime) == 1 .AND. &
+                 & get_day(options%current_datetime) == 1 .AND. &
                  & ABS(get_secs_of_day(options%current_datetime) - dtime) < eps1) THEN
               rph_decomposition(ic, is)    = rph_decomposition(ic, is) * calc_ph_decom_function(ph_old(ic),delta_ph(ic))
             END IF
