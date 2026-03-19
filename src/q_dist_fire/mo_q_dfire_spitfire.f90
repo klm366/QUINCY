@@ -140,6 +140,7 @@ MODULE mo_q_dfire_spitfire
     MODULE PROCEDURE :: create_sf_spitfire
   END INTERFACE t_sf_spitfire
 
+!< Group weather related variables to pass in calc_spitfire
 TYPE t_sf_met
     REAL(wp), POINTER :: wind(:)                    !< Wind speed [m s-1]
     REAL(wp), POINTER :: t_air_min_c(:)             !< Daily minimum air temperature [deg C]
@@ -151,6 +152,18 @@ END TYPE t_sf_met
 INTERFACE t_sf_met
   MODULE PROCEDURE :: create_sf_met
 END INTERFACE t_sf_met
+
+!< Group ignition related variables to pass in calc_spitfire
+TYPE :: t_sf_ignitions
+    REAL(wp), POINTER :: a_nd(:)!< Propensity of people to produce ignition events [ignitions individual-1 d-1]
+    REAL(wp), POINTER :: pop_dens(:) !< Average human population density in the grid cell [individuals km-2]
+    REAL(wp), POINTER :: lightning_events(:) !< Lightning frequency [ha-1 d-1]
+    REAL(wp)          :: max_pop_dens
+END TYPE t_sf_ignitions
+
+INTERFACE t_sf_ignitions
+  MODULE PROCEDURE :: create_sf_ignitions
+END INTERFACE t_sf_ignitions
 
 CONTAINS
 
@@ -187,6 +200,24 @@ CONTAINS
     sf_spitfire % is_fire_intense_enough = .FALSE.
 
   END FUNCTION create_sf_spitfire
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Constructor for t_sf_ignitions
+  !>
+  FUNCTION create_sf_ignitions(a_nd, ic_pop_dens, lightning_events, max_pop_dens) RESULT (sf_ignitions)
+    REAL(wp), INTENT(in), POINTER :: a_nd(:)
+    REAL(wp), INTENT(in), POINTER :: ic_pop_dens(:)
+    REAL(wp), INTENT(in), POINTER :: lightning_events(:)
+    REAL(wp), INTENT(in)          :: max_pop_dens
+    TYPE(t_sf_ignitions) :: sf_ignitions
+
+    sf_ignitions % a_nd => a_nd
+    sf_ignitions % ic_pop_dens => ic_pop_dens
+    sf_ignitions % lightning_events => lightning_events
+    sf_ignitions % max_pop_dens = max_pop_dens
+  END FUNCTION create_sf_ignitions
 
 
   ! ======================================================================================================= !
@@ -253,6 +284,7 @@ CONTAINS
 
     TYPE(t_sf_veget_cover_frac)           :: veg_cover_frac                               !< Vegetation cover
     TYPE(t_sf_fuel_load)                  :: fuel_load
+    TYPE(t_sf_ignitions)                  :: ignitions
     TYPE(t_sf_met)                        :: met
 
     REAL(wp), TARGET                      :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
@@ -264,7 +296,7 @@ CONTAINS
 
     INTEGER                               :: nr_of_children
 
-    REAL(wp)                              :: a_nd(options%nc)
+    REAL(wp), TARGET                      :: a_nd(options%nc)
     INTEGER                               :: ierror
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_DFIRE_)
@@ -473,8 +505,6 @@ CONTAINS
                                  live_tree_fuel_100hr_lfp, &
                                  live_tree_fuel_1000hr_lfp)
 
-
-    !< Init variables
     !< Make sure those values are set to 0, as it means there is no fire.
     ab_moisture_diag = 0._wp
     fuel_moisture = 0._wp
@@ -518,13 +548,11 @@ CONTAINS
     ! Load input data: rate of human-caused ignitions per person [#ign indiv-1 d-]
     ! Todo: further research on this data, currently taken from a paper.
     a_nd = a2l_lightning_events * 4._wp
+    ignitions = t_sf_ignitions(a_nd, ic_pop_dens, a2l_lightning_events, df_sf_max_density_human_pop)
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         dsl4jsb_Config(Q_DFIRE_)%ros_model_id, &
                         fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
-                        ic_pop_dens, & ! ignition events
-                        a_nd, &
-                        a2l_lightning_events, &
                         df_sf_calorific_heat_content, &
                         df_sf_isurface_extinc_th, &
                         df_sf_alphas, &
@@ -532,6 +560,7 @@ CONTAINS
                         ab_moisture, &
                         lvg_moisture, &
                         burnable_area_ha, &
+                        ignitions, &
                         fuel_load, &
                         met, &
                         veg_cover_frac, &
@@ -594,13 +623,14 @@ CONTAINS
   SUBROUTINE calc_spitfire(nc, nalphas, nfuelclasses, dtime, one_day, & ! in
                   config_ros_model_id, &
                   lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
-                  density_human_population, a_nd, lightning_frequency, & ! ignition events
+                  ! density_human_population, a_nd, lightning_frequency, & ! ignition events
                   const_calorific_heat_content, const_i_surface_thd, &
                   alphas, &
                   moisture_extinction, &
                   ab_moisture, &
                   lvg_moisture, &
                   grid_cell_area, & ! fuel properties
+                  ignitions, &
                   fuel_load, &
                   met, &
                   veg_cover_frac, & ! in
@@ -621,10 +651,6 @@ CONTAINS
     REAL(wp), INTENT(in)  :: lctlib_fuel_bulk_density(nc)          !< Fuel bulk density [kg m-3]
     REAL(wp), INTENT(in)  :: lctlib_fwd_wind_factor(nc)            !< Forward wind factor [0 to 1]
 
-    REAL(wp), INTENT(in)  :: density_human_population(nc)          !< Average human population density in the grid cell [individuals km-2]
-    REAL(wp), INTENT(in)  :: a_nd(nc)                              !< Propensity of people to produce ignition events [ignitions individual-1 d-1]
-    REAL(wp), INTENT(in)  :: lightning_frequency(nc)               !< Lightning frequency [ha-1 d-1]
-
     REAL(wp), INTENT(in)  :: const_calorific_heat_content          !< Fuel calorific heat content [kJ kg-1]
     REAL(wp), INTENT(in)  :: const_i_surface_thd                   !< Fire intensity threshold [kW m-1]
 
@@ -635,6 +661,7 @@ CONTAINS
 
     REAL(wp), INTENT(in)  :: grid_cell_area(nc)                    !< Gridcell area [ha]
 
+    TYPE(t_sf_ignitions), INTENT(in) :: ignitions !< Ignition related inputs
     TYPE(t_sf_fuel_load), INTENT(in) :: fuel_load !< [g DM m-2]
     TYPE(t_sf_met), INTENT(inout) :: met
 
@@ -648,7 +675,7 @@ CONTAINS
     LOGICAL :: mask_tile_enabled(nc)
 
     ! locals
-    TYPE(t_q_sf_ignitions)  :: sf_ignitions
+    TYPE(t_q_sf_ignitions)  :: sf_ignitions !< Ignitions outputs
     INTEGER :: ndeadpools
     LOGICAL  :: has_dead_fuel(nc)           !< True = dead fuel
     LOGICAL  :: has_fire_conditions(nc)     !< 1, 10, 100 and 1000 hours
@@ -682,7 +709,7 @@ CONTAINS
     !> Calculate whether there are conditions for fire based on the Nesterov Index,
     !> following Thonicke et al. (2010) with modifications from Pfeiffer et al. (2013)
     !> and own changes for QUINCY.
-    nesterov_index = calc_sf_nesterov_index(nc, met%t_air_max_c, met%t_air_min_c, &
+    met%nesterov_index = calc_sf_nesterov_index(nc, met%t_air_max_c, met%t_air_min_c, &
         met%precip_daily_mmd, met%nesterov_index, &
         o_tsfactor = (dtime / one_day), &
         mask= has_fire_conditions)
@@ -696,7 +723,7 @@ CONTAINS
                                     alphas, &
                                     lctlib_fuel_bulk_density, &
                                     u_f_wind, &
-                                    nesterov_index, ab_moisture, &
+                                    met%nesterov_index, ab_moisture, &
                                     moisture_extinction, &
                                     fuel_load, &
                                     spitfire % fdi, & !< outputs
@@ -713,7 +740,7 @@ CONTAINS
           df_sf_sigma_lv_nr, & ! live fuel classes
           df_alphas_dead, &
           df_sigmas_dead, df_sigmas_live, &
-          nesterov_index, &
+          met%nesterov_index, &
           lctlib_fuel_bulk_density, &
           moisture_extinction, &
           u_f_wind, &
@@ -737,9 +764,9 @@ CONTAINS
                   spitfire % ros)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
-    sf_ignitions = calc_q_sf_ignition(nc, density_human_population, &
-                                    a_nd, lightning_frequency, &
-                                    df_sf_max_density_human_pop)
+    sf_ignitions = calc_q_sf_ignition(nc, ignitions%pop_dens, &
+                                    ignitions%a_nd, ignitions%lightning_events, &
+                                    ignitions%max_pop_dens)
     !< From daily to ts
     spitfire%e_n_ignitions = sf_ignitions%total * (dtime / one_day)
     spitfire%e_n_humans = sf_ignitions%human * (dtime / one_day)
