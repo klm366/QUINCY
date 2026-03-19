@@ -192,6 +192,7 @@ CONTAINS
     REAL(wp) :: water_table_t, frac_liquid_top_t
     LOGICAL,  POINTER :: PE_mask(:)
     LOGICAL  :: lstart, lrestart, lnew_year, lnew_month, lnew_day, lstop
+    LOGICAL  :: not_crop
     INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, ic
     INTEGER  :: year, month, day, summer_state, ylen, mlen, nstep, step, stepm, stepp
     REAL(wp) :: dtime
@@ -459,8 +460,16 @@ CONTAINS
         frac_inun_uncorr (ic  ) = 0._wp
       ENDDO
 
+      ! Check for crop tile
+      not_crop = .TRUE.
+      IF (tile%lcts(1)%lib_id > 0) THEN  ! Make sure we are on a pft
+        IF (dsl4jsb_Lctlib_param(CropFlag)) THEN
+          not_crop = .FALSE.
+        ENDIF
+      ENDIF
+
       ! If this is a crop tile and wetlands are not allowed on crops: Skip calc of wt and inun
-      IF (dsl4jsb_Config(TOP_)%use_crop_wetlands .OR. .NOT. dsl4jsb_Lctlib_param(CropFlag)) THEN
+      IF (dsl4jsb_Config(TOP_)%use_crop_wetlands .OR. not_crop) THEN
 
         ! Calculate water table
         !$acc loop gang vector
