@@ -219,22 +219,12 @@ CONTAINS
     REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
 
     TYPE(t_sf_veget_cover_frac)           :: veg_cover_frac                               !< Vegetation cover
-
-    !< dead fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp)                              :: dead_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
-    !< live grass fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp)                              :: live_grass_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
-    !< cured live grass fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp)                              :: cured_live_grass_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
-    !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp)                              :: live_tree_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
     TYPE(t_sf_fuel_load)                  :: fuel_load
 
     REAL(wp)                              :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
     REAL(wp)                              :: t_air_min_c(options%nc)                      !< Minimum daily temperature [Celsius]
     REAL(wp)                              :: t_air_max_c(options%nc)                      !< Maximum daily temperature [Celsius]
     REAL(wp)                              :: burnable_area_ha(options%nc)                 !< Burnable area [ha]
-    LOGICAL, PARAMETER                    :: are_all_pfts_wave =.FALSE. ! todo: replace by config option, flag_wa_pfts=all|only
 
     TYPE(t_sf_spitfire)                   :: sf_spitfire
 
@@ -436,22 +426,19 @@ CONTAINS
 
     no_children = tile%Get_no_of_children()
 
-    !< Init variables
-    live_grass_fuel_fcl = 0._wp
-    cured_live_grass_fuel_fcl = 0._wp
+    ! !< Init variables
+    fuel_load = t_sf_fuel_load(nc, sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
+                                 dead_fuel_1hr_dfp, &
+                                 dead_fuel_10hr_dfp, &
+                                 dead_fuel_100hr_dfp, &
+                                 dead_fuel_1000hr_dfp, &
+                                 cured_live_grass_fuel_1hr_dfp, &
+                                 live_grass_fuel_1hr_lfp, &
+                                 live_tree_fuel_1hr_lfp, &
+                                 live_tree_fuel_10hr_lfp, &
+                                 live_tree_fuel_100hr_lfp, &
+                                 live_tree_fuel_1000hr_lfp)
 
-    ! rebuild fuel variables
-    dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp ! dead fuel
-    dead_fuel_fcl(:,:,df_sf_fc_10hr_idx) = dead_fuel_10hr_dfp
-    dead_fuel_fcl(:,:,df_sf_fc_100hr_idx) = dead_fuel_100hr_dfp
-    dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1000hr_dfp
-    live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx) = live_grass_fuel_1hr_lfp ! live grass fuel
-    cured_live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx) = cured_live_grass_fuel_1hr_dfp ! cured live grass fuel
-    live_tree_fuel_fcl(:,:,df_sf_fc_1hr_idx) = live_tree_fuel_1hr_lfp ! live tree fuel
-    live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx) = live_tree_fuel_10hr_lfp
-    live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr_lfp
-    live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr_lfp
-    fuel_load = t_sf_fuel_load(dead_fuel_fcl, cured_live_grass_fuel_fcl, live_grass_fuel_fcl, live_tree_fuel_fcl)
 
     !< Init variables
     !< Make sure those values are set to 0, as it means there is no fire.
@@ -510,8 +497,6 @@ CONTAINS
                         ab_moisture, &
                         lvg_moisture, &
                         burnable_area_ha, &
-                        ! dead_fuel_fcl, cured_live_grass_fuel_fcl, &
-                        ! live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
                         fuel_load, &
                         t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
                         veg_cover_frac, &

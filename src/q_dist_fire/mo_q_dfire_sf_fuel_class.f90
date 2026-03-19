@@ -104,12 +104,16 @@ MODULE mo_q_dfire_sf_fuel_class
   END INTERFACE t_sf_fuel_class
 
 
-  !< Derived type to group precomputed fuels so those can be passed around
+  !< Derived type to group precomputed fuels
   TYPE :: t_sf_fuel_load
-    REAL(wp), POINTER :: dead_fuel(:,:,:) => null() !< dead fuel load [g DM m-2] (nc, ndeadpools, nfuels)
-    REAL(wp), POINTER :: cured_live_grass(:,:) => null() !< cured live grass load [g DM m-2] (nc, ndeadpools)
-    REAL(wp), POINTER :: live_grass(:,:,:) => null() !< live grass load [g DM m-2] (nc, nlivepools)
-    REAL(wp), POINTER :: live_tree(:,:) => null() !< live tree load [g DM m-2] (nc, nlivepools, nfuels)
+    !< dead fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), ALLOCATABLE :: dead_fuel(:,:,:)!(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
+    !< live grass fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), ALLOCATABLE :: live_grass(:,:,:)!(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
+    !< cured live grass fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), ALLOCATABLE :: cured_live_grass(:,:,:)!(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
+    !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), ALLOCATABLE :: live_tree(:,:,:)!(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
   CONTAINS !< fuel transformations
     PROCEDURE :: count_dead_fuel_pools
     PROCEDURE :: Calc_dead_litter
@@ -119,26 +123,49 @@ MODULE mo_q_dfire_sf_fuel_class
   END TYPE t_sf_fuel_load
 
   INTERFACE t_sf_fuel_load
-    MODULE PROCEDURE :: create_fuel_load
+    MODULE PROCEDURE :: create_fuel_load_from_scratch
   END INTERFACE t_sf_fuel_load
 
 CONTAINS
 
   !>
-  !> Constructor for t_sf_fuel_load
+  !> Constructor for t_sf_fuel_load.
+  !> It packs arrays from IQ memory
   !>
-  FUNCTION create_fuel_load(dead_fuel, cured_live_grass, live_grass, live_tree) RESULT(fuel_load)
-    REAL(wp), INTENT(in) :: dead_fuel(:,:,:)
-    REAL(wp), INTENT(in) :: cured_live_grass(:,:,:)
-    REAL(wp), INTENT(in) :: live_grass(:,:)
-    REAL(wp), INTENT(in) :: live_tree(:,:,:)
+  FUNCTION create_fuel_load_from_scratch(nc, nddpools, nlvpools, nfclass, &
+                                dd1hr, dd10hr, dd100hrs, dd1000hrs, &
+                                clvg, lvg, &
+                                lvt1hr, lvt10hr, lvt100hr, lvt1000hr) &
+                                RESULT(fuel_load)
+    USE mo_q_dfire_constants, ONLY: ix_1hr => df_sf_fc_1hr_idx, &
+                                     ix_10hr => df_sf_fc_10hr_idx, &
+                                     ix_100hr => df_sf_fc_100hr_idx, &
+                                     ix_1000hr => df_sf_fc_1000hr_idx
+
+    REAL(wp), POINTER, INTENT(in) :: dd1hr(:,:), dd10hr(:,:), dd100hrs(:,:), dd1000hrs(:,:) ! dead fuel (#nc,#dead fuel pools) [g DM m-2]
+    REAL(wp), POINTER, INTENT(in) :: clvg(:,:), lvg(:,:) ! cured live grass, live grass fuels (#nc,#dead fuel pools) [g DM m-2]
+    REAL(wp), POINTER, INTENT(in) :: lvt1hr(:,:), lvt10hr(:,:), lvt100hr(:,:), lvt1000hr(:,:) ! live tree fuel (#nc,#dead fuel pools) [g DM m-2]
     TYPE(t_sf_fuel_load) :: fuel_load
 
-    fuel_load%dead_fuel => dead_fuel
-    fuel_load%cured_live_grass => cured_live_grass
-    fuel_load%live_grass => live_grass
-    fuel_load%live_tree => live_tree
-  END FUNCTION create_fuel_load
+    ALLOCATE(fuel_load%dead_fuel(nc, nddpools, nfclass))
+    ALLOCATE(fuel_load%cured_live_grass(nc, nddpools, nfclass))
+    ALLOCATE(fuel_load%live_grass(nc, nlvpools, nfclass))
+    ALLOCATE(fuel_load%live_tree(nc, nlvpools, nfclass))
+
+    fuel_load%cured_live_grass = 0._wp
+    fuel_load%live_grass = 0._wp
+
+    fuel_load%dead_fuel(:,:,ix_1hr) = dd1hr
+    fuel_load%dead_fuel(:,:,ix_10hr) = dd10hr
+    fuel_load%dead_fuel(:,:,ix_100hr) = dd100hrs
+    fuel_load%dead_fuel(:,:,ix_1000hr) = dd1000hrs
+    fuel_load%cured_live_grass(:,:,ix_1hr) = clvg
+    fuel_load%live_grass(:,:,ix_1hr) = lvg
+    fuel_load%live_tree(:,:,ix_1hr) = lvt1hr
+    fuel_load%live_tree(:,:,ix_10hr) = lvt10hr
+    fuel_load%live_tree(:,:,ix_100hr) = lvt100hr
+    fuel_load%live_tree(:,:,ix_1000hr) = lvt1000hr
+  END FUNCTION create_fuel_load_from_scratch
 
   ! ======================================================================================================= !
   !>
@@ -148,7 +175,7 @@ CONTAINS
   !>  sum_dead_pools = TRUE: it sums over dead litter pools. a2 is returned.
   !>  sum_dead_pools = FALSE: it sums over dead litter pools. a3 is returned.
   !>
-  SUBROUTINE Calc_dead_litter(this, spread, sum_dead_pools, dead_fuel_litter, a2, a3)
+  SUBROUTINE Calc_dead_litter(this, spread, sum_dead_pools, a2, a3)
       USE mo_q_dfire_constants, ONLY: ixs_litter => ixs_sf_dead_litter_fuel_pools
 
     CLASS(t_sf_fuel_load), INTENT(in) :: this
