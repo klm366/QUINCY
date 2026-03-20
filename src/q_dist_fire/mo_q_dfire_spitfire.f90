@@ -119,9 +119,7 @@ MODULE mo_q_dfire_spitfire
   !< Move spitfire data from calc_spitfire <-> update_q_dfire_spitfire subroutines
   !<
   TYPE t_sf_spitfire
-    REAL(wp), ALLOCATABLE :: e_n_ignitions(:) !< Number of ignition events [ignitions d-1]
-    REAL(wp), ALLOCATABLE :: e_n_humans(:)     !< Number of human ignitions [ignitions d-1]
-    REAL(wp), ALLOCATABLE :: e_n_lightning(:)  !< Number of lightning strikes [strikes d-1]
+    TYPE(t_q_sf_ignitions) :: ignitions !< Ignition outputs [ignitions d-1 timestep-1]
 
     REAL(wp), ALLOCATABLE :: fdi(:) !< fire danger index [0 to 1]
     TYPE(t_sf_ros)        :: ros    !< fire dynamics
@@ -140,7 +138,7 @@ MODULE mo_q_dfire_spitfire
     MODULE PROCEDURE :: create_sf_spitfire
   END INTERFACE t_sf_spitfire
 
-!< Group weather related variables to pass in calc_spitfire
+!< Group weather related variables to pass to calc_spitfire
 TYPE t_sf_met
     REAL(wp), POINTER :: wind(:)                    !< Wind speed [m s-1]
     REAL(wp), POINTER :: t_air_min_c(:)             !< Daily minimum air temperature [deg C]
@@ -153,7 +151,7 @@ INTERFACE t_sf_met
   MODULE PROCEDURE :: create_sf_met
 END INTERFACE t_sf_met
 
-!< Group ignition related variables to pass in calc_spitfire
+!< Group ignition related variables to pass to calc_spitfire
 TYPE :: t_sf_ignitions
     REAL(wp), POINTER :: a_nd(:)!< Propensity of people to produce ignition events [ignitions individual-1 d-1]
     REAL(wp), POINTER :: pop_dens(:) !< Average human population density in the grid cell [individuals km-2]
@@ -165,7 +163,7 @@ INTERFACE t_sf_ignitions
   MODULE PROCEDURE :: create_sf_ignitions
 END INTERFACE t_sf_ignitions
 
-!< Group fuel moisture related variables to pass in calc_spitfire
+!< Group fuel moisture related variables to pass to calc_spitfire
 TYPE :: t_sf_fuel_moisture
     REAL(wp), POINTER :: alphas_thon(:) !< Drying parameter for 1, 10 and 100 hours fuel classes
     REAL(wp), POINTER :: alphas_dead_ober(:)
@@ -206,7 +204,7 @@ END TYPE t_sf_params
 CONTAINS
 
   !>
-  !> t_sf_spitfire constructor: Allocate and initialize
+  !> sf_fuel_moisture constructor: Allocate and initialize
   !>
   FUNCTION create_sf_fuel_moisture(nc, nddsigmas, nlvsigmas, &
                                     alphas_thon, &
@@ -252,9 +250,6 @@ CONTAINS
     INTEGER, INTENT(in) :: ndeadpools  !< # dead fuel pools
     TYPE(t_sf_spitfire) :: sf_spitfire !< Output
 
-    ALLOCATE(sf_spitfire % e_n_ignitions(nc))
-    ALLOCATE(sf_spitfire % e_n_humans(nc))
-    ALLOCATE(sf_spitfire % e_n_lightning(nc))
     ALLOCATE(sf_spitfire % fdi(nc))
     ALLOCATE(sf_spitfire % area_burned(nc))
     ALLOCATE(sf_spitfire % area_burned_fract(nc))
@@ -263,9 +258,7 @@ CONTAINS
     ALLOCATE(sf_spitfire % i_surface(nc))
     ALLOCATE(sf_spitfire % is_fire_intense_enough(nc))
 
-    sf_spitfire % e_n_ignitions = 0._wp
-    sf_spitfire % e_n_humans = 0._wp
-    sf_spitfire % e_n_lightning = 0._wp
+    sf_spitfire % ignitions = t_q_sf_ignitions(nc)
     sf_spitfire % fdi = 0._wp
     sf_spitfire % ros = t_sf_ros(nc)
     sf_spitfire % area_burned = 0._wp
@@ -660,9 +653,9 @@ CONTAINS
     dead_fuel_consumption_1000hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_1000hr_idx)
 
     !< Ignitions into process memory
-    e_n_ignitions = sf_spitfire % e_n_ignitions
-    e_n_humans = sf_spitfire % e_n_humans
-    e_n_lightning = sf_spitfire % e_n_lightning
+    e_n_ignitions = sf_spitfire % igntions % e_n_ignitions
+    e_n_humans = sf_spitfire % igntions % e_n_humans
+    e_n_lightning = sf_spitfire % igntions % e_n_lightning
 
     dead_frac_consumption = sf_spitfire % dead_frac_consump
     i_surface = sf_spitfire % i_surface
@@ -823,20 +816,16 @@ CONTAINS
                   spitfire % ros)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
-    sf_ignitions = calc_q_sf_ignition(nc, ignitions%pop_dens, &
+    spitfire%ignitions = calc_q_sf_ignition(nc, ignitions%pop_dens, &
                                     ignitions%a_nd, ignitions%lightning_events, &
                                     ignitions%max_pop_dens, &
                                     factor = (config%dtime / config%one_day))
-    !< From daily to ts
-    spitfire%e_n_ignitions = sf_ignitions%total
-    spitfire%e_n_humans = sf_ignitions%human
-    spitfire%e_n_lightning = sf_ignitions%lightning
 
     !< no ignitions events, no fire conditions
-    has_fire_conditions = has_fire_conditions .AND. (spitfire%e_n_ignitions > 0._wp)
+    has_fire_conditions = has_fire_conditions .AND. (spitfire%ignitions%e_n_ignitions > 0._wp)
 
     !< Based on ignitions and fire spread conditions, calculate burned area and its fraction.
-    CALL calc_area_burned(nc, spitfire % e_n_ignitions, & !< in
+    CALL calc_area_burned(nc, spitfire % ignitions % e_n_ignitions, & !< in
                           spitfire % fdi, &
                           spitfire % ros % mean_fire_area, &
                           gridcell_info % grid_cell_area, &
