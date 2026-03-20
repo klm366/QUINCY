@@ -69,7 +69,7 @@ MODULE mo_q_dfire_spitfire
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_LOSS_ID, SB_BGCM_POOL_ID
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
-  USE mo_q_dfire_constants,       ONLY: df_sf_sl_dims_nr, sl_ixs => df_sf_sl_indices !< Soil related constants: top soil moisture layers
+  USE mo_q_dfire_constants,       ONLY: df_sf_sl_dims_nr, ixs_top_sls => df_sf_sl_indices !< Soil related constants: top soil moisture layers
 
   USE mo_q_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix
   USE mo_q_dfire_constants,       ONLY: df_sf_max_density_human_pop
@@ -349,8 +349,6 @@ CONTAINS
     REAL(wp), POINTER                     :: tile_fract(:) ! [%]
     LOGICAL                               :: mask_is_tile_enabled(options%nc)
 
-    REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
-
     TYPE(t_sf_veget_cover_frac), TARGET   :: veg_cover_frac                               !< Vegetation cover
     TYPE(t_sf_fuel_load)                  :: fuel_load
     TYPE(t_sf_ignitions)                  :: ignitions
@@ -569,7 +567,6 @@ CONTAINS
     ab_moisture_diag = 0._wp
     fuel_moisture = 0._wp
     i_surface = 0._wp
-    ab_moisture = 0._wp
     frac_consump_fcl = 0._wp
     area_burned_output = 0._wp
     area_burned_fract_output = 0._wp
@@ -599,11 +596,14 @@ CONTAINS
     wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
     met = t_sf_met(wind_sf, t_air_min_c, t_air_max_c, precip_daily_mmd, nesterov_index)
 
-    ab_moisture = calc_ab_moisture(soil_depth_sl(:,sl_ixs), wtr_soil_sl(:,sl_ixs), wtr_soil_sat_sl(:,sl_ixs), &
-                                    mask=mask_is_tile_enabled)
     ! Load input data: rate of human-caused ignitions per person [#ign indiv-1 d-]
     ! Todo: further research on this data, currently taken from a paper.
     a_nd = a2l_lightning_events * 4._wp
+
+    ab_moisture_diag = calc_ab_moisture(soil_depth_sl(:,ixs_top_sls), &
+                                    wtr_soil_sl(:,ixs_top_sls), &
+                                    wtr_soil_sat_sl(:,ixs_top_sls), &
+                                    mask=mask_is_tile_enabled)
 
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
@@ -612,7 +612,7 @@ CONTAINS
                                         df_alphas_dead, & ! oberhagemann
                                         df_sigmas_dead, & ! oberhagemann
                                         df_sigmas_live, & ! oberhagemann
-                                        ab_moisture, lvg_moisture, &
+                                        ab_moisture_diag, lvg_moisture, &
                                         moisture_extinction, fuel_moisture)
 
     ignitions = t_sf_ignitions(a_nd, ic_pop_dens, a2l_lightning_events, df_sf_max_density_human_pop)
@@ -666,8 +666,6 @@ CONTAINS
     area_burned_output = sf_spitfire % area_burned / dtime !< to seconds
 
     fdi = sf_spitfire % fdi ! todo: define as pointer
-
-    ab_moisture_diag(:) =  ab_moisture(:)
 
     ros_f = sf_spitfire % ros % ros_forward
     ros_b = sf_spitfire % ros % ros_backwards
@@ -1119,7 +1117,7 @@ CONTAINS
     REAL(wp), INTENT(in)                :: ab_wtr_soil_sl(:,:)        !< soil water content [m] (#nc, #above ground soil layers)
     REAL(wp), INTENT(in)                :: ab_wtr_wsat_sl(:,:)        !< soil water saturation [m] (#nc, #above ground soil layers)
     LOGICAL, INTENT(in), OPTIONAL       :: mask(:)                    !< True = gridcell enabled
-    REAL(wp), ALLOCATABLE               :: ab_moisture(:)             !< Relative above ground soil moisture [-] (nc)
+    REAL(wp)                            :: ab_moisture(size(ab_wtr_soil_sl), dim=1) !< Relative above ground soil moisture [-] (nc)
 
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
     INTEGER :: is, ic
@@ -1129,7 +1127,6 @@ CONTAINS
 
     nc = SIZE(ab_wtr_wsat_sl, DIM=1)
     nsl = SIZE(ab_wtr_wsat_sl, DIM=2) ! 2=soil layers index
-    ALLOCATE(ab_moisture_sl, mold=ab_wtr_soil_sl)
 
     ALLOCATE(mask_in(nc))
     IF (PRESENT(mask)) THEN
