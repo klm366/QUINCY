@@ -825,11 +825,12 @@ CONTAINS
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
     sf_ignitions = calc_q_sf_ignition(nc, ignitions%pop_dens, &
                                     ignitions%a_nd, ignitions%lightning_events, &
-                                    ignitions%max_pop_dens)
+                                    ignitions%max_pop_dens, &
+                                    factor = (config%dtime / config%one_day))
     !< From daily to ts
-    spitfire%e_n_ignitions = sf_ignitions%total * (config%dtime / config%one_day)
-    spitfire%e_n_humans = sf_ignitions%human * (config%dtime / config%one_day)
-    spitfire%e_n_lightning = sf_ignitions%lightning * (config%dtime / config%one_day)
+    spitfire%e_n_ignitions = sf_ignitions%total
+    spitfire%e_n_humans = sf_ignitions%human
+    spitfire%e_n_lightning = sf_ignitions%lightning
 
     !< no ignitions events, no fire conditions
     has_fire_conditions = has_fire_conditions .AND. (spitfire%e_n_ignitions > 0._wp)

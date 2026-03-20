@@ -68,7 +68,8 @@ CONTAINS
   !>
   !> Calculation of total ignitions (lightning + human) based on Section 2.2.1 from Thonicke et al. (2010)
   !>
-  FUNCTION calc_q_sf_ignition(nc, dens_hum_pop, a_nd, n_lightning_ig, max_dens_hum_pop) RESULT (sf_ignitions)
+  FUNCTION calc_q_sf_ignition(nc, dens_hum_pop, a_nd, n_lightning_ig, max_dens_hum_pop, &
+                                factor) RESULT (sf_ignitions)
     INTEGER, INTENT(in)    :: nc                     !< dimensions
     REAL(wp), INTENT(in)   :: dens_hum_pop(nc)       !< average human population density in the grid cell
                                                      !< [individuals km-2]
@@ -77,6 +78,7 @@ CONTAINS
     REAL(wp), INTENT(in)   :: n_lightning_ig(nc)     !< average number of flashes per day [ha-1 d-1]
     REAL(wp), INTENT(in)   :: a_nd(nc)               !< propensity to people to produce ignitions events
                                                      !< [ignitions individual-1 d-1]
+    REAL(wp), INTENT(in)   :: factor                 !< Timestep factor. e.g: daily to 30 min
     TYPE(t_q_sf_ignitions) :: sf_ignitions           !< (output)
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_q_sf_ignition'
@@ -101,9 +103,9 @@ CONTAINS
 
     !< Calculate how likely a fire is about to ignite due to human population
     !< Section 2.2.1, equation 3 from Thonicke et al. (2010)
-    sf_ignitions%human = sel_dens_hum_pop * k_pd * a_nd / 100._wp
+    sf_ignitions%human = sel_dens_hum_pop * k_pd * a_nd / 100._wp * factor
 
-    sf_ignitions%lightning = n_lightning_ig * df_sf_lign_cg * df_sf_lign_eff
+    sf_ignitions%lightning = n_lightning_ig * df_sf_lign_cg * df_sf_lign_eff * factor
     !< Section 2.2, last paragraph (below eq. 2 from Thonicke et al. (2010))
     sf_ignitions%total = sf_ignitions%human + sf_ignitions%lightning
   END FUNCTION calc_q_sf_ignition
