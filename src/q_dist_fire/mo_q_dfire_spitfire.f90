@@ -642,7 +642,7 @@ CONTAINS
                                     live_tree_fuel_100hr_lfp, &
                                     live_tree_fuel_1000hr_lfp)
 
-    CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, &
+    CALL calc_spitfire(nc, df_sf_fc_full_nr, &
                         sf_config, &
                         sf_gridcell_info, &
                         sf_params, &
