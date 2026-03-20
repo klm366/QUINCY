@@ -801,16 +801,11 @@ CONTAINS
           df_sf_sigma_dd_nr, & ! all dead fuel classes
           df_sf_sigma_dd_ros_nr, & ! dead fuel classes involved in fire spread
           df_sf_sigma_lv_nr, & ! live fuel classes
-          fuel_moisture_params%alphas_dead_ober, &
-          fuel_moisture_params%sigmas_dead_ober, &
-          fuel_moisture_params%sigmas_live_ober, &
           met%nesterov_index, &
           params%lctlib_fuel_bulk_density, &
-          fuel_moisture_params%moisture_extinction, &
           u_f_wind, &
           fuel_load, &
-          fuel_moisture_params%lvg_moisture, & ! live grass moisture pre-calculated at fuel.f90
-          fuel_moisture_params%fuel_moisture_ober, & ! outputs
+          fuel_moisture_params, &
           spitfire % fdi, &
           spitfire % ros, &
           mask = has_fire_conditions) ! optional
@@ -965,15 +960,11 @@ CONTAINS
                   ndd, & ! 5=1,10,100,1000 hours, cured live grass
                   nddros, & ! 4 = 1,10,100, cured live grass
                   nlv, & ! 2=live grass, woody
-                  alphas_dd, &
-                  sigmas_dd, sigmas_lv, &
                   nesterov_index, &
                   fuel_bulk_density, &
-                  moisture_extinction, &
                   u_f_wind, &
                   fuel_load, &
-                  lvg_moisture, &
-                  fuel_moisture, & ! outputs
+                  fuel_moisture_params, &
                   fdi, &
                   ros, &
                   mask) ! optional
@@ -991,15 +982,11 @@ CONTAINS
     INTEGER, INTENT(in) :: ndd !< number of fuel classes (1 to 1000 hours ...)
     INTEGER, INTENT(in) :: nddros !< dead fuel classes involved in fire spread (1 to 100 hours and cured live grass)
     INTEGER, INTENT(in) :: nlv !< live fuel classes (live grass and woody)
-    REAL(wp), INTENT(in) :: alphas_dd(:) !< Drying parameter [deg C-2]
-    REAL(wp), INTENT(in) :: sigmas_dd(:), sigmas_lv(:) !< Surface area to volume ratio [cm2/cm3]
     REAL(wp), INTENT(in) :: nesterov_index(:) !< Dryness index [deg C2]
     REAL(wp), INTENT(in) :: fuel_bulk_density(:) !< Fuel bulk density [kg m-3]
-    REAL(wp), INTENT(in) :: moisture_extinction(:) !< Dead moisture of extinction [%]
     REAL(wp), INTENT(in) :: u_f_wind(:) !< Wind speed at vegetation cover [m min-1]
     TYPE(t_sf_fuel_load), INTENT(in) :: fuel_load(:)
-    REAL(wp), INTENT(in) :: lvg_moisture(:) !< [%], Note: up to 250%
-    TYPE(t_mf), INTENT(out) :: fuel_moisture !< Fuel moisture
+    TYPE(t_sf_fuel_moisture), INTENT(inout) :: fuel_moisture_params !< Fuel moisture
     REAL(wp), INTENT(out) :: fdi(:) !< Fire danger index [%]
     TYPE(t_sf_ros), INTENT(out) :: ros !< Rate of spread [-]
     LOGICAL, OPTIONAL :: mask(:) !< True: gridcell enabled
@@ -1017,8 +1004,10 @@ CONTAINS
                       ndd, & ! 5 = 1, 10, 100, 1000 hours and cured live grass
                       nlitros, & ! 3=1, 10 and 100 hours
                       nlv, &
-                      alphas_dd, &
-                      lvg_moisture, &
+                      fuel_moisture_params%alphas_dead_ober, &
+                      fuel_moisture_params%sigmas_dead_ober, &
+                      fuel_moisture_params%sigmas_live_ober, &
+                      fuel_moisture_params%lvg_moisture, &
                       dead_fuel_litter, &
                       fuel_load%Calc_total_cured_live_grass(), &
                       nesterov_index, &
@@ -1035,25 +1024,31 @@ CONTAINS
     woi_lv(:,ix_wdy) = fuel_load%Calc_total_live_tree() * df_sf_units_g_to_kg !< 2= woody fuel
 
     me_dd = moisture_extinction
-    me_lv = calc_live_me(nc, nddros, nlv, fuel_moisture%dead(:,ixs_ros), &
-                          me_dd, woi_dd(:,ixs_ros), woi_lv, sigmas_dd, sigmas_lv, mask)
+    me_lv = calc_live_me(nc, nddros, nlv, &
+                         fuel_moisture_params%fuel_moisture_ober%dead(:,ixs_ros), &
+                          me_dd, woi_dd(:,ixs_ros), woi_lv, &
+                          fuel_moisture_params%sigmas_dead_ober, &
+                          fuel_moisture_params%sigmas_live_ober, &
+                          mask)
 
     !< only involved ROS fuel (and FM)
     ros = sf_calc_rate_of_spread_ober(&
         nc, nddros, nlv, &
         sigmas_dd, sigmas_lv, &
         woi_dd(:,ixs_ros), woi_lv, & ! fuels
-        fuel_moisture%dead(:,ixs_ros), fuel_moisture%live, &
+        fuel_moisture_params%fuel_moisture_ober%dead(:,ixs_ros), &
+        fuel_moisture_params%fuel_moisture_ober%live, &
         me_dd, me_lv, &
         fuel_bulk_density, &
         u_f_wind, &
-        fuel_moisture%val, & ! output too
+        fuel_moisture_params%fuel_moisture_ober%val, & ! output too
         mask) ! optional
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
     !> Eq. 8 from Thonicke et al. (2010)
     WHERE(moisture_extinction > 0._wp)
-      fdi = max(0._wp, 1._wp  - (fuel_moisture%val / moisture_extinction))
+      fdi = max(0._wp, 1._wp  - (fuel_moisture_params%fuel_moisture_ober%val / &
+                                    fuel_moisture_params%moisture_extinction))
     ENDWHERE
 
   END SUBROUTINE calc_spitfire_oberhagemann
