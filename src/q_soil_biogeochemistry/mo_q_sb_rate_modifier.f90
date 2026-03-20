@@ -201,7 +201,7 @@ CONTAINS
             IF (get_year(options%current_datetime) >= 2014) THEN
               IF (get_month(options%current_datetime) == 1 .AND. & 
                     & get_day(options%current_datetime) == 1 .AND. &
-                    & ABS(get_secs_of_day(options%current_datetime) - dtime) < eps1) THEN
+                    & ABS(get_secs_of_day(options%current_datetime) - 2 * dtime) < eps1) THEN
                 rph_decomposition(ic, is)    = rph_decomposition(ic, is) * calc_ph_decom_function(ph_old(ic),delta_ph(ic))
               END IF
             ELSE ! 1851-2014
@@ -210,7 +210,7 @@ CONTAINS
           ELSE ! not future
             IF (get_month(options%current_datetime) == 1 .AND. &
                  & get_day(options%current_datetime) == 1 .AND. &
-                 & ABS(get_secs_of_day(options%current_datetime) - dtime) < eps1) THEN
+                 & ABS(get_secs_of_day(options%current_datetime) - 2 * dtime) < eps1) THEN
               rph_decomposition(ic, is)    = rph_decomposition(ic, is) * calc_ph_decom_function(ph_old(ic),delta_ph(ic))
             END IF
           END IF ! if future or not

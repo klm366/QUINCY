@@ -598,7 +598,7 @@ CONTAINS
       IF (config_ph_future) THEN
         IF (time_year >= 2014) THEN 
           IF (time_month == 1 .AND. time_day == 1) THEN 
-            IF (ABS(time_day_seconds - dtime) < eps1) THEN
+            IF (ABS(time_day_seconds - 2 * dtime) < eps1) THEN
                DO ic = 1, nc
                  ph_fine_root_factor_acc(ic) = ph_fine_root_factor_acc(ic) &
                                             & * calc_ph_on_fine_root_turnover(ph_old(ic), delta_ph(ic))
@@ -610,7 +610,7 @@ CONTAINS
         END IF
       ELSE !not future simulation
         IF (time_month == 1 .AND. time_day == 1) THEN
-         IF (ABS(time_day_seconds - dtime) < eps1) THEN
+         IF (ABS(time_day_seconds - 2 * dtime) < eps1) THEN
            DO ic = 1, nc
               ph_fine_root_factor_acc(ic) = ph_fine_root_factor_acc(ic) &
                                           & * calc_ph_on_fine_root_turnover(ph_old(ic), delta_ph(ic))
