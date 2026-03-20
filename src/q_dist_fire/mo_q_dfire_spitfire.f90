@@ -572,19 +572,6 @@ CONTAINS
 
     no_children = tile%Get_no_of_children()
 
-    ! !< Init variables
-    fuel_load = t_sf_fuel_load(nc, sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
-                                 dead_fuel_1hr_dfp, &
-                                 dead_fuel_10hr_dfp, &
-                                 dead_fuel_100hr_dfp, &
-                                 dead_fuel_1000hr_dfp, &
-                                 cured_live_grass_fuel_1hr_dfp, &
-                                 live_grass_fuel_1hr_lfp, &
-                                 live_tree_fuel_1hr_lfp, &
-                                 live_tree_fuel_10hr_lfp, &
-                                 live_tree_fuel_100hr_lfp, &
-                                 live_tree_fuel_1000hr_lfp)
-
     !< Make sure those values are set to 0, as it means there is no fire.
     ab_moisture_diag = 0._wp
     fuel_moisture = 0._wp
@@ -619,17 +606,14 @@ CONTAINS
     wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
     met = t_sf_met(wind_sf, t_air_min_c, t_air_max_c, precip_daily_mmd, nesterov_index)
 
-    !< Pack vegetation cover fraction
-    veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
-
     ab_moisture = calc_ab_moisture(soil_depth_sl(:,sl_ixs), wtr_soil_sl(:,sl_ixs), wtr_soil_sat_sl(:,sl_ixs), &
                                     mask=mask_is_tile_enabled)
-
     ! Load input data: rate of human-caused ignitions per person [#ign indiv-1 d-]
     ! Todo: further research on this data, currently taken from a paper.
     a_nd = a2l_lightning_events * 4._wp
-    ignitions = t_sf_ignitions(a_nd, ic_pop_dens, a2l_lightning_events, df_sf_max_density_human_pop)
 
+    !< Pack vegetation cover fraction
+    veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
     fuel_moisture_params = t_sf_fuel_moisture(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
                                         df_sf_alphas, & ! thonicke
                                         df_alphas_dead, & ! oberhagemann
@@ -638,11 +622,25 @@ CONTAINS
                                         ab_moisture, lvg_moisture, &
                                         moisture_extinction, fuel_moisture)
 
+    ignitions = t_sf_ignitions(a_nd, ic_pop_dens, a2l_lightning_events, df_sf_max_density_human_pop)
     sf_config = t_sf_config(dtime, one_day, dsl4jsb_Config(Q_DFIRE_)%ros_model_id)
     sf_gridcell_info = t_sf_gridcell_info(burnable_area_ha, veget_cover_frac)
     sf_params = t_sf_params(fuel_bulk_density, fwd_wind_factor, &
                             df_sf_calorific_heat_content, &
                             df_sf_isurface_extinc_th)
+
+    ! !< Init variables
+    fuel_load = t_sf_fuel_load(nc, sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
+                                    dead_fuel_1hr_dfp, &
+                                    dead_fuel_10hr_dfp, &
+                                    dead_fuel_100hr_dfp, &
+                                    dead_fuel_1000hr_dfp, &
+                                    cured_live_grass_fuel_1hr_dfp, &
+                                    live_grass_fuel_1hr_lfp, &
+                                    live_tree_fuel_1hr_lfp, &
+                                    live_tree_fuel_10hr_lfp, &
+                                    live_tree_fuel_100hr_lfp, &
+                                    live_tree_fuel_1000hr_lfp)
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, &
                         sf_config, &
