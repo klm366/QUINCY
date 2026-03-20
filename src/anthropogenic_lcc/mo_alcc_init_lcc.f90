@@ -24,8 +24,8 @@ MODULE mo_alcc_init_lcc
   USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_lcc,             ONLY: init_lcc, count_descendants_for_up_to_2layers, &
     &                               collect_names_of_descendant_leaves_up_to_2layers
-  USE mo_jsb_cqt_class,       ONLY: LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
-    &                               BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE, &
+  USE mo_jsb_cqt_class,       ONLY: LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, &
+    &                               PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE, &
     &                               IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE
 
   dsl4jsb_Use_processes ALCC_
@@ -71,7 +71,8 @@ CONTAINS
       ALLOCATE(passive_cqts(4))
 
       active_cqts = (/ LIVE_CARBON_CQ_TYPE /)
-      passive_cqts = (/ PRODUCT_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, FLUX_C_CQ_TYPE /)
+      passive_cqts = (/ PRODUCT_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, &
+        &               FLUX_C_CQ_TYPE /)
     ELSE IF (model%config%model_scheme == MODEL_QUINCY) THEN
       ! Note: due to the complexity of the bgcms the lcc framework is not used for active relocation with quincy.
       !       Active variables are instead explicitly relocated within the alcc update task.

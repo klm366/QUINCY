@@ -28,10 +28,11 @@ MODULE mo_nlcc_config_class
   PUBLIC :: t_nlcc_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_nlcc_config
-    LOGICAL             :: &
+    LOGICAL             ::  &
       & init_running_means, &
-      & init_nlcc
-    REAL(wp)            :: &
+      & init_nlcc,          &
+      & climbuf_only
+    REAL(wp)            ::  &
       & accelerate_nlcc
 
    CONTAINS
@@ -98,9 +99,10 @@ CONTAINS
     config%bc_filename         = bc_filename
     config%init_running_means  = init_running_means
     IF (init_running_means) CALL message(TRIM(routine), 'Initializing climate buffer')
-    config%init_nlcc         = init_nlcc
+    config%init_nlcc           = init_nlcc
     IF (init_nlcc) CALL message(TRIM(routine), 'Initializing NLCC')
-    config%accelerate_nlcc   = accelerate_nlcc
+    config%climbuf_only        = .FALSE. ! Can only be activated by using vertical carbon yasso
+    config%accelerate_nlcc     = accelerate_nlcc
     IF (accelerate_nlcc /= 1._wp) THEN
       WRITE(message_text, *) 'NLCC calculations accelerated by factor ', accelerate_nlcc
       CALL message(TRIM(routine), message_text)

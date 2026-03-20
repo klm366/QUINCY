@@ -97,13 +97,16 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_nlcc_memory'
 
+    dsl4jsb_Def_config(NLCC_)
+
     model => Get_model(model_id)
+
+    dsl4jsb_Get_config(NLCC_)
 
     table = tables(1)
 
     hgrid     => Get_grid(mem%grid_id)
     surface   => Get_vgrid('surface')
-    pft_vgrid => Get_vgrid('pfts')
 
     CALL mem%Add_var('temp_sum_day', mem%temp_sum_day,                        &
       & hgrid, surface,                                                       &
@@ -168,6 +171,11 @@ CONTAINS
       & prefix, suffix,                                                       &
       & output_level=FULL,                                                   &
       & initval_r=0.0_wp )
+
+    IF (dsl4jsb_config(NLCC_)%climbuf_only .OR. &
+       .NOT. dsl4jsb_config(NLCC_)%active) RETURN
+
+    pft_vgrid => Get_vgrid('pfts')
 
     CALL mem%Add_var('act_fpc', mem%act_fpc,                                  &
       & hgrid, pft_vgrid,                                                     &

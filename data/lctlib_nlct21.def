@@ -196,6 +196,9 @@ BCLIMIT_MIN_TEMPRANGE -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1000.0 -1
 #BCLIMIT_MIN_GDD: PFT-specific minimum growing degree days (at or above 5 deg C)                     
 BCLIMIT_MIN_GDD 0.0 0.0 0.0 400.0 400.0 0.0 0.0 0.0 0.0 900.0 350.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
                      
+#BCLIMIT_MIN_SNOW: PFT-specific minimum snow height                     
+BCLIMIT_MIN_SNOW 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+                     
 #GDD_BASE: PFT-specific GDD base                     
 GDD_BASE 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0
                      
@@ -261,9 +264,24 @@ WoodLit_coef 1.0000 0.6500 0.6500 0.6900 0.7300 0.7300 0.7300 0.6900 0.6900 0.73
 #WoodLitterSize:                     
 WoodLitterSize 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4
                      
+#root_dist_beta: cumulative root density distribution as beta distribution according to Jackson et al. 1996                     
+root_dist_beta -99.000 0.962 0.961 0.976 0.966 0.966 0.966 0.976 0.966 0.964 0.964 0.943 0.972 -99.000 0.943 0.972 0.914 -99.000 0.961 0.943 0.972
+#                     
+# 0.943 for peatlands                     
+                     
+# emission factors for plant produced isoprene                     
+em_fac_iso 0.0 10000.0 10000.0 6000.0 3200.0 10000.0 10000.0 3200.0 3200.0 3400.0 6800.0 2000.0 350.0 1200.0 2000.0 350.0 0.0 0.0 1000.0 1000.0 1000.0
+                     
+# emission factors for plant produced CO                     
+em_fac_CO 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0 1000.0
+                     
+# emission factors for plant produced NO                     
+em_fac_NO 0.0 5.0 5.0 6.0 5.0 5.0 5.0 5.0 5.0 30.0 30.0 70.0 70.0 70.0 70.0 70.0 0.0 0.0 70.0 70.0 70.0
+                     
 #                     
 # Parameters for Spitfire fire algorithm (Thonicke et al. 2010)                     
 #                     
+                     
 #moist_extinction: moisture of extinction used to determine rate of spread in spitfire units: [-]                     
 moist_extinction 0 0.2 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2
                      
