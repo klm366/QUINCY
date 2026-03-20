@@ -2326,8 +2326,23 @@ CONTAINS
       config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
       config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
+      ! determine relative soil moisture on all layers (needed for vertical yasso scheme)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          IF ( wtr_soil_avail_max_sl(ic,is) > 0._wp) THEN
+            wtr_soil_rel_sl(ic,is) =  MIN(wtr_soil_avail_sl(ic,is) / wtr_soil_avail_max_sl(ic,is), 1._wp)
+          ELSE
+            ! weq_rootzone_max is zero for glacier tiles
+            wtr_soil_rel_sl(ic,is) = 0._wp
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+
       ! Calculate water stress factor
-      ! TODO: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
+      ! TODO: maybe use the distributed permanent wilting point/field cap from above and
+      ! change get_water_stress_factor function
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         water_stress(ic) = &
@@ -2375,30 +2390,6 @@ CONTAINS
     END IF
 
     !$ACC END DATA
-
-    ! determine relative soil moisture on all layers
-    DO is = 1, nsoil
-      DO ic = 1, nc
-        IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
-          wtr_max_sl = MAX(wpi_fcap_soil_sl(ic,is) - ice_soil_sl(ic,is) - wtr_soil_pot_scool_sl(ic,is), 0._wp)
-        ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
-          wtr_max_sl = MAX(wpi_fcap_soil_sl(ic,is) - ice_soil_sl(ic,is), 0._wp)
-        ELSE
-          wtr_max_sl = MAX(wpi_fcap_soil_sl(ic,is), 0._wp)
-        END IF
-        IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
-          wtr_avail_sl = MAX(wtr_soil_sl(ic,is) - MIN(wtr_soil_pot_scool_sl(ic,is), wtr_soil_sl(ic,is)), 0._wp)
-        ELSE
-          wtr_avail_sl = wtr_soil_sl(ic,is)
-        END IF
-        IF (wtr_max_sl > 0._wp) THEN
-          wtr_soil_rel_sl(ic,is) =  MIN(wtr_avail_sl / wtr_max_sl, 1._wp)
-        ELSE
-          ! weq_rootzone_max is zero for glacier tiles
-          wtr_soil_rel_sl(ic,is) = 0._wp
-        END IF
-      END DO
-    END DO
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
