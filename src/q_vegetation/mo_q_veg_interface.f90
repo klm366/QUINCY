@@ -862,19 +862,19 @@ CONTAINS
   !>
   !> calculations of vegetation diagnostic global sums
   !>
-  SUBROUTINE global_q_veg_diagnostics(tile)
+  SUBROUTINE global_q_veg_diagnostics(tile, global_land_area, land_area_scaling)
 
     USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N
     USE mo_jsb_math_constants,      ONLY: one_day, one_year
-    USE mo_sync,                    ONLY: global_sum_array
-    USE mo_jsb_grid,                ONLY: Get_grid
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
-
-    ! Local variables
-    !
-    TYPE(t_jsb_model), POINTER      :: model
-    TYPE(t_jsb_grid),  POINTER      :: grid
+    USE mo_jsb_control,             ONLY: acc_stream
+    USE mo_util,                    ONLY: scaled_global_sum_2D
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
+    REAL(wp),                   INTENT(in) :: global_land_area       !< Global land area
+    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER  :: model
+    CHARACTER(len=*), PARAMETER :: routine = modname//':global_q_veg_diagnostics'
 
     REAL(wp), POINTER       :: total_veg_c_gsum(:)
     REAL(wp), POINTER       :: total_prod_c_gsum(:)
@@ -883,15 +883,6 @@ CONTAINS
     REAL(wp), POINTER       :: gpp_gsum(:)
     REAL(wp), POINTER       :: npp_gsum(:)
     REAL(wp), POINTER       :: nuptake_gsum(:)
-    REAL(wp)                :: global_land_area
-
-    REAL(wp), POINTER      :: area(:,:)
-    REAL(wp), POINTER      :: notsea(:,:)
-    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
-    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
-    REAL(wp), ALLOCATABLE  :: scaling (:,:)
-
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_q_veg_diagnostics'
 
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
@@ -906,12 +897,8 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: uptake_nh4
     dsl4jsb_Real2D_onDomain :: uptake_no3
     dsl4jsb_Real2D_onDomain :: gross_assimilation
-
+    ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
-    grid  => Get_grid(model%grid_id)
-    area         => grid%area(:,:)
-    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
@@ -939,50 +926,51 @@ CONTAINS
     npp_gsum           => VEG__mem%npp_gsum%ptr(:)                     ! out
     nuptake_gsum       => VEG__mem%nuptake_gsum%ptr(:)                 ! out
 
-    ! Domain Mask - to mask all halo cells for global sums (otherwise these cells are counted twice)
-    ALLOCATE(in_domain(grid%nproma,grid%nblks))
-    ALLOCATE(scaling(grid%nproma,grid%nblks))
-
-    WHERE (is_in_domain(:,:))
-      in_domain = 1._wp
-    ELSEWHERE
-      in_domain = 0._wp
-    END WHERE
-
     ! Calculate global carbon inventories, if requested for output
     !  => Conversion from [mol(C)/m^2] to [PgC]
     !     1 mol C = molar_massC g C   => 1 mol C = molar_mass_C * e-15 Pg C
-    scaling(:,:) = molar_mass_C * 1.e-15_wp * notsea(:,:) * area(:,:) * in_domain(:,:)
-    IF (VEG__mem%total_veg_c_gsum%is_in_output)        &
-          &  total_veg_c_gsum        = global_sum_array(veg_pool_total_c(:,:)        * scaling(:,:))
-    IF (VEG__mem%total_prod_c_gsum%is_in_output)        &
-          &  total_prod_c_gsum        = global_sum_array(veg_products_total_c(:,:)   * scaling(:,:))
+    IF (VEG__mem%total_veg_c_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(total_veg_c_gsum, veg_pool_total_c, land_area_scaling, molar_mass_C * 1.e-15_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%total_veg_c_gsum%ptr(:))
+    END IF
+    IF (VEG__mem%total_prod_c_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(total_prod_c_gsum, veg_products_total_c, land_area_scaling, molar_mass_C * 1.e-15_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%total_prod_c_gsum%ptr(:))
+    END IF
 
     ! Calculate global land means variables, if requested for output
-    global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
-    scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
-    IF (VEG__mem%lai_gmean%is_in_output)     &
-      &  lai_gmean     = global_sum_array(lai(:,:)    * scaling(:,:)) / global_land_area
-    IF (VEG__mem%fract_fpc_gmean%is_in_output)  &
-      &  fract_fpc_gmean  = global_sum_array(fract_fpc(:,:) * scaling(:,:)) / global_land_area
+    IF (VEG__mem%lai_gmean%is_in_output) THEN
+      CALL scaled_global_sum_2D(lai_gmean, lai, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%lai_gmean%ptr(:))
+    END IF
+    IF (VEG__mem%fract_fpc_gmean%is_in_output) THEN
+      CALL scaled_global_sum_2D(fract_fpc_gmean, fract_fpc, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%fract_fpc_gmean%ptr(:))
+    END IF
 
     ! Calculate global BGC fluxes, if requested for output
     !  => Conversion from [ummol/m^2/s] to [PgC/yr]
     !     1 mu mol C = molar_massC g C e-6  => 1 Pg = molar_mass_C * e-15 * e-6
     !     1 s times one_day (60*60*24) time one_year (365)
-    scaling(:,:) = molar_mass_C * 1.e-21_wp * (one_day*one_year) * notsea(:,:) * area(:,:) * in_domain(:,:)
-    IF (VEG__mem%gpp_gsum%is_in_output)        &
-          &  gpp_gsum        = global_sum_array(gross_assimilation(:,:) * scaling(:,:))
-    IF (VEG__mem%npp_gsum%is_in_output)        &
-          &  npp_gsum        = global_sum_array(npp(:,:) * scaling(:,:))
+    IF (VEG__mem%gpp_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(gpp_gsum, gross_assimilation, land_area_scaling, &
+          & molar_mass_C * 1.e-21_wp * (one_day*one_year), acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%gpp_gsum%ptr(:))
+    END IF
+    IF (VEG__mem%npp_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(npp_gsum, npp, land_area_scaling, &
+          & molar_mass_C * 1.e-21_wp * (one_day*one_year), acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%npp_gsum%ptr(:))
+    END IF
+
     !  => Conversion from [ummol/m^2/s] to [TgN/yr]
     !     1 mu mol N = molar_massN g N e-6  => 1 Tg = molar_mass_N * e-12 * e-6
     !     1 s times one_day (60*60*24) time one_year (365)
-    scaling(:,:) = molar_mass_N * 1.e-18_wp * (one_day*one_year) * notsea(:,:) * area(:,:) * in_domain(:,:)
-    IF (VEG__mem%nuptake_gsum%is_in_output)        &
-          &  nuptake_gsum        = global_sum_array((uptake_nh4(:,:)+uptake_no3(:,:)) * scaling(:,:))
-
-    DEALLOCATE (scaling, in_domain)
+    IF (VEG__mem%nuptake_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(nuptake_gsum, uptake_no3, land_area_scaling, &
+          & molar_mass_N * 1.e-18_wp * (one_day*one_year), acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%nuptake_gsum%ptr(:))
+    END IF
 
   END SUBROUTINE global_q_veg_diagnostics
 
