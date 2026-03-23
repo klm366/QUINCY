@@ -142,7 +142,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_sb_config(config)
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_util_string,           ONLY: tolower
+    USE mo_util,                  ONLY: tolower
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,              ONLY: Register_vgrid
     USE mo_jsb_io,                ONLY: ZAXIS_GENERIC
