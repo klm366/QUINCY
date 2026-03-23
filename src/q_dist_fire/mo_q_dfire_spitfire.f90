@@ -622,7 +622,7 @@ CONTAINS
                             df_sf_calorific_heat_content, &
                             df_sf_isurface_extinc_th)
 
-    ! !< Init variables
+    ! !< Init fuel
     fuel_load = t_sf_fuel_load(nc, sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
                                     dead_fuel_1hr_dfp, &
                                     dead_fuel_10hr_dfp, &
@@ -643,7 +643,6 @@ CONTAINS
                         ignitions, &
                         fuel_load, &
                         met, &
-                        fuel_moisture, & ! fuel properties
                         sf_spitfire, &
                         mask=mask_is_tile_enabled)
 
@@ -704,7 +703,6 @@ CONTAINS
                   ignitions, &
                   fuel_load, &
                   met, &
-                  fuel_moisture, & ! out
                   spitfire, & ! out
                   mask)
 
@@ -724,8 +722,6 @@ CONTAINS
     TYPE(t_sf_ignitions), INTENT(in) :: ignitions !< Ignition related inputs
     TYPE(t_sf_fuel_load), INTENT(in) :: fuel_load !< [g DM m-2]
     TYPE(t_sf_met), INTENT(inout) :: met
-
-    REAL(wp), INTENT(out) :: fuel_moisture(nc,df_sf_omegas_nr)     !< Fuel moisture (#nc, #omega_nr (omega_o, omega_nl))
 
     TYPE(t_sf_spitfire), INTENT(out)    :: spitfire                !< Spitfire outputs
     LOGICAL, INTENT(in), OPTIONAL       :: mask(nc)
