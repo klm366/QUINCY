@@ -61,6 +61,8 @@ MODULE mo_sse_memory_class
       & grnd_hflx,            & !< ground heat flux
       & grnd_hflx_old,        & !< ground heat flux (old)
       & thaw_depth,           & !< Thawing depth [m]
+      & thaw_cycle,           & !< Freeze-thaw cycle number this year
+      & thaw_cycle_prev,      & !< Freeze-thaw cycle number prev year
       & thaw_depth_max,       & !< Maximum thaw depth [m]
       & thaw_depth_max_ym1      !< Last year's maximum thaw depth [m]
 
@@ -340,6 +342,22 @@ CONTAINS
         & initval_r = 0.0_wp)
     END SELECT
 #endif
+
+    CALL mem%Add_var( 'thaw_cycle', mem%thaw_cycle,                          &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_cycle', '', 'Number of freeze-thaw cycles'),              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.TRUE., lrestart_cont=.TRUE.,                                                     &
+      & output_level=FULL)
+
+    CALL mem%Add_var( 'thaw_cycle_prev', mem%thaw_cycle_prev,                &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_cycle_prev', '', 'Number of freeze-thaw cycles prev year'),  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.true., lrestart_cont=.TRUE.,                                                     &
+      & output_level=FULL)
 
   END SUBROUTINE Init_sse_memory
 

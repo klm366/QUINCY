@@ -174,6 +174,7 @@ MODULE mo_hydro_memory_class
       & wtr_soil_pot_sl,      & !< Soil water potential per layer                        [MPa]
       & hyd_cond_sat_sl,      & !< Saturated hydraulic conductivity                      [m/s]
       & wtr_soil_sl,          & !< Water content in soil layers                          [m]
+      & wtr_soil_rel_sl,      & !< Water content in soil layers, relative to maximum     []
       & ice_soil_sl,          & !< Ice content in soil layers                            [m]
       & vol_weq_soil_sl,      & !< Volumetric water content (liquid+ice) in soil
                                 !< layers (Water content below bedrock depth is zero.)   [m3/m3]
@@ -991,6 +992,14 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & loutput=.TRUE., output_level=BASIC,                                  &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_soil_rel_sl', mem%wtr_soil_rel_sl,                &
+        & hgrid, soil_w,                                                       &
+        & t_cf('wtr_soil_rel_sl', '1', 'Water content of soil layers, relative to maximum'),            &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'ice_soil_sl', mem%ice_soil_sl,                        &
