@@ -436,8 +436,9 @@ CONTAINS
     & alb_nir_dif,      &
     & kh,               &
     & km,               &
-    & kh_neutral,       &
-    & km_neutral,       &
+    & interp_fac_2m,    &
+    & interp_fac_10m,   &
+    & interp_fac_tsfc,  &
     & CO2_flux          &
     & )
 
@@ -489,8 +490,9 @@ CONTAINS
       & alb_nir_dif       (:), &
       & kh                (:), &
       & km                (:), &
-      & kh_neutral        (:), &
-      & km_neutral        (:), &
+      & interp_fac_2m     (:), &
+      & interp_fac_10m    (:), &
+      & interp_fac_tsfc   (:), &
       & CO2_flux          (:)
 
     ! Local variables
@@ -571,8 +573,9 @@ CONTAINS
       & alb_nir_dif        = alb_nir_dif,        &
       & kh                 = kh,                 &
       & km                 = km,                 &
-      & kh_neutral         = kh_neutral,         &
-      & km_neutral         = km_neutral,         &
+      & interp_fac_2m      = interp_fac_2m,      &
+      & interp_fac_10m     = interp_fac_10m,     &
+      & interp_fac_tsfc    = interp_fac_tsfc,    &
       & CO2_flux           = CO2_flux            &
       & )
     NULLIFY(tile)
