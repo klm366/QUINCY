@@ -36,7 +36,9 @@ MODULE mo_carbon_config_class
                             !            in the experiment jobs following the first one! Or re-set it manually!
     LOGICAL  :: diag_humus_fluxes ! Activate diagnostic carbon fluxes to and from the yasso humus pools
                                   ! required for analytical humus pool equilibration (compare jsb3.2 svn rev 9934)
-    LOGICAL  :: on_soillev  ! Carbon calculated on vertical grid: soil layers
+    LOGICAL  :: on_soillev  ! T: Carbon calculated on vertical grid (soil layers)
+    LOGICAL  :: clear_frozen
+    REAL(wp) :: resp_rate_modifier
     REAL(wp) :: fire_fract_wood_2_atmos
 
    CONTAINS
@@ -67,6 +69,9 @@ CONTAINS
     LOGICAL                     :: with_nitrogen
     LOGICAL                     :: read_cpools, diag_humus_fluxes
     LOGICAL                     :: on_soillev
+    LOGICAL                     :: clear_frozen
+    REAL(wp)                    :: resp_rate_modifier
+
     REAL(wp)                    :: fire_fract_wood_2_atmos
     ! LOGICAL           :: lemissions
 
@@ -79,7 +84,8 @@ CONTAINS
          read_cpools,              &
          diag_humus_fluxes,        &
          on_soillev,               &
-         fire_fract_wood_2_atmos
+         clear_frozen,             &
+         resp_rate_modifier
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -102,6 +108,8 @@ CONTAINS
     read_cpools            = .FALSE.
     diag_humus_fluxes      = .FALSE.
     on_soillev             = .FALSE.
+    clear_frozen           = .FALSE.
+    resp_rate_modifier      = 1._wp
     fire_fract_wood_2_atmos = FireFracWood2Atmos
 
     ! Read namelist
@@ -121,6 +129,8 @@ CONTAINS
     config%read_cpools            = read_cpools
     config%diag_humus_fluxes      = diag_humus_fluxes
     config%on_soillev             = on_soillev
+    config%clear_frozen           = clear_frozen
+    config%resp_rate_modifier     = resp_rate_modifier
     config%fire_fract_wood_2_atmos = fire_fract_wood_2_atmos
 
     IF (on_soillev) THEN

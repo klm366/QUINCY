@@ -149,6 +149,7 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: CanopyResistanceMin  !< Minimum canopy resistance (optional, only used in VIC scheme
                                                  !< and if BETHY is not used)
     REAL(wp) :: StemArea             !< Area of stems and branches of woody plants
+    REAL(wp) :: root_dist_beta       !< Beta for exponential decaying root distribution with depth [cm-1]
 
     ! --- QUINCY model parameters (MPI-BGC Jena) ---------------------------------------------------------------------------------
     INTEGER  :: growthform
@@ -373,6 +374,7 @@ CONTAINS
     LOGICAL            :: exists_woodlit_coef             = .FALSE.
     LOGICAL            :: exists_leaflit_coef             = .FALSE.
     LOGICAL            :: exists_litveg_coef              = .FALSE.
+    LOGICAL            :: exists_root_dist_beta           = .FALSE.
     ! quincy model - start
     LOGICAL            :: exists_growthform = .FALSE.
     LOGICAL            :: exists_ps_pathway = .FALSE.
@@ -793,6 +795,9 @@ CONTAINS
           CASE ('woodlittersize')                                ! PFT-specific wood liter size (needed for wood decomposition)
              READ(line(pos:length),*) lctlib(1:nlct)%WoodLitterSize
              exists_woodlittersize_coef = .TRUE.
+          CASE ('root_dist_beta')                                ! PFT-specific exponent for root distribution
+             READ(line(pos:length),*) lctlib(1:nlct)%root_dist_beta
+             exists_root_dist_beta = .TRUE.
           CASE default
             ! nothing to do
           END SELECT
@@ -1194,6 +1199,8 @@ CONTAINS
               CALL finish('init_lctlib','No data for LEAFLIT_COEF found in '//TRIM(lctlib_file_name))
          IF(.NOT. exists_litveg_coef) &
               CALL finish('init_lctlib','No data for LITVEG_COEF found in '//TRIM(lctlib_file_name))
+         IF(.NOT. exists_root_dist_beta) &
+              CALL finish('init_lctlib','No data for ROOT_DIST_BETA found in '//TRIM(lctlib_file_name))
          !------------------------------------------------------------------------------------------
          ! kalle, 151004
          ! Set carbox rate to  [Mol(CO2)/m^2/s]
@@ -1634,6 +1641,7 @@ CONTAINS
           CALL p_bcast(lctlib(:)%WoodLit_coef(i), p_io, mpi_comm)
         END DO
         CALL p_bcast(lctlib(:)%WoodLitterSize, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%root_dist_beta, p_io, mpi_comm)
       END IF
 #ifndef __NO_QUINCY__
       ! model schmeme: quincy

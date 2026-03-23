@@ -75,9 +75,6 @@ CONTAINS
       c_ethanol_bg2_sl,                       &
       c_nonsoluble_bg2_sl,                    &
       c_humus_2_sl,                           &
-      ! debugging
-      Y_debug,                                &
-      Y_debug_sl,                             &
       ! Output fluxes
       c_decomp_humus_1_sum,                   &
       c_decomp_humus_2_sum,                   &
@@ -162,9 +159,6 @@ CONTAINS
     REAL(wp),                   INTENT(inout) :: c_nonsoluble_bg2_sl(:)   ! Non-soluble litter pool
     REAL(wp),                   INTENT(inout) :: c_humus_2_sl(:)          ! Humus litter pool
 
-    REAL(wp),                   INTENT(inout) :: Y_debug                  ! debugging
-    REAL(wp),                   INTENT(inout) :: Y_debug_sl(:)            ! debugging
-
     ! Decomposition fluxes
     REAL(wp),                   INTENT(inout) :: c_decomp_humus_1_sum     ! annual cflux sum of humus decomposed (leaf)
     REAL(wp),                   INTENT(inout) :: c_decomp_humus_2_sum     ! annual cflux sum of humus decomposed (wood)
@@ -237,15 +231,6 @@ CONTAINS
     d_water_sl  = get_modifier_water(wtr_soil_rel_sl)
     d_depth_sl  = get_modifier_depth(layer_depth)
     d_size_wood = get_modifier_size(MiscPar(i_WoodLitSize))
-
-!     Y_debug = d_water
-!     Y_debug_sl(:) = d_water_sl(:)
-!     Y_debug = d_temp
-!     Y_debug_sl(:) = d_temp_sl(:)
-
-!     d_temp_sl(:) = d_temp
-!     d_water_sl(:) = d_water
-!     d_depth_sl(:) = 1._wp
 
     ! -------------------------------
     ! call YASSO for dry / oxic areas
@@ -441,8 +426,6 @@ CONTAINS
                                    WoodLit_coefV)
     END DO
 
-    Y_debug_sl(:) = root_dist_sl(:)
-
     ! ----------------------------------------------------------------------------------------
     ! vertical mixing
 
@@ -451,9 +434,6 @@ CONTAINS
           &             c_ethanol_ag1, c_ethanol_bg1_sl, c_ethanol_ag2, c_ethanol_bg2_sl, &
           &             c_nonsoluble_ag1, c_nonsoluble_bg1_sl, c_nonsoluble_ag2, c_nonsoluble_bg2_sl, &
           &             c_humus_1_sl, c_humus_2_sl, max_depth, max_depth_sl, layer_thick, permafrost_layer)
-
-!       Y_debug_sl(:) = soil_depth_sl(:)
-      Y_debug = thaw_depth
 
       CALL set_diffusivity(diff_coeff, soil_depth, soil_depth_sl, thaw_depth, thaw_depth_sl, &
                            max_depth, max_depth_sl, layer_depth, layer_thick, &
@@ -480,8 +460,6 @@ CONTAINS
       CALL remove_C_below_bedrock(c_nonsoluble_bg2_sl, soil_depth, layer_thick)
       CALL remove_C_below_bedrock(c_humus_1_sl, soil_depth, layer_thick)
       CALL remove_C_below_bedrock(c_humus_2_sl, soil_depth, layer_thick)
-
-!       Y_debug_sl(:) = c_acid_bg1_sl(:)
 
   END SUBROUTINE calc_vertical_soil_c
 

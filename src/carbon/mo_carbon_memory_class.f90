@@ -103,6 +103,10 @@ MODULE mo_carbon_memory_class
       !runoff_sum,                 & ! used to accumulate runoff over a day.  R: Nicht notwendig in JS4.
       soil_respiration,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(canopy)].
                                     ! Without N limitation!
+      soil_respiration_oxic,      & ! mean daily rate of heterotrophic (oxid soils) respiration [mol m-2(canopy)].
+                                    ! Without N limitation!
+      soil_respiration_anox,      & ! mean daily rate of heterotrophic (anoxid soils) respiration [mol m-2(canopy)].
+                                    ! Without N limitation! Only with methane processes active
       NPP_flux_correction,        & ! Daily updated flux correction from yesterdays carbon balance
                                     ! [mol(CO2)/m^2(canopy) s]
                                     ! Amount by which the NPP rate entering the routine has to be corrected. This
@@ -188,6 +192,10 @@ MODULE mo_carbon_memory_class
 !      GPP_sum_ta,                    & ! used to accumulated GPP-Rate over a day
       soil_respiration_ta,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(tile area)].
                                        ! Without N limitation!
+      soil_respiration_oxic_ta,      & ! mean daily rate of heterotrophic (oxic soils) respiration [mol(CO2)/m^2(tile area)].
+                                       ! Without N limitation!
+      soil_respiration_anox_ta,      & ! mean daily rate of heterotrophic (anoxic soils) respiration [mol(CO2)/m^2(tile area)].
+                                       ! Without N limitation! Only with methane process active
       NPP_flux_correction_ta,        & ! Daily updated flux correction from yesterdays carbon balance
                                     ! [mol(CO2)/m^2(tile area) s]
                                     ! Amount by which the NPP rate entering the routine has to be corrected. This
@@ -624,6 +632,21 @@ CONTAINS
       & prefix, suffix,                                                        &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
+    CALL mem%Add_var('soil_respiration_oxic', mem%soil_respiration_oxic,       &
+      & hgrid, surface,                                                        &
+      & t_cf('soil_respiration_oxic', 'mol(C) m-2(canopy) s-1', 'Soil respiration from oxic soils.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+      & prefix, suffix,                                                        &
+      & output_level=BASIC,                                                    &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('soil_respiration_anox', mem%soil_respiration_anox,       &
+      & hgrid, surface,                                                        &
+      & t_cf('soil_respiration_anox', 'mol m-2(canopy) s-1', 'Soil respiration from anoxic soils.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+      & prefix, suffix,                                                        &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
     CALL mem%Add_var('npp_flux_correction', mem%NPP_flux_correction,                                 &
       & hgrid, surface,                                                                              &
       & t_cf('NPP_flux_correction', 'mol(C) m-2(canopy) s-1',                                        &
@@ -965,6 +988,22 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
       & output_level=BASIC,                                                 &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+    CALL mem%Add_var('soil_respiration_oxic_ta', mem%soil_respiration_oxic_ta,     &
+      & hgrid, surface,                                                            &
+      & t_cf('soil_respiration_oxic_ta', 'mol(C) m-2 s-1', 'Soil respiration from oxic soils.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+      & prefix, suffix,                                                            &
+      & output_level=BASIC,                                                        &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+    CALL mem%Add_var('soil_respiration_anox_ta', mem%soil_respiration_anox_ta,     &
+      & hgrid, surface,                                                            &
+      & t_cf('soil_respiration_anox_ta', 'mol(C) m-2 s-1', 'Soil respiration from anoxic soils.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+      & prefix, suffix,                                                            &
+      & output_level=BASIC,                                                        &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('npp_flux_corr_ta', mem%NPP_flux_correction_ta,                                 &
