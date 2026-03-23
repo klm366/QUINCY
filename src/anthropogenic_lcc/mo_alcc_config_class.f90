@@ -72,23 +72,11 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER    :: pft_layer
     TYPE(t_jsb_vgrid), POINTER    :: trans_layer
     INTEGER                       :: i, nr_of_pfts
-    ! Todo-AKN: fill trans_names, from_class, to_class and pft_class depending on use case (jsbach_pfts, jsbach_12pfts, etc.)
-    !CHARACTER(len=15), PARAMETER  :: trans_names(12) = [character(len=15) :: &      !< names of transition types for use case 'jsbach_12pfts'
-    !        'c3crop2c4crop', 'c3crop2pasture', 'c3crop2natural',  & 
-    !        'c4crop2c3crop', 'c4crop2pasture', 'c4crop2natural',  & 
-    !        'pasture2c3crop', 'pasture2c4crop', 'pasture2natural', &
-    !        'natural2c3crop', 'natural2c4crop', 'natural2pasture']
-    CHARACTER(len=15), PARAMETER  :: trans_names(6) = [character(len=15) :: &      !< names of transition types for use case 'jsbach_pfts'
-            'crop2pasture', 'crop2natural',  & 
-            'pasture2crop', 'pasture2natural', &
-            'natural2crop', 'natural2pasture']
-    
-    INTEGER, PARAMETER            :: from_class(6) = [3, 3, 2, 2, 1, 1] 
-                                     !< index for class that loses area through a transition (1: natural, 2: pasture, 3: crop)
-    INTEGER, PARAMETER            :: to_class(6)   = [2, 1, 3, 1, 3, 2] 
-                                     !< index for class that gains area through a transition
-    INTEGER, PARAMETER            :: pft_class(11) = [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3] 
-                                     !< index that associates each PFT type with a class
+    ! trans_names, from_class, to_class and pft_class are filled below depending on use case (jsbach_pfts, jsbach_12pfts, etc.)
+    CHARACTER(len=15), ALLOCATABLE :: trans_names(:)  !< names of transition types
+    INTEGER, ALLOCATABLE           :: from_class(:)   !< class losing area per transition (1: natural, 2: pasture, 3: c3crop/crop, 4: c4crop)
+    INTEGER, ALLOCATABLE           :: to_class(:)     !< class gaining area per transition
+    INTEGER, ALLOCATABLE           :: pft_class(:)    !< class index for each PFT
 
     NAMELIST /jsb_alcc_nml/      &
          active,                 &
@@ -133,13 +121,47 @@ CONTAINS
     config%alcc_filename_prefix = alcc_filename_prefix
     config%alcc_transitions_filename_prefix = alcc_transitions_filename_prefix
     config%scheme               = scheme
-    ALLOCATE(config%trans_names(SIZE(trans_names)))
-    config%trans_names          = trans_names
-    config%from_class           = from_class
-    config%to_class             = to_class
-    config%pft_class            = pft_class
     config%l_daily_alcc         = l_daily_alcc
     config%nr_of_pfts           = nr_of_pfts
+
+    SELECT CASE (TRIM(tolower(config%scheme)))
+    CASE ('transition')
+
+      ! Fill trans_names, from_class, to_class and pft_class based on the model use case
+      SELECT CASE (TRIM(config%model_config%usecase))
+      CASE ('jsbach_pfts')
+        ALLOCATE(trans_names(6))
+        trans_names = [character(len=15) :: &              !< 6 transition types for 'jsbach_pfts' (11 PFTs)
+          'crop2pasture',   'crop2natural',   &
+          'pasture2crop',   'pasture2natural', &
+          'natural2crop',   'natural2pasture']
+        ALLOCATE(from_class(6), to_class(6))
+        from_class = [3, 3, 2, 2, 1, 1]                   ! 1: natural, 2: pasture, 3: crop
+        to_class   = [2, 1, 3, 1, 3, 2]
+        ALLOCATE(pft_class(11))
+        pft_class  = [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3]   ! 8 natural, 2 pasture, 1 crop
+      CASE ('jsbach_12pfts')
+        ALLOCATE(trans_names(12))
+        trans_names = [character(len=15) :: &              !< 12 transition types for 'jsbach_12pfts' (12 PFTs)
+          'c3crop2c4crop',  'c3crop2pasture',  'c3crop2natural',  &
+          'c4crop2c3crop',  'c4crop2pasture',  'c4crop2natural',  &
+          'pasture2c3crop', 'pasture2c4crop',  'pasture2natural', &
+          'natural2c3crop', 'natural2c4crop',  'natural2pasture']
+        ALLOCATE(from_class(12), to_class(12))
+        from_class = [3, 3, 3, 4, 4, 4, 2, 2, 2, 1, 1, 1] ! 1: natural, 2: pasture, 3: c3crop, 4: c4crop
+        to_class   = [4, 2, 1, 3, 2, 1, 3, 4, 1, 3, 4, 2]
+        ALLOCATE(pft_class(12))
+        pft_class  = [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 4] ! 8 natural, 2 pasture, 1 c3crop, 1 c4crop
+      CASE DEFAULT
+        CALL finish(TRIM(routine), 'Transition setup not defined for usecase: '// TRIM(config%model_config%usecase))
+      END SELECT
+
+      config%trans_names          = trans_names
+      config%from_class           = from_class
+      config%to_class             = to_class
+      config%pft_class            = pft_class
+
+    END SELECT
 
     SELECT CASE (TRIM(tolower(config%scheme)))
     CASE ('maps')

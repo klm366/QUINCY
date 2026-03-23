@@ -402,7 +402,7 @@ CONTAINS
       ! Collect current area of all involved tiles
       CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
 
-      ! Todo-AKN: CASE('transition'): loop over tiles and calculate from_cf_sum and to_cf_sum
+      ! For transition scheme, loop over tiles and calculate from_cf_sum and to_cf_sum
       SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
       CASE('transition')
         current_tile => tile%Get_first_child_tile()
