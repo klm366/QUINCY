@@ -95,7 +95,7 @@ MODULE mo_q_dfire_sf_fuel_class
     PROCEDURE :: Calc_total_live_tree_fuel    !< (#nc) [gDM m-2]
     PROCEDURE :: Calc_total_live_grass_fuel   !< (#nc) [gDM m-2]
 
-    PROCEDURE :: Count_dead_fuel_pools
+    PROCEDURE :: Count_dead_fuel_pools => Count_dead_fuel_pools_for_fc
   END TYPE t_sf_fuel_class
 
 
@@ -115,7 +115,7 @@ MODULE mo_q_dfire_sf_fuel_class
     !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
     REAL(wp), ALLOCATABLE :: live_tree(:,:,:)!(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
   CONTAINS !< fuel transformations
-    PROCEDURE :: count_dead_fuel_pools
+    PROCEDURE :: count_dead_fuel_pools => count_dead_fuel_pools_for_fl
     PROCEDURE :: Calc_dead_litter
     PROCEDURE :: has_dead_fuel
     PROCEDURE :: Calc_total_cured_live_grass
@@ -247,11 +247,11 @@ CONTAINS
   !>
   !> Total number of dead fuel pools.
   !>
-  FUNCTION count_dead_fuel_pools(this) RESULT(ndeadpools)
+  FUNCTION count_dead_fuel_pools_for_fl(this) RESULT(ndeadpools)
     CLASS(t_sf_fuel_load), INTENT(in) :: this
     INTEGER :: ndeadpools
     ndeadpools = SIZE(this%dead_fuel, DIM=2)
-  END FUNCTION count_dead_fuel_pools
+  END FUNCTION count_dead_fuel_pools_for_fl
 
 
   ! ======================================================================================================= !
@@ -595,11 +595,11 @@ CONTAINS
   !>
   !> Count the number of dead fuel pools
   !>
-  FUNCTION Count_dead_fuel_pools(this) RESULT (nfuelpools)
+  FUNCTION Count_dead_fuel_pools_for_fc(this) RESULT (nfuelpools)
     CLASS(t_sf_fuel_class), INTENT(in) :: this
     INTEGER :: nfuelpools
     nfuelpools = this % ndeadpools
-  END FUNCTION Count_dead_fuel_pools
+  END FUNCTION Count_dead_fuel_pools_for_fc
 
 #endif
 END MODULE mo_q_dfire_sf_fuel_class
