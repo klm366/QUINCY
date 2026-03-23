@@ -34,7 +34,7 @@ MODULE mo_util
 #endif
 
   INTERFACE one_of
-    MODULE PROCEDURE one_of_str
+    MODULE PROCEDURE one_of_str_wrapper
     MODULE PROCEDURE one_of_int
   END INTERFACE one_of
 
@@ -178,6 +178,22 @@ CONTAINS
     parameter_from_texture = MIN(parameter_from_texture, MAX(parameter_sand,parameter_silt,parameter_clay))
 
   END SUBROUTINE soil_init_from_texture
+
+  ! ====================================================================================================== !
+  !
+  !> Wrapper calling one_of_str provided via the ICON adapter file
+  !
+  ! ======================================================================================================= !
+  FUNCTION one_of_str_wrapper(in_str, arg)
+    INTEGER :: one_of_str_wrapper          !< If "in_str" is matching one of the "arg(i)" return index "i".
+                                           !< If none matches: returns "-1"
+    CHARACTER(len=*), INTENT(IN) :: in_str !< input string
+    CHARACTER(len=*), INTENT(IN) :: arg(:) !< arguments to compare string to
+
+    one_of_str_wrapper = one_of_str(in_str, arg)
+
+  END FUNCTION one_of_str_wrapper
+
 
   FUNCTION one_of_int(in_int, arg)
     INTEGER :: one_of_int

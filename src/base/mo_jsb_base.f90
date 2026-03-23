@@ -244,10 +244,8 @@ CONTAINS
       IF (model%Is_process_enabled(SSE_)) THEN
         soil_e => Get_vgrid('soil_depth_energy')
         nsoil_e = soil_e%n_levels
-        IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-          snow_e => Get_vgrid('snow_depth_energy')
-          nsnow_e = snow_e%n_levels
-        END IF
+        snow_e => Get_vgrid('snow_depth_energy')
+        nsnow_e = snow_e%n_levels
       END IF
       CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
 
@@ -419,11 +417,7 @@ CONTAINS
         dsl4jsb_Config(HYDRO_)%l_read_initial_moist = .FALSE.
       END IF
 
-      IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
-        ! Don't allow infiltration at sub-zero soil temperature for old snow scheme
-        dsl4jsb_Config(HYDRO_)%l_infil_subzero = .FALSE.
-        CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature (l_snow=false)')
-      ELSE IF (.NOT. dsl4jsb_Config(HYDRO_)%l_infil_subzero) THEN
+      IF (.NOT. dsl4jsb_Config(HYDRO_)%l_infil_subzero) THEN
         ! Print message if infiltration at sub-zero temperature is switched off in namelist
         CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature')
       END IF

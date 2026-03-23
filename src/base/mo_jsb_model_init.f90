@@ -296,6 +296,9 @@ CONTAINS
       CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")
       CALL model%Queue_task(HYDRO_,  "soil_properties")
       CALL model%Queue_task(SEB_,    "surface_energy")
+      IF (model%config%use_tmx) THEN
+        CALL model%Queue_task(TURB_, "prepare_near_sfc_temp_interp")
+      END IF
       CALL model%Queue_task(HYDRO_,  "evaporation")
       CALL model%Queue_task(SEB_,    "surface_fluxes")
       IF (model%processes(ASSIMI_)%p%config%active) THEN
