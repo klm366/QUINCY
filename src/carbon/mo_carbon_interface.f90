@@ -315,6 +315,7 @@ CONTAINS
                                                       ! For oxic soils in methane process only. [mol m-2(ground) d-1].
     dsl4jsb_Real2D_onChunk ::  soil_respiration_anox  ! mean daily rate of heterotrophic (soil) respiration Without N limitation!
                                                       ! For anoxic soils in methane process only. [mol m-2(ground) d-1].
+    dsl4jsb_Real2D_onChunk ::  frac_inun              ! Inundated fraction (from topmodel/pond scheme)
     dsl4jsb_Real2D_onChunk ::  NPP_flux_correction    ! Daily updated flux correction from yesterdays carbon balance
                                                       ! [mol(CO2)/m^2(canopy) s]
                                                       ! Amount by which the NPP rate entering the routine has to be corrected.
@@ -564,10 +565,14 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(CARBON_,  max_green_bio)            ! out
       dsl4jsb_Get_var2D_onChunk(CARBON_,  sla)                      ! out
     END IF
-    dsl4jsb_Get_var2D_onChunk(SSE_,     thaw_cycle_prev)            ! in
+
+    ! frac_inun must wait until the use of any kind of inundated fraction (Topmodel or pond scheme)
+    ! is implemented here
+    frac_inun => NULL()
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_oxic )     ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_anox )     ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_,     thaw_cycle_prev)            ! in
 
     lstart   = is_time_experiment_start(options%current_datetime)
     lresume  = is_time_restart(options%current_datetime)
@@ -810,6 +815,14 @@ CONTAINS
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
       is_crop = lctlib_PhenologyType == 5
+
+      IF (ASSOCIATED(frac_inun)) THEN
+        frac_inun_loc(:) = frac_inun(:)
+        IF (debug_on()) CALL message(TRIM(routine), 'Using frac_inun from Topmodel or pond scheme.')
+      ELSE
+        frac_inun_loc(:) = 0._wp
+        IF (debug_on()) CALL message(TRIM(routine), 'No frac_inun provided.')
+      END IF
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
