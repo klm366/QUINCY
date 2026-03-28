@@ -484,12 +484,15 @@ CONTAINS
             & //' exceeds extlai_lai_max for '//TRIM(current_tile%name)//'. Please check.')
         END IF
 
+        !$ACC UPDATE DEVICE(pheno__mem__current_tile%extlai_target%ptr) ASYNC(1)
+
       END IF
 
       current_tile => current_tile%Get_next_sibling_tile()
     END DO
 
     !$ACC WAIT(1)
+
     CALL input_file%Close()
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')

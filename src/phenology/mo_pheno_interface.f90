@@ -248,8 +248,10 @@ CONTAINS
       ! (Re-)compute the per-second increment at every new year and at experiment start
       IF (is_newyear(options%current_datetime, dtime) .OR. &
         & is_time_experiment_start(options%current_datetime)) THEN
+
         IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), &
           & 'Annual mode: recomputing LAI increment for tile '//TRIM(tile%name))
+
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           ! Guard against sentinel value -1.0 (target not yet read from file)
