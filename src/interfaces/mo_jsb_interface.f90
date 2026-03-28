@@ -606,7 +606,8 @@ CONTAINS
   !>
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
-    USE mo_alcc_init,           ONLY : read_land_use_data
+    USE mo_alcc_init,           ONLY: read_land_use_data
+    USE mo_pheno_init,          ONLY: read_extlai_data
     USE mo_sb_init,             ONLY : provide_n_and_p_deposition
     USE mo_q_syl_init,          ONLY : read_harvest_fraction
     USE mo_q_agr_init,          ONLY : read_fertiliser_input
@@ -644,6 +645,12 @@ CONTAINS
     ! For the ALCC process land use data has to be read once a year
     IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
       CALL read_land_use_data(model_id, current_datetime)
+    END IF
+
+    ! For the PHENO external_lai scheme, LAI data is read at experiment start and once per new year
+    IF ((is_newyear(current_datetime, dtime) .OR. is_time_experiment_start(current_datetime)) &
+      & .AND. model%processes(PHENO_)%p%config%active) THEN
+      CALL read_extlai_data(model_id, current_datetime)
     END IF
 
     IF (model%config%model_scheme == MODEL_QUINCY) THEN

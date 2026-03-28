@@ -160,11 +160,118 @@ CONTAINS
         CALL update_phenology_logrop(tile, options)
       CASE ('climatology')
         CALL update_phenology_climatology(tile, options)
+      CASE ('external_lai')
+        CALL update_phenology_external_lai(tile, options)
       CASE DEFAULT
-        CALL finish('Invalid scheme for phenology')
+        CALL finish(TRIM(routine), 'Invalid phenology scheme specified: ' &
+          & // TRIM(dsl4jsb_Config(PHENO_)%scheme))
       END SELECT
     END IF
   END SUBROUTINE update_phenology_jsbach
+
+  ! ======================================================================================================= !
+  !>
+  !> Implementation of 'EXTERNAL_LAI' phenology scheme
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_phenology_external_lai(tile, options)
+
+    USE mo_jsb_time, ONLY: get_time_interpolation_weights, is_newyear, is_time_experiment_start, &
+      &                    get_year, get_year_length
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    INTEGER  :: iblk, ics, ice, nc, ic
+    REAL(wp) :: dtime, year_length_secs
+    INTEGER  :: current_year
+    REAL(wp) :: wgt1, wgt2
+    INTEGER  :: nmw1, nmw2
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_memory(PHENO_)
+
+    dsl4jsb_Real2D_onChunk :: lai
+    dsl4jsb_Real2D_onChunk :: extlai_target
+    dsl4jsb_Real2D_onChunk :: extlai_incr
+    REAL(wp), POINTER      :: lai_mon(:,:)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology_external_lai'
+
+    ! Get local variables from options argument
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+    nc    = options%nc
+    dtime = options%dtime
+
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_memory(PHENO_)
+
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)   ! inout
+
+    IF (TRIM(dsl4jsb_Config(PHENO_)%extlai_mode) == 'monthly') THEN
+
+      ! Monthly mode: interpolate between the two bracketing monthly means
+      lai_mon(1:,0:) => dsl4jsb_memory(PHENO_)%lai_mon(ics:ice, iblk, :)  ! in
+
+      !$ACC DATA CREATE(wgt1, wgt2, nmw1, nmw2) ASYNC(acc_stream)
+      CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2, acc_stream)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, nmw1, wgt2, nmw2) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        lai(ic) = REAL(wgt1, wp) * lai_mon(ic, nmw1) + REAL(wgt2, wp) * lai_mon(ic, nmw2)
+      END DO
+      !$ACC END PARALLEL LOOP
+      !$ACC END DATA
+
+    ELSE
+
+      ! Annual mode: linear ramp from current LAI toward the annually prescribed target value.
+      ! extlai_target holds the end-of-year target read at the beginning of the year;
+      ! extlai_incr   holds the constant per-second increment, recomputed each new year.
+      dsl4jsb_Get_var2D_onChunk(PHENO_, extlai_target)  ! in
+      dsl4jsb_Get_var2D_onChunk(PHENO_, extlai_incr)    ! inout
+
+      current_year     = get_year(options%current_datetime)
+      year_length_secs = REAL(get_year_length(current_year), wp) * 86400.0_wp
+
+      ! (Re-)compute the per-second increment at every new year and at experiment start
+      IF (is_newyear(options%current_datetime, dtime) .OR. &
+        & is_time_experiment_start(options%current_datetime)) THEN
+        IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), &
+          & 'Annual mode: recomputing LAI increment for tile '//TRIM(tile%name))
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic = 1, nc
+          ! Guard against sentinel value -1.0 (target not yet read from file)
+          IF (extlai_target(ic) >= 0.0_wp) THEN
+            extlai_incr(ic) = (extlai_target(ic) - lai(ic)) / year_length_secs
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP
+      END IF
+
+      ! Apply the per-second increment every timestep; clamp to non-negative LAI
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        lai(ic) = MAX(0.0_wp, lai(ic) + extlai_incr(ic) * dtime)
+      END DO
+      !$ACC END PARALLEL LOOP
+
+    END IF
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_phenology_external_lai
 
   ! ======================================================================================================= !
   !>

@@ -35,7 +35,7 @@ MODULE mo_pheno_init
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: pheno_init
+  PUBLIC :: pheno_init, read_extlai_data
 
   TYPE t_pheno_init_vars
     REAL(wp), POINTER ::  &
@@ -348,6 +348,153 @@ CONTAINS
     !$ACC END DATA
 
   END SUBROUTINE pheno_init_ic
+
+  ! ======================================================================================================= !
+  !> Read external time-varying PFT LAI for the 'external_lai' phenology scheme
+  !>
+  !> Called at experiment start and once per new year from jsbach_start_timestep.
+  !> Monthly mode: reads 12 monthly fields from the current-year file into lai_mon (with Dec/Jan wrap).
+  !> Annual  mode: reads a single annual target from the next-year file into extlai_target (ALCC convention).
+  !>
+  SUBROUTINE read_extlai_data(model_id, current_datetime)
+
+    USE mo_jsb_time_iface,  ONLY: t_datetime
+    USE mo_jsb_time,        ONLY: get_year
+    USE mo_jsb_varlist,     ONLY: VARNAME_LEN
+    USE mo_io_units,        ONLY: filename_max
+    USE mo_jsb_parallel,    ONLY: Get_omp_thread
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER,                   INTENT(in) :: model_id
+    TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
+    ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),          POINTER :: model
+    CLASS(t_jsb_tile_abstract), POINTER :: tile, current_tile
+
+    dsl4jsb_Def_memory_tile(PHENO_, current_tile)
+
+    REAL(wp), POINTER :: ptr_2d(:,:)
+    REAL(wp), POINTER :: ptr_mon(:,:,:)
+
+    INTEGER                     :: target_year, current_year, no_omp_thread
+    TYPE(t_input_file)          :: input_file
+    CHARACTER(len=filename_max) :: filename
+    CHARACTER(len=VARNAME_LEN)  :: varname
+    CHARACTER(len=*), PARAMETER :: routine = modname//':read_extlai_data'
+    ! -------------------------------------------------------------------------------------------------- !
+    model         => Get_model(model_id)
+    no_omp_thread =  Get_omp_thread()
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+    ! Walk the tile tree to the veg tile (source of PHENO config and parent of PFT tiles)
+    CALL model%Get_top_tile(tile)
+    DO WHILE (ASSOCIATED(tile))
+      IF (tile%visited(no_omp_thread)) THEN
+        CALL model%Goto_next_tile(tile)
+        CYCLE
+      END IF
+      IF (tile%name .EQ. 'veg') EXIT
+      CALL model%Goto_next_tile(tile)
+    END DO
+
+    IF (.NOT. ASSOCIATED(tile)) THEN
+      CALL finish(TRIM(routine), &
+        & 'Violation of assertion: veg tile required but not found in tile tree.')
+    END IF
+
+    dsl4jsb_Get_config(PHENO_)
+
+    ! Early return when not using the external_lai scheme
+    IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'external_lai') RETURN
+
+    current_year = get_year(current_datetime)
+
+    ! Annual mode reads next year's target (ALCC convention); monthly mode reads current year
+    IF (TRIM(dsl4jsb_Config(PHENO_)%extlai_mode) == 'annual') THEN
+      target_year = current_year + 1
+    ELSE
+      target_year = current_year
+    END IF
+
+    IF (debug_on()) THEN
+      WRITE(filename, '(a,I4.4)') 'external_lai mode='//TRIM(dsl4jsb_Config(PHENO_)%extlai_mode) &
+        & //', reading year ', target_year
+      CALL message(TRIM(routine), TRIM(filename))
+    END IF
+
+    ! Assert: filenames require a 4-digit year
+    IF ((target_year < 1000) .OR. (target_year > 9999)) THEN
+      CALL finish(TRIM(routine), &
+        & 'Violation of assertion: external LAI filenames require a 4-digit year.')
+    END IF
+
+    WRITE(filename, '(a,I4.4,a)') TRIM(dsl4jsb_Config(PHENO_)%extlai_filename_prefix), target_year, '.nc'
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading external LAI from '//TRIM(filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(filename), model%grid_id)
+
+    ! Fill per-PFT LAI state by looping over veg child tiles
+    current_tile => tile%Get_first_child_tile()
+    DO WHILE (ASSOCIATED(current_tile))
+
+      dsl4jsb_Get_memory_tile(PHENO_, current_tile)
+
+      WRITE(varname, '(a,a)') 'lai_', TRIM(current_tile%name)
+
+      IF (debug_on()) CALL message(TRIM(routine), &
+        & 'Reading '//TRIM(varname)//' for tile '//TRIM(current_tile%name))
+
+      IF (TRIM(dsl4jsb_Config(PHENO_)%extlai_mode) == 'monthly') THEN
+
+        ptr_mon => input_file%Read_2d_time(variable_name=TRIM(varname))
+
+        IF (ANY(ptr_mon(:,:,1:12) < 0.0_wp)) THEN
+          CALL finish(TRIM(routine), &
+            & 'Violation of assertion: external LAI from '//TRIM(filename) &
+            & //' is negative for '//TRIM(current_tile%name)//'. Please check.')
+        END IF
+        IF (ANY(ptr_mon(:,:,1:12) > dsl4jsb_Config(PHENO_)%extlai_lai_max)) THEN
+          CALL finish(TRIM(routine), &
+            & 'Violation of assertion: external LAI from '//TRIM(filename) &
+            & //' exceeds extlai_lai_max for '//TRIM(current_tile%name)//'. Please check.')
+        END IF
+
+        ! Copy to monthly buffer; repeat Dec/Jan in slots 0 and 13 for interpolation wrap
+        pheno__mem__current_tile%lai_mon(:,:, 1:12) = ptr_mon(:,:, 1:12)
+        pheno__mem__current_tile%lai_mon(:,:, 0   ) = ptr_mon(:,:, 12  )
+        pheno__mem__current_tile%lai_mon(:,:, 13  ) = ptr_mon(:,:, 1   )
+        !$ACC UPDATE DEVICE(pheno__mem__current_tile%lai_mon) ASYNC(1)
+
+        DEALLOCATE(ptr_mon)
+
+      ELSE  ! annual mode
+
+        ptr_2d => input_file%Read_2d(variable_name=TRIM(varname), &
+          &                          fill_array=pheno__mem__current_tile%extlai_target%ptr(:,:))
+
+        IF (ANY(ptr_2d(:,:) < 0.0_wp)) THEN
+          CALL finish(TRIM(routine), &
+            & 'Violation of assertion: external LAI from '//TRIM(filename) &
+            & //' is negative for '//TRIM(current_tile%name)//'. Please check.')
+        END IF
+        IF (ANY(ptr_2d(:,:) > dsl4jsb_Config(PHENO_)%extlai_lai_max)) THEN
+          CALL finish(TRIM(routine), &
+            & 'Violation of assertion: external LAI from '//TRIM(filename) &
+            & //' exceeds extlai_lai_max for '//TRIM(current_tile%name)//'. Please check.')
+        END IF
+
+      END IF
+
+      current_tile => current_tile%Get_next_sibling_tile()
+    END DO
+
+    !$ACC WAIT(1)
+    CALL input_file%Close()
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
+
+  END SUBROUTINE read_extlai_data
 
 #endif
 END MODULE mo_pheno_init
