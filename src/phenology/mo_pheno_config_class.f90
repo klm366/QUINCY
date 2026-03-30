@@ -83,7 +83,7 @@ CONTAINS
     ic_filename         = 'ic_land_phenology.nc'
     !first_call_phenology_this_day = .FALSE.
     extlai_mode         = 'monthly'
-    extlai_filename_prefix = 'bc_land_lai_'
+    extlai_filename_prefix = 'fc_land_lai_'
     extlai_lai_max      = 20.0_wp
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
