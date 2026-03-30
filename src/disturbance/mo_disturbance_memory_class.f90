@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -56,7 +56,7 @@ CONTAINS
 
   SUBROUTINE Init_disturb_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM !, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -105,6 +105,7 @@ CONTAINS
       & t_cf('q_rel_air_climbuf', '-', 'Relative humiditiy of lowest air layer smoothed in time.'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
       & prefix, suffix,                                                                               &
+      & output_level=MEDIUM,                                                                          &
       & lrestart=.TRUE., initval_r=50.0_wp ) ! initval taken from JS3; lrestart=true only necessary if we restart within a day
 
     CALL mem%Add_var( 'q_air_clim_yday', mem%q_rel_air_climbuf_yday,                                    &
@@ -113,7 +114,6 @@ CONTAINS
                                                & at the end of the last day.'),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
       & prefix, suffix,                                                                                 &
-      & output_level=BASIC,                                                                             &
       & lrestart=.FALSE., initval_r=50.0_wp ) ! initval taken from JSBACH3
 
     CALL mem%Add_var( 'prev_day_max_wind_10m', mem%prev_day_max_wind_10m,         &
@@ -128,6 +128,7 @@ CONTAINS
       & t_cf('max_wind_10m', '-', 'Maximum wind speed smoothed in time at the end of the last day..'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
       & prefix, suffix,                                                                                &
+      & output_level=MEDIUM,                                                                           &
       & lrestart=.TRUE., initval_r=0.0_wp )
 
     CALL mem%Add_var( 'max_wind_10m_act', mem%max_wind_10m_act,             &
@@ -135,6 +136,7 @@ CONTAINS
       & t_cf('max_wind_10m_act', '-', 'This days maximum wind speed.'),     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
+      & output_level=MEDIUM,                                                &
       & lrestart=.TRUE., initval_r=0.0_wp )
 
     IF (.NOT. model%processes(WLCC_)%p%config%active) THEN

@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -37,8 +37,9 @@ MODULE mo_turb_memory_class
       ! For tmx
       & kh,                   & !< Surface exchange coefficient (heat)
       & km,                   & !< Surface exchange coefficient (momentum)
-      & kh_neutral,           & !< Surface exchange coefficient, neutral conditions (heat)
-      & km_neutral,           & !< Surface exchange coefficient, neutral conditions (momentum)
+      & interp_fac_2m,        & !< Interpolatoin factor for calculating near-surface diagnostics at 2m height (heat type)
+      & interp_fac_10m,       & !< Interpolatoin factor for calculating near-surface diagnostics at 10m height (mom type)
+      & interp_fac_tsfc,      & !< Interpolatoin factor (2m, heat type) multiplied with surface temperature
       & ch,                   & !< Surface transfer coefficient (heat)
       !
       & rough_m,              & !< Surface roughness length for momentum
@@ -112,7 +113,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
-        & output_level=BASIC,                                                              &
+        & output_level=FULL,                                                               &
         & initval_r=0.01_wp )
 
       CALL mem%Add_var( 'km', mem%km,                                                      &
@@ -121,25 +122,34 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
-        & output_level=BASIC,                                                              &
+        & output_level=FULL,                                                               &
         & initval_r=0.01_wp )
 
-      CALL mem%Add_var( 'kh_neutral', mem%kh_neutral,                                      &
+      CALL mem%Add_var( 'interp_fac_2m', mem%interp_fac_2m,                                &
         & hgrid, surface,                                                                  &
-        & t_cf('neutral exchange coeffient heat', '', 'neutral surface exchange coefficient for heat'), &
+        & t_cf('interp coef 2m (heat)', '', 'interpolation coefficient at 2m height (heat)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
-        & output_level=BASIC,                                                              &
+        & output_level=FULL,                                                               &
         & initval_r=0.01_wp )
 
-      CALL mem%Add_var( 'km_neutral', mem%km_neutral,                                      &
+      CALL mem%Add_var( 'interp_fac_10m', mem%interp_fac_10m,                              &
         & hgrid, surface,                                                                  &
-        & t_cf('neutral exchange coeffient mom', '', 'neutral surface exchange coefficient for momentum'), &
+        & t_cf('interp coef 10m (mom)', '', 'interpolation coefficient at 10m height (mom)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
-        & output_level=BASIC,                                                              &
+        & output_level=FULL,                                                               &
+        & initval_r=0.01_wp )
+
+      CALL mem%Add_var( 'interp_fac_tsfc', mem%interp_fac_tsfc,                            &
+        & hgrid, surface,                                                                  &
+        & t_cf('interp coef mult sfc temp', '', 'interpolation coefficient (2m, heat) multiplied with surface temperature'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+        & prefix, suffix,                                                                  &
+        & lrestart=.FALSE.,                                                                &
+        & output_level=FULL,                                                               &
         & initval_r=0.01_wp )
 
       CALL mem%Add_var( 'ch', mem%ch,                                                      &
@@ -148,7 +158,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
-        & output_level=BASIC,                                                              &
+        & output_level=FULL,                                                               &
         & initval_r=0.01_wp )
     END IF
 
@@ -158,7 +168,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
       & lrestart=.TRUE.,                                                                 &
-      & output_level=BASIC,                                                              &
+      & output_level=FULL,                                                               &
       & initval_r=1.0_wp )
 
     CALL mem%Add_var( 'rough_h', mem%rough_h,                                    &
@@ -167,7 +177,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
       & prefix, suffix,                                                          &
       & lrestart=.TRUE.,                                                         &
-      & output_level=BASIC,                                                      &
+      & output_level=FULL,                                                       &
       & initval_r=1.0_wp )
 
     CALL mem%Add_var( 'rough_m_star', mem%rough_m_star,                          &
@@ -193,7 +203,7 @@ CONTAINS
       & t_cf('fact_q_air', '', ''),                                        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
-      & output_level=BASIC,                                                &
+      & output_level=FULL,                                                 &
       & initval_r=0.5_wp )
 
     CALL mem%Add_var( 'fact_qsat_srf', mem%fact_qsat_srf,                  &
@@ -201,7 +211,7 @@ CONTAINS
       & t_cf('fact_qsat_srf', '', ''),                                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
-      & output_level=BASIC,                                                &
+      & output_level=FULL,                                                 &
       & initval_r=0.5_wp )
 
     CALL mem%Add_var( 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf,      &
@@ -209,7 +219,7 @@ CONTAINS
       & t_cf('fact_qsat_trans_srf', '', ''),                               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
-      & output_level=BASIC,                                                &
+      & output_level=FULL,                                                 &
       & initval_r=0.0_wp )
 
     ! ----------------------------------------------------------------------------------------------------- !

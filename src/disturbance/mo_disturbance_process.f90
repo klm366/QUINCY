@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -114,16 +114,17 @@ CONTAINS
 
   END SUBROUTINE broken_woody_fract_jsbach
 
-  FUNCTION get_relative_humidity_air(air_moisture, air_temperature, air_press) RESULT(relative_humidity_air)
+  FUNCTION get_relative_humidity_air(air_moisture, air_temperature, air_press, use_tmx) RESULT(relative_humidity_air)
 
     USE mo_jsb_physical_constants, ONLY: rd  ! gas constant for dry air [J/(K*kg)]
     USE mo_jsb_physical_constants, ONLY: rv  ! gas constant for water vapor [J/(K*kg)]
-    USE mo_phy_schemes,            ONLY: qsat_water
+    USE mo_phy_schemes,            ONLY: qsat_water, qsat_mixed
 
     REAL(wp), INTENT(in) :: &
       air_moisture(:),      & ! Specific humidity of air [kg kg-1]
       air_temperature(:),   & ! Temperature of air [K]
       air_press(:)            ! Pressure of air [Pa]
+    LOGICAL, INTENT(in) :: use_tmx  ! if true, use qsat_water, else qsat_mixed
 
     REAL(wp) :: air_qsat      ! Saturation specific humidity
     REAL(wp) :: relative_humidity_air(SIZE(air_moisture))
@@ -136,7 +137,11 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(air_qsat)
     DO ic = 1, nc
-      air_qsat = qsat_water(air_temperature(ic), air_press(ic), use_convect_tables=.TRUE.)
+      IF (use_tmx) THEN
+        air_qsat = qsat_water(air_temperature(ic), air_press(ic))
+      ELSE
+        air_qsat = qsat_mixed(air_temperature(ic), air_press(ic))
+      END IF
       relative_humidity_air(ic) = 100._wp * air_moisture(ic)                                       &
                                  * (  (1._wp - rd / rv) * air_qsat + (rd / rv) )                   &
                                  / ( ((1._wp - rd / rv) * air_moisture(ic) + (rd / rv)) * air_qsat )

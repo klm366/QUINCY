@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -175,7 +175,7 @@ MODULE mo_veg_constants
       k3_fruit_alloc              , & !< parameter in the Weibull function controlling fruit growth; ~micro-mol C / m2 / s
       ! minimum fraction of allocation going to fruit (flowers etc.)
       k1_fruit_alloc              , & !< minimum fraction of allocation going to fruit (flowers etc.)
-      w_root_lim_max              , & !< value of the root water limitation below which root allocation starts responding
+      k1_root_alloc               , & !< value of relative root zone water below which root allocation starts responding
       leaf2root_min_ratio         , & !< minimum leaf to root ratio for dynamic allocation
       leaf2root_max_ratio             !< maximum leaf to root ratio for dynamic allocation
 
@@ -366,7 +366,7 @@ CONTAINS
       k1_fruit_alloc              = 0.01_wp
       k3_fruit_alloc              = 0.1_wp
       k4_fruit_alloc              = 2.0_wp
-      w_root_lim_max              = 0.8_wp
+      k1_root_alloc               = 0.8_wp
       leaf2root_min_ratio         = 0.2_wp
       leaf2root_max_ratio         = 15.0_wp
 

@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -17,8 +17,7 @@ MODULE mo_phy_schemes
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
-  USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
-  USE mo_jsb_thermo_iface, ONLY: specific_humidity, sat_pres_water, sat_pres_ice, potential_temperature
+  USE mo_jsb_thermo_iface, ONLY: specific_humidity, sat_pres_water, sat_pres_ice, sat_pres_mixed, potential_temperature
 #ifndef __NO_AES__
   USE mo_jsb_surface_exchange_iface, ONLY: sfc_exchange_coefficients
 #endif
@@ -27,8 +26,8 @@ MODULE mo_phy_schemes
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: specific_humidity, qsat_water, qsat_ice, sat_pres_water, &
-    & update_drag, tlucua, jptlucu1, jptlucu2, &
+  PUBLIC :: specific_humidity, qsat_water, qsat_ice, qsat_mixed, sat_pres_water, sat_pres_ice, sat_pres_mixed, &
+    & update_drag, &
     & q_effective, surface_dry_static_energy, heat_transfer_coef, &
     & thermal_radiation, lwnet_from_lwdown, potential_temperature
 #ifndef __NO_AES__
@@ -45,7 +44,7 @@ MODULE mo_phy_schemes
   !   PURE SUBROUTINE i_exchange_coefficients_procedure(           &
   !     & dz,                                                 &
   !     & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
-  !     & km, kh, km_neutral, kh_neutral                      &
+  !     & km, kh, interp_fac_2m, interp_fac_10m               &
   !     & )
   !     IMPORT :: wp
 
@@ -61,8 +60,8 @@ MODULE mo_phy_schemes
   !     REAL(wp), INTENT(out) :: &
   !       km,         &
   !       kh,         &
-  !       km_neutral, &
-  !       kh_neutral
+  !       interp_fac_2m, &
+  !       interp_fac_10m
 
   !   END SUBROUTINE
   ! END INTERFACE
@@ -84,7 +83,7 @@ CONTAINS
   ! SUBROUTINE exchange_coefficients(                       &
   !   & dz,                                                 &
   !   & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
-  !   & km, kh, km_neutral, kh_neutral                      &
+  !   & km, kh, interp_fac_2m, interp_fac_10m               &
   !   & )
 
   !   REAL(wp), DIMENSION(:), INTENT(in) :: &
@@ -99,8 +98,8 @@ CONTAINS
   !   REAL(wp), DIMENSION(:), INTENT(out) :: &
   !     km,         &
   !     kh,         &
-  !     km_neutral, &
-  !     kh_neutral
+  !     interp_fac_2m, &
+  !     interp_fac_10m
 
   !   INTEGER :: ic, nc
 
@@ -111,80 +110,63 @@ CONTAINS
   !     CALL registered_exchange_coefficients_procedure(                                &
   !       & dz(ic),                                                                     &
   !       & pqm1(ic), thetam1(ic), mwind(ic), rough_m(ic), theta_sfc(ic), qsat_sfc(ic), &
-  !       & km(ic), kh(ic), km_neutral(ic), kh_neutral(ic)                              &
+  !       & km(ic), kh(ic), interp_fac_2m(ic), interp_fac_10m(ic)                       &
   !       & )
   !   END DO
   !   !$ACC END PARALLEL LOOP
 
   ! END SUBROUTINE exchange_coefficients
 
-  REAL(wp) FUNCTION qsat_water(temperature, pressure, use_convect_tables)
+  ! ====================================================================================================== !
+  !>
+  !> Functions to calculate saturation specific humidity
+  !>
+  !> Input: temperature [K], pressure [Pa]
+  !> Output: saturation specific humidity [kg/kg]
+  !>
+#ifndef _OPENACC
+ELEMENTAL &
+#endif
+  REAL(wp) FUNCTION qsat_water(temperature, pressure)
 
     !$ACC ROUTINE SEQ
 
     REAL(wp), INTENT(in) :: temperature      ! Air temperature [K]
     REAL(wp), INTENT(in) :: pressure         ! Pressure [Pa]
-    LOGICAL,  INTENT(in) :: use_convect_tables
 
-    IF (use_convect_tables) THEN
-      qsat_water = calc_qsat(temperature, pressure)
-    ELSE
-      qsat_water = specific_humidity(sat_pres_water(temperature), pressure)
-    END IF
+    qsat_water = specific_humidity(sat_pres_water(temperature), pressure)
 
   END FUNCTION qsat_water
 
-  REAL(wp) FUNCTION qsat_ice(temperature, pressure, use_convect_tables)
+#ifndef _OPENACC
+ELEMENTAL &
+#endif
+  REAL(wp) FUNCTION qsat_ice(temperature, pressure)
 
     !$ACC ROUTINE SEQ
 
     REAL(wp), INTENT(in) :: temperature      ! Air temperature [K]
     REAL(wp), INTENT(in) :: pressure         ! Pressure [Pa]
-    LOGICAL,  INTENT(in) :: use_convect_tables
 
-    IF (use_convect_tables) THEN
-      qsat_ice = calc_qsat(temperature, pressure)
-    ELSE
-      qsat_ice = specific_humidity(sat_pres_ice(temperature), pressure)
-    END IF
+    qsat_ice = specific_humidity(sat_pres_ice(temperature), pressure)
 
   END FUNCTION qsat_ice
 
-  ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
-  ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
-  ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
-  !
-  ! Note: temporary for backward compatibility
-  FUNCTION calc_qsat(temperature, pressure) RESULT(qsat)
+#ifndef _OPENACC
+ELEMENTAL &
+#endif
+  REAL(wp) FUNCTION qsat_mixed(temperature, pressure)
 
     !$ACC ROUTINE SEQ
 
-    USE mo_jsb_convect_tables_iface, ONLY: tlucua, &        ! Table for water vapor pressure e_s multiplied by R_d/R_v
-      &                                    jptlucu1, jptlucu2
-    USE mo_jsb_physical_constants, ONLY: rvd1                    ! = R_v/R_d - 1
-
     REAL(wp), INTENT(in) :: temperature      !< Air temperature [K]
     REAL(wp), INTENT(in) :: pressure         !< Pressure [Pa]
-    REAL(wp)             :: qsat             !< saturation specific humidity
 
-    INTEGER :: it
-    REAL(wp) :: tluc
+    qsat_mixed = specific_humidity(sat_pres_mixed(temperature), pressure)
 
-    it = NINT(temperature * 1000._wp)
-    ! NOTE a segmentation fault for unplausible surface temperatures occurs (e.g. see mo_jsb4_forcing)
-    !      convection tables work within [50,400] Kelvin
-    !      unplausible surface temperatures are caught with "seb_check_temperature_range()"
-    !      and could be caught in additionally here with:
-    !      it = MIN( MAX( NINT(temperature * 1000._wp), 50000), 400000)
-    tluc = tlucua(it)
+  END FUNCTION qsat_mixed
 
-    IF (it >= jptlucu1 .AND. it <= jptlucu2) THEN
-      qsat = tluc / (pressure - rvd1*tluc)
-    ELSE
-      qsat = HUGE(1._wp)
-    END IF
-
-  END FUNCTION calc_qsat
+  !> ====================================================================================================== !
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION q_effective
@@ -440,10 +422,10 @@ CONTAINS
     !$ACC   PRIVATE(dzucfhl, zcons, zcfnchl, zcfhl, dzcfhl)
     DO ic = 1, nc
       ! NOTE: a segmentation fault for unplausible surface temperatures (outside [50,400] Kelvin) would occur in "calc_qsat()"
-      qsat_surf = calc_qsat(t_srf_proc(ic), pressure(ic))
-      dqsat_surf = 1e3_wp * (calc_qsat(t_srf_proc(ic) + 1e-3_wp, pressure(ic)) - qsat_surf)
+      qsat_surf = qsat_mixed(t_srf_proc(ic), pressure(ic))
+      dqsat_surf = 1e3_wp * (qsat_mixed(t_srf_proc(ic) + 1e-3_wp, pressure(ic)) - qsat_surf)
       IF (l_zril_filter) THEN
-        qsat_surf_upd = calc_qsat(t_srf_upd(ic), pressure(ic))
+        qsat_surf_upd = qsat_mixed(t_srf_upd(ic), pressure(ic))
       END IF
 
       !------------------------------------------------------------------------------------

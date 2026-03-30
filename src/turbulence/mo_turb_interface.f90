@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -93,6 +93,18 @@ MODULE mo_turb_interface
     PROCEDURE Create_task_exchange_coefficients                        !< Constructor function for task
   END INTERFACE tsk_exchange_coefficients
 
+  !> Type definition for near-surface-temperature interpolation
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_near_sfc_temp_interpolation
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_near_sfc_temp_interp     !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_near_sfc_temp_interp  !< Aggregates computed task variables
+  END TYPE tsk_near_sfc_temp_interpolation
+
+  !> Constructor interface for near-surface-temperature interpolation
+  INTERFACE tsk_near_sfc_temp_interpolation
+    PROCEDURE Create_task_prepare_near_sfc_temperature_interpolation   !< Constructor function for task
+  END INTERFACE tsk_near_sfc_temp_interpolation
+
   !> Type definition for surface_roughness task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_roughness
   CONTAINS
@@ -137,6 +149,22 @@ CONTAINS
     CALL return_ptr%Construct(name='exchange_coefficients', process_id=TURB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_exchange_coefficients
+
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for prepare_near_sfc_temp_interp task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "tsk_near_sfc_temp_interpolation"
+  !!
+  FUNCTION Create_task_prepare_near_sfc_temperature_interpolation(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_near_sfc_temp_interpolation::return_ptr)
+    CALL return_ptr%Construct(name='prepare_near_sfc_temp_interp', process_id=TURB_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_prepare_near_sfc_temperature_interpolation
 
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for surface_roughness task
@@ -184,6 +212,7 @@ CONTAINS
     CALL this%Register_task(tsk_exchange_coefficients(model_id))
     CALL this%Register_task(tsk_surface_roughness(model_id))
     CALL this%Register_task(tsk_humidity_scaling(model_id))
+    CALL this%Register_task(tsk_near_sfc_temp_interpolation(model_id))
 
   END SUBROUTINE Register_turb_Tasks
 
@@ -235,8 +264,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_lice
     dsl4jsb_Real2D_onChunk :: kh
     dsl4jsb_Real2D_onChunk :: km
-    dsl4jsb_Real2D_onChunk :: kh_neutral
-    dsl4jsb_Real2D_onChunk :: km_neutral
+    dsl4jsb_Real2D_onChunk :: interp_fac_2m
+    dsl4jsb_Real2D_onChunk :: interp_fac_10m
     dsl4jsb_Real2D_onChunk :: ch
 
     ! Local variables
@@ -287,8 +316,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)         ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  kh)              ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  km)              ! out
-    dsl4jsb_Get_var2D_onChunk(TURB_,  kh_neutral)      ! out
-    dsl4jsb_Get_var2D_onChunk(TURB_,  km_neutral)      ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  interp_fac_2m)   ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  interp_fac_10m)  ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  ch)              ! out
 
     !$ACC DATA CREATE(pot_temperature_srf, pot_temperature_air, qsat_srf) ASYNC(acc_stream)
@@ -297,7 +326,7 @@ CONTAINS
     DO ic = 1, nc
       pot_temperature_srf(ic) = potential_temperature(t_unfilt(ic), press_srf(ic))
       pot_temperature_air(ic) = potential_temperature(t_air(ic), press_air(ic))
-      qsat_srf(ic) = qsat_water(t_unfilt(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      qsat_srf(ic) = qsat_water(t_unfilt(ic), press_srf(ic))
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -305,7 +334,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! in
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(qsat_lice)
         DO ic = 1, nc
-          qsat_lice = qsat_ice(t_unfilt(ic), press_srf(ic), use_convect_tables=.NOT. use_tmx)
+          qsat_lice = qsat_ice(t_unfilt(ic), press_srf(ic))
           qsat_srf(ic) = (1._wp - fract_lice(ic)) * qsat_srf(ic) + fract_lice(ic) * qsat_lice
         END DO
         !$ACC END PARALLEL LOOP
@@ -314,14 +343,14 @@ CONTAINS
     ! CALL exchange_coefficients( &
     !   & dz_srf(:),                                                 &
     !   & q_air(:), pot_temperature_air(:), wind_air(:), rough_m(:), pot_temperature_srf(:), qsat_srf(:), &
-    !   & km(:), kh(:), km_neutral(:), kh_neutral(:)                                                      &
+    !   & km(:), kh(:), interp_fac_2m(:), interp_fac_10m(:)                                               &
     !   &)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       ! CALL registered_exchange_coefficients_procedure( &
       CALL sfc_exchange_coefficients( &
         & dz_srf(ic), q_air(ic), pot_temperature_air(ic), wind_air(ic), rough_m(ic), pot_temperature_srf(ic), &
-        & qsat_srf(ic), km(ic), kh(ic), km_neutral(ic), kh_neutral(ic))
+        & qsat_srf(ic), km(ic), kh(ic), interp_fac_2m(ic), interp_fac_10m(ic))
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -381,7 +410,7 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
@@ -389,16 +418,126 @@ CONTAINS
 
     CALL weighted_by_fract%BeginAggregate()
 
-    dsl4jsb_Aggregate_onChunk(TURB_, kh,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TURB_, km,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TURB_, kh_neutral, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TURB_, km_neutral, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TURB_, ch,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, kh,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, km,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, interp_fac_2m,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, interp_fac_10m, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, ch,             weighted_by_fract)
 
     CALL weighted_by_fract%EndAggregate()
 
   END SUBROUTINE aggregate_exchange_coefficients
 #endif
+
+  ! ======================================================================================================= !
+  !>
+  !> Implementation of "update" for task "near_sfc_temp_interpolation" - only called with 'use_tmx = .TRUE.'
+  !>
+  SUBROUTINE update_near_sfc_temp_interp(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_config(TURB_)
+    dsl4jsb_Def_config(SEB_)
+
+    ! Declare process memories
+    dsl4jsb_Def_memory(TURB_)
+    dsl4jsb_Def_memory(SEB_)
+
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: t_unfilt
+    dsl4jsb_Real2D_onChunk :: interp_fac_2m
+    dsl4jsb_Real2D_onChunk :: interp_fac_tsfc
+
+    ! Local variables
+    TYPE(t_jsb_model), POINTER :: model
+
+    INTEGER  :: iblk, ics, ice, nc, ic
+    LOGICAL :: use_tmx
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_near_sfc_temp_interp'
+
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+
+    ! If process is not active on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(TURB_)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    use_tmx = model%config%use_tmx
+
+    IF (.NOT. model%config%use_tmx) CALL finish(routine, 'can only be used with tmx')
+
+    dsl4jsb_Get_config(TURB_)
+    dsl4jsb_Get_config(SEB_)
+
+    ! Get process memories
+    dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(SEB_)
+
+    ! Get process variables
+    dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,  interp_fac_2m)   ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,  interp_fac_tsfc) ! out
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      interp_fac_tsfc(ic) = t_unfilt(ic) * interp_fac_2m(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
+
+  END SUBROUTINE update_near_sfc_temp_interp
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "near_sfc_temp_interpolation"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE aggregate_near_sfc_temp_interp(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_config(TURB_)
+    dsl4jsb_Def_memory(TURB_)
+
+    dsl4jsb_Real2D_onChunk :: interp_fac_tsfc
+
+    TYPE(t_jsb_model),       POINTER :: model
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_near_sfc_temp_interp'
+
+    ! Local variables
+    INTEGER  :: iblk, ics, ice
+
+    ! Get local variables from options argument
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Get_memory(TURB_)
+
+    CALL weighted_by_fract%BeginAggregate()
+
+    dsl4jsb_Aggregate_onChunk(TURB_, interp_fac_tsfc, weighted_by_fract)
+
+    CALL weighted_by_fract%EndAggregate()
+
+  END SUBROUTINE aggregate_near_sfc_temp_interp
 
   ! ======================================================================================================= !
   !>
@@ -692,7 +831,7 @@ CONTAINS
 
     !$ACC END DATA
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_roughness
 
@@ -732,7 +871,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
@@ -764,7 +903,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_roughness
 
@@ -1124,7 +1263,7 @@ CONTAINS
 
     !$ACC END DATA
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_humidity_scaling
 
@@ -1154,7 +1293,7 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     dsl4jsb_Get_memory(TURB_)
 
@@ -1168,7 +1307,7 @@ CONTAINS
 
     CALL weighted_by_fract%EndAggregate()
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_humidity_scaling
 

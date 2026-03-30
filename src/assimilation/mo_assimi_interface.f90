@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -569,7 +569,7 @@ CONTAINS
 
     ! Used variables
     USE mo_hydro_process, ONLY: get_canopy_conductance
-    USE mo_phy_schemes,   ONLY: qsat_water
+    USE mo_phy_schemes,   ONLY: qsat_water, qsat_mixed
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -638,7 +638,11 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(q_air_gt_qsat_tmp)
     DO ic = 1, nc
-      q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      IF (use_tmx) THEN
+        q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic))
+      ELSE
+        q_air_gt_qsat_tmp = q_air(ic) > qsat_mixed(t(ic),press_srf(ic))
+      END IF
       canopy_cond_limited(ic) = &
         &  get_canopy_conductance(canopy_cond_unlimited(ic), & ! in, unstressed canopy conductance
                                   water_stress(ic),          & ! in, water stress factor

@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -33,8 +33,7 @@ MODULE mo_veg_config_class
   PRIVATE
   PUBLIC :: t_veg_config, Get_number_of_veg_compartments
   PUBLIC :: VEG_PART_LEAF_IDX , VEG_PART_FINE_ROOT_IDX, VEG_PART_COARSE_ROOT_IDX, VEG_PART_SAP_WOOD_IDX, &
-    &       VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, VEG_PART_RESERVE_IDX, VEG_PART_FRUIT_IDX, &
-    &       VEG_PART_SEED_BED_IDX
+    &       VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, VEG_PART_RESERVE_IDX, VEG_PART_FRUIT_IDX
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the vegetation process, derived from t_jsb_config
@@ -71,6 +70,7 @@ MODULE mo_veg_config_class
     LOGICAL          :: flag_dynroots_h2o_n_limit  !< root growth across layers limited/affected by H2O and Nitrogen availability (needs flag_dynamic_roots="T")
     LOGICAL          :: flag_herbivory             !< whether herbivory (on grass PFT) is enabled
     LOGICAL          :: flag_log_negative_vegpool  !< debug option: test for negative veg_pool and message to LOG file for any negative value
+    LOGICAL          :: flag_log_c_conservation    !< debug option: test for C conservation tests and message to LOG file if failing
     LOGICAL          :: flag_veg_interactive_n     !< TRUE: N cycle state affects C,P processes via stoichiometry or allocation changes
     LOGICAL          :: flag_veg_interactive_p     !< TRUE: P cycle state affects C,N processes via stoichiometry or allocation changes
 
@@ -84,6 +84,7 @@ MODULE mo_veg_config_class
     REAL(wp)         :: nml_k_herbivory_grass
     REAL(wp)         :: nml_k_herbivory_pasture
     REAL(wp)         :: nml_sm2lm_grass
+    REAL(wp)         :: nml_k1_root_alloc
 
    CONTAINS
      PROCEDURE :: Init => Init_veg_config
@@ -100,7 +101,6 @@ MODULE mo_veg_config_class
       & VEG_PART_LABILE_IDX,      &   !< labile
       & VEG_PART_RESERVE_IDX,     &   !< reserve
       & VEG_PART_FRUIT_IDX,       &   !< fruit
-      & VEG_PART_SEED_BED_IDX,    &   !< seed bed
       & LAST_VEG_PART_IDX ! needs to be the last -- it is used to determine the number of compartments
   END ENUM
 
@@ -133,6 +133,7 @@ CONTAINS
     LOGICAL                     :: flag_dynroots_h2o_n_limit
     LOGICAL                     :: flag_herbivory
     LOGICAL                     :: flag_log_negative_vegpool
+    LOGICAL                     :: flag_log_c_conservation
     LOGICAL                     :: flag_veg_interactive_n
     LOGICAL                     :: flag_veg_interactive_p
     LOGICAL                     :: l_use_product_pools
@@ -145,13 +146,10 @@ CONTAINS
     REAL(wp)                    :: nml_k_herbivory_grass
     REAL(wp)                    :: nml_k_herbivory_pasture
     REAL(wp)                    :: nml_sm2lm_grass
+    REAL(wp)                    :: nml_k1_root_alloc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /vegetation_ctl/       &
-#else
-    NAMELIST /jsb_veg_nml/          &
-#endif
+    NAMELIST /lnd_veg_nml/          &
       active,                       &
       lrestart_cont,                &
       ic_filename,                  &
@@ -166,6 +164,7 @@ CONTAINS
       flag_dynroots_h2o_n_limit,    &
       flag_herbivory,               &
       flag_log_negative_vegpool,    &
+      flag_log_c_conservation,      &
       flag_veg_interactive_n,       &
       flag_veg_interactive_p,       &
       l_use_product_pools,          &
@@ -177,7 +176,8 @@ CONTAINS
       &   nml_background_mort_rate_tree, &
       &   nml_k_herbivory_grass, &
       &   nml_k_herbivory_pasture, &
-      &   nml_sm2lm_grass
+      &   nml_sm2lm_grass, &
+      &   nml_k1_root_alloc
 
     INTEGER  :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
     CALL message(TRIM(routine), 'Starting veg configuration')
@@ -197,6 +197,7 @@ CONTAINS
     flag_dynroots_h2o_n_limit = .FALSE.
     flag_herbivory            = .FALSE.
     flag_log_negative_vegpool = .FALSE.
+    flag_log_c_conservation   = .FALSE.
     flag_veg_interactive_n    = .TRUE.
     flag_veg_interactive_p    = .FALSE.
     l_use_product_pools       = .FALSE.
@@ -209,16 +210,12 @@ CONTAINS
     nml_k_herbivory_grass          = def_parameters
     nml_k_herbivory_pasture        = def_parameters
     nml_sm2lm_grass                = def_parameters
+    nml_k1_root_alloc              = def_parameters
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('vegetation_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, vegetation_ctl)
-#else
-    nml_unit = position_nml('jsb_veg_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_veg_nml)
-#endif
+    nml_unit = position_nml('lnd_veg_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_veg_nml)
 
     CALL close_nml(nml_handler)
 
@@ -237,6 +234,7 @@ CONTAINS
     config%flag_dynroots_h2o_n_limit  = flag_dynroots_h2o_n_limit
     config%flag_herbivory             = flag_herbivory
     config%flag_log_negative_vegpool  = flag_log_negative_vegpool
+    config%flag_log_c_conservation    = flag_log_c_conservation
     config%flag_veg_interactive_n     = flag_veg_interactive_n
     config%flag_veg_interactive_p     = flag_veg_interactive_p
     config%l_use_product_pools        = l_use_product_pools
@@ -249,6 +247,7 @@ CONTAINS
     config%nml_k_herbivory_grass          = nml_k_herbivory_grass
     config%nml_k_herbivory_pasture        = nml_k_herbivory_pasture
     config%nml_sm2lm_grass                = nml_sm2lm_grass
+    config%nml_k1_root_alloc              = nml_k1_root_alloc
 
   END SUBROUTINE Init_veg_config
 

@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -727,77 +727,34 @@ CONTAINS
   !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
   !!
   !-----------------------------------------------------------------------------------------------------
-#ifndef __QUINCY_STANDALONE__
-  SUBROUTINE global_seb_diagnostics(tile)
+  SUBROUTINE global_seb_diagnostics(tile, global_land_area, land_area_scaling)
 
-    USE mo_sync,                  ONLY: global_sum_array
-    USE mo_jsb_grid,              ONLY: Get_grid
-    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
-
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    ! Local variables
-    !
+    USE mo_util,                    ONLY: scaled_global_sum_2D
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
+    REAL(wp),                   INTENT(in) :: global_land_area       !< Global land area
+    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SEB_)
 
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_seb_diagnostics'
 
-    ! Pointers to variables in memory
-
     dsl4jsb_Real2D_onDomain :: t
-
     REAL(wp), POINTER       :: t_gmean(:)
-
-    TYPE(t_jsb_model), POINTER      :: model
-    TYPE(t_jsb_grid),  POINTER      :: grid
-
-    REAL(wp), POINTER      :: area(:,:)
-    REAL(wp), POINTER      :: notsea(:,:)
-    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
-    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
-    REAL(wp), ALLOCATABLE  :: scaling (:,:)
-    REAL(wp)               :: global_land_area
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SEB_)
-    dsl4jsb_Get_var2D_onDomain(SEB_,  t)        ! in
-
-    t_gmean        => SEB__mem%t_gmean%ptr(:)   ! out
-
-    model => Get_model(tile%owner_model_id)
-    grid  => Get_grid(model%grid_id)
-    area         => grid%area(:,:)
-    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
-
+    dsl4jsb_Get_var2D_onDomain(SEB_,  t) ! in
+    t_gmean => SEB__mem%t_gmean%ptr(:)   ! out
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
-
-
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
     IF (SEB__mem%t_gmean%is_in_output) THEN
-
-      ! Domain Mask - to mask all halo cells for global sums (otherwise these
-      ! cells are counted twice)
-      ALLOCATE (in_domain(grid%nproma,grid%nblks))
-      WHERE (is_in_domain(:,:))
-        in_domain = 1._wp
-      ELSEWHERE
-        in_domain = 0._wp
-      END WHERE
-
-      ALLOCATE (scaling(grid%nproma,grid%nblks))
-
-      ! Calculate global land mean seb variables
-      global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
-      scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
-      t_gmean      = global_sum_array(t(:,:) * scaling(:,:)) / global_land_area
-
-      DEALLOCATE (scaling, in_domain)
+      CALL scaled_global_sum_2D(t_gmean, t, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(SEB__mem%t_gmean%ptr(:))
     END IF
 
   END SUBROUTINE global_seb_diagnostics
-#endif
 
   !
   ! ================================================================================================================================

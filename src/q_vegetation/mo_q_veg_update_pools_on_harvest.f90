@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -31,7 +31,7 @@ MODULE mo_q_veg_update_pools_on_harvest
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, VEG_BGCM_PP_FIBERBOARD_ID, &
     &       VEG_BGCM_PP_CROP_ID, VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_HARVEST_TO_PROD_ID, &
-    &       VEG_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, VEG_BGCM_HARVEST_LITTER_ID
+    &       VEG_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, VEG_BGCM_HARVEST_LITTER_ID, VEG_BGCM_SEED_BED_POOL_ID
 
 
   dsl4jsb_use_memory(HYDRO_)
@@ -84,6 +84,7 @@ CONTAINS
     INTEGER                             :: nsoil_w                    !< number of soil layers (water)
     INTEGER                             :: elem_idx_map(LAST_ELEM_ID) !< element mapper ID -> IX
     LOGICAL                             :: is_elem_used(LAST_ELEM_ID) !< indicates which elements are used in this simulation
+    REAL(wp)                            :: zero_mt(LAST_ELEM_ID, options%nc) !< helper array to pass zero seedbed litter
     REAL(wp), DIMENSION(options%nc)     :: fract_harvest_rel_to_tile  !< harvested area fraction relative to the tile area
     REAL(wp), DIMENSION(options%nc)     :: cover_fraction             !< current tile area
     REAL(wp)                            :: dtime                      !< timestep length
@@ -116,6 +117,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: delta_dens_ind
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt1L2D :: seed_bed_pool_mt
     dsl4jsb_Def_mt1L2D :: veg_pp_crop_mt
     dsl4jsb_Def_mt1L2D :: veg_pp_fuel_mt
     dsl4jsb_Def_mt1L2D :: veg_pp_paper_mt
@@ -148,6 +150,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_SYL_)
     ! ----------------------------------------------------------------------------------------------------- !
+    zero_mt(:,:) = 0.0_wp
 
     IF (tile%Is_process_calculated(Q_SYL_)) THEN
       IF (dsl4jsb_Config(Q_SYL_)%l_daily_harvest) THEN
@@ -207,6 +210,7 @@ CONTAINS
 
         IF (tile%Is_process_calculated(Q_AGR_)) THEN
           dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_CROP_ID, veg_pp_crop_mt)
+          dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_POOL_ID, seed_bed_pool_mt)
 
         ELSE IF (tile%Is_process_calculated(Q_SYL_)) THEN
           dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FUEL_ID, veg_pp_fuel_mt)
@@ -256,16 +260,10 @@ CONTAINS
 
       ! ----------------------------------------------------------------------------------------------------- !
       ! - Transfer harvested amount of each element of each compartment to harvest litter flux (but leave the seeds)
-      ! Mind TODO: if the harvest will be used in IQ to empty the veg pool before cover change, the matter
-      !            in the seeds needs to be transferred into the litter in addition,
-      !            e.g. when this routine is changed from a task to a normal subroutine it could take a boolean
-      !            indicating what to do with the seed bed!
       DO ic = 1,nc
         DO i_compartment = 1,nr_of_veg_bgcm_comp
-          IF (.NOT. i_compartment == ix_seed_bed) THEN
-            veg_litter_flux_harvest_mt(i_compartment,:,ic) = veg_pool_mt(i_compartment,:,ic) * fract_harvest_rel_to_tile(ic)
-            veg_pool_mt(i_compartment,:,ic) = veg_pool_mt(i_compartment,:,ic) - veg_litter_flux_harvest_mt(i_compartment,:,ic)
-          END IF
+          veg_litter_flux_harvest_mt(i_compartment,:,ic) = veg_pool_mt(i_compartment,:,ic) * fract_harvest_rel_to_tile(ic)
+          veg_pool_mt(i_compartment,:,ic) = veg_pool_mt(i_compartment,:,ic) - veg_litter_flux_harvest_mt(i_compartment,:,ic)
         END DO
       END DO
 
@@ -275,7 +273,7 @@ CONTAINS
       !>
       IF (dsl4jsb_Lctlib_param(ForestFlag)) THEN
         DO ic = 1,nc
-          delta_dens_ind = - (fract_harvest_rel_to_tile(ic) * dens_ind(ic))
+          delta_dens_ind(ic) = - (fract_harvest_rel_to_tile(ic) * dens_ind(ic))
         END DO
       END IF
 
@@ -290,6 +288,7 @@ CONTAINS
           CALL calc_crop_harvest_to_products_flux(nc, &                                 ! in
             &                                     veg_litter_flux_harvest_mt(:,:,:), & ! inout
             &                                     veg_pool_mt(:,:,:), &
+            &                                     seed_bed_pool_mt(:,:), &
             &                                     veg_pp_crop_mt(:,:), &
             &                                     veg_pp_flux_harvest_mt(:,:))
 
@@ -340,9 +339,11 @@ CONTAINS
         & soil_depth_sl(:,:), &
         & root_fraction_sl(:,:), &
         & veg_litter_flux_harvest_mt(:,:,:), &          ! in
+        & zero_mt(:,:), &
         & sb_formation_mt(:,:,:,:) )                    ! inout
 
     END IF
+
   END SUBROUTINE update_pools_on_harvest
 
 
@@ -392,6 +393,7 @@ CONTAINS
     & nc, &
     & veg_litter_flux_harvest_mt, &
     & veg_pool_mt, &
+    & seed_bed_pool_mt, &
     & veg_pp_crop_mt, &
     & veg_pp_flux_harvest_mt)
 
@@ -401,6 +403,7 @@ CONTAINS
     INTEGER,  INTENT(in)    :: nc                                !< dimensions
     REAL(wp), INTENT(inout) :: veg_litter_flux_harvest_mt(:,:,:) !< bgcm flux from harvest to litter
     REAL(wp), INTENT(inout) :: veg_pool_mt(:,:,:)                !< bgcm vegetation pool
+    REAL(wp), INTENT(inout) :: seed_bed_pool_mt(:,:)             !< bgcm seed bed pool
     REAL(wp), INTENT(inout) :: veg_pp_crop_mt(:,:)               !< bgcm crop products pool
     REAL(wp), INTENT(inout) :: veg_pp_flux_harvest_mt(:,:)       !< bgcm harvest flux to products
     ! ----------------------------------------------------------------------------------------------------- !
@@ -426,12 +429,12 @@ CONTAINS
 
       ! fruits: first ensure that the seed pool does not decrease below twice planting level to have planting
       !         material for next growing season
-      IF (veg_pool_mt(ix_seed_bed,ixC,ic) < fstore_seed_min * crop_planting_mass &
+      IF (seed_bed_pool_mt(ixC,ic) < fstore_seed_min * crop_planting_mass &
           & .AND. veg_litter_flux_harvest_mt(ix_fruit,ixC,ic) > eps8) THEN
         hlp1 = MIN(MAX( &
-          &             (fstore_seed_min * crop_planting_mass - veg_pool_mt(ix_seed_bed,ixC,ic)) &
+          &             (fstore_seed_min * crop_planting_mass - seed_bed_pool_mt(ixC,ic)) &
           &               / veg_litter_flux_harvest_mt(ix_fruit,ixC,ic),0.0_wp),1.0_wp)
-        veg_pool_mt(ix_seed_bed,:,ic) = veg_pool_mt(ix_seed_bed,:,ic) &
+        seed_bed_pool_mt(:,ic) = seed_bed_pool_mt(:,ic) &
           & + hlp1 * veg_litter_flux_harvest_mt(ix_fruit,:,ic)
         veg_litter_flux_harvest_mt(ix_fruit,:,ic) = veg_litter_flux_harvest_mt(ix_fruit,:,ic) &
           & - hlp1 * veg_litter_flux_harvest_mt(ix_fruit,:,ic)

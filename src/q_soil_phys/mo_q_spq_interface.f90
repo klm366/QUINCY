@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -307,8 +307,9 @@ CONTAINS
     ! SSE_
     dsl4jsb_Aggregate_onChunk(SSE_, t_soil_sl               , weighted_by_fract)
     ! HYDRO_ 2D
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_skin                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_skin               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_rel       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_plant_avail_rel    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, transpiration          , weighted_by_fract)
     ! HYDRO_ 3D
