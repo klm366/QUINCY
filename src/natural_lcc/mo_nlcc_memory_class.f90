@@ -50,6 +50,8 @@ MODULE mo_nlcc_memory_class
       & max_mmtemp20, &
       & gdd_sum_year, &
       & gdd_prev_year, &
+      & max_snow_year, &
+      & max_snow_prev_year, &
       & max_thaw_year, &
       & max_thaw_prev_year, &
       & bare_fpc, &
@@ -60,6 +62,7 @@ MODULE mo_nlcc_memory_class
       & pot_fpc, &
       & cover_fract_pot, &
       & cover_fract, &
+      & npp_pft, &
       & bio_exist
     ! Additional variables for LAND lct_type
 !!$  TR  TYPE(t_jsb_var_real2d) :: &
@@ -168,15 +171,31 @@ CONTAINS
 
     CALL mem%Add_var('gdd_prev_year', mem%gdd_prev_year,                      &
       & hgrid, surface,                                                       &
-      & t_cf('gdd_prev_year', 'gdd previous year', 'gdd prev year'),          &
+      & t_cf('gdd_prev_year', 'degC days', 'gdd previous year'),              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
-      & output_level=FULL,                                                   &
+      & output_level=FULL,                                                    &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var('max_thaw_year', mem%max_thaw_year,                &
+    CALL mem%Add_var('max_snow_year', mem%max_snow_year,                      &
       & hgrid, surface,                                                       &
-      & t_cf('max_thaw_year', 'm', 'max thaw depth current year'), &
+      & t_cf('max_snow_year', 'm', 'max snow depth current year'),            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & output_level=NONE,                                                    &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var('max_snow_prev_year', mem%max_snow_prev_year,            &
+      & hgrid, surface,                                                       &
+      & t_cf('max_snow_prev_year', 'm', 'max snow depth previous year'),      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & output_level=FULL,                                                    &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var('max_thaw_year', mem%max_thaw_year,                      &
+      & hgrid, surface,                                                       &
+      & t_cf('max_thaw_year', 'm', 'max thaw depth current year'),            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                    &
@@ -184,7 +203,7 @@ CONTAINS
 
     CALL mem%Add_var('max_thaw_prev_year', mem%max_thaw_prev_year,            &
       & hgrid, surface,                                                       &
-      & t_cf('max_thaw_prev_year', 'm', 'max thaw depth previous year'),          &
+      & t_cf('max_thaw_prev_year', 'm', 'max thaw depth previous year'),      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=FULL,                                                    &
@@ -258,6 +277,15 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var('npp_pft', mem%npp_pft,                                  &
+      & hgrid, pft_vgrid,                                                     &
+      & t_cf('npp_pft', 'mol/m2/s', 'NPP per PFT'),                           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & output_level=FULL,                                                    &
+      & lrestart_cont = .TRUE.,                                               &
       & initval_r=0.0_wp )
 
   END SUBROUTINE Init_nlcc_memory

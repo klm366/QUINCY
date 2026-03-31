@@ -31,6 +31,7 @@ MODULE mo_nlcc_config_class
     LOGICAL             ::  &
       & init_running_means, &
       & init_nlcc,          &
+      & update_cover_fract, &
       & climbuf_only
     REAL(wp)            ::  &
       & accelerate_nlcc
@@ -60,6 +61,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: init_running_means
     LOGICAL                     :: init_nlcc
+    LOGICAL                     :: update_cover_fract
     REAL(wp)                    :: accelerate_nlcc
 
     NAMELIST /jsb_nlcc_nml/  &
@@ -69,6 +71,7 @@ CONTAINS
       &  bc_filename,        &
       &  init_running_means, &
       &  init_nlcc,          &
+      &  update_cover_fract, &
       &  accelerate_nlcc
 
     INTEGER :: nml_handler, nml_unit, istat, npft, i
@@ -84,6 +87,7 @@ CONTAINS
     ic_filename         = 'ic_land_nlcc.nc'
     init_running_means  = .FALSE.
     init_nlcc           = .FALSE.
+    update_cover_fract  = .TRUE.
     accelerate_nlcc     = 1._wp
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -101,6 +105,12 @@ CONTAINS
     IF (init_running_means) CALL message(TRIM(routine), 'Initializing climate buffer')
     config%init_nlcc           = init_nlcc
     IF (init_nlcc) CALL message(TRIM(routine), 'Initializing NLCC')
+    config%update_cover_fract  = update_cover_fract
+    IF (update_cover_fract) THEN
+      CALL message(TRIM(routine), 'Updating cover fractions')
+    ELSE
+      CALL message(TRIM(routine), 'NOT updating cover fractions')
+    END IF
     config%climbuf_only        = .FALSE. ! Can only be activated by using vertical carbon yasso
     config%accelerate_nlcc     = accelerate_nlcc
     IF (accelerate_nlcc /= 1._wp) THEN
