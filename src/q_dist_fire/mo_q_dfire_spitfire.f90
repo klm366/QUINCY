@@ -522,6 +522,10 @@ CONTAINS
                         sf_spitfire, &
                         mask=mask_is_tile_enabled)
 
+    IF (.TRUE.) THEN ! todo: add namelist parameter
+      CALL run_diagnostics_at_tile(nc, iblk, burnable_area_ha, sf_spitfire)
+    ENDIF
+
     dead_fuel_consumption_1hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_1hr_idx)
     dead_fuel_consumption_10hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_10hr_idx)
     dead_fuel_consumption_100hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_100hr_idx)
@@ -1091,6 +1095,63 @@ CONTAINS
       END IF
     ENDDO
   END FUNCTION calc_ab_moisture
+
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Check calculated data is consistent, otherwise report and stop the simulation
+  !>
+  SUBROUTINE run_diagnostics_at_tile(nc, iblk, grid_cell_area, sf_outputs)
+    INTEGER, INTENT(in) :: nc, iblk
+    REAL(wp), INTENT(in) :: grid_cell_area(:)
+    TYPE(t_sf_spitfire), INTENT(in) :: sf_outputs
+
+    LOGICAL :: test_BAfract_is_outside_limits
+    LOGICAL :: test_BA_is_bigger_than_gridcellarea
+    LOGICAL :: has_any_test_failed
+    INTEGER :: ic
+    INTEGER :: nfailedtests
+
+    nfailedtests = 0
+    test_BAfract_is_outside_limits = .FALSE.
+    test_BA_is_bigger_than_gridcellarea = .FALSE.
+    has_any_test_failed = .FALSE.
+
+    ! AB_fract is bigger than gridcell?
+    IF (ANY(sf_outputs % area_burned_fract > 1._wp)) THEN
+      DO ic=1, nc
+        IF (sf_outputs % area_burned_fract(ic) > 1._wp) THEN
+          WRITE(*,*) "spitfire.f90:: ic, iblk, AB_fract=", ic, iblk, &
+                  sf_outputs % area_burned_fract(ic)
+          test_BAfract_is_outside_limits = .TRUE.
+        ENDIF
+      ENDDO
+      IF (test_BAfract_is_outside_limits) nfailedtests = nfailedtests + 1
+      WRITE(*,*) "(spitfire) AB_fract is beyong fractional limits (0 to 1)?", test_BAfract_is_outside_limits
+    ENDIF
+
+    !< is Area burnt bigger than grid cell area?
+    DO ic=1, nc
+      IF (sf_outputs % area_burned(ic) > grid_cell_area(ic)) THEN
+        WRITE(*,*) "spitfire.f90:: ic, iblk, AB, grid cell area=", ic, iblk, &
+                  sf_outputs % area_burned(ic), grid_cell_area(ic)
+        test_BA_is_bigger_than_gridcellarea = .TRUE.
+      ENDIF
+      ENDDO
+    IF (test_BAfract_is_outside_limits) nfailedtests = nfailedtests + 1
+    WRITE(*,*) "(spitfire) AB is bigger than gridcell area?", test_BA_is_bigger_than_gridcellarea
+
+    ! sum up
+    has_any_test_failed = test_BAfract_is_outside_limits .AND. &
+                          test_BA_is_bigger_than_gridcellarea
+
+    IF (has_any_test_failed) THEN
+      WRITE(*,*) "Failed tests:", nfailedtests
+      CALL finish("run_diagnostics", "Test(s) failed")
+    ENDIF
+
+  END SUBROUTINE run_diagnostics_at_tile
 
 #endif
 END MODULE mo_q_dfire_spitfire

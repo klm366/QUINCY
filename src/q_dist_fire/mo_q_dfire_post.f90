@@ -552,9 +552,55 @@ CONTAINS
     sb_fire_emissions_total_els = sb_fire_emissions_total_els / dtime * 1000000._wp
     veg_fire_emissions_total_els = veg_fire_emissions_total_els / dtime * 1000000._wp
     sb_fire_litter_ash_total_els = sb_fire_litter_ash_total_els / dtime * 1000000._wp
+
+    IF (.TRUE.) THEN
+      CALL run_diagnostics_at_pft(nc, sb_pool_mt, sb_fire_emissions_mt, sb_fire_litter_ash_mt)
+    ENDIF
   END SUBROUTINE update_q_dfire_post
 
 
+  ! ======================================================================================================= !
+  !>
+  !> Calculate residue and any mass imbalance
+  !>
+  SUBROUTINE run_diagnostics_at_pft(nc, sb_pool_mt, sb_fire_emissions_mt, sb_fire_litter_ash_mt)
+    INTEGER, INTENT(in) :: nc
+    REAL(wp), INTENT(in) :: sb_pool_mt(:,:,:,:)
+    REAL(wp), INTENT(in) :: sb_fire_emissions_mt(:,:,:,:)
+    REAL(wp), INTENT(in) :: sb_fire_litter_ash_mt(:,:,:,:)
+
+    INTEGER :: ic, ip, iel
+    REAL(wp) :: diff
+    LOGICAL :: is_sb_pool_negative
+
+    is_sb_pool_negative = .FALSE.
+
+    IF (ANY((sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl) - &
+            (sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl) + &
+             sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl))) < 0._wp)) THEN
+
+      DO ic=1, nc
+        DO ip=1, SIZE(sb_pool_mt, DIM=1) !ndeadpools
+          DO iel=1, SIZE(sb_pool_mt, DIM=2) ! n elements
+            diff = sb_pool_mt(ip,iel,ic,df_sf_spq_layer_top_sl) - &
+                   (sb_fire_emissions_mt(ip,iel,ic,df_sf_spq_layer_top_sl) + &
+                   sb_fire_litter_ash_mt(ip,iel,ic,df_sf_spq_layer_top_sl))
+            IF (diff < 0._wp) THEN
+              WRITE(*,*) "post.f90:: ic, pool, el, sb(ic,pool,el), ab_fract =", &
+                      ic, ip, iel, diff
+              WRITE(*,*) "post.f90:: sb_pool, sb_fire_em, sb_fire_ash =", &
+                       sb_pool_mt(ip,iel,ic,df_sf_spq_layer_top_sl), &
+                       sb_fire_emissions_mt(ip,iel,ic,df_sf_spq_layer_top_sl), &
+                       sb_fire_litter_ash_mt(ip,iel,ic,df_sf_spq_layer_top_sl)
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDDO
+      is_sb_pool_negative = .TRUE.
+      CALL finish("post.f90", "Too much fuel to remove from sb_pool")
+    ENDIF
+
+  END SUBROUTINE run_diagnostics_at_pft
   ! ======================================================================================================= !
   !>
   !> Calculate residue and any mass imbalance
