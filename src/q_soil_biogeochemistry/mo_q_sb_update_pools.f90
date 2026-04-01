@@ -69,6 +69,7 @@ CONTAINS
                                          calc_qmax_bulk_density_correction
     USE mo_q_sb_jsm_transport,     ONLY: calc_particle_fluxrate, calc_particle_transport_wrapper
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
+    USE mo_jsb_physical_constants, ONLY: ATM_STANDARD_N15
     USE mo_spq_util,               ONLY: calc_qmax_texture
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
@@ -351,8 +352,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: volume_min_sl
     dsl4jsb_Real3D_onChunk :: dom_cn_mavg
     dsl4jsb_Real3D_onChunk :: dom_cp_mavg
-    dsl4jsb_Real3D_onChunk :: fact_n_status_mic_c_growth
-    dsl4jsb_Real3D_onChunk :: fact_p_status_mic_c_growth
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -636,8 +635,6 @@ CONTAINS
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
       dsl4jsb_Get_var3D_onChunk(SB_,       dom_cn_mavg)
       dsl4jsb_Get_var3D_onChunk(SB_,       dom_cp_mavg)
-      dsl4jsb_Get_var3D_onChunk(SB_,       fact_n_status_mic_c_growth)
-      dsl4jsb_Get_var3D_onChunk(SB_,       fact_p_status_mic_c_growth)
       dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_microbial_c)
       dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_microbial_n)
       dsl4jsb_Get_var3D_onChunk(SB_,       sb_bgcm_pool_microbial_p)
@@ -924,7 +921,6 @@ CONTAINS
     !! nh4
     CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
       &                                    0.0_wp, qmax_nh4_min_sl(:,:), qmax_nh4(:,:))
-    qmax_nh4(:,:) = qmax_nh4(:,:) * rmm_sorption(:,:)
     CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
       &                                    km_adsorpt_OM_nh4, km_adsorpt_mineral_nh4, km_adsorpt_nh4_sl(:,:))
 
@@ -969,8 +965,8 @@ CONTAINS
 
       nh4_solute(:,:)        = nh4_solute(:,:) + partition_coef(:,:) * hlp1(:,:)
       nh4_assoc(:,:)         = nh4_assoc(:,:)  + (1._wp - partition_coef(:,:)) * hlp1(:,:)
-
       fast_exchange_nh4(:,:) = (partition_coef(:,:) * hlp1(:,:) + hlp2(:,:)) * 1.e6_wp / dtime
+
       hlp2(:,:) = (net_mineralisation_nh4_n15(:,:) + transport_nh4_n15_solute(:,:) - &
                    lateral_loss_nh4_n15_solute_sl(:,:) - &
                    plant_uptake_nh4_n15_sl(:,:) - mycorrhiza_uptake_nh4_n15_sl(:,:) - &
@@ -979,19 +975,17 @@ CONTAINS
       hlp2(:,1) = hlp2(:,1) + (nhx_n15_deposition(:) + fertiliser_nh4_n15(:)) &
         &                     / 1.e6_wp / soil_depth_sl(:,1) * dtime
 
-      DO ic = 1,nc
-        DO isoil = 1, NINT(num_sl_above_bedrock(ic))
-          IF ((nh4_n15_solute(ic,isoil) + nh4_n15_assoc(ic,isoil)) < -hlp2(ic,isoil)) THEN
-            hlp2(ic,isoil) = -(nh4_n15_solute(ic,isoil) + nh4_n15_assoc(ic,isoil))
-          END IF
-          IF (nh4_solute(ic,isoil) + nh4_assoc(ic,isoil) > eps8) THEN
-            partition_coef(ic,isoil) = nh4_solute(ic,isoil) / (nh4_solute(ic,isoil) + nh4_assoc(ic,isoil))
-          END IF
-        END DO
-      END DO
-
-      nh4_n15_solute(:,:) = partition_coef(:,:) * (nh4_n15_solute(:,:) + nh4_n15_assoc(:,:) + hlp2(:,:))
-      nh4_n15_assoc(:,:)  = (1._wp - partition_coef(:,:)) * (nh4_n15_solute(:,:) + nh4_n15_assoc(:,:) + hlp2(:,:))
+      ! translate km and qmax to the order of N15 by multiplying by the default mixing ratio
+      CALL calc_langmuir_kinetics( &
+        &   dtime, &
+        &   hlp2(:,:), &
+        &   nh4_n15_solute(:,:), &
+        &   nh4_n15_assoc(:,:), &
+        &   km_adsorpt_nh4_act(:,:) * ATM_STANDARD_N15, &
+        &   qmax_nh4_mineral_act(:,:) * ATM_STANDARD_N15, &
+        &   partition_coef(:,:))
+      nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + partition_coef(:,:) * hlp2(:,:)
+      nh4_n15_assoc(:,:)  = nh4_n15_assoc(:,:)  + (1._wp - partition_coef(:,:)) * hlp2(:,:)
     ENDIF
 
     !> 10.3 update mineral P pools if not prescibed
@@ -1460,7 +1454,7 @@ CONTAINS
                                               km, qmax, solute_partition_coef, &
                                               assoc_slow, km_fast, qmax_fast, km_slow, qmax_slow, &
                                               slow_partition_coef, slow_exchange)
-    USE mo_sb_constants
+    USE mo_sb_constants,        ONLY: langmuir_conc_min
     USE mo_jsb_math_constants,  ONLY: eps4, eps8
 
     IMPLICIT NONE
@@ -1508,7 +1502,7 @@ CONTAINS
           hlp1 = assoc_fast / (assoc_fast + assoc_slow + solute)
           hlp2 = assoc_slow / (assoc_fast + assoc_slow + solute)
           hlp3 = solute     / (assoc_fast + assoc_slow + solute)
-        ELSEIF ( (solute < po4_solute_min) .AND. solute_flux<0._wp ) THEN
+        ELSEIF ( (solute < langmuir_conc_min) .AND. solute_flux < 0._wp ) THEN
           hlp3 = 0._wp
         ENDIF
       ENDIF
@@ -1531,47 +1525,80 @@ CONTAINS
 
     !> 2.0 traditional Langmuir isotherm
     ELSE
-      IF((km > eps8) .AND. (qmax > eps8)) THEN
+      IF (km > eps8 .AND. qmax > eps8) THEN
         !! calculate partition coefficient based on derivatives of solute
         hlp1 = qmax * km / ((solute + km) ** 2.0_wp )
         hlp3 = 1._wp
         solute_partition_coef = hlp3 / (hlp1 + hlp3)
-        !! check for extreme low concentrations of soluble and adsorbed pools
-        IF (assoc_fast < (-solute_flux)) THEN
-          hlp1 = assoc_fast / (assoc_fast + solute)
-          !! avoid assoc_fast to be lower than po4_solute_min
-          IF ((assoc_fast + hlp1 * solute_flux) < po4_solute_min) THEN
-            hlp1 = MAX(0._wp, (assoc_fast - po4_solute_min)) / (-solute_flux)
-          ENDIF
-          hlp3                  = 1._wp - hlp1
-          solute_partition_coef = hlp3 / (hlp1 + hlp3)
-        ELSEIF ((solute < po4_solute_min) .AND. solute_flux < 0._wp) THEN
-          hlp3                  = 0._wp
-          solute_partition_coef = hlp3 / (hlp1 + hlp3)
-        ELSEIF (solute_flux < (-eps8)) THEN
-          solute_partition_coef = MAX(hlp3 / (hlp1 + hlp3), solute / (solute + assoc_fast))
-        ENDIF
-      ELSE
-        hlp1                  = 0._wp
-        hlp3                  = 1._wp
-        solute_partition_coef = hlp3 / (hlp1 + hlp3)
-      ENDIF
 
-      !> 2.1 check fast pool size against Qmax
-      !!
-      hlp4 = assoc_fast + (1._wp - solute_partition_coef) * solute_flux
-      IF ((solute + assoc_fast) > eps8 ) THEN
-         IF ((hlp4 > qmax) .AND. (qmax > eps8)) THEN
-           IF (solute_flux < 0._wp) THEN
-             solute_partition_coef = 1._wp - MIN(1._wp, MAX(0._wp, (qmax-po4_solute_min) / (-solute_flux)))
-           ELSEIF (solute_flux > 0._wp) THEN
-             solute_partition_coef = 1._wp
-           ENDIF
-         ENDIF
-      ENDIF
-    ENDIF  ! IF (PRESENT(assoc_slow))
+        ! impose checks at very low and very high concentrations
+        hlp4 = assoc_fast + (1._wp - solute_partition_coef) * solute_flux
+        hlp2 = solute + solute_partition_coef * solute_flux
+
+        ! in case of net removal of substance
+        IF (solute_flux < 0._wp) THEN
+          ! as long as the assoc_fast pool is larger than qmax, empty assoc_fast pool
+          IF (hlp4 > qmax) THEN
+            solute_partition_coef = limit_partitioning_coef(solute_flux, assoc_fast, qmax)
+          END IF
+
+          ! extreme case with low conccentrations in both assoc_fast and solute pool
+          ! constrain to linear solution
+          IF (hlp2 < langmuir_conc_min .AND. hlp4 < langmuir_conc_min) THEN
+            solute_partition_coef = solute / (solute + assoc_fast)
+          ! if only the solute pool drops below langmuir_conc_min, constrain this to
+          ! minimum level, i.e. take remaining flux from assoc pool (for numerical reasons)
+          ELSE IF (hlp2 < langmuir_conc_min) THEN
+            solute_partition_coef = MIN(MAX( (langmuir_conc_min - solute) / solute_flux, 0.0_wp), 1.0_wp)
+          ! if assoc_fast pool becomes so small that it cannot accommodate the removal
+          ! but there is still sufficient solute, constrain solute_partition_coef
+          ! such that the pool still contains langmuir_conc_min (for numerical reasons)
+          ELSE IF (hlp4 < langmuir_conc_min) THEN
+            solute_partition_coef = limit_partitioning_coef(solute_flux, assoc_fast, langmuir_conc_min)
+          END IF
+
+        ELSE ! net addition of substance
+          ! if assoc_fast pool exceeds qmax, limit partitioning to ensure qmax is not exceeded
+          IF (hlp4 > qmax) THEN
+            solute_partition_coef = limit_partitioning_coef(solute_flux, assoc_fast, qmax)
+          END IF
+        END IF
+      ELSE ! insufficient qmax to activate sorption process
+        solute_partition_coef = 1.0_wp
+      END IF
+    END IF  ! IF (PRESENT(assoc_slow))
 
   END SUBROUTINE calc_langmuir_kinetics
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task to calc_langmuir_kinetics
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> function to limit solute_partitioning_coef to valid solution in the case of extreme fluxes and
+  !! concentrations
+  !-----------------------------------------------------------------------------------------------------
+  ELEMENTAL FUNCTION limit_partitioning_coef(solute_flux, assoc_fast, limit) RESULT (solute_partition_coef)
+
+    USE mo_jsb_math_constants,  ONLY: eps8
+
+    IMPLICIT NONE
+    ! 0.1 inout
+    REAL(wp), INTENT(in)    :: solute_flux            !< total solute flux (mol/m3/dtime)
+    REAL(wp), INTENT(in)    :: assoc_fast             !< adsorbed (fast) pool (mol/m3)
+    REAL(wp), INTENT(in)    :: limit                  !< minimum or maximum size of the adsorbed (fast) pool (mol/m3)
+    REAL(wp)                :: solute_partition_coef  !< partition coefficient to soluble pool
+
+    IF (ABS(solute_flux) >= eps8) THEN
+      solute_partition_coef = MIN(MAX( (assoc_fast + solute_flux - limit) / solute_flux, 0.0_wp), 1.0_wp)
+    ELSE
+      IF (solute_flux < 0.0_wp) THEN
+        solute_partition_coef = 0.0_wp
+      ELSE
+        solute_partition_coef = 1.0_wp
+      END IF
+    END IF
+
+  END FUNCTION limit_partitioning_coef
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task to update_sb_pools
