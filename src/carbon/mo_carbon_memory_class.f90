@@ -282,6 +282,12 @@ MODULE mo_carbon_memory_class
       soil_respiration_anox_sl_ta    ! mean daily rate of heterotrophic (anoxid soils) respiration [mol m-2(tile)].
                                      ! Without N limitation! Only with methane processes active
 
+    ! YASSO debugging output
+    TYPE(t_jsb_var_real2d) ::        &
+      YASSO_debug
+    TYPE(t_jsb_var_real3d) ::        &
+      YASSO_debug_sl
+
   CONTAINS
     PROCEDURE :: Init => Init_carbon_memory
   END TYPE t_carbon_memory
@@ -1144,6 +1150,14 @@ CONTAINS
       & prefix, suffix,                                                           &
       & loutput=.TRUE.,lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    CALL mem%Add_var('YASSO_debug', mem%YASSO_debug,                              &
+      & hgrid, surface,                                                           &
+      & t_cf('YASSO_debug', '', 'Debug output on surface'),                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+      & prefix, suffix,                                                           &
+      & output_level=FULL,                                                        &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
     IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
       ! Soil level pools for vertical C separation
       ! Yasso 1: Green carbon pools
@@ -1378,6 +1392,14 @@ CONTAINS
         & output_level=FULL,                                                      &
         & lrestart_cont = .TRUE.,                                                 &
         & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+    CALL mem%Add_var('YASSO_debug_sl', mem%YASSO_debug_sl,  &
+        & hgrid, soil_c,                                                          &
+        & t_cf('YASSO_debug_sl', '', 'Debug output on soil layers'),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL,                                                      &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     END IF
 

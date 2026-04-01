@@ -75,6 +75,9 @@ CONTAINS
       c_ethanol_bg2_sl,                       &
       c_nonsoluble_bg2_sl,                    &
       c_humus_2_sl,                           &
+      ! debugging
+      Y_debug,                                &
+      Y_debug_sl,                             &
       ! Output fluxes
       c_decomp_humus_1_sum,                   &
       c_decomp_humus_2_sum,                   &
@@ -158,6 +161,9 @@ CONTAINS
     REAL(wp),                   INTENT(inout) :: c_ethanol_bg2_sl(:)      ! Ethanol soluble litter pool
     REAL(wp),                   INTENT(inout) :: c_nonsoluble_bg2_sl(:)   ! Non-soluble litter pool
     REAL(wp),                   INTENT(inout) :: c_humus_2_sl(:)          ! Humus litter pool
+
+    REAL(wp),                   INTENT(inout) :: Y_debug                  ! debugging
+    REAL(wp),                   INTENT(inout) :: Y_debug_sl(:)            ! debugging
 
     ! Decomposition fluxes
     REAL(wp),                   INTENT(inout) :: c_decomp_humus_1_sum     ! annual cflux sum of humus decomposed (leaf)
@@ -446,6 +452,9 @@ CONTAINS
       CALL vertical_C_transport(c_humus_1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
       CALL vertical_C_transport(c_humus_2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
 
+      Y_debug = thaw_depth
+      Y_debug_sl(:) = diff_coeff(:)
+      
       ! remove any C that might be below bedrock boundary
       CALL remove_C_below_bedrock(c_acid_bg1_sl, soil_depth, layer_thick)
       CALL remove_C_below_bedrock(c_acid_bg2_sl, soil_depth, layer_thick)

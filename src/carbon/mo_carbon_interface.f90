@@ -375,6 +375,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: soil_respiration_oxic_sl
     dsl4jsb_Real3D_onChunk :: soil_respiration_anox_sl
     !
+    dsl4jsb_Real2D_onChunk :: YASSO_debug
+    dsl4jsb_Real3D_onChunk :: YASSO_debug_sl
     dsl4jsb_Real3D_onChunk :: root_dist_sl
     dsl4jsb_Real3D_onChunk :: max_layer_sl
 
@@ -481,6 +483,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout
     !
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YASSO_debug)          ! inout
+    !
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_1_sum) ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_2_sum) ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum)   ! inout
@@ -548,6 +552,7 @@ CONTAINS
 
       dsl4jsb_Get_var3D_onChunk(CARBON_,  root_dist_sl)             ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  max_layer_sl)             ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  YASSO_debug_sl)           ! inout
     END IF
 
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
@@ -979,6 +984,9 @@ CONTAINS
                c_nonsoluble_bg2_sl          = c_nonsoluble_bg2_sl(ic,:),      & ! inout
                c_humus_2_sl                 = c_humus_2_sl(ic,:),             & ! inout
                !
+               Y_debug                      = YASSO_debug(ic),                & ! inout
+               Y_debug_sl                   = YASSO_debug_sl(ic,:),           & ! inout
+               !
                c_decomp_humus_1_sum         = c_decomp_humus_1_sum(ic),       & ! out
                c_decomp_humus_2_sum         = c_decomp_humus_2_sum(ic),       & ! out
                c_into_humus_1_sum           = c_into_humus_1_sum(ic),         & ! out
@@ -1242,6 +1250,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, max_green_bio,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, sla,                      weighted_by_fract)
 
+    dsl4jsb_Aggregate_onChunk(CARBON_, YASSO_debug,      weighted_by_fract)
+
     dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_oxic_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_anox_ta,      weighted_by_fract)
 
@@ -1267,6 +1277,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(CARBON_, max_layer_sl,             weighted_by_fract)             ! inout
 
       dsl4jsb_Aggregate_onChunk(CARBON_, permafrost_layer,         weighted_by_fract)             ! inout
+      dsl4jsb_Aggregate_onChunk(CARBON_, YASSO_debug_sl,           weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_t_soil_sl_yDay,    weighted_by_fract)             ! inout
       dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_wtr_soil_rel_sl_yDay, weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_t_soil_sl,         weighted_by_fract)             ! inout
