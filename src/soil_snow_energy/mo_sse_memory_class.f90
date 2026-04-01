@@ -54,7 +54,10 @@ MODULE mo_sse_memory_class
       & snow_depth_sl,        & !< Depth of snow layers [m]
       & t_snow,               & !< Temperature of snow layers [K]
       & t_snow_acoef,         & !< Snow A coefficient of Richtmeyer and Morton scheme
-      & t_snow_bcoef            !< Snow B coefficient of Richtmeyer and Morton scheme
+      & t_snow_bcoef,         & !< Snow B coefficient of Richtmeyer and Morton scheme
+      & t_soil_sl_max,        & !< Soil temperature daily maximum [K]
+      & t_soil_sl_min           !< Soil temperature daily minimum [K]
+
     TYPE(t_jsb_var_real2d) :: &
       & hcap_grnd,            & !< Heat capacity of the ground (uppermost layer)        [J m-2 K-1]
       & hcap_grnd_old,        & !< Heat capacity of the ground (uppermost_layer), old   [J m-2 K-1]
@@ -119,7 +122,7 @@ CONTAINS
     soil_e  => Get_vgrid('soil_depth_energy')
     snow_e  => Get_vgrid('snow_depth_energy')
 
-    CALL mem%Add_var( 'vol_heat_cap', mem%vol_heat_cap,                 &
+    CALL mem%Add_var( 'vol_heat_cap', mem%vol_heat_cap,                      &
       & hgrid, surface,                                                      &
       & t_cf('vol_heat_capacity_soil', 'J m-3 K-1', ''),                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -127,7 +130,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL mem%Add_var( 'vol_heat_cap_sl', mem%vol_heat_cap_sl,           &
+    CALL mem%Add_var( 'vol_heat_cap_sl', mem%vol_heat_cap_sl,                &
       & hgrid, soil_e,                                                       &
       & t_cf('vol_heat_capacity_soil', 'J m-3 K-1', ''),                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -135,7 +138,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'vol_heat_cap_snow', mem%vol_heat_cap_snow,       &
+    CALL mem%Add_var( 'vol_heat_cap_snow', mem%vol_heat_cap_snow,            &
       & hgrid, surface,                                                      &
       & t_cf('vol_heat_capacity_snow', 'J m-3 K-1', ''),                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -143,7 +146,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'heat_cond', mem%heat_cond,                       &
+    CALL mem%Add_var( 'heat_cond', mem%heat_cond,                            &
       & hgrid, surface,                                                      &
       & t_cf('heat_cond_soil', 'J m-1 s-1 K-1', ''),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -151,7 +154,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL mem%Add_var( 'heat_cond_sl', mem%heat_cond_sl,                 &
+    CALL mem%Add_var( 'heat_cond_sl', mem%heat_cond_sl,                      &
       & hgrid, soil_e,                                                       &
       & t_cf('heat_cond_soil', 'J m-1 s-1 K-1', ''),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -159,7 +162,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'heat_cond_snow', mem%heat_cond_snow,             &
+    CALL mem%Add_var( 'heat_cond_snow', mem%heat_cond_snow,                  &
       & hgrid, surface,                                                      &
       & t_cf('heat_cond_snow', 'J m-1 s-1 K-1', ''),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -169,12 +172,12 @@ CONTAINS
 
     IF (      .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map                     &
       & .AND. .NOT. dsl4jsb_Config(SSE_)%l_soil_texture) THEN
-      CALL mem%Add_var( 'thermal_diffusivity', mem%thermal_diffusivity,        &
-        & hgrid, surface,                                                      &
-        & t_cf('thermal_diffusivity_soil', 'm2 s-1', ''),                      &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
+      CALL mem%Add_var( 'thermal_diffusivity', mem%thermal_diffusivity,      &
+        & hgrid, surface,                                                    &
+        & t_cf('thermal_diffusivity_soil', 'm2 s-1', ''),                    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.FALSE.,                                                  &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
     END IF
 
@@ -347,17 +350,29 @@ CONTAINS
       & hgrid, surface,                                                      &
       & t_cf('thaw_cycle', '', 'Number of freeze-thaw cycles'),              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.TRUE., lrestart_cont=.TRUE.,                                                     &
-      & output_level=FULL)
+      & prefix, suffix, initval_r = 0.0_wp,                                  &
+      & output_level=FULL, lrestart=.TRUE., lrestart_cont=.TRUE.)
 
     CALL mem%Add_var( 'thaw_cycle_prev', mem%thaw_cycle_prev,                &
       & hgrid, surface,                                                      &
       & t_cf('thaw_cycle_prev', '', 'Number of freeze-thaw cycles prev year'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.true., lrestart_cont=.TRUE.,                                                     &
-      & output_level=FULL)
+      & prefix, suffix, initval_r = 0.0_wp,                                  &
+      & output_level=FULL, lrestart=.TRUE., lrestart_cont=.TRUE.)
+
+    CALL mem%Add_var( 't_soil_sl_max', mem%t_soil_sl_max,                    &
+      & hgrid, soil_e,                                                       &
+      & t_cf('soil_temperature_max', 'K', 'soil temperature daily maximum'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix, initval_r = 0.0_wp,                                  &
+      & output_level=NONE, lrestart=.TRUE., lrestart_cont=.TRUE.)
+
+    CALL mem%Add_var( 't_soil_sl_min', mem%t_soil_sl_min,                    &
+      & hgrid, soil_e,                                                       &
+      & t_cf('soil_temperature_min', 'K', 'soil temperature daily minimum'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix, initval_r = 0.0_wp,                                  &
+      & output_level=NONE, lrestart=.TRUE., lrestart_cont=.TRUE.)
 
   END SUBROUTINE Init_sse_memory
 
