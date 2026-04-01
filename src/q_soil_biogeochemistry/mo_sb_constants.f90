@@ -222,6 +222,7 @@ MODULE mo_sb_constants
       km_adsorpt_silt_po4, &      !< Half-saturation concentration for PO4 adsorption to silt [mol P kg-1 fine mineral soil], ECA and Langmuir
       km_adsorpt_sand_po4, &      !< Half-saturation concentration for PO4 adsorption to sand [mol P kg-1 fine mineral soil], ECA and Langmuir
       km_adsorpt_OM_po4, &        !< Half-saturation concentration for PO4 adsorption to OM, [mol P kg-1 OM], ECA and Langmuir
+      langmuir_conc_min, &        !< minimum extractable concentration from the solute/associated PO4/NH4 pools [mol/m3]; numerical constraint
       k_deep_soil_moc_corr, &     !< numerical coefficient for correction of deep soil initialised with very low MOC, assuming the P sorption capacity of OM is one-tenth of mineral soil
       k_sl_conv_moc_corr, &       !< numerical converter for number of soil layers in deep soil MOC correction [--], the original code is designed for 15-layer soil only
       z_deep_soil_moc_corr, &     !< minimum depth [m] for correction of deep soil initialised with very low MOC, assuming the P sorption capacity of OM is one-tenth of mineral soil
@@ -324,7 +325,7 @@ MODULE mo_sb_constants
 
    !! only temporarily, mol / m2 !! @TODO
    REAL(wp), SAVE :: &
-      nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe, po4_solute_min
+      nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_constants'
 
@@ -522,10 +523,10 @@ CONTAINS
     f_plant_carrier_po4       = 1.25_wp / 10000._wp                     ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
     f_nit_carrier_nh4         = 0.05_wp / 10000._wp                     ! estimated
     f_denit_carrier_no3       = 0.05_wp / 10000._wp                     ! estimated
-    qmax_nh4_clay             = 7.105 / molar_mass_N                    ! [mol N kg-1 clay], Nieder et al. 2011
-    km_adsorpt_mineral_nh4    = 2.602 / 1000._wp / molar_mass_N         ! [mol N kg-1 fine mineral soil], based on 12.3 [mg N l-1 soil solution]  2.602_wp
+    qmax_nh4_clay             = 0.5562111_wp / molar_mass_N             ! [mol N kg-1 clay], TODO
+    km_adsorpt_mineral_nh4    = 2.602_wp / 1000._wp / molar_mass_N      ! [mol N kg-1 fine mineral soil], based on 12.3 [mg N l-1 soil solution]  2.602_wp
                                                                         ! from literature data analysis, with .33 m wc and 1560 kg/m3 bulk density
-    km_adsorpt_OM_nh4         = 26.02 / 1000._wp / molar_mass_N         ! [mol N kg-1 fine mineral soil], 10 times of mineral km
+    km_adsorpt_OM_nh4         = 26.02_wp / 1000._wp / molar_mass_N      ! [mol N kg-1 fine mineral soil], 10 times of mineral km
     qmax_po4_mineral          = 1.2_wp / molar_mass_P                   ! [mol P kg-1 soil], Olander and Vitousek 2005
     km_adsorpt_mineral_po4    = 0.070_wp / 1000._wp / molar_mass_P      ! [mol P kg-1 fine mineral soil], based on 0.332 [mg P l-1 soil solution]
                                                                         ! from literature data analysis, with .33 m wc and 1560 kg/m3 bulk density
@@ -538,6 +539,7 @@ CONTAINS
     km_adsorpt_silt_po4       = 2.176_wp / 1000._wp / molar_mass_P      ! [mol P L-1 kg-1 silt], from literature data analysis
     km_adsorpt_sand_po4       = 20._wp / 1000._wp / molar_mass_P        ! [mol P L-1 kg-1 sand], from literature data analysis
     km_adsorpt_OM_po4         = 14._wp / 1000._wp / molar_mass_P        ! [mol P L-1 kg-1 OM], from literature data analysis
+    langmuir_conc_min         = 1.E-6_wp                                ! a numerically safe minimum value to avoid complete exhaustion of pools following langmuir kinetics
     k_deep_soil_moc_corr      = 0.01_wp                                 ! estimated, Yu et al. 2020, GMD
     k_sl_conv_moc_corr        = 7._wp / 15._wp                          ! Yu et al. 2020, GMD
     z_deep_soil_moc_corr      = 2._wp                                   ! estimated based on Yu et al. 2020, GMD
@@ -636,7 +638,6 @@ CONTAINS
     nh4_solute_prescribe = 0.2_wp         ! tuned, to have enough nh4 for microbial dynamics and a large enough associated-nh4 pool for initialization
     no3_solute_prescribe = 0.1_wp
     po4_solute_prescribe = 0.05_wp
-    po4_solute_min       = 1.e-6_wp
 
 
   END SUBROUTINE init_sb_constants

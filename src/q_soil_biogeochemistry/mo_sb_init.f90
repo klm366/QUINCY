@@ -418,8 +418,8 @@ CONTAINS
     vmax_weath_mineral_sl(:,:,:)        = k_weath_mineral
     dom_cn(:,:,:)                       = microbial_cn
     dom_cp(:,:,:)                       = microbial_cn * microbial_np
-    fact_n_status_mic_c_growth(:,:,:)   = 1._wp                           !< ... docu ...
-    fact_p_status_mic_c_growth(:,:,:)   = 1._wp                           !< ... docu ...
+    fact_n_status_mic_c_growth(:,:,:)   = 1._wp              !< [0,1] microbial N status, to scale up/down some microbial processes
+    fact_p_status_mic_c_growth(:,:,:)   = 1._wp              !< [0,1] microbial P status, to scale up/down some microbial processes
 
 #ifdef __QUINCY_STANDALONE__
     !------------------------------------------------------------------------------------------------------ !
@@ -1210,13 +1210,6 @@ CONTAINS
         & qmax_nh4(:,:,iblk) )              ! out
     END DO
     DO iblk = 1,nblks
-      DO ic = 1,nproma
-        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
-          qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * vol_porosity_sl(ic, is, iblk)
-        END DO
-      END DO
-    END DO
-    DO iblk = 1,nblks
       CALL calc_qmax_bulk_density_correction( &
         & bulk_soil_carbon_sl(:,:,iblk), &  ! in
         & volume_min_sl(:,:,iblk), &
@@ -1843,14 +1836,6 @@ CONTAINS
         & 0.0_wp, &
         & qmax_nh4_min_sl(:,:,iblk), &       ! in
         & qmax_nh4(:,:,iblk) )               ! out
-    END DO
-
-    DO iblk = 1,nblks
-      DO ic = 1,nproma
-        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
-          qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * vol_porosity_sl(ic, is, iblk)
-        END DO
-      END DO
     END DO
 
     DO iblk = 1,nblks
