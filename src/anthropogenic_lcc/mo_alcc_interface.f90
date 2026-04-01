@@ -358,7 +358,8 @@ CONTAINS
       dsl4jsb_Get_memory(NLCC_)
       dsl4jsb_Get_var3D_onChunk(NLCC_, cover_fract_pot)  ! in: potential cover fractions (no land use)
     END IF
-    ! Todo-AKN: How to get potential cover fractions if NLCC is not active? Maybe read in potential cover fractions as part of the ALCC process' land use data in this case?
+    ! Todo-AKN: How to get potential cover fractions if NLCC is not active? Maybe read in potential cover 
+    ! fractions as part of the ALCC process' land use data in this case?
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(alcc_)) RETURN
@@ -442,8 +443,9 @@ CONTAINS
             END IF
             IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
               IF (model%Is_process_enabled(NLCC_) .AND. dsl4jsb_Config(ALCC_)%to_class(idx) == 1) THEN
-                ! Back-conversion rule for agricultural lands to natural scales with the difference between potential cover fraction and current cover fraction
-                to_cf_sum(ic) = to_cf_sum(ic) + (cover_fract_pot(ic, i_tile) - initial_area(ic, i_tile))
+                ! Back-conversion rule for agricultural lands to natural scales with the difference between 
+                ! potential cover fraction and current cover fraction
+                to_cf_sum(ic) = to_cf_sum(ic) + max(0.0_wp, cover_fract_pot(ic, i_tile) - initial_area(ic, i_tile))
               ELSE
                 ! For 'equal relative gain and loss' scale with the sum of the current cover fraction of the PFTs 
                 to_cf_sum(ic) = to_cf_sum(ic) + initial_area(ic, i_tile)
@@ -555,7 +557,8 @@ CONTAINS
               CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
             END IF
           CASE ('transition')
-            ! This implementation assumes that transition rates are given as change relative to the vegetated grid box, not relative to each pft's area.
+            ! This implementation assumes that transition rates are given as change relative to the vegetated grid box, 
+            ! not relative to each pft's area.
             ! It applies (1) the rule of equal relative gain and loss, and (2) the rule for back-conversion of agricultural lands.
             ! Todo-AKN: Add correction to make sure that lost area equals gained area
 
@@ -582,7 +585,7 @@ CONTAINS
                 IF (to_cf_sum(ic) > 0.0_wp) THEN
                   IF (model%Is_process_enabled(NLCC_) .AND.dsl4jsb_Config(ALCC_)%to_class(idx) == 1) THEN
                     ! Back-conversion rule for agricultural lands to natural scales with the difference between potential cover fraction and current cover fraction
-                    gained_area(ic, i_tile) = transition_rate(ic, idx) * (cover_fract_pot(ic, i_tile) - initial_area(ic, i_tile)) / to_cf_sum(ic)
+                    gained_area(ic, i_tile) = transition_rate(ic, idx) * max(0.0_wp, cover_fract_pot(ic, i_tile) - initial_area(ic, i_tile)) / to_cf_sum(ic)
                   ELSE
                     ! Rule of equal relative gain 
                     gained_area(ic, i_tile) = transition_rate(ic, idx) * initial_area(ic, i_tile) / to_cf_sum(ic)
@@ -598,14 +601,13 @@ CONTAINS
 
             END DO
 
-            ! Todo-AKN: why not apply it to dynamic tiles?
-            IF (.NOT. dynamic_tile) THEN
-              IF (ANY(current_fract(:) < 0.0_wp) .OR. ANY(current_fract(:) > 1.0_wp)) THEN
-                CALL finish(TRIM(routine), 'Violation of assertion: cover fractions need to be between 0 and 1.' &
-                 & // ' Please check transition rates and initial areas. Tile: ' // TRIM(current_tile%name))
-              END IF 
-              CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
-            END IF
+            !IF (.NOT. dynamic_tile) THEN
+            IF (ANY(current_fract(:) < 0.0_wp) .OR. ANY(current_fract(:) > 1.0_wp)) THEN
+              CALL finish(TRIM(routine), 'Violation of assertion: cover fractions need to be between 0 and 1.' &
+               & // ' Please check transition rates and initial areas. Tile: ' // TRIM(current_tile%name))
+            END IF 
+            CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
+            !END IF
 
           END SELECT
         END IF ! If running with jsbach_forest_age_classes usecase and a forest pft or ELSE a pft without leaves as current tile
@@ -613,8 +615,8 @@ CONTAINS
         current_tile => current_tile%Get_next_sibling_tile()
       END DO ! Current_tile
 
-      ! If demanded: handle the dynamic PFT tiles
-      IF (model%Is_process_enabled(NLCC_)) THEN
+      ! If demanded: handle the dynamic PFT tiles in maps scheme
+      IF (model%Is_process_enabled(NLCC_) .AND. TRIM(dsl4jsb_Config(ALCC_)%scheme) == 'maps') THEN
         CALL handle_dynamic_pfts(tile, options, initial_area, gained_area, lost_area)
       END IF
 
