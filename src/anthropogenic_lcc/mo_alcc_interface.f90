@@ -131,7 +131,6 @@ CONTAINS
   !>
   SUBROUTINE update_alcc_delta_cover_fractions(tile, options)
 
-    USE mo_util,              ONLY: one_of
     USE mo_jsb_time,          ONLY: is_newyear, get_year, get_year_length
     USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, min_daily_cf_change, min_annual_cf_change
 
