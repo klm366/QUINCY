@@ -571,9 +571,11 @@ CONTAINS
 
     INTEGER :: ic, ip, iel
     REAL(wp) :: diff
-    LOGICAL :: is_sb_pool_negative
+    LOGICAL :: test_is_sb_pool_negative
+    LOGICAL :: has_any_test_failed
 
-    is_sb_pool_negative = .FALSE.
+    test_is_sb_pool_negative = .FALSE.
+    has_any_test_failed = .FALSE.
 
     IF (ANY((sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl) - &
             (sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl) + &
@@ -596,8 +598,14 @@ CONTAINS
           ENDDO
         ENDDO
       ENDDO
-      is_sb_pool_negative = .TRUE.
-      CALL finish("post.f90", "Too much fuel to remove from sb_pool")
+      test_is_sb_pool_negative = .TRUE.
+      WRITE(*,*) "(post) is too much fuel removed from sb_pool?" , test_is_sb_pool_negative
+    ENDIF
+
+    has_any_test_failed = test_is_sb_pool_negative !< add here more tests
+
+    IF (has_any_test_failed) THEN
+      CALL finish("post.f90", "A test(s) failed")
     ENDIF
 
   END SUBROUTINE run_diagnostics_at_pft

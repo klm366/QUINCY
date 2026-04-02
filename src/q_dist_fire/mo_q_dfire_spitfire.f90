@@ -1118,7 +1118,7 @@ CONTAINS
     test_BA_is_bigger_than_gridcellarea = .FALSE.
     has_any_test_failed = .FALSE.
 
-    ! AB_fract is bigger than gridcell?
+    ! AB_fract is within fractional limits? 0 to 1 
     IF (ANY(sf_outputs % area_burned_fract > 1._wp)) THEN
       DO ic=1, nc
         IF (sf_outputs % area_burned_fract(ic) > 1._wp) THEN
@@ -1139,8 +1139,10 @@ CONTAINS
         test_BA_is_bigger_than_gridcellarea = .TRUE.
       ENDIF
       ENDDO
-    IF (test_BAfract_is_outside_limits) nfailedtests = nfailedtests + 1
-    WRITE(*,*) "(spitfire) AB is bigger than gridcell area?", test_BA_is_bigger_than_gridcellarea
+    IF (test_BA_is_bigger_than_gridcellarea) THEN
+      nfailedtests = nfailedtests + 1
+      WRITE(*,*) "(spitfire) AB is bigger than gridcell area?", test_BA_is_bigger_than_gridcellarea
+    ENDIF
 
     ! sum up
     has_any_test_failed = test_BAfract_is_outside_limits .AND. &

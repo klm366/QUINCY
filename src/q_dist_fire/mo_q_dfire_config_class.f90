@@ -116,7 +116,7 @@ MODULE mo_q_dfire_config_class
     REAL(wp)          :: tree_diameter_factor        !< Tree diameter factor for spitfire
     REAL(wp)          :: dead_fuel_factor            !< Dead fuel factor for spitfire
     REAL(wp)          :: live_fuel_factor            !< Live fuel factor for spitfire
-    REAL(wp)          :: has_diagnostics             !< Enable diagnostics for spitfire, in case of any inconsistencies it stops the simulation
+    LOGICAL           :: has_diagnostics             !< Enable diagnostics for spitfire, in case of any inconsistencies it stops the simulation
 
   CONTAINS
     PROCEDURE :: Init => Init_q_dfire_config
@@ -180,7 +180,7 @@ CONTAINS
     REAL(wp)                      :: tree_diameter_factor        !< Tree diameter factor for spitfire
     REAL(wp)                      :: dead_fuel_factor            !< Dead fuel factor for spitfire
     REAL(wp)                      :: live_fuel_factor            !< Live fuel factor for spitfire
-    REAL(wp)                      :: has_diagnostics             !< Enable diagnostics for spitfire, in case of any inconsistencies it stops the simulation
+    LOGICAL                       :: has_diagnostics             !< Enable diagnostics for spitfire, in case of any inconsistencies it stops the simulation
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_q_dfire_config'
     ! ----------------------------------------------------------------------------------------------------- !
