@@ -522,7 +522,7 @@ CONTAINS
                         sf_spitfire, &
                         mask=mask_is_tile_enabled)
 
-    IF (.TRUE.) THEN ! todo: add namelist parameter
+    IF (dsl4jsb_Config(Q_DFIRE_)%has_diagnostics) THEN
       CALL run_diagnostics_at_tile(nc, iblk, burnable_area_ha, sf_spitfire)
     ENDIF
 

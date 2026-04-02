@@ -116,6 +116,7 @@ MODULE mo_q_dfire_config_class
     REAL(wp)          :: tree_diameter_factor        !< Tree diameter factor for spitfire
     REAL(wp)          :: dead_fuel_factor            !< Dead fuel factor for spitfire
     REAL(wp)          :: live_fuel_factor            !< Live fuel factor for spitfire
+    REAL(wp)          :: has_diagnostics             !< Enable diagnostics for spitfire, in case of any inconsistencies it stops the simulation
 
   CONTAINS
     PROCEDURE :: Init => Init_q_dfire_config
@@ -179,6 +180,7 @@ CONTAINS
     REAL(wp)                      :: tree_diameter_factor        !< Tree diameter factor for spitfire
     REAL(wp)                      :: dead_fuel_factor            !< Dead fuel factor for spitfire
     REAL(wp)                      :: live_fuel_factor            !< Live fuel factor for spitfire
+    REAL(wp)                      :: has_diagnostics             !< Enable diagnostics for spitfire, in case of any inconsistencies it stops the simulation
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_q_dfire_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -212,7 +214,8 @@ CONTAINS
       & tree_height_factor,                   &
       & tree_diameter_factor,                 &
       & dead_fuel_factor,                     &
-      & live_fuel_factor
+      & live_fuel_factor,                     &
+      & has_diagnostics
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! variables for reading model-options from namelist
@@ -247,6 +250,7 @@ CONTAINS
     tree_diameter_factor     = 1._wp
     dead_fuel_factor         = 1.0_wp
     live_fuel_factor         = 1.0_wp
+    has_diagnostics          = .FALSE.
     ! ----------------------------------------------------------------------------------------------------- !
     ! read the namelist
     ! &Q_DIST_FIRE_CTL
@@ -287,6 +291,8 @@ CONTAINS
     config%tree_diameter_factor      = tree_diameter_factor           !
     config%dead_fuel_factor          = dead_fuel_factor
     config%live_fuel_factor          = live_fuel_factor
+    config%has_diagnostics           = has_diagnostics
+
     ! ----------------------------------------------------------------------------------------------------- !
     CALL close_nml(nml_handler)
     ! ----------------------------------------------------------------------------------------------------- !

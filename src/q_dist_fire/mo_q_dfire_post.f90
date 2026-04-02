@@ -553,7 +553,7 @@ CONTAINS
     veg_fire_emissions_total_els = veg_fire_emissions_total_els / dtime * 1000000._wp
     sb_fire_litter_ash_total_els = sb_fire_litter_ash_total_els / dtime * 1000000._wp
 
-    IF (.TRUE.) THEN
+    IF (dsl4jsb_Config(Q_DFIRE_)%has_diagnostics) THEN
       CALL run_diagnostics_at_pft(nc, sb_pool_mt, sb_fire_emissions_mt, sb_fire_litter_ash_mt)
     ENDIF
   END SUBROUTINE update_q_dfire_post
