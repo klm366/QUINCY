@@ -541,7 +541,8 @@ CONTAINS
     IF(ph > 6.0_wp) THEN
        rate_modifier = 1.0_wp
     ELSE
-       rate_modifier = 1.0_wp + 0.3_wp * delta_ph ! delta_ph is negative
+!       rate_modifier = 1.0_wp + 0.3_wp * delta_ph ! delta_ph is negative
+        rate_modifier = exp(0.39_wp * delta_ph)
     END IF
 
 !    IF (ph > 4.5_wp .AND. ph <= 6.0_wp) THEN

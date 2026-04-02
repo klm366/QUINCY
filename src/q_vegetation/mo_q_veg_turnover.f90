@@ -797,19 +797,23 @@ CONTAINS
     END IF
 
     IF (ph > 5.0_wp .AND. ph <= 5.5_wp) THEN
-       ratio_modifier = 1.0_wp - 0.4164_wp * delta_ph
+!       ratio_modifier = 1.0_wp - 0.4164_wp * delta_ph
+       ratio_modifier = 1.0_wp / exp(0.59_wp * delta_ph)
     END IF
 
     IF (ph > 4.5_wp .AND. ph <= 5.0_wp) THEN
-       ratio_modifier = 1.0_wp - 0.3739_wp * delta_ph
+!       ratio_modifier = 1.0_wp - 0.3739_wp * delta_ph
+       ratio_modifier = 1.0_wp / exp(0.47_wp * delta_ph)
     END IF
 
     IF (ph > 4.0_wp .AND. ph <= 4.5_wp) THEN
-       ratio_modifier = 1.0_wp - 0.3658_wp * delta_ph
+!       ratio_modifier = 1.0_wp - 0.3658_wp * delta_ph
+       ratio_modifier = 1.0_wp / exp(0.45_wp * delta_ph)
     END IF
 
     IF (ph <= 4.0_wp) THEN
-       ratio_modifier = 1.0_wp - 1.0517_wp * delta_ph
+!       ratio_modifier = 1.0_wp - 1.0517_wp * delta_ph
+       ratio_modifier = 1.0_wp / exp(1.22_wp * delta_ph)
     END IF
 
   END FUNCTION calc_ph_on_fine_root_turnover
