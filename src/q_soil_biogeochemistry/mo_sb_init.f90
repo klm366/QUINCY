@@ -138,7 +138,6 @@ CONTAINS
     REAL(wp)                        :: hlp1                  !< helper var
     REAL(wp)                        :: hlp_frac_c13          !< helper var
     REAL(wp)                        :: hlp_frac_c14          !< helper var
-    CHARACTER(len=3)                :: site_ID_spp1685       !< QUINCY standalone, SPP site-set, sideID
     INTEGER                         :: iblk, ic, is          !< loop over dimensions
     INTEGER                         :: nblks                 !< number of blocks
     INTEGER                         :: nproma                !< number of grid points per iblk
@@ -418,30 +417,8 @@ CONTAINS
     vmax_weath_mineral_sl(:,:,:)        = k_weath_mineral
     dom_cn(:,:,:)                       = microbial_cn
     dom_cp(:,:,:)                       = microbial_cn * microbial_np
-    fact_n_status_mic_c_growth(:,:,:)   = 1._wp                           !< ... docu ...
-    fact_p_status_mic_c_growth(:,:,:)   = 1._wp                           !< ... docu ...
-
-#ifdef __QUINCY_STANDALONE__
-    !------------------------------------------------------------------------------------------------------ !
-    !>  1.4 SPP site-set: identify site based on longitude
-    !>  five sites from the "SPP 1685 Project: Forest Strategies for limited Phosphorus Resources"
-    !>
-    site_ID_spp1685 = "OTH"   ! default: OTH = other
-    IF (model%config%flag_spp1685) THEN
-      IF (ABS(model%config%lon - 9.75_wp) < eps8) THEN
-        site_ID_spp1685 = "BBR"
-      ELSE IF (ABS(model%config%lon - 10.25_wp) < eps8) THEN
-        site_ID_spp1685 = "LUE"
-      ELSE IF (ABS(model%config%lon - 10.75_wp) < eps8) THEN
-        site_ID_spp1685 = "VES"
-      ELSE IF (ABS(model%config%lon - 12.75_wp) < eps8) THEN
-        site_ID_spp1685 = "MIT"
-      ELSE IF (ABS(model%config%lon - 7.75_wp)  < eps8) THEN
-        site_ID_spp1685 = "CON"
-      END IF
-    END IF
-    !------------------------------------------------------------------------------------------------------ !
-#endif
+    fact_n_status_mic_c_growth(:,:,:)   = 1._wp              !< [0,1] microbial N status, to scale up/down some microbial processes
+    fact_p_status_mic_c_growth(:,:,:)   = 1._wp              !< [0,1] microbial P status, to scale up/down some microbial processes
 
     SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
     !>2.0 ssm - a simple four pool soil biogeochemical model
@@ -505,11 +482,6 @@ CONTAINS
         & km_adsorpt_nh4_sl(:,:,:), &
         & nh4_assoc(:,:,:), &
         & nh4_n15_assoc(:,:,:) &                      ! out
-#ifdef __QUINCY_STANDALONE__
-        & , &
-        & model%config%flag_spp1685, &                ! optional in
-        & site_ID_spp1685 &                           ! optional in
-#endif
         & )
     !>3.0 jsm - Jena Soil Model (described in https://doi.org/10.5194/gmd-13-783-2020)
     !>
@@ -577,11 +549,6 @@ CONTAINS
         & enzyme_frac_poly_n(:,:,:), &
         & enzyme_frac_poly_p(:,:,:), &
         & enzyme_frac_AP(:,:,:) &                     ! out
-#ifdef __QUINCY_STANDALONE__
-        & , &
-        & model%config%flag_spp1685, &                ! optional in
-        & site_ID_spp1685 &                           ! optional in
-#endif
         & )
     CASE DEFAULT
       CALL finish(routine, 'Invalid setting of sb_model_scheme (simple_sm / jsm).')
@@ -910,9 +877,7 @@ CONTAINS
     & qmax_nh4_min_sl, &
     & km_adsorpt_nh4_sl, &
     & nh4_assoc, &
-    & nh4_n15_assoc, &
-    & flag_spp1685, &   ! optional in
-    & site_ID_spp1685 ) ! optional in
+    & nh4_n15_assoc)
 
     USE mo_q_sb_jsm_processes,            ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
       &                                         calc_qmax_bulk_density_correction, calc_Psorption_parameter, &
@@ -931,10 +896,6 @@ CONTAINS
       &                                         reference_depth_som_init, k_som_init, &
       &                                         sb_pool_total_som_at_ref_depth_init, fract_som_fast
     USE mo_jsb_physical_constants,        ONLY: molar_mass_C
-#ifdef __QUINCY_STANDALONE__
-    USE mo_qs_process_init_util,          ONLY: init_sb_soil_properties_spp1685_sites, &
-      &                                         init_sb_soil_p_pools_spp1685_sites
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                    INTENT(in)    :: nproma
     INTEGER,                    INTENT(in)    :: nsoil_w
@@ -993,8 +954,6 @@ CONTAINS
     REAL(wp),                   INTENT(out)   :: km_adsorpt_nh4_sl(:,:,:)
     REAL(wp),                   INTENT(out)   :: nh4_assoc(:,:,:)
     REAL(wp),                   INTENT(out)   :: nh4_n15_assoc(:,:,:)
-    LOGICAL,          OPTIONAL, INTENT(in)    :: flag_spp1685
-    CHARACTER(len=3), OPTIONAL, INTENT(in)    :: site_ID_spp1685
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp), ALLOCATABLE       :: hlp1(:,:)
     REAL(wp), ALLOCATABLE       :: hlp2(:,:)
@@ -1130,21 +1089,6 @@ CONTAINS
         & qmax_org(:,:,iblk) )              ! out
     END DO
 
-#ifdef __QUINCY_STANDALONE__
-    ! specific init values for sites of the SPP site-set
-    ! for: ph_sl(:,:,:) and Qmax_AlFe_cor(:,:,:)
-    IF (flag_spp1685) THEN
-      DO iblk = 1,nblks
-        CALL init_sb_soil_properties_spp1685_sites( &
-          & nproma, &                   ! in
-          & nsoil_w, &
-          & site_ID_spp1685, &          ! in
-          & ph_sl(:,:,iblk), &          ! out
-          & Qmax_AlFe_cor(:,:,iblk) )   ! out
-      END DO
-    END IF
-#endif
-
     ! Correct the 1st soil layer Qmax_AlFe_cor(:,:,:) with the woody litter
     Qmax_AlFe_cor(:, 1, :) = Qmax_AlFe_cor(:, 1, :) * 1._wp / ((1._wp - volume_min_sl(:, 1, :)) &
       &                      * (bulk_soil_carbon_sl(:, 1, :) + soil_litter_carbon_sl(:, 1, :)  &
@@ -1208,13 +1152,6 @@ CONTAINS
         & 0.0_wp, &
         & qmax_nh4_min_sl(:,:,iblk), &      ! in
         & qmax_nh4(:,:,iblk) )              ! out
-    END DO
-    DO iblk = 1,nblks
-      DO ic = 1,nproma
-        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
-          qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * vol_porosity_sl(ic, is, iblk)
-        END DO
-      END DO
     END DO
     DO iblk = 1,nblks
       CALL calc_qmax_bulk_density_correction( &
@@ -1288,45 +1225,6 @@ CONTAINS
 
     !> Soil P pools intialisation
     !>
-#ifdef __QUINCY_STANDALONE__
-    ! SPP site-set - initialise mineral soil P pools
-    IF (flag_spp1685) THEN
-      DO iblk = 1,nblks
-        ! for SPP sites, read in initial state from site-specific input data
-        CALL init_sb_soil_p_pools_spp1685_sites( &
-          & nproma, &
-          & nsoil_w, &
-          & soil_lay_depth_center_sl(:,:,iblk), &
-          & soil_p_labile(:,:,iblk), &
-          & soil_p_slow(:,:,iblk), &
-          & soil_p_occluded(:,:,iblk), &
-          & soil_p_primary(:,:,iblk), &
-          & site_ID_spp1685, &
-          & p_labile_slow_site(:,:,iblk), &
-          & p_labile(:,:,iblk), &
-          & po4_assoc_slow(:,:,iblk), &
-          & po4_occluded(:,:,iblk), &
-          & po4_primary(:,:,iblk) )
-      END DO
-      DO iblk = 1,nblks
-        DO ic = 1,nproma
-          DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
-            IF (flag_sb_double_langmuir) THEN
-              po4_assoc_fast(ic, is, iblk) = calc_fast_po4(p_labile(ic, is, iblk), &
-                &                            qmax_fast_po4(ic, is, iblk), &
-                &                            km_fast_po4(ic, is, iblk))
-            ELSE
-              po4_assoc_fast(ic, is, iblk) = calc_fast_po4(p_labile(ic, is, iblk), &
-                &                            qmax_po4(ic, is, iblk), &
-                &                            km_adsorpt_po4_sl(ic, is, iblk) )
-            END IF
-          END DO
-        END DO
-      END DO
-      po4_solute(:,:,:) = p_labile(:,:,:) - po4_assoc_fast(:,:,:)
-    ELSE
-#endif
-
     ! initialise mineral soil P pools
     DO iblk = 1,nblks
       CALL init_soil_p_pools( &
@@ -1356,10 +1254,6 @@ CONTAINS
         & km_fast_po4(:,:,iblk), &
         & km_slow_po4(:,:,iblk) )           ! inout
     END DO
-
-#ifdef __QUINCY_STANDALONE__
-    END IF  ! flag_spp1685
-#endif
 
     ! de-allocate local allocatable var
     DEALLOCATE(p_labile_slow_site)
@@ -1430,9 +1324,7 @@ CONTAINS
     & enzyme_frac_poly_c, &
     & enzyme_frac_poly_n, &
     & enzyme_frac_poly_p, &
-    & enzyme_frac_AP, &
-    & flag_spp1685, &           ! optional in
-    & site_ID_spp1685 )         ! optional in
+    & enzyme_frac_AP)
 
     USE mo_q_sb_jsm_processes,            ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
       &                                         calc_qmax_bulk_density_correction, calc_Psorption_parameter, &
@@ -1443,10 +1335,6 @@ CONTAINS
     USE mo_veg_constants,                 ONLY: ITREE
     USE mo_sb_constants                   ! ..
     USE mo_jsb_physical_constants,        ONLY: molar_mass_C
-#ifdef __QUINCY_STANDALONE__
-    USE mo_qs_process_init_util,          ONLY: init_sb_soil_properties_spp1685_sites, &
-      &                                         init_sb_soil_p_pools_spp1685_sites
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                    INTENT(in)    :: nproma
     INTEGER,                    INTENT(in)    :: nsoil_w
@@ -1510,8 +1398,6 @@ CONTAINS
     REAL(wp),                   INTENT(out)   :: enzyme_frac_poly_n(:,:,:)
     REAL(wp),                   INTENT(out)   :: enzyme_frac_poly_p(:,:,:)
     REAL(wp),                   INTENT(out)   :: enzyme_frac_AP(:,:,:)
-    LOGICAL,          OPTIONAL, INTENT(in)    :: flag_spp1685
-    CHARACTER(len=3), OPTIONAL, INTENT(in)    :: site_ID_spp1685
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp), ALLOCATABLE       :: p_labile(:,:,:)
     REAL(wp), ALLOCATABLE       :: p_labile_slow_site(:,:,:)
@@ -1763,21 +1649,6 @@ CONTAINS
         & qmax_org(:,:,iblk) )                ! out
     END DO
 
-#ifdef __QUINCY_STANDALONE__
-    ! specific init values for sites of the SPP site-set
-    ! for: ph_sl(:,:,:) and Qmax_AlFe_cor(:,:,:)
-    IF (flag_spp1685) THEN
-      DO iblk = 1,nblks
-        CALL init_sb_soil_properties_spp1685_sites( &
-          & nproma, &                   ! in
-          & nsoil_w, &
-          & site_ID_spp1685, &          ! in
-          & ph_sl(:,:,iblk), &          ! out
-          & Qmax_AlFe_cor(:,:,iblk) )   ! out
-      END DO
-    END IF
-#endif
-
     !! po4 adsorption
     ! Correct the first layer Qmax_AlFe_cor(:,:,:) with the woody litter
     Qmax_AlFe_cor(:,1,:) = Qmax_AlFe_cor(:,1,:) * 1._wp / ((1._wp - volume_min_sl(:,1,:)) &
@@ -1846,14 +1717,6 @@ CONTAINS
     END DO
 
     DO iblk = 1,nblks
-      DO ic = 1,nproma
-        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
-          qmax_nh4(ic, is, iblk) = qmax_nh4(ic, is, iblk) * vol_porosity_sl(ic, is, iblk)
-        END DO
-      END DO
-    END DO
-
-    DO iblk = 1,nblks
       CALL calc_qmax_bulk_density_correction( &
         & bulk_soil_carbon_sl(:,:,iblk), &   ! in
         & volume_min_sl(:,:,iblk), &
@@ -1875,46 +1738,6 @@ CONTAINS
 
     !> Soil P pools intialisation
     !>
-#ifdef __QUINCY_STANDALONE__
-    ! SPP site-set - initialise mineral soil P pools
-    IF (flag_spp1685) THEN
-      DO iblk = 1,nblks
-        ! for SPP sites, read in initial state from site-specific input data
-        CALL init_sb_soil_p_pools_spp1685_sites( &
-          & nproma, &
-          & nsoil_w, &
-          & soil_lay_depth_center_sl(:,:,iblk), &
-          & soil_p_labile(:,:,iblk), &
-          & soil_p_slow(:,:,iblk), &
-          & soil_p_occluded(:,:,iblk), &
-          & soil_p_primary(:,:,iblk), &
-          & site_ID_spp1685, &
-          & p_labile_slow_site(:,:,iblk), &
-          & p_labile(:,:,iblk), &
-          & po4_assoc_slow(:,:,iblk), &
-          & po4_occluded(:,:,iblk), &
-          & po4_primary(:,:,iblk) )
-      END DO
-      ! calculate the soluble and adsorbed P pool based on Langmuir isotherm
-      DO iblk = 1,nblks
-        DO ic = 1,nproma
-          DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
-            IF (flag_sb_double_langmuir) THEN
-              po4_assoc_fast(ic, is, iblk) = calc_fast_po4(p_labile(ic, is, iblk), &
-                &                            qmax_fast_po4(ic, is, iblk), &
-                &                            km_fast_po4(ic, is, iblk))
-            ELSE
-              po4_assoc_fast(ic, is, iblk) = calc_fast_po4(p_labile(ic, is, iblk), &
-                &                            qmax_po4(ic, is, iblk), &
-                &                            km_adsorpt_po4_sl(ic, is, iblk))
-            END IF
-            po4_solute(ic, is, iblk) = p_labile(ic, is, iblk) - po4_assoc_fast(ic, is, iblk)
-          END DO
-        END DO
-      END DO
-    ELSE
-#endif
-
     ! initialise mineral soil P pools
     DO iblk = 1,nblks
       CALL init_soil_p_pools( &
@@ -1944,10 +1767,6 @@ CONTAINS
         & km_fast_po4(:,:,iblk), &
         & km_slow_po4(:,:,iblk) )                 ! inout
     END DO
-
-#ifdef __QUINCY_STANDALONE__
-    END IF  ! flag_spp1685
-#endif
 
     ! initialise diffusion by bioturbation
     DO iblk = 1,nblks
