@@ -259,7 +259,7 @@ CONTAINS
     c_into_humus_1_sum         = c_into_humus_1_sum + Y_out_fluxes(i_f_2_humus)          ! decomposition into humus
 
     ! call YASSO for inundated / anoxic
-    IF (frac_inun_loc > 0._wp) THEN
+    IF (frac_inun_loc > EPSILON(1._wp)) THEN
       Y_in_mod(i_m_litter) = d_temp * d_water * d_size_leaf * d_anox
 
       ! call YASSO for anoxic
@@ -294,7 +294,7 @@ CONTAINS
       c_into_humus_1_sum       = c_into_humus_1_sum   + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
 
       ! call YASSO for inundated / anoxic
-      IF (frac_inun_loc > 0._wp) THEN
+      IF (frac_inun_loc > EPSILON(1._wp)) THEN
         Y_in_mod(i_m_litter) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_leaf * d_anox * resp_rate_modifier
         Y_in_mod(i_m_humus)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox * resp_rate_modifier
 
@@ -333,7 +333,7 @@ CONTAINS
     soilResp_oxic              = soilResp_oxic + Y_out_fluxes(i_f_resp) / delta_time_C             ! respiration XXX SO FAR DOESN'T GO ANYWHERE
     c_into_humus_2_sum         = c_into_humus_2_sum + Y_out_fluxes(i_f_2_humus)          ! decomposition into humus
 
-    IF (frac_inun_loc > 0._wp) THEN
+    IF (frac_inun_loc > EPSILON(1._wp)) THEN
       ! call YASSO for inundated / anoxic
       Y_in_mod(i_m_litter) = d_temp * d_water * d_size_wood * d_anox
 
@@ -367,7 +367,7 @@ CONTAINS
       c_decomp_humus_2_sum     = c_decomp_humus_2_sum + Y_out_fluxes(i_f_f_humus)        ! decomposition of humus
       c_into_humus_2_sum       = c_into_humus_2_sum   + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
 
-      IF (frac_inun_loc > 0._wp) THEN
+      IF (frac_inun_loc > EPSILON(1._wp)) THEN
         ! call YASSO for inundated / anoxic
         Y_in_mod(i_m_litter) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_wood * d_anox * resp_rate_modifier
         Y_in_mod(i_m_humus)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox * resp_rate_modifier
