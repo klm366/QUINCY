@@ -443,7 +443,7 @@ CONTAINS
     END IF
 
     !< Recalculate dead fuel consumption at a PFT level
-    fc_dead_cls = sf_calc_dead_fuel_consumption(area_burned_fract, dead_frac_consumption, &
+    fc_dead_cls = sf_calc_dead_fuel_consumption(area_burned_fract_pft, dead_frac_consumption, &
                                                 dead_fuel_fcl, mask=is_fire_intense_enough)
 
     !< Units conversion of Dead fuel consumption into molX/m2
