@@ -2757,7 +2757,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = restart_veg_optimal_n_fractions, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('t_air_tfrac_mavg', mem%t_air_tfrac_mavg, &
