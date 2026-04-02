@@ -1076,11 +1076,8 @@ CONTAINS
     & t_soil_sl_max, t_soil_sl_min,       &
     & thaw_cycle, thaw_cycle_prev)
 
-    USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi
-    USE mo_jsb_impl_constants,     ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
+    USE mo_jsb_physical_constants, ONLY: tmelt
 
-
-    IMPLICIT NONE
 
     !-----------------------------------------------------------------------
     !  arguments
@@ -1109,6 +1106,7 @@ CONTAINS
     END IF
 
     IF (new_day) THEN
+      ! Check for zero curtain within soil column during last day
       DO ic = 1,nc
         tmax = MAXVAL(t_soil_sl_max(ic,:))
         tmin = MINVAL(t_soil_sl_min(ic,:))
@@ -1117,7 +1115,11 @@ CONTAINS
           thaw_cycle(ic) = thaw_cycle(ic) + 1._wp
         END IF
       END DO
+      ! Reset temperatures for actual day
+      t_soil_sl_max(:,:) = t_soil_sl(:,:)
+      t_soil_sl_min(:,:) = t_soil_sl(:,:)
     ELSE
+      ! Store maximum temperature difference within soil column
       t_soil_sl_max(:,:) = MAX(t_soil_sl_max(:,:),t_soil_sl(:,:))
       t_soil_sl_min(:,:) = MIN(t_soil_sl_min(:,:),t_soil_sl(:,:))
     END IF
