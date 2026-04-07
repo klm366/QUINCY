@@ -244,8 +244,8 @@ CONTAINS
         mf%l(ic) = SUM(wfactors%fij%l(ic,:) * mf_lv(ic,:))
         mf%total(ic) = wfactors%fi%l(ic) * mf%l(ic) + wfactors%fi%d(ic) * mf%d(ic)
         ! - moisture dampening coefficient (oberhagemann et al. (2025))
-        rm%d(ic) = MIN(1._wp, mf%d(ic) / me_dd(ic))
-        rm%l(ic) = MIN(1._wp, mf%l(ic) / me_lv(ic))
+        IF (me_dd(ic) > 0._wp) rm%d(ic) = MIN(1._wp, mf%d(ic) / me_dd(ic))
+        IF (me_lv(ic) > 0._wp) rm%l(ic) = MIN(1._wp, mf%l(ic) / me_lv(ic))
         eta_m%d(ic) = 1._wp - (2.59_wp * rm%d(ic)) + (5.11_wp * (rm%d(ic)**2)) - (3.52_wp * (rm%d(ic)**3))
         eta_m%l(ic) = 1._wp - (2.59_wp * rm%l(ic)) + (5.11_wp * (rm%l(ic)**2)) - (3.52_wp * (rm%l(ic)**3))
         ! - surface area to volume ratio (sigma_i)
@@ -468,7 +468,7 @@ CONTAINS
     mfdead = calc_fine_dead_fuel_moisture(nc, ndd_ff, mf_dd(:,ix_ff), woi_dd(:,ix_ff), sigmas_dd(ix_ff), mask)
 
     DO ic=1, nc
-      IF (mask(ic)) THEN
+      IF (mask(ic) .AND. wlive_sum(ic) > 0._wp) THEN
         me(ic) = 2.9_wp * w(ic) * (1._wp - mfdead(ic) / me_dd(ic)) - 0.226_wp
         me(ic) = MAX(me(ic), me_dd(ic))
       ENDIF
