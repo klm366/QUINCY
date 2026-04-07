@@ -230,7 +230,10 @@ MODULE mo_q_dfire_constants
   INTEGER, PARAMETER :: df_sf_ix_sigma_lv_lvg = 1
   INTEGER, PARAMETER :: df_sf_ix_sigma_lv_wdy = 1
   INTEGER, PARAMETER :: df_sf_ix_sigma_dd_ff(2) = [df_sf_ix_sigma_dd_1hr, df_sf_ix_sigma_dd_clvg] ! fine fuels
-  INTEGER, PARAMETER :: df_sf_ix_sigma_dd_ros(4) = [df_sf_ix_sigma_dd_1hr, df_sf_ix_sigma_dd_10hr, df_sf_ix_sigma_dd_100hr, df_sf_ix_sigma_dd_clvg] ! fuel moistre involved fire rate of spread
+  INTEGER, PARAMETER :: df_sf_ix_sigma_dd_ros(4) = [df_sf_ix_sigma_dd_1hr, &
+                                                    df_sf_ix_sigma_dd_10hr, &
+                                                    df_sf_ix_sigma_dd_100hr, &
+                                                    df_sf_ix_sigma_dd_clvg] ! fuel moistre involved fire rate of spread
 
   !< Surface area to volume ratio (Oberhagemann et al. (2025)) [cm-1]
   REAL(wp), PARAMETER :: df_sigmas_dead(df_sf_sigma_dd_ros_nr) = (/ 66._wp, 3.58_wp, 0.98_wp, 66._wp/) !< 1 hr, 10 hrs, 100 hrs, live herbaceous (to burn due to low moisture)

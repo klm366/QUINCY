@@ -17,7 +17,7 @@
 !>    You should have received a copy of the GNU General Public License
 !>    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
 !>
-!> @brief Contains structures and methods for config of the q_dist_fire_fuel process
+!> @brief Contains structures and methods for config of the lnd_q_dist_fire_fuel process
 !>
 !> @author
 !>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
@@ -85,11 +85,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_q_dfire_fuel_config'
     ! ----------------------------------------------------------------------------------------------------- !
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /q_dist_fire_fuel_ctl/        &
-#else
-    NAMELIST /q_dist_fire_fuel_nml/        &
-#endif
+    NAMELIST /lnd_q_dist_fire_fuel_nml/        &
       & active,                     &
       & ic_filename,                &
       & bc_filename,                &
@@ -99,7 +95,7 @@ CONTAINS
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
     ! ----------------------------------------------------------------------------------------------------- !
-    CALL message(TRIM(routine), 'Starting q_dist_fire_fuel configuration')
+    CALL message(TRIM(routine), 'Starting lnd_q_dist_fire_fuel configuration')
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults, see namelist.slm for more details
     active                   = .FALSE.
@@ -112,13 +108,8 @@ CONTAINS
     ! &Q_DIST_FIRE_FUEL_CTL
     nml_handler = open_nml(TRIM(config%namelist_filename))
     ! ----------------------------------------------------------------------------------------------------- !
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('q_dist_fire_fuel_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, q_dist_fire_fuel_ctl)
-#else
-    nml_unit = position_nml('q_dist_fire_fuel_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, q_dist_fire_fuel_nml)
-#endif
+    nml_unit = position_nml('lnd_q_dist_fire_fuel_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_q_dist_fire_fuel_nml)
     ! ----------------------------------------------------------------------------------------------------- !
     ! pass values as read from file
     config%active                    = active

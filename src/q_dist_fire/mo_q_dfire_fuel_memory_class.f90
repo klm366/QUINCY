@@ -49,12 +49,7 @@ MODULE mo_q_dfire_fuel_memory_class
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_q_dfire_fuel_memory
 
-    !TYPE(t_jsb_var_real3d)  :: live_fuel_1hr_lfp           !< 1 hour live fuel (#nc, #nlivepools) [gDM m-2]
-    !TYPE(t_jsb_var_real3d)  :: live_fuel_10hr_lfp          !< 10 hours live fuel (#nc, #nlivepools) [gDM m-2]
-    !TYPE(t_jsb_var_real3d)  :: live_fuel_100hr_lfp         !< 100 hours live fuel (#nc, #nlivepools) [gDM m-2]
-    !TYPE(t_jsb_var_real3d)  :: live_fuel_1000hr_lfp        !< 1000 hours live fuel (#nc, #nlivepools) [gDM m-2]
-
-    TYPE(t_jsb_var_real2d)  :: forest_fract        !< forest fraction [%]
+    TYPE(t_jsb_var_real2d)  :: forest_fract        !< forest fraction [%] 
     TYPE(t_jsb_var_real2d)  :: grass_fract         !< grass fraction [%]
 
     ! lctlib, weighted by tile fraction

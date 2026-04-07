@@ -42,8 +42,7 @@ MODULE mo_q_dfire_sf_ros_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_rate_of_spread, t_sf_veget_cover_frac !, calc_length_to_breadth_ratio, calc_opt_react_velocity, &
-                !calc_prop_flux_ratio, calc_wind_factor
+  PUBLIC :: sf_calc_rate_of_spread, t_sf_veget_cover_frac, calc_mean_fire_area 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_class'
 

@@ -52,7 +52,7 @@ MODULE mo_q_dfire_sf_ros_thon_class
 
   PRIVATE
   PUBLIC :: sf_calc_rate_of_spread_thon
-  PUBLIC :: calc_sigma
+  PUBLIC :: calc_sigma, calc_moist_damp_coeff
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_thon_class'
 
