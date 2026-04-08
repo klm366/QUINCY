@@ -989,8 +989,6 @@ CONTAINS
                       nlitros, & ! 3=1, 10 and 100 hours
                       nlv, &
                       fuel_moisture_params%alphas_dead_ober, &
-                      ! fuel_moisture_params%sigmas_dead_ober, &
-                      ! fuel_moisture_params%sigmas_live_ober, &
                       fuel_moisture_params%lvg_moisture, &
                       dead_fuel_litter, &
                       fuel_load%Calc_total_cured_live_grass(), &
