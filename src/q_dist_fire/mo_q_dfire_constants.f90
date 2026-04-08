@@ -238,7 +238,7 @@ MODULE mo_q_dfire_constants
 
   !< Live woody is skipped from implementation in latest source code version (lpjml 5.7.10 - spitfire 1.9)
   !< However, live woody used value 1500 ft2/ft3 -> 42 m2/m3, loosely averaged from fuel models Andrews pl (2018)
-  REAL(wp), PARAMETER :: df_sigmas_live(df_sf_sigma_lv_nr) = (/ 66._wp, 42._wp/) * df_sf_units_ft_to_cm !< (live herbaceous, live woody) [cm-1]
+  REAL(wp), PARAMETER :: df_sigmas_live(df_sf_sigma_lv_nr) = (/ 66._wp, 42._wp/) !< (live herbaceous, live woody)
 
   REAL(wp), PARAMETER :: df_sf_mineral_fract = 0.055_wp !< Total mineral content of fuel (fraction, S_T in Thonicke et al. (2010), Table A1) [0 to 1]
   REAL(wp), PARAMETER :: df_sf_mineral_damp_coeff = 0.41739_wp !< Table A1, Thonicke et al. (2010) [0 to 1]
