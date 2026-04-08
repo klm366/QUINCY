@@ -251,7 +251,7 @@ CONTAINS
 
       ! We here use the vertical grid infrastructure for a PFT dimension. This
       ! dimension is needed in setups with changing PFT fractions.
-      IF (model%Is_process_enabled(PPLCC_)) THEN
+      IF (model%Do_fractions_change()) THEN
         pft_layer => new_vgrid('pfts', ZAXIS_GENERIC, model%config%npft, &
           & levels=(/ (REAL(i,kind=wp),i=1,model%config%npft) /), units='')
         CALL register_vgrid(pft_layer)
