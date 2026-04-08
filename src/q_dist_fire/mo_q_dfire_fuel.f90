@@ -40,7 +40,7 @@ MODULE mo_q_dfire_fuel
   USE mo_q_dfire_constants,     ONLY: t_sf_fuel_dead_fuel_grass_fruit_ix, t_sf_fuel_dead_fuel_grass_labile_ix, &  ! dead fuel indices from veg_pool
                                       t_sf_fuel_dead_fuel_grass_reserve_ix, t_sf_fuel_dead_fuel_grass_leaf_ix, &
                                       t_sf_fuel_dead_fuel_grass_sap_ix
-  USE mo_q_dfire_constants,     ONLY: df_sf_spq_layer_top_sl, burnable_pfts
+  USE mo_q_dfire_constants,     ONLY: df_sf_spq_layer_top_sl
 
   USE mo_q_dfire_constants,     ONLY: t_sf_fuel_live_fuel_fruit_ix, t_sf_fuel_live_fuel_leaf_ix, & ! live fuel indices from veg_pool
                                       t_sf_fuel_live_fuel_labile_ix, t_sf_fuel_live_fuel_reserve_ix, &

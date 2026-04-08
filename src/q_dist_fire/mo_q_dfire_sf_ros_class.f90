@@ -66,7 +66,7 @@ CONTAINS
   !>
   !>
   SUBROUTINE sf_calc_rate_of_spread(nc, &
-                  fwd_wind_factor, wind, &
+                  u_f_wind, &
                   fdi, &
                   veg_cover_frac, &
                   mask, ros)

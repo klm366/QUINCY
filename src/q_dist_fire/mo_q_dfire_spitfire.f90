@@ -165,15 +165,15 @@ END INTERFACE t_sf_ignitions
 
 !< Group fuel moisture related variables to pass to calc_spitfire
 TYPE :: t_sf_fuel_moisture
-    REAL(wp), POINTER :: alphas_thon(:) !< Drying parameter for 1, 10 and 100 hours fuel classes
-    REAL(wp), POINTER :: alphas_dead_ober(:)
-    REAL(wp), POINTER :: sigmas_dead_ober(:) !< Surface area to volume ratio for dead fuel [cm2/cm3]
-    REAL(wp), POINTER :: sigmas_live_ober(:) !< Surface area to volume ratio for live fuel [cm2/cm3]
+    REAL(wp), ALLOCATABLE :: alphas_thon(:) !< Drying parameter for 1, 10 and 100 hours fuel classes
+    REAL(wp), ALLOCATABLE :: alphas_dead_ober(:)
+    REAL(wp), ALLOCATABLE :: sigmas_dead_ober(:) !< Surface area to volume ratio for dead fuel [cm2/cm3]
+    REAL(wp), ALLOCATABLE :: sigmas_live_ober(:) !< Surface area to volume ratio for live fuel [cm2/cm3]
     REAL(wp), POINTER :: ab_moisture(:) !< above ground relative soil moisture [0 to 1]
     REAL(wp), POINTER :: lvg_moisture(:) !< live grass fuel moisture [%], note: up to 250%
     REAL(wp), POINTER :: moisture_extinction(:) !< Moisture of extinction threshold [0 to 1]
-    REAL(wp), POINTER :: fuel_moisture_thon(:) !< Fuel moisture (#nc,#fuel moisture types) [%]
-    TYPE(t_mf), ALLOCATABLE :: fuel_moisture_ober(:)
+    REAL(wp), POINTER :: fuel_moisture_thon(:,:) !< Fuel moisture (#nc,#fuel moisture types) [%]
+    TYPE(t_mf)        :: fuel_moisture_ober
 END TYPE t_sf_fuel_moisture
 
 INTERFACE t_sf_fuel_moisture
@@ -191,7 +191,7 @@ END TYPE t_sf_config
 !< Group gridcell info
 TYPE :: t_sf_gridcell_info
     REAL(wp), POINTER :: grid_cell_area(:) !< gridcell area [ha]
-    TYPE(t_sf_veget_cover_frac), POINTER :: veget_cover_frac(:) !< Vegetation cover fraction [0 to 1]
+    TYPE(t_sf_veget_cover_frac), POINTER :: veget_cover_frac !< Vegetation cover fraction [0 to 1]
 END TYPE t_sf_gridcell_info
 
 TYPE :: t_sf_params
@@ -211,31 +211,31 @@ CONTAINS
                                     alphas_dead_ober, sigmas_dead_ober, sigmas_live_ober, &
                                     ab_moisture, lvg_moisture, &
                                     moisture_extinction, &
-                                    fuel_moisture_thon, fuel_moisture_ober) &
+                                    fuel_moisture_thon) & !, fuel_moisture_ober) &
                                     RESULT (sf_fuel_moisture)
     INTEGER, INTENT(in) :: nc
     INTEGER, INTENT(in) :: nddsigmas
     INTEGER, INTENT(in) :: nlvsigmas
-    REAL(wp), POINTER, INTENT(in) :: alphas_thon(:)
-    REAL(wp), POINTER, INTENT(in) :: alphas_dead_ober(:)
-    REAL(wp), POINTER, INTENT(in) :: sigmas_dead_ober(:)
-    REAL(wp), POINTER, INTENT(in) :: sigmas_live_ober(:)
+    REAL(wp), INTENT(in) :: alphas_thon(:)
+    REAL(wp), INTENT(in) :: alphas_dead_ober(:)
+    REAL(wp), INTENT(in) :: sigmas_dead_ober(:)
+    REAL(wp), INTENT(in) :: sigmas_live_ober(:)
     REAL(wp), POINTER, INTENT(in) :: ab_moisture(:)
     REAL(wp), POINTER, INTENT(in) :: lvg_moisture(:)
     REAL(wp), POINTER, INTENT(in) :: moisture_extinction(:)
-    REAL(wp), POINTER, INTENT(in) :: fuel_moisture_thon(:)
-    TYPE(t_mf), INTENT(in) :: fuel_moisture_ober(:)
+    REAL(wp), POINTER, INTENT(in) :: fuel_moisture_thon(:,:)
+    !TYPE(t_mf), INTENT(in) :: fuel_moisture_ober(:)
     TYPE(t_sf_fuel_moisture) :: sf_fuel_moisture
 
-    sf_fuel_moisture % alphas_thon => alphas_thon
-    sf_fuel_moisture % alphas_dead_ober => alphas_dead_ober
-    sf_fuel_moisture % sigmas_dead_ober => sigmas_dead_ober
-    sf_fuel_moisture % sigmas_live_ober => sigmas_live_ober
+    ALLOCATE(sf_fuel_moisture % alphas_thon, source = alphas_thon)
+    ALLOCATE(sf_fuel_moisture % alphas_dead_ober, source = alphas_dead_ober)
+    ALLOCATE(sf_fuel_moisture % sigmas_dead_ober, source = sigmas_dead_ober)
+    ALLOCATE(sf_fuel_moisture % sigmas_live_ober, source = sigmas_live_ober)
     sf_fuel_moisture % ab_moisture => ab_moisture
     sf_fuel_moisture % lvg_moisture => lvg_moisture
     sf_fuel_moisture % moisture_extinction => moisture_extinction
     sf_fuel_moisture % fuel_moisture_thon => fuel_moisture_thon
-    ALLOCATE(sf_fuel_moisture % fuel_moisture_ober)
+    !ALLOCATE(sf_fuel_moisture % fuel_moisture_ober)
     sf_fuel_moisture % fuel_moisture_ober = t_mf(nc, nddsigmas, nlvsigmas)
   END FUNCTION create_sf_fuel_moisture
 
@@ -283,7 +283,7 @@ CONTAINS
     TYPE(t_sf_ignitions) :: sf_ignitions
 
     sf_ignitions % a_nd => a_nd
-    sf_ignitions % ic_pop_dens => ic_pop_dens
+    sf_ignitions % pop_dens => ic_pop_dens
     sf_ignitions % lightning_events => lightning_events
     sf_ignitions % max_pop_dens = max_pop_dens
   END FUNCTION create_sf_ignitions
@@ -361,7 +361,7 @@ CONTAINS
     REAL(wp), TARGET                      :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
     REAL(wp), TARGET                      :: t_air_min_c(options%nc)                      !< Minimum daily temperature [Celsius]
     REAL(wp), TARGET                      :: t_air_max_c(options%nc)                      !< Maximum daily temperature [Celsius]
-    REAL(wp)                              :: burnable_area_ha(options%nc)                 !< Burnable area [ha]
+    REAL(wp), TARGET                      :: burnable_area_ha(options%nc)                 !< Burnable area [ha]
 
     TYPE(t_sf_spitfire)                   :: sf_spitfire
 
@@ -607,7 +607,7 @@ CONTAINS
 
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
-    fuel_moisture_params = t_sf_fuel_moisture(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
+    fuel_moisture_params = create_sf_fuel_moisture(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, &
                                         df_sf_alphas, & ! thonicke
                                         df_alphas_dead, & ! oberhagemann
                                         df_sigmas_dead, & ! oberhagemann
@@ -617,7 +617,7 @@ CONTAINS
 
     ignitions = t_sf_ignitions(a_nd, ic_pop_dens, a2l_lightning_events, df_sf_max_density_human_pop)
     sf_config = t_sf_config(dtime, one_day, dsl4jsb_Config(Q_DFIRE_)%ros_model_id)
-    sf_gridcell_info = t_sf_gridcell_info(burnable_area_ha, veget_cover_frac)
+    sf_gridcell_info = t_sf_gridcell_info(burnable_area_ha, veg_cover_frac)
     sf_params = t_sf_params(fuel_bulk_density, fwd_wind_factor, &
                             df_sf_calorific_heat_content, &
                             df_sf_isurface_extinc_th)
@@ -652,9 +652,9 @@ CONTAINS
     dead_fuel_consumption_1000hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_1000hr_idx)
 
     !< Ignitions into process memory
-    e_n_ignitions = sf_spitfire % igntions % e_n_ignitions
-    e_n_humans = sf_spitfire % igntions % e_n_humans
-    e_n_lightning = sf_spitfire % igntions % e_n_lightning
+    e_n_ignitions = sf_spitfire % ignitions % total
+    e_n_humans = sf_spitfire % ignitions % human
+    e_n_lightning = sf_spitfire % ignitions % lightning
 
     dead_frac_consumption = sf_spitfire % dead_frac_consump
     i_surface = sf_spitfire % i_surface
@@ -769,7 +769,7 @@ CONTAINS
                                                 mask= has_fire_conditions)
 
     !> Fuel moisture and ROS
-    u_f_wind = params%lctlib_fwd_wind_factor * met%wind_sf
+    u_f_wind = params%lctlib_fwd_wind_factor * met%wind
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
     IF (config%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
@@ -805,7 +805,7 @@ CONTAINS
     CALL sf_calc_rate_of_spread(nc, &
                   u_f_wind, &
                   spitfire % fdi, &
-                  gridcell_info%veg_cover_frac, &
+                  gridcell_info%veget_cover_frac, &
                   has_fire_conditions, &
                   spitfire % ros)
 
@@ -816,10 +816,10 @@ CONTAINS
                                     factor = (config%dtime / config%one_day))
 
     !< no ignitions events, no fire conditions
-    has_fire_conditions = has_fire_conditions .AND. (spitfire%ignitions%e_n_ignitions > 0._wp)
+    has_fire_conditions = has_fire_conditions .AND. (spitfire%ignitions%total > 0._wp)
 
     !< Based on ignitions and fire spread conditions, calculate burned area and its fraction.
-    CALL calc_area_burned(nc, spitfire % ignitions % e_n_ignitions, & !< in
+    CALL calc_area_burned(nc, spitfire % ignitions % total, & !< in
                           spitfire % fdi, &
                           spitfire % ros % mean_fire_area, &
                           gridcell_info % grid_cell_area, &
@@ -857,7 +857,7 @@ CONTAINS
     !< See mo_q_dfire_sf_fuel_consumption_class.f90 for furter details.
     spitfire % fc_dead_cls = sf_calc_dead_fuel_consumption(spitfire % area_burned_fract, &
                                                       spitfire % dead_frac_consump, &
-                                                      dead_fuel, mask=has_fire_conditions)
+                                                      fuel_load % dead_fuel, mask=has_fire_conditions)
 
     !< According to Thonicke et al. (2010), fire intensity is calculated based on the fractional fuel combustion,
     !< rate of spread and burned area fraction (Sec. 2.2.5).
@@ -895,7 +895,7 @@ CONTAINS
     REAL(wp), INTENT(in)        :: nesterov_index(:) !< [deg C2]
     TYPE(t_sf_fuel_load), INTENT(in) :: fuel_load
 
-    TYPE(t_sf_fuel_moisture), INTENT(inout) :: fuel_moisture(:,:) !< Fuel moisture (#nc,#fuel moisture types) [%]
+    TYPE(t_sf_fuel_moisture), INTENT(inout) :: fuel_moisture !< Fuel moisture (#nc,#fuel moisture types) [%]
     REAL(wp), INTENT(out)       :: fdi(:) !< Fire dange index [%]
     TYPE(t_sf_ros), INTENT(out) :: ros
     LOGICAL, INTENT(in), OPTIONAL :: mask(:) !< True: gridcell is enabled
@@ -910,7 +910,7 @@ CONTAINS
 
     !< Compute fuel moisture (omega_o, omega_nl)
     CALL fuel_load%Calc_dead_litter(.TRUE., .TRUE., a2=dead_litter)
-    fuel_moisture = sf_calc_fuel_moisture(nc, nalphas, nspread, fuel_moisture%alphas_thon, &
+    fuel_moisture%fuel_moisture_thon = sf_calc_fuel_moisture(nc, nalphas, nspread, fuel_moisture%alphas_thon, &
                                           nesterov_index, fuel_moisture%ab_moisture, &
                                           dead_litter, &
                                           fuel_load%Calc_total_cured_live_grass())
@@ -969,7 +969,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: nesterov_index(:) !< Dryness index [deg C2]
     REAL(wp), INTENT(in) :: fuel_bulk_density(:) !< Fuel bulk density [kg m-3]
     REAL(wp), INTENT(in) :: u_f_wind(:) !< Wind speed at vegetation cover [m min-1]
-    TYPE(t_sf_fuel_load), INTENT(in) :: fuel_load(:)
+    TYPE(t_sf_fuel_load), INTENT(in) :: fuel_load
     TYPE(t_sf_fuel_moisture), INTENT(inout) :: fuel_moisture_params !< Fuel moisture
     REAL(wp), INTENT(out) :: fdi(:) !< Fire danger index [%]
     TYPE(t_sf_ros), INTENT(out) :: ros !< Rate of spread [-]
@@ -984,13 +984,13 @@ CONTAINS
     fdi = 0._wp
     CALL fuel_load%Calc_dead_litter(.TRUE., .TRUE., a2=dead_fuel_litter)
 
-    fuel_moisture = sf_calc_fuel_moisture_ober(nc, &
+    fuel_moisture_params%fuel_moisture_ober = sf_calc_fuel_moisture_ober(nc, &
                       ndd, & ! 5 = 1, 10, 100, 1000 hours and cured live grass
                       nlitros, & ! 3=1, 10 and 100 hours
                       nlv, &
                       fuel_moisture_params%alphas_dead_ober, &
-                      fuel_moisture_params%sigmas_dead_ober, &
-                      fuel_moisture_params%sigmas_live_ober, &
+                      ! fuel_moisture_params%sigmas_dead_ober, &
+                      ! fuel_moisture_params%sigmas_live_ober, &
                       fuel_moisture_params%lvg_moisture, &
                       dead_fuel_litter, &
                       fuel_load%Calc_total_cured_live_grass(), &
@@ -1007,7 +1007,7 @@ CONTAINS
     woi_lv(:,ix_lvg) = 0._wp !< 1 = wet livegrass, not yet implemented
     woi_lv(:,ix_wdy) = fuel_load%Calc_total_live_tree() * df_sf_units_g_to_kg !< 2= woody fuel
 
-    me_dd = moisture_extinction
+    me_dd = fuel_moisture_params%moisture_extinction
     me_lv = calc_live_me(nc, nddros, nlv, &
                          fuel_moisture_params%fuel_moisture_ober%dead(:,ixs_ros), &
                           me_dd, woi_dd(:,ixs_ros), woi_lv, &
@@ -1018,7 +1018,7 @@ CONTAINS
     !< only involved ROS fuel (and FM)
     ros = sf_calc_rate_of_spread_ober(&
         nc, nddros, nlv, &
-        sigmas_dd, sigmas_lv, &
+        df_sigmas_dead, df_sigmas_live, &
         woi_dd(:,ixs_ros), woi_lv, & ! fuels
         fuel_moisture_params%fuel_moisture_ober%dead(:,ixs_ros), &
         fuel_moisture_params%fuel_moisture_ober%live, &
@@ -1030,7 +1030,7 @@ CONTAINS
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
     !> Eq. 8 from Thonicke et al. (2010)
-    WHERE(moisture_extinction > 0._wp)
+    WHERE(fuel_moisture_params%moisture_extinction > 0._wp)
       fdi = max(0._wp, 1._wp  - (fuel_moisture_params%fuel_moisture_ober%val / &
                                     fuel_moisture_params%moisture_extinction))
     ENDWHERE
@@ -1113,7 +1113,7 @@ CONTAINS
     REAL(wp), INTENT(in)                :: ab_wtr_soil_sl(:,:)        !< soil water content [m] (#nc, #above ground soil layers)
     REAL(wp), INTENT(in)                :: ab_wtr_wsat_sl(:,:)        !< soil water saturation [m] (#nc, #above ground soil layers)
     LOGICAL, INTENT(in), OPTIONAL       :: mask(:)                    !< True = gridcell enabled
-    REAL(wp)                            :: ab_moisture(size(ab_wtr_soil_sl), dim=1) !< Relative above ground soil moisture [-] (nc)
+    REAL(wp), ALLOCATABLE               :: ab_moisture(:)             !< Relative above ground soil moisture [-] (nc)
 
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
     INTEGER :: is, ic

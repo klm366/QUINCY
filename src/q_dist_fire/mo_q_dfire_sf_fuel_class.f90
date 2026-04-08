@@ -59,7 +59,7 @@ MODULE mo_q_dfire_sf_fuel_class
   IMPLICIT NONE
 
 
-  PUBLIC :: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
+  PUBLIC :: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels, t_sf_fuel_load
   PUBLIC :: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix
   PUBLIC :: create_fuel_class ! DEBUG only
 
@@ -142,6 +142,7 @@ CONTAINS
                                      ix_100hr => df_sf_fc_100hr_idx, &
                                      ix_1000hr => df_sf_fc_1000hr_idx
 
+    INTEGER, INTENT(in) :: nc, nddpools, nlvpools, nfclass
     REAL(wp), POINTER, INTENT(in) :: dd1hr(:,:), dd10hr(:,:), dd100hrs(:,:), dd1000hrs(:,:) ! dead fuel (#nc,#dead fuel pools) [g DM m-2]
     REAL(wp), POINTER, INTENT(in) :: clvg(:,:), lvg(:,:) ! cured live grass, live grass fuels (#nc,#dead fuel pools) [g DM m-2]
     REAL(wp), POINTER, INTENT(in) :: lvt1hr(:,:), lvt10hr(:,:), lvt100hr(:,:), lvt1000hr(:,:) ! live tree fuel (#nc,#dead fuel pools) [g DM m-2]
@@ -181,8 +182,8 @@ CONTAINS
     CLASS(t_sf_fuel_load), INTENT(in) :: this
     LOGICAL, INTENT(in) :: spread
     LOGICAL, INTENT(in) :: sum_dead_pools
-    REAL(wp), ALLOCATABLE, INTENT(out) :: a2(:,:) ! (nc, nfuels)
-    REAL(wp), ALLOCATABLE, INTENT(out) :: a3(:,:,:) ! (nc, npools, nfuels)
+    REAL(wp), ALLOCATABLE, INTENT(out), OPTIONAL :: a2(:,:) ! (nc, nfuels)
+    REAL(wp), ALLOCATABLE, INTENT(out), OPTIONAL :: a3(:,:,:) ! (nc, npools, nfuels)
 
     INTEGER, PARAMETER :: ixs_fuels_all(4) = [1, 2, 3, 4]
     INTEGER, PARAMETER :: ixs_fuels_spread(3) = [1, 2, 3]
@@ -200,10 +201,10 @@ CONTAINS
     nfuels = size(ixs_fuels)
 
     IF (sum_dead_pools) THEN
-        ALLOCATE(a2(nc, ixs_fuels))
+        ALLOCATE(a2(nc, SIZE(ixs_fuels)))
         a2 = SUM(this%dead_fuel(:,ixs_litter,ixs_fuels), dim=2) !< sum over dead litter pools (so no cured live grass)
     ELSE
-        ALLOCATE(a3(nc, npools, ixs_fuels))
+        ALLOCATE(a3(nc, npools, SIZE(ixs_fuels)))
         a3 = this%dead_fuel(:,ixs_litter,ixs_fuels)
     ENDIF
   END SUBROUTINE Calc_dead_litter
@@ -225,20 +226,20 @@ CONTAINS
   !>
   !> True if any dead fuel is present in the fuel load.
   !>
-  FUNCTION has_dead_fuel(this, spread) RESULT(has_dead_fuel)
+  FUNCTION has_dead_fuel(this, spread) RESULT(has_df)
     CLASS(t_sf_fuel_load), INTENT(in) :: this
     LOGICAL, OPTIONAL, INTENT(in) :: spread
-    LOGICAL :: has_dead_fuel(this%dead_fuel, dim=1) ! 1 = nc dimension
+    LOGICAL :: has_df(SIZE(this%dead_fuel, dim=1)) ! 1 = nc dimension
     LOGICAL :: is_spread
 
     is_spread = .FALSE.
     IF (PRESENT(spread)) is_spread = spread
 
-    has_dead_fuel = .FALSE.
+    has_df = .FALSE.
     IF (is_spread) THEN
-      has_dead_fuel = sf_calc_has_any_fuel(this%dead_fuel(:,:,1:3))
+      has_df = sf_calc_has_any_fuel(this%dead_fuel(:,:,1:3))
     ELSE
-      has_dead_fuel = sf_calc_has_any_fuel(this%dead_fuel)
+      has_df = sf_calc_has_any_fuel(this%dead_fuel)
     ENDIF
   END FUNCTION has_dead_fuel
 
@@ -261,7 +262,7 @@ CONTAINS
   FUNCTION Calc_total_live_tree(this) RESULT(tot_live_tree)
       USE mo_q_dfire_constants, ONLY:  ix_1hr => df_sf_ix_sigma_dd_1hr
     CLASS(t_sf_fuel_load), INTENT(in) :: this
-    REAL(wp) :: tot_live_tree(size(this%live_fuel_tree,dim=1)) ! 1=nc dimension [g DM m-2]
+    REAL(wp) :: tot_live_tree(size(this%live_tree,dim=1)) ! 1=nc dimension [g DM m-2]
     INTEGER :: i, j
 
     DO CONCURRENT (i=1:SIZE(this%live_tree,2), j=1:SIZE(this%live_tree,3)) !2=fuel pools, 3=fuel classes

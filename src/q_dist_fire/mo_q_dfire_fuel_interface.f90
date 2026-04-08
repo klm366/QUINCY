@@ -37,8 +37,6 @@ MODULE mo_q_dfire_fuel_interface
   USE mo_q_dfire_fuel,                ONLY: update_q_dfire_fuel
   USE mo_q_dfire_post,                ONLY: update_q_dfire_post
 
-  USE mo_q_dfire_constants,           ONLY: burnable_pfts, burnable_grass_pfts, burnable_tree_pfts ! pfts to compute average
-
   dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
 
   IMPLICIT NONE
