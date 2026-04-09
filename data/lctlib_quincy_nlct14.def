@@ -3,11 +3,7 @@
 # !>#### ICON-Land
 # !>
 # !> ------------------------------------------------------------------------
-<<<<<<< Updated upstream
-# !> Copyright (C) 2004-2026, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss
-=======
 # !> Copyright (C) 2013-2026, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss
->>>>>>> Stashed changes
 # !> Contact information: <https://icon-model.org>
 # !>
 # !> See AUTHORS.TXT for a list of authors  
@@ -190,7 +186,7 @@ tau_mycorrhiza 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
         
 #vmax_uptake_n: vmax of N uptake (~micro-mol N / mol C / s)        
 # tuned with GLOBAL sitelists to make N uptake comparable with other C-N coupled TBMs (NMIP2) 
-vmax_uptake_n 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.12 0.12 0.06 0.06
+vmax_uptake_n 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.10 0.10 0.05 0.05
         
 #vmax_uptake_p: vmax of P uptake (~micro-mol P / mol C / s)        
 # tuned together with N, but needs further validation
@@ -204,7 +200,7 @@ bnf_base 2.0 1.0 1.0 1.0 1.0 1.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0
 # converted internally to mumol N / mol C fine root / s
 # set C4 grass/pasture/crop as zero because they cannot fix N
 # tuned based on T. Davies-Barnard and P. Friedlingstein 2020
-vmax_symb_bnf 0.0150 0.0680 0.0306 0.0680 0.0068 0.0680 0.0306 0.0 0.0306 0.0 0.0306 0.0 0.0 0.0
+vmax_symb_bnf 0.0150 0.0500 0.0306 0.0500 0.0068 0.0680 0.0380 0.0 0.0380 0.0 0.0380 0.0 0.0 0.0
 
 #km_symb_bnf: half-saturating cost of the response of N fixation (g C / g N)
 # converted internally to mol C / mol N

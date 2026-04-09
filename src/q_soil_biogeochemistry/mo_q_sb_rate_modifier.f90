@@ -37,7 +37,7 @@ CONTAINS
   SUBROUTINE update_sb_rate_modifier(tile, options)
 
     USE mo_jsb_class,              ONLY: Get_model
-    USE mo_jsb_process_class,      ONLY: SB_, HYDRO_, SSE_
+    USE mo_jsb_process_class,      ONLY: SB_, HYDRO_, SSE_, VEG_
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
@@ -50,6 +50,7 @@ CONTAINS
       &                                  ea_nitrification, ed_nitrification, ea_denitrification, ea_gasdiffusion, &
       &                                  t_opt_nitrification, lambda_anvf, k_anvf, &
       &                                  ea_decomposition, ed_decomposition,t_ref_decomposition, kmr_decomposition, &
+                                         tacclim_uptake_min, tacclim_uptake_max, k_ea_uptake, &
       &                                  kmr_asymb_bnf, min_rmm_gasdiffusion, temp_freeze_window_bio
     USE mo_veg_constants,          ONLY: ea_symb_bnf, ed_symb_bnf, t_opt_symb_bnf
     USE mo_phy_schemes,            ONLY: calc_peaked_arrhenius_function
@@ -58,7 +59,7 @@ CONTAINS
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
-    dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -70,12 +71,14 @@ CONTAINS
     INTEGER                           :: iblk, ics, ice, nc !< dimensions
     INTEGER                           :: is, ic             !< dimensions looping
     REAL(wp)                          :: dtime              !< timestep length
+    REAL(wp)                          :: hlp1               !< helper variable
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_rate_modifier'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! SB_
     dsl4jsb_Real2D_onChunk :: ph_old
@@ -116,6 +119,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: vol_field_cap_sl
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk :: t_soil_sl
+    ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk :: t_soil_root_tacclim_mavg
     ! ----------------------------------------------------------------------------------------------------- !
     iblk  = options%iblk
     ics   = options%ics
@@ -134,6 +139,7 @@ CONTAINS
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(SB_,       ph_old)                      ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       delta_ph)                    ! in
@@ -172,7 +178,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_porosity_sl)             ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_field_cap_sl)            ! in
     ! SSE_ 3D
-    dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)                    ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)                   ! in
+    ! VEG_ 2D
+    dsl4jsb_Get_var2D_onChunk(VEG_,     t_soil_root_tacclim_mavg)    ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     DO ic = 1,nc
@@ -258,7 +266,8 @@ CONTAINS
 
         !>3.0 root model
         !>
-        rtm_plant_uptake(ic, is) = calc_peaked_arrhenius_function(t_soil_sl(ic, is), ea_decomposition, &
+        hlp1 = MIN(MAX(t_soil_root_tacclim_mavg(ic) - Tzero, tacclim_uptake_min), tacclim_uptake_max)
+        rtm_plant_uptake(ic, is) = calc_peaked_arrhenius_function(t_soil_sl(ic, is), ea_decomposition * k_ea_uptake * hlp1, &
           &                        ed_decomposition, t_ref_decomposition)
         rmm_plant_uptake(ic, is) = MAX(1._wp - wtr_soil_pot_sl(ic, is) / lctlib%phi_leaf_min, 0.0_wp)
       ENDDO

@@ -550,6 +550,7 @@ CONTAINS
       & dsl4jsb_Config(SB_)%flag_mycorrhiza, &
       & kstar_labile(:), &
       & t_soil_root(:), &
+      & t_soil_root_tacclim_mavg(:), &
       & veg_pool_mt(ix_fine_root, ixC, :), &
       & veg_pool_mt(ix_fine_root, ixN, :), &
       & veg_pool_mt(ix_labile, ixC, :), &
@@ -1073,6 +1074,7 @@ CONTAINS
                                               flag_mycorrhiza  , &
                                               kstar_labile, &
                                               t_soil_root, &
+                                              t_soil_root_tacclim_mavg, &
                                               fine_root_carbon, &
                                               fine_root_nitrogen, &
                                               labile_carbon, &
@@ -1124,6 +1126,8 @@ CONTAINS
     USE mo_phy_schemes,             ONLY: calc_peaked_arrhenius_function
     USE mo_veg_constants,           ONLY: k_cost_symb_bnf, &
                                           ea_symb_bnf, ed_symb_bnf, t_opt_symb_bnf, &
+                                          k_ea_symb_bnf, k_topt_symb_bnf, &
+                                          tacclim_nacq_min, tacclim_nacq_max, &
                                           eta_nfixation, transform_cost_nh4, transform_cost_no3, &
                                           fresp_growth, tau_labile, &
                                           f_myc_exudation_max, f_mycorrhization_min, f_mycorrhization_max
@@ -1148,6 +1152,7 @@ CONTAINS
     LOGICAL,                              INTENT(in)    :: flag_mycorrhiza              !< from sb config
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: kstar_labile                 !< meristem turnover rate
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: t_soil_root                  !< root temperature (K)
+    REAL(wp), DIMENSION(nc),              INTENT(in)    :: t_soil_root_tacclim_mavg     !< root temperature (K)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: fine_root_carbon             !< fine root carbon (mol C / m2)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: fine_root_nitrogen           !< fine root nitrogen (mol N / m2)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: labile_carbon                !< labile pool carbon (mol C / m2)
@@ -1337,16 +1342,18 @@ CONTAINS
         n_fixation(:) = active_n_fixation(:) * demand_uptake_n_tuptake_mavg(:) * lctlib_bnf_base
 
       !>3.2 Case 2: symbiotic N fixation as a dynamic trade-off of carbon and nitrogen opportunity costs
-      !>  based on Rastaetter et al. 2001, Meyerholt et al. 2016, Kern, 2021
+      !>  based on Rastaetter et al. 2001, Meyerholt et al. 2016, Kern, 2021, using the
+      !>  temperature responses as in Bytnerowicz et al. 2022
       !>
       CASE ("dynamic")
         WHERE(cost_n_uptake_root(:) > (k_cost_symb_bnf + eps8))
+          hlp1(:) = MIN(MAX(t_soil_root_tacclim_mavg - Tzero, tacclim_nacq_min), tacclim_nacq_max)
           n_fixation(:) = fine_root_carbon(:) * lctlib_vmax_symb_bnf * &
             &             active_n_fixation(:) * &
             &             calc_peaked_arrhenius_function(t_soil_root, &
-            &                                            ea_symb_bnf, &
+            &                                            ea_symb_bnf * k_ea_symb_bnf * hlp1(:), &
             &                                            ed_symb_bnf, &
-            &                                            t_opt_symb_bnf) * &
+            &                                            t_opt_symb_bnf + k_topt_symb_bnf * hlp1(:)) * &
             &             (cost_n_uptake_root(:) - k_cost_symb_bnf) / &
             &             (lctlib_km_symb_bnf + (cost_n_uptake_root(:) - k_cost_symb_bnf))
         ELSEWHERE
