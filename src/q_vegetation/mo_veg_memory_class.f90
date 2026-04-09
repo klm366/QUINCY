@@ -1279,13 +1279,6 @@ CONTAINS
           & output_level = MEDIUM, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-<<<<<<< HEAD
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('veg_products_decay_c', mem%veg_products_decay_c, &
-          & hgrid, surface, &
-          & t_cf('veg_products_decay_c', 'micro-mol m-2 s-1', 'total c in product decay'), &
-=======
           & initval_r = 0.0_wp, &
           & l_aggregate_all = .TRUE.)
 
@@ -1316,16 +1309,12 @@ CONTAINS
         CALL mem%Add_var('veg_products_decay_c', mem%veg_products_decay_c, &
           & hgrid, surface, &
           & t_cf('veg_products_decay_c', 'micro-mol m-2 s-1', 'C lost to atmosphere due to product decay'), &
->>>>>>> land4icon-mpim
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
           & output_level = BASIC, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-<<<<<<< HEAD
-          & initval_r = 0.0_wp)
-=======
           & initval_r = 0.0_wp, &
           & l_aggregate_all = .TRUE.)
 
@@ -1388,7 +1377,6 @@ CONTAINS
           & lrestart = .FALSE., &
           & initval_r = 0.0_wp, &
           & l_aggregate_all = .TRUE.)
->>>>>>> land4icon-mpim
       END IF
 
       ! --------------------------------------------------------------------------------------------------- !

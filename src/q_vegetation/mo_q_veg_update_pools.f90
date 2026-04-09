@@ -760,6 +760,8 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
       ! adding seed bed pool for reporting and carbon conservation test to total vegetation pool
       veg_pool_total_c(ic)   = veg_pool_total_c(ic) + seed_bed_pool_mt(ixC, ic)
       veg_pool_total_n(ic)   = veg_pool_total_n(ic) + seed_bed_pool_mt(ixN, ic)
