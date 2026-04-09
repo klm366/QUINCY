@@ -31,6 +31,9 @@ MODULE mo_sb_util
 
   PRIVATE
   PUBLIC :: reset_sb_fluxes, calculate_time_average_soilbiogeochemistry
+#ifndef  __QUINCY_STANDALONE__
+  PUBLIC :: update_read_soil_forcing
+#endif
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_util'
 
@@ -420,6 +423,251 @@ CONTAINS
                                                                       mavg_period_tresidual)
     END IF
   END SUBROUTINE calculate_time_average_soilbiogeochemistry
+
+  ! ======================================================================================================= !
+  !> read soil forcing from input files (ONLY for IQ)
+  !>
+#ifndef  __QUINCY_STANDALONE__
+  SUBROUTINE update_read_soil_forcing(tile, options)
+
+    USE mo_jsb_model_class,         ONLY: t_jsb_model
+    USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,          ONLY: t_jsb_task_options
+    USE mo_jsb_class,               ONLY: Get_model
+    USE mo_jsb_process_class,       ONLY: SB_, HYDRO_, SSE_, VEG_, A2L_
+
+    USE mo_jsb_io_netcdf,           ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store, get_bgcm_idx, read_bgcm_from_file
+    USE mo_lnd_bgcm_idx
+    USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
+    USE mo_jsb_time,                ONLY: t_datetime, get_date_components, get_year_day
+
+    USE mo_util,                    ONLY: int2string
+
+    dsl4jsb_Use_processes SB_
+    dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_config(SB_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),      POINTER :: model            !< the model
+    TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store       !< the bgcm store of this tile
+    TYPE(t_input_file)              :: input_file       !< file with to be read soil model forcing
+    REAL(wp)                        :: dtime, year_instant
+    INTEGER                         :: iblk             !< Dimensions of the horizontal grid
+    INTEGER                         :: veg_pool_idx
+    INTEGER                         :: year, month, day, hour, minute, second, yearday, &
+                                    &  ith_timestep     !< the row number of current timestep in soil forcing
+    REAL(wp), POINTER               :: veg_pool_mt_domain(:,:,:,:)            !< dim: compartments, elements, nc, nblks -- on domain!
+    REAL(wp), POINTER :: &
+      & ptr_3D(:,:,:),   &                      !< Pointer to 3d variable
+      & ptr_4D(:,:,:,:)                         !< Pointer to 4d variable
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_read_soil_forcing'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_config(SB_)
+    ! A2L_
+    dsl4jsb_Real2D_onDomain      :: nhx_deposition
+    dsl4jsb_Real2D_onDomain      :: noy_deposition
+    dsl4jsb_Real2D_onDomain      :: nhx_n15_deposition
+    dsl4jsb_Real2D_onDomain      :: noy_n15_deposition
+    dsl4jsb_Real2D_onDomain      :: p_deposition
+    ! VEG_ 2D
+    dsl4jsb_Real2D_onDomain      :: demand_uptake_n_tuptake_mavg
+    dsl4jsb_Real2D_onDomain      :: demand_uptake_p_tuptake_mavg
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onDomain      :: root_fraction_sl
+    ! HYDRO_ 3D
+    dsl4jsb_Real3D_onDomain      :: frac_wtr_transp_down_sl
+    dsl4jsb_Real3D_onDomain      :: frac_w_lat_loss_sl
+    dsl4jsb_Real3D_onDomain      :: wtr_soil_sl
+    dsl4jsb_Real3D_onDomain      :: vol_porosity_sl
+    ! SSE_ 3D
+    dsl4jsb_Real3D_onDomain      :: t_soil_sl
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    iblk = options%iblk
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_var2D_onDomain(A2L_,  nhx_deposition)
+    dsl4jsb_Get_var2D_onDomain(A2L_,  noy_deposition)
+    dsl4jsb_Get_var2D_onDomain(A2L_,  nhx_n15_deposition)
+    dsl4jsb_Get_var2D_onDomain(A2L_,  noy_n15_deposition)
+    dsl4jsb_Get_var2D_onDomain(A2L_,  p_deposition)
+    dsl4jsb_Get_var2D_onDomain(VEG_,  demand_uptake_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_,  demand_uptake_p_tuptake_mavg)
+    dsl4jsb_Get_var3D_onDomain(VEG_,  root_fraction_sl)
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, frac_wtr_transp_down_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, frac_w_lat_loss_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, wtr_soil_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onDomain(SSE_, t_soil_sl)
+
+    !> get the timestep information of current timestep
+    dtime   = options%dtime
+    CALL get_date_components(options%current_datetime, year, month, day, hour, minute, second)
+    year_instant = get_year_day(options%current_datetime)
+    yearday = INT(year_instant)
+    ith_timestep = IMerge_TIME2Sec(yearday, hour, minute, second)/int(dtime) + 1 ! the row number of current timestep in forcing file
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading the forcing at timestep '//int2string(ith_timestep)//' ... at day '//int2string(yearday)//' ...')
+    !> 1.0 the first soil forcing file
+    ! ----------------------------------------------------------------------------------------------------- !
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%soilphysics_forcing_filename), model%grid_id)
+
+    !> read the 3D forcing variables
+    !> - Fraction of fineroot
+    ptr_4D => input_file%Read_3d_time(                  &
+        & variable_name='veg_root_fraction_sl_'//tile%name,          &
+        & start_time_step=ith_timestep, end_time_step=ith_timestep)
+    root_fraction_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
+
+    !> - plant N uptake demand
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_demand_uptake_n_tuptake_mavg_"//tile%name,            &
+        & start_time_step=ith_timestep, end_time_step=ith_timestep)
+    demand_uptake_n_tuptake_mavg(:,:) = ptr_3D(:,:,1)
+
+    !> - plant P uptake demand
+    ptr_3D => input_file%Read_2d_time(                  &
+        & variable_name="veg_demand_uptake_p_tuptake_mavg_"//tile%name,            &
+        & start_time_step=ith_timestep, end_time_step=ith_timestep)
+    demand_uptake_p_tuptake_mavg(:,:) = ptr_3D(:,:,1)
+
+    !> - variables not on tile level
+    IF (tile%name(1:3) /= 'pft') THEN
+      !> - Fraction of vertical transport
+      ptr_4D => input_file%Read_3d_time(                  &
+          & variable_name='hydro_frac_wtr_transp_down_sl_'//tile%name,   &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      frac_wtr_transp_down_sl(:,:,:) = ptr_4D(:,:,:,1)
+
+      !> - Fraction of lateral water loss
+      ptr_4D => input_file%Read_3d_time(                  &
+          & variable_name='hydro_frac_w_lat_loss_sl_'//tile%name,        &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      frac_w_lat_loss_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
+
+      !> - Water content
+      ptr_4D => input_file%Read_3d_time(                  &
+          & variable_name='hydro_wtr_soil_sl_'//tile%name,              &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      wtr_soil_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
+
+      !> - Volumetric water content
+      ptr_4D => input_file%Read_3d_time(                  &
+          & variable_name='hydro_vol_porosity_sl_'//tile%name,          &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      vol_porosity_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
+
+      !> - Soil temperature
+      ptr_4D => input_file%Read_3d_time(                  &
+          & variable_name='sse_t_soil_sl_'//tile%name,                &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      t_soil_sl(:,:,:) = ptr_4D(:,:,:,1)
+
+      !> read the 2D forcing variables
+      !> - nhx deposition
+      ptr_3D => input_file%Read_2d_time(                  &
+          & variable_name="a2l_nhx_deposition_"//tile%name,            &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      nhx_deposition(:,:) = ptr_3D(:,:,1)
+
+      !> - noy deposition
+      ptr_3D => input_file%Read_2d_time(                  &
+          & variable_name="a2l_noy_deposition_"//tile%name,            &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      noy_deposition(:,:) = ptr_3D(:,:,1)
+
+      !> - nhx n15 deposition
+      ptr_3D => input_file%Read_2d_time(                  &
+          & variable_name="a2l_nhx_n15_deposition_"//tile%name,            &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      nhx_n15_deposition(:,:) = ptr_3D(:,:,1)
+
+      !> - noy n15 deposition
+      ptr_3D => input_file%Read_2d_time(                  &
+          & variable_name="a2l_noy_n15_deposition_"//tile%name,            &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      noy_n15_deposition(:,:) = ptr_3D(:,:,1)
+
+      !> - p deposition
+      ptr_3D => input_file%Read_2d_time(                  &
+          & variable_name="a2l_p_deposition_"//tile%name,            &
+          & start_time_step=ith_timestep, end_time_step=ith_timestep)
+      p_deposition(:,:) = ptr_3D(:,:,1)
+    END IF
+
+    CALL input_file%Close()
+
+    !> 2.0 the second soil forcing file
+    ! ----------------------------------------------------------------------------------------------------- !
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%veglitterfall_forcing_filename), model%grid_id)
+    IF (ASSOCIATED(tile%bgcm_store)) THEN
+      bgcm_store => tile%bgcm_store
+      veg_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile%name, routine)
+      veg_pool_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(veg_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
+    END IF
+
+    !> - veg fineroot C
+    ptr_3D => input_file%Read_2d_time(                      &
+        & variable_name="veg_veg_bgcm_pool_fine_root_C_"//tile%name, &
+        & start_time_step=ith_timestep, end_time_step=ith_timestep)
+    veg_pool_mt_domain(ix_fine_root, ixC, :,:) = ptr_3D(:,:,1)
+
+    !> - veg_litterfall_mt_domain using read_bgcm_from_file
+    CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_LITTERFALL_ID, "veg", &
+        & tile%name, routine, input_file, dt_step = ith_timestep)
+
+    !> - litterfall seed bed
+    CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_SEED_BED_LITTERFALL_ID, "veg", &
+        & tile%name, routine, input_file, dt_step = ith_timestep)
+
+    CALL input_file%Close()
+
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
+  END SUBROUTINE update_read_soil_forcing
+
+  ! ======================================================================================================= !
+  !>
+  !> @TODO add docu
+  !>
+  FUNCTION IMerge_TIME2Sec (kd, kh, km, ks) RESULT (ix)
+    !+
+    !
+    ! IMerge_TIME2Sec [function, integer]
+    !    merge day, hour, minute and second to internal time
+    !    (
+    !    day    [integer] input (day of year, 0...364)
+    !    hour   [integer] input (hour of day, 0...23)
+    !    minute [integer] input (minute of hour, 0...59)
+    !    second [integer] input (second of minute, 0...59)
+    !    )
+    !
+    !-
+    INTEGER, INTENT(in) :: kd, kh, km, ks
+    INTEGER             :: ix
+
+    ix = (kd-1)*86400 + kh*3600 + km*60 + ks
+
+  END FUNCTION IMerge_TIME2Sec
+#endif
 
 #endif
 END MODULE mo_sb_util

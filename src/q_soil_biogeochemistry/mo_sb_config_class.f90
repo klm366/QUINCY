@@ -87,6 +87,8 @@ MODULE mo_sb_config_class
 
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename    !< IQ (QUINCY) soil input data
     CHARACTER(len=filename_max) :: sb_analytical_init_filename !< IQ (QUINCY) gridded input data for analytical steady-state SB initialisation
+    CHARACTER(len=filename_max) :: soilphysics_forcing_filename    !< IQ (QUINCY) forcing data for soil model
+    CHARACTER(len=filename_max) :: veglitterfall_forcing_filename    !< IQ (QUINCY) forcing data for soil model
     CHARACTER(len=filename_max) :: deposition_filename_prefix !< IQ. Note: should NOT include an ending "_"
 
     ! parameter calibration
@@ -160,6 +162,8 @@ CONTAINS
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename
     CHARACTER(len=filename_max) :: sb_analytical_init_filename
+    CHARACTER(len=filename_max) :: soilphysics_forcing_filename
+    CHARACTER(len=filename_max) :: veglitterfall_forcing_filename
     CHARACTER(len=filename_max) :: deposition_filename_prefix
     CHARACTER(15)               :: sb_model_scheme
     CHARACTER(15)               :: sb_init_scheme
@@ -209,6 +213,8 @@ CONTAINS
                       bc_filename               , &
                       bc_quincy_soil_filename   , &
                       sb_analytical_init_filename, &
+                      soilphysics_forcing_filename,   &
+                      veglitterfall_forcing_filename, &
                       deposition_filename_prefix, &
                       sb_model_scheme           , &
                       sb_init_scheme            , &
@@ -265,6 +271,8 @@ CONTAINS
     bc_filename                 = 'bc_land_srf.nc'
     bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
     sb_analytical_init_filename = 'bc_land_sb_analytical_init.nc'
+    soilphysics_forcing_filename   = 'bc_qsoil_physics.nc'
+    veglitterfall_forcing_filename = 'bc_qsoil_litterfall.nc'
     deposition_filename_prefix  = 'bc_land_npdep_quincy'
     sb_model_scheme             = "simple_1d"       ! simple_1d jsm
     sb_init_scheme              = "legacy"          ! legacy analytical_ss
@@ -321,6 +329,8 @@ CONTAINS
     config%bc_filename                     = bc_filename
     config%bc_quincy_soil_filename         = bc_quincy_soil_filename
     config%sb_analytical_init_filename     = sb_analytical_init_filename
+    config%soilphysics_forcing_filename    = soilphysics_forcing_filename
+    config%veglitterfall_forcing_filename  = veglitterfall_forcing_filename
     config%deposition_filename_prefix      = deposition_filename_prefix
     config%sb_model_scheme                 = TRIM(sb_model_scheme)
     config%sb_init_scheme                  = TRIM(sb_init_scheme)

@@ -370,17 +370,15 @@ CONTAINS
     ! QPLANT:  PLANT  model mode - with additional tasks calculating vegetation biogeochemistry and dynamics
     ! QLAND:   LAND   model mode - adding tasks to calculate soil biogeochemistry
     !                              (on top of the tasks specific for the PLANT model mode)
-    !
-    ! Later a separated task queue set-up might be specified for QSOIL
-    ! # QSOIL:   SOIL   model mode - standalone soil biogeochemistry with forcing from vegetation
+    ! QSOIL:   SOIL   model mode - standalone soil biogeochemistry with forcing from vegetation
     !
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_config(VEG_)
       dsl4jsb_Get_config(SB_)
 
-      !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
+      !-- QLAND, QPLANT, QCANOPY and QSOIL
       IF (.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
-                .OR. (model%config%qmodel_id == QCANOPY))) THEN
+                .OR. (model%config%qmodel_id == QCANOPY) .OR. (model%config%qmodel_id == QSOIL))) THEN
         CALL finish(TRIM(routine), &
           & 'Unexpected / not yet implemented Quincy model mode: '//TRIM(model%config%quincy_model))
       END IF
@@ -388,8 +386,7 @@ CONTAINS
       !>
       !> quincy with jsbach soil physics (w/o tmx)
       !>
-      IF (model%config%use_soil_phys_jsbach) THEN
-
+      IF (model%config%use_soil_phys_jsbach .AND. (.NOT. model%config%qmodel_id == QSOIL)) THEN
         !-- set flux variables to zero
         CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
         CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
@@ -506,7 +503,7 @@ CONTAINS
       !>
       !> quincy with SPQ_ soil physics process (fallback)
       !>
-      ELSE IF (.NOT. model%config%use_soil_phys_jsbach) THEN
+      ELSE IF ((.NOT. model%config%use_soil_phys_jsbach)  .AND. (.NOT. model%config%qmodel_id == QSOIL)) THEN
 
         !-- set flux variables to zero
         CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
@@ -611,6 +608,31 @@ CONTAINS
           CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")   ! LAND or PLANT
         END IF
 
+      ELSE IF (model%config%qmodel_id == QSOIL) THEN
+        !-- QSOIL
+        !! read soil forcing data
+        CALL model%Queue_task(SB_, "read_soil_forcing")
+
+        !! init/reset fluxes (with/to zero)
+        !!
+        CALL model%Queue_task(SB_, "reset_sb_fluxes")
+        IF (.NOT. model%config%use_soil_phys_jsbach) THEN
+          CALL model%Queue_task(SPQ_, "reset_spq_fluxes")
+        END IF
+
+        CALL model%Queue_task(SB_, "sb_rate_modifier")
+        IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+          CALL model%Queue_task(SB_, "sb_jsm")                  ! JSM
+        ELSE
+          CALL model%Queue_task(SB_, "sb_simple_model")         ! SSM
+        END IF
+        CALL model%Queue_task(SB_, "sb_pools")
+
+        !-- averaging variables in time ------------------------------------------------------------------- !
+        CALL model%Queue_task(RAD_, "rad_time_average")
+        CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")
+        CALL model%Queue_task(VEG_, "tavrg_vegetation")
+        CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")
       ELSE
         CALL finish(TRIM(routine), 'Some is wrong with the model%config%use_soil_phys_jsbach setting.')
       END IF ! T/F use_soil_phys_jsbach
