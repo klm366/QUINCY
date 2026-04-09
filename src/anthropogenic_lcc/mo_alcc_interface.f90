@@ -292,6 +292,7 @@ CONTAINS
     USE mo_jsb_time,          ONLY: is_newday, is_newyear
     USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, max_tolerated_cf_mismatch
     USE mo_jsb_lcc,           ONLY: init_lcc_reloc
+    USE mo_nlcc_process,      ONLY: fract_small
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
@@ -438,8 +439,15 @@ CONTAINS
           END IF
 
           DO ic = 1,nc
+            ! Assert: all cover fractions are >= fract_small - tolerance
+            !IF (initial_area(ic,i_tile) < fract_small - 1.0E-12_wp) THEN
+            !  CALL finish(TRIM(routine), 'Violation of assertion: cover fraction is smaller than allowed minimum. '  &
+            !    & // 'Please check initial areas and transition rates. Tile: ' // TRIM(current_tile%name))
+            !END IF
+       
+            ! Now actually calculate from_cf_sum and to_cf_sum
             IF (dsl4jsb_Config(ALCC_)%from_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
-              from_cf_sum(ic) = from_cf_sum(ic) + initial_area(ic, i_tile)
+              from_cf_sum(ic) = from_cf_sum(ic) + max(0.0_wp, initial_area(ic, i_tile) - fract_small)
             END IF
             IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
               IF (model%Is_process_enabled(NLCC_) .AND. dsl4jsb_Config(ALCC_)%to_class(idx) == 1) THEN
@@ -454,6 +462,27 @@ CONTAINS
           END DO
 
           current_tile => current_tile%Get_next_sibling_tile()
+        END DO ! current_tile
+
+        ! Assure necessary but not sufficient conditions:
+        ! (1) transition rates <= from_cf_sum, i.e. that the transition does not remove more area than 
+        !     currently available in all tiles beloning to one transition class, taking into account that
+        !     a minimum fraction needs to be kept to avoid numerical issues in NLCC
+        !     - Because the lost area for each tile is calculated as 
+        !       transition_rate * initial_area / from_cf_sum, 
+        !       this also ensures that the lost area does not exceed the initial area in each tile.
+        ! (2) for back-conversion of agricultural lands to natural: transition rates <= to_cf_sum, i.e. 
+        !     that the transition does not add more area than the potentially available in all natural tiles
+        ! (3) if not back-conversion of agricultural lands to natural: transition_rate + to_cf_sum <= 1, 
+        !     i.e. that the transition does not add more area than available in the vegetated grid box
+        DO ic = 1, nc
+          !transition_rate(ic, idx) = MAX(0.0_wp, MIN(transition_rate(ic, idx), from_cf_sum(ic) - n_tile_fc * fract_small))
+          transition_rate(ic, idx) = MIN(transition_rate(ic, idx), from_cf_sum(ic))
+          IF ((model%Is_process_enabled(NLCC_)) .AND. (dsl4jsb_Config(ALCC_)%to_class(idx) == 1)) THEN
+            transition_rate(ic, idx) = MIN(transition_rate(ic, idx), to_cf_sum(ic))
+          ELSE
+            transition_rate(ic, idx) = MIN(transition_rate(ic, idx), 1.0_wp - to_cf_sum(ic))
+          END IF
         END DO
 
       END SELECT
@@ -566,12 +595,15 @@ CONTAINS
               
               IF (dsl4jsb_Config(ALCC_)%from_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
                 IF (from_cf_sum(ic) < 0.0_wp) THEN
-                  CALL finish(TRIM(routine), 'Violation of assertion: from_cf_sum is negative. Please check transition rates and initial areas. Tile: ' // TRIM(current_tile%name))
+                  CALL finish(TRIM(routine), 'Violation of assertion: from_cf_sum is negative. Please check transition rates' &
+                  & // ' and initial areas. Tile: ' // TRIM(current_tile%name))
                 END IF
                 IF (from_cf_sum(ic) > 0.0_wp) THEN
                   ! Rule of equal relative loss
-                  lost_area(ic, i_tile) = transition_rate(ic, idx) * initial_area(ic, i_tile) / from_cf_sum(ic)
+                  lost_area(ic, i_tile) = transition_rate(ic, idx) *  &
+                      max(0.0_wp, (initial_area(ic, i_tile) - fract_small)) / from_cf_sum(ic)
                 END IF
+                !Todo-AKN: Why do I need this? Shouldn't these cases be treated by line 450-490?Maybe just a numerical issues?
                 IF (initial_area(ic, i_tile) - lost_area(ic, i_tile) < 0.0_wp) THEN
                   current_fract(ic) = 0.0_wp
                   lost_area(ic, i_tile) = initial_area(ic, i_tile)
@@ -580,17 +612,21 @@ CONTAINS
                 END IF
               ELSE IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
                 IF (to_cf_sum(ic) < 0.0_wp) THEN
-                  CALL finish(TRIM(routine), 'Violation of assertion: to_cf_sum is negative. Please check transition rates and initial areas. Tile: ' // TRIM(current_tile%name))
+                  CALL finish(TRIM(routine), 'Violation of assertion: to_cf_sum is negative. Please check transition rates' &
+                   & // ' and initial areas. Tile: ' // TRIM(current_tile%name))
                 END IF
                 IF (to_cf_sum(ic) > 0.0_wp) THEN
                   IF (model%Is_process_enabled(NLCC_) .AND.dsl4jsb_Config(ALCC_)%to_class(idx) == 1) THEN
-                    ! Back-conversion rule for agricultural lands to natural scales with the difference between potential cover fraction and current cover fraction
-                    gained_area(ic, i_tile) = transition_rate(ic, idx) * max(0.0_wp, cover_fract_pot(ic, i_tile) - initial_area(ic, i_tile)) / to_cf_sum(ic)
+                    ! Back-conversion rule for agricultural lands to natural scales with the difference 
+                    ! between potential cover fraction and current cover fraction
+                    gained_area(ic, i_tile) = transition_rate(ic, idx) * &
+                        max(0.0_wp, cover_fract_pot(ic, i_tile) - initial_area(ic, i_tile)) / to_cf_sum(ic)
                   ELSE
                     ! Rule of equal relative gain 
                     gained_area(ic, i_tile) = transition_rate(ic, idx) * initial_area(ic, i_tile) / to_cf_sum(ic)
                   END IF
                 END IF
+                !Todo-AKN: Why do I need this? Shouldn't these cases be treated by line 450-490?Maybe just a numerical issues?
                 IF (initial_area(ic, i_tile) + gained_area(ic, i_tile) > 1.0_wp) THEN
                   gained_area(ic, i_tile) = 1.0_wp - initial_area(ic, i_tile)
                 END IF
@@ -629,10 +665,10 @@ CONTAINS
       !    & // 'Max difference of: ', MAXVAL(cf_diff(:))
       !  CALL finish(TRIM(routine), TRIM(message_text))
       !END IF
-      IF (model%config%check_child_cf) THEN
-        ! Check and correct remaining mismatches
-        CALL check_and_correct_cf_mismatches(tile, options, nr_of_tiles, gained_area, lost_area)
-      END IF
+      !IF (model%config%check_child_cf) THEN
+      !  ! Check and correct remaining mismatches
+      !  CALL check_and_correct_cf_mismatches(tile, options, nr_of_tiles, gained_area, lost_area)
+      !END IF
 
       ! Now do the matter translocation
       CALL alcc_matter_translocation_jsb(tile, options)
