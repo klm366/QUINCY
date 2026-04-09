@@ -1096,10 +1096,10 @@ CONTAINS
     REAL(wp) :: gained_area_loc(options%nc,options%npft)     !< Local array for gained_area
     REAL(wp) :: lost_area_loc(options%nc,options%npft)       !< Local array for lost_area
 
-    LOGICAL :: is_woody(options%nc,options%npft)     ! PFTs that build wood
-    LOGICAL :: is_dynamic(options%nc,options%npft)   ! PFTs taking part in competition (NLCC)
-    LOGICAL :: is_pasture(options%nc,options%npft)   ! PFTs that are pasture
-    LOGICAL :: is_crop(options%nc,options%npft)      ! PFTs that are crop
+    LOGICAL :: is_woody(options%npft)     ! PFTs that build wood
+    LOGICAL :: is_dynamic(options%npft)   ! PFTs taking part in competition (NLCC)
+    LOGICAL :: is_pasture(options%npft)   ! PFTs that are pasture
+    LOGICAL :: is_crop(options%npft)      ! PFTs that are crop
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':handle_nlcc_pfts'
     ! -------------------------------------------------------------------------------------------------- !
@@ -1132,10 +1132,10 @@ CONTAINS
 
     ! Find out different vegetation types
 
-    is_woody(:,:)   = .FALSE.
-    is_dynamic(:,:) = .FALSE.
-    is_pasture(:,:) = .FALSE.
-    is_crop(:,:)    = .FALSE.
+    is_woody(:)   = .FALSE.
+    is_dynamic(:) = .FALSE.
+    is_pasture(:) = .FALSE.
+    is_crop(:)    = .FALSE.
 
     veg_tile_fract(:) = tile%fract(ics:ice,iblk)
 
@@ -1148,9 +1148,9 @@ CONTAINS
       IF (dsl4jsb_Lctlib_param_tile(dynamic_PFT, current_tile)) THEN
         ! Natural PFTs
         ndynamic = ndynamic + 1
-        is_dynamic(:,i_tile) = .TRUE.
+        is_dynamic(i_tile) = .TRUE.
         IF (dsl4jsb_Lctlib_param_tile(woody_PFT, current_tile)) THEN
-          is_woody(:,i_tile) = .TRUE.
+          is_woody(i_tile) = .TRUE.
         END IF
         ! We just initialize natural PFT fractions here. They will be calculated below in NLCC process
         ! routine calc_cover_fract_inst.
@@ -1166,9 +1166,9 @@ CONTAINS
           pft_fractions(:,i_tile) = 0._wp
         END WHERE
         IF (dsl4jsb_Lctlib_param_tile(pasture_PFT, current_tile)) THEN
-          is_pasture(:, i_tile) = .TRUE.
+          is_pasture(i_tile) = .TRUE.
         ELSE
-          is_crop(:, i_tile) = .TRUE.
+          is_crop(i_tile) = .TRUE.
         END IF
       END IF
 
@@ -1178,8 +1178,8 @@ CONTAINS
     ! Update natural PFT fractions based on potential vegetation (cover_fract_pot) and current
     ! anthropogenic PFT fraction (pft_fractions) taking into account the pasture rule.
     ! Note: calc_cover_fract_inst belongs to the NLCC process.
-    CALL calc_cover_fract_inst(options%nc, options%npft, is_woody(:,:), is_dynamic(:,:), is_pasture(:,:), &
-        &                      is_crop(:,:), cover_fract_pot(:,:), pft_fractions(:,:), current_fract(:,:))
+    CALL calc_cover_fract_inst(options%nc, options%npft, is_woody(:), is_dynamic(:), is_pasture(:), &
+        &                      is_crop(:), cover_fract_pot(:,:), pft_fractions(:,:), current_fract(:,:))
 
     ! Re-convert to absolute fractions
     DO i_tile = 1, options%npft
@@ -1188,18 +1188,20 @@ CONTAINS
 
     IF (PRESENT (gained_area)) THEN
       ! Calculate gained and lost area fractions of the natural PFTs
-      WHERE (is_dynamic(:,:))
-        WHERE (current_fract(:,:) > initial_area(:,:))
-          gained_area(:,:) = current_fract(:,:) - initial_area(:,:)
-        ELSE WHERE
-          gained_area(:,:) = 0._wp
-        END WHERE
-        WHERE (current_fract(:,:) < initial_area(:,:))
-          lost_area(:,:) = initial_area(:,:) - current_fract(:,:)
-        ELSE WHERE
-          lost_area(:,:) = 0._wp
-        END WHERE
-      END WHERE
+      DO i_tile = 1, options%npft
+        IF (is_dynamic(i_tile)) THEN
+          WHERE (current_fract(:,:) > initial_area(:,:))
+            gained_area(:,:) = current_fract(:,:) - initial_area(:,:)
+          ELSE WHERE
+            gained_area(:,:) = 0._wp
+          END WHERE
+          WHERE (current_fract(:,:) < initial_area(:,:))
+            lost_area(:,:) = initial_area(:,:) - current_fract(:,:)
+          ELSE WHERE
+            lost_area(:,:) = 0._wp
+          END WHERE
+        END IF ! is_dynamic
+      END DO
     END IF
 
     ! Update dynamic (natural) PFT fractions
