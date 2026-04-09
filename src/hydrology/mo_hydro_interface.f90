@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -1512,7 +1512,8 @@ CONTAINS
                                                  !< affects bottom layer drainage [m]
       & drainage_lowest_soil_layer(options%nc), & !< Bottom layer drainage [kg m-2 s-1]
       & ret_macro_blg, &                         !< Retention time for below ground runoff [s]
-      & wtr_flux_in_m                            !< Variable used for water fluxes in [m / (time step)]
+      & wtr_flux_in_m, &                         !< Variable used for water fluxes in [m / (time step)]
+      & hlp1                                     !< helper variable
 
     LOGICAL :: &
       & l_fract(options%nc), &                   !< Tile has a non-zero grid cell fraction
@@ -1609,17 +1610,8 @@ CONTAINS
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_transp_down_sl)  ! out
       dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)       ! out
-      ! Save the soil-water state at the beginning of the time step
-      !   for the calculation of fractional water transport in the water column
       ALLOCATE(wtr_soil_old_sl(nc, nsoil))
       !$ACC ENTER DATA CREATE(wtr_soil_old_sl) ASYNC(acc_stream)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
-      DO is = 1, nsoil
-        DO ic = 1, nc
-          wtr_soil_old_sl(ic, is) = wtr_soil_sl(ic, is)
-        END DO
-      END DO
-      !$ACC END PARALLEL LOOP
 #endif
     END SELECT
 
@@ -1727,6 +1719,19 @@ CONTAINS
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_memory(Q_ASSIMI_)
 
+      ! Save the soil-water state at the beginning of the time step
+      !   for the calculation of fractional water transport in the water column
+      !   note: this needs to include ice, because ice also contains inorganc biogeochemical
+      !         substances and when comparing the water lost from a layer, the total
+      !         water irrespective of whether its frozen or not
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          wtr_soil_old_sl(ic, is) = wtr_soil_sl(ic, is) + ice_soil_sl(ic, is)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+
       CALL calc_soil_hydrology( &
         ! in
         & nc, &
@@ -1796,12 +1801,16 @@ CONTAINS
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
       !$ACC LOOP SEQ
       DO is = 1, nsoil
-        !$ACC LOOP GANG VECTOR PRIVATE(wtr_flux_in_m)
+        !$ACC LOOP GANG VECTOR PRIVATE(wtr_flux_in_m, hlp1)
         DO ic = 1, nc
           IF (wtr_soil_old_sl(ic, is) > eps8) THEN
             ! calculation of the two fractions
             ! vertical (across soil layers)
-            wtr_flux_in_m = wtr_transp_down_sl(ic, is) * dtime / rhoh2o
+            IF (ABS(wtr_transp_down_sl(ic, is)) > eps8) THEN ! diagnosed upwards and downwards fluxes both contain spurious fluxes of < E-8, which are ignored here
+              wtr_flux_in_m = wtr_transp_down_sl(ic, is) * dtime / rhoh2o
+            ELSE
+              wtr_flux_in_m = 0.0_wp
+            END IF
             frac_wtr_transp_down_sl(ic, is) = &
               &  MIN( MAX( wtr_flux_in_m / wtr_soil_old_sl(ic, is), frac_wtr_vertical_transport_up_max), &
               &       frac_wtr_vertical_transport_down_max) * 1000._wp / dtime
@@ -1813,11 +1822,10 @@ CONTAINS
             frac_w_lat_loss_sl(ic, is) = &
               &  MIN( MAX(wtr_flux_in_m / wtr_soil_old_sl(ic, is), 0.0_wp), frac_w_lat_loss_max) * 1000._wp / dtime
             ! ensure the sum of the two fractions would not increase beyond frac_w_lat_loss_max
-            IF ((frac_wtr_transp_down_sl(ic, is) + frac_w_lat_loss_sl(ic, is)) > frac_w_lat_loss_max) THEN
-              frac_wtr_transp_down_sl(ic, is) = frac_wtr_transp_down_sl(ic, is) * frac_w_lat_loss_max &
-                &                               / (frac_wtr_transp_down_sl(ic, is) + frac_w_lat_loss_sl(ic, is))
-              frac_w_lat_loss_sl(ic, is)      = frac_w_lat_loss_sl(ic, is) * frac_w_lat_loss_max &
-                &                               / (frac_wtr_transp_down_sl(ic, is) + frac_w_lat_loss_sl(ic, is))
+            hlp1 = frac_wtr_transp_down_sl(ic, is) + frac_w_lat_loss_sl(ic, is)
+            IF (hlp1 > frac_w_lat_loss_max) THEN
+              frac_wtr_transp_down_sl(ic, is) = frac_wtr_transp_down_sl(ic, is) * frac_w_lat_loss_max / hlp1
+              frac_w_lat_loss_sl(ic, is)      = frac_w_lat_loss_sl(ic, is) * frac_w_lat_loss_max / hlp1
             END IF
           ELSE
             frac_wtr_transp_down_sl(ic, is) = 0.0_wp
@@ -2133,8 +2141,14 @@ CONTAINS
       & wtr_soil_pot_scool_sl_min(options%nc, options%nsoil_w), & !< Actual amount of supercooled water [m]
       & wpi_fcap_soil_sl(options%nc, options%nsoil_w)             !< Volumetric amount of water and/or ice
                                                                   !< at field capacity [m] (???)
-    REAL(wp) :: wpi_pwp_soil_sl(options%nc, options%nsoil_w)      !< Volumetric amount of water and/or ice
-                                                                  !< at wilting point [m] (???)
+    REAL(wp) :: &
+      & wpi_pwp_soil_sl(options%nc, options%nsoil_w), &           !< Volumetric amount of water and/or ice at wilting point [m]
+      & wtr_soil_pwp_sl(options%nc, options%nsoil_w), &           !< Actual amount of water at wilting point
+                                                                  !< (corrected for ice/supercooled) [m]
+      & wtr_soil_avail_sl(options%nc, options%nsoil_w), &         !< Actual amount of plant available water [m]
+      & wtr_soil_avail_max_sl(options%nc, options%nsoil_w), &     !< Actual maximum of plant available water [m]
+      & wtr_soil_inaccessible_sl(options%nc, options%nsoil_w)     !< Actual amount of plant inaccessible water
+                                                                  !< (ice+supercooled) [m]
     REAL(wp) :: wtr_rootzone_pwp(options%nc)                      !< Amount of liquid water at wilting point [m]
     REAL(wp) :: hlp1                                              !< helper variable
 
@@ -2178,165 +2192,120 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_plant_avail_rel)    ! out
 
-    ! Define plain local variables, needed on GPUs
-    config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
-    config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
-
     !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min, wpi_fcap_soil_sl) &
-    !$ACC   CREATE(wpi_pwp_soil_sl, wtr_rootzone_pwp) ASYNC(acc_stream)
+    !$ACC   CREATE(wpi_pwp_soil_sl, wtr_soil_pwp_sl, wtr_soil_avail_sl, wtr_soil_avail_max_sl) &
+    !$ACC   CREATE(wtr_soil_inaccessible_sl, wtr_rootzone_pwp) &
+    !$ACC   ASYNC(acc_stream)
 
     !> Water stress is calculated from the ratio between the actual plant available water
-    !> "wtr_rootzone_avail" and the maximum potentielly available water "wtr_rootzone_avail_max" between the
+    !> "wtr_rootzone_avail" and the maximum potentially available water "wtr_rootzone_avail_max" between the
     !> wilting point and the "critical" soil moisture, where plants feel no water limitation.
     !>
 
-    ! Calculate actual plant available water
-    !
-    CALL get_amount_in_rootzone(wtr_soil_sl(:,:),  &
-      &                         soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
-
-    ! Calculate root zone field capacity
+    ! Derive layer-dependent field capacity and wilting point from the volumetric quantities
     !
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 1, nsoil
       DO ic = 1, nc
         wpi_fcap_soil_sl(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
+        wpi_pwp_soil_sl(ic,is) = vol_p_wilt_sl(ic,is) * soil_depth_sl(ic,is)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
-    CALL get_amount_in_rootzone(wpi_fcap_soil_sl(:,:),  &
-      &  soil_depth_sl(:,:), root_depth_sl(:,:), wpi_rootzone_max(:))
-
-#ifndef __NO_QUINCY__
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_QUINCY)
-      ! Compute minimum plant available water in the root zone water based on soil permanent wilting point
+    IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
+      ! Derive the actual amount of supercooled water from the potential amount and the actual amount of
+      ! liquid soil water
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
-          wpi_pwp_soil_sl(ic,is) = vol_p_wilt_sl(ic,is) * soil_depth_sl(ic,is)
-        END DO
-      END DO
-      !$ACC END PARALLEL LOOP
-      CALL get_amount_in_rootzone( &
-        &   wpi_pwp_soil_sl(:,:), &   ! in
-        &   soil_depth_sl(:,:), &     ! in
-        &   root_depth_sl(:,:), &     ! in
-        &   wtr_rootzone_pwp(:) &     ! inout
-        &   )
-
-    !> Available water is corrected by ice and supercooled water content below,
-    !> helping to ensure a consistent definition of water at permanent wilting point.
-    IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
-      CALL get_amount_in_rootzone(ice_soil_sl(:,:), &
-        &                         soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
-      !$ACC   PRIVATE(hlp1)
-      DO ic = 1, nc
-        ! assume ice and supercooled water are distributed equally between water below and above the PWP
-        hlp1 = wtr_rootzone_pwp(ic) / wpi_rootzone_max(ic)
-        wtr_rootzone_pwp(ic) = MAX(wtr_rootzone_pwp(ic) - ice_rootzone(ic) * hlp1 - wtr_rootzone_scool_pot(ic) * hlp1, 0._wp)
-      END DO
-      !$ACC END PARALLEL LOOP
-    ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
-      CALL get_amount_in_rootzone(ice_soil_sl(:,:), &
-        &                         soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
-      !$ACC   PRIVATE(hlp1)
-      DO ic = 1, nc
-        hlp1 = wtr_rootzone_pwp(ic) / wpi_rootzone_max(ic)
-        wtr_rootzone_pwp(ic) = MAX(wtr_rootzone_pwp(ic) - ice_rootzone(ic) * hlp1, 0._wp)
-      END DO
-      !$ACC END PARALLEL LOOP
-    END IF
-    END SELECT
-#endif
-
-    !> By plant available water we mean the liquid water content of the root zone, not including supercooled
-    !> water. However, water below the wilting point is included - although it is not available to plants.
-
-    IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
-      ! Calculate the potential amount of supercooled water within the root zone. This is the amount of
-      ! supercooled water that could remain liquid with current temperatures, if there was enough soil water
-      ! (compare [[mo_sse_process:Get_liquid_max]]).
-      CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl(:,:),  &
-        &                         soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_pot(:))
-
-      ! Calculate the actual amount of supercooled water within the root zone.
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
-      DO is=1,nsoil
-        DO ic=1,nc
           wtr_soil_pot_scool_sl_min(ic,is) = MIN(wtr_soil_pot_scool_sl(ic,is), wtr_soil_sl(ic,is))
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl_min(:,:),  &
-        &                         soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_act(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    END IF
 
-      ! Subtract the supercooled water from the plant available water, as supercooled water is not available
-      ! for plants.
-      DO ic=1,nc
-        wtr_rootzone_avail(ic) = MAX(wtr_rootzone(ic) - wtr_rootzone_scool_act(ic), 0._wp)
+    ! Calculate actual plant available water
+    !> By plant available water we mean the liquid water content of the root zone, not including supercooled
+    !> water. However, water below the wilting point is included - although it is not available to plants.
+    !
+    IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          wtr_soil_avail_sl(ic ,is) = MAX(wtr_soil_sl(ic, is) - wtr_soil_pot_scool_sl_min(ic, is), 0.0_wp)
+        END DO
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      ! In setups without soil water phase changes all (liquid) water of the root zone is available to plants
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic=1,nc
-        wtr_rootzone_avail(ic) = wtr_rootzone(ic)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          wtr_soil_avail_sl(ic, is) = wtr_soil_sl(ic, is)
+        END DO
       END DO
       !$ACC END PARALLEL LOOP
     END IF
 
-    ! Calculate the soil field capacity
+    ! Calculate the soil field capacity and permanent wilting point
     !>
-    !> As the actual root zone moisture, the potential root zone moisture is reduced by the amount of ice
+    !> As the actual root zone moisture, the potential and minimal root zone moisture is reduced by the amount of ice
     !> - otherwise plants suffer constant water stress in permafrost-regions. Besides, we also subtract the
     !> amount of potential supercooled water, as supercooled water is not accounted as plant available water.
     !> As for the actual available water, water below the wilting point is not subtracted from the
     !> potentially available water.
-
+    !
     IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
-      CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
-                               &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic=1,nc
-        wtr_rootzone_avail_max(ic) = MAX(wpi_rootzone_max(ic) - ice_rootzone(ic) - wtr_rootzone_scool_pot(ic), 0._wp)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          wtr_soil_inaccessible_sl(ic, is) = ice_soil_sl(ic, is) + wtr_soil_pot_scool_sl(ic, is)
+        END DO
       END DO
       !$ACC END PARALLEL LOOP
     ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
-      CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
-                               &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic=1,nc
-        wtr_rootzone_avail_max(ic) = MAX(wpi_rootzone_max(ic) - ice_rootzone(ic), 0._wp)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          wtr_soil_inaccessible_sl(ic, is) = ice_soil_sl(ic, is)
+        END DO
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic=1,nc
-        wtr_rootzone_avail_max(ic) = wpi_rootzone_max(ic)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          wtr_soil_inaccessible_sl(ic, is) = 0.0_wp
+        END DO
       END DO
       !$ACC END PARALLEL LOOP
     END IF
 
-    ! Calculate water stress factor
-    !
-    ! TODO: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic=1,nc
-      water_stress(ic) = &
-        & get_water_stress_factor(wtr_rootzone_avail(ic), wtr_rootzone_avail_max(ic), &
-            &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream) &
+    !$ACC   PRIVATE(hlp1)
+    DO is = 1, nsoil
+      DO ic = 1, nc
+        IF(wpi_fcap_soil_sl(ic, is) > 0.0_wp) THEN
+          hlp1 = wpi_pwp_soil_sl(ic, is) / wpi_fcap_soil_sl(ic, is)
+        ELSE
+          hlp1 = 0.0_wp
+        END IF
+        wtr_soil_avail_max_sl(ic, is) = MAX(wpi_fcap_soil_sl(ic, is) - wtr_soil_inaccessible_sl(ic, is), 0.0_wp)
+        wtr_soil_pwp_sl(ic, is) = MAX(wpi_pwp_soil_sl(ic, is) - wtr_soil_inaccessible_sl(ic, is) * hlp1, 0.0_wp)
+      END DO
     END DO
     !$ACC END PARALLEL LOOP
 
-    ! Calculate relative soil moisture
-    !>
-    !> The logistic growth phenology (LoGro-P; compare [[mo_pheno_interface:update_phenology_logrop]]) has
-    !> a different approach to account for water stress: there we use the relative soil moisture as measure
-    !> for water stress directly, instead of using the water stress factor.
+    ! integrate available water, as well as water at field capacity and permanent wilting point to root zone
+    !
+    CALL get_amount_in_rootzone(wtr_soil_avail_sl(:,:),  &
+      &    soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_avail(:))
+    CALL get_amount_in_rootzone(wtr_soil_avail_max_sl(:,:),  &
+      &    soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_avail_max(:))
+    CALL get_amount_in_rootzone(wtr_soil_pwp_sl(:,:),  &
+      &   soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_pwp(:))
+
+    ! Calculate water content of the root zone relative to storage potential
+    !
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic= 1, nc
       IF (wtr_rootzone_avail_max(ic) > 0._wp) THEN
@@ -2348,23 +2317,59 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_JSBACH)
+      ! Define plain local variables, needed on GPUs
+      config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
+      config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
+
+      ! Calculate water stress factor
+      ! TODO: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        water_stress(ic) = &
+          & get_water_stress_factor(wtr_rootzone_avail(ic), wtr_rootzone_avail_max(ic), &
+              &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
+      END DO
+      !$ACC END PARALLEL LOOP
+      !>
+      !> Note, the logistic growth phenology (LoGro-P; compare [[mo_pheno_interface:update_phenology_logrop]]) has
+      !> a different approach to account for water stress: there we use the relative soil moisture as measure
+      !> for water stress directly, instead of using the water stress factor.
+#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
-      ! Calculate relative soil moisture (used in Quincy Vegetation)
+      ! Calculate relative plant available water content of the root zone
+      !
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         IF ((wtr_rootzone_avail_max(ic) - wtr_rootzone_pwp(ic)) > 0.0_wp) THEN
           wtr_plant_avail_rel(ic) = MIN(MAX(wtr_rootzone_avail(ic) - wtr_rootzone_pwp(ic), 0.0_wp) &
             &                       / (wtr_rootzone_avail_max(ic) - wtr_rootzone_pwp(ic)), 1.0_wp)
         ELSE
-          ! wpi_rootzone_max is zero for glacier tiles
           wtr_plant_avail_rel(ic) = 0.0_wp
         END IF
+        ! for diagnostic purposes: report QUINCY relative plant available water as JSB water stress
+        water_stress(ic) = wtr_plant_avail_rel(ic)
       END DO
       !$ACC END PARALLEL LOOP
-    END SELECT
 #endif
+    END SELECT
+
+    ! for diagnostic purposes, calculate root zone integrated water and ice stocks
+    CALL get_amount_in_rootzone(wtr_soil_sl(:,:),  &
+      &    soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
+    CALL get_amount_in_rootzone(wpi_fcap_soil_sl(:,:),  &
+      &    soil_depth_sl(:,:), root_depth_sl(:,:), wpi_rootzone_max(:))
+    IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
+      CALL get_amount_in_rootzone(ice_soil_sl(:,:), &
+        &    soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
+      IF(dsl4jsb_Config(SSE_)%l_supercool) THEN
+        CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl(:,:),  &
+          &    soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_pot(:))
+        CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl_min(:,:),  &
+          &    soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_act(:))
+      END IF
+    END IF
 
     !$ACC END DATA
 
@@ -2415,6 +2420,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_rel,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail_max, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_scool_pot, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_scool_act, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,           weighted_by_fract)
 
     CALL weighted_by_fract%EndAggregate()
@@ -3595,7 +3602,6 @@ CONTAINS
 
   END SUBROUTINE aggregate_water_balance
 
-#ifndef __QUINCY_STANDALONE__
   ! ======================================================================================================== !
   !>
   !>#### Global diagnostics of the hydrology process
@@ -3605,24 +3611,27 @@ CONTAINS
   !> available, the routine is called from [[mo_jsb_interface:jsbach_finish_timestep]], after the loop
   !> over the nproma blocks.
   !>
-  SUBROUTINE global_hydrology_diagnostics(tile)
+  SUBROUTINE global_hydrology_diagnostics(tile, global_land_area, in_domain, land_area_scaling)
 
-    USE mo_sync,                  ONLY: global_sum_array
-    USE mo_jsb_grid,              ONLY: Get_grid
-    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
-
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    ! Local variables
-    !
+    USE mo_util,                    ONLY: scaled_global_sum_2D
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
+    REAL(wp),                   INTENT(in) :: global_land_area       !< Global land area
+    REAL(wp),                   INTENT(in) :: in_domain(:,:)         !< Mask out halo cells
+    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(HYDRO_)      !< Configurable parameters of the hydrology process
     dsl4jsb_Def_memory(HYDRO_)      !< Memory of the hydrology process
 
-    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_hydrology_diagnostics'
+    TYPE(t_jsb_model), POINTER   :: model
+    TYPE(t_jsb_grid),  POINTER   :: grid
+
+    REAL(wp), POINTER            :: notsea(:,:)
+    REAL(wp)                     :: scaling(SIZE(in_domain,1), SIZE(in_domain,2))
+    REAL(wp)                     :: gsum_weq_balance_err_count(1)
+    CHARACTER(len=*),  PARAMETER :: routine = modname//':global_hydrology_diagnostics'
 
     ! Pointers to variables in memory
-
     dsl4jsb_Real2D_onDomain :: transpiration    !< Transpiration [kg m-2 s-1]
     dsl4jsb_Real2D_onDomain :: evapotrans       !< Evapotranspiration [kg m-2 s-1]
     dsl4jsb_Real2D_onDomain :: weq_land         !< Total amount of liquid or frozen water of the land [m3]
@@ -3644,16 +3653,12 @@ CONTAINS
     REAL(wp), POINTER       :: weq_snow_gsum(:)            !< Global snow amount on non-glacier land [Gt]
     REAL(wp), POINTER       :: weq_balance_err_gsum(:)     !< Global land water balance error [m3/(time step)]
 
-    TYPE(t_jsb_model), POINTER      :: model               !< This instance of ICON-Land
-    TYPE(t_jsb_grid),  POINTER      :: grid                !< The ICON-Land horizontal grid
-
-    REAL(wp), POINTER      :: area(:,:)                    !< Grid cell area [m2]
-    REAL(wp), POINTER      :: notsea(:,:)                  !< Land mask (1: land incl. lakes; 0: ocean)
-    LOGICAL,  POINTER      :: is_in_domain(:,:)            !< True: cell in domain; False: halo cell
-    REAL(wp), ALLOCATABLE  :: in_domain (:,:)              !< 1: cell in domain; 0: halo cell
-    REAL(wp), ALLOCATABLE  :: scaling (:,:)                !< Scaling factor: Land area of the cells
-    REAL(wp)               :: global_land_area             !< Global land are [m3]
-
+    INTEGER  :: blk, jc, nblks, nproma
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    nblks  = grid%nblks
+    nproma = grid%nproma
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  transpiration)              ! in
@@ -3666,20 +3671,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  weq_balance_err)            ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  weq_balance_err_count)      ! in
 
-    trans_gmean          => HYDRO__mem%trans_gmean%ptr(:)           ! out
-    evapotrans_gmean     => HYDRO__mem%evapotrans_gmean%ptr(:)      ! out
-    weq_land_gsum        => HYDRO__mem%weq_land_gsum%ptr(:)         ! out
-    discharge_ocean_gsum => HYDRO__mem%discharge_ocean_gsum%ptr(:)  ! out
-    wtr_rootzone_rel_gmean => HYDRO__mem%wtr_rootzone_rel_gmean%ptr(:)  ! out
-    fract_snow_gsum      => HYDRO__mem%fract_snow_gsum%ptr(:)       ! out
-    weq_snow_gsum        => HYDRO__mem%weq_snow_gsum%ptr(:)         ! out
-    weq_balance_err_gsum => HYDRO__mem%weq_balance_err_gsum%ptr(:)  ! out
-
-    model => Get_model(tile%owner_model_id)
-    grid  => Get_grid(model%grid_id)
-    area         => grid%area(:,:)
-    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-    notsea       => tile%fract(:,:)     ! Fraction of the box tile
+    trans_gmean            => HYDRO__mem%trans_gmean%ptr(:)            ! out
+    evapotrans_gmean       => HYDRO__mem%evapotrans_gmean%ptr(:)       ! out
+    weq_land_gsum          => HYDRO__mem%weq_land_gsum%ptr(:)          ! out
+    discharge_ocean_gsum   => HYDRO__mem%discharge_ocean_gsum%ptr(:)   ! out
+    wtr_rootzone_rel_gmean => HYDRO__mem%wtr_rootzone_rel_gmean%ptr(:) ! out
+    fract_snow_gsum        => HYDRO__mem%fract_snow_gsum%ptr(:)        ! out
+    weq_snow_gsum          => HYDRO__mem%weq_snow_gsum%ptr(:)          ! out
+    weq_balance_err_gsum   => HYDRO__mem%weq_balance_err_gsum%ptr(:)   ! out
 
     dsl4jsb_Get_config(HYDRO_)
 
@@ -3687,66 +3686,81 @@ CONTAINS
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
-    ! Domain Mask - to mask all halo cells for global sums (otherwise these cells are counted twice)
-    ALLOCATE (in_domain(grid%nproma,grid%nblks))
-    WHERE (is_in_domain(:,:))
-      in_domain = 1._wp
-    ELSEWHERE
-      in_domain = 0._wp
-    END WHERE
-
-    ALLOCATE (scaling(grid%nproma,grid%nblks))
-
+    !$ACC DATA ASYNC(acc_stream) CREATE(scaling)
 
     ! Calculate global land variables, if requested for output
     ! -------------------------------
+    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
 
-    IF (HYDRO__mem%trans_gmean%is_in_output .OR. HYDRO__mem%evapotrans_gmean%is_in_output &
-      & .OR. HYDRO__mem%wtr_rootzone_rel_gmean%is_in_output) THEN
-
-      ! Global land area
-      global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
-
-      ! Weighting factor for each grid cell corresponding to its area fraction
-      scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
-
+    IF (HYDRO__mem%weq_land_gsum%is_in_output .OR. HYDRO__mem%weq_balance_err_gsum%is_in_output) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
+      DO blk = 1, nblks
+        DO jc = 1, nproma
+          scaling(jc,blk) = in_domain(jc,blk) * notsea(jc,blk)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
-    IF (HYDRO__mem%trans_gmean%is_in_output)           &
-      &  trans_gmean          = global_sum_array(transpiration(:,:)   * scaling(:,:)) / global_land_area
-    IF (HYDRO__mem%evapotrans_gmean%is_in_output)      &
-      &  evapotrans_gmean     = global_sum_array(evapotrans(:,:)      * scaling(:,:)) / global_land_area
+    IF (HYDRO__mem%trans_gmean%is_in_output) THEN
+      CALL scaled_global_sum_2D(trans_gmean, transpiration, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%trans_gmean%ptr(:))
+    END IF
+    IF (HYDRO__mem%evapotrans_gmean%is_in_output) THEN
+      CALL scaled_global_sum_2D(evapotrans_gmean, evapotrans, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%evapotrans_gmean%ptr(:))
+    END IF
+
     ! Unit transformation from [m3] to [km3]: 1.e-9
-    IF (HYDRO__mem%weq_land_gsum%is_in_output)         &
-      &  weq_land_gsum        = global_sum_array(weq_land(:,:)  * notsea(:,:) * in_domain(:,:)) * 1.e-9_wp
-    ! Unit transformation from [m3/s] to [Sv] (1 Sv = 1.e6 m3/s)
-    IF (HYDRO__mem%discharge_ocean_gsum%is_in_output)  &
-      &  discharge_ocean_gsum = global_sum_array(discharge_ocean(:,:) * in_domain(:,:)) * 1.e-6_wp
-    IF (HYDRO__mem%wtr_rootzone_rel_gmean%is_in_output)  &
-      &  wtr_rootzone_rel_gmean = global_sum_array(wtr_rootzone_rel(:,:) * scaling(:,:)) / global_land_area
+    IF (HYDRO__mem%weq_land_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(weq_land_gsum, weq_land, scaling, 1.e-9_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%weq_land_gsum%ptr(:))
+    END IF
+
+    ! Unit transformation from [m3] to [km3]: 1.e-9
+    IF (HYDRO__mem%discharge_ocean_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(discharge_ocean_gsum, discharge_ocean, in_domain, 1.e-6_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%discharge_ocean_gsum%ptr(:))
+    END IF
+
+    IF (HYDRO__mem%wtr_rootzone_rel_gmean%is_in_output) THEN
+      CALL scaled_global_sum_2D(wtr_rootzone_rel_gmean, wtr_rootzone_rel, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%wtr_rootzone_rel_gmean%ptr(:))
+    END IF
+
     ! Unit transformation from [m2] to [Mio km2]: 1.e-12
-    IF (HYDRO__mem%fract_snow_gsum%is_in_output)       &
-      &  fract_snow_gsum      = global_sum_array(fract_snow(:,:)      * scaling(:,:)) * 1.e-12_wp
+    IF (HYDRO__mem%fract_snow_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(fract_snow_gsum, fract_snow, land_area_scaling, 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%fract_snow_gsum%ptr(:))
+    END IF
+
     ! Unit transformation from [m water equivalent](= [t]) to [Gt]: 1.e-9
-    IF (HYDRO__mem%weq_snow_gsum%is_in_output)         &
-      &  weq_snow_gsum        = global_sum_array(weq_snow(:,:)        * scaling(:,:)) * 1.e-9_wp
+    IF (HYDRO__mem%weq_snow_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(weq_snow_gsum, weq_snow, land_area_scaling, 1.e-9_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%weq_snow_gsum%ptr(:))
+    END IF
+
     ! No unit transformation [m3]: 1
-    IF (HYDRO__mem%weq_balance_err_gsum%is_in_output)  &
-      &  weq_balance_err_gsum = global_sum_array(weq_balance_err(:,:) * notsea(:,:) * in_domain(:,:))
+    IF (HYDRO__mem%weq_balance_err_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(weq_balance_err_gsum, weq_balance_err, scaling, 1.0_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%weq_balance_err_gsum%ptr(:))
+    END IF
 
     IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget == WB_IGNORE .AND. print_wb_warning) THEN
-      IF (global_sum_array(weq_balance_err_count(:,:) * in_domain(:,:)) > 0.5_wp) THEN
+      CALL scaled_global_sum_2D(gsum_weq_balance_err_count, weq_balance_err_count, in_domain, 1.0_wp, acc_stream)
+
+      IF (gsum_weq_balance_err_count(1) > 0.5_wp) THEN
         CALL message (TRIM(routine), 'Water balance issues detected. '// &
-          & 'Consider rerun the simulation with enforce_water_budget = "logging" for more details.')
+            & 'Consider rerun the simulation with enforce_water_budget = "logging" for more details.')
         ! Don't repeat this warning during this simulation period
         print_wb_warning = .FALSE.
       END IF
     END IF
 
-    DEALLOCATE (scaling, in_domain)
+    !$ACC WAIT(acc_stream)
+    !$ACC END DATA
 
   END SUBROUTINE global_hydrology_diagnostics
-#endif
 
 #endif
 END MODULE mo_hydro_interface

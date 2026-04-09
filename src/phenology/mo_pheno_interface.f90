@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -988,78 +988,43 @@ CONTAINS
   !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE global_phenology_diagnostics(tile)
+  SUBROUTINE global_phenology_diagnostics(tile, global_land_area, land_area_scaling)
 
-    USE mo_sync,                  ONLY: global_sum_array
-    USE mo_jsb_grid,              ONLY: Get_grid
-    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
-
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    ! Local variables
-    !
+    USE mo_util,                    ONLY: scaled_global_sum_2D
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
+    REAL(wp),                   INTENT(in) :: global_land_area       !< Global land area
+    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(PHENO_)
 
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_phenology_diagnostics'
 
-    ! Pointers to variables in memory
-
     dsl4jsb_Real2D_onDomain :: lai_ta
     dsl4jsb_Real2D_onDomain :: fract_fpc
-
     REAL(wp), POINTER       :: lai_ta_gmean(:)
     REAL(wp), POINTER       :: fract_fpc_gmean(:)
-
-    TYPE(t_jsb_model), POINTER      :: model
-    TYPE(t_jsb_grid),  POINTER      :: grid
-
-    REAL(wp), POINTER      :: area(:,:)
-    REAL(wp), POINTER      :: notsea(:,:)
-    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
-    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
-    REAL(wp), ALLOCATABLE  :: scaling (:,:)
-    REAL(wp)               :: global_land_area
-
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_var2D_onDomain(PHENO_,  lai_ta)             ! in
     dsl4jsb_Get_var2D_onDomain(PHENO_,  fract_fpc)          ! in
 
-    lai_ta_gmean        => PHENO__mem%lai_ta_gmean%ptr(:)   ! out
-    fract_fpc_gmean  => PHENO__mem%fract_fpc_gmean%ptr(:)   ! out
-
-    model => Get_model(tile%owner_model_id)
-    grid  => Get_grid(model%grid_id)
-    area         => grid%area(:,:)
-    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
-
+    lai_ta_gmean     => PHENO__mem%lai_ta_gmean%ptr(:)    ! out
+    fract_fpc_gmean  => PHENO__mem%fract_fpc_gmean%ptr(:) ! out
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
-
-
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
-    ! Domain Mask - to mask all halo cells for global sums (otherwise these
-    ! cells are counted twice)
-    ALLOCATE (in_domain(grid%nproma,grid%nblks))
-    WHERE (is_in_domain(:,:))
-      in_domain = 1._wp
-    ELSEWHERE
-      in_domain = 0._wp
-    END WHERE
-
-    ALLOCATE (scaling(grid%nproma,grid%nblks))
-
     ! Calculate global land means phenology variables, if requested for output
-    global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
-    scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
-    IF (PHENO__mem%lai_ta_gmean%is_in_output)     &
-      &  lai_ta_gmean     = global_sum_array(lai_ta(:,:)    * scaling(:,:)) / global_land_area
-    IF (PHENO__mem%fract_fpc_gmean%is_in_output)  &
-      &  fract_fpc_gmean  = global_sum_array(fract_fpc(:,:) * scaling(:,:)) / global_land_area
+    IF (PHENO__mem%lai_ta_gmean%is_in_output) THEN
+      CALL scaled_global_sum_2D(lai_ta_gmean, lai_ta, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(PHENO__mem%lai_ta_gmean%ptr(:))
+    END IF
 
-    DEALLOCATE (scaling, in_domain)
+    IF (PHENO__mem%fract_fpc_gmean%is_in_output) THEN
+      CALL scaled_global_sum_2D(fract_fpc_gmean, fract_fpc, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(PHENO__mem%fract_fpc_gmean%ptr(:))
+    END IF
 
   END SUBROUTINE global_phenology_diagnostics
 

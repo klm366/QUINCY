@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -16,24 +16,25 @@
 MODULE mo_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message, finish
-
-  USE mo_math_utilities, ONLY: tdma_solver_vec ! TODO from ICON, mo_math_utilities should be replaced once
+  USE mo_kind,            ONLY: wp
+  USE mo_exception,       ONLY: message, finish
+  USE mo_jsb_utils_iface, ONLY: toupper, tolower, int2string, real2string, logical2string, separator, one_of_str
+  USE mo_math_utilities,  ONLY: tdma_solver_vec ! TODO from ICON, mo_math_utilities should be replaced once
                                                !      libmath-support is an external library
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, tolower, int2string, real2string, logical2string, &
-    &       report_memory_usage, soil_init_from_texture, tdma_solver_vec
+  PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, &
+    &       report_memory_usage, soil_init_from_texture, tdma_solver_vec, scaled_global_sum_2D
+  PUBLIC :: toupper, tolower, int2string, real2string, logical2string, separator
 
 #ifndef __QUINCY_STANDALONE__
   PUBLIC :: read_2D_var, read_3D_var
 #endif
 
   INTERFACE one_of
-    MODULE PROCEDURE one_of_str
+    MODULE PROCEDURE one_of_str_wrapper
     MODULE PROCEDURE one_of_int
   END INTERFACE one_of
 
@@ -178,89 +179,21 @@ CONTAINS
 
   END SUBROUTINE soil_init_from_texture
 
+  ! ====================================================================================================== !
+  !
+  !> Wrapper calling one_of_str provided via the ICON adapter file
+  !
+  ! ======================================================================================================= !
+  FUNCTION one_of_str_wrapper(in_str, arg)
+    INTEGER :: one_of_str_wrapper          !< If "in_str" is matching one of the "arg(i)" return index "i".
+                                           !< If none matches: returns "-1"
+    CHARACTER(len=*), INTENT(IN) :: in_str !< input string
+    CHARACTER(len=*), INTENT(IN) :: arg(:) !< arguments to compare string to
 
-  !-----------------------------------------------------------------------------------------------------
-  !> conversion: uppercase -> lowercase
-  !!
-  !! implemented based on mo_util:toupper in jsbach4.1
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION tolower(string) RESULT(stringlower)
+    one_of_str_wrapper = one_of_str(in_str, arg)
 
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    CHARACTER(len=*), INTENT(in) :: string
-    CHARACTER(len=LEN_TRIM(string)) :: stringlower
-    ! ---------------------------
-    ! 0.2 Local
-    INTEGER, PARAMETER :: idel = ICHAR('a')-ICHAR('A')  ! = 32
-    INTEGER :: i
+  END FUNCTION one_of_str_wrapper
 
-    DO i = 1, LEN_TRIM(string)
-      IF (ICHAR(string(i:i)) >= ICHAR('A') .AND. ICHAR(string(i:i)) <= ICHAR('Z')) THEN
-        stringlower(i:i) = CHAR( ICHAR(string(i:i)) + idel )
-      ELSE
-        stringlower(i:i) = string(i:i)
-      ENDIF
-    ENDDO
-  END FUNCTION tolower
-  !
-  !> Conversion: Lowercase -> Uppercase
-  !
-  !  Copied from ICON module shared/mo_util_string
-  !
-  FUNCTION toupper (lowercase)
-    CHARACTER(len=*), INTENT(in) :: lowercase
-    CHARACTER(len=LEN_TRIM(lowercase)) :: toupper
-    !
-    INTEGER, PARAMETER :: idel = ICHAR('A')-ICHAR('a')
-    INTEGER :: i
-    !
-    DO i = 1, LEN_TRIM(lowercase)
-      IF (ICHAR(lowercase(i:i)) >= ICHAR('a') .AND. ICHAR(lowercase(i:i)) <= ICHAR('z')) THEN
-        toupper(i:i) = CHAR( ICHAR(lowercase(i:i)) + idel )
-      ELSE
-        toupper(i:i) = lowercase(i:i)
-      ENDIF
-    ENDDO
-    !
-  END FUNCTION toupper
-
-  !> Function for convenience
-  !
-  !  If "in_str" is matching one of the arguments "arg(i)" return the
-  !  index "i". Returns "-1" if none of the strings matches.
-  !
-  !  Copied from ICON module shared/mo_util_string
-  !
-  FUNCTION one_of_str(in_str, arg)
-    INTEGER :: one_of_str
-    CHARACTER(len=*), INTENT(IN)           :: in_str    ! input string
-    CHARACTER(len=*), INTENT(IN)           :: arg(:)
-    ! local variables:
-    INTEGER :: i, ipos, len_in_str
-
-    len_in_str = LEN_TRIM(in_str)
-    one_of_str = -1
-    DO i=1,SIZE(arg)
-      ipos = SCAN(arg(i), '*')
-      IF (ipos == 0) THEN
-        ipos = LEN_TRIM(arg(i))
-      ELSE
-        ipos = ipos - 1
-      END IF
-      IF (ipos > 0) THEN
-        IF ( ADJUSTL(toupper(in_str(1:MIN(ipos,len_in_str)))) == ADJUSTL(toupper(arg(i)(1:ipos))) ) THEN
-          one_of_str=i
-          EXIT
-        END IF
-      ELSE
-        one_of_str=i
-        EXIT
-      END IF
-    END DO
-  END FUNCTION one_of_str
 
   FUNCTION one_of_int(in_int, arg)
     INTEGER :: one_of_int
@@ -277,64 +210,6 @@ CONTAINS
       END IF
     END DO
   END FUNCTION one_of_int
-
-  !-----------------------------------------------------------------------------------------------------
-  !> returns integer n as a string (often needed in printing messages)
-  !!
-  !! Copied from ICON module shared/mo\_util\_string
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION int2string(n, opt_fmt)
-    CHARACTER(len=:), ALLOCATABLE :: int2string ! result
-    INTEGER, INTENT(in) :: n
-    CHARACTER(len=*), INTENT(in), OPTIONAL :: opt_fmt
-    !
-    CHARACTER(len=:), ALLOCATABLE :: fmt
-    CHARACTER(len=30) :: string
-
-    IF (PRESENT(opt_fmt)) THEN
-      fmt = opt_fmt
-    ELSE
-      fmt = '(I10)'
-    END IF
-    WRITE(string,fmt) n
-    int2string = TRIM(ADJUSTL(string))
-    !
-  END FUNCTION int2string
-
-  !-----------------------------------------------------------------------------------------------------
-  !> returns real x as a string (often needed in printing messages)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION real2string(x, opt_fmt)
-    CHARACTER(len=:), ALLOCATABLE :: real2string ! result
-    REAL(wp), INTENT(in) :: x
-    CHARACTER(len=*), INTENT(in), OPTIONAL :: opt_fmt
-    !
-    CHARACTER(len=:), ALLOCATABLE :: fmt
-    CHARACTER(len=30) :: string
-
-    IF (PRESENT(opt_fmt)) THEN
-      fmt = opt_fmt
-    ELSE
-      fmt = '(E10.4)'
-    END IF
-    WRITE(string,fmt) x
-    real2string = TRIM(ADJUSTL(string))
-    !
-  END FUNCTION real2string
-
-  FUNCTION logical2string(value)
-    CHARACTER(len=:), ALLOCATABLE :: logical2string ! result
-    LOGICAL, INTENT(in) :: value
-    !
-    IF (value) THEN
-      logical2string = '.TRUE.'
-    ELSE
-      logical2string = '.FALSE.'
-    END IF
-    !
-  END FUNCTION logical2string
 
   SUBROUTINE report_memory_usage(msg)
 
@@ -367,6 +242,45 @@ CONTAINS
     END IF
 
   END SUBROUTINE report_memory_usage
+
+
+  ! ====================================================================================================== !
+  !
+  !> Calculate the scaled global sum of a given 2D variable using passed 2D and 1D scaling factors
+  !
+  ! ======================================================================================================= !
+  SUBROUTINE scaled_global_sum_2D(scaled_global_sum, var_ptr, scaling_2D, scaling_factor, acc_stream)
+
+    USE mo_sync,                    ONLY: global_sum_array
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp),          INTENT(out) :: scaled_global_sum(:) !< Scaled variable
+    REAL(wp), POINTER, INTENT(in)  :: var_ptr(:,:)         !< Variable pointer
+    REAL(wp),          INTENT(in)  :: scaling_2D(:,:)      !< 2D scaling factor
+    REAL(wp),          INTENT(in)  :: scaling_factor       !< Additional scaling factor
+    INTEGER,           INTENT(in)  :: acc_stream           !< ACC stream - passed to avoid cyclic
+                                                           !< dependencies
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp) :: scaled_variable(SIZE(scaling_2D,1), SIZE(scaling_2D,2))
+    INTEGER  :: blk, jc, nblks, nproma
+    ! ----------------------------------------------------------------------------------------------------- !
+    nblks  = SIZE(scaling_2D,2)
+    nproma = SIZE(scaling_2D,1)
+
+    !$ACC DATA ASYNC(acc_stream) CREATE(scaled_variable)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
+    DO blk = 1, nblks
+      DO jc = 1, nproma
+        scaled_variable(jc,blk) = scaling_2D(jc,blk) * var_ptr(jc,blk)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+    scaled_global_sum(:) = global_sum_array(scaled_variable(:,:), lacc=.TRUE.) * scaling_factor
+
+    !$ACC END DATA
+
+  END SUBROUTINE scaled_global_sum_2D
+
 
 #ifndef __QUINCY_STANDALONE__
   ! ====================================================================================================== !

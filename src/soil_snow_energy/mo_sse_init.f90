@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -961,30 +961,28 @@ CONTAINS
       DEALLOCATE(fract_org_sl)
     END IF
 
-    IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
-        ! Use snow density values for fresh snow for initialization
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-        DO ib=1,nblks
-          DO ic = 1, nproma
-            vol_heat_cap_snow(ic,ib) = ci * dens_snow_min              ! Use specific heat of ice (Verseghy 1991)
-            heat_cond_snow   (ic,ib) =   2.5e-6_wp * dens_snow_min**2._wp &
-              &                        - 0.123E-3_wp *dens_snow_min + 0.024_wp ! Calonne et al. (2011)
-            ! vol_heat_cap_snow(ic,ib) = vol_hcap_snow_min
-            ! heat_cond_snow   (ic,ib) = hcond_snow_min
-          END DO
+    IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
+      ! Use snow density values for fresh snow for initialization
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO ib=1,nblks
+        DO ic = 1, nproma
+          vol_heat_cap_snow(ic,ib) = ci * dens_snow_min              ! Use specific heat of ice (Verseghy 1991)
+          heat_cond_snow   (ic,ib) =   2.5e-6_wp * dens_snow_min**2._wp &
+            &                        - 0.123E-3_wp *dens_snow_min + 0.024_wp ! Calonne et al. (2011)
+          ! vol_heat_cap_snow(ic,ib) = vol_hcap_snow_min
+          ! heat_cond_snow   (ic,ib) = hcond_snow_min
         END DO
-        !$ACC END PARALLEL LOOP
-      ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-        DO ib=1,nblks
-          DO ic = 1, nproma
-            vol_heat_cap_snow(ic,ib) = vol_hcap_snow
-            heat_cond_snow   (ic,ib) = hcond_snow
-          END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+      DO ib=1,nblks
+        DO ic = 1, nproma
+          vol_heat_cap_snow(ic,ib) = vol_hcap_snow
+          heat_cond_snow   (ic,ib) = hcond_snow
         END DO
-        !$ACC END PARALLEL LOOP
-      END IF
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     !$ACC WAIT(1)
