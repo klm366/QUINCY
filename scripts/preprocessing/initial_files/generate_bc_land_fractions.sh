@@ -3,7 +3,7 @@
 # ICON-Land
 #
 # ---------------------------------------
-# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+# Copyright (C) 2013-2026, MPI-M, MPI-BGC
 #
 # Contact: icon-model.org
 # Authors: AUTHORS.md
@@ -182,8 +182,12 @@ for var in ${var_list}; do
   # ----------------------
      veg_ratio_max )
   # ----------------------
-      # Note: veg_ratio_max is only used with jsbach, not with quincy. The variable is based
-      # on esacci data (1 - bare).
+      # Note: veg_ratio_max is needed as input variable only with jsbach, not with quincy.
+      # But initial soil moisture calculations are based on (the jsbach) veg_ratio_max also
+      # with quincy (compare generate_ic_land_soil.sh). We thus need to calculate it here
+      # for both setups.
+      # The variable is based on esacci data (1 - bare; following the cross walking table
+      # used for jsbach).
 
       # Remapping matrix for entire grid - without missing values
       if [[ ! -f wgt025.nc ]]; then
@@ -198,6 +202,10 @@ for var in ${var_list}; do
       ${cdo} -setvar,veg_ratio_max -mul non-glac-land-mask.nc -maxc,${small_fract_jsb} \
           -addc,1. -mulc,-1. ${atmGridID}_esacci_jsb_bare.nc  ${atmGridID}_veg_ratio_max.nc
       ${rm} ${atmGridID}_esacci_jsb_bare.nc
+
+      # Keep veg_ratio_max for usage below in 12 PFT setup and for late use in
+      # generate_ic_land_soil.nc
+      cp ${atmGridID}_veg_ratio_max.nc ${atmGridID}_veg_ratio_max.keep
       ;;
   # ----------------------
     * )
@@ -242,9 +250,6 @@ for test in zero1 zero2 zero3 zero4 zero5 zero6; do
     exit 1
   fi
 done
-
-# veg_ratio_max is needed for 12 pft usecase
-mv ${atmGridID}_veg_ratio_max.nc ${atmGridID}_veg_ratio_max_12pfts.nc
 
 # Clean up
 if [[ ${clean_up} == true ]]; then
@@ -547,13 +552,13 @@ for year in ${year_list}; do
       # need a minimum fraction of small_fract.
       sf=$(echo ${small_fract} | awk '{printf "%.13f\n", $1}') # Convert exponential number to float (needed with bc)
       min_veg=$(echo "${npfts} * ${sf}" | bc)
-      ${cdo} -setname,has_veg -gtc,${min_veg} ${atmGridID}_veg_ratio_max_${pft_tag}.nc  has_veg.nc
+      ${cdo} -setname,has_veg -gtc,${min_veg} ${atmGridID}_veg_ratio_max.keep  has_veg.nc
 
       # Scaling with veg_ratio_max (i.e. 1 - bare)
       for pft in ${nat_pfts}; do
         {
         ${cdo} -div ${atmGridID}_${pft}.${npfts}.keep \
-                    ${atmGridID}_veg_ratio_max_${pft_tag}.nc   ${atmGridID}_${pft}.tmp1
+                    ${atmGridID}_veg_ratio_max.keep ${atmGridID}_${pft}.tmp1
         } &  # comment out '&' for serial processing
       done
       wait
@@ -561,13 +566,13 @@ for year in ${year_list}; do
       # We need to limit the anthropogenic fractions, otherwise fractions become huge in cells with little vegetation.
       ${cdo} mul LUH3_pastr_max_${year}.nc c3_ratio_${pft_tag}.nc LUH3_c3pastr_max_${year}.nc
       ${cdo} mul LUH3_pastr_max_${year}.nc c4_ratio_${pft_tag}.nc LUH3_c4pastr_max_${year}.nc
-      ${cdo} -min -div ${atmGridID}_pft09.${npfts}.keep ${atmGridID}_veg_ratio_max_${pft_tag}.nc \
+      ${cdo} -min -div ${atmGridID}_pft09.${npfts}.keep ${atmGridID}_veg_ratio_max.keep \
                   LUH3_c3pastr_max_${year}.nc   ${atmGridID}_pft09.tmp1
-      ${cdo} -min -div ${atmGridID}_pft10.${npfts}.keep ${atmGridID}_veg_ratio_max_${pft_tag}.nc \
+      ${cdo} -min -div ${atmGridID}_pft10.${npfts}.keep ${atmGridID}_veg_ratio_max.keep \
                   LUH3_c4pastr_max_${year}.nc   ${atmGridID}_pft10.tmp1
-      ${cdo} -min -div ${atmGridID}_pft11.${npfts}.keep ${atmGridID}_veg_ratio_max_${pft_tag}.nc \
+      ${cdo} -min -div ${atmGridID}_pft11.${npfts}.keep ${atmGridID}_veg_ratio_max.keep \
                   LUH3_c3crops_max_${year}.nc   ${atmGridID}_pft11.tmp1
-      ${cdo} -min -div ${atmGridID}_pft12.${npfts}.keep ${atmGridID}_veg_ratio_max_${pft_tag}.nc \
+      ${cdo} -min -div ${atmGridID}_pft12.${npfts}.keep ${atmGridID}_veg_ratio_max.keep \
                   LUH3_c4crops_max_${year}.nc   ${atmGridID}_pft12.tmp1
 
       # Scaling: The sum of the natural fractions from escci need to be scaled to the natural 'nat' fraction of LUH3
@@ -801,8 +806,6 @@ for year in ${year_list}; do
 
     if [[ ${npfts} == 12 ]]; then
       ${cp} ${file_bc_frac}.nc ${file_bc_frac}_${npfts}.nc
-      # Copy veg_ratio_max for later use in generate_ic_land_soil
-      ${cp} ${atmGridID}_veg_ratio_max_${pft_tag}.nc ${atmGridID}_veg_ratio_max_${pft_tag}.keep
     elif [[ ${npfts} == 13 ]]; then
       # Veg_ratio_max is not needed with Quincy and is removed here to avoid confusion.
       ${cdo} delvar,veg_ratio_max ${file_bc_frac}.nc ${file_bc_frac}_${npfts}.nc
@@ -841,7 +844,7 @@ if [[ ${clean_up} == true ]]; then
   ${rm} -f ${atmGridID}_LUH2_states.nc
   ${rm} LUH?_*.nc ${atmGridID}_pft??.??.keep
   ${rm} -f c3_ratio_*.nc c4_ratio_*.nc ${atmGridID}_bare_??.keep \
-            ${atmGridID}_veg_ratio_max_*.nc
+            ${atmGridID}_veg_ratio_max.nc
 fi
 
 echo "${prog}:  done"

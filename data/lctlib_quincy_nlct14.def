@@ -3,7 +3,7 @@
 # !>#### ICON-Land
 # !>
 # !> ------------------------------------------------------------------------
-# !> Copyright (C) 2004-2024, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss  
+# !> Copyright (C) 2013-2026, MPI-M, MPI-BGC, DWD, DKRZ, KIT, ETH, MeteoSwiss
 # !> Contact information: <https://icon-model.org>
 # !>
 # !> See AUTHORS.TXT for a list of authors  
@@ -184,9 +184,9 @@ tau_mycorrhiza 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
 # N uptake parameters        
 #         
         
-#vmax_uptake_n: vmax of N uptake (~micro-mol N / mol C / s) [714.28_wp ? old value]        
+#vmax_uptake_n: vmax of N uptake (~micro-mol N / mol C / s)        
 # tuned with GLOBAL sitelists to make N uptake comparable with other C-N coupled TBMs (NMIP2) 
-vmax_uptake_n 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04
+vmax_uptake_n 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.10 0.10 0.05 0.05
         
 #vmax_uptake_p: vmax of P uptake (~micro-mol P / mol C / s)        
 # tuned together with N, but needs further validation
@@ -200,7 +200,7 @@ bnf_base 2.0 1.0 1.0 1.0 1.0 1.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0
 # converted internally to mumol N / mol C fine root / s
 # set C4 grass/pasture/crop as zero because they cannot fix N
 # tuned based on T. Davies-Barnard and P. Friedlingstein 2020
-vmax_symb_bnf 0.0150 0.0680 0.0306 0.0680 0.0068 0.0680 0.0306 0.0 0.0306 0.0 0.0306 0.0 0.0 0.0
+vmax_symb_bnf 0.0150 0.0500 0.0306 0.0500 0.0068 0.0680 0.0380 0.0 0.0380 0.0 0.0380 0.0 0.0 0.0
 
 #km_symb_bnf: half-saturating cost of the response of N fixation (g C / g N)
 # converted internally to mol C / mol N
@@ -218,7 +218,7 @@ lambda_est_light 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5
 k_est_light 2.0 2.0 4.0 4.0 2.0 4.0 4.0 4.0 4.0 4.0 4.0 4.0 4.0 4.0
         
 #seed_size: seed size (mol C)        
-seed_size 0.5 0.5 0.5 0.5 0.5 0.5 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1
+seed_size 0.5 0.5 0.5 0.5 0.5 0.5 0.1 0.1 0.1 0.1 0.1 0.1 0.0 0.0
        
 #k1_mort_greff: asymptotic growth efficiency mortality rate (1/yr)
 k1_mort_greff 0.05 0.05 0.3 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05

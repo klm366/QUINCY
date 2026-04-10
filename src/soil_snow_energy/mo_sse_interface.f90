@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -123,7 +123,7 @@ CONTAINS
 
   SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
-    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_snow_abcoeff, calc_soiltemp_old
+    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_snow_abcoeff
     USE mo_jsb_physical_constants, ONLY: rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newyear
@@ -219,10 +219,8 @@ CONTAINS
 
     soil_e => Get_vgrid('soil_depth_energy')
     nsoil = soil_e%n_levels
-    IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      snow_e => Get_vgrid('snow_depth_energy')
-      nsnow = snow_e%n_levels
-    END IF
+    snow_e => Get_vgrid('snow_depth_energy')
+    nsnow = snow_e%n_levels
 
     ! Get reference to variables for current block
     !
@@ -239,6 +237,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)         ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_acoef)      ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_bcoef)      ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_snow)            ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_snow_acoef)      ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_snow_bcoef)      ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, vol_heat_cap_sl)   ! in
     dsl4jsb_Get_var3D_onChunk(SSE_, heat_cond_sl)      ! in
     dsl4jsb_Get_var3D_onChunk(SSE_, nrg_lex_net_sl)    ! in
@@ -248,12 +249,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, hcap_grnd_old)     ! out
     dsl4jsb_Get_var2D_onChunk(SSE_, grnd_hflx)         ! out
     dsl4jsb_Get_var2D_onChunk(SSE_, grnd_hflx_old)     ! out
-    IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      dsl4jsb_Get_var3D_onChunk(SSE_, snow_depth_sl)   ! out
-      dsl4jsb_Get_var3D_onChunk(SSE_, t_snow)          ! inout
-      dsl4jsb_Get_var3D_onChunk(SSE_, t_snow_acoef)    ! inout
-      dsl4jsb_Get_var3D_onChunk(SSE_, t_snow_bcoef)    ! inout
-    END IF
+    dsl4jsb_Get_var3D_onChunk(SSE_, snow_depth_sl)     ! out
     IF (.NOT. tile%is_glacier) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)    ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)  ! in
@@ -295,41 +291,6 @@ CONTAINS
       hcap_grnd_old(ic) = hcap_grnd(ic)
     END DO
     !$ACC END PARALLEL LOOP
-
-    IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
-      !$ACC KERNELS DEFAULT(PRESENT) ASYNC(acc_stream)
-      ldglac(:) = tile%is_glacier
-      !$ACC END KERNELS
-
-      CALL calc_soiltemp_old(                          &
-        & nc,                                          &
-        & nsoil,                                       &
-        & soil_e%dz(:),                                &
-        & soil_e%levels(:),                            &
-        & dtime,                                       &
-        & lstart,                                      &
-        & t_srf(:)                                  ,  &
-        & weq_snow_soil(:)                          ,  &
-        & heat_cond(:)                              ,  &
-        & vol_heat_cap(:)                           ,  &
-        & t_soil_acoef                          (:,:), &
-        & t_soil_bcoef                          (:,:), &
-        & t_soil_sl                             (:,:), &
-        & hcap_grnd                             (:),   &
-        & grnd_hflx                             (:),   &
-        & ldglac                                (:)    &
-        !& SPREAD(tile%is_glacier, DIM=1, ncopies=nc)   &
-        & )
-
-
-      !$ACC EXIT DATA ASYNC(acc_stream) &
-      !$ACC   DELETE(snow_depth, snow_fract, t_soil_top) &
-      !$ACC   DELETE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
-      RETURN
-
-    END IF
-
-    ! l_snow=.TRUE. below here
 
     IF (.NOT. tile%is_glacier) THEN
 
@@ -711,19 +672,17 @@ CONTAINS
 
     CALL weighted_by_fract%BeginAggregate()
 
-    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_acoef,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_bcoef,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_sl,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   grnd_hflx,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   grnd_hflx_old,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   hcap_grnd,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   hcap_grnd_old,    weighted_by_fract)
-    IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      dsl4jsb_Aggregate_onChunk(SSE_,   snow_depth_sl,    weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(SSE_,   t_snow_acoef,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(SSE_,   t_snow_bcoef,     weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(SSE_,   t_snow,           weighted_by_fract)
-    END IF
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_acoef,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_bcoef,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_sl,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   grnd_hflx,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   grnd_hflx_old,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   hcap_grnd,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   hcap_grnd_old,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   snow_depth_sl,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_snow_acoef,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_snow_bcoef,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_snow,                weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_freeze_sl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_melt_sl,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pot_scool_sl, weighted_by_fract)
@@ -1014,37 +973,28 @@ CONTAINS
       DEALLOCATE(fract_org_sl)
     END IF
 
-    IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
-        dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          IF (snow_soil_dens(ic) > dens_snow_min) THEN         ! "old" or mixture of old and fresh snow
-            vol_heat_cap_snow(ic) = ci * snow_soil_dens(ic)    ! Use specific heat of ice (Verseghy 1991)
-            ! heat_cond_snow   (:) = 2.576e-6_wp * snow_soil_dens(:) ** 2._wp + 0.074_wp                      ! Verseghy (1991)
-            ! heat_cond_snow   (:) = 2.9e-6_wp*snow_soil_dens(:)**2._wp                                       ! Goodrich (1982)
-            ! Calonne et al. (2011):
-            heat_cond_snow   (ic) = 2.5e-6_wp*snow_soil_dens(ic)**2._wp - 0.123e-3_wp*snow_soil_dens(ic) + 0.024_wp
-          ELSE                                         ! fresh snow
-            ! @todo: these minimum values from mo_sse_constants.f90 don't match with the above equations and minimum snow density
-            ! vol_heat_cap_snow(:) = vol_hcap_snow_min
-            heat_cond_snow   (ic) = hcond_snow_min
-            vol_heat_cap_snow(ic) = ci * dens_snow_min
-          END IF
-        END DO
-        !$ACC END PARALLEL LOOP
-      ELSE
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          vol_heat_cap_snow(ic) = vol_hcap_snow  ! Use specific heat of snow (cs * dens_snow)
-          heat_cond_snow   (ic) = hcond_snow
-        END DO
-        !$ACC END PARALLEL LOOP
-      END IF
+    IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        IF (snow_soil_dens(ic) > dens_snow_min) THEN         ! "old" or mixture of old and fresh snow
+          vol_heat_cap_snow(ic) = ci * snow_soil_dens(ic)    ! Use specific heat of ice (Verseghy 1991)
+          ! heat_cond_snow   (:) = 2.576e-6_wp * snow_soil_dens(:) ** 2._wp + 0.074_wp                      ! Verseghy (1991)
+          ! heat_cond_snow   (:) = 2.9e-6_wp*snow_soil_dens(:)**2._wp                                       ! Goodrich (1982)
+          ! Calonne et al. (2011):
+          heat_cond_snow   (ic) = 2.5e-6_wp*snow_soil_dens(ic)**2._wp - 0.123e-3_wp*snow_soil_dens(ic) + 0.024_wp
+        ELSE                                         ! fresh snow
+          ! @todo: these minimum values from mo_sse_constants.f90 don't match with the above equations and minimum snow density
+          ! vol_heat_cap_snow(:) = vol_hcap_snow_min
+          heat_cond_snow   (ic) = hcond_snow_min
+          vol_heat_cap_snow(ic) = ci * dens_snow_min
+        END IF
+      END DO
+      !$ACC END PARALLEL LOOP
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        vol_heat_cap_snow(ic) = vol_hcap_snow    ! Use specific heat of snow (cs * dens_snow)
+        vol_heat_cap_snow(ic) = vol_hcap_snow  ! Use specific heat of snow (cs * dens_snow)
         heat_cond_snow   (ic) = hcond_snow
       END DO
       !$ACC END PARALLEL LOOP

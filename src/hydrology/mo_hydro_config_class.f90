@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -24,8 +24,7 @@ MODULE mo_hydro_config_class
 
   USE mo_exception,          ONLY: message_text, message, finish
   USE mo_jsb_impl_constants, ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
-  USE mo_util,               ONLY: real2string
-  USE mo_util_string,        ONLY: tolower
+  USE mo_util,               ONLY: real2string, tolower
   USE mo_io_units,           ONLY: filename_max
   USE mo_kind,               ONLY: wp
   USE mo_jsb_control,        ONLY: debug_on

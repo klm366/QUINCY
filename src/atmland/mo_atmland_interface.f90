@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -96,7 +96,7 @@ CONTAINS
     USE mtime,                     ONLY: datetime
     USE mo_time_config,            ONLY: time_config
     USE mo_jsb_time,               ONLY: get_secs_of_day, get_year, is_newyear
-    USE mo_iq_atm2land_process,    ONLY: update_local_time_and_daytime_counter, update_slow_sb_pool_accelerator_bookkeeping
+    USE mo_iq_atm2land_process,    ONLY: update_local_time_and_daytime_counter
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     USE mo_atmland_constants,      ONLY: def_co2_deltaC13, def_co2_deltaC14
 #endif
@@ -115,7 +115,7 @@ CONTAINS
 
     dsl4jsb_Def_memory(A2L_)
 
-    INTEGER  :: iblk, ics, ice, nc, i
+    INTEGER  :: iblk, ics, ice, nc, i, ic
     REAL(wp) :: dtime
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
@@ -127,10 +127,6 @@ CONTAINS
     TYPE(datetime),    POINTER :: mtime_current !< elapsed simulation time
     INTEGER  :: global_seconds_day, current_year
     REAL(wp) :: co2_dC13_constant, co2_dC14_constant
-    LOGICAL :: run_spinup_accelerator                    !< model configuration: if running with slow sb pool spin-up accelerator
-    INTEGER :: sb_pool_spinup_accelerator_max_executions !< bookkeeping configurations for the spin-up accelerator: max number of executions
-    INTEGER :: sb_pool_spinup_accelerator_frequency      !< bookkeeping configurations for the spin-up accelerator: frequency of executions
-    INTEGER :: sb_pool_spinup_accelerator_start_year     !< bookkeeping configurations for the spin-up accelerator: start year of executions
 #endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
@@ -179,9 +175,7 @@ CONTAINS
       & CO2_mixing_ratio_C14_ptr,             &
       & daytime_counter_ptr,                  &
       & daylength_prev_day_ptr,               &
-      & local_time_day_seconds_ptr,           &
-      & slow_sb_pool_accelerator_execute_ptr, &
-      & slow_sb_pool_accelerator_execution_counter_ptr
+      & local_time_day_seconds_ptr
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
@@ -200,14 +194,9 @@ CONTAINS
 
     IF (model_scheme == MODEL_QUINCY) THEN
 #ifndef __NO_QUINCY__
-
       mtime_current => time_config%tc_current_date
       global_seconds_day = NINT(get_secs_of_day(mtime_current))  ! TODO time steps w/ fractional seconds not supported by quincy, yet!
       current_year = get_year(mtime_current)
-      run_spinup_accelerator = model%config%flag_slow_sb_pool_spinup_accelerator
-      sb_pool_spinup_accelerator_max_executions = model%config%slow_sb_pool_spinup_accelerator_max_executions
-      sb_pool_spinup_accelerator_frequency = model%config%slow_sb_pool_spinup_accelerator_frequency
-      sb_pool_spinup_accelerator_start_year = model%config%slow_sb_pool_spinup_accelerator_start_year
 #endif
     END IF
 
@@ -336,10 +325,6 @@ CONTAINS
       daytime_counter_ptr         => dsl4jsb_var2D_onChunk(A2L_, daytime_counter)
       daylength_prev_day_ptr      => dsl4jsb_var2D_onChunk(A2L_, daylength_prev_day)
       local_time_day_seconds_ptr  => dsl4jsb_var2D_onChunk(A2L_, local_time_day_seconds)
-      IF (run_spinup_accelerator) THEN
-        slow_sb_pool_accelerator_execute_ptr           => dsl4jsb_var2D_onChunk(A2L_, slow_sb_pool_accelerator_execute)
-        slow_sb_pool_accelerator_execution_counter_ptr => dsl4jsb_var2D_onChunk(A2L_, slow_sb_pool_accelerator_execution_counter)
-      END IF
 
       IF (PRESENT(co2_dC13) .OR. PRESENT(co2_dC14)) THEN
         CALL finish(TRIM(routine), 'As soon as 13C or 14C are provided by the atmosphere,' &
@@ -594,22 +579,8 @@ CONTAINS
     IF (model_scheme == MODEL_QUINCY) THEN
 #ifndef __NO_QUINCY__
       ! Update local time and the daytime counter
-      CALL update_local_time_and_daytime_counter( &
-        &     global_seconds_day, dtime, lon, swpar_srf_down, daytime_counter_ptr, daylength_prev_day_ptr, local_time_day_seconds_ptr)
-
-      ! In case that we run with spin-up acceleration we need to update the accelerator bookkeeping
-      IF (run_spinup_accelerator) THEN
-        ! in most years the spin-up will not be accelerated
-        slow_sb_pool_accelerator_execute_ptr(:) = 0.0_wp
-
-        IF (is_newyear(mtime_current, dtime)) THEN
-          CALL finish(TRIM(routine), 'This functionality has so far not been tested within a coupled run, but should be!')
-
-          CALL update_slow_sb_pool_accelerator_bookkeeping( dtime, current_year, &
-            & sb_pool_spinup_accelerator_max_executions, sb_pool_spinup_accelerator_frequency, sb_pool_spinup_accelerator_start_year, &
-            & slow_sb_pool_accelerator_execution_counter_ptr, slow_sb_pool_accelerator_execute_ptr)
-        END IF
-      END IF
+      CALL update_local_time_and_daytime_counter(global_seconds_day, dtime, lon, swpar_srf_down, &
+          &                                      daytime_counter_ptr, daylength_prev_day_ptr, local_time_day_seconds_ptr)
 #endif
     END IF
   END SUBROUTINE update_atm2land
@@ -620,7 +591,7 @@ CONTAINS
     & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,                  &
     & rough_h_srf, rough_m_srf, q_snocpymlt,                                         &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,                            &
-    & kh, km, kh_neutral, km_neutral, CO2_flux,                                      &
+    & kh, km, interp_fac_2m, interp_fac_10m, interp_fac_tsfc, CO2_flux,              &
     & t_lwtr, t_lice, qsat_lwtr, qsat_lice, s_lwtr, s_lice,                          &
     & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                                 &
     & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                                 &
@@ -644,7 +615,8 @@ CONTAINS
       & alb_vis_dir_wtr(:), alb_vis_dif_wtr(:), alb_nir_dir_wtr(:),                  &
       & alb_nir_dif_wtr(:), albedo_lwtr(:), albedo_lice(:),                          &
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:),              &
-      & CO2_flux(:), kh(:), km(:), kh_neutral(:), km_neutral(:)
+      & CO2_flux(:), kh(:), km(:), interp_fac_2m(:), interp_fac_10m(:),              &
+      & interp_fac_tsfc(:)
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
@@ -696,8 +668,9 @@ CONTAINS
       & alb_nir_lnd_ptr, &
       & kh_ptr, &
       & km_ptr, &
-      & kh_neutral_ptr, &
-      & km_neutral_ptr, &
+      & interp_fac_2m_ptr, &
+      & interp_fac_10m_ptr, &
+      & interp_fac_tsfc_ptr, &
       & co2flux_npp_2_atm_ta_ptr, &
       & co2flux_soilresp_2_atm_ta_ptr, &
       & co2flux_herb_2_atm_ta_ptr, &
@@ -842,8 +815,9 @@ CONTAINS
       alb_nir_lnd_ptr       => dsl4jsb_var2D_onChunk(RAD_,   alb_nir)
       kh_ptr                => dsl4jsb_var2D_onChunk(TURB_,  kh)
       km_ptr                => dsl4jsb_var2D_onChunk(TURB_,  km)
-      kh_neutral_ptr        => dsl4jsb_var2D_onChunk(TURB_,  kh_neutral)
-      km_neutral_ptr        => dsl4jsb_var2D_onChunk(TURB_,  km_neutral)
+      interp_fac_2m_ptr     => dsl4jsb_var2D_onChunk(TURB_,  interp_fac_2m)
+      interp_fac_10m_ptr    => dsl4jsb_var2D_onChunk(TURB_,  interp_fac_10m)
+      interp_fac_tsfc_ptr   => dsl4jsb_var2D_onChunk(TURB_,  interp_fac_tsfc)
     ELSE
       t_filt_ptr            => dsl4jsb_var2D_onChunk(SEB_,   t_filt)
       evapotrans_lnd_ptr    => dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
@@ -1086,16 +1060,22 @@ CONTAINS
         km(i) = km_ptr(i)
       END DO
     END IF
-    IF (PRESENT(kh_neutral)) THEN
+    IF (PRESENT(interp_fac_2m)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
-        kh_neutral(i) = kh_neutral_ptr(i)
+        interp_fac_2m(i) = interp_fac_2m_ptr(i)
       END DO
     END IF
-    IF (PRESENT(km_neutral)) THEN
+    IF (PRESENT(interp_fac_10m)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
-        km_neutral(i) = km_neutral_ptr(i)
+        interp_fac_10m(i) = interp_fac_10m_ptr(i)
+      END DO
+    END IF
+    IF (PRESENT(interp_fac_tsfc)) THEN
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO i=1,nc
+        interp_fac_tsfc(i) = interp_fac_tsfc_ptr(i)
       END DO
     END IF
 
