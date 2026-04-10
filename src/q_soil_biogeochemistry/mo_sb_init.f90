@@ -738,28 +738,205 @@ CONTAINS
     sb_analytical_init_vars%is_loaded = .FALSE.
   END SUBROUTINE sb_finalize_analytical_init_vars
 
+  ! ======================================================================================================= !
+  !> allocate analytical steady-state SB_ init vars
+  !>
+  SUBROUTINE sb_allocate_analytical_init_vars(nproma, nsoil_w, nblks)
+    INTEGER, INTENT(in) :: nproma
+    INTEGER, INTENT(in) :: nsoil_w
+    INTEGER, INTENT(in) :: nblks
+
+    ALLOCATE( &
+      & sb_analytical_init_vars%frac_wtr_transp_down_sl      (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%frac_w_lat_loss_sl           (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rtm_decomposition            (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rmm_decomposition            (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rtm_depolymerisation         (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rmm_depolymerisation         (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rtm_sorption                 (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rmm_sorption                 (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rtm_desorption               (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rmm_desorption               (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rtm_mic_uptake               (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rmm_mic_uptake               (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rtm_hsc                      (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rmm_hsc                      (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%bulk_dens_sl                 (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%silt_sl                      (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%clay_sl                      (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%formation_soluable_litter_c (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%formation_polymeric_litter_c(nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%formation_woody_litter_c    (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%enzyme_frac_ap              (nproma, nsoil_w, nblks))
+  END SUBROUTINE sb_allocate_analytical_init_vars
+
+  ! ======================================================================================================= !
+  !> set defaults for analytical steady-state SB_ init vars
+  !>
+  SUBROUTINE sb_set_analytical_init_vars_defaults()
+    USE mo_sb_constants, ONLY: min_enzyme_fraction
+
+    sb_analytical_init_vars%frac_wtr_transp_down_sl      (:,:,:) = 0.0_wp
+    sb_analytical_init_vars%frac_w_lat_loss_sl           (:,:,:) = 0.0_wp
+    sb_analytical_init_vars%rtm_decomposition            (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rmm_decomposition            (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rtm_depolymerisation         (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rmm_depolymerisation         (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rtm_sorption                 (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rmm_sorption                 (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rtm_desorption               (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rmm_desorption               (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rtm_mic_uptake               (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rmm_mic_uptake               (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rtm_hsc                      (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rmm_hsc                      (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%bulk_dens_sl                 (:,:,:) = 0.0_wp
+    sb_analytical_init_vars%silt_sl                      (:,:,:) = 0.0_wp
+    sb_analytical_init_vars%clay_sl                      (:,:,:) = 0.0_wp
+    sb_analytical_init_vars%formation_soluable_litter_c (:,:,:) = 0.0_wp
+    sb_analytical_init_vars%formation_polymeric_litter_c(:,:,:) = 0.0_wp
+    sb_analytical_init_vars%formation_woody_litter_c    (:,:,:) = 0.0_wp
+    sb_analytical_init_vars%enzyme_frac_ap              (:,:,:) = min_enzyme_fraction
+  END SUBROUTINE sb_set_analytical_init_vars_defaults
+
+  ! ======================================================================================================= !
+  !> assign one scalar value to one analytical steady-state init variable
+  !>
+  SUBROUTINE sb_assign_analytical_init_scalar(var_name, scalar_value)
+    CHARACTER(len=*), INTENT(in) :: var_name
+    REAL(wp),         INTENT(in) :: scalar_value
+
+    SELECT CASE(TRIM(var_name))
+    CASE('frac_wtr_transp_down_sl', 'hydro_frac_wtr_transp_down_sl')
+      sb_analytical_init_vars%frac_wtr_transp_down_sl(:,:,:) = scalar_value
+    CASE('frac_w_lat_loss_sl', 'hydro_frac_w_lat_loss_sl')
+      sb_analytical_init_vars%frac_w_lat_loss_sl(:,:,:) = scalar_value
+    CASE('rtm_decomposition', 'sb_rtm_decomposition')
+      sb_analytical_init_vars%rtm_decomposition(:,:,:) = scalar_value
+    CASE('rmm_decomposition', 'sb_rmm_decomposition')
+      sb_analytical_init_vars%rmm_decomposition(:,:,:) = scalar_value
+    CASE('rtm_depolymerisation', 'sb_rtm_depolymerisation')
+      sb_analytical_init_vars%rtm_depolymerisation(:,:,:) = scalar_value
+    CASE('rmm_depolymerisation', 'sb_rmm_depolymerisation')
+      sb_analytical_init_vars%rmm_depolymerisation(:,:,:) = scalar_value
+    CASE('rtm_sorption', 'sb_rtm_sorption')
+      sb_analytical_init_vars%rtm_sorption(:,:,:) = scalar_value
+    CASE('rmm_sorption', 'sb_rmm_sorption')
+      sb_analytical_init_vars%rmm_sorption(:,:,:) = scalar_value
+    CASE('rtm_desorption', 'sb_rtm_desorption')
+      sb_analytical_init_vars%rtm_desorption(:,:,:) = scalar_value
+    CASE('rmm_desorption', 'sb_rmm_desorption')
+      sb_analytical_init_vars%rmm_desorption(:,:,:) = scalar_value
+    CASE('rtm_mic_uptake', 'sb_rtm_mic_uptake')
+      sb_analytical_init_vars%rtm_mic_uptake(:,:,:) = scalar_value
+    CASE('rmm_mic_uptake', 'sb_rmm_mic_uptake')
+      sb_analytical_init_vars%rmm_mic_uptake(:,:,:) = scalar_value
+    CASE('rtm_hsc', 'sb_rtm_hsc')
+      sb_analytical_init_vars%rtm_hsc(:,:,:) = scalar_value
+    CASE('rmm_hsc', 'sb_rmm_hsc')
+      sb_analytical_init_vars%rmm_hsc(:,:,:) = scalar_value
+    CASE('bulk_dens_sl', 'sse_bulk_dens_sl')
+      sb_analytical_init_vars%bulk_dens_sl(:,:,:) = scalar_value
+    CASE('silt_sl', 'sse_silt_sl')
+      sb_analytical_init_vars%silt_sl(:,:,:) = scalar_value
+    CASE('clay_sl', 'sse_clay_sl')
+      sb_analytical_init_vars%clay_sl(:,:,:) = scalar_value
+    CASE('formation_soluable_litter_c')
+      sb_analytical_init_vars%formation_soluable_litter_c(:,:,:) = scalar_value
+    CASE('formation_polymeric_litter_c')
+      sb_analytical_init_vars%formation_polymeric_litter_c(:,:,:) = scalar_value
+    CASE('formation_woody_litter_c')
+      sb_analytical_init_vars%formation_woody_litter_c(:,:,:) = scalar_value
+    CASE('enzyme_frac_ap')
+      sb_analytical_init_vars%enzyme_frac_ap(:,:,:) = scalar_value
+    CASE DEFAULT
+      CALL finish(TRIM(modname)//':sb_assign_analytical_init_scalar', &
+        & 'Unknown analytical steady-state init variable in standalone text file: '//TRIM(var_name))
+    END SELECT
+  END SUBROUTINE sb_assign_analytical_init_scalar
+
 #ifdef __QUINCY_STANDALONE__
   ! ======================================================================================================= !
   !> read analytical steady-state SB_ init vars in QUINCY standalone mode
   !>
   SUBROUTINE sb_qs_read_analytical_init_vars(tile)
+    USE mo_sb_constants, ONLY: min_enzyme_fraction
+
     dsl4jsb_Use_config(SB_)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     dsl4jsb_Def_config(SB_)
 
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: hgrid
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_w
+    INTEGER                     :: nproma
+    INTEGER                     :: nblks
+    INTEGER                     :: nsoil_w
+    INTEGER                     :: analytical_unit
+    INTEGER                     :: io_status
+    INTEGER                     :: nline
+    CHARACTER(len=512)          :: line
+    CHARACTER(len=32)           :: line_no_str
+    CHARACTER(len=128)          :: var_name
+    REAL(wp)                    :: scalar_value
     CHARACTER(len=*), PARAMETER :: routine = modname//':sb_qs_read_analytical_init_vars'
 
     dsl4jsb_Get_config(SB_)
 
     IF (TRIM(dsl4jsb_Config(SB_)%sb_init_scheme) /= 'analytical_ss') RETURN
 
-    !> The analytical steady-state initialisation will require a dedicated set of gridded,
-    !> soil-layer explicit input variables. The standalone reader is kept as a dedicated hook
-    !> so that the final implementation can mirror the IQ reader below without changing the
-    !> overall initialisation flow again.
-    CALL finish(TRIM(routine), 'Analytical steady-state SB initialisation is not implemented yet for QUINCY standalone.')
+    model  => Get_model(tile%owner_model_id)
+    hgrid  => Get_grid(model%grid_id)
+    nproma = hgrid%Get_nproma()
+    nblks  = hgrid%Get_nblks()
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       = vgrid_soil_w%n_levels
+
+    CALL sb_allocate_analytical_init_vars(nproma, nsoil_w, nblks)
+    CALL sb_set_analytical_init_vars_defaults()
+
+    !> Temporary standalone path: read analytical initialisation values from a simple text file
+    !> with one scalar "name value" pair per line and broadcast that scalar to all soil layers.
+    !> This is intentionally simpler than the ICON-QUINCY gridded NetCDF path so the analytical
+    !> initialisation can be tested quickly in the one-site-per-node setup before adding a richer
+    !> layer-resolved standalone file format.
+    OPEN(NEWUNIT=analytical_unit, FILE=TRIM(dsl4jsb_Config(SB_)%sb_analytical_init_filename), &
+      & STATUS='OLD', ACTION='READ', IOSTAT=io_status)
+    IF (io_status /= 0) THEN
+      CALL finish(TRIM(routine), 'Cannot open standalone analytical init file: ' // &
+        & TRIM(dsl4jsb_Config(SB_)%sb_analytical_init_filename))
+    END IF
+
+    nline = 0
+    DO
+      READ(analytical_unit, '(A)', IOSTAT=io_status) line
+      IF (io_status /= 0) EXIT
+      nline = nline + 1
+
+      IF (LEN_TRIM(line) == 0) CYCLE
+      IF (line(1:1) == '#') CYCLE
+      IF (line(1:1) == '!') CYCLE
+
+      READ(line, *, IOSTAT=io_status) var_name, scalar_value
+      IF (io_status /= 0) THEN
+        WRITE(line_no_str, '(I0)') nline
+        CALL finish(TRIM(routine), 'Invalid line in standalone analytical init file at line ' // &
+          & TRIM(line_no_str) // ': ' // TRIM(line))
+      END IF
+      CALL sb_assign_analytical_init_scalar(TRIM(var_name), scalar_value)
+    END DO
+
+    CLOSE(analytical_unit)
+    sb_analytical_init_vars%enzyme_frac_ap(:,:,:) = MIN(MAX(sb_analytical_init_vars%enzyme_frac_ap(:,:,:), &
+      & min_enzyme_fraction), 1._wp - min_enzyme_fraction)
+    sb_analytical_init_vars%is_loaded = .TRUE.
+
+    IF (debug_on()) THEN
+      CALL message(TRIM(routine), 'Read standalone analytical steady-state SB init vars from: ' // &
+        & TRIM(dsl4jsb_Config(SB_)%sb_analytical_init_filename))
+    END IF
   END SUBROUTINE sb_qs_read_analytical_init_vars
 
   SUBROUTINE sb_qs_read_init_vars(tile)
@@ -852,8 +1029,6 @@ CONTAINS
   !> read analytical steady-state SB_ init vars from input file
   !>
   SUBROUTINE sb_read_analytical_init_vars(tile)
-    USE mo_sb_constants, ONLY: min_enzyme_fraction
-
     dsl4jsb_Use_config(SB_)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -879,28 +1054,7 @@ CONTAINS
     vgrid_soil_w => Get_vgrid('soil_depth_water')
     nsoil_w      =  vgrid_soil_w%n_levels
 
-    ALLOCATE( &
-      & sb_analytical_init_vars%frac_wtr_transp_down_sl      (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%frac_w_lat_loss_sl           (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%rtm_decomposition            (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%rmm_decomposition            (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%rtm_depolymerisation         (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%rmm_depolymerisation         (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%rtm_sorption                 (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%rmm_sorption                 (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%rtm_desorption               (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%rmm_desorption               (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%rtm_mic_uptake               (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%rmm_mic_uptake               (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%rtm_hsc                      (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%rmm_hsc                      (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%bulk_dens_sl                 (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%silt_sl                      (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%clay_sl                      (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%formation_soluable_litter_c (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%formation_polymeric_litter_c(nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%formation_woody_litter_c    (nproma, nsoil_w, nblks), &
-      & sb_analytical_init_vars%enzyme_frac_ap              (nproma, nsoil_w, nblks))
+    CALL sb_allocate_analytical_init_vars(nproma, nsoil_w, nblks)
 
     !> The analytical steady-state status file now contains HYDRO, SB, and SSE layer variables
     !> together with tile-wise litter formation fluxes. The tile-wise litter outputs are written
@@ -915,27 +1069,7 @@ CONTAINS
     !>
     !> Until that file I/O is added, keep explicit neutral defaults here so the code structure
     !> already matches the agreed status-file schema without changing legacy behaviour.
-    sb_analytical_init_vars%frac_wtr_transp_down_sl      (:,:,:) = 0.0_wp
-    sb_analytical_init_vars%frac_w_lat_loss_sl           (:,:,:) = 0.0_wp
-    sb_analytical_init_vars%rtm_decomposition            (:,:,:) = 1.0_wp
-    sb_analytical_init_vars%rmm_decomposition            (:,:,:) = 1.0_wp
-    sb_analytical_init_vars%rtm_depolymerisation         (:,:,:) = 1.0_wp
-    sb_analytical_init_vars%rmm_depolymerisation         (:,:,:) = 1.0_wp
-    sb_analytical_init_vars%rtm_sorption                 (:,:,:) = 1.0_wp
-    sb_analytical_init_vars%rmm_sorption                 (:,:,:) = 1.0_wp
-    sb_analytical_init_vars%rtm_desorption               (:,:,:) = 1.0_wp
-    sb_analytical_init_vars%rmm_desorption               (:,:,:) = 1.0_wp
-    sb_analytical_init_vars%rtm_mic_uptake               (:,:,:) = 1.0_wp
-    sb_analytical_init_vars%rmm_mic_uptake               (:,:,:) = 1.0_wp
-    sb_analytical_init_vars%rtm_hsc                      (:,:,:) = 1.0_wp
-    sb_analytical_init_vars%rmm_hsc                      (:,:,:) = 1.0_wp
-    sb_analytical_init_vars%bulk_dens_sl                 (:,:,:) = 0.0_wp
-    sb_analytical_init_vars%silt_sl                      (:,:,:) = 0.0_wp
-    sb_analytical_init_vars%clay_sl                      (:,:,:) = 0.0_wp
-    sb_analytical_init_vars%formation_soluable_litter_c (:,:,:) = 0.0_wp
-    sb_analytical_init_vars%formation_polymeric_litter_c(:,:,:) = 0.0_wp
-    sb_analytical_init_vars%formation_woody_litter_c    (:,:,:) = 0.0_wp
-    sb_analytical_init_vars%enzyme_frac_ap              (:,:,:) = min_enzyme_fraction
+    CALL sb_set_analytical_init_vars_defaults()
     sb_analytical_init_vars%is_loaded = .TRUE.
 
     CALL message(TRIM(routine), 'Analytical steady-state SB initialisation is configured; reader stub reached for file: ' // &
