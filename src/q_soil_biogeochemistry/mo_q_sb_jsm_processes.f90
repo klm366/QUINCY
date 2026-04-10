@@ -33,7 +33,7 @@ MODULE mo_q_sb_jsm_processes
     &       calc_sorption_desorption_of_org_material, calc_depolymerisation_SESAM, &
     &       calc_sinking_flux, calc_sourcing_flux, &
     &       calc_fast_po4, calc_nitri_denitri_partitioning_rate, &
-    &       calc_Psorption_parameter
+    &       calc_Psorption_parameter, calc_enzyme_allocation
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_jsm_processes'
 
