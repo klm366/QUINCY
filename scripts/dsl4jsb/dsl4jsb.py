@@ -4,7 +4,7 @@
 # ICON-Land
 #
 # ---------------------------------------
-# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+# Copyright (C) 2013-2026, MPI-M, MPI-BGC
 #
 # Contact: icon-model.org
 # Authors: AUTHORS.md
@@ -140,12 +140,19 @@ macros = {
         re.compile(r"dsl4jsb_Get_var3D_onChunk *\((.*?)_ *, *(.*?) *\)", re.IGNORECASE),
         r"\2 => \1__mem%\2%ptr(ics:ice,:,iblk)",
     ],
+    "get_var3d_onchunk_tile": [
+        re.compile(
+            r"dsl4jsb_Get_var3D_onChunk_tile *\((.*?)_ *, *(.*?) *, *(.*?) *\)",
+            re.IGNORECASE,
+        ),
+        r"\2 => \1__mem__\3%\2%ptr(ics:ice,:,iblk)",
+    ],
     "get_var3d_onchunk_tile_name": [
         re.compile(
             r"dsl4jsb_Get_var3D_onChunk_tile_name *\((.*?)_ *, *(.*?) *, *(.*?) *\)",
             re.IGNORECASE,
         ),
-        r'\2_\3 => \1__mem__\3%\2%ptr(ics:ice,:,iblk)',
+        r"\2_\3 => \1__mem__\3%\2%ptr(ics:ice,:,iblk)",
     ],
     "var2d_onchunk": [
         re.compile(r"dsl4jsb_var2D_onChunk *\((.*?)_ *, *(.*?) *\)", re.IGNORECASE),
@@ -271,6 +278,42 @@ macros = {
     "get_mt2l3d": [
         re.compile(r"dsl4jsb_Get_mt2L3D *\((.*?) *, *(.*?) *\)", re.IGNORECASE),
         r"\2 => bgcm_store%Get_matrix_from_store_2l_3d(\1, ics, ice, iblk, tile%name)",
+    ],
+    "get_mt1l2d_tile": [
+        re.compile(r"dsl4jsb_Get_mt1L2D_tile *\((.*?) *, *(.*?) *, *(.*?) *\)", re.IGNORECASE),
+        r"\2 => bgcm_store%Get_matrix_from_store_1l_2d(\1, ics, ice, iblk, \3%name)",
+    ],
+    "get_mt1l3d_tile": [
+        re.compile(r"dsl4jsb_Get_mt1L3D_tile *\((.*?) *, *(.*?) *, *(.*?) *\)", re.IGNORECASE),
+        r"\2 => bgcm_store%Get_matrix_from_store_1l_3d(\1, ics, ice, iblk, \3%name)",
+    ],
+    "get_mt2l2d_tile": [
+        re.compile(r"dsl4jsb_Get_mt2L2D_tile *\((.*?) *, *(.*?) *, *(.*?) *\)", re.IGNORECASE),
+        r"\2 => bgcm_store%Get_matrix_from_store_2l_2d(\1, ics, ice, iblk, \3%name)",
+    ],
+    "get_mt2l3d_tile": [
+        re.compile(r"dsl4jsb_Get_mt2L3D_tile *\((.*?) *, *(.*?) *, *(.*?) *\)", re.IGNORECASE),
+        r"\2 => bgcm_store%Get_matrix_from_store_2l_3d(\1, ics, ice, iblk, \3%name)",
+    ],
+    "write_mt1l2d_to_vars_tile": [
+        re.compile(r"dsl4jsb_Write_mt1L2D_to_vars_tile *\((.*?) *, *(.*?) *, *(.*?) *\)", re.IGNORECASE),
+        r"CALL bgcm_store%Write_matrix_to_1l_2d_bgcm_vars(\1, ics, ice, iblk, \3%name, \2)",
+    ],
+    "write_mt1l3d_to_vars_tile": [
+        re.compile(r"dsl4jsb_Write_mt1L3D_to_vars_tile *\((.*?) *, *(.*?) *, *(.*?) *\)", re.IGNORECASE),
+        r"CALL bgcm_store%Write_matrix_to_1l_3d_bgcm_vars(\1, ics, ice, iblk, \3%name, \2)",
+    ],
+    "write_mt2l2d_to_vars_tile": [
+        re.compile(r"dsl4jsb_Write_mt2L2D_to_vars_tile *\((.*?) *, *(.*?) *, *(.*?) *\)", re.IGNORECASE),
+        r"CALL bgcm_store%Write_matrix_to_2l_2d_bgcm_vars(\1, ics, ice, iblk, \3%name, \2)",
+    ],
+    "write_mt2l3d_to_vars_tile": [
+        re.compile(r"dsl4jsb_Write_mt2L3D_to_vars_tile *\((.*?) *, *(.*?) *, *(.*?) *\)", re.IGNORECASE),
+        r"CALL bgcm_store%Write_matrix_to_2l_3d_bgcm_vars(\1, ics, ice, iblk, \3%name, \2)",
+    ],
+    "update_mt1l2d_tile": [
+        re.compile(r"dsl4jsb_Update_mt1L2D_tile *\((.*?) *, *(.*?) *, *(.*?) *\)", re.IGNORECASE),
+        r"CALL bgcm_store%Update_matrix_with_2d_bgcm_element_vars(\1, ics, ice, iblk, \3%name, \2)",
     ],
     "aggregate_onchunk": [
         re.compile(

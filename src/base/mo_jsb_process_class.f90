@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -15,7 +15,7 @@ MODULE mo_jsb_process_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,           ONLY: message, finish
-  USE mo_util_string,         ONLY: tolower
+  USE mo_util,                ONLY: tolower
   USE mo_jsb_control,         ONLY: debug_on
 
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_process_task_p

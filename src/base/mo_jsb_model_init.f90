@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -237,7 +237,7 @@ CONTAINS
 
       ! ------------------------ tasks that can change area
       !
-      ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
+      ! Note: PPLCC_ is automatically activated in mo_jsb_base.f90:jsbach_setup_models
       ! if any process that changes area (e.g. NLCC_, ALCC_) is active.
       !
       IF (model%processes(PPLCC_)%p%config%active) THEN
@@ -298,6 +298,9 @@ CONTAINS
       CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")
       CALL model%Queue_task(HYDRO_,  "soil_properties")
       CALL model%Queue_task(SEB_,    "surface_energy")
+      IF (model%config%use_tmx) THEN
+        CALL model%Queue_task(TURB_, "prepare_near_sfc_temp_interp")
+      END IF
       CALL model%Queue_task(HYDRO_,  "evaporation")
       CALL model%Queue_task(SEB_,    "surface_fluxes")
       IF (model%processes(ASSIMI_)%p%config%active) THEN
@@ -405,26 +408,30 @@ CONTAINS
 
         ! --------------- Any tasks that might change the land cover need to come first in the timestep
         !
-        ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
-        ! if any process that changes area is active (currently none for QS)
-        ! or if harvest is active because it already now needs information on the forested area
+        ! Note: PPLCC_ is automatically activated in mo_jsb_base.f90:jsbach_setup_models
+        ! if any process that changes area is active
+        ! or if harvest is active because it needs information on the forested area
         !
         IF (model%processes(PPLCC_)%p%config%active) THEN
+          IF (model%processes(ALCC_)%p%config%active) THEN
+            CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
+          END IF
+
           ! Prepare LCC tasks
           CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
-          ! Here all lcc tasks need to be called
-          !
+          ! Here all lcc tasks need to be called: for Quincy this is currently only alcc
 
-          ! Call alcc for now only in CANOPY mode (i.e. without biogeochemistry enabled)
-          IF (model%config%qmodel_id == QCANOPY) THEN
-            IF (model%processes(ALCC_)%p%config%active) THEN
-              CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
-              CALL model%Queue_task(ALCC_, "alcc_translocation")
-            END IF
+          IF (model%processes(ALCC_)%p%config%active) THEN
+            CALL model%Queue_task(ALCC_, "alcc_translocation")
           END IF
 
           ! Do postprocessing after all LCC tasks were executed
           CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
+
+          IF (model%Do_fractions_change() .AND. (.NOT. model%config%qmodel_id == QCANOPY)) THEN
+            !-- if required recalculate plant characteristics
+            CALL model%Queue_task(VEG_, "plant_characteristics")
+          END IF
         END IF
 
         IF (model%processes(Q_AGR_)%p%config%active) THEN
@@ -441,14 +448,15 @@ CONTAINS
           END IF
         END IF
 
-        IF (model%config%qmodel_id == QLAND) THEN
-          CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
-        END IF
-
         CALL model%Queue_task(RAD_,       "surface_radiation")
         CALL model%Queue_task(Q_PHENO_,   "q_phenology")
         CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
         CALL model%Queue_task(HYDRO_,     "soil_properties")
+
+        IF (model%config%qmodel_id == QLAND) THEN
+          CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
+        END IF
+
         CALL model%Queue_task(SEB_,       "surface_energy")
         CALL model%Queue_task(HYDRO_,     "evaporation")
         CALL model%Queue_task(SEB_,       "surface_fluxes")
@@ -519,26 +527,30 @@ CONTAINS
 
         ! --------------- Any tasks that might change the land cover need to come first in the timestep
         !
-        ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
-        ! if any process that changes area is active (currently none for QS)
-        ! or if harvest is active because it already now needs information on the forested area
+        ! Note: PPLCC_ is automatically activated in mo_jsb_base.f90:jsbach_setup_models
+        ! if any process that changes area is active
+        ! or if harvest is active because it needs information on the forested area
         !
         IF (model%processes(PPLCC_)%p%config%active) THEN
+          IF (model%processes(ALCC_)%p%config%active) THEN
+            CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
+          END IF
+
           ! Prepare LCC tasks
           CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
-          ! Here all lcc tasks need to be called
-          !
+          ! Here all lcc tasks need to be called: for Quincy this is currently only alcc
 
-          ! Call alcc for now only in CANOPY mode (i.e. without biogeochemistry enabled)
-          IF (model%config%qmodel_id == QCANOPY) THEN
-            IF (model%processes(ALCC_)%p%config%active) THEN
-              CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
-              CALL model%Queue_task(ALCC_, "alcc_translocation")
-            END IF
+          IF (model%processes(ALCC_)%p%config%active) THEN
+            CALL model%Queue_task(ALCC_, "alcc_translocation")
           END IF
 
           ! Do postprocessing after all LCC tasks were executed
           CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
+
+          IF (model%Do_fractions_change() .AND. (.NOT. model%config%qmodel_id == QCANOPY)) THEN
+            !-- if required recalculate plant characteristics
+            CALL model%Queue_task(VEG_, "plant_characteristics")
+          END IF
         END IF
 
         IF (model%processes(Q_AGR_)%p%config%active) THEN
@@ -1152,7 +1164,7 @@ CONTAINS
           DO blk = blks, blke
             jcs = grid%get_col_start(blk)
             jce = grid%get_col_end  (blk)
-            CALL tile%bgcm_store%Store_bgcms_in_matrices(tile%name, jcs, jce, blk)
+            CALL tile%bgcm_store%Store_bgcm_vars_in_matrices(tile%name, jcs, jce, blk)
           ENDDO
         END IF
 #endif

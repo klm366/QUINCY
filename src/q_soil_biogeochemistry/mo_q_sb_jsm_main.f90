@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -24,7 +24,7 @@ MODULE mo_q_sb_jsm_main
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID
+  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, SB_BGCM_TRANSPORT_ID
 
   IMPLICIT NONE
@@ -101,6 +101,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_formation_mt
     dsl4jsb_Def_mt2L3D :: sb_loss_mt
@@ -334,6 +335,7 @@ CONTAINS
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_FORMATION_ID, sb_formation_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
@@ -549,7 +551,7 @@ CONTAINS
       & nsoil_w, &
       & dtime, &
       & num_sl_above_bedrock(:), &
-      & dsl4jsb_Config(SB_)%flag_sb_prescribe_po4, &  ! in
+      & dsl4jsb_Config(SB_)%flag_sb_interactive_p, &  ! in
       & sb_pool_mt(ix_microbial, ixC, :, :), &
       & sb_pool_mt(ix_microbial, ixN, :, :), &
       & sb_pool_mt(ix_microbial, ixP, :, :), &
@@ -643,7 +645,8 @@ CONTAINS
       & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
       & soil_depth_sl(:,:), &
       & root_fraction_sl(:,:), &
-      & veg_litterfall_mt(:,:,:), &                   ! in
+      & veg_litterfall_mt(:,:,:), &
+      & seed_bed_litterfall_mt(:,:), &                ! in
       & sb_formation_mt(:,:,:,:) )                    ! inout
 
     !>5.0 vertical transport
@@ -779,6 +782,7 @@ CONTAINS
       &   lctlib%vmax_uptake_p, &
       &   "po4", &
       &   TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &   ! in
+      &   dsl4jsb_Config(SB_)%flag_sb_interactive_p, &
       &   sb_pool_mt(ix_microbial, ixC, :, :), fine_root_carbon_sl(:,:), po4_solute(:,:), &                ! in
       &   rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &                          ! in
       &   rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &        ! in
@@ -826,6 +830,7 @@ CONTAINS
       &   lctlib%vmax_uptake_n, &
       &   "nh4", &
       &   TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &   ! in
+      &   dsl4jsb_Config(SB_)%flag_sb_interactive_n, &
       &   sb_pool_mt(ix_microbial, ixC, :, :), fine_root_carbon_sl(:,:), nh4_solute(:,:), &                ! in
       &   rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &                          ! in
       &   rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &        ! in
@@ -875,6 +880,7 @@ CONTAINS
       &   lctlib%vmax_uptake_n, &
       &   "no3", &
       &   TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &   ! in
+      &   dsl4jsb_Config(SB_)%flag_sb_interactive_n, &
       &   sb_pool_mt(ix_microbial, ixC, :, :), fine_root_carbon_sl(:,:), no3_solute(:,:), &                  ! in
       &   rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &                            ! in
       &   rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &          ! in
@@ -1044,6 +1050,8 @@ CONTAINS
       & dtime, &
       & num_sl_above_bedrock(:), &
       & TRIM(dsl4jsb_Config(SB_)%bnf_scheme), &
+      & dsl4jsb_Config(SB_)%flag_sb_interactive_n, &  ! in
+      & dsl4jsb_Config(SB_)%flag_sb_interactive_p, &  ! in
       & rtm_mic_uptake(:,:), &
       & rmm_mic_uptake(:,:), &
       & rtm_hsc(:,:), &
