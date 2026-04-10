@@ -29,6 +29,7 @@ MODULE mo_assimi_config_class
   !>
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
      LOGICAL               :: init_running_means ! initialize npp buffer for NLCC process
+     LOGICAL               :: l_use_skintemp     ! Use skin temperature for assimilation
      INTEGER               :: ncanopy          ! number of canopy layers for the assimi process
                                                ! R: could be different for other processes e.g. for radiation
      REAL(wp), ALLOCATABLE :: canopy_bound_lai(:)
@@ -57,6 +58,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     LOGICAL                     :: init_running_means
+    LOGICAL                     :: l_use_skintemp
     INTEGER                     :: ncanopy
     INTEGER                     :: icanopy
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_canopy
@@ -66,7 +68,8 @@ CONTAINS
       & lrestart_cont,         &
       & ic_filename,           &
       & bc_filename,           &
-      & init_running_means
+      & init_running_means,    &
+      & l_use_skintemp
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -82,6 +85,7 @@ CONTAINS
     bc_filename         = 'bc_land_assimi.nc'
     ic_filename         = 'ic_land_assimi.nc'
     init_running_means  = .FALSE.
+    l_use_skintemp      = .FALSE.
     ncanopy             = 3
 
     ! Read namelist
@@ -97,6 +101,11 @@ CONTAINS
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%init_running_means  = init_running_means
+    config%l_use_skintemp      = l_use_skintemp
+
+    IF (l_use_skintemp) &
+      & CALL message(TRIM(routine), 'Using skin temperature instead of air temperature for photosynthesis')
+
 
     ! ncanopy is so far not a parameter in the assimi namelist but fixed to 3 above
     config%ncanopy = ncanopy

@@ -411,6 +411,7 @@ CONTAINS
     !dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(SEB_)
 
     dsl4jsb_Def_config(ASSIMI_)
 
@@ -419,9 +420,12 @@ CONTAINS
     REAL(wp) :: &
       & CarboxRate, &
       & ETransport
-    LOGICAL :: C4Flag
+    REAL(wp) :: temperature(options%nc)
+    LOGICAL :: C4Flag, &
+      &        l_use_skintemp
 
     dsl4jsb_Real2D_onChunk :: t_air                 ! Atmosphere temperature (lowest layer) in Kelvin!
+    dsl4jsb_Real2D_onChunk :: t_filt                ! Skin temperature (if skin scheme is active) [K]
     dsl4jsb_Real2D_onChunk :: press_srf             ! Surface pressure
     dsl4jsb_Real2D_onChunk :: par_down_mol          ! Downward PAR flux in mol (photons)/(m^2 s)
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl       ! Input. Absorbed PAR of canopy layer.
@@ -454,11 +458,13 @@ CONTAINS
     !dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(SEB_)
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(A2L_,      t_air)                   ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      press_srf)               ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      CO2_air_mol)             ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t_filt)                  ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol)            ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
@@ -468,6 +474,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_unlimited)   ! out
 
     ncanopy     = dsl4jsb_Config(ASSIMI_)%ncanopy
+    l_use_skintemp = dsl4jsb_Config(ASSIMI_)%l_use_skintemp
     C4Flag      = dsl4jsb_Lctlib_param(C4Flag)
     CarboxRate  = dsl4jsb_Lctlib_param(CarboxRate)
     ETransport  = dsl4jsb_Lctlib_param(ETransport)
@@ -478,6 +485,20 @@ CONTAINS
       canopy_cond_unlimited(ic) = 0._wp
     END DO
 
+    IF (l_use_skintemp) THEN
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+        temperature(ic) = t_filt(ic)
+      END DO
+    ELSE
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+        temperature(ic) = t_air(ic)
+      END DO
+    END IF
+
     !$ACC LOOP SEQ
     DO icanopy=1,ncanopy
       !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -486,7 +507,7 @@ CONTAINS
         & C4Flag,                      &
         & CarboxRate,                  &
         & ETransport,                  &
-        & t_air(ic),                   &
+        & temperature(ic),             &
         & press_srf(ic),               &
         & par_down_mol(ic),            &
         & apar_per_lai_cl(ic,icanopy), &
@@ -733,7 +754,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     INTEGER                    :: iblk, ics, ice, nc, ic
     REAL(wp)                   :: dtime
+    REAL(wp)                   :: temperature(options%nc)
     INTEGER                    :: icanopy
+    LOGICAL                    :: l_use_skintemp
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_assimilation'
 
@@ -741,6 +764,7 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(PHENO_)
@@ -750,6 +774,7 @@ CONTAINS
     ! Declare pointers to variables in memory
 
     dsl4jsb_Real2D_onChunk :: t_air                 ! Atmosphere temperature (lowest layer) in Kelvin!
+    dsl4jsb_Real2D_onChunk :: t_filt                ! Skin temperature (if skin scheme is active) [K]
     dsl4jsb_Real2D_onChunk :: press_srf             ! Surface pressure
     dsl4jsb_Real2D_onChunk :: par_down_mol          ! Downward PAR flux in mol (photons)/(m^2 s)
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl       ! Input. Absorbed PAR of canopy layer.
@@ -797,17 +822,20 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
 
     ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
+    l_use_skintemp = dsl4jsb_Config(ASSIMI_)%l_use_skintemp
 
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(PHENO_)
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(A2L_,      t_air)                   ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      CO2_air_mol)             ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      press_srf)               ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t_filt)                  ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol)            ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
@@ -835,12 +863,26 @@ CONTAINS
     ! ---------------------------
     ! Go
 
+    IF (l_use_skintemp) THEN
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+        temperature(ic) = t_filt(ic)
+      END DO
+    ELSE
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+        temperature(ic) = t_air(ic)
+      END DO
+    END IF
+
     DO icanopy=1,ncanopy
       CALL calc_assimilation_waterlimited(    &
         & dsl4jsb_Lctlib_param(C4Flag),       &
         & dsl4jsb_Lctlib_param(CarboxRate),   &
         & dsl4jsb_Lctlib_param(ETransport),   &
-        & t_air(:),                           & ! in
+        & temperature(:),                     & ! in
         & press_srf(:),                       & ! in
         & par_down_mol(:),                    & ! in
         & apar_per_lai_cl(:,icanopy),         & ! in
