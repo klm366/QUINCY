@@ -68,6 +68,23 @@ MODULE mo_sb_init
 
   TYPE t_sb_analytical_init_vars
     REAL(wp), POINTER :: &
+      & frac_wtr_transp_down_sl      (:,:,:) => NULL(), & !< HYDRO layer fraction for downward transport; reserved for later analytical closures [--]
+      & frac_w_lat_loss_sl           (:,:,:) => NULL(), & !< HYDRO layer fraction for lateral loss; reserved for later analytical closures [--]
+      & rtm_decomposition            (:,:,:) => NULL(), & !< temperature modifier for simple-model decomposition read from analytical status file [--]
+      & rmm_decomposition            (:,:,:) => NULL(), & !< moisture modifier for simple-model decomposition read from analytical status file [--]
+      & rtm_depolymerisation         (:,:,:) => NULL(), & !< temperature modifier for depolymerisation read from analytical status file [--]
+      & rmm_depolymerisation         (:,:,:) => NULL(), & !< moisture modifier for depolymerisation read from analytical status file [--]
+      & rtm_sorption                 (:,:,:) => NULL(), & !< temperature modifier for sorption read from analytical status file [--]
+      & rmm_sorption                 (:,:,:) => NULL(), & !< moisture modifier for sorption read from analytical status file [--]
+      & rtm_desorption               (:,:,:) => NULL(), & !< temperature modifier for desorption read from analytical status file [--]
+      & rmm_desorption               (:,:,:) => NULL(), & !< moisture modifier for desorption read from analytical status file [--]
+      & rtm_mic_uptake               (:,:,:) => NULL(), & !< temperature modifier for microbial uptake read from analytical status file [--]
+      & rmm_mic_uptake               (:,:,:) => NULL(), & !< moisture modifier for microbial uptake read from analytical status file [--]
+      & rtm_hsc                      (:,:,:) => NULL(), & !< temperature modifier on half-saturation terms read from analytical status file [--]
+      & rmm_hsc                      (:,:,:) => NULL(), & !< moisture modifier on half-saturation terms read from analytical status file [--]
+      & bulk_dens_sl                 (:,:,:) => NULL(), & !< SSE bulk density from analytical status file [kg m-3]
+      & silt_sl                      (:,:,:) => NULL(), & !< SSE silt fraction from analytical status file [--]
+      & clay_sl                      (:,:,:) => NULL(), & !< SSE clay fraction from analytical status file [--]
       & formation_soluable_litter_c (:,:,:) => NULL(), & !< external carbon input to soluable litter [mol C m-3 s-1]
       & formation_polymeric_litter_c(:,:,:) => NULL(), & !< external carbon input to polymeric litter [mol C m-3 s-1]
       & formation_woody_litter_c    (:,:,:) => NULL(), & !< external carbon input to woody litter [mol C m-3 s-1]
@@ -655,6 +672,57 @@ CONTAINS
   !> de-allocate analytical steady-state SB_ init vars
   !>
   SUBROUTINE sb_finalize_analytical_init_vars
+    IF (ASSOCIATED(sb_analytical_init_vars%frac_wtr_transp_down_sl)) THEN
+      DEALLOCATE(sb_analytical_init_vars%frac_wtr_transp_down_sl)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%frac_w_lat_loss_sl)) THEN
+      DEALLOCATE(sb_analytical_init_vars%frac_w_lat_loss_sl)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%rtm_decomposition)) THEN
+      DEALLOCATE(sb_analytical_init_vars%rtm_decomposition)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%rmm_decomposition)) THEN
+      DEALLOCATE(sb_analytical_init_vars%rmm_decomposition)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%rtm_depolymerisation)) THEN
+      DEALLOCATE(sb_analytical_init_vars%rtm_depolymerisation)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%rmm_depolymerisation)) THEN
+      DEALLOCATE(sb_analytical_init_vars%rmm_depolymerisation)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%rtm_sorption)) THEN
+      DEALLOCATE(sb_analytical_init_vars%rtm_sorption)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%rmm_sorption)) THEN
+      DEALLOCATE(sb_analytical_init_vars%rmm_sorption)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%rtm_desorption)) THEN
+      DEALLOCATE(sb_analytical_init_vars%rtm_desorption)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%rmm_desorption)) THEN
+      DEALLOCATE(sb_analytical_init_vars%rmm_desorption)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%rtm_mic_uptake)) THEN
+      DEALLOCATE(sb_analytical_init_vars%rtm_mic_uptake)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%rmm_mic_uptake)) THEN
+      DEALLOCATE(sb_analytical_init_vars%rmm_mic_uptake)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%rtm_hsc)) THEN
+      DEALLOCATE(sb_analytical_init_vars%rtm_hsc)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%rmm_hsc)) THEN
+      DEALLOCATE(sb_analytical_init_vars%rmm_hsc)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%bulk_dens_sl)) THEN
+      DEALLOCATE(sb_analytical_init_vars%bulk_dens_sl)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%silt_sl)) THEN
+      DEALLOCATE(sb_analytical_init_vars%silt_sl)
+    END IF
+    IF (ASSOCIATED(sb_analytical_init_vars%clay_sl)) THEN
+      DEALLOCATE(sb_analytical_init_vars%clay_sl)
+    END IF
     IF (ASSOCIATED(sb_analytical_init_vars%formation_soluable_litter_c)) THEN
       DEALLOCATE(sb_analytical_init_vars%formation_soluable_litter_c)
     END IF
@@ -812,23 +880,58 @@ CONTAINS
     nsoil_w      =  vgrid_soil_w%n_levels
 
     ALLOCATE( &
+      & sb_analytical_init_vars%frac_wtr_transp_down_sl      (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%frac_w_lat_loss_sl           (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rtm_decomposition            (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rmm_decomposition            (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rtm_depolymerisation         (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rmm_depolymerisation         (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rtm_sorption                 (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rmm_sorption                 (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rtm_desorption               (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rmm_desorption               (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rtm_mic_uptake               (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rmm_mic_uptake               (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rtm_hsc                      (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%rmm_hsc                      (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%bulk_dens_sl                 (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%silt_sl                      (nproma, nsoil_w, nblks), &
+      & sb_analytical_init_vars%clay_sl                      (nproma, nsoil_w, nblks), &
       & sb_analytical_init_vars%formation_soluable_litter_c (nproma, nsoil_w, nblks), &
       & sb_analytical_init_vars%formation_polymeric_litter_c(nproma, nsoil_w, nblks), &
       & sb_analytical_init_vars%formation_woody_litter_c    (nproma, nsoil_w, nblks), &
       & sb_analytical_init_vars%enzyme_frac_ap              (nproma, nsoil_w, nblks))
 
-    !> The analytical steady-state initialisation will read a dedicated gridded NetCDF status file.
-    !> The file is intended to provide all externally prescribed, soil-layer explicit variables that
-    !> are needed to solve the analytical steady-state equations for the carbon pools before the
-    !> remaining derived SB state variables are initialised.
+    !> The analytical steady-state status file now contains HYDRO, SB, and SSE layer variables
+    !> together with tile-wise litter formation fluxes. The tile-wise litter outputs are written
+    !> for every PFT and element, while the analytical C-only solver currently needs the carbon
+    !> formation summed over PFT tiles for soluable, polymeric, and woody litter only.
     !>
-    !> The concrete variable list and allocation strategy will be added once the equation system and
-    !> required inputs have been finalised. For the structural draft, the reader is kept explicit so
-    !> that file I/O, temporary storage, and the later analytical solver stay cleanly separated.
+    !> The actual NetCDF reader still needs to:
+    !>   1. map process-prefixed output names (for example hydro_frac_wtr_transp_down_sl) back to
+    !>      the corresponding in-code variable names stored in this temporary container,
+    !>   2. aggregate the carbon litter-formation outputs across all PFT tiles, and
+    !>   3. fill the remaining layer-wise modifiers and soil-property fields from the status file.
     !>
-    !> For the first implementation draft, allocate the currently known variables and populate them
-    !> with neutral defaults. The actual NetCDF reads will replace these placeholders once the final
-    !> status-file schema and variable names are agreed on.
+    !> Until that file I/O is added, keep explicit neutral defaults here so the code structure
+    !> already matches the agreed status-file schema without changing legacy behaviour.
+    sb_analytical_init_vars%frac_wtr_transp_down_sl      (:,:,:) = 0.0_wp
+    sb_analytical_init_vars%frac_w_lat_loss_sl           (:,:,:) = 0.0_wp
+    sb_analytical_init_vars%rtm_decomposition            (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rmm_decomposition            (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rtm_depolymerisation         (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rmm_depolymerisation         (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rtm_sorption                 (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rmm_sorption                 (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rtm_desorption               (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rmm_desorption               (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rtm_mic_uptake               (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rmm_mic_uptake               (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rtm_hsc                      (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%rmm_hsc                      (:,:,:) = 1.0_wp
+    sb_analytical_init_vars%bulk_dens_sl                 (:,:,:) = 0.0_wp
+    sb_analytical_init_vars%silt_sl                      (:,:,:) = 0.0_wp
+    sb_analytical_init_vars%clay_sl                      (:,:,:) = 0.0_wp
     sb_analytical_init_vars%formation_soluable_litter_c (:,:,:) = 0.0_wp
     sb_analytical_init_vars%formation_polymeric_litter_c(:,:,:) = 0.0_wp
     sb_analytical_init_vars%formation_woody_litter_c    (:,:,:) = 0.0_wp
@@ -967,18 +1070,132 @@ CONTAINS
 
   ! ======================================================================================================= !
   !> calculate analytical steady-state carbon pools for the simple soil model
+  !> The shared SB pool indices map to the simple-model notation as
+  !>   C_met  <-> ix_soluable_litter
+  !>   C_str  <-> ix_polymeric_litter
+  !>   C_fast <-> ix_microbial
+  !>   C_slow <-> ix_residue
+  !> while the other carbon pools remain unused in the simple_1d analytical initialisation.
+  !> The current C-only analytical draft uses
+  !>   C_wl*   = I_wl * tau_wl
+  !>   C_met*  = tau_met * (I_met + eta_met^wl * I_wl)
+  !>   C_str*  = tau_str * (I_str + eta_str^wl * I_wl)
+  !>   C_fast* = (tau_fast * eta_fast^l * A) / (1 - eta_fast^slow * eta_slow^fast)
+  !>   C_slow* = (tau_slow * eta_slow^fast * eta_fast^l * A) / (1 - eta_fast^slow * eta_slow^fast)
+  !>   A       = I_met + I_str + I_wl * (eta_met^wl + eta_str^wl)
+  !> with the same decomposition modifiers as the prognostic simple-model path, i.e.
+  !> every turnover time is divided by rtm_decomposition * rmm_decomposition.
+  !> using the simple-model routing constants from mo_sb_constants.
   !>
-  SUBROUTINE calc_analytical_ss_simple_sm
-    !> This hook will hold the equation group for the analytical steady-state solution of the
-    !> simple_1d soil model. The routine is kept separate from the file reader and from the
-    !> remaining SB initialisation logic so that the algebraic system can evolve independently.
-    CALL finish(TRIM(modname)//':calc_analytical_ss_simple_sm', &
-      & 'Analytical steady-state initialisation for simple_1d is reserved but not implemented yet.')
+  SUBROUTINE calc_analytical_ss_simple_sm( &
+    & nproma, &
+    & nsoil_w, &
+    & nblks, &
+    & num_sl_above_bedrock, &
+    & sb_pool_mt_domain)
+
+    USE mo_sb_constants, ONLY: tau_metabolic_litter, tau_structural_litter, tau_woody_litter, tau_fast, tau_slow, &
+      &                        frac_woody2dec_litter, frac_litter2fast_som, frac_fast2slow_som, frac_slow2fast_som, &
+      &                        fc_soluable_max
+
+    INTEGER,  INTENT(in)    :: nproma
+    INTEGER,  INTENT(in)    :: nsoil_w
+    INTEGER,  INTENT(in)    :: nblks
+    REAL(wp), INTENT(in)    :: num_sl_above_bedrock(:,:)
+    REAL(wp), INTENT(inout) :: sb_pool_mt_domain(:,:,:,:,:)
+
+    REAL(wp)                    :: input_met
+    REAL(wp)                    :: input_str
+    REAL(wp)                    :: input_wood
+    REAL(wp)                    :: eta_met_wood
+    REAL(wp)                    :: eta_str_wood
+    REAL(wp)                    :: litter_input_total
+    REAL(wp)                    :: denominator
+    REAL(wp)                    :: decomp_modifier
+    INTEGER                     :: iblk, is, ic
+
+    !> In the C-only analytical simple-model draft, the woody split into metabolic versus structural
+    !> litter cannot yet use the N-dependent partitioning from calc_litter_formation_from_woody_decay.
+    !> Use the simple-model carbon partition implied by fc_soluable_max together with the prescribed
+    !> woody-to-decomposable-litter fraction until the richer status-file inputs are added.
+    eta_met_wood = frac_woody2dec_litter * fc_soluable_max
+    eta_str_wood = frac_woody2dec_litter * (1._wp - fc_soluable_max)
+
+    sb_pool_mt_domain(ix_soluable_litter, ixC, :, :, :) = 0.0_wp
+    sb_pool_mt_domain(ix_polymeric_litter, ixC, :, :, :) = 0.0_wp
+    sb_pool_mt_domain(ix_woody_litter, ixC, :, :, :) = 0.0_wp
+    sb_pool_mt_domain(ix_microbial, ixC, :, :, :) = 0.0_wp
+    sb_pool_mt_domain(ix_residue, ixC, :, :, :) = 0.0_wp
+    sb_pool_mt_domain(ix_dom, ixC, :, :, :) = 0.0_wp
+    sb_pool_mt_domain(ix_dom_assoc, ixC, :, :, :) = 0.0_wp
+    sb_pool_mt_domain(ix_residue_assoc, ixC, :, :, :) = 0.0_wp
+
+    denominator = 1._wp - frac_fast2slow_som * frac_slow2fast_som
+    IF (denominator <= eps8) THEN
+      CALL finish(TRIM(modname)//':calc_analytical_ss_simple_sm', &
+        & 'Analytical simple_1d initialisation requires 1 - frac_fast2slow_som * frac_slow2fast_som > 0.')
+    END IF
+
+    DO iblk = 1,nblks
+      DO ic = 1,nproma
+        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
+          input_met  = MAX(0.0_wp, sb_analytical_init_vars%formation_soluable_litter_c(ic, is, iblk))
+          input_str  = MAX(0.0_wp, sb_analytical_init_vars%formation_polymeric_litter_c(ic, is, iblk))
+          input_wood = MAX(0.0_wp, sb_analytical_init_vars%formation_woody_litter_c(ic, is, iblk))
+          decomp_modifier = MAX(eps8, sb_analytical_init_vars%rtm_decomposition(ic, is, iblk) * &
+            &                         sb_analytical_init_vars%rmm_decomposition(ic, is, iblk))
+
+          !> C_wl* = I_wl * tau_wl / (rtm_decomposition * rmm_decomposition)
+          sb_pool_mt_domain(ix_woody_litter, ixC, ic, is, iblk) = input_wood * tau_woody_litter / decomp_modifier
+
+          !> C_met* = tau_met * (I_met + eta_met^wl * I_wl) / (rtm_decomposition * rmm_decomposition)
+          sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk) = &
+            & tau_metabolic_litter * (input_met + eta_met_wood * input_wood) / decomp_modifier
+
+          !> C_str* = tau_str * (I_str + eta_str^wl * I_wl) / (rtm_decomposition * rmm_decomposition)
+          sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) = &
+            & tau_structural_litter * (input_str + eta_str_wood * input_wood) / decomp_modifier
+
+          !> A = I_met + I_str + I_wl * (eta_met^wl + eta_str^wl)
+          litter_input_total = input_met + input_str + input_wood * (eta_met_wood + eta_str_wood)
+
+          !> C_fast* = (tau_fast * eta_fast^l * A) &
+          !>           / ((rtm_decomposition * rmm_decomposition) * (1 - eta_fast^slow * eta_slow^fast))
+          sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk) = &
+            & tau_fast * frac_litter2fast_som * litter_input_total / (decomp_modifier * denominator)
+
+          !> C_slow* = (tau_slow * eta_slow^fast * eta_fast^l * A) &
+          !>           / ((rtm_decomposition * rmm_decomposition) * (1 - eta_fast^slow * eta_slow^fast))
+          sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk) = &
+            & tau_slow * frac_slow2fast_som * frac_litter2fast_som * litter_input_total / (decomp_modifier * denominator)
+        END DO
+      END DO
+    END DO
   END SUBROUTINE calc_analytical_ss_simple_sm
 
   ! ======================================================================================================= !
   !> calculate analytical steady-state carbon pools for the Jena Soil Model
-  !>
+  !> The current C-only analytical draft uses
+  !>   C_wl*   = I_wl tau_wl
+  !>   C_sol*  = I_sol tau_sol
+  !>   C_D*    = (k_B * K_m,U) / (CUE * vmax_U - k_B)
+  !> and the layer-wise DOC transport closure
+  !>   C_B,sl*  = CUE_sl / (k_B * (1 - CUE_sl)) * C_eff_input_sl
+  !>   C_eff_input_sl = (eta_DOM^sol * I_sol,sl + I_poly,sl + eta_poly^wl * I_wl,sl
+  !>                - lambda_sl * C_D,sl* + lambda_(sl-1) * C_D,sl-1*)
+  !> together with the associated-pool and sorption-capacity closure
+  !>   C_aDOM* = ((k_ads,D * C_D*) / k_des,D) * Qmax*
+  !>             / (1 + (k_ads,R / k_des,R) * C_res* + (k_ads,D / k_des,D) * C_D*)
+  !>   C_aRes* = ((k_ads,R * C_res*) / k_des,R) * Qmax*
+  !>             / (1 + (k_ads,R / k_des,R) * C_res* + (k_ads,D / k_des,D) * C_D*)
+  !>   Qmax*   = (A * (1 - C0* / B)) / (1 + A * F / B)
+  !>   C0*     = C_sol* + C_poly* + C_D* + C_B* + C_res*
+  !>   A       = qmax_min * rho_bulk
+  !>   B       = f_C^SOM * rho_org
+  !>   F       = (r_D * C_D* + r_R * C_res*) / (1 + r_D * C_D* + r_R * C_res*)
+  !> before solving the polymeric-litter and residue pools from the enzyme-allocation closure.
+  !>   C_poly*=(I_poly + eta_poly^wl * I_wl)/(vmax_poly * enzyme_frac_poly * C_B* )(Km_depoly + enzyme_frac_poly * C_B*)
+  !>   C_res*=((1-f_soluable_residue) * k_B * C_B*)/(vmax_res * enzyme_frac_residue * C_B*)(Km_depoly + enzyme_frac_residue * C_B*)
   SUBROUTINE calc_analytical_ss_jsm( &
     & nproma, &
     & nsoil_w, &
@@ -1044,7 +1261,7 @@ CONTAINS
     REAL(wp)                    :: input_sol
     REAL(wp)                    :: input_poly
     REAL(wp)                    :: input_wood
-    REAL(wp)                    :: uptake_input_c
+    REAL(wp)                    :: eff_input_c
     REAL(wp)                    :: enzyme_depoly
     REAL(wp)                    :: d_litter
     REAL(wp)                    :: d_residue
@@ -1064,6 +1281,8 @@ CONTAINS
     REAL(wp)                    :: ratio_res
     REAL(wp)                    :: qmax_f
     REAL(wp)                    :: sorption_denom
+    REAL(wp)                    :: lambda_doc
+    REAL(wp)                    :: lambda_doc_above
     REAL(wp)                    :: rtm_dep_eff
     REAL(wp)                    :: rmm_dep_eff
     REAL(wp)                    :: rtm_upt_eff
@@ -1074,9 +1293,14 @@ CONTAINS
     REAL(wp)                    :: rmm_desorb_eff
     REAL(wp)                    :: rtm_hsc_eff
     REAL(wp)                    :: rmm_hsc_eff
+    REAL(wp)                    :: bulk_dens_local
+    REAL(wp)                    :: silt_local
+    REAL(wp)                    :: clay_local
     INTEGER                     :: iblk, is, ic
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_analytical_ss_jsm'
-
+    !> init out var
+    !> The current analytical steady-state solution only solves for the carbon pools, so we can safely   
+    !> initialise the other elements with zeros here. The actual NetCDF reader will need to fill
     sb_pool_mt_domain(ix_soluable_litter, ixC, :, :, :) = 0.0_wp
     sb_pool_mt_domain(ix_polymeric_litter, ixC, :, :, :) = 0.0_wp
     sb_pool_mt_domain(ix_woody_litter, ixC, :, :, :) = 0.0_wp
@@ -1100,19 +1324,47 @@ CONTAINS
           input_poly = MAX(0.0_wp, sb_analytical_init_vars%formation_polymeric_litter_c(ic, is, iblk))
           input_wood = MAX(0.0_wp, sb_analytical_init_vars%formation_woody_litter_c(ic, is, iblk))
 
-          !> The SB rate modifiers are diagnosed later by the runtime task sequence and are initialised
-          !> with zeros in memory. During analytical initialisation, treat not-yet-diagnosed modifiers
-          !> as neutral factors of one so the steady-state equations can still be evaluated.
-          rtm_dep_eff    = MERGE(rtm_depolymerisation(ic, is, iblk), 1.0_wp, rtm_depolymerisation(ic, is, iblk) > eps8)
-          rmm_dep_eff    = MERGE(rmm_depolymerisation(ic, is, iblk), 1.0_wp, rmm_depolymerisation(ic, is, iblk) > eps8)
-          rtm_upt_eff    = MERGE(rtm_mic_uptake(ic, is, iblk),      1.0_wp, rtm_mic_uptake(ic, is, iblk)      > eps8)
-          rmm_upt_eff    = MERGE(rmm_mic_uptake(ic, is, iblk),      1.0_wp, rmm_mic_uptake(ic, is, iblk)      > eps8)
-          rtm_sorb_eff   = MERGE(rtm_sorption(ic, is, iblk),        1.0_wp, rtm_sorption(ic, is, iblk)        > eps8)
-          rmm_sorb_eff   = MERGE(rmm_sorption(ic, is, iblk),        1.0_wp, rmm_sorption(ic, is, iblk)        > eps8)
-          rtm_desorb_eff = MERGE(rtm_desorption(ic, is, iblk),      1.0_wp, rtm_desorption(ic, is, iblk)      > eps8)
-          rmm_desorb_eff = MERGE(rmm_desorption(ic, is, iblk),      1.0_wp, rmm_desorption(ic, is, iblk)      > eps8)
-          rtm_hsc_eff    = MERGE(rtm_hsc(ic, is, iblk),             1.0_wp, rtm_hsc(ic, is, iblk)             > eps8)
-          rmm_hsc_eff    = MERGE(rmm_hsc(ic, is, iblk),             1.0_wp, rmm_hsc(ic, is, iblk)             > eps8)
+          !> Prefer the modifier and soil-property fields carried by the analytical status file.
+          !> Until the dedicated NetCDF reader is implemented, these temporary arrays hold neutral
+          !> defaults and we safely fall back to the currently available runtime fields.
+          bulk_dens_local = MERGE(sb_analytical_init_vars%bulk_dens_sl(ic, is, iblk), &
+            &                     bulk_dens_sl(ic, is, iblk), sb_analytical_init_vars%bulk_dens_sl(ic, is, iblk) > eps8)
+          silt_local = MERGE(sb_analytical_init_vars%silt_sl(ic, is, iblk), &
+            &                silt_sl(ic, is, iblk), sb_analytical_init_vars%silt_sl(ic, is, iblk) > eps8)
+          clay_local = MERGE(sb_analytical_init_vars%clay_sl(ic, is, iblk), &
+            &                clay_sl(ic, is, iblk), sb_analytical_init_vars%clay_sl(ic, is, iblk) > eps8)
+
+          rtm_dep_eff    = MERGE(sb_analytical_init_vars%rtm_depolymerisation(ic, is, iblk), &
+            &                    rtm_depolymerisation(ic, is, iblk), sb_analytical_init_vars%rtm_depolymerisation(ic, is, iblk) > eps8)
+          rmm_dep_eff    = MERGE(sb_analytical_init_vars%rmm_depolymerisation(ic, is, iblk), &
+            &                    rmm_depolymerisation(ic, is, iblk), sb_analytical_init_vars%rmm_depolymerisation(ic, is, iblk) > eps8)
+          rtm_upt_eff    = MERGE(sb_analytical_init_vars%rtm_mic_uptake(ic, is, iblk), &
+            &                    rtm_mic_uptake(ic, is, iblk), sb_analytical_init_vars%rtm_mic_uptake(ic, is, iblk) > eps8)
+          rmm_upt_eff    = MERGE(sb_analytical_init_vars%rmm_mic_uptake(ic, is, iblk), &
+            &                    rmm_mic_uptake(ic, is, iblk), sb_analytical_init_vars%rmm_mic_uptake(ic, is, iblk) > eps8)
+          rtm_sorb_eff   = MERGE(sb_analytical_init_vars%rtm_sorption(ic, is, iblk), &
+            &                    rtm_sorption(ic, is, iblk), sb_analytical_init_vars%rtm_sorption(ic, is, iblk) > eps8)
+          rmm_sorb_eff   = MERGE(sb_analytical_init_vars%rmm_sorption(ic, is, iblk), &
+            &                    rmm_sorption(ic, is, iblk), sb_analytical_init_vars%rmm_sorption(ic, is, iblk) > eps8)
+          rtm_desorb_eff = MERGE(sb_analytical_init_vars%rtm_desorption(ic, is, iblk), &
+            &                    rtm_desorption(ic, is, iblk), sb_analytical_init_vars%rtm_desorption(ic, is, iblk) > eps8)
+          rmm_desorb_eff = MERGE(sb_analytical_init_vars%rmm_desorption(ic, is, iblk), &
+            &                    rmm_desorption(ic, is, iblk), sb_analytical_init_vars%rmm_desorption(ic, is, iblk) > eps8)
+          rtm_hsc_eff    = MERGE(sb_analytical_init_vars%rtm_hsc(ic, is, iblk), &
+            &                    rtm_hsc(ic, is, iblk), sb_analytical_init_vars%rtm_hsc(ic, is, iblk) > eps8)
+          rmm_hsc_eff    = MERGE(sb_analytical_init_vars%rmm_hsc(ic, is, iblk), &
+            &                    rmm_hsc(ic, is, iblk), sb_analytical_init_vars%rmm_hsc(ic, is, iblk) > eps8)
+
+          rtm_dep_eff    = MERGE(rtm_dep_eff,    1.0_wp, rtm_dep_eff    > eps8)
+          rmm_dep_eff    = MERGE(rmm_dep_eff,    1.0_wp, rmm_dep_eff    > eps8)
+          rtm_upt_eff    = MERGE(rtm_upt_eff,    1.0_wp, rtm_upt_eff    > eps8)
+          rmm_upt_eff    = MERGE(rmm_upt_eff,    1.0_wp, rmm_upt_eff    > eps8)
+          rtm_sorb_eff   = MERGE(rtm_sorb_eff,   1.0_wp, rtm_sorb_eff   > eps8)
+          rmm_sorb_eff   = MERGE(rmm_sorb_eff,   1.0_wp, rmm_sorb_eff   > eps8)
+          rtm_desorb_eff = MERGE(rtm_desorb_eff, 1.0_wp, rtm_desorb_eff > eps8)
+          rmm_desorb_eff = MERGE(rmm_desorb_eff, 1.0_wp, rmm_desorb_eff > eps8)
+          rtm_hsc_eff    = MERGE(rtm_hsc_eff,    1.0_wp, rtm_hsc_eff    > eps8)
+          rmm_hsc_eff    = MERGE(rmm_hsc_eff,    1.0_wp, rmm_hsc_eff    > eps8)
 
           km_uptake_eff = km_mic_uptake * rtm_hsc_eff * rmm_hsc_eff
           vmax_uptake_eff = vmax_mic_uptake * rtm_upt_eff * rmm_upt_eff
@@ -1120,23 +1372,39 @@ CONTAINS
           vmax_poly_eff = vmax_depolymerisation_litter * rtm_dep_eff * rmm_dep_eff
           vmax_res_eff = vmax_depolymerisation_residue * rtm_dep_eff * rmm_dep_eff
 
+          !> C_wl*   = I_wl * tau_wl
           sb_pool_mt_domain(ix_woody_litter, ixC, ic, is, iblk)    = input_wood * tau_woody_litter
+          !> C_sol*  = I_sol * tau_sol
           sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk) = input_sol * tau_soluable_litter
-
-          uptake_input_c = fc_soluable2dom * input_sol + input_poly + fc_woody2polymeric * input_wood
-          IF (uptake_input_c > eps8) THEN
-            sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk) = microbial_cue_max / &
-              & (k_mort_microbial * (1._wp - microbial_cue_max)) * uptake_input_c
-          ELSE
-            sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk) = 0.0_wp
-          END IF
 
           denominator = microbial_cue_max * vmax_uptake_eff - k_mort_microbial
           IF (denominator <= eps8) THEN
             CALL finish(TRIM(routine), &
               & 'Analytical JSM initialisation requires modified microbial uptake to exceed microbial mortality.')
           END IF
+          !> C_D*    = (k_B * K_m,U) / (CUE * vmax_U - k_B)
           sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk) = k_mort_microbial * km_uptake_eff / denominator
+
+          lambda_doc = MAX(0.0_wp, sb_analytical_init_vars%frac_wtr_transp_down_sl(ic, is, iblk))
+          IF (is > 1) THEN
+            lambda_doc_above = MAX(0.0_wp, sb_analytical_init_vars%frac_wtr_transp_down_sl(ic, is - 1, iblk))
+          ELSE
+            lambda_doc_above = 0.0_wp
+          END IF
+
+          eff_input_c = fc_soluable2dom * input_sol + input_poly + fc_woody2polymeric * input_wood &
+            &            - lambda_doc * sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk)
+          IF (is > 1) THEN
+            eff_input_c = eff_input_c + lambda_doc_above * sb_pool_mt_domain(ix_dom, ixC, ic, is - 1, iblk)
+          END IF
+
+          !> C_B,sl*  = CUE / (k_B * (1 - CUE)) * C_eff_input_sl
+          IF (eff_input_c > eps8) THEN
+            sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk) = microbial_cue_max / &
+              & (k_mort_microbial * (1._wp - microbial_cue_max)) * eff_input_c
+          ELSE
+            sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk) = 0.0_wp
+          END IF
 
           enzyme_frac_AP(ic, is, iblk) = MIN(MAX(sb_analytical_init_vars%enzyme_frac_ap(ic, is, iblk), &
             & min_enzyme_fraction), max_enzyme_fraction)
@@ -1166,6 +1434,7 @@ CONTAINS
           enzyme_frac_poly_n(ic, is, iblk)  = alpha_poly
           enzyme_frac_poly_p(ic, is, iblk)  = alpha_poly
 
+          !> C_poly*=(I_poly + eta_poly^wl * I_wl)/(vmax_poly * enzyme_frac_poly * C_B* )(Km_depoly + enzyme_frac_poly * C_B*)
           IF (d_litter > eps8 .AND. alpha_poly * enzyme_depoly > eps8) THEN
             sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) = d_litter * &
               & (km_depoly_eff + alpha_poly * enzyme_depoly) / &
@@ -1174,6 +1443,7 @@ CONTAINS
             sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) = 0.0_wp
           END IF
 
+          !> C_res*=((1-f_soluable_residue) * k_B * C_B*)/(vmax_res * enzyme_frac_residue * C_B*)(Km_depoly + enzyme_frac_residue * C_B*)
           IF (d_residue > eps8 .AND. alpha_residue * enzyme_depoly > eps8) THEN
             sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk) = d_residue * &
               & (km_depoly_eff + alpha_residue * enzyme_depoly) / &
@@ -1184,13 +1454,21 @@ CONTAINS
 
           !> Resolve the mineral-associated carbon pools from the analytical sorption-desorption
           !> equilibrium using the same temperature and moisture modifiers as the prognostic JSM path.
-          qmax_org_min_local = calc_qmax_texture(qmax_org_fine_particle(ic, is, iblk), silt_sl(ic, is, iblk), &
-            &                                    clay_sl(ic, is, iblk))
+          !>   C_aDOM* = ((k_ads,D * C_D*) / k_des,D) * Qmax*
+          !>             / (1 + (k_ads,R / k_des,R) * C_res* + (k_ads,D / k_des,D) * C_D*)
+          !>   C_aRes* = ((k_ads,R * C_res*) / k_des,R) * Qmax*
+          !>             / (1 + (k_ads,R / k_des,R) * C_res* + (k_ads,D / k_des,D) * C_D*)
+          !>   Qmax*   = (A * (1 - C0* / B)) / (1 + A * F / B)
+          !>   C0*     = C_sol* + C_poly* + C_D* + C_B* + C_res*
+          !>   A       = qmax_min * rho_bulk
+          !>   B       = f_C^SOM * rho_org
+          !>   F       = (r_D * C_D* + r_R * C_res*) / (1 + r_D * C_D* + r_R * C_res*)
+          qmax_org_min_local = calc_qmax_texture(qmax_org_fine_particle(ic, is, iblk), silt_local, clay_local)
           qmax_org_min_local = qmax_org_min_local * EXP(-is / (INT(num_sl_above_bedrock(ic, iblk)) * k_sl_conv_moc_corr)) * 0.5_wp
           IF (soil_lay_depth_ubound_sl(ic, is, iblk) > z_deep_soil_moc_corr) THEN
             qmax_org_min_local = qmax_org_min_local * MAX(0.0001_wp, 10._wp**(-soil_lay_depth_ubound_sl(ic, is, iblk)))
           END IF
-          qmax_a = qmax_org_min_local * bulk_dens_sl(ic, is, iblk)
+          qmax_a = qmax_org_min_local * bulk_dens_local
           qmax_b = carbon_per_dryweight_SOM * rho_bulk_org * 1000._wp / molar_mass_C
           c0_star = sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk) + &
             &       sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) + &
@@ -1457,7 +1735,12 @@ CONTAINS
           &   sb_pool_total_som_at_ref_depth_init / molar_mass_C / soil_lay_width_sl(:,1,:)
       END IF
     CASE('analytical_ss')
-      CALL calc_analytical_ss_simple_sm()
+      CALL calc_analytical_ss_simple_sm( &
+        & nproma, &
+        & nsoil_w, &
+        & nblks, &
+        & num_sl_above_bedrock, &
+        & sb_pool_mt_domain)
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Invalid setting of sb_init_scheme (legacy / analytical_ss).')
     END SELECT
