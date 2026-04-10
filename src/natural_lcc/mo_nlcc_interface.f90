@@ -39,7 +39,6 @@ MODULE mo_nlcc_interface
   dsl4jsb_Use_config(FAGE_)
 
   ! Use of process memories
-!! TR$  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
@@ -229,7 +228,6 @@ CONTAINS
     ! Define masks for different vegetation types
     no_children = tile%Get_no_of_children()
     land_cover_class => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%land_cover_class)
-    !TODO: only 1d vector for is_woody etc
     ALLOCATE(is_woody(no_children))
     ALLOCATE(is_grass(no_children))
     ALLOCATE(is_pasture(no_children))
@@ -239,11 +237,11 @@ CONTAINS
     ALLOCATE(cover_fract_pot_previous_year(nc,no_children))
     ALLOCATE(fuel(nc))
     ALLOCATE(fract_fpc_max(nc,no_children))
+
     !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(is_woody, is_grass, is_pasture, is_crop, is_dynamic) &
     !$ACC   CREATE(cover_fract_sum, cover_fract_pot_previous_year, fuel, fract_fpc_max)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO itile = 1, no_children
       ! Point to the correct PFT
       IF (itile == 1) THEN
@@ -266,7 +264,6 @@ CONTAINS
           & dsl4jsb_Lctlib_param_tile(LandcoverClass, ptr_tile) == 4 .OR. &
           & dsl4jsb_Lctlib_param_tile(LandcoverClass, ptr_tile) == 5)       is_dynamic(itile) = .TRUE.
     END DO
-    !$ACC END PARALLEL LOOP
 
     ! import bioclimatic limits from lct library
     bclimit_min_cold_mmtemp => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%bclimit_min_cold_mmtemp)
@@ -327,7 +324,6 @@ CONTAINS
     ! Import cover fractions from grid
     grid => Get_grid(model%grid_id)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO itile = 1, no_children
       ! Point to the correct PFT
       IF (itile == 1) THEN
@@ -337,13 +333,12 @@ CONTAINS
       END IF
       ! Get cover fractions
       CALL ptr_tile%Get_fraction(ics, ice, iblk, fract=cover_fract(:,itile))
-      !$ACC LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         cover_fract_sum(ic) = cover_fract_sum(ic) + cover_fract(ic,itile)
       END DO
-      !$ACC END LOOP
     END DO ! itile
-    !$ACC END PARALLEL LOOP
+    ! Type-bound procedure Get_fraction cannot be called in parallel region
+    !$ACC UPDATE DEVICE(cover_fract, cover_fract_sum) ASYNC(acc_stream)
 
     ! Do the scaling
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
@@ -356,15 +351,12 @@ CONTAINS
 
     ! Initialize act_fpc, bare fpc, and pot_fpc
     IF (lstart) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
-      DO itile = 1, no_children
-        DO ic = 1, nc
-         act_fpc(ic,itile) = cover_fract(ic,itile)
-         bare_fpc(ic) = 0._wp
-         ! TODO: replace no_children by npft, no need to pass as argument
-         CALL scale_fpc(routine, nc, iblk, no_children, is_dynamic, act_fpc, bare_fpc)
-         pot_fpc(ic,itile) = act_fpc(ic,itile) !!$ TR to be improved (scale, non-woodies = 0, etc.)
-        END DO
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        act_fpc(ic,:) = cover_fract(ic,:)
+        bare_fpc(ic) = 0._wp
+        CALL scale_fpc(no_children, is_dynamic(:), act_fpc(ic,:), bare_fpc(ic))
+        pot_fpc(ic,:) = act_fpc(ic,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
       END DO
       !$ACC END PARALLEL LOOP
     ENDIF
@@ -372,21 +364,29 @@ CONTAINS
     accelerate_nlcc    = dsl4jsb_Config(NLCC_)%accelerate_nlcc
     init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
 
-    CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
-                      seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
-                      min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20, &
-                      gdd_sum_year, gdd_prev_year)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air(ic), &
+        &               seconds_day, seconds_month, temp_sum_day(ic), temp_sum_month(ic), &
+        &               min_mmtemp_of_yr(ic), max_mmtemp_of_yr(ic), min_mmtemp20(ic), max_mmtemp20(ic), &
+        &               gdd_sum_year(ic), gdd_prev_year(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
 
     ! Annual calculations
     IF (new_year) THEN
       DO itile = 1,no_children
-         CALL bioclim_limits (is_dynamic(itile), bclimit_min_cold_mmtemp(:,itile), bclimit_max_cold_mmtemp(:,itile),    &
-                              bclimit_max_warm_mmtemp(:,itile), bclimit_min_temprange(:,itile), bclimit_min_gdd(:,itile), &
-                              min_mmtemp20(:), max_mmtemp20(:), gdd_prev_year(:), bio_exist(:,itile))
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic = 1, nc
+          CALL bioclim_limits (is_dynamic(itile), bclimit_min_cold_mmtemp(ic,itile), bclimit_max_cold_mmtemp(ic,itile),    &
+            &                  bclimit_max_warm_mmtemp(ic,itile), bclimit_min_temprange(ic,itile), bclimit_min_gdd(ic,itile), &
+            &                  min_mmtemp20(ic), max_mmtemp20(ic), gdd_prev_year(ic), bio_exist(ic,itile))
+        END DO
+        !$ACC END PARALLEL LOOP
       END DO
       IF (.NOT. lstart) THEN
-         CALL potential_tree_fpc (nc, no_children, is_dynamic(:), is_woody(:), bio_exist(:,:), &
-                                  NPP_mean_5year(:,:), act_fpc(:,:), pot_fpc(:,:))
+        CALL potential_tree_fpc (nc, no_children, is_dynamic(:), is_woody(:), bio_exist(:,:), &
+          &                      NPP_mean_5year(:,:), act_fpc(:,:), pot_fpc(:,:))
       ENDIF
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO itile = 1, no_children
@@ -396,30 +396,29 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
       CALL fpc_to_cover_fract_pot(nc, no_children, is_dynamic(:), is_woody(:), &
-                                   act_fpc(:,:), bare_fpc(:), cover_fract_pot(:,:))
+        &                         act_fpc(:,:), bare_fpc(:), cover_fract_pot(:,:))
       IF (.NOT. lstart) THEN
         ! new cover fractions
         CALL cover_fract_pot_to_cover_fract(nc, no_children, is_dynamic(:), is_woody(:), is_pasture(:), is_crop(:), &
-                                            cover_fract_pot(:,:), cover_fract_pot_previous_year(:,:), cover_fract(:,:))
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+          &                                 cover_fract_pot(:,:), cover_fract_pot_previous_year(:,:), cover_fract(:,:))
+
         DO itile = 1, no_children
           ! Point to the correct pft
           IF (itile == 1) THEN
-             ptr_tile => tile%Get_first_child_tile()
+            ptr_tile => tile%Get_first_child_tile()
           ELSE
-             ptr_tile => ptr_tile%Get_next_sibling_tile()
+            ptr_tile => ptr_tile%Get_next_sibling_tile()
           END IF
           ! Set cover fractions - and rescale from veg tile to the box tile fraction
           CALL ptr_tile%Set_fraction(ics, ice, iblk, fract=cover_fract(:,itile) * cover_fract_sum(:))
         END DO ! itile
-        !$ACC END PARALLEL LOOP
 
         ! Calculate desert fraction
         CALL desert_fraction(nc, no_children, init_running_means, accelerate_nlcc,   &
-                             is_woody(:), is_dynamic(:),                             &
-                             act_fpc(:,:), bare_fpc(:),                              &
-                             sla(:,:), max_green_bio(:,:),                           &
-                             sum_green_bio_memory(:), desert_fpc(:))
+          &                  is_woody(:), is_dynamic(:),                             &
+          &                  act_fpc(:,:), bare_fpc(:),                              &
+          &                  sla(:,:), max_green_bio(:,:),                           &
+          &                  sum_green_bio_memory(:), desert_fpc(:))
 
         ! Calculate fract_fpc_max and hand it back to child tiles (pft tiles)
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
@@ -435,9 +434,9 @@ CONTAINS
 
     ! Daily calculations
     IF (new_day) THEN
-       CALL fpc_daily(nc, no_children, accelerate_nlcc, is_woody(:), is_dynamic(:), tau_c_woods(:,:),           &
-                      NPP_mean_5year(:,:), bio_exist(:,:), burned_fract(:,:), damaged_fract(:,:), pot_fpc(:,:), &
-                      act_fpc(:,:), bare_fpc(:), fuel(:))
+      CALL fpc_daily(nc, no_children, accelerate_nlcc, is_woody(:), is_dynamic(:), tau_c_woods(:,:),           &
+        &            NPP_mean_5year(:,:), bio_exist(:,:), burned_fract(:,:), damaged_fract(:,:), pot_fpc(:,:), &
+        &            act_fpc(:,:), bare_fpc(:), fuel(:))
     ENDIF
 
     !$ACC END DATA

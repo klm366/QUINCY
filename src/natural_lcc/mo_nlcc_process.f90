@@ -14,7 +14,7 @@
 MODULE mo_nlcc_process
 #ifndef __NO_JSBACH__
 
-  USE mo_jsb_control, ONLY: debug_on
+  USE mo_jsb_control, ONLY: debug_on, acc_stream
   USE mo_kind,        ONLY: wp
   USE mo_exception,   ONLY: message, finish, message_text
   USE mo_jsb_physical_constants, ONLY: tmelt
@@ -46,7 +46,7 @@ CONTAINS
   !!
 
 #ifndef _OPENACC
-  ELEMENTAL PURE &
+  ELEMENTAL &
 #endif
   SUBROUTINE calc_climbuf (lstart, init_running_means, new_day, new_month, new_year, delta_time, t_air, &
     &                      seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
@@ -119,7 +119,7 @@ CONTAINS
 ! --- bioclim_limits ---------------------------------------------------------------------------------------
 
 #ifndef _OPENACC
-  ELEMENTAL PURE &
+  ELEMENTAL &
 #endif
   SUBROUTINE bioclim_limits (is_dynamic, lct_tcmin, lct_tcmax, lct_twmax, lct_min_temprange, lct_gddmin, &
     &                        min_mmtemp20, max_mmtemp20, gdd_prev_year, bio_exist)
@@ -296,7 +296,7 @@ CONTAINS
 
     CALL scale_cover_fract (nc, ntiles, is_dynamic(:), cover_fract_pot(:,:))
 
-    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
+#ifndef _OPENACC
     DO ic = 1, nc
       IF (  SUM(cover_fract_pot(ic,:)) > 1._wp + REAL(ntiles,wp)*EPSILON(1._wp) .OR. &
           & SUM(cover_fract_pot(ic,:)) < 1._wp - REAL(ntiles,wp)*EPSILON(1._wp)) THEN
@@ -304,10 +304,8 @@ CONTAINS
         CALL finish (routine, message_text)
       END IF
     END DO
-    !$ACC END PARALLEL LOOP
 
     DO itile = 1, ntiles
-      !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
       DO ic = 1, nc
         IF (is_dynamic(itile) .AND. cover_fract_pot(ic,itile) < fract_small) THEN
           WRITE (message_text,*) 'cover_fract_pot too small: ', cover_fract_pot(ic,itile), &
@@ -315,8 +313,8 @@ CONTAINS
           CALL finish (routine, message_text)
         END IF
       END DO
-      !$ACC END PARALLEL LOOP
     END DO
+#endif
 
     !$ACC END DATA
 
@@ -563,8 +561,8 @@ CONTAINS
 
     CALL scale_cover_fract(nc, ntiles, is_dynamic(:), cover_fract(:,:))
 
+#ifndef _OPENACC
     !-- Stop simulation, if sum of cover fractions is not equal to 1 or a cover fraction is smaller than fract_small
-    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
     DO ic = 1, nc
       IF (  SUM(cover_fract(ic,:)) > 1._wp + REAL(ntiles,wp)*EPSILON(1._wp) .OR. &
           & SUM(cover_fract(ic,:)) < 1._wp - REAL(ntiles,wp)*EPSILON(1._wp)) THEN
@@ -572,19 +570,17 @@ CONTAINS
         CALL finish (routine, message_text)
       END IF
     END DO
-    !$ACC END PARALLEL LOOP
     DO itile = 1, ntiles
-      !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
       DO ic = 1, nc
         IF (cover_fract(ic,itile) < fract_small) THEN
           WRITE (message_text,*) 'cover_fract too small: ', cover_fract(ic,itile), ' at ic: ', ic
           CALL finish (routine, message_text)
         END IF
       END DO
-      !$ACC END PARALLEL LOOP
     END DO
+#endif
 
-    !&ACC END DATA
+    !$ACC END DATA
 
   END SUBROUTINE cover_fract_pot_to_cover_fract
 
@@ -926,162 +922,92 @@ CONTAINS
   END SUBROUTINE fpc_daily
 
 ! --- scale_fpc ---------------------------------------------------------------------------
-
-  SUBROUTINE scale_fpc (calling_routine, nc, iblk, ntiles, is_dynamic, act_fpc, bare_fpc)
+  SUBROUTINE scale_fpc (ntiles, is_dynamic, act_fpc, bare_fpc)
 !
 ! Rescaling of fractional plant coverage to assure that
 !  - the sum of act_fpc and bare soil is exactly one
 !  - all tiles have a minimum vegetated fraction
 !
 ! input
-    CHARACTER, INTENT(in) :: calling_routine ! name of the calling routine
-    INTEGER,  INTENT(in)  :: nc              ! vector length
-    INTEGER,  INTENT(in)  :: iblk            ! number of block
     INTEGER,  INTENT(in)  :: ntiles          ! number of tiles (different land cover type mosaics per gridcell)
     LOGICAL,  INTENT(in)  :: is_dynamic(:)   ! PFTs taking part in competition
 
 ! inout
-    REAL(wp), INTENT(inout) :: act_fpc(:,:) ! actual fpc in nlcc
-    REAL(wp), INTENT(inout) :: bare_fpc(:)  ! fraction of bare ground
+    REAL(wp), INTENT(inout) :: act_fpc(:)   ! actual fpc in nlcc
+    REAL(wp), INTENT(inout) :: bare_fpc     ! fraction of bare ground
 
 ! local variables
     LOGICAL   :: just_return
     INTEGER   :: ic, itile      ! indices
-    INTEGER   :: nsparce(nc)    ! number of PFTs with less then fract_small vegetation
-    REAL(wp)  :: sum_fpc(nc)    ! sum of the different cover fractions
-    REAL(wp)  :: excess(nc)     ! extra fraction, that needs to be redistibuted
-    REAL(wp)  :: scalable(nc)   ! sum of fraction of tiles that can be scaled
-    REAL(wp)  :: rescale(nc)    ! factor to rescale fraction of tiles
+    INTEGER   :: nsparce        ! number of PFTs with less then fract_small vegetation
+    REAL(wp)  :: sum_fpc        ! sum of the different cover fractions
+    REAL(wp)  :: excess         ! extra fraction, that needs to be redistibuted
+    REAL(wp)  :: scalable       ! sum of fraction of tiles that can be scaled
+    REAL(wp)  :: rescale        ! factor to rescale fraction of tiles
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':scale_fpc'
 
-    !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(nsparce, sum_fpc, excess, scalable, rescale)
+    !$ACC ROUTINE SEQ
 
     ! test, if scaling is necessary
     just_return = .TRUE.
 
-    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
-    DO ic = 1, nc
-      sum_fpc(ic) = bare_fpc(ic)
-    END DO
-    !$ACC END PARALLEL LOOP
+    sum_fpc = bare_fpc
     DO itile = 1, ntiles
-      !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
-      DO ic = 1, nc
-        sum_fpc(ic) = sum_fpc(ic) + act_fpc(ic,itile)
-        IF (is_dynamic(itile) .AND. act_fpc(ic,itile) < fract_small) just_return = .FALSE.
-      END DO
-      !$ACC END PARALLEL LOOP
+      sum_fpc = sum_fpc + act_fpc(itile)
+      IF (is_dynamic(itile) .AND. act_fpc(itile) < fract_small) just_return = .FALSE.
     END DO
-    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
-    DO ic = 1, nc
-      IF (ABS(1._wp - sum_fpc(ic)) > 3._wp * EPSILON(1._wp)) just_return = .FALSE.
-    END DO
-    !$ACC END PARALLEL LOOP
+    IF (ABS(1._wp - sum_fpc) > 3._wp * EPSILON(1._wp)) just_return = .FALSE.
 
     IF (just_return) RETURN
 
-    IF (debug_on() .AND. iblk == 1) THEN
-      WRITE (message_text,*) 'Attention: act_fpc is rescaled; called from ', calling_routine
-      CALL message(routine, message_text)
-    END IF
-
     ! sum act_fpc and bare_fpc
-    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
-    DO ic = 1, nc
-      sum_fpc(ic) = bare_fpc(ic)
-      nsparce(ic) = 0
-    END DO
-    !$ACC END PARALLEL LOOP
+    sum_fpc = bare_fpc
+    nsparce = 0
 
     DO itile = 1, ntiles
-      IF (is_dynamic(itile)) THEN
-        !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
-        DO ic = 1, nc
-          IF (act_fpc(ic,itile) > fract_small) THEN
-            sum_fpc(ic) = sum_fpc(ic) + act_fpc(ic,itile)
-          ELSE
-            nsparce(ic) = nsparce(ic) + 1
-            act_fpc(ic,itile) = fract_small
-          END IF
-        END DO
-        !$ACC END PARALLEL LOOP
+      IF (is_dynamic(itile) .AND. act_fpc(itile) > fract_small) THEN
+        sum_fpc = sum_fpc + act_fpc(itile)
+      ELSE IF (is_dynamic(itile)) THEN
+        nsparce = nsparce + 1
+        act_fpc(itile) = fract_small
       ELSE
-        !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
-        DO ic = 1, nc
-          act_fpc(ic,itile) = 0._wp
-        END DO
-        !$ACC END PARALLEL LOOP
+        act_fpc(itile) = 0._wp
       END IF
     END DO
 
-    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
-    DO ic = 1, nc
-      sum_fpc(ic) = sum_fpc(ic) + REAL(nsparce(ic),wp) * fract_small
-    END DO
-    !$ACC END PARALLEL LOOP
+    sum_fpc = sum_fpc + REAL(nsparce,wp) * fract_small
 
     ! scaling of bare_fpc
-    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
-    DO ic = 1, nc
-      IF (sum_fpc(ic) <= 1._wp - EPSILON(1._wp)) THEN
-        bare_fpc(ic) = bare_fpc(ic) + (1._wp - sum_fpc(ic))
-      ELSE IF (sum_fpc(ic) >= 1._wp + EPSILON(1._wp)) THEN
-        bare_fpc(ic) = bare_fpc(ic) / sum_fpc(ic)
-      END IF
-    END DO
-    !$ACC END PARALLEL LOOP
+    IF (sum_fpc <= 1._wp - EPSILON(1._wp)) THEN
+      bare_fpc = bare_fpc + (1._wp - sum_fpc)
+    ELSE IF (sum_fpc >= 1._wp + EPSILON(1._wp)) THEN
+      bare_fpc = bare_fpc / sum_fpc
+    END IF
 
     ! scaling of act_fpc
     DO itile = 1, ntiles
       IF (is_dynamic(itile)) THEN
-        !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
-        DO ic = 1, nc
-          excess(ic) = 0._wp
-          IF (sum_fpc(ic) >= 1._wp + EPSILON(1._wp) .AND. act_fpc(ic,itile) > fract_small * sum_fpc(ic)) THEN
-            act_fpc(ic,itile) = act_fpc(ic,itile) / sum_fpc(ic)
-          ELSE IF (sum_fpc(ic) >= 1._wp + EPSILON(1._wp)) THEN
-            excess(ic) = excess(ic) + fract_small - act_fpc(ic,itile) / sum_fpc(ic)
-            act_fpc(ic,itile) = fract_small
-          END IF
-        END DO
-        !$ACC END PARALLEL LOOP
+        excess = 0._wp
+        IF (sum_fpc >= 1._wp + EPSILON(1._wp) .AND. act_fpc(itile) > fract_small * sum_fpc) THEN
+          act_fpc(itile) = act_fpc(itile) / sum_fpc
+        ELSE IF (sum_fpc >= 1._wp + EPSILON(1._wp)) THEN
+          excess = excess + fract_small - act_fpc(itile) / sum_fpc
+          act_fpc(itile) = fract_small
+        END IF
       END IF
     END DO
 
-    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
-    DO ic = 1, nc
-      scalable(ic) = bare_fpc(ic)
-    END DO
-    !$ACC END PARALLEL LOOP
+    scalable = bare_fpc
 
     DO itile = 1, ntiles
-      IF (is_dynamic(itile)) THEN
-        !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
-        DO ic = 1, nc
-          IF (act_fpc(ic,itile) > 2._wp * fract_small) scalable = scalable + act_fpc(ic,itile)
-        END DO
-        !$ACC END PARALLEL LOOP
-      END IF
+      IF (is_dynamic(itile) .AND. act_fpc(itile) > 2._wp * fract_small) scalable = scalable + act_fpc(itile)
     END DO
-    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
-    DO ic = 1, nc
-      rescale(ic) = (scalable(ic) - excess(ic)) / scalable(ic)
-      bare_fpc(ic) = bare_fpc(ic) * rescale(ic)
-    END DO
-    !$ACC END PARALLEL LOOP
+    rescale = (scalable - excess) / scalable
+    bare_fpc = bare_fpc * rescale
     DO itile = 1, ntiles
-      IF (is_dynamic(itile)) THEN
-        !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
-        DO ic = 1, nc
-          IF (act_fpc(ic,itile) > 2._wp * fract_small) act_fpc(ic,itile) = act_fpc(ic,itile) * rescale(ic)
-        END DO
-        !$ACC END PARALLEL LOOP
-      END IF
+      IF (is_dynamic(itile) .AND. act_fpc(itile) > 2._wp * fract_small) act_fpc(itile) = act_fpc(itile) * rescale
     END DO
-
-    !$ACC END DATA
 
   END SUBROUTINE scale_fpc
 
@@ -1130,7 +1056,8 @@ CONTAINS
       sum_pasture_fract(ic) = 0._wp
       sum_crop_fract(ic) = 0._wp
     END DO
-    !$ACC END PATALLEL LOOP
+    !$ACC END PARALLEL LOOP
+
     DO itile = 1, ntiles
       IF (.NOT. is_woody(itile) .AND. is_dynamic(itile)) THEN
         ngrass = ngrass + 1
@@ -1138,20 +1065,20 @@ CONTAINS
         DO ic = 1, nc
           sum_grass_fract(ic) = sum_grass_fract(ic) + cover_fract_pot(ic,itile)
         END DO
-        !$ACC END PATALLEL LOOP
+        !$ACC END PARALLEL LOOP
       ELSE IF (is_pasture(itile)) THEN
         !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
         DO ic = 1, nc
           sum_pasture_fract(ic) = sum_pasture_fract(ic) + cover_fract(ic,itile)
         END DO
-        !$ACC END PATALLEL LOOP
+        !$ACC END PARALLEL LOOP
       ELSE IF (is_crop(itile)) THEN
         ncrops = ncrops + 1
         !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
         DO ic = 1, nc
           sum_crop_fract(ic) = sum_crop_fract(ic) + cover_fract(ic,itile)
         END DO
-        !$ACC END PATALLEL LOOP
+        !$ACC END PARALLEL LOOP
       END IF
     END DO
 
@@ -1178,13 +1105,13 @@ CONTAINS
             END IF
           END IF
         END DO
-        !$ACC END PATALLEL LOOP
+        !$ACC END PARALLEL LOOP
       ELSE IF (is_pasture(itile)) THEN
         !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
         DO ic = 1, nc
           cover_fract_inst(ic,itile) = cover_fract(ic,itile)
         END DO
-        !$ACC END PATALLEL LOOP
+        !$ACC END PARALLEL LOOP
       END IF
     END DO
 
@@ -1195,7 +1122,7 @@ CONTAINS
         DO ic = 1, nc
           cover_fract_inst(ic,itile) = cover_fract(ic,itile)
         END DO
-        !$ACC END PATALLEL LOOP
+        !$ACC END PARALLEL LOOP
       ELSE IF (.NOT. is_pasture(itile)) THEN
         !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
         DO ic = 1, nc
@@ -1203,13 +1130,13 @@ CONTAINS
             &  * (1._wp - sum_pasture_fract(ic) - sum_crop_fract(ic)) &
             &  / (1._wp - sum_pasture_fract(ic) - ncrops * fract_small)
         END DO
-        !$ACC END PATALLEL LOOP
+        !$ACC END PARALLEL LOOP
       END IF
     END DO
 
     CALL scale_cover_fract (nc, ntiles, is_dynamic(:), cover_fract_inst(:,:))
 
-    !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
+#ifndef _OPENACC
     DO ic = 1, nc
       IF (  SUM(cover_fract_inst(ic,:)) > 1._wp + REAL(ntiles,wp)*EPSILON(1._wp) .OR. &
           & SUM(cover_fract_inst(ic,:)) < 1._wp - REAL(ntiles,wp)*EPSILON(1._wp)) THEN
@@ -1218,9 +1145,7 @@ CONTAINS
         CALL finish (routine, message_text)
       END IF
     END DO
-    !$ACC END PATALLEL LOOP
     DO itile = 1, ntiles
-      !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
       DO ic = 1, nc
         IF (cover_fract_inst(ic,itile) < fract_small) THEN
           WRITE (message_text,*) 'cover_fract_inst too small: ', cover_fract_inst(ic,itile), &
@@ -1228,8 +1153,8 @@ CONTAINS
           CALL finish (routine, message_text)
         END IF
       END DO
-      !$ACC END PATALLEL LOOP
     END DO
+#endif
 
     !$ACC END DATA
 
@@ -1392,11 +1317,13 @@ SUBROUTINE scale_cover_fract (nc, ntiles, is_dynamic, cover_fract)
     !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
     DO ic = 1, nc
       sum_fract(ic) = SUM(cover_fract(ic,:))
+#ifndef _OPENACC
       ! Exit if the cover fraction sum is considerably different from 1.
       IF (ABS(1._wp - sum_fract(ic)) > fract_small) THEN
         WRITE(message_text,*) 'Sum of PFT fractions differs from 1.: ', sum_fract(ic), ' at ic: ', ic
         CALL finish (routine, message_text)
       END IF
+#endif
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -1430,20 +1357,23 @@ SUBROUTINE scale_cover_fract (nc, ntiles, is_dynamic, cover_fract)
       !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
       DO ic = 1, nc
         IF (cover_fract(ic,itile) < fract_small) THEN
+#ifndef _OPENACC
           WRITE(message_text,*) 'cover_fract still smaller ', fract_small, ' after ', niter, ' iterations:', &
             &  ' cover_fract(ic,itile): ', cover_fract(ic,itile), ' at ic: ', ic, ' itile: ', itile
           CALL message (routine, message_text)
-
+#endif
           ! Sometimes cover_fract remains slightly smaller than fract_small for numerical reasons
           IF (cover_fract(ic,itile) < fract_small &
               & .AND. cover_fract(ic,itile) >= fract_small - REAL(ntiles,wp)*EPSILON(1._wp)) THEN
             cover_fract(ic,itile) = fract_small
           END IF
+#ifndef _OPENACC
           IF (cover_fract(ic,itile) < fract_small) THEN
             WRITE(message_text,*) 'cover_fract still smaller ', fract_small, ' after ', niter, ' iterations:', &
               &  ' cover_fract(ic,itile): ', cover_fract(ic,itile), ' at ic: ', ic, ' itile: ', itile
             CALL finish (routine, message_text)
           END IF
+#endif
         END IF
       END DO
       !$ACC END PARALLEL LOOP
