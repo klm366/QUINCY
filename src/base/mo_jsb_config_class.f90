@@ -38,7 +38,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_tmx
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
-    LOGICAL                        :: check_child_cf      !< Assert that cover fractions of children tiles sum up to the tile cf
+    LOGICAL                        :: check_child_cf      !< Assert that cover fractions of child tiles sum up to the tile cf
     INTEGER                        :: enforce_water_budget!< descriptor for water balance 'ignore', 'logging', or 'error'
     CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
     INTEGER                        :: qmodel_id           !< defines the applied model configuration (quincy_model_name)
