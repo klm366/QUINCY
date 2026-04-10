@@ -37,17 +37,19 @@ MODULE mo_carbon_interface
                                  & i_lctlib_nonsoluble, i_lctlib_humus
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
-  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, NLCC_, A2L_, L2A_
+  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, CLIMBUF_, DISTURB_, NLCC_, A2L_, L2A_
 
   ! Use of process configurations
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
+  dsl4jsb_Use_config(CLIMBUF_)
 
   ! Use of process memories (t_carbon_memory)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(CLIMBUF_)
   dsl4jsb_Use_memory(L2A_)
 
   ! -------------------------------------------------------------------------------------------------------
@@ -335,6 +337,11 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    ! Consistency check
+    IF (.NOT. model%Is_process_enabled(CLIMBUF_)) THEN
+      CALL finish(TRIM(routine), 'Setup ERROR: Climate buffer (CLIMBUF) needs to be active with CARBON.')
+    END IF
 
     nlcc_is_enabled = model%Is_process_enabled(NLCC_)     ! workaround currently needed for DWD NEC
 

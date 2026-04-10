@@ -33,7 +33,7 @@ MODULE mo_disturb_interface
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
 
   ! Use of processes in this module (Get_disturb_memory and Get_disturb_config)
-  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, A2L_, CARBON_, SEB_, FLCC_, WLCC_
+  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, A2L_, CLIMBUF_, CARBON_, SEB_, FLCC_, WLCC_
 
   ! Use of process configurations (t_disturb_config)
   dsl4jsb_Use_config(DISTURB_)
@@ -42,6 +42,7 @@ MODULE mo_disturb_interface
   ! Use of process memories (t_disturb_memory)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
+  dsl4jsb_Use_memory(CLIMBUF_)
   dsl4jsb_Use_memory(DISTURB_)
   dsl4jsb_Use_memory(FUEL_)
   dsl4jsb_Use_memory(CARBON_)
@@ -154,6 +155,7 @@ CONTAINS
     ! Declare process memories
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(CLIMBUF_)
     dsl4jsb_Def_memory(DISTURB_)
     dsl4jsb_Def_memory(FUEL_)
     dsl4jsb_Def_memory(SEB_)
@@ -165,6 +167,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: t_unfilt
     dsl4jsb_Real2D_onChunk :: wind_10m               ! 10m wind speed [m/s]
+
     dsl4jsb_Real2D_onChunk :: max_wind_10m_act       ! Maximum 10m wind speed since midnight
     dsl4jsb_Real2D_onChunk :: prev_day_max_wind_10m  ! Previous day maximum 10m wind speed
     dsl4jsb_Real2D_onChunk :: max_wind_10m           ! Several day mean maximum wind speed (climate buffer)
@@ -197,12 +200,17 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
 
+    model => Get_model(tile%owner_model_id)
+
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(DISTURB_)) RETURN
 
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! Consistency check
+    IF (.NOT. model%Is_process_enabled(CLIMBUF_)) THEN
+      CALL finish(TRIM(routine), 'Setup ERROR: Climate buffer (CLIMBUF) needs to be active with disturbances.')
+    END IF
 
-    model => Get_model(tile%owner_model_id)
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     use_tmx = model%config%use_tmx
 
@@ -210,6 +218,7 @@ CONTAINS
     dsl4jsb_Get_config(DISTURB_)
 
     ! Get process memories
+    dsl4jsb_Get_memory(CLIMBUF_)
     dsl4jsb_Get_memory(DISTURB_)
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(FUEL_)
@@ -223,11 +232,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,       press_srf)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,       wind_10m)                 ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,       t_unfilt)                 ! in
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   max_wind_10m_act)         ! inout
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   prev_day_max_wind_10m)    ! inout
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   max_wind_10m)             ! inout
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   q_rel_air_climbuf)        ! inout
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   q_rel_air_climbuf_yDay)   ! out
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,   max_wind_10m_act)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,   prev_day_max_wind_10m)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,   max_wind_10m)             ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,   q_rel_air_climbuf)        ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,   q_rel_air_climbuf_yDay)   ! out
 
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
@@ -402,9 +411,6 @@ CONTAINS
 
     dsl4jsb_Aggregate_onChunk(DISTURB_, burned_fract,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, damaged_fract,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DISTURB_, max_wind_10m_act,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf_yDay,  weighted_by_fract)
 
     CALL weighted_by_fract%EndAggregate()
 
