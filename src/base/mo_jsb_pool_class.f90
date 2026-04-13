@@ -62,7 +62,6 @@ MODULE mo_jsb_pool_class
 #ifdef __QUINCY_STANDALONE__
 #else
     PROCEDURE                       :: Find_pool             => t_jsb_pool_find_pool
-    ! PROCEDURE                       :: Sum_leaves            => t_jsb_pool_sum_leaves
     PROCEDURE                       :: Print                 => t_jsb_pool_print
     PROCEDURE                       :: Get_subset            => t_jsb_pool_get_subset         ! get chunk and block and type information for the pool and thread
 #endif
@@ -412,43 +411,6 @@ CONTAINS
     subset = jsbach_subsets(this%owner_model_id)%sub(Get_omp_thread())
 
   END FUNCTION t_jsb_pool_get_subset
-
-  ! SUBROUTINE t_jsb_pool_sum_leaves(this, element_list)
-
-  !   CLASS(t_jsb_pool), INTENT(inout) :: this
-  !   INTEGER,           INTENT(in)    :: element_list(:)
-
-  !   INTEGER :: i, i_leaf, i_element
-
-  !   CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_pool_sum_leaves'
-
-  !   IF (.NOT. ASSOCIATED(this%leaf_list)) CALL finish(routine, 'Pool has no leaves')
-
-  !   DO i=1,SIZE(element_list)
-  !     i_element = this%Find_element_position(element_list(i))
-  !     IF (i_element < 1) CALL finish(routine, 'Element '//this%Get_element_name(element_list(i))//' not found')
-
-  !     SELECT TYPE (element1 => this%element_list(i_element)%p)
-  !     CLASS IS (t_jsb_var_real2d)
-  !       element1 = 0._wp
-  !       DO i_leaf=1,SIZE(this%leaf_list)
-  !         SELECT TYPE (element2 => this%leaf_list(i_leaf)%p%element_list(i_element)%p)
-  !         CLASS IS (t_jsb_var_real2d)
-  !           element1 = element1 + element2
-  !         END SELECT
-  !       END DO
-  !     CLASS IS (t_jsb_var_real3d)
-  !       element1 = 0._wp
-  !       DO i_leaf=1,SIZE(this%leaf_list)
-  !         SELECT TYPE (element2 => this%leaf_list(i_leaf)%p%element_list(i_element)%p)
-  !         CLASS IS (t_jsb_var_real3d)
-  !           element1 = element1 + element2
-  !         END SELECT
-  !       END DO
-  !     END SELECT
-  !   END DO
-
-  ! END SUBROUTINE t_jsb_pool_sum_leaves
 
 #endif
 END MODULE mo_jsb_pool_class
