@@ -146,8 +146,6 @@ MODULE mo_jsb_var_class
       &                                           Assign_field1d_to_var_real2d, &
       &                                           Assign_field2d_to_var_real2d, &
       &                                           Assign_var_real2d_to_var_real2d
-    ! finalize
-    FINAL                     :: finalize_jsb_var_real2d
   END TYPE t_jsb_var_real2d
 
   !================================================================================================================================
@@ -207,8 +205,6 @@ MODULE mo_jsb_var_class
       &                                           Assign_field2d_to_var_real3d, &
       &                                           Assign_field3d_to_var_real3d, &
       &                                           Assign_var_real3d_to_var_real3d
-    ! finalize
-    FINAL     :: finalize_jsb_var_real3d
   END TYPE t_jsb_var_real3d
 
 !#pragma GCC diagnostic pop
@@ -241,42 +237,6 @@ CONTAINS
     ! print*,'GGG ',subset%type,subset%ics,subset%ice,subset%iblk
 
   END FUNCTION t_jsb_var_get_subset
-
-  !================================================================================================================================
-  ! finalize after operator overload
-  ! var_real2d & var_real3d
-  !================================================================================================================================
-  SUBROUTINE finalize_jsb_var_real2d(this)
-
-    TYPE(t_jsb_var_real2d) :: this
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':finalize_jsb_var_real2d'
-
-    !CALL message(routine, 'Finalizing '//TRIM(this%name))
-
-    IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
-    IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
-
-    IF (ASSOCIATED(this%ptr))   NULLIFY(this%ptr)
-    IF (ASSOCIATED(this%ptr2d)) DEALLOCATE(this%ptr2d)
-
-  END SUBROUTINE finalize_jsb_var_real2d
-
-  SUBROUTINE finalize_jsb_var_real3d(this)
-
-    TYPE(t_jsb_var_real3d) :: this
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':finalize_jsb_var_real3d'
-
-    !CALL message(routine, 'Finalizing '//TRIM(this%name))
-
-    IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
-    IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
-
-    IF (ASSOCIATED(this%ptr))   NULLIFY(this%ptr)
-    IF (ASSOCIATED(this%ptr3d)) DEALLOCATE(this%ptr3d)
-
-  END SUBROUTINE finalize_jsb_var_real3d
 
   !================================================================================================================================
   ! create var_real2d/3d
