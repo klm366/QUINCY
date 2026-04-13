@@ -107,22 +107,22 @@ CONTAINS
 
     CALL mem%Add_var( 'prev_day_max_wind_10m', mem%prev_day_max_wind_10m,         &
       & hgrid, surface,                                                           &
-      & t_cf('prev_day_max_wind_10m', '-', 'Previous day maximum wind speed.'),   &
+      & t_cf('prev_day_max_wind_10m', 'm/s', 'Previous day maximum wind speed.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
       & prefix, suffix,                                                           &
       & lrestart=.FALSE., initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'max_wind_10m', mem%max_wind_10m,                                                &
-      & hgrid, surface,                                                                                &
-      & t_cf('max_wind_10m', '-', 'Maximum wind speed smoothed in time at the end of the last day..'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
-      & prefix, suffix,                                                                                &
-      & output_level=MEDIUM,                                                                           &
+    CALL mem%Add_var( 'max_wind_10m', mem%max_wind_10m,                                                  &
+      & hgrid, surface,                                                                                  &
+      & t_cf('max_wind_10m', 'm/s', 'Maximum wind speed smoothed in time at the end of the last day..'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                               &
+      & prefix, suffix,                                                                                  &
+      & output_level=MEDIUM,                                                                             &
       & lrestart=.TRUE., initval_r=0.0_wp )
 
     CALL mem%Add_var( 'max_wind_10m_act', mem%max_wind_10m_act,             &
       & hgrid, surface,                                                     &
-      & t_cf('max_wind_10m_act', '-', 'This days maximum wind speed.'),     &
+      & t_cf('max_wind_10m_act', 'm/s', 'This days maximum wind speed.'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
       & output_level=MEDIUM,                                                &
@@ -130,23 +130,23 @@ CONTAINS
 
     CALL mem%Add_var('temp_sum_day', mem%temp_sum_day,                        &
       & hgrid, surface,                                                       &
-      & t_cf('temp_sum_day', 'sum of air temperature in day', 'temperature sum day'),  &
+      & t_cf('temp_sum_day', 'Ks', 'sum of air temperature over one day'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                    &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var('temp_sum_month', mem%temp_sum_month,                    &
-      & hgrid, surface,                                                       &
-      & t_cf('temp_sum_month', 'sum of air temperature in month', 'temperature sum month'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
+    CALL mem%Add_var('temp_sum_month', mem%temp_sum_month,                     &
+      & hgrid, surface,                                                        &
+      & t_cf('temp_sum_month', 'Ks', 'sum of air temperature over one month'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+      & prefix, suffix,                                                        &
+      & output_level=NONE,                                                     &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var('min_mmtemp_of_yr', mem%min_mmtemp_of_yr,                &
       & hgrid, surface,                                                       &
-      & t_cf('min_mmtemp_of_yr', 'min temperature of year', 'temperature min'), &
+      & t_cf('min_mmtemp_of_yr', 'K', 'minimum monthly temperature of year'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                    &
@@ -154,7 +154,7 @@ CONTAINS
 
     CALL mem%Add_var('max_mmtemp_of_yr', mem%max_mmtemp_of_yr,                &
       & hgrid, surface,                                                       &
-      & t_cf('max_mmtemp_of_yr', 'max temperature of year', 'temperature max'), &
+      & t_cf('max_mmtemp_of_yr', 'K', 'maximum monthly temperature of year'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                    &
@@ -162,34 +162,34 @@ CONTAINS
 
     CALL mem%Add_var('min_mmtemp20', mem%min_mmtemp20,                        &
       & hgrid, surface,                                                       &
-      & t_cf('min_mmtemp20', 'min temperature climatology', 'temp min climate'), &
+      & t_cf('min_mmtemp20', 'K', 'minimum monthly temperature climatology'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
-      & output_level=FULL,                                                   &
+      & output_level=FULL,                                                    &
       & initval_r=1000.0_wp )
 
     CALL mem%Add_var('max_mmtemp20', mem%max_mmtemp20,                        &
       & hgrid, surface,                                                       &
-      & t_cf('max_mmtemp20', 'max temperature climatology', 'temp max climate'), &
+      & t_cf('max_mmtemp20', 'K', 'maximum monthly temperature climatology'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
-      & output_level=FULL,                                                   &
+      & output_level=FULL,                                                    &
       & initval_r=-1000.0_wp )
 
-    CALL mem%Add_var('gdd_sum_year', mem%gdd_sum_year,                        &
-      & hgrid, surface,                                                       &
-      & t_cf('gdd_sum_year', 'gdd current year', 'gdd sum year'),             &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
+    CALL mem%Add_var('gdd_sum_year', mem%gdd_sum_year,                                  &
+      & hgrid, surface,                                                                 &
+      & t_cf('gdd_sum_year', 'degC days', 'sum of growing degree days (current year)'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
+      & prefix, suffix,                                                                 &
+      & output_level=NONE,                                                              &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var('gdd_prev_year', mem%gdd_prev_year,                      &
-      & hgrid, surface,                                                       &
-      & t_cf('gdd_prev_year', 'gdd previous year', 'gdd prev year'),          &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=FULL,                                                   &
+    CALL mem%Add_var('gdd_prev_year', mem%gdd_prev_year,                                  &
+      & hgrid, surface,                                                                   &
+      & t_cf('gdd_prev_year', 'degC days', 'sum of growing degree days (previous year)'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=FULL,                                                                &
       & initval_r=0.0_wp )
 
   END SUBROUTINE Init_climbuf_memory
