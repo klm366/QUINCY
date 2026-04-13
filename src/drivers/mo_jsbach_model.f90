@@ -69,6 +69,7 @@ CONTAINS
     USE mo_read_namelists_iface,    ONLY: read_infrastructure_namelists_for_jsbach
     USE mo_namelist,                ONLY: open_nml_output, close_nml_output
     USE mo_nml_annotate,            ONLY: log_nml_settings
+    USE mo_dynamics_config,         ONLY: nold, nnow, nnew
     USE mo_name_list_output_init,   ONLY: read_name_list_output_namelists, init_name_list_output, parse_variable_groups, &
       &                                   output_file, create_vertical_axes
     USE mo_level_selection,         ONLY: create_mipz_level_selections
@@ -426,6 +427,9 @@ CONTAINS
       ! get start counter for time loop from restart file:
       IF (restartAttributes%is_init) &
         & CALL restartAttributes%get("jstep", sim_step_info%jstep0)
+      ! Set time levels to 1 in order to avoid confusing finish message about <var_name>.TL0
+      ! for non-existent variable <var_name> in output_nml
+      nold(:) = 1; nnow(:) = 1; nnew(:) = 1
       CALL init_name_list_output(sim_step_info)
       CALL create_mipz_level_selections(output_file)
       CALL create_vertical_axes(output_file)
