@@ -249,12 +249,12 @@ CONTAINS
   !> Calculate the scaled global sum of a given 2D variable using passed 2D and 1D scaling factors
   !
   ! ======================================================================================================= !
-  SUBROUTINE scaled_global_sum_2D(scaled_global_sum, var_ptr, scaling_2D, scaling_factor, acc_stream)
+  SUBROUTINE scaled_global_sum_2D(scaled_global_sum, var, scaling_2D, scaling_factor, acc_stream)
 
     USE mo_sync,                    ONLY: global_sum_array
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp),          INTENT(out) :: scaled_global_sum(:) !< Scaled variable
-    REAL(wp), POINTER, INTENT(in)  :: var_ptr(:,:)         !< Variable pointer
+    REAL(wp),          INTENT(in)  :: var(:,:)             !< Variable that should be scaled and summed up
     REAL(wp),          INTENT(in)  :: scaling_2D(:,:)      !< 2D scaling factor
     REAL(wp),          INTENT(in)  :: scaling_factor       !< Additional scaling factor
     INTEGER,           INTENT(in)  :: acc_stream           !< ACC stream - passed to avoid cyclic
@@ -271,7 +271,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
     DO blk = 1, nblks
       DO jc = 1, nproma
-        scaled_variable(jc,blk) = scaling_2D(jc,blk) * var_ptr(jc,blk)
+        scaled_variable(jc,blk) = scaling_2D(jc,blk) * var(jc,blk)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
