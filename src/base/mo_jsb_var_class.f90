@@ -72,7 +72,6 @@ MODULE mo_jsb_var_class
     LOGICAL                       :: is_in_restart = .FALSE.   ! Whether variable is requested to be written to restart file
   CONTAINS
     PROCEDURE :: Get_subset         => t_jsb_var_get_subset         ! get chunk and block information for the var and thread
-    PROCEDURE :: force_finalization => t_jsb_var_force_finalization ! finalization after operator overload avoiding memory leaks
   END TYPE t_jsb_var
 
 !#pragma GCC diagnostic push
@@ -242,17 +241,6 @@ CONTAINS
     ! print*,'GGG ',subset%type,subset%ics,subset%ice,subset%iblk
 
   END FUNCTION t_jsb_var_get_subset
-
-  !================================================================================================================================
-  ! force finalization
-  !================================================================================================================================
-  SUBROUTINE t_jsb_var_force_finalization(this)
-
-    CLASS(t_jsb_var), INTENT(inout) :: this
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_var_force_finalization'
-
-  END SUBROUTINE t_jsb_var_force_finalization
 
   !================================================================================================================================
   ! finalize after operator overload

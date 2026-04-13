@@ -66,7 +66,6 @@ MODULE mo_jsb_pool_class
     PROCEDURE                       :: Print                 => t_jsb_pool_print
     PROCEDURE                       :: Get_subset            => t_jsb_pool_get_subset         ! get chunk and block and type information for the pool and thread
 #endif
-    PROCEDURE                       :: force_finalization    => t_jsb_pool_force_finalization
   END TYPE t_jsb_pool
 
   TYPE :: t_jsb_pool_p
@@ -413,14 +412,6 @@ CONTAINS
     subset = jsbach_subsets(this%owner_model_id)%sub(Get_omp_thread())
 
   END FUNCTION t_jsb_pool_get_subset
-
-  SUBROUTINE t_jsb_pool_force_finalization(this)
-
-    CLASS(t_jsb_pool), INTENT(inout) :: this
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_pool_force_finalization'
-
-  END SUBROUTINE t_jsb_pool_force_finalization
 
   SUBROUTINE t_jsb_pool_sum_leaves(this, element_list)
 
