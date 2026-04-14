@@ -17,7 +17,6 @@ MODULE mo_jsb_var_class
   USE mo_kind,              ONLY: wp, dp
   USE mo_exception,         ONLY: finish, message
   USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN
-  USE mo_jsb_subset,        ONLY: t_subset, ON_DOMAIN, ON_CHUNK
 
   IMPLICIT NONE
   PRIVATE
@@ -70,8 +69,6 @@ MODULE mo_jsb_var_class
                                                                  !< matter should only be collected proportionally to the lost area
     LOGICAL                       :: is_in_output  = .FALSE.   ! Whether variable is requested to be written to output
     LOGICAL                       :: is_in_restart = .FALSE.   ! Whether variable is requested to be written to restart file
-  ! CONTAINS
-    ! PROCEDURE :: Get_subset         => t_jsb_var_get_subset         ! get chunk and block information for the var and thread
   END TYPE t_jsb_var
 
 !#pragma GCC diagnostic push
@@ -113,26 +110,6 @@ MODULE mo_jsb_var_class
   END TYPE t_jsb_var_p
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_var_class'
-
-! CONTAINS
-
-!   !================================================================================================================================
-!   ! get subset
-!   ! chunk and block information per model & thread from mo_jsb_subset:jsbach_subsets(model_id)%sub(thread)
-!   !================================================================================================================================
-!   FUNCTION t_jsb_var_get_subset(this) RESULT(subset)
-
-!     USE mo_jsb_subset,   ONLY: jsbach_subsets
-!     USE mo_jsb_parallel, ONLY: Get_omp_thread
-
-!     CLASS(t_jsb_var), INTENT(in) :: this
-!     TYPE(t_subset)               :: subset
-
-!     ! print*,'FFF ',TRIM(this%full_name), this%owner_model_id, Get_omp_thread()
-!     subset = jsbach_subsets(this%owner_model_id)%sub(Get_omp_thread())
-!     ! print*,'GGG ',subset%type,subset%ics,subset%ice,subset%iblk
-
-!   END FUNCTION t_jsb_var_get_subset
 
 #endif
 END MODULE mo_jsb_var_class

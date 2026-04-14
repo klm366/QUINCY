@@ -18,10 +18,6 @@ MODULE mo_jsb_pool_class
   USE mo_exception,     ONLY: finish, message
   USE mo_util,          ONLY: int2string
   USE mo_jsb_var_class, ONLY: t_jsb_var, t_jsb_var_p, t_jsb_var_real2d, t_jsb_var_real3d
-#ifdef __QUINCY_STANDALONE__
-#else
-  USE mo_jsb_subset,    ONLY: t_subset, ON_DOMAIN, ON_CHUNK
-#endif
 
   IMPLICIT NONE
 
@@ -59,12 +55,6 @@ MODULE mo_jsb_pool_class
     PROCEDURE                       :: Set_paths             => t_jsb_pool_set_paths
     GENERIC                         :: Find_element_position => t_jsb_pool_find_element_position_by_id,   &
       &                                                         t_jsb_pool_find_element_position_by_name
-#ifdef __QUINCY_STANDALONE__
-#else
-    ! PROCEDURE                       :: Find_pool             => t_jsb_pool_find_pool
-    ! PROCEDURE                       :: Print                 => t_jsb_pool_print
-    ! PROCEDURE                       :: Get_subset            => t_jsb_pool_get_subset         ! get chunk and block and type information for the pool and thread
-#endif
   END TYPE t_jsb_pool
 
   TYPE :: t_jsb_pool_p
@@ -318,99 +308,6 @@ CONTAINS
     END IF
 
   END SUBROUTINE t_jsb_pool_set_paths
-
-  ! RECURSIVE FUNCTION t_jsb_pool_find_pool(this, path) RESULT(pool)
-
-  !   CLASS(t_jsb_pool), TARGET, INTENT(in) :: this
-  !   CHARACTER(LEN=*),          INTENT(in) :: path
-  !   CLASS(t_jsb_pool), POINTER            :: pool
-
-  !   INTEGER :: i, ipos
-  !   CHARACTER(LEN=:), ALLOCATABLE :: path_left, path_right
-
-  !   CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_pool_find_pool'
-
-  !   IF (.NOT. ALLOCATED(this%shortname)) &
-  !     & CALL finish(routine, 'Pool must have a shortname')
-
-  !   IF (path == '') THEN
-  !     pool => this
-  !     RETURN
-  !   END IF
-
-  !   ipos = INDEX(path, ':')
-  !   IF (ipos > 1) THEN
-  !     path_left = path(1:ipos-1)
-  !     path_right = path(ipos+1:LEN(path))
-  !   ELSE IF (path /= '') THEN
-  !     path_left = path
-  !     path_right = ''
-  !   ELSE
-  !     path_left = ''
-  !     path_right = ''
-  !   END IF
-
-  !   IF (ASSOCIATED(this%pool_list)) THEN
-  !     DO i=1,SIZE(this%pool_list)
-  !       IF (path_left == this%pool_list(i)%p%shortname) THEN
-  !         pool => this%pool_list(i)%p%Find_pool(path_right)
-  !         EXIT
-  !       END IF
-  !     END DO
-  !   ELSE IF (path_right /= '') THEN
-  !     CALL finish(routine, 'Pool not found '//this%shortname//' '//path)
-  !   END IF
-
-  !   IF (.NOT. ASSOCIATED(pool)) &
-  !     CALL finish(routine, 'Pool not found '//this%shortname//' '//path)
-
-  ! END FUNCTION t_jsb_pool_find_pool
-
-  ! RECURSIVE SUBROUTINE t_jsb_pool_print(this)
-
-  !   CLASS(t_jsb_pool), INTENT(in) :: this
-
-  !   INTEGER :: i
-
-  !   CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_pool_print'
-
-  !   IF (.NOT. ALLOCATED(this%path)) &
-  !     & CALL finish(routine, 'Pool must have a unique identifier ... call %Set_paths on top pool container!')
-
-  !   CALL message('', this%path//' ('//this%name//')')
-
-  !   IF (ALLOCATED(this%element_list)) THEN
-  !     DO i=1,SIZE(this%element_list)
-  !       CALL message('  element', this%element_list(i)%p%element_name           // &
-  !         &            ', id=' // int2string(this%element_list(i)%p%element_id) // &
-  !         &            ', unit=' // this%element_unit                              &
-  !         & )
-  !     END DO
-  !   END IF
-
-  !   IF (ASSOCIATED(this%pool_list)) THEN
-  !     DO i=1,SIZE(this%pool_list)
-  !       CALL this%pool_list(i)%p%Print()
-  !     END DO
-  !   END IF
-
-  ! END SUBROUTINE t_jsb_pool_print
-
-  ! !================================================================================================================================
-  ! ! get subset
-  ! ! chunk and block information per model & thread from mo_jsb_subset:jsbach_subsets(model_id)%sub(thread)
-  ! !================================================================================================================================
-  ! FUNCTION t_jsb_pool_get_subset(this) RESULT(subset)
-
-  !   USE mo_jsb_subset,   ONLY: jsbach_subsets
-  !   USE mo_jsb_parallel, ONLY: Get_omp_thread
-
-  !   CLASS(t_jsb_pool), INTENT(in) :: this
-  !   TYPE(t_subset)                :: subset
-
-  !   subset = jsbach_subsets(this%owner_model_id)%sub(Get_omp_thread())
-
-  ! END FUNCTION t_jsb_pool_get_subset
 
 #endif
 END MODULE mo_jsb_pool_class
