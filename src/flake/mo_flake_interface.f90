@@ -389,20 +389,19 @@ CONTAINS
 
     Q_w = Q_w - Q_sensible - Q_latent  ! Add sensible and latent heat fluxes (notice the signs)
 
-    WHERE(h_ice.GE.h_Ice_min)             ! Ice exists
-      WHERE(h_snow.GE.h_Snow_min)         ! There is snow above the ice
+    WHERE (h_ice >= h_Ice_min .AND. h_snow >= h_Snow_min)             ! Ice and snow exist
         !Q_snow = Q_w
         Q_ice  = 0._wp
         Q_w    = 0._wp
-      ELSEWHERE                                         ! No snow above the ice
+    ELSEWHERE (h_ice >= h_Ice_min .AND. h_snow < h_Snow_min)          ! Ice exists but no snow cover
         !Q_snow = 0._wp
         Q_ice  = Q_w
         Q_w    = 0._wp
-      END WHERE
     ELSEWHERE                                           ! No ice-snow cover
         !Q_snow = 0._wp
         Q_ice  = 0._wp
     END WHERE
+    !Q_snow = 0._wp ! Snow is not considered for now
 
     !  Advance FLake variables 
     !  From here on the original file flake_driver is included but split into the routines
