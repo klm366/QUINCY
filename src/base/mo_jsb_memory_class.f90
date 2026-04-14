@@ -25,7 +25,7 @@ MODULE mo_jsb_memory_class
   USE mo_jsb_varlist_iface, ONLY: is_variable_in_output
   USE mo_jsb_var_class,     ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d, &
     &                             REAL1D, REAL2D, REAL3D
-  USE mo_jsb_pool_class,    ONLY: t_jsb_pool
+  USE mo_jsb_pool_class,    ONLY: t_lnd_bgcm
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, &
     &                             GRID_LONLAT, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
@@ -66,8 +66,8 @@ MODULE mo_jsb_memory_class
     LOGICAL                        :: lrestart_cont = .FALSE. !< TRUE: Continue although variables are missing in restart file
     !
     LOGICAL :: has_bgc_materials = .FALSE.
-    CLASS(t_jsb_pool), POINTER :: pools         => NULL()
-    CLASS(t_jsb_pool), POINTER :: bgc_material  => NULL()     ! TODO t_jsb_memory rename 't_jsb_pool' -> 't_lnd_bgc_material'
+    CLASS(t_lnd_bgcm), POINTER :: pools         => NULL()
+    CLASS(t_lnd_bgcm), POINTER :: bgc_material  => NULL()     ! TODO t_jsb_memory rename 't_lnd_bgcm' -> 't_lnd_bgc_material'
   CONTAINS
     PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init
     PROCEDURE         :: Get_var
@@ -666,7 +666,7 @@ CONTAINS
 
     CLASS(t_jsb_memory),   INTENT(inout)        :: mem                 ! memory structure
   !!$    TYPE(t_jsb_varlist),  INTENT(inout)        :: this_list           ! list
-    CLASS(t_jsb_pool),    TARGET,  INTENT(inout) :: pool                ! reference to pool
+    CLASS(t_lnd_bgcm),    TARGET,  INTENT(inout) :: pool                ! reference to pool
     TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! horizontal grid type
     TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid_2d            ! vertical grid type
     TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid_3d            ! vertical grid type
@@ -758,7 +758,7 @@ CONTAINS
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
   !!$    TYPE(t_jsb_varlist),  INTENT(inout)        :: this_list           ! list
-    CLASS(t_jsb_pool),    INTENT(inout)           :: pool                ! reference to pool
+    CLASS(t_lnd_bgcm),    INTENT(inout)           :: pool                ! reference to pool
     CHARACTER(len=*),     INTENT(in)           :: name                ! name of variable
     TYPE(t_jsb_var_real2d), TARGET, INTENT(inout) :: var              ! reference to jsbach var
     TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! horizontal grid type

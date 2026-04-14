@@ -781,14 +781,14 @@ CONTAINS
   SUBROUTINE Count_and_classify_bgc_materials_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
-    USE mo_jsb_pool_class,      ONLY: t_jsb_pool
+    USE mo_jsb_pool_class,      ONLY: t_lnd_bgcm
     USE mo_lnd_bgcm_store,      ONLY: t_lnd_bgcm_store
     USE mo_lnd_bgcm_class,      ONLY: assert_no_compartment_bgc_materials, get_dimension_of_element_variables
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the bgc materials are checked
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_memory), POINTER     :: mem
-    CLASS(t_jsb_pool), POINTER       :: bgcm
+    CLASS(t_lnd_bgcm), POINTER       :: bgcm
     CLASS(t_lnd_bgcm_store), POINTER :: bgcm_store
     INTEGER                          :: i_proc, i_bgcm, i_compartment
     INTEGER                          :: nr_of_bgcms_this_proc, nr_of_compartments

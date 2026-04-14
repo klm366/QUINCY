@@ -20,7 +20,7 @@ MODULE mo_lnd_bgcm_class
 
   USE mo_kind,                ONLY: wp
   USE mo_util,                ONLY: int2string
-  USE mo_jsb_pool_class,      ONLY: t_jsb_pool
+  USE mo_jsb_pool_class,      ONLY: t_lnd_bgcm
   USE mo_exception,           ONLY: message, message_text, finish
 
   IMPLICIT NONE
@@ -72,7 +72,7 @@ CONTAINS
   SUBROUTINE assert_no_compartment_bgc_materials(this, tile_name, routine)
     USE mo_exception,           ONLY: finish
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool), POINTER, INTENT(IN) :: this      !< bgc material to test assertion for
+    CLASS(t_lnd_bgcm), POINTER, INTENT(IN) :: this      !< bgc material to test assertion for
     CHARACTER(len=*),           INTENT(IN) :: tile_name !< name of the tile with this bgc material
     CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine
     ! -------------------------------------------------------------------------------------------------- !
@@ -95,7 +95,7 @@ CONTAINS
     USE mo_exception,           ONLY: finish
     USE mo_jsb_var_class,       ONLY: REAL2D, REAL3D
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool), POINTER, INTENT(IN) :: this      !< bgc material to test assertion for
+    CLASS(t_lnd_bgcm), POINTER, INTENT(IN) :: this      !< bgc material to test assertion for
     CHARACTER(len=*),           INTENT(IN) :: tile_name !< name of the tile with this bgc material
     CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine
     INTEGER                                :: this_dim  !< dimension

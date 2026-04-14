@@ -29,7 +29,7 @@ MODULE mo_sb_memory_class
     &                                  SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
-  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
+  USE mo_jsb_pool_class,         ONLY: t_lnd_bgcm, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
   USE mo_jsb_cqt_class,          ONLY: IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE
 
@@ -403,7 +403,7 @@ MODULE mo_sb_memory_class
   !>
   !> Type definition for sb_bgc_material_elements
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_sb_bgcm_with_elements
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_sb_bgcm_with_elements
     TYPE(t_jsb_var_real3d), POINTER :: carbon
     TYPE(t_jsb_var_real3d), POINTER :: nitrogen
     TYPE(t_jsb_var_real3d), POINTER :: phosphorus
@@ -419,7 +419,7 @@ MODULE mo_sb_memory_class
   !>
   !> Type definition for sb_bgc_material_components
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_sb_bgcm_with_components
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_sb_bgcm_with_components
     TYPE(t_sb_bgcm_with_elements), POINTER :: dom              !< elements of dissolved organic matter
     TYPE(t_sb_bgcm_with_elements), POINTER :: dom_assoc        !< elements of minerally associated dissolved organic matter
     TYPE(t_sb_bgcm_with_elements), POINTER :: soluable_litter  !< elements of metabolic litter (sugars, cellulose etc.)
@@ -438,9 +438,9 @@ MODULE mo_sb_memory_class
   !>
   !> Type definition for sb_bgc_material_main
   !> the main bgc_material structure containing all SB_ bgc_material structures
-  !> main structure, added directly into the "TYPE(t_jsb_memory) :: t_sb_memory" as "CLASS(t_jsb_pool) :: bgc_material"
+  !> main structure, added directly into the "TYPE(t_jsb_memory) :: t_sb_memory" as "CLASS(t_lnd_bgcm) :: bgc_material"
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_sb_bgcm_main
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_sb_bgcm_main
     !! pools
     TYPE(t_sb_bgcm_with_components), POINTER :: sb_pool
     TYPE(t_sb_bgcm_with_elements),   POINTER :: sb_delta_pools
@@ -3705,7 +3705,7 @@ CONTAINS
   FUNCTION Add_sb_bgc_material_with_components(pool, bgcm_id, name, shortname, unit, elements_index_map) &
       & RESULT(sb_bgcm_with_components)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool), TARGET,  INTENT(INOUT) :: pool                  !< pool to which this pool with component should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: pool                  !< pool to which this pool with component should be added
     INTEGER,                    INTENT(in)    :: bgcm_id               !< id of this sb bgcm with components
     CHARACTER(LEN=*),           INTENT(in)    :: name                  !< name of this sb bgcm with components
     CHARACTER(LEN=*),           INTENT(in)    :: shortname             !< shortname of this sb bgcm with components
@@ -3761,7 +3761,7 @@ CONTAINS
   FUNCTION Add_sb_bgc_material_with_elements(pool,  name, shortname, elements_index_map, unit, bgcm_id) &
       & RESULT(sb_bgcm_with_elements)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool), TARGET,  INTENT(INOUT) :: pool                  !< pool to which this pool with elements should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: pool                  !< pool to which this pool with elements should be added
     CHARACTER(LEN=*),           INTENT(in)    :: name                  !< name of this sb bgcm with elements
     CHARACTER(LEN=*),           INTENT(in)    :: shortname             !< shortname of this sb bgcm with elements
     INTEGER,                    INTENT(in)    :: elements_index_map(:) !< mapping elements ID -> IND

@@ -102,11 +102,11 @@ CONTAINS
   SUBROUTINE Append_process_bgcms_to_store(this, main_bgcm, nblks, nproma, nsoil, tile_name, idx_bgcm, &
       &                                    idx_1l_2d_bgcm, idx_2l_2d_bgcm, idx_1l_3d_bgcm, idx_2l_3d_bgcm)
 
-    USE mo_jsb_pool_class,      ONLY: t_jsb_pool
+    USE mo_jsb_pool_class,      ONLY: t_lnd_bgcm
     USE mo_lnd_bgcm_class,      ONLY: get_dimension_of_element_variables
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_lnd_bgcm_store), INTENT(INOUT) :: this           !< this bgcm store instance
-    CLASS(t_jsb_pool),       INTENT(IN)    :: main_bgcm      !< 'main' bgcm of a process
+    CLASS(t_lnd_bgcm),       INTENT(IN)    :: main_bgcm      !< 'main' bgcm of a process
     CHARACTER(len=*),        INTENT(IN)    :: tile_name      !< name of the tile with this bgcm store
     INTEGER,                 INTENT(IN)    :: nblks          !< number of blocks
     INTEGER,                 INTENT(IN)    :: nproma         !< number of grid-cells
@@ -117,7 +117,7 @@ CONTAINS
     INTEGER,                 INTENT(INOUT) :: idx_1l_3d_bgcm !< idx of last 1l 3d bgcm
     INTEGER,                 INTENT(INOUT) :: idx_2l_3d_bgcm !< idx of last 2l 3d bgcm
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool),   POINTER  :: bgcm
+    CLASS(t_lnd_bgcm),   POINTER  :: bgcm
     INTEGER                       :: i_bgcm, i_compartment, i_element
     INTEGER                       :: nr_of_bgcms_this_proc, nr_of_elements, nr_of_compartments
 
