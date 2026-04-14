@@ -236,11 +236,10 @@ MODULE mo_flake_process
                             & I_intm_0_h!, & ! Mean radiation flux over the mixed layer [W m^{-1}]
                             !& depth_w       ! Waterbody depth [m]
 
-      REAL(wp),  INTENT(inout) :: I_bot  ! Radiation flux through the water-bottom sediment interface [W m^{-2}]
-
-      REAL(wp),  INTENT(out) :: Q_w,       & ! Heat flux through the ice-water or air-water interface [W m^{-2}]
-                              & Q_star,    & ! A generalized heat flux scale [W m^{-2}]
-                              & Phi_T_pr0    ! d\Phi_T(0)/d\zeta   (thermocline)
+      REAL(wp),  INTENT(inout) :: I_bot,    &  ! Radiation flux through the water-bottom sediment interface [W m^{-2}]
+        &                         Q_w,      &  ! Heat flux through the ice-water or air-water interface [W m^{-2}]
+        &                         Q_star,   &  ! A generalized heat flux scale [W m^{-2}]
+        &                         Phi_T_pr0    ! d\Phi_T(0)/d\zeta   (thermocline)
 
       ! ---------------------------
       ! Go
