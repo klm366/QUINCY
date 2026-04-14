@@ -1448,7 +1448,11 @@ CONTAINS
       ! check timeseries
       IF (my_process_is_stdio()) THEN
         IF (TRIM(forcing_input_variable%variable_name) == 'precip') THEN
-          WRITE(message_text,*) ' Reading forcing for ', ydate
+          IF (model%config%is_single_site) THEN
+            WRITE(message_text,*) ' Reading forcing for ', ydate, '(site '//model%config%single_site_shortname//')'
+          ELSE
+            WRITE(message_text,*) ' Reading forcing for ', ydate
+          END IF
           CALL message('----- ', message_text)
         END IF
         !Assertion: currentTimeStep needs to be contained in the file
