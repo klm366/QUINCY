@@ -59,7 +59,8 @@ CONTAINS
       & T_mnw , &
       !& T_sfc , &
       !& T_snow, &
-      & T_wML
+      & T_wML, &
+      & fetch
 
     dsl4jsb_Def_memory(FLAKE_)
     dsl4jsb_Get_memory(FLAKE_)
@@ -75,6 +76,7 @@ CONTAINS
       ! dsl4jsb_Get_var2D_onDomain(FLAKE_, T_sfc)  ! OUT
       ! dsl4jsb_Get_var2D_onDomain(FLAKE_, T_snow) ! OUT
       dsl4jsb_Get_var2D_onDomain(FLAKE_, T_wML)  ! OUT
+      dsl4jsb_Get_var2D_onDomain(FLAKE_, fetch)  ! OUT
 
       c_t         = 0.5_wp 
       h_ice       = 0.0_wp
@@ -86,6 +88,7 @@ CONTAINS
       ! T_sfc       = tpl_T_f
       ! T_snow      = tpl_T_f
       T_wML       = tpl_T_f
+      fetch       = 1.0E+04_wp ! 10km
 
     END IF
 
