@@ -442,13 +442,13 @@ MODULE mo_sb_memory_class
   !>
   TYPE, EXTENDS(t_jsb_pool) :: t_sb_bgcm_main
     !! pools
-    TYPE(t_sb_bgcm_with_components), POINTER :: sbbpool
-    TYPE(t_sb_bgcm_with_elements),   POINTER :: sbbdelta_pools
+    TYPE(t_sb_bgcm_with_components), POINTER :: sb_pool
+    TYPE(t_sb_bgcm_with_elements),   POINTER :: sb_delta_pools
     ! !! fluxes
-    TYPE(t_sb_bgcm_with_components), POINTER :: sbbformation
-    TYPE(t_sb_bgcm_with_components), POINTER :: sbbloss
-    TYPE(t_sb_bgcm_with_components), POINTER :: sbbtransport
-    TYPE(t_sb_bgcm_with_elements),   POINTER :: sbbmyco_export
+    TYPE(t_sb_bgcm_with_components), POINTER :: sb_formation
+    TYPE(t_sb_bgcm_with_components), POINTER :: sb_loss
+    TYPE(t_sb_bgcm_with_components), POINTER :: sb_transport
+    TYPE(t_sb_bgcm_with_elements),   POINTER :: sb_myco_export
   CONTAINS
     PROCEDURE :: Get_element_name_by_id     => sb_bgcm_main_get_element_name_by_id
     PROCEDURE :: Init                       => sb_bgcm_main_init
@@ -556,7 +556,6 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !>  1.0 bgc_material structures
       !>
-      !>  @TODO replace "b" in bgcm object names by "_" (sbbpool -> sb_pool) !!
       !>
       ! copy elements_index_map from config to local
       elem_idx_map(:) = model%config%elements_index_map(:)
@@ -581,19 +580,19 @@ CONTAINS
       !>
       ! "shortname" is used for model output names
       ! sb_pool
-      mem%sb_bgcm_main%sbbpool => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+      mem%sb_bgcm_main%sb_pool => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
         & SB_BGCM_POOL_ID, name = 'soil_biogeochemistry_bgcm_pool', shortname = 'sb_bgcm_pool', &
         & unit = unit_sb_pool, elements_index_map = elem_idx_map(:))
       ! sb_formation
-      mem%sb_bgcm_main%sbbformation => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,                   &
+      mem%sb_bgcm_main%sb_formation => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,                   &
         & SB_BGCM_FORMATION_ID, name = 'soil_biogeochemistry_bgcm_formation', shortname = 'sb_bgcm_formation', &
         & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
       ! sb_loss
-      mem%sb_bgcm_main%sbbloss => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+      mem%sb_bgcm_main%sb_loss => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
         & SB_BGCM_LOSS_ID, name = 'soil_biogeochemistry_bgcm_loss', shortname = 'sb_bgcm_loss', &
         & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
       ! sb_transport
-      mem%sb_bgcm_main%sbbtransport => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+      mem%sb_bgcm_main%sb_transport => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
         & SB_BGCM_TRANSPORT_ID, name = 'soil_biogeochemistry_bgcm_transport', shortname = 'sb_bgcm_transport', &
         & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
 
@@ -602,11 +601,11 @@ CONTAINS
       !>
       ! "shortname" is used for model output names
       ! sb_delta_pools
-      mem%sb_bgcm_main%sbbdelta_pools => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,            &
+      mem%sb_bgcm_main%sb_delta_pools => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,            &
         & name = 'soil_biogeochemistry_bgcm_delta_pools', shortname = 'sb_bgcm_delta_pools',            &
         & elements_index_map = elem_idx_map(:), unit = unit_sb_pool, bgcm_id = SB_BGCM_DELTA_POOLS_ID)
       ! sb_myco_export
-      mem%sb_bgcm_main%sbbmyco_export => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,        &
+      mem%sb_bgcm_main%sb_myco_export => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,        &
         & name = 'soil_biogeochemistry_bgcm_myco_export', shortname = 'sb_bgcm_myc_exp',            &
         & elements_index_map = elem_idx_map(:), unit = unit_sb_flux, bgcm_id = SB_BGCM_MYCO_EXPORT_ID)
 
@@ -614,7 +613,7 @@ CONTAINS
       CALL mem%bgc_material%Set_paths()
 
       ! add variables to bgc_material
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbpool,                                 &
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_pool,                                 &
         & hgrid, surface, vgrid_soil_w,                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
@@ -623,7 +622,7 @@ CONTAINS
         & lrestart = .TRUE.,                                                     &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE,                                &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbformation,                            &
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_formation,                            &
         & hgrid, surface, vgrid_soil_w,                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
@@ -633,7 +632,7 @@ CONTAINS
         & cons_quan_type_id = IQ_SL_FLUX_CQ_TYPE,                                &
         & transfer_all = .TRUE.,                                                 &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbloss, &
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_loss, &
         & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -641,7 +640,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbtransport, &
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_transport, &
         & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -649,7 +648,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbdelta_pools, &
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_delta_pools, &
         & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -657,7 +656,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbmyco_export, &
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_myco_export, &
         & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &

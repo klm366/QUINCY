@@ -417,7 +417,7 @@ MODULE mo_veg_memory_class
   !>
   TYPE, EXTENDS(t_jsb_pool) :: t_veg_bgcm_main
     !! pools
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbpool
+    TYPE(t_veg_bgcm_with_components),  POINTER :: veg_pool
     ! ... separate seed bed pool
     TYPE(t_veg_bgcm_with_elements),    POINTER :: seed_bed_pool
     ! ... and if with product pools
@@ -429,14 +429,14 @@ MODULE mo_veg_memory_class
     TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_pv
     TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_sawnwood
     !! fluxes
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbgrowth
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegblitterfall
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbfrac_alloc
+    TYPE(t_veg_bgcm_with_components),  POINTER :: veg_growth
+    TYPE(t_veg_bgcm_with_components),  POINTER :: veg_litterfall
+    TYPE(t_veg_bgcm_with_components),  POINTER :: veg_frac_alloc
     TYPE(t_veg_bgcm_with_elements),    POINTER :: seed_bed_growth
     TYPE(t_veg_bgcm_with_elements),    POINTER :: seed_bed_litterfall
-    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbexudation
-    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbestablishment
-    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbreserve_use
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_exudation
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_establishment
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_reserve_use
     ! ... if with sylviculture or agriculture
     TYPE(t_veg_bgcm_with_components),  POINTER :: harvest_litter
     ! ... if with product pools
@@ -563,7 +563,6 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !>  1.0 bgc_material structures
       !>
-      !>  @TODO replace "b" in bgcm object names by "_" (vegbpool -> veg_pool) !!
       !>
       ! copy elements_index_map from config to local
       elem_idx_map(:) = model%config%elements_index_map(:)
@@ -590,19 +589,19 @@ CONTAINS
       ! each component structure is created within the main bgcm pool structure together with required bookkeeping information
       ! "shortname" is used for model output names
       ! veg_pool
-      mem%veg_bgcm_main%vegbpool => Add_veg_bgc_material_with_components(mem%veg_bgcm_main, &
+      mem%veg_bgcm_main%veg_pool => Add_veg_bgc_material_with_components(mem%veg_bgcm_main, &
         & VEG_BGCM_POOL_ID, name = 'vegetation_bgcm_pool', shortname = 'veg_bgcm_pool',     &
         & unit = unit_veg_pool, elements_index_map = elem_idx_map(:))
       ! veg_growth
-      mem%veg_bgcm_main%vegbgrowth => Add_veg_bgc_material_with_components(mem%veg_bgcm_main, &
+      mem%veg_bgcm_main%veg_growth => Add_veg_bgc_material_with_components(mem%veg_bgcm_main, &
         & VEG_BGCM_GROWTH_ID, name = 'vegetation_bgcm_growth', shortname = 'veg_bgcm_growth', &
         & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
       ! veg_litterfall
-      mem%veg_bgcm_main%vegblitterfall => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,         &
+      mem%veg_bgcm_main%veg_litterfall => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,         &
         & VEG_BGCM_LITTERFALL_ID, name = 'vegetation_bgcm_litterfall', shortname = 'veg_bgcm_litterfall', &
         & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
       ! veg_frac_alloc
-      mem%veg_bgcm_main%vegbfrac_alloc => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,         &
+      mem%veg_bgcm_main%veg_frac_alloc => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,         &
         & VEG_BGCM_FRAC_ALLOC_ID, name = 'vegetation_bgcm_frac_alloc', shortname = 'veg_bgcm_frac_alloc', &
         & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
 
@@ -634,15 +633,15 @@ CONTAINS
         & name = 'vegetation_bgcm_seed_bed_litterfall', shortname = 'veg_bgcm_seed_bed_litterfall', &
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_SEED_BED_LITTERFALL_ID)
       ! veg_exudation
-      mem%veg_bgcm_main%vegbexudation => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
+      mem%veg_bgcm_main%veg_exudation => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
         & name = 'vegetation_bgcm_exudation', shortname = 'veg_bgcm_exudation',                       &
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_EXUDATION_ID)
       ! veg_establishment
-      mem%veg_bgcm_main%vegbestablishment => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
+      mem%veg_bgcm_main%veg_establishment => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
         & name = 'vegetation_bgcm_establishment', shortname = 'veg_bgcm_establishment',                   &
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_ESTABLISHMENT_ID)
       ! veg_reserve_use
-      mem%veg_bgcm_main%vegbreserve_use => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
+      mem%veg_bgcm_main%veg_reserve_use => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
         & name = 'vegetation_bgcm_reserve_use', shortname = 'veg_bgcm_reserve_use',                     &
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_RESERVE_USE_ID)
 
@@ -702,7 +701,7 @@ CONTAINS
       CALL mem%bgc_material%Set_paths()
 
       ! add variables to bgc_material
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbpool,                               &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_pool,                               &
         & hgrid, surface, vgrid_canopy_q_assimi,                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
@@ -720,7 +719,7 @@ CONTAINS
         & lrestart = .TRUE.,                                                                           &
         & cons_quan_type_id = IQ_1L2D_POOL_CQ_TYPE,                                                    &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbgrowth, &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_growth, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -736,7 +735,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegblitterfall, &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_litterfall, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -752,7 +751,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbfrac_alloc, &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_frac_alloc, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -760,7 +759,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbexudation, &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_exudation, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -768,7 +767,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbestablishment, &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_establishment, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -776,7 +775,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbreserve_use,                                              &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_reserve_use,                                              &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
