@@ -256,15 +256,6 @@ MODULE mo_q_dfire_constants
   REAL(wp), PARAMETER :: df_sf_lign_cg = 0.20_wp           !< Lightning events, from cloud to ground flashes, Thonicke et al. (2010) section 2.2.1
   REAL(wp), PARAMETER :: df_sf_lign_eff = 0.04_wp          !< Lightning events, Efficiency to start fires from cloud to ground flashes, Thonicke et al. (2010) section 2.2.1
 
-  ! todo: smarter way to do it?
-  LOGICAL, SAVE :: burnable_tree_pfts(13)  ! TTTTTTFFFFFFF, default
-  LOGICAL, SAVE :: burnable_grass_pfts(13) ! FFFFFFTTFFFFF, default
-  LOGICAL, SAVE :: burnable_pfts(13) != [.TRUE., .TRUE., .TRUE., .TRUE., .TRUE., .TRUE., & ! tree pfts
-                                        !      .TRUE., .TRUE., &                                 ! grass pfts
-                                        !      .FALSE., .FALSE., &                               ! pasture pfts , 13 pfts only
-                                        !      .FALSE., .FALSE., &                               ! crop pfts
-                                        !      .FALSE.]                                          ! Bare soil
-
   TYPE(t_sf_litter_ratios), SAVE :: ratio_as_dead_fuel                                 !< sb_pool ratios to dead fuel pools [0 to 1]
 CONTAINS
 
