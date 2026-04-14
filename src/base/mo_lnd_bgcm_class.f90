@@ -48,7 +48,7 @@ MODULE mo_lnd_bgcm_class
     LOGICAL                        :: contains_bgcm                 = .FALSE.  ! contains bgc_material (t_lnd_bgcm)
     LOGICAL                        :: contains_elem_1d_ptr_to_chunk = .FALSE.  ! t_lnd_bgcm_elem2d -> set TRUE in the bgcm init routines in the PROC_memory_class
     LOGICAL                        :: contains_elem_2d_ptr_to_chunk = .FALSE.  ! t_lnd_bgcm_elem3d -> set TRUE in the bgcm init routines in the PROC_memory_class
-    CLASS(t_lnd_bgcm_p),   POINTER :: pool_list(:) => NULL()                   ! children
+    CLASS(t_lnd_bgcm_p),   POINTER :: bgcm_list(:) => NULL()                   ! children
     CLASS(t_lnd_bgcm_p),   POINTER :: leaf_list(:) => NULL()                   ! leaves
     TYPE(t_jsb_var_p), ALLOCATABLE :: element_list(:)                          ! elements of this bgcm (elements used in PROC are defined in 'all_elements(:)' in PROC_memory_class)
     TYPE(t_jsb_var_p), ALLOCATABLE :: var_list(:)                              ! other associated variables - currently not used
@@ -148,8 +148,8 @@ CONTAINS
     CHARACTER(len=*),           INTENT(IN) :: tile_name !< name of the tile with this bgc material
     CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine
     ! -------------------------------------------------------------------------------------------------- !
-    IF(ASSOCIATED(this%pool_list)) THEN
-      IF(.NOT. SIZE(this%pool_list) .EQ. 0) THEN
+    IF(ASSOCIATED(this%bgcm_list)) THEN
+      IF(.NOT. SIZE(this%bgcm_list) .EQ. 0) THEN
         CALL finish(TRIM(routine), 'Found bgcm '//TRIM(this%name)//' in tile '//TRIM(tile_name)// &
           & ' with elements and compartments, but no behaviour is implemented for this so far, please check!')
       END IF
@@ -431,7 +431,7 @@ CONTAINS
     CLASS(t_lnd_bgcm), TARGET, INTENT(inout) :: bgcm
     INTEGER, OPTIONAL,         INTENT(in)    :: id  !< unique id of this bgcm
 
-    TYPE(t_lnd_bgcm_p), POINTER :: pool_list(:), leaf_list(:)
+    TYPE(t_lnd_bgcm_p), POINTER :: bgcm_list(:), leaf_list(:)
     INTEGER :: n_pools, n_leaves, i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_lnd_bgcm_add_bgcm'
@@ -439,20 +439,20 @@ CONTAINS
     ! if bgc materials should be used within the bgcm store, they need to have a unique id for quick association
     IF( PRESENT(id)) bgcm%id = id
 
-    IF (ASSOCIATED(this%pool_list)) THEN
-      n_pools = SIZE(this%pool_list)
+    IF (ASSOCIATED(this%bgcm_list)) THEN
+      n_pools = SIZE(this%bgcm_list)
     ELSE
       n_pools = 0
     END IF
 
-    ALLOCATE(pool_list(n_pools+1))
+    ALLOCATE(bgcm_list(n_pools+1))
     DO i=1,n_pools
-      pool_list(i)%p => this%pool_list(i)%p
+      bgcm_list(i)%p => this%bgcm_list(i)%p
     END DO
-    pool_list(n_pools+1)%p => bgcm
+    bgcm_list(n_pools+1)%p => bgcm
 
-    IF (ASSOCIATED(this%pool_list)) DEALLOCATE(this%pool_list)
-    this%pool_list => pool_list
+    IF (ASSOCIATED(this%bgcm_list)) DEALLOCATE(this%bgcm_list)
+    this%bgcm_list => bgcm_list
 
     IF (ASSOCIATED(this%leaf_list)) THEN
       n_leaves = SIZE(this%leaf_list)
@@ -507,9 +507,9 @@ CONTAINS
     END IF
     ! print*,'DDD ', this%shortname, path, this%path
 
-    IF (ASSOCIATED(this%pool_list)) THEN
-      DO i=1,SIZE(this%pool_list)
-        CALL this%pool_list(i)%p%Set_paths(this%path)
+    IF (ASSOCIATED(this%bgcm_list)) THEN
+      DO i=1,SIZE(this%bgcm_list)
+        CALL this%bgcm_list(i)%p%Set_paths(this%path)
       END DO
     END IF
 

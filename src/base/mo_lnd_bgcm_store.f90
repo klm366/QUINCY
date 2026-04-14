@@ -127,10 +127,10 @@ CONTAINS
     IF (debug_on()) &
       & CALL message(TRIM(routine), 'Append bgcms: '//TRIM(main_bgcm%name)//' - tile '//TRIM(tile_name))
 
-    nr_of_bgcms_this_proc = SIZE(main_bgcm%pool_list)
+    nr_of_bgcms_this_proc = SIZE(main_bgcm%bgcm_list)
     DO i_bgcm = 1, nr_of_bgcms_this_proc
       idx_bgcm = idx_bgcm + 1
-      bgcm => main_bgcm%pool_list(i_bgcm)%p
+      bgcm => main_bgcm%bgcm_list(i_bgcm)%p
 
       this%bgc_material_name(idx_bgcm) = bgcm%shortname
       IF(bgcm%id == -1) THEN
@@ -194,10 +194,10 @@ CONTAINS
         this%nr_of_levels(idx_bgcm) = 2
         ! current assumption (asserted in the counting routine): all elements of all compartments have the same dimension
         this%nr_of_dimensions(idx_bgcm) &
-          & = get_dimension_of_element_variables(bgcm%pool_list(1)%p, tile_name, routine)
+          & = get_dimension_of_element_variables(bgcm%bgcm_list(1)%p, tile_name, routine)
 
-        nr_of_compartments = SIZE(bgcm%pool_list)
-        nr_of_elements = SIZE(bgcm%pool_list(1)%p%element_list)
+        nr_of_compartments = SIZE(bgcm%bgcm_list)
+        nr_of_elements = SIZE(bgcm%bgcm_list(1)%p%element_list)
 
         SELECT CASE(this%nr_of_dimensions(idx_bgcm))
         CASE(2)
@@ -235,20 +235,20 @@ CONTAINS
         DO i_compartment = 1, nr_of_compartments
           SELECT CASE(this%nr_of_dimensions(idx_bgcm))
           CASE(2)
-            this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%compartment_shortname(i_compartment) = bgcm%pool_list(i_compartment)%p%shortname
+            this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%compartment_shortname(i_compartment) = bgcm%bgcm_list(i_compartment)%p%shortname
             DO i_element = 1, nr_of_elements
               this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%element_shortname(i_element) &
-                & = bgcm%pool_list(i_compartment)%p%element_list(i_element)%p%element_shortname
+                & = bgcm%bgcm_list(i_compartment)%p%element_list(i_element)%p%element_shortname
               this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%collection_2l_p(i_compartment, i_element)%p &
-                & => bgcm%pool_list(i_compartment)%p%element_list(i_element)%p
+                & => bgcm%bgcm_list(i_compartment)%p%element_list(i_element)%p
             ENDDO
           CASE(3)
-            this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%compartment_shortname(i_compartment) = bgcm%pool_list(i_compartment)%p%shortname
+            this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%compartment_shortname(i_compartment) = bgcm%bgcm_list(i_compartment)%p%shortname
             DO i_element = 1, nr_of_elements
               this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%element_shortname(i_element) &
-                & = bgcm%pool_list(i_compartment)%p%element_list(i_element)%p%element_shortname
+                & = bgcm%bgcm_list(i_compartment)%p%element_list(i_element)%p%element_shortname
               this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%collection_2l_p(i_compartment, i_element)%p &
-                & => bgcm%pool_list(i_compartment)%p%element_list(i_element)%p
+                & => bgcm%bgcm_list(i_compartment)%p%element_list(i_element)%p
             ENDDO
           ENDSELECT
         ENDDO ! compartments

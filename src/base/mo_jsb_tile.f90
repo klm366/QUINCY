@@ -820,10 +820,10 @@ CONTAINS
           this%bgcm_store => bgcm_store
         ENDIF
 
-        nr_of_bgcms_this_proc = SIZE(mem%bgc_material%pool_list)
+        nr_of_bgcms_this_proc = SIZE(mem%bgc_material%bgcm_list)
         this%bgcm_store%nr_of_bgc_materials = this%bgcm_store%nr_of_bgc_materials + nr_of_bgcms_this_proc
         DO i_bgcm = 1, nr_of_bgcms_this_proc
-          bgcm => mem%bgc_material%pool_list(i_bgcm)%p
+          bgcm => mem%bgc_material%bgcm_list(i_bgcm)%p
 
           IF(bgcm%contains_elements) THEN
             ! i.e. directly elements and no compartments
@@ -837,17 +837,17 @@ CONTAINS
           ELSE
             ! i.e. no elements but one layer of compartments which are then expected to have elements
             ! but no further compartments!
-            nr_of_compartments = SIZE(bgcm%pool_list)
+            nr_of_compartments = SIZE(bgcm%bgcm_list)
             common_dim = -1
             DO i_compartment = 1, nr_of_compartments
-              IF(.NOT. bgcm%pool_list(i_compartment)%p%contains_elements) THEN
+              IF(.NOT. bgcm%bgcm_list(i_compartment)%p%contains_elements) THEN
                 CALL finish(TRIM(routine), 'Found bgcm '//TRIM(bgcm%name)//' in tile '//TRIM(this%name)// &
                   & ' that contains a compartment without elements '//                                    &
-                  &  TRIM(bgcm%pool_list(i_compartment)%p%name)//                                         &
+                  &  TRIM(bgcm%bgcm_list(i_compartment)%p%name)//                                         &
                   & ' but no behaviour is implemented for this so far, please check!')
               ENDIF
-              CALL assert_no_compartment_bgc_materials(bgcm%pool_list(i_compartment)%p, this%name, routine)
-              this_dim = get_dimension_of_element_variables(bgcm%pool_list(i_compartment)%p, this%name, routine)
+              CALL assert_no_compartment_bgc_materials(bgcm%bgcm_list(i_compartment)%p, this%name, routine)
+              this_dim = get_dimension_of_element_variables(bgcm%bgcm_list(i_compartment)%p, this%name, routine)
               IF(i_compartment == 1) THEN
                 common_dim = this_dim
               ELSEIF(common_dim /= this_dim) THEN

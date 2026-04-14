@@ -67,17 +67,17 @@ MODULE mo_jsb_memory_class
     !
     LOGICAL :: has_bgc_materials = .FALSE.
     CLASS(t_lnd_bgcm), POINTER :: pools         => NULL()
-    CLASS(t_lnd_bgcm), POINTER :: bgc_material  => NULL()     ! TODO t_jsb_memory rename 't_lnd_bgcm' -> 't_lnd_bgc_material'
+    CLASS(t_lnd_bgcm), POINTER :: bgc_material  => NULL()     !< bgc material
   CONTAINS
     PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init
     PROCEDURE         :: Get_var
     PROCEDURE         :: t_jsb_memory_add_var_r1d
     PROCEDURE         :: t_jsb_memory_add_var_r2d
     PROCEDURE         :: t_jsb_memory_add_var_r3d
-    PROCEDURE         :: t_jsb_memory_add_pool         !< Add a (hierarchical) bgcm structure to memory (sub-bgcm and elements)
+    PROCEDURE         :: t_jsb_memory_add_bgcm         !< Add a (hierarchical) bgcm structure to memory (sub-bgcm and elements)
     GENERIC           :: Add_var => t_jsb_memory_add_var_r1d, t_jsb_memory_add_var_r2d, &
       &                             t_jsb_memory_add_var_r3d, &
-      &                             t_jsb_memory_add_pool
+      &                             t_jsb_memory_add_bgcm
     PROCEDURE         :: Get_var_position
     PROCEDURE, PUBLIC :: Collect_var_real2d            !< Collect 2d var from its child tiles
     PROCEDURE, PUBLIC :: Collect_var_real3d            !< Collect 3d var from its child tiles
@@ -654,7 +654,7 @@ CONTAINS
 
   END SUBROUTINE t_jsb_memory_add_var_r3d
 
-  RECURSIVE SUBROUTINE t_jsb_memory_add_pool(mem, pool,         &
+  RECURSIVE SUBROUTINE t_jsb_memory_add_bgcm(mem, pool,         &
     hgrid, vgrid_2d, vgrid_3d, grib1, grib2, prefix, suffix,    &
     loutput, lcontainer,                                        &
     lrestart, lrestart_cont, initval_r, isteptype,              &
@@ -701,11 +701,11 @@ CONTAINS
     ! CHARACTER(len=:), ALLOCATABLE :: output_level_name
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_pool'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_bgcm'
 
     lrestart_loc = .FALSE.
     CALL assign_if_present(lrestart_loc, lrestart)
-    lrestart_loc = lrestart_loc .AND. .NOT. ASSOCIATED(pool%pool_list)  ! Only elements on leaves are only put into restart file
+    lrestart_loc = lrestart_loc .AND. .NOT. ASSOCIATED(pool%bgcm_list)  ! Only elements on leaves are only put into restart file
 
     pool%owner_model_id = mem%owner_model_id
 
@@ -734,9 +734,9 @@ CONTAINS
       END DO
     END IF
 
-    IF (ASSOCIATED(pool%pool_list)) THEN
-      DO i=1,SIZE(pool%pool_list)
-        CALL mem%Add_var(pool%pool_list(i)%p,       &
+    IF (ASSOCIATED(pool%bgcm_list)) THEN
+      DO i=1,SIZE(pool%bgcm_list)
+        CALL mem%Add_var(pool%bgcm_list(i)%p,       &
           & hgrid, vgrid_2d, vgrid_3d, grib1, grib2, prefix//'_'//pool%shortname, suffix,             &
           & loutput=loutput, lcontainer=lcontainer,                                        &
           & lrestart=lrestart, lrestart_cont=lrestart_cont, initval_r=initval_r, isteptype=isteptype,              &
@@ -745,7 +745,7 @@ CONTAINS
       END DO
     END IF
 
-  END SUBROUTINE t_jsb_memory_add_pool
+  END SUBROUTINE t_jsb_memory_add_bgcm
 
 
   FUNCTION Get_var(this, name) RESULT(var_ptr)
