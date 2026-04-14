@@ -63,7 +63,7 @@ MODULE mo_jsb_pool_class
 #else
     PROCEDURE                       :: Find_pool             => t_jsb_pool_find_pool
     PROCEDURE                       :: Print                 => t_jsb_pool_print
-    PROCEDURE                       :: Get_subset            => t_jsb_pool_get_subset         ! get chunk and block and type information for the pool and thread
+    ! PROCEDURE                       :: Get_subset            => t_jsb_pool_get_subset         ! get chunk and block and type information for the pool and thread
 #endif
   END TYPE t_jsb_pool
 
@@ -396,21 +396,21 @@ CONTAINS
 
   END SUBROUTINE t_jsb_pool_print
 
-  !================================================================================================================================
-  ! get subset
-  ! chunk and block information per model & thread from mo_jsb_subset:jsbach_subsets(model_id)%sub(thread)
-  !================================================================================================================================
-  FUNCTION t_jsb_pool_get_subset(this) RESULT(subset)
+  ! !================================================================================================================================
+  ! ! get subset
+  ! ! chunk and block information per model & thread from mo_jsb_subset:jsbach_subsets(model_id)%sub(thread)
+  ! !================================================================================================================================
+  ! FUNCTION t_jsb_pool_get_subset(this) RESULT(subset)
 
-    USE mo_jsb_subset,   ONLY: jsbach_subsets
-    USE mo_jsb_parallel, ONLY: Get_omp_thread
+  !   USE mo_jsb_subset,   ONLY: jsbach_subsets
+  !   USE mo_jsb_parallel, ONLY: Get_omp_thread
 
-    CLASS(t_jsb_pool), INTENT(in) :: this
-    TYPE(t_subset)                :: subset
+  !   CLASS(t_jsb_pool), INTENT(in) :: this
+  !   TYPE(t_subset)                :: subset
 
-    subset = jsbach_subsets(this%owner_model_id)%sub(Get_omp_thread())
+  !   subset = jsbach_subsets(this%owner_model_id)%sub(Get_omp_thread())
 
-  END FUNCTION t_jsb_pool_get_subset
+  ! END FUNCTION t_jsb_pool_get_subset
 
 #endif
 END MODULE mo_jsb_pool_class
