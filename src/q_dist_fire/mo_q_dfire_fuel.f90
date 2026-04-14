@@ -28,47 +28,31 @@
 MODULE mo_q_dfire_fuel
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
-  USE mo_jsb_control,           ONLY: debug_on
-  USE mo_exception,             ONLY: message, finish
-  USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
-  USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
-  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
+  USE mo_kind,                    ONLY: wp
+  USE mo_jsb_control,             ONLY: debug_on
+  USE mo_exception,               ONLY: message, finish
+  USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
+  USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
+  USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
 
-  USE mo_veg_constants,         ONLY: ITREE, IGRASS
-  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix ! dead fuel indices from sb_pool
-  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_dead_fuel_grass_fruit_ix, t_sf_fuel_dead_fuel_grass_labile_ix, &  ! dead fuel indices from veg_pool
-                                      t_sf_fuel_dead_fuel_grass_reserve_ix, t_sf_fuel_dead_fuel_grass_leaf_ix, &
-                                      t_sf_fuel_dead_fuel_grass_sap_ix
-  USE mo_q_dfire_constants,     ONLY: df_sf_spq_layer_top_sl, burnable_pfts
+  USE mo_veg_constants,           ONLY: ITREE, IGRASS
+  USE mo_q_dfire_constants,       ONLY: df_sf_spq_layer_top_sl
 
-  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_live_fuel_fruit_ix, t_sf_fuel_live_fuel_leaf_ix, & ! live fuel indices from veg_pool
-                                      t_sf_fuel_live_fuel_labile_ix, t_sf_fuel_live_fuel_reserve_ix, &
-                                      t_sf_fuel_live_fuel_sap_wood_ix, t_sf_fuel_live_fuel_heart_wood_ix
+  USE mo_q_dfire_constants,       ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
+  USE mo_q_dfire_constants,       ONLY: ratio_as_dead_fuel !< variable sb pool ratios to dead fuel
 
-  USE mo_q_dfire_constants,     ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr ! total number of fuel pools
-  USE mo_q_dfire_constants,     ONLY: sf_fuel_classes_nr ! total number of fuel classes
-  USE mo_q_dfire_constants,     ONLY: sf_slow_fuel, sf_fast_fuel ! Fraction for each fuel class [%]
-  USE mo_q_dfire_constants,     ONLY: df_sf_fuel_class_factors !< Fuel bulk density factors for each spreading fuel class (1 to 100 hours)
-  USE mo_q_dfire_constants,     ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx, &
-                                        df_sf_fc_spread_nr !< Spread fuel classes: 1, 10 and 100 hours
-  USE mo_q_dfire_constants,     ONLY: ratio_as_dead_fuel !< variable sb pool ratios to dead fuel
-  USE mo_q_dfire_constants,     ONLY: df_sf_sl_dims_nr
-
-  USE mo_lnd_bgcm_idx,          ONLY: ixC
-  USE mo_lnd_bgcm_idx,          ONLY: ix_woody_litter, ix_polymeric_litter
-  USE mo_lnd_bgcm_idx,          ONLY: ix_leaf, ix_fruit, ix_labile, ix_reserve, ix_sap_wood, ix_heart_wood
-  USE mo_q_dfire_sf_fuel_class, ONLY: t_sf_fuel_class
-  USE mo_q_dfire_sf_ros_eqs,    ONLY: calc_fbd
-  USE mo_q_dfire_config_class,  ONLY: Q_DFIRE_ROS_OBERHAGEMANN, Q_DFIRE_ROS_THONICKE
+  USE mo_lnd_bgcm_idx,            ONLY: ixC
+  USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class
+  USE mo_q_dfire_sf_ros_eqs,      ONLY: calc_fbd
+  USE mo_q_dfire_config_class,    ONLY: Q_DFIRE_ROS_OBERHAGEMANN, Q_DFIRE_ROS_THONICKE
 
   !< Live fraction allocation for dead and live fuels
-  USE mo_q_dfire_constants,     ONLY: df_sf_live_frac_tree, &
+  USE mo_q_dfire_constants,       ONLY: df_sf_live_frac_tree, &
                                         df_sf_live_frac_grass
-  USE mo_q_dfire_constants,     ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
+  USE mo_q_dfire_constants,       ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
 
-  USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
-  USE mo_q_dfire_constants,     ONLY: df_sf_units_k_to_c
+  USE mo_q_dfire_sf_adaptor,      ONLY: sf_convert_units
+  USE mo_q_dfire_constants,       ONLY: df_sf_units_k_to_c
   USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg_ober, t_gsi, t_lfmc
 
   IMPLICIT NONE
@@ -122,23 +106,23 @@ CONTAINS
 
     INTEGER                               :: lctlib_growthform(options%nc)
 
-    REAL(wp)                              :: tile_fract(options%nc) !<  [%]
-    REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2?]
-    REAL(wp), POINTER                     :: tile_fract_ref(:) ! [%]
-    REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:) !< Top soil depth layer [m]
+    REAL(wp)                              :: tile_fract(options%nc)      !< [%]
+    REAL(wp), POINTER                     :: grid_cell_area(:)           ! [m2]
+    REAL(wp), POINTER                     :: tile_fract_ref(:)           ! [%]
+    REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:)        !< Top soil depth layer [m]
     REAL(wp)                              :: cured_lvg_fract(options%nc) !< Cured live grass fraction considered as dead fuel [%]
 
-    REAL(wp), POINTER, CONTIGUOUS         :: live_fuel_frac(:,:) !< live fuel classes allocation from veg_pool (#fuel classes,#live pools)
-    REAL(wp), ALLOCATABLE                 :: sb_pool_slim(:,:) !< debug only  (#pools, #nc)
-    REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:) !< (#nc,#dead fuel pools,#fuel classes)
-    REAL(wp), ALLOCATABLE                 :: live_grass_fuel_fcl(:,:,:) !< (#nc,#live fuel pools,#fuel classes)
+    REAL(wp), POINTER, CONTIGUOUS         :: live_fuel_frac(:,:)         !< live fuel classes allocation from veg_pool (#fuel classes,#live pools)
+    REAL(wp), ALLOCATABLE                 :: sb_pool_slim(:,:)           !< debug only  (#pools, #nc)
+    REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:)        !< (#nc,#dead fuel pools,#fuel classes)
+    REAL(wp), ALLOCATABLE                 :: live_grass_fuel_fcl(:,:,:)  !< (#nc,#live fuel pools,#fuel classes)
     REAL(wp), ALLOCATABLE                 :: cured_live_grass_fuel_fcl(:,:,:) !< (#nc,#dead fuel pools,#fuel classes)
-    REAL(wp), ALLOCATABLE                 :: live_tree_fuel_fcl(:,:,:) !< (#nc,#live fuel pools,#fuel classes)
-    REAL(wp), ALLOCATABLE                 :: dead_fuel_spread_fcl(:,:) !< (#nc,#dead fuel pools-1,10,100-,#fuel classes)
-    REAL(wp), ALLOCATABLE                 :: live_fuel_fcl(:,:,:) !< Live fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp), ALLOCATABLE                 :: veg_pool_in_gdm(:,:) !< Live fuel (#nc,#live fuel pools) [g DM m-2]
-    REAL(wp), ALLOCATABLE                 :: sb_pool_in_gdm(:,:) !< Dead fuel (#nc,#dead fuel pools) [g DM m-2]
-    TYPE(t_sf_fuel_class)                 :: fuel_cls
+    REAL(wp), ALLOCATABLE                 :: live_tree_fuel_fcl(:,:,:)   !< (#nc,#live fuel pools,#fuel classes)
+    REAL(wp), ALLOCATABLE                 :: dead_fuel_spread_fcl(:,:)   !< (#nc,#dead fuel pools-1,10,100-,#fuel classes)
+    REAL(wp), ALLOCATABLE                 :: live_fuel_fcl(:,:,:)        !< Live fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), ALLOCATABLE                 :: veg_pool_in_gdm(:,:)        !< Live fuel (#nc,#live fuel pools) [g DM m-2]
+    REAL(wp), ALLOCATABLE                 :: sb_pool_in_gdm(:,:)         !< Dead fuel (#nc,#dead fuel pools) [g DM m-2]
+    TYPE(t_sf_fuel_class)                 :: fuel_cls                    !< Fuel [g DM m-2]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -250,7 +234,7 @@ CONTAINS
     ELSE IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
       moisture_extinction = lctlib%q_moisture_extinction_ober
     END IF
-    fwd_wind_factor = lctlib%q_fwd_wind_factor ! aggregation: weighted over tile fraction
+    fwd_wind_factor = lctlib%q_fwd_wind_factor
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -307,7 +291,7 @@ CONTAINS
                             sb_pool_in_gdm, veg_pool_in_gdm, &
                             ratio_as_dead_fuel, cured_lvg_fract)
 
-    dead_fuel_fcl = fuel_cls % calc_dead_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
+    dead_fuel_fcl = fuel_cls % Calc_dead_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
 
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
@@ -329,12 +313,12 @@ CONTAINS
     dead_fuel_1000hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
 
     IF (lctlib%growthform == igrass) THEN
-      live_grass_fuel_fcl = fuel_cls % calc_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
+      live_grass_fuel_fcl = fuel_cls % Calc_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
       live_grass_fuel_1hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx)
       cured_live_grass_fuel_fcl = fuel_cls % Calc_cured_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
       cured_live_grass_fuel_1hr_dfp = cured_live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx)
     ELSE IF (lctlib%growthform == itree) THEN
-      live_tree_fuel_fcl = fuel_cls % calc_live_tree_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
+      live_tree_fuel_fcl = fuel_cls % Calc_live_tree_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
       live_tree_fuel_1hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1hr_idx)
       live_tree_fuel_10hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx)
       live_tree_fuel_100hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx)

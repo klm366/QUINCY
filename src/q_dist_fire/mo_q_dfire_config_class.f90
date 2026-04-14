@@ -40,14 +40,14 @@ MODULE mo_q_dfire_config_class
   USE mo_q_dfire_constants,   ONLY: df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_live_fuel_pools_name, &
                                   df_sf_vgrid_fuel_classes_name, df_sf_vgrid_fuel_moisture_name, &
                                   df_sf_vgrid_months_in_year_name
-  USE mo_q_dfire_constants,   ONLY: df_sf_omegas_nr
+  USE mo_q_dfire_constants,   ONLY: df_sf_omegas_nr, & !< fuel moisture (omega_o and omega_n_l)
+                                  sf_fuel_classes_nr   !< total number of fuel classes
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_q_dfire_config
   PUBLIC :: Q_DFIRE_MODEL_SF, Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
-  PUBLIC :: Q_DFIRE_LVG_THONICKE, Q_DFIRE_LVG_OBERHAGEMANN
 
   !>
   !> Fire models
@@ -62,12 +62,6 @@ MODULE mo_q_dfire_config_class
   ENUM, BIND(C)
     ENUMERATOR :: Q_DFIRE_ROS_THONICKE = 1 !< Thonicke et al. (2010)
     ENUMERATOR :: Q_DFIRE_ROS_OBERHAGEMANN !< Oberhagemann et al. (2025)
-  END ENUM
-
-  !> live grass moisture content models
-  ENUM, BIND(C)
-    ENUMERATOR :: Q_DFIRE_LVG_THONICKE = 1 !< Thonicke et al. (2010)
-    ENUMERATOR :: Q_DFIRE_LVG_OBERHAGEMANN !< Oberhagemann et al. (2025)
   END ENUM
 
   !< Precipitation method names for namelist
@@ -95,18 +89,18 @@ MODULE mo_q_dfire_config_class
     REAL(wp)          :: lightning_frequency         !< avrg number of all lightnings [ha-1 d-1]
     REAL(wp)          :: a_nd                        !< Propensity of people to produce ignition events (Eq. 3, Thonicke et al. (2010))
                                                      !< [ignitions indivual-1 d-1]
-    REAL(wp)          :: fract_crown_scorch(4)       !< Fraction of live fuel consumed in crown scorch. 4=fuel classes
+    REAL(wp)          :: fract_crown_scorch(sf_fuel_classes_nr) !< Fraction of live fuel consumed in crown scorch. 4=fuel classes
 
     ! input data
     CHARACTER(len=filename_max) :: ic_popdens_filename, ic_lightning_events_filename
 
-    !< flags
+    !< Fuel ratio flags (how much fuel allocate to the dead fuel classes)
     REAL(wp)          :: ratio_polymeric_litter_to_dead_fuel !< Ratio to include polymeric litter as dead fuel
-    REAL(wp)          :: ratio_dom_assoc_to_dead_fuel       !< Ratio to include dom_assoc as dead fuel
-    REAL(wp)          :: ratio_dom_to_dead_fuel             !< Ratio to include dom as dead fuel
-    REAL(wp)          :: ratio_soluable_litter_to_dead_fuel !< Ratio to include soluable as dead fuel
-    REAL(wp)          :: ratio_residue_to_dead_fuel         !< Ratio to include residue as dead fuel
-    REAL(wp)          :: ratio_residue_assoc_to_dead_fuel   !< Ratio to include residue_assoc as dead fuel
+    REAL(wp)          :: ratio_dom_assoc_to_dead_fuel        !< Ratio to include dom_assoc as dead fuel
+    REAL(wp)          :: ratio_dom_to_dead_fuel              !< Ratio to include dom as dead fuel
+    REAL(wp)          :: ratio_soluable_litter_to_dead_fuel  !< Ratio to include soluable as dead fuel
+    REAL(wp)          :: ratio_residue_to_dead_fuel          !< Ratio to include residue as dead fuel
+    REAL(wp)          :: ratio_residue_assoc_to_dead_fuel    !< Ratio to include residue_assoc as dead fuel
 
     !< Dev Flags
     LOGICAL           :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
@@ -153,7 +147,7 @@ CONTAINS
     REAL(wp)                      :: density_human_population !< Ignition events
     REAL(wp)                      :: lightning_frequency      !<
     REAL(wp)                      :: a_nd                     !<
-    REAL(wp)                      :: fract_crown_scorch(4)    !< Fraction of live fuel consumption from crown scorch
+    REAL(wp)                      :: fract_crown_scorch(sf_fuel_classes_nr) !< Fraction of live fuel consumption from crown scorch
     CHARACTER(len=filename_max)   :: ic_popdens_filename
     CHARACTER(len=filename_max)   :: ic_lightning_events_filename
 
@@ -195,7 +189,7 @@ CONTAINS
       & ic_lightning_events_filename,         &
       & fract_crown_scorch,                   &
       & ratio_polymeric_litter_to_dead_fuel,  &
-      & ratio_dom_assoc_to_dead_fuel,         & ! spitfire
+      & ratio_dom_assoc_to_dead_fuel,         &
       & ratio_dom_to_dead_fuel,               &
       & ratio_soluable_litter_to_dead_fuel,   &
       & ratio_residue_to_dead_fuel,           &
@@ -259,23 +253,23 @@ CONTAINS
     config%dfire_modelname           = TRIM(dfire_modelname)
     config%dfire_precip_method_name  = TRIM(dfire_precip_method_name)
     config%ros_modelname             = TRIM(ros_modelname)
-    config%density_human_population  = density_human_population       ! spitfire
-    config%lightning_frequency       = lightning_frequency            !
-    config%a_nd                      = a_nd                           !
+    config%density_human_population  = density_human_population
+    config%lightning_frequency       = lightning_frequency
+    config%a_nd                      = a_nd
     config%ic_popdens_filename       = TRIM(ic_popdens_filename)
     config%ic_lightning_events_filename = TRIM(ic_lightning_events_filename)
-    config%fract_crown_scorch        = fract_crown_scorch             !
-    config%ratio_polymeric_litter_to_dead_fuel = ratio_polymeric_litter_to_dead_fuel ! spitfire
-    config%ratio_dom_assoc_to_dead_fuel        = ratio_dom_assoc_to_dead_fuel          ! spitfire
-    config%ratio_dom_to_dead_fuel              = ratio_dom_to_dead_fuel                ! spitfire
-    config%ratio_soluable_litter_to_dead_fuel  = ratio_soluable_litter_to_dead_fuel    ! spitfire
-    config%ratio_residue_to_dead_fuel          = ratio_residue_to_dead_fuel            ! spitfire
-    config%ratio_residue_assoc_to_dead_fuel    = ratio_residue_assoc_to_dead_fuel      ! spitfire
-    config%flag_has_dead_feedback    = flag_has_dead_feedback         !
-    config%flag_has_live_feedback    = flag_has_live_feedback         !
-    config%flag_has_prob_mort_feedback = flag_has_prob_mort_feedback  !
-    config%tree_height_factor        = tree_height_factor             !
-    config%tree_diameter_factor      = tree_diameter_factor           !
+    config%fract_crown_scorch        = fract_crown_scorch
+    config%ratio_polymeric_litter_to_dead_fuel = ratio_polymeric_litter_to_dead_fuel
+    config%ratio_dom_assoc_to_dead_fuel        = ratio_dom_assoc_to_dead_fuel
+    config%ratio_dom_to_dead_fuel              = ratio_dom_to_dead_fuel
+    config%ratio_soluable_litter_to_dead_fuel  = ratio_soluable_litter_to_dead_fuel
+    config%ratio_residue_to_dead_fuel          = ratio_residue_to_dead_fuel
+    config%ratio_residue_assoc_to_dead_fuel    = ratio_residue_assoc_to_dead_fuel
+    config%flag_has_dead_feedback    = flag_has_dead_feedback
+    config%flag_has_live_feedback    = flag_has_live_feedback
+    config%flag_has_prob_mort_feedback = flag_has_prob_mort_feedback
+    config%tree_height_factor        = tree_height_factor
+    config%tree_diameter_factor      = tree_diameter_factor
     config%dead_fuel_factor          = dead_fuel_factor
     config%live_fuel_factor          = live_fuel_factor
     config%has_diagnostics           = has_diagnostics
