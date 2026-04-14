@@ -101,7 +101,7 @@ MODULE mo_lnd_bgcm_class
   ! ======================================================================================================= !
   !>
   !>IDs of elements, Carbon, Nitrogen, Phosphorous and their isotopes
-  !> 
+  !>
   !>(since elements are dynamic these ID can only be used as idx in arrays with all possible elements)
   !>
   ENUM, BIND(C)
