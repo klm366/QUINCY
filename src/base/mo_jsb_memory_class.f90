@@ -44,7 +44,10 @@ MODULE mo_jsb_memory_class
 
   PUBLIC :: t_jsb_memory_p, t_jsb_memory
 
-  !> Abstract type for the memory state of each tile and process (to be extended by each process)
+  ! ======================================================================================================= !
+  !>
+  !>Abstract type for the memory state of each tile and process (to be extended by each process)
+  !>
   TYPE, ABSTRACT :: t_jsb_memory
     INTEGER :: id = 0
     INTEGER :: grid_id = 0
@@ -66,7 +69,6 @@ MODULE mo_jsb_memory_class
     LOGICAL                        :: lrestart_cont = .FALSE. !< TRUE: Continue although variables are missing in restart file
     !
     LOGICAL :: has_bgc_materials = .FALSE.
-    CLASS(t_lnd_bgcm), POINTER :: pools         => NULL()
     CLASS(t_lnd_bgcm), POINTER :: bgc_material  => NULL()     !< bgc material
   CONTAINS
     PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init
@@ -654,7 +656,7 @@ CONTAINS
 
   END SUBROUTINE t_jsb_memory_add_var_r3d
 
-  RECURSIVE SUBROUTINE t_jsb_memory_add_bgcm(mem, pool,         &
+  RECURSIVE SUBROUTINE t_jsb_memory_add_bgcm(mem, bgcm,         &
     hgrid, vgrid_2d, vgrid_3d, grib1, grib2, prefix, suffix,    &
     loutput, lcontainer,                                        &
     lrestart, lrestart_cont, initval_r, isteptype,              &
@@ -665,7 +667,7 @@ CONTAINS
 
     CLASS(t_jsb_memory),   INTENT(inout)        :: mem                 ! memory structure
   !!$    TYPE(t_jsb_varlist),  INTENT(inout)        :: this_list           ! list
-    CLASS(t_lnd_bgcm),    TARGET,  INTENT(inout) :: pool                ! reference to pool
+    CLASS(t_lnd_bgcm),    TARGET,  INTENT(inout) :: bgcm                ! reference to bgcm
     TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! horizontal grid type
     TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid_2d            ! vertical grid type
     TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid_3d            ! vertical grid type
@@ -705,27 +707,27 @@ CONTAINS
 
     lrestart_loc = .FALSE.
     CALL assign_if_present(lrestart_loc, lrestart)
-    lrestart_loc = lrestart_loc .AND. .NOT. ASSOCIATED(pool%bgcm_list)  ! Only elements on leaves are only put into restart file
+    lrestart_loc = lrestart_loc .AND. .NOT. ASSOCIATED(bgcm%bgcm_list)  ! Only elements on leaves are only put into restart file
 
-    pool%owner_model_id = mem%owner_model_id
+    bgcm%owner_model_id = mem%owner_model_id
 
-    IF (ALLOCATED(pool%element_list)) THEN
-      DO i=1,SIZE(pool%element_list)
-        cf = t_cf(prefix//'_'//pool%shortname//pool%element_list(i)%p%element_shortname, pool%element_unit, &
-          &       pool%element_list(i)%p%element_name//' in pool '//pool%path//' on '//suffix)
+    IF (ALLOCATED(bgcm%element_list)) THEN
+      DO i=1,SIZE(bgcm%element_list)
+        cf = t_cf(prefix//'_'//bgcm%shortname//bgcm%element_list(i)%p%element_shortname, bgcm%element_unit, &
+          &       bgcm%element_list(i)%p%element_name//' in bgcm '//bgcm%path//' on '//suffix)
         ! cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
         ! grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
-        SELECT TYPE (selected_element => pool%element_list(i)%p)
+        SELECT TYPE (selected_element => bgcm%element_list(i)%p)
         TYPE IS (t_jsb_var_real2d)
           CALL mem%Add_var(selected_element%element_shortname, selected_element,       &
-            & hgrid, vgrid_2d, cf, grib1, grib2, prefix//'_'//pool%shortname, suffix,  &
+            & hgrid, vgrid_2d, cf, grib1, grib2, prefix//'_'//bgcm%shortname, suffix,  &
             & loutput=loutput, lcontainer=lcontainer,                                        &
             & lrestart=lrestart_loc, lrestart_cont=lrestart_cont, initval_r=initval_r, isteptype=isteptype,          &
             & resetval_r=resetval_r, lmiss=lmiss, missval_r=missval_r, l_aggregate_all=l_aggregate_all,              &
             & output_level=output_level, verbose=verbose, cons_quan_type_id=cons_quan_type_id, transfer_all=transfer_all )
         TYPE IS (t_jsb_var_real3d)
           CALL mem%Add_var(selected_element%element_shortname, selected_element,       &
-            & hgrid, vgrid_3d, cf, grib1, grib2, prefix//'_'//pool%shortname, suffix,  &
+            & hgrid, vgrid_3d, cf, grib1, grib2, prefix//'_'//bgcm%shortname, suffix,  &
             & loutput=loutput, lcontainer=lcontainer,                                        &
             & lrestart=lrestart_loc, lrestart_cont=lrestart_cont, initval_r=initval_r, isteptype=isteptype,          &
             & resetval_r=resetval_r, lmiss=lmiss, missval_r=missval_r, l_aggregate_all=l_aggregate_all,              &
@@ -734,10 +736,10 @@ CONTAINS
       END DO
     END IF
 
-    IF (ASSOCIATED(pool%bgcm_list)) THEN
-      DO i=1,SIZE(pool%bgcm_list)
-        CALL mem%Add_var(pool%bgcm_list(i)%p,       &
-          & hgrid, vgrid_2d, vgrid_3d, grib1, grib2, prefix//'_'//pool%shortname, suffix,             &
+    IF (ASSOCIATED(bgcm%bgcm_list)) THEN
+      DO i=1,SIZE(bgcm%bgcm_list)
+        CALL mem%Add_var(bgcm%bgcm_list(i)%p,       &
+          & hgrid, vgrid_2d, vgrid_3d, grib1, grib2, prefix//'_'//bgcm%shortname, suffix,             &
           & loutput=loutput, lcontainer=lcontainer,                                        &
           & lrestart=lrestart, lrestart_cont=lrestart_cont, initval_r=initval_r, isteptype=isteptype,              &
           & resetval_r=resetval_r, lmiss=lmiss, missval_r=missval_r, l_aggregate_all=l_aggregate_all,              &

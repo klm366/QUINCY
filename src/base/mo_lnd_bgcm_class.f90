@@ -44,7 +44,7 @@ MODULE mo_lnd_bgcm_class
     INTEGER                        :: id                            = -1
       !< a bgcm id that - if set /= -1 - should be unique (from mo_lnd_bgcm_store_class)
     INTEGER                        :: owner_model_id                = 0        ! ID of the jsbach model this bgcm is running at
-    LOGICAL                        :: contains_elements             = .FALSE.  ! contains element variables
+    LOGICAL                        :: contains_elements             = .FALSE.  ! contains element variables (e.g., Carbon, Nitrogen)
     LOGICAL                        :: contains_bgcm                 = .FALSE.  ! contains bgc_material (t_lnd_bgcm)
     LOGICAL                        :: contains_elem_1d_ptr_to_chunk = .FALSE.  ! t_lnd_bgcm_elem2d -> set TRUE in the bgcm init routines in the PROC_memory_class
     LOGICAL                        :: contains_elem_2d_ptr_to_chunk = .FALSE.  ! t_lnd_bgcm_elem3d -> set TRUE in the bgcm init routines in the PROC_memory_class
