@@ -388,7 +388,7 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen15
   CONTAINS
     PROCEDURE :: Get_element_name_by_id     => veg_bgcm_with_elements_get_element_name_by_id
-    ! PROCEDURE :: Init                       => veg_bgcm_with_elements_init
+    PROCEDURE :: Init                       => veg_bgcm_with_elements_init
   END TYPE t_veg_bgcm_with_elements
 
   ! ======================================================================================================= !
@@ -406,7 +406,7 @@ MODULE mo_veg_memory_class
     TYPE(t_veg_bgcm_with_elements),    POINTER :: fruit
   CONTAINS
     PROCEDURE :: Get_element_name_by_id     => veg_bgcm_with_components_get_element_name_by_id
-    ! PROCEDURE :: Init                       => veg_bgcm_with_components_init
+    PROCEDURE :: Init                       => veg_bgcm_with_components_init
   END TYPE t_veg_bgcm_with_components
 
   ! ======================================================================================================= !
@@ -444,7 +444,7 @@ MODULE mo_veg_memory_class
     TYPE(t_veg_bgcm_with_elements),    POINTER :: harvest_to_prod !< bgcm used for temporary storage of fluxes from harvest and alcc
   CONTAINS
     PROCEDURE :: Get_element_name_by_id     => veg_bgcm_main_get_element_name_by_id
-    ! PROCEDURE :: Init                       => veg_bgcm_main_init
+    PROCEDURE :: Init                       => veg_bgcm_main_init
   END TYPE t_veg_bgcm_main
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_memory_class'
@@ -3526,115 +3526,115 @@ CONTAINS
     END IF
   END FUNCTION veg_bgcm_main_get_element_name_by_id
 
-  ! ! ======================================================================================================= !
-  ! !>
-  ! !> initializing the t_veg_bgcm_with_elements object
-  ! !> "bgcm_object%Init()"
-  ! !> by default it does contain element variables !
-  ! !>
-  ! SUBROUTINE veg_bgcm_with_elements_init(this, name, shortname, elements_index_map, &
-  !   &                                    l_elements, element_list, element_unit)
-  !   ! ----------------------------------------------------------------------------------------------------- !
-  !   CLASS(t_veg_bgcm_with_elements),    INTENT(inout) :: this                   ! object of TYPE t_sb_elements_pool
-  !   CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! pool name       (No spaces !)
-  !   CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! pool short name (No spaces !)
-  !   INTEGER,                            INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-  !   LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF pool has elements
-  !   INTEGER,          OPTIONAL,         INTENT(in)    :: element_list(:) ! @TODO remove | list of elements; used if only selected elements should be added
-  !   CHARACTER(LEN=*), OPTIONAL,         INTENT(in)    :: element_unit           ! unit of elements
-  !   ! ----------------------------------------------------------------------------------------------------- !
-  !   INTEGER                     :: element_id
-  !   CHARACTER(len=*), PARAMETER :: routine = modname//':veg_bgcm_with_elements_init'
-  !   ! ----------------------------------------------------------------------------------------------------- !
+  ! ======================================================================================================= !
+  !>
+  !> initializing the t_veg_bgcm_with_elements object
+  !> "bgcm_object%Init()"
+  !> by default it does contain element variables !
+  !>
+  SUBROUTINE veg_bgcm_with_elements_init(this, name, shortname, elements_index_map, &
+    &                                    l_elements, element_list, element_unit)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_veg_bgcm_with_elements),    INTENT(inout) :: this                   ! object of TYPE t_sb_elements_pool
+    CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! pool name       (No spaces !)
+    CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    INTEGER,                            INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
+    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF pool has elements
+    INTEGER,          OPTIONAL,         INTENT(in)    :: element_list(:) ! @TODO remove | list of elements; used if only selected elements should be added
+    CHARACTER(LEN=*), OPTIONAL,         INTENT(in)    :: element_unit           ! unit of elements
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER                     :: element_id
+    CHARACTER(len=*), PARAMETER :: routine = modname//':veg_bgcm_with_elements_init'
+    ! ----------------------------------------------------------------------------------------------------- !
 
-  !   this%name              = name
-  !   this%shortname         = shortname
-  !   this%contains_elements = l_elements
-  !   this%contains_bgcm     = .FALSE.
+    this%name              = name
+    this%shortname         = shortname
+    this%contains_elements = l_elements
+    this%contains_bgcm     = .FALSE.
 
-  !   IF (.NOT. PRESENT(element_unit)) CALL finish(routine, 'Missing unit for elements')
-  !   this%element_unit = element_unit
+    IF (.NOT. PRESENT(element_unit)) CALL finish(routine, 'Missing unit for elements')
+    this%element_unit = element_unit
 
-  !   ! add element variables
-  !   DO element_id = 1, SIZE(elements_index_map)
-  !     IF (elements_index_map(element_id) > 0) THEN
-  !       CALL this%Add_element(get_name_for_element_id(element_id), get_short_name_for_element_id(element_id), element_id, dim=2)
+    ! add element variables
+    DO element_id = 1, SIZE(elements_index_map)
+      IF (elements_index_map(element_id) > 0) THEN
+        CALL this%Add_element(get_name_for_element_id(element_id), get_short_name_for_element_id(element_id), element_id, dim=2)
 
-  !       SELECT TYPE (selector => this%element_list(elements_index_map(element_id))%p)
-  !       CLASS IS (t_jsb_var_real2d)
-  !         SELECT CASE(element_id)
-  !         CASE(ELEM_C_ID)
-  !           this%carbon => selector
-  !         CASE(ELEM_N_ID)
-  !           this%nitrogen => selector
-  !         CASE(ELEM_P_ID)
-  !           this%phosphorus => selector
-  !         CASE(ELEM_C13_ID)
-  !           this%carbon13 => selector
-  !         CASE(ELEM_C14_ID)
-  !           this%carbon14 => selector
-  !         CASE(ELEM_N15_ID)
-  !           this%nitrogen15 => selector
-  !         CASE DEFAULT
-  !           CALL finish(routine, 'Invalid element id'//int2string(element_id))
-  !         END SELECT
-  !       END SELECT
-  !     ENDIF
-  !   ENDDO
+        SELECT TYPE (selector => this%element_list(elements_index_map(element_id))%p)
+        CLASS IS (t_jsb_var_real2d)
+          SELECT CASE(element_id)
+          CASE(ELEM_C_ID)
+            this%carbon => selector
+          CASE(ELEM_N_ID)
+            this%nitrogen => selector
+          CASE(ELEM_P_ID)
+            this%phosphorus => selector
+          CASE(ELEM_C13_ID)
+            this%carbon13 => selector
+          CASE(ELEM_C14_ID)
+            this%carbon14 => selector
+          CASE(ELEM_N15_ID)
+            this%nitrogen15 => selector
+          CASE DEFAULT
+            CALL finish(routine, 'Invalid element id'//int2string(element_id))
+          END SELECT
+        END SELECT
+      ENDIF
+    ENDDO
 
-  ! END SUBROUTINE veg_bgcm_with_elements_init
+  END SUBROUTINE veg_bgcm_with_elements_init
 
-  ! ! ======================================================================================================= !
-  ! !>
-  ! !> initializing the t_veg_bgcm_with_components object
-  ! !> "bgcm_object%Init()"
-  ! !> by default it does not contain element variables (only t_veg_bgcm_with_elements do)
-  ! !>
-  ! SUBROUTINE veg_bgcm_with_components_init(this, name, shortname, elements_index_map, &
-  !   &                                      l_elements, element_list, element_unit)
-  !   CLASS(t_veg_bgcm_with_components),    INTENT(inout) :: this                   ! object of TYPE t_sb_components_pool
-  !   CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! pool name       (No spaces !)
-  !   CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! pool short name (No spaces !)
-  !   INTEGER,                              INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-  !   LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF pool has elements
-  !   INTEGER,          OPTIONAL,           INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
-  !   CHARACTER(LEN=*), OPTIONAL,           INTENT(in)    :: element_unit           ! unit of elements
-  !   ! ----------------------------------------------------------------------------------------------------- !
-  !   CHARACTER(len=*), PARAMETER :: routine = modname//':veg_bgcm_with_components_init'
+  ! ======================================================================================================= !
+  !>
+  !> initializing the t_veg_bgcm_with_components object
+  !> "bgcm_object%Init()"
+  !> by default it does not contain element variables (only t_veg_bgcm_with_elements do)
+  !>
+  SUBROUTINE veg_bgcm_with_components_init(this, name, shortname, elements_index_map, &
+    &                                      l_elements, element_list, element_unit)
+    CLASS(t_veg_bgcm_with_components),    INTENT(inout) :: this                   ! object of TYPE t_sb_components_pool
+    CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! pool name       (No spaces !)
+    CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    INTEGER,                              INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
+    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF pool has elements
+    INTEGER,          OPTIONAL,           INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
+    CHARACTER(LEN=*), OPTIONAL,           INTENT(in)    :: element_unit           ! unit of elements
+    ! ----------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*), PARAMETER :: routine = modname//':veg_bgcm_with_components_init'
 
-  !   this%name              = name
-  !   this%shortname         = shortname
-  !   this%contains_elements = l_elements
-  !   this%contains_bgcm     = .TRUE.
+    this%name              = name
+    this%shortname         = shortname
+    this%contains_elements = l_elements
+    this%contains_bgcm     = .TRUE.
 
-  !   IF (.NOT. PRESENT(element_unit)) CALL finish(routine, 'Missing unit for elements')
-  !   this%element_unit = element_unit
-  ! END SUBROUTINE veg_bgcm_with_components_init
+    IF (.NOT. PRESENT(element_unit)) CALL finish(routine, 'Missing unit for elements')
+    this%element_unit = element_unit
+  END SUBROUTINE veg_bgcm_with_components_init
 
-  ! ! ======================================================================================================= !
-  ! !>
-  ! !> initializing the t_veg_bgcm_main object
-  ! !> "bgcm_object%Init()"
-  ! !> by default it does not contain element variables (only t_veg_bgcm_with_elements do)
-  ! !>
-  ! SUBROUTINE veg_bgcm_main_init(this, name, shortname, elements_index_map, &
-  !   &                           l_elements, element_list, element_unit)
-  !   ! ----------------------------------------------------------------------------------------------------- !
-  !   CLASS(t_veg_bgcm_main),         INTENT(inout) :: this                   ! object of TYPE t_sb_components_pool
-  !   CHARACTER(LEN=*),               INTENT(in)    :: name                   ! pool name       (No spaces !)
-  !   CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! pool short name (No spaces !)
-  !   INTEGER,                        INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-  !   LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF pool has elements
-  !   INTEGER,          OPTIONAL,     INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
-  !   CHARACTER(LEN=*), OPTIONAL,     INTENT(in)    :: element_unit           ! unit of elements
-  !   ! ----------------------------------------------------------------------------------------------------- !
-  !   CHARACTER(len=*), PARAMETER :: routine = modname//':veg_bgcm_main_init'
-  !   ! ----------------------------------------------------------------------------------------------------- !
-  !   this%name              = name
-  !   this%shortname         = shortname
-  !   this%contains_elements = l_elements
-  !   this%contains_bgcm     = .TRUE.
-  ! END SUBROUTINE veg_bgcm_main_init
+  ! ======================================================================================================= !
+  !>
+  !> initializing the t_veg_bgcm_main object
+  !> "bgcm_object%Init()"
+  !> by default it does not contain element variables (only t_veg_bgcm_with_elements do)
+  !>
+  SUBROUTINE veg_bgcm_main_init(this, name, shortname, elements_index_map, &
+    &                           l_elements, element_list, element_unit)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_veg_bgcm_main),         INTENT(inout) :: this                   ! object of TYPE t_sb_components_pool
+    CHARACTER(LEN=*),               INTENT(in)    :: name                   ! pool name       (No spaces !)
+    CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    INTEGER,                        INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
+    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF pool has elements
+    INTEGER,          OPTIONAL,     INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
+    CHARACTER(LEN=*), OPTIONAL,     INTENT(in)    :: element_unit           ! unit of elements
+    ! ----------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*), PARAMETER :: routine = modname//':veg_bgcm_main_init'
+    ! ----------------------------------------------------------------------------------------------------- !
+    this%name              = name
+    this%shortname         = shortname
+    this%contains_elements = l_elements
+    this%contains_bgcm     = .TRUE.
+  END SUBROUTINE veg_bgcm_main_init
 
   ! ======================================================================================================= !
   !>
