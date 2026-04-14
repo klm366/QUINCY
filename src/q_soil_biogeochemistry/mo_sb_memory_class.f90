@@ -24,12 +24,12 @@ MODULE mo_sb_memory_class
 
   USE mo_jsb_process_class,      ONLY: SB_
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
-    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id
+    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id, &
+    &                                  t_lnd_bgcm
   USE mo_lnd_bgcm_store_class,   ONLY: SB_BGCM_POOL_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
     &                                  SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
-  USE mo_jsb_pool_class,         ONLY: t_lnd_bgcm, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
   USE mo_jsb_cqt_class,          ONLY: IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE
 
@@ -3751,7 +3751,7 @@ CONTAINS
       & name = 'residue_assoc_bgcm', shortname = 'residue_assoc', elements_index_map = elements_index_map(:), unit = unit)
 
     ! Add the bookkeepoing for this sb bgcm with components
-    CALL pool%Add_pool(sb_bgcm_with_components, bgcm_id)
+    CALL pool%Add_bgcm(sb_bgcm_with_components, bgcm_id)
   END FUNCTION Add_sb_bgc_material_with_components
 
   ! ======================================================================================================= !
@@ -3774,7 +3774,7 @@ CONTAINS
 
     CALL sb_bgcm_with_elements%Init(name = name, shortname = shortname,  &
       & elements_index_map = elements_index_map(:), l_elements = .TRUE., element_unit = unit)
-    CALL pool%Add_pool(sb_bgcm_with_elements, bgcm_id)
+    CALL pool%Add_bgcm(sb_bgcm_with_elements, bgcm_id)
   END FUNCTION Add_sb_bgc_material_with_elements
 
 #endif

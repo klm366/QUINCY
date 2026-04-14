@@ -781,7 +781,7 @@ CONTAINS
   SUBROUTINE Count_and_classify_bgc_materials_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
-    USE mo_jsb_pool_class,      ONLY: t_lnd_bgcm
+    USE mo_lnd_bgcm_class,      ONLY: t_lnd_bgcm
     USE mo_lnd_bgcm_store,      ONLY: t_lnd_bgcm_store
     USE mo_lnd_bgcm_class,      ONLY: assert_no_compartment_bgc_materials, get_dimension_of_element_variables
     ! -------------------------------------------------------------------------------------------------- !

@@ -25,7 +25,7 @@ MODULE mo_jsb_memory_class
   USE mo_jsb_varlist_iface, ONLY: is_variable_in_output
   USE mo_jsb_var_class,     ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d, &
     &                             REAL1D, REAL2D, REAL3D
-  USE mo_jsb_pool_class,    ONLY: t_lnd_bgcm
+  USE mo_lnd_bgcm_class,    ONLY: t_lnd_bgcm
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, &
     &                             GRID_LONLAT, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var

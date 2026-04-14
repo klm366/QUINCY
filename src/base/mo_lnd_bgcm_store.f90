@@ -102,7 +102,7 @@ CONTAINS
   SUBROUTINE Append_process_bgcms_to_store(this, main_bgcm, nblks, nproma, nsoil, tile_name, idx_bgcm, &
       &                                    idx_1l_2d_bgcm, idx_2l_2d_bgcm, idx_1l_3d_bgcm, idx_2l_3d_bgcm)
 
-    USE mo_jsb_pool_class,      ONLY: t_lnd_bgcm
+    USE mo_lnd_bgcm_class,      ONLY: t_lnd_bgcm
     USE mo_lnd_bgcm_class,      ONLY: get_dimension_of_element_variables
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_lnd_bgcm_store), INTENT(INOUT) :: this           !< this bgcm store instance

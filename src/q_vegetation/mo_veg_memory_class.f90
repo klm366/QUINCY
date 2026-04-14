@@ -24,7 +24,8 @@ MODULE mo_veg_memory_class
 
   USE mo_jsb_process_class,      ONLY: VEG_, Q_SYL_, Q_AGR_, Q_ASSIMI_, ALCC_
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
-    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id
+    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id, &
+    &                                  t_lnd_bgcm
   USE mo_lnd_bgcm_store_class,   ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_SEED_BED_POOL_ID, VEG_BGCM_GROWTH_ID,                           &
     &                                  VEG_BGCM_SEED_BED_GROWTH_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID,      &
     &                                  VEG_BGCM_FRAC_ALLOC_ID,                                                                    &
@@ -34,7 +35,6 @@ MODULE mo_veg_memory_class
     &                                  VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_HARVEST_TO_PROD_ID, VEG_BGCM_HARVEST_LITTER_ID
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
-  USE mo_jsb_pool_class,         ONLY: t_lnd_bgcm, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
   USE mo_jsb_cqt_class,          ONLY: IQ_2L2D_POOL_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE
 
@@ -3678,7 +3678,7 @@ CONTAINS
       & name = 'fruit_bgcm', shortname = 'fruit', elements_index_map = elements_index_map(:), unit = unit)
 
     ! Add the bookkeepoing for this veg bgcm with components
-    CALL pool%Add_pool(veg_bgcm_with_components, bgcm_id)
+    CALL pool%Add_bgcm(veg_bgcm_with_components, bgcm_id)
 
   END FUNCTION Add_veg_bgc_material_with_components
 
@@ -3702,7 +3702,7 @@ CONTAINS
     ALLOCATE(veg_bgcm_with_elements)
     CALL veg_bgcm_with_elements%Init(name = name, shortname = shortname,  &
       & elements_index_map = elements_index_map(:), l_elements = .TRUE., element_unit = unit)
-    CALL pool%Add_pool(veg_bgcm_with_elements, bgcm_id)
+    CALL pool%Add_bgcm(veg_bgcm_with_elements, bgcm_id)
 
   END FUNCTION Add_veg_bgc_material_with_elements
 
