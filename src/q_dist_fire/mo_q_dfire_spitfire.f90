@@ -69,9 +69,8 @@ MODULE mo_q_dfire_spitfire
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_LOSS_ID, SB_BGCM_POOL_ID
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
-  USE mo_q_dfire_constants,       ONLY: df_sf_sl_dims_nr, sl_ixs => df_sf_sl_indices !< Soil related constants: top soil moisture layers
+  USE mo_q_dfire_constants,       ONLY: sl_ixs => df_sf_sl_indices !< Soil related constants: top soil moisture layers
 
-  USE mo_q_dfire_constants,       ONLY: t_sf_fuel_dead_fuel_woody_ix
   USE mo_q_dfire_constants,       ONLY: df_sf_max_density_human_pop
   USE mo_q_dfire_constants,       ONLY: df_sf_fc_spread_nr
   USE mo_q_dfire_constants,       ONLY: df_sf_alpha_nr, df_sf_alphas !< Drying parameters
@@ -85,7 +84,7 @@ MODULE mo_q_dfire_spitfire
                                       df_sf_omega_o_idx, & !< omega_o index from sf_calc_fuel_moisture output (array)
                                       df_sf_omega_nl_idx
 
-  USE mo_q_dfire_constants,       ONLY: ixs_sf_dead_litter_fuel_pools, ixs_sf_dead_livegrass_fuel_pools
+  USE mo_q_dfire_constants,       ONLY: ixs_sf_dead_litter_fuel_pools
   USE mo_q_dfire_constants,       ONLY: df_sf_units_g_to_kg
   USE mo_q_dfire_constants,       ONLY: df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, df_sf_sigma_dd_ros_nr
   USE mo_q_dfire_constants,       ONLY: df_sigmas_dead, df_sigmas_live, df_alphas_dead
@@ -636,7 +635,7 @@ CONTAINS
 
     REAL(wp), INTENT(INOUT) :: nesterov_index(nc)                  !< Dryness index [Celsius^2]
 
-    REAL(wp), INTENT(out) :: fuel_moisture(nc,df_sf_omegas_nr)     !< Fuel moisture (#nc, #omega_nr (omega_o, omega_nl))
+    REAL(wp), INTENT(out)   :: fuel_moisture(nc,df_sf_omegas_nr)   !< Fuel moisture (#nc, #omega_nr (omega_o, omega_nl))
 
     TYPE(t_sf_spitfire), INTENT(out)    :: spitfire                !< Spitfire outputs
     LOGICAL, INTENT(in), OPTIONAL       :: mask(nc)
@@ -645,27 +644,25 @@ CONTAINS
 
     ! locals
     TYPE(t_q_sf_ignitions)  :: sf_ignitions
-    REAL(wp) :: w_oi(nc,df_sf_fc_spread_nr)      !< Dead fuel by spread fuel classes (litter only)  [g DM m-2]
-    REAL(wp), ALLOCATABLE :: dry_lvg(:,:) !< Dry live grass, considered dead fuel [g DM m-2] (#nc,#livegrass fuel pools, #fuel classes)
-    REAL(wp) :: tot_lvg_fuel(nc)            !< Total livegrass fuel [g DM m-2]
-    INTEGER :: ndeadpools
-    LOGICAL  :: has_dead_fuel(nc)           !< True = dead fuel
-    LOGICAL  :: has_fire_conditions(nc)     !< 1, 10, 100 and 1000 hours
-    REAL(wp) :: tot_lvt_fuel(nc)            !< Total amount of live tree fuel [g DM m-2]
+    REAL(wp)                :: w_oi(nc,df_sf_fc_spread_nr)      !< Dead fuel by spread fuel classes (litter only)  [g DM m-2]
+    REAL(wp), ALLOCATABLE   :: dry_lvg(:,:)                     !< Dry live grass, considered dead fuel [g DM m-2] (#nc,#livegrass fuel pools, #fuel classes)
+    REAL(wp)                :: tot_lvg_fuel(nc)                 !< Total livegrass fuel [g DM m-2]
+    INTEGER                 :: ndeadpools
+    LOGICAL                 :: has_dead_fuel(nc)                !< True = dead fuel
+    LOGICAL                 :: has_fire_conditions(nc)          !< 1, 10, 100 and 1000 hours
+    REAL(wp)                :: tot_lvt_fuel(nc)                 !< Total amount of live tree fuel [g DM m-2]
 
     !< Thonicke related
-    REAL(wp), ALLOCATABLE :: dead_fuel_litter(:,:) !< Dead fuel litter [g DM m-2] (#nc,#fuel classes-1,10,100-)
-    REAL(wp), ALLOCATABLE :: tot_dead_fuel_grass(:) !< Total dead fuel grass [g DM m-2] (#nc)
-    REAL(wp), ALLOCATABLE :: tot_live_fuel_tree(:) !< Total live fuel tree [g DM m-2] (#nc)
-    REAL(wp), ALLOCATABLE :: fuel_moisture_for_fc(:,:) !< fuel moisture (or omega) [%] (#nc,#fuel classes-1,10,100,1000hrs-)
+    REAL(wp), ALLOCATABLE   :: dead_fuel_litter(:,:)            !< Dead fuel litter [g DM m-2] (#nc,#fuel classes-1,10,100-)
+    REAL(wp), ALLOCATABLE   :: tot_dead_fuel_grass(:)           !< Total dead fuel grass [g DM m-2] (#nc)
+    REAL(wp), ALLOCATABLE   :: tot_live_fuel_tree(:)            !< Total live fuel tree [g DM m-2] (#nc)
+    REAL(wp), ALLOCATABLE   :: fuel_moisture_for_fc(:,:)        !< fuel moisture (or omega) [%] (#nc,#fuel classes-1,10,100,1000hrs-)
     !< Oberhagemann related
     TYPE(t_mf), ALLOCATABLE :: fuel_moisture_ober
     !< ROS related
-    REAL(wp) :: u_f_wind(nc)  !< Wind speed at vegetation cover [m min-1]
+    REAL(wp)                :: u_f_wind(nc)                     !< Wind speed at vegetation cover [m min-1]
 
-    INTEGER                               :: i, j
-
-    ! todo: deal with tile_frac = 0?
+    INTEGER                 :: i, j                             !< loop indices
 
     ndeadpools = SIZE(dead_fuel, DIM=2) ! 2=dead fuel pools !fuel_cls % Count_dead_fuel_pools()
     mask_tile_enabled = .TRUE.
@@ -832,19 +829,19 @@ CONTAINS
                                     mask) !< optional
 
     INTEGER, INTENT(in)         :: nc, nalphas, nspread
-    REAL(wp), INTENT(in)        :: alphas(:) !< Surface area to volume ratio [cm2/cm3]
-    REAL(wp), INTENT(in)        :: fuel_bulk_density(:) !< Fuel bulk density [kg m-3]
-    REAL(wp), INTENT(in)        :: u_f_wind(:) !< Wind speed at vegetation cover [m min-1]
-    REAL(wp), INTENT(in)        :: nesterov_index(:) !< [deg C2]
-    REAL(wp), INTENT(in)        :: ab_moisture(:) !< Aboveground soil moisture [%]
+    REAL(wp), INTENT(in)        :: alphas(:)              !< Surface area to volume ratio [cm2/cm3]
+    REAL(wp), INTENT(in)        :: fuel_bulk_density(:)   !< Fuel bulk density [kg m-3]
+    REAL(wp), INTENT(in)        :: u_f_wind(:)            !< Wind speed at vegetation cover [m min-1]
+    REAL(wp), INTENT(in)        :: nesterov_index(:)      !< [deg C2]
+    REAL(wp), INTENT(in)        :: ab_moisture(:)         !< Aboveground soil moisture [%]
     REAL(wp), INTENT(in)        :: moisture_extinction(:) !< Dead moisture of extinction [%]
-    REAL(wp), INTENT(in)        :: dead_fuel_litter(:,:) !< Dead fuel litter [g DM m-2] (#nc,#fuel classes)
+    REAL(wp), INTENT(in)        :: dead_fuel_litter(:,:)  !< Dead fuel litter [g DM m-2] (#nc,#fuel classes)
     REAL(wp), INTENT(in)        :: tot_dead_fuel_grass(:) !< Total dead fuel grass [g DM m-2] (#nc)
 
-    REAL(wp), INTENT(out)       :: fdi(:) !< Fire dange index [%]
-    REAL(wp), INTENT(out)       :: fuel_moisture(:,:) !< Fuel moisture (#nc,#fuel moisture types) [%]
+    REAL(wp), INTENT(out)       :: fdi(:)                 !< Fire dange index [%]
+    REAL(wp), INTENT(out)       :: fuel_moisture(:,:)     !< Fuel moisture (#nc,#fuel moisture types) [%]
     TYPE(t_sf_ros), INTENT(out) :: ros
-    LOGICAL, INTENT(in), OPTIONAL :: mask(:) !< True: gridcell is enabled
+    LOGICAL, INTENT(in), OPTIONAL :: mask(:)              !< True: gridcell is enabled
 
     LOGICAL :: has_fire_conditions(nc)
 
@@ -880,8 +877,6 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> Calculate spitfire Oberhagemann's implementation
-  !>
-  !>
   !>
   SUBROUTINE calc_spitfire_oberhagemann(nc, &
                   ndd, & ! 5=1,10,100,1000 hours, cured live grass
@@ -930,10 +925,10 @@ CONTAINS
     TYPE(t_sf_ros), INTENT(out) :: ros !< Rate of spread [-]
     LOGICAL, OPTIONAL :: mask(:) !< True: gridcell enabled
 
-    REAL(wp) :: woi_dd(nc,ndd)    !< [kg DM m-2] (#nc, #sigma classes-1,10,100hrs,cured lvg-) Note: in kg
-    REAL(wp) :: woi_lv(nc,nlv)    !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
-    REAL(wp) :: me_dd(nc)            !< Dead moisture of extinction [-] (#nc)
-    REAL(wp) :: me_lv(nc)            !< Live moisture of extinction [-] (#nc)
+    REAL(wp) :: woi_dd(nc,ndd)        !< [kg DM m-2] (#nc, #sigma classes-1,10,100hrs,cured lvg-) Note: in kg
+    REAL(wp) :: woi_lv(nc,nlv)        !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
+    REAL(wp) :: me_dd(nc)             !< Dead moisture of extinction [-] (#nc)
+    REAL(wp) :: me_lv(nc)             !< Live moisture of extinction [-] (#nc)
 
     fdi = 0._wp
     fuel_moisture = sf_calc_fuel_moisture_ober(nc, &
@@ -1118,7 +1113,7 @@ CONTAINS
     test_BA_is_bigger_than_gridcellarea = .FALSE.
     has_any_test_failed = .FALSE.
 
-    ! AB_fract is within fractional limits? 0 to 1 
+    ! AB_fract is within fractional limits? 0 to 1
     IF (ANY(sf_outputs % area_burned_fract > 1._wp)) THEN
       DO ic=1, nc
         IF (sf_outputs % area_burned_fract(ic) > 1._wp) THEN

@@ -34,18 +34,18 @@ MODULE mo_q_dfire_sf_damage_class
   PUBLIC :: calc_prob_mortality
 
   TYPE t_sf_prob_mort
-    REAL(wp), ALLOCATABLE :: pm_ck(:)   !< probability of post fire mortality due to crown damage [-]
-    REAL(wp), ALLOCATABLE :: r_ck !< Resistance factor against crown damage [-]
-    REAL(wp), ALLOCATABLE :: ck_p !< Parameter for woody PFTs used in Pm (CK) equation [-]
-    REAL(wp), ALLOCATABLE :: F_scorch_height    !< PFT-parameter in crown scorch equation [-]
+    REAL(wp), ALLOCATABLE :: pm_ck(:)         !< probability of post fire mortality due to crown damage [-]
+    REAL(wp), ALLOCATABLE :: r_ck             !< Resistance factor against crown damage [-]
+    REAL(wp), ALLOCATABLE :: ck_p             !< Parameter for woody PFTs used in Pm (CK) equation [-]
+    REAL(wp), ALLOCATABLE :: F_scorch_height  !< PFT-parameter in crown scorch equation [-]
     REAL(wp), POINTER :: pm_fire(:) => NULL() !< mix of tau and ck [-]
     REAL(wp), POINTER :: pm_tau(:)  => NULL() !< probability of post fire mortality due to cambial damage [-]
-    REAL(wp), POINTER :: tau_l(:)!< Residence time of the fire [min]
-    REAL(wp), POINTER :: tau_c(:)!< Critical time for cambial damage [min]
-    REAL(wp), POINTER :: bark_thickness(:) !< [cm]
-    REAL(wp), POINTER :: prop_ck(:) !< Fraction of the crown scorch [-]
-    REAL(wp), POINTER :: scorch_height(:)   !< Scorch height [m]
-    REAL(wp), POINTER :: crown_length(:)    !< Crown length of woody PFT [m]
+    REAL(wp), POINTER :: tau_l(:)             !< Residence time of the fire [min]
+    REAL(wp), POINTER :: tau_c(:)             !< Critical time for cambial damage [min]
+    REAL(wp), POINTER :: bark_thickness(:)    !< Tree barth thickness [cm]
+    REAL(wp), POINTER :: prop_ck(:)           !< Fraction of the crown scorch [-]
+    REAL(wp), POINTER :: scorch_height(:)     !< Scorch height [m]
+    REAL(wp), POINTER :: crown_length(:)      !< Crown length of woody PFT [m]
   CONTAINS
     PROCEDURE :: copy_from_prob_mort
     GENERIC, PUBLIC :: assignment(=) => copy_from_prob_mort
