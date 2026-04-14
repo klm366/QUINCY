@@ -465,7 +465,7 @@ CONTAINS
     USE mo_jsb_model_class,     ONLY: t_jsb_model
     USE mo_jsb_class,           ONLY: Get_model
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT
-    USE mo_quincy_output_class, ONLY: unitless, unit_veg_pool_flux
+    USE mo_quincy_output_class, ONLY: unitless, unit_veg_pool, unit_veg_flux
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(Q_AGR_)
@@ -484,8 +484,6 @@ CONTAINS
     TYPE(t_jsb_vgrid),  POINTER :: surface                    !< Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy_q_assimi      !< Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_soil_w               !< Vertical grid
-    CHARACTER(len=30)           :: unit_veg_pool              !< unit of element var
-    CHARACTER(len=30)           :: unit_veg_flux              !< unit of element var
     INTEGER                     :: elem_idx_map(LAST_ELEM_ID) !< element mapper ID -> IND
     INTEGER                     :: table                      !< ...
     TYPE(t_grib2)               :: grib2_desc                 !< used for lai settings
@@ -516,11 +514,6 @@ CONTAINS
     dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_config(Q_ASSIMI_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! init local variables
-    unit_veg_pool = "mol m-2"
-    unit_veg_flux = "mol m-2 timestep-1"
-
     ! ----------------------------------------------------------------------------------------------------- !
     ! Depending on other active processes, certain bgcms are required or not
     is_active_AGR_or_ALCC = .FALSE.
@@ -658,7 +651,7 @@ CONTAINS
         !       If the alcc flux would be required for diagnostical reasons, an additional bgcm would be needed.
         mem%veg_bgcm_main%harvest_to_prod => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,             &
           & name = 'vegetation_bgcm_flux_harvest_to_product_pools', shortname = 'veg_bgcm_harvest_to_prod',    &
-          & elements_index_map = elem_idx_map(:), unit = unit_veg_pool_flux, bgcm_id = VEG_BGCM_HARVEST_TO_PROD_ID)
+          & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_HARVEST_TO_PROD_ID)
 
         ! only create the crop product pool bgcm if running with agriculture or anthropogenic land cover change
         IF (is_active_AGR_or_ALCC) THEN
