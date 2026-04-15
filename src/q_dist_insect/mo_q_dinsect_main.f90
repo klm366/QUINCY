@@ -195,7 +195,7 @@ CONTAINS
     doy = forcing_options%forcing_doy
     hour = forcing_options%forcing_hour
 #else
-    year = get_year(options%current_datetime) 
+    year = get_year(options%current_datetime)
     doy = INT(get_year_day(options%current_datetime))
     hour = get_secs_of_day(options%current_datetime) / 3600._wp ! seconds to hours
 #endif
