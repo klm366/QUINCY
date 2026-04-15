@@ -60,6 +60,7 @@ CONTAINS
 #ifdef __QUINCY_STANDALONE__
     USE mo_qs_forcing,              ONLY: forcing_options
 #else
+    USE mo_jsb_time,                ONLY: get_year, get_year_day, get_secs_of_day
 #endif
     USE mo_q_dinsect_damage
     USE mo_q_dinsect_defoliator_effect
@@ -194,10 +195,9 @@ CONTAINS
     doy = forcing_options%forcing_doy
     hour = forcing_options%forcing_hour
 #else
-    ! TODO: not yet implemented
-!    year = forcing_options%forcing_year
-!    doy = forcing_options%forcing_doy
-!    hour = forcing_options%forcing_hour
+    year = get_year(options%current_datetime) 
+    doy = INT(get_year_day(options%current_datetime))
+    hour = get_secs_of_day(options%current_datetime) / 3600._wp ! seconds to hours
 #endif
 
     start_of_year =  is_newyear(options%current_datetime, dtime)
