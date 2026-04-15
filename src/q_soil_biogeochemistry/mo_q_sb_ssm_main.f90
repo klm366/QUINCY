@@ -27,7 +27,8 @@ MODULE mo_q_sb_ssm_main
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, SB_BGCM_TRANSPORT_ID, &
     &                                   SB_BGCM_MYCO_EXPORT_ID
-
+  USE mo_lnd_bgcm_store_class,    ONLY: DINSECT_BGCM_SLOW_LITTER_ID, DINSECT_BGCM_FAST_LITTER_ID, &
+    &                                   DINSECT_BGCM_DROPPING_ID
   USE mo_jsb_math_constants,      ONLY: one_day, one_year, eps8, eps4
 
   IMPLICIT NONE
@@ -51,18 +52,20 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_
+    USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_, Q_DINSECT_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_q_sb_jsm_transport,    ONLY: calc_bioturbation_rate
     USE mo_q_sb_litter_processes, ONLY: calc_litter_partitioning
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_config(Q_DINSECT_)
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -100,6 +103,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt2L2D :: dinsect_slow_litter_mt
+    dsl4jsb_Def_mt1L2D :: dinsect_dropping_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_formation_mt
@@ -108,11 +113,13 @@ CONTAINS
     dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(Q_DINSECT_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: unit_uptake_n_pot
@@ -269,11 +276,13 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(Q_DINSECT_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     ALLOCATE(apparent_fast_som_cn(nc, nsoil_w))
     ALLOCATE(apparent_fast_som_np(nc, nsoil_w))
@@ -299,6 +308,8 @@ CONTAINS
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt2L2D(DINSECT_BGCM_SLOW_LITTER_ID, dinsect_slow_litter_mt)
+    dsl4jsb_Get_mt1L2D(DINSECT_BGCM_DROPPING_ID, dinsect_dropping_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_FORMATION_ID, sb_formation_mt)
@@ -906,6 +917,11 @@ CONTAINS
 
     !>5.0 Update soil litter pools with litter fall
     !>
+    !> If dinsect processes are considered, then the quantity of litterfall should add the materials from dead pools
+    IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_online) THEN
+      veg_litterfall_mt(:,:,:) = veg_litterfall_mt(:,:,:) + dinsect_slow_litter_mt(:,:,:)
+    END If
+
     CALL calc_litter_partitioning( &
       & nc, &                                         ! in
       & nsoil_w, &
@@ -918,6 +934,22 @@ CONTAINS
       & veg_litterfall_mt(:,:,:), &
       & seed_bed_litterfall_mt(:,:), &                ! in
       & sb_formation_mt(:,:,:,:) )                    ! inout
+
+    !< When defoliation is considered, the C litter from defoliation is added to the the formation of soluable C litter
+    IF ((dsl4jsb_Config(Q_DINSECT_)%dinsect_online)&
+    & .and. (dsl4jsb_Config(Q_DINSECT_)%dinsect_type == 2)) THEN
+      sb_formation_mt(ix_soluable_litter, ixC, :, 1) = &
+                                      sb_formation_mt(ix_soluable_litter, ixC, :, 1) &
+                                      + dinsect_dropping_mt(ixC,:) / soil_depth_sl(:,1)
+    END IF
+
+    !< After the calculation of litter fomation, the veg_litterfall_mt will extract live vegetation pools
+    !< through veg_pool_mt = veg_pool_mt - veg_litterfall_mt in veg_updata_pool
+    !< So here, after we use veg_litterfall_mt to to calculate litter formation from dead sapwood, dead heartwood, and dead leaves,
+    !< we need to exclude these parts
+    IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_online) THEN
+      veg_litterfall_mt(:,:,:) = veg_litterfall_mt(:,:,:) - dinsect_slow_litter_mt(:,:,:)
+    END If
 
     !>6.0 for 'sb_model = fixed': estimate N losses
     !>
