@@ -201,6 +201,8 @@ CONTAINS
 
        CALL message(TRIM(routine), 'New jsbach model: '//TRIM(model%shortname))
        CALL message('     ', '... ID: '//TRIM(int2string(model%id)))
+       IF (model%config%is_single_site) &
+         & CALL message('     ', '... Single site: '//TRIM(model%config%single_site_name))
        CALL message('     ', '... Usecase: '//TRIM(model%config%usecase))
        CALL message('     ', '... Using configuration from namelist: '//TRIM(model%namelist_filename))
        CALL message('     ', '... Using tile fractions from: '//TRIM(model%config%fract_filename))

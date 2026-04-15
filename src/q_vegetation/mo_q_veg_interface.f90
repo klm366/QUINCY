@@ -25,6 +25,7 @@ MODULE mo_q_veg_interface
   USE mo_exception,                   ONLY: message, finish
   USE mo_jsb_class,                   ONLY: Get_model
   USE mo_jsb_grid_class,              ONLY: t_jsb_grid
+  USE mo_jsb_grid,                    ONLY: Get_grid
   USE mo_jsb_model_class,             ONLY: t_jsb_model
   USE mo_jsb_tile_class,              ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
@@ -874,6 +875,7 @@ CONTAINS
     REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: grid
     CHARACTER(len=*), PARAMETER :: routine = modname//':global_q_veg_diagnostics'
 
     REAL(wp), POINTER       :: total_veg_c_gsum(:)
@@ -883,6 +885,9 @@ CONTAINS
     REAL(wp), POINTER       :: gpp_gsum(:)
     REAL(wp), POINTER       :: npp_gsum(:)
     REAL(wp), POINTER       :: nuptake_gsum(:)
+    REAL(wp)                :: hlp(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+
+    INTEGER  :: blk, jc, nblks, nproma
 
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
@@ -899,6 +904,9 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: gross_assimilation
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    nblks  = grid%nblks
+    nproma = grid%nproma
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
@@ -967,9 +975,22 @@ CONTAINS
     !     1 mu mol N = molar_massN g N e-6  => 1 Tg = molar_mass_N * e-12 * e-6
     !     1 s times one_day (60*60*24) time one_year (365)
     IF (VEG__mem%nuptake_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(nuptake_gsum, uptake_no3, land_area_scaling, &
+
+      !$ACC DATA ASYNC(acc_stream) CREATE(hlp)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
+      DO blk = 1, nblks
+        DO jc = 1, nproma
+          hlp(jc,blk) = uptake_nh4(jc,blk) + uptake_no3(jc,blk)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+
+      CALL scaled_global_sum_2D(nuptake_gsum, hlp, land_area_scaling, &
           & molar_mass_N * 1.e-18_wp * (one_day*one_year), acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%nuptake_gsum%ptr(:))
+
+      !$ACC WAIT(acc_stream)
+      !$ACC END DATA
     END IF
 
   END SUBROUTINE global_q_veg_diagnostics
