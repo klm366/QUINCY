@@ -38,6 +38,13 @@ MODULE mo_lnd_bgcm_store_class
     &       VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID,                           &
     &       VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_HARVEST_TO_PROD_ID, VEG_BGCM_HARVEST_LITTER_ID
 
+  PUBLIC :: DINSECT_BGCM_VEG_EXTRACT_ID, DINSECT_BGCM_FAST_LITTER_ID, &
+    &       DINSECT_BGCM_SLOW_LITTER_ID, DINSECT_BGCM_DEADSAPWOOD_ID, &
+    &       DINSECT_BGCM_DEADHEARTWOOD_ID, DINSECT_BGCM_DEADLEAF_ID, &
+    &       DINSECT_BGCM_LARVA_ID, DINSECT_BGCM_DROPPING_ID, &
+    &       DINSECT_BGCM_SEEDB_FASTL_ID
+    &
+
   ! ======================================================================================================= !
   !>
   !> IDs of all bgc materials that are to be used in the store
@@ -49,6 +56,15 @@ MODULE mo_lnd_bgcm_store_class
       & SB_BGCM_LOSS_ID,             &   !< soil biogeochemistry bgcm loss
       & SB_BGCM_TRANSPORT_ID,        &   !< soil biogeochemistry bgcm transport
       & SB_BGCM_MYCO_EXPORT_ID,      &   !< soil biogeochemistry bgcm mycorrhiza export
+      & DINSECT_BGCM_VEG_EXTRACT_ID,& !< dinsect bgcm veg extract
+      & DINSECT_BGCM_FAST_LITTER_ID,   &        !< dinsect bgcm direct litterfall
+      & DINSECT_BGCM_SEEDB_FASTL_ID, & !< dinsect bgcm seed bed direct litterfall
+      & DINSECT_BGCM_SLOW_LITTER_ID, & !< dinsect bgcm indirect litterfall
+      & DINSECT_BGCM_DEADSAPWOOD_ID,         & !< dinsect bgcm dead sapwood
+      & DINSECT_BGCM_DEADHEARTWOOD_ID,       & !< dinsect bgcm dead heartwood
+      & DINSECT_BGCM_DEADLEAF_ID,            & !< dinsect bgcm dead leaf
+      & DINSECT_BGCM_LARVA_ID,               & !< dinsect bgcm larva
+      & DINSECT_BGCM_DROPPING_ID,            & !< dinsect bgcm larva
       & VEG_BGCM_POOL_ID,            &   !< vegetation bgcm pool
       & VEG_BGCM_SEED_BED_POOL_ID,   &   !< vegetation bgcm seed bed pool
       & VEG_BGCM_GROWTH_ID,          &   !< vegetation bgcm growth
