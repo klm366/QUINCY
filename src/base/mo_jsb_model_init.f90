@@ -19,7 +19,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
-    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, Q_DINSECT_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -166,6 +166,7 @@ CONTAINS
     USE mo_carbon_init,         ONLY: carbon_init
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
+    USE mo_q_dinsect_init,      ONLY: dinsect_init
     USE mo_q_assimi_init,       ONLY: q_assimi_init
     USE mo_q_pheno_init,        ONLY: q_pheno_init
     USE mo_q_syl_init,          ONLY: q_syl_init
@@ -466,6 +467,9 @@ CONTAINS
         CALL model%Queue_task(HYDRO_,     "soil_properties")
 
         IF (model%config%qmodel_id == QLAND) THEN
+          IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
+            CALL model%Queue_task(Q_DINSECT_, "dist_insect")      ! LAND ONLY
+          ENDIF
           CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
         END IF
 
@@ -580,6 +584,9 @@ CONTAINS
         END IF
 
         IF (model%config%qmodel_id == QLAND) THEN
+          IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
+            CALL model%Queue_task(Q_DINSECT_, "dist_insect")      ! LAND ONLY
+          ENDIF
           CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
         END IF
         CALL model%Queue_task(SPQ_, "soil_turbulence")              ! ALL

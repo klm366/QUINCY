@@ -38,7 +38,7 @@ MODULE mo_q_dinsect_memory_class
   PRIVATE
   PUBLIC :: t_q_dinsect_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 1200 !> TYPE t_jsb_var | 'normal' var: ~ 220 | 5 pools: 270 var | 4 tissues: 24
+  INTEGER, PARAMETER :: max_no_of_vars = 20 !> TYPE t_jsb_var | 'normal' var: ~ 220 | 5 pools: 270 var | 4 tissues: 24
 
   ! ======================================================================================================= !
   !> Type definition for dinsect memory
