@@ -64,12 +64,14 @@ CONTAINS
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 #endif
 
-    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
+    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, CLIMBUF_, NLCC_, &
       &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_, VEG_, ALCC_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
+    dsl4jsb_Use_config(CLIMBUF_)
+    dsl4jsb_Use_config(NLCC_)
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
@@ -89,6 +91,8 @@ CONTAINS
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(RAD_)
+    dsl4jsb_Def_config(CLIMBUF_)
+    dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
@@ -268,6 +272,8 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
+        dsl4jsb_Get_config(CLIMBUF_)
+        dsl4jsb_Get_config(NLCC_)
         dsl4jsb_Get_config(CARBON_)
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
@@ -372,6 +378,18 @@ CONTAINS
           CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
         END IF
 
+        IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
+          dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on climate buffer process since natural lcc is active')
+        END IF
+        IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(CARBON_)) THEN
+          dsl4jsb_Config(CARBON_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on carbon process since natural lcc is active')
+        END IF
+        IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
+          dsl4jsb_Config(DISTURB_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on disturbance process since natural lcc process is active')
+        END IF
         IF (model%Is_process_enabled(FLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
           dsl4jsb_Config(DISTURB_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on disturbance process since fire lcc process is active')
@@ -388,8 +406,12 @@ CONTAINS
           dsl4jsb_Config(CARBON_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
         END IF
+        IF (model%Is_process_enabled(CARBON_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
+          dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on climate buffer process since carbon process is active')
+        END IF
 
-        IF(model%Is_process_enabled(FAGE_) &
+        IF (model%Is_process_enabled(FAGE_) &
             & .AND. .NOT. (TRIM(model%config%usecase) == 'jsbach_forest_age_classes')) THEN
           CALL finish(routine, &
             & 'The FAGE process should only be used with the jsbach_forest_age_classes usecase! Please check!')
