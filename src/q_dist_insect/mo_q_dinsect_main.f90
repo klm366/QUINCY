@@ -1,14 +1,14 @@
 !> Update dinsect module
 !>
-!> QUINCY
+!> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2019-2024, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
-!> Authors: AUTHORS.md   Yimian Ma for dinsect
+!> Authors: AUTHORS.md
 !> See LICENSES/ for license information
-!> SPDX-License-Identifier: GPL-3.0-only
+!> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
@@ -195,7 +195,7 @@ CONTAINS
     doy = forcing_options%forcing_doy
     hour = forcing_options%forcing_hour
 #else
-    year = get_year(options%current_datetime) 
+    year = get_year(options%current_datetime)
     doy = INT(get_year_day(options%current_datetime))
     hour = get_secs_of_day(options%current_datetime) / 3600._wp ! seconds to hours
 #endif
