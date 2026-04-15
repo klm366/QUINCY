@@ -41,7 +41,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_q_syl_memory_class,   ONLY: t_q_syl_memory
   USE mo_q_agr_memory_class,   ONLY: t_q_agr_memory
   USE mo_q_pheno_memory_class, ONLY: t_q_pheno_memory
-  USE mo_q_insect_memory_class, ONLY: t_q_insect_memory
+  USE mo_q_dinsect_memory_class, ONLY: t_q_dinsect_memory
   USE mo_spq_memory_class,     ONLY: t_spq_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
   USE mo_sb_memory_class,      ONLY: t_sb_memory
@@ -92,7 +92,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_q_agr_config_class,    ONLY: t_q_agr_config
   USE mo_q_pheno_interface,     ONLY: Register_q_pheno_tasks
   USE mo_q_pheno_config_class,  ONLY: t_q_pheno_config
-  USE mo_q_dinsect_interface,   ONLY: Register_q_dinsect_tasks
+  USE mo_q_dinsect_interface,   ONLY: Register_dinsect_tasks
   USE mo_q_dinsect_config_class,ONLY: t_q_dinsect_config
   USE mo_q_veg_interface,       ONLY: Register_veg_tasks_quincy
   USE mo_veg_config_class,      ONLY: t_veg_config
@@ -212,7 +212,7 @@ CONTAINS
       CALL Register_q_pheno_tasks(return_ptr, model_id)
       ALLOCATE(t_q_pheno_config::return_ptr%config)
     CASE (Q_DINSECT_)
-      CALL Register_q_dinsect_tasks(return_ptr, model_id)
+      CALL Register_dinsect_tasks(return_ptr, model_id)
       ALLOCATE(t_q_dinsect_config::return_ptr%config)
     CASE (VEG_)
       CALL Register_veg_tasks_quincy(return_ptr, model_id)

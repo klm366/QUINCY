@@ -57,7 +57,10 @@ CONTAINS
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: VEG_, Q_DINSECT_
     USE mo_q_dinsect_constants
+#ifdef __QUINCY_STANDALONE__
     USE mo_qs_forcing,              ONLY: forcing_options
+#else
+#endif
     USE mo_q_dinsect_damage
     USE mo_q_dinsect_defoliator_effect
     USE mo_q_dinsect_bark_beetle_effect
@@ -186,9 +189,16 @@ CONTAINS
     !> Vegetation and soil dynamics can be changed by insect effect module if dinsect_online is .True.
     ! ----------------------------------------------------------------------------------------------------- !
 
+#ifdef __QUINCY_STANDALONE__
     year = forcing_options%forcing_year
     doy = forcing_options%forcing_doy
     hour = forcing_options%forcing_hour
+#else
+    ! TODO: not yet implemented
+!    year = forcing_options%forcing_year
+!    doy = forcing_options%forcing_doy
+!    hour = forcing_options%forcing_hour
+#endif
 
     start_of_year =  is_newyear(options%current_datetime, dtime)
 

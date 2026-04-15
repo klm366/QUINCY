@@ -43,7 +43,6 @@ MODULE mo_lnd_bgcm_store_class
     &       DINSECT_BGCM_DEADHEARTWOOD_ID, DINSECT_BGCM_DEADLEAF_ID, &
     &       DINSECT_BGCM_LARVA_ID, DINSECT_BGCM_DROPPING_ID, &
     &       DINSECT_BGCM_SEEDB_FASTL_ID
-    &
 
   ! ======================================================================================================= !
   !>

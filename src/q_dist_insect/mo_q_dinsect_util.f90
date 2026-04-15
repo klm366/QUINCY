@@ -18,7 +18,6 @@ MODULE mo_q_dinsect_util
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message
   USE mo_jsb_math_constants,      ONLY: zero, eps8
-  USE mo_qs_forcing,              ONLY: forcing_options
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: DINSECT_BGCM_VEG_EXTRACT_ID, &

@@ -26,6 +26,7 @@ MODULE mo_jsb_model_init
   dsl4jsb_Use_config(FAGE_)
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(Q_DINSECT_)
 #ifndef __NO_QUINCY__
   dsl4jsb_Use_config(VEG_)
   dsl4jsb_Use_config(SB_)
@@ -202,6 +203,7 @@ CONTAINS
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(Q_DINSECT_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
@@ -222,6 +224,7 @@ CONTAINS
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_config(Q_DINSECT_)
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
