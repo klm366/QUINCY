@@ -104,6 +104,7 @@ CONTAINS
   SUBROUTINE sb_init(tile)
 
     USE mo_jsb_parallel,       ONLY: Get_omp_thread
+    dsl4jsb_Use_config(SB_)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -111,26 +112,38 @@ CONTAINS
     TYPE(t_jsb_model),  POINTER :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sb_init'
 
+    dsl4jsb_Def_config(SB_)
+
+    model => Get_model(tile%owner_model_id)
+    dsl4jsb_Get_config(SB_)
+
 #ifdef __QUINCY_STANDALONE__
     CALL sb_qs_read_init_vars(tile)
-    CALL sb_qs_read_analytical_init_vars(tile)
+    IF (TRIM(dsl4jsb_Config(SB_)%sb_init_scheme) == 'analytical_ss') THEN
+      CALL sb_qs_read_analytical_init_vars(tile)
+    END IF
     CALL sb_init_ic_bc(tile)
-    CALL sb_finalize_analytical_init_vars()
+    IF (TRIM(dsl4jsb_Config(SB_)%sb_init_scheme) == 'analytical_ss') THEN
+      CALL sb_finalize_analytical_init_vars()
+    END IF
     CALL sb_finalize_init_vars()
 #else
-    model => Get_model(tile%owner_model_id)
     no_omp_thread = Get_omp_thread()
 
     ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL sb_read_init_vars(tile)
-      CALL sb_read_analytical_init_vars(tile)
+      IF (TRIM(dsl4jsb_Config(SB_)%sb_init_scheme) == 'analytical_ss') THEN
+        CALL sb_read_analytical_init_vars(tile)
+      END IF
     END IF
 
     CALL sb_init_ic_bc(tile)
 
     IF (tile%Is_last_process_tile(SB_)) THEN
-      CALL sb_finalize_analytical_init_vars()
+      IF (TRIM(dsl4jsb_Config(SB_)%sb_init_scheme) == 'analytical_ss') THEN
+        CALL sb_finalize_analytical_init_vars()
+      END IF
       CALL sb_finalize_init_vars()
     END IF
 #endif
@@ -847,13 +860,188 @@ CONTAINS
       sb_analytical_init_vars%formation_polymeric_litter_c(:,:,:) = scalar_value
     CASE('formation_woody_litter_c')
       sb_analytical_init_vars%formation_woody_litter_c(:,:,:) = scalar_value
-    CASE('enzyme_frac_ap')
-      sb_analytical_init_vars%enzyme_frac_ap(:,:,:) = scalar_value
     CASE DEFAULT
       CALL finish(TRIM(modname)//':sb_assign_analytical_init_scalar', &
         & 'Unknown analytical steady-state init variable in standalone text file: '//TRIM(var_name))
     END SELECT
   END SUBROUTINE sb_assign_analytical_init_scalar
+
+  ! ======================================================================================================= !
+  !> assign one scalar value to one analytical steady-state init variable and one specific soil layer
+  !>
+  SUBROUTINE sb_assign_analytical_init_layer_scalar(var_name, scalar_value, isoil_layer)
+    CHARACTER(len=*), INTENT(in) :: var_name
+    REAL(wp),         INTENT(in) :: scalar_value
+    INTEGER,          INTENT(in) :: isoil_layer
+
+    SELECT CASE(TRIM(var_name))
+    CASE('frac_wtr_transp_down_sl', 'hydro_frac_wtr_transp_down_sl')
+      sb_analytical_init_vars%frac_wtr_transp_down_sl(:,isoil_layer,:) = scalar_value
+    CASE('frac_w_lat_loss_sl', 'hydro_frac_w_lat_loss_sl')
+      sb_analytical_init_vars%frac_w_lat_loss_sl(:,isoil_layer,:) = scalar_value
+    CASE('rtm_decomposition', 'sb_rtm_decomposition')
+      sb_analytical_init_vars%rtm_decomposition(:,isoil_layer,:) = scalar_value
+    CASE('rmm_decomposition', 'sb_rmm_decomposition')
+      sb_analytical_init_vars%rmm_decomposition(:,isoil_layer,:) = scalar_value
+    CASE('rtm_depolymerisation', 'sb_rtm_depolymerisation')
+      sb_analytical_init_vars%rtm_depolymerisation(:,isoil_layer,:) = scalar_value
+    CASE('rmm_depolymerisation', 'sb_rmm_depolymerisation')
+      sb_analytical_init_vars%rmm_depolymerisation(:,isoil_layer,:) = scalar_value
+    CASE('rtm_sorption', 'sb_rtm_sorption')
+      sb_analytical_init_vars%rtm_sorption(:,isoil_layer,:) = scalar_value
+    CASE('rmm_sorption', 'sb_rmm_sorption')
+      sb_analytical_init_vars%rmm_sorption(:,isoil_layer,:) = scalar_value
+    CASE('rtm_desorption', 'sb_rtm_desorption')
+      sb_analytical_init_vars%rtm_desorption(:,isoil_layer,:) = scalar_value
+    CASE('rmm_desorption', 'sb_rmm_desorption')
+      sb_analytical_init_vars%rmm_desorption(:,isoil_layer,:) = scalar_value
+    CASE('rtm_mic_uptake', 'sb_rtm_mic_uptake')
+      sb_analytical_init_vars%rtm_mic_uptake(:,isoil_layer,:) = scalar_value
+    CASE('rmm_mic_uptake', 'sb_rmm_mic_uptake')
+      sb_analytical_init_vars%rmm_mic_uptake(:,isoil_layer,:) = scalar_value
+    CASE('rtm_hsc', 'sb_rtm_hsc')
+      sb_analytical_init_vars%rtm_hsc(:,isoil_layer,:) = scalar_value
+    CASE('rmm_hsc', 'sb_rmm_hsc')
+      sb_analytical_init_vars%rmm_hsc(:,isoil_layer,:) = scalar_value
+    CASE('bulk_dens_sl', 'sse_bulk_dens_sl')
+      sb_analytical_init_vars%bulk_dens_sl(:,isoil_layer,:) = scalar_value
+    CASE('silt_sl', 'sse_silt_sl')
+      sb_analytical_init_vars%silt_sl(:,isoil_layer,:) = scalar_value
+    CASE('clay_sl', 'sse_clay_sl')
+      sb_analytical_init_vars%clay_sl(:,isoil_layer,:) = scalar_value
+    CASE('formation_soluable_litter_c')
+      sb_analytical_init_vars%formation_soluable_litter_c(:,isoil_layer,:) = scalar_value
+    CASE('formation_polymeric_litter_c')
+      sb_analytical_init_vars%formation_polymeric_litter_c(:,isoil_layer,:) = scalar_value
+    CASE('formation_woody_litter_c')
+      sb_analytical_init_vars%formation_woody_litter_c(:,isoil_layer,:) = scalar_value
+    CASE DEFAULT
+      CALL finish(TRIM(modname)//':sb_assign_analytical_init_layer_scalar', &
+        & 'Unknown analytical steady-state init variable in standalone text file: '//TRIM(var_name))
+    END SELECT
+  END SUBROUTINE sb_assign_analytical_init_layer_scalar
+
+  ! ======================================================================================================= !
+  !> assign one standalone analytical steady-state record to the analytical init storage
+  !>
+  !> The standalone text file now stores one site per row with the fixed column order:
+  !>   site_name,
+  !>   formation_soluable_litter_c_L1..Ln,
+  !>   formation_polymeric_litter_c_L1..Ln,
+  !>   formation_woody_litter_c_L1..Ln,
+  !>   frac_wtr_transp_down_sl_L1..Ln,
+  !>   frac_w_lat_loss_sl_L1..Ln,
+  !>   rtm_decomposition_L1..Ln,
+  !>   rmm_decomposition_L1..Ln,
+  !>   rtm_depolymerisation_L1..Ln,
+  !>   rmm_depolymerisation_L1..Ln,
+  !>   rtm_mic_uptake_L1..Ln,
+  !>   rmm_mic_uptake_L1..Ln,
+  !>   rtm_sorption_L1..Ln,
+  !>   rmm_sorption_L1..Ln,
+  !>   rtm_desorption_L1..Ln,
+  !>   rmm_desorption_L1..Ln,
+  !>   rtm_hsc_L1..Ln,
+  !>   rmm_hsc_L1..Ln,
+  !>   bulk_dens_sl_L1..Ln,
+  !>   silt_sl_L1..Ln,
+  !>   clay_sl_L1..Ln
+  !>
+  SUBROUTINE sb_assign_analytical_init_record_values(record_values, nsoil_w)
+    REAL(wp), INTENT(in) :: record_values(:)
+    INTEGER,  INTENT(in) :: nsoil_w
+
+    INTEGER :: idx
+    INTEGER :: isoil
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sb_assign_analytical_init_record_values'
+
+    IF (SIZE(record_values) /= 20 * nsoil_w) THEN
+      CALL finish(TRIM(routine), 'Unexpected number of values in standalone analytical init record.')
+    END IF
+
+    idx = 0
+
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%formation_soluable_litter_c(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%formation_polymeric_litter_c(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%formation_woody_litter_c(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%frac_wtr_transp_down_sl(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%frac_w_lat_loss_sl(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%rtm_decomposition(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%rmm_decomposition(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%rtm_depolymerisation(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%rmm_depolymerisation(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%rtm_mic_uptake(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%rmm_mic_uptake(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%rtm_sorption(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%rmm_sorption(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%rtm_desorption(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%rmm_desorption(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%rtm_hsc(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%rmm_hsc(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%bulk_dens_sl(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%silt_sl(:, isoil, :) = record_values(idx)
+    END DO
+    DO isoil = 1, nsoil_w
+      idx = idx + 1
+      sb_analytical_init_vars%clay_sl(:, isoil, :) = record_values(idx)
+    END DO
+  END SUBROUTINE sb_assign_analytical_init_record_values
 
 #ifdef __QUINCY_STANDALONE__
   ! ======================================================================================================= !
@@ -877,15 +1065,15 @@ CONTAINS
     INTEGER                     :: analytical_unit
     INTEGER                     :: io_status
     INTEGER                     :: nline
-    CHARACTER(len=512)          :: line
+    INTEGER                     :: values_per_site
+    INTEGER                     :: data_lines_read
+    INTEGER                     :: ivalue
+    CHARACTER(len=32768)        :: line
     CHARACTER(len=32)           :: line_no_str
-    CHARACTER(len=128)          :: var_name
-    REAL(wp)                    :: scalar_value
+    CHARACTER(len=128)          :: site_name
+    REAL(wp), ALLOCATABLE       :: record_values(:)
+    LOGICAL                     :: header_read
     CHARACTER(len=*), PARAMETER :: routine = modname//':sb_qs_read_analytical_init_vars'
-
-    dsl4jsb_Get_config(SB_)
-
-    IF (TRIM(dsl4jsb_Config(SB_)%sb_init_scheme) /= 'analytical_ss') RETURN
 
     model  => Get_model(tile%owner_model_id)
     hgrid  => Get_grid(model%grid_id)
@@ -894,14 +1082,23 @@ CONTAINS
     vgrid_soil_w  => Get_vgrid('soil_depth_water')
     nsoil_w       = vgrid_soil_w%n_levels
 
+    dsl4jsb_Get_config(SB_)
+
+    IF (TRIM(dsl4jsb_Config(SB_)%sb_init_scheme) /= 'analytical_ss') RETURN
+
     CALL sb_allocate_analytical_init_vars(nproma, nsoil_w, nblks)
     CALL sb_set_analytical_init_vars_defaults()
 
-    !> Temporary standalone path: read analytical initialisation values from a simple text file
-    !> with one scalar "name value" pair per line and broadcast that scalar to all soil layers.
-    !> This is intentionally simpler than the ICON-QUINCY gridded NetCDF path so the analytical
-    !> initialisation can be tested quickly in the one-site-per-node setup before adding a richer
-    !> layer-resolved standalone file format.
+    !> Temporary standalone path: read analytical initialisation values from a simple text file.
+    !> The same sb_analytical_init_filename config entry is used in both code paths:
+    !> ICON-QUINCY points it to the gridded NetCDF file, whereas QUINCY standalone points it
+    !> to a text table with one site record per row. The site-level run script extracts the
+    !> header and the selected site row into the local run directory before model start, so
+    !> the standalone reader here expects exactly one header row plus exactly one data row.
+    !> The fixed column order is documented in sb_assign_analytical_init_record_values.
+    values_per_site = 20 * nsoil_w
+    ALLOCATE(record_values(values_per_site))
+
     OPEN(NEWUNIT=analytical_unit, FILE=TRIM(dsl4jsb_Config(SB_)%sb_analytical_init_filename), &
       & STATUS='OLD', ACTION='READ', IOSTAT=io_status)
     IF (io_status /= 0) THEN
@@ -910,6 +1107,8 @@ CONTAINS
     END IF
 
     nline = 0
+    data_lines_read = 0
+    header_read = .FALSE.
     DO
       READ(analytical_unit, '(A)', IOSTAT=io_status) line
       IF (io_status /= 0) EXIT
@@ -919,19 +1118,47 @@ CONTAINS
       IF (line(1:1) == '#') CYCLE
       IF (line(1:1) == '!') CYCLE
 
-      READ(line, *, IOSTAT=io_status) var_name, scalar_value
-      IF (io_status /= 0) THEN
-        WRITE(line_no_str, '(I0)') nline
-        CALL finish(TRIM(routine), 'Invalid line in standalone analytical init file at line ' // &
-          & TRIM(line_no_str) // ': ' // TRIM(line))
+      IF (.NOT. header_read) THEN
+        READ(line, *, IOSTAT=io_status) site_name
+        IF (io_status /= 0 .OR. TRIM(site_name) /= 'site_name') THEN
+          CALL finish(TRIM(routine), &
+          &  'Standalone analytical init file must start with a header line beginning with site_name.')
+        END IF
+        header_read = .TRUE.
+      ELSE
+        IF (data_lines_read >= 1) THEN
+          CALL finish(TRIM(routine), &
+          &  'Standalone analytical init file in the site run directory must contain exactly one site record.')
+        END IF
+
+        READ(line, *, IOSTAT=io_status) site_name, (record_values(ivalue), ivalue = 1, values_per_site)
+        IF (io_status /= 0) THEN
+          WRITE(line_no_str, '(I0)') nline
+          CALL finish(TRIM(routine), 'Invalid data record in standalone analytical init file at line ' // &
+            & TRIM(line_no_str) // ': ' // TRIM(line))
+        END IF
+
+        !> The selected site row already matches the current run directory, so only the
+        !> ordered values remain to be unpacked into the analytical-init storage.
+        CALL sb_assign_analytical_init_record_values(record_values, nsoil_w)
+        data_lines_read = data_lines_read + 1
       END IF
-      CALL sb_assign_analytical_init_scalar(TRIM(var_name), scalar_value)
     END DO
 
     CLOSE(analytical_unit)
+    IF (.NOT. header_read) THEN
+      CALL finish(TRIM(routine), &
+      &  'Standalone analytical init file is empty or misses the header row.')
+    END IF
+    IF (data_lines_read /= 1) THEN
+      CALL finish(TRIM(routine), &
+      &  'Standalone analytical init file must contain exactly one selected site record.')
+    END IF
+
     sb_analytical_init_vars%enzyme_frac_ap(:,:,:) = MIN(MAX(sb_analytical_init_vars%enzyme_frac_ap(:,:,:), &
       & min_enzyme_fraction), 1._wp - min_enzyme_fraction)
     sb_analytical_init_vars%is_loaded = .TRUE.
+    DEALLOCATE(record_values)
 
     IF (debug_on()) THEN
       CALL message(TRIM(routine), 'Read standalone analytical steady-state SB init vars from: ' // &
@@ -1469,9 +1696,11 @@ CONTAINS
             &                clay_sl(ic, is, iblk), sb_analytical_init_vars%clay_sl(ic, is, iblk) > eps8)
 
           rtm_dep_eff    = MERGE(sb_analytical_init_vars%rtm_depolymerisation(ic, is, iblk), &
-            &                    rtm_depolymerisation(ic, is, iblk), sb_analytical_init_vars%rtm_depolymerisation(ic, is, iblk) > eps8)
+            &                    rtm_depolymerisation(ic, is, iblk), &
+            &                    sb_analytical_init_vars%rtm_depolymerisation(ic, is, iblk) > eps8)
           rmm_dep_eff    = MERGE(sb_analytical_init_vars%rmm_depolymerisation(ic, is, iblk), &
-            &                    rmm_depolymerisation(ic, is, iblk), sb_analytical_init_vars%rmm_depolymerisation(ic, is, iblk) > eps8)
+            &                    rmm_depolymerisation(ic, is, iblk), &
+            &                    sb_analytical_init_vars%rmm_depolymerisation(ic, is, iblk) > eps8)
           rtm_upt_eff    = MERGE(sb_analytical_init_vars%rtm_mic_uptake(ic, is, iblk), &
             &                    rtm_mic_uptake(ic, is, iblk), sb_analytical_init_vars%rtm_mic_uptake(ic, is, iblk) > eps8)
           rmm_upt_eff    = MERGE(sb_analytical_init_vars%rmm_mic_uptake(ic, is, iblk), &
@@ -1623,10 +1852,12 @@ CONTAINS
           sorption_denom = 1._wp + ratio_res * sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk) + &
             &                        ratio_dom * sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk)
           IF (sorption_denom > eps8) THEN
-            sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk) = ratio_dom * sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk) * &
-              &                                                   qmax_org(ic, is, iblk) / sorption_denom
-            sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = ratio_res * sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk) * &
-              &                                                       qmax_org(ic, is, iblk) / sorption_denom
+            sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk) = &
+              &                 ratio_dom * sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk) * &
+              &                 qmax_org(ic, is, iblk) / sorption_denom
+            sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = &
+              &                 ratio_res * sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk) * &
+              &                 qmax_org(ic, is, iblk) / sorption_denom
           ELSE
             sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk)     = 0.0_wp
             sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = 0.0_wp
@@ -2335,15 +2566,17 @@ CONTAINS
                 &                                          * root_fraction_sl(ic, is, iblk)
               sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk) &
                   & = k_sb_pool_dom_assoc_c_corr * sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk)
-              sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk) = def_sb_pool_microbial_necromass / soil_lay_width_sl(ic, is, iblk) &
-                &                                              * root_fraction_sl(ic, is, iblk)
+              sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk) = &
+                &                               def_sb_pool_microbial_necromass / soil_lay_width_sl(ic, is, iblk) &
+                &                               * root_fraction_sl(ic, is, iblk)
               ! calc fraction of mineral-associated C in the soil
               ! initialize the mineral-associated organic carbon (MOC) of soil layer by a fraction coefficient and the maximum sortion capacity
               ! assuming the fraction coefficient frac_mineral_assoc_soil_c decreases with soil depth
               frac_mineral_assoc_soil_c  = EXP(-is / (NINT(num_sl_above_bedrock(ic, iblk)) * k_sl_conv_moc_corr) ) * 0.5_wp
               ! deep soil is initialised with very low MOC, corrected by k_deep_soil_moc_corr
               IF (soil_lay_depth_ubound_sl(ic, is, iblk) > z_deep_soil_moc_corr) THEN
-                frac_mineral_assoc_soil_c = frac_mineral_assoc_soil_c * MAX(0.0001_wp, 10._wp**(-soil_lay_depth_ubound_sl(ic, is, iblk)))
+                frac_mineral_assoc_soil_c = frac_mineral_assoc_soil_c &
+                &                           * MAX(0.0001_wp, 10._wp**(-soil_lay_depth_ubound_sl(ic, is, iblk)))
               END IF
               sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk) = qmax_org_fine_particle(ic, is, iblk) &
                 &                                                      * (clay_sl(ic, is, iblk) + silt_sl(ic, is, iblk)) &
@@ -2524,7 +2757,8 @@ CONTAINS
           frac_mineral_assoc_soil_c  = EXP(-is / (INT(num_sl_above_bedrock(ic, iblk)) * k_sl_conv_moc_corr) ) * 0.5_wp
           qmax_org_min_sl(ic, is, iblk) = qmax_org_min_sl(ic, is, iblk) * frac_mineral_assoc_soil_c
           IF (soil_lay_depth_ubound_sl(ic, is, iblk) > z_deep_soil_moc_corr) THEN
-            qmax_org_min_sl(ic, is, iblk) = qmax_org_min_sl(ic, is, iblk) * MAX(0.0001_wp, 10._wp**(-soil_lay_depth_ubound_sl(ic, is, iblk)))
+            qmax_org_min_sl(ic, is, iblk) = qmax_org_min_sl(ic, is, iblk) &
+            &                               * MAX(0.0001_wp, 10._wp**(-soil_lay_depth_ubound_sl(ic, is, iblk)))
           ENDIF
         END DO
       END DO
