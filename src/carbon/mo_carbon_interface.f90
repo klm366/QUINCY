@@ -338,11 +338,6 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    ! Consistency check
-    IF (.NOT. model%Is_process_enabled(CLIMBUF_)) THEN
-      CALL finish(TRIM(routine), 'Setup ERROR: Climate buffer (CLIMBUF) needs to be active with CARBON.')
-    END IF
-
     nlcc_is_enabled = model%Is_process_enabled(NLCC_)     ! workaround currently needed for DWD NEC
 
     dsl4jsb_Get_memory(ASSIMI_)

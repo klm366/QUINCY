@@ -25,9 +25,7 @@ MODULE mo_nlcc_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
@@ -37,7 +35,6 @@ MODULE mo_nlcc_interface
   ! Use of process configurations
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(CLIMBUF_)
-  dsl4jsb_Use_config(FAGE_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(CLIMBUF_)
@@ -116,8 +113,7 @@ CONTAINS
 
     USE mo_nlcc_process,   ONLY: bioclim_limits, potential_tree_fpc, fpc_to_cover_fract_pot, &
                                  cover_fract_pot_to_cover_fract, desert_fraction, fpc_daily, scale_fpc
-    USE mo_climbuf_process, ONLY: calc_climbuf
-    USE mo_jsb_time,       ONLY: is_newyear, is_newmonth, is_newday, get_day_length, get_previous_month_length
+    USE mo_jsb_time,       ONLY: is_newyear, is_newday
     USE mo_jsb_grid,       ONLY: Get_grid
     USE mo_jsb_grid_class, ONLY: t_jsb_grid
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
@@ -130,12 +126,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  ::  model
     TYPE(t_jsb_grid),  POINTER  ::  grid
     CLASS(t_jsb_tile_abstract),  POINTER  ::  ptr_tile
-    LOGICAL  :: lstart, init_running_means, init_mmtemp20
+    LOGICAL  :: lstart, init_running_means
     INTEGER  :: iblk, ics, ice, nc, no_children
     INTEGER  :: i, itile
-    REAL(wp) :: seconds_day   ! number of seconds per day
-    REAL(wp) :: seconds_month ! number of seconds in previous month
-    REAL(wp) :: dtime
     REAL(wp) :: accelerate_nlcc
     REAL(wp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_nlcc'
@@ -163,7 +156,6 @@ CONTAINS
     ! Declare process memories
     dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_config(CLIMBUF_)
-    dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_memory(NLCC_)
     dsl4jsb_Def_memory(CLIMBUF_)
     dsl4jsb_Def_memory(PHENO_)
@@ -172,10 +164,6 @@ CONTAINS
     dsl4jsb_Def_memory(DISTURB_)
 
     ! Declare pointers to variables in nlcc memory
-    dsl4jsb_Real2D_onChunk :: temp_sum_day
-    dsl4jsb_Real2D_onChunk :: temp_sum_month
-    dsl4jsb_Real2D_onChunk :: min_mmtemp_of_yr
-    dsl4jsb_Real2D_onChunk :: max_mmtemp_of_yr
     dsl4jsb_Real2D_onChunk :: min_mmtemp20
     dsl4jsb_Real2D_onChunk :: max_mmtemp20
     dsl4jsb_Real3D_onChunk :: act_fpc
@@ -184,34 +172,28 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: cover_fract_pot
     dsl4jsb_Real3D_onChunk :: cover_fract
     dsl4jsb_Real3D_onChunk :: bio_exist
-    dsl4jsb_Real2D_onChunk :: gdd_sum_year
     dsl4jsb_Real2D_onChunk :: gdd_prev_year
     dsl4jsb_Real2D_onChunk :: sum_green_bio_memory
     dsl4jsb_Real2D_onChunk :: desert_fpc
 
     ! Local variables
-    LOGICAL :: new_year, new_month, new_day
+    LOGICAL :: new_year, new_day
 
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    dtime   = options%dtime
 
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(NLCC_)
     dsl4jsb_Get_config(CLIMBUF_)
-    dsl4jsb_Get_config(FAGE_)
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(NLCC_)) RETURN
 
-    ! Consistency checks
-    IF (.NOT. model%Is_process_enabled(CLIMBUF_)) THEN
-      CALL finish(TRIM(routine), 'Setup ERROR: Climate buffer (CLIMBUF) needs to be active with NLCC.')
-    END IF
+    ! Consistency check
     IF (model%Is_process_enabled(FAGE_)) THEN
       CALL finish(routine, 'Setup ERROR: NLCC is not possible with forest age (FAGE) enabled.')
     END IF
@@ -275,13 +257,8 @@ CONTAINS
     damaged_fract => disturb__mem%collect_var_real2d(ics, ice, iblk, no_children, disturb__mem%damaged_fract)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_sum_day)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_sum_month)   ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp_of_yr) ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp_of_yr) ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp20)     ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp20)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_sum_year)     ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_prev_year)    ! inout
     dsl4jsb_Get_var3D_onChunk(NLCC_,act_fpc)          ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,bare_fpc)         ! inout
@@ -298,11 +275,7 @@ CONTAINS
       lstart = .FALSE.
     END IF
     new_year = is_newyear(options%current_datetime, options%dtime)
-    new_month = is_newmonth(options%current_datetime, options%dtime)
     new_day = is_newday(options%current_datetime, options%dtime)
-
-    seconds_day   = get_day_length()
-    seconds_month = get_previous_month_length(options%current_datetime)
 
     ! import cover fractions from grid
     ALLOCATE (cover_fract_sum(nc))
@@ -421,14 +394,13 @@ CONTAINS
 
     ! Local variables
     CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_nlcc'
 
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
