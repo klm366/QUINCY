@@ -17,7 +17,6 @@ MODULE mo_climbuf_process
 
   USE mo_jsb_control, ONLY: debug_on
   USE mo_kind,        ONLY: wp
-  USE mo_exception,   ONLY: message, finish, message_text
   USE mo_jsb_physical_constants, ONLY: tmelt
 
   IMPLICIT NONE
@@ -28,42 +27,51 @@ MODULE mo_climbuf_process
   CHARACTER(len=*), PARAMETER :: modname = 'mo_climbuf_process'
 CONTAINS
   !
-  ! ===============================================================================================================================
+  ! ======================================================================================================== !
   !>
-  !> Compute running averages of climate variables for nlcc
+  !>#### Compute running averages of climate variables
   !>
-
+  !> We here calculate daily, annual or climatological mean, maximum or minimum values from
+  !> atmospheric forcing data.
+  !>
+  ! -------------------------------------------------------------------------------------------------------- !
   ELEMENTAL PURE SUBROUTINE calc_climbuf (lstart, init_running_means, new_day, new_month, new_year, delta_time, t_air, &
                                           seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
                                           min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20, &
                                           gdd_sum_year, gdd_prev_year)
 
-    LOGICAL, INTENT(in) :: lstart ! first time step in a simulation
-    LOGICAL, INTENT(in) :: init_running_means ! initialize the min/max temperature climatology
-    LOGICAL, INTENT(in) :: new_day ! first time step in a day
-    LOGICAL, INTENT(in) :: new_month ! firest time step in a month
-    LOGICAL, INTENT(in) :: new_year ! first time step in a year
-    REAL(wp), INTENT(in) :: delta_time ! time step length [s]
-    REAL(wp), INTENT(in) :: seconds_day ! lenght of a day [s]
-    REAL(wp), INTENT(in) :: seconds_month ! length of the previous month [s]
-    REAL(wp), INTENT(in) :: t_air ! air temperature of lowest atmosphere level [K]
-    REAL(wp), INTENT(inout) :: temp_sum_day
-    REAL(wp), INTENT(inout) :: temp_sum_month
-    REAL(wp), INTENT(inout) :: min_mmtemp_of_yr ! temperature of coldest month of previous year [K]
-    REAL(wp), INTENT(inout) :: max_mmtemp_of_yr ! temperature of warmest month of previous year [K]
-    REAL(wp), INTENT(inout) :: min_mmtemp20 ! temperature of coldest month climatology [K]
-    REAL(wp), INTENT(inout) :: max_mmtemp20 ! temperature of warmest month climatology [K]
-    REAL(wp), INTENT(inout) :: gdd_sum_year ! growing degree days of current year [C]
-    REAL(wp), INTENT(inout) :: gdd_prev_year ! growing degree days of previous year [C]
+    LOGICAL, INTENT(in) :: &
+      & lstart,                 & !< This is the first time step in a simulation
+      & init_running_means,     & !< Initialize the min/max temperature climatology
+      & new_day,                & !< This is the first time step of the day
+      & new_month,              & !< This is the first time step of the month
+      & new_year                  !< This is the first time step of the year
 
-!   local variables
-    REAL(wp) :: prev_day_mean_temp   ! air temperature of previous day [K]
-    REAL(wp) :: prev_month_mean_temp ! air temperature of previous month [K]
+    REAL(wp), INTENT(in) :: &
+      & delta_time,             & !< Time step length [s]
+      & seconds_day,            & !< Length of a day [s]
+      & seconds_month,          & !< Length of the previous month [s]
+      & t_air                     !< Near surface air temperature [K]
+    REAL(wp), INTENT(inout) :: &
+      & temp_sum_day,           & !< Current temperature sum of the day [K]
+      & temp_sum_month,         & !< Current temperature sum of the month [K]
+      & min_mmtemp_of_yr,       & !< Current minimum monthly mean temperature of the year [K]
+      & max_mmtemp_of_yr,       & !< Current maximum monthly mean temperature of the year [K]
+      & min_mmtemp20,           & !< Climatological mean temperature of the coldest month [K]
+      & max_mmtemp20,           & !< Climatological mean temperature of the warmest month [K]
+      & gdd_sum_year,           & !< Current number of growing degree days of this year
+      & gdd_prev_year             !< Growing degree days of previous year
+
+    ! Local variables
+    REAL(wp) :: &
+      & prev_day_mean_temp,     & !< Air temperature of previous day [K]
+      & prev_month_mean_temp      !< Air temperature of previous month [K]
+    ! ------------------------------------------------------------------------------------------------------ !
 
     IF (new_year) THEN
-       gdd_prev_year = gdd_sum_year
-       gdd_sum_year = 0._wp
-    ENDIF
+      gdd_prev_year = gdd_sum_year
+      gdd_sum_year = 0._wp
+    END IF
 
     IF (.NOT. new_day .OR. lstart) THEN
        temp_sum_day = temp_sum_day + t_air * delta_time
