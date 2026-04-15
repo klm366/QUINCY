@@ -496,9 +496,8 @@ MODULE mo_flake_process
                                 & T_bot,                & ! Temperature at the water-bottom sediment interface [K] 
                                 & T_mnw,                & ! Mean temperature of the water column [K] 
                                 & T_wML,                & ! Mixed-layer temperature [K] 
-                                & h_ML                    ! Thickness of the mixed-layer [m] 
-
-      REAL(wp),  INTENT(out) :: w_star_sfc ! Convective velocity scale, using a generalized heat flux scale [m s^{-1}]
+                                & h_ML,                 & ! Thickness of the mixed-layer [m] 
+                                & w_star_sfc              ! Convective velocity scale, using a generalized heat flux scale [m s^{-1}]
 
       ! Local variables
       REAL(wp) :: C_T_p,              & ! Shape factor in previous timestep (thermocline)
