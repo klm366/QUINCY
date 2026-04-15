@@ -340,7 +340,7 @@ SUBROUTINE calc_defoliator_effects( &
       ! print*, 'larvae before', dinsect_larva_mt(ixC,ic)
       ! IF (doy > 246) THEN
       !     print*, 'droppings before', dinsect_dropping_mt(ixC,ic)
-      !     ! move larvae to adult or to droppings with an emergence yield‘
+      !     ! move larvae to adult or to droppings with an emergence yield
 
       !     dinsect_dropping_mt(ixC,ic) = dinsect_dropping_mt(ixC,ic) + dinsect_larva_mt(ixC,ic)
       !     print*, 'droppings after', dinsect_dropping_mt(ixC,ic)
