@@ -462,6 +462,7 @@ CONTAINS
     INTEGER                         :: veg_pool_idx
     INTEGER                         :: year, month, day, hour, minute, second, yearday, &
                                     &  ith_timestep     !< the row number of current timestep in soil forcing
+    CHARACTER(len=:), ALLOCATABLE   :: soilphysics_forcing_file, veglitterfall_forcing_file
     REAL(wp), POINTER               :: veg_pool_mt_domain(:,:,:,:)            !< dim: compartments, elements, nc, nblks -- on domain!
     REAL(wp), POINTER :: &
       & ptr_3D(:,:,:),   &                      !< Pointer to 3d variable
@@ -525,11 +526,15 @@ CONTAINS
     CALL get_date_components(options%current_datetime, year, month, day, hour, minute, second)
     year_instant = get_year_day(options%current_datetime)
     yearday = INT(year_instant)
-    ith_timestep = IMerge_TIME2Sec(yearday, hour, minute, second)/int(dtime) + 1 ! the row number of current timestep in forcing file
-    IF (debug_on()) CALL message(TRIM(routine), 'Reading the forcing at timestep '//int2string(ith_timestep)//' ... at day '//int2string(yearday)//' ...')
+    CALL get_soil_forcing_info(TRIM(dsl4jsb_Config(SB_)%soilphysics_forcing_filename), &
+      & year, month, day, hour, minute, second, yearday, dtime, soilphysics_forcing_file, ith_timestep)
+    CALL get_soil_forcing_info(TRIM(dsl4jsb_Config(SB_)%veglitterfall_forcing_filename), &
+      & year, month, day, hour, minute, second, yearday, dtime, veglitterfall_forcing_file, ith_timestep)
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading the forcing record '//int2string(ith_timestep)// &
+      & ' at day '//int2string(yearday)//' from '//TRIM(soilphysics_forcing_file)//' ...')
     !> 1.0 the first soil forcing file
     ! ----------------------------------------------------------------------------------------------------- !
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%soilphysics_forcing_filename), model%grid_id)
+    input_file = jsb_netcdf_open_input(TRIM(soilphysics_forcing_file), model%grid_id)
 
     !> read the 3D forcing variables
     !> - Fraction of fineroot
@@ -618,7 +623,7 @@ CONTAINS
 
     !> 2.0 the second soil forcing file
     ! ----------------------------------------------------------------------------------------------------- !
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%veglitterfall_forcing_filename), model%grid_id)
+    input_file = jsb_netcdf_open_input(TRIM(veglitterfall_forcing_file), model%grid_id)
     IF (ASSOCIATED(tile%bgcm_store)) THEN
       bgcm_store => tile%bgcm_store
       veg_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile%name, routine)
@@ -643,6 +648,56 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
   END SUBROUTINE update_read_soil_forcing
+
+  ! ======================================================================================================= !
+  !> Resolve soil forcing filename and record index for the current model time.
+  !> The filename argument is interpreted as a full filename for yearly forcing
+  !> and as a prefix for daily forcing, yielding <prefix>_<doy>.nc.
+  !>
+  SUBROUTINE get_soil_forcing_info(base_filename, year, month, day, hour, minute, second, yearday, dtime, &
+    & resolved_filename, itimestep)
+
+    CHARACTER(len=*),           INTENT(in)  :: base_filename
+    INTEGER,                    INTENT(in)  :: year, month, day, hour, minute, second, yearday
+    REAL(wp),                   INTENT(in)  :: dtime
+    CHARACTER(len=:), ALLOCATABLE, INTENT(out) :: resolved_filename
+    INTEGER,                    INTENT(out) :: itimestep
+
+    INTEGER :: seconds_of_day
+    CHARACTER(len=8) :: doy_string
+    LOGICAL :: is_daily_timestep
+
+    seconds_of_day = hour * 3600 + minute * 60 + second
+    is_daily_timestep = NINT(dtime) == 86400
+
+    IF (is_daily_timestep) THEN
+      resolved_filename = TRIM(base_filename)
+      itimestep = yearday
+    ELSE
+      WRITE(doy_string,'(I3.3)') yearday
+      resolved_filename = trim_nc_filename(base_filename)//'_'//TRIM(doy_string)//'.nc'
+      itimestep = seconds_of_day / INT(dtime) + 1
+    END IF
+
+  END SUBROUTINE get_soil_forcing_info
+
+  ! ======================================================================================================= !
+  !> Return the filename prefix without a trailing .nc suffix.
+  !>
+  FUNCTION trim_nc_filename(filename) RESULT(prefix)
+
+    CHARACTER(len=*), INTENT(in) :: filename
+    CHARACTER(len=:), ALLOCATABLE :: prefix
+    INTEGER :: ilen
+
+    ilen = LEN_TRIM(filename)
+    IF (ilen >= 3 .AND. filename(ilen-2:ilen) == '.nc') THEN
+      prefix = filename(:ilen-3)
+    ELSE
+      prefix = TRIM(filename)
+    END IF
+
+  END FUNCTION trim_nc_filename
 
   ! ======================================================================================================= !
   !>
