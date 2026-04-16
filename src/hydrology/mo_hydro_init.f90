@@ -882,7 +882,6 @@ CONTAINS
       & ptr_1D(:    ),   &                      !< Pointer to 1d variable
       & ptr_2D(:,  :),   &                      !< Pointer to 2d variable
       & ptr_3D(:,:,:)                           !< Pointer to 3d variable
-    LOGICAL,  POINTER   :: is_in_domain(:,:)    !< True: the cell belongs to domain; False: halo cell
 
     TYPE(t_jsb_model), POINTER :: model             !< Current instance of the model
     TYPE(t_jsb_grid),  POINTER :: grid              !< Horizontal grid
@@ -908,7 +907,6 @@ CONTAINS
     nblks  = grid%Get_nblks()
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
-    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -1108,25 +1106,17 @@ CONTAINS
         END IF
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
-        !>     - Volumetric residual water content (if missing deduce from porosity)
-        ! TODO Remove deduction of residual water content. This was only temporarily implemented
-        !      while bc_land files without this quantity were still around and used
-        IF (input_file%Has_var('residual_water')) THEN
-          IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-            ptr_2D => input_file%Read_2d(                &
-              & variable_name='residual_water_mineral',  &
-              & fill_array=hydro_init_vars%vol_wres)
-          ELSE
-            ptr_2D => input_file%Read_2d(                &
-              & variable_name='residual_water',          &
-              & fill_array=hydro_init_vars%vol_wres)
-          END IF
-          ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+        !>     - Volumetric residual water content
+        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+          ptr_2D => input_file%Read_2d(                &
+            & variable_name='residual_water_mineral',  &
+            & fill_array=hydro_init_vars%vol_wres)
         ELSE
-          WRITE (message_text,*) 'BC File does not contain data on residual water content. Will use approximation instead!'
-          CALL message (TRIM(routine), message_text)
-          hydro_init_vars%vol_wres = hydro_init_vars%vol_porosity * 0.2_wp
+          ptr_2D => input_file%Read_2d(                &
+            & variable_name='residual_water',          &
+            & fill_array=hydro_init_vars%vol_wres)
         END IF
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         !>     - Soil matric potential
         IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
@@ -1138,33 +1128,7 @@ CONTAINS
             & variable_name='moisture_pot',              &
             & fill_array = hydro_init_vars%matric_pot)
         END IF
-        ! @todo There is still old bc data around where the matric potential is given with a positiv sign while
-        !       it should be negativ from a soil physics perspective and is expected as such from the soil hydrology
-        !       routines. Until this bc data is not used anymore, the following check is required to ensure the
-        !       sign of the soil matric potential is (converted) correct.
-        ! Exclude values outside of the domain
-        WHERE(.NOT. is_in_domain(:,:))
-          ptr_2D(:,:) = 0._wp
-        ENDWHERE
-        ! Exclude (standard) missing values
-        WHERE(ABS(ptr_2D(:,:)) > 1.0e+20_wp)
-          ptr_2D(:,:) = 0._wp
-        ENDWHERE
-        ! Check if all values are negative or positive (negative values are needed)
-        !   and convert positive -> negative values
-        ! TODO please revise if still is correct and necessary with current ic/bc files
-        IF (ALL(ptr_2D(:,:) < 1.0e-10_wp)) THEN
-          ! Correct: all values are negative
-          ptr_2D(:,:) = MERGE(ptr_2D(:,:), -0.2_wp, ptr_2D(:,:) <= 0._wp)
-        ELSE IF (ALL(ptr_2D(:,:) > -1.0e-10_wp)) THEN
-          ! False: all values are positive --> convert to negative values
-          ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) >= 0._wp) * (-1._wp)
-        ELSE
-          ! Totally wrong: dataset contains positive and negativ values
-          WRITE (message_text,*) 'Found positive and negative values in soil moisture matric potential: ', &
-            & MINVAL(ptr_2D(:,:)),' <-> ',MAXVAL(ptr_2D(:,:))
-          CALL finish (TRIM(routine), message_text)
-        END IF
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), -0.2_wp, ptr_2D(:,:) <= 0._wp)
 
         !>     - Exponent B in Clapp and Hornberger
         IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
