@@ -98,7 +98,6 @@ CONTAINS
     USE mo_jsb_time,                ONLY: timesteps_per_day
     USE mo_jsb_model_init,          ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
     USE mo_jsb_model_final,         ONLY: jsbach_finalize
-    USE mo_jsb_version,             ONLY: jsbach_label_run
     USE mo_jsb_control,             ONLY: get_no_of_models, force_from_observations
     USE mo_jsb4_forcing,            ONLY: setup_forcing, init_forcing, finalize_external_forcing
     USE mo_jsb_parallel,            ONLY: Get_omp_no_of_threads
@@ -406,7 +405,6 @@ CONTAINS
       CALL jsbach_init(jg)
       IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, dtime)
     END DO
-    CALL jsbach_label_run(.TRUE.)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 12.0 restart a simulation
