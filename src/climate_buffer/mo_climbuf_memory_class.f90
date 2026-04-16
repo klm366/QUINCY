@@ -62,6 +62,10 @@ MODULE mo_climbuf_memory_class
     & max_mmtemp_of_yr,         & !< Maximum monthly mean temperature of the year [K]
     & min_mmtemp20,             & !< Minimum monthly mean temperature within 20 years [K]
     & max_mmtemp20,             & !< Maximum monthly mean temperature within 20 years [K]
+    & temp_15d,                 & !< Near surface temperature with 15-day smoothing [K]
+    & temp_15d_yDay,            & !< 15-day temperature at the end of the previous day [K]
+    & precip_15d,               & !< Precipitation with 15-day smoothing [kg m-2 s-1]
+    & precip_15d_yDay,          & !< 15-day precipitation at the end of previous day [kg m-2 s-1]
     & gdd_sum_year,             & !< Current number of growing degree days in this year
     & gdd_prev_year               !< Growing degree days of the previous year
 
@@ -146,7 +150,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=MEDIUM,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp )
+      & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var( 'max_wind_10m_act', mem%max_wind_10m_act,                           &
       & hgrid, surface,                                                                   &
@@ -154,7 +158,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=MEDIUM,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp )
+      & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var('temp_sum_day', mem%temp_sum_day,                                    &
       & hgrid, surface,                                                                   &
@@ -162,7 +166,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=NONE,                                                                &
-      & initval_r=0.0_wp )
+      & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var('temp_sum_month', mem%temp_sum_month,                                &
       & hgrid, surface,                                                                   &
@@ -170,7 +174,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=NONE,                                                                &
-      & initval_r=0.0_wp )
+      & lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL mem%Add_var('min_mmtemp_of_yr', mem%min_mmtemp_of_yr,                            &
       & hgrid, surface,                                                                   &
@@ -178,7 +182,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=NONE,                                                                &
-      & initval_r=1000.0_wp )
+      & lrestart=.TRUE., initval_r=1000.0_wp)
 
     CALL mem%Add_var('max_mmtemp_of_yr', mem%max_mmtemp_of_yr,                            &
       & hgrid, surface,                                                                   &
@@ -186,7 +190,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=NONE,                                                                &
-      & initval_r=-1000.0_wp )
+      & lrestart=.TRUE., initval_r=-1000.0_wp)
 
     CALL mem%Add_var('min_mmtemp20', mem%min_mmtemp20,                                    &
       & hgrid, surface,                                                                   &
@@ -194,7 +198,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=FULL,                                                                &
-      & initval_r=1000.0_wp )
+      & lrestart=.TRUE., initval_r=1000.0_wp)
 
     CALL mem%Add_var('max_mmtemp20', mem%max_mmtemp20,                                    &
       & hgrid, surface,                                                                   &
@@ -202,7 +206,39 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=FULL,                                                                &
-      & initval_r=-1000.0_wp )
+      & lrestart=.TRUE., initval_r=-1000.0_wp)
+
+    CALL mem%Add_var('temp_15d', mem%temp_15d,                                            &
+      & hgrid, surface,                                                                   &
+      & t_cf('temp_15d', 'K', 'Near surface Temperature with 15-day smoothing'),          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=FULL,                                                                &
+      & lrestart=.TRUE., initval_r=285.0_wp)
+
+    CALL mem%Add_var('temp_15d_yDay', mem%temp_15d_yDay,                                  &
+      & hgrid, surface,                                                                   &
+      & t_cf('temp_15d_yDay', 'K', '15-day smoothed temperature at end of previous day'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=FULL,                                                                &
+      & lrestart=.TRUE., initval_r=285.0_wp)
+
+    CALL mem%Add_var('precip_15d', mem%precip_15d,                                        &
+      & hgrid, surface,                                                                   &
+      & t_cf('precip_15d', 'K', 'Precipitation (Rain+Snow) with 15-day smoothing'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=FULL,                                                                &
+      & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var('precip_15d_yDay', mem%precip_15d_yDay,                              &
+      & hgrid, surface,                                                                   &
+      & t_cf('precip_15d_yDay', 'K', '15-day smoothed temperature at end of previous day'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=FULL,                                                                &
+      & lrestart=.TRUE., initval_r=3.0E-5_wp)
 
     CALL mem%Add_var('gdd_sum_year', mem%gdd_sum_year,                                    &
       & hgrid, surface,                                                                   &
@@ -210,7 +246,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=NONE,                                                                &
-      & initval_r=0.0_wp )
+      & lrestart=.TRUE., initval_r=3.0E-5_wp)
 
     CALL mem%Add_var('gdd_prev_year', mem%gdd_prev_year,                                  &
       & hgrid, surface,                                                                   &
@@ -218,7 +254,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=FULL,                                                                &
-      & initval_r=0.0_wp )
+      & lrestart=.TRUE., initval_r=0.0_wp)
 
   END SUBROUTINE Init_climbuf_memory
 
