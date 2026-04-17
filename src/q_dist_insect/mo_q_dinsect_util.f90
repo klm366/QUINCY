@@ -3,12 +3,12 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2019-2024, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
-!> Authors: AUTHORS.md   Yimian Ma for dinsect
+!> Authors: AUTHORS.md
 !> See LICENSES/ for license information
-!> SPDX-License-Identifier: GPL-3.0-only
+!> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
 MODULE mo_q_dinsect_util
