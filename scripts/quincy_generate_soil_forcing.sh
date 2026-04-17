@@ -18,9 +18,10 @@
 #
 #
 # Notes:
-# - This script supports two new source layouts:
+# - This script supports two source layouts:
 #   1) one yearly output file with daily records
-#   2) 365 daily output files with PT30M records
+#   2) 365 daily output files with PT30M records split across
+#      one soil-physics run and two litter runs
 # - The collected variables must stay in sync with the variables read in
 #   update_read_soil_forcing.
 #
@@ -43,15 +44,21 @@ output_file_sp_prefix="bc_qsoil_physics"
 output_file_litter_prefix="bc_qsoil_litterfall"
 
 # Source layout:
-# - yearly_p1d : one yearly file with daily records
-# - daily_pt30m: 365 daily files with PT30M records
+# - yearly_p1d       : one yearly file with daily records
+# - daily_pt30m_split: 365 daily files with PT30M records, split across
+#                      one soil-physics run and two litter runs
 source_layout="yearly_p1d"
 
 # ICON output naming convention:
 #   <exp_name>_<input_selector>_<timestamp>.nc
-# e.g.
-#   quincy_R2B5_land-CN-gswp3_S0_lnd_basic_ml_18500101T000000Z.nc
-exp_name="quincy_R2B5_land-CN-gswp3_S0"
+# Current defaults match the forcing runscripts in
+# C:\Users\Lin.DELL-X-70\Documents\Codex\ICON\soil_forcing
+# - yearly_p1d       : use exp_name
+# - daily_pt30m_split: use exp_name_sp, exp_name_litter1, and exp_name_litter2
+exp_name="land_iqj_R2B4_CN_gswp3_yearlyforcing_P1D"
+exp_name_sp="land_iqj_R2B4_CN_gswp3_dailyforcing_PT30M_sp"
+exp_name_litter1="land_iqj_R2B4_CN_gswp3_dailyforcing_PT30M_litter1"
+exp_name_litter2="land_iqj_R2B4_CN_gswp3_dailyforcing_PT30M_litter2"
 input_selector="lnd_basic_ml"
 forcing_year=1850
 
@@ -119,23 +126,23 @@ which ncatted || {
 #----------------------------------------------------------------------
 #----------------------------------------------------------------------
 # Generate lists of to be extracted variables
-var_list_sp=""
-var_list_litter=""
+var_list_litter1=""
+var_list_litter2=""
 
 # veg fine root C
 for tile in ${tile_list} ; do
-  var_list_litter="${var_list_litter},${veg_bgcm_prefix}_fine_root_C_${tile}"
+  var_list_litter1="${var_list_litter1},${veg_bgcm_prefix}_fine_root_C_${tile}"
 done
 
 # veg bgcm litterfall
 for element in ${elements}; do
   for tile in ${tile_list} ; do
     for compartment in ${veg_compartments_1} ; do
-      var_list_litter="${var_list_litter},${veg_litter_bgcm_prefix}_${compartment}_${element}_${tile}"
+      var_list_litter1="${var_list_litter1},${veg_litter_bgcm_prefix}_${compartment}_${element}_${tile}"
     done
   
     for compartment in ${veg_compartments_2} ; do
-      var_list_litter="${var_list_litter},${veg_litter_bgcm_prefix}_${compartment}_${element}_${tile}"
+      var_list_litter2="${var_list_litter2},${veg_litter_bgcm_prefix}_${compartment}_${element}_${tile}"
     done
   done
 done
@@ -143,7 +150,7 @@ done
 # seedbed bgcm litterfall
 for element in ${elements}; do
   for tile in ${tile_list} ; do
-    var_list_litter="${var_list_litter},${seedbed_litter_bgcm_prefix}_${element}_${tile}"
+    var_list_litter2="${var_list_litter2},${seedbed_litter_bgcm_prefix}_${element}_${tile}"
   done
 done
 var_list_water=""
@@ -176,7 +183,8 @@ doy_for_day () {
 }
 
 build_source_file_list () {
-  local year="$1"
+  local exp_name_local="$1"
+  local year="$2"
   local source_files=()
   local timestamp
   local input_file
@@ -185,13 +193,13 @@ build_source_file_list () {
   case "${source_layout}" in
     yearly_p1d)
       timestamp=$(timestamp_for_day "${year}" 1)
-      input_file="${input_path}/${exp_name}_${input_selector}_${timestamp}.nc"
+      input_file="${input_path}/${exp_name_local}_${input_selector}_${timestamp}.nc"
       source_files+=("${input_file}")
       ;;
-    daily_pt30m)
+    daily_pt30m_split)
       for day in $(seq 1 365); do
         timestamp=$(timestamp_for_day "${year}" "${day}")
-        input_file="${input_path}/${exp_name}_${input_selector}_${timestamp}.nc"
+        input_file="${input_path}/${exp_name_local}_${input_selector}_${timestamp}.nc"
         source_files+=("${input_file}")
       done
       ;;
@@ -257,32 +265,56 @@ add_global_comment () {
 }
 
 process_source_file () {
-  local input_file="$1"
-  local output_sp_file="$2"
-  local output_litter_file="$3"
+  local input_file_sp="$1"
+  local input_file_litter1="$2"
+  local input_file_litter2="$3"
+  local output_sp_file="$4"
+  local output_litter_file="$5"
   local tmp_water="${output_path}/tmp_sp_water.nc"
   local tmp_energy="${output_path}/tmp_sp_energy.nc"
-  local tmp_litter="${output_path}/tmp_litter.nc"
+  local tmp_litter_1="${output_path}/tmp_litter_1.nc"
+  local tmp_litter_2="${output_path}/tmp_litter_2.nc"
   local f
 
-  if [[ ! -f "${input_file}" ]]; then
-    echo "Missing input file: ${input_file}"
+  if [[ ! -f "${input_file_sp}" ]]; then
+    echo "Missing soil-physics input file: ${input_file_sp}"
+    exit 1
+  fi
+  if [[ ! -f "${input_file_litter1}" ]]; then
+    echo "Missing litterfall input file 1: ${input_file_litter1}"
+    exit 1
+  fi
+  if [[ ! -f "${input_file_litter2}" ]]; then
+    echo "Missing litterfall input file 2: ${input_file_litter2}"
     exit 1
   fi
 
-  rm -f "${output_sp_file}" "${output_litter_file}" "${tmp_water}" "${tmp_energy}" "${tmp_litter}"
+  rm -f "${output_sp_file}" "${output_litter_file}" "${tmp_water}" "${tmp_energy}" \
+    "${tmp_litter_1}" "${tmp_litter_2}"
 
-  prepare_var_groups "${input_file}"
+  prepare_var_groups "${input_file_sp}"
 
-  extract_if_nonempty "${var_list_litter}" "${input_file}" "${tmp_litter}"
-  extract_if_nonempty "${var_list_water}"  "${input_file}" "${tmp_water}"
-  extract_if_nonempty "${var_list_energy}" "${input_file}" "${tmp_energy}"
+  # Extract soil-physics variables from the dedicated soil-physics run.
+  extract_if_nonempty "${var_list_water}"  "${input_file_sp}" "${tmp_water}"
+  extract_if_nonempty "${var_list_energy}" "${input_file_sp}" "${tmp_energy}"
 
-  if [[ -f "${tmp_litter}" ]]; then
-    ncrename -h -d .ncells,cell "${tmp_litter}"
-    cp -f "${tmp_litter}" "${output_litter_file}"
+  # Extract the fineroot pool together with litterfall part 1 from the first litter run.
+  extract_if_nonempty "${var_list_litter1}" "${input_file_litter1}" "${tmp_litter_1}"
+  extract_if_nonempty "${var_list_litter2}" "${input_file_litter2}" "${tmp_litter_2}"
+
+  if [[ -f "${tmp_litter_1}" ]]; then
+    ncrename -h -d .ncells,cell "${tmp_litter_1}"
+    cp -f "${tmp_litter_1}" "${output_litter_file}"
   else
-    echo "No litter variables were extracted for ${input_file}"
+    echo "No litter variables were extracted from ${input_file_litter1}"
+    exit 1
+  fi
+
+  if [[ -f "${tmp_litter_2}" ]]; then
+    ncrename -h -d .ncells,cell "${tmp_litter_2}"
+    ncks -A "${tmp_litter_2}" "${output_litter_file}"
+  else
+    echo "No litter variables were extracted from ${input_file_litter2}"
     exit 1
   fi
 
@@ -295,38 +327,42 @@ process_source_file () {
 
   merge_sp_files "${tmp_water}" "${tmp_energy}" "${output_sp_file}"
 
-  add_global_comment "${output_sp_file}" "Soil physics forcing extracted from output file ${input_file}"
-  add_global_comment "${output_litter_file}" "Litterfall forcing extracted from output file ${input_file}"
+  add_global_comment "${output_sp_file}" "Soil physics forcing extracted from output file ${input_file_sp}"
+  add_global_comment "${output_litter_file}" "Litterfall forcing extracted from output files ${input_file_litter1} and ${input_file_litter2}"
 
-  rm -f "${tmp_water}" "${tmp_energy}" "${tmp_litter}"
+  rm -f "${tmp_water}" "${tmp_energy}" "${tmp_litter_1}" "${tmp_litter_2}"
 }
 
 main () {
   local source_files=()
+  local source_files_sp=()
+  local source_files_litter1=()
+  local source_files_litter2=()
   local input_file
   local day_index
   local doy_string
   local output_sp_file
   local output_litter_file
 
-  mapfile -t source_files < <(build_source_file_list "${forcing_year}")
-
   case "${source_layout}" in
     yearly_p1d)
-      process_source_file "${source_files[0]}" \
-        "${output_path}/${output_file_sp}" \
-        "${output_path}/${output_file_litter}"
+      mapfile -t source_files < <(build_source_file_list "${exp_name}" "${forcing_year}")
+      process_source_file "${source_files[0]}" "${source_files[0]}" "${source_files[0]}" \
+        "${output_path}/${output_file_sp}" "${output_path}/${output_file_litter}"
       ;;
-    daily_pt30m)
+    daily_pt30m_split)
+      mapfile -t source_files_sp < <(build_source_file_list "${exp_name_sp}" "${forcing_year}")
+      mapfile -t source_files_litter1 < <(build_source_file_list "${exp_name_litter1}" "${forcing_year}")
+      mapfile -t source_files_litter2 < <(build_source_file_list "${exp_name_litter2}" "${forcing_year}")
       day_index=0
-      for input_file in "${source_files[@]}"; do
-        (( day_index = day_index + 1 ))
-        doy_string=$(doy_for_day "${day_index}")
-
+      for input_file in "${source_files_sp[@]}"; do
+        doy_string=$(doy_for_day "$((day_index + 1))")
         output_sp_file="${output_path}/${output_file_sp_prefix}_${doy_string}.nc"
         output_litter_file="${output_path}/${output_file_litter_prefix}_${doy_string}.nc"
 
-        process_source_file "${input_file}" "${output_sp_file}" "${output_litter_file}"
+        process_source_file "${source_files_sp[$day_index]}" "${source_files_litter1[$day_index]}" \
+          "${source_files_litter2[$day_index]}" "${output_sp_file}" "${output_litter_file}"
+        (( day_index = day_index + 1 ))
       done
       ;;
   esac
