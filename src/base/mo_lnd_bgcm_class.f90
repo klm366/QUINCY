@@ -11,9 +11,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
-!>
-!>#### define bgcm class, and indices (enumerator) and helper functions for bgc material and their components
+!>### define bgcm class, indices (enumerator) and helper functions for bgc material and their components
 !>
 MODULE mo_lnd_bgcm_class
 #ifndef __NO_QUINCY__
