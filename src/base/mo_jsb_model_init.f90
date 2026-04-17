@@ -415,6 +415,9 @@ CONTAINS
         CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
         IF (model%config%qmodel_id == QLAND) THEN
           CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
+          IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
+            CALL model%Queue_task(Q_DINSECT_, "reset_dinsect_fluxes") ! LAND ONLY
+          ENDIF
         END IF
 
         IF (is_time_restart(get_time_start())) THEN
@@ -471,7 +474,7 @@ CONTAINS
 
         IF (model%config%qmodel_id == QLAND) THEN
           IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
-            CALL model%Queue_task(Q_DINSECT_, "dist_insect")      ! LAND ONLY
+            CALL model%Queue_task(Q_DINSECT_, "update_dinsect_effects") ! LAND ONLY
           ENDIF
           CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
         END IF
@@ -537,6 +540,9 @@ CONTAINS
         CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
         IF (model%config%qmodel_id == QLAND) THEN
           CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
+          IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
+            CALL model%Queue_task(Q_DINSECT_, "reset_dinsect_fluxes") ! LAND ONLY
+          ENDIF
         END IF
 
         IF (is_time_restart(get_time_start())) THEN
@@ -588,7 +594,7 @@ CONTAINS
 
         IF (model%config%qmodel_id == QLAND) THEN
           IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
-            CALL model%Queue_task(Q_DINSECT_, "dist_insect")      ! LAND ONLY
+            CALL model%Queue_task(Q_DINSECT_, "update_dinsect_effects") ! LAND ONLY
           ENDIF
           CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
         END IF
@@ -781,6 +787,11 @@ CONTAINS
         IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT .OR. model%config%qmodel_id == QCANOPY) THEN
           IF (tile%Is_process_active(Q_AGR_)) THEN
             CALL q_agr_init(tile)
+          END IF
+        END IF
+        IF(model%config%qmodel_id == QLAND) THEN
+          IF (tile%Is_process_active(Q_DINSECT_)) THEN
+            CALL dinsect_init(tile)
           END IF
         END IF
 #endif

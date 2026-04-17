@@ -56,6 +56,7 @@ CONTAINS
     USE mo_q_assimi_parameters, ONLY: init_q_assimi_parameters
     USE mo_q_agr_constants,     ONLY: init_q_agr_constants
     USE mo_q_syl_constants,     ONLY: init_q_syl_constants
+    USE mo_q_dinsect_constants, ONLY: init_dinsect_constants
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
@@ -182,6 +183,7 @@ CONTAINS
            CALL init_q_assimi_parameters
            CALL init_q_agr_constants
            CALL init_q_syl_constants
+           CALL init_dinsect_constants
            CALL init_veg_constants
            CALL init_spq_constants
            CALL init_turb_constants
