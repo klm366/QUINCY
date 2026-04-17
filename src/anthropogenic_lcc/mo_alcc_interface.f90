@@ -464,7 +464,7 @@ CONTAINS
           current_tile => current_tile%Get_next_sibling_tile()
         END DO ! current_tile
 
-        ! Assure necessary but not sufficient conditions:
+        ! Assure some conditions:
         ! (1) transition rates <= from_cf_sum, i.e. that the transition does not remove more area than 
         !     currently available in all tiles beloning to one transition class, taking into account that
         !     a minimum fraction needs to be kept to avoid numerical issues in NLCC
@@ -603,13 +603,7 @@ CONTAINS
                   lost_area(ic, i_tile) = transition_rate(ic, idx) *  &
                       max(0.0_wp, (initial_area(ic, i_tile) - fract_small)) / from_cf_sum(ic)
                 END IF
-                !Todo-AKN: Why do I need this? Shouldn't these cases be treated by line 450-490?Maybe just a numerical issues?
-                IF (initial_area(ic, i_tile) - lost_area(ic, i_tile) < 0.0_wp) THEN
-                  current_fract(ic) = 0.0_wp
-                  lost_area(ic, i_tile) = initial_area(ic, i_tile)
-                ELSE
-                  current_fract(ic) = initial_area(ic, i_tile) - lost_area(ic, i_tile)
-                END IF
+                current_fract(ic) = initial_area(ic, i_tile) - lost_area(ic, i_tile)
               ELSE IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
                 IF (to_cf_sum(ic) < 0.0_wp) THEN
                   CALL finish(TRIM(routine), 'Violation of assertion: to_cf_sum is negative. Please check transition rates' &
@@ -626,9 +620,11 @@ CONTAINS
                     gained_area(ic, i_tile) = transition_rate(ic, idx) * initial_area(ic, i_tile) / to_cf_sum(ic)
                   END IF
                 END IF
-                !Todo-AKN: Why do I need this? Shouldn't these cases be treated by line 450-490?Maybe just a numerical issues?
-                IF (initial_area(ic, i_tile) + gained_area(ic, i_tile) > 1.0_wp) THEN
-                  gained_area(ic, i_tile) = 1.0_wp - initial_area(ic, i_tile)
+                ! Ensuring a minimum cover fraction should avoid this situation, but let's check.
+                ! If it occured, area would not be conserved.
+                IF (to_cf_sum(ic) == 0.0_wp .AND. transition_rate(ic, idx) > 0.0_wp) THEN
+                  CALL finish(TRIM(routine), 'Violation of assertion: to_cf_sum is zero while transition_rate is positive.' &
+                   & // ' Please check transition rates and initial areas. Tile: ' // TRIM(current_tile%name))
                 END IF
                 current_fract(ic) = initial_area(ic, i_tile) + gained_area(ic, i_tile)
               ELSE
@@ -660,15 +656,15 @@ CONTAINS
       cf_diff(:) = SUM(gained_area(:,:),DIM=2) - SUM(lost_area(:,:),DIM=2)
       ! Check for violations outside of the tolerated range (which are probably rather due to errors than precision)
       ! todo-AKN: need to reapply the check once mismatches have been treated correctly
-      !IF (ANY(ABS(cf_diff(:)) > max_tolerated_cf_mismatch)) THEN
-      !  WRITE (message_text,*) 'Violation of assertion: gained area does not equal lost area! Please check input data. ' &
-      !    & // 'Max difference of: ', MAXVAL(cf_diff(:))
-      !  CALL finish(TRIM(routine), TRIM(message_text))
-      !END IF
-      !IF (model%config%check_child_cf) THEN
-      !  ! Check and correct remaining mismatches
-      !  CALL check_and_correct_cf_mismatches(tile, options, nr_of_tiles, gained_area, lost_area)
-      !END IF
+      IF (ANY(ABS(cf_diff(:)) > max_tolerated_cf_mismatch)) THEN
+        WRITE (message_text,*) 'Violation of assertion: gained area does not equal lost area! Please check input data. ' &
+          & // 'Max difference of: ', MAXVAL(cf_diff(:))
+        CALL finish(TRIM(routine), TRIM(message_text))
+      END IF
+      IF (model%config%check_child_cf) THEN
+        ! Check and correct remaining mismatches
+        CALL check_and_correct_cf_mismatches(tile, options, nr_of_tiles, gained_area, lost_area)
+      END IF
 
       ! Now do the matter translocation
       CALL alcc_matter_translocation_jsb(tile, options)
