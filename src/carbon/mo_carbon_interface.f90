@@ -459,6 +459,7 @@ CONTAINS
       END DO
       !$ACC END LOOP
     END IF
+    !$ACC END PARALLEL
 
     ! R: "IF (read_cpools .AND. (lstart .OR. lresume)) THEN ..." of JS3 is in JS4 now in SUBROUTINE carbon_init_ic(tile)!
 
