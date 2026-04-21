@@ -188,7 +188,7 @@ MODULE mo_jsb_tile_class
     END SUBROUTINE Init_interface
 
     !> Interface for deferred subroutine `Init_fractions`
-    SUBROUTINE Init_fractions_interface(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
+    SUBROUTINE Init_fractions_interface(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions, is_sitelevel)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
       CHARACTER(len=*),           INTENT(in)    :: varlist_name
@@ -196,6 +196,7 @@ MODULE mo_jsb_tile_class
       CHARACTER(len=*),           INTENT(in)    :: suffix
       LOGICAL,                    INTENT(in)    :: l_fixed_fractions
       LOGICAL,                    INTENT(in)    :: l_rel_fractions
+      LOGICAL,                    INTENT(in)    :: is_sitelevel
     END SUBROUTINE Init_fractions_interface
 
     !> Interface for varous deferred subroutines

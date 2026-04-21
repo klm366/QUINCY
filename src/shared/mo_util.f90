@@ -25,8 +25,8 @@ MODULE mo_util
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, &
-    &       report_memory_usage, soil_init_from_texture, read_bc_data, tdma_solver_vec, scaled_global_sum_2D
+  PUBLIC :: soil_depth_to_layers_2d, ifs2soil, read_bc_data, one_of, &
+    &       report_memory_usage, soil_init_from_texture, tdma_solver_vec, scaled_global_sum_2D
   PUBLIC :: toupper, tolower, int2string, real2string, logical2string, separator
 
 #ifndef __QUINCY_STANDALONE__
@@ -179,16 +179,15 @@ CONTAINS
 
   END SUBROUTINE soil_init_from_texture
 
-  ! ====================================================================================================== !
-
-  !>#### Read boundary conditions for hydrology module
+  !>#### Read boundary conditions accounting for different options
   !>
-  !> Boundary condition fields for the hydrology module may depend on namelist settings, e.g. l_organic,
-  !> but also on whether specific fields for individual tiles are available. This warrants a separate
-  !> routine to read the boundary conditions while managing the different cases.
+  !> Boundary condition fields may depend on namelist settings (e.g. parameter [[t_hydro_config:l_organic]]
+  !> used in the HYDRO process), whether or not specific fields for individual tiles are available, or they
+  !> might depend on the vertical layer. Besides, given minimum or maximum values can be handled. This
+  !> routine reads the boundary condition data managing the different options.
   !>
-  SUBROUTINE read_bc_data(input_file, varname, tilename, l_organic, datafield, &
-    & default, llimit, ulimit, fallback, ilay, layer_name)
+  SUBROUTINE read_bc_data(input_file, varname, tilename, datafield, &
+    & l_organic, default, llimit, ulimit, fallback, ilay, layer_name)
 
     USE mo_jsb_io_netcdf,      ONLY: t_input_file
     USE mo_jsb_io,             ONLY: missval
@@ -196,9 +195,9 @@ CONTAINS
     TYPE(t_input_file)           :: input_file     !< File containing input data to be read
     CHARACTER(len=*), INTENT(IN) :: varname        !< Name of the variable to read
     CHARACTER(len=*), INTENT(IN) :: tilename       !< Name of the actual tile to read the variable for
-    LOGICAL, INTENT(IN)          :: l_organic      !< T: read the '_mineral' version of the variable
-    REAL(wp), INTENT(OUT)        :: datafield(:,:) !< Data field to be filled with boundary condition data
+    REAL(wp), INTENT(INOUT), TARGET :: datafield(:,:) !< Data field to be filled with boundary condition data
 
+    LOGICAL,  INTENT(IN), OPTIONAL :: l_organic    !< T: read the '_mineral' version of the variable
     REAL(wp), INTENT(IN), OPTIONAL :: default      !< Default value for missing data
     REAL(wp), INTENT(IN), OPTIONAL :: llimit       !< Set lower bound for the variable to read
     REAL(wp), INTENT(IN), OPTIONAL :: ulimit       !< Set Upper bound for the variable to read
@@ -215,35 +214,35 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER  :: routine = modname//':read_bc_data'
 
+    !> Start with the base variable name as the default full name to read from the file.
+    fullname = varname
+
     !> Add the '_mineral' suffix to variable names, if 'l_organic == .TRUE.' and the impact
     !> of organic soil carbon is therefore explicitly computed during runtime.
-    IF (l_organic) THEN
-      ! If the soil is later modified with organic carbon fraction, read the variable with the '_mineral' suffix.
-      fullname = TRIM(varname) // '_mineral'
-    ELSE
-      ! If soil organic fraction is already included, read the variable without '_mineral' suffix.
-      fullname = TRIM(varname)
+    IF (PRESENT(l_organic)) THEN
+      IF (l_organic) THEN
+        fullname = fullname // '_mineral'
+      END IF
     END IF
 
     !> In case the input file contains data specifically for a given tile, the tile name is added to
     !> the variable name.
-    IF (input_file%Has_var(TRIM(fullname)//'_'//TRIM(tilename))) THEN
+    IF (input_file%Has_var(fullname//'_'//tilename)) THEN
       ! If the variable with the tile name exists, use it.
-      fullname = TRIM(fullname)//'_'//TRIM(tilename)
+      fullname = fullname//'_'//tilename
       read_from_file = .TRUE.
     ELSE IF (PRESENT(fallback)) THEN
       ! Set datafield to the fallback value if one is provided.
       datafield(:,:) = fallback
       read_from_file = .FALSE.
-      CALL message(routine, 'Set '//TRIM(fullname)//' field for tile '// TRIM(tilename) // &
-        & ' to fallback value '//TRIM(real2string(fallback)))
-    ELSE IF (input_file%Has_var(TRIM(fullname))) THEN
+      CALL message(routine, 'Set '//fullname//' field for tile '//tilename//' to fallback value '//TRIM(real2string(fallback)))
+    ELSE IF (input_file%Has_var(fullname)) THEN
       ! Use the standard variable for this tile if the variable exists in the bc file
       ! and no fallback value is provided
       read_from_file = .TRUE.
     ELSE
       ! If neither the fallback value nor field variable exist, complain and stop.
-      CALL finish(routine, 'Variable '//TRIM(fullname)//' not found in input file '//TRIM(input_file%filename) &
+      CALL finish(routine, 'Variable '//fullname//' not found in input file '//input_file%filename &
         & // ' and no fallback value is given.')
     END IF
 
@@ -253,13 +252,13 @@ CONTAINS
       IF (PRESENT(ilay) .AND. PRESENT(layer_name)) THEN
         ! Read a single layer of a 3D field
         ptr_3D => input_file%Read_2d_extdim( &
-          & variable_name=TRIM(fullname),    &
-          & start_extdim=ilay, end_extdim=ilay, extdim_name=TRIM(layer_name))
-        datafield(:,:) = ptr_3D(:,:,1)
+          & variable_name=fullname, &
+          & start_extdim=ilay, end_extdim=ilay, extdim_name=layer_name)
+        datafield(:,:) = ptr_3D(:,:,1) ! The third dimension is always size 1
+        DEALLOCATE(ptr_3D)
       ELSE
         ! Read 2D field
-        ptr_2D => input_file%Read_2d(variable_name=TRIM(fullname))
-        datafield(:,:) = ptr_2D(:,:)
+        ptr_2D => input_file%Read_2d(variable_name=fullname, fill_array = datafield(:,:))
       END IF
       IF (PRESENT(default)) THEN
         ! Set missing values to a default value
@@ -348,12 +347,12 @@ CONTAINS
   !> Calculate the scaled global sum of a given 2D variable using passed 2D and 1D scaling factors
   !
   ! ======================================================================================================= !
-  SUBROUTINE scaled_global_sum_2D(scaled_global_sum, var_ptr, scaling_2D, scaling_factor, acc_stream)
+  SUBROUTINE scaled_global_sum_2D(scaled_global_sum, var, scaling_2D, scaling_factor, acc_stream)
 
     USE mo_sync,                    ONLY: global_sum_array
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp),          INTENT(out) :: scaled_global_sum(:) !< Scaled variable
-    REAL(wp), POINTER, INTENT(in)  :: var_ptr(:,:)         !< Variable pointer
+    REAL(wp),          INTENT(in)  :: var(:,:)             !< Variable that should be scaled and summed up
     REAL(wp),          INTENT(in)  :: scaling_2D(:,:)      !< 2D scaling factor
     REAL(wp),          INTENT(in)  :: scaling_factor       !< Additional scaling factor
     INTEGER,           INTENT(in)  :: acc_stream           !< ACC stream - passed to avoid cyclic
@@ -370,7 +369,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
     DO blk = 1, nblks
       DO jc = 1, nproma
-        scaled_variable(jc,blk) = scaling_2D(jc,blk) * var_ptr(jc,blk)
+        scaled_variable(jc,blk) = scaling_2D(jc,blk) * var(jc,blk)
       END DO
     END DO
     !$ACC END PARALLEL LOOP

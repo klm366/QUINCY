@@ -438,7 +438,7 @@ CONTAINS
   !>
   !> Add and initialise fraction variables for this tile - either from a file or according to specification
   !>
-  SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
+  SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions, is_sitelevel)
 
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_varlist,         ONLY: jsb_add_var, VARNAME_LEN
@@ -456,6 +456,7 @@ CONTAINS
     LOGICAL,           INTENT(in)    :: l_rel_fractions
       !< Tile fractions in input file are usually relative with respect to parent (historical reasons)
       !< while the fractions in the code are absolute (with respect to the box tile)
+    LOGICAL,           INTENT(in)    :: is_sitelevel       !< Is this a site-level model configuration?
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
     CLASS(t_jsb_aggregator),                  POINTER :: aggregator
@@ -581,7 +582,13 @@ CONTAINS
         CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
         CALL this%Set_fraction(fract=MAX(0._wp, return_pointer(:,:)*tmp_fract(:,:)))
       ELSE
-        CALL this%Set_fraction(fract=return_pointer(:,:))
+        IF (is_sitelevel .AND. .NOT. ASSOCIATED(this%parent_tile)) THEN
+          ! For site-level, set fraction of box tile to 1
+          tmp_fract(:,:) = 1._wp
+          CALL this%Set_fraction(fract=tmp_fract(:,:))
+        ELSE
+          CALL this%Set_fraction(fract=return_pointer(:,:))
+        END IF
         CALL this%Get_fraction(fract=hgrid%lsf(:,:))
         hgrid%lsm(:,:) = hgrid%lsf(:,:) > 0._wp
         !$ACC UPDATE DEVICE(hgrid%lsf, hgrid%lsm) ASYNC(1)

@@ -810,6 +810,7 @@ CONTAINS
     ALLOCATE(forcing_input(no_of_models))
     ALLOCATE(forcing_options(no_of_models))
 
+    CALL message('', '')
     CALL message(routine, 'Allocated forcing_input and forcing_options ('//TRIM(int2string(no_of_models))//')')
 
   END SUBROUTINE setup_forcing
@@ -920,6 +921,8 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     INTEGER:: nml_handler, read_status, f_unit
+
+    CALL message('', '')
 
     !------------------------------------------------------------------------------------
     model => Get_model(model_id)
@@ -1226,6 +1229,8 @@ CONTAINS
         & forcing_c14_file_prefix, forcing_c14_unit, forcing_c14_const_c14, forcing_input(model_id)%C14_concentr)
     END SELECT
 
+    CALL message('', '')
+
   END SUBROUTINE init_forcing
 
   ! ======================================================================================================= !
@@ -1448,7 +1453,11 @@ CONTAINS
       ! check timeseries
       IF (my_process_is_stdio()) THEN
         IF (TRIM(forcing_input_variable%variable_name) == 'precip') THEN
-          WRITE(message_text,*) ' Reading forcing for ', ydate
+          IF (model%config%is_single_site) THEN
+            WRITE(message_text,*) ' Reading forcing for ', ydate, '(site '//model%config%single_site_shortname//')'
+          ELSE
+            WRITE(message_text,*) ' Reading forcing for ', ydate
+          END IF
           CALL message('----- ', message_text)
         END IF
         !Assertion: currentTimeStep needs to be contained in the file
