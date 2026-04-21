@@ -22,10 +22,16 @@ MODULE mo_sb_util
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   USE mo_jsb_math_constants,    ONLY: zero
+  USE mo_util,                  ONLY: int2string
 
   USE mo_lnd_bgcm_idx
-  USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-  USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
+  USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store, get_bgcm_idx
+  USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID, &
+                                  VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
+#ifndef  __QUINCY_STANDALONE__
+  USE mo_jsb_io_netcdf,           ONLY: t_input_file
+  USE mo_read_interface,          ONLY: read_2D_extdim, read_3D_extdim, on_cells
+#endif
 
   IMPLICIT NONE
 
@@ -36,6 +42,50 @@ MODULE mo_sb_util
 #endif
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_util'
+
+#ifndef  __QUINCY_STANDALONE__
+  TYPE t_soil_forcing_cache
+    TYPE(t_input_file) :: soilphysics_input_file
+    TYPE(t_input_file) :: veglitterfall_input_file
+    LOGICAL :: soilphysics_open = .FALSE.
+    LOGICAL :: veglitterfall_open = .FALSE.
+    LOGICAL :: arrays_initialized = .FALSE.
+    LOGICAL :: preload_loaded = .FALSE.
+    INTEGER :: nproma = 0
+    INTEGER :: nsoil = 0
+    INTEGER :: nblks = 0
+    INTEGER :: npft = 0
+    INTEGER :: veg_litter_nr_parts = 0
+    INTEGER :: veg_litter_nr_elems = 0
+    INTEGER :: seed_bed_nr_elems = 0
+    INTEGER :: preload_nsteps = 0
+    INTEGER :: cached_year = -HUGE(0)
+    INTEGER :: cached_yearday = -HUGE(0)
+    INTEGER :: cached_timestep = -HUGE(0)
+    CHARACTER(len=:), ALLOCATABLE :: soilphysics_filename
+    CHARACTER(len=:), ALLOCATABLE :: veglitterfall_filename
+    REAL(wp), ALLOCATABLE :: root_fraction_sl_preload(:,:,:,:,:)      ! nproma, nsoil, nblks, npft, ntime
+    REAL(wp), ALLOCATABLE :: demand_uptake_n_preload(:,:,:,:)         ! nproma, nblks, npft, ntime
+    REAL(wp), ALLOCATABLE :: demand_uptake_p_preload(:,:,:,:)         ! nproma, nblks, npft, ntime
+    REAL(wp), ALLOCATABLE :: frac_wtr_transp_down_sl_preload(:,:,:,:) ! nproma, nsoil, nblks, ntime
+    REAL(wp), ALLOCATABLE :: frac_w_lat_loss_sl_preload(:,:,:,:)      ! nproma, nsoil, nblks, ntime
+    REAL(wp), ALLOCATABLE :: wtr_soil_sl_preload(:,:,:,:)             ! nproma, nsoil, nblks, ntime
+    REAL(wp), ALLOCATABLE :: vol_porosity_sl_preload(:,:,:,:)         ! nproma, nsoil, nblks, ntime
+    REAL(wp), ALLOCATABLE :: t_soil_sl_preload(:,:,:,:)               ! nproma, nsoil, nblks, ntime
+    REAL(wp), ALLOCATABLE :: nhx_deposition_preload(:,:,:)            ! nproma, nblks, ntime
+    REAL(wp), ALLOCATABLE :: noy_deposition_preload(:,:,:)            ! nproma, nblks, ntime
+    REAL(wp), ALLOCATABLE :: nhx_n15_deposition_preload(:,:,:)        ! nproma, nblks, ntime
+    REAL(wp), ALLOCATABLE :: noy_n15_deposition_preload(:,:,:)        ! nproma, nblks, ntime
+    REAL(wp), ALLOCATABLE :: p_deposition_preload(:,:,:)              ! nproma, nblks, ntime
+    REAL(wp), ALLOCATABLE :: veg_pool_fine_root_c_preload(:,:,:,:)    ! nproma, nblks, npft, ntime
+    REAL(wp), ALLOCATABLE :: veg_litterfall_preload(:,:,:,:,:,:)      ! part, elem, nproma, nblks, npft, ntime
+    REAL(wp), ALLOCATABLE :: seed_bed_litterfall_preload(:,:,:,:,:)   ! elem, nproma, nblks, npft, ntime
+    REAL(wp), ALLOCATABLE :: scratch_3d(:,:,:)                        ! nproma, nblks, 1
+    REAL(wp), ALLOCATABLE :: scratch_4d(:,:,:,:)                      ! nproma, nsoil, nblks, 1
+  END TYPE t_soil_forcing_cache
+
+  TYPE(t_soil_forcing_cache), SAVE :: soil_forcing_cache
+#endif
 
 CONTAINS
 
@@ -436,13 +486,8 @@ CONTAINS
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_process_class,       ONLY: SB_, HYDRO_, SSE_, VEG_, A2L_
 
-    USE mo_jsb_io_netcdf,           ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store, get_bgcm_idx, read_bgcm_from_file
     USE mo_lnd_bgcm_idx
-    USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
     USE mo_jsb_time,                ONLY: t_datetime, get_date_components, get_year_day
-
-    USE mo_util,                    ONLY: int2string
 
     dsl4jsb_Use_processes SB_
     dsl4jsb_Use_memory(A2L_)
@@ -456,17 +501,12 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER :: model            !< the model
     TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store       !< the bgcm store of this tile
-    TYPE(t_input_file)              :: input_file       !< file with to be read soil model forcing
     REAL(wp)                        :: dtime, year_instant
     INTEGER                         :: iblk             !< Dimensions of the horizontal grid
-    INTEGER                         :: veg_pool_idx
-    INTEGER                         :: year, month, day, hour, minute, second, yearday, &
-                                    &  ith_timestep     !< the row number of current timestep in soil forcing
+    INTEGER                         :: pft_idx, npft
+    INTEGER                         :: year, month, day, hour, minute, second, yearday, forcing_yearday, &
+                                    &  ith_timestep, cache_itimestep     !< forcing record index in file / cache
     CHARACTER(len=:), ALLOCATABLE   :: soilphysics_forcing_file, veglitterfall_forcing_file
-    REAL(wp), POINTER               :: veg_pool_mt_domain(:,:,:,:)            !< dim: compartments, elements, nc, nblks -- on domain!
-    REAL(wp), POINTER :: &
-      & ptr_3D(:,:,:),   &                      !< Pointer to 3d variable
-      & ptr_4D(:,:,:,:)                         !< Pointer to 4d variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_read_soil_forcing'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -526,142 +566,579 @@ CONTAINS
     CALL get_date_components(options%current_datetime, year, month, day, hour, minute, second)
     year_instant = get_year_day(options%current_datetime)
     yearday = INT(year_instant)
+    forcing_yearday = MODULO(yearday - 1, 365) + 1
     CALL get_soil_forcing_info(TRIM(dsl4jsb_Config(SB_)%soilphysics_forcing_filename), &
-      & year, month, day, hour, minute, second, yearday, dtime, soilphysics_forcing_file, ith_timestep)
+      & forcing_yearday, hour, minute, second, dtime, soilphysics_forcing_file, ith_timestep)
     CALL get_soil_forcing_info(TRIM(dsl4jsb_Config(SB_)%veglitterfall_forcing_filename), &
-      & year, month, day, hour, minute, second, yearday, dtime, veglitterfall_forcing_file, ith_timestep)
+      & forcing_yearday, hour, minute, second, dtime, veglitterfall_forcing_file, ith_timestep)
     IF (debug_on()) CALL message(TRIM(routine), 'Reading the forcing record '//int2string(ith_timestep)// &
-      & ' at day '//int2string(yearday)//' from '//TRIM(soilphysics_forcing_file)//' ...')
-    !> 1.0 the first soil forcing file
-    ! ----------------------------------------------------------------------------------------------------- !
-    input_file = jsb_netcdf_open_input(TRIM(soilphysics_forcing_file), model%grid_id)
-
-    !> read the 3D forcing variables
-    !> - Fraction of fineroot
-    ptr_4D => input_file%Read_3d_time(                  &
-        & variable_name='veg_root_fraction_sl_'//tile%name,          &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    root_fraction_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
-
-    !> - plant N uptake demand
-    ptr_3D => input_file%Read_2d_time(                  &
-        & variable_name="veg_demand_uptake_n_tuptake_mavg_"//tile%name,            &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    demand_uptake_n_tuptake_mavg(:,:) = ptr_3D(:,:,1)
-
-    !> - plant P uptake demand
-    ptr_3D => input_file%Read_2d_time(                  &
-        & variable_name="veg_demand_uptake_p_tuptake_mavg_"//tile%name,            &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    demand_uptake_p_tuptake_mavg(:,:) = ptr_3D(:,:,1)
-
-    !> - variables not on tile level
-    IF (tile%name(1:3) /= 'pft') THEN
-      !> - Fraction of vertical transport
-      ptr_4D => input_file%Read_3d_time(                  &
-          & variable_name='hydro_frac_wtr_transp_down_sl_'//tile%name,   &
-          & start_time_step=ith_timestep, end_time_step=ith_timestep)
-      frac_wtr_transp_down_sl(:,:,:) = ptr_4D(:,:,:,1)
-
-      !> - Fraction of lateral water loss
-      ptr_4D => input_file%Read_3d_time(                  &
-          & variable_name='hydro_frac_w_lat_loss_sl_'//tile%name,        &
-          & start_time_step=ith_timestep, end_time_step=ith_timestep)
-      frac_w_lat_loss_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
-
-      !> - Water content
-      ptr_4D => input_file%Read_3d_time(                  &
-          & variable_name='hydro_wtr_soil_sl_'//tile%name,              &
-          & start_time_step=ith_timestep, end_time_step=ith_timestep)
-      wtr_soil_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
-
-      !> - Volumetric water content
-      ptr_4D => input_file%Read_3d_time(                  &
-          & variable_name='hydro_vol_porosity_sl_'//tile%name,          &
-          & start_time_step=ith_timestep, end_time_step=ith_timestep)
-      vol_porosity_sl(:,:,:) = MERGE(ptr_4D(:,:,:,1), 0._wp, ptr_4D(:,:,:,1) >= 0._wp)
-
-      !> - Soil temperature
-      ptr_4D => input_file%Read_3d_time(                  &
-          & variable_name='sse_t_soil_sl_'//tile%name,                &
-          & start_time_step=ith_timestep, end_time_step=ith_timestep)
-      t_soil_sl(:,:,:) = ptr_4D(:,:,:,1)
-
-      !> read the 2D forcing variables
-      !> - nhx deposition
-      ptr_3D => input_file%Read_2d_time(                  &
-          & variable_name="a2l_nhx_deposition_"//tile%name,            &
-          & start_time_step=ith_timestep, end_time_step=ith_timestep)
-      nhx_deposition(:,:) = ptr_3D(:,:,1)
-
-      !> - noy deposition
-      ptr_3D => input_file%Read_2d_time(                  &
-          & variable_name="a2l_noy_deposition_"//tile%name,            &
-          & start_time_step=ith_timestep, end_time_step=ith_timestep)
-      noy_deposition(:,:) = ptr_3D(:,:,1)
-
-      !> - nhx n15 deposition
-      ptr_3D => input_file%Read_2d_time(                  &
-          & variable_name="a2l_nhx_n15_deposition_"//tile%name,            &
-          & start_time_step=ith_timestep, end_time_step=ith_timestep)
-      nhx_n15_deposition(:,:) = ptr_3D(:,:,1)
-
-      !> - noy n15 deposition
-      ptr_3D => input_file%Read_2d_time(                  &
-          & variable_name="a2l_noy_n15_deposition_"//tile%name,            &
-          & start_time_step=ith_timestep, end_time_step=ith_timestep)
-      noy_n15_deposition(:,:) = ptr_3D(:,:,1)
-
-      !> - p deposition
-      ptr_3D => input_file%Read_2d_time(                  &
-          & variable_name="a2l_p_deposition_"//tile%name,            &
-          & start_time_step=ith_timestep, end_time_step=ith_timestep)
-      p_deposition(:,:) = ptr_3D(:,:,1)
+      & ' at forcing day '//int2string(forcing_yearday)//' (model day '//int2string(yearday)//') from ' // &
+      & TRIM(soilphysics_forcing_file)//' ...')
+    bgcm_store => tile%bgcm_store
+    npft = model%config%npft
+    pft_idx = get_pft_tile_index(tile%name)
+    CALL ensure_soil_forcing_cache_loaded(model, bgcm_store, root_fraction_sl, soilphysics_forcing_file, &
+      & veglitterfall_forcing_file, year, forcing_yearday, ith_timestep, dtime, npft, routine)
+    cache_itimestep = ith_timestep - soil_forcing_cache%cached_timestep + 1
+    IF (cache_itimestep < 1 .OR. cache_itimestep > soil_forcing_cache%preload_nsteps) THEN
+      CALL finish(TRIM(routine), 'Invalid soil forcing cache index '//int2string(cache_itimestep)// &
+        & ' for forcing timestep '//int2string(ith_timestep)//' with cache start '// &
+        & int2string(soil_forcing_cache%cached_timestep)//' and preload_nsteps '// &
+        & int2string(soil_forcing_cache%preload_nsteps))
     END IF
 
-    CALL input_file%Close()
-
-    !> 2.0 the second soil forcing file
-    ! ----------------------------------------------------------------------------------------------------- !
-    input_file = jsb_netcdf_open_input(TRIM(veglitterfall_forcing_file), model%grid_id)
-    IF (ASSOCIATED(tile%bgcm_store)) THEN
-      bgcm_store => tile%bgcm_store
-      veg_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile%name, routine)
-      veg_pool_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(veg_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
+    IF (pft_idx > 0) THEN
+      root_fraction_sl(:,:,:) = soil_forcing_cache%root_fraction_sl_preload(:,:,:,pft_idx,cache_itimestep)
+      demand_uptake_n_tuptake_mavg(:,:) = soil_forcing_cache%demand_uptake_n_preload(:,:,pft_idx,cache_itimestep)
+      demand_uptake_p_tuptake_mavg(:,:) = soil_forcing_cache%demand_uptake_p_preload(:,:,pft_idx,cache_itimestep)
+      CALL apply_litterfall_cache_to_tile(bgcm_store, tile%name, pft_idx, cache_itimestep, routine)
+    ELSE
+      frac_wtr_transp_down_sl(:,:,:) = soil_forcing_cache%frac_wtr_transp_down_sl_preload(:,:,:,cache_itimestep)
+      frac_w_lat_loss_sl(:,:,:)      = soil_forcing_cache%frac_w_lat_loss_sl_preload(:,:,:,cache_itimestep)
+      wtr_soil_sl(:,:,:)             = soil_forcing_cache%wtr_soil_sl_preload(:,:,:,cache_itimestep)
+      vol_porosity_sl(:,:,:)         = soil_forcing_cache%vol_porosity_sl_preload(:,:,:,cache_itimestep)
+      t_soil_sl(:,:,:)               = soil_forcing_cache%t_soil_sl_preload(:,:,:,cache_itimestep)
+      nhx_deposition(:,:)            = soil_forcing_cache%nhx_deposition_preload(:,:,cache_itimestep)
+      noy_deposition(:,:)            = soil_forcing_cache%noy_deposition_preload(:,:,cache_itimestep)
+      nhx_n15_deposition(:,:)        = soil_forcing_cache%nhx_n15_deposition_preload(:,:,cache_itimestep)
+      noy_n15_deposition(:,:)        = soil_forcing_cache%noy_n15_deposition_preload(:,:,cache_itimestep)
+      p_deposition(:,:)              = soil_forcing_cache%p_deposition_preload(:,:,cache_itimestep)
     END IF
-
-    !> - veg fineroot C
-    ptr_3D => input_file%Read_2d_time(                      &
-        & variable_name="veg_veg_bgcm_pool_fine_root_C_"//tile%name, &
-        & start_time_step=ith_timestep, end_time_step=ith_timestep)
-    veg_pool_mt_domain(ix_fine_root, ixC, :,:) = ptr_3D(:,:,1)
-
-    !> - veg_litterfall_mt_domain using read_bgcm_from_file
-    CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_LITTERFALL_ID, "veg", &
-        & tile%name, routine, input_file, dt_step = ith_timestep)
-
-    !> - litterfall seed bed
-    CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_SEED_BED_LITTERFALL_ID, "veg", &
-        & tile%name, routine, input_file, dt_step = ith_timestep)
-
-    CALL input_file%Close()
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
   END SUBROUTINE update_read_soil_forcing
+
+  ! ======================================================================================================= !
+  !> Return the number of records to preload for the current forcing file.
+  !>
+  INTEGER FUNCTION get_soil_forcing_preload_nsteps(dtime)
+
+    REAL(wp), INTENT(in) :: dtime
+
+    IF (NINT(dtime) == 86400) THEN
+      get_soil_forcing_preload_nsteps = 1
+    ELSE
+      get_soil_forcing_preload_nsteps = 86400 / INT(dtime)
+    END IF
+
+  END FUNCTION get_soil_forcing_preload_nsteps
+
+  ! ======================================================================================================= !
+  ! ======================================================================================================= !
+  !> Return the pft index encoded in a tile name like pft01.
+  !>
+  INTEGER FUNCTION get_pft_tile_index(tile_name)
+
+    CHARACTER(len=*), INTENT(in) :: tile_name
+    INTEGER :: ios
+
+    get_pft_tile_index = 0
+    IF (LEN_TRIM(tile_name) /= 5) RETURN
+    IF (tile_name(1:3) /= 'pft') RETURN
+
+    READ(tile_name(4:5), '(I2)', IOSTAT=ios) get_pft_tile_index
+    IF (ios /= 0) get_pft_tile_index = 0
+
+  END FUNCTION get_pft_tile_index
+
+  ! ======================================================================================================= !
+  !> Return the canonical pft tile name.
+  !>
+  FUNCTION get_pft_tile_name(ipft) RESULT(tile_name)
+
+    INTEGER, INTENT(in) :: ipft
+    CHARACTER(len=5)    :: tile_name
+
+    WRITE(tile_name, '("pft",I2.2)') ipft
+
+  END FUNCTION get_pft_tile_name
+
+  ! ======================================================================================================= !
+  !> Return the litterfall compartment name used in the forcing variable names.
+  !>
+  FUNCTION get_veg_litter_part_name(i_part) RESULT(part_name)
+
+    INTEGER, INTENT(in)    :: i_part
+    CHARACTER(len=:), ALLOCATABLE :: part_name
+
+    SELECT CASE(i_part)
+    CASE (1)
+      part_name = 'leaf'
+    CASE (2)
+      part_name = 'fine_root'
+    CASE (3)
+      part_name = 'coarse_root'
+    CASE (4)
+      part_name = 'sap_wood'
+    CASE (5)
+      part_name = 'heart_wood'
+    CASE (6)
+      part_name = 'labile'
+    CASE (7)
+      part_name = 'reserve'
+    CASE (8)
+      part_name = 'fruit'
+    CASE DEFAULT
+      CALL finish(modname//':get_veg_litter_part_name', 'Unsupported litterfall part index '//int2string(i_part))
+    END SELECT
+
+  END FUNCTION get_veg_litter_part_name
+
+  ! ======================================================================================================= !
+  !> Return the litterfall element name used in the forcing variable names.
+  !>
+  FUNCTION get_veg_litter_elem_name(i_elem) RESULT(elem_name)
+
+    INTEGER, INTENT(in)    :: i_elem
+    CHARACTER(len=:), ALLOCATABLE :: elem_name
+
+    SELECT CASE(i_elem)
+    CASE (1)
+      elem_name = 'C'
+    CASE (2)
+      elem_name = 'N'
+    CASE (3)
+      elem_name = 'P'
+    CASE (4)
+      elem_name = 'C13'
+    CASE (5)
+      elem_name = 'C14'
+    CASE (6)
+      elem_name = 'N15'
+    CASE DEFAULT
+      CALL finish(modname//':get_veg_litter_elem_name', 'Unsupported litterfall element index '//int2string(i_elem))
+    END SELECT
+
+  END FUNCTION get_veg_litter_elem_name
+
+  ! ======================================================================================================= !
+  !> Keep the forcing files open and cache the currently loaded timestep.
+  !>
+  SUBROUTINE ensure_soil_forcing_cache_loaded(model, bgcm_store, root_fraction_sl, soilphysics_filename, &
+    & veglitterfall_filename, year, yearday, itimestep, dtime, npft, caller)
+
+    USE mo_jsb_model_class, ONLY: t_jsb_model
+
+    TYPE(t_jsb_model),       POINTER, INTENT(in) :: model
+    TYPE(t_lnd_bgcm_store),  POINTER, INTENT(in) :: bgcm_store
+    REAL(wp),                        INTENT(in) :: root_fraction_sl(:,:,:)
+    CHARACTER(len=*),                INTENT(in) :: soilphysics_filename, veglitterfall_filename, caller
+    INTEGER,                         INTENT(in) :: year, yearday, itimestep, npft
+    REAL(wp),                        INTENT(in) :: dtime
+
+    LOGICAL :: cache_hit
+    INTEGER :: preload_nsteps, cache_start_timestep
+
+    preload_nsteps = get_soil_forcing_preload_nsteps(dtime)
+    IF (preload_nsteps == 1) THEN
+      cache_start_timestep = itimestep
+    ELSE
+      cache_start_timestep = 1
+    END IF
+    !$OMP CRITICAL (soil_forcing_netcdf_io)
+    CALL ensure_soil_forcing_cache_shape(bgcm_store, root_fraction_sl, npft, preload_nsteps, caller)
+    CALL open_cached_soil_forcing_file(model, soil_forcing_cache%soilphysics_input_file, &
+      & soil_forcing_cache%soilphysics_open, soil_forcing_cache%soilphysics_filename, soilphysics_filename, caller)
+    CALL open_cached_soil_forcing_file(model, soil_forcing_cache%veglitterfall_input_file, &
+      & soil_forcing_cache%veglitterfall_open, soil_forcing_cache%veglitterfall_filename, veglitterfall_filename, caller)
+
+    cache_hit = .FALSE.
+    IF (ALLOCATED(soil_forcing_cache%soilphysics_filename) .AND. ALLOCATED(soil_forcing_cache%veglitterfall_filename)) THEN
+      cache_hit = soil_forcing_cache%preload_loaded .AND. soil_forcing_cache%preload_nsteps == preload_nsteps .AND. &
+        & TRIM(soil_forcing_cache%soilphysics_filename) == TRIM(soilphysics_filename) .AND. &
+        & TRIM(soil_forcing_cache%veglitterfall_filename) == TRIM(veglitterfall_filename) .AND. &
+        & soil_forcing_cache%cached_timestep == cache_start_timestep
+    END IF
+
+    IF (.NOT. cache_hit) THEN
+      CALL load_soilphysics_cache(bgcm_store, preload_nsteps, cache_start_timestep, caller)
+      CALL load_litterfall_cache(bgcm_store, preload_nsteps, cache_start_timestep, caller)
+      soil_forcing_cache%preload_loaded = .TRUE.
+      soil_forcing_cache%cached_year = year
+      soil_forcing_cache%cached_yearday = yearday
+      soil_forcing_cache%cached_timestep = cache_start_timestep
+    END IF
+    !$OMP END CRITICAL (soil_forcing_netcdf_io)
+
+  END SUBROUTINE ensure_soil_forcing_cache_loaded
+
+  ! ======================================================================================================= !
+  !> Ensure that the cache arrays match the current model dimensions.
+  !>
+  SUBROUTINE ensure_soil_forcing_cache_shape(bgcm_store, root_fraction_sl, npft, preload_nsteps, caller)
+
+    TYPE(t_lnd_bgcm_store), POINTER, INTENT(in) :: bgcm_store
+    REAL(wp),                      INTENT(in) :: root_fraction_sl(:,:,:)
+    INTEGER,                       INTENT(in) :: npft
+    INTEGER,                       INTENT(in) :: preload_nsteps
+    CHARACTER(len=*),              INTENT(in) :: caller
+
+    INTEGER :: nproma, nsoil, nblks
+    INTEGER :: veg_litter_idx, seed_bed_idx
+    INTEGER :: veg_litter_store_idx, seed_bed_store_idx
+    LOGICAL :: needs_realloc
+    CHARACTER(len=5) :: tile_name
+
+    nproma = SIZE(root_fraction_sl, 1)
+    nsoil  = SIZE(root_fraction_sl, 2)
+    nblks  = SIZE(root_fraction_sl, 3)
+    tile_name = get_pft_tile_name(1)
+
+    veg_litter_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_LITTERFALL_ID, tile_name, caller)
+    seed_bed_idx   = get_bgcm_idx(bgcm_store, VEG_BGCM_SEED_BED_LITTERFALL_ID, tile_name, caller)
+    veg_litter_store_idx = bgcm_store%idx_in_store(veg_litter_idx)
+    seed_bed_store_idx   = bgcm_store%idx_in_store(seed_bed_idx)
+
+    needs_realloc = .NOT. soil_forcing_cache%arrays_initialized
+    IF (.NOT. needs_realloc) THEN
+      needs_realloc = soil_forcing_cache%nproma /= nproma .OR. soil_forcing_cache%nsoil /= nsoil .OR. &
+        & soil_forcing_cache%nblks /= nblks .OR. soil_forcing_cache%npft /= npft .OR. &
+        & soil_forcing_cache%preload_nsteps /= preload_nsteps .OR. &
+        & soil_forcing_cache%veg_litter_nr_parts /= bgcm_store%store_2l_2d_bgcms(veg_litter_store_idx)%nr_of_parts .OR. &
+        & soil_forcing_cache%veg_litter_nr_elems /= bgcm_store%store_2l_2d_bgcms(veg_litter_store_idx)%nr_of_elems .OR. &
+        & soil_forcing_cache%seed_bed_nr_elems /= bgcm_store%store_1l_2d_bgcms(seed_bed_store_idx)%nr_of_elems
+    END IF
+
+    IF (.NOT. needs_realloc) RETURN
+
+    CALL reset_soil_forcing_cache_arrays()
+
+    soil_forcing_cache%nproma = nproma
+    soil_forcing_cache%nsoil  = nsoil
+    soil_forcing_cache%nblks  = nblks
+    soil_forcing_cache%npft   = npft
+    soil_forcing_cache%preload_nsteps = preload_nsteps
+    soil_forcing_cache%veg_litter_nr_parts = bgcm_store%store_2l_2d_bgcms(veg_litter_store_idx)%nr_of_parts
+    soil_forcing_cache%veg_litter_nr_elems = bgcm_store%store_2l_2d_bgcms(veg_litter_store_idx)%nr_of_elems
+    soil_forcing_cache%seed_bed_nr_elems   = bgcm_store%store_1l_2d_bgcms(seed_bed_store_idx)%nr_of_elems
+    ALLOCATE(soil_forcing_cache%root_fraction_sl_preload(nproma, nsoil, nblks, npft, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%demand_uptake_n_preload(nproma, nblks, npft, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%demand_uptake_p_preload(nproma, nblks, npft, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%frac_wtr_transp_down_sl_preload(nproma, nsoil, nblks, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%frac_w_lat_loss_sl_preload(nproma, nsoil, nblks, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%wtr_soil_sl_preload(nproma, nsoil, nblks, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%vol_porosity_sl_preload(nproma, nsoil, nblks, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%t_soil_sl_preload(nproma, nsoil, nblks, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%nhx_deposition_preload(nproma, nblks, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%noy_deposition_preload(nproma, nblks, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%nhx_n15_deposition_preload(nproma, nblks, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%noy_n15_deposition_preload(nproma, nblks, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%p_deposition_preload(nproma, nblks, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%veg_pool_fine_root_c_preload(nproma, nblks, npft, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%veg_litterfall_preload(soil_forcing_cache%veg_litter_nr_parts, soil_forcing_cache%veg_litter_nr_elems, &
+      & nproma, nblks, npft, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%seed_bed_litterfall_preload(soil_forcing_cache%seed_bed_nr_elems, nproma, nblks, npft, preload_nsteps))
+    ALLOCATE(soil_forcing_cache%scratch_3d(nproma, nblks, 1))
+    ALLOCATE(soil_forcing_cache%scratch_4d(nproma, nsoil, nblks, 1))
+
+    soil_forcing_cache%root_fraction_sl_preload = zero
+    soil_forcing_cache%demand_uptake_n_preload = zero
+    soil_forcing_cache%demand_uptake_p_preload = zero
+    soil_forcing_cache%frac_wtr_transp_down_sl_preload = zero
+    soil_forcing_cache%frac_w_lat_loss_sl_preload = zero
+    soil_forcing_cache%wtr_soil_sl_preload = zero
+    soil_forcing_cache%vol_porosity_sl_preload = zero
+    soil_forcing_cache%t_soil_sl_preload = zero
+    soil_forcing_cache%nhx_deposition_preload = zero
+    soil_forcing_cache%noy_deposition_preload = zero
+    soil_forcing_cache%nhx_n15_deposition_preload = zero
+    soil_forcing_cache%noy_n15_deposition_preload = zero
+    soil_forcing_cache%p_deposition_preload = zero
+    soil_forcing_cache%veg_pool_fine_root_c_preload = zero
+    soil_forcing_cache%veg_litterfall_preload = zero
+    soil_forcing_cache%seed_bed_litterfall_preload = zero
+    soil_forcing_cache%scratch_3d = zero
+    soil_forcing_cache%scratch_4d = zero
+
+    soil_forcing_cache%arrays_initialized = .TRUE.
+    soil_forcing_cache%preload_loaded = .FALSE.
+    soil_forcing_cache%cached_year = -HUGE(0)
+    soil_forcing_cache%cached_yearday = -HUGE(0)
+    soil_forcing_cache%cached_timestep = -HUGE(0)
+  END SUBROUTINE ensure_soil_forcing_cache_shape
+
+  ! ======================================================================================================= !
+  !> Deallocate the cache arrays while keeping any open files untouched.
+  !>
+  SUBROUTINE reset_soil_forcing_cache_arrays()
+
+    IF (ALLOCATED(soil_forcing_cache%root_fraction_sl_preload)) DEALLOCATE(soil_forcing_cache%root_fraction_sl_preload)
+    IF (ALLOCATED(soil_forcing_cache%demand_uptake_n_preload)) DEALLOCATE(soil_forcing_cache%demand_uptake_n_preload)
+    IF (ALLOCATED(soil_forcing_cache%demand_uptake_p_preload)) DEALLOCATE(soil_forcing_cache%demand_uptake_p_preload)
+    IF (ALLOCATED(soil_forcing_cache%frac_wtr_transp_down_sl_preload)) DEALLOCATE(soil_forcing_cache%frac_wtr_transp_down_sl_preload)
+    IF (ALLOCATED(soil_forcing_cache%frac_w_lat_loss_sl_preload)) DEALLOCATE(soil_forcing_cache%frac_w_lat_loss_sl_preload)
+    IF (ALLOCATED(soil_forcing_cache%wtr_soil_sl_preload)) DEALLOCATE(soil_forcing_cache%wtr_soil_sl_preload)
+    IF (ALLOCATED(soil_forcing_cache%vol_porosity_sl_preload)) DEALLOCATE(soil_forcing_cache%vol_porosity_sl_preload)
+    IF (ALLOCATED(soil_forcing_cache%t_soil_sl_preload)) DEALLOCATE(soil_forcing_cache%t_soil_sl_preload)
+    IF (ALLOCATED(soil_forcing_cache%nhx_deposition_preload)) DEALLOCATE(soil_forcing_cache%nhx_deposition_preload)
+    IF (ALLOCATED(soil_forcing_cache%noy_deposition_preload)) DEALLOCATE(soil_forcing_cache%noy_deposition_preload)
+    IF (ALLOCATED(soil_forcing_cache%nhx_n15_deposition_preload)) DEALLOCATE(soil_forcing_cache%nhx_n15_deposition_preload)
+    IF (ALLOCATED(soil_forcing_cache%noy_n15_deposition_preload)) DEALLOCATE(soil_forcing_cache%noy_n15_deposition_preload)
+    IF (ALLOCATED(soil_forcing_cache%p_deposition_preload)) DEALLOCATE(soil_forcing_cache%p_deposition_preload)
+    IF (ALLOCATED(soil_forcing_cache%veg_pool_fine_root_c_preload)) DEALLOCATE(soil_forcing_cache%veg_pool_fine_root_c_preload)
+    IF (ALLOCATED(soil_forcing_cache%veg_litterfall_preload)) DEALLOCATE(soil_forcing_cache%veg_litterfall_preload)
+    IF (ALLOCATED(soil_forcing_cache%seed_bed_litterfall_preload)) DEALLOCATE(soil_forcing_cache%seed_bed_litterfall_preload)
+    IF (ALLOCATED(soil_forcing_cache%scratch_3d)) DEALLOCATE(soil_forcing_cache%scratch_3d)
+    IF (ALLOCATED(soil_forcing_cache%scratch_4d)) DEALLOCATE(soil_forcing_cache%scratch_4d)
+
+    soil_forcing_cache%arrays_initialized = .FALSE.
+    soil_forcing_cache%preload_loaded = .FALSE.
+    soil_forcing_cache%nproma = 0
+    soil_forcing_cache%nsoil = 0
+    soil_forcing_cache%nblks = 0
+    soil_forcing_cache%npft = 0
+    soil_forcing_cache%preload_nsteps = 0
+    soil_forcing_cache%veg_litter_nr_parts = 0
+    soil_forcing_cache%veg_litter_nr_elems = 0
+    soil_forcing_cache%seed_bed_nr_elems = 0
+    soil_forcing_cache%cached_year = -HUGE(0)
+    soil_forcing_cache%cached_yearday = -HUGE(0)
+    soil_forcing_cache%cached_timestep = -HUGE(0)
+
+  END SUBROUTINE reset_soil_forcing_cache_arrays
+
+  ! ======================================================================================================= !
+  !> Reuse an open forcing file when possible, otherwise reopen it.
+  !>
+  SUBROUTINE open_cached_soil_forcing_file(model, input_file, is_open, cached_filename, target_filename, caller)
+
+    USE mo_jsb_model_class, ONLY: t_jsb_model
+    USE mo_jsb_io_netcdf,   ONLY: jsb_netcdf_open_input
+    USE mo_jsb_parallel,    ONLY: my_process_is_stdio
+
+    TYPE(t_jsb_model), POINTER, INTENT(in) :: model
+    TYPE(t_input_file),        INTENT(inout) :: input_file
+    LOGICAL,                   INTENT(inout) :: is_open
+    CHARACTER(len=:), ALLOCATABLE, INTENT(inout) :: cached_filename
+    CHARACTER(len=*),          INTENT(in) :: target_filename, caller
+
+    IF (is_open .AND. ALLOCATED(cached_filename)) THEN
+      IF (TRIM(cached_filename) == TRIM(target_filename)) THEN
+        RETURN
+      END IF
+      CALL input_file%Close()
+      is_open = .FALSE.
+    END IF
+
+    input_file = jsb_netcdf_open_input(TRIM(target_filename), model%grid_id)
+
+    ! The standard JSBACH input wrapper can report is_open=.FALSE. on non-stdio ranks
+    ! even though the distributed read path is still valid. Only the stdio rank should
+    ! treat this as a hard open failure.
+    IF (my_process_is_stdio() .AND. .NOT. input_file%is_open) THEN
+      CALL finish(TRIM(caller), 'Failed to open soil forcing file '//TRIM(target_filename))
+    END IF
+
+    is_open = .TRUE.
+    cached_filename = TRIM(target_filename)
+    soil_forcing_cache%preload_loaded = .FALSE.
+    soil_forcing_cache%cached_year = -HUGE(0)
+    soil_forcing_cache%cached_yearday = -HUGE(0)
+    soil_forcing_cache%cached_timestep = -HUGE(0)
+
+  END SUBROUTINE open_cached_soil_forcing_file
+
+  ! ======================================================================================================= !
+  !> Read and cache the forcing fields from bc_qsoil_physics.
+  !>
+  SUBROUTINE load_soilphysics_cache(bgcm_store, nsteps, start_timestep, caller)
+
+    TYPE(t_lnd_bgcm_store), POINTER, INTENT(in) :: bgcm_store
+    INTEGER,                       INTENT(in) :: nsteps
+    INTEGER,                       INTENT(in) :: start_timestep
+    CHARACTER(len=*),              INTENT(in) :: caller
+
+    INTEGER :: ipft, itimestep, source_timestep
+    CHARACTER(len=5) :: tile_name
+
+    DO itimestep = 1, nsteps
+      source_timestep = start_timestep + itimestep - 1
+      DO ipft = 1, soil_forcing_cache%npft
+        tile_name = get_pft_tile_name(ipft)
+
+        CALL read_3D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+          & 'veg_root_fraction_sl_'//tile_name, soil_forcing_cache%scratch_4d, &
+          & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+        soil_forcing_cache%root_fraction_sl_preload(:,:,:,ipft,itimestep) = MERGE( &
+          & soil_forcing_cache%scratch_4d(:,:,:,1), zero, &
+          & soil_forcing_cache%scratch_4d(:,:,:,1) >= zero)
+
+        CALL read_2D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+          & 'veg_demand_uptake_n_tuptake_mavg_'//tile_name, soil_forcing_cache%scratch_3d, &
+          & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+        soil_forcing_cache%demand_uptake_n_preload(:,:,ipft,itimestep) = soil_forcing_cache%scratch_3d(:,:,1)
+
+        CALL read_2D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+          & 'veg_demand_uptake_p_tuptake_mavg_'//tile_name, soil_forcing_cache%scratch_3d, &
+          & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+        soil_forcing_cache%demand_uptake_p_preload(:,:,ipft,itimestep) = soil_forcing_cache%scratch_3d(:,:,1)
+      END DO
+
+      CALL read_3D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+        & 'hydro_frac_wtr_transp_down_sl_box', soil_forcing_cache%scratch_4d, &
+        & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+      soil_forcing_cache%frac_wtr_transp_down_sl_preload(:,:,:,itimestep) = soil_forcing_cache%scratch_4d(:,:,:,1)
+
+      CALL read_3D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+        & 'hydro_frac_w_lat_loss_sl_box', soil_forcing_cache%scratch_4d, &
+        & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+      soil_forcing_cache%frac_w_lat_loss_sl_preload(:,:,:,itimestep) = MERGE( &
+        & soil_forcing_cache%scratch_4d(:,:,:,1), zero, &
+        & soil_forcing_cache%scratch_4d(:,:,:,1) >= zero)
+
+      CALL read_3D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+        & 'hydro_wtr_soil_sl_box', soil_forcing_cache%scratch_4d, &
+        & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+      soil_forcing_cache%wtr_soil_sl_preload(:,:,:,itimestep) = MERGE( &
+        & soil_forcing_cache%scratch_4d(:,:,:,1), zero, &
+        & soil_forcing_cache%scratch_4d(:,:,:,1) >= zero)
+
+      CALL read_3D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+        & 'hydro_vol_porosity_sl_box', soil_forcing_cache%scratch_4d, &
+        & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+      soil_forcing_cache%vol_porosity_sl_preload(:,:,:,itimestep) = MERGE( &
+        & soil_forcing_cache%scratch_4d(:,:,:,1), zero, &
+        & soil_forcing_cache%scratch_4d(:,:,:,1) >= zero)
+
+      CALL read_3D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+        & 'sse_t_soil_sl_box', soil_forcing_cache%scratch_4d, &
+        & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+      soil_forcing_cache%t_soil_sl_preload(:,:,:,itimestep) = soil_forcing_cache%scratch_4d(:,:,:,1)
+
+      CALL read_2D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+        & 'a2l_nhx_deposition_box', soil_forcing_cache%scratch_3d, &
+        & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+      soil_forcing_cache%nhx_deposition_preload(:,:,itimestep) = soil_forcing_cache%scratch_3d(:,:,1)
+
+      CALL read_2D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+        & 'a2l_noy_deposition_box', soil_forcing_cache%scratch_3d, &
+        & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+      soil_forcing_cache%noy_deposition_preload(:,:,itimestep) = soil_forcing_cache%scratch_3d(:,:,1)
+
+      CALL read_2D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+        & 'a2l_nhx_n15_deposition_box', soil_forcing_cache%scratch_3d, &
+        & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+      soil_forcing_cache%nhx_n15_deposition_preload(:,:,itimestep) = soil_forcing_cache%scratch_3d(:,:,1)
+
+      CALL read_2D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+        & 'a2l_noy_n15_deposition_box', soil_forcing_cache%scratch_3d, &
+        & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+      soil_forcing_cache%noy_n15_deposition_preload(:,:,itimestep) = soil_forcing_cache%scratch_3d(:,:,1)
+
+      CALL read_2D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+        & 'a2l_p_deposition_box', soil_forcing_cache%scratch_3d, &
+        & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+      soil_forcing_cache%p_deposition_preload(:,:,itimestep) = soil_forcing_cache%scratch_3d(:,:,1)
+    END DO
+
+  END SUBROUTINE load_soilphysics_cache
+
+  ! ======================================================================================================= !
+  !> Read and cache the forcing fields from bc_qsoil_litterfall.
+  !>
+  SUBROUTINE load_litterfall_cache(bgcm_store, nsteps, start_timestep, caller)
+
+    TYPE(t_lnd_bgcm_store), POINTER, INTENT(in) :: bgcm_store
+    INTEGER,                       INTENT(in) :: nsteps
+    INTEGER,                       INTENT(in) :: start_timestep
+    CHARACTER(len=*),              INTENT(in) :: caller
+
+    INTEGER :: ipft, i_part, i_elem, itimestep, source_timestep
+    INTEGER :: veg_litter_idx, seed_bed_idx
+    INTEGER :: veg_litter_store_idx, seed_bed_store_idx
+    CHARACTER(len=5) :: tile_name
+
+    tile_name = get_pft_tile_name(1)
+    veg_litter_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_LITTERFALL_ID, tile_name, caller)
+    seed_bed_idx   = get_bgcm_idx(bgcm_store, VEG_BGCM_SEED_BED_LITTERFALL_ID, tile_name, caller)
+    veg_litter_store_idx = bgcm_store%idx_in_store(veg_litter_idx)
+    seed_bed_store_idx   = bgcm_store%idx_in_store(seed_bed_idx)
+
+    DO itimestep = 1, nsteps
+      source_timestep = start_timestep + itimestep - 1
+      DO ipft = 1, soil_forcing_cache%npft
+        tile_name = get_pft_tile_name(ipft)
+
+        CALL read_2D_extdim(soil_forcing_cache%veglitterfall_input_file%stream_id, on_cells, &
+          & 'veg_veg_bgcm_pool_fine_root_C_'//tile_name, soil_forcing_cache%scratch_3d, &
+          & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+        soil_forcing_cache%veg_pool_fine_root_c_preload(:,:,ipft,itimestep) = soil_forcing_cache%scratch_3d(:,:,1)
+
+        DO i_part = 1, soil_forcing_cache%veg_litter_nr_parts
+          DO i_elem = 1, soil_forcing_cache%veg_litter_nr_elems
+            CALL read_2D_extdim(soil_forcing_cache%veglitterfall_input_file%stream_id, on_cells, &
+              & 'veg_veg_bgcm_litterfall_'//get_veg_litter_part_name(i_part)//'_'// &
+              & get_veg_litter_elem_name(i_elem)//'_'//tile_name, soil_forcing_cache%scratch_3d, &
+              & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+            soil_forcing_cache%veg_litterfall_preload(i_part, i_elem, :, :, ipft, itimestep) = &
+              & soil_forcing_cache%scratch_3d(:,:,1)
+          END DO
+        END DO
+
+        DO i_elem = 1, soil_forcing_cache%seed_bed_nr_elems
+          CALL read_2D_extdim(soil_forcing_cache%veglitterfall_input_file%stream_id, on_cells, &
+            & 'veg_veg_bgcm_seed_bed_litterfall_'//get_veg_litter_elem_name(i_elem)//'_'//tile_name, &
+            & soil_forcing_cache%scratch_3d, start_extdim=source_timestep, end_extdim=source_timestep, &
+            & extdim_name='time')
+          soil_forcing_cache%seed_bed_litterfall_preload(i_elem, :, :, ipft, itimestep) = &
+            & soil_forcing_cache%scratch_3d(:,:,1)
+        END DO
+      END DO
+    END DO
+
+  END SUBROUTINE load_litterfall_cache
+
+  ! ======================================================================================================= !
+  !> Copy cached litterfall and fine-root C into the tile bgcm storage.
+  !>
+  SUBROUTINE apply_litterfall_cache_to_tile(bgcm_store, tile_name, pft_idx, itimestep, caller)
+
+    TYPE(t_lnd_bgcm_store), POINTER, INTENT(inout) :: bgcm_store
+    CHARACTER(len=*),              INTENT(in)    :: tile_name, caller
+    INTEGER,                       INTENT(in)    :: pft_idx, itimestep
+
+    INTEGER :: veg_pool_idx, veg_litter_idx, seed_bed_idx
+    INTEGER :: veg_pool_store_idx, veg_litter_store_idx, seed_bed_store_idx
+    INTEGER :: i_part, i_elem
+
+    veg_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile_name, caller)
+    veg_litter_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_LITTERFALL_ID, tile_name, caller)
+    seed_bed_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_SEED_BED_LITTERFALL_ID, tile_name, caller)
+
+    veg_pool_store_idx = bgcm_store%idx_in_store(veg_pool_idx)
+    veg_litter_store_idx = bgcm_store%idx_in_store(veg_litter_idx)
+    seed_bed_store_idx = bgcm_store%idx_in_store(seed_bed_idx)
+
+    bgcm_store%store_2l_2d_bgcms(veg_pool_store_idx)%collection_2l_p(ix_fine_root, ixC)%p%ptr2d(:,:) = &
+      & soil_forcing_cache%veg_pool_fine_root_c_preload(:,:,pft_idx,itimestep)
+
+    DO i_part = 1, soil_forcing_cache%veg_litter_nr_parts
+      DO i_elem = 1, soil_forcing_cache%veg_litter_nr_elems
+        bgcm_store%store_2l_2d_bgcms(veg_litter_store_idx)%collection_2l_p(i_part, i_elem)%p%ptr2d(:,:) = &
+          & soil_forcing_cache%veg_litterfall_preload(i_part, i_elem, :, :, pft_idx, itimestep)
+      END DO
+    END DO
+
+    DO i_elem = 1, soil_forcing_cache%seed_bed_nr_elems
+      bgcm_store%store_1l_2d_bgcms(seed_bed_store_idx)%collection_1l_p(i_elem)%p%ptr2d(:,:) = &
+        & soil_forcing_cache%seed_bed_litterfall_preload(i_elem, :, :, pft_idx, itimestep)
+    END DO
+
+  END SUBROUTINE apply_litterfall_cache_to_tile
 
   ! ======================================================================================================= !
   !> Resolve soil forcing filename and record index for the current model time.
   !> The filename argument is interpreted as a full filename for yearly forcing
   !> and as a prefix for daily forcing, yielding <prefix>_<doy>.nc.
   !>
-  SUBROUTINE get_soil_forcing_info(base_filename, year, month, day, hour, minute, second, yearday, dtime, &
-    & resolved_filename, itimestep)
+  SUBROUTINE get_soil_forcing_info(base_filename, yearday, hour, minute, second, dtime, &
+      & resolved_filename, itimestep)
 
-    CHARACTER(len=*),           INTENT(in)  :: base_filename
-    INTEGER,                    INTENT(in)  :: year, month, day, hour, minute, second, yearday
-    REAL(wp),                   INTENT(in)  :: dtime
-    CHARACTER(len=:), ALLOCATABLE, INTENT(out) :: resolved_filename
-    INTEGER,                    INTENT(out) :: itimestep
+      CHARACTER(len=*),           INTENT(in)  :: base_filename
+      INTEGER,                    INTENT(in)  :: yearday, hour, minute, second
+      REAL(wp),                   INTENT(in)  :: dtime
+      CHARACTER(len=:), ALLOCATABLE, INTENT(out) :: resolved_filename
+      INTEGER,                    INTENT(out) :: itimestep
 
     INTEGER :: seconds_of_day
     CHARACTER(len=8) :: doy_string
