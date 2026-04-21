@@ -88,6 +88,7 @@ MODULE mo_sb_config_class
     CHARACTER(len=filename_max) :: soilphysics_forcing_filename    !< IQ (QUINCY) forcing data for soil model
     CHARACTER(len=filename_max) :: veglitterfall_forcing_filename    !< IQ (QUINCY) forcing data for soil model
     CHARACTER(len=filename_max) :: deposition_filename_prefix !< IQ. Note: should NOT include an ending "_"
+    LOGICAL                     :: skip_forcing_isotopes_after_init !< IQ soil model shortcut: read 13C/14C/15N forcing only once
 
     ! parameter calibration
     LOGICAL          :: flag_apply_nml_parameters  !< replace values of sb_constants parameters by the values of the below nml_* variables
@@ -162,6 +163,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: soilphysics_forcing_filename
     CHARACTER(len=filename_max) :: veglitterfall_forcing_filename
     CHARACTER(len=filename_max) :: deposition_filename_prefix
+    LOGICAL                     :: skip_forcing_isotopes_after_init
     CHARACTER(15)               :: sb_model_scheme
     CHARACTER(15)               :: sb_nloss_scheme
     CHARACTER(15)               :: sb_bnf_scheme
@@ -211,6 +213,7 @@ CONTAINS
                       soilphysics_forcing_filename,   &
                       veglitterfall_forcing_filename, &
                       deposition_filename_prefix, &
+                      skip_forcing_isotopes_after_init, &
                       sb_model_scheme           , &
                       sb_nloss_scheme           , &
                       sb_bnf_scheme             , &
@@ -267,6 +270,7 @@ CONTAINS
     soilphysics_forcing_filename   = 'bc_qsoil_physics.nc'
     veglitterfall_forcing_filename = 'bc_qsoil_litterfall.nc'
     deposition_filename_prefix  = 'bc_land_npdep_quincy'
+    skip_forcing_isotopes_after_init = .TRUE.
     sb_model_scheme             = "simple_1d"       ! simple_1d jsm
     sb_nloss_scheme             = "dynamic"         ! none fixed dynamic
     sb_bnf_scheme               = "dynamic"         ! none dynamic unlimited (fixed == dynamic)
@@ -323,6 +327,7 @@ CONTAINS
     config%soilphysics_forcing_filename    = soilphysics_forcing_filename
     config%veglitterfall_forcing_filename  = veglitterfall_forcing_filename
     config%deposition_filename_prefix      = deposition_filename_prefix
+    config%skip_forcing_isotopes_after_init = skip_forcing_isotopes_after_init
     config%sb_model_scheme                 = TRIM(sb_model_scheme)
     config%sb_nloss_scheme                 = TRIM(sb_nloss_scheme)
     config%bnf_scheme                      = TRIM(sb_bnf_scheme)
@@ -371,6 +376,10 @@ CONTAINS
     CASE DEFAULT
       CALL finish(TRIM(routine),  'No such soil model available: '//TRIM(sb_model_scheme))
     END SELECT
+
+    IF (config%skip_forcing_isotopes_after_init) THEN
+      CALL message(TRIM(routine), 'skip_forcing_isotopes_after_init enabled: 13C/14C/15N forcing is only read on first cache load.')
+    END IF
 
     ! Set deposition scheme
     SELECT CASE (tolower(TRIM(deposition_scheme)))

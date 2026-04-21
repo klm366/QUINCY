@@ -48,6 +48,7 @@ MODULE mo_sb_iqj_soil_model
     LOGICAL :: veglitterfall_open = .FALSE.
     LOGICAL :: arrays_initialized = .FALSE.
     LOGICAL :: preload_loaded = .FALSE.
+    LOGICAL :: isotope_forcing_initialized = .FALSE.
     INTEGER :: nproma = 0
     INTEGER :: nsoil = 0
     INTEGER :: nblks = 0
@@ -525,7 +526,7 @@ CONTAINS
     INTEGER                         :: year, month, day, hour, minute, second, yearday, forcing_yearday, &
                                     &  ith_timestep, cache_itimestep     !< forcing record index in file / cache
     CHARACTER(len=:), ALLOCATABLE   :: soilphysics_forcing_file, veglitterfall_forcing_file
-    LOGICAL                         :: cache_hit, trace_timing
+    LOGICAL                         :: cache_hit, trace_timing, skip_forcing_isotopes_after_init
     REAL(wp)                        :: t_total_start, t_stage_start, t_stage_end
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_read_soil_forcing'
@@ -562,6 +563,7 @@ CONTAINS
     iblk = options%iblk
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
+    skip_forcing_isotopes_after_init = dsl4jsb_Config(SB_)%skip_forcing_isotopes_after_init
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -601,7 +603,8 @@ CONTAINS
     pft_idx = get_pft_tile_index(tile%name)
     IF (trace_timing) CALL cpu_time(t_stage_start)
     CALL ensure_soil_forcing_cache_loaded(model, bgcm_store, root_fraction_sl, soilphysics_forcing_file, &
-      & veglitterfall_forcing_file, year, forcing_yearday, ith_timestep, dtime, npft, routine, cache_hit)
+      & veglitterfall_forcing_file, year, forcing_yearday, ith_timestep, dtime, npft, &
+      & skip_forcing_isotopes_after_init, routine, cache_hit)
     IF (trace_timing) THEN
       CALL cpu_time(t_stage_end)
       IF (cache_hit) THEN
@@ -760,7 +763,7 @@ CONTAINS
   !> Keep the forcing files open and cache the currently loaded timestep.
   !>
   SUBROUTINE ensure_soil_forcing_cache_loaded(model, bgcm_store, root_fraction_sl, soilphysics_filename, &
-    & veglitterfall_filename, year, yearday, itimestep, dtime, npft, caller, cache_hit_out)
+    & veglitterfall_filename, year, yearday, itimestep, dtime, npft, skip_forcing_isotopes_after_init, caller, cache_hit_out)
 
     USE mo_jsb_model_class, ONLY: t_jsb_model
 
@@ -770,9 +773,10 @@ CONTAINS
     CHARACTER(len=*),                INTENT(in) :: soilphysics_filename, veglitterfall_filename, caller
     INTEGER,                         INTENT(in) :: year, yearday, itimestep, npft
     REAL(wp),                        INTENT(in) :: dtime
+    LOGICAL,                         INTENT(in) :: skip_forcing_isotopes_after_init
     LOGICAL, OPTIONAL,               INTENT(out) :: cache_hit_out
 
-    LOGICAL :: cache_hit
+    LOGICAL :: cache_hit, skip_isotope_reload
     INTEGER :: preload_nsteps, cache_start_timestep
     REAL(wp) :: t_stage_start, t_stage_end
 
@@ -804,18 +808,22 @@ CONTAINS
 
     IF (.NOT. cache_hit) THEN
       IF (debug_on()) CALL cpu_time(t_stage_start)
-      CALL load_soilphysics_cache(bgcm_store, preload_nsteps, cache_start_timestep, caller)
+      skip_isotope_reload = skip_forcing_isotopes_after_init .AND. &
+        & soil_forcing_cache%isotope_forcing_initialized
+
+      CALL load_soilphysics_cache(bgcm_store, preload_nsteps, cache_start_timestep, skip_isotope_reload, caller)
       IF (debug_on()) THEN
         CALL cpu_time(t_stage_end)
         CALL log_soil_forcing_timing(caller, 'load_soilphysics_cache', t_stage_end - t_stage_start)
       END IF
       IF (debug_on()) CALL cpu_time(t_stage_start)
-      CALL load_litterfall_cache(bgcm_store, preload_nsteps, cache_start_timestep, caller)
+      CALL load_litterfall_cache(bgcm_store, preload_nsteps, cache_start_timestep, skip_isotope_reload, caller)
       IF (debug_on()) THEN
         CALL cpu_time(t_stage_end)
         CALL log_soil_forcing_timing(caller, 'load_litterfall_cache', t_stage_end - t_stage_start)
       END IF
       soil_forcing_cache%preload_loaded = .TRUE.
+      IF (skip_forcing_isotopes_after_init) soil_forcing_cache%isotope_forcing_initialized = .TRUE.
       soil_forcing_cache%cached_year = year
       soil_forcing_cache%cached_yearday = yearday
       soil_forcing_cache%cached_timestep = cache_start_timestep
@@ -1004,11 +1012,12 @@ CONTAINS
   ! ======================================================================================================= !
   !> Read and cache the forcing fields from bc_qsoil_physics.
   !>
-  SUBROUTINE load_soilphysics_cache(bgcm_store, nsteps, start_timestep, caller)
+  SUBROUTINE load_soilphysics_cache(bgcm_store, nsteps, start_timestep, skip_isotope_reload, caller)
 
     TYPE(t_lnd_bgcm_store), POINTER, INTENT(in) :: bgcm_store
     INTEGER,                       INTENT(in) :: nsteps
     INTEGER,                       INTENT(in) :: start_timestep
+    LOGICAL,                       INTENT(in) :: skip_isotope_reload
     CHARACTER(len=*),              INTENT(in) :: caller
 
     INTEGER :: ipft, itimestep, source_timestep
@@ -1080,15 +1089,17 @@ CONTAINS
         & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
       soil_forcing_cache%noy_deposition_preload(:,:,itimestep) = soil_forcing_cache%scratch_3d(:,:,1)
 
-      CALL read_2D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
-        & 'a2l_nhx_n15_deposition_box', soil_forcing_cache%scratch_3d, &
-        & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
-      soil_forcing_cache%nhx_n15_deposition_preload(:,:,itimestep) = soil_forcing_cache%scratch_3d(:,:,1)
+      IF (.NOT. skip_isotope_reload) THEN
+        CALL read_2D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+          & 'a2l_nhx_n15_deposition_box', soil_forcing_cache%scratch_3d, &
+          & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+        soil_forcing_cache%nhx_n15_deposition_preload(:,:,itimestep) = soil_forcing_cache%scratch_3d(:,:,1)
 
-      CALL read_2D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
-        & 'a2l_noy_n15_deposition_box', soil_forcing_cache%scratch_3d, &
-        & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
-      soil_forcing_cache%noy_n15_deposition_preload(:,:,itimestep) = soil_forcing_cache%scratch_3d(:,:,1)
+        CALL read_2D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
+          & 'a2l_noy_n15_deposition_box', soil_forcing_cache%scratch_3d, &
+          & start_extdim=source_timestep, end_extdim=source_timestep, extdim_name='time')
+        soil_forcing_cache%noy_n15_deposition_preload(:,:,itimestep) = soil_forcing_cache%scratch_3d(:,:,1)
+      END IF
 
       CALL read_2D_extdim(soil_forcing_cache%soilphysics_input_file%stream_id, on_cells, &
         & 'a2l_p_deposition_box', soil_forcing_cache%scratch_3d, &
@@ -1106,11 +1117,12 @@ CONTAINS
   ! ======================================================================================================= !
   !> Read and cache the forcing fields from bc_qsoil_litterfall.
   !>
-  SUBROUTINE load_litterfall_cache(bgcm_store, nsteps, start_timestep, caller)
+  SUBROUTINE load_litterfall_cache(bgcm_store, nsteps, start_timestep, skip_isotope_reload, caller)
 
     TYPE(t_lnd_bgcm_store), POINTER, INTENT(in) :: bgcm_store
     INTEGER,                       INTENT(in) :: nsteps
     INTEGER,                       INTENT(in) :: start_timestep
+    LOGICAL,                       INTENT(in) :: skip_isotope_reload
     CHARACTER(len=*),              INTENT(in) :: caller
 
     INTEGER :: ipft, i_part, i_elem, itimestep, source_timestep
@@ -1138,6 +1150,7 @@ CONTAINS
 
         DO i_part = 1, soil_forcing_cache%veg_litter_nr_parts
           DO i_elem = 1, soil_forcing_cache%veg_litter_nr_elems
+            IF (skip_isotope_reload .AND. i_elem >= 4) CYCLE
             CALL read_2D_extdim(soil_forcing_cache%veglitterfall_input_file%stream_id, on_cells, &
               & 'veg_veg_bgcm_litterfall_'//get_veg_litter_part_name(i_part)//'_'// &
               & get_veg_litter_elem_name(i_elem)//'_'//tile_name, soil_forcing_cache%scratch_3d, &
@@ -1148,6 +1161,7 @@ CONTAINS
         END DO
 
         DO i_elem = 1, soil_forcing_cache%seed_bed_nr_elems
+          IF (skip_isotope_reload .AND. i_elem >= 4) CYCLE
           CALL read_2D_extdim(soil_forcing_cache%veglitterfall_input_file%stream_id, on_cells, &
             & 'veg_veg_bgcm_seed_bed_litterfall_'//get_veg_litter_elem_name(i_elem)//'_'//tile_name, &
             & soil_forcing_cache%scratch_3d, start_extdim=source_timestep, end_extdim=source_timestep, &
