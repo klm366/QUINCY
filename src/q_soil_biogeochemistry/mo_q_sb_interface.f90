@@ -34,7 +34,7 @@ MODULE mo_q_sb_interface
   USE mo_q_sb_jsm_main,               ONLY: update_sb_jsm_real => update_sb_jsm
   USE mo_q_sb_update_pools,           ONLY: update_sb_pools_real => update_sb_pools
 #ifndef  __QUINCY_STANDALONE__
-  USE mo_sb_util,                     ONLY: update_read_soil_forcing_real => update_read_soil_forcing
+  USE mo_sb_iqj_soil_model,           ONLY: update_read_soil_forcing_real => update_read_soil_forcing
 #endif
 
   dsl4jsb_Use_processes SB_, VEG_, HYDRO_, SSE_, A2L_
