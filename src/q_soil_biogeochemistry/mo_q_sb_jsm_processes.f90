@@ -20,7 +20,7 @@ MODULE mo_q_sb_jsm_processes
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish
-  USE mo_jsb_math_constants,  ONLY: one_day, eps8
+  USE mo_jsb_math_constants,  ONLY: one_day, eps4, eps8
   USE mo_lnd_bgcm_idx
 
   IMPLICIT NONE
@@ -138,7 +138,7 @@ CONTAINS
     & nsoil_w, &
     & dtime, &
     & num_sl_above_bedrock, &
-    & flag_sb_prescribe_po4, &
+    & flag_sb_interactive_p, &
     & microbial_carbon, &
     & microbial_nitrogen, &
     & microbial_po4, &
@@ -190,7 +190,7 @@ CONTAINS
     INTEGER,                                     INTENT(in)        :: nsoil_w                      !< number of soil layers
     REAL(wp),                                    INTENT(in)        :: dtime                        !< timestep length
     REAL(wp), DIMENSION(nc),                     INTENT(in)        :: num_sl_above_bedrock         !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    LOGICAL,                                     INTENT(in)        :: flag_sb_prescribe_po4        !< whether PO4 is prescribed or not
+    LOGICAL,                                     INTENT(in)        :: flag_sb_interactive_p        !< FALSE: biochem_min_po4 being zero
     REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_carbon             !< microbial carbon density (mol / m3)
     REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_nitrogen           !< nitrogen in the microbial biomass pool (mol / m3)
     REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_po4                !< PO4 in the microbial biomass pool [mol/m3]
@@ -303,7 +303,7 @@ CONTAINS
     !>
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
-        IF (.NOT. flag_sb_prescribe_po4) THEN
+        IF (flag_sb_interactive_p) THEN
            hlp1 = (dom_assoc_po4(ic,is) + residue_assoc_po4(ic,is) + residue_po4(ic,is) + dom_phosphorus(ic,is))
            ! Biomineralization only occurs when there is available organic P
            IF (hlp1 > eps8) THEN
@@ -421,6 +421,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_sinking_flux(nc, nsoil_w, dtime, num_sl_above_bedrock, &                            ! in
     &                                        lctlib_vmax_uptake, substrate, sb_adsorp_scheme, &       ! in
+    &                                        flag_sb_interactive_elem, &                              ! in
     &                                        microbial_carbon, fine_root_carbon, solute, &            ! in
     &                                        rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, &      ! in
     &                                        rtm_plant_uptake, rmm_plant_uptake, km1_upt, km2_upt, &  ! in
@@ -446,6 +447,7 @@ CONTAINS
     REAL(wp),                                    INTENT(in)        :: lctlib_vmax_uptake        !< lctlib uptake paramter, for eca_none
     CHARACTER(len=*),                            INTENT(in)        :: substrate                 !< po4, nh4, no3, determine the specific ECA paramaters
     CHARACTER(len=*),                            INTENT(in)        :: sb_adsorp_scheme          !< eca_full; eca_none; eca_part
+    LOGICAL,                                     INTENT(in)        :: flag_sb_interactive_elem  !< FALSE: sinking fluxes not limited by concentration, assuming instant refreshing
     REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_carbon          !< bgcm sb_pool: microbial carbon density (mol / m3)
     REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: fine_root_carbon          !< fine_root density (mol / m3)
     REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: rtm_mic_uptake            !< temperature rate modifier for microbial uptake
@@ -665,32 +667,36 @@ CONTAINS
 
     !> 2.0 check the availability of solute considering all sinking fluxes
     !>
+    !> assume potential rate is not limited by solute when the interactive flag is off
+    !>
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
-        fast_desorpt = (solute_available(ic,is) - solute(ic,is)) * k_desorpt_f * 1.E6_wp
-        SELECT CASE (substrate)
-          CASE("po4")
-            hlp1 = microbial_uptake(ic,is) + plant_uptake(ic,is)
-            hlp2 = MAX(0._wp, ((solute(ic,is)) / dtime * 1.E6_wp - fast_adsorpt(ic,is) + fast_desorpt))
-          CASE("nh4")
-            hlp1 = microbial_uptake(ic,is) + plant_uptake(ic,is) + flux_nitri_denitri(ic,is)
-            hlp2 = MAX(0._wp, ((solute(ic,is)) / dtime * 1.E6_wp - fast_adsorpt(ic,is) + fast_desorpt))
-          CASE("no3")
-            hlp1 = microbial_uptake(ic,is) + plant_uptake(ic,is) + flux_nitri_denitri(ic,is)
-            hlp2 = MAX(0._wp, (solute(ic,is)) / dtime * 1.E6_wp)
-        END SELECT
-        IF (hlp1 > hlp2 .AND. hlp1 > 0._wp) THEN
-          microbial_uptake(ic,is)   = microbial_uptake(ic,is)   * hlp2 / hlp1
-          plant_uptake(ic,is)       = plant_uptake(ic,is)       * hlp2 / hlp1
+        IF (flag_sb_interactive_elem) THEN
+          fast_desorpt = (solute_available(ic,is) - solute(ic,is)) * k_desorpt_f * 1.E6_wp
           SELECT CASE (substrate)
             CASE("po4")
-              fast_adsorpt(ic,is)       = fast_adsorpt(ic,is)
+              hlp1 = microbial_uptake(ic,is) + plant_uptake(ic,is)
+              hlp2 = MAX(0._wp, ((solute(ic,is)) / dtime * 1.E6_wp - fast_adsorpt(ic,is) + fast_desorpt))
             CASE("nh4")
-              fast_adsorpt(ic,is)       = fast_adsorpt(ic,is)
-              flux_nitri_denitri(ic,is) = flux_nitri_denitri(ic,is) * hlp2 / hlp1
+              hlp1 = microbial_uptake(ic,is) + plant_uptake(ic,is) + flux_nitri_denitri(ic,is)
+              hlp2 = MAX(0._wp, ((solute(ic,is)) / dtime * 1.E6_wp - fast_adsorpt(ic,is) + fast_desorpt))
             CASE("no3")
-              flux_nitri_denitri(ic,is) = flux_nitri_denitri(ic,is) * hlp2 / hlp1
+              hlp1 = microbial_uptake(ic,is) + plant_uptake(ic,is) + flux_nitri_denitri(ic,is)
+              hlp2 = MAX(0._wp, (solute(ic,is)) / dtime * 1.E6_wp)
           END SELECT
+          IF (hlp1 > hlp2 .AND. hlp1 > 0._wp) THEN
+            microbial_uptake(ic,is)   = microbial_uptake(ic,is)   * hlp2 / hlp1
+            plant_uptake(ic,is)       = plant_uptake(ic,is)       * hlp2 / hlp1
+            SELECT CASE (substrate)
+              CASE("po4")
+                fast_adsorpt(ic,is)       = fast_adsorpt(ic,is)
+              CASE("nh4")
+                fast_adsorpt(ic,is)       = fast_adsorpt(ic,is)
+                flux_nitri_denitri(ic,is) = flux_nitri_denitri(ic,is) * hlp2 / hlp1
+              CASE("no3")
+                flux_nitri_denitri(ic,is) = flux_nitri_denitri(ic,is) * hlp2 / hlp1
+            END SELECT
+          END IF
         END IF
         plant_uptake_pot(ic,is) = plant_uptake(ic,is)
       END DO
@@ -828,16 +834,19 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_turnover'
     ! ----------------------------------------------------------------------------------------------------- !
 
-
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
+
         !>0.9 init local variables
         !>
         !>  Fractional of N and P in microbial necromass is recycled to DOM,
         !>    regulated by the microbial nutritional scalors following exponential decline curve
         !>
-        n_res2dom(ic,is) = fc_n_res2dom * MIN(1._wp, EXP(fact_n_status_mic_c_growth(ic,is) * (-1._wp)) ** k_n_recyc_corr)
-        p_res2dom(ic,is) = fc_p_res2dom * MIN(1._wp, EXP(fact_p_status_mic_c_growth(ic,is) * (-1._wp)) ** k_p_recyc_corr)
+        hlp2 = MIN(MAX(fact_n_status_mic_c_growth(ic,is), eps4), 1.0_wp)
+        hlp3 = MIN(MAX(fact_p_status_mic_c_growth(ic,is), eps4), 1.0_wp)
+
+        n_res2dom(ic,is) = fc_n_res2dom * MIN(1._wp, EXP(hlp2 * (-1._wp)) ** k_n_recyc_corr)
+        p_res2dom(ic,is) = fc_p_res2dom * MIN(1._wp, EXP(hlp3 * (-1._wp)) ** k_p_recyc_corr)
 
         !>1.0 calculate microbial mortality rate, limited to minimum microbial biomass density (-> dormant microbes)
         !>
@@ -951,6 +960,8 @@ CONTAINS
     & dtime, &
     & num_sl_above_bedrock, &
     & bnf_scheme, &
+    & flag_sb_interactive_n, &
+    & flag_sb_interactive_p, &
     & rtm_mic_uptake, &
     & rmm_mic_uptake, &
     & rtm_hsc, &
@@ -992,6 +1003,8 @@ CONTAINS
     REAL(wp),                           INTENT(in)    :: dtime                        !< timestep length
     REAL(wp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock         !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     CHARACTER(len=*),                   INTENT(in)    :: bnf_scheme                   !< SB_ asymbiotic N fixation scheme
+    LOGICAL,                            INTENT(in)    :: flag_sb_interactive_n        !< FALSE: N not limiting microbial growth
+    LOGICAL,                            INTENT(in)    :: flag_sb_interactive_p        !< FALSE: P not limiting microbial growth
     REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rtm_mic_uptake               !< temperature rate modifier [-]
     REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rmm_mic_uptake               !< moisture rate modifier [-]
     REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rtm_hsc                      !< temperature rate modifier [-]
@@ -1075,6 +1088,21 @@ CONTAINS
         CASE DEFAULT
           CALL finish(TRIM(routine),'No such bnf_scheme available here.')
         END SELECT
+
+        !> this ensures fact_n_status_mic_c_growth >= 1, which will affect calc_depolymerisation_SESAM and calc_microbial_turnover
+        IF (.NOT. flag_sb_interactive_n) THEN
+          microbial_uptake_nh4_sl(ic,is) = &
+            & MAX(microbial_uptake_nh4_sl(ic,is), microbial_cue_max * uptake_c(ic,is) / microbial_cn &
+            & - microbial_nue * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is) &
+            & - asymb_n_fixation(ic,is) - microbial_uptake_no3_sl(ic,is))
+        END IF
+        !> this ensures fact_p_status_mic_c_growth >= 1, which will affect calc_depolymerisation_SESAM and calc_microbial_turnover
+        IF (.NOT. flag_sb_interactive_p) THEN
+          microbial_uptake_po4_sl(ic,is) = &
+            & MAX(microbial_uptake_po4_sl(ic,is), microbial_cue_max * uptake_c(ic,is) &
+            & / microbial_cn / microbial_np - microbial_pue &
+            & * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixP, ic, is))
+        END IF
 
         !>  1.2 microbial growth rates in [micro-mol C / m3 / s], given by C, N and P availability, and the rate-limiting growth rate
         !>
@@ -1436,7 +1464,7 @@ CONTAINS
         !>
         !> following the algorithm described in Wutzler et al. 2025 (DOI:10.5194/gmd-15-8377-2022)
         !>
-        IF (poly_depolymerisation_rate(ic,is) > 0.0_wp .AND. residue_depolymerisation_rate(ic,is)> 0.0_wp) THEN
+        IF (poly_depolymerisation_rate(ic,is) > eps4 .AND. residue_depolymerisation_rate(ic,is) > eps4) THEN
           !! alpha_C, poly enzyme allocation coefficient based on carbon
           hlp1(ic,is)               = poly_depolymerisation_rate(ic,is) * sb_pool_mt(ix_polymeric_litter, ixC, ic, is)
           hlp2(ic,is)               = residue_depolymerisation_rate(ic,is) * sb_pool_mt(ix_residue, ixC, ic, is)
@@ -1982,7 +2010,7 @@ CONTAINS
         &                                    qmax_po4, &
         &                                    qmax_fast=qmax_fast_po4, &
         &                                    qmax_slow=qmax_slow_po4)
-      qmax_po4          = qmax_po4 * soil_water / 1000._wp ! corrected by water content
+
       CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl, volume_min_sl, bulk_dens_sl, &
         &                                    km_adsorpt_OM_po4, km_adsorpt_mineral_po4, &
         &                                    km_adsorpt_po4_sl, &
