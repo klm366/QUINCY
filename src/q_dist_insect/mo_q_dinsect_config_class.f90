@@ -115,7 +115,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dinsect_config'
     ! ----------------------------------------------------------------------------------------------------- !
-    NAMELIST /lnd_q_dinsect_nml/       &
+    NAMELIST /lnd_q_dinsect_nml/     &
+      active,                        &
       flag_dinsect,                  &
       dinsect_online,                &
       dinsect_type,                  &
@@ -143,6 +144,7 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting dinsect configuration')
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
+    active                       = .TRUE.
     flag_dinsect                 = .FALSE.
     dinsect_online               = .FALSE.
     dinsect_type                 = 1         ! 1: Bark beetles 2: Defoliators
@@ -173,6 +175,7 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, lnd_q_dinsect_nml)
     ! ----------------------------------------------------------------------------------------------------- !
     ! pass values as read from file
+    config%active                       = active
     config%flag_dinsect                 = flag_dinsect
     config%dinsect_online               = dinsect_online
     config%dinsect_type                 = dinsect_type
