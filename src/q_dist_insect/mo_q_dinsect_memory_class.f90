@@ -38,7 +38,7 @@ MODULE mo_q_dinsect_memory_class
   PRIVATE
   PUBLIC :: t_q_dinsect_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 20 !> TYPE t_jsb_var | 'normal' var: ~ 220 | 5 pools: 270 var | 4 tissues: 24
+  INTEGER, PARAMETER :: max_no_of_vars = 1200 !> TYPE t_jsb_var | 'normal' var: ~ 220 | 5 pools: 270 var | 4 tissues: 24
 
   ! ======================================================================================================= !
   !> Type definition for dinsect memory
@@ -229,17 +229,17 @@ CONTAINS
       ! "shortname" is used for model output names
       ! dinsect_bgcm_veg_extract
       mem%dinsect_bgcm_main%dinsectbvegextract => Add_dinsect_bgc_material_with_components(mem%dinsect_bgcm_main, &
-        & DINSECT_BGCM_VEG_EXTRACT_ID, name = 'dinsect_bgcm_veg_extract', shortname = 'dinsect_bgcm_veg_extract',     &
+        & DINSECT_BGCM_VEG_EXTRACT_ID, name = 'dinsect_bgcm_veg_extract', shortname = 'bgcm_veg_extract',     &
         & unit = unit_dinsect_flux, elements_index_map = elem_idx_map(:))
 
       ! dinsect_bgcm_fast_litterfall
       mem%dinsect_bgcm_main%dinsectbfastlitterfall => Add_dinsect_bgc_material_with_components(mem%dinsect_bgcm_main, &
-        & DINSECT_BGCM_FAST_LITTER_ID, name = 'dinsect_bgcm_fast_litterfall', shortname = 'dinsect_bgcm_fast_litterfall',     &
+        & DINSECT_BGCM_FAST_LITTER_ID, name = 'dinsect_bgcm_fast_litterfall', shortname = 'bgcm_flitterfall',     &
         & unit = unit_dinsect_flux, elements_index_map = elem_idx_map(:))
 
       ! dinsect_bgcm_slow_litterfall
       mem%dinsect_bgcm_main%dinsectbslowlitterfall => Add_dinsect_bgc_material_with_components(mem%dinsect_bgcm_main, &
-        & DINSECT_BGCM_SLOW_LITTER_ID, name = 'dinsect_bgcm_slow_litterfall', shortname = 'dinsect_bgcm_slow_litterfall',     &
+        & DINSECT_BGCM_SLOW_LITTER_ID, name = 'dinsect_bgcm_slow_litterfall', shortname = 'bgcm_slitterfall',     &
         & unit = unit_dinsect_flux, elements_index_map = elem_idx_map(:))
 
       ! --------------------------------------------------------------------------------------------------- !
@@ -277,7 +277,7 @@ CONTAINS
 
       ! dinsect_bgcm_seed_bed_fast_litterfall
       mem%dinsect_bgcm_main%dinsectbseedbedfastlitterfall => Add_dinsect_bgc_material_with_elements(mem%dinsect_bgcm_main,    &
-        & name = 'dinsect_bgcm_seed_bed_fast_litterfall', shortname = 'dinsect_bgcm_seed_bed_fast_litterfall',               &
+        & name = 'dinsect_bgcm_seed_bed_fast_litterfall', shortname = 'bgcm_seed_bed_flitterfall',               &
         & elements_index_map = elem_idx_map(:), unit = unit_dinsect_flux, bgcm_id = DINSECT_BGCM_SEEDB_FASTL_ID)
 
       ! create list of CHARACTERs with names dinsect_bgcm_main to the "lowest childs" of bgcm structures
