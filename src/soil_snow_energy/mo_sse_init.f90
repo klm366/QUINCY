@@ -295,10 +295,12 @@ CONTAINS
         ptr_2D => model%config%ifs_input_file%Read_2d_1lev_1time( &
           & variable_name='STL'//int2string(isoil))
         sse_init_vars%ifs_tsoil(:,isoil,:) = ptr_2D(:,:)
+        DEALLOCATE(ptr_2D)
       END DO
       ptr_3D => model%config%ifs_input_file%Read_2d_time( &
         & variable_name='SKT', start_time_step=1, end_time_step=1)
       sse_init_vars%ifs_tskin(:,:) = ptr_3D(:,:,1)
+      DEALLOCATE(ptr_3D)
 
     ELSE
 
@@ -311,6 +313,7 @@ CONTAINS
       ptr_3D => input_file%Read_2d_time( &
         & variable_name='surf_temp')
       sse_init_vars%t_srf_mon(:,:,:) = MERGE(ptr_3D, 280._wp, ptr_3D > 0._wp)
+      DEALLOCATE(ptr_3D)
 
       CALL input_file%Close()
 

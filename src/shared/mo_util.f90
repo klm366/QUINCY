@@ -195,7 +195,7 @@ CONTAINS
     TYPE(t_input_file)           :: input_file     !< File containing input data to be read
     CHARACTER(len=*), INTENT(IN) :: varname        !< Name of the variable to read
     CHARACTER(len=*), INTENT(IN) :: tilename       !< Name of the actual tile to read the variable for
-    REAL(wp), INTENT(OUT)        :: datafield(:,:) !< Data field to be filled with boundary condition data
+    REAL(wp), INTENT(INOUT), TARGET :: datafield(:,:) !< Data field to be filled with boundary condition data
 
     LOGICAL,  INTENT(IN), OPTIONAL :: l_organic    !< T: read the '_mineral' version of the variable
     REAL(wp), INTENT(IN), OPTIONAL :: default      !< Default value for missing data
@@ -215,35 +215,34 @@ CONTAINS
     CHARACTER(len=*), PARAMETER  :: routine = modname//':read_bc_data'
 
     !> Start with the base variable name as the default full name to read from the file.
-    fullname = TRIM(varname)
+    fullname = varname
 
     !> Add the '_mineral' suffix to variable names, if 'l_organic == .TRUE.' and the impact
     !> of organic soil carbon is therefore explicitly computed during runtime.
     IF (PRESENT(l_organic)) THEN
       IF (l_organic) THEN
-        fullname = TRIM(fullname) // '_mineral'
+        fullname = fullname // '_mineral'
       END IF
     END IF
 
     !> In case the input file contains data specifically for a given tile, the tile name is added to
     !> the variable name.
-    IF (input_file%Has_var(TRIM(fullname)//'_'//TRIM(tilename))) THEN
+    IF (input_file%Has_var(fullname//'_'//tilename)) THEN
       ! If the variable with the tile name exists, use it.
-      fullname = TRIM(fullname)//'_'//TRIM(tilename)
+      fullname = fullname//'_'//tilename
       read_from_file = .TRUE.
     ELSE IF (PRESENT(fallback)) THEN
       ! Set datafield to the fallback value if one is provided.
       datafield(:,:) = fallback
       read_from_file = .FALSE.
-      CALL message(routine, 'Set '//TRIM(fullname)//' field for tile '// TRIM(tilename) // &
-        & ' to fallback value '//TRIM(real2string(fallback)))
-    ELSE IF (input_file%Has_var(TRIM(fullname))) THEN
+      CALL message(routine, 'Set '//fullname//' field for tile '//tilename//' to fallback value '//TRIM(real2string(fallback)))
+    ELSE IF (input_file%Has_var(fullname)) THEN
       ! Use the standard variable for this tile if the variable exists in the bc file
       ! and no fallback value is provided
       read_from_file = .TRUE.
     ELSE
       ! If neither the fallback value nor field variable exist, complain and stop.
-      CALL finish(routine, 'Variable '//TRIM(fullname)//' not found in input file '//TRIM(input_file%filename) &
+      CALL finish(routine, 'Variable '//fullname//' not found in input file '//input_file%filename &
         & // ' and no fallback value is given.')
     END IF
 
@@ -253,13 +252,13 @@ CONTAINS
       IF (PRESENT(ilay) .AND. PRESENT(layer_name)) THEN
         ! Read a single layer of a 3D field
         ptr_3D => input_file%Read_2d_extdim( &
-          & variable_name=TRIM(fullname),    &
-          & start_extdim=ilay, end_extdim=ilay, extdim_name=TRIM(layer_name))
-        datafield(:,:) = ptr_3D(:,:,1)
+          & variable_name=fullname, &
+          & start_extdim=ilay, end_extdim=ilay, extdim_name=layer_name)
+        datafield(:,:) = ptr_3D(:,:,1) ! The third dimension is always size 1
+        DEALLOCATE(ptr_3D)
       ELSE
         ! Read 2D field
-        ptr_2D => input_file%Read_2d(variable_name=TRIM(fullname))
-        datafield(:,:) = ptr_2D(:,:)
+        ptr_2D => input_file%Read_2d(variable_name=fullname, fill_array = datafield(:,:))
       END IF
       IF (PRESENT(default)) THEN
         ! Set missing values to a default value
