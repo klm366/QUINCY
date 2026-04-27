@@ -174,8 +174,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
 
-#ifdef __QUINCY_STANDALONE__
     model  => Get_model(tile%owner_model_id)
+
+#ifdef __QUINCY_STANDALONE__
     IF (model%config%use_soil_phys_jsbach) THEN
       CALL qs_hydro_read_init_vars(tile)
       CALL qs_hydro_init_ic_bc(tile)

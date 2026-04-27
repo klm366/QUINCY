@@ -286,7 +286,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !>Get info (T/F) whether process is intialized, if not: finish the model
+  !>Test if process the process is already initialized, if not: finish the model
   !>
   SUBROUTINE Test_init_status_asked_by(this, process_asking)
 
