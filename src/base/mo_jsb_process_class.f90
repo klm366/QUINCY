@@ -38,11 +38,14 @@ MODULE mo_jsb_process_class
     TYPE(t_jsb_process_task_p), ALLOCATABLE :: task_list(:)
     INTEGER                       :: owner_model_id
     LOGICAL                       :: l_changes_fractions = .FALSE.  !< Does this process change tile fractions?
-    LOGICAL                       :: has_memory = .TRUE.  !< Does this process has an own memory module
+    LOGICAL                       :: has_memory = .TRUE.            !< Does this process has an own memory module
+    LOGICAL                       :: is_initialized = .FALSE.       !< Did this process successfully finish its init routine
   CONTAINS
     PROCEDURE :: Configure => Configure_process
     PROCEDURE :: Register_task
     PROCEDURE :: Get_task
+    PROCEDURE :: Set_init_status_true
+    PROCEDURE :: Test_init_status_asked_by
   END TYPE t_jsb_process
 
   ! The constructor for t_jsb_process is Create_process in mo_jsb_process_factory.
@@ -264,6 +267,44 @@ CONTAINS
     CALL this%config%Init()
 
   END SUBROUTINE Configure_process
+
+  ! ======================================================================================================= !
+  !>
+  !>Mark process as successfully initialized - set 'is_initialized' to TRUE
+  !>
+  SUBROUTINE Set_init_status_true(this)
+
+    CLASS(t_jsb_process), INTENT(inout) :: this
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_init_status_true'
+
+    this%is_initialized = .TRUE.
+
+    CALL message(TRIM(routine), "Process initialization successful: "//Get_process_name(this%id))
+
+  END SUBROUTINE Set_init_status_true
+
+  ! ======================================================================================================= !
+  !>
+  !>Get info (T/F) whether process is intialized, if not: finish the model
+  !>
+  SUBROUTINE Test_init_status_asked_by(this, process_asking)
+
+    CLASS(t_jsb_process), INTENT(in) :: this
+    INTEGER                          :: process_asking  !< Process that depends on this process
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Test_init_status_asked_by'
+
+    IF (this%is_initialized) THEN
+      CALL message(TRIM(routine), "Process dependency check: "//Get_process_name(process_asking)// &
+        &                         " depends on "//Get_process_name(this%id))
+    ELSE
+      CALL finish(TRIM(routine), "Failed process dependency: "//Get_process_name(process_asking)// &
+        &                         " depends on "//Get_process_name(this%id)//", which is not initialized yet.")
+    END IF
+
+  END SUBROUTINE Test_init_status_asked_by
+
 
   FUNCTION Get_action_name(iact) RESULT(return_value)
 
