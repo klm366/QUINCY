@@ -45,7 +45,7 @@ MODULE mo_jsb_process_class
     PROCEDURE :: Register_task
     PROCEDURE :: Get_task
     PROCEDURE :: Set_init_status_true
-    PROCEDURE :: Test_init_status_asked_by
+    PROCEDURE :: Test_init_status_asked_by => Test_init_status
   END TYPE t_jsb_process
 
   ! The constructor for t_jsb_process is Create_process in mo_jsb_process_factory.
@@ -288,12 +288,12 @@ CONTAINS
   !>
   !>Test if process the process is already initialized, if not: finish the model
   !>
-  SUBROUTINE Test_init_status_asked_by(this, process_asking)
+  SUBROUTINE Test_init_status(this, process_asking)
 
     CLASS(t_jsb_process), INTENT(in) :: this
     INTEGER                          :: process_asking  !< Process that depends on this process
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Test_init_status_asked_by'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Test_init_status'
 
     IF (this%is_initialized) THEN
       CALL message(TRIM(routine), "Process dependency check: "//Get_process_name(process_asking)// &
@@ -303,7 +303,7 @@ CONTAINS
         &                         " depends on "//Get_process_name(this%id)//", which is not initialized yet.")
     END IF
 
-  END SUBROUTINE Test_init_status_asked_by
+  END SUBROUTINE Test_init_status
 
 
   FUNCTION Get_action_name(iact) RESULT(return_value)

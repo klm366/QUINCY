@@ -25,6 +25,9 @@ MODULE mo_veg_init
   USE mo_jsb_impl_constants,      ONLY: def_parameters
 
   USE mo_jsb_process_class,       ONLY: VEG_, Q_AGR_, Q_SYL_, ALCC_
+!! debug
+  USE mo_jsb_process_class,       ONLY: SB_
+
   USE mo_jsb_model_class,         ONLY: t_jsb_model
   USE mo_jsb_class,               ONLY: get_model
 
@@ -202,6 +205,7 @@ CONTAINS
     nsoil_w       = vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     CALL model%processes(HYDRO_)%p%Test_init_status_asked_by(VEG_)    !< Test if process dependency is already initialized
+    CALL model%processes(SB_)%p%Test_init_status_asked_by(VEG_)    !< Test if process dependency is already initialized
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
@@ -684,6 +688,9 @@ CONTAINS
     !$ACC   DEVICE(t_jmax_opt_mavg(:,:), veg_pool_mt_domain(:,:,:,:)) &
     !$ACC   DEVICE(rfr_ratio_boc(:,:), rfr_ratio_boc_tvegdyn_mavg(:,:)) ASYNC(1)
     !$ACC WAIT(1)
+
+    ! Mark process as successfully initialized
+    CALL model%processes(VEG_)%p%Set_init_status_true
 
   END SUBROUTINE veg_init
 
