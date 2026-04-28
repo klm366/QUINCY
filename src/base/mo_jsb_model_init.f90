@@ -684,7 +684,7 @@ CONTAINS
       CALL tile%Collect_bgc_materials()
 #endif
 
-      DO p in 1,LAST_PROC_ID-1
+      DO p = 1,LAST_PROC_ID-1
         CALL model%processes(p)%p%Set_init_status_false
       END DO
 
