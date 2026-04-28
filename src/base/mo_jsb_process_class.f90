@@ -297,7 +297,7 @@ CONTAINS
 
     this%is_initialized = .FALSE.
 
-    CALL message(TRIM(routine), "Set process finished-init status to FALSE for: "//Get_process_name(this%id))
+    !CALL message(TRIM(routine), "Set process finished-init status to FALSE for: "//Get_process_name(this%id))
 
   END SUBROUTINE Set_init_status_false
 
