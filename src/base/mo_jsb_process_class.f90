@@ -289,17 +289,17 @@ CONTAINS
   !>
   !>Mark process as successfully initialized - set 'is_initialized' to FALSE
   !>
-  SUBROUTINE Set_init_status_fals(this)
+  SUBROUTINE Set_init_status_false(this)
 
     CLASS(t_jsb_process), INTENT(inout) :: this
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_init_status_fals'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_init_status_false'
 
     this%is_initialized = .FALSE.
 
     CALL message(TRIM(routine), "Set process finished-init status to FALSE for: "//Get_process_name(this%id))
 
-  END SUBROUTINE Set_init_status_fals
+  END SUBROUTINE Set_init_status_false
 
   ! ======================================================================================================= !
   !>
