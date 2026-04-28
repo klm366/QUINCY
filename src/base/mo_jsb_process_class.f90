@@ -28,7 +28,7 @@ MODULE mo_jsb_process_class
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     &       PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
-    &       Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &       Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, LAST_PROC_ID
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -45,6 +45,7 @@ MODULE mo_jsb_process_class
     PROCEDURE :: Register_task
     PROCEDURE :: Get_task
     PROCEDURE :: Set_init_status_true
+    PROCEDURE :: Set_init_status_false
     PROCEDURE :: Test_init_status_asked_by => Test_init_status
   END TYPE t_jsb_process
 
@@ -57,7 +58,7 @@ MODULE mo_jsb_process_class
   ENUM, BIND(C)
     ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
       &           FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
-      &           Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+      &           Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, LAST_PROC_ID
   END ENUM
 
   ! Process actions
@@ -283,6 +284,22 @@ CONTAINS
     CALL message(TRIM(routine), "Process initialization successful: "//Get_process_name(this%id))
 
   END SUBROUTINE Set_init_status_true
+
+  ! ======================================================================================================= !
+  !>
+  !>Mark process as successfully initialized - set 'is_initialized' to FALSE
+  !>
+  SUBROUTINE Set_init_status_fals(this)
+
+    CLASS(t_jsb_process), INTENT(inout) :: this
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_init_status_fals'
+
+    this%is_initialized = .FALSE.
+
+    CALL message(TRIM(routine), "Set process finished-init status to FALSE for: "//Get_process_name(this%id))
+
+  END SUBROUTINE Set_init_status_fals
 
   ! ======================================================================================================= !
   !>

@@ -19,7 +19,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
-    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, LAST_PROC_ID
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -196,6 +196,7 @@ CONTAINS
     INTEGER                             :: ilct, jlct, i, no_children, lct_start, blks, blke, blk, jcs, jce
     REAL(wp), ALLOCATABLE               :: fract_tmp(:,:), tile_lct_fract_tmp(:,:)
     INTEGER                             :: no_omp_thread
+    INTEGER                             :: p             ! iterator over processes
     LOGICAL                             :: l_fixed_fractions
     CLASS(t_jsb_aggregator), POINTER    :: weighted_by_fract
 
@@ -682,6 +683,10 @@ CONTAINS
       CALL tile%Count_and_classify_bgc_materials()
       CALL tile%Collect_bgc_materials()
 #endif
+
+      DO p in 1,LAST_PROC_ID-1
+        CALL model%processes(p)%p%Set_init_status_false
+      END DO
 
       ! ---------------------------------------------------------------------------------------------- !
       !>
