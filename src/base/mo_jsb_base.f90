@@ -37,6 +37,7 @@ CONTAINS
   SUBROUTINE jsbach_setup_models(master_namelist_filename)
 
     USE mo_kind,                ONLY: wp
+    USE mo_util,                ONLY: separator
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       &                               jsbach_runs_standalone, jsbach_is_restarted
     USE mo_jsb_parallel,        ONLY: init_parallel_iface, Get_omp_no_of_threads
@@ -116,7 +117,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_models'
 
-    CALL message(TRIM(routine), 'starting basic setup')
+    CALL message('', '')
+    CALL message('', separator)
+    CALL message('', 'ICON-Land model configuration:')
+    CALL message('', '')
 
     CALL init_parallel_iface
 
@@ -147,6 +151,14 @@ CONTAINS
        NULLIFY(model)
        model => jsbach%models(model_idx)%m
        model%config => new_model_config(model%namelist_filename)
+
+       CALL message(TRIM(routine), 'New ICON-Land model: '//TRIM(model%shortname))
+       CALL message('     ', '... ID: '//TRIM(int2string(model%id)))
+       IF (model%config%is_single_site) &
+         & CALL message('     ', '... Single site: '//TRIM(model%config%single_site_name))
+       CALL message('     ', '... Usecase: '//TRIM(model%config%usecase))
+       CALL message('     ', '... Using configuration from namelist: '//TRIM(model%namelist_filename))
+       CALL message('     ', '... Using tile fractions from: '//TRIM(model%config%fract_filename))
 
        ! Require that only one model_scheme is used!
        IF (model_idx == 1) THEN
@@ -194,12 +206,6 @@ CONTAINS
            CALL init_pheno_parameters
          END SELECT
        END IF
-
-       CALL message(TRIM(routine), 'New jsbach model: '//TRIM(model%shortname))
-       CALL message('     ', '... ID: '//TRIM(int2string(model%id)))
-       CALL message('     ', '... Usecase: '//TRIM(model%config%usecase))
-       CALL message('     ', '... Using configuration from namelist: '//TRIM(model%namelist_filename))
-       CALL message('     ', '... Using tile fractions from: '//TRIM(model%config%fract_filename))
 
        IF (jsbach_runs_standalone()) THEN
          CALL init_time(TRIM(model%namelist_filename), TRIM(model%shortname), jsbach_is_restarted())
@@ -424,7 +430,9 @@ CONTAINS
 
     END DO
 
-    CALL message(TRIM(routine), 'done basic setup (models, process configs, QUINCY process constants init)')
+    CALL message('', '')
+    CALL message('', separator)
+    CALL message('', '')
 
   END SUBROUTINE jsbach_setup_models
 

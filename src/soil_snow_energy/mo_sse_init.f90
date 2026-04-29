@@ -223,22 +223,22 @@ CONTAINS
     IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
 
       !>     - Fraction of sand in upper soil
-      CALL read_bc_data(input_file, 'FR_SAND', tile%name, .FALSE., sse_init_vars%fr_sand, llimit=0._wp)
+      CALL read_bc_data(input_file, 'FR_SAND', tile%name, sse_init_vars%fr_sand, llimit=0._wp)
 
       !>     - Fraction of silt in upper soil
-      CALL read_bc_data(input_file, 'FR_SILT', tile%name, .FALSE., sse_init_vars%fr_silt, llimit=0._wp)
+      CALL read_bc_data(input_file, 'FR_SILT', tile%name, sse_init_vars%fr_silt, llimit=0._wp)
 
       !>     - Fraction of clay in upper soil
-      CALL read_bc_data(input_file, 'FR_CLAY', tile%name, .FALSE., sse_init_vars%fr_clay, llimit=0._wp)
+      CALL read_bc_data(input_file, 'FR_CLAY', tile%name, sse_init_vars%fr_clay, llimit=0._wp)
 
       !>     - Fraction of sand in deep soil
-      CALL read_bc_data(input_file, 'SUB_FR_SAND', tile%name, .FALSE., sse_init_vars%fr_sand_deep, llimit=0._wp)
+      CALL read_bc_data(input_file, 'SUB_FR_SAND', tile%name, sse_init_vars%fr_sand_deep, llimit=0._wp)
 
       !>     - Fraction of silt in deep soil
-      CALL read_bc_data(input_file, 'SUB_FR_SILT', tile%name, .FALSE., sse_init_vars%fr_silt_deep, llimit=0._wp)
+      CALL read_bc_data(input_file, 'SUB_FR_SILT', tile%name, sse_init_vars%fr_silt_deep, llimit=0._wp)
 
       !>     - Fraction of clay in deep soil
-      CALL read_bc_data(input_file, 'SUB_FR_CLAY', tile%name, .FALSE., sse_init_vars%fr_clay_deep, llimit=0._wp)
+      CALL read_bc_data(input_file, 'SUB_FR_CLAY', tile%name, sse_init_vars%fr_clay_deep, llimit=0._wp)
 
 #ifndef __NO_QUINCY__
       ! quincy
@@ -277,19 +277,21 @@ CONTAINS
     ELSE
       IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
         ! FAO
-        CALL read_bc_data(input_file, 'fao', tile%name, .FALSE., sse_init_vars%fao, default=0._wp)
+        CALL read_bc_data(input_file, 'fao', tile%name, sse_init_vars%fao, default=0._wp)
         sse_init_vars%fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),wp), &
                                      MIN(REAL(UBOUND(fao_thermal_diff,1),wp), sse_init_vars%fao(:,:)))
       END IF
 
       IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
         ! Volumetric heat capacity of dry soil [J/(m^3*K)]
-        CALL read_bc_data(input_file, 'heat_capacity', tile%name, l_organic, sse_init_vars%vol_heat_cap, default=2.e6_wp)
+        CALL read_bc_data(input_file, 'heat_capacity', tile%name, sse_init_vars%vol_heat_cap, &
+          &  l_organic=l_organic, default=2.e6_wp)
       END IF
 
       IF (dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
         ! Heat conductivity of mineral soil
-        CALL read_bc_data(input_file, 'heat_conductivity', tile%name, l_organic, sse_init_vars%heat_cond, default=0.2_wp)
+        CALL read_bc_data(input_file, 'heat_conductivity', tile%name, sse_init_vars%heat_cond, &
+          &  l_organic=l_organic, default=0.2_wp)
       END IF
 
     END IF ! l_soil_texture
@@ -306,10 +308,12 @@ CONTAINS
         ptr_2D => model%config%ifs_input_file%Read_2d_1lev_1time( &
           & variable_name='STL'//int2string(isoil))
         sse_init_vars%ifs_tsoil(:,isoil,:) = ptr_2D(:,:)
+        DEALLOCATE(ptr_2D)
       END DO
       ptr_3D => model%config%ifs_input_file%Read_2d_time( &
         & variable_name='SKT', start_time_step=1, end_time_step=1)
       sse_init_vars%ifs_tskin(:,:) = ptr_3D(:,:,1)
+      DEALLOCATE(ptr_3D)
 
     ELSE
 
@@ -322,6 +326,7 @@ CONTAINS
       ptr_3D => input_file%Read_2d_time( &
         & variable_name='surf_temp')
       sse_init_vars%t_srf_mon(:,:,:) = MERGE(ptr_3D, 280._wp, ptr_3D > 0._wp)
+      DEALLOCATE(ptr_3D)
 
       CALL input_file%Close()
 

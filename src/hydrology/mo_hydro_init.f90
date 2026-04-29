@@ -905,8 +905,6 @@ CONTAINS
       & ptr_2D(:,  :),   &                      !< Pointer to 2d variable
       & ptr_3D(:,:,:)                           !< Pointer to 3d variable
 
-    LOGICAL,  POINTER   :: is_in_domain(:,:)    !< True: the cell belongs to domain; False: halo cell
-
     TYPE(t_jsb_model), POINTER :: model             !< Current instance of the model
     TYPE(t_jsb_grid),  POINTER :: grid              !< Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: soil_w            !< Vertical grid used for hydrology
@@ -915,7 +913,8 @@ CONTAINS
     INTEGER                    :: nsoil             !< Number of vertical soil layers of the vgrid 'soil_depth_water'
     INTEGER                    :: nsoil_input_file  !< Number of vertical soil layers as provided by the ic input file
     INTEGER                    :: isoil             !< Looping index for soil layers
-    LOGICAL                    :: l_organic         !< T: read mineral soil properties
+    LOGICAL                    :: l_organic         !< T: read mineral soil properties (and calculate final properties
+                                                    !< taking into account organic matter fraction)
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_read_init_vars'
 
     ! Assertion: do nothing if hydrology process is not active on this tile (should not happen)
@@ -1033,21 +1032,21 @@ CONTAINS
 
     !>    - Orography and its standard deviation
     IF (jsbach_runs_standalone()) THEN
-      CALL read_bc_data(input_file, 'elevation', tile%name, .FALSE., hydro_init_vars%elevation, llimit=0._wp)
+      CALL read_bc_data(input_file, 'elevation', tile%name, hydro_init_vars%elevation, llimit=0._wp)
     END IF
 
-    CALL read_bc_data(input_file, 'orostd', tile%name, .FALSE., hydro_init_vars%oro_stddev, llimit=0._wp)
+    CALL read_bc_data(input_file, 'orostd', tile%name, hydro_init_vars%oro_stddev, llimit=0._wp)
 
     !>    - Maximum fraction and depth of local surface depressions needed with the ponds scheme
     IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
       IF (tile%Is_process_active(LEX_)) THEN
         ! TODO there is a LEX config switch that allows for fractional ponds in depression. This
         ! needs to be implemented later.
-        CALL read_bc_data(input_file, 'char_area',  tile%name, .FALSE., hydro_init_vars%char_area,  &
+        CALL read_bc_data(input_file, 'char_area',  tile%name, hydro_init_vars%char_area,  &
           &  llimit=0._wp, fallback=10000._wp)
-        CALL read_bc_data(input_file, 'char_h_srf', tile%name, .FALSE., hydro_init_vars%char_h_srf, &
+        CALL read_bc_data(input_file, 'char_h_srf', tile%name, hydro_init_vars%char_h_srf, &
           &  fallback=0._wp)
-        CALL read_bc_data(input_file, 'char_slope', tile%name, .FALSE., hydro_init_vars%char_slope, &
+        CALL read_bc_data(input_file, 'char_slope', tile%name, hydro_init_vars%char_slope, &
           &  llimit=0._wp, fallback=-9999._wp)
         ! Reset LEX l_dpr4ponds switch in case that tile specific depression data is provided
         IF (input_file%Has_var('surf_depr_fract_'//TRIM(tile%name)) .AND. &
@@ -1058,9 +1057,9 @@ CONTAINS
 
       IF (dsl4jsb_Config(HYDRO_)%l_ponds .OR. tile%Is_process_active(LEX_)) THEN
         ! Use depression area fraction as maximum pond fraction
-        CALL read_bc_data(input_file, 'surf_depr_fract', tile%name, .FALSE., hydro_init_vars%fract_pond_max, llimit=0._wp)
+        CALL read_bc_data(input_file, 'surf_depr_fract', tile%name, hydro_init_vars%fract_pond_max, llimit=0._wp)
         ! Use depression depth as maximum pond depth (Attention: Values are negative!)
-        CALL read_bc_data(input_file, 'surf_depr_depth', tile%name, .FALSE., hydro_init_vars%depth_pond_max, ulimit=0._wp)
+        CALL read_bc_data(input_file, 'surf_depr_depth', tile%name, hydro_init_vars%depth_pond_max, ulimit=0._wp)
       END IF
     END IF
 
@@ -1080,6 +1079,7 @@ CONTAINS
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%ic_filename))
       ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of the bottom of each soil layer
       nsoil_input_file = SIZE(ptr_1D)                          ! number of soil layers provided by the ic input file
+      DEALLOCATE(ptr_1D)
       ! Close input file - ic
       CALL input_file%Close()
 
@@ -1091,46 +1091,47 @@ CONTAINS
       !>
 
       !>     - Soil depth until bedrock
-      CALL read_bc_data(input_file, 'soil_depth', tile%name, .FALSE., hydro_init_vars%soil_depth, llimit=0.1_wp)
+      CALL read_bc_data(input_file, 'soil_depth', tile%name, hydro_init_vars%soil_depth, llimit=0.1_wp)
 
       !>     - Root depth
       ! TODO root depth should become a function of PFTs eventually, instead of being a soil property
-      CALL read_bc_data(input_file, 'root_depth', tile%name, .FALSE., hydro_init_vars%root_depth, default=0._wp)
+      CALL read_bc_data(input_file, 'root_depth', tile%name, hydro_init_vars%root_depth, default=0._wp)
 
       IF (.NOT. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
         !>
         !>    B: Soil properties only read if soil textures are ignored
         !>
         !>     - Volumetric soil porosity
-        CALL read_bc_data(input_file, 'soil_porosity', tile%name, l_organic, hydro_init_vars%vol_porosity, default=0.2_wp)
+        CALL read_bc_data(input_file, 'soil_porosity', tile%name, hydro_init_vars%vol_porosity, &
+          &  l_organic=l_organic, default=0.2_wp)
 
         !>     - Saturated hydraulic conductivity
-        CALL read_bc_data(input_file, 'hyd_cond_sat', tile%name, l_organic, hydro_init_vars%hyd_cond_sat, default=4.e-6_wp)
+        CALL read_bc_data(input_file, 'hyd_cond_sat', tile%name, hydro_init_vars%hyd_cond_sat, &
+          &  l_organic=l_organic, default=4.e-6_wp)
 
         !>     - Volumetric field capacity
-        CALL read_bc_data(input_file, 'soil_field_cap', tile%name, l_organic, hydro_init_vars%vol_field_cap, default=0._wp)
+        CALL read_bc_data(input_file, 'soil_field_cap', tile%name, hydro_init_vars%vol_field_cap, &
+          &  l_organic=l_organic, default=0._wp)
 
         !>     - Volumetric permanent wilting point
-        CALL read_bc_data(input_file, 'wilting_point', tile%name, l_organic, hydro_init_vars%vol_p_wilt, default=0._wp)
+        CALL read_bc_data(input_file, 'wilting_point', tile%name, hydro_init_vars%vol_p_wilt, &
+          &  l_organic=l_organic, default=0._wp)
 
         !>     - Volumetric residual water content
-        IF (input_file%Has_var('residual_water')) THEN
-          CALL read_bc_data(input_file, 'residual_water', tile%name, l_organic, hydro_init_vars%vol_wres, default=0._wp)
-        ELSE
-          WRITE (message_text,*) 'BC File does not contain data on residual water content. Will use approximation instead!'
-          CALL message (TRIM(routine), message_text)
-          hydro_init_vars%vol_wres = hydro_init_vars%vol_porosity * 0.2_wp
-        END IF
+        CALL read_bc_data(input_file, 'residual_water', tile%name, hydro_init_vars%vol_wres, &
+          &  l_organic=l_organic, default=0._wp)
 
         !>     - Soil matric potential
-        CALL read_bc_data(input_file, 'moisture_pot', tile%name, l_organic, hydro_init_vars%matric_pot, default=-0.2_wp)
+        CALL read_bc_data(input_file, 'moisture_pot', tile%name, hydro_init_vars%matric_pot, &
+          &  l_organic=l_organic, default=-0.2_wp)
 
         !>     - Exponent B in Clapp and Hornberger
-        CALL read_bc_data(input_file, 'bclapp', tile%name, l_organic, hydro_init_vars%bclapp, default=6._wp)
+        CALL read_bc_data(input_file, 'bclapp', tile%name, hydro_init_vars%bclapp, &
+          &  l_organic=l_organic, default=6._wp)
 
         !>     - Pore size distribution index
-        CALL read_bc_data(input_file, 'pore_size_index', tile%name, l_organic, hydro_init_vars%pore_size_index, &
-          & default=0.25_wp)
+        CALL read_bc_data(input_file, 'pore_size_index', tile%name, hydro_init_vars%pore_size_index, &
+          &  l_organic=l_organic, default=0.25_wp)
 
       ELSE   ! l_soil_texture
         !>
@@ -1138,22 +1139,22 @@ CONTAINS
         !>       and then calculate the soil properties from these textures.
         !>
         !>     - Fraction of sand in upper soil
-        CALL read_bc_data(input_file, 'FR_SAND', tile%name, .FALSE., hydro_init_vars%fr_sand, llimit=0._wp)
+        CALL read_bc_data(input_file, 'FR_SAND', tile%name, hydro_init_vars%fr_sand, llimit=0._wp)
 
         !>     - Fraction of silt in upper soil
-        CALL read_bc_data(input_file, 'FR_SILT', tile%name, .FALSE., hydro_init_vars%fr_silt, llimit=0._wp)
+        CALL read_bc_data(input_file, 'FR_SILT', tile%name, hydro_init_vars%fr_silt, llimit=0._wp)
 
         !>     - Fraction of clay in upper soil
-        CALL read_bc_data(input_file, 'FR_CLAY', tile%name, .FALSE., hydro_init_vars%fr_clay, llimit=0._wp)
+        CALL read_bc_data(input_file, 'FR_CLAY', tile%name, hydro_init_vars%fr_clay, llimit=0._wp)
 
         !>     - Fraction of sand in deep soil
-        CALL read_bc_data(input_file, 'SUB_FR_SAND', tile%name, .FALSE., hydro_init_vars%fr_sand_deep, llimit=0._wp)
+        CALL read_bc_data(input_file, 'SUB_FR_SAND', tile%name, hydro_init_vars%fr_sand_deep, llimit=0._wp)
 
         !>     - Fraction of silt in deep soil
-        CALL read_bc_data(input_file, 'SUB_FR_SILT', tile%name, .FALSE., hydro_init_vars%fr_silt_deep, llimit=0._wp)
+        CALL read_bc_data(input_file, 'SUB_FR_SILT', tile%name, hydro_init_vars%fr_silt_deep, llimit=0._wp)
 
         !>     - Fraction of clay in deep soil
-        CALL read_bc_data(input_file, 'SUB_FR_CLAY', tile%name, .FALSE., hydro_init_vars%fr_clay_deep, llimit=0._wp)
+        CALL read_bc_data(input_file, 'SUB_FR_CLAY', tile%name, hydro_init_vars%fr_clay_deep, llimit=0._wp)
 
         ! Calculate the soil properties from soil textures
         !
@@ -1221,14 +1222,14 @@ CONTAINS
       !>
       !>     - Soil organic carbon fractions for each soil layer
       IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
-        DO isoil=1,nsoil
-          CALL read_bc_data(input_file, 'fract_org_sl', tile%name, .FALSE., hydro_init_vars%fract_org_sl(:,isoil,:), &
+        DO isoil = 1,nsoil_input_file
+          CALL read_bc_data(input_file, 'fract_org_sl', tile%name, hydro_init_vars%fract_org_sl(:,isoil,:), &
             &  default=0._wp, ilay=isoil, layer_name='soillev')
         END DO
         ! apply the value from the lowest soil layer (of the input file) to all soil layers below
         IF (nsoil > nsoil_input_file) THEN
           DO isoil = nsoil_input_file+1, nsoil
-            hydro_init_vars%fract_org_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+            hydro_init_vars%fract_org_sl(:,isoil,:) = hydro_init_vars%fract_org_sl(:,nsoil_input_file,:)
           END DO
         END IF
       END IF
@@ -1255,6 +1256,7 @@ CONTAINS
         ptr_3D => model%config%ifs_input_file%Read_2d_time( &
           & variable_name='W_SNOW', start_time_step=1, end_time_step=1)
         hydro_init_vars%ifs_weq_snow(:,:) = ptr_3D(:,:,1)
+        DEALLOCATE(ptr_3D)
 
       ELSE
         IF (input_file%Has_var('snow')) THEN
@@ -1276,20 +1278,19 @@ CONTAINS
           ptr_2D => model%config%ifs_input_file%Read_2d_1lev_1time( &
             & variable_name='SMIL'//int2string(isoil))
           hydro_init_vars%ifs_smi_sl(:,isoil,:) = ptr_2D(:,:)
+          DEALLOCATE(ptr_2D)
         END DO
 
       ELSE
 
-        DO isoil = 1,nsoil_input_file
-          ptr_3D => input_file%Read_2d_extdim( &
-            & variable_name='layer_moist',     &
-            & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
-          hydro_init_vars%wtr_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
-        END DO
+        ptr_3D => input_file%Read_3d(variable_name='layer_moist')
+        hydro_init_vars%wtr_soil_sl(:,1:nsoil_input_file,:) = MERGE(ptr_3D(:,:,:), 0._wp, ptr_3D(:,:,:) >= 0._wp)
+        DEALLOCATE(ptr_3D)
+
         ! apply the value from the lowest soil layer (of the input file) to all soil layers below
         IF (nsoil > nsoil_input_file) THEN
           DO isoil = nsoil_input_file+1, nsoil
-            hydro_init_vars%wtr_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+            hydro_init_vars%wtr_soil_sl(:,isoil,:) = hydro_init_vars%wtr_soil_sl(:,nsoil_input_file,:)
           END DO
         END IF
 
