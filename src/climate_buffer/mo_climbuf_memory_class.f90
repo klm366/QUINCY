@@ -135,7 +135,7 @@ CONTAINS
       & 'Relative humiditiy of lowest air layer smoothed in time at the end of the previous day.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-& output_level=BASIC, & 
+& output_level=BASIC, & !vg to be removed again
       & lrestart=.FALSE., initval_r=50.0_wp )
 
     CALL mem%Add_var( 'prev_day_max_wind_10m', mem%prev_day_max_wind_10m,                 &
@@ -143,7 +143,7 @@ CONTAINS
       & t_cf('prev_day_max_wind_10m', 'm/s', 'Previous day maximum wind speed.'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-& output_level=BASIC, & 
+& output_level=BASIC, & !vg to be removed again
       & lrestart=.FALSE., initval_r=0.0_wp )
 
     CALL mem%Add_var( 'max_wind_10m', mem%max_wind_10m,                                   &
