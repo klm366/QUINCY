@@ -22,7 +22,7 @@ MODULE mo_nlcc_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_climbuf, bioclim_limits, scale_fpc, potential_tree_fpc
+  PUBLIC :: calc_climbuf, bioclim_limits, scale_fpc, potential_tree_fpc, calc_cover_fract_inst
   PUBLIC :: fpc_to_cover_fract_pot, cover_fract_pot_to_cover_fract, desert_fraction, fpc_daily, fract_small
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_nlcc_process'
@@ -285,8 +285,8 @@ CONTAINS
 
     CALL scale_cover_fract (nidx, ntiles, is_dynamic(:,:), cover_fract_pot(:,:))
 
-    IF (ANY(SUM(cover_fract_pot(:,:),DIM=2) > 1._wp + ntiles*EPSILON(1._wp)) .OR. &
-        ANY(SUM(cover_fract_pot(:,:),DIM=2) < 1._wp - ntiles*EPSILON(1._wp))) THEN
+    IF (ANY(SUM(cover_fract_pot(:,:),DIM=2) > 1._wp + REAL(ntiles,wp)*EPSILON(1._wp)) .OR. &
+        ANY(SUM(cover_fract_pot(:,:),DIM=2) < 1._wp - REAL(ntiles,wp)*EPSILON(1._wp))) THEN
        WRITE (message_text,*) 'sum of cover_fract_pot /= 1: ', &
             MINVAL(SUM(cover_fract_pot(:,:),DIM=2)), MAXVAL(SUM(cover_fract_pot(:,:),DIM=2)), &
             MAXLOC(SUM(cover_fract_pot(:,:),DIM=2))
@@ -336,7 +336,7 @@ CONTAINS
 ! local variables
 
     INTEGER   :: i, itile
-    REAL(wp)  :: nwoody(nidx)                   ! number of woody PFTs (as REAL)
+    INTEGER   :: nwoody(nidx)                   ! number of woody PFTs
     REAL(wp)  :: nexcluded(nidx)                ! number of non-dynamic PFTs (crops, pastures)
     REAL(wp)  :: cover_fract_inst(nidx,ntiles)  ! cover fractions that would result from an instantanous implementation of
                                                 ! land use change and vegetation dynamics
@@ -360,17 +360,16 @@ CONTAINS
                                                 !  establishment of crop land and pasture
 
     !-- find out number of woody types and number of exculded types
-    nwoody(:) = 0._wp
+    nwoody(:) = 0
     nexcluded(:) = 0._wp
     DO i=1,nidx
        DO itile = 1,ntiles
-          IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) nwoody(i) = nwoody(i) + 1._wp
+          IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) nwoody(i) = nwoody(i) + 1
           IF (.NOT. is_dynamic(i,itile)) nexcluded(i) = nexcluded(i) + 1._wp
        ENDDO
     ENDDO
 
-    !-- Sum up cover fractions and of woody types, grasses, pasture etc. The fractions (cover_fract) were last updated by
-    !   last years land use change, and do not yet include current vegetation dynamics.
+    !-- Sum up cover fractions of woody types, grasses and fractions not affected by NLCC.
     sum_woody_fract(:) = 0._wp
     sum_grass_fract(:) = 0._wp
     excluded_fract(:) = 0._wp
@@ -401,7 +400,7 @@ CONTAINS
        END DO
     END DO
 
-    !-- Calculate the woody fraction resulting from last years potential vegetation assuming an instantanous
+    !-- Calculate the woody fraction resulting from last years potential vegetation assuming an instantaneous
     !   establishment of crops and pastures
     CALL calc_cover_fract_inst(nidx, ntiles, is_woody(:,:), is_dynamic(:,:), is_pasture(:,:), is_crop(:,:), &
                                cover_fract_pot_previous_year(:,:), cover_fract(:,:), cover_fract_inst(:,:))
@@ -414,7 +413,7 @@ CONTAINS
        END DO
     END DO
 
-    !-- Calculate the woody fraction resulting from current potential vegetation assuming an instantanous
+    !-- Calculate the woody fraction resulting from current potential vegetation assuming an instantaneous
     !   establishment of crops and pastures
     CALL calc_cover_fract_inst(nidx, ntiles, is_woody(:,:), is_dynamic(:,:), is_pasture(:,:), is_crop(:,:), &
                                cover_fract_pot(:,:), cover_fract(:,:), cover_fract_inst(:,:))
@@ -489,11 +488,11 @@ CONTAINS
     CALL scale_cover_fract(nidx, ntiles, is_dynamic(:,:), cover_fract(:,:))
 
     !-- Stop simulation, if sum of cover fractions is not equal to 1 or a cover fraction is smaller than fract_small
-    IF (ANY(SUM(cover_fract(:,:),DIM=2) > 1._wp + REAL(ntiles,wp) * EPSILON(1._wp)) .OR. &
-        ANY(SUM(cover_fract(:,:),DIM=2) < 1._wp - REAL(ntiles,wp) * EPSILON(1._wp))) THEN
+    IF (  ANY(SUM(cover_fract(:,:),DIM=2) > 1._wp + REAL(ntiles,wp)*EPSILON(1._wp)) .OR.   &
+       &  ANY(SUM(cover_fract(:,:),DIM=2) < 1._wp - REAL(ntiles,wp)*EPSILON(1._wp))) THEN
        WRITE (message_text,*) 'sum of cover_fract /= 1: ', &
-            MINVAL(SUM(cover_fract(:,:),DIM=2)), MAXVAL(SUM(cover_fract(:,:),DIM=2)), &
-            MAXLOC(SUM(cover_fract(:,:),DIM=2))
+         &   MINVAL(SUM(cover_fract(:,:),DIM=2)), MAXVAL(SUM(cover_fract(:,:),DIM=2)), ', MINLOC: ', &
+         &   MINLOC(SUM(cover_fract(:,:),DIM=2)), ', MAXLOC: ', MAXLOC(SUM(cover_fract(:,:),DIM=2))
        CALL finish ('cover_fract_pot_to_cover_fract', message_text)
     END IF
     DO itile = 1,ntiles
@@ -576,7 +575,7 @@ CONTAINS
                 sum_act_fpc(i) = sum_act_fpc(i) + act_fpc(i,itile) * (1._wp + bare_fpc(i) / sum_grass_fpc(i))
              ELSE
                 sum_green_bio(i) = sum_green_bio(i) +                                              &
-                 MAX(0._wp, (bare_fpc(i) / REAL(n_grass_pft(i),wp)) * (1._wp -                        &
+                 MAX(0._wp, (bare_fpc(i) / REAL(n_grass_pft(i),wp)) * (1._wp -                     &
                  exp(-desert_extend * ((max_green_bio(i,itile) * sla(i,itile)) ** desert_margin) / &
                  (3._wp ** (desert_margin - 1._wp)))))
                 sum_act_fpc(i) = sum_act_fpc(i) + (bare_fpc(i) / REAL(n_grass_pft(i),wp))
@@ -862,7 +861,7 @@ CONTAINS
 !
 ! convert fractional plant cover calculated within nlcc to jsbach cover fractions
 ! that would result from an instantaneous establishment of crop land and pasture
-! (pasture is preferrentially established on grasslands)
+! (pasture is preferentially established on grasslands)
 !
 ! input
     INTEGER,  INTENT(in)  :: nidx              ! vector length
@@ -879,31 +878,28 @@ CONTAINS
                                                    ! instantaneous establishment of crop land and pasture
 ! local variables
     INTEGER   :: i, itile
-    REAL(wp)  :: grass(nidx)             ! number of grass types (as real)
+    INTEGER   :: ngrass                  ! number of grass types
+    INTEGER   :: ncrops                  ! number of crop types
     REAL(wp)  :: sum_grass_fract(nidx)   ! potential fraction of grass if there was no land use
     REAL(wp)  :: sum_pasture_fract(nidx) ! fraction of the vegetated part of the grid box covered with pasture
     REAL(wp)  :: sum_crop_fract(nidx)    ! fraction of the vegetated part of the grid box covered with crops
-
-    !-- find out number of grass types
-    grass(:) = 0._wp
-    DO i = 1,nidx
-       DO itile = 1,ntiles
-          IF (.NOT. is_woody(i,itile) .AND. is_dynamic(i,itile)) grass(i) = grass(i) + 1._wp
-       ENDDO
-       grass(i) = MAX(1._wp,grass(i))
-    ENDDO
 
     !-- sum up FPC of grasses, pastures and crops
     sum_grass_fract(:) = 0._wp
     sum_pasture_fract(:) = 0._wp
     sum_crop_fract(:) = 0._wp
-    DO i = 1,nidx
-      DO itile = 1,ntiles
-         IF (.NOT. is_woody(i,itile) .AND. is_dynamic(i,itile)) &
-            sum_grass_fract(i) = sum_grass_fract(i) + cover_fract_pot(i,itile)
-         IF (is_pasture(i,itile)) sum_pasture_fract(i) = sum_pasture_fract(i) + cover_fract(i,itile)
-         IF (is_crop(i,itile)) sum_crop_fract(i) = sum_crop_fract(i) + cover_fract(i,itile)
-      END DO
+    ngrass = 0
+    ncrops = 0
+    DO itile = 1, ntiles
+       IF (.NOT. is_woody(1,itile) .AND. is_dynamic(1,itile)) THEN
+          ngrass = ngrass + 1
+          sum_grass_fract(:) = sum_grass_fract(:) + cover_fract_pot(:,itile)
+       ELSE IF (is_pasture(1,itile)) THEN
+          sum_pasture_fract(:) = sum_pasture_fract(:) + cover_fract(:,itile)
+       ELSE IF (is_crop(1,itile)) THEN
+          ncrops = ncrops + 1
+          sum_crop_fract(:) = sum_crop_fract(:) + cover_fract(:,itile)
+       END IF
     END DO
 
     !-- establishment of pastures (at the expense of grass land)
@@ -916,22 +912,19 @@ CONTAINS
                    cover_fract_inst(i,itile) = cover_fract_pot(i,itile)
                 ELSE
                    cover_fract_inst(i,itile) = cover_fract_pot(i,itile) &
-                      * (sum_grass_fract(i) - sum_pasture_fract(i) + grass(i) * fract_small) / sum_grass_fract(i)
+                     & * (sum_grass_fract(i) - sum_pasture_fract(i) + ngrass * fract_small) / sum_grass_fract(i)
                 END IF
              ELSE
                 ! There are not enough grasslands for all pastures, so that woody types are also reduced
                 IF (is_woody(i,itile)) THEN
                    cover_fract_inst(i,itile) = cover_fract_pot(i,itile) &
-                      * (1._wp - sum_pasture_fract(i) - 3._wp * fract_small) &
-                      / (1._wp - sum_grass_fract(i) - 3._wp * fract_small)
+                     &  * (1._wp - sum_pasture_fract(i)) / (1._wp - sum_grass_fract(i))
                 ELSE
                    cover_fract_inst(i,itile) = fract_small
                 END IF
              END IF
           ELSE IF (is_pasture(i,itile)) THEN
              cover_fract_inst(i,itile) = cover_fract(i,itile)
-          ELSE
-             cover_fract_inst(i,itile) = fract_small
           END IF
        END DO
     END DO
@@ -941,24 +934,25 @@ CONTAINS
        WHERE (is_crop(:,itile))
           cover_fract_inst(:,itile) = cover_fract(:,itile)
        ELSEWHERE (.NOT. is_pasture(:,itile))
-          cover_fract_inst(:,itile) = cover_fract_inst(:,itile) * (1._wp - sum_pasture_fract(:) - sum_crop_fract(:)) &
-             / (1._wp - sum_pasture_fract(:) - fract_small)
+          cover_fract_inst(:,itile) = cover_fract_inst(:,itile) &
+            &  * (1._wp - sum_pasture_fract(:) - sum_crop_fract(:)) &
+            &  / (1._wp - sum_pasture_fract(:) - ncrops * fract_small)
        END WHERE
     END DO
 
     CALL scale_cover_fract (nidx, ntiles, is_dynamic(:,:), cover_fract_inst(:,:))
 
-    IF (ANY(SUM(cover_fract_inst(:,:),DIM=2) > 1._wp + REAL(ntiles,wp) * EPSILON(1._wp)) .OR. &
-        ANY(SUM(cover_fract_inst(:,:),DIM=2) < 1._wp - REAL(ntiles,wp) * EPSILON(1._wp))) THEN
+    IF (ANY(SUM(cover_fract_inst(:,:),DIM=2) > 1._wp + REAL(ntiles,wp)*EPSILON(1._wp)) .OR. &
+      & ANY(SUM(cover_fract_inst(:,:),DIM=2) < 1._wp - REAL(ntiles,wp)*EPSILON(1._wp))) THEN
        WRITE (message_text,*) 'sum of cover_fract_inst /= 1: ', &
-            MINVAL(SUM(cover_fract_inst(:,:),DIM=2)), MAXVAL(SUM(cover_fract_inst(:,:),DIM=2)), &
-            MAXLOC(SUM(cover_fract_inst(:,:),DIM=2))
+         &   MINVAL(SUM(cover_fract_inst(:,:),DIM=2)), MAXVAL(SUM(cover_fract_inst(:,:),DIM=2)), ', MINLOC: ', &
+         &   MINLOC(SUM(cover_fract_inst(:,:),DIM=2)), ', MAXLOC: ', MAXLOC(SUM(cover_fract_inst(:,:),DIM=2))
        CALL finish ('calc_cover_fract_inst', message_text)
     END IF
     DO itile = 1,ntiles
        IF (ANY(cover_fract_inst(:,itile) < fract_small)) THEN
           WRITE (message_text,*) 'cover_fract_inst too small: ', MINVAL(cover_fract_inst(:,itile)), &
-               MINLOC(cover_fract_inst(:,itile))
+            &  MINLOC(cover_fract_inst(:,itile))
           CALL finish ('calc_cover_fract_inst', message_text)
        END IF
     END DO
@@ -990,19 +984,43 @@ SUBROUTINE scale_cover_fract (nidx, ntiles, is_dynamic, cover_fract)
 
 ! !LOCAL VARIABLES:
 !
-    INTEGER   :: i, iter
+    INTEGER   :: itile, ic, iter   ! looping indices
     INTEGER   :: niter             ! number of iterations needed
     INTEGER   :: nsparce(nidx)     ! number of PFTs with a vegetated fraction of less then fract_small
     REAL(wp)  :: sum_fract(nidx)   ! sum of all cover fractions
-    REAL(wp)  :: excluded_fract(nidx) ! sum of all cover fractions
+    REAL(wp)  :: excluded_fract(nidx) ! sum of the PFT fractions that cannot be changed by natural vegetation
+                                      ! dynamics: non-dynamic fractions and minimum fractions of dynamic PFTs
+    REAL(wp)  :: anthro_fract(nidx)   ! sum of non-dynamic PFT fractions
+    REAL(wp)  :: considerable_nat_fract(nidx) ! sum of natural PFTs with considerable fractions
+    LOGICAL   :: corrected(nidx)      ! flag indicating cells with corrected fractions
 
+    CHARACTER(len=*), PARAMETER :: routine = modname//':scale_cover_fract'
 !------------------------------------------------------------------------------
 
     ! Make sure, crop and pasture have a cover fraction of at least fract_small
-
     WHERE (.NOT. is_dynamic(:,:))
        cover_fract(:,:) = MAX(fract_small,cover_fract(:,:))
     END WHERE
+
+    ! Make sure, the sum of non-dynamic PFTs is smaller than (1 - fract_small*n_natural)
+    excluded_fract(:) = 0._wp
+    DO itile = 1,ntiles
+       WHERE (is_dynamic(:,itile))
+          excluded_fract(:) = excluded_fract(:) + fract_small
+       ELSEWHERE
+          excluded_fract(:) = excluded_fract(:) + cover_fract(:,itile)
+       END WHERE
+    END DO
+    IF (ANY(excluded_fract(:) > 1._wp)) THEN
+       corrected(:) = .FALSE.
+       DO itile = 1, ntiles
+          WHERE (excluded_fract(:) > 1._wp .AND. .NOT. corrected(:) .AND. .NOT. is_dynamic(:,itile) &
+               &  .AND. cover_fract(:,itile) > (fract_small + excluded_fract(:)-1._wp))
+             cover_fract(:,itile) = cover_fract(:,itile) - (excluded_fract(:)-1._wp)
+             corrected(:) = .TRUE.
+          END WHERE
+       END DO
+    END IF
 
     ! The more tiles we have, the more iterations are needed. For binary identical results
     ! the number of iterations must not change.
@@ -1010,43 +1028,76 @@ SUBROUTINE scale_cover_fract (nidx, ntiles, is_dynamic, cover_fract)
     DO iter = 1, niter
 
        sum_fract(:) = 0._wp
-       excluded_fract(:) = 0._wp
+       considerable_nat_fract(:) = 0._wp
+       anthro_fract(:) = 0._wp
        nsparce(:) = 0
 
-       DO i = 1,ntiles
-          WHERE (cover_fract(:,i) > fract_small .AND. is_dynamic(:,i))
-             sum_fract(:) = sum_fract(:) + cover_fract(:,i)
-          ELSEWHERE (is_dynamic(:,i))
+       DO itile = 1,ntiles
+          sum_fract(:) = sum_fract(:) + cover_fract(:,itile)
+          WHERE (cover_fract(:,itile) > fract_small .AND. is_dynamic(:,itile))
+             considerable_nat_fract(:) = considerable_nat_fract(:) + cover_fract(:,itile)
+          ELSEWHERE (is_dynamic(:,itile))
              nsparce(:) = nsparce(:) + 1
           ELSEWHERE
-             excluded_fract(:) = excluded_fract(:) + cover_fract(:,i)
+             anthro_fract(:) = anthro_fract(:) + cover_fract(:,itile)
           END WHERE
        END DO
-       DO i = 1,ntiles
-          WHERE (cover_fract(:,i) > fract_small .AND. is_dynamic(:,i))
-             cover_fract(:,i) = cover_fract(:,i) * (1._wp - excluded_fract(:) - REAL(nsparce,wp)*fract_small) / sum_fract(:)
-          ELSEWHERE (is_dynamic(:,i))
-             cover_fract(:,i) = fract_small
+       DO itile = 1,ntiles
+          WHERE (cover_fract(:,itile) > fract_small .AND. is_dynamic(:,itile))
+             cover_fract(:,itile) = cover_fract(:,itile) * &
+               &                    (1._wp - anthro_fract(:) - REAL(nsparce,wp)*fract_small) / considerable_nat_fract(:)
+          ELSEWHERE (is_dynamic(:,itile))
+             cover_fract(:,itile) = fract_small
           ELSEWHERE
-             cover_fract(:,i) = MAX(fract_small,cover_fract(:,i))
+             cover_fract(:,itile) = MAX(fract_small,cover_fract(:,itile))
           END WHERE
        END DO
+    END DO  ! iter
 
+    ! Final corrections, to assure the sum of all PFT fractions equals 1. This sometimes might not be
+    ! the case for numerical reasons.
+
+    sum_fract(:) = SUM(cover_fract(:,:), DIM=2)
+    ! Exit if the cover fraction sum is considerably different from 1.
+    IF (ANY(ABS(1._wp - sum_fract(:)) > fract_small)) THEN
+       WRITE(message_text,*) 'Sum of PFT fractions differs from 1.: ', &
+         &  MINVAL(sum_fract(:)), MAXVAL(sum_fract(:)), ' MINLOC: ', &
+         &  MINLOC(sum_fract(:)), ' MAXLOC: ', MAXLOC(sum_fract(:))
+       CALL finish (routine, message_text)
+    END IF
+
+    corrected(:) = .FALSE.
+    DO itile = 1,ntiles
+       WHERE (is_dynamic(:,itile) .AND. (sum_fract(:) < 1._wp - EPSILON(1._wp)) &
+            &  .AND. .NOT. corrected(:) .AND. cover_fract(:,itile) < sum_fract(:))
+          cover_fract(:,itile) = cover_fract(:,itile) + (1._wp - sum_fract(:))
+          corrected(:) = .TRUE.
+       END WHERE
+    END DO
+    corrected(:) = .FALSE.
+    DO itile = 1,ntiles
+       WHERE (is_dynamic(:,itile) .AND. (sum_fract(:) > 1._wp + EPSILON(1._wp)) &
+            &  .AND. .NOT. corrected(:) .AND. cover_fract(:,itile) > 1._wp - sum_fract(:) - fract_small)
+          cover_fract(:,itile) = cover_fract(:,itile) - (sum_fract(:) - 1._wp)
+          corrected(:) = .TRUE.
+       END WHERE
     END DO
 
     IF (ANY(cover_fract(:,:) < fract_small)) THEN
-       WRITE(message_text,*) 'cover_fract still smaller ', fract_small, ' after ', ntiles, ' iterations:', &
-            MINVAL(MERGE(cover_fract(:,:), 1._wp, cover_fract > 0._wp))
-       CALL message ('scale_cover_fract', message_text)
+       WRITE(message_text,*) 'cover_fract still smaller ', fract_small, ' after ', niter, ' iterations:', &
+          &  MINVAL(MERGE(cover_fract(:,:), 1._wp, cover_fract > 0._wp)), 'MINLOC: ', &
+          &  MINLOC(MERGE(cover_fract(:,:), 1._wp, cover_fract > 0._wp))
+       CALL message (routine, message_text)
 
-       ! sometimes cover_fract remains slightly smaller than fract_small for numerical reasons
+       ! Sometimes cover_fract remains slightly smaller than fract_small for numerical reasons
        WHERE (cover_fract(:,:) < fract_small .AND. cover_fract(:,:) >= fract_small - REAL(ntiles,wp)*EPSILON(1._wp))
           cover_fract(:,:) = fract_small
        END WHERE
        IF (ANY(cover_fract(:,:) < fract_small)) THEN
-          WRITE(message_text,*) 'cover_fract still smaller ', fract_small, ' after ', ntiles, ' iterations:', &
-               MINVAL(MERGE(cover_fract(:,:), 1._wp, cover_fract > 0._wp))
-          CALL finish ('scale_cover_fract', message_text)
+          WRITE(message_text,*) 'cover_fract still smaller ', fract_small, ' after ', niter, ' iterations:', &
+             &  MINVAL(MERGE(cover_fract(:,:), 1._wp, cover_fract > 0._wp)),'MINLOC: ', &
+             &  MINLOC(MERGE(cover_fract(:,:), 1._wp, cover_fract > 0._wp))
+          CALL finish (routine, message_text)
        END IF
     END IF
 

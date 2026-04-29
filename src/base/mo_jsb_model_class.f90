@@ -144,7 +144,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:new_model'
 
-    CALL message(TRIM(routine), 'starting construction of new JSBACH model instance.')
+    IF (debug_on()) CALL message(TRIM(routine), 'starting construction of new ICON-Land model instance.')
 
     ALLOCATE(return_ptr)
 
@@ -172,7 +172,7 @@ CONTAINS
 
     ALLOCATE(return_ptr%queue)
 
-    CALL message(TRIM(routine), 'construction of JSBACH model completed.')
+    IF (debug_on()) CALL message(TRIM(routine), 'construction of ICON-Land model completed.')
 
   END FUNCTION new_model
 

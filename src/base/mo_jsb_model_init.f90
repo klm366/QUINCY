@@ -96,14 +96,15 @@ CONTAINS
   !
   SUBROUTINE setup_grid_patch( model_id, patch, type)
 
-    USE mo_jsb_domain_iface, ONLY: t_patch
-    USE mo_jsb_grid_class,   ONLY: new_grid
-    USE mo_jsb_grid,         ONLY: Register_grid
+    USE mo_jsb_domain_iface,   ONLY: t_patch
+    USE mo_jsb_grid_class,     ONLY: new_grid
+    USE mo_jsb_grid,           ONLY: Register_grid
+    USE mo_jsb_math_constants, ONLY: deg2rad
 
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER, INTENT(in)               :: model_id !< ID of model instance
-    TYPE(t_patch), TARGET, INTENT(in) :: patch    !< Grid information provided by host model
-    CHARACTER(LEN=*), INTENT(in)      :: type     !< Type of host model ('icon' or 'echam')
+    INTEGER, INTENT(in)                  :: model_id !< ID of model instance
+    TYPE(t_patch), TARGET, INTENT(inout) :: patch    !< Grid information provided by host model
+    CHARACTER(LEN=*), INTENT(in)         :: type     !< Type of host model ('icon' or 'echam')
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
@@ -117,6 +118,21 @@ CONTAINS
     model => Get_model(model_id)
 
     grid => new_grid(patch, type)
+    IF (grid%ntotal_g == 1) THEN
+      IF (.NOT. model%config%is_single_site) &
+          & CALL finish(routine, 'Number of global cells == 1 but config not for single site')
+      ! Overwrite lon/lat from single cell grid file with sitelevel model-specific namelist location
+      patch%cells%center(:,:)%lon = deg2rad * model%config%single_site_lonlat(1)
+      patch%cells%center(:,:)%lat = deg2rad * model%config%single_site_lonlat(2)
+      grid%lon(:,:) = model%config%single_site_lonlat(1)
+      grid%lat(:,:) = model%config%single_site_lonlat(2)
+      grid%coslat(:,:) = COS(deg2rad * grid%lat(:,:))
+      grid%sinlat(:,:) = SIN(deg2rad * grid%lat(:,:))
+      grid%coslon(:,:) = COS(deg2rad * grid%lon(:,:))
+      grid%sinlon(:,:) = SIN(deg2rad * grid%lon(:,:))
+      grid%area(:,:) = 1._wp
+    END IF
+
     CALL Register_grid(grid)
     model%grid_id = grid%id
 
@@ -680,7 +696,8 @@ CONTAINS
       CALL tile%Init_fractions(                                           &
         & TRIM(model%shortname), '', TRIM(tile%name),                     &
         & l_fixed_fractions=l_fixed_fractions,                            &
-        & l_rel_fractions=model%config%relative_fractions_in_file)
+        & l_rel_fractions=model%config%relative_fractions_in_file,        &
+        & is_sitelevel=model%config%is_single_site )
 
       ! ---------------------------------------------------------------------------------------------- !
       !>

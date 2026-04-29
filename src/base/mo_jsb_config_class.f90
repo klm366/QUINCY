@@ -38,7 +38,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_tmx
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
-    LOGICAL                        :: check_child_cf      !< Assert that cover fractions of children tiles sum up to the tile cf
+    LOGICAL                        :: check_child_cf      !< Assert that cover fractions of child tiles sum up to the tile cf
     INTEGER                        :: enforce_water_budget!< descriptor for water balance 'ignore', 'logging', or 'error'
     CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
     INTEGER                        :: qmodel_id           !< defines the applied model configuration (quincy_model_name)
@@ -76,6 +76,12 @@ MODULE mo_jsb_config_class
     CHARACTER(len=:), ALLOCATABLE  :: ifs_filename
     TYPE(t_input_file)             :: ifs_input_file
 
+    ! Single site setup
+    LOGICAL                        :: is_single_site        !< Single site model
+    CHARACTER(len=:), ALLOCATABLE  :: single_site_name      !< Single site name
+    CHARACTER(len=:), ALLOCATABLE  :: single_site_shortname !< Single site short name
+    REAL(wp)                       :: single_site_lonlat(2) !< Lon/lat of site in degrees
+
   END TYPE t_jsb_model_config
 
   ! Abstract type for process configurations
@@ -111,7 +117,9 @@ CONTAINS
 
     USE mo_jsb_namelist_iface,  ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_impl_constants,  ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
+    USE mo_jsb_control,         ONLY: jsbach_runs_standalone
     USE mo_util,                ONLY: tolower
+
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, Get_quincy_model_config_id
 #endif
@@ -158,6 +166,10 @@ CONTAINS
 #endif
     LOGICAL                       :: init_from_ifs
     CHARACTER(len=filename_max)   :: ifs_filename
+    LOGICAL                       :: is_single_site
+    CHARACTER(len=filename_max)   :: single_site_name
+    CHARACTER(len=SHORT_NAME_LEN) :: single_site_shortname
+    REAL(wp)                      :: single_site_lonlat(2)
 
     NAMELIST /jsb_model_nml/  &
       model_scheme, &
@@ -189,7 +201,11 @@ CONTAINS
       slow_sb_pool_spinup_accelerator_max_executions, &
 #endif
       init_from_ifs, &
-      ifs_filename
+      ifs_filename, &
+      is_single_site, &
+      single_site_name, &
+      single_site_shortname, &
+      single_site_lonlat
 
     INTEGER :: nml_handler, nml_unit, istat, i
 
@@ -250,6 +266,10 @@ CONTAINS
 #endif
     init_from_ifs              = .FALSE.
     ifs_filename               = 'ifs2icon.nc'
+    is_single_site             = .FALSE.
+    single_site_name           = ''
+    single_site_shortname      = ''
+    single_site_lonlat         = [0._wp, 0._wp]
 
     ! Read namelist
     nml_handler = open_nml(TRIM(namelist_filename))
@@ -363,6 +383,13 @@ CONTAINS
     ! quincy - end
     model_config%init_from_ifs              = init_from_ifs
     model_config%ifs_filename               = TRIM(ifs_filename)
+    model_config%is_single_site             = is_single_site
+    model_config%single_site_name           = TRIM(single_site_name)
+    model_config%single_site_shortname      = TRIM(single_site_shortname)
+    model_config%single_site_lonlat(1:2)    = single_site_lonlat(1:2)
+
+    IF (is_single_site .AND. .NOT. jsbach_runs_standalone()) &
+        & CALL finish(routine, 'Single site only allowed in standalone experiment')
 
     DO i=1,99
       IF (output_tiles(i) == '') EXIT

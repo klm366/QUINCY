@@ -1807,7 +1807,7 @@ CONTAINS
           IF (wtr_soil_old_sl(ic, is) > eps8) THEN
             ! calculation of the two fractions
             ! vertical (across soil layers)
-            IF (wtr_transp_down_sl(ic, is) > eps8) THEN ! diagnosed flux contains spurious fluxes of < E-20, which are ignored here
+            IF (ABS(wtr_transp_down_sl(ic, is)) > eps8) THEN ! diagnosed upwards and downwards fluxes both contain spurious fluxes of < E-8, which are ignored here
               wtr_flux_in_m = wtr_transp_down_sl(ic, is) * dtime / rhoh2o
             ELSE
               wtr_flux_in_m = 0.0_wp
