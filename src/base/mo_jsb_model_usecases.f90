@@ -703,7 +703,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
 
     ! Define PFT names and indices depending on the number of PFTs
-    CALL set_jsbach_pfts(model%config%npft, pft_shortnames(:), pft_longnames(:), pft_ids(:))    
+    CALL set_jsbach_pfts(model%config%npft, pft_shortnames(:), pft_longnames(:), pft_ids(:))
 
     ! overview of tile structure:
     !
