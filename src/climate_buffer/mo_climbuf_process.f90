@@ -21,7 +21,7 @@ MODULE mo_climbuf_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_climbuf
+  PUBLIC :: calc_climbuf, get_relative_humidity_air
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_climbuf_process'
 CONTAINS
@@ -35,11 +35,13 @@ CONTAINS
   !>
   ! -------------------------------------------------------------------------------------------------------- !
   ELEMENTAL PURE SUBROUTINE calc_climbuf (lstart, init_running_means, new_day, new_month, new_year, &
-    &                                     dtime, t_air, rain, snow, &
+    &                                     dtime, t_air, rain, snow, wind_10m, q_rel_air, &
     &                                     seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
     &                                     min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20y, max_mmtemp_20y, &
     &                                     temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
-    &                                     gdd5_sum_year, gdd5_prev_year)
+    &                                     gdd5_sum_year, gdd5_prev_year, &
+    &                                     max_wind_10m_act, prev_day_max_wind_10m, max_wind_10m, &
+    &                                     q_rel_air_climbuf, q_rel_air_climbuf_yDay)
 
     LOGICAL, INTENT(in) :: &
       & lstart,                 & !< This is the first time step in a simulation
@@ -54,7 +56,9 @@ CONTAINS
       & seconds_month,          & !< Length of the previous month [s]
       & t_air,                  & !< Near surface air temperature [K]
       & rain,                   & !< Liquid precipitation [kg m-2 s-1]
-      & snow                      !< Solid precipitation [kg m-2 s-1]
+      & snow,                   & !< Solid precipitation [kg m-2 s-1]
+      & wind_10m,               & !< 10m wind speed [m/s]
+      & q_rel_air                 !< Relative humidity []
 
     REAL(wp), INTENT(inout) :: &
       & temp_sum_day,           & !< Current temperature sum of the day [K]
@@ -68,17 +72,25 @@ CONTAINS
       & precip_15d,             & !< 15-day smoothed precipitation [K]
       & precip_15d_yDay,        & !< 15-day smoothed precipitation at the end of the previous day [K]
       & gdd5_sum_year,          & !< Current number of growing degree days of this year
-      & gdd5_prev_year            !< Growing degree days of previous year
+      & gdd5_prev_year,         & !< Growing degree days of previous year
+      & max_wind_10m_act,       & !
+      & prev_day_max_wind_10m,  &  !!! namen anpassen
+      & max_wind_10m,           &  !!! welche Zeitskala ist das?
+      & q_rel_air_climbuf,      &
+      & q_rel_air_climbuf_yDay
 
     ! Local variables
     REAL(wp) :: &
       & prev_day_mean_temp,     & !< Air temperature of previous day [K]
       & prev_month_mean_temp,   & !< Air temperature of previous month [K]
+      & persist,                & !< Persistence factor adapted to model time step
       & F_15d,                  & !< Factor for 15-day smoothing
       & N_15d                     !< Factor for 15-day smoothing
 
+    REAL(wp), PARAMETER :: persist_wind_10m = 0.9995_wp   ! ~4 years
+    REAL(wp), PARAMETER :: persist_rel_hum  = 0.95_wp     ! ~14 days
     ! ------------------------------------------------------------------------------------------------------ !
-
+!checken, wie oft was aufgerufen wird!
 
     IF (.NOT. new_day .OR. lstart) THEN
       temp_sum_day = temp_sum_day + t_air * dtime
@@ -140,8 +152,72 @@ CONTAINS
       precip_15d_yDay = precip_15d
     END IF
 
+    !-- 10m wind
+    !  ---------------------
+    IF (.NOT. new_day .OR. lstart) THEN
+      IF (wind_10m > max_wind_10m_act) THEN
+        max_wind_10m_act = wind_10m
+      END IF
+    ELSE
+      prev_day_max_wind_10m = max_wind_10m_act
+      ! Maximum daily wind speed smoothed in time
+      max_wind_10m = max_wind_10m * persist_wind_10m + max_wind_10m_act * (1._wp - persist_wind_10m)
+      max_wind_10m_act = wind_10m
+    END IF
+
+    !-- Relative humidity
+    !  ---------------------
+    persist = persist_rel_hum ** (dtime/seconds_day)
+    q_rel_air_climbuf =  q_rel_air_climbuf * persist + q_rel_air * (1._wp - persist)
+    IF (new_day .AND. .NOT. lstart) THEN
+      ! Save previous day variables (for disturbance)
+      q_rel_air_climbuf_yDay = q_rel_air_climbuf
+    END IF
 
   END SUBROUTINE calc_climbuf
 
+  ! ======================================================================================================== !
+  !>
+  !>#### Compute relative humidity
+  !>
+  !> We here calculate relative humidity of the lowest atmospheric level
+  !>
+  ! -------------------------------------------------------------------------------------------------------- !
+  FUNCTION get_relative_humidity_air(air_moisture, air_temperature, air_press, use_tmx) RESULT(relative_humidity_air)
+
+    USE mo_jsb_physical_constants, ONLY: rd  ! gas constant for dry air [J/(K*kg)]
+    USE mo_jsb_physical_constants, ONLY: rv  ! gas constant for water vapor [J/(K*kg)]
+    USE mo_phy_schemes,            ONLY: qsat_water, qsat_mixed
+
+    REAL(wp), INTENT(in) :: &
+      air_moisture(:),      & ! Specific humidity of air [kg kg-1]
+      air_temperature(:),   & ! Temperature of air [K]
+      air_press(:)            ! Pressure of air [Pa]
+    LOGICAL, INTENT(in) :: use_tmx  ! if true, use qsat_water, else qsat_mixed
+
+    REAL(wp) :: air_qsat      ! Saturation specific humidity
+    REAL(wp) :: relative_humidity_air(SIZE(air_moisture))
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_relative_humidity_air'
+    INTEGER :: ic, nc
+
+    nc = SIZE(air_moisture)
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC   PRIVATE(air_qsat)
+    DO ic = 1, nc
+      IF (use_tmx) THEN
+        air_qsat = qsat_water(air_temperature(ic), air_press(ic))
+      ELSE
+        air_qsat = qsat_mixed(air_temperature(ic), air_press(ic))
+      END IF
+      relative_humidity_air(ic) = 100._wp * air_moisture(ic)                                       &
+                                 * (  (1._wp - rd / rv) * air_qsat + (rd / rv) )                   &
+                                 / ( ((1._wp - rd / rv) * air_moisture(ic) + (rd / rv)) * air_qsat )
+      relative_humidity_air(ic) = MIN(100._wp, relative_humidity_air(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
+
+  END FUNCTION get_relative_humidity_air
 #endif
 END MODULE mo_climbuf_process

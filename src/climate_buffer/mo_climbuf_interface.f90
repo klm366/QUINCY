@@ -19,12 +19,11 @@ MODULE mo_climbuf_interface
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  ! Use of basic structures
-  USE mo_jsb_control,     ONLY: debug_on
-  USE mo_jsb_time,        ONLY: is_time_experiment_start
-  USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message, finish
-
+  USE mo_kind,               ONLY: wp
+  USE mo_jsb_control,        ONLY: debug_on
+  USE mo_jsb_time,           ONLY: is_time_experiment_start, is_newyear, is_newmonth, is_newday, &
+    &                              get_day_length, get_previous_month_length
+  USE mo_exception,          ONLY: message
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
@@ -32,13 +31,14 @@ MODULE mo_climbuf_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes A2L_, CLIMBUF_
+  dsl4jsb_Use_processes A2L_, SEB_, CLIMBUF_
 
   ! Use of process configurations
   dsl4jsb_Use_config(CLIMBUF_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(A2L_)
+  dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(CLIMBUF_)
 
   ! -------------------------------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ MODULE mo_climbuf_interface
   !> Type definition for climbuf task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_climbuf
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_climbuf     !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Integrate => update_climbuf     !< Advances task computation for one time step
     PROCEDURE, NOPASS :: Aggregate => aggregate_climbuf  !< Aggregates computed task variables
   END TYPE tsk_climbuf
 
@@ -64,16 +64,16 @@ MODULE mo_climbuf_interface
 
 CONTAINS
 
-  ! ================================================================================================================================
+  ! ======================================================================================================
   !! Constructors for tasks
 
-  ! -------------------------------------------------------------------------------------------------------
+  ! ------------------------------------------------------------------------------------------------------
   !> Constructor for the climate buffer task
   !>
   FUNCTION Create_task_climbuf(model_id) RESULT(return_ptr)
 
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+    INTEGER,                   INTENT(in) :: model_id    !< ID of current instance of the model
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "climbuf"
 
     ALLOCATE(tsk_climbuf::return_ptr)
     CALL return_ptr%Construct(name='climbuf', process_id=climbuf_, owner_model_id=model_id)
@@ -85,8 +85,8 @@ CONTAINS
   !>
   SUBROUTINE Register_climbuf_tasks(this, model_id)
 
-    CLASS(t_jsb_process), INTENT(inout) :: this
-    INTEGER,              INTENT(in)    :: model_id
+    CLASS(t_jsb_process), INTENT(inout) :: this          !< Instance of climbuf process task
+    INTEGER,              INTENT(in)    :: model_id      !< Model ID
 
     CALL this%Register_task(tsk_climbuf(model_id))
 
@@ -100,8 +100,7 @@ CONTAINS
   !>
   SUBROUTINE update_climbuf(tile, options)
 
-    USE mo_climbuf_process,   ONLY: calc_climbuf
-    USE mo_jsb_time,          ONLY: is_newyear, is_newmonth, is_newday, get_day_length, get_previous_month_length
+    USE mo_climbuf_process,   ONLY: calc_climbuf, get_relative_humidity_air
     USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
 
     ! Arguments
@@ -122,19 +121,24 @@ CONTAINS
     INTEGER :: &
       & iblk,                & !< Currently processed block
       & ics,                 & !< First grid cell of the block
-      & ice                    !< Last grid cell of the block
+      & ice,                 & !< Last grid cell of the block
+      & nc                     !< Number of grid cells in block
 
     REAL(wp) :: &
       & seconds_day,         & !< Number of seconds per day
       & seconds_month,       & !< Number of seconds in previous month
-      & dtime                  !< Time step lenght [s]
+      & dtime                  !< Time step length [s]
+
+    REAL(wp), ALLOCATABLE :: &
+      & q_rel_air(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_climbuf'
 
     ! Declare process memories
     dsl4jsb_Def_config(CLIMBUF_)   !< Configuration of the climate buffer process
     dsl4jsb_Def_memory(CLIMBUF_)   !< Memory of the climate buffer process
-    dsl4jsb_Def_memory(A2L_)       !< Memory of containing atmospheric variables for the land
+    dsl4jsb_Def_memory(A2L_)       !< Memory for atmospheric variables for the land
+    dsl4jsb_Def_memory(SEB_)       !< Memory of surface energy balance process
 
     ! Declare pointers to variables in climbuf memory
     dsl4jsb_Real2D_onChunk :: temp_sum_day       !< Current temperature sum of the day [K]
@@ -149,15 +153,25 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: precip_15d_yDay    !< Smoothed precip at the end of previous day [kg m-2 s-1]
     dsl4jsb_Real2D_onChunk :: gdd_sum_year       !< Current number of growing degree days in the year
     dsl4jsb_Real2D_onChunk :: gdd_prev_year      !< Growing degree days of the previous year
+    dsl4jsb_Real2D_onChunk :: max_wind_10m_act   !< Current maximum 10m wind speed of the day
+    dsl4jsb_Real2D_onChunk :: prev_day_max_wind_10m  !< Maximum 10m wind speed of the previous day
+    dsl4jsb_Real2D_onChunk :: max_wind_10m       !< Maximum 10m wind speed smoothed in time
+    dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf  !< Relative humidity []
+    dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf_yDay  !< Relative humidity []
     ! Declare pointers to variables in foreign memory
     dsl4jsb_Real2D_onChunk :: t_air              !< Near surface air temperature [K]
     dsl4jsb_Real2D_onChunk :: rain               !< Liquid precipitation [kg m-2 s-1]
     dsl4jsb_Real2D_onChunk :: snow               !< Solid precipitation [kg m-2 s-1]
+    dsl4jsb_Real2D_onChunk :: wind_10m           !< 10m wind speed [m/s]
+    dsl4jsb_Real2D_onChunk :: t_unfilt
+    dsl4jsb_Real2D_onChunk :: q_air
+    dsl4jsb_Real2D_onChunk :: press_srf
 
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
+    nc      = options%nc
     dtime   = options%dtime
 
     model => Get_model(tile%owner_model_id)
@@ -172,11 +186,16 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(CLIMBUF_)
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(SEB_)
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)             ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   rain)              ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   snow)              ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   wind_10m)          ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)             ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)         ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)          ! in
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_sum_day)     ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_sum_month)   ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp_of_yr) ! inout
@@ -189,6 +208,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,precip_15d_yDay)  ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_sum_year)     ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_prev_year)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_10m_act) ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,prev_day_max_wind_10m)     ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_10m)     ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_climbuf)     ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_climbuf_yDay)     ! inout
 
     IF (is_time_experiment_start(options%current_datetime)) THEN
       lstart = .TRUE.
@@ -202,12 +226,20 @@ CONTAINS
     seconds_day   = get_day_length()
     seconds_month = get_previous_month_length(options%current_datetime)
 
+    ALLOCATE (q_rel_air(nc))
+
+    q_rel_air(:) = get_relative_humidity_air(q_air(:), t_unfilt(:), press_srf(:), model%config%use_tmx)
+
     init_running_means = dsl4jsb_Config(CLIMBUF_)%init_running_means
     CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
-      &               rain, snow, seconds_day, seconds_month, temp_sum_day, temp_sum_month,   &
+      &               rain, snow, wind_10m, q_rel_air, seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
       &               min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20,         &
       &               temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay,                   &
-      &               gdd_sum_year, gdd_prev_year)
+      &               gdd_sum_year, gdd_prev_year, &
+      &               max_wind_10m_act, prev_day_max_wind_10m, max_wind_10m, &
+      &               q_rel_air_climbuf, q_rel_air_climbuf_yDay)
+
+    DEALLOCATE (q_rel_air)
 
   END SUBROUTINE update_climbuf
 
@@ -215,7 +247,7 @@ CONTAINS
   !>
   !>#### Aggregation of climate buffer variables
   !>
-  !> The climate buffer variables are aggregated in this routine. (Currently not needed)
+  !> The climate buffer variables are aggregated in this routine.
   !>
   ! -------------------------------------------------------------------------------------------------------- !
   SUBROUTINE aggregate_climbuf(tile, options)
@@ -227,16 +259,41 @@ CONTAINS
     dsl4jsb_Def_memory(CLIMBUF_)                           !< Memory of the climate buffer process
 
     ! Local variables
+    INTEGER :: iblk, ics, ice
+
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract  !< Aggregation method: area weighted fractions
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_climbuf'
     ! ------------------------------------------------------------------------------------------------------ !
+
+    ! Get local variables from options argument (needed in dsl4jsb_Aggregate_onChunk)
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
 
     IF (debug_on() .AND. options%iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     dsl4jsb_Get_memory(CLIMBUF_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, q_rel_air_climbuf, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, q_rel_air_climbuf_yday, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, prev_day_max_wind_10m, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_wind_10m, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_wind_10m_act, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, temp_sum_day, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, temp_sum_month, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, min_mmtemp_of_yr, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_mmtemp_of_yr, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, min_mmtemp20, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_mmtemp20, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, temp_15d, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, temp_15d_yDay, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, precip_15d, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, precip_15d_yDay, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, gdd_sum_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, gdd_prev_year, weighted_by_fract)
 
     IF (debug_on() .AND. options%iblk==1) CALL message(TRIM(routine), 'Finished.')
 

@@ -186,11 +186,13 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
-    dsl4jsb_Def_memory(CLIMBUF_)
+
+    CLASS(t_jsb_tile_abstract), POINTER :: climbuf   ! Pointer to the climate buffer memory residing on the veg tile
+    dsl4jsb_Def_memory_tile(CLIMBUF_, climbuf)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk ::  temp_15d_yDay
-    dsl4jsb_Real2D_onChunk ::  precip_15d_yDay
+    dsl4jsb_Real2D_onChunk ::  temp_15d_yDay_climbuf
+    dsl4jsb_Real2D_onChunk ::  precip_15d_yDay_climbuf
 
     dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
 
@@ -336,11 +338,17 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(CARBON_)
-    dsl4jsb_Get_memory(CLIMBUF_)
+
+    ! The climate buffer is calculated on the veg tile, we thus need a pointer to the veg tile. We call it
+    ! climbuf, as the pointer name is appended to the climate buffer variables below.
+    climbuf => tile%parent_tile
+    ! Make sure this is the veg tile
+    IF (TRIM(climbuf%name) /= 'veg') CALL finish(routine, 'Setup ERROR: expected parent tile to be the veg tile.')
+    dsl4jsb_Get_memory_tile(CLIMBUF_, climbuf)
 
     ! Set process variables
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_, temp_15d_yDay)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_, precip_15d_yDay)         ! inout
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, temp_15d_yDay, climbuf)    ! in
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, precip_15d_yDay, climbuf)  ! in
 
     !
     ! This is on canopy area:
@@ -620,8 +628,8 @@ CONTAINS
           &  NPP_act_yDayMean(ic),                              & ! out
           !
           ! Variables only needed with yasso:
-          &  temp2_30d        =  temp_15d_yDay(ic),             & ! in
-          &  precip_30d       =  precip_15d_yDay(ic),           & ! in
+          &  temp2_30d        =  temp_15d_yDay_climbuf(ic),     & ! in
+          &  precip_30d       =  precip_15d_yDay_climbuf(ic),   & ! in
 
           &  c_acid_ag1       =  c_acid_ag1(ic),                & ! inout
           &  c_water_ag1      =  c_water_ag1(ic),               & ! inout

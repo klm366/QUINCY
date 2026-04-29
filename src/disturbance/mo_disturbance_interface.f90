@@ -33,20 +33,18 @@ MODULE mo_disturb_interface
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
 
   ! Use of processes in this module (Get_disturb_memory and Get_disturb_config)
-  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, A2L_, CLIMBUF_, CARBON_, SEB_, FLCC_, WLCC_
+  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, CLIMBUF_, CARBON_, FLCC_, WLCC_
 
   ! Use of process configurations (t_disturb_config)
   dsl4jsb_Use_config(DISTURB_)
   dsl4jsb_Use_config(CARBON_)
 
   ! Use of process memories (t_disturb_memory)
-  dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(CLIMBUF_)
   dsl4jsb_Use_memory(DISTURB_)
   dsl4jsb_Use_memory(FUEL_)
   dsl4jsb_Use_memory(CARBON_)
-  dsl4jsb_Use_memory(SEB_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -136,43 +134,35 @@ CONTAINS
   !> Task "damaged_area" calculates the damage of vegetation due to fire and windbreak
   !
   SUBROUTINE update_damaged_area(tile, options)
-    USE mo_disturb_process,       ONLY: burned_fract_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
+    USE mo_disturb_process,       ONLY: burned_fract_jsbach, broken_woody_fract_jsbach
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
-    USE mo_jsb_time,              ONLY: is_time_experiment_start, timesteps_per_day, is_newday
-    USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m
-
+    USE mo_jsb_time,              ONLY: is_newday
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                :: model
-    LOGICAL :: use_tmx
-    LOGICAL :: newday, exp_start
+    LOGICAL :: newday
     INTEGER :: iblk, ic, nc, ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_damaged_area'
 
     ! Declare process memories
-    dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CLIMBUF_)
     dsl4jsb_Def_memory(DISTURB_)
     dsl4jsb_Def_memory(FUEL_)
-    dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
 
-    dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which the fire was based.
-    dsl4jsb_Real2D_onChunk :: q_air
-    dsl4jsb_Real2D_onChunk :: press_srf
-    dsl4jsb_Real2D_onChunk :: t_unfilt
-    dsl4jsb_Real2D_onChunk :: wind_10m               ! 10m wind speed [m/s]
+    CLASS(t_jsb_tile_abstract), POINTER :: climbuf   ! Pointer to the climate buffer memory residing on the veg tile
+    dsl4jsb_Def_memory_tile(CLIMBUF_, climbuf)
 
-    dsl4jsb_Real2D_onChunk :: max_wind_10m_act       ! Maximum 10m wind speed since midnight
-    dsl4jsb_Real2D_onChunk :: prev_day_max_wind_10m  ! Previous day maximum 10m wind speed
-    dsl4jsb_Real2D_onChunk :: max_wind_10m           ! Several day mean maximum wind speed (climate buffer)
+    dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which the fire was based.
+
+    dsl4jsb_Real2D_onChunk :: prev_day_max_wind_10m_climbuf  ! Previous day maximum 10m wind speed
+    dsl4jsb_Real2D_onChunk :: max_wind_10m_climbuf           ! Several day mean maximum wind speed (climate buffer)
     dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf
-    dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf_yDay
 
     dsl4jsb_Real2D_onChunk :: burned_fract
     dsl4jsb_Real2D_onChunk :: damaged_fract
@@ -185,12 +175,7 @@ CONTAINS
 
     ! Locally allocated vectors
     !
-    REAL(wp), DIMENSION(options%nc) :: &
-      & q_rel_air
 
-    !LOGICAL  :: pft_mask ! True for pfts to which the disturbance should be applied.
-    REAL(wp) :: persist ! Factor (as fraction) determining the persistance of q_rel_air_climbuf
-                        ! relative to the time-step-actual q_rel_air
     REAL(wp) :: fire_minimum, fire_tau
     ! -------------------------------------------------------------------------------------------------- !
 
@@ -207,36 +192,33 @@ CONTAINS
 
     ! Consistency check
     IF (.NOT. model%Is_process_enabled(CLIMBUF_)) THEN
-      CALL finish(TRIM(routine), 'Setup ERROR: Climate buffer (CLIMBUF) needs to be active with disturbances.')
+      CALL finish(routine, 'Setup ERROR: Climate buffer (CLIMBUF) needs to be active with disturbances.')
     END IF
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    use_tmx = model%config%use_tmx
 
     ! Get process configurations
     dsl4jsb_Get_config(DISTURB_)
 
     ! Get process memories
-    dsl4jsb_Get_memory(CLIMBUF_)
     dsl4jsb_Get_memory(DISTURB_)
+    dsl4jsb_Get_memory(CLIMBUF_)
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(FUEL_)
     dsl4jsb_Get_memory(ASSIMI_)
-    dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(SEB_)
+
+    ! The climate buffer is calculated on the veg tile, we thus need a pointer to the veg tile. We call it
+    ! climbuf, as the pointer name is appended to the climate buffer variables below.
+    climbuf => tile%parent_tile
+    ! Make sure this is the veg tile
+    IF (TRIM(climbuf%name) /= 'veg') CALL finish(routine, 'Setup ERROR: expected parent tile to be the veg tile.')
+    dsl4jsb_Get_memory_tile(CLIMBUF_, climbuf)
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(FUEL_,      fuel)                     ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,       q_air)                    ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,       press_srf)                ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,       wind_10m)                 ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_,       t_unfilt)                 ! in
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,   max_wind_10m_act)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,   prev_day_max_wind_10m)    ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,   max_wind_10m)             ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,   q_rel_air_climbuf)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,   q_rel_air_climbuf_yDay)   ! out
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, prev_day_max_wind_10m, climbuf)  ! in
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, max_wind_10m, climbuf)           ! in
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,   q_rel_air_climbuf)        ! in
 
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
@@ -247,46 +229,8 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)         ! in
     ! -------------------------------------------------------------------------------------------------- !
-    !$ACC DATA CREATE(q_rel_air)
-
     ! Local variables
     newday = is_newday(options%current_datetime, options%dtime)
-    exp_start = is_time_experiment_start(options%current_datetime)
-    ! Smoothing factor for relative humidity
-    persist = persist_rel_hum ** (1._wp/REAL(timesteps_per_day(options%dtime),wp))
-
-    ! Update climate buffer variables each time step
-    q_rel_air(:) = get_relative_humidity_air(q_air(:), t_unfilt(:), press_srf(:), use_tmx)
-    !$ACC WAIT(1)
-
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG(STATIC: 1) VECTOR
-    DO ic = 1, nc
-      q_rel_air_climbuf(ic) =  q_rel_air_climbuf(ic) * persist + q_rel_air(ic) * (1._wp - persist)
-    END DO
-    !$ACC END LOOP
-
-    IF (.NOT. newday .OR. exp_start) THEN
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO ic = 1, nc
-        IF (wind_10m(ic) > max_wind_10m_act(ic)) THEN
-          max_wind_10m_act(ic) = wind_10m(ic)
-        END IF
-      END DO
-      !$ACC END LOOP
-    ELSE
-      ! Update previous day variabes at the beginning of the new day
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO ic = 1, nc
-        q_rel_air_climbuf_yDay(ic) = q_rel_air_climbuf(ic)
-        prev_day_max_wind_10m(ic) = max_wind_10m_act(ic)
-        ! Maximum daily wind speed smoothed in time
-        max_wind_10m(ic) = max_wind_10m(ic) * persist_wind_10m + max_wind_10m_act(ic) * (1._wp - persist_wind_10m)
-        max_wind_10m_act(ic) = wind_10m(ic)
-      END DO
-      !$ACC END LOOP
-    END IF
-    !$ACC END PARALLEL
 
     ! Calculate or read burned area
     IF (newday) THEN ! only once per day
@@ -347,8 +291,8 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%wnd_threshold,     & ! in
               & dsl4jsb_Config(DISTURB_)%wnd_damage_scale,  & ! in
               & cover_fract_pot(:),                         & ! in
-              & prev_day_max_wind_10m(:),                   & ! in
-              & max_wind_10m(:),                            & ! in
+              & prev_day_max_wind_10m_climbuf(:),           & ! in
+              & max_wind_10m_climbuf(:),                    & ! in
               & damaged_fract(:)                            & ! inout
               & )
 
@@ -371,8 +315,6 @@ CONTAINS
     END IF
 
     !$ACC WAIT(1)
-    !$ACC END DATA
-
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_damaged_area
