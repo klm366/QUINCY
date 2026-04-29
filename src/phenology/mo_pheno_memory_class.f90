@@ -23,11 +23,12 @@ MODULE mo_pheno_memory_class
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes PHENO_, HYDRO_, RAD_
+  dsl4jsb_Use_processes PHENO_, HYDRO_, RAD_, CH4_
   ! Use process configurations
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_config(RAD_)
+  dsl4jsb_Use_config(CH4_)
 
   IMPLICIT NONE
   PRIVATE
@@ -108,7 +109,7 @@ MODULE mo_pheno_memory_class
                                           !< growing period (autumn to spring) and negative during summer. (stream)
       & chill_days_SG,                  & !< Number of chill days --- needed for the phenology of summer- and
       & chill_days_EG,                  & !< evergreens (stream)
-      & veg_fract_correction              !< Factor representing clumpyness of vegetation (for each tile type).
+      & veg_fract_correction,           & !< Factor representing clumpyness of vegetation (for each tile type).
                                           !< To write it in the output file we define it as 2d even when there is no change
                                           !< between gridcells as it is in fact a 1d constant for each tile.
                                           !   JN: with l_forestRegrowth = true veg_fract_correction can change over time
@@ -121,6 +122,8 @@ MODULE mo_pheno_memory_class
                                           ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wueste" und Vegetation
                                           !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
                                           ! var (tile area) = veg_fract_correction * var(canopy area)  * fract_fpc_max.
+      & GDD_prev_year,                  & ! Growing degree days of previous year.
+      & GDD_sum                           ! Sum of growing degree days of current year
 
   CONTAINS
     PROCEDURE :: Init => Init_pheno_memory
@@ -151,6 +154,7 @@ CONTAINS
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(RAD_)
+    dsl4jsb_Def_config(CH4_)
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid),  POINTER :: surface                      ! Vertical grid
@@ -166,6 +170,7 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(RAD_)
+    dsl4jsb_Get_config(CH4_)
 
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
@@ -238,6 +243,30 @@ CONTAINS
         & output_level=FULL,                                                   &
         & lrestart=.TRUE.,                                                     &
         & initval_r=0.0_wp )
+
+      IF (dsl4jsb_Config(CH4_)%active) THEN
+        CALL mem%Add_var('GDD_prev_year', mem%GDD_prev_year, &
+          & hgrid, surface, &
+          & t_cf('GDD_prev_year', 'K days', 'growing degree days above 5 degC of previous year'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = BASIC, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = -1.0_wp) ! Secure that uninitialized values are not used
+
+        CALL mem%Add_var('GDD_sum', mem%GDD_sum, &
+          & hgrid, surface, &
+          & t_cf('GDD_sum', 'K days', 'growing degree days above 5 degC of past part of year'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = BASIC, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+      ENDIF
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 

@@ -21,12 +21,47 @@ MODULE mo_carbon_constants
   IMPLICIT NONE
   PUBLIC
 
+!  ! Yasso requires tile dependant lctlib constants for carbon relocation, accessed via indices
+!  INTEGER, PARAMETER  :: i_lctlib_acid           = 1 !< Index of constants for acid yasso pools in the lctlib
+!  INTEGER, PARAMETER  :: i_lctlib_water          = 2 !< Index of constants for water yasso pools in the lctlib
+!  INTEGER, PARAMETER  :: i_lctlib_ethanol        = 3 !< Index of constants for ethanol yasso pools in the lctlib
+!  INTEGER, PARAMETER  :: i_lctlib_nonsoluble     = 4 !< Index of constants for nonsoluble yasso pools in the lctlib
+!  INTEGER, PARAMETER  :: i_lctlib_humus          = 5 !< Index of constants for humus yasso pools in the lctlib
+
   ! Yasso requires tile dependant lctlib constants for carbon relocation, accessed via indices
-  INTEGER, PARAMETER  :: i_lctlib_acid           = 1 !< Index of constants for acid yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_water          = 2 !< Index of constants for water yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_ethanol        = 3 !< Index of constants for ethanol yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_nonsoluble     = 4 !< Index of constants for nonsoluble yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_humus          = 5 !< Index of constants for humus yasso pools in the lctlib
+  ENUM, BIND(C)
+    ENUMERATOR :: i_lctlib_acid=1, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble, i_lctlib_humus
+  END ENUM
+
+  ! Indices of the yasso(_out) transfer array
+  ENUM, BIND(C)
+    ENUMERATOR :: i_pool_acid_ag=1, i_pool_water_ag, i_pool_ethanol_ag, i_pool_nonsoluble_ag,             &
+                & i_pool_acid_bg, i_pool_water_bg, i_pool_ethanol_bg, i_pool_nonsoluble_bg, i_pool_humus, &
+                & i_flux_resp_total, i_flux_2_humus_ag, i_flux_2_humus_bg, i_flux_from_humus_diag,        &
+                & i_flux_resp_litter_ag, i_flux_resp_litter_bg, i_rel_flux_AWEN, i_flux_from_humus,       &
+                & i_flux_litter_2_humus
+  END ENUM
+
+  ! Yasso pool indicators for c pool in/out, rate constant in
+  ENUM, BIND(C)
+    ENUMERATOR :: i_y_acid=1, i_y_water, i_y_ethanol, i_y_nonsoluble, i_y_humus
+  END ENUM
+
+  ! Yasso flux indicators for flux out
+  ENUM, BIND(C)
+    ENUMERATOR :: i_f_resp=1, i_f_2_humus, i_f_f_humus, i_f_litresp
+  END ENUM
+
+  ! Yasso rate modifiers for litter/humus
+  ENUM, BIND(C)
+    ENUMERATOR :: i_m_litter=1, i_m_humus
+  END ENUM
+
+  ! Misc parameters in interface
+  ENUM, BIND(C)
+    ENUMERATOR :: i_WoodLitSize=1, i_RootDistBeta, i_FracInunMin
+  END ENUM
+
 
   ! Further constants
   REAL(wp), PARAMETER :: molarMassC_kg           = 12.01_wp * 1.e-3_wp  !< 12.01e-3_wp   -  Mass of 1 mol C   in kg
@@ -49,6 +84,15 @@ MODULE mo_carbon_constants
   !$ACC DECLARE COPYIN(days_per_year)
   REAL(wp), PARAMETER :: sec_per_year            = days_per_year * sec_per_day
   !$ACC DECLARE COPYIN(sec_per_year)
+
+  !   parameters for Yasso peat
+  REAL(wp), parameter :: rho_YCpool_acro          = 3.5e4_wp           ! Bulk density of acrotelm peat: 0.035 g/cm3, based on
+                                                                       ! Granberg (1999): rho upper 20cm: 0.02 g/cm^3  */
+                                                                       !  rho 20-40cm: 0.05 g/cm3, > 40 cm: 0.1-0.12 g/cm3
+  REAL(wp), parameter :: rho_YCpool_cato          = 9.1e4_wp           ! Bulk density of catotelm peat: 0.091 g/cm3, based on
+                                                                       ! Clymo (1983); Turunen (2002)
+  REAL(wp), parameter :: Cfrac_YCpool_acro        = 0.50_wp           ! C fraction in acrotelm peat Malmer and Wallen (2004)
+  REAL(wp), parameter :: Cfrac_YCpool_cato        = 0.52_wp           ! Malmer and Wallen (2004)
 
   ! Definitions for lcc
 
@@ -73,6 +117,50 @@ MODULE mo_carbon_constants
     & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble, i_lctlib_humus, &
     & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble,                 &
     & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble, i_lctlib_humus  /)
+
+  ! ------------------------------------------------------------------------------------------
+  ! parameters for vertical YASSO
+  !
+
+  ! decomposition modifier parameters for temperature and depth modifier
+  REAL(wp), PARAMETER :: Q10     = 1.5_wp         ! Q10 for deep soil C decomposition, based on CLM
+!   REAL(wp), PARAMETER :: ref_dep = 0.5_wp         ! reference depth for depth dependence of decomposition, based on CLM 4.5
+!   REAL(wp), PARAMETER :: ref_dep = 10._wp         ! reference depth for depth dependence of decomposition, based on CLM 5.0
+  REAL(wp), PARAMETER :: ref_dep = 1000._wp       ! reference depth to remove depth dependence of decomposition
+
+  ! decomposition modifiers for oxic / anoxic soils
+  REAL(wp), PARAMETER :: d_anox = 0.35_wp         ! decomposition modifier for anaerobic decomposition
+  REAL(wp), PARAMETER :: d_oxic = 1.0_wp          ! decomposition modifier for oxic decomposition
+
+  ! Yasso parameters (Tuomi '11)
+  ! parameters for temperature dependence
+  REAL(wp), PARAMETER   :: temp_p1                    = 0.095_wp    ! first  order temperature dependence [1/C]
+  REAL(wp), PARAMETER   :: temp_p2                    = -0.0014_wp  ! second order temperature dependence [1/C]
+  ! parameter for precipitation dependence
+  REAL(wp), PARAMETER   :: precip_p1                  = -1.21_wp    ! first  order precipitation dependence [a/m]
+  ! parameters for size dependence
+  REAL(wp), PARAMETER   :: size_p1                    = -1.71_wp    ! first  order size dependence [1/cm]
+  REAL(wp), PARAMETER   :: size_p2                    = 0.86_wp     ! second order size dependence [1/cm]
+  REAL(wp), PARAMETER   :: size_p3                    = -0.306_wp   ! size dependence power [ ]
+  REAL(wp), PARAMETER   :: d_size_leaf                = 1.0_wp      ! leaf litter is not size dependent
+
+  ! parameters for moisture dependence, DAYCENT formulation
+  REAL(wp), PARAMETER   :: moist_p_a                 = 0.575_wp
+  REAL(wp), PARAMETER   :: moist_p_b                 = 1.5_wp
+  REAL(wp), PARAMETER   :: moist_p_d                 = 3.0_wp
+
+!   REAL(wp), PARAMETER   :: minimum_layer_thickness   = 0.00005_wp     ! [m] ignore layers thinner than this threshold
+  REAL(wp), PARAMETER   :: minimum_layer_thickness   = 0.05_wp     ! [m] ignore layers thinner than this threshold
+  REAL(wp), PARAMETER   :: permafrost_threshold      = 0.1_wp      ! threshold in the permafrost_layer variable to consider a layer permafrost
+
+  ! ------------------------------------------------------------------------------------------
+  ! Ratio of C mass to biomass (Spitfire and emission of chemical species by fire)
+  REAL(wp),  PARAMETER :: C_2_biomass_ratio = 0.5_wp
+
+ !< organic matter [litter/duff?] bulk densities for below above and ground [kg/m3], see Chojnacky (2009), 0'Donnell (2009), (https://philbusey.com/sports_turf/organic_matter.html#table), Ahn (2009)
+  REAL(wp), PARAMETER ::  rho_org         = 100._wp
+  REAL(wp), PARAMETER ::  rho_org_ag      =  75._wp
+  REAL(wp), PARAMETER ::  rho_org_bg      = 150._wp
 
 #endif
 END MODULE mo_carbon_constants

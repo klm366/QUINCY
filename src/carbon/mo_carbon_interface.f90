@@ -23,25 +23,29 @@ MODULE mo_carbon_interface
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message, finish
+  USE mo_exception,       ONLY: message, message_text, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day,                    &
-                                 & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, &
-                                 & i_lctlib_nonsoluble, i_lctlib_humus
+                                   i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, &
+                                   i_lctlib_nonsoluble, i_lctlib_humus,             &
+                                   i_WoodLitSize, i_RootDistBeta, i_FracInunMin, permafrost_threshold
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
-  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, NLCC_, A2L_, L2A_
+  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, NLCC_, A2L_, L2A_, TOP_, CH4_, SSE_, HYDRO_
 
   ! Use of process configurations
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
+  dsl4jsb_Use_config(CH4_)
+  dsl4jsb_Use_config(TOP_)
 
   ! Use of process memories (t_carbon_memory)
   dsl4jsb_Use_memory(A2L_)
@@ -49,6 +53,11 @@ MODULE mo_carbon_interface
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(L2A_)
+  dsl4jsb_Use_memory(TOP_)
+  dsl4jsb_Use_memory(CH4_)
+  dsl4jsb_Use_memory(SSE_)
+  dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(NLCC_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -57,10 +66,10 @@ MODULE mo_carbon_interface
   PRIVATE
   PUBLIC ::  Register_carbon_tasks
   PUBLIC ::  recalc_carbon_per_tile_vars, recalc_per_tile_vars,                                            &
-    &        calculate_current_c_ta_state_sum, check_carbon_conservation, yday_carbon_conservation_test,   &
-    &        rescale_carbon_upon_reference_area_change,                                                    &
-    &        carbon_transfer_from_active_to_passive_vars_onChunk, global_carbon_diagnostics,               &
-    &        rescale_carbon_vars_upon_ageing_induced_ref_area_change, merge_carbon_vars_upon_ageing
+             calculate_current_c_ta_state_sum, check_carbon_conservation, yday_carbon_conservation_test,   &
+             rescale_carbon_upon_reference_area_change,                                                    &
+             carbon_transfer_from_active_to_passive_vars_onChunk, global_carbon_diagnostics,               &
+             rescale_carbon_vars_upon_ageing_induced_ref_area_change, merge_carbon_vars_upon_ageing
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_interface'
 
@@ -151,8 +160,12 @@ CONTAINS
   SUBROUTINE update_C_NPP_pot_allocation(tile, options)
 
     ! Use declarations
-    USE mo_carbon_process,    ONLY: calc_Cpools
-    USE mo_jsb_time,          ONLY: is_newday, is_newyear, timesteps_per_day, is_time_experiment_start
+    USE mo_carbon_shared,            ONLY: calc_plant_c
+    USE mo_carbon_process,           ONLY: calc_soil_c
+    USE mo_carbon_process_methane,   ONLY: calc_methane_soil_c
+    USE mo_carbon_process_vertical,  ONLY: calc_vertical_soil_c, depth_to_layers, check_permafrost, determine_root_dist
+    USE mo_jsb_time,                 ONLY: is_newday, is_newyear, timesteps_per_day, &
+                                           is_time_experiment_start, is_time_restart
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -160,9 +173,11 @@ CONTAINS
 
     ! Declare local variables
     TYPE(t_jsb_model), POINTER   :: model
-    LOGICAL                      :: lstart, new_day, new_year
+    TYPE(t_jsb_grid),  POINTER   :: grid
+    TYPE(t_jsb_vgrid), POINTER   :: soil_c
+    LOGICAL                      :: lstart, lresume, new_day, new_year
     LOGICAL                      :: nlcc_is_enabled    ! helper needed on DWD NEC
-    INTEGER                      :: iblk, ics, ice, nc, ic
+    INTEGER                      :: iblk, ics, ice, nc, ic, is, nsoil
     INTEGER                      :: tmp_timesteps_per_day
     INTEGER                      :: lctlib_PhenologyType
     REAL(wp)                     :: lctlib_fract_npp_2_woodPool, lctlib_fract_NPP_2_reservePool
@@ -176,18 +191,48 @@ CONTAINS
     REAL(wp)                     :: lctlib_WoodLit_coef_acid, lctlib_WoodLit_coef_water
     REAL(wp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
     REAL(wp)                     :: lctlib_WoodLit_coef_humus
+    REAL(wp)                     :: lctlib_root_dist_beta
     REAL(wp)                     :: F_pseudo_temp, N_pseudo_temp, F_pseudo_precip, N_pseudo_precip
+    REAL(wp)                     :: frac_inun_min
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
     REAL(wp)                     :: dtime
+    REAL(wp), POINTER            :: lat(:)
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
+    REAL(wp), DIMENSION(options%nc) :: cflux_c_green_2_litter, cflux_c_wood_2_litter, cflux_crop_harvest_2_atmos
+    LOGICAL                         :: is_crop
+
+    ! Variables required for vertical YASSO
+    REAL(wp), ALLOCATABLE  :: layer_depth(:)            ! soil layer depth
+    REAL(wp), ALLOCATABLE  :: layer_thick(:)            ! soil layer thickness
+
+    REAL(wp), ALLOCATABLE  :: soil_depth_thaw(:)        ! either soil or thaw depth
+    REAL(wp), ALLOCATABLE  :: soil_depth_thaw_sl(:,:)
+    REAL(wp), ALLOCATABLE  :: thaw_depth(:)             ! maximum thaw depth / active layer depth
+    REAL(wp), ALLOCATABLE  :: thaw_depth_sl(:,:)
+!     REAL(wp), ALLOCATABLE  :: tmp_root(:)
+
+    REAL(wp), DIMENSION(options%nc) :: frac_inun_loc
+
+    ! Cleaner parameter transfer for vertical YASSO
+    REAL(wp) :: LeafLit_coefV(5)
+    REAL(wp) :: WoodLit_coefV(5)
+    REAL(wp) :: MiscPar(3)
+
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(CH4_)
+    dsl4jsb_Def_config(TOP_)
+    dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(TOP_)
+    dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(NLCC_)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk ::  pseudo_temp
@@ -195,64 +240,69 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  pseudo_precip
     dsl4jsb_Real2D_onChunk ::  pseudo_precip_yDay
 
+    dsl4jsb_Real3D_onChunk ::  pseudo_t_soil_sl
+    dsl4jsb_Real3D_onChunk ::  pseudo_t_soil_sl_yDay
+    dsl4jsb_Real3D_onChunk ::  pseudo_wtr_soil_rel_sl
+    dsl4jsb_Real3D_onChunk ::  pseudo_wtr_soil_rel_sl_yDay
+
     dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
 
     dsl4jsb_Real2D_onChunk ::  cflux_c_greenwood_2_litter           ! Carbon flux from the veget. to the litter pools
-                                                     ! [mol(C)/m^2(canopy) s]
-    dsl4jsb_Real2D_onChunk ::  c_green           ! C-pool for leaves, fine roots, vegetative organs and
-                                                     ! other green (living) parts of vegetation [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_reserve         ! C-pool for carbohydrate reserve (sugars, starches) that
-                                                     ! allows plants to survive bad times[mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_woods           ! C-pool for stems, thick roots and other (dead) structural
-                                                     !  material of living plants [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_crop_harvest    ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
+                                                      ! [mol(C)/m^2(canopy) s]
+    dsl4jsb_Real2D_onChunk ::  c_green                ! C-pool for leaves, fine roots, vegetative organs and
+                                                      ! other green (living) parts of vegetation [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_reserve              ! C-pool for carbohydrate reserve (sugars, starches) that
+                                                      ! allows plants to survive bad times[mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_woods                ! C-pool for stems, thick roots and other (dead) structural
+                                                      !  material of living plants [mol(C)/m^2(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_crop_harvest         ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
 
     !SIZE CLASS 1
-    dsl4jsb_Real2D_onChunk ::  c_acid_ag1        ! Yasso above ground litter-pool for acid soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_acid_ag1             ! Yasso above ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_water_ag1       ! Yasso above ground litter-pool for water soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_water_ag1            ! Yasso above ground litter-pool for water soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag1     ! Yasso above ground litter-pool for ethanol soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag1          ! Yasso above ground litter-pool for ethanol soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag1  ! Yasso above ground litter-pool for non-soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag1       ! Yasso above ground litter-pool for non-soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_acid_bg1        ! Yasso below ground litter-pool for acid soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_acid_bg1             ! Yasso below ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_water_bg1       ! Yasso below ground litter-pool for water soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_water_bg1            ! Yasso below ground litter-pool for water soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg1     ! Yasso below ground litter-pool for ethanol soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg1          ! Yasso below ground litter-pool for ethanol soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg1  ! Yasso below ground litter-pool for non-soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg1       ! Yasso below ground litter-pool for non-soluble litter
                                                       ! [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_humus_1         ! Yasso below ground litter-pool for slow C compartment
+    dsl4jsb_Real2D_onChunk ::  c_humus_1              ! Yasso below ground litter-pool for slow C compartment
                                                       !  [mol(C)/m^2(canopy)]
     !SIZE CLASS 2
-    dsl4jsb_Real2D_onChunk ::  c_acid_ag2        ! Yasso above ground litter-pool for acid soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_acid_ag2             ! Yasso above ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_water_ag2       ! Yasso above ground litter-pool for water soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_water_ag2            ! Yasso above ground litter-pool for water soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag2     ! Yasso above ground litter-pool for ethanol soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_ag2          ! Yasso above ground litter-pool for ethanol soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag2  ! Yasso above ground litter-pool for non-soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_ag2       ! Yasso above ground litter-pool for non-soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_acid_bg2        ! Yasso below ground litter-pool for acid soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_acid_bg2             ! Yasso below ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_water_bg2       ! Yasso below ground litter-pool for water soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_water_bg2            ! Yasso below ground litter-pool for water soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg2     ! Yasso below ground litter-pool for ethanol soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_ethanol_bg2          ! Yasso below ground litter-pool for ethanol soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2  ! Yasso below ground litter-pool for non-soluble litter
+    dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2       ! Yasso below ground litter-pool for non-soluble litter
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_humus_2         ! Yasso below ground litter-pool for slow C compartment
+    dsl4jsb_Real2D_onChunk ::  c_humus_2              ! Yasso below ground litter-pool for slow C compartment
                                                       !  [mol(C)/m^2(canopy)]
 
-    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum  ! Annual sum of humus decomposed in YASSO (leaf)
+    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum   ! Annual sum of humus decomposed in YASSO (leaf)
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum  ! Annual sum of humus decomposed in YASSO (wood)
+    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum   ! Annual sum of humus decomposed in YASSO (wood)
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum    ! Annual sum of cflux into humus in YASSO (leaf)
+    dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum     ! Annual sum of cflux into humus in YASSO (leaf)
                                                       !  [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum    ! Annual sum of cflux into humus in YASSO (wood)
+    dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum     ! Annual sum of cflux into humus in YASSO (wood)
                                                       !  [mol(C)/m^2(canopy)]
 
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
@@ -261,6 +311,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  LAI_sum                ! used to accumulate LAI over a day. Sum of LAI since Midnight.
     dsl4jsb_Real2D_onChunk ::  NPP_pot_sum            ! used to accumulated NPP-Rate over a day
     dsl4jsb_Real2D_onChunk ::  GPP_sum                ! used to accumulated GPP-Rate over a day
+    dsl4jsb_Real2D_onChunk ::  GPP_ann_sum            ! used to accumulated GPP-Rate over a year (for the methane process)
+    dsl4jsb_Real2D_onChunk ::  GPP_prev_year_ta       ! previous year mean (for the methane process)
     dsl4jsb_Real2D_onChunk ::  LAI_yDayMean           ! previous days mean
     dsl4jsb_Real2D_onChunk ::  LAI_yyDayMean          ! previous previous days mean
     dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean       ! mean value of NPP-Rate yesterday (from NPP_pot_sum())
@@ -270,10 +322,19 @@ CONTAINS
                                                       ! Actual NPP after N-limitation and excess carbon drop.
                                                       ! [mol(CO2)/(m^2(canopy) s)]
     dsl4jsb_Real2D_onChunk ::  GPP_yDayMean
+    dsl4jsb_Real2D_onChunk ::  GPP_yDayMean_ta
 
     dsl4jsb_Real2D_onChunk ::  soil_respiration       ! mean daily rate of heterotrophic (soil) respiration
                                                       ! [mol(CO2)/m^2(ground)].
                                                       ! Without N limitation!
+    dsl4jsb_Real2D_onChunk ::  soil_respiration_oxic  ! mean daily rate of heterotrophic (soil) respiration Without N limitation!
+                                                      ! For oxic soils in methane process only. [mol m-2(ground) d-1].
+    dsl4jsb_Real2D_onChunk ::  soil_respiration_anox! mean daily rate of heterotrophic (soil) respiration Without N limitation!
+                                                      ! For anoxic soils in methane process only. [mol m-2(ground) d-1].
+    dsl4jsb_Real2D_onChunk ::  frac_inun              ! Inundated fraction (from topmodel)
+    dsl4jsb_Real2D_onChunk ::  peat_water_table       ! Water table of peatlands (from topmodel)
+    dsl4jsb_Real2D_onChunk ::  acrotelm_height_ag     ! Peat acrotelm height above ground (methane process only) [m]
+    dsl4jsb_Real2D_onChunk ::  acrotelm_height_bg     ! Peat acrotelm height above ground (methane process only) [m]
     dsl4jsb_Real2D_onChunk ::  NPP_flux_correction    ! Daily updated flux correction from yesterdays carbon balance
                                                       ! [mol(CO2)/m^2(canopy) s]
                                                       ! Amount by which the NPP rate entering the routine has to be corrected.
@@ -318,6 +379,43 @@ CONTAINS
     ! Variables needed with forest regrowth
     dsl4jsb_Real2D_onChunk :: maxLAI_allom
 
+    dsl4jsb_Real3D_onChunk :: c_acid_bg1_sl
+    dsl4jsb_Real3D_onChunk :: c_water_bg1_sl
+    dsl4jsb_Real3D_onChunk :: c_ethanol_bg1_sl
+    dsl4jsb_Real3D_onChunk :: c_nonsoluble_bg1_sl
+    dsl4jsb_Real3D_onChunk :: c_humus_1_sl
+    !SIZE CLASS 2
+    dsl4jsb_Real3D_onChunk :: c_acid_bg2_sl
+    dsl4jsb_Real3D_onChunk :: c_water_bg2_sl
+    dsl4jsb_Real3D_onChunk :: c_ethanol_bg2_sl
+    dsl4jsb_Real3D_onChunk :: c_nonsoluble_bg2_sl
+    dsl4jsb_Real3D_onChunk :: c_humus_2_sl
+    !
+    dsl4jsb_Real3D_onChunk :: soil_respiration_oxic_sl
+    dsl4jsb_Real3D_onChunk :: soil_respiration_anox_sl
+    !
+    dsl4jsb_Real2D_onChunk :: YASSO_debug
+    dsl4jsb_Real3D_onChunk :: YASSO_debug_sl
+    dsl4jsb_Real3D_onChunk :: root_dist_sl
+    dsl4jsb_Real3D_onChunk :: max_layer_sl
+
+    ! climatic soil conditions
+    dsl4jsb_Real3D_onChunk :: t_soil_sl
+    dsl4jsb_Real3D_onChunk :: t_max_soil_year
+    dsl4jsb_Real3D_onChunk :: permafrost_layer
+    dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl
+
+    ! active layer thickness, soil depth
+    dsl4jsb_Real2D_onChunk :: max_thaw_prev_year      ! previous year active layer thickness
+    dsl4jsb_Real2D_onChunk :: soil_depth              ! soil depth
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+
+    dsl4jsb_Real2D_onChunk :: thaw_cycle_prev
+
+    ! ------------------------------------------------------------------------------------------------
+    ! declarations over -- now real code
+    ! ------------------------------------------------------------------------------------------------
+
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
 
     ! If process is not to be calculated on this tile, do nothing
@@ -335,20 +433,57 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    lat   => grid%lat(ics:ice,iblk)
 
     nlcc_is_enabled = model%Is_process_enabled(NLCC_)     ! workaround currently needed for DWD NEC
 
-    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_config(CH4_)
+    dsl4jsb_Get_config(TOP_)
+    dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(HYDRO_)
+    IF (nlcc_is_enabled) THEN
+      dsl4jsb_Get_memory(NLCC_)
+    END IF
+    IF (dsl4jsb_Config(TOP_)%active) THEN
+      dsl4jsb_Get_memory(TOP_)
+    END IF
+
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      soil_c => Get_vgrid('soil_depth_carbon')
+      nsoil = soil_c%n_levels
+
+      ALLOCATE(layer_depth(nsoil))
+      ALLOCATE(layer_thick(nsoil))
+      layer_depth(:) = soil_c%levels
+      layer_thick(:) = soil_c%ubounds-soil_c%lbounds
+
+      ALLOCATE(soil_depth_thaw(nc))
+      ALLOCATE(soil_depth_thaw_sl(nc,nsoil))
+      ALLOCATE(thaw_depth(nc))
+      ALLOCATE(thaw_depth_sl(nc,nsoil))
+!       ALLOCATE(tmp_root(nsoil))
+    END IF
+
 
     ! Set process variables
     dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_temp)                ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_temp_yDay)           ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_precip)              ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_precip_yDay)         ! inout
+
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  pseudo_t_soil_sl)       ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  pseudo_t_soil_sl_yDay)       ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  pseudo_wtr_soil_rel_sl) ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  pseudo_wtr_soil_rel_sl_yDay) ! inout
+    END IF
 
     !
     ! This is on canopy area:
@@ -380,6 +515,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout
     !
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  YASSO_debug)          ! inout
+    !
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_1_sum) ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_2_sum) ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum)   ! inout
@@ -391,11 +528,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  LAI_sum )                   ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_sum )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_sum )                   ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_ann_sum )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  LAI_yDayMean )              ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  LAI_yyDayMean )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_yDayMean )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_act_yDayMean )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yDayMean )              ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yDayMean_ta )           ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_prev_year_ta )          ! inout
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_flux_correction)        ! inout
@@ -418,6 +558,38 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  co2flux_soilresp_2_atm_ta )  ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  co2flux_herb_2_atm_ta )      ! out
 
+    ! Variable for vertical YASSO
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      !SIZE CLASS 1
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg1_sl)            ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg1_sl)           ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg1_sl)         ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg1_sl)      ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_1_sl)             ! inout
+      !SIZE CLASS 2
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg2_sl)            ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg2_sl)           ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg2_sl)         ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg2_sl)      ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_2_sl)             ! inout
+      !
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_oxic_sl) ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_anox_sl) ! inout
+      !
+      dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)                ! in
+      dsl4jsb_Get_var2D_onChunk(NLCC_,    max_thaw_prev_year)       ! in
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  t_max_soil_year)          ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  permafrost_layer)         ! inout
+
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_rel_sl)          ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   soil_depth)               ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)            ! in
+
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  root_dist_sl)             ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  max_layer_sl)             ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  YASSO_debug_sl)           ! inout
+    END IF
+
     ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
     !dsl4jsb_Get_var2D_onChunk(CARBON_,  fract_litter_wood_new )
     !
@@ -434,7 +606,28 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(CARBON_,  sla)                      ! out
     END IF
 
+    IF (dsl4jsb_Config(TOP_)%active) THEN
+      dsl4jsb_Get_var2D_onChunk(TOP_,     frac_inun )               ! in
+    ELSE
+      frac_inun => NULL()
+    END IF
+
+    ! Variables needed for methane process
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_oxic )   ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_anox ) ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  acrotelm_height_ag )      ! inout
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  acrotelm_height_bg )      ! inout
+      dsl4jsb_Get_var2D_onChunk(TOP_,     peat_water_table )        ! in
+    ENDIF
+    dsl4jsb_Get_var2D_onChunk(SSE_,     thaw_cycle_prev)                       ! in
+
+    ! ---------------------------
+    ! Go
+
+    ! dynveg a.k.a. vegetation_lcc
     lstart   = is_time_experiment_start(options%current_datetime)
+    lresume  = is_time_restart(options%current_datetime)
     new_day  = is_newday(options%current_datetime, dtime)
     new_year = is_newyear(options%current_datetime, dtime)
 
@@ -450,8 +643,6 @@ CONTAINS
     ! Put a comment on the screen...
     IF (debug_on() .AND. iblk==1 .AND. new_day  ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new day')
-    IF (debug_on() .AND. iblk==1 .AND. new_year ) CALL message(TRIM(routine), &
-                                                           'update_C_NPP_pot_allocation: First time step of new year')
 
     ! Initializations
 
@@ -514,9 +705,35 @@ CONTAINS
     DO ic = 1, nc
       pseudo_temp(ic)   = t_air(ic)             * N_pseudo_temp    +  F_pseudo_temp   * pseudo_temp(ic)
       pseudo_precip(ic) = (rain(ic) + snow(ic)) * N_pseudo_precip  +  F_pseudo_precip * pseudo_precip(ic)
+
+      IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+        pseudo_t_soil_sl(ic,:)       = t_soil_sl(ic,:)         * N_pseudo_temp    +  F_pseudo_temp   * pseudo_t_soil_sl(ic,:)
+        pseudo_wtr_soil_rel_sl(ic,:) = wtr_soil_rel_sl(ic,:)   * N_pseudo_temp    +  F_pseudo_precip * pseudo_wtr_soil_rel_sl(ic,:)
+      END IF
     END DO
     !$ACC END LOOP
     !$ACC END PARALLEL
+
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      soil_depth_thaw = MIN(soil_depth, max_thaw_prev_year)
+      max_layer_sl = depth_to_layers(soil_depth_thaw, layer_thick)
+      thaw_depth = max_thaw_prev_year;
+      thaw_depth_sl = depth_to_layers(thaw_depth, layer_thick);
+    END IF
+
+    ! Check if permafrost
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      DO ic = 1, nc
+        DO is = 1, nsoil
+          CALL check_permafrost((new_year .OR. lstart .OR. lresume), t_soil_sl(ic,is), t_max_soil_year(ic,is), permafrost_layer(ic,is))
+        END DO
+!         IF (new_year .OR. lstart .OR. lresume) THEN
+!           tmp_root(:) = determine_root_dist(max_layer_sl(ic,:), layer_depth, &
+!                                           dsl4jsb_Lctlib_param(root_dist_beta), permafrost_layer(ic,:))
+!           root_dist_sl(ic,:) = (0.9_wp * root_dist_sl(ic,:)) + (0.1_wp * tmp_root(:))
+!         END IF
+      END DO
+    END IF
 
     ! All per tile variables need to be re-calculated in case they are written to output
     CALL recalc_per_tile_vars(tile, options,                                      &
@@ -540,6 +757,32 @@ CONTAINS
       & NPP_pot_yDayMean = NPP_pot_yDayMean(:),                                   &
       & GPP_yDayMean = GPP_yDayMean(:))
 
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      CALL recalc_per_tile_vars(tile, options,                  &
+        & soil_respiration_oxic = soil_respiration_oxic(:), &
+        & soil_respiration_anox = soil_respiration_anox(:))
+    ENDIF
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      ! Recalc per tile variables on soil levels
+      CALL recalc_per_tile_vars(tile, options,                                                      &
+        & c_acid_bg1_sl = c_acid_bg1_sl(:,:), c_water_bg1_sl = c_water_bg1_sl(:,:),                 &
+        & c_ethanol_bg1_sl = c_ethanol_bg1_sl(:,:), c_nonsoluble_bg1_sl = c_nonsoluble_bg1_sl(:,:), &
+        & c_acid_bg2_sl = c_acid_bg2_sl(:,:), c_water_bg2_sl = c_water_bg2_sl(:,:),                 &
+        & c_ethanol_bg2_sl = c_ethanol_bg2_sl(:,:), c_nonsoluble_bg2_sl = c_nonsoluble_bg2_sl(:,:), &
+        & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:),                       &
+        & soil_respiration_oxic_sl = soil_respiration_oxic_sl(:,:),                                 &
+        & soil_respiration_anox_sl = soil_respiration_anox_sl(:,:))
+    END IF
+
+    ! Give some "initial" value for GPP_yYear and initalize sum for next year
+    IF (lstart) THEN
+      GPP_prev_year_ta = GPP_ann_sum
+      GPP_ann_sum = GPP_yDayMean_ta
+    ENDIF
+
+    ! ----------------------------------------------------------------------------------------------
+    ! ACTION: ANY time step
+
     IF( .NOT. new_day .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -550,6 +793,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
+    ! NEW DAY -- Carbon time step
     ELSE                                    ! A NEW DAY BEGINS and we DID NOT START AN
                                             ! TOTALLY NEW EXPERIMENT ==> perform carbon balance
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -570,6 +814,10 @@ CONTAINS
         ! Save previous day variables (for yasso)
         pseudo_temp_yDay(ic)   = pseudo_temp(ic)
         pseudo_precip_yDay(ic) = pseudo_precip(ic)
+        IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+          pseudo_t_soil_sl_yDay(ic,:)       = pseudo_t_soil_sl(ic,:)
+          pseudo_wtr_soil_rel_sl_yDay(ic,:) = pseudo_wtr_soil_rel_sl(ic,:)
+        END IF
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -612,15 +860,64 @@ CONTAINS
       lctlib_WoodLit_coef_nonsoluble = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_nonsoluble))
       lctlib_WoodLit_coef_humus      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_humus))
       lctlib_WoodLitterSize          = dsl4jsb_Lctlib_param(WoodLitterSize)
+      lctlib_root_dist_beta          = dsl4jsb_Lctlib_param(root_dist_beta)
+      frac_inun_min                  = dsl4jsb_Config(CH4_)%frac_inun_min
+
+      ! Set up parameter arrays for cleaner parameter transfer vertical YASSO
+      LeafLit_coefV(i_lctlib_acid)       = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_acid))
+      LeafLit_coefV(i_lctlib_water)      = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_water))
+      LeafLit_coefV(i_lctlib_ethanol)    = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_ethanol))
+      LeafLit_coefV(i_lctlib_nonsoluble) = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_nonsoluble))
+      LeafLit_coefV(i_lctlib_humus)      = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_humus))
+      WoodLit_coefV(i_lctlib_acid)       = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_acid))
+      WoodLit_coefV(i_lctlib_water)      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_water))
+      WoodLit_coefV(i_lctlib_ethanol)    = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_ethanol))
+      WoodLit_coefV(i_lctlib_nonsoluble) = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_nonsoluble))
+      WoodLit_coefV(i_lctlib_humus)      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_humus))
+      MiscPar(i_WoodLitSize)  = dsl4jsb_Lctlib_param(WoodLitterSize)
+      MiscPar(i_RootDistBeta) = dsl4jsb_Lctlib_param(root_dist_beta)
+      MiscPar(i_FracInunMin)  = dsl4jsb_Config(CH4_)%frac_inun_min
 
       ! Calculate current carbon sum before the update - for C conservation test
       CALL recalc_carbon_per_tile_vars(tile, options)
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
+      is_crop = lctlib_PhenologyType == 5
+
+!       CALL message(TRIM(routine), '--------')
+!       IF (dsl4jsb_Config(CH4_)%active) THEN
+!         CALL message(TRIM(routine), 'CH4 active.')
+!       END IF
+!       IF (dsl4jsb_Config(TOP_)%active) THEN
+!         CALL message(TRIM(routine), 'Topmodel active.')
+!       END IF
+!       IF (dsl4jsb_Config(CARBON_)%active) THEN
+!         CALL message(TRIM(routine), 'Carbon active.')
+!       END IF
+!       IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+!         CALL message(TRIM(routine), 'Vertical YASSO active.')
+!       END IF
+!       IF (.NOT. dsl4jsb_Config(CARBON_)%consider_anaerobic) THEN
+!         frac_inun_loc(:) = 0._wp
+!         CALL message(TRIM(routine), 'ignoring anaerobic.')
+!       END IF
+      IF (ASSOCIATED(frac_inun)) THEN
+        frac_inun_loc(:) = frac_inun(:)
+        IF (debug_on()) CALL message(TRIM(routine), 'Using frac_inun from Topmodel.')
+      ELSE
+        frac_inun_loc(:) = 0._wp
+        IF (debug_on()) CALL message(TRIM(routine), 'No frac_inun from Topmodel.')
+      END IF
+      IF (.NOT. dsl4jsb_Config(CARBON_)%consider_anaerobic) THEN
+        frac_inun_loc(:) = 0._wp
+        IF (debug_on()) CALL message(TRIM(routine), 'ignoring anaerobic.')
+      END IF
+
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         ! Now update the C pools
-        CALL calc_Cpools( &
+        CALL calc_plant_c( &
+          &  sec_per_day, is_crop,                              & ! in
           &  LAI_yDayMean(ic),                                  & ! in
           &  LAI_yyDayMean(ic),                                 & ! in
           &  MaxLai(ic),                                        & ! in
@@ -635,65 +932,248 @@ CONTAINS
           &  lctlib_Max_C_content_woods,                        & ! in
           &  lctlib_specificLeafArea_C,                         & ! in
           &  lctlib_reserveC2leafC,                             & ! in
-          &  lctlib_PhenologyType,                              & ! in
           !
           &  c_green(ic),                                       & ! inout
           &  c_woods(ic),                                       & ! inout
           &  c_reserve(ic),                                     & ! inout
           &  c_crop_harvest(ic),                                & ! inout
           !
-          &  soil_respiration(ic),                              & ! out
           &  NPP_flux_correction(ic),                           & ! out
           &  excess_NPP(ic),                                    & ! out
+          &  NPP_act_yDayMean(ic),                              & ! out
           &  root_exudates(ic),                                 & ! out
           &  cflux_c_greenwood_2_litter(ic),                    & ! out
+          &  cflux_c_green_2_litter(ic),                        & ! out
+          &  cflux_c_wood_2_litter(ic),                         & ! out
           &  cflux_c_green_2_herb(ic),                          & ! out
           &  cflux_herb_2_littergreen(ic),                      & ! out
           &  cflux_herb_2_atm(ic),                              & ! out
-          &  NPP_act_yDayMean(ic),                              & ! out
-          !
-          ! Variables only needed with yasso:
-          &  temp2_30d        =  pseudo_temp_yDay(ic),          & ! in
-          &  precip_30d       =  pseudo_precip_yDay(ic),        & ! in
-
-          &  c_acid_ag1       =  c_acid_ag1(ic),                & ! inout
-          &  c_water_ag1      =  c_water_ag1(ic),               & ! inout
-          &  c_ethanol_ag1    =  c_ethanol_ag1(ic),             & ! inout
-          &  c_nonsoluble_ag1 =  c_nonsoluble_ag1(ic),          & ! inout
-          &  c_acid_bg1       =  c_acid_bg1(ic),                & ! inout
-          &  c_water_bg1      =  c_water_bg1(ic),               & ! inout
-          &  c_ethanol_bg1    =  c_ethanol_bg1(ic),             & ! inout
-          &  c_nonsoluble_bg1 =  c_nonsoluble_bg1(ic),          & ! inout
-          &  c_humus_1        =  c_humus_1(ic),                 & ! inout
-          &  c_acid_ag2       =  c_acid_ag2(ic),                & ! inout
-          &  c_water_ag2      =  c_water_ag2(ic),               & ! inout
-          &  c_ethanol_ag2    =  c_ethanol_ag2(ic),             & ! inout
-          &  c_nonsoluble_ag2 =  c_nonsoluble_ag2(ic),          & ! inout
-          &  c_acid_bg2       =  c_acid_bg2(ic),                & ! inout
-          &  c_water_bg2      =  c_water_bg2(ic),               & ! inout
-          &  c_ethanol_bg2    =  c_ethanol_bg2(ic),             & ! inout
-          &  c_nonsoluble_bg2 =  c_nonsoluble_bg2(ic),          & ! inout
-          &  c_humus_2        =  c_humus_2(ic),                 & ! inout
-
-          &  LeafLit_coef_acid       =  lctlib_LeafLit_coef_acid,       & ! in
-          &  LeafLit_coef_water      =  lctlib_LeafLit_coef_water,      & ! in
-          &  LeafLit_coef_ethanol    =  lctlib_LeafLit_coef_ethanol,    & ! in
-          &  LeafLit_coef_nonsoluble =  lctlib_LeafLit_coef_nonsoluble, & ! in
-          &  LeafLit_coef_humus      =  lctlib_LeafLit_coef_humus,      & ! in
-          &  WoodLit_coef_acid       =  lctlib_WoodLit_coef_acid,       & ! in
-          &  WoodLit_coef_water      =  lctlib_WoodLit_coef_water,      & ! in
-          &  WoodLit_coef_ethanol    =  lctlib_WoodLit_coef_ethanol,    & ! in
-          &  WoodLit_coef_nonsoluble =  lctlib_WoodLit_coef_nonsoluble, & ! in
-          &  WoodLit_coef_humus      =  lctlib_WoodLit_coef_humus,      & ! in
-          &  WoodLitterSize          =  lctlib_WoodLitterSize,          & ! in
-
-          & c_decomp_humus_1_sum  = c_decomp_humus_1_sum(ic),   & ! out
-          & c_decomp_humus_2_sum  = c_decomp_humus_2_sum(ic),   & ! out
-          & c_into_humus_1_sum    = c_into_humus_1_sum(ic),     & ! out
-          & c_into_humus_2_sum    = c_into_humus_2_sum(ic)      & ! out
+          &  cflux_crop_harvest_2_atmos(ic)                     & ! out
           & )
       END DO
       !$ACC END PARALLEL LOOP
+
+      ! clear C from frozen pools
+      IF ((dsl4jsb_Config(CARBON_)%on_soillev) .AND. (dsl4jsb_Config(CARBON_)%clear_frozen) .AND. (lresume .OR. lstart)) THEN
+        CALL message(TRIM(routine), 'update_C_NPP_pot_allocation: Clearing frozen C')
+        DO ic = 1, nc
+          DO is = 1, nsoil
+!             IF (thaw_depth_sl(ic,is) .LT. 0.005_wp) THEN
+            IF (permafrost_layer(ic,is) > permafrost_threshold) THEN
+              c_acid_bg1_sl(ic,is)       = 0._wp
+              c_water_bg1_sl(ic,is)      = 0._wp
+              c_ethanol_bg1_sl(ic,is)    = 0._wp
+              c_nonsoluble_bg1_sl(ic,is) = 0._wp
+              c_acid_bg2_sl(ic,is)       = 0._wp
+              c_water_bg2_sl(ic,is)      = 0._wp
+              c_ethanol_bg2_sl(ic,is)    = 0._wp
+              c_nonsoluble_bg2_sl(ic,is) = 0._wp
+              c_humus_1_sl(ic,is)        = 0._wp
+              c_humus_2_sl(ic,is)        = 0._wp
+            END IF
+          END DO    ! is
+        END DO    ! ic
+      END IF
+
+      IF (.NOT. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+        IF (dsl4jsb_Config(CH4_)%active) THEN
+          ! For now, peatlands are not included - therefore always .FALSE.
+          CALL calc_methane_soil_c(.FALSE., sec_per_day,                     &
+            & LeafLit_coef_acid            = lctlib_LeafLit_coef_acid,       & ! in
+            & LeafLit_coef_water           = lctlib_LeafLit_coef_water,      & ! in
+            & LeafLit_coef_ethanol         = lctlib_LeafLit_coef_ethanol,    & ! in
+            & LeafLit_coef_nonsoluble      = lctlib_LeafLit_coef_nonsoluble, & ! in
+            & LeafLit_coef_humus           = lctlib_LeafLit_coef_humus,      & ! in
+            & WoodLit_coef_acid            = lctlib_WoodLit_coef_acid,       & ! in
+            & WoodLit_coef_water           = lctlib_WoodLit_coef_water,      & ! in
+            & WoodLit_coef_ethanol         = lctlib_WoodLit_coef_ethanol,    & ! in
+            & WoodLit_coef_nonsoluble      = lctlib_WoodLit_coef_nonsoluble, & ! in
+            & WoodLit_coef_humus           = lctlib_WoodLit_coef_humus,      & ! in
+            & WoodLitterSize               = lctlib_WoodLitterSize,          & ! in
+            & frac_inun_min                = frac_inun_min,                  & ! in
+            !
+            & temp                         = pseudo_temp_yDay,               & ! in
+            & precip                       = pseudo_precip_yDay,             & ! in
+            !
+            & frac_inun                    = frac_inun,                      & ! in
+            & wt_peat                      = peat_water_table,               & ! in
+            !
+            & woodLitter                   = cflux_c_wood_2_litter,          & ! in
+            & leafLitter                   = cflux_c_green_2_litter,         & ! in
+            & rootExudates                 = root_exudates,                  & ! in
+            !
+            & c_acid_ag1                   = c_acid_ag1,                     & ! inout
+            & c_water_ag1                  = c_water_ag1,                    & ! inout
+            & c_ethanol_ag1                = c_ethanol_ag1,                  & ! inout
+            & c_nonsoluble_ag1             = c_nonsoluble_ag1,               & ! inout
+            & c_acid_bg1                   = c_acid_bg1,                     & ! inout
+            & c_water_bg1                  = c_water_bg1,                    & ! inout
+            & c_ethanol_bg1                = c_ethanol_bg1,                  & ! inout
+            & c_nonsoluble_bg1             = c_nonsoluble_bg1,               & ! inout
+            & c_humus_1                    = c_humus_1,                      & ! inout
+            & c_acid_ag2                   = c_acid_ag2,                     & ! inout
+            & c_water_ag2                  = c_water_ag2,                    & ! inout
+            & c_ethanol_ag2                = c_ethanol_ag2,                  & ! inout
+            & c_nonsoluble_ag2             = c_nonsoluble_ag2,               & ! inout
+            & c_acid_bg2                   = c_acid_bg2,                     & ! inout
+            & c_water_bg2                  = c_water_bg2,                    & ! inout
+            & c_ethanol_bg2                = c_ethanol_bg2,                  & ! inout
+            & c_nonsoluble_bg2             = c_nonsoluble_bg2,               & ! inout
+            & c_humus_2                    = c_humus_2,                      & ! inout
+            !
+            & c_decomp_humus_1_sum         = c_decomp_humus_1_sum,           & ! out
+            & c_decomp_humus_2_sum         = c_decomp_humus_2_sum,           & ! out
+            & c_into_humus_1_sum           = c_into_humus_1_sum,             & ! out
+            & c_into_humus_2_sum           = c_into_humus_2_sum,             & ! out
+            & soilResp_rate                = soil_respiration,               & ! out
+            & soilResp_oxic                = soil_respiration_oxic,          & ! out
+            & soilResp_anoxic              = soil_respiration_anox,          & ! out
+            & acrotelm_height_ag           = acrotelm_height_ag,             & ! out
+            & acrotelm_height_bg           = acrotelm_height_bg              & ! out
+            & )
+
+            ! Test case: "manually" manipulate the anoxic fraction. polar_anoxic_fac is 1 in the standard case
+            WHERE (lat(:) > dsl4jsb_Config(TOP_)%lat_const_wetland_type)
+              soil_respiration_anox(:) = MAX(soil_respiration       (:), & ! Respiration by def < 0
+                                              soil_respiration_anox(:) * dsl4jsb_Config(CH4_)%polar_anoxic_fac)
+              soil_respiration_oxic  (:) = soil_respiration(:) - soil_respiration_anox(:)
+            ENDWHERE
+        ELSE
+          CALL calc_soil_c( &
+            & sec_per_day,                                                                       & ! in
+            & LeafLit_coef_acid       = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_acid)),       & ! in
+            & LeafLit_coef_water      = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_water)),      & ! in
+            & LeafLit_coef_ethanol    = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_ethanol)),    & ! in
+            & LeafLit_coef_nonsoluble = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_nonsoluble)), & ! in
+            & LeafLit_coef_humus      = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_humus)),      & ! in
+            & WoodLit_coef_acid       = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_acid)),       & ! in
+            & WoodLit_coef_water      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_water)),      & ! in
+            & WoodLit_coef_ethanol    = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_ethanol)),    & ! in
+            & WoodLit_coef_nonsoluble = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_nonsoluble)), & ! in
+            & WoodLit_coef_humus      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_humus)),      & ! in
+            & WoodLitterSize          = dsl4jsb_Lctlib_param(WoodLitterSize),                    & ! in
+            !
+            & temp                    = pseudo_temp_yDay,                                        & ! in
+            & precip                  = pseudo_precip_yDay,                                      & ! in
+            !
+            & Cflx_wood_2_litter      = cflux_c_wood_2_litter,                                   & ! in
+            & Cflx_green_2_litter     = cflux_c_green_2_litter,                                  & ! in
+            & Cflx_2_root_exudates    = root_exudates,                                           & ! in
+            !
+            & c_acid_ag1              = c_acid_ag1,                                              & ! inout
+            & c_water_ag1             = c_water_ag1,                                             & ! inout
+            & c_ethanol_ag1           = c_ethanol_ag1,                                           & ! inout
+            & c_nonsoluble_ag1        = c_nonsoluble_ag1,                                        & ! inout
+            & c_acid_bg1              = c_acid_bg1,                                              & ! inout
+            & c_water_bg1             = c_water_bg1,                                             & ! inout
+            & c_ethanol_bg1           = c_ethanol_bg1,                                           & ! inout
+            & c_nonsoluble_bg1        = c_nonsoluble_bg1,                                        & ! inout
+            & c_humus_1               = c_humus_1,                                               & ! inout
+            & c_acid_ag2              = c_acid_ag2,                                              & ! inout
+            & c_water_ag2             = c_water_ag2,                                             & ! inout
+            & c_ethanol_ag2           = c_ethanol_ag2,                                           & ! inout
+            & c_nonsoluble_ag2        = c_nonsoluble_ag2,                                        & ! inout
+            & c_acid_bg2              = c_acid_bg2,                                              & ! inout
+            & c_water_bg2             = c_water_bg2,                                             & ! inout
+            & c_ethanol_bg2           = c_ethanol_bg2,                                           & ! inout
+            & c_nonsoluble_bg2        = c_nonsoluble_bg2,                                        & ! inout
+            & c_humus_2               = c_humus_2,                                               & ! inout
+            !
+            & c_decomp_humus_1_sum    = c_decomp_humus_1_sum,                                    & ! out
+            & c_decomp_humus_2_sum    = c_decomp_humus_2_sum,                                    & ! out
+            & c_into_humus_1_sum      = c_into_humus_1_sum,                                      & ! out
+            & c_into_humus_2_sum      = c_into_humus_2_sum,                                      & ! out
+            & Cflx_soil_respiration   = soil_respiration                                         & ! out
+            & )
+            !
+            !&  fract_litter_wood_new    = fract_litter_wood_new,       & ! inout, optional. Only for spitfire
+            !
+        END IF
+      ELSE
+        DO ic = 1, nc
+          CALL calc_vertical_soil_c(sec_per_day,                              &
+               nsoil, layer_depth, layer_thick,                               & ! in
+               LeafLit_coefV, WoodLit_coefV, MiscPar,                         & ! in
+!                dsl4jsb_Config(CARBON_)%mix_ag_2_bg,                           & ! in
+!                dsl4jsb_Config(CARBON_)%do_diffusion,                          & ! in
+               dsl4jsb_Config(CARBON_)%resp_rate_modifier,                    & ! in
+!                dsl4jsb_Config(CARBON_)%diff_coeff_modifier,                   & ! in
+               !
+               temp                         = pseudo_temp_yDay(ic),           & ! in
+               precip                       = pseudo_precip_yDay(ic),         & ! in
+               t_soil_sl                    = pseudo_t_soil_sl_yDay(ic,:),    & ! in
+               wtr_soil_rel_sl              = pseudo_wtr_soil_rel_sl(ic,:),   & ! in
+               n_thaw_cycle                 = thaw_cycle_prev(ic),            & ! in
+               !
+               frac_inun                    = frac_inun_loc(ic),              & ! in
+!                wt_peat                      = peat_water_table(ic),           & ! in
+               !
+               soil_depth                   = soil_depth(ic),                 & ! in
+               soil_depth_sl                = soil_depth_sl(ic,:),            & ! in
+               max_depth                    = soil_depth_thaw(ic),            & ! in
+               max_depth_sl                 = max_layer_sl(ic,:),             & ! in
+               thaw_depth                   = thaw_depth(ic),                 & ! in
+               thaw_depth_sl                = thaw_depth_sl(ic,:),            & ! in
+               root_dist_sl                 = root_dist_sl(ic,:),             & ! inout
+               permafrost_layer             = permafrost_layer(ic,:),         & ! in
+               !
+               woodLitter                   = cflux_c_wood_2_litter(ic),      & ! in
+               leafLitter                   = cflux_c_green_2_litter(ic),     & ! in
+               rootExudates                 = root_exudates(ic),              & ! in
+               !
+               c_acid_ag1                   = c_acid_ag1(ic),                 & ! inout
+               c_water_ag1                  = c_water_ag1(ic),                & ! inout
+               c_ethanol_ag1                = c_ethanol_ag1(ic),              & ! inout
+               c_nonsoluble_ag1             = c_nonsoluble_ag1(ic),           & ! inout
+               c_acid_ag2                   = c_acid_ag2(ic),                 & ! inout
+               c_water_ag2                  = c_water_ag2(ic),                & ! inout
+               c_ethanol_ag2                = c_ethanol_ag2(ic),              & ! inout
+               c_nonsoluble_ag2             = c_nonsoluble_ag2(ic),           & ! inout
+               c_acid_bg1_sl                = c_acid_bg1_sl(ic,:),            & ! inout
+               c_water_bg1_sl               = c_water_bg1_sl(ic,:),           & ! inout
+               c_ethanol_bg1_sl             = c_ethanol_bg1_sl(ic,:),         & ! inout
+               c_nonsoluble_bg1_sl          = c_nonsoluble_bg1_sl(ic,:),      & ! inout
+               c_humus_1_sl                 = c_humus_1_sl(ic,:),             & ! inout
+               c_acid_bg2_sl                = c_acid_bg2_sl(ic,:),            & ! inout
+               c_water_bg2_sl               = c_water_bg2_sl(ic,:),           & ! inout
+               c_ethanol_bg2_sl             = c_ethanol_bg2_sl(ic,:),         & ! inout
+               c_nonsoluble_bg2_sl          = c_nonsoluble_bg2_sl(ic,:),      & ! inout
+               c_humus_2_sl                 = c_humus_2_sl(ic,:),             & ! inout
+               !
+               Y_debug                      = YASSO_debug(ic),                & ! inout
+               Y_debug_sl                   = YASSO_debug_sl(ic,:),           & ! inout
+               !
+               c_decomp_humus_1_sum         = c_decomp_humus_1_sum(ic),       & ! out
+               c_decomp_humus_2_sum         = c_decomp_humus_2_sum(ic),       & ! out
+               c_into_humus_1_sum           = c_into_humus_1_sum(ic),         & ! out
+               c_into_humus_2_sum           = c_into_humus_2_sum(ic),         & ! out
+               soilResp_oxic_sl             = soil_respiration_oxic_sl(ic,:), & ! out
+               soilResp_anox_sl             = soil_respiration_anox_sl(ic,:)  &!, & ! out
+               )
+
+          ! Provide all variables as sum, too, not just on levels
+          c_acid_bg1(ic)       = SUM(c_acid_bg1_sl(ic,:))
+          c_water_bg1(ic)      = SUM(c_water_bg1_sl(ic,:))
+          c_ethanol_bg1(ic)    = SUM(c_ethanol_bg1_sl(ic,:))
+          c_nonsoluble_bg1(ic) = SUM(c_nonsoluble_bg1_sl(ic,:))
+          c_acid_bg2(ic)       = SUM(c_acid_bg2_sl(ic,:))
+          c_water_bg2(ic)      = SUM(c_water_bg2_sl(ic,:))
+          c_ethanol_bg2(ic)    = SUM(c_ethanol_bg2_sl(ic,:))
+          c_nonsoluble_bg2(ic) = SUM(c_nonsoluble_bg2_sl(ic,:))
+          c_humus_1(ic)        = SUM(c_humus_1_sl(ic,:))
+          c_humus_2(ic)        = SUM(c_humus_2_sl(ic,:))
+          soil_respiration(ic) = SUM(soil_respiration_oxic_sl(ic,:)) + &
+                                 SUM(soil_respiration_anox_sl(ic,:))
+
+          IF (dsl4jsb_Config(CH4_)%active) THEN
+            soil_respiration_oxic(ic) = SUM(soil_respiration_oxic_sl(ic,:))
+            soil_respiration_anox(ic) = SUM(soil_respiration_anox_sl(ic,:))
+          END IF
+        END DO
+      END IF
+
+      !! ============== Include decay of crop harvest in soil respiration =============
+      soil_respiration = soil_respiration + cflux_crop_harvest_2_atmos
 
       ! determine annual maximum content of green pool for NLCC process
       IF (model%Is_process_enabled(NLCC_)) THEN
@@ -714,7 +1194,6 @@ CONTAINS
 
       ! Compute carbon contents from canopy to tile box area by weighting pools with fractions of grid box covered by vegetation
       ! ------------------------------------------------------------------------------------------------------------------------
-
       CALL recalc_per_tile_vars(tile, options,                                      &
         & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
         & c_crop_harvest = c_crop_harvest(:),                                       &
@@ -730,11 +1209,32 @@ CONTAINS
         & c_decomp_humus_1_sum = c_decomp_humus_1_sum(:),                           &
         & c_decomp_humus_2_sum = c_decomp_humus_2_sum(:),                           &
         & c_into_humus_1_sum = c_into_humus_1_sum(:),                               &
-        & c_into_humus_2_sum = c_into_humus_2_sum(:), root_exudates = root_exudates(:),           &
-        & soil_respiration = soil_respiration(:), NPP_flux_correction = NPP_flux_correction(:),   &
-        & cflux_c_greenwood_2_litter = cflux_c_greenwood_2_litter(:),                             &
-        & cflux_c_green_2_herb = cflux_c_green_2_herb(:), NPP_act_yDayMean = NPP_act_yDayMean(:), &
-        & NPP_pot_yDayMean = NPP_pot_yDayMean(:), GPP_yDayMean = GPP_yDayMean(:))
+        & c_into_humus_2_sum = c_into_humus_2_sum(:),                               &
+        & root_exudates = root_exudates(:),                                         &
+        & soil_respiration = soil_respiration(:),                                   &
+        & NPP_flux_correction = NPP_flux_correction(:),                             &
+        & cflux_c_greenwood_2_litter = cflux_c_greenwood_2_litter(:),               &
+        & cflux_c_green_2_herb = cflux_c_green_2_herb(:),                           &
+        & NPP_act_yDayMean = NPP_act_yDayMean(:),                                   &
+        & NPP_pot_yDayMean = NPP_pot_yDayMean(:),                                   &
+        & GPP_yDayMean = GPP_yDayMean(:))
+
+      IF (dsl4jsb_Config(CH4_)%active) THEN
+        CALL recalc_per_tile_vars(tile, options,                  &
+          & soil_respiration_oxic = soil_respiration_oxic(:),     &
+          & soil_respiration_anox = soil_respiration_anox(:))
+      ENDIF
+      IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+        ! Recalc per tile variables on soil levels
+        CALL recalc_per_tile_vars(tile, options,                                                      &
+          & c_acid_bg1_sl = c_acid_bg1_sl(:,:), c_water_bg1_sl = c_water_bg1_sl(:,:),                 &
+          & c_ethanol_bg1_sl = c_ethanol_bg1_sl(:,:), c_nonsoluble_bg1_sl = c_nonsoluble_bg1_sl(:,:), &
+          & c_acid_bg2_sl = c_acid_bg2_sl(:,:), c_water_bg2_sl = c_water_bg2_sl(:,:),                 &
+          & c_ethanol_bg2_sl = c_ethanol_bg2_sl(:,:), c_nonsoluble_bg2_sl = c_nonsoluble_bg2_sl(:,:), &
+          & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:),                       &
+          & soil_respiration_oxic_sl = soil_respiration_oxic_sl(:,:),                                 &
+          & soil_respiration_anox_sl = soil_respiration_anox_sl(:,:))
+      END IF
 
       ! cflux_herb_2_atm and soil_respiration are negative (fluxes away from land)
       ! thus + here instead of - to reduce NPP by these fluxes
@@ -749,6 +1249,14 @@ CONTAINS
         & current_fluxes(:), cconservation_calcCpools(:))
 
     END IF ! new day
+
+    ! Calc sum of GPP for total GPP of previous year for the methane process
+    IF (new_year) THEN
+      GPP_prev_year_ta = GPP_ann_sum / 365._wp
+      GPP_ann_sum = GPP_yDayMean_ta
+    ELSE
+      GPP_ann_sum = GPP_ann_sum + GPP_yDayMean_ta
+    ENDIF
 
     ! Compute net CO2 fluxes exchanged with atmosphere at each time step
     !-------------------------------------------------------------------
@@ -790,6 +1298,13 @@ CONTAINS
     END IF
 
     !$ACC END DATA
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      DEALLOCATE(layer_depth)
+      DEALLOCATE(layer_thick)
+      DEALLOCATE(soil_depth_thaw)
+      DEALLOCATE(soil_depth_thaw_sl)
+!       DEALLOCATE(tmp_root)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -808,20 +1323,26 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_config(CH4_)
+    dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_memory(CARBON_)
 
     CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
+    TYPE(t_jsb_model), POINTER   :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_C_NPP_pot_allocation'
 
     INTEGER  :: iblk , ics, ice
 
+    model => Get_model(tile%owner_model_id)
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    dsl4jsb_Get_config(CH4_)
+    dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_memory(CARBON_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -880,6 +1401,8 @@ CONTAINS
 !    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yDayMean_ta,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_yDayMean_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_act_yDayMean_ta,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_yDayMean,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_prev_year_ta,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, GPP_yDayMean_ta,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, root_exudates_ta,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_green_2_herb_ta,  weighted_by_fract)
@@ -890,10 +1413,48 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_soilresp_2_atm_ta, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_herb_2_atm_ta,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_npp_2_atm_yday_ta, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_temp,               weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_precip,             weighted_by_fract)
 
     ! variables for NLCC process
     dsl4jsb_Aggregate_onChunk(CARBON_, max_green_bio,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, sla,                      weighted_by_fract)
+
+    dsl4jsb_Aggregate_onChunk(CARBON_, YASSO_debug,      weighted_by_fract)
+
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_oxic_ta,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_anox_ta,      weighted_by_fract)
+    END IF
+
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      ! variables on soil levels
+      ! bg1
+      dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg1_sl_ta,         weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg1_sl_ta,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg1_sl_ta,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg1_sl_ta,   weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_1_sl_ta,          weighted_by_fract)
+      ! bg2
+      dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg2_sl_ta,         weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, c_water_bg2_sl_ta,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg2_sl_ta,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2_sl_ta,   weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2_sl_ta,          weighted_by_fract)
+
+      dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_oxic_sl_ta,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_anox_sl_ta,      weighted_by_fract)
+
+      dsl4jsb_Aggregate_onChunk(CARBON_, root_dist_sl,             weighted_by_fract)             ! inout
+      dsl4jsb_Aggregate_onChunk(CARBON_, max_layer_sl,             weighted_by_fract)             ! inout
+
+      dsl4jsb_Aggregate_onChunk(CARBON_, permafrost_layer,         weighted_by_fract)             ! inout
+      dsl4jsb_Aggregate_onChunk(CARBON_, YASSO_debug_sl,           weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_t_soil_sl_yDay,    weighted_by_fract)             ! inout
+      dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_wtr_soil_rel_sl_yDay, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_t_soil_sl,         weighted_by_fract)             ! inout
+      dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_wtr_soil_rel_sl,   weighted_by_fract)
+    END IF
 
     CALL weighted_by_fract%EndAggregate()
 
@@ -1001,12 +1562,14 @@ CONTAINS
     REAL(wp),                   INTENT(in)            :: oldRefArea(:),  &
                                                          newRefArea(:)
 
+    dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':rescale_carbon_upon_reference_area_change'
     REAL(wp)                    :: refarea_scaling
     INTEGER                     :: nc, ic, ics, ice, iblk
+    TYPE(t_jsb_model), POINTER      :: model
 
     dsl4jsb_Real2D_onChunk ::  c_green
     dsl4jsb_Real2D_onChunk ::  c_reserve
@@ -1038,6 +1601,23 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum
     dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum
 
+    dsl4jsb_Real3D_onChunk ::  c_acid_bg1_sl
+    dsl4jsb_Real3D_onChunk ::  c_water_bg1_sl
+    dsl4jsb_Real3D_onChunk ::  c_ethanol_bg1_sl
+    dsl4jsb_Real3D_onChunk ::  c_nonsoluble_bg1_sl
+    dsl4jsb_Real3D_onChunk ::  c_humus_1_sl
+
+    dsl4jsb_Real3D_onChunk ::  c_acid_bg2_sl
+    dsl4jsb_Real3D_onChunk ::  c_water_bg2_sl
+    dsl4jsb_Real3D_onChunk ::  c_ethanol_bg2_sl
+    dsl4jsb_Real3D_onChunk ::  c_nonsoluble_bg2_sl
+    dsl4jsb_Real3D_onChunk ::  c_humus_2_sl
+
+!     dsl4jsb_Real3D_onChunk ::  soil_respiration_oxic_sl
+!     dsl4jsb_Real3D_onChunk ::  soil_respiration_anox_sl
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
     ! Assertion: 0 < oldRedArea <= 1 and 0 < newRefArea <= 1
     ! TODO on GPU
 #ifndef _OPENACC
@@ -1053,6 +1633,9 @@ CONTAINS
     ENDIF
 #endif
 
+    ! -------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_memory(CARBON_)
 
     iblk  = options%iblk
@@ -1090,6 +1673,23 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum)   ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum)   ! inout
 
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg1_sl )
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg1_sl )
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg1_sl )
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg1_sl )
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_1_sl )
+
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg2_sl )
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg2_sl )
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg2_sl )
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg2_sl )
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_2_sl )
+
+!       dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_oxic_sl )
+!       dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_anox_sl )
+    END IF
+
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(refarea_scaling)
     DO ic = 1, nc
@@ -1125,6 +1725,21 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      DO ic = 1, nc
+        c_acid_bg1_sl(ic,:)       = c_acid_bg1_sl(ic,:)       * refarea_scaling
+        c_water_bg1_sl(ic,:)      = c_water_bg1_sl(ic,:)      * refarea_scaling
+        c_ethanol_bg1_sl(ic,:)    = c_ethanol_bg1_sl(ic,:)    * refarea_scaling
+        c_nonsoluble_bg1_sl(ic,:) = c_nonsoluble_bg1_sl(ic,:) * refarea_scaling
+        c_humus_1_sl(ic,:)        = c_humus_1_sl(ic,:)        * refarea_scaling
+        c_acid_bg2_sl(ic,:)       = c_acid_bg2_sl(ic,:)       * refarea_scaling
+        c_water_bg2_sl(ic,:)      = c_water_bg2_sl(ic,:)      * refarea_scaling
+        c_ethanol_bg2_sl(ic,:)    = c_ethanol_bg2_sl(ic,:)    * refarea_scaling
+        c_nonsoluble_bg2_sl(ic,:) = c_nonsoluble_bg2_sl(ic,:) * refarea_scaling
+        c_humus_2_sl(ic,:)        = c_humus_2_sl(ic,:)        * refarea_scaling
+      END DO
+    END IF
+
     CALL recalc_per_tile_vars(tile, options, &
       & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
       & c_crop_harvest = c_crop_harvest(:), &
@@ -1141,6 +1756,16 @@ CONTAINS
       & c_decomp_humus_2_sum  = c_decomp_humus_2_sum(:),                          &
       & c_into_humus_1_sum    = c_into_humus_1_sum(:),                            &
       & c_into_humus_2_sum    = c_into_humus_2_sum(:))
+
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      CALL recalc_per_tile_vars(tile, options,                                                    &
+      & c_acid_bg1_sl = c_acid_bg1_sl(:,:), c_water_bg1_sl = c_water_bg1_sl(:,:),                 &
+      & c_ethanol_bg1_sl = c_ethanol_bg1_sl(:,:), c_nonsoluble_bg1_sl = c_nonsoluble_bg1_sl(:,:), &
+      & c_acid_bg2_sl = c_acid_bg2_sl(:,:), c_water_bg2_sl = c_water_bg2_sl(:,:),                 &
+      & c_ethanol_bg2_sl = c_ethanol_bg2_sl(:,:), c_nonsoluble_bg2_sl = c_nonsoluble_bg2_sl(:,:), &
+      & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:)) !,                       &
+!       & soil_respiration_oxic_sl = soil_respiration_oxic_sl(:,:), soil_respiration_anox_sl = soil_respiration_anox_sl(:,:))
+    END IF
 
   END SUBROUTINE rescale_carbon_upon_reference_area_change
 
@@ -1195,10 +1820,30 @@ CONTAINS
   dsl4jsb_Real2D_onChunk ::  root_exudates
   dsl4jsb_Real2D_onChunk ::  cflux_c_green_2_herb
 
+  dsl4jsb_Real3D_onChunk ::  c_acid_bg1_sl
+  dsl4jsb_Real3D_onChunk ::  c_water_bg1_sl
+  dsl4jsb_Real3D_onChunk ::  c_ethanol_bg1_sl
+  dsl4jsb_Real3D_onChunk ::  c_nonsoluble_bg1_sl
+  dsl4jsb_Real3D_onChunk ::  c_humus_1_sl
+
+  dsl4jsb_Real3D_onChunk ::  c_acid_bg2_sl
+  dsl4jsb_Real3D_onChunk ::  c_water_bg2_sl
+  dsl4jsb_Real3D_onChunk ::  c_ethanol_bg2_sl
+  dsl4jsb_Real3D_onChunk ::  c_nonsoluble_bg2_sl
+  dsl4jsb_Real3D_onChunk ::  c_humus_2_sl
+
+  dsl4jsb_Real3D_onChunk ::  soil_respiration_oxic_sl
+  dsl4jsb_Real3D_onChunk ::  soil_respiration_anox_sl
+
+  dsl4jsb_Def_config(CARBON_)
   dsl4jsb_Def_memory(CARBON_)
 
   INTEGER                     :: ics, ice, iblk
+  INTEGER                     :: is, nsoil
+  TYPE(t_jsb_model), POINTER      :: model
   ! -------------------------------------------------------------------------------------------------- !
+  model => Get_model(tile%owner_model_id)
+  dsl4jsb_Get_config(CARBON_)
   dsl4jsb_Get_memory(CARBON_)
 
   iblk  = options%iblk
@@ -1243,6 +1888,24 @@ CONTAINS
   dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates)
   dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_green_2_herb)
 
+  IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg1_sl )
+    dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg1_sl )
+    dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg1_sl )
+    dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg1_sl )
+    dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_1_sl )
+
+    dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg2_sl )
+    dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg2_sl )
+    dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg2_sl )
+    dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg2_sl )
+    dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_2_sl )
+
+    dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_oxic_sl )
+    dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_anox_sl )
+  END IF
+
+
   CALL recalc_per_tile_vars(tile, options,                                    &
   & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
   & c_crop_harvest = c_crop_harvest(:),                                       &
@@ -1263,6 +1926,16 @@ CONTAINS
   & cflux_c_green_2_herb = cflux_c_green_2_herb(:), NPP_act_yDayMean = NPP_act_yDayMean(:), &
   & NPP_pot_yDayMean = NPP_pot_yDayMean(:), GPP_yDayMean = GPP_yDayMean(:))
 
+  IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    CALL recalc_per_tile_vars(tile, options,                                                    &
+    & c_acid_bg1_sl = c_acid_bg1_sl(:,:), c_water_bg1_sl = c_water_bg1_sl(:,:),                 &
+    & c_ethanol_bg1_sl = c_ethanol_bg1_sl(:,:), c_nonsoluble_bg1_sl = c_nonsoluble_bg1_sl(:,:), &
+    & c_acid_bg2_sl = c_acid_bg2_sl(:,:), c_water_bg2_sl = c_water_bg2_sl(:,:),                 &
+    & c_ethanol_bg2_sl = c_ethanol_bg2_sl(:,:), c_nonsoluble_bg2_sl = c_nonsoluble_bg2_sl(:,:), &
+    & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:),                       &
+    & soil_respiration_oxic_sl = soil_respiration_oxic_sl(:,:), soil_respiration_anox_sl = soil_respiration_anox_sl(:,:))
+  END IF
+
 END SUBROUTINE recalc_carbon_per_tile_vars
 
 
@@ -1275,20 +1948,27 @@ END SUBROUTINE recalc_carbon_per_tile_vars
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  SUBROUTINE recalc_per_tile_vars(tile, options,                  &
-      & c_green , c_woods, c_reserve, c_crop_harvest,             &
-      & c_acid_ag1, c_water_ag1, c_ethanol_ag1, c_nonsoluble_ag1, &
-      & c_acid_bg1, c_water_bg1, c_ethanol_bg1, c_nonsoluble_bg1, &
-      & c_acid_ag2, c_water_ag2, c_ethanol_ag2, c_nonsoluble_ag2, &
-      & c_acid_bg2, c_water_bg2, c_ethanol_bg2, c_nonsoluble_bg2, &
-      & c_humus_1, c_humus_2,                                     &
-      & c_decomp_humus_1_sum, c_decomp_humus_2_sum, c_into_humus_1_sum, c_into_humus_2_sum, &
-      & soil_respiration, NPP_flux_correction, NPP_pot_yDayMean, NPP_act_yDayMean,          &
-      & GPP_yDayMean, root_exudates, cflux_c_green_2_herb,                                  &
-      & cflux_dist_green_2_soil, cflux_dist_woods_2_soil, co2flux_fire_all_2_atm,           &
-      & cflux_c_greenwood_2_litter)
+  SUBROUTINE recalc_per_tile_vars(tile, options,                          &
+      & c_green , c_woods, c_reserve, c_crop_harvest,                     &
+      & c_acid_ag1, c_water_ag1, c_ethanol_ag1, c_nonsoluble_ag1,         &
+      & c_acid_bg1, c_water_bg1, c_ethanol_bg1, c_nonsoluble_bg1,         &
+      & c_acid_ag2, c_water_ag2, c_ethanol_ag2, c_nonsoluble_ag2,         &
+      & c_acid_bg2, c_water_bg2, c_ethanol_bg2, c_nonsoluble_bg2,         &
+      & c_humus_1, c_humus_2,                                             &
+      & c_decomp_humus_1_sum, c_decomp_humus_2_sum,                       &
+      & c_into_humus_1_sum, c_into_humus_2_sum,                           &
+      & soil_respiration, soil_respiration_oxic, soil_respiration_anox,   &
+      & NPP_flux_correction, NPP_pot_yDayMean, NPP_act_yDayMean,          &
+      & GPP_yDayMean, root_exudates, cflux_c_green_2_herb,                &
+      & cflux_dist_green_2_soil, cflux_dist_woods_2_soil,                 &
+      & co2flux_fire_all_2_atm,                                           &
+      & cflux_c_greenwood_2_litter,                                       &
+      & c_acid_bg1_sl, c_water_bg1_sl, c_ethanol_bg1_sl, c_nonsoluble_bg1_sl,         &
+      & c_acid_bg2_sl, c_water_bg2_sl, c_ethanol_bg2_sl, c_nonsoluble_bg2_sl,         &
+      & c_humus_1_sl, c_humus_2_sl,                                             &
+      & soil_respiration_oxic_sl, soil_respiration_anox_sl )
 
-    USE mo_carbon_process,    ONLY: get_per_tile
+    USE mo_carbon_shared, ONLY: get_per_tile
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
@@ -1328,6 +2008,8 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_dist_woods_2_soil(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: co2flux_fire_all_2_atm(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: soil_respiration(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: soil_respiration_oxic(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: soil_respiration_anox(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: NPP_pot_yDayMean(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: NPP_act_yDayMean(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: NPP_flux_correction(:)
@@ -1336,12 +2018,29 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     REAL(wp),                   INTENT(in), OPTIONAL  :: root_exudates(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_c_green_2_herb(:)
 
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_acid_bg1_sl(:,:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_water_bg1_sl(:,:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_ethanol_bg1_sl(:,:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg1_sl(:,:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_acid_bg2_sl(:,:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_water_bg2_sl(:,:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_ethanol_bg2_sl(:,:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg2_sl(:,:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_humus_1_sl(:,:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_humus_2_sl(:,:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: soil_respiration_oxic_sl(:,:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: soil_respiration_anox_sl(:,:)
+
+    dsl4jsb_Def_config(CARBON_)
+    dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(PHENO_)
 
     ! Local variables
     CHARACTER(len=*), PARAMETER     :: routine = modname//':recalc_per_tile_vars'
     INTEGER                         :: ics, ice, iblk
+    INTEGER                         :: is, nsoil
+    TYPE(t_jsb_model), POINTER      :: model
 
     dsl4jsb_Real2D_onChunk ::  c_green_ta
     dsl4jsb_Real2D_onChunk ::  c_reserve_ta
@@ -1377,6 +2076,8 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Real2D_onChunk ::  cflux_dist_woods_2_soil_ta
     dsl4jsb_Real2D_onChunk ::  co2flux_fire_all_2_atm_ta
     dsl4jsb_Real2D_onChunk ::  soil_respiration_ta
+    dsl4jsb_Real2D_onChunk ::  soil_respiration_oxic_ta
+    dsl4jsb_Real2D_onChunk ::  soil_respiration_anox_ta
     dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean_ta
     dsl4jsb_Real2D_onChunk ::  NPP_act_yDayMean_ta
     dsl4jsb_Real2D_onChunk ::  NPP_flux_correction_ta
@@ -1388,6 +2089,25 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Real2D_onChunk ::  veg_fract_correction
     dsl4jsb_Real2D_onChunk ::  fract_fpc_max
 
+    dsl4jsb_Real3D_onChunk ::  c_acid_bg1_sl_ta
+    dsl4jsb_Real3D_onChunk ::  c_water_bg1_sl_ta
+    dsl4jsb_Real3D_onChunk ::  c_ethanol_bg1_sl_ta
+    dsl4jsb_Real3D_onChunk ::  c_nonsoluble_bg1_sl_ta
+    dsl4jsb_Real3D_onChunk ::  c_humus_1_sl_ta
+
+    dsl4jsb_Real3D_onChunk ::  c_acid_bg2_sl_ta
+    dsl4jsb_Real3D_onChunk ::  c_water_bg2_sl_ta
+    dsl4jsb_Real3D_onChunk ::  c_ethanol_bg2_sl_ta
+    dsl4jsb_Real3D_onChunk ::  c_nonsoluble_bg2_sl_ta
+    dsl4jsb_Real3D_onChunk ::  c_humus_2_sl_ta
+
+    dsl4jsb_Real3D_onChunk ::  soil_respiration_oxic_sl_ta
+    dsl4jsb_Real3D_onChunk ::  soil_respiration_anox_sl_ta
+
+
+    model => Get_model(tile%owner_model_id)
+    dsl4jsb_Get_config(CARBON_)
+    dsl4jsb_Get_config(CH4_)
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(PHENO_)
 
@@ -1439,6 +2159,30 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )              ! in
+
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_oxic_ta )     ! opt out
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_anox_ta )   ! opt out
+    END IF
+
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg1_sl_ta )      ! opt out
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg1_sl_ta )      ! opt out
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg1_sl_ta )      ! opt out
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg1_sl_ta )      ! opt out
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_1_sl_ta )      ! opt out
+
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg2_sl_ta )      ! opt out
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg2_sl_ta )      ! opt out
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg2_sl_ta )      ! opt out
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg2_sl_ta )      ! opt out
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_2_sl_ta )      ! opt out
+
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_oxic_sl_ta )      ! opt out
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_anox_sl_ta )      ! opt out
+    END IF
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     IF (PRESENT(c_green)) CALL get_per_tile(c_green_ta(:), c_green(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_woods)) CALL get_per_tile(c_woods_ta(:), c_woods(:), veg_fract_correction(:), fract_fpc_max(:))
@@ -1505,6 +2249,10 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       & NPP_act_yDayMean(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(soil_respiration)) CALL get_per_tile(soil_respiration_ta(:), &
       & soil_respiration(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(soil_respiration_oxic)) CALL get_per_tile(soil_respiration_oxic_ta(:), &
+      & soil_respiration_oxic(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(soil_respiration_anox)) CALL get_per_tile(soil_respiration_anox_ta(:), &
+      & soil_respiration_anox(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(NPP_flux_correction)) CALL get_per_tile(NPP_flux_correction_ta(:), &
       & NPP_flux_correction(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(GPP_yDayMean)) CALL get_per_tile(GPP_yDayMean_ta(:), &
@@ -1515,6 +2263,91 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       & root_exudates(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(cflux_c_green_2_herb)) CALL get_per_tile(cflux_c_green_2_herb_ta(:), &
       & cflux_c_green_2_herb(:), veg_fract_correction(:), fract_fpc_max(:))
+
+    IF (PRESENT(c_acid_bg1_sl)) THEN
+      nsoil = SIZE(c_acid_bg1_sl, DIM=2)
+      DO is = 1,nsoil
+        CALL get_per_tile(c_acid_bg1_sl_ta(:,is), &
+        & c_acid_bg1_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
+      END DO
+    END IF
+    IF (PRESENT(c_water_bg1_sl)) THEN
+      nsoil = SIZE(c_water_bg1_sl, DIM=2)
+      DO is = 1,nsoil
+        CALL get_per_tile(c_water_bg1_sl_ta(:,is), &
+        & c_water_bg1_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
+      END DO
+    END IF
+    IF (PRESENT(c_ethanol_bg1_sl)) THEN
+      nsoil = SIZE(c_ethanol_bg1_sl, DIM=2)
+      DO is = 1,nsoil
+        CALL get_per_tile(c_ethanol_bg1_sl_ta(:,is), &
+        & c_ethanol_bg1_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
+      END DO
+    END IF
+    IF (PRESENT(c_nonsoluble_bg1_sl)) THEN
+      nsoil = SIZE(c_nonsoluble_bg1_sl, DIM=2)
+      DO is = 1,nsoil
+        CALL get_per_tile(c_nonsoluble_bg1_sl_ta(:,is), &
+        & c_nonsoluble_bg1_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
+      END DO
+    END IF
+    IF (PRESENT(c_acid_bg2_sl)) THEN
+      nsoil = SIZE(c_acid_bg2_sl, DIM=2)
+      DO is = 1,nsoil
+        CALL get_per_tile(c_acid_bg2_sl_ta(:,is), &
+        & c_acid_bg2_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
+      END DO
+    END IF
+    IF (PRESENT(c_water_bg2_sl)) THEN
+      nsoil = SIZE(c_water_bg2_sl, DIM=2)
+      DO is = 1,nsoil
+        CALL get_per_tile(c_water_bg2_sl_ta(:,is), &
+        & c_water_bg2_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
+      END DO
+    END IF
+    IF (PRESENT(c_ethanol_bg2_sl)) THEN
+      nsoil = SIZE(c_ethanol_bg2_sl, DIM=2)
+      DO is = 1,nsoil
+        CALL get_per_tile(c_ethanol_bg2_sl_ta(:,is), &
+        & c_ethanol_bg2_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
+      END DO
+    END IF
+    IF (PRESENT(c_nonsoluble_bg2_sl)) THEN
+      nsoil = SIZE(c_nonsoluble_bg2_sl, DIM=2)
+      DO is = 1,nsoil
+        CALL get_per_tile(c_nonsoluble_bg2_sl_ta(:,is), &
+        & c_nonsoluble_bg2_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
+      END DO
+    END IF
+    IF (PRESENT(c_humus_1_sl)) THEN
+      nsoil = SIZE(c_humus_1_sl, DIM=2)
+      DO is = 1,nsoil
+        CALL get_per_tile(c_humus_1_sl_ta(:,is), &
+        & c_humus_1_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
+      END DO
+    END IF
+    IF (PRESENT(c_humus_2_sl)) THEN
+      nsoil = SIZE(c_humus_2_sl, DIM=2)
+      DO is = 1,nsoil
+        CALL get_per_tile(c_humus_2_sl_ta(:,is), &
+        & c_humus_2_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
+      END DO
+    END IF
+    IF (PRESENT(soil_respiration_oxic_sl)) THEN
+      nsoil = SIZE(soil_respiration_oxic_sl, DIM=2)
+      DO is = 1,nsoil
+        CALL get_per_tile(soil_respiration_oxic_sl_ta(:,is), &
+        & soil_respiration_oxic_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
+      END DO
+    END IF
+    IF (PRESENT(soil_respiration_anox_sl)) THEN
+      nsoil = SIZE(soil_respiration_anox_sl, DIM=2)
+      DO is = 1,nsoil
+        CALL get_per_tile(soil_respiration_anox_sl_ta(:,is), &
+        & soil_respiration_anox_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
+      END DO
+    END IF
 
   END SUBROUTINE recalc_per_tile_vars
 
@@ -1580,6 +2413,8 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     is_present_c_sum_humus_ta     = PRESENT(c_sum_humus_ta)
 
     dsl4jsb_Get_memory(CARBON_)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     iblk  = options%iblk
     ics   = options%ics
@@ -1673,10 +2508,9 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     USE mo_jsb_task_class,      ONLY: t_jsb_task_options
     USE mo_carbon_constants,    ONLY: fract_green_aboveGround, fract_wood_aboveGround,           &
       &                               nr_of_yasso_pools, carbon_required_passive_vars, coefficient_ind_of_passive_vars
-    USE mo_carbon_process,      ONLY: add_litter_to_yasso_pool
+    USE mo_carbon_shared,       ONLY: add_litter_to_yasso_pool
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
 
-    IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(INOUT) :: lcc_relocations
         !< lcc structure of the calling lcc process for distributing matter from an active to a passive var

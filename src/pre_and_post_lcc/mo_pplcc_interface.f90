@@ -28,7 +28,7 @@ MODULE mo_pplcc_interface
 
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message, finish
+  USE mo_exception,       ONLY: message, finish, message_text
   USE mo_util,            ONLY: int2string
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
@@ -41,7 +41,7 @@ MODULE mo_pplcc_interface
 
   USE mo_jsb_time,          ONLY: is_newday
   USE mo_jsb_cqt_class,     ONLY: Get_cqt_name, LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
-    &                             BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE, &
+    &                             BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE, &
     &                             IQ_2L2D_POOL_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE, &
     &                             IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE
 
@@ -164,6 +164,7 @@ CONTAINS
     INTEGER  :: nc   !< Number of cells in current block
     INTEGER  :: iblk, ics, ice, ic, cqt_id, i_cqt, i_cq_var
     REAL(wp) :: dtime
+    INTEGER  :: is, nsoil, sz(3)
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_pplcc_pre_lcc'
 
     CHARACTER(len=:), ALLOCATABLE :: this_unit, expected_string_in_unit
@@ -223,7 +224,8 @@ CONTAINS
         ! conversion depends on the cq type
         cqt_id = tile%conserved_quantities(i_cqt)%p%type_id
         SELECT CASE (cqt_id)
-          CASE (LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE)
+          CASE (LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, &
+            & PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE)
 
             ! in the current implementation of jsb4 carbon variables are only available on the pft tiles
             IF (.NOT. index(tile%name, 'pft') /= 0) THEN
@@ -357,6 +359,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, ic, i_cqt, i_cq_var, cqt_id, nc
     REAL(wp) :: dtime
+    INTEGER  :: is, nsoil
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_pplcc_post_lcc'
 
     ! Declare pointers for process configuration and memory
@@ -416,7 +419,8 @@ CONTAINS
         cqt_id = tile%conserved_quantities(i_cqt)%p%type_id
 
         SELECT CASE (cqt_id)
-          CASE (LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE)
+          CASE (LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, &
+            &   PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE)
 
             ! in the current implementation of jsb4 carbon variables are only available on the pft tiles
             IF (.NOT. index(tile%name, 'pft') /= 0) THEN

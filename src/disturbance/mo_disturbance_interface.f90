@@ -33,7 +33,7 @@ MODULE mo_disturb_interface
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
 
   ! Use of processes in this module (Get_disturb_memory and Get_disturb_config)
-  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, A2L_, CARBON_, SEB_, FLCC_, WLCC_
+  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, A2L_, CARBON_, SEB_, FLCC_, WLCC_, HYDRO_
 
   ! Use of process configurations (t_disturb_config)
   dsl4jsb_Use_config(DISTURB_)
@@ -46,6 +46,7 @@ MODULE mo_disturb_interface
   dsl4jsb_Use_memory(FUEL_)
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(HYDRO_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -384,6 +385,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_damaged_area'
 
+    dsl4jsb_Real2D_onChunk :: burned_fract
+
     INTEGER  :: iblk, ics, ice
     ! -------------------------------------------------------------------------------------------------- !
 
@@ -421,6 +424,7 @@ CONTAINS
   SUBROUTINE update_natural_disturbances(tile, options)
 
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
+    USE mo_carbon_process_vertical,        ONLY: relocate_carbon_vertical_fire, relocate_carbon_vertical_damage
     USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, recalc_carbon_per_tile_vars, &
                                       & calculate_current_c_ta_state_sum, check_carbon_conservation
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
@@ -435,16 +439,19 @@ CONTAINS
     REAL(wp), DIMENSION(5)                    :: lctlib_LeafLit_coef, lctlib_WoodLit_coef
 
     INTEGER :: iblk, ics, ice, ic, nc
+    INTEGER :: is, nsoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_natural_disturbances'
 
     ! Declare process memories
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(DISTURB_)
+    dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(CARBON_)
 
     ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel
     dsl4jsb_Real2D_onChunk :: cconservation_fire
     dsl4jsb_Real2D_onChunk :: cconservation_wind
     !
@@ -477,6 +484,19 @@ CONTAINS
     !
     dsl4jsb_Real2D_onChunk :: c_humus_1
     dsl4jsb_Real2D_onChunk :: c_humus_2
+
+    dsl4jsb_Real3D_onChunk :: c_acid_bg1_sl
+    dsl4jsb_Real3D_onChunk :: c_water_bg1_sl
+    dsl4jsb_Real3D_onChunk :: c_ethanol_bg1_sl
+    dsl4jsb_Real3D_onChunk :: c_nonsoluble_bg1_sl
+    dsl4jsb_Real3D_onChunk :: c_acid_bg2_sl
+    dsl4jsb_Real3D_onChunk :: c_water_bg2_sl
+    dsl4jsb_Real3D_onChunk :: c_ethanol_bg2_sl
+    dsl4jsb_Real3D_onChunk :: c_nonsoluble_bg2_sl
+    !
+    dsl4jsb_Real3D_onChunk :: c_humus_1_sl
+    dsl4jsb_Real3D_onChunk :: c_humus_2_sl
+
     dsl4jsb_Real2D_onChunk :: co2flux_fire_all_2_atm
     !
     dsl4jsb_Real2D_onChunk :: co2flux_fire_all_2_atm_ta
@@ -502,8 +522,11 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(DISTURB_)
     dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(HYDRO_)
 
     ! Get process variables
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,     wtr_rootzone_rel)         ! in
+
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
     !
@@ -538,6 +561,20 @@ CONTAINS
     ! Tile average (ta) variable required for the carbon conservation test
     dsl4jsb_Get_var2D_onChunk(CARBON_,    co2flux_fire_all_2_atm_ta) ! out
 
+    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+          !SIZE CLASS 1
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg1_sl)            ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg1_sl)           ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg1_sl)         ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg1_sl)      ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_1_sl)             ! inout
+      !SIZE CLASS 2
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg2_sl)            ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg2_sl)           ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg2_sl)         ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg2_sl)      ! inout
+      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_2_sl)             ! inout
+    END IF
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Calculate carbon relocation due to wind damages and fires
@@ -562,49 +599,126 @@ CONTAINS
               CALL recalc_carbon_per_tile_vars(tile, options)
               CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
-              CALL relocate_carbon_damage(                 &
-                & damaged_fract(:),                        & ! in
-                & lctlib_LeafLit_coef(1:5),                & ! in
-                & lctlib_WoodLit_coef(1:5),                & ! in
-                & c_green(:),                              & ! inout
-                & c_woods(:),                              & ! inout
-                & c_reserve(:),                            & ! inout
-                & cflux_dist_green_2_soil(:),              & ! inout
-                & cflux_dist_woods_2_soil(:),              & ! inout
-                & c_acid_ag1(:),                           & ! inout
-                & c_water_ag1(:),                          & ! inout
-                & c_ethanol_ag1(:),                        & ! inout
-                & c_nonsoluble_ag1(:),                     & ! inout
-                & c_acid_ag2(:),                           & ! inout
-                & c_water_ag2(:),                          & ! inout
-                & c_ethanol_ag2(:),                        & ! inout
-                & c_nonsoluble_ag2(:),                     & ! inout
-                & c_acid_bg1(:),                           & ! inout
-                & c_water_bg1(:),                          & ! inout
-                & c_ethanol_bg1(:),                        & ! inout
-                & c_nonsoluble_bg1(:),                     & ! inout
-                & c_acid_bg2(:),                           & ! inout
-                & c_water_bg2(:),                          & ! inout
-                & c_ethanol_bg2(:),                        & ! inout
-                & c_nonsoluble_bg2(:),                     & ! inout
-                & c_humus_1(:),                            & ! inout
-                & c_humus_2(:)                             & ! inout
-                & )
+              IF (.NOT. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+                CALL relocate_carbon_damage(                 &
+                  & damaged_fract(:),                        & ! in
+                  & lctlib_LeafLit_coef(1:5),                & ! in
+                  & lctlib_WoodLit_coef(1:5),                & ! in
+                  & c_green(:),                              & ! inout
+                  & c_woods(:),                              & ! inout
+                  & c_reserve(:),                            & ! inout
+                  & cflux_dist_green_2_soil(:),              & ! inout
+                  & cflux_dist_woods_2_soil(:),              & ! inout
+                  & c_acid_ag1(:),                           & ! inout
+                  & c_water_ag1(:),                          & ! inout
+                  & c_ethanol_ag1(:),                        & ! inout
+                  & c_nonsoluble_ag1(:),                     & ! inout
+                  & c_acid_ag2(:),                           & ! inout
+                  & c_water_ag2(:),                          & ! inout
+                  & c_ethanol_ag2(:),                        & ! inout
+                  & c_nonsoluble_ag2(:),                     & ! inout
+                  & c_acid_bg1(:),                           & ! inout
+                  & c_water_bg1(:),                          & ! inout
+                  & c_ethanol_bg1(:),                        & ! inout
+                  & c_nonsoluble_bg1(:),                     & ! inout
+                  & c_acid_bg2(:),                           & ! inout
+                  & c_water_bg2(:),                          & ! inout
+                  & c_ethanol_bg2(:),                        & ! inout
+                  & c_nonsoluble_bg2(:),                     & ! inout
+                  & c_humus_1(:),                            & ! inout
+                  & c_humus_2(:)                             & ! inout
+                  & )
 
-              CALL recalc_per_tile_vars(tile, options,                                      &
-                & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
-                & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
-                & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
-                & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:),                 &
-                & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
-                & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:),                 &
-                & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
-                & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:),                 &
-                & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
-                & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
-                & cflux_dist_green_2_soil = cflux_dist_green_2_soil(:),                     &
-                & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:))
+                CALL recalc_per_tile_vars(tile, options,                                      &
+                  & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
+                  & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
+                  & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
+                  & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:),                 &
+                  & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
+                  & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:),                 &
+                  & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
+                  & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:),                 &
+                  & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
+                  & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
+                  & cflux_dist_green_2_soil = cflux_dist_green_2_soil(:),                     &
+                  & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:))
+              ELSE
+                CALL relocate_carbon_vertical_damage(                 &
+                  & damaged_fract(:),                        & ! in
+                  & lctlib_LeafLit_coef(1:5),                & ! in
+                  & lctlib_WoodLit_coef(1:5),                & ! in
+                  & c_green(:),                              & ! inout
+                  & c_woods(:),                              & ! inout
+                  & c_reserve(:),                            & ! inout
+                  & cflux_dist_green_2_soil(:),              & ! inout
+                  & cflux_dist_woods_2_soil(:),              & ! inout
+                  & c_acid_ag1(:),                           & ! inout
+                  & c_water_ag1(:),                          & ! inout
+                  & c_ethanol_ag1(:),                        & ! inout
+                  & c_nonsoluble_ag1(:),                     & ! inout
+                  & c_acid_ag2(:),                           & ! inout
+                  & c_water_ag2(:),                          & ! inout
+                  & c_ethanol_ag2(:),                        & ! inout
+                  & c_nonsoluble_ag2(:),                     & ! inout
+                  & c_acid_bg1(:),                           & ! inout
+                  & c_water_bg1(:),                          & ! inout
+                  & c_ethanol_bg1(:),                        & ! inout
+                  & c_nonsoluble_bg1(:),                     & ! inout
+                  & c_acid_bg2(:),                           & ! inout
+                  & c_water_bg2(:),                          & ! inout
+                  & c_ethanol_bg2(:),                        & ! inout
+                  & c_nonsoluble_bg2(:),                     & ! inout
+                  & c_humus_1(:),                            & ! inout
+                  & c_humus_2(:),                            & ! inout
+                  & c_acid_bg1_sl(:,:),                           & ! inout
+                  & c_water_bg1_sl(:,:),                          & ! inout
+                  & c_ethanol_bg1_sl(:,:),                        & ! inout
+                  & c_nonsoluble_bg1_sl(:,:),                     & ! inout
+                  & c_acid_bg2_sl(:,:),                           & ! inout
+                  & c_water_bg2_sl(:,:),                          & ! inout
+                  & c_ethanol_bg2_sl(:,:),                        & ! inout
+                  & c_nonsoluble_bg2_sl(:,:),                     & ! inout
+                  & c_humus_1_sl(:,:),                            & ! inout
+                  & c_humus_2_sl(:,:)                             & ! inout
+                  & )
 
+                DO ic = 1, nc
+                  ! Provide all variables as sum, too, not just on levels
+                  c_acid_bg1(ic)       = SUM(c_acid_bg1_sl(ic,:))
+                  c_water_bg1(ic)      = SUM(c_water_bg1_sl(ic,:))
+                  c_ethanol_bg1(ic)    = SUM(c_ethanol_bg1_sl(ic,:))
+                  c_nonsoluble_bg1(ic) = SUM(c_nonsoluble_bg1_sl(ic,:))
+                  c_acid_bg2(ic)       = SUM(c_acid_bg2_sl(ic,:))
+                  c_water_bg2(ic)      = SUM(c_water_bg2_sl(ic,:))
+                  c_ethanol_bg2(ic)    = SUM(c_ethanol_bg2_sl(ic,:))
+                  c_nonsoluble_bg2(ic) = SUM(c_nonsoluble_bg2_sl(ic,:))
+                  c_humus_1(ic)        = SUM(c_humus_1_sl(ic,:))
+                  c_humus_2(ic)        = SUM(c_humus_2_sl(ic,:))
+                END DO
+
+                CALL recalc_per_tile_vars(tile, options,                                      &
+                  & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
+                  & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
+                  & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
+                  & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:),                 &
+                  & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
+                  & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:),                 &
+                  & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
+                  & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:),                 &
+                  & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
+                  & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
+                  & cflux_dist_green_2_soil = cflux_dist_green_2_soil(:),                     &
+                  & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:))
+
+                ! Recalc per tile variables on soil levels
+                CALL recalc_per_tile_vars(tile, options,                                                      &
+                  & c_acid_bg1_sl = c_acid_bg1_sl(:,:), c_water_bg1_sl = c_water_bg1_sl(:,:),                 &
+                  & c_ethanol_bg1_sl = c_ethanol_bg1_sl(:,:), c_nonsoluble_bg1_sl = c_nonsoluble_bg1_sl(:,:), &
+                  & c_acid_bg2_sl = c_acid_bg2_sl(:,:), c_water_bg2_sl = c_water_bg2_sl(:,:),                 &
+                  & c_ethanol_bg2_sl = c_ethanol_bg2_sl(:,:), c_nonsoluble_bg2_sl = c_nonsoluble_bg2_sl(:,:), &
+                  & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:))
+
+              END IF
               ! Check conservation of carbon windthrow carbon relocations
               ! Note: Windthrow does not lead to an immediate flux to the atmosphere, therefore cflux = 0._wp
               !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
@@ -638,52 +752,135 @@ CONTAINS
               CALL recalc_carbon_per_tile_vars(tile, options)
               CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
-              CALL relocate_carbon_fire(                    &
-                & burned_fract(:),                          & ! in, only for windbreak
-                & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos, & ! in
-                & lctlib_LeafLit_coef(1:5),                 & ! in
-                & lctlib_WoodLit_coef(1:5),                 & ! in
-                & c_green(:),                               & ! inout
-                & c_woods(:),                               & ! inout
-                & c_reserve(:),                             & ! inout
-                & cflux_dist_green_2_soil(:),               & ! inout
-                & cflux_dist_woods_2_soil(:),               & ! inout
-                & c_acid_ag1(:),                            & ! inout
-                & c_water_ag1(:),                           & ! inout
-                & c_ethanol_ag1(:),                         & ! inout
-                & c_nonsoluble_ag1(:),                      & ! inout
-                & c_acid_ag2(:),                            & ! inout
-                & c_water_ag2(:),                           & ! inout
-                & c_ethanol_ag2(:),                         & ! inout
-                & c_nonsoluble_ag2(:),                      & ! inout
-                & c_acid_bg1(:),                            & ! inout
-                & c_water_bg1(:),                           & ! inout
-                & c_ethanol_bg1(:),                         & ! inout
-                & c_nonsoluble_bg1(:),                      & ! inout
-                & c_acid_bg2(:),                            & ! inout
-                & c_water_bg2(:),                           & ! inout
-                & c_ethanol_bg2(:),                         & ! inout
-                & c_nonsoluble_bg2(:),                      & ! inout
-                & c_humus_1(:),                             & ! inout
-                & c_humus_2(:),                             & ! inout
-                & co2flux_fire_all_2_atm                    & ! out
-                & )
+              IF (.NOT. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+                CALL relocate_carbon_fire(                    &
+                  & burned_fract(:),                          & ! in, only for windbreak
+                  & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos, & ! in
+                  & lctlib_LeafLit_coef(1:5),                 & ! in
+                  & lctlib_WoodLit_coef(1:5),                 & ! in
+                  & wtr_rootzone_rel(:),                      & ! in
+                  & c_green(:),                               & ! inout
+                  & c_woods(:),                               & ! inout
+                  & c_reserve(:),                             & ! inout
+                  & cflux_dist_green_2_soil(:),               & ! inout
+                  & cflux_dist_woods_2_soil(:),               & ! inout
+                  & c_acid_ag1(:),                            & ! inout
+                  & c_water_ag1(:),                           & ! inout
+                  & c_ethanol_ag1(:),                         & ! inout
+                  & c_nonsoluble_ag1(:),                      & ! inout
+                  & c_acid_ag2(:),                            & ! inout
+                  & c_water_ag2(:),                           & ! inout
+                  & c_ethanol_ag2(:),                         & ! inout
+                  & c_nonsoluble_ag2(:),                      & ! inout
+                  & c_acid_bg1(:),                            & ! inout
+                  & c_water_bg1(:),                           & ! inout
+                  & c_ethanol_bg1(:),                         & ! inout
+                  & c_nonsoluble_bg1(:),                      & ! inout
+                  & c_acid_bg2(:),                            & ! inout
+                  & c_water_bg2(:),                           & ! inout
+                  & c_ethanol_bg2(:),                         & ! inout
+                  & c_nonsoluble_bg2(:),                      & ! inout
+                  & c_humus_1(:),                             & ! inout
+                  & c_humus_2(:),                             & ! inout
+                  & co2flux_fire_all_2_atm                    & ! out
+                  & )
 
-              CALL recalc_per_tile_vars(tile, options,                                      &
-                & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
-                & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
-                & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
-                & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:),                 &
-                & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
-                & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:),                 &
-                & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
-                & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:),                 &
-                & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
-                & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
-                & cflux_dist_green_2_soil = cflux_dist_green_2_soil(:),                     &
-                & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:),                     &
-                & co2flux_fire_all_2_atm = co2flux_fire_all_2_atm(:))
+                CALL recalc_per_tile_vars(tile, options,                                      &
+                  & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
+                  & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
+                  & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
+                  & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:),                 &
+                  & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
+                  & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:),                 &
+                  & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
+                  & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:),                 &
+                  & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
+                  & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
+                  & cflux_dist_green_2_soil = cflux_dist_green_2_soil(:),                     &
+                  & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:),                     &
+                  & co2flux_fire_all_2_atm = co2flux_fire_all_2_atm(:))
 
+              ELSE
+                CALL relocate_carbon_vertical_fire(                    &
+                  & burned_fract(:),                          & ! in, only for windbreak
+                  & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos, & ! in
+                  & lctlib_LeafLit_coef(1:5),                 & ! in
+                  & lctlib_WoodLit_coef(1:5),                 & ! in
+                  & wtr_rootzone_rel(:),                      & ! in
+                  & c_green(:),                               & ! inout
+                  & c_woods(:),                               & ! inout
+                  & c_reserve(:),                             & ! inout
+                  & cflux_dist_green_2_soil(:),               & ! inout
+                  & cflux_dist_woods_2_soil(:),               & ! inout
+                  & c_acid_ag1(:),                            & ! inout
+                  & c_water_ag1(:),                           & ! inout
+                  & c_ethanol_ag1(:),                         & ! inout
+                  & c_nonsoluble_ag1(:),                      & ! inout
+                  & c_acid_ag2(:),                            & ! inout
+                  & c_water_ag2(:),                           & ! inout
+                  & c_ethanol_ag2(:),                         & ! inout
+                  & c_nonsoluble_ag2(:),                      & ! inout
+                  & c_acid_bg1(:),                            & ! inout
+                  & c_water_bg1(:),                           & ! inout
+                  & c_ethanol_bg1(:),                         & ! inout
+                  & c_nonsoluble_bg1(:),                      & ! inout
+                  & c_acid_bg2(:),                            & ! inout
+                  & c_water_bg2(:),                           & ! inout
+                  & c_ethanol_bg2(:),                         & ! inout
+                  & c_nonsoluble_bg2(:),                      & ! inout
+                  & c_humus_1(:),                             & ! inout
+                  & c_humus_2(:),                             & ! inout
+                  & co2flux_fire_all_2_atm,                   & ! out
+                  & c_acid_bg1_sl(:,:),                           & ! inout
+                  & c_water_bg1_sl(:,:),                          & ! inout
+                  & c_ethanol_bg1_sl(:,:),                        & ! inout
+                  & c_nonsoluble_bg1_sl(:,:),                     & ! inout
+                  & c_acid_bg2_sl(:,:),                           & ! inout
+                  & c_water_bg2_sl(:,:),                          & ! inout
+                  & c_ethanol_bg2_sl(:,:),                        & ! inout
+                  & c_nonsoluble_bg2_sl(:,:),                     & ! inout
+                  & c_humus_1_sl(:,:),                            & ! inout
+                  & c_humus_2_sl(:,:)                             & ! inout
+                  & )
+
+                DO ic = 1, nc
+                  ! Provide all variables as sum, too, not just on levels
+                  c_acid_bg1(ic)       = SUM(c_acid_bg1_sl(ic,:))
+                  c_water_bg1(ic)      = SUM(c_water_bg1_sl(ic,:))
+                  c_ethanol_bg1(ic)    = SUM(c_ethanol_bg1_sl(ic,:))
+                  c_nonsoluble_bg1(ic) = SUM(c_nonsoluble_bg1_sl(ic,:))
+                  c_acid_bg2(ic)       = SUM(c_acid_bg2_sl(ic,:))
+                  c_water_bg2(ic)      = SUM(c_water_bg2_sl(ic,:))
+                  c_ethanol_bg2(ic)    = SUM(c_ethanol_bg2_sl(ic,:))
+                  c_nonsoluble_bg2(ic) = SUM(c_nonsoluble_bg2_sl(ic,:))
+                  c_humus_1(ic)        = SUM(c_humus_1_sl(ic,:))
+                  c_humus_2(ic)        = SUM(c_humus_2_sl(ic,:))
+                END DO
+
+                CALL recalc_per_tile_vars(tile, options,                                      &
+                  & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
+                  & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
+                  & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
+                  & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:),                 &
+                  & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
+                  & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:),                 &
+                  & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
+                  & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:),                 &
+                  & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
+                  & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
+                  & cflux_dist_green_2_soil = cflux_dist_green_2_soil(:),                     &
+                  & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:),                     &
+                  & co2flux_fire_all_2_atm = co2flux_fire_all_2_atm(:))
+
+                ! Recalc per tile variables on soil levels
+                CALL recalc_per_tile_vars(tile, options,                                                      &
+                  & c_acid_bg1_sl = c_acid_bg1_sl(:,:), c_water_bg1_sl = c_water_bg1_sl(:,:),                 &
+                  & c_ethanol_bg1_sl = c_ethanol_bg1_sl(:,:), c_nonsoluble_bg1_sl = c_nonsoluble_bg1_sl(:,:), &
+                  & c_acid_bg2_sl = c_acid_bg2_sl(:,:), c_water_bg2_sl = c_water_bg2_sl(:,:),                 &
+                  & c_ethanol_bg2_sl = c_ethanol_bg2_sl(:,:), c_nonsoluble_bg2_sl = c_nonsoluble_bg2_sl(:,:), &
+                  & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:))
+
+              END IF
               ! Check conservation of carbon relocations due to fire
               ! Note: co2flux_fire_all_2_atm_ta is currently positve. It needs to be turned negative
               !      (flux away from land) and converted from CO2 flux per second to C flux per day.

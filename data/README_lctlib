@@ -1,0 +1,41 @@
+---------------
+ README lctlib
+---------------
+Veronika Gayler, July 2009
+
+The landcover library is edited as an OpenDocument spreadsheet (lctlib.ods).
+It includes different sheets:
+
+  nlct11     - corresponds to the lctlib used with the dynamic vegetation 
+  nlct14     - corresponds to the lctlib used in millennium expriments
+  nlct14C3C4 - as nlct14, however C3 and C4 crops are considered
+
+  nlct21     - merge of the above three lctlibs. Different numbers are used for
+               the LCTclasses.
+
+The idea is not to change any of the LCTs listed on nlct19, but to rather add
+new lct classes. This allows the usage old initial files with future LCT
+libraries.
+
+Export from the staroffice document
+-----------------------------------
+
+File -> Save as -> "Text CSV"
+    (x) Edit filter settings
+    Save
+
+Klick "Yes" to save in Text CVS even though formatting might get lost 
+
+Chose field options:
+  Character set Unicode (UTF-8)
+  Field delimiter {space}
+  Text delimiter "
+ (x) Save cell content as shown
+  And klick "OK"
+
+
+Convert the csv text file to the lctlib.def
+-------------------------------------------
+
+tr -d '"' < lctlib.csv > lctlib_nlct21.def 
+ 
