@@ -267,10 +267,6 @@ CONTAINS
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
     config%dbg_process            = dbg_process
-    config%run_case               = 1
-    IF (has_peatland_tile) THEN
-      config%run_case               = 2
-    ENDIF
     config%has_peatland_tile      = has_peatland_tile
     config%frac_CH4_anox_mineral  = frac_CH4_anox_mineral
     config%frac_CH4_anox_organic  = frac_CH4_anox_organic
@@ -284,13 +280,13 @@ CONTAINS
     config%implicit_contrib       = implicit_contrib
     config%CH4_source             = CH4_source
     config%CO2_source             = CO2_source
-    config%O2_source              =  O2_source
-    config%CH4_scale             = CH4_scale
-    config%CO2_scale             = CO2_scale
-    config%O2_scale              =  O2_scale
+    config%O2_source              = O2_source
+    config%CH4_scale              = CH4_scale
+    config%CO2_scale              = CO2_scale
+    config%O2_scale               = O2_scale
     config%CH4_varname            = CH4_varname
     config%CO2_varname            = CO2_varname
-    config%O2_varname             =  O2_varname
+    config%O2_varname             = O2_varname
     config%do_fire                = do_fire
     config%do_termite             = do_termite
     config%do_herbivore           = do_herbivore

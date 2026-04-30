@@ -3018,6 +3018,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_skin          !< Wet skin fraction (soil and canopy; without ponds) []
     dsl4jsb_Real2D_onChunk :: fract_wet           !< Wet tile fraction (soil and canopy; incl. ponds) []
     dsl4jsb_Real2D_onChunk :: fract_pond          !< Inundated area fraction (area of temporary ponds) []
+    dsl4jsb_Real2D_onChunk :: fract_pond_old      !< Inundated area fraction prior to update []
     dsl4jsb_Real2D_onChunk :: fract_pond_max      !< Maximum inundated area fraction []
     dsl4jsb_Real2D_onChunk :: fract_fpc_max       !< Maximum foliage projected cover []
     dsl4jsb_Real2D_onChunk :: fract_snow_can      !< Snow fraction on canopy []
@@ -3120,6 +3121,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond_max)      ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_skin)        ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_pond)        ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_pond_old)    ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_wet)         ! out
     END IF
     IF (tile%contains_vegetation) THEN
@@ -3194,9 +3196,11 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1,nc
       IF (tile%contains_soil) THEN
-        skinres_max(ic) = config_w_skin_max + skinres_canopy_max(ic)
+        skinres_max(ic)    = config_w_skin_max + skinres_canopy_max(ic)
+        fract_pond_old(ic) = fract_pond(ic)
       ELSE
-        skinres_max(ic) = 0._wp
+        skinres_max(ic)    = 0._wp
+        fract_pond_old(ic) = 0._wp
       END IF
 
       !> Glaciers are entirely covered with snow. They do not have a wet fraction.
@@ -3331,6 +3335,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_wet,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_skin,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_pond,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, fract_pond_old,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow_soil,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow_can,   weighted_by_fract)

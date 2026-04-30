@@ -22,19 +22,17 @@ MODULE mo_methane_interface
   USE mo_jsb_grid_class,         ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,               ONLY: Get_vgrid, Get_grid
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_process_class,      ONLY: t_jsb_process, PHENO_, CH4_, TOP_, CARBON_, A2L_, HYDRO_, SSE_, NLCC_
+  USE mo_jsb_process_class,      ONLY: t_jsb_process, PHENO_, CH4_, CARBON_, A2L_, HYDRO_, SSE_, NLCC_
   USE mo_jsb_task_class,         ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_math_constants,     ONLY: eps8
   USE mo_jsb_physical_constants, ONLY: tmelt
   USE mo_methane_constants,      ONLY: t_specie_const, CH4_consts, CO2_consts, O2_consts
 
   dsl4jsb_Use_config(CH4_)
-  dsl4jsb_Use_config(TOP_)
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_memory(CH4_)
-  dsl4jsb_Use_memory(TOP_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(A2L_)
@@ -282,13 +280,11 @@ CONTAINS
     !
     TYPE(t_jsb_model), POINTER :: model
     dsl4jsb_Def_config(CH4_)
-    dsl4jsb_Def_config(TOP_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(CH4_)
-    dsl4jsb_Def_memory(TOP_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(PHENO_)
@@ -321,8 +317,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: acrotelm_height_bg
     dsl4jsb_Real2D_onChunk :: mxlay_above_rock
     dsl4jsb_Real2D_onChunk :: lai
-    dsl4jsb_Real2D_onChunk :: frac_inun
-    dsl4jsb_Real2D_onChunk :: frac_inun_pre
+    dsl4jsb_Real2D_onChunk :: fract_pond
+    dsl4jsb_Real2D_onChunk :: fract_pond_old
     dsl4jsb_Real2D_onChunk :: peat_water_table
     dsl4jsb_Real2D_onChunk :: wt_inun
     dsl4jsb_Real2D_onChunk :: soil_depth
@@ -399,12 +395,10 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_Config(CH4_)
-    dsl4jsb_Get_Config(TOP_)
     dsl4jsb_Get_Config(SSE_)
     dsl4jsb_Get_Config(NLCC_)
     dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_memory(CH4_)
-    dsl4jsb_Get_memory(TOP_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(CARBON_)
@@ -535,13 +529,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, bclapp)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_porosity)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, soil_depth)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond_old)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)
-    ! TOP_ variables
-    dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun)
-    dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun_pre)
-    dsl4jsb_Get_var2D_onChunk(TOP_, wt_inun)
-    dsl4jsb_Get_var2D_onChunk(TOP_, peat_water_table)
+    ! ! TOP_ variables
+    ! dsl4jsb_Get_var2D_onChunk(TOP_, wt_inun)
+    ! dsl4jsb_Get_var2D_onChunk(TOP_, peat_water_table)
     ! dsl4jsb_Get_var2D_onChunk(A2L_, CH4)
     ! CARBON_ variables
     dsl4jsb_Get_var2D_onChunk(CARBON_, soil_respiration_oxic_ta)
@@ -778,17 +772,17 @@ CONTAINS
 
           ! flush stored C out and reset to ensure conservation
           stored_C_sum = 0._wp
-          IF (frac_inun_pre(ic) < 1._wp) THEN
+          IF (fract_pond_old(ic) < 1._wp) THEN
             stored_C_sum = stored_C_sum + &
                            (SUM(CO2_dry%dens_sl(ic,1:nly)) +   &
                             SUM(CH4_dry%dens_sl(ic,1:nly))) *  &
-                            (1._wp - frac_inun_pre(ic))
+                            (1._wp - fract_pond_old(ic))
           END IF
-          IF (frac_inun_pre(ic) > 0._wp) THEN
+          IF (fract_pond_old(ic) > 0._wp) THEN
             stored_C_sum = stored_C_sum + &
                            (SUM(CO2_wet%dens_sl(ic,1:nly)) +   &
                             SUM(CH4_wet%dens_sl(ic,1:nly))) *  &
-                            frac_inun_pre(ic)
+                            fract_pond_old(ic)
           END IF
 
           CO2_out_net(ic) = CO2_out_net(ic) + stored_C_sum / dt
@@ -803,12 +797,12 @@ CONTAINS
 
         IF (compute_flag) THEN
 
-          frac_inun_loc = frac_inun(ic)
-          CALL init_gas_pools(is_peat, nly,                                                         &
-                              dsl4jsb_Config(CH4_)%frac_inun_min, frac_inun_loc, frac_inun_pre(ic), &
-                              CH4_dry%dens_sl(ic,:), CO2_dry%dens_sl(ic,:), O2_dry%dens_sl(ic,:),   &
-                              CH4_wet%dens_sl(ic,:), CO2_wet%dens_sl(ic,:), O2_wet%dens_sl(ic,:),   &
-                              CH4_dry_sl     (   :), CO2_dry_sl     (   :), O2_dry_sl     (   :),   &
+          frac_inun_loc = fract_pond(ic)
+          CALL init_gas_pools(is_peat, nly,                                                          &
+                              dsl4jsb_Config(CH4_)%frac_inun_min, frac_inun_loc, fract_pond_old(ic), &
+                              CH4_dry%dens_sl(ic,:), CO2_dry%dens_sl(ic,:), O2_dry%dens_sl(ic,:),    &
+                              CH4_wet%dens_sl(ic,:), CO2_wet%dens_sl(ic,:), O2_wet%dens_sl(ic,:),    &
+                              CH4_dry_sl     (   :), CO2_dry_sl     (   :), O2_dry_sl     (   :),    &
                               CH4_wet_sl     (   :), CO2_wet_sl     (   :), O2_wet_sl     (   :))
 
           ! setup for wetness loop:
@@ -1002,7 +996,7 @@ CONTAINS
 
             ! Peatlands updates densities differently
             IF (is_peat) THEN
-              frac_inun_pre  (ic)   = 1._wp
+              fract_pond_old(ic)    = 1._wp
               CH4_dry%dens_sl(ic,:) = 0._wp
               CO2_dry%dens_sl(ic,:) = 0._wp
                O2_dry%dens_sl(ic,:) = 0._wp
@@ -1010,7 +1004,7 @@ CONTAINS
               CO2_wet%dens_sl(ic,:) = CO2_act(:)
                O2_wet%dens_sl(ic,:) =  O2_act(:)
             ELSE
-              frac_inun_pre(ic) = frac_inun_loc
+              fract_pond_old(ic) = frac_inun_loc
             ENDIF
 
           ENDDO ! iWetness

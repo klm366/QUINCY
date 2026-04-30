@@ -78,6 +78,7 @@ MODULE mo_hydro_memory_class
       & evapopot,             & !< Potential evaporation                                 [kg m-2 s-1]
       & evapotrans,           & !< Evapotranspiration                                    [kg m-2 s-1]
       & fract_pond,           & !< Inudated area fraction (area of temporary ponds)      []
+      & fract_pond_old,       & !< Last timesteps inudated area fraction                 []
       & fract_pond_max,       & !< Maximum possible inudated tile fraction               []
       & weq_pond,             & !< Water content of pond reservoir                       [m water equivalent]
       & weq_pond_max,         & !< Maximum water content of pond reservoir               [m water equivalent]
@@ -1124,6 +1125,14 @@ CONTAINS
       CALL mem%Add_var( 'fract_pond', mem%fract_pond,                                  &
         & hgrid, surface,                                                              &
         & t_cf('fract_pond', '-', 'Inundated surface fraction'),                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'fract_pond_old', mem%fract_pond_old,                          &
+        & hgrid, surface,                                                              &
+        & t_cf('fract_pond_old', '-', 'Last timesteps inundated surface fraction'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
