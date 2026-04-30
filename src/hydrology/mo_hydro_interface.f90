@@ -1440,7 +1440,7 @@ CONTAINS
   SUBROUTINE update_soil_hydrology(tile, options)
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
-    USE mo_hydro_process,          ONLY: calc_soil_hydrology
+    USE mo_hydro_process,          ONLY: calc_soil_hydrology, diagnose_water_table
     USE mo_hydro_constants,        ONLY: frac_wtr_vertical_transport_up_max, frac_wtr_vertical_transport_down_max, &
       &                                  frac_w_lat_loss_max
     USE mo_jsb_math_constants,     ONLY: eps8
@@ -1450,8 +1450,9 @@ CONTAINS
 
     ! Local variables
     dsl4jsb_Def_config(HYDRO_)                   !< Configurable parameters of the hydrology process
+    dsl4jsb_Def_config(SSE_)                     !< Configurable parameters of the soil and snow energy process
     dsl4jsb_Def_memory(HYDRO_)                   !< Variables of the hydrology process
-    dsl4jsb_Def_memory(SSE_)                     !< Variables of the "snow and snow energy" process
+    dsl4jsb_Def_memory(SSE_)                     !< Variables of the "soil and snow energy" process
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_memory(Q_ASSIMI_)
 #endif
@@ -1468,6 +1469,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: soil_depth_sl      !< (Active) soil depth within the soil layers [m]
 
     dsl4jsb_Real2D_onChunk :: wtr_soilhyd_res    !< Residual of the vertical soil water transport scheme [m]
+    dsl4jsb_Real2D_onChunk :: water_table        !< Height of soil water table [m]
+    dsl4jsb_Real2D_onChunk :: frac_liquid_top    !< Fraction of liquid water in <=0.5m depth (full layers) [-]
     dsl4jsb_Real2D_onChunk :: wtr_pond           !< Water content of the pond reservoir [m]
     dsl4jsb_Real2D_onChunk :: ice_pond           !< Amount of ice in the pond reservoir [m water equivalent]
     dsl4jsb_Real2D_onChunk :: weq_pond           !< Water/ice content of the pond reservoir [m water equiv.]
@@ -1569,6 +1572,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, soil_depth)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, steepness)        ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soilhyd_res)  ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, water_table)      ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, frac_liquid_top)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)         ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)         ! out
@@ -1866,6 +1871,19 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    ! Diagnose the soil water table
+    CALL diagnose_water_table(nc, nsoil,                   &
+      &  dsl4jsb_Config(SSE_)%l_freeze,                    &
+      &  dsl4jsb_Config(HYDRO_)%dz_min_wt,                 &
+      &  dsl4jsb_Config(HYDRO_)%saturation,                &
+      &  soil_w%dz(:), soil_w%ubounds(:),                  &
+      &  soil_depth(:),                                    &
+      &  dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl), &
+      &  dsl4jsb_var3D_onChunk (SSE_,   t_soil_sl),        &
+      &  wtr_soil_sl(:,:), ice_soil_sl(:,:),               &
+      &  water_table(:), frac_liquid_top(:)                &
+      & )
+
     SELECT CASE (model%config%model_scheme)
 #ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
@@ -1934,6 +1952,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage_sl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, water_table,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, frac_liquid_top,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_transp_down_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_sl,  weighted_by_fract)

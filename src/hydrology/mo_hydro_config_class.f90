@@ -60,8 +60,10 @@ MODULE mo_hydro_config_class
                                 !< cells with infinitely growing snow depth; -1. for no limitation
       & ret_macro_blg,        & !< Assumed retention time for below ground runoff,
                                 !< i.e. avg. time before water reaches tributary [s]
-      & ret_macro_srf           !< Assumed retention time for surface runoff,
+      & ret_macro_srf,        & !< Assumed retention time for surface runoff,
                                 !< i.e. avg. time before water reaches tributary [s]
+      & saturation,           & !< Relative soil moisture at saturation [-]
+      & dz_min_wt               !< Minimum soil depth to run water table diagnostic [m]
 
     CHARACTER(len=10)     ::  &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance: 'echam5' is only option
@@ -167,7 +169,9 @@ CONTAINS
       & w_soil_crit_fract,    & !< Relative root zone moisture where water stress starts to matter
       & w_soil_wilt_fract,    & !< Relative root zone moisture at wilting point
       & ret_macro_blg,        & !< Retention time for below ground runoff [s]
-      & ret_macro_srf           !< Retention time for surface runoff [s]
+      & ret_macro_srf,        & !< Retention time for surface runoff [s]
+      & saturation,           & !< Relative soil moisture at saturation [-]
+      & dz_min_wt               !< Minimum soil depth to run water table diagnostic [m]
     CHARACTER(len=16) :: &
       & scheme_stom_cond,     & !< Scheme to compute stomatal conductance
       & soilhydmodel,         & !< Model to calculate soil hydraulic properties
@@ -213,6 +217,8 @@ CONTAINS
       & snow_depth_max,             &
       & ret_macro_blg,              &
       & ret_macro_srf,              &
+      & saturation,                 &
+      & dz_min_wt,                  &
       & scheme_stom_cond,           &
       & l_read_initial_moist,       &
       & sanitize_restart,           &
@@ -268,6 +274,8 @@ CONTAINS
     snow_depth_max         = -1.0_wp             ! -1: no limitation
     ret_macro_blg          = 432000._wp          ! [s]
     ret_macro_srf          = 36000._wp           ! [s]
+    saturation             = 0.95_wp             ! [-]
+    dz_min_wt              = 0.11_wp             ! [m]
     scheme_stom_cond       = 'echam5'
     l_read_initial_moist   = .FALSE.
     sanitize_restart       = .FALSE.
@@ -332,6 +340,9 @@ CONTAINS
 
     config%ret_macro_blg       = ret_macro_blg
     config%ret_macro_srf       = ret_macro_srf
+
+    config%saturation          = saturation
+    config%dz_min_wt           = dz_min_wt
 
     config%scheme_stom_cond       = scheme_stom_cond
 

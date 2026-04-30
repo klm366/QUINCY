@@ -221,6 +221,8 @@ MODULE mo_hydro_memory_class
       & wtr_rootzone_avail_max, & !< Maximum plant available water content in root zone  [m]
       & water_stress,           & !< Water stress factor used in assimilation and
                                   !< canopy conductance (1: none, 0: infinite stress)    []
+      & water_table,            & !< Height of water table                               [m]
+      & frac_liquid_top,        & !< Fraction of liquid water in <=0.5m depth (full layers) []
       & canopy_cond_unlimited,  & !< Canopy conductance without water limitation         [m/s]
       & canopy_cond_limited,    & !< Canopy conductance accounting for water stress      [m/s]
       & transpiration             !< Transpiration                                       [kg m-2 s-1]
@@ -1292,6 +1294,22 @@ CONTAINS
         & prefix, suffix,                                                                &
         & output_level=BASIC,                                                            &
         & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp )
+
+      CALL mem%Add_var( 'water_table', mem%water_table,                                  &
+        & hgrid, surface,                                                                &
+        & t_cf('water_table', 'm', 'Height of water table'),                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & output_level=BASIC,                                                            &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+
+      CALL mem%Add_var( 'frac_liquid_top', mem%frac_liquid_top,                          &
+        & hgrid, surface,                                                                &
+        & t_cf('frac_liquid_top', '-', 'Fraction of liquid water in <=0.5m depth'),      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & output_level=FULL,                                                             &
+        & lrestart=.FALSE., initval_r=0.0_wp )
 
 #ifndef __QUINCY_STANDALONE__
       IF (.NOT. model%Is_process_enabled(ASSIMI_)) THEN

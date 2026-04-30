@@ -27,7 +27,7 @@ MODULE mo_hydro_process
 
   PUBLIC :: calc_surface_hydrology_land, calc_surface_hydrology_glacier, calc_soil_hydrology,             &
     & get_soilhyd_properties, calc_wskin_fractions_lice, calc_wet_fractions_veg, calc_wet_fractions_bare, &
-    & get_canopy_conductance, get_water_stress_factor, calc_orographic_features
+    & diagnose_water_table, get_canopy_conductance, get_water_stress_factor, calc_orographic_features
 
   INTERFACE get_canopy_conductance
     MODULE PROCEDURE get_canopy_cond_unstressed_simple
@@ -2839,6 +2839,137 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
   END SUBROUTINE calc_wet_fractions_bare
+
+  !----------------------------------------------------------------------------------------------
+  !>
+  !> #### Diagnose the water table depth
+  !>
+  SUBROUTINE diagnose_water_table(           &
+    &  nc, nsoil, with_permafrost,           &
+    &  soil_depth_min, saturation_threshold, &
+    &  dz_sl, lower_bound_sl,                &
+    &  soil_depth, field_capacity,           &
+    &  t_soil_sl,                            &
+    &  wtr_soil_sl, ice_soil_sl,             &
+    &  water_table,                          &
+    &  frac_liquid_top                       &
+    & )
+
+    USE mo_jsb_physical_constants, ONLY: tmelt
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
+
+    ! Parameters
+    INTEGER,  INTENT(in)    :: nc                   !< Number of grid cells on vector
+    INTEGER,  INTENT(in)    :: nsoil                !< Number of soil layers
+    LOGICAL,  INTENT(in)    :: with_permafrost      !< Soil may contain frozen water?
+    REAL(wp), INTENT(in)    :: soil_depth_min       !< Minimum total depth of soil for point to be considered [m]
+    REAL(wp), INTENT(in)    :: saturation_threshold !< Threshold for fully saturated soil layer []
+    REAL(wp), INTENT(in)    :: dz_sl(:)             !< Thickness of individual soil layers [m]
+    REAL(wp), INTENT(in)    :: lower_bound_sl(:)    !< Depth of lower boundary of individual soil layers [m]
+    REAL(wp), INTENT(in)    :: soil_depth(:)        !< Total depth of soil [m]
+    REAL(wp), INTENT(in)    :: field_capacity(:,:)  !< Field capacity of soil []
+    ! Input variables
+    REAL(wp), INTENT(in)    :: t_soil_sl(:,:)       !< Temperature of each soil layer [K]
+    REAL(wp), INTENT(in)    :: wtr_soil_sl(:,:)     !< Column of liquid water in each soil layer [m]
+    REAL(wp), INTENT(in)    :: ice_soil_sl(:,:)     !< Column of frozen water in each soil layer [m]
+    ! Output variables
+    REAL(wp), INTENT(out)   :: water_table(:)       !< Height of water table [m]
+    REAL(wp), INTENT(out)   :: frac_liquid_top(:)   !< fraction of liquid water in top <=0.5m (full layers) []
+
+    ! Local variables
+    REAL(wp) :: ice2weq                     !< Conversion factor: [m ice] to [m water equivalent]
+    REAL(wp) :: weq
+    REAL(wp) :: saturation
+    REAL(wp) :: dz                          ! Thickness of current layer
+    REAL(wp) :: local_depth
+    REAL(wp) :: frac_liquid
+    LOGICAL  :: layer_below_saturated, layer_below_unfrozen
+    INTEGER  :: &
+      & is,     & !< Index for soil layers
+      & ic        !< Index for grid cells
+
+    ice2weq = rhoi / rhoh2o
+
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+    !$ACC LOOP SEQ
+    DO is = nsoil, 1, -1
+      !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(layer_below_saturated, layer_below_unfrozen, local_depth) &
+      !$ACC   PRIVATE(dz, frac_liquid, weq, saturation)
+      DO ic = 1, nc
+
+        IF (is == nsoil) THEN
+          ! Initialize
+          layer_below_saturated =  .TRUE.
+          layer_below_unfrozen  = .FALSE.
+          local_depth           = 0._wp
+          water_table(ic)       = -MIN(lower_bound_sl(nsoil), soil_depth(ic))
+          frac_liquid_top(ic)   = 0._wp
+        END IF
+
+        ! Skip this layer if it is fully below the bedock
+        IF (lower_bound_sl(MAX(1,is-1)) > soil_depth(ic)) CYCLE
+
+        ! Thickness of soil in current layer
+        IF (lower_bound_sl(is) > soil_depth(ic)) THEN
+          dz = soil_depth(ic) - lower_bound_sl(MAX(1,is-1))
+        ELSE
+          dz = dz_sl(is)
+        END IF
+
+        ! Absolute and relative water content (liquid and frozen) in layer is
+        frac_liquid = 1._wp
+        weq = wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) * ice2weq
+        IF (weq > 0._wp) THEN
+          IF (with_permafrost) THEN
+            frac_liquid = wtr_soil_sl(ic,is) / weq
+          ELSE
+            ! Piecewise linear function, 0 for T < ~0.5 degC, increasing to 1 between ~-0.5 degC and 0.5 degC and 1 afterwards
+            frac_liquid = MAX(0._wp, MIN(1._wp, (t_soil_sl(ic,is) - (tmelt-0.5_wp))))
+          ENDIF
+        ENDIF
+
+        ! Sum for avg. liquid frac in upper 0.5 m
+        IF (lower_bound_sl(is) <= 0.5_wp) THEN
+          frac_liquid_top = frac_liquid_top + frac_liquid * dz
+          local_depth = local_depth + dz
+        ENDIF
+
+        ! Water table for grids with sufficient soil_depth
+        IF (soil_depth(ic) > soil_depth_min) THEN
+          IF ((field_capacity(ic,is) > 0._wp) .AND. (dz > 0._wp)) THEN
+            saturation = MAX(0._wp, MIN(1._wp, weq / dz / field_capacity(ic,is)))
+          ELSE
+            IF (weq > 0._wp) THEN
+              saturation = 1._wp
+            ELSE
+              saturation = 0._wp
+            END IF
+          END IF
+          IF (layer_below_saturated) THEN
+            IF ((t_soil_sl(ic,is) < tmelt) .AND. .NOT. layer_below_unfrozen) THEN
+              water_table = water_table + dz
+            ELSE
+              layer_below_unfrozen = .TRUE.
+              IF (saturation > saturation_threshold) THEN
+                water_table = water_table + dz
+              ELSE
+                layer_below_saturated = .FALSE.
+                water_table = water_table + saturation * dz
+              ENDIF
+            ENDIF
+          ENDIF
+        ENDIF
+      END DO ! ic
+    END DO ! is
+    !$ACC END PARALLEL
+
+    IF (local_depth > 0) THEN
+      frac_liquid_top = frac_liquid_top / local_depth
+    ELSE
+      frac_liquid_top = 0._wp
+    ENDIF
+
+  END SUBROUTINE diagnose_water_table
 
   !----------------------------------------------------------------------------------------------
   !>

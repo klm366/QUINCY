@@ -313,14 +313,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: soil_respiration
     dsl4jsb_Real2D_onChunk :: soil_respiration_oxic_ta
     dsl4jsb_Real2D_onChunk :: soil_respiration_anox_ta
-    dsl4jsb_Real2D_onChunk :: acrotelm_height_ag
-    dsl4jsb_Real2D_onChunk :: acrotelm_height_bg
     dsl4jsb_Real2D_onChunk :: mxlay_above_rock
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_pond
     dsl4jsb_Real2D_onChunk :: fract_pond_old
     dsl4jsb_Real2D_onChunk :: peat_water_table
-    dsl4jsb_Real2D_onChunk :: wt_inun
+    dsl4jsb_Real2D_onChunk :: water_table
     dsl4jsb_Real2D_onChunk :: soil_depth
     dsl4jsb_Real2D_onChunk :: vol_porosity
     dsl4jsb_Real2D_onChunk :: bclapp
@@ -355,7 +353,6 @@ CONTAINS
     REAL(wp), POINTER :: AnoxDecompCarbon(:)
     REAL(wp), POINTER :: OxicDecompCarbon_sl(:,:)
     REAL(wp), POINTER :: AnoxDecompCarbon_sl(:,:)
-    REAL(wp), POINTER :: water_table(:)
     REAL(wp), POINTER :: tiller_area_sl(:)
     REAL(wp), POINTER :: frac_tile(:)
     REAL(wp), POINTER :: D_CH4(:), D_CO2(:), D_O2(:), D_used(:)
@@ -474,7 +471,6 @@ CONTAINS
     !
     ALLOCATE(OxicDecompCarbon      (nc))
     ALLOCATE(AnoxDecompCarbon      (nc))
-    ALLOCATE(water_table           (nc))
     ALLOCATE(frac_tile             (nc))
     ALLOCATE(tiller_area_sl        (nsoil))
     ALLOCATE(CH4_dry_sl            (nsoil))
@@ -541,8 +537,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_, soil_respiration_oxic_ta)
     dsl4jsb_Get_var2D_onChunk(CARBON_, soil_respiration_anox_ta)
     dsl4jsb_Get_var2D_onChunk(CARBON_, c_green)
-    dsl4jsb_Get_var2D_onChunk(CARBON_, acrotelm_height_ag)
-    dsl4jsb_Get_var2D_onChunk(CARBON_, acrotelm_height_bg)
     dsl4jsb_Get_var2D_onChunk(CARBON_, co2flux_fire_all_2_atm_ta)
     dsl4jsb_Get_var2D_onChunk(CARBON_, co2flux_herb_2_atm_ta)
     dsl4jsb_Get_var2D_onChunk(CARBON_, GPP_prev_year_ta)
@@ -712,18 +706,6 @@ CONTAINS
       END DO
     END IF
 
-    is_peat = .FALSE. ! StW, TODO: Previous no peatland tiles are defined - to be replaced with some lctlib-constant
-
-    IF (is_peat) THEN ! StW: Where to get is_peat?
-      DO ic = 1, nc
-        water_table(ic) = peat_water_table(ic)
-      ENDDO
-    ELSE
-      DO ic = 1, nc
-        water_table(ic) = wt_inun(ic)
-      ENDDO
-    ENDIF
-
     ! Is tile any kind of vegentation? Should always be the case in JSB4 since this process is only active on veg-tiles
     is_veg = dsl4jsb_Lctlib_param(NaturalVegFlag) .OR. &
              dsl4jsb_Lctlib_param(PastureFlag)    .OR. &
@@ -852,11 +834,8 @@ CONTAINS
 
             ! set up soil column
 
-            ! set up acrotelm height (= 0 for mineral soil)
+            ! set up acrotelm height (= 0 for mineral soil, peatlands not yet implemented)
             acro_height = 0._wp
-            IF (is_peat) THEN
-              acro_height = acrotelm_height_ag(ic)+acrotelm_height_bg(ic)
-            END IF
 
             CALL soil_column_setup(dsl4jsb_Config(SSE_)%l_freeze, is_peat, is_Wet, nly,                &
                                    soil_w%dz(:), (soil_w%lbounds(:)+soil_w%ubounds(:))*0.5_wp,         &
@@ -1084,7 +1063,6 @@ CONTAINS
     !
     DEALLOCATE(OxicDecompCarbon)
     DEALLOCATE(AnoxDecompCarbon)
-    DEALLOCATE(water_table)
     DEALLOCATE(tiller_area_sl)
     DEALLOCATE(frac_tile)
     DEALLOCATE(CH4_dry_sl)
