@@ -66,7 +66,8 @@ CONTAINS
 #endif
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, NLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_, VEG_, ALCC_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, NLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_, VEG_, ALCC_, &
+      &                   CH4_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -80,6 +81,7 @@ CONTAINS
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
     dsl4jsb_Use_config(ALCC_)
+    dsl4jsb_Use_config(CH4_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(SPQ_)
@@ -100,6 +102,7 @@ CONTAINS
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
     dsl4jsb_Def_config(ALCC_)
+    dsl4jsb_Def_config(CH4_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(SPQ_)
@@ -283,6 +286,7 @@ CONTAINS
         dsl4jsb_Get_config(NLCC_)
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
+        dsl4jsb_Get_config(CH4_)
 
         ! Make number of vertical layers available from the options type
         IF (model%Is_process_enabled(HYDRO_)) THEN
@@ -396,12 +400,13 @@ CONTAINS
       CASE (MODEL_JSBACH)
 
         IF (.NOT. model%Is_process_enabled(NLCC_) .AND. ( &
+          & (model%Is_process_enabled(CH4_)    .AND. dsl4jsb_Config(CH4_)%do_termite)    .OR. &  ! Termintes active
           & (model%Is_process_enabled(CARBON_) .AND. dsl4jsb_Config(CARBON_)%on_soillev)      &  ! Yasso active
           & )) THEN
           dsl4jsb_Config(NLCC_)%active = .TRUE.
           dsl4jsb_Config(NLCC_)%climbuf_only = .TRUE.
           CALL message(TRIM(routine), &
-            & 'Switching on nlcc process since vertical soil carbon representation is active')
+            & 'Switching on nlcc process since vertical soil carbon or termites are active')
         ENDIF
 
         IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN

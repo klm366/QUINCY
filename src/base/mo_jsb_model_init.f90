@@ -19,7 +19,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
-    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, CH4_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -174,6 +174,7 @@ CONTAINS
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
 #endif
+    USE mo_methane_init,        ONLY: methane_init
     USE mo_fage_init,           ONLY: fage_init
 
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
@@ -348,6 +349,7 @@ CONTAINS
       IF (model%processes(CARBON_)%p%config%active) THEN
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
+      CALL model%Queue_task(CH4_,    "methane_processes") ! StW: No clue if this is a sensible place in the list
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       IF (.NOT. model%config%use_tmx) THEN
         CALL model%Queue_task(TURB_,   "surface_roughness")
@@ -802,6 +804,9 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
+        IF (tile%Is_process_active(CH4_)) THEN
+          CALL methane_init(tile)
+        END IF
         IF (tile%Is_process_active(HD_)) THEN
           CALL hd_init_bc(tile)
           CALL hd_init_ic(tile)
