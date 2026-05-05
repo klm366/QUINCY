@@ -38,7 +38,8 @@ MODULE mo_climbuf_config_class
   !> buffer actually defined in [[t_climbuf_config]].
   TYPE, EXTENDS(t_jsb_config) :: t_climbuf_config
     LOGICAL :: &
-      & init_running_means                    !< Switch to initialize some running mean climate variables
+      & init_climbuf,         & !< Switch to initialize some running mean climate variables
+      & init_running_means      !< Switch to initialize some running mean climate variables
 
    CONTAINS
      PROCEDURE :: Init => Init_climbuf_config
@@ -69,6 +70,7 @@ CONTAINS
       & active,                    & !< True: the CLIMBUF process is activated
       & lrestart_cont,             & !< Continue simulation although variables of the climbuf
                                      !< process are missing in restart file
+      & init_climbuf,              & !< Initialize climate buffer
       & init_running_means           !< Initialize running mean CLIMBUF variables
 
     CHARACTER(len=filename_max) :: &
@@ -80,6 +82,7 @@ CONTAINS
       & lrestart_cont,             &
       & ic_filename,               &
       & bc_filename,               &
+      & init_climbuf,              &
       & init_running_means
 
     INTEGER ::                     &
@@ -97,6 +100,7 @@ CONTAINS
     lrestart_cont       = .FALSE.      ! TRUE: Continue although climbuf variables are missing in restart file
     bc_filename         = 'bc_land_climbuf.nc'
     ic_filename         = 'ic_land_climbuf.nc'
+    init_climbuf        = .FALSE.
     init_running_means  = .FALSE.
 
     ! Open the file containing the climate buffer namelist
@@ -119,6 +123,7 @@ CONTAINS
     config%lrestart_cont       = lrestart_cont
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
+    config%init_climbuf        = init_climbuf
     config%init_running_means  = init_running_means
 
     IF (active .AND. init_running_means) CALL message(TRIM(routine), 'Initializing climate buffer')

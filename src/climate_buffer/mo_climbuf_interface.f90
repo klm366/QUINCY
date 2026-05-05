@@ -21,7 +21,7 @@ MODULE mo_climbuf_interface
 
   USE mo_kind,               ONLY: wp
   USE mo_jsb_control,        ONLY: debug_on
-  USE mo_jsb_time,           ONLY: is_time_experiment_start, is_newyear, is_newmonth, is_newday, &
+  USE mo_jsb_time,           ONLY: is_newyear, is_newmonth, is_newday, &
     &                              get_day_length, get_previous_month_length
   USE mo_exception,          ONLY: message
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -111,10 +111,10 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  ::  model                 !< Current instance of the ICON-Land
 
     LOGICAL :: &
-      & lstart,              & !< This is the first time step of a simulation
       & new_year,            & !< This is the first time step of a year
       & new_month,           & !< This is the first time step of a month
       & new_day,             & !< This is the first time step of a day
+      & init_climbuf,        & !< Initialize climate buffer
       & init_running_means     !< Initialize (annual) running means, only possible
                                !< after at least one simulated year
 
@@ -214,11 +214,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_climbuf)     ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_climbuf_yDay)     ! inout
 
-    IF (is_time_experiment_start(options%current_datetime)) THEN
-      lstart = .TRUE.
-    ELSE
-      lstart = .FALSE.
-    END IF
     new_year = is_newyear(options%current_datetime, options%dtime)
     new_month = is_newmonth(options%current_datetime, options%dtime)
     new_day = is_newday(options%current_datetime, options%dtime)
@@ -231,7 +226,8 @@ CONTAINS
     q_rel_air(:) = get_relative_humidity_air(q_air(:), t_unfilt(:), press_srf(:), model%config%use_tmx)
 
     init_running_means = dsl4jsb_Config(CLIMBUF_)%init_running_means
-    CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
+    init_climbuf       = dsl4jsb_Config(CLIMBUF_)%init_climbuf
+    CALL calc_climbuf(init_climbuf, init_running_means, new_day, new_month, new_year, dtime, t_air, &
       &               rain, snow, wind_10m, q_rel_air, seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
       &               min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20,         &
       &               temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay,                   &

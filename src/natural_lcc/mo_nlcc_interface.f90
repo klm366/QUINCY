@@ -34,7 +34,6 @@ MODULE mo_nlcc_interface
 
   ! Use of process configurations
   dsl4jsb_Use_config(NLCC_)
-  dsl4jsb_Use_config(CLIMBUF_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(CLIMBUF_)
@@ -114,8 +113,6 @@ CONTAINS
     USE mo_nlcc_process,   ONLY: bioclim_limits, potential_tree_fpc, fpc_to_cover_fract_pot, &
                                  cover_fract_pot_to_cover_fract, desert_fraction, fpc_daily, scale_fpc
     USE mo_jsb_time,       ONLY: is_newyear, is_newday
-    USE mo_jsb_grid,       ONLY: Get_grid
-    USE mo_jsb_grid_class, ONLY: t_jsb_grid
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
 
     ! Arguments
@@ -124,7 +121,6 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER  ::  model
-    TYPE(t_jsb_grid),  POINTER  ::  grid
     CLASS(t_jsb_tile_abstract),  POINTER  ::  ptr_tile
     LOGICAL  :: lstart, init_running_means
     INTEGER  :: iblk, ics, ice, nc, no_children
@@ -155,7 +151,6 @@ CONTAINS
 
     ! Declare process memories
     dsl4jsb_Def_config(NLCC_)
-    dsl4jsb_Def_config(CLIMBUF_)
     dsl4jsb_Def_memory(NLCC_)
     dsl4jsb_Def_memory(CLIMBUF_)
     dsl4jsb_Def_memory(PHENO_)
@@ -188,7 +183,6 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(NLCC_)
-    dsl4jsb_Get_config(CLIMBUF_)
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(NLCC_)) RETURN
@@ -277,10 +271,8 @@ CONTAINS
     new_year = is_newyear(options%current_datetime, options%dtime)
     new_day = is_newday(options%current_datetime, options%dtime)
 
-    ! import cover fractions from grid
     ALLOCATE (cover_fract_sum(nc))
     cover_fract_sum(:) = 0._wp
-    grid => Get_grid(model%grid_id)
     DO itile = 1,no_children
       ! Point to the correct pft
       IF (itile == 1) THEN
@@ -309,7 +301,7 @@ CONTAINS
     ENDIF
 
     accelerate_nlcc    = dsl4jsb_Config(NLCC_)%accelerate_nlcc
-    init_running_means = dsl4jsb_Config(CLIMBUF_)%init_running_means
+    init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
 
     ! annual calculations
     IF (new_year) THEN
