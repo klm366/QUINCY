@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -23,10 +23,6 @@ MODULE mo_spq_init
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_jsb_math_constants,      ONLY: eps8
   USE mo_jsb_process_class,       ONLY: SPQ_, SEB_, SSE_, HYDRO_, Q_ASSIMI_
-
-#ifdef __QUINCY_STANDALONE__
-  USE mo_qs_process_init_util,    ONLY: init_spq_soil_properties_spp1685_sites
-#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -127,7 +123,6 @@ CONTAINS
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: sand_spq_init_sl
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: silt_spq_init_sl
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: clay_spq_init_sl
-    CHARACTER(len=3)                        :: site_ID_spp1685
     INTEGER                                 :: is, ic, iblk
     INTEGER                                 :: nproma, nblks
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':spq_init_ic_bc'
@@ -341,25 +336,6 @@ CONTAINS
     temp_srf_eff_4(:,:)   = 273.15_wp ** 4.0_wp
     qsat_star(:,:)        = 0.0075_wp   ! value from JSBACH
     s_star(:,:)           = 2.9E5_wp    ! value from JSBACH
-
-#ifdef __QUINCY_STANDALONE__
-    !>     3.1.1 soil-layer specific init for sites of the "SPP 1685" site-set
-    !>
-    !>     works only with 15 soil layer
-    !>
-    IF (model%config%flag_spp1685) THEN
-      DO iblk = 1,nblks
-        CALL init_spq_soil_properties_spp1685_sites( &
-          & nproma, &                           ! in
-          & nsoil_w, &
-          & model%config%lon, &                 ! in ('site_longitude')
-          & bulk_dens_sl(:, :, iblk), &         ! out
-          & sand_sl(:, :, iblk), &
-          & silt_sl(:, :, iblk), &
-          & clay_sl(:, :, iblk) )               ! out
-      END DO
-    END IF
-#endif
 
     !>   3.2 ensure a certain minimum proportion for sand, clay and silt
     !>    needed for the Saxton equations

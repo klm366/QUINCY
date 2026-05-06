@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -98,14 +98,15 @@ CONTAINS
   !
   SUBROUTINE setup_grid_patch( model_id, patch, type)
 
-    USE mo_jsb_domain_iface, ONLY: t_patch
-    USE mo_jsb_grid_class,   ONLY: new_grid
-    USE mo_jsb_grid,         ONLY: Register_grid
+    USE mo_jsb_domain_iface,   ONLY: t_patch
+    USE mo_jsb_grid_class,     ONLY: new_grid
+    USE mo_jsb_grid,           ONLY: Register_grid
+    USE mo_jsb_math_constants, ONLY: deg2rad
 
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER, INTENT(in)               :: model_id !< ID of model instance
-    TYPE(t_patch), TARGET, INTENT(in) :: patch    !< Grid information provided by host model
-    CHARACTER(LEN=*), INTENT(in)      :: type     !< Type of host model ('icon' or 'echam')
+    INTEGER, INTENT(in)                  :: model_id !< ID of model instance
+    TYPE(t_patch), TARGET, INTENT(inout) :: patch    !< Grid information provided by host model
+    CHARACTER(LEN=*), INTENT(in)         :: type     !< Type of host model ('icon' or 'echam')
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
@@ -119,6 +120,21 @@ CONTAINS
     model => Get_model(model_id)
 
     grid => new_grid(patch, type)
+    IF (grid%ntotal_g == 1) THEN
+      IF (.NOT. model%config%is_single_site) &
+          & CALL finish(routine, 'Number of global cells == 1 but config not for single site')
+      ! Overwrite lon/lat from single cell grid file with sitelevel model-specific namelist location
+      patch%cells%center(:,:)%lon = deg2rad * model%config%single_site_lonlat(1)
+      patch%cells%center(:,:)%lat = deg2rad * model%config%single_site_lonlat(2)
+      grid%lon(:,:) = model%config%single_site_lonlat(1)
+      grid%lat(:,:) = model%config%single_site_lonlat(2)
+      grid%coslat(:,:) = COS(deg2rad * grid%lat(:,:))
+      grid%sinlat(:,:) = SIN(deg2rad * grid%lat(:,:))
+      grid%coslon(:,:) = COS(deg2rad * grid%lon(:,:))
+      grid%sinlon(:,:) = SIN(deg2rad * grid%lon(:,:))
+      grid%area(:,:) = 1._wp
+    END IF
+
     CALL Register_grid(grid)
     model%grid_id = grid%id
 
@@ -191,6 +207,7 @@ CONTAINS
     dsl4jsb_Def_config(FAGE_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_config(Q_DFIRE_)
     dsl4jsb_Def_config(Q_DFIRE_FUEL_)
 #endif
@@ -240,7 +257,7 @@ CONTAINS
 
       ! ------------------------ tasks that can change area
       !
-      ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
+      ! Note: PPLCC_ is automatically activated in mo_jsb_base.f90:jsbach_setup_models
       ! if any process that changes area (e.g. NLCC_, ALCC_) is active.
       !
       IF (model%processes(PPLCC_)%p%config%active) THEN
@@ -268,7 +285,8 @@ CONTAINS
         END IF
 
         IF (model%processes(ALCC_)%p%config%active) THEN
-          CALL model%Queue_task(ALCC_, "alcc")
+          CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
+          CALL model%Queue_task(ALCC_, "alcc_translocation")
         END IF
 
         ! Do postprocessing after all LCC tasks were executed
@@ -300,6 +318,9 @@ CONTAINS
       CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")
       CALL model%Queue_task(HYDRO_,  "soil_properties")
       CALL model%Queue_task(SEB_,    "surface_energy")
+      IF (model%config%use_tmx) THEN
+        CALL model%Queue_task(TURB_, "prepare_near_sfc_temp_interp")
+      END IF
       CALL model%Queue_task(HYDRO_,  "evaporation")
       CALL model%Queue_task(SEB_,    "surface_fluxes")
       IF (model%processes(ASSIMI_)%p%config%active) THEN
@@ -377,6 +398,7 @@ CONTAINS
     !
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_config(VEG_)
+      dsl4jsb_Get_config(SB_)
       dsl4jsb_Get_config(Q_DFIRE_)
       dsl4jsb_Get_config(Q_DFIRE_FUEL_)
 
@@ -406,25 +428,30 @@ CONTAINS
 
         ! --------------- Any tasks that might change the land cover need to come first in the timestep
         !
-        ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
-        ! if any process that changes area is active (currently none for QS)
-        ! or if harvest is active because it already now needs information on the forested area
+        ! Note: PPLCC_ is automatically activated in mo_jsb_base.f90:jsbach_setup_models
+        ! if any process that changes area is active
+        ! or if harvest is active because it needs information on the forested area
         !
         IF (model%processes(PPLCC_)%p%config%active) THEN
+          IF (model%processes(ALCC_)%p%config%active) THEN
+            CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
+          END IF
+
           ! Prepare LCC tasks
           CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
-          ! Here all lcc tasks need to be called
-          !
+          ! Here all lcc tasks need to be called: for Quincy this is currently only alcc
 
-          ! Call alcc for now only in CANOPY mode (i.e. without biogeochemistry enabled)
-          IF (model%config%qmodel_id == QCANOPY) THEN
-            IF (model%processes(ALCC_)%p%config%active) THEN
-              CALL model%Queue_task(ALCC_, "alcc")
-            END IF
+          IF (model%processes(ALCC_)%p%config%active) THEN
+            CALL model%Queue_task(ALCC_, "alcc_translocation")
           END IF
 
           ! Do postprocessing after all LCC tasks were executed
           CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
+
+          IF (model%Do_fractions_change() .AND. (.NOT. model%config%qmodel_id == QCANOPY)) THEN
+            !-- if required recalculate plant characteristics
+            CALL model%Queue_task(VEG_, "plant_characteristics")
+          END IF
         END IF
 
         IF (model%processes(Q_AGR_)%p%config%active) THEN
@@ -441,19 +468,20 @@ CONTAINS
           END IF
         END IF
 
+        CALL model%Queue_task(RAD_,       "surface_radiation")
+        CALL model%Queue_task(Q_PHENO_,   "q_phenology")
+        CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
+        CALL model%Queue_task(HYDRO_,     "soil_properties")
+
         IF (model%config%qmodel_id == QLAND) THEN
           IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
-            CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_fuel")    ! LAND ONLY, todo: rename to dfire_sf_pre, dfire_sf_fire
+            CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_fuel")    ! LAND ONLY
             CALL model%Queue_task(Q_DFIRE_, "q_dfire_spitfire")     ! LAND ONLY
             CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_post")    ! LAND ONLY
           ENDIF
           CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
         END IF
 
-        CALL model%Queue_task(RAD_,       "surface_radiation")
-        CALL model%Queue_task(Q_PHENO_,   "q_phenology")
-        CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
-        CALL model%Queue_task(HYDRO_,     "soil_properties")
         CALL model%Queue_task(SEB_,       "surface_energy")
         CALL model%Queue_task(HYDRO_,     "evaporation")
         CALL model%Queue_task(SEB_,       "surface_fluxes")
@@ -475,7 +503,11 @@ CONTAINS
           CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
           CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
           IF (model%config%qmodel_id == QLAND) THEN
-            CALL model%Queue_task(SB_, "sb_simple_model")           ! LAND ONLY
+            IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+              CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
+            ELSE
+              CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
+            END IF
           END IF
           CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
         END IF
@@ -526,25 +558,30 @@ CONTAINS
 
         ! --------------- Any tasks that might change the land cover need to come first in the timestep
         !
-        ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
-        ! if any process that changes area is active (currently none for QS)
-        ! or if harvest is active because it already now needs information on the forested area
+        ! Note: PPLCC_ is automatically activated in mo_jsb_base.f90:jsbach_setup_models
+        ! if any process that changes area is active
+        ! or if harvest is active because it needs information on the forested area
         !
         IF (model%processes(PPLCC_)%p%config%active) THEN
+          IF (model%processes(ALCC_)%p%config%active) THEN
+            CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
+          END IF
+
           ! Prepare LCC tasks
           CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
-          ! Here all lcc tasks need to be called
-          !
+          ! Here all lcc tasks need to be called: for Quincy this is currently only alcc
 
-          ! Call alcc for now only in CANOPY mode (i.e. without biogeochemistry enabled)
-          IF (model%config%qmodel_id == QCANOPY) THEN
-            IF (model%processes(ALCC_)%p%config%active) THEN
-              CALL model%Queue_task(ALCC_, "alcc")
-            END IF
+          IF (model%processes(ALCC_)%p%config%active) THEN
+            CALL model%Queue_task(ALCC_, "alcc_translocation")
           END IF
 
           ! Do postprocessing after all LCC tasks were executed
           CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
+
+          IF (model%Do_fractions_change() .AND. (.NOT. model%config%qmodel_id == QCANOPY)) THEN
+            !-- if required recalculate plant characteristics
+            CALL model%Queue_task(VEG_, "plant_characteristics")
+          END IF
         END IF
 
         IF (model%processes(Q_AGR_)%p%config%active) THEN
@@ -584,7 +621,11 @@ CONTAINS
           CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
           CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
           IF (model%config%qmodel_id == QLAND) THEN
-            CALL model%Queue_task(SB_, "sb_simple_model")           ! LAND ONLY
+            IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+              CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
+            ELSE
+              CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
+            END IF
           END IF
           CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
         END IF
@@ -679,7 +720,8 @@ CONTAINS
       CALL tile%Init_fractions(                                           &
         & TRIM(model%shortname), '', TRIM(tile%name),                     &
         & l_fixed_fractions=l_fixed_fractions,                            &
-        & l_rel_fractions=model%config%relative_fractions_in_file)
+        & l_rel_fractions=model%config%relative_fractions_in_file,        &
+        & is_sitelevel=model%config%is_single_site )
 
       ! ---------------------------------------------------------------------------------------------- !
       !>
@@ -948,7 +990,7 @@ CONTAINS
 
     END DO
 
-    ! Iterate over tiles, crosscheck tile structure and collect conserved quantities
+    ! Iterate over tiles, crosscheck tile structure, and collect conserved quantities
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &
@@ -1141,7 +1183,7 @@ CONTAINS
           DO blk = blks, blke
             jcs = grid%get_col_start(blk)
             jce = grid%get_col_end  (blk)
-            CALL tile%bgcm_store%Store_bgcms_in_matrices(tile%name, jcs, jce, blk)
+            CALL tile%bgcm_store%Store_bgcm_vars_in_matrices(tile%name, jcs, jce, blk)
           ENDDO
         END IF
 #endif

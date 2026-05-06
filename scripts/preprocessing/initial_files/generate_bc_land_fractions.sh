@@ -3,7 +3,7 @@
 # ICON-Land
 #
 # ---------------------------------------
-# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+# Copyright (C) 2013-2026, MPI-M, MPI-BGC
 #
 # Contact: icon-model.org
 # Authors: AUTHORS.md
@@ -182,9 +182,12 @@ for var in ${var_list}; do
   # ----------------------
      veg_ratio_max )
   # ----------------------
-      # Note: veg_ratio_max calculated here is different from veg_ratio_max generated below for
-      # the deprecated 11 PFT usecase. As in the 12 PFT usecase veg_ratio_max calculated here
-      # is based on esacci data.
+      # Note: veg_ratio_max is needed as input variable only with jsbach, not with quincy.
+      # But initial soil moisture calculations are based on (the jsbach) veg_ratio_max also
+      # with quincy (compare generate_ic_land_soil.sh). We thus need to calculate it here
+      # for both setups.
+      # The variable is based on esacci data (1 - bare; following the cross walking table
+      # used for jsbach).
 
       # Remapping matrix for entire grid - without missing values
       if [[ ! -f wgt025.nc ]]; then
@@ -199,6 +202,10 @@ for var in ${var_list}; do
       ${cdo} -setvar,veg_ratio_max -mul non-glac-land-mask.nc -maxc,${small_fract_jsb} \
           -addc,1. -mulc,-1. ${atmGridID}_esacci_jsb_bare.nc  ${atmGridID}_veg_ratio_max.nc
       ${rm} ${atmGridID}_esacci_jsb_bare.nc
+
+      # Keep veg_ratio_max for usage below in 12 PFT setup and for late use in
+      # generate_ic_land_soil.nc
+      cp ${atmGridID}_veg_ratio_max.nc ${atmGridID}_veg_ratio_max.keep
       ;;
   # ----------------------
     * )
@@ -244,9 +251,6 @@ for test in zero1 zero2 zero3 zero4 zero5 zero6; do
   fi
 done
 
-# veg_ratio_max is needed for 12 pft usecase
-mv ${atmGridID}_veg_ratio_max.nc ${atmGridID}_veg_ratio_max_12pfts.nc
-
 # Clean up
 if [[ ${clean_up} == true ]]; then
   for var in ${var_list}; do; ${rm} -f ${atmGridID}_${var}.nc; done
@@ -259,7 +263,7 @@ echo "${prog}:     ${file_bc_frac}.nc             done"
 # ----------------------------------------------------------------------------
 #  1b. bc fract with PFT fractions
 # -----------------------------
-npfts_list="11 12 13"
+npfts_list="12 13"
 
 # Currently, only PFT fractions depend on the year
 for year in ${year_list}; do
@@ -272,156 +276,8 @@ for year in ${year_list}; do
     #
 
     case $npfts in
-    # ----------------------------------------------------
-      11 )   # 11 PFTs  - jsbach setup without C4 crops -> deprecated!
-    # ----------------------------------------------------
-
-        land_setup=jsbach
-        pft_tag="11pfts"
-        nat_pfts="pft01 pft02 pft03 pft04 pft05 pft06 pft07 pft08"
-        ant_pfts="pft09 pft10 pft11"
-        pft_list="${nat_pfts} ${ant_pfts}"
-        small_fract=${small_fract_jsb}
-
-        # Potential vegetation data and processed LUH2 data are not available on the 0.5
-        # degree grid. We use T255 data instead.
-
-        # Land use states
-        if [[ ! -f ${atmGridID}_LUH2_states.nc ]]; then
-          ${cp} ${luh2_states_file}.gz .
-          gunzip ${luh2_states_file##*/}.gz
-          ${cdo} mul -remap${remap_scheme},${icon_grid} ${luh2_states_file##*/} \
-                     non-glac-land-mask.nc    ${atmGridID}_LUH2_states.nc
-          ${rm} ${luh2_states_file##*/}
-        fi
-        ${cdo} -setmisstoc,0. -selyear,${year} -selvar,gcrop ${atmGridID}_LUH2_states.nc LUH2_gcrop_${year}.tmp
-        ncwa -O -a time LUH2_gcrop_${year}.tmp LUH2_gcrop_${year}.nc  # remove time dimension
-        ${cdo} -setmisstoc,0. -selyear,${year} -selvar,gpast ${atmGridID}_LUH2_states.nc LUH2_gpast_${year}.tmp
-        ncwa -O -a time LUH2_gpast_${year}.tmp LUH2_gpast_${year}.nc  # remove time dimension
-
-        # Potential (natural) vegetation needs to be derived only once - in the first year
-        if [[ ${year} == ${start_year} ]]; then
-          # Potential vegetation
-          ${cdo} splitlevel ${pool_prepare}/T255/potveg_T255.nc lct
-
-          if [[ ! -f wgtT255.nc ]]; then
-            # Remapping matrix for entire grid - without missing values
-            ${cdo} gen${remap_scheme},${icon_grid} -setmisstoc,0. ${pool_prepare}/T255/potveg_T255.nc wgtT255.nc
-          fi
-          ilct=01
-          while [[ ${ilct} -le 14 ]]; do
-            {
-            ncwa -O -a vegtype lct0000${ilct}.nc lct0000${ilct}.tmp       # Get rid of vegtype dimension
-            ${cdo} mul -remap,${icon_grid},wgtT255.nc -setmisstodis lct0000${ilct}.tmp non-glac-land-mask.nc \
-                lct0000${ilct}.nc
-            } &  # comment out '&' for serial processing
-            (( ilct = ilct + 1 ))
-          done
-          wait
-
-          # C3/C4 ratios   (lct09: C3 grass; lct10: C4 grass)
-          # Needed to define C3/C4 ratio of pastures corresponding to the C3/C4 ration of grasslands
-          # Note: If neither C3 nor C4 grasses exist, we do an extrapolation.
-          ${cdo} -setvar,c4_ratio -mul non-glac-land-mask.nc -setmisstodis \
-              -div lct000010.nc -add lct000009.nc lct000010.nc               c4_ratio_${pft_tag}.nc
-          ${cdo} -setvar,c3_ratio -addc,1. -mulc,-1. c4_ratio_${pft_tag}.nc  c3_ratio_${pft_tag}.nc
-
-          # veg_ratio_max
-          # Extrapolate the data (glacier data is zero, as well as the ocean)
-          ${cdo} selvar,veg_ratio_max -setmissval,-1. -setmisstodis -setmissval,0. \
-              ${pool_prepare}/05/vegmax_6_05_0-360.nc 05_veg_ratio_max.nc
-          ${cdo} remap,${icon_grid},wgt05.nc 05_veg_ratio_max.nc ${atmGridID}_veg_ratio_max.tmp
-          ncwa -O -a time ${atmGridID}_veg_ratio_max.tmp ${atmGridID}_veg_ratio_max.tmp1  # remove time dimension
-          # Set a minimum vegetated fraction
-          ${cdo} maxc,${small_fract} ${atmGridID}_veg_ratio_max.tmp1 ${atmGridID}_veg_ratio_max.tmp2
-          # Set glacier values to zero and set attributes
-          ${cdo} -setattribute,veg_ratio_max@long_name="Maximum vegetation fraction" \
-              -mul ${atmGridID}_veg_ratio_max.tmp2 non-glac-land-mask.nc ${atmGridID}_veg_ratio_max_${pft_tag}.nc
-
-
-          for pft in ${nat_pfts}; do # natural PFTs
-            {
-            case $pft in
-              pft01 ) # Tropical evergreen trees
-                $cdo setname,fract_${pft} lct000001.nc ${atmGridID}_${pft}.${npfts}.keep
-                ncatted -a long_name,fract_${pft},c,c,'Fraction of tropical evergreen tree tile rel. to veg tile' \
-                    ${atmGridID}_${pft}.${npfts}.keep
-                ;;
-              pft02 ) # Tropical deciduous trees
-                $cdo setname,fract_${pft} lct000002.nc ${atmGridID}_${pft}.${npfts}.keep
-                ncatted -a long_name,fract_${pft},c,c,'Fraction of tropical deciduous tree tile rel. to veg tile' \
-                    ${atmGridID}_${pft}.${npfts}.keep
-                ;;
-              pft03 ) # Temperate broadl. evergreen + evergreen_conifer
-                $cdo setname,fract_${pft} -add  lct000003.nc lct000005.nc ${atmGridID}_${pft}.${npfts}.keep
-                ncatted -a long_name,fract_${pft},c,c,'Fraction of temperate evergreen tree tile rel. to veg tile' \
-                    ${atmGridID}_${pft}.${npfts}.keep
-                ;;
-              pft04 ) # Temperate broadl. deciduous + deciduous conifer
-                $cdo setname,fract_${pft} -add  lct000004.nc lct000006.nc ${atmGridID}_${pft}.${npfts}.keep
-                ncatted -a long_name,fract_${pft},c,c,'Fraction of temperate deciduous tree tile rel. to veg tile' \
-                    ${atmGridID}_${pft}.${npfts}.keep
-                ;;
-              pft05 ) # Raingreen shrub
-                $cdo setname,fract_${pft} lct000007.nc ${atmGridID}_${pft}.${npfts}.keep
-                ncatted -a long_name,fract_${pft},c,c,'Fraction of raingreen shrub tile rel. to veg tile' \
-                    ${atmGridID}_${pft}.${npfts}.keep
-                ;;
-              pft06 ) # Deciduous shrub
-                $cdo setname,fract_${pft} lct000008.nc ${atmGridID}_${pft}.${npfts}.keep
-                ncatted -a long_name,fract_${pft},c,c,'Fraction of deciduous shrub tile rel. to veg tile' \
-                    ${atmGridID}_${pft}.${npfts}.keep
-                ;;
-              pft07 ) # C3-grass + tundra (incl. glaciers)
-                $cdo setname,fract_${pft} -add  lct000009.nc lct000011.nc ${atmGridID}_${pft}.${npfts}.keep
-                ncatted -a long_name,fract_${pft},c,c,'Fraction of C3-grass tile rel. to veg tile' \
-                    ${atmGridID}_${pft}.${npfts}.keep
-                ;;
-              pft08 ) # C4-grass
-                $cdo setname,fract_${pft} lct000010.nc ${atmGridID}_${pft}.${npfts}.keep
-                ncatted -a long_name,fract_${pft},c,c,'Fraction of C4-grass tile rel. to veg tile' \
-                    ${atmGridID}_${pft}.${npfts}.keep
-                ;;
-              * )
-                echo "ERROR: pft ${pft} not expected with ${npfts} PFTs."; exit 1
-                ;;
-            esac
-            } &  # comment out '&' for serial processing
-          done
-          wait
-
-        fi  # first year
-
-        for pft in ${ant_pfts}; do   # anthropogenic PFTs
-          {
-          case $pft in
-            pft09 ) # C3-pasture
-              $cdo setname,fract_${pft} -mul LUH2_gpast_${year}.nc \
-                                             c3_ratio_${pft_tag}.nc   ${atmGridID}_${pft}.${npfts}.keep
-              ncatted -a long_name,fract_${pft},c,c,'Fraction of C3-pasture tile rel. to veg tile' \
-                  ${atmGridID}_${pft}.${npfts}.keep
-              ;;
-            pft10 ) # C4-pasture
-              $cdo setname,fract_${pft} -mul LUH2_gpast_${year}.nc \
-                                             c4_ratio_${pft_tag}.nc   ${atmGridID}_${pft}.${npfts}.keep
-              ncatted -a long_name,fract_${pft},c,c,'Fraction of C4-pasture tile rel. to veg tile' \
-                  ${atmGridID}_${pft}.${npfts}.keep
-              ;;
-            pft11 ) # crop
-              $cdo setname,fract_${pft} LUH2_gcrop_${year}.nc ${atmGridID}_${pft}.${npfts}.keep
-              ncatted -a long_name,fract_${pft},c,c,'Fraction of (C3) crop tile rel. to veg tile' \
-                  ${atmGridID}_${pft}.${npfts}.keep
-              ;;
-            * )
-              echo "ERROR: pft ${pft} not expected with ${npfts} PFTs."; exit 1
-              ;;
-          esac
-          } &  # comment out '&' for serial processing
-        done
-        wait
-        ;;
     # ----------------------------------------------------------------------------
-      12 | 13 )   # 12 PFTs - jsbach setup incl. C4-crops; 13 PFTs - quincy setup
+      12 | 13 )   # 12 PFTs - jsbach; 13 PFTs - quincy setup
     # ----------------------------------------------------------------------------
         [[ ${npfts} == 12 ]] && land_setup=jsbach
         [[ ${npfts} == 13 ]] && land_setup=quincy
@@ -696,34 +552,28 @@ for year in ${year_list}; do
       # need a minimum fraction of small_fract.
       sf=$(echo ${small_fract} | awk '{printf "%.13f\n", $1}') # Convert exponential number to float (needed with bc)
       min_veg=$(echo "${npfts} * ${sf}" | bc)
-      ${cdo} -setname,has_veg -gtc,${min_veg} ${atmGridID}_veg_ratio_max_${pft_tag}.nc  has_veg.nc
+      ${cdo} -setname,has_veg -gtc,${min_veg} ${atmGridID}_veg_ratio_max.keep  has_veg.nc
 
       # Scaling with veg_ratio_max (i.e. 1 - bare)
-      if [[ ${npfts} == 12 ]]; then
-        for pft in ${nat_pfts}; do
-          {
-          ${cdo} -div ${atmGridID}_${pft}.${npfts}.keep \
-                      ${atmGridID}_veg_ratio_max_${pft_tag}.nc   ${atmGridID}_${pft}.tmp1
-          } &  # comment out '&' for serial processing
-        done
-        wait
-        # We need to limit the anthropogenic fractions, otherwise fractions become huge in cells with little vegetation.
-        ${cdo} mul LUH3_pastr_max_${year}.nc c3_ratio_${pft_tag}.nc LUH3_c3pastr_max_${year}.nc
-        ${cdo} mul LUH3_pastr_max_${year}.nc c4_ratio_${pft_tag}.nc LUH3_c4pastr_max_${year}.nc
-        ${cdo} -min -div ${atmGridID}_pft09.${npfts}.keep ${atmGridID}_veg_ratio_max_${pft_tag}.nc \
-                    LUH3_c3pastr_max_${year}.nc   ${atmGridID}_pft09.tmp1
-        ${cdo} -min -div ${atmGridID}_pft10.${npfts}.keep ${atmGridID}_veg_ratio_max_${pft_tag}.nc \
-                    LUH3_c4pastr_max_${year}.nc   ${atmGridID}_pft10.tmp1
-        ${cdo} -min -div ${atmGridID}_pft11.${npfts}.keep ${atmGridID}_veg_ratio_max_${pft_tag}.nc \
-                    LUH3_c3crops_max_${year}.nc   ${atmGridID}_pft11.tmp1
-        ${cdo} -min -div ${atmGridID}_pft12.${npfts}.keep ${atmGridID}_veg_ratio_max_${pft_tag}.nc \
-                    LUH3_c4crops_max_${year}.nc   ${atmGridID}_pft12.tmp1
-      else
-        # In 11 PFT setup scaling with veg_ratio_max had already been done in the natural and LUH2 input data.
-        for pft in ${pft_list}; do
-          ${cp} ${atmGridID}_${pft}.${npfts}.keep ${atmGridID}_${pft}.tmp1
-        done
-      fi
+      for pft in ${nat_pfts}; do
+        {
+        ${cdo} -div ${atmGridID}_${pft}.${npfts}.keep \
+                    ${atmGridID}_veg_ratio_max.keep ${atmGridID}_${pft}.tmp1
+        } &  # comment out '&' for serial processing
+      done
+      wait
+
+      # We need to limit the anthropogenic fractions, otherwise fractions become huge in cells with little vegetation.
+      ${cdo} mul LUH3_pastr_max_${year}.nc c3_ratio_${pft_tag}.nc LUH3_c3pastr_max_${year}.nc
+      ${cdo} mul LUH3_pastr_max_${year}.nc c4_ratio_${pft_tag}.nc LUH3_c4pastr_max_${year}.nc
+      ${cdo} -min -div ${atmGridID}_pft09.${npfts}.keep ${atmGridID}_veg_ratio_max.keep \
+                  LUH3_c3pastr_max_${year}.nc   ${atmGridID}_pft09.tmp1
+      ${cdo} -min -div ${atmGridID}_pft10.${npfts}.keep ${atmGridID}_veg_ratio_max.keep \
+                  LUH3_c4pastr_max_${year}.nc   ${atmGridID}_pft10.tmp1
+      ${cdo} -min -div ${atmGridID}_pft11.${npfts}.keep ${atmGridID}_veg_ratio_max.keep \
+                  LUH3_c3crops_max_${year}.nc   ${atmGridID}_pft11.tmp1
+      ${cdo} -min -div ${atmGridID}_pft12.${npfts}.keep ${atmGridID}_veg_ratio_max.keep \
+                  LUH3_c4crops_max_${year}.nc   ${atmGridID}_pft12.tmp1
 
       # Scaling: The sum of the natural fractions from escci need to be scaled to the natural 'nat' fraction of LUH3
       ${rm} -f sum_ant_luh.nc sum_nat_luh.nc
@@ -954,14 +804,8 @@ for year in ${year_list}; do
       (( ipft = ipft + 1 ))
     done
 
-    # In jsbach setup with 11 PFTs veg_ratio_max needs to be corrected.
-    if [[ ${npfts} == 11 ]]; then
-      ${cdo} replace ${file_bc_frac}.nc ${atmGridID}_veg_ratio_max_${pft_tag}.nc ${file_bc_frac}_${npfts}.nc
-    elif [[ ${npfts} == 12 ]]; then
-      # Nothing to do
+    if [[ ${npfts} == 12 ]]; then
       ${cp} ${file_bc_frac}.nc ${file_bc_frac}_${npfts}.nc
-      # Copy veg_ratio_max for later use in generate_ic_land_soil
-      ${cp} ${atmGridID}_veg_ratio_max_${pft_tag}.nc ${atmGridID}_veg_ratio_max_${pft_tag}.keep
     elif [[ ${npfts} == 13 ]]; then
       # Veg_ratio_max is not needed with Quincy and is removed here to avoid confusion.
       ${cdo} delvar,veg_ratio_max ${file_bc_frac}.nc ${file_bc_frac}_${npfts}.nc
@@ -975,10 +819,8 @@ for year in ${year_list}; do
         ${path_bc}/${file_bc_frac}_${pft_tag}_${year}.nc
 
     # Add global attributes from LUH and esacci pre-preocessed files
-    if [[ ${npfts} == 12 || ${npfts} == 13 ]]; then
-      ncks -A -x -h ${prep_esacci_file}            ${path_bc}/${file_bc_frac}_${pft_tag}_${year}.nc
-      ncks -A -x -h ${luh3_states_root}_${year}.nc ${path_bc}/${file_bc_frac}_${pft_tag}_${year}.nc
-    fi
+    ncks -A -x -h ${prep_esacci_file}            ${path_bc}/${file_bc_frac}_${pft_tag}_${year}.nc
+    ncks -A -x -h ${luh3_states_root}_${year}.nc ${path_bc}/${file_bc_frac}_${pft_tag}_${year}.nc
 
     echo "${prog}:     ${file_bc_frac}_${pft_tag}_${year}.nc done"
 
@@ -1002,7 +844,7 @@ if [[ ${clean_up} == true ]]; then
   ${rm} -f ${atmGridID}_LUH2_states.nc
   ${rm} LUH?_*.nc ${atmGridID}_pft??.??.keep
   ${rm} -f c3_ratio_*.nc c4_ratio_*.nc ${atmGridID}_bare_??.keep \
-            ${atmGridID}_veg_ratio_max_*.nc
+            ${atmGridID}_veg_ratio_max.nc
 fi
 
 echo "${prog}:  done"

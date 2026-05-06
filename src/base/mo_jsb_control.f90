@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -83,7 +83,6 @@ CONTAINS
   SUBROUTINE init_jsb_master_control(namelist_filename)
 
     USE mo_jsb_io,      ONLY: init_jsb_io
-    USE mo_jsb_version, ONLY: jsbach_init_version
 
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: namelist_filename
 
@@ -94,8 +93,6 @@ CONTAINS
     IF (PRESENT(namelist_filename)) master_namelist_filename = TRIM(namelist_filename)
 
     CALL read_jsb_control_namelist(TRIM(master_namelist_filename)) ! This sets *no_of_models*
-
-    CALL jsbach_init_version(jsbach_runs_standalone())
 
     CALL init_jsb_io(TRIM(master_namelist_filename))
 

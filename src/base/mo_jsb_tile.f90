@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -12,7 +12,7 @@
 !> ---------------------------------------
 !>
 !>### Definition of concrete class and methods for tiles
-!> This module implements `t_jsb_tile` as an extension of `[[mo_jsb_tile_class:t_jsb_tile_abstract]]` and
+!> This module implements 't_jsb_tile' as an extension of [[mo_jsb_tile_class:t_jsb_tile_abstract]] and
 !>   implements, among others, the methods
 !>
 !> - Init => [[Init_tile]]
@@ -36,7 +36,7 @@ MODULE mo_jsb_tile
   USE mo_jsb_process_class,   ONLY: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task
-  USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan
+  USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan, Get_cqt_name, max_cqt_name_length
 
 #ifdef _OPENACC
   USE openacc
@@ -437,7 +437,7 @@ CONTAINS
   !>
   !> Add and initialise fraction variables for this tile - either from a file or according to specification
   !>
-  SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
+  SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions, is_sitelevel)
 
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator_sum
@@ -456,6 +456,7 @@ CONTAINS
     LOGICAL,           INTENT(in)    :: l_rel_fractions
       !< Tile fractions in input file are usually relative with respect to parent (historical reasons)
       !< while the fractions in the code are absolute (with respect to the box tile)
+    LOGICAL,           INTENT(in)    :: is_sitelevel       !< Is this a site-level model configuration?
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
     TYPE(t_jsb_aggregator_sum), POINTER               :: aggregator_sum
@@ -532,6 +533,9 @@ CONTAINS
     ALLOCATE(this%l_fract_children_changed(hgrid%nproma, hgrid%nblks))
     this%l_fract_children_changed(:,:) = .TRUE. ! default: fraction of tile is changing
 
+    ALLOCATE(this%l_fract_alcc_change(hgrid%nproma, hgrid%nblks))
+    this%l_fract_alcc_change(:,:) = .FALSE. ! default: fraction of tile will not be changed by alcc
+
     ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
     IF (TRIM(this%fract_varname) == 'equal') THEN ! fract_varname == 'equal' ==> each child tile gets the same fraction
       IF (ASSOCIATED(this%parent_tile)) THEN ! The tile is not the box tile.
@@ -579,7 +583,13 @@ CONTAINS
         CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
         CALL this%Set_fraction(fract=MAX(0._wp, return_pointer(:,:)*tmp_fract(:,:)))
       ELSE
-        CALL this%Set_fraction(fract=return_pointer(:,:))
+        IF (is_sitelevel .AND. .NOT. ASSOCIATED(this%parent_tile)) THEN
+          ! For site-level, set fraction of box tile to 1
+          tmp_fract(:,:) = 1._wp
+          CALL this%Set_fraction(fract=tmp_fract(:,:))
+        ELSE
+          CALL this%Set_fraction(fract=return_pointer(:,:))
+        END IF
         CALL this%Get_fraction(fract=hgrid%lsf(:,:))
         hgrid%lsm(:,:) = hgrid%lsf(:,:) > 0._wp
         !$ACC UPDATE DEVICE(hgrid%lsf, hgrid%lsm) ASYNC(1)
@@ -997,7 +1007,6 @@ CONTAINS
   SUBROUTINE Count_conserved_quantities_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
-    USE mo_jsb_cqt_class,       ONLY: Get_cqt_name, max_cqt_name_length
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the conserved quantities are to be counted
     ! -------------------------------------------------------------------------------------------------- !
@@ -1066,6 +1075,7 @@ CONTAINS
   SUBROUTINE Collect_conserved_variables_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
+    USE mo_util,                ONLY: int2string
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the conserved quantities are collected
     ! -------------------------------------------------------------------------------------------------- !
@@ -1103,11 +1113,30 @@ CONTAINS
               consQuanTypeInUse = .TRUE.
               nrOfConsQuans = this%conserved_quantities(ind)%p%no_of_vars
 
-              ! If this is the first collected variable: allocate collector for var pointers
-              IF (.NOT. (ALLOCATED(this%conserved_quantities(ind)%p%cq_vars_2D))) THEN
+              IF (.NOT. (ALLOCATED(this%conserved_quantities(ind)%p%cq_vars))) THEN
+                ! If this is the first collected variable: allocate collector for var pointers
                 ALLOCATE(this%conserved_quantities(ind)%p%associated_process(nrOfConsQuans))
-                ALLOCATE(this%conserved_quantities(ind)%p%cq_vars_2D(nrOfConsQuans))
-              ENDIF
+                ALLOCATE(this%conserved_quantities(ind)%p%cq_vars(nrOfConsQuans))
+                ! and identify variable dimension
+                this%conserved_quantities(ind)%p%var_type = mem%vars(i)%p%type
+                ! and transfer property
+                this%conserved_quantities(ind)%p%transfer_all = mem%vars(i)%p%transfer_all
+              ELSE
+                ! Assert that all variables of one type have the same dimension
+                IF (.NOT. this%conserved_quantities(ind)%p%var_type == mem%vars(i)%p%type) THEN
+                  CALL finish(TRIM(routine), &
+                      & 'All variables of one conserved quantity type should have the same number of dimensions, but found  '// &
+                      & int2string(mem%vars(i)%p%type)//' and '//int2string(this%conserved_quantities(ind)%p%var_type)// &
+                      & ' for cqt '//TRIM(Get_cqt_name(this%conserved_quantities(ind)%p%type_id)) // ', please check!')
+                END IF
+                ! Assert that all variables of one type have the same transfer property
+                IF (this%conserved_quantities(ind)%p%transfer_all .NEQV. mem%vars(i)%p%transfer_all) THEN
+                  CALL finish(TRIM(routine), &
+                      & 'All variables of one conserved quantity type should have the same transfer property, '// &
+                      & 'but found true and false '// &
+                      & 'for cqt '//TRIM(Get_cqt_name(this%conserved_quantities(ind)%p%type_id)) // ', please check!')
+                END IF
+              END IF
 
               this%conserved_quantities(ind)%p%last_index_used = this%conserved_quantities(ind)%p%last_index_used + 1
               last_index = this%conserved_quantities(ind)%p%last_index_used
@@ -1116,7 +1145,7 @@ CONTAINS
                 & CALL finish(TRIM(routine), 'Assigned conserved quantities exceed expected number.')
 
               ! Add current variable
-              this%conserved_quantities(ind)%p%cq_vars_2D(last_index)%p => mem%vars(i)%p
+              this%conserved_quantities(ind)%p%cq_vars(last_index)%p => mem%vars(i)%p
               this%conserved_quantities(ind)%p%associated_process(last_index) = mem%owner_proc_id
 
               ! Since the type has been found: exit do loop now

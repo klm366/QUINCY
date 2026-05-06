@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -24,8 +24,7 @@ MODULE mo_hydro_config_class
 
   USE mo_exception,          ONLY: message_text, message, finish
   USE mo_jsb_impl_constants, ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
-  USE mo_util,               ONLY: real2string
-  USE mo_util_string,        ONLY: tolower
+  USE mo_util,               ONLY: real2string, tolower
   USE mo_io_units,           ONLY: filename_max
   USE mo_kind,               ONLY: wp
   USE mo_jsb_control,        ONLY: debug_on
@@ -94,7 +93,7 @@ MODULE mo_hydro_config_class
                                 !< 'Quadratic' (1): quadratic scaling </br>
                                 !< 'Tanh' (2): scaling with tangent hyperbolicus (default)
       & hydro_scale,          & !< Assumed effective scale of the process calculations</br>
-                                !< 'semi_distributed' (1): usage of the ARNO scheme assuming sub-grid scale topographic
+                                !< 'semi_distributed' (1): usage of the ARNO scheme assuming subgrid scale topographic
                                 !<    variations (default)</br>
                                 !< 'uniform' (2): assume uniform soil moisture distribution for the tile,
                                 !<   e.g. for applications like HydroTiles, HighRes or sitelevel
@@ -129,8 +128,8 @@ CONTAINS
   !>
   !>#### Configuration of the hydrology process
   !>
-  !> In this subroutine we configure the hydrolology process based on the [[jsb_hydro_nml]]
-  !> parameter settings. Init_hydro_config is a type-bound procedure of [[t_hydro_config]].
+  !> In this subroutine we configure the hydrolology process based on the settings in hydrology
+  !> namelist 'jsb_hydro_nml'. Init_hydro_config is a type-bound procedure of [[t_hydro_config]].
   !> It is called during initialization phase from [[mo_jsb_model_class:Configure_model_processes]]
   !> ('CALL this%processes(iproc)%p%Configure()').
   !>
@@ -185,7 +184,7 @@ CONTAINS
       & l_soil_texture,       & !< True: calculate soil properties from soil texture data
       & l_glac_in_soil,       & !< True: glaciers are part of the soil - not used
       & l_infil_subzero,      & !< True: infiltration of surface water below zero degC possible
-      & l_ponds                 !< True: represent sub-grid scale surface depressions that might
+      & l_ponds                 !< True: represent subgrid scale surface depressions that might
                                 !< form small ponds
 
     ! quincy

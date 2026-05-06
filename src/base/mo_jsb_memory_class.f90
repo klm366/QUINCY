@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -182,9 +182,11 @@ CONTAINS
 
     IF (PRESENT(output_level)) THEN
       IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
-        no_groups = 2 * (4 - output_level)         ! Number of standard output groups: 2 groups per output_level:
-                                                   ! jsb_all_<output_level> and jsb_<process>_<output_level>
-                                                   ! e.g. 6 groups for BASIC(output_level=1), 2 for FULL(output_level=3)
+        ! Number of standard output groups: 2 groups per output_level:
+        ! jsb_all_<output_level> and jsb_<process>_<output_level>
+        ! e.g. 8 groups for MINIMUM(output_level=1): 2xMINIMUM + 2xBASIC + 2xMEDIUM + 2xFULL
+        !      2 groups for FULL   (output_level=4): 2xFULL
+        no_groups = 2 * (5 - output_level)
       ELSE
         no_groups = 0
       END IF
@@ -207,7 +209,10 @@ CONTAINS
       groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
       IF (no_groups > 0) THEN                                    ! Variable specific setting of output level
         igroup = 4
-        DO out_level=output_level,3
+        ! Variables with lower output level are included in higher level output groups: Variables with an output
+        ! level of e.g. BASIC are included in "group:jsb_all_medium" and "group:jsb_all_full" and in the corresponding
+        ! process groups.
+        DO out_level=output_level,4
           out_level_name = Get_var_group_name(out_level)
           groups(igroup)   = 'jsb_all_'//out_level_name ! var group jsb_all_<level>
           groups(igroup+1) = 'jsb_'//mem%owner_proc_name//'_'//out_level_name ! var group jsb_<process>_<level>
@@ -250,6 +255,7 @@ CONTAINS
 
     var%ptr => var%ptr1d
     var%name = TRIM(name)
+    var%standard_name = TRIM(cf%standard_name)
     var%unit = TRIM(cf%units)
     var%type = REAL1D
     var%missval = missval_r_loc
@@ -279,9 +285,9 @@ CONTAINS
 
   END SUBROUTINE t_jsb_memory_add_var_r1d
 
-  SUBROUTINE t_jsb_memory_add_var_r2d(mem, name, var,       &
+  SUBROUTINE t_jsb_memory_add_var_r2d(mem, name, var,           &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
-    loutput, lcontainer, l_conserve_quan, cons_quan_type_id,    &
+    loutput, lcontainer, cons_quan_type_id, transfer_all,       &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, l_aggregate_all,              &
     output_level, output_groups, verbose                        &
@@ -300,8 +306,8 @@ CONTAINS
     CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
-    LOGICAL,              INTENT(in), OPTIONAL :: l_conserve_quan     ! if var carries a to-be-conserved quantity
-    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of the conserved quantity (mo_jsb_cqt_class)
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   !< type id of a conserved quantity (mo_jsb_cqt_class)
+    LOGICAL,              INTENT(in), OPTIONAL :: transfer_all        !< transfer all or only a proportion of matter upon lcc
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
@@ -357,9 +363,11 @@ CONTAINS
 
     IF (PRESENT(output_level)) THEN
       IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
-        no_groups = 2 * (4 - output_level)         ! Number of standard output groups: 2 groups per output_level:
-                                                   ! jsb_all_<output_level> and jsb_<process>_<output_level>
-                                                   ! e.g. 6 groups for BASIC(output_level=1), 2 for FULL(output_level=3)
+        ! Number of standard output groups: 2 groups per output_level:
+        ! jsb_all_<output_level> and jsb_<process>_<output_level>
+        ! e.g. 8 groups for MINIMUM(output_level=1): 2xMINIMUM + 2xBASIC + 2xMEDIUM + 2xFULL
+        !      2 groups for FULL   (output_level=4): 2xFULL
+        no_groups = 2 * (5 - output_level)
       ELSE
         no_groups = 0
       END IF
@@ -382,7 +390,10 @@ CONTAINS
       groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
       IF (no_groups > 0) THEN                                    ! Variable specific setting of output level
         igroup = 4
-        DO out_level=output_level,3
+        ! Variables with lower output level are included in higher level output groups: Variables with an output
+        ! level of e.g. BASIC are included in "group:jsb_all_medium" and "group:jsb_all_full" and in the corresponding
+        ! process groups.
+        DO out_level=output_level,4
           out_level_name = Get_var_group_name(out_level)
           groups(igroup)   = 'jsb_all_'//out_level_name ! var group jsb_all_<level>
           groups(igroup+1) = 'jsb_'//mem%owner_proc_name//'_'//out_level_name ! var group jsb_<process>_<level>
@@ -410,6 +421,7 @@ CONTAINS
 
     var%ptr => var%ptr2d
     var%name = TRIM(name)
+    var%standard_name = TRIM(cf%standard_name)
     var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
     var%type = REAL2D
@@ -426,8 +438,11 @@ CONTAINS
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
-    IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
-    IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
+    IF (PRESENT(cons_quan_type_id)) THEN
+      var%is_conserved_quan = .TRUE.
+      var%cons_quan_type_id = cons_quan_type_id
+    END IF
+    IF (PRESENT(transfer_all)) var%transfer_all = transfer_all
 
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
@@ -453,10 +468,10 @@ CONTAINS
 
   END SUBROUTINE t_jsb_memory_add_var_r2d
 
-  SUBROUTINE t_jsb_memory_add_var_r3d(mem, name, var,        &
+  SUBROUTINE t_jsb_memory_add_var_r3d(mem, name, var,            &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,              &
     extra_dim_n, loutput, lcontainer,                            &
-    l_conserve_quan, cons_quan_type_id,                          &
+    cons_quan_type_id, transfer_all,                             &
     lrestart, lrestart_cont, initval_r, isteptype,               &
     resetval_r, lmiss, missval_r, l_aggregate_all,               &
     output_level, output_groups, verbose                         &
@@ -475,8 +490,8 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: extra_dim_n         ! Extra (third) dimension (not levels)
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
-    LOGICAL,              INTENT(in), OPTIONAL :: l_conserve_quan     ! if var carries a to-be-conserved quantity
-    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of the conserved quantity (mo_jsb_cqt_class)
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of a conserved quantity (mo_jsb_cqt_class)
+    LOGICAL,              INTENT(in), OPTIONAL :: transfer_all        !< transfer all or only a proportion of matter upon lcc
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
@@ -551,9 +566,11 @@ CONTAINS
 
     IF (PRESENT(output_level)) THEN
       IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
-        no_groups = 2 * (4 - output_level)         ! Number of standard output groups: 2 groups per output_level:
-                                                   ! jsb_all_<output_level> and jsb_<process>_<output_level>
-                                                   ! e.g. 6 groups for BASIC(output_level=1), 2 for FULL(output_level=3)
+        ! Number of standard output groups: 2 groups per output_level:
+        ! jsb_all_<output_level> and jsb_<process>_<output_level>
+        ! e.g. 8 groups for MINIMUM(output_level=1): 2xMINIMUM + 2xBASIC + 2xMEDIUM + 2xFULL
+        !      2 groups for FULL   (output_level=4): 2xFULL
+        no_groups = 2 * (5 - output_level)
       ELSE
         no_groups = 0
       END IF
@@ -576,7 +593,10 @@ CONTAINS
       groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
       IF (no_groups > 0) THEN                                    ! Variable specific setting of output level
         igroup = 4
-        DO out_level=output_level,3
+        ! Variables with lower output level are included in higher level output groups: Variables with an output
+        ! level of e.g. BASIC are included in "group:jsb_all_medium" and "group:jsb_all_full" and in the corresponding
+        ! process groups.
+        DO out_level=output_level,4
           out_level_name = Get_var_group_name(out_level)
           groups(igroup)   = 'jsb_all_'//out_level_name ! var group jsb_all_<level>
           groups(igroup+1) = 'jsb_'//mem%owner_proc_name//'_'//out_level_name ! var group jsb_<process>_<level>
@@ -603,6 +623,7 @@ CONTAINS
 
     var%ptr => var%ptr3d
     var%name = TRIM(name)
+    var%standard_name = TRIM(cf%standard_name)
     var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
     var%type = REAL3D
@@ -619,8 +640,11 @@ CONTAINS
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
-    IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
-    IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
+    IF (PRESENT(cons_quan_type_id)) THEN
+      var%is_conserved_quan = .TRUE.
+      var%cons_quan_type_id = cons_quan_type_id
+    END IF
+    IF (PRESENT(transfer_all)) var%transfer_all = transfer_all
 
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
@@ -647,11 +671,12 @@ CONTAINS
   END SUBROUTINE t_jsb_memory_add_var_r3d
 
   RECURSIVE SUBROUTINE t_jsb_memory_add_pool(mem, pool,         &
-    hgrid, vgrid_2d, vgrid_3d, grib1, grib2, prefix, suffix,             &
+    hgrid, vgrid_2d, vgrid_3d, grib1, grib2, prefix, suffix,    &
     loutput, lcontainer,                                        &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, l_aggregate_all,              &
-    output_level, verbose                                       &
+    output_level, verbose,                                      &
+    cons_quan_type_id, transfer_all                             &
     )
 
     CLASS(t_jsb_memory),   INTENT(inout)        :: mem                 ! memory structure
@@ -676,6 +701,8 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
     INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   !< if this is a conserved quantity this specifies the type
+    LOGICAL,              INTENT(in), OPTIONAL :: transfer_all        !< transfer all or only a proportion of matter upon lcc
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
@@ -711,14 +738,14 @@ CONTAINS
             & loutput=loutput, lcontainer=lcontainer,                                        &
             & lrestart=lrestart_loc, lrestart_cont=lrestart_cont, initval_r=initval_r, isteptype=isteptype,          &
             & resetval_r=resetval_r, lmiss=lmiss, missval_r=missval_r, l_aggregate_all=l_aggregate_all,              &
-            & output_level=output_level, verbose=verbose)
+            & output_level=output_level, verbose=verbose, cons_quan_type_id=cons_quan_type_id, transfer_all=transfer_all )
         TYPE IS (t_jsb_var_real3d)
           CALL mem%Add_var(selected_element%element_shortname, selected_element,       &
             & hgrid, vgrid_3d, cf, grib1, grib2, prefix//'_'//pool%shortname, suffix,  &
             & loutput=loutput, lcontainer=lcontainer,                                        &
             & lrestart=lrestart_loc, lrestart_cont=lrestart_cont, initval_r=initval_r, isteptype=isteptype,          &
             & resetval_r=resetval_r, lmiss=lmiss, missval_r=missval_r, l_aggregate_all=l_aggregate_all,              &
-            & output_level=output_level, verbose=verbose)
+            & output_level=output_level, verbose=verbose, cons_quan_type_id=cons_quan_type_id, transfer_all=transfer_all)
         END SELECT
       END DO
     END IF
@@ -730,7 +757,7 @@ CONTAINS
           & loutput=loutput, lcontainer=lcontainer,                                        &
           & lrestart=lrestart, lrestart_cont=lrestart_cont, initval_r=initval_r, isteptype=isteptype,              &
           & resetval_r=resetval_r, lmiss=lmiss, missval_r=missval_r, l_aggregate_all=l_aggregate_all,              &
-          & output_level=output_level, verbose=verbose)
+          & output_level=output_level, verbose=verbose, cons_quan_type_id=cons_quan_type_id, transfer_all=transfer_all)
       END DO
     END IF
 
@@ -837,6 +864,7 @@ CONTAINS
       var%ptr => var%ptr2d
       __acc_attach(var%ptr)
       var%name = TRIM(name)
+      var%standard_name = TRIM(cf%standard_name)
       var%full_name = TRIM(name_loc)
       var%type = REAL2D
       var%missval = missval_r_loc

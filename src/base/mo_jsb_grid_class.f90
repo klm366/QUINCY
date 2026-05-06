@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -139,6 +139,8 @@ CONTAINS
     END SELECT
     new%type = TRIM(type)
     new%host_patch_id = get_host_patch_id(patch)
+
+    IF (new%id /= new%host_patch_id) CALL finish(routine, 'grid id /= patch_id - this should not happen!')
 
     new%filename = get_grid_filename_domain(patch)
     new%ntotal   = get_ntotal_domain       (patch)

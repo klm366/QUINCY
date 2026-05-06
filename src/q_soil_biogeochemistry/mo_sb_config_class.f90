@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -142,7 +142,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_sb_config(config)
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_util_string,           ONLY: tolower
+    USE mo_util,                  ONLY: tolower
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,              ONLY: Register_vgrid
     USE mo_jsb_io,                ONLY: ZAXIS_GENERIC
@@ -198,11 +198,7 @@ CONTAINS
     REAL(wp)                    :: nml_ea_decomposition
     REAL(wp)                    :: nml_ed_decomposition
 
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /soil_biogeochemistry_ctl/       &
-#else
-    NAMELIST /jsb_sb_nml/                     &
-#endif
+    NAMELIST /lnd_sb_nml/                     &
                       active                    , &
                       lrestart_cont             , &
                       ic_filename               , &
@@ -305,13 +301,8 @@ CONTAINS
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('soil_biogeochemistry_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, soil_biogeochemistry_ctl)
-#else
-    nml_unit = position_nml('jsb_sb_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_sb_nml)
-#endif
+    nml_unit = position_nml('lnd_sb_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_sb_nml)
 
     CALL close_nml(nml_handler)
 

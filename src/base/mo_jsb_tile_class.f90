@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -64,8 +64,8 @@ MODULE mo_jsb_tile_class
     CHARACTER(len=25) :: name    !< Aggregators are distinguished by using unique names
   CONTAINS
     ! Begin/End routines enable multi-stream OpenACC aggregation
-    PROCEDURE(begin_interface),        DEFERRED             :: BeginAggregate !> Start  multi-stream aggregation (useful for OpenACC)
-    PROCEDURE(end_interface),          DEFERRED             :: EndAggregate   !> Finish multi-stream aggregation (useful for OpenACC)
+    PROCEDURE(begin_interface),        DEFERRED             :: BeginAggregate !< Start  multi-stream aggregation (useful for OpenACC)
+    PROCEDURE(end_interface),          DEFERRED             :: EndAggregate   !< Finish multi-stream aggregation (useful for OpenACC)
     PROCEDURE(aggregate_interface_2d), DEFERRED             :: Aggregate_2d !< Aggregate operator for 2d variables
     PROCEDURE(aggregate_interface_3d), DEFERRED             :: Aggregate_3d !< Aggregate operator for 3d variables
     GENERIC                                                 :: Aggregate => Aggregate_2d, Aggregate_3d
@@ -109,7 +109,8 @@ MODULE mo_jsb_tile_class
                                                                       !< names must be either "fract[_max]_"//tile%name,
                                                                       !< or specified by fract_varname (in the use case).
     CHARACTER(LEN=20)                     :: fract_varname                 !< Name of variable containing fractions for this tile
-    LOGICAL,                  ALLOCATABLE :: l_fract_children_changed(:,:) !< indicates whether the fraction is changed
+    LOGICAL,                  ALLOCATABLE :: l_fract_children_changed(:,:) !< indicates whether the fraction is changed (aggregator)
+    LOGICAL,                  ALLOCATABLE :: l_fract_alcc_change(:,:)      !< indicates whether the fraction will be changed by alcc
     TYPE(t_jsb_aggregator_p), ALLOCATABLE :: aggregators(:)                !< List of possible aggregators for this tile
     !
     INTEGER                               :: nr_of_cqts = 0                !< number of conserved quantity types in use on the tile
@@ -188,7 +189,7 @@ MODULE mo_jsb_tile_class
     END SUBROUTINE Init_interface
 
     !> Interface for deferred subroutine `Init_fractions`
-    SUBROUTINE Init_fractions_interface(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
+    SUBROUTINE Init_fractions_interface(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions, is_sitelevel)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
       CHARACTER(len=*),           INTENT(in)    :: varlist_name
@@ -196,6 +197,7 @@ MODULE mo_jsb_tile_class
       CHARACTER(len=*),           INTENT(in)    :: suffix
       LOGICAL,                    INTENT(in)    :: l_fixed_fractions
       LOGICAL,                    INTENT(in)    :: l_rel_fractions
+      LOGICAL,                    INTENT(in)    :: is_sitelevel
     END SUBROUTINE Init_fractions_interface
 
     !> Interface for varous deferred subroutines

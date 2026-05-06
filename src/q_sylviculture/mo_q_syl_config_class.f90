@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -67,7 +67,7 @@ CONTAINS
   !>
   SUBROUTINE Init_q_syl_config(config)
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_util_string,           ONLY: tolower
+    USE mo_util,                  ONLY: tolower
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,              ONLY: Register_vgrid
     USE mo_jsb_io,                ONLY: ZAXIS_GENERIC
@@ -91,11 +91,8 @@ CONTAINS
     LOGICAL   :: flag_stand_harvest       !< QS: if stand replacing harvest is enabled
     INTEGER   :: stand_replacing_year     !< QS: site specific stand replacing harvest year
 
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /q_syl_ctl/  &
-#else
-    NAMELIST /q_syl_nml/  &
-#endif
+    NAMELIST /lnd_q_syl_nml/  &
+
       & active,                   &
       & lrestart_cont,            &
       & ic_filename,              &
@@ -121,7 +118,7 @@ CONTAINS
     ic_filename                   = 'ic_land_syl.nc'
     !
     harvest_filename_prefix       = 'bc_land_use_quincy'
-    harvest_scheme                = 'constant'  ! possible varlues: constant, reference or transient
+    harvest_scheme                = 'none'  ! possible values: none, constant, reference or transient
     l_daily_harvest               = .TRUE.  ! determines if harvest is to be applied on a daily (TRUE) or annual (FALSE) basis
     ! for now arbitrary default fraction used if not read from a map (annual change, relative to whole gridcell)
     harvest_fraction              = 0.05_wp
@@ -133,13 +130,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit = position_nml('q_syl_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, q_syl_ctl)
-#else
-    nml_unit = position_nml('q_syl_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, q_syl_nml)
-#endif
+    nml_unit = position_nml('lnd_q_syl_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_q_syl_nml)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
@@ -161,6 +153,9 @@ CONTAINS
 
     ! Set harvest scheme
     SELECT CASE (tolower(TRIM(harvest_scheme)))
+    CASE ("none")
+      CALL message(TRIM(routine), 'Running with process active but no global harvest.')
+      config%harvest_scheme = 0.0_wp
     CASE ("constant")
       CALL message(TRIM(routine), 'Running with constant global harvest.')
       config%harvest_scheme = CONST_HARV
