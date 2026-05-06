@@ -90,7 +90,6 @@ CONTAINS
     REAL(wp), PARAMETER :: persist_wind_10m = 0.9995_wp   ! ~4 years
     REAL(wp), PARAMETER :: persist_rel_hum  = 0.95_wp     ! ~14 days
     ! ------------------------------------------------------------------------------------------------------ !
-!checken, wie oft was aufgerufen wird!
 
     IF (.NOT. new_day .OR. lstart) THEN
       temp_sum_day = temp_sum_day + t_air * dtime

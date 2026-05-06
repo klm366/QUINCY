@@ -172,7 +172,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: desert_fpc
 
     ! Local variables
-    LOGICAL :: new_year, new_day
+    LOGICAL :: new_year, new_month, new_day, init_nlcc
+    LOGICAL, SAVE :: nlcc_initialized = .FALSE.
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -263,7 +264,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)       ! inout
 
-    IF (is_time_experiment_start(options%current_datetime) .OR. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
+    IF (.NOT. nlcc_initialized .AND. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
+      init_nlcc = .TRUE.
+    ELSE
+      init_nlcc = .FALSE.
+    END IF
+    IF (is_time_experiment_start(options%current_datetime) .OR. init_nlcc) THEN
       lstart = .TRUE.
     ELSE
       lstart = .FALSE.
@@ -352,6 +358,8 @@ CONTAINS
                       act_fpc(:,:), bare_fpc(:), fuel(:))
     ENDIF
 
+    nlcc_initialized = .TRUE.
+
     DEALLOCATE(is_woody, is_grass, is_pasture, is_crop, is_dynamic)
     DEALLOCATE(bclimit_min_cold_mmtemp, bclimit_max_cold_mmtemp, &
                bclimit_max_warm_mmtemp, bclimit_min_temprange, bclimit_min_gdd, tau_c_woods)
@@ -363,7 +371,6 @@ CONTAINS
     DEALLOCATE(cover_fract_pot_previous_year)
     DEALLOCATE(cover_fract_sum)
     DEALLOCATE(var_collect)
-
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
