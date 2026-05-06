@@ -46,6 +46,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: involved_tiles(:)
     INTEGER :: nr_of_descendants
 
@@ -59,6 +60,7 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => get_model(tile%owner_model_id)
     active_cqts = (/ LIVE_CARBON_CQ_TYPE /)
     passive_cqts = (/ AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE /)
 
@@ -76,6 +78,8 @@ CONTAINS
 
     DEALLOCATE(involved_tiles)
 
+    ! Mark process as successfully initialized
+    CALL model%processes(WLCC_)%p%Set_init_status_true
   END SUBROUTINE wlcc_init_lcc
 
 #endif

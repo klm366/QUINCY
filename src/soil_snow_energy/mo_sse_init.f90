@@ -89,8 +89,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
-#ifdef __QUINCY_STANDALONE__
     model  => Get_model(tile%owner_model_id)
+
+#ifdef __QUINCY_STANDALONE__
     IF (model%config%use_soil_phys_jsbach) THEN
       CALL qs_sse_init_bc(tile)
       CALL sse_init_ic(tile)
@@ -107,6 +108,9 @@ CONTAINS
       CALL sse_finalize_init_vars()
     END IF
 #endif
+
+    ! Mark process as successfully initialized
+    CALL model%processes(SSE_)%p%Set_init_status_true
   END SUBROUTINE sse_init
 
   SUBROUTINE sse_finalize_init_vars

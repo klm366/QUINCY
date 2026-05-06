@@ -78,9 +78,8 @@ CONTAINS
     USE mo_jsb_parallel,       ONLY: Get_omp_thread
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-
+    TYPE(t_jsb_model), POINTER  :: model
     INTEGER :: no_omp_thread
-    TYPE(t_jsb_model),  POINTER :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sb_init'
 
 #ifdef __QUINCY_STANDALONE__

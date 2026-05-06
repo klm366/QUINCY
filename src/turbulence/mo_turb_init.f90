@@ -52,7 +52,10 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+    TYPE(t_jsb_model), POINTER :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':turb_init'
+
+    model => Get_model(tile%owner_model_id)
 
 #ifdef __QUINCY_STANDALONE__
 #else
@@ -67,6 +70,9 @@ CONTAINS
       CALL turb_finalize_init_vars()
     END IF
 #endif
+
+    ! Mark process as successfully initialized
+    CALL model%processes(TURB_)%p%Set_init_status_true
   END SUBROUTINE turb_init
 
 #ifdef __QUINCY_STANDALONE__

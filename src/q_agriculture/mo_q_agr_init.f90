@@ -154,6 +154,9 @@ CONTAINS
     !$ACC WAIT(1)
 
 #endif
+
+    ! Mark process as successfully initialized
+    CALL model%processes(Q_AGR_)%p%Set_init_status_true
   END SUBROUTINE q_agr_init
 
 #ifndef __QUINCY_STANDALONE__

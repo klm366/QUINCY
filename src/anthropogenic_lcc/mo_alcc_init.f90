@@ -50,19 +50,22 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':alcc_init'
 
     dsl4jsb_Def_memory(ALCC_)
 
 !    dsl4jsb_Real2D_onDomain ::
     ! -------------------------------------------------------------------------------------------------- !
-
+    model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_memory(ALCC_)
 
 !    dsl4jsb_Get_var2D_onDomain(ALCC_, )
 
     ! currently nothing to do here
 
+    ! Mark process as successfully initialized
+    CALL model%processes(ALCC_)%p%Set_init_status_true
   END SUBROUTINE alcc_init
 
 
