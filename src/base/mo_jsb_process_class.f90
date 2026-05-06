@@ -45,7 +45,6 @@ MODULE mo_jsb_process_class
     PROCEDURE :: Register_task
     PROCEDURE :: Get_task
     PROCEDURE :: Set_init_status_true
-    PROCEDURE :: Set_init_status_false
     PROCEDURE :: Test_init_status_asked_by => Test_init_status
   END TYPE t_jsb_process
 
@@ -274,41 +273,24 @@ CONTAINS
   !>Mark process as successfully initialized - set 'is_initialized' to TRUE
   !>
   SUBROUTINE Set_init_status_true(this)
-
     CLASS(t_jsb_process), INTENT(inout) :: this
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_init_status_true'
 
-    this%is_initialized = .TRUE.
-
-    CALL message(TRIM(routine), "Process initialization successful: "//Get_process_name(this%id))
-
+    ! mark as initialized and add info to logfile only if not yet initialized
+    IF (.NOT. this%is_initialized) THEN
+      this%is_initialized = .TRUE.
+      CALL message(TRIM(routine), "Process initialization successful: "//Get_process_name(this%id))
+    END IF
   END SUBROUTINE Set_init_status_true
-
-  ! ======================================================================================================= !
-  !>
-  !>Mark process as successfully initialized - set 'is_initialized' to FALSE
-  !>
-  SUBROUTINE Set_init_status_false(this)
-
-    CLASS(t_jsb_process), INTENT(inout) :: this
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_init_status_false'
-
-    this%is_initialized = .FALSE.
-
-    !CALL message(TRIM(routine), "Set process finished-init status to FALSE for: "//Get_process_name(this%id))
-
-  END SUBROUTINE Set_init_status_false
 
   ! ======================================================================================================= !
   !>
   !>Test if process the process is already initialized, if not: finish the model
   !>
   SUBROUTINE Test_init_status(this, process_asking)
-
     CLASS(t_jsb_process), INTENT(in) :: this
-    INTEGER                          :: process_asking  !< Process that depends on this process
+    INTEGER                          :: process_asking  !< Process that depends on 'this' process
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Test_init_status'
 
@@ -319,10 +301,12 @@ CONTAINS
       CALL finish(TRIM(routine), "Failed process dependency: "//Get_process_name(process_asking)// &
         &                         " depends on "//Get_process_name(this%id)//", which is not initialized yet.")
     END IF
-
   END SUBROUTINE Test_init_status
 
-
+  ! ======================================================================================================= !
+  !>
+  !>Get name for action of process on tile
+  !>
   FUNCTION Get_action_name(iact) RESULT(return_value)
 
     INTEGER, INTENT(in) :: iact

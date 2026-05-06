@@ -684,11 +684,6 @@ CONTAINS
       CALL tile%Collect_bgc_materials()
 #endif
 
-      DO p = 1,LAST_PROC_ID-1
-        CALL model%processes(p)%p%Set_init_status_false
-        CALL message(TRIM(routine), "Reset process init-setting, tile init: "//TRIM(tile%name))
-      END DO
-
       ! ---------------------------------------------------------------------------------------------- !
       !>
       !>     2.2 Initialize fractions of each tile
