@@ -295,8 +295,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Test_init_status'
 
     IF (this%is_initialized) THEN
-      CALL message(TRIM(routine), "Process dependency check: "//Get_process_name(process_asking)// &
-        &                         " depends on "//Get_process_name(this%id))
+      IF (debug_on()) THEN
+        CALL message(TRIM(routine), "Process dependency check: "//Get_process_name(process_asking)// &
+          &                         " depends on "//Get_process_name(this%id))
+      END IF
     ELSE
       CALL finish(TRIM(routine), "Failed process dependency: "//Get_process_name(process_asking)// &
         &                         " depends on "//Get_process_name(this%id)//", which is not initialized yet.")
