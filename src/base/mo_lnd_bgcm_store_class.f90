@@ -30,7 +30,7 @@ MODULE mo_lnd_bgcm_store_class
   PUBLIC :: t_lnd_bgcm_store_abstract
   PUBLIC :: SB_BGCM_POOL_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
     &       SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID,                                              &
-    &       SB_BGCM_FIRE_LITTER_ASH_ID, SB_BGCM_FIRE_EMISSIONS_ID,                                     &
+    &       SB_BGCM_FIRE_LITTER_ASH_ID, SB_BGCM_FIRE_EMISSIONS_ID
   PUBLIC :: VEG_BGCM_POOL_ID, VEG_BGCM_SEED_BED_POOL_ID, VEG_BGCM_GROWTH_ID,                           &
     &       VEG_BGCM_SEED_BED_GROWTH_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID,      &
     &       VEG_BGCM_FRAC_ALLOC_ID,                                                                    &

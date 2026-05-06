@@ -43,7 +43,7 @@ MODULE mo_q_dfire_sf_feedback_class
                                       ix_residue_assoc, ix_residue, &
                                       ix_dom_assoc, ix_dom, &
                                       ix_sap_wood, ix_heart_wood, ix_fruit, ix_labile, &
-                                      ix_reserve, ix_leaf, ix_seed_bed
+                                      ix_reserve, ix_leaf
 
   IMPLICIT NONE
 
