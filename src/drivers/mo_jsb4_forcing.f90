@@ -28,7 +28,7 @@ MODULE mo_jsb4_forcing
 
   ! Apparently in echam and icon
   USE mo_math_constants,         ONLY: pi
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: wp, dp
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util,                   ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, vtmpc1, rdv
@@ -174,7 +174,8 @@ MODULE mo_jsb4_forcing
     INTEGER                  :: currentDayEnd = 0      !! Last time step in file corresponding to the current day
     INTEGER                  :: length_time_series     !! The number of time steps found in the data (only if my_process_is_stdio())
     REAL(wp), POINTER        :: data_read(:,:,:) => NULL()  !! Pointer to read data
-    REAL(wp), POINTER        :: timevalues(:) => NULL()     !! The values of the time variable (only if my_process_is_stdio())
+    REAL(dp), POINTER        :: timevalues(:) => NULL()     !! The values of the time variable (only if my_process_is_stdio())
+                                                            !! double precision is required to store days and lower as REAL using format YYYYMMDD.xxx
     TYPE(t_input_file)       :: input_file
   END TYPE input_variable_type
 
