@@ -1,9 +1,8 @@
-!> QUINCY calculate fire rate of spread
 !>
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -12,16 +11,6 @@
 !> ---------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
-!>
-!> @brief Main interface to calculate rate of spread and related variables (mean fire area, ...)
-!>
-!> Available implementations to compute Rate of Spread:
-!> - Thonicke et al. (2010)
-!> - Oberhagemann et al. (2025)
-!>
-!> @author
-!>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
-!>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
 MODULE mo_q_dfire_sf_ros_class
 #ifndef __NO_JSBACH__

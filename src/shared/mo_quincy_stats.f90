@@ -1,23 +1,14 @@
-!> QUINCY functions for statistics
 !>
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
-!>
-!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
-!>
-!> @brief
-!>  Contains common statistics function
-!>
-!> @author
-!>  Albert Jornet Puig, MPI-BGC Jena
 !>
 MODULE mo_quincy_stats
 

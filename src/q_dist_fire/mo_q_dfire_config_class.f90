@@ -1,32 +1,14 @@
 !>
-!>  @par Copyright
-!>    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!>    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
-!>    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+!> ICON-Land
 !>
-!>    This file is part of the QUINCY model.
-!>    The QUINCY model is free software: you can redistribute it and/or modify
-!>    it under the terms of the GNU General Public License version 3,
-!>    as published by the Free Software Foundation.
+!> ---------------------------------------
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
-!>    The QUINCY model is distributed in the hope that it will be useful,
-!>    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!>    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!>    GNU General Public License for more details.
-!>
-!>    You should have received a copy of the GNU General Public License
-!>    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!>
-!> @brief Contains structures and methods for config of the dist_fire process
-!>
-!>  -flag_ros_f_prescribed
-!>  -flag_mean_fire_area_prescribed: only calculated if ros_f is also calculated. Otherwise an error is raised.
-!>      However, if area_burned_fract is prescribed. Then it is ignore anyway.
-!>  -flag_area_burned_fract_prescribed: only calculated if ros_f is also calculated. Otherwise an error is raised.
-!>
-!> @author
-!>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
-!>  Ana Bastos, University of Leipzig / MPI-BGC Jena
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
 !>
 MODULE mo_q_dfire_config_class
 #ifndef __NO_JSBACH__

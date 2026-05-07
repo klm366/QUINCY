@@ -1,4 +1,3 @@
-!> QUINCY
 !>
 !> ICON-Land
 !>
@@ -10,10 +9,6 @@
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
-!>
-!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
-!>
-!> @brief Rate of spread derived type t_sf_ros
 !>
 MODULE mo_q_dfire_sf_ros_type
 #ifndef __NO_JSBACH__

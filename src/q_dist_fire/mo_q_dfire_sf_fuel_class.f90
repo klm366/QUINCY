@@ -1,30 +1,13 @@
-!> QUINCY calculate fuel pools
-!>
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
-!>
-!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
-!>
-!> @description It holds and calculates the fuel from vegetation and litter.
-!>
-!>  Data is organized to account for:
-!>    - Live fuel: from tree
-!>        - Pool of origin
-!>    - Dead fuel: from litter pool + 1 hr live grass, following Thonicke et al. (2010)
-!>        - Pool of origin
-!>    - Nutrients (C)
-!>
-!> @author
-!>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
-!>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
 MODULE mo_q_dfire_sf_fuel_class
 #ifndef __NO_JSBACH__

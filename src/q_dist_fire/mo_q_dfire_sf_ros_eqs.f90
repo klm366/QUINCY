@@ -2,7 +2,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -11,12 +11,6 @@
 !> ---------------------------------------
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
-!>
-!> @brief Equations related to Rate of Spread
-!>
-!> @author
-!>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
-!>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
 MODULE mo_q_dfire_sf_ros_eqs
 #ifndef __NO_JSBACH__

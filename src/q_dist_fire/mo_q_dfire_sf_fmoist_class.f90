@@ -1,23 +1,13 @@
-!> QUINCY calculate fuel moisture
-!>
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
-!>
-!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
-!>
-!> @brief Module to calculate fuel moisture based on Thonicke et al. (2010)
-!>
-!> @author
-!>  Albert Jornet Puig, University of Leipzig / MPI-BGC Jena
-!>  Ana Bastos, University of Leipzig / MPI-BGC Jena
 !>
 MODULE mo_q_dfire_sf_fmoist_class
 #ifndef __NO_JSBACH__
