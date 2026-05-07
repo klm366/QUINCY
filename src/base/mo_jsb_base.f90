@@ -60,13 +60,12 @@ CONTAINS
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
-    USE mo_spq_constants,       ONLY: init_spq_constants
     USE mo_turb_constants,      ONLY: init_turb_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 #endif
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, CLIMBUF_, NLCC_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_, VEG_, ALCC_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, ALCC_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -83,7 +82,6 @@ CONTAINS
     dsl4jsb_Use_config(ALCC_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Use_config(Q_SYL_)
-    dsl4jsb_Use_config(SPQ_)
     dsl4jsb_Use_config(VEG_)
 #endif
 
@@ -104,7 +102,6 @@ CONTAINS
     dsl4jsb_Def_config(ALCC_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(Q_SYL_)
-    dsl4jsb_Def_config(SPQ_)
     dsl4jsb_Def_config(VEG_)
 #endif
 
@@ -199,7 +196,6 @@ CONTAINS
            CALL init_q_agr_constants
            CALL init_q_syl_constants
            CALL init_veg_constants
-           CALL init_spq_constants
            CALL init_turb_constants
            CALL init_sb_constants
            CALL init_q_pheno_parameters
@@ -353,26 +349,6 @@ CONTAINS
             dsl4jsb_Config(Q_SYL_)%active = .FALSE.
           END IF
         END IF
-
-        ! check settings with jsbach soil physics and SPQ_
-        dsl4jsb_Get_config(SPQ_)
-        IF (model%config%use_soil_phys_jsbach .NEQV. dsl4jsb_Config(SPQ_)%active) THEN
-          IF (dsl4jsb_Config(SPQ_)%active) THEN
-            IF (model%config%use_lakes .OR. model%config%use_glacier) THEN
-              CALL finish(routine, &
-                & 'With the SPQ_ process active, use_lakes and use_glacier must be FALSE.')
-            END IF
-          END IF
-        ELSE
-          IF (model%config%use_soil_phys_jsbach) THEN
-            CALL finish(routine, &
-              & 'The SPQ_ process must not be active if use_soil_phys_jsbach is set to TRUE.')
-          ELSE
-            CALL finish(routine, &
-              & 'The SPQ_ process must be active if use_soil_phys_jsbach is set to FALSE.')
-          END IF
-        END IF
-
 #endif
 
       CASE (MODEL_JSBACH)
@@ -477,7 +453,7 @@ CONTAINS
     ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
     ! quincy model with 13 PFT tiles incl. bare soil
-    CASE ('quincy_13_pfts_for_coupling', 'quincy_13_pfts')
+    CASE ('quincy_13_pfts')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT

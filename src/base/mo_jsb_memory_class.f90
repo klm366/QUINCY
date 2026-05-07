@@ -182,9 +182,11 @@ CONTAINS
 
     IF (PRESENT(output_level)) THEN
       IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
-        no_groups = 2 * (4 - output_level)         ! Number of standard output groups: 2 groups per output_level:
-                                                   ! jsb_all_<output_level> and jsb_<process>_<output_level>
-                                                   ! e.g. 6 groups for BASIC(output_level=1), 2 for FULL(output_level=3)
+        ! Number of standard output groups: 2 groups per output_level:
+        ! jsb_all_<output_level> and jsb_<process>_<output_level>
+        ! e.g. 8 groups for MINIMUM(output_level=1): 2xMINIMUM + 2xBASIC + 2xMEDIUM + 2xFULL
+        !      2 groups for FULL   (output_level=4): 2xFULL
+        no_groups = 2 * (5 - output_level)
       ELSE
         no_groups = 0
       END IF
@@ -207,7 +209,10 @@ CONTAINS
       groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
       IF (no_groups > 0) THEN                                    ! Variable specific setting of output level
         igroup = 4
-        DO out_level=output_level,3
+        ! Variables with lower output level are included in higher level output groups: Variables with an output
+        ! level of e.g. BASIC are included in "group:jsb_all_medium" and "group:jsb_all_full" and in the corresponding
+        ! process groups.
+        DO out_level=output_level,4
           out_level_name = Get_var_group_name(out_level)
           groups(igroup)   = 'jsb_all_'//out_level_name ! var group jsb_all_<level>
           groups(igroup+1) = 'jsb_'//mem%owner_proc_name//'_'//out_level_name ! var group jsb_<process>_<level>
@@ -358,9 +363,11 @@ CONTAINS
 
     IF (PRESENT(output_level)) THEN
       IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
-        no_groups = 2 * (4 - output_level)         ! Number of standard output groups: 2 groups per output_level:
-                                                   ! jsb_all_<output_level> and jsb_<process>_<output_level>
-                                                   ! e.g. 6 groups for BASIC(output_level=1), 2 for FULL(output_level=3)
+        ! Number of standard output groups: 2 groups per output_level:
+        ! jsb_all_<output_level> and jsb_<process>_<output_level>
+        ! e.g. 8 groups for MINIMUM(output_level=1): 2xMINIMUM + 2xBASIC + 2xMEDIUM + 2xFULL
+        !      2 groups for FULL   (output_level=4): 2xFULL
+        no_groups = 2 * (5 - output_level)
       ELSE
         no_groups = 0
       END IF
@@ -383,7 +390,10 @@ CONTAINS
       groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
       IF (no_groups > 0) THEN                                    ! Variable specific setting of output level
         igroup = 4
-        DO out_level=output_level,3
+        ! Variables with lower output level are included in higher level output groups: Variables with an output
+        ! level of e.g. BASIC are included in "group:jsb_all_medium" and "group:jsb_all_full" and in the corresponding
+        ! process groups.
+        DO out_level=output_level,4
           out_level_name = Get_var_group_name(out_level)
           groups(igroup)   = 'jsb_all_'//out_level_name ! var group jsb_all_<level>
           groups(igroup+1) = 'jsb_'//mem%owner_proc_name//'_'//out_level_name ! var group jsb_<process>_<level>
@@ -556,9 +566,11 @@ CONTAINS
 
     IF (PRESENT(output_level)) THEN
       IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
-        no_groups = 2 * (4 - output_level)         ! Number of standard output groups: 2 groups per output_level:
-                                                   ! jsb_all_<output_level> and jsb_<process>_<output_level>
-                                                   ! e.g. 6 groups for BASIC(output_level=1), 2 for FULL(output_level=3)
+        ! Number of standard output groups: 2 groups per output_level:
+        ! jsb_all_<output_level> and jsb_<process>_<output_level>
+        ! e.g. 8 groups for MINIMUM(output_level=1): 2xMINIMUM + 2xBASIC + 2xMEDIUM + 2xFULL
+        !      2 groups for FULL   (output_level=4): 2xFULL
+        no_groups = 2 * (5 - output_level)
       ELSE
         no_groups = 0
       END IF
@@ -581,7 +593,10 @@ CONTAINS
       groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
       IF (no_groups > 0) THEN                                    ! Variable specific setting of output level
         igroup = 4
-        DO out_level=output_level,3
+        ! Variables with lower output level are included in higher level output groups: Variables with an output
+        ! level of e.g. BASIC are included in "group:jsb_all_medium" and "group:jsb_all_full" and in the corresponding
+        ! process groups.
+        DO out_level=output_level,4
           out_level_name = Get_var_group_name(out_level)
           groups(igroup)   = 'jsb_all_'//out_level_name ! var group jsb_all_<level>
           groups(igroup+1) = 'jsb_'//mem%owner_proc_name//'_'//out_level_name ! var group jsb_<process>_<level>

@@ -50,7 +50,7 @@ CONTAINS
 
   SUBROUTINE Init_disturb_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM !, FULL
+    USE mo_jsb_varlist,       ONLY: MINIMUM, BASIC, MEDIUM !, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -83,7 +83,7 @@ CONTAINS
       & t_cf('burned_fract', 'frac', 'Fraction of tile that is burned.'),               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
       & prefix, suffix,                                                                 &
-      & output_level=BASIC,                                                             &
+      & output_level=MINIMUM,                                                           &
       & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
     CALL mem%Add_var( 'damaged_fract', mem%damaged_fract,                                &
@@ -91,7 +91,7 @@ CONTAINS
       & t_cf('damaged_fract', 'frac', 'Fraction of tile that is damaged by windbreak.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
-      & output_level=BASIC,                                                              &
+      & output_level=MINIMUM,                                                            &
       & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
     IF (.NOT. model%processes(WLCC_)%p%config%active) THEN
