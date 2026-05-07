@@ -309,7 +309,7 @@ MODULE mo_sb_constants
     def_sb_pool_microbial_necromass  , &      ! microbial necromass
     def_sb_pool_dom                           ! DOM
 
-  ! constants used as factor for multiplication with namelist parameters (spq_config) when "parameter sensitivity" is enabled
+  ! constants used as factor for multiplication with namelist parameters when "parameter sensitivity" is enabled
   ! see sb_config & mo_qs_set_parameters:Modify_quincy_namelist_parameter
   REAL(wp) :: &
     f_psensi_soil_p_depth, &
@@ -626,7 +626,7 @@ CONTAINS
     def_sb_pool_microbial_necromass   = 150.0_wp        ! Yu et al. 2020, GMD
     def_sb_pool_dom                   = 1.0_wp          ! Yu et al. 2020, GMD
 
-    ! constants used as factor for multiplication with namelist parameters (spq_config) when "parameter sensitivity" is enabled
+    ! constants used as factor for multiplication with namelist parameters when "parameter sensitivity" is enabled
     f_psensi_soil_p_depth             = 1.0_wp
     f_psensi_soil_p_labile            = 1.0_wp
     f_psensi_soil_p_slow              = 1.0_wp
