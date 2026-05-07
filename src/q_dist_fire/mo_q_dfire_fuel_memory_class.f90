@@ -49,7 +49,7 @@ MODULE mo_q_dfire_fuel_memory_class
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_q_dfire_fuel_memory
 
-    TYPE(t_jsb_var_real2d)  :: forest_fract        !< forest fraction [%] 
+    TYPE(t_jsb_var_real2d)  :: forest_fract        !< forest fraction [%]
     TYPE(t_jsb_var_real2d)  :: grass_fract         !< grass fraction [%]
 
     ! lctlib, weighted by tile fraction

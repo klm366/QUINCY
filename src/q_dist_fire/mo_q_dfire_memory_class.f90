@@ -91,12 +91,12 @@ MODULE mo_q_dfire_memory_class
     TYPE(t_jsb_var_real2d)               :: precip_daily_mmd    !< Daily precipitation, same as precip_daily but in spitfire expected units [mm day-1]
 
     ! diagnostic for ros of spread calculation
-    TYPE(t_jsb_var_real2d)               :: reaction_intensity             !< I_R: the energy release rate per unit area of fire front [kJ m−2 min−1]
+    TYPE(t_jsb_var_real2d)               :: reaction_intensity             !< I_R: the energy release rate per unit area of fire front [kJ m-2 min-1]
     TYPE(t_jsb_var_real2d)               :: prop_flux_ratio                !< the proportion of IR that heats adjacent fuel particles to ignition [0 to 1]
     TYPE(t_jsb_var_real2d)               :: wind_factor                    !< wind_factor is a multiplier that accounts for the effect of wind in increasing the effective value of prop_flux_ratio[-]
     TYPE(t_jsb_var_real2d)               :: eff_heating_number             !< the proportion of a fuel particle that is heated to ...
                                                                            !< ignition temperature at the time flaming combustion starts [-]
-    TYPE(t_jsb_var_real2d)               :: preig_heat                     !< the amount of heat required to ignite a given mass of fuel [kJ kg−1]
+    TYPE(t_jsb_var_real2d)               :: preig_heat                     !< the amount of heat required to ignite a given mass of fuel [kJ kg-1]
 
     !< diagnostics: for reaction_intensity
     TYPE(t_jsb_var_real2d)               :: opt_react_velo                 !< Optimum reaction velocity [min-1]
@@ -560,7 +560,7 @@ CONTAINS
 
     CALL mem%Add_var('reaction_intensity', mem%reaction_intensity, &
         & hgrid, vgrid_surface, &
-        & t_cf('reaction_intensity', 'kJ m−2 min−1', 'The energy release rate per unit area of fire front'), &
+        & t_cf('reaction_intensity', 'kJ m-2 min-1', 'The energy release rate per unit area of fire front'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -606,7 +606,7 @@ CONTAINS
 
     CALL mem%Add_var('preig_heat', mem%preig_heat, &
         & hgrid, vgrid_surface, &
-        & t_cf('preig_heat', 'kJ min−1', 'The amount of heat required to ignite a given mass of fuel'), &
+        & t_cf('preig_heat', 'kJ min-1', 'The amount of heat required to ignite a given mass of fuel'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -617,7 +617,7 @@ CONTAINS
 
     CALL mem%Add_var('optimum_reaction_velocity', mem%opt_react_velo, &
         & hgrid, vgrid_surface, &
-        & t_cf('opt_react_velo', 'min−1', 'Optimum reaction velocity'), &
+        & t_cf('opt_react_velo', 'min-1', 'Optimum reaction velocity'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

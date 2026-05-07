@@ -299,7 +299,7 @@ CONTAINS
     REAL(wp) :: dead_fuel(nc,4) !< [g DM m-2]
     REAL(wp) :: alphas_weighted_ros(nc) !<  [deg C-2]
     REAL(wp) :: alphas_weighted_dd(nc) !<  [deg C-2]
-    REAL(wp) :: mf_10hr 
+    REAL(wp) :: mf_10hr
     INTEGER :: ic
 
     mf = t_mf(nc, ndd, nlv)
