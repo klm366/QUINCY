@@ -272,8 +272,8 @@ CONTAINS
         A_var(ic) = 8.9033_wp * (sigma%total(ic) ** (-0.7913)) !< Table A1, 4th equation from Thonicke et al. (2010)
         gamma(ic) = calc_opt_react_velocity(gamma_max(ic), beta(ic), beta_op(ic), A_var(ic)) ! Table A1, 1st equation from Thonicke et al. (2010) [min-1]
         ! - reaction intensity
-        ir%d(ic) =  wn%d(ic) * df_sf_fuel_heat_content * eta_m%d(ic) * df_sf_mineral_damp_coeff !< [kJ m−2 min−1]
-        ir%l(ic) =  wn%l(ic) * df_sf_fuel_heat_content * eta_m%l(ic) * df_sf_mineral_damp_coeff !< [kJ m−2 min−1]
+        ir%d(ic) =  wn%d(ic) * df_sf_fuel_heat_content * eta_m%d(ic) * df_sf_mineral_damp_coeff !< [kJ m-2 min-1]
+        ir%l(ic) =  wn%l(ic) * df_sf_fuel_heat_content * eta_m%l(ic) * df_sf_mineral_damp_coeff !< [kJ m-2 min-1]
         ir%total(ic) = gamma(ic) * (ir%d(ic) + ir%l(ic))
         ! - propagating flux ratio
         xi(ic) = calc_prop_flux_ratio(sigma%total(ic), beta(ic))

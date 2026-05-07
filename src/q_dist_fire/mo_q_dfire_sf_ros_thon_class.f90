@@ -112,7 +112,7 @@ CONTAINS
         !< (Eq. A1 from Thonicke et al. (2010))
         ros%reaction_intensity(inc) = ros%opt_react_velo(inc) * &
                                       ros%net_fuel_load(inc) * df_sf_fuel_heat_content * &
-                                      ros%moist_damp_coeff(inc) * df_sf_mineral_damp_coeff !< [kJ m−2 min−1]
+                                      ros%moist_damp_coeff(inc) * df_sf_mineral_damp_coeff !< [kJ m-2 min-1]
 
         ros%prop_flux_ratio(inc) = calc_prop_flux_ratio(sigma(inc), beta(inc)) !< Eq. A2 from Thonicke et al. (2010) [-]
         ros%wind_factor(inc) = calc_wind_factor(u_f_wind(inc), sigma(inc), beta(inc), beta_op(inc)) !< Eq. A5 from Thonicke et al. (2010) [-]
