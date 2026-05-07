@@ -25,6 +25,7 @@ MODULE mo_sse_config_class
   PRIVATE
 
   PUBLIC :: t_sse_config
+  PUBLIC :: max_soil_layers, max_snow_layers
 
   TYPE, EXTENDS(t_jsb_config) :: t_sse_config
     INTEGER  :: nsnow           !< Maximum number of snow layers
@@ -156,6 +157,7 @@ CONTAINS
     bc_quincy_soil_filename = 'bc_quincy_soil.nc'
     quincy_nsoil_e          = 0           ! by default the values is not set via namelist, but used from 'ic_filename'
 #ifdef __QUINCY_STANDALONE__
+    quincy_nsoil_e          = 5           ! but use 5 soil layers as default for quincy standalone
     qs_soil_sand            = 0.3_wp
     qs_soil_silt            = 0.4_wp
     qs_soil_clay            = 0.3_wp
@@ -302,7 +304,7 @@ CONTAINS
       !!
       !! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth" !
       !!
-      !! site-specific soil-layer thickness values are stored in soil_depth_sl (and calc in spq_init) \n
+      !! site-specific soil-layer thickness values are stored in soil_depth_sl \n
       !! the function new_vgrid() does: (a) check for 'dz(:) <= zero', and (b) calc levels & lbounds from ubounds and dz \n
       !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
       vgrid_soil_e => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &

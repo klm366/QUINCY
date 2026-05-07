@@ -272,9 +272,9 @@ CONTAINS
     ! In case of quincy: check if model setup is supported
 #ifndef __NO_QUINCY__
     IF (model_scheme == MODEL_QUINCY) THEN
-      IF(.NOT. model%config%usecase == 'quincy_13_pfts_for_coupling') THEN
+      IF (.NOT. model%config%usecase == 'quincy_13_pfts') THEN
         CALL finish(TRIM(routine), 'The usecase currently to be used when running quincy coupled' &
-          &  //' would be quincy_13_pfts_for_coupling, not '// model%config%usecase)
+          &  //' would be quincy_13_pfts, but not '// model%config%usecase)
       END IF
 
 #ifdef _OPENACC
