@@ -1,0 +1,19 @@
+---
+title: Fair-use Policy
+order: 4
+---
+
+The ICON-Land team encourages the collaborative use of the ICON-Land framework for research. This fair-use policy is designed as a win-win opportunity for both users and developers of the ICON-Land environment. It warrants the continuation of ambitious model developments. The fair-use policy is designed to ensure that the individuals who develop the ICON-Land model receive proper credit for their work, and to foster collaborative work with the model. The policy applies to the use of any present and future model version. If your work using the ICON-Land model directly competes with ongoing research of the ICON-Land team, we request to be given the opportunity to submit a manuscript before you submit one that uses the ICON-Land model, or invite you to execute this work in a collaborative manner.
+
+**Recognition of intellectual contributions to the ICON-Land model will be ensured by:**
+
+    Offering co-authorship on any publication that benefits of recent developments improvements in the ICON-Land model. We assume that an agreement on such matters will be reached before publishing and/or use of the model/data for publication. We deliberately refrain from specifying ‘recent’ as it should be a function of the intellectual contribution and the exposure this contribution already received. 
+    Discussing, early on, intended usage of the ICON-Land model. This discussion should prevent uses and/or applications of the ICON-Land model which are in conflict with the plans of the ICON-Land team. When using the model code or output, please reference the source of the model and its scientific documentation as a citation. 
+
+**Use of follow-up recent versions**
+
+The ICON-Land model is a continuously evolving research tool. Despite the efforts of documenting and validating release versions before their publication, new users are likely to require help to correctly use the ICON-Land model and its run environment. It is therefore highly recommended to stay in active communication with the ICON-Land team. Requests for support from unregistered users or non-academic users will not be considered.
+
+**We may need your expertise**
+
+The MPIs for Meteorology and Biogeochemistry contribute to a better understanding of the interactions between human activities in the Earth System, environment and climate dynamics at different time scales. If you have a PhD in mathematics, physics, engineering, computer science, meteorology, or physiology, or you believe that your skills could contribute to the development of ICON-Land model, feel free to send us your CV, a customized letter of motivation and names of people who are willing to act as references.

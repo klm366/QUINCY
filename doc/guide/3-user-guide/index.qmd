@@ -1,8 +1,14 @@
 ---
 title: User Guide
+listing:
+  id: user-guide-listings
+  type: grid
 order: 3
 ---
 
-:::{.callout-note}
-Nothing here, yet.
+::: {#user-guide-listings}
 :::
+::: {style="font-size: 0.8em; font-style: italic; text-align: left; margin-top: -10px;"}
+Images designed by [Freepik](https://www.freepik.com)
+:::
+

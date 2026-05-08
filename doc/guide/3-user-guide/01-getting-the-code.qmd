@@ -1,0 +1,10 @@
+---
+title: Getting the code 
+order: 1
+---
+
+The ICON-Land code is available via the DKRZ gitlab server at: <www.gitlab.dkrz.de/icon-land/icon-land>
+
+ICON-Land can be run standalone, coupled to the atmosphere or as part of a fully-coupled Earth System Model, but for compiling and running always needs a Host model providing e.g. i/o and other infrastructural aspects.
+
+As a default, the code of ICON-Land is included as an _external_ as part of the [ICON model](https://www.icon-model.org). Getting access to the ICON model is therefore required for the use of ICON-Land. 
