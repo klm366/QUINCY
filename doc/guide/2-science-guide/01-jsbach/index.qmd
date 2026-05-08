@@ -1,13 +1,13 @@
 ---
-title: JSBACH Overview
+title: JSBACH
 order: 1
 ---
+
+**JSBACH (Jena Scheme for Biosphere-Atmosphere Coupling in Hamburg)** has been developed out of ECHAM5 by collecting all land processes into a separate land component accessed from ECHAM each time step via a single subroutine call. Accordingly, JSBACH inherits all the land processes originally present in ECHAM5, in particular the way the surface energy balance is solved, and how the land processes are coupled to the atmosphere.
 
 :::{.callout-warning}
 These pages are under construction!
 :::
-
-Historically, JSBACH grew out of ECHAM5 by collecting all land processes into a separate land component – then called JSBACH – accessed from ECHAM each time step via a single subroutine call. Accordingly, JSBACH inherits all the land processes originally present in ECHAM5, in particular the way the surface energy balance is solved, and how the land processes are coupled to the atmosphere.
 
 JSBACHv4 is the land component of ICON-A and thus also integral part of the first version of ICON-ESM. Technically, JSBACHv4 is a subroutine of ICON-A and part of its scheme for the implicit solution of vertical diffusion. JSBACHv4 is the successor of JSBACHv3 (Reick et al., 2013, 2021), but with a completely renewed structure inside the ICON-Land infrastructure. In particular, JSBACHv4 has a hierarchical, flexible tile structure to represent sub-grid variability (Nabel et a. 2020). It is possible to choose different configurations of varying complexity for the description of the land-surface characteristics and the processes that run on the respective tiles.
 
@@ -19,14 +19,5 @@ Considered processes are
 - biogeographical processes (dynamic vegetation)
 - land use change
 
-The description of JSBACH v4 is still under development. The complete scientific documentation of the [JSBACH v3.2 model](https://pure.mpg.de/view/item_3279802) may serve as a first point of reference. Note that not all features, e.g. the nitrogen cycle or the fire module SPITFIRE, of the JSBACH v3.2 model have been ported to JSBACH v4.3, as used by Schneck et al. 2022.
+The detailed description of JSBACH v4 can be found under [here](./jsbach_documentation.html).
 
-### Key References
-
-Nabel, J. E. M. S., Naudts, K., & Pongratz, J. (2020). Accounting for forest age in the tile-based dynamic global vegetation model JSBACH4 (4.20p7; git feature/forests) – a land surface model for the ICON-ESM. Geoscientific Model Development, 13(1), 185–200. <https://doi.org/10.5194/gmd-13-185-2020>
-
-Reick, C. H., Gayler, V., Goll, D., Hagemann, S., Heidkamp, M., Nabel, J. E. M. S., Raddatz, T., Roeckner, E., Schnur, R., & Wilkenskjeld, S. (2021). JSBACH 3 - The land component of the MPI Earth System Model: Documentation of version 3.2 [Application/pdf]. 4990986. <https://doi.org/10.17617/2.3279802>
-
-Reick, C. H., Raddatz, T., Brovkin, V., & Gayler, V. (2013). Representation of natural and anthropogenic land cover change in MPI‐ESM. Journal of Advances in Modeling Earth Systems, 5(3), 459–482. <https://doi.org/10.1002/jame.20022>
-
-Schneck, R., Gayler, V., Nabel, J. E. M. S., Raddatz, T., Reick, C. H., & Schnur, R. (2022). Assessment of JSBACHv4.30 as a land component of ICON-ESM-V1 in comparison to its predecessor JSBACHv3.2 of MPI-ESM1.2. Geoscientific Model Development, 15(22), 8581–8611. <https://doi.org/10.5194/gmd-15-8581-2022>

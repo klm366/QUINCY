@@ -1,17 +1,26 @@
 ---
-title: QUINCY Overview
-order: 2
+title: QUINCY
+order: 10
 ---
 
 ![Schematic representation of biogeochemical, water and energy flows in QUINCY; as published in Thum et al. 2019](/media/QUINCY-high-res.png){.lightbox #fig-quincy-schematic width="70%" fig-alt="QUINCY schematic"}
 
-:::{.callout-note}
-**QUINCY (QUantifying Interactions between terrestrial Nutrient CYcles and the climate system) v1** (Thum et al. 2019) has been developed to represent a consistent treatment of the element cycling (in terms of carbon (C), nitrogen (N), and phosphorus (P)) in terrestrial ecosystems, as well as their interaction with the terrestrial water and energy balance suitable for the modelling of land-atmosphere interactions (@fig-quincy-schematic). QUINCY was originally described by Thum et al. (2019) as a stand-alone ecosystem model, but has now been fully integrated into the ICON-Land infrastructure and shares biophysical process representation with JSBACH. It follows a modular structure to facilitate the consistent testing of multiple hypothesis for one particular process.
-:::
-
----  
+**QUINCY (QUantifying Interactions between terrestrial Nutrient CYcles and the climate system)** has been developed
+to represent a consistent treatment of the element cycling, in terms of carbon (C), nitrogen (N), and phosphorus (P),
+in terrestrial ecosystems that is tightly coupled to the terrestrial water and energy balance, and suitable for the
+modelling of land-atmosphere interactions (@fig-quincy-schematic). QUINCY was originally described by Thum et al. (2019) as a
+ stand-alone ecosystem model, but has now been fully integrated into the ICON-Land infrastructure. It follows a modular structure
+to facilitate the consistent testing of multiple hypothesis for one particular process. QUINCY shares the representation of
+physical process of the land surface and the land-atmosphere coupling with JSBACH.
 
 The following gives a brief overview over the main features of QUINCY in ICON-Land. A detailed documentation of the scientific code of QUINCY can be found [here](./quincy_documentation.html).
+
+- [Vegetation Processes](./index.html#vegetation-processes)
+- [Soil Biogeochemistry](./index.html#soil-biogeochemistry)
+- [Surface Physics](./index.html#surface-physics)
+- [Land Management](./index.html#land-management)
+
+---
  
 ### Vegetation processes
 
@@ -120,7 +129,7 @@ vegetation depends directly on the past vegetation ability to produce
 fruits, as the re-establishment is explicitly taking account of the
 available seed pool at the forest / grassland floor.
 
-### Soil biogeochemical processes
+### Soil Biogeochemistry
 
 The vertical soil profile of physical and biogeochemical processes is
 explicitly represented, with exponentially increasing layer thickness
@@ -162,20 +171,47 @@ pool. The adsorbed P is further absorbed into the soil matrix and
 gradually becomes an inactive form of P, occluded P, as proposed by
 (Walker and Syers 1976).
 
+### Surface Physics
+
+Surface physics in QUINCY follow JSBACH. Briefly, incoming radiation is partitioned into reflected
+and absorbed energy depending on the albedo of the surface, which varies with soil moisture, snow and vegetation cover.
+The absorbed energy is further partitioned into a sensible, latent, and ground heat flux, depending on the
+skin temperature, the aerodynamic coupling of the surface to the lower atmosphere, soil moisture, snow cover as well as the
+canopy conductance of vegetation. The aerodynamic coupling is affected by the height and phenology of the vegetation,
+canopy conductance is linked to photosynthesis (see [Vegetation Processes](index.html#vegetation-processes)).
+
+Precipitation as snow and rain is partially intercepted by the canopy, as a function of leaf area, from where it either
+evaporates or falls to the ground. Throughfall is partitioned into surface runoff, evaporation from the surface or snow
+layer or infiltration. Water movement through the soil is modelled according to the Richards equation, assuming
+pedo-transfer functions to describe the dependence of soil hydraulic properties to soil texture and soil moisture.
+JSBACH includes the calculation of freeze-thaw dynamics on soil moisture and temperature, the formation of ice and supercooled
+water in the soil column, which is not plant-accessible or movable. Liquid water through the rooting zone
+above the minimum leaf water potential of a PFT is accessible for plant water uptake and transpiration. Excess water
+drains through the soil column, transporting solved biogeochemical tracers as leaching.
+
 ### Land management
 
-to be added.
+Anthropgenic land management in QUINCY is represented as
+
+- **pasture**, with two specific herbaceous pasture PFTs (C3 and C4 herbaceous), in which increased lifestock density enhances herbivory-related carbon and nutrient flows;
+- **wood harvest** on the six natural tree PFTs, given externally forced wood extraction rates;
+- **agriculture**, with two specific crop PFTs (C3 or C4 crops), which are parameterised given eight distinct Crop Functional Types (spring wheat, temperate and tropical soybean, temperate and tropical maize, rice, cotton, and sugarcane). CFTs follow their destinct phenology and seasonal growth. Crop management includes planting, fertilisation, harvesting and grain/slash removal.
+
+Transitions between land cover classes given externally forced land cover maps affect cause the removal of biogeochemical matter into
+product pools, which decay according to pool specific turnover times. Vegetation removal and re-distribution of litter and soil organic
+matter as a consequence of changing land cover fractions give rise to legacy effects from land-use change.
 
 ### Driving data
 
 QUINCY requires hourly short- and longwave downward radiation, 2m air temperature, precipitation and snowfall, wind
-velocity, atmospheric humidity and CO<sub>2</sub> mole fractions, as well as rates of NH<sub>4</sub>, NO<sub>3</sub>, and PO<sub>4</sub> deposition as time-dependent driving data. In addition, the model
-requires input describing the geographical coordinates, vegetation type,
+velocity, atmospheric humidity and CO<sub>2</sub> mole fractions, as well as rates of NH<sub>4</sub>, NO<sub>3</sub>, and PO<sub>4</sub> deposition as time-dependent driving data. These can be either site-specific observations, or regional to global reanalyses. Alternatively,
+QUINCY can be run coupled to the ICON Atmosphere.
+
+In addition, the model requires input describing the geographical coordinates, vegetation type,
 and soil physical and chemical parameters (texture, bulk density,
 rooting and soil depth, as well as inorganic soil P content).
 
-
-### Literature
+### References
 
 Atkin, Owen K., Patrick Meir, and Matthew H. Turnbull. 2014. “Improving
 Representation of Leaf Respiration in Large-Scale Predictive
@@ -225,6 +261,8 @@ Bondeau, W Cramer, J O Kaplan, et al. 2003.
 and terrestrial carbon cycling in the LPJ Dynamic Global Vegetation
 Model</span>.” *Global Change Biology* 9: 161–85.
 
+Thum, T., Caldararu, S., Engel, J., Kern, M., Pallandt, M., Schnur, R., Yu, L., & Zaehle, S. (2019). A new model of the coupled carbon, nitrogen, and phosphorus cycles in the terrestrial biosphere (QUINCY v1.0; revision 1996). *Geoscientific Model Development*, 12(11), 4781–4802. <https://doi.org/10.5194/gmd-12-4781-2019>
+
 Walker, T. W., and J. K. Syers. 1976. “The Fate of Phosphorus During
 Pedogenesis.” Journal Article. *Geoderma* 15 (1): 1–19.
 <https://doi.org/10.1016/0016-7061(76)90066-5>.
@@ -236,7 +274,6 @@ biosphere</span>.” *Biogeosciences* 7 (7): 2261–82.
 White, Robert E. 2006. *Principles and Practice of Soil Science the Soil
 as a Natural Resource*. Book. 4th ed. Vol. 32. Malden: Blackwell
 Publishing. <https://doi.org/10.1177/0340035206070163>.
-
 
 Yang, X., P. E. Thornton, D. M. Ricciuto, and W. M. Post. 2014. “The
 Role of Phosphorus Dynamics in Tropical Forests – a Modeling Study Using
