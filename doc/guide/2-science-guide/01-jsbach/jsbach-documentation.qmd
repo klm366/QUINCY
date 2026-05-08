@@ -1,0 +1,20 @@
+---
+title: Scientific Documentation 
+order: 2 
+---
+
+The description of JSBACH v4 is still under development. The complete scientific documentation of the [JSBACH v3.2 model](https://pure.mpg.de/view/item_3279802) may serve as a first point of reference. Note that not all features, e.g. the nitrogen cycle or the fire module SPITFIRE, of the JSBACH v3.2 model have been ported to JSBACH v4.3, as used by Schneck et al. 2022.
+
+:::{.callout-warning}
+These pages are under construction!
+:::
+
+### Key References
+
+Nabel, J. E. M. S., Naudts, K., & Pongratz, J. (2020). Accounting for forest age in the tile-based dynamic global vegetation model JSBACH4 (4.20p7; git feature/forests) – a land surface model for the ICON-ESM. Geoscientific Model Development, 13(1), 185–200. <https://doi.org/10.5194/gmd-13-185-2020>
+
+Reick, C. H., Gayler, V., Goll, D., Hagemann, S., Heidkamp, M., Nabel, J. E. M. S., Raddatz, T., Roeckner, E., Schnur, R., & Wilkenskjeld, S. (2021). JSBACH 3 - The land component of the MPI Earth System Model: Documentation of version 3.2 [Application/pdf]. 4990986. <https://doi.org/10.17617/2.3279802>
+
+Reick, C. H., Raddatz, T., Brovkin, V., & Gayler, V. (2013). Representation of natural and anthropogenic land cover change in MPI‐ESM. Journal of Advances in Modeling Earth Systems, 5(3), 459–482. <https://doi.org/10.1002/jame.20022>
+
+Schneck, R., Gayler, V., Nabel, J. E. M. S., Raddatz, T., Reick, C. H., & Schnur, R. (2022). Assessment of JSBACHv4.30 as a land component of ICON-ESM-V1 in comparison to its predecessor JSBACHv3.2 of MPI-ESM1.2. Geoscientific Model Development, 15(22), 8581–8611. <https://doi.org/10.5194/gmd-15-8581-2022>

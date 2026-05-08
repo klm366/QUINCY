@@ -1,5 +1,5 @@
 ---
-title: QUINCY model documentation
+title: Scientific Documentation
 author:
 - QUINCY Team
 bibliography:
@@ -20,13 +20,16 @@ section-src-format-1: Section {num}
 section-src-format-2: Section {num}
 table-cref-format: Table {num}
 table-prefix: Table
-order: 3
+order: 11 
 editor:
   markdown:
     wrap: 100
 ---
 
-The following presents an attempt to provide a complete overview on QUINCY v1. @sec-structure
+This page attempts to provide a complete overview over the scientific processes represented by QUINCY. 
+
+As any model documentation, it will lag behind the actual implementation in the code, and interested users
+are advised to consult the inline documentation for potential updates. @sec-structure
 summarises the general structure and vertical discretisation of vegetation and soil. @sec-assimi
 describes the canopy processes, such as photosynthesis and stomatal coupling. @sec-veg introduces
 vegetation growth, turnover and dynamics. Soil biogeochemistry is described in

@@ -1,0 +1,17 @@
+---
+title: Configurations 
+order: 3
+---
+
+This page gives an overview over the main configurations of JSBACH used in ICON-Land. 
+
+:::{.callout-warning}
+These pages are under construction!
+:::
+
+| Short-Name | Processes included |
+|----|----|
+| JSB-lite | ... |
+| JSB-12pft | ... |
+| JSB-carbon | ... |
+| JSB-dynveg | ... |

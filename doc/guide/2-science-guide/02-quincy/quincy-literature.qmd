@@ -1,0 +1,55 @@
+---
+title: Publications 
+order: 13 
+---
+
+:::{.callout-note}
+Publications using QUINCY (last update 05/2026)
+:::
+
+#### Pre-prints (sorted alphabetically)
+
+Emmerichs, T., Lacroix, F., Brovkin, V., Zaehle, S., Gong, C., Zhu, Y., Sjogersten, S., Voigt, C., Steenberg Larsen, K., & Tuitila, E.-S. (2026). Impacts of Shrub Coverage for Arctic Ecosystem Carbon Uptake and Storage. *Biogeoscience Discussions*, <https://doi.org/10.5194/egusphere-2026-1514>
+
+Schufft, K., Fleischer, K., Rammig, A., Yu, L., Jiang, M., Medlyn, B. E., & Zaehle, S. (2025). Modelling root exudation and plant-microbe interactions under CO2 fertilization in a mature forest. *Biogeoscience Discussions* <https://doi.org/10.5194/egusphere-2025-4286>
+
+Seitz, J., Yajima, M., Zhu, Y., Joseph, L. S. K., Yang, J., Lacroix, F., Luo, Y., Schaumberger, A., Bahn, M., Zaehle, S., & Caldararu, S. (2026). A general physiologically driven representation of leaf turnover in grasslands in the QUINCY land surface model (revision: 974a6b7f). *Biogeoscience Discussions*. <https://doi.org/10.5194/egusphere-2025-5731>
+
+Thum, T., Goodale, C. L., Yu, L., Nabel, J., & Zaehle, S. (2025). Evaluation of simulated N cycling using observations from a15 N tracer experiment in a mixed deciduous forest. *Biogeoscience Discussions*. <https://doi.org/10.5194/egusphere-2025-5876>
+
+Thum, T., Pacheco-Labrador, J., Aurela, M., Barr, A., Honkanen, M., Johnson, B., Lindqvist, H., Magney, T., Migliavacca, M., Pierrat, Z. A., Quaife, T., Stutz, J., & Zaehle, S. (2025). Modelling sun-induced chlorophyll fluorescence (SIF) in evergreen conifer forests with a terrestrial biosphere model. *Biogeoscience Discussions*. <https://doi.org/10.5194/egusphere-2025-4432>
+
+Yajima, M., Seitz, J., Matthaeus, W. J., Girish Nair, G., Daly, L., & Caldararu, S. (2025). Phenological benchmarking with a land surface model: An in-silico experiment for temperate forests. *Ecology*. <https://doi.org/10.1101/2025.11.20.689458>
+
+Zhu, Y., Zaehle, S., & Lacroix, F. (2026). Retrieving Phenological Parameters from Remote Sensing for Modeling Vegetation Dynamics in Permafrost Regions. <https://doi.org/10.22541/essoar.15001797/v1>
+
+
+#### Peer-reviewed (sorted by year)
+
+Sophia, G., Caldararu, S., Stocker, B. D., & Zaehle, S. (2026). Dynamic Nitrogen Resorption Improves Predictions of Nitrogen Cycling Responses to Global Change in a Next Generation Ecosystem Model. *Journal of Advances in Modeling Earth Systems,* 18(1), e2025MS005181. <https://doi.org/10.1029/2025MS005181>
+
+Wang, B., Lyu, H., Zhang, X., Jiang, M., Medlyn, B. E., Wårlind, D., Knauer, J., Fleischer, K., Goll, D. S., Olin, S., Yang, X., Yu, L., Zaehle, S., Zhang, H., Schufft, K., Crous, K. Y., Carrillo, Y., Macdonald, C. A., Anderson, I. C., … Smith, B. (2026). Phosphorus enrichment does not enlarge the predicted CO2 fertilization effect on forest carbon sequestration. *Proceedings of the National Academy of Sciences,* 123(12), e2516152123. <https://doi.org/10.1073/pnas.2516152123>
+
+Thum, T., Miinalainen, T., Seppälä, O., Croft, H., Rogers, C., Staebler, R., Caldararu, S., & Zaehle, S. (2025). Modelling decadal trends and the impact of extreme events on carbon fluxes in a temperate deciduous forest using a terrestrial biosphere model. *Biogeosciences*, 22(7), 1781–1807. <https://doi.org/10.5194/bg-22-1781-2025>
+
+Vekuri, H., Tuovinen, J.-P., Kulmala, L., Aurela, M., Thum, T., Liski, J., & Lohila, A. (2025). Improved uncertainty estimates for eddy covariance-based carbon dioxide balances using deep ensembles for gap-filling. *Agricultural and Forest Meteorology,* 371, 110558. <https://doi.org/10.1016/j.agrformet.2025.110558>
+
+Jiang, M., Medlyn, B. E., Wårlind, D., Knauer, J., Fleischer, K., Goll, D. S., Olin, S., Yang, X., Yu, L., Zaehle, S., Zhang, H., Lv, H., Crous, K. Y., Carrillo, Y., Macdonald, C., Anderson, I., Boer, M. M., Farrell, M., Gherlenda, A., … Smith, B. (2024). Carbon-phosphorus cycle models overestimate CO2 enrichment response in a mature Eucalyptus forest. *Science Advances*, 10(27), eadl5822. <https://doi.org/10.1126/sciadv.adl5822>
+
+Thurner, M. A., Caldararu, S., Engel, J., Rammig, A., & Zaehle, S. (2024). Modelled forest ecosystem carbon–nitrogen dynamics with integrated mycorrhizal processes under elevated CO2. *Biogeosciences*, 21(6), 1391–1410. <https://doi.org/10.5194/bg-21-1391-2024>
+
+Zhan, C., Orth, R., Yang, H., Reichstein, M., Zaehle, S., De Kauwe, M. G., Rammig, A., & Winkler, A. J. (2024). Estimating the CO2 Fertilization Effect on Extratropical Forest Productivity From Flux‐Tower Observations. Journal of Geophysical Research: *Biogeosciences*, 129(6), e2023JG007910. <https://doi.org/10.1029/2023JG007910>
+
+Yu, L., Caldararu, S., Ahrens, B., Wutzler, T., Schrumpf, M., Helfenstein, J., Pistocchi, C., & Zaehle, S. (2023). Improved representation of phosphorus exchange on soil mineral surfaces reduces estimates of phosphorus limitation in temperate forest ecosystems. *Biogeosciences*, 20(1), 57–73. <https://doi.org/10.5194/bg-20-57-2023>
+
+Caldararu, S., Thum, T., Yu, L., Kern, M., Nair, R., & Zaehle, S. (2022). Long‐term ecosystem nitrogen limitation from foliar δ15 N data and a land surface model. *Global Change Biology*, 28(2), 493–508. <https://doi.org/10.1111/gcb.15933>
+
+Lacroix, F., Zaehle, S., Caldararu, S., Schaller, J., Stimmler, P., Holl, D., Kutzbach, L., & Göckede, M. (2022). Mismatch of N release from the permafrost and vegetative uptake opens pathways of increasing nitrous oxide emissions in the high Arctic. *Global Change Biology*, 28(20), 5973–5990. <https://doi.org/10.1111/gcb.16345>
+
+Zhan, C., Orth, R., Migliavacca, M., Zaehle, S., Reichstein, M., Engel, J., Rammig, A., & Winkler, A. J. (2022). Emergence of the physiological effects of elevated  CO2  on land–atmosphere exchange of carbon and water. *Global Change Biology*, 28(24), 7313–7326. <https://doi.org/10.1111/gcb.16397>
+
+Caldararu, S., Thum, T., Yu, L., & Zaehle, S. (2020). Whole‐plant optimality predicts changes in leaf nitrogen under variable CO2 and nutrient availability. *New Phytologist*, 225(6), 2331–2346. <https://doi.org/10.1111/nph.16327>
+
+Yu, L., Ahrens, B., Wutzler, T., Schrumpf, M., & Zaehle, S. (2020). Jena Soil Model (JSM v1.0; revision 1934): A microbial soil organic carbon model integrated with nitrogen and phosphorus processes. *Geoscientific Model Development*, 13(2), 783–803. <https://doi.org/10.5194/gmd-13-783-2020>
+
+Thum, T., Caldararu, S., Engel, J., Kern, M., Pallandt, M., Schnur, R., Yu, L., & Zaehle, S. (2019). A new model of the coupled carbon, nitrogen, and phosphorus cycles in the terrestrial biosphere (QUINCY v1.0; revision 1996). *Geoscientific Model Development*, 12(11), 4781–4802. <https://doi.org/10.5194/gmd-12-4781-2019>

@@ -1,0 +1,29 @@
+---
+title: Configurations 
+order: 12 
+---
+
+This page gives an overview over the main configurations of QUINCY used in ICON-Land. 
+
+:::{.callout-warning}
+These pages are under construction!
+:::
+
+| Short-Name | Processes included |
+|---|--------|
+| **lite** (aka CANOPY) | Surface and soil physics (incl. snow) including energy and water exchange and albedo, turbulent coupling to the atmosphere, phenology, canopy carbon assimilation and conductance | 
+| **vegetation** (aka PLANT) | same as **lite**, but in addition dynamic vegetation growth, respiration, establishment and mortality processes activated. N and P concentrations in organic pools are held at average concentrations, and soil nutrient supply is assumed to be unlimited. |
+| **soil** (aka SOIL) | soil biogeochemistry given prescribed litter input from vegetation and pre-calculated soil temperature, moisture and water leaching. Dynamics of mineral levels of NH~4~, NO~3~  and PO~4~ can be set to prescribed or dynamic. |
+| **IQJ-C** (aka LAND) | **vegetation** + **soil**, with N and P concentrations in organic pools held at average concentrations, constant, non-limiting levels of NH~4~, NO~3~,  and PO~4~, and asymbiotic and symbiotic N fixation rates that assure that vegetation and soil processes are not constrained by available N | 
+| **IQJ-CN**| **IQJ-C**, but with dynamic N concentrations in organic pools and of mineral N | 
+| **IQJ-CNP** | **IQJ-CN**, but with dynamic P concentrations in organic pools and dynamic mineral PO~4~ |
+
+In addition to these standard configurations, a number of options permit to further determine processes in QUINCY. The most important settings are described here. For a full list, see the inline code documentation.
+
+| Namelist Keyword | Settings | Meaning |
+|---|-----|--------|
+| biomass_alloc_scheme | ... | ... | 
+| leaf_stoichom_scheme | ... | ... | 
+| flag_herbivory | ... | ... | 
+| sb_model_scheme | ... | ... | 
+| sb_nloss_scheme | ... | ... | 
