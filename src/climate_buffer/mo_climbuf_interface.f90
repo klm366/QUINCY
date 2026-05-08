@@ -11,7 +11,10 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!> The CLIMBUF process provides long term mean climatic variables from atmospheric forcing.
+!>### The CLIMBUF process provides long term mean climatic variables from atmospheric forcing.
+!>
+!> This module contains the climate buffer interface routines. Core routine is [[update_climbuf]], where
+!> the climate variables are calculated from atmospheric forcing variables.
 !>
 MODULE mo_climbuf_interface
 #ifndef __NO_JSBACH__
@@ -96,7 +99,7 @@ CONTAINS
   !>
   !>#### Update the climate buffer
   !>
-  !> In this subroutine we update long term mean climatic variables from atmospheric data.
+  !> In this subroutine we update long term mean climatic variables from atmospheric forcing data.
   !>
   SUBROUTINE update_climbuf(tile, options)
 
@@ -115,9 +118,10 @@ CONTAINS
       & new_year,            & !< This is the first time step of a year
       & new_month,           & !< This is the first time step of a month
       & new_day,             & !< This is the first time step of a day
-      & init_climbuf,        & !< Initialize climate buffer (needed if not active in restart file)
-      & init_running_means     !< Initialize (annual) running means, only possible
-                               !< after at least one simulated year
+      & init_climbuf,        & !< Initialize climate buffer (needed if climbuf process was not active in the
+                               !< simulation from which the restart file originates)
+      & init_running_means     !< Initialize (annual) running means, only possible after at least one
+                               !< full year of simulation after climate buffer initialization
 
     INTEGER :: &
       & iblk,                & !< Currently processed block
@@ -131,9 +135,11 @@ CONTAINS
       & dtime                  !< Time step length [s]
 
     REAL(wp), ALLOCATABLE :: &
-      & q_rel_air(:)
+      & q_rel_air(:)           !< Relative humidity of the lowest level of the atmosphere [%]
 
-    LOGICAL, SAVE :: climbuf_initialized = .FALSE.
+    LOGICAL, SAVE :: &
+      & climbuf_initialized = .FALSE.    !< Climate buffer has been initialized
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_climbuf'
 
     ! Declare process memories
@@ -147,27 +153,28 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: temp_sum_month     !< Current temperature sum of the month [K]
     dsl4jsb_Real2D_onChunk :: min_mmtemp_of_yr   !< Current minimum monthly mean temperature of the year [K]
     dsl4jsb_Real2D_onChunk :: max_mmtemp_of_yr   !< Current maximum monthly mean temperature of the year [K]
-    dsl4jsb_Real2D_onChunk :: min_mmtemp20       !< Climatological minimum monthly mean temperature [K]
-    dsl4jsb_Real2D_onChunk :: max_mmtemp20       !< Climatological maximum monthly mean temperature [K]
+    dsl4jsb_Real2D_onChunk :: min_mmtemp_20yr    !< Climatological minimum monthly mean temperature [K]
+    dsl4jsb_Real2D_onChunk :: max_mmtemp_20yr    !< Climatological maximum monthly mean temperature [K]
     dsl4jsb_Real2D_onChunk :: temp_15d           !< 15-day smoothed temperature [K]
     dsl4jsb_Real2D_onChunk :: temp_15d_yDay      !< 15-day smoothed temperature at the end of previous day [K]
     dsl4jsb_Real2D_onChunk :: precip_15d         !< 15-day smoothed precipitation [kg m-2 s-1]
-    dsl4jsb_Real2D_onChunk :: precip_15d_yDay    !< Smoothed precip at the end of previous day [kg m-2 s-1]
+    dsl4jsb_Real2D_onChunk :: precip_15d_yDay    !< 15-day smoothed precipitation at the end of previous day [kg m-2 s-1]
     dsl4jsb_Real2D_onChunk :: gdd_sum_year       !< Current number of growing degree days in the year
     dsl4jsb_Real2D_onChunk :: gdd_prev_year      !< Growing degree days of the previous year
-    dsl4jsb_Real2D_onChunk :: max_wind_10m_act   !< Current maximum 10m wind speed of the day
-    dsl4jsb_Real2D_onChunk :: prev_day_max_wind_10m  !< Maximum 10m wind speed of the previous day
-    dsl4jsb_Real2D_onChunk :: max_wind_10m       !< Maximum 10m wind speed smoothed in time
-    dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf  !< Relative humidity []
-    dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf_yDay  !< Relative humidity []
+    dsl4jsb_Real2D_onChunk :: max_wind_of_day    !< Current maximum 10m wind speed of the day
+    dsl4jsb_Real2D_onChunk :: max_wind_yDay      !< Maximum 10m wind speed of the previous day
+    dsl4jsb_Real2D_onChunk :: max_wind_4yr       !< Maximum 10m wind speed smoothed in time
+    dsl4jsb_Real2D_onChunk :: q_rel_air_14d      !< Relative humidity smoothed in time (~14 days) [%]
+    dsl4jsb_Real2D_onChunk :: q_rel_air_14d_yDay !< Previous day value of smoothed relative humidity [%]
+
     ! Declare pointers to variables in foreign memory
     dsl4jsb_Real2D_onChunk :: t_air              !< Near surface air temperature [K]
     dsl4jsb_Real2D_onChunk :: rain               !< Liquid precipitation [kg m-2 s-1]
     dsl4jsb_Real2D_onChunk :: snow               !< Solid precipitation [kg m-2 s-1]
     dsl4jsb_Real2D_onChunk :: wind_10m           !< 10m wind speed [m/s]
-    dsl4jsb_Real2D_onChunk :: t_unfilt
-    dsl4jsb_Real2D_onChunk :: q_air
-    dsl4jsb_Real2D_onChunk :: press_srf
+    dsl4jsb_Real2D_onChunk :: t_unfilt           !< Surface temperature [K]
+    dsl4jsb_Real2D_onChunk :: q_air              !< Specific humidity of lowest level of the atmosphere []
+    dsl4jsb_Real2D_onChunk :: press_srf          !< Surface pressure [N m-2]
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -191,31 +198,34 @@ CONTAINS
     dsl4jsb_Get_memory(SEB_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)             ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,   rain)              ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,   snow)              ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,   wind_10m)          ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)             ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)         ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)          ! in
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_sum_day)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_sum_month)   ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp_of_yr) ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp_of_yr) ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp20)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp20)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_15d)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_15d_yDay)    ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,precip_15d)       ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,precip_15d_yDay)  ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_sum_year)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_prev_year)    ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_10m_act) ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,prev_day_max_wind_10m)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_10m)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_climbuf)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_climbuf_yDay)     ! inout
+    dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)                   ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   rain)                    ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   snow)                    ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   wind_10m)                ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)                   ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)               ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)                ! in
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_sum_day)           ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_sum_month)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp_of_yr)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp_of_yr)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp_20yr)        ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp_20yr)        ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_15d)               ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_15d_yDay)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,precip_15d)             ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,precip_15d_yDay)        ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_sum_year)           ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_prev_year)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_of_day)        ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_yDay)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_4yr)           ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_14d)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_14d_yDay)     ! inout
 
+    ! Generally, the climate buffer is initialized at model initialization (is_time_experiment_start).
+    ! There is however the possibility to initialize it in restarted simulations by namelist parameter
+    ! 'init_climbuf'. We here make sure, the buffer is initialized only at the first time step of the run.
     IF (.NOT. climbuf_initialized .AND. dsl4jsb_Config(CLIMBUF_)%init_climbuf) THEN
       init_climbuf = .TRUE.
     ELSE
@@ -235,19 +245,21 @@ CONTAINS
     seconds_month = get_previous_month_length(options%current_datetime)
 
     ALLOCATE (q_rel_air(nc))
+    !$ACC DATA ASYNC(acc_stream) CREATE(q_rel_air)
 
     q_rel_air(:) = get_relative_humidity_air(q_air(:), t_unfilt(:), press_srf(:), model%config%use_tmx)
 
     init_running_means = dsl4jsb_Config(CLIMBUF_)%init_running_means
     CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
       &               rain, snow, wind_10m, q_rel_air, seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
-      &               min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20,         &
-      &               temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay,                   &
+      &               min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
+      &               temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
       &               gdd_sum_year, gdd_prev_year, &
-      &               max_wind_10m_act, prev_day_max_wind_10m, max_wind_10m, &
-      &               q_rel_air_climbuf, q_rel_air_climbuf_yDay)
+      &               max_wind_of_day, max_wind_yDay, max_wind_4yr, &
+      &               q_rel_air_14d, q_rel_air_14d_yDay)
     climbuf_initialized = .TRUE.
 
+    !$ACC END DATA
     DEALLOCATE (q_rel_air)
 
   END SUBROUTINE update_climbuf
@@ -286,17 +298,17 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(CLIMBUF_, q_rel_air_climbuf, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CLIMBUF_, q_rel_air_climbuf_yday, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CLIMBUF_, prev_day_max_wind_10m, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_wind_10m, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_wind_10m_act, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, q_rel_air_14d, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, q_rel_air_14d_yday, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_wind_yDay, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_wind_4yr, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_wind_of_day, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, temp_sum_day, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, temp_sum_month, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, min_mmtemp_of_yr, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_mmtemp_of_yr, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CLIMBUF_, min_mmtemp20, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_mmtemp20, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, min_mmtemp_20yr, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_mmtemp_20yr, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, temp_15d, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, temp_15d_yDay, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, precip_15d, weighted_by_fract)

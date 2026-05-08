@@ -160,9 +160,9 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which the fire was based.
 
-    dsl4jsb_Real2D_onChunk :: prev_day_max_wind_10m_climbuf  ! Previous day maximum 10m wind speed
-    dsl4jsb_Real2D_onChunk :: max_wind_10m_climbuf           ! Several day mean maximum wind speed (climate buffer)
-    dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf
+    dsl4jsb_Real2D_onChunk :: max_wind_yDay_climbuf    ! Previous day maximum 10m wind speed
+    dsl4jsb_Real2D_onChunk :: max_wind_4yr_climbuf     ! Climatological maximum wind speed (~4 years)
+    dsl4jsb_Real2D_onChunk :: q_rel_air_14d_climbuf    ! Relative humidity smoothed in time (~14 days)
 
     dsl4jsb_Real2D_onChunk :: burned_fract
     dsl4jsb_Real2D_onChunk :: damaged_fract
@@ -190,11 +190,6 @@ CONTAINS
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(DISTURB_)) RETURN
 
-    ! Consistency check
-    IF (.NOT. model%Is_process_enabled(CLIMBUF_)) THEN
-      CALL finish(routine, 'Setup ERROR: Climate buffer (CLIMBUF) needs to be active with disturbances.')
-    END IF
-
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! Get process configurations
@@ -216,9 +211,9 @@ CONTAINS
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(FUEL_,      fuel)                     ! in
-    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, prev_day_max_wind_10m, climbuf)  ! in
-    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, max_wind_10m, climbuf)           ! in
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,   q_rel_air_climbuf)        ! in
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, max_wind_yDay, climbuf)  ! in
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, max_wind_4yr,  climbuf)  ! in
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, q_rel_air_14d, climbuf)  ! in
 
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
@@ -266,7 +261,7 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,  &
               & fire_minimum,                                    & ! in
               & fire_tau,                                        & ! in
-              & q_rel_air_climbuf(:),                            & ! in
+              & q_rel_air_14d_climbuf(:),                        & ! in
               & fuel(:),                                         & ! in
               & burned_fract(:)                                  & ! out
               & )
@@ -291,8 +286,8 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%wnd_threshold,     & ! in
               & dsl4jsb_Config(DISTURB_)%wnd_damage_scale,  & ! in
               & cover_fract_pot(:),                         & ! in
-              & prev_day_max_wind_10m_climbuf(:),           & ! in
-              & max_wind_10m_climbuf(:),                    & ! in
+              & max_wind_yDay_climbuf(:),                   & ! in
+              & max_wind_4yr_climbuf(:),                    & ! in
               & damaged_fract(:)                            & ! inout
               & )
 

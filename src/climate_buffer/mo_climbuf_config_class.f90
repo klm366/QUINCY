@@ -14,7 +14,7 @@
 !>### Configuration of the climate buffer process
 !>
 !> The module defines the data structure [[t_climbuf_config]] containing the configuration of
-!> process "CLIMBUF_", i.e. all climat buffer variables that are configurable via namelist.
+!> process "CLIMBUF_", i.e. all climate buffer variables that are configurable via namelist.
 !> In subroutine [[Init_climbuf_config]] we read the climate buffer namelist 'jsb_climbuf_nml'
 !> and set the configuration data structure accordingly.
 !>
@@ -38,8 +38,10 @@ MODULE mo_climbuf_config_class
   !> buffer actually defined in [[t_climbuf_config]].
   TYPE, EXTENDS(t_jsb_config) :: t_climbuf_config
     LOGICAL :: &
-      & init_climbuf,         & !< Switch to initialize some running mean climate variables
-      & init_running_means      !< Switch to initialize some running mean climate variables
+      & init_climbuf,         & !< Initialize the climate buffer; needed if the climate buffer is
+                                !< activated and restart files do not contain climate buffer variables
+      & init_running_means      !< Initialize running mean climate variables; should be set to true
+                                !< after at least one year after initialization
 
    CONTAINS
      PROCEDURE :: Init => Init_climbuf_config
@@ -53,9 +55,9 @@ CONTAINS
   !
   !> #### Setup the climate buffer configuration
   !
-  !> In this subroutine we configure the climate buffer process based on the climate buffer namelist
-  !> 'jsb_climbuf_nml'. Routine Init_climbuf_config is a type-bound procedure of [[t_climbuf_config]].
-  !> It is called during initialization phase from [[mo_jsb_model_class:Configure_model_processes]]
+  !> In this subroutine we configure the climate buffer process based on namelist 'jsb_climbuf_nml'. The
+  !> routine is a type-bound procedure of [[t_climbuf_config]].
+  !> It is called during the model initialization phase from [[mo_jsb_model_class:Configure_model_processes]]
   !> ('CALL this%processes(iproc)%p%Configure()').
   !>
 
@@ -64,11 +66,11 @@ CONTAINS
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_climbuf_config), INTENT(inout) :: config !<Configuration type of process (t_climbuf_config)
+    CLASS(t_climbuf_config), INTENT(inout) :: config !< Configuration type of the climate buffer process
     ! -------------------------------------------------------------------------------------------------- !
     LOGICAL ::                     &
       & active,                    & !< True: the CLIMBUF process is activated
-      & lrestart_cont,             & !< Continue simulation although variables of the climbuf
+      & lrestart_cont,             & !< Continue simulation although variables of the
                                      !< process are missing in restart file
       & init_climbuf,              & !< Initialize climate buffer
       & init_running_means           !< Initialize running mean CLIMBUF variables

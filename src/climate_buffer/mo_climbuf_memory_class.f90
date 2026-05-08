@@ -53,17 +53,17 @@ MODULE mo_climbuf_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_climbuf_memory
 
   TYPE(t_jsb_var_real2d) ::     &
-    & q_rel_air_climbuf,        & !< Relative humidity of lowest air layer smoothed in time
-    & q_rel_air_climbuf_yday,   & !< Relative humidity of lowest air layer of the previous day
-    & prev_day_max_wind_10m,    & !< Maximum 10m wind speed of the previous day [m/s]
-    & max_wind_10m,             & !< for windbreak
-    & max_wind_10m_act,         & !< for windbreak
+    & q_rel_air_14d,            & !< Relative humidity of lowest air layer smoothed in time
+    & q_rel_air_14d_yday,       & !< Relative humidity of lowest air layer of the previous day
+    & max_wind_yDay,            & !< Maximum 10m wind speed of the previous day [m/s]
+    & max_wind_4yr,             & !< Maximum wind speed smoothed in time (~4 years) [m/s]
+    & max_wind_of_day,          & !< Current maximum 10m wind speed of the day [m/s]
     & temp_sum_day,             & !< Temperature sum of the current day
     & temp_sum_month,           & !< Temperature sum of the current month
     & min_mmtemp_of_yr,         & !< Minimum monthly mean temperature of the year [K]
     & max_mmtemp_of_yr,         & !< Maximum monthly mean temperature of the year [K]
-    & min_mmtemp20,             & !< Minimum monthly mean temperature within 20 years [K]
-    & max_mmtemp20,             & !< Maximum monthly mean temperature within 20 years [K]
+    & min_mmtemp_20yr,          & !< Smoothed minimum monthly mean temperature within 20 years [K]
+    & max_mmtemp_20yr,          & !< Smoothed maximum monthly mean temperature within 20 years [K]
     & temp_15d,                 & !< Near surface temperature with 15-day smoothing [K]
     & temp_15d_yDay,            & !< 15-day temperature at the end of the previous day [K]
     & precip_15d,               & !< Precipitation with 15-day smoothing [kg m-2 s-1]
@@ -121,42 +121,42 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    CALL mem%Add_var( 'q_air_clim', mem%q_rel_air_climbuf,                                &
+    CALL mem%Add_var( 'q_rel_air_14d', mem%q_rel_air_14d,                                 &
       & hgrid, surface,                                                                   &
-      & t_cf('q_rel_air_climbuf', '%', 'Relative humiditiy of lowest air layer smoothed in time.'), &
+      & t_cf('q_rel_air_14d', '%', 'Relative humiditiy of lowest air layer smoothed in time.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=BASIC, & !vg MEDIUM,                                                              &
       & lrestart=.TRUE., initval_r=50.0_wp )
 
-    CALL mem%Add_var( 'q_air_clim_yday', mem%q_rel_air_climbuf_yday,                      &
+    CALL mem%Add_var( 'q_air_14d_yday', mem%q_rel_air_14d_yday,                           &
       & hgrid, surface,                                                                   &
-      & t_cf('q_rel_air_climbuf_yday', '%',                                               &
+      & t_cf('q_rel_air_14d_yday', '%',                                                   &
       & 'Relative humiditiy of lowest air layer smoothed in time at the end of the previous day.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
 & output_level=BASIC, & !vg to be removed again
       & lrestart=.FALSE., initval_r=50.0_wp )
 
-    CALL mem%Add_var( 'prev_day_max_wind_10m', mem%prev_day_max_wind_10m,                 &
+    CALL mem%Add_var( 'max_wind_yDay', mem%max_wind_yDay,                                 &
       & hgrid, surface,                                                                   &
-      & t_cf('prev_day_max_wind_10m', 'm/s', 'Previous day maximum wind speed.'),         &
+      & t_cf('max_wind_yDay', 'm/s', 'Previous day maximum wind speed.'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
 & output_level=BASIC, & !vg to be removed again
       & lrestart=.FALSE., initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'max_wind_10m', mem%max_wind_10m,                                   &
+    CALL mem%Add_var( 'max_wind_4yr', mem%max_wind_4yr,                                   &
       & hgrid, surface,                                                                   &
-      & t_cf('max_wind_10m', 'm/s', 'Maximum wind speed smoothed in time.'),              &
+      & t_cf('max_wind_4yr', 'm/s', 'Maximum wind speed smoothed in time.'),              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=BASIC, & !vg MEDIUM,                                                              &
       & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'max_wind_10m_act', mem%max_wind_10m_act,                           &
+    CALL mem%Add_var( 'max_wind_of_day', mem%max_wind_of_day,                             &
       & hgrid, surface,                                                                   &
-      & t_cf('max_wind_10m_act', 'm/s', 'Current maximum wind speed of the day.'),        &
+      & t_cf('max_wind_of_day', 'm/s', 'Current maximum wind speed of the day.'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=BASIC, & !vg MEDIUM,                                                              &
@@ -194,17 +194,17 @@ CONTAINS
       & output_level=BASIC, & !vg NONE,                                                                &
       & lrestart=.TRUE., initval_r=-1000.0_wp)
 
-    CALL mem%Add_var('min_mmtemp20', mem%min_mmtemp20,                                    &
+    CALL mem%Add_var('min_mmtemp_20yr', mem%min_mmtemp_20yr,                              &
       & hgrid, surface,                                                                   &
-      & t_cf('min_mmtemp20', 'K', 'Climatological minimum monthly mean temperature'),     &
+      & t_cf('min_mmtemp_20yr', 'K', 'Climatological minimum monthly mean temperature'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=BASIC, & !vg FULL,                                                                &
       & lrestart=.TRUE., initval_r=1000.0_wp)
 
-    CALL mem%Add_var('max_mmtemp20', mem%max_mmtemp20,                                    &
+    CALL mem%Add_var('max_mmtemp_20yr', mem%max_mmtemp_20yr,                              &
       & hgrid, surface,                                                                   &
-      & t_cf('max_mmtemp20', 'K', 'Climatological maximum monthly mean temperature'),     &
+      & t_cf('max_mmtemp_20yr', 'K', 'Climatological maximum monthly mean temperature'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=BASIC, & !vg FULL,                                                                &

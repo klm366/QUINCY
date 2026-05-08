@@ -158,16 +158,18 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(DISTURB_)
 
+    ! Declare pointers to variables in climbuf memory
+    dsl4jsb_Real2D_onChunk :: min_mmtemp_20yr
+    dsl4jsb_Real2D_onChunk :: max_mmtemp_20yr
+    dsl4jsb_Real2D_onChunk :: gdd_prev_year
+
     ! Declare pointers to variables in nlcc memory
-    dsl4jsb_Real2D_onChunk :: min_mmtemp20
-    dsl4jsb_Real2D_onChunk :: max_mmtemp20
     dsl4jsb_Real3D_onChunk :: act_fpc
     dsl4jsb_Real2D_onChunk :: bare_fpc
     dsl4jsb_Real3D_onChunk :: pot_fpc
     dsl4jsb_Real3D_onChunk :: cover_fract_pot
     dsl4jsb_Real3D_onChunk :: cover_fract
     dsl4jsb_Real3D_onChunk :: bio_exist
-    dsl4jsb_Real2D_onChunk :: gdd_prev_year
     dsl4jsb_Real2D_onChunk :: sum_green_bio_memory
     dsl4jsb_Real2D_onChunk :: desert_fpc
 
@@ -252,8 +254,8 @@ CONTAINS
     damaged_fract => disturb__mem%collect_var_real2d(ics, ice, iblk, no_children, disturb__mem%damaged_fract)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp20)     ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp20)     ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp_20yr)  ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp_20yr)  ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_prev_year)    ! inout
     dsl4jsb_Get_var3D_onChunk(NLCC_,act_fpc)          ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,bare_fpc)         ! inout
@@ -314,7 +316,7 @@ CONTAINS
        DO itile = 1,no_children
           CALL bioclim_limits (is_dynamic(:,itile), bclimit_min_cold_mmtemp(:,itile), bclimit_max_cold_mmtemp(:,itile),    &
                                bclimit_max_warm_mmtemp(:,itile), bclimit_min_temprange(:,itile), bclimit_min_gdd(:,itile), &
-                               min_mmtemp20(:), max_mmtemp20(:), gdd_prev_year(:), bio_exist(:,itile))
+                               min_mmtemp_20yr(:), max_mmtemp_20yr(:), gdd_prev_year(:), bio_exist(:,itile))
        ENDDO
        IF (.NOT. lstart) THEN
           CALL potential_tree_fpc (nc, no_children, is_dynamic(:,:), is_woody(:,:), bio_exist(:,:), &

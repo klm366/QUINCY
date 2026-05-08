@@ -80,8 +80,8 @@ CONTAINS
     & wind_threshold,                                  & ! in
     & wind_damage_scale,                               & ! in
     & cover_fract_pot,                                 & ! in
-    & prev_day_max_wind_10m,                           & ! in
-    & max_wind_10m,                                    & ! in
+    & max_wind_yDay,                                   & ! in
+    & max_wind_clim,                                   & ! in
     & damaged_fract                                    & ! inout
     & )
 
@@ -90,8 +90,8 @@ CONTAINS
       & wind_threshold,           &
       & wind_damage_scale,        &
       & cover_fract_pot(:),       &
-      & prev_day_max_wind_10m(:), &
-      & max_wind_10m(:)
+      & max_wind_yDay(:),         &
+      & max_wind_clim(:)
 
     REAL(wp), INTENT(inout) :: &
       & damaged_fract(:)
@@ -101,13 +101,13 @@ CONTAINS
 
     REAL(wp), PARAMETER :: delta_time_yr = 1._wp / 365._wp
 
-    nc = SIZE(max_wind_10m)
+    nc = SIZE(max_wind_clim)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      IF (cover_fract_pot(ic) > EPSILON(1._wp) .AND. prev_day_max_wind_10m(ic) > max_wind_10m(ic) * wind_threshold) THEN
+      IF (cover_fract_pot(ic) > EPSILON(1._wp) .AND. max_wind_yDay(ic) > max_wind_clim(ic) * wind_threshold) THEN
         damaged_fract(ic) = MIN( 1._wp - EPSILON(1._wp) / cover_fract_pot(ic),                                          &
-        &                        delta_time_yr * wind_damage_scale * prev_day_max_wind_10m(ic) ** 3._wp / max_wind_10m(ic) )
+        &                        delta_time_yr * wind_damage_scale * max_wind_yDay(ic) ** 3._wp / max_wind_clim(ic) )
       ENDIF
     END DO
     !$ACC END PARALLEL LOOP
