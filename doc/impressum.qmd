@@ -1,45 +1,48 @@
 ---
-title: Imprint/Service Provider Identification
+title: Imprint
 order: 4
 ---
 
 :::{.callout-note}
+### Overview
 The following provides mandatory data concerning the service provider of this website, obligations with regard to data protection, as well as other important legal references involving the Internet site of the Max Planck Institute for Biogeochemistry (www.bgc-jena.mpg.de) as required by German law.
 :::
 
-## Service Provider
+:::{.callout-note}
+### Service Provider Identification
 The service provider of this Internet site within the legal meaning of the term is the registered association Max Planck Society for the Advancement of Science e.V.
+:::
 
-### Address
-Max-Planck-Gesellschaft zur Förderung der Wissenschaften e.V.
-Hofgartenstrasse 8
-D-80539 Munich
+### Service Provider 
+Max-Planck-Gesellschaft zur Förderung der Wissenschaften e.V.\
+Hofgartenstrasse 8\
+D-80539 Munich\
 Germany
 
-Phone: +49 89 2108-0
+Phone: +49 89 2108-0\
 Internet: https://www.mpg.de
 
-Register of Societies and Associations
+#### Register of Societies and Associations
 The Max Planck Society is registered in the Official Register of Societies and Associations at Berlin-Charlottenburg Local Court under the register number VR 13378 B.
 
-Representatives
+#### Representatives
 The Max Planck Society is legally represented by its Board of Directors which, in turn, is represented by the President of the Society, Prof. Dr. Patrick Cramer and by Secretary General, Dr. Simone Schwanitz.
 
-Value Added Tax Identification Number
+#### Value Added Tax Identification Number
 The value added tax identification number of the Max Planck Society is DE 129517720.
 
-Editors
+#### Editors
 Responsible editor for the contents of the website of the Max Planck Institute for Biogeochemistry with regard to media law is the Managing Director, Prof. Dr. Markus Reichstein.
 
 ### Editor contact
-Dr. Eberhard Fritz
-Research Coordinator
-Max Planck Institute for Biogeochemistry
-Hans-Knöll-Str. 10
-07745 Jena, Germany
-efritz@bgc-jena.mpg.de
+Dr. Eberhard Fritz\
+Research Coordinator\
+Max Planck Institute for Biogeochemistry\
+Hans-Knöll-Str. 10\
+07745 Jena, Germany\
+efritz-at-bgc-jena.mpg.de
 
-**Responsible editors:** Reiner Schnur (MPI-MET), Sönke Zaehle (MPI-BGC), ...
+**Responsible editors:** Reiner Schnur (MPI-MET), Sönke Zaehle (MPI-BGC)
 
 ### Legal Structure
 The Max Planck Society is a non-profit research facility which is organized as a registered association. All of the institutes and facilities of the Max Planck Society are largely autonomous in terms of organization and research, but as a rule have no legal capacity of their own.
