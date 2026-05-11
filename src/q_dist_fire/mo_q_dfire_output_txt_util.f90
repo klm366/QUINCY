@@ -1,11 +1,11 @@
 !> Extended functions to complement QUINCY model output as ascii text for dfire
 !>
-!> QUINCY standalone
+!> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
-!> Contact: https://doi.org/10.17871/quincy-model-2019
+!> Contact: icon-model.org
 !> Authors: AUTHORS.md
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
