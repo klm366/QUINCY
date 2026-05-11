@@ -10,11 +10,11 @@
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
-!> 
+!>
 !> three main sections
-!>   - I   Pools 
+!>   - I   Pools
 !>   - II  Fluxes
-!> 
+!>
 MODULE mo_q_dfire_output_txt
 
   USE mo_kind,                  ONLY: wp
@@ -52,7 +52,7 @@ MODULE mo_q_dfire_output_txt
 
   USE mo_linked_list,             ONLY: t_q_linkedlist, t_q_linkedlist_node
   USE mo_q_dfire_output_txt_util, ONLY: t_qs_output_file, t_qs_output_2d, t_qs_output_3d, add_to_list, t_qs_soutputs
-  USE mo_q_dfire_output_txt_util, ONLY: EN_OP_AVERAGE, EN_PRE_OP_SUM 
+  USE mo_q_dfire_output_txt_util, ONLY: EN_OP_AVERAGE, EN_PRE_OP_SUM
 
   dsl4jsb_Use_config(SB_)
 
@@ -137,11 +137,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_air_max
     dsl4jsb_Real2D_onChunk      :: precip_daily_mmd
 
-    dsl4jsb_Real2D_onChunk      :: area_burned_output 
-    dsl4jsb_Real2D_onChunk      :: area_burned_fract_output 
-    dsl4jsb_Real2D_onChunk      :: fdi 
+    dsl4jsb_Real2D_onChunk      :: area_burned_output
+    dsl4jsb_Real2D_onChunk      :: area_burned_fract_output
+    dsl4jsb_Real2D_onChunk      :: fdi
     dsl4jsb_Real2D_onChunk      :: mean_fire_area
-    dsl4jsb_Real2D_onChunk      :: e_n_ignitions 
+    dsl4jsb_Real2D_onChunk      :: e_n_ignitions
 
     ! Q_DFIRE_FUEL_
     dsl4jsb_Real3D_onChunk      :: emissions_spc
@@ -335,7 +335,7 @@ CONTAINS
   !>
   !> Add new output for a flux variable
   !>
-  SUBROUTINE create_output_txt_as_flux(sout, name, units, var) 
+  SUBROUTINE create_output_txt_as_flux(sout, name, units, var)
     TYPE(t_qs_soutputs), INTENT(inout) :: sout
     CHARACTER(*), INTENT(in)        :: name, units
     REAL(wp), POINTER, INTENT(in)   :: var(:,:,:)  !< Quincy flux type variable (#pool, #elems, #nc)
@@ -345,7 +345,7 @@ CONTAINS
 
     !< Sum pools when writting data
     CALL sout % add_var(fid, "C["//units//"]", units, op=EN_OP_AVERAGE, &
-                pdata3d=var(:,ixC,ic), preop=EN_PRE_OP_SUM) 
+                pdata3d=var(:,ixC,ic), preop=EN_PRE_OP_SUM)
     CALL sout % add_var(fid, "C13["//units//"]", units, op=EN_OP_AVERAGE, &
                 pdata3d=var(:,ixC13,ic), preop=EN_PRE_OP_SUM)
     CALL sout % add_var(fid, "C14["//units//"]", units, op=EN_OP_AVERAGE, &
@@ -362,7 +362,7 @@ CONTAINS
   !>
   !> Add new output and print each element within (C,C13,C14,N,N15,P)
   !>
-  SUBROUTINE create_output_txt_as_var_els(sout, name, units, var) 
+  SUBROUTINE create_output_txt_as_var_els(sout, name, units, var)
     TYPE(t_qs_soutputs), INTENT(inout) :: sout
     CHARACTER(*), INTENT(in)        :: name, units
     REAL(wp), POINTER, INTENT(in)   :: var(:,:)  !< Quincy flux type variable (#nc,#elements)
@@ -393,12 +393,12 @@ CONTAINS
 
       SELECT TYPE(v=>node%value)
       CLASS IS (t_qs_output_file)
-        CALL v % update() 
+        CALL v % update()
       CLASS DEFAULT
         ! unexpected type found, raise error
         CALL finish("runUpdates", "Unexpected class found")
       END SELECT
-    END SUBROUTINE runUpdates 
+    END SUBROUTINE runUpdates
   END SUBROUTINE q_dfire_update_outputs
 
   ! ======================================================================================================= !
@@ -420,7 +420,7 @@ CONTAINS
         ! unexpected type found, raise error
         CALL finish("writeAllFiles", "Unexpected class found")
       END SELECT
-    END SUBROUTINE writeAllFiles 
+    END SUBROUTINE writeAllFiles
   END SUBROUTINE q_dfire_write_outputs
 
   ! ======================================================================================================= !
@@ -436,12 +436,12 @@ CONTAINS
 
       SELECT TYPE(v=>node%value)
       CLASS IS (t_qs_output_file)
-        CALL v % reset() 
+        CALL v % reset()
       CLASS DEFAULT
         ! unexpected type found, raise error
         CALL finish("resetAllFiles", "Unexpected class found")
       END SELECT
-    END SUBROUTINE resetAllFiles 
+    END SUBROUTINE resetAllFiles
   END SUBROUTINE q_dfire_reset_outputs
 
   ! ======================================================================================================= !

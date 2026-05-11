@@ -10,7 +10,7 @@
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
-!> 
+!>
 MODULE mo_q_dfire_output_txt_util
 
   USE mo_kind,                  ONLY: wp
@@ -100,7 +100,7 @@ MODULE mo_q_dfire_output_txt_util
     procedure :: add_var_by_object
     procedure :: add_var_by_name
     procedure :: write
-    procedure :: update 
+    procedure :: update
     procedure :: reset
     procedure :: close
   END TYPE t_qs_output_file
@@ -276,7 +276,7 @@ CONTAINS
 
       SELECT TYPE(v=>node%value)
       CLASS IS (t_qs_output_2d)
-        values(ic) = v % get() 
+        values(ic) = v % get()
       CLASS IS (t_qs_output_3d)
         CALL finish("getData", "t_qs_output_3d not yet implemented")
       CLASS DEFAULT
@@ -289,16 +289,16 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Apply an operation (average, ...) for each variable 
+  !> Apply an operation (average, ...) for each variable
   !>
   SUBROUTINE update(this)
     CLASS(t_qs_output_file), INTENT(inout) :: this
     CALL this % vars % traverse(runAllOperations)
-  END SUBROUTINE update 
+  END SUBROUTINE update
 
   ! ======================================================================================================= !
   !>
-  !> Reset all counters for Averaging variables  
+  !> Reset all counters for Averaging variables
   !>
   SUBROUTINE reset(this)
     CLASS(t_qs_output_file), INTENT(inout) :: this
@@ -318,7 +318,7 @@ CONTAINS
         CALL finish("resetAllVars", "Unexpected class found")
       END SELECT
     END SUBROUTINE resetAllVars
-  END SUBROUTINE reset 
+  END SUBROUTINE reset
 
 
   ! ======================================================================================================= !
