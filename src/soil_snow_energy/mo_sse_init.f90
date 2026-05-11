@@ -87,17 +87,13 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
     dsl4jsb_Def_config(LEX_)
 
 #ifdef __QUINCY_STANDALONE__
-    model  => Get_model(tile%owner_model_id)
-    IF (model%config%use_soil_phys_jsbach) THEN
-      CALL qs_sse_init_bc(tile)
-      CALL sse_init_ic(tile)
-    END IF
+    CALL qs_sse_init_bc(tile)
+    CALL sse_init_ic(tile)
 #else
     model => get_model(tile%owner_model_id)
     dsl4jsb_Get_config(LEX_)

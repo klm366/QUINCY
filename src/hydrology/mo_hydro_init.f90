@@ -175,19 +175,15 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< current tile
 
-    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
 
     dsl4jsb_Def_config(LEX_)                                        !< Configurable parameters of the LEX process
-    model  => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(LEX_)
 
 #ifdef __QUINCY_STANDALONE__
-    IF (model%config%use_soil_phys_jsbach) THEN
-      CALL qs_hydro_read_init_vars(tile)
-      CALL qs_hydro_init_ic_bc(tile)
-      CALL hydro_finalize_init_vars()
-    END IF
+    CALL qs_hydro_read_init_vars(tile)
+    CALL qs_hydro_init_ic_bc(tile)
+    CALL hydro_finalize_init_vars()
 #else
     IF (dsl4jsb_Config(LEX_)%active) THEN
       ! Read initial and boundary conditions on each tile, in case tile-specific fields are provided.

@@ -34,5 +34,3 @@
 * ICON-mpim MR: add link (full url) to the MR in the ICON-Land repository
 * QS MR: add link (full url) to the MR in the ICON-Land repository
 * iq-scripts MR: add link (full url) to the MR in the ICON-Land repository
-
-closes issue [add link (full url) to issue]
