@@ -10,6 +10,20 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!> Calculate post-processed Spitfire fire impacts and model feedback
+!>
+!> Gather data from memory, rebuild variables, ...
+!> (PFT is tree?) calc prob of tree mortality
+!> (PFT is tree?) calc live fuel consumption
+!> Calc dead fuel consumption
+!> Allocate fuel consumption for remaining nutrients and isotopes
+!> Calc fire emissions
+!> Calc fire residue
+!> (online?) Apply impacts on the model
+!> Calc diagnostics varibles
+!> Adjust flux units
+!> (enabled?) Run diagnostics
+!>
 MODULE mo_q_dfire_post
 #ifndef __NO_JSBACH__
 
@@ -94,7 +108,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store !< the bgcm store of this tile
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: iblk, ics, ice, nc, ic, ipool, iel
+    INTEGER                               :: iblk, ics, ice, nc, ic, ipool, iel, ip
     INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
 
@@ -116,13 +130,13 @@ CONTAINS
     REAL(wp)                              :: area_burned_pft(options%nc) !< Area burned for current PFT [ha]
     REAL(wp)                              :: area_burned_fract_pft(options%nc) !< Fraction of the area burned for current PFT [-]
 
-    TYPE(t_sf_prob_mort)                  :: prob_mort     !< Tree mortality
+    TYPE(t_sf_prob_mort)                  :: prob_mort                 !< Tree mortality
     REAL(wp), ALLOCATABLE                 :: live_tree_fuel_cls(:,:,:) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
 
     REAL(wp), ALLOCATABLE                 :: fc_live_mol_m2(:,:)  !< Total live fuel consumption (nc, live fuels) [molX/m2]
     REAL(wp), ALLOCATABLE                 :: fc_dead_mol_m2(:,:)  !< Total dead fuel consumption (nc, t_sf_fuel_dead_fuel_nr) [molX/m2]
 
-    REAL(wp), ALLOCATABLE                 :: fc_dead_el(:,:,:) !< dead fuel consumption (#nc, #dead pools, #Elements) [molX m-2]
+    REAL(wp), ALLOCATABLE                 :: fc_dead_el(:,:,:)   !< dead fuel consumption (#nc, #dead pools, #Elements) [molX m-2]
     REAL(wp), ALLOCATABLE                 :: fc_live_el(:,:,:)   !< live fuel consumption (#nc, #live pools, #Elemens) [molX m-2]
 
     REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:) !< Dead fuel [g MD m-2]
@@ -133,13 +147,11 @@ CONTAINS
     REAL(wp)                              :: mass_imbalance_emitted_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #dead pools, #elems) [mol m-2]
     REAL(wp)                              :: mass_imbalance_emitted_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elems) [mol m-2]
 
-    REAL(wp), ALLOCATABLE                 :: sb_pool_in_m2(:,:,:) !< BGCM sb_pool (#pools,#elements,#nc) [molX/m2]
+    REAL(wp), ALLOCATABLE                 :: sb_pool_in_m2(:,:,:)               !< BGCM sb_pool (#pools,#elements,#nc) [molX/m2]
     REAL(wp), ALLOCATABLE                 :: emissions_dead_in_m3(:,:,:)        !< (#nc,#pools,#elements) sb_pool fuels in molX/m3, veg_pool fuels in molX/m2
     REAL(wp), ALLOCATABLE                 :: residue_dead_in_m3(:,:,:)          !< (#nc,#pools,#elements) sb_pool fuels in molX/m3, veg_pool fuels in molX/m2
 
-    INTEGER                               :: ip ! iterate
-
-    REAL(wp), ALLOCATABLE                 :: lctlib_emission_factors(:) !< Array packed with emission factors from lctlib (#species)
+    REAL(wp), ALLOCATABLE                 :: lctlib_emission_factors(:)         !< Array packed with emission factors from lctlib (#species)
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -391,6 +403,14 @@ CONTAINS
                                 (tile_fract > 0._wp) .AND. & ! tile is empty, skip
                                 (height > 0._wp) ! height is not yet initialized, skip
 
+    ! SUBROUTINE calc_example( &
+    !     & variables providing info on dimensions, &
+    !     & lctlib parameters, &
+    !     & process config variables, &
+    !     & Input variables, &
+    !     & InOut variables, &
+    !     & Output variables )
+
       CALL calc_prob_mortality(nc, df_sf_fc_spread_nr, &
                                     lctlib%q_crown_length, lctlib%q_crown_damage_p, lctlib%q_crown_damage_r_ck, &
                                     lctlib%q_scorch_height_f, &
@@ -404,11 +424,11 @@ CONTAINS
                                     mask_opt=is_fire_intense_enough)
 
       fc_live = sf_calc_live_fuel_consumption(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
-                                              prob_mort % prop_ck, &
-                                              dsl4jsb_Config(Q_DFIRE_)%fract_crown_scorch, &
-                                              area_burned_fract_pft, &
-                                              live_tree_fuel_cls, &
-                                              mask=is_fire_intense_enough)
+                                    dsl4jsb_Config(Q_DFIRE_)%fract_crown_scorch, &
+                                    prob_mort % prop_ck, &
+                                    area_burned_fract_pft, &
+                                    live_tree_fuel_cls, &
+                                    mask=is_fire_intense_enough)
 
       !< output calculated values
       pm_prop_ck = prob_mort % prop_ck

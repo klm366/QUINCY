@@ -10,37 +10,29 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!> Main task to compute the spitfire
+!> Calculate Spitfire fire dynamics
 !>
 !> -update_dfire_spitfire: integrate Quincy with the spitfire process:
-!>    - convert units from Quincy into spitfire
+!>    - convert units from Quincy into Thonicke's Spitfire
 !>    - gather lctlib parameters
 !>    - select precalculated daily precipitation method
 !>    - Soil moisture content
 !>    - Fraction of the vegetation
 !>    - Call calc_spitfire (science)
-!>    - Dead feedback
-!>    - Live feedback
 !>    - Save data into process memory
 !>
 !> -calc_spitfire: spitfire subroutine which calls
-!>    - [mask] method (file)
-!>    - [-] Initialize t_sf_spitfire, used to output data
-!>    - [-] Calc ignition events (mo_difre_sf_ignition.f90)
-!>    - [-] Calc fuel load (mo_q_dfire_sf_fuel_class.f90)
-!>    - [-] Calc Nesterov index (mo_q_dfire_sf_nesterov.f90)
-!>    - [-] Calc fuel moisture (mo_q_dfire_sf_fmoist_class.f90)
-!>    - [-] Calc Fire danger index (-)
-!>    - [dead_fuel-all- > 0 & FDI>0] Calc Rate of spread (mo_q_dfire_sf_ros_class.f90)
-!>    - [dead_fuel-all- > 0 & FDI>0] Calc Area Burned and its fraction (-)
-!>    - [dead_fuel-1,10,100- > 0 & FDI>0] Calc dead fraction of consumption (mo_q_dfire_sf_frac_consump_class.f90)
-!>    - [dead_fuel-1,10,100- > 0 & FDI>0]  Calc dead fuel consumption (mo_q_dfire_sf_fuel_consumption.f90)
-!>    - [dead_fuel-1,10,100- > 0 & FDI>0]  Calc fire intensity (-)
-!>    - [... & I_surface>50] Calc tree mortality (mo_q_dfire_sf_damage.f90)
-!>    - [... & I_surface>50]  Calc live fuel consumption (mo_q_dfire_sf_fuel_consumption.f90)
-!>    - [... & I_surface>50]  Calc emissions (mo_q_dfire_sf_emissions_class.f90)
-!>    - [... & I_surface>50]  Derive fuel consumption for N,P,C13,C14,N15
-!>    - [... & I_surface>50]  Calc residue from emissions
+!>    - Initialize t_sf_spitfire, used to output data
+!>    - Calc Nesterov index (mo_q_dfire_sf_nesterov.f90)
+!>    - Calc Thonicke's / Oberhagemann implementation
+!>    -   Calc fuel moisture (mo_q_dfire_sf_fmoist_class.f90)
+!>    -   Calc Fire danger index (-)
+!>    -   Calc Rate of spread (mo_q_dfire_sf_ros_class.f90)
+!>    - Calc Area Burned and its fraction (-)
+!>    - Calc ignition events (mo_q_difre_sf_ignition.f90)
+!>    - Calc dead fraction of consumption (mo_q_dfire_sf_frac_consump_class.f90)
+!>    - Calc dead fuel consumption (mo_q_dfire_sf_fuel_consumption.f90)
+!>    - Calc fire intensity (-)
 !>
 MODULE mo_q_dfire_spitfire
 #ifndef __NO_JSBACH__
@@ -340,9 +332,9 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)            ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sat_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)          ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sat_sl)          ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)            ! in
 
     !< Ignitions
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, e_n_ignitions)          ! out
@@ -353,7 +345,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, t_air_max)              ! in
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, precip_daily_mmd)       ! out
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, precip_daily)           ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, wind_10m)                 ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, wind_10m)                   ! in
 
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, nesterov_index)         ! inout [Celsius 2]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, ab_moisture_diag)       ! out [-]
@@ -382,24 +374,24 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp)   ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp)  ! in [g DM m-2]
 
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, forest_fract)      ! in [%]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, grass_fract)       ! in [%]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, forest_fract)        ! in [%]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, grass_fract)         ! in [%]
 
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, fuel_bulk_density)   ! in [kg m-3]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, moisture_extinction) ! in [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, fwd_wind_factor)     ! in [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, lvg_moisture)        ! in [0 to 2.5]%
 
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, reaction_intensity)     ! out
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, prop_flux_ratio)        ! out
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, wind_factor)            ! out
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, eff_heating_number)     ! out
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, preig_heat)             ! out
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, reaction_intensity)       ! out
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, prop_flux_ratio)          ! out
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, wind_factor)              ! out
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, eff_heating_number)       ! out
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, preig_heat)               ! out
 
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, opt_react_velo)         ! out
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, net_fuel_load)          ! out
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, moist_damp_coeff)       ! out
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, mineral_damp_coeff)     ! out
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, opt_react_velo)           ! out
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, net_fuel_load)            ! out
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, moist_damp_coeff)         ! out
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, mineral_damp_coeff)       ! out
 
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_1hr) ! out [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_10hr) ! out [g DM m-2]
@@ -413,9 +405,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_frac_consumption)     ! out [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, i_surface)                 ! out [kW m-1]
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, frac_consump_fcl)            ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, ic_pop_dens)                 ! in [#humans km-2]
-    dsl4jsb_Get_var2D_onChunk(A2L_, a2l_lightning_events) ! in [#events ha-1 d-1]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, frac_consump_fcl)          ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, ic_pop_dens)               ! in [#humans km-2]
+    dsl4jsb_Get_var2D_onChunk(A2L_, a2l_lightning_events)          ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     ! ----------------------------------------------------------------------------------------------------- !
@@ -621,7 +613,7 @@ CONTAINS
     REAL(wp), INTENT(out)   :: fuel_moisture(nc,df_sf_omegas_nr)   !< Fuel moisture (#nc, #omega_nr (omega_o, omega_nl))
 
     TYPE(t_sf_spitfire), INTENT(out)    :: spitfire                !< Spitfire outputs
-    LOGICAL, INTENT(in), OPTIONAL       :: mask(nc)
+    LOGICAL, INTENT(in), OPTIONAL       :: mask(nc)                !< Gridcell can burn
 
     LOGICAL :: mask_tile_enabled(nc)
 

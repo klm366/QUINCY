@@ -126,12 +126,12 @@ CONTAINS
     INTEGER                       :: dfire_precip_method_id   !< precipitation method id (1=,2=,3=), internal
     CHARACTER(len=20)             :: ros_modelname            !< name of rate of spread model
     INTEGER                       :: ros_model_id             !< rate of spread ID, derived from 'ros_modelname'
-    REAL(wp)                      :: density_human_population !< Ignition events
-    REAL(wp)                      :: lightning_frequency      !<
-    REAL(wp)                      :: a_nd                     !<
+    REAL(wp)                      :: density_human_population !< Human population density, used in QS
+    REAL(wp)                      :: lightning_frequency      !< Lightning frequency events, used in QS
+    REAL(wp)                      :: a_nd                     !< Human-caused ignition events, used in QS
     REAL(wp)                      :: fract_crown_scorch(sf_fuel_classes_nr) !< Fraction of live fuel consumption from crown scorch
-    CHARACTER(len=filename_max)   :: ic_popdens_filename
-    CHARACTER(len=filename_max)   :: ic_lightning_events_filename
+    CHARACTER(len=filename_max)   :: ic_popdens_filename                    !< Filename for human population density input, used in IQJ
+    CHARACTER(len=filename_max)   :: ic_lightning_events_filename           !< Filename for lightning events input, used in IQJ
 
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_dead_fuel_pools
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_live_fuel_pools

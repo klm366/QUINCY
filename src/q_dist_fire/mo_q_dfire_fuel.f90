@@ -10,6 +10,16 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!> Precompute fuel at PFT level
+!>
+!> Precalc PFT fraction for tree/grass (sum at aggregation)
+!> (Oberhagemann only) Calc live grass moisture
+!> (Oberhagemann only) Calc cured live grass
+!> Convert to desired units required by Spitfire
+!> Calc dead and live fuels...
+!> Precalc fuel bulk density
+!> Move fuel(s) into process memory
+!>
 MODULE mo_q_dfire_fuel
 #ifndef __NO_JSBACH__
 

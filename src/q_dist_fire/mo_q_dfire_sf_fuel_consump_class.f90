@@ -87,8 +87,9 @@ CONTAINS
   !> Eq. Appendix B2 from Thonicke et al. (2010)
   !>
   FUNCTION sf_calc_live_fuel_consumption(nc, nlivepools, nfuelclass, &
-      prop_crown_scorch, fract_crown_scorch, &
+      fract_crown_scorch, prop_crown_scorch, &
       area_burned_frac, live_fuel, mask) RESULT (live_fc)
+
     INTEGER, INTENT(in) :: nc, nlivepools, nfuelclass
     REAL(wp), INTENT(in) :: prop_crown_scorch(nc)               !< Proportion of the crown scorch by the fire [0 to 1]
     REAL(wp), INTENT(in) :: fract_crown_scorch(nfuelclass)      !< Fraction of the crown scorch consumed as live fuel for each fuel class [0 to 1]

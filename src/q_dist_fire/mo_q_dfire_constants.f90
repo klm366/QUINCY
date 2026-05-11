@@ -25,7 +25,7 @@ MODULE mo_q_dfire_constants
   !>
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_dfire_constants'
 
-  !< sb pool to dead fuel ratios (polymoric is not included as it is fundamental)
+  !< sb pool to dead fuel ratios (polymeric is not included as it is fundamental)
   TYPE :: t_sf_litter_ratios
     REAL(wp) :: polymeric, dom_assoc, dom, soluable, residue, residue_assoc
   END TYPE t_sf_litter_ratios
