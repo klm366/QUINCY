@@ -10,7 +10,9 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!> Available implementations to compute Rate of Spread:
+!> - Thonicke et al. (2010)
+!> - Oberhagemann et al. (2025)
 !>
 MODULE mo_q_dfire_sf_ros_class
 #ifndef __NO_JSBACH__

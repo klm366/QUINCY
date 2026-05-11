@@ -10,6 +10,17 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
+!>
+!>  This involves equations from:
+!>    - Section 2.2.4, Equations 9 to 14
+!>    - Table A1
+!>    - Appendix A (equations A1 to A9)
+!>
+!>  Most of the equations are based on Thonicke et al. (2010). Nonetheless, some equations are also
+!>  using Pfeiffer et al. (2013). Furter improvements are applied using Oberhagemann et al. (2025)
+!>  paper. Those includes weighting fuels accordingly.
+!>
 MODULE mo_q_dfire_sf_ros_thon_class
 #ifndef __NO_JSBACH__
 

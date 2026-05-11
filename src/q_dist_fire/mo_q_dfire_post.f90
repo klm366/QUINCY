@@ -403,14 +403,6 @@ CONTAINS
                                 (tile_fract > 0._wp) .AND. & ! tile is empty, skip
                                 (height > 0._wp) ! height is not yet initialized, skip
 
-    ! SUBROUTINE calc_example( &
-    !     & variables providing info on dimensions, &
-    !     & lctlib parameters, &
-    !     & process config variables, &
-    !     & Input variables, &
-    !     & InOut variables, &
-    !     & Output variables )
-
       CALL calc_prob_mortality(nc, df_sf_fc_spread_nr, &
                                     lctlib%q_crown_length, lctlib%q_crown_damage_p, lctlib%q_crown_damage_r_ck, &
                                     lctlib%q_scorch_height_f, &
