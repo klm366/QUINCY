@@ -174,7 +174,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: desert_fpc
 
     ! Local variables
-    LOGICAL :: new_year, new_month, new_day, init_nlcc
+    LOGICAL :: new_year, new_day, init_nlcc
     LOGICAL, SAVE :: nlcc_initialized = .FALSE.
 
     ! Get local variables from options argument
