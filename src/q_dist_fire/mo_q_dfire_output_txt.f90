@@ -94,7 +94,6 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: molar_mass_C, molar_mass_N
     USE mo_sb_constants,           ONLY: organic_cn
     USE mo_isotope_util,           ONLY: calc_delta_C13, calc_delta_C14, calc_delta_N15
-    USE mo_spq_config_class,       ONLY: max_soil_layers
     USE mo_phy_schemes,            ONLY: qsat_mixed
     USE mo_atmland_constants,      ONLY: eps_vpd
     ! ----------------------------------------------------------------------------------------------------- !
