@@ -18,7 +18,7 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_,  &
+    &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_,        &
     &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
   dsl4jsb_Use_config(PHENO_)
@@ -170,7 +170,6 @@ CONTAINS
     USE mo_q_pheno_init,        ONLY: q_pheno_init
     USE mo_q_syl_init,          ONLY: q_syl_init
     USE mo_q_agr_init,          ONLY: q_agr_init
-    USE mo_spq_init,            ONLY: spq_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
 #endif
@@ -372,11 +371,11 @@ CONTAINS
 #ifndef __NO_QUINCY__
     ! ----------------------------------------------------------------------------------------------------- !
     !
-    ! quincy model
+    ! MODEL_QUINCY
     !
-    !   using either the SPQ_ process or HYDRO_ / SSE_ / SEB_ for soil physics
+    ! IQJ: ICON-Land with QUINCY configuration and jsbach physics
     !
-    ! QUINCY model modes represent different levels of model complexity:
+    ! The QUINCY model modes represent different levels of model complexity:
     !
     ! By setting the 'quincy_model' in the namelist, 'qmodel_id' is set to QCANOPY, QPLANT, QLAND, QSOIL
     ! QCANOPY, QPLANT, QLAND share many tasks (indicated with 'ALL' below)
@@ -401,235 +400,119 @@ CONTAINS
           & 'Unexpected / not yet implemented Quincy model mode: '//TRIM(model%config%quincy_model))
       END IF
 
-      !>
-      !> quincy with jsbach soil physics (w/o tmx)
-      !>
-      IF (model%config%use_soil_phys_jsbach) THEN
+      !-- set flux variables to zero
+      CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
+      CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
+      IF (model%config%qmodel_id == QLAND) THEN
+        CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
+      END IF
 
-        !-- set flux variables to zero
-        CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
-        CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
-        IF (model%config%qmodel_id == QLAND) THEN
-          CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
+      IF (is_time_restart(get_time_start())) THEN
+        !-- derive plant characteristics from restart variables
+        CALL model%Queue_task(VEG_, "plant_characteristics")
+      END IF
+
+      ! --------------- Any tasks that might change the land cover need to come first in the timestep
+      !
+      ! Note: PPLCC_ is automatically activated in mo_jsb_base.f90:jsbach_setup_models
+      ! if any process that changes area is active
+      ! or if harvest is active because it needs information on the forested area
+      !
+      IF (model%processes(PPLCC_)%p%config%active) THEN
+        IF (model%processes(ALCC_)%p%config%active) THEN
+          CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
         END IF
 
-        IF (is_time_restart(get_time_start())) THEN
-          !-- derive plant characteristics from restart variables
+        ! Prepare LCC tasks
+        CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
+        ! Here all lcc tasks need to be called: for Quincy this is currently only alcc
+
+        IF (model%processes(ALCC_)%p%config%active) THEN
+          CALL model%Queue_task(ALCC_, "alcc_translocation")
+        END IF
+
+        ! Do postprocessing after all LCC tasks were executed
+        CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
+
+        IF (model%Do_fractions_change() .AND. (.NOT. model%config%qmodel_id == QCANOPY)) THEN
+          !-- if required recalculate plant characteristics
           CALL model%Queue_task(VEG_, "plant_characteristics")
         END IF
+      END IF
 
-        ! --------------- Any tasks that might change the land cover need to come first in the timestep
-        !
-        ! Note: PPLCC_ is automatically activated in mo_jsb_base.f90:jsbach_setup_models
-        ! if any process that changes area is active
-        ! or if harvest is active because it needs information on the forested area
-        !
-        IF (model%processes(PPLCC_)%p%config%active) THEN
-          IF (model%processes(ALCC_)%p%config%active) THEN
-            CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
+      IF (model%processes(Q_AGR_)%p%config%active) THEN
+        CALL model%Queue_task(Q_AGR_, "cropland_process")         ! ALL; if Q_AGR_ active
+      END IF
+
+      IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
+        IF (model%processes(Q_SYL_)%p%config%active .OR. model%processes(Q_AGR_)%p%config%active) THEN
+          IF (model%processes(Q_SYL_)%p%config%active) THEN
+            CALL model%Queue_task(Q_SYL_, "sylviculture")         ! LAND or PLANT; if Q_SYL_ active
           END IF
-
-          ! Prepare LCC tasks
-          CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
-          ! Here all lcc tasks need to be called: for Quincy this is currently only alcc
-
-          IF (model%processes(ALCC_)%p%config%active) THEN
-            CALL model%Queue_task(ALCC_, "alcc_translocation")
-          END IF
-
-          ! Do postprocessing after all LCC tasks were executed
-          CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
-
-          IF (model%Do_fractions_change() .AND. (.NOT. model%config%qmodel_id == QCANOPY)) THEN
-            !-- if required recalculate plant characteristics
-            CALL model%Queue_task(VEG_, "plant_characteristics")
-          END IF
+          CALL model%Queue_task(VEG_, "pools_on_harvest")         ! LAND or PLANT; if Q_SYL_ or Q_AGR_ active
+          CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND or PLANT; if Q_SYL_ or Q_AGR_ active
         END IF
+      END IF
 
-        IF (model%processes(Q_AGR_)%p%config%active) THEN
-          CALL model%Queue_task(Q_AGR_, "cropland_process")         ! ALL; if Q_AGR_ active
+      CALL model%Queue_task(RAD_,       "surface_radiation")
+      CALL model%Queue_task(Q_PHENO_,   "q_phenology")
+      CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
+      CALL model%Queue_task(HYDRO_,     "soil_properties")
+
+      IF (model%config%qmodel_id == QLAND) THEN
+        CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
+      END IF
+
+      CALL model%Queue_task(SEB_,       "surface_energy")
+      CALL model%Queue_task(HYDRO_,     "evaporation")
+      CALL model%Queue_task(SEB_,       "surface_fluxes")
+      CALL model%Queue_task(HYDRO_,     "surface_hydrology")
+      CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
+      CALL model%Queue_task(SSE_,       "soil_and_snow_properties")
+      CALL model%Queue_task(SSE_,       "soil_and_snow_temperature")
+      CALL model%Queue_task(Q_ASSIMI_,  "ftranspiration_per_sl")
+      CALL model%Queue_task(HYDRO_,     "soil_hydrology")
+      CALL model%Queue_task(HYDRO_,     "water_stress")
+      CALL model%Queue_task(RAD_,       "radiation_par")
+      CALL model%Queue_task(Q_ASSIMI_,  "canopy_fluxes")
+      CALL model%Queue_task(TURB_,      "humidity_scaling")
+
+      IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
+        IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+          CALL model%Queue_task(VEG_, "products_decay")           ! LAND or PLANT; if with l_use_product_pools
         END IF
-
-        IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
-          IF (model%processes(Q_SYL_)%p%config%active .OR. model%processes(Q_AGR_)%p%config%active) THEN
-            IF (model%processes(Q_SYL_)%p%config%active) THEN
-              CALL model%Queue_task(Q_SYL_, "sylviculture")         ! LAND or PLANT; if Q_SYL_ active
-            END IF
-            CALL model%Queue_task(VEG_, "pools_on_harvest")         ! LAND or PLANT; if Q_SYL_ or Q_AGR_ active
-            CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND or PLANT; if Q_SYL_ or Q_AGR_ active
-          END IF
-        END IF
-
-        CALL model%Queue_task(RAD_,       "surface_radiation")
-        CALL model%Queue_task(Q_PHENO_,   "q_phenology")
-        CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
-        CALL model%Queue_task(HYDRO_,     "soil_properties")
-
+        CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
+        CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
         IF (model%config%qmodel_id == QLAND) THEN
-          CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
-        END IF
-
-        CALL model%Queue_task(SEB_,       "surface_energy")
-        CALL model%Queue_task(HYDRO_,     "evaporation")
-        CALL model%Queue_task(SEB_,       "surface_fluxes")
-        CALL model%Queue_task(HYDRO_,     "surface_hydrology")
-        CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
-        CALL model%Queue_task(SSE_,       "soil_and_snow_properties")
-        CALL model%Queue_task(SSE_,       "soil_and_snow_temperature")
-        CALL model%Queue_task(Q_ASSIMI_,  "ftranspiration_per_sl")
-        CALL model%Queue_task(HYDRO_,     "soil_hydrology")
-        CALL model%Queue_task(HYDRO_,     "water_stress")
-        CALL model%Queue_task(RAD_,       "radiation_par")
-        CALL model%Queue_task(Q_ASSIMI_,  "canopy_fluxes")
-        CALL model%Queue_task(TURB_,      "humidity_scaling")
-
-        IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
-          IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
-            CALL model%Queue_task(VEG_, "products_decay")           ! LAND or PLANT; if with l_use_product_pools
-          END IF
-          CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
-          CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
-          IF (model%config%qmodel_id == QLAND) THEN
-            IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
-              CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
-            ELSE
-              CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
-            END IF
-          END IF
-          CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
-        END IF
-
-        CALL model%Queue_task(VEG_, "veg_pools")                    ! ALL
-        CALL model%Queue_task(VEG_, "plant_characteristics")        ! ALL - ! required after updating veg pools !
-        IF (model%config%qmodel_id == QLAND) THEN
-          CALL model%Queue_task(SB_, "sb_pools")                    ! LAND ONLY
-        END IF
-
-        CALL model%Queue_task(TURB_,    "surface_roughness")        ! both update and aggregate run calculations
-        CALL model%Queue_task(RAD_,     "albedo")                   ! ALL
-        CALL model%Queue_task(HYDRO_,   "water_balance")
-        CALL model%Queue_task(SEB_,     "asselin_filter")           ! Should always be the last task
-        CALL model%Queue_task(SEB_,     "energy_balance")           ! 't' is used here, and 't' is updated in the 'asselin_filter'
-
-        !-- averaging variables in time ------------------------------------------------------------------- !
-        CALL model%Queue_task(RAD_, "rad_time_average")             ! ALL
-        CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")      ! ALL
-        CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
-        IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
-          CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")   ! LAND or PLANT
-        END IF
-
-      !>
-      !> quincy with SPQ_ soil physics process (fallback)
-      !>
-      ELSE IF (.NOT. model%config%use_soil_phys_jsbach) THEN
-
-        !-- set flux variables to zero
-        CALL model%Queue_task(Q_ASSIMI_, "reset_q_assimi_fluxes")   ! ALL
-        CALL model%Queue_task(SPQ_, "reset_spq_fluxes")             ! ALL
-        CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
-        IF (model%config%qmodel_id == QLAND) THEN
-          CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
-        END IF
-
-        IF (is_time_restart(get_time_start())) THEN
-          !-- derive plant characteristics from restart variables
-          CALL model%Queue_task(VEG_, "plant_characteristics")
-        END IF
-
-        ! --------------- Any tasks that might change the land cover need to come first in the timestep
-        !
-        ! Note: PPLCC_ is automatically activated in mo_jsb_base.f90:jsbach_setup_models
-        ! if any process that changes area is active
-        ! or if harvest is active because it needs information on the forested area
-        !
-        IF (model%processes(PPLCC_)%p%config%active) THEN
-          IF (model%processes(ALCC_)%p%config%active) THEN
-            CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
-          END IF
-
-          ! Prepare LCC tasks
-          CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
-          ! Here all lcc tasks need to be called: for Quincy this is currently only alcc
-
-          IF (model%processes(ALCC_)%p%config%active) THEN
-            CALL model%Queue_task(ALCC_, "alcc_translocation")
-          END IF
-
-          ! Do postprocessing after all LCC tasks were executed
-          CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
-
-          IF (model%Do_fractions_change() .AND. (.NOT. model%config%qmodel_id == QCANOPY)) THEN
-            !-- if required recalculate plant characteristics
-            CALL model%Queue_task(VEG_, "plant_characteristics")
+          IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+            CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
+          ELSE
+            CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
           END IF
         END IF
+        CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
+      END IF
 
-        IF (model%processes(Q_AGR_)%p%config%active) THEN
-          CALL model%Queue_task(Q_AGR_, "cropland_process")         ! ALL; if Q_AGR_ active
-        END IF
+      CALL model%Queue_task(VEG_, "veg_pools")                    ! ALL
+      CALL model%Queue_task(VEG_, "plant_characteristics")        ! ALL - ! required after updating veg pools !
+      IF (model%config%qmodel_id == QLAND) THEN
+        CALL model%Queue_task(SB_, "sb_pools")                    ! LAND ONLY
+      END IF
 
-        IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
-          IF (model%processes(Q_SYL_)%p%config%active .OR. model%processes(Q_AGR_)%p%config%active) THEN
-            IF (model%processes(Q_SYL_)%p%config%active) THEN
-              CALL model%Queue_task(Q_SYL_, "sylviculture")         ! LAND or PLANT; if Q_SYL_ active
-            END IF
-            CALL model%Queue_task(VEG_, "pools_on_harvest")         ! LAND or PLANT; if Q_SYL_ or Q_AGR_ active
-            CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND or PLANT; if Q_SYL_ or Q_AGR_ active
-          END IF
-        END IF
+      CALL model%Queue_task(TURB_,    "surface_roughness")        ! both update and aggregate run calculations
+      CALL model%Queue_task(RAD_,     "albedo")                   ! ALL
+      CALL model%Queue_task(HYDRO_,   "water_balance")
+      CALL model%Queue_task(SEB_,     "asselin_filter")           ! Should always be the last task
+      CALL model%Queue_task(SEB_,     "energy_balance")           ! 't' is used here, and 't' is updated in the 'asselin_filter'
 
-        IF (model%config%qmodel_id == QLAND) THEN
-          CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
-        END IF
-        CALL model%Queue_task(SPQ_, "soil_turbulence")              ! ALL
-        CALL model%Queue_task(RAD_, "surface_radiation")            ! ALL
-        CALL model%Queue_task(Q_PHENO_, "q_phenology")              ! ALL
-        CALL model%Queue_task(RAD_, "radiation_par")                ! ALL
-        CALL model%Queue_task(Q_ASSIMI_, "canopy_fluxes")           ! ALL
-        CALL model%Queue_task(Q_ASSIMI_, "ftranspiration_per_sl")   ! ALL
-        CALL model%Queue_task(SPQ_, "spq_physics")                  ! ALL
+      !-- averaging variables in time ------------------------------------------------------------------- !
+      CALL model%Queue_task(RAD_, "rad_time_average")             ! ALL
+      CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")      ! ALL
+      CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
+      IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
+        CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")   ! LAND or PLANT
+      END IF
 
-        IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
-          IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
-            CALL model%Queue_task(VEG_, "products_decay")           ! LAND or PLANT; if with l_use_product_pools
-          END IF
-          CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
-          CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
-          IF (model%config%qmodel_id == QLAND) THEN
-            IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
-              CALL model%Queue_task(SB_, "sb_jsm")                  ! LAND ONLY
-            ELSE
-              CALL model%Queue_task(SB_, "sb_simple_model")         ! LAND ONLY
-            END IF
-          END IF
-          CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
-        END IF
-
-        CALL model%Queue_task(VEG_, "veg_pools")                    ! ALL
-        CALL model%Queue_task(VEG_, "plant_characteristics")        ! ALL - ! required after updating veg pools !
-
-        IF (model%config%qmodel_id == QLAND) THEN
-          CALL model%Queue_task(SB_, "sb_pools")                    ! LAND ONLY
-        END IF
-
-        CALL model%Queue_task(TURB_, "humidity_scaling")            ! ALL
-        IF (.NOT. model%config%use_tmx) THEN
-          CALL model%Queue_task(TURB_, "surface_roughness")         ! ALL
-        END IF
-        CALL model%Queue_task(RAD_, "albedo")                       ! ALL
-
-        !-- averaging variables in time ------------------------------------------------------------------- !
-        CALL model%Queue_task(RAD_, "rad_time_average")             ! ALL
-        CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")      ! ALL
-        CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
-        IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
-          CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")   ! LAND or PLANT
-        END IF
-
-      ELSE
-        CALL finish(TRIM(routine), 'Some is wrong with the model%config%use_soil_phys_jsbach setting.')
-      END IF ! T/F use_soil_phys_jsbach
 #endif
     END SELECT  ! MODEL_JSBACH / MODEL_QUINCY
     ! Task Queue created
@@ -729,14 +612,13 @@ CONTAINS
       END SELECT
 
       ! SSE_ and HYDRO_
-      ! SPQ_
       ! VEG_ and SB_
       !
       ! Initialize SSE_ before HYDRO_
       IF (tile%Is_process_active(SSE_)) THEN
         CALL sse_init(tile)
       END IF
-      ! Initialize HYDRO_ before VEG_ and SPQ_
+      ! Initialize HYDRO_ before VEG_
       IF (tile%Is_process_active(HYDRO_)) THEN
         CALL hydro_init(tile)
       END IF
@@ -749,12 +631,6 @@ CONTAINS
 
 #ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
-        IF (.NOT. model%config%use_soil_phys_jsbach) THEN
-          ! Initialize HYDRO_ before SPQ_
-          IF (tile%Is_process_active(SPQ_)) THEN
-            CALL spq_init(tile)
-          END IF
-        END IF
         IF (tile%Is_process_active(VEG_)) THEN
           CALL veg_init(tile)
         END IF
