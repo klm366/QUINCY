@@ -278,15 +278,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C13      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C14      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, canopy_cond                 , weighted_by_fract)
-    IF (model%config%use_soil_phys_jsbach) THEN
-      ! only with jsbach soil physics processes enabled, otherwise calculated with SPQ_
-      dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, wtr_soil_root_pot           , weighted_by_fract)
-    END IF
-    ! Q_ASSIMI_ 3D
-    IF (.NOT. model%config%use_soil_phys_jsbach) THEN
-      ! only with SPQ_ calculated in update_canopy_fluxes
-      dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, ftranspiration_sl           , weighted_by_fract)
-    END IF
+    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, wtr_soil_root_pot           , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
   END SUBROUTINE aggregate_canopy_fluxes
@@ -294,7 +286,6 @@ CONTAINS
   ! ======================================================================================================= !
   !>Implementation of "update": ftranspiration_per_sl task
   !>
-  !>  called only with QUINCY and jsbach soil physics processes (not with SPQ_)
   !>
   SUBROUTINE update_ftranspiration_per_sl(tile, options)
     USE mo_q_assimi_process, ONLY: real_update_ftranspiration_per_sl => update_ftranspiration_per_sl
@@ -321,7 +312,7 @@ CONTAINS
   !>
   !>  plus: correction of ftranspiration_sl after aggregation
   !>
-  !>  called only with QUINCY and jsbach soil physics processes (not with SPQ_)
+  !>  called only with QUINCY and jsbach soil physics processes
   !>
   SUBROUTINE aggregate_ftranspiration_per_sl(tile, options)
     USE mo_jsb_math_constants,     ONLY: eps8

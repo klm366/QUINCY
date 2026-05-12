@@ -20,6 +20,7 @@ title: Authors
 - Lin Yu
 - Marvin Heidkamp
 - Melanie Thurner
+- Moritz Waldmann
 - Philipp de Vrese
 - Pinhsin Hu
 - Rainer Schneck

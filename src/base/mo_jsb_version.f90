@@ -26,7 +26,7 @@ MODULE mo_jsb_version
   PRIVATE
   PUBLIC :: get_icon_land_version
 
-  CHARACTER(len=*), PARAMETER :: icon_land_version = '2025.10-2' !< ICON-Land version string
+  CHARACTER(len=*), PARAMETER :: icon_land_version = '2026.04' !< ICON-Land version string
 
 CONTAINS
 
