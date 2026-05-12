@@ -49,7 +49,6 @@ MODULE mo_jsb_config_class
 #ifndef __NO_QUINCY__
     ! Characteristics of bgc material in this model: flags specifying used elements and bookkeeping vector for elements used
     ! Note: no logical for carbon because we presuppose that it is always used!
-    LOGICAL                        :: use_soil_phys_jsbach  !< use jsbach soil physics processes instead of SPQ_ with quincy
     LOGICAL                        :: force_c_isotopes      !< If c isotopes forcing should be used (else use atmland constant)
     LOGICAL                        :: include_nitrogen      !< If bgc materials contain nitrogen as element
     LOGICAL                        :: include_phosphorus    !< If bgc materials contain phosphorus as element
@@ -149,7 +148,6 @@ CONTAINS
     CHARACTER(len=SHORT_NAME_LEN) :: hsm_mode
     CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)
     LOGICAL                       :: relative_fractions_in_file
-    LOGICAL                       :: use_soil_phys_jsbach       !< use jsbach soil physics processes instead of SPQ_ with quincy
 #ifndef __NO_QUINCY__
     LOGICAL :: force_c_isotopes           !< use c isotopes forcing
     LOGICAL :: include_nitrogen           !< element variables in bgc_material (infrastructure)
@@ -185,7 +183,6 @@ CONTAINS
       fract_filename, &
       output_tiles, &
       relative_fractions_in_file, &
-      use_soil_phys_jsbach, &
 #ifndef __NO_QUINCY__
       force_c_isotopes, &
       include_nitrogen, &
@@ -243,12 +240,6 @@ CONTAINS
     output_tiles(:)            = ''
     relative_fractions_in_file = .TRUE.
 #ifndef __NO_QUINCY__
-#ifdef __QUINCY_STANDALONE__
-    use_soil_phys_jsbach       = .FALSE.  ! with quincy standalone the default is to not use the jsbach soil physics but SPQ_
-#else
-    use_soil_phys_jsbach       = .TRUE.   ! MODEL_QUINCY: default is TRUE
-                                          ! MODEL_JSBACH: not used
-#endif
     force_c_isotopes           = .TRUE.
     include_nitrogen           = .TRUE.
     include_phosphorus         = .TRUE.
@@ -260,8 +251,6 @@ CONTAINS
     slow_sb_pool_spinup_accelerator_length = 1000
     slow_sb_pool_spinup_accelerator_start_year = 300
     slow_sb_pool_spinup_accelerator_max_executions = 4
-#else
-    use_soil_phys_jsbach       = .TRUE.  ! MODEL_JSBACH: not used
 #endif
     init_from_ifs              = .FALSE.
     ifs_filename               = 'ifs2icon.nc'
@@ -289,19 +278,9 @@ CONTAINS
     CASE ("jsbach")
       model_config%model_scheme = MODEL_JSBACH
       CALL message(TRIM(routine), 'Use model_scheme JSBACH')
-      IF (.NOT. use_soil_phys_jsbach) THEN  ! different from default
-        CALL message(TRIM(routine), 'use_soil_phys_jsbach is set to FALSE, however, this option is not used for MODEL_JSBACH.')
-      ELSE
-        use_soil_phys_jsbach = .FALSE.  ! Set it to false, even though this switch (and model%config%use_soil_phys_jsbach) should not be used for MODEL_JSBACH
-      END IF
     CASE ("quincy")
       model_config%model_scheme = MODEL_QUINCY
       CALL message(TRIM(routine), 'Use model_scheme QUINCY')
-      IF (use_soil_phys_jsbach) THEN
-        CALL message(TRIM(routine), 'Using JSBACH soil physics')
-      ELSE
-        CALL message(TRIM(routine), 'Using SPQ soil physics')
-      END IF
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Selected model_scheme '//TRIM(model_scheme)//' not available.')
     END SELECT
@@ -329,7 +308,6 @@ CONTAINS
     model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
 #ifndef __NO_QUINCY__
-    model_config%use_soil_phys_jsbach       = use_soil_phys_jsbach
     model_config%force_c_isotopes           = force_c_isotopes
     ! organise elements
     model_config%include_nitrogen           = include_nitrogen
