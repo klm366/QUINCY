@@ -81,10 +81,6 @@ CONTAINS
       CALL init_usecase_pfts_with_forest_age_classes(model)
 
 #ifndef __NO_QUINCY__
-    ! QUINCY 11 PFTs
-    CASE ('quincy_11_pfts')
-      CALL init_usecase_quincy_11_pfts(model)
-
     ! QUINCY 13 PFTs
     CASE ('quincy_13_pfts')
       CALL init_usecase_quincy_13_pfts(model)
