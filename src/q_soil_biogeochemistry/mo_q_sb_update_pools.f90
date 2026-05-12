@@ -74,7 +74,7 @@ CONTAINS
     USE mo_q_sb_jsm_transport,     ONLY: calc_particle_fluxrate, calc_particle_transport_wrapper
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
     USE mo_jsb_physical_constants, ONLY: ATM_STANDARD_N15
-    USE mo_spq_util,               ONLY: calc_qmax_texture
+    USE mo_sb_util,                ONLY: calc_qmax_texture
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_config(Q_DFIRE_)
