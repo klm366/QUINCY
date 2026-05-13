@@ -25,7 +25,9 @@ MODULE mo_q_sb_rate_modifier
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_sb_rate_modifier
+  PUBLIC :: update_sb_rate_modifier, calc_temperature_rate_modifier, calc_oxygen_rate_modifier, &
+    &       calc_convert_bulk_to_liquid, calc_substrate_rate_modifier, calc_moisture_modifier, &
+    &       calc_anaerobic_volume_fraction
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_rate_modifier'
 
