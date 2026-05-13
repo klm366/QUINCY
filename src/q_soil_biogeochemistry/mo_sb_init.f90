@@ -2225,7 +2225,7 @@ CONTAINS
     INTEGER, PARAMETER          :: max_iter_phys_constraint = 200
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_analytical_ss_jsm'
     !> init out var
-    !> The current analytical steady-state solution only solves for the carbon pools, so we can safely   
+    !> The current analytical steady-state solution only solves for the carbon pools, so we can safely
     !> initialise the other elements with zeros here. The actual NetCDF reader will need to fill
     sb_pool_mt_domain(ix_soluable_litter, ixC, :, :, :) = 0.0_wp
     sb_pool_mt_domain(ix_polymeric_litter, ixC, :, :, :) = 0.0_wp
@@ -2406,7 +2406,7 @@ CONTAINS
             END IF
             qmax_org(ic, is, iblk) = qmax_org_target
             dom_assoc_carbon       = dom_assoc_carbon * assoc_scale
-            residue_assoc_carbon   = residue_assoc_carbon * assoc_scale                                                            
+            residue_assoc_carbon   = residue_assoc_carbon * assoc_scale
             !> C_bulk,1^soil = f_burial * (C_sol* + C_poly* + C_B* + C_D* + C_res*) + C_aDOM* + C_aRes*
             !> f_burial = (C_bulk,max - (C_aDOM* + C_aRes*))
             !>              / (C_sol* + C_poly* + C_B* + C_D* + C_res*)
