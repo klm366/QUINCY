@@ -251,6 +251,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_norg_n15_sl
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: particle_fluxrate
+    dsl4jsb_Real3D_onChunk :: surface_burial_frac
+    dsl4jsb_Real3D_onChunk :: bulk_carbon_max
     dsl4jsb_Real3D_onChunk :: transport_nh4_solute
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute
     dsl4jsb_Real3D_onChunk :: transport_nh4_assoc
@@ -530,6 +532,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_n15_sl) ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_po4_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate)           ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       surface_burial_frac)         ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       bulk_carbon_max)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc)         ! in
@@ -612,6 +616,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       Qmax_AlFe_cor)
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       surface_burial_frac)         ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       bulk_carbon_max)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       soil_litter_carbon_sl)       ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_c)             ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_n)             ! out
@@ -757,7 +763,7 @@ CONTAINS
       !>
       sb_particle_transport_hlp_mt = sb_transport_mt * 0._wp
       particle_fluxrate(:,:) = calc_particle_fluxrate(nc, nsoil_w, ixC, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
-        &                                             sb_pool_mt, sb_pool_prev_timestep_hlp_mt)
+        &                                             surface_burial_frac(:,:), sb_pool_mt, sb_pool_prev_timestep_hlp_mt)
       ! particle transport of organic and inorganic pools
       CALL calc_particle_transport_wrapper( &
         & nc, nsoil_w, num_sl_above_bedrock(:), soil_depth_sl(:,:), &                         ! in
@@ -872,6 +878,8 @@ CONTAINS
       & num_sl_above_bedrock(:), &
       & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
       & sb_pool_mt(:,:,:,:), &                       ! in
+      & bulk_carbon_max(:,:), &                      ! in
+      & surface_burial_frac(:,:), &                  ! in
       & bulk_soil_carbon_sl, &                       ! inout
       & soil_litter_carbon_sl, &                     ! inout
       & volume_min_sl)                               ! inout

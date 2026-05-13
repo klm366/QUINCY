@@ -117,6 +117,8 @@ MODULE mo_sb_constants
       fc_soluable2dom, &                !< fraction of soluable litter transformed into dom pool (JSM version)
       k_mort_microbial, &               !< mortality rate of microbes [s-1]
       min_mic_biomass, &                !< minimum microbial biomass density (stopping mortality) [mol C/m3]
+      min_volume_min_surface_analytical_ss, & !< minimum mineral-soil volume fraction in first layer for analytical SS init [-]
+      min_volume_min_gradient_analytical_ss, & !< minimum mineral-soil volume gradient with depth for analytical SS init [m-1]
       min_enzyme_fraction, &            !< minimum enzymatic fraction [--]
       max_enzyme_fraction, &            !< maximum enzymatic fraction [--]
       init_enzyme_fraction, &           !< initial values for enzyme allocation etc.[--]
@@ -435,6 +437,8 @@ CONTAINS
     fc_soluable2dom               = 0.7_wp                                        ! Yu et al. 2020, GMD
     k_mort_microbial              = 7.48_wp * 1.e-8_wp                            ! COMISSION, Ahrens et al. 2015
     min_mic_biomass               = 0.01_wp                                       ! Yu et al. 2020, GMD
+    min_volume_min_surface_analytical_ss = 0.05_wp                                ! steady-state-only first-layer mineral volume floor
+    min_volume_min_gradient_analytical_ss = 0.01_wp                               ! steady-state-only mineral volume floor gradient with depth [m-1]
     min_enzyme_fraction           = 0.01_wp                                       ! Yu et al. 2020, GMD
     max_enzyme_fraction           = 0.6_wp                                        ! tuned, mostly against the very P-poor site LUE observations (in Germany)
     init_enzyme_fraction          = 0.5_wp                                        ! initial values for enzyme allocation etc.
@@ -444,7 +448,7 @@ CONTAINS
     vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day             ! calibrated, from Yu et al. 2020
     vmax_depolymerisation_litter  = 0.3698_wp / one_year / one_day / 2._wp        ! calibrated, from Yu et al. 2020
     km_depolymerisation           = 0.08876_wp / 2._wp / molar_mass_C * 10._wp    ! calibrated, from Yu et al. 2020
-    enzyme_frac_total             = 0.005_wp
+    enzyme_frac_total             = 0.05_wp
     fc_p_res2dom                  = 0._wp                                         ! Yu et al. 2020, GMD
     fc_n_res2dom                  = 0.8_wp                                        ! Yu et al. 2020, GMD
     k_p_recyc_corr                = 0.3_wp                                        ! tuned [0,1], based on model-data comparison of 16 ecosystem traits (4 vegetation, 3 microbe, 9 soil) at 5 sites
