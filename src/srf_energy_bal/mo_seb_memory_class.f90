@@ -274,9 +274,7 @@ CONTAINS
     END IF
 
     ! Additional variables for LAND lct
-    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
-      ! NOTE  temporary solution to run the SPQ_ process with SEB_ variables at PFT tiles
-      & .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 ) THEN
 
       CALL mem%Add_var( 's_star', mem%s_star,                                                &
         & hgrid, surface,                                                                    &
