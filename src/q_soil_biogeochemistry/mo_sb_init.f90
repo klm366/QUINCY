@@ -1273,10 +1273,12 @@ CONTAINS
       &                               calc_convert_bulk_to_liquid, calc_substrate_rate_modifier
     USE mo_phy_schemes,         ONLY: calc_peaked_arrhenius_function
     dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_memory(HYDRO_)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_memory(HYDRO_)
 
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
@@ -1286,8 +1288,6 @@ CONTAINS
     REAL(wp), ALLOCATABLE       :: wtr_soil_sl(:,:,:)
     REAL(wp), ALLOCATABLE       :: wtr_soil_pot_sl(:,:,:)
     REAL(wp), ALLOCATABLE       :: ice_soil_sl(:,:,:)
-    REAL(wp), ALLOCATABLE       :: vol_field_cap_sl(:,:,:)
-    REAL(wp), ALLOCATABLE       :: soil_depth_sl(:,:,:)
     REAL(wp)                    :: wtr_soil_fc_local
     INTEGER                     :: nproma
     INTEGER                     :: nblks
@@ -1299,8 +1299,6 @@ CONTAINS
     LOGICAL                     :: have_wtr_soil
     LOGICAL                     :: have_wtr_soil_pot
     LOGICAL                     :: have_ice_soil
-    LOGICAL                     :: have_vol_field_cap
-    LOGICAL                     :: have_soil_depth
     LOGICAL                     :: have_rtm_decomposition
     LOGICAL                     :: have_rmm_decomposition
     LOGICAL                     :: have_rtm_depolymerisation
@@ -1315,10 +1313,14 @@ CONTAINS
     LOGICAL                     :: have_rmm_hsc
     LOGICAL                     :: have_enzyme_frac_ap
     LOGICAL                     :: need_jsm_modifiers
+    LOGICAL                     :: need_decomposition_modifiers
+    dsl4jsb_Real3D_onDomain     :: soil_depth_sl
+    dsl4jsb_Real3D_onDomain     :: vol_field_cap_sl
     CHARACTER(len=*), PARAMETER :: routine = modname//':sb_read_analytical_init_vars'
 
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_memory(HYDRO_)
 
     IF (TRIM(dsl4jsb_Config(SB_)%sb_init_scheme) /= 'analytical_ss') RETURN
 
@@ -1327,6 +1329,9 @@ CONTAINS
     nblks        =  hgrid%Get_nblks()
     vgrid_soil_w => Get_vgrid('soil_depth_water')
     nsoil_w      =  vgrid_soil_w%n_levels
+
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)
 
     CALL sb_allocate_analytical_init_vars(nproma, nsoil_w, nblks)
     CALL sb_set_analytical_init_vars_defaults()
@@ -1372,30 +1377,26 @@ CONTAINS
       & sb_analytical_init_vars%enzyme_frac_ap, have_enzyme_frac_ap)
 
     need_jsm_modifiers = TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == 'jsm'
+    need_decomposition_modifiers = TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == 'simple_1d'
 
     !> Fall back to reconstructing the modifiers from the raw box-tile hydro and soil-temperature state.
-    IF ((.NOT. have_rtm_decomposition) .OR. (.NOT. have_rmm_decomposition) .OR. &
+    IF ((need_decomposition_modifiers .AND. ((.NOT. have_rtm_decomposition) .OR. (.NOT. have_rmm_decomposition))) .OR. &
       & (need_jsm_modifiers .AND. ((.NOT. have_rtm_depolymerisation) .OR. (.NOT. have_rmm_depolymerisation) .OR. &
       &                            (.NOT. have_rtm_sorption)         .OR. (.NOT. have_rmm_sorption)         .OR. &
       &                            (.NOT. have_rtm_desorption)       .OR. (.NOT. have_rmm_desorption)       .OR. &
       &                            (.NOT. have_rtm_mic_uptake)       .OR. (.NOT. have_rmm_mic_uptake)       .OR. &
-      &                            (.NOT. have_rtm_hsc)              .OR. (.NOT. have_rmm_hsc))))) THEN
+      &                            (.NOT. have_rtm_hsc)              .OR. (.NOT. have_rmm_hsc)))) THEN
 
       ALLOCATE(t_soil_sl(nproma, nsoil_w, nblks))
       ALLOCATE(wtr_soil_sl(nproma, nsoil_w, nblks))
       ALLOCATE(wtr_soil_pot_sl(nproma, nsoil_w, nblks))
       ALLOCATE(ice_soil_sl(nproma, nsoil_w, nblks))
-      ALLOCATE(vol_field_cap_sl(nproma, nsoil_w, nblks))
-      ALLOCATE(soil_depth_sl(nproma, nsoil_w, nblks))
-
       CALL sb_try_read_analytical_var(input_file, 't_soil_sl', t_soil_sl, have_t_soil)
       CALL sb_try_read_analytical_var(input_file, 'wtr_soil_sl', wtr_soil_sl, have_wtr_soil)
       CALL sb_try_read_analytical_var(input_file, 'wtr_soil_pot_sl', wtr_soil_pot_sl, have_wtr_soil_pot)
       CALL sb_try_read_analytical_var(input_file, 'ice_soil_sl', ice_soil_sl, have_ice_soil)
-      CALL sb_try_read_analytical_var(input_file, 'vol_field_cap_sl', vol_field_cap_sl, have_vol_field_cap)
-      CALL sb_try_read_analytical_var(input_file, 'soil_depth_sl', soil_depth_sl, have_soil_depth)
 
-      IF ((.NOT. have_rtm_decomposition .OR. .NOT. have_rmm_decomposition) .AND. &
+      IF (need_decomposition_modifiers .AND. (.NOT. have_rtm_decomposition .OR. .NOT. have_rmm_decomposition) .AND. &
         & (.NOT. (have_t_soil .AND. have_wtr_soil_pot))) THEN
         CALL finish(TRIM(routine), 'Need either direct analytical decomposition modifiers ' // &
           & '(sb_rtm_decomposition_box, sb_rmm_decomposition_box) or raw state variables ' // &
@@ -1408,22 +1409,21 @@ CONTAINS
         &                            (.NOT. have_rtm_desorption)       .OR. (.NOT. have_rmm_desorption)       .OR. &
         &                            (.NOT. have_rtm_mic_uptake)       .OR. (.NOT. have_rmm_mic_uptake)       .OR. &
         &                            (.NOT. have_rtm_hsc)              .OR. (.NOT. have_rmm_hsc)) .AND. &
-        &      (.NOT. (have_t_soil .AND. have_wtr_soil .AND. have_ice_soil .AND. have_vol_field_cap .AND. have_soil_depth)))) THEN
+        &      (.NOT. (have_t_soil .AND. have_wtr_soil .AND. have_ice_soil))) THEN
         CALL finish(TRIM(routine), 'Need either direct analytical JSM modifiers ' // &
           & '(sb_rtm_*/sb_rmm_*_box) or raw state variables ' // &
-          & '(sse_t_soil_sl_box, hydro_wtr_soil_sl_box, hydro_ice_soil_sl_box, ' // &
-          & 'hydro_vol_field_cap_sl_box, hydro_soil_depth_sl_box) in ' // &
+          & '(sse_t_soil_sl_box, hydro_wtr_soil_sl_box, hydro_ice_soil_sl_box) in ' // &
           & TRIM(dsl4jsb_Config(SB_)%sb_analytical_init_filename))
       END IF
 
       DO iblk = 1, nblks
         DO ic = 1, nproma
           DO is = 1, nsoil_w
-            IF (.NOT. have_rtm_decomposition) THEN
+            IF (need_decomposition_modifiers .AND. .NOT. have_rtm_decomposition) THEN
               sb_analytical_init_vars%rtm_decomposition(ic, is, iblk) = calc_peaked_arrhenius_function( &
                 & t_soil_sl(ic, is, iblk), ea_decomposition, ed_decomposition, t_ref_decomposition)
             END IF
-            IF (.NOT. have_rmm_decomposition) THEN
+            IF (need_decomposition_modifiers .AND. .NOT. have_rmm_decomposition) THEN
               sb_analytical_init_vars%rmm_decomposition(ic, is, iblk) = MAX(1._wp - &
                 & wtr_soil_pot_sl(ic, is, iblk) / kmr_decomposition, 0.0_wp)
             END IF
@@ -1477,7 +1477,7 @@ CONTAINS
         END DO
       END DO
 
-      DEALLOCATE(t_soil_sl, wtr_soil_sl, wtr_soil_pot_sl, ice_soil_sl, vol_field_cap_sl, soil_depth_sl)
+      DEALLOCATE(t_soil_sl, wtr_soil_sl, wtr_soil_pot_sl, ice_soil_sl)
     END IF
 
     IF (need_jsm_modifiers .AND. (.NOT. have_enzyme_frac_ap)) THEN

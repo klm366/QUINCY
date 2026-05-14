@@ -31,12 +31,12 @@
 #   in the ICON output stream on the box tile.
 #------------------------------------------------------------------------------
 
-set -euo pipefail
+# set -euo pipefail
 
-module unload cdo >/dev/null 2>&1 || true
-module unload nco >/dev/null 2>&1 || true
-module load nco/5.0.6-gcc-11.2.0
-module load cdo/2.5.0-gcc-11.2.0
+# module unload cdo >/dev/null 2>&1 || true
+# module unload nco >/dev/null 2>&1 || true
+# module load nco/5.0.6-gcc-11.2.0
+# module load cdo/2.5.0-gcc-11.2.0
 
 cdo="cdo -s -P 8"
 
@@ -44,7 +44,7 @@ cdo="cdo -s -P 8"
 # paths and filenames
 
 input_path="./"
-input_file="icon_sb_analytical_init_source.nc"
+input_file="quincy_R2B5_land-CN-gswp3_S0_SS_forcing_lnd_basic_ml_20180101T000000Z.nc"
 output_path="./"
 output_file="bc_land_sb_analytical_init.nc"
 
@@ -54,6 +54,12 @@ nr_pft=13
 # Model timestep used for the litter-formation outputs written in
 # [mol m-3 timestep-1]. Adjust if the source simulation used another dtime.
 dtime_seconds=1800
+
+# Soil model that will consume the generated analytical-init file.
+# Supported values:
+#   jsm
+#   simple_1d
+sb_model_scheme="jsm"
 
 input_filepath="${input_path%/}/${input_file}"
 output_filepath="${output_path%/}/${output_file}"
@@ -90,11 +96,12 @@ make_pft_list () {
   printf '%s\n' "${vars[@]}"
 }
 
-required_direct_mappings=(
+base_required_mappings=(
   "hydro_frac_wtr_transp_down_sl_box:frac_wtr_transp_down_sl"
   "hydro_frac_w_lat_loss_sl_box:frac_w_lat_loss_sl"
-  "sb_rtm_decomposition_box:rtm_decomposition"
-  "sb_rmm_decomposition_box:rmm_decomposition"
+)
+
+direct_jsm_mappings=(
   "sb_rtm_depolymerisation_box:rtm_depolymerisation"
   "sb_rmm_depolymerisation_box:rmm_depolymerisation"
   "sb_rtm_sorption_box:rtm_sorption"
@@ -105,16 +112,26 @@ required_direct_mappings=(
   "sb_rmm_mic_uptake_box:rmm_mic_uptake"
   "sb_rtm_hsc_box:rtm_hsc"
   "sb_rmm_hsc_box:rmm_hsc"
-  "sb_enzyme_frac_AP_box:enzyme_frac_ap"
-  "sse_bulk_dens_sl_box:bulk_dens_sl"
-  "sse_silt_sl_box:silt_sl"
-  "sse_clay_sl_box:clay_sl"
+)
+
+fallback_jsm_state_mappings=(
   "sse_t_soil_sl_box:t_soil_sl"
   "hydro_wtr_soil_sl_box:wtr_soil_sl"
-  "hydro_wtr_soil_pot_sl_box:wtr_soil_pot_sl"
   "hydro_ice_soil_sl_box:ice_soil_sl"
-  "hydro_vol_field_cap_sl_box:vol_field_cap_sl"
-  "hydro_soil_depth_sl_box:soil_depth_sl"
+)
+
+direct_simple_mappings=(
+  "sb_rtm_decomposition_box:rtm_decomposition"
+  "sb_rmm_decomposition_box:rmm_decomposition"
+)
+
+fallback_simple_state_mappings=(
+  "sse_t_soil_sl_box:t_soil_sl"
+  "hydro_wtr_soil_pot_sl_box:wtr_soil_pot_sl"
+)
+
+optional_direct_mappings=(
+  "sb_enzyme_frac_AP_box:enzyme_frac_ap"
 )
 
 litter_mappings=(
@@ -126,15 +143,98 @@ litter_mappings=(
 selected_direct_vars=()
 direct_renames=()
 
-for mapping in "${required_direct_mappings[@]}"; do
+append_mapping_if_present () {
+  local mapping="$1"
+  local src_var="${mapping%%:*}"
+  local dst_var="${mapping##*:}"
+  if has_var "${src_var}"; then
+    selected_direct_vars+=("${src_var}")
+    direct_renames+=("${src_var}:${dst_var}")
+    return 0
+  fi
+  return 1
+}
+
+all_mappings_present () {
+  local mapping
+  for mapping in "$@"; do
+    local src_var="${mapping%%:*}"
+    if ! has_var "${src_var}"; then
+      return 1
+    fi
+  done
+  return 0
+}
+
+for mapping in "${base_required_mappings[@]}"; do
   src_var="${mapping%%:*}"
   dst_var="${mapping##*:}"
   if ! has_var "${src_var}"; then
     echo "Missing required variable in ICON output: ${src_var}"
     exit 1
   fi
-  selected_direct_vars+=("${src_var}")
-  direct_renames+=("${src_var}:${dst_var}")
+  append_mapping_if_present "${mapping}" >/dev/null
+done
+
+case "${sb_model_scheme}" in
+  "jsm")
+    if all_mappings_present "${direct_jsm_mappings[@]}"; then
+      for mapping in "${direct_jsm_mappings[@]}"; do
+        append_mapping_if_present "${mapping}" >/dev/null
+      done
+    else
+      for mapping in "${direct_jsm_mappings[@]}"; do
+        append_mapping_if_present "${mapping}" >/dev/null || true
+      done
+      for mapping in "${fallback_jsm_state_mappings[@]}"; do
+        src_var="${mapping%%:*}"
+        if ! append_mapping_if_present "${mapping}" >/dev/null; then
+          echo "Missing required fallback variable for JSM analytical init: ${src_var}"
+          exit 1
+        fi
+      done
+    fi
+    for mapping in "${direct_simple_mappings[@]}"; do
+      append_mapping_if_present "${mapping}" >/dev/null || true
+    done
+    ;;
+  "simple_1d")
+    if all_mappings_present "${direct_simple_mappings[@]}"; then
+      for mapping in "${direct_simple_mappings[@]}"; do
+        append_mapping_if_present "${mapping}" >/dev/null
+      done
+    else
+      for mapping in "${direct_simple_mappings[@]}"; do
+        append_mapping_if_present "${mapping}" >/dev/null || true
+      done
+      for mapping in "${fallback_simple_state_mappings[@]}"; do
+        src_var="${mapping%%:*}"
+        if ! append_mapping_if_present "${mapping}" >/dev/null; then
+          echo "Missing required fallback variable for simple_1d analytical init: ${src_var}"
+          exit 1
+        fi
+      done
+    fi
+    for mapping in "${direct_jsm_mappings[@]}"; do
+      append_mapping_if_present "${mapping}" >/dev/null || true
+    done
+    for mapping in "${fallback_jsm_state_mappings[@]}"; do
+      append_mapping_if_present "${mapping}" >/dev/null || true
+    done
+    ;;
+  *)
+    echo "Unsupported sb_model_scheme: ${sb_model_scheme}"
+    exit 1
+    ;;
+esac
+
+for mapping in "${optional_direct_mappings[@]}"; do
+  src_var="${mapping%%:*}"
+  if append_mapping_if_present "${mapping}" >/dev/null; then
+    :
+  else
+    echo "Optional analytical-init variable not found, skipping: ${src_var}"
+  fi
 done
 
 selected_litter_vars=()
