@@ -1,4 +1,4 @@
-!> vegetation process memory (QUINCY)
+!> QUINCY vegetation process memory
 !>
 !> ICON-Land
 !>
