@@ -808,7 +808,7 @@ CONTAINS
 
       CALL mem%Add_var('sb_pool_total_bg_soil_n15', mem%sb_pool_total_bg_soil_n15, &
         & hgrid, vgrid_soil_w, &
-        & t_cf('sb_pool_total_som_n15', 'mol m-3', 'total N15, sum of SOM and below ground litter in sb_pool components'), &
+        & t_cf('sb_pool_total_bg_soil_n15', 'mol m-3', 'total N15, sum of SOM and below ground litter in sb_pool components'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -3600,10 +3600,10 @@ CONTAINS
     &                                   l_elements, element_list, element_unit)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_sb_bgcm_with_elements),     INTENT(inout) :: this                   ! bgcm object
-    CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! bgcm name       (No spaces !)
+    CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! bgcm short name (No spaces !)
     INTEGER,                            INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,         INTENT(in)    :: element_list(:) ! @TODO remove | list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,         INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3656,10 +3656,10 @@ CONTAINS
   SUBROUTINE sb_bgcm_with_components_init(this, name, shortname, elements_index_map, &
     &                                     l_elements, element_list, element_unit)
     CLASS(t_sb_bgcm_with_components),     INTENT(inout) :: this                   ! bgcm object
-    CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! bgcm name       (No spaces !)
+    CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! bgcm short name (No spaces !)
     INTEGER,                              INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,           INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,           INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3683,10 +3683,10 @@ CONTAINS
   SUBROUTINE sb_bgcm_main_init(this, name, shortname, elements_index_map, &
     &                          l_elements, element_list, element_unit)
     CLASS(t_sb_bgcm_main),          INTENT(inout) :: this                   ! bgcm object
-    CHARACTER(LEN=*),               INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),               INTENT(in)    :: name                   ! bgcm name       (No spaces !)
+    CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! bgcm short name (No spaces !)
     INTEGER,                        INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,     INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,     INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3702,10 +3702,10 @@ CONTAINS
   !>
   !> create, init and append a sb bgcm with components
   !>
-  FUNCTION Add_sb_bgc_material_with_components(pool, bgcm_id, name, shortname, unit, elements_index_map) &
+  FUNCTION Add_sb_bgc_material_with_components(bgcm, bgcm_id, name, shortname, unit, elements_index_map) &
       & RESULT(sb_bgcm_with_components)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: pool                  !< pool to which this pool with component should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: bgcm                  !< bgcm to which this bgcm with component should be added
     INTEGER,                    INTENT(in)    :: bgcm_id               !< id of this sb bgcm with components
     CHARACTER(LEN=*),           INTENT(in)    :: name                  !< name of this sb bgcm with components
     CHARACTER(LEN=*),           INTENT(in)    :: shortname             !< shortname of this sb bgcm with components
@@ -3750,18 +3750,18 @@ CONTAINS
     sb_bgcm_with_components%residue_assoc => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
       & name = 'residue_assoc_bgcm', shortname = 'residue_assoc', elements_index_map = elements_index_map(:), unit = unit)
 
-    ! Add the bookkeepoing for this sb bgcm with components
-    CALL pool%Add_bgcm(sb_bgcm_with_components, bgcm_id)
+    ! Add the bookkeeping for this sb bgcm with components
+    CALL bgcm%Add_bgcm(sb_bgcm_with_components, bgcm_id)
   END FUNCTION Add_sb_bgc_material_with_components
 
   ! ======================================================================================================= !
   !>
   !> create, init and append a sb bgcm with elements
   !>
-  FUNCTION Add_sb_bgc_material_with_elements(pool,  name, shortname, elements_index_map, unit, bgcm_id) &
+  FUNCTION Add_sb_bgc_material_with_elements(bgcm,  name, shortname, elements_index_map, unit, bgcm_id) &
       & RESULT(sb_bgcm_with_elements)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: pool                  !< pool to which this pool with elements should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: bgcm                  !< bgcm to which this bgcm with elements should be added
     CHARACTER(LEN=*),           INTENT(in)    :: name                  !< name of this sb bgcm with elements
     CHARACTER(LEN=*),           INTENT(in)    :: shortname             !< shortname of this sb bgcm with elements
     INTEGER,                    INTENT(in)    :: elements_index_map(:) !< mapping elements ID -> IND
@@ -3774,7 +3774,7 @@ CONTAINS
 
     CALL sb_bgcm_with_elements%Init(name = name, shortname = shortname,  &
       & elements_index_map = elements_index_map(:), l_elements = .TRUE., element_unit = unit)
-    CALL pool%Add_bgcm(sb_bgcm_with_elements, bgcm_id)
+    CALL bgcm%Add_bgcm(sb_bgcm_with_elements, bgcm_id)
   END FUNCTION Add_sb_bgc_material_with_elements
 
 #endif

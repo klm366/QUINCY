@@ -579,7 +579,7 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !> create the bgc_material components structures
       !>
-      ! each component structure is created within the main bgcm pool structure together with required bookkeeping information
+      ! each component structure is created within the t_veg_bgcm_main together with required bookkeeping information
       ! "shortname" is used for model output names
       ! veg_pool
       mem%veg_bgcm_main%veg_pool => Add_veg_bgc_material_with_components(mem%veg_bgcm_main, &
@@ -3528,10 +3528,10 @@ CONTAINS
     &                                    l_elements, element_list, element_unit)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_veg_bgcm_with_elements),    INTENT(inout) :: this                   ! object of TYPE t_sb_elements_pool
-    CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! bgcm name
+    CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! bgcm short name
     INTEGER,                            INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,         INTENT(in)    :: element_list(:) ! @TODO remove | list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,         INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3585,10 +3585,10 @@ CONTAINS
   SUBROUTINE veg_bgcm_with_components_init(this, name, shortname, elements_index_map, &
     &                                      l_elements, element_list, element_unit)
     CLASS(t_veg_bgcm_with_components),    INTENT(inout) :: this                   ! object of TYPE t_sb_components_pool
-    CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! bgcm name
+    CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! bgcm short name
     INTEGER,                              INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,           INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,           INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3613,10 +3613,10 @@ CONTAINS
     &                           l_elements, element_list, element_unit)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_veg_bgcm_main),         INTENT(inout) :: this                   ! object of TYPE t_sb_components_pool
-    CHARACTER(LEN=*),               INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),               INTENT(in)    :: name                   ! bgcm name
+    CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! bgcm short name
     INTEGER,                        INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,     INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,     INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3632,10 +3632,10 @@ CONTAINS
   !>
   !> create, init and append a veg bgcm with components
   !>
-  FUNCTION Add_veg_bgc_material_with_components(pool, bgcm_id, name, shortname, unit, elements_index_map) &
+  FUNCTION Add_veg_bgc_material_with_components(bgcm, bgcm_id, name, shortname, unit, elements_index_map) &
       & RESULT(veg_bgcm_with_components)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT)  :: pool                  !< pool to which this pool with component should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT)  :: bgcm                  !< bgcm to which this bgcm with component should be added
     INTEGER,                    INTENT(in)     :: bgcm_id               !< id of this veg bgcm with components
     CHARACTER(LEN=*),           INTENT(in)     :: name                  !< name of this veg bgcm with components
     CHARACTER(LEN=*),           INTENT(in)     :: shortname             !< shortname of this veg bgcm with components
@@ -3678,7 +3678,7 @@ CONTAINS
       & name = 'fruit_bgcm', shortname = 'fruit', elements_index_map = elements_index_map(:), unit = unit)
 
     ! Add the bookkeepoing for this veg bgcm with components
-    CALL pool%Add_bgcm(veg_bgcm_with_components, bgcm_id)
+    CALL bgcm%Add_bgcm(veg_bgcm_with_components, bgcm_id)
 
   END FUNCTION Add_veg_bgc_material_with_components
 
@@ -3686,10 +3686,10 @@ CONTAINS
   !>
   !> create, init and append a veg bgcm with elements
   !>
-  FUNCTION Add_veg_bgc_material_with_elements(pool,  name, shortname, elements_index_map, unit, bgcm_id) &
+  FUNCTION Add_veg_bgc_material_with_elements(bgcm,  name, shortname, elements_index_map, unit, bgcm_id) &
       & RESULT(veg_bgcm_with_elements)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: pool                   !< pool to which this pool with elements should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: bgcm                   !< bgcm to which this bgcm with elements should be added
     CHARACTER(LEN=*),           INTENT(in)    :: name                   !< name of this veg bgcm with elements
     CHARACTER(LEN=*),           INTENT(in)    :: shortname              !< shortname of this veg bgcm with elements
     INTEGER,                    INTENT(in)    :: elements_index_map(:)  !< mapping elements ID -> IND
@@ -3702,7 +3702,7 @@ CONTAINS
     ALLOCATE(veg_bgcm_with_elements)
     CALL veg_bgcm_with_elements%Init(name = name, shortname = shortname,  &
       & elements_index_map = elements_index_map(:), l_elements = .TRUE., element_unit = unit)
-    CALL pool%Add_bgcm(veg_bgcm_with_elements, bgcm_id)
+    CALL bgcm%Add_bgcm(veg_bgcm_with_elements, bgcm_id)
 
   END FUNCTION Add_veg_bgc_material_with_elements
 

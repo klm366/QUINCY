@@ -1,4 +1,4 @@
-!> Contains class definitions for bgc material (bgcm)
+!> Contains class definitions for biogeochemical material (bgcm)
 !>
 !> ICON-Land
 !>
@@ -100,7 +100,7 @@ MODULE mo_lnd_bgcm_class
   !>
   !>IDs of elements, Carbon, Nitrogen, Phosphorous and their isotopes
   !>
-  !>(since elements are dynamic these ID can only be used as idx in arrays with all possible elements)
+  !>  (since elements are dynamic these ID can only be used as idx in arrays with all possible elements)
   !>
   ENUM, BIND(C)
     ENUMERATOR ::           &
@@ -146,8 +146,8 @@ CONTAINS
     CHARACTER(len=*),           INTENT(IN) :: tile_name !< name of the tile with this bgc material
     CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine
     ! -------------------------------------------------------------------------------------------------- !
-    IF(ASSOCIATED(this%bgcm_list)) THEN
-      IF(.NOT. SIZE(this%bgcm_list) .EQ. 0) THEN
+    IF (ASSOCIATED(this%bgcm_list)) THEN
+      IF (.NOT. SIZE(this%bgcm_list) .EQ. 0) THEN
         CALL finish(TRIM(routine), 'Found bgcm '//TRIM(this%name)//' in tile '//TRIM(tile_name)// &
           & ' with elements and compartments, but no behaviour is implemented for this so far, please check!')
       END IF
@@ -177,15 +177,15 @@ CONTAINS
 
     ! assert that all variables have the same dimensionality
     DO i_element = 1, nr_of_elements
-      IF(this_dim == -1) THEN
+      IF (this_dim == -1) THEN
         this_dim = this%element_list(i_element)%p%type
-      ELSEIF(this_dim /= this%element_list(i_element)%p%type) THEN
+      ELSEIF (this_dim /= this%element_list(i_element)%p%type) THEN
         CALL finish(TRIM(routine), 'Found elements with different dimensions for bgcm '//TRIM(this%name)// &
           & ' in tile '//TRIM(tile_name)//', but no behaviour is implemented for this so far, please check!')
       ENDIF
     ENDDO
 
-    IF(this_dim /= REAL2D .AND. this_dim /= REAL3D) THEN
+    IF (this_dim /= REAL2D .AND. this_dim /= REAL3D) THEN
       CALL finish(TRIM(routine), 'Found elements with other than 2D or 3D type for bgcm '//TRIM(this%name)// &
         & ' in tile '//TRIM(tile_name)//' for this so far no behaviour is implemented, please check!')
     ENDIF
@@ -268,7 +268,7 @@ CONTAINS
     element_idx = elements_index_map(element_id)
 
     ! Assert that the model is running with this element
-    IF ( element_idx == 0 ) THEN
+    IF (element_idx == 0) THEN
       CALL finish(TRIM(caller), 'Unknown or unused element id: ' // int2string(element_id) &
         & // ' - element name: "' // get_name_for_element_id(element_id) // '". Please check!' )
     ENDIF
@@ -430,24 +430,24 @@ CONTAINS
     INTEGER, OPTIONAL,         INTENT(in)    :: id  !< unique id of this bgcm
 
     TYPE(t_lnd_bgcm_p), POINTER :: bgcm_list(:), leaf_list(:)
-    INTEGER :: n_pools, n_leaves, i
+    INTEGER :: n_bgcm_main, n_leaves, i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_lnd_bgcm_add_bgcm'
 
     ! if bgc materials should be used within the bgcm store, they need to have a unique id for quick association
-    IF( PRESENT(id)) bgcm%id = id
+    IF (PRESENT(id)) bgcm%id = id
 
     IF (ASSOCIATED(this%bgcm_list)) THEN
-      n_pools = SIZE(this%bgcm_list)
+      n_bgcm_main = SIZE(this%bgcm_list)
     ELSE
-      n_pools = 0
+      n_bgcm_main = 0
     END IF
 
-    ALLOCATE(bgcm_list(n_pools+1))
-    DO i=1,n_pools
+    ALLOCATE(bgcm_list(n_bgcm_main + 1))
+    DO i = 1, n_bgcm_main
       bgcm_list(i)%p => this%bgcm_list(i)%p
     END DO
-    bgcm_list(n_pools+1)%p => bgcm
+    bgcm_list(n_bgcm_main + 1)%p => bgcm
 
     IF (ASSOCIATED(this%bgcm_list)) DEALLOCATE(this%bgcm_list)
     this%bgcm_list => bgcm_list
@@ -464,16 +464,16 @@ CONTAINS
       ALLOCATE(leaf_list(n_leaves + 1))
     END IF
 
-    DO i=1,n_leaves
+    DO i = 1, n_leaves
       leaf_list(i)%p => this%leaf_list(i)%p
     END DO
 
     IF (ASSOCIATED(bgcm%leaf_list)) THEN
-      DO i=1,SIZE(bgcm%leaf_list)
+      DO i = 1, SIZE(bgcm%leaf_list)
         leaf_list(n_leaves+i)%p => bgcm%leaf_list(i)%p
       END DO
     ELSE
-      leaf_list(n_leaves+1)%p => bgcm
+      leaf_list(n_leaves + 1)%p => bgcm
     END IF
 
     IF (ASSOCIATED(this%leaf_list)) DEALLOCATE(this%leaf_list)
