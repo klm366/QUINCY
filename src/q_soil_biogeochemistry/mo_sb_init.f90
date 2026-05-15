@@ -1783,70 +1783,6 @@ CONTAINS
   END SUBROUTINE calc_analytical_ss_simple_sm
 
   ! ======================================================================================================= !
-  !> temporary debug dump of analytical steady-state carbon pools
-  !>
-  SUBROUTINE dump_analytical_ss_pools(filename, nproma, nsoil_w, nblks, num_sl_above_bedrock, sb_pool_mt_domain)
-
-    CHARACTER(len=*), INTENT(in) :: filename
-    INTEGER,          INTENT(in) :: nproma
-    INTEGER,          INTENT(in) :: nsoil_w
-    INTEGER,          INTENT(in) :: nblks
-    REAL(wp),         INTENT(in) :: num_sl_above_bedrock(:,:)
-    REAL(wp),         INTENT(in) :: sb_pool_mt_domain(:,:,:,:,:)
-
-    INTEGER :: lun
-    INTEGER :: ios
-    INTEGER :: iblk, ic, is
-
-    OPEN(newunit=lun, file=TRIM(filename), status='replace', action='write', iostat=ios)
-    IF (ios /= 0) THEN
-      CALL finish(TRIM(modname)//':dump_analytical_ss_pools', &
-        & 'Could not open analytical steady-state debug output file: '//TRIM(filename))
-    END IF
-
-    WRITE(lun,'(A)') 'iblk ic is c_soluable_litter c_polymeric_litter c_woody_litter &
-      &                 c_microbial c_residue c_dom c_dom_assoc c_residue_assoc &
-      &                 n_soluable_litter n_polymeric_litter n_woody_litter &
-      &                 n_microbial n_residue n_dom n_dom_assoc n_residue_assoc &
-      &                 p_soluable_litter p_polymeric_litter p_woody_litter &
-      &                 p_microbial p_residue p_dom p_dom_assoc p_residue_assoc'
-
-    DO iblk = 1,nblks
-      DO ic = 1,nproma
-        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
-          WRITE(lun,'(3(I6,1X),24(ES24.16E3,1X))') iblk, ic, is, &
-            & sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_woody_litter, ixC, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_soluable_litter, ixN, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_polymeric_litter, ixN, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_woody_litter, ixN, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_microbial, ixN, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_residue, ixN, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_dom, ixN, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_dom_assoc, ixN, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_residue_assoc, ixN, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_soluable_litter, ixP, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_polymeric_litter, ixP, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_woody_litter, ixP, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_microbial, ixP, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_residue, ixP, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_dom, ixP, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_dom_assoc, ixP, ic, is, iblk), &
-            & sb_pool_mt_domain(ix_residue_assoc, ixP, ic, is, iblk)
-        END DO
-      END DO
-    END DO
-
-    CLOSE(lun)
-  END SUBROUTINE dump_analytical_ss_pools
-
-  ! ======================================================================================================= !
   !> calculate the layer-wise maximum bulk carbon allowed by the prescribed minimum mineral-soil volume
   !>
   SUBROUTINE calc_bulk_carbon_max_profile(nproma, nsoil_w, nblks, num_sl_above_bedrock, soil_lay_depth_center_sl, bulk_carbon_max)
@@ -3001,11 +2937,6 @@ CONTAINS
         & km_slow_po4(:,:,iblk) )           ! inout
     END DO
 
-    !> Temporary debug dump after the full simple_1d initialisation is complete so the output
-    !> contains the final C, N, and P pool sizes for both legacy and analytical_ss options.
-    CALL dump_analytical_ss_pools('sb_analytical_init_debug_simple_sm.txt', nproma, nsoil_w, nblks, &
-      & num_sl_above_bedrock, sb_pool_mt_domain)
-
     ! de-allocate local allocatable var
     DEALLOCATE(p_labile_slow_site)
   END SUBROUTINE sb_init_simple_sm
@@ -3673,11 +3604,6 @@ CONTAINS
     sb_pool_mt_domain(ix_mycorrhiza, ixC14, :, :, :) = sb_pool_mt_domain(ix_mycorrhiza, ixC, :, :, :) * hlp_frac_c14
     sb_pool_mt_domain(ix_mycorrhiza, ixN15, :, :, :) = sb_pool_mt_domain(ix_mycorrhiza, ixN, :, :, :) / &
       &                                         (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-
-    !> Temporary debug dump after the full JSM initialisation is complete so the output
-    !> contains the final C, N, and P pool sizes for both legacy and analytical_ss options.
-    CALL dump_analytical_ss_pools('sb_analytical_init_debug_jsm.txt', nproma, nsoil_w, nblks, &
-      & num_sl_above_bedrock, sb_pool_mt_domain)
 
     ! de-allocate local allocatable var
     DEALLOCATE(p_labile)
