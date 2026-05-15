@@ -14,7 +14,7 @@
 !>### define bgcm class, indices (enumerator) and helper functions for bgc material and their components
 !>
 MODULE mo_lnd_bgcm_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_util,                ONLY: int2string
