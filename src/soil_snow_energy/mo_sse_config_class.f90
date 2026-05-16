@@ -44,8 +44,11 @@ MODULE mo_sse_config_class
     LOGICAL  :: l_uniform_snow  !< T: Temporary bugfix to use zero or one snow fraction for soil temperature computation
     REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
                                 !! temperature for freezing/melting [m water equivalent]
+    CHARACTER(len=filename_max) :: ic_filename_3d !< Initial condition data with soil-layer dimension
+    CHARACTER(len=filename_max) :: bc_filename_3d !< Boundary condition data with soil-layer dimension
     ! quincy
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< IQ (QUINCY) soil input data
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename_3d !< IQ (QUINCY) soil input data with soil-layer dimension
     INTEGER                     :: quincy_nsoil_e           !< number of soil layers for soil energy calculations (equivalent 'quincy_nsoil_w' in HYDRO_)
 #ifdef __QUINCY_STANDALONE__
     ! quincy standalone
