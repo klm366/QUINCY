@@ -68,6 +68,10 @@ MODULE mo_sse_init
       & fr_silt_deep(:,:  ) => Null(), &
       & fr_clay_deep(:,:  ) => Null(), &
       & bulk_density(:,:  ) => NULL(), &
+      & fr_sand_sl  (:,:,:) => NULL(), &
+      & fr_silt_sl  (:,:,:) => NULL(), &
+      & fr_clay_sl  (:,:,:) => NULL(), &
+      & bulk_density_sl(:,:,:) => NULL(), &
       & t_srf_mon   (:,:,:) => NULL(), &
       & ifs_tsoil   (:,:,:) => NULL(), &
       & ifs_tskin   (:,:  ) => NULL()
@@ -120,6 +124,10 @@ CONTAINS
     IF (ASSOCIATED(sse_init_vars%fr_silt_deep)) DEALLOCATE(sse_init_vars%fr_silt_deep)
     IF (ASSOCIATED(sse_init_vars%fr_clay_deep)) DEALLOCATE(sse_init_vars%fr_clay_deep)
     IF (ASSOCIATED(sse_init_vars%bulk_density)) DEALLOCATE(sse_init_vars%bulk_density)
+    IF (ASSOCIATED(sse_init_vars%fr_sand_sl)) DEALLOCATE(sse_init_vars%fr_sand_sl)
+    IF (ASSOCIATED(sse_init_vars%fr_silt_sl)) DEALLOCATE(sse_init_vars%fr_silt_sl)
+    IF (ASSOCIATED(sse_init_vars%fr_clay_sl)) DEALLOCATE(sse_init_vars%fr_clay_sl)
+    IF (ASSOCIATED(sse_init_vars%bulk_density_sl)) DEALLOCATE(sse_init_vars%bulk_density_sl)
 
     IF (ASSOCIATED(sse_init_vars%t_srf_mon))    DEALLOCATE(sse_init_vars%t_srf_mon)
 
@@ -197,13 +205,53 @@ CONTAINS
       sse_init_vars%fr_silt_deep(:,:)   = missval
       sse_init_vars%fr_clay_deep(:,:)   = missval
       sse_init_vars%bulk_density(:,:)   = missval
+
+      IF (model%config%l_read_quincy_soil_3d) THEN
+        ALLOCATE(                                             &
+          & sse_init_vars%fr_sand_sl     (nproma, soil_e%n_levels, nblks), &
+          & sse_init_vars%fr_silt_sl     (nproma, soil_e%n_levels, nblks), &
+          & sse_init_vars%fr_clay_sl     (nproma, soil_e%n_levels, nblks), &
+          & sse_init_vars%bulk_density_sl(nproma, soil_e%n_levels, nblks)  &
+          & )
+
+        sse_init_vars%fr_sand_sl     (:,:,:) = missval
+        sse_init_vars%fr_silt_sl     (:,:,:) = missval
+        sse_init_vars%fr_clay_sl     (:,:,:) = missval
+        sse_init_vars%bulk_density_sl(:,:,:) = missval
+      END IF
     END IF ! l_soil_texture
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename), model%grid_id)
 
     ! soil texture information
     !
-    IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
+    IF (dsl4jsb_Config(SSE_)%l_soil_texture .AND. model%config%l_read_quincy_soil_3d) THEN
+
+      CALL input_file%Close()
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename_3d), model%grid_id)
+
+      CALL read_sse_soil_texture_input_3d(input_file, 'FR_SAND', sse_init_vars%fr_sand_sl, 0.3_wp)
+      CALL read_sse_soil_texture_input_3d(input_file, 'FR_SILT', sse_init_vars%fr_silt_sl, 0.4_wp)
+      CALL read_sse_soil_texture_input_3d(input_file, 'FR_CLAY', sse_init_vars%fr_clay_sl, 0.3_wp)
+      CALL input_file%Close()
+
+      sse_init_vars%fr_sand(:,:)      = sse_init_vars%fr_sand_sl(:,1,:)
+      sse_init_vars%fr_silt(:,:)      = sse_init_vars%fr_silt_sl(:,1,:)
+      sse_init_vars%fr_clay(:,:)      = sse_init_vars%fr_clay_sl(:,1,:)
+      sse_init_vars%fr_sand_deep(:,:) = sse_init_vars%fr_sand_sl(:,soil_e%n_levels,:)
+      sse_init_vars%fr_silt_deep(:,:) = sse_init_vars%fr_silt_sl(:,soil_e%n_levels,:)
+      sse_init_vars%fr_clay_deep(:,:) = sse_init_vars%fr_clay_sl(:,soil_e%n_levels,:)
+
+#ifndef __NO_QUINCY__
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_quincy_soil_filename_3d), model%grid_id)
+        CALL read_sse_soil_texture_input_3d(input_file, 'BLDFIE', sse_init_vars%bulk_density_sl, 1000.0_wp, lallow_zero=.FALSE.)
+        sse_init_vars%bulk_density(:,:) = sse_init_vars%bulk_density_sl(:,1,:)
+      END SELECT
+#endif
+
+    ELSE IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
 
       !>     - Fraction of sand in upper soil
       CALL read_bc_data(input_file, 'FR_SAND', tile%name, sse_init_vars%fr_sand, llimit=0._wp)
@@ -316,6 +364,26 @@ CONTAINS
     END IF
 
   END SUBROUTINE sse_read_init_vars
+
+  SUBROUTINE read_sse_soil_texture_input_3d(input_file, variable_name, field, default, lallow_zero)
+    TYPE(t_input_file), INTENT(inout) :: input_file
+    CHARACTER(len=*),   INTENT(in)    :: variable_name
+    REAL(wp), TARGET,   INTENT(inout) :: field(:,:,:)
+    REAL(wp),           INTENT(in)    :: default
+    LOGICAL, OPTIONAL,  INTENT(in)    :: lallow_zero
+
+    REAL(wp), POINTER :: ptr_3D(:,:,:)
+    LOGICAL           :: allow_zero
+
+    allow_zero = .TRUE.
+    IF (PRESENT(lallow_zero)) allow_zero = lallow_zero
+    ptr_3D => input_file%Read_3d(variable_name=variable_name, fill_array=field)
+    IF (allow_zero) THEN
+      field(:,:,:) = MERGE(ptr_3D, default, ptr_3D >= 0.0_wp)
+    ELSE
+      field(:,:,:) = MERGE(ptr_3D, default, ptr_3D > 0.0_wp)
+    END IF
+  END SUBROUTINE read_sse_soil_texture_input_3d
 #endif
 
 #ifdef __QUINCY_STANDALONE__
@@ -461,18 +529,33 @@ CONTAINS
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
-        ! sand
-        !
-        sand_sl(:,:,:) = SPREAD(sse_init_vars%fr_sand(:,:), DIM = 2, ncopies = nsoil)
-        ! silt
-        !
-        silt_sl(:,:,:) = SPREAD(sse_init_vars%fr_silt(:,:), DIM = 2, ncopies = nsoil)
-        ! clay
-        !
-        clay_sl(:,:,:) = SPREAD(sse_init_vars%fr_clay(:,:), DIM = 2, ncopies = nsoil)
-        ! bulk density
-        !
-        bulk_dens_sl(:,:,:) = SPREAD(sse_init_vars%bulk_density(:,:), DIM = 2, ncopies = nsoil)
+        IF (model%config%l_read_quincy_soil_3d) THEN
+          ! sand
+          !
+          sand_sl(:,:,:) = sse_init_vars%fr_sand_sl(:,:,:)
+          ! silt
+          !
+          silt_sl(:,:,:) = sse_init_vars%fr_silt_sl(:,:,:)
+          ! clay
+          !
+          clay_sl(:,:,:) = sse_init_vars%fr_clay_sl(:,:,:)
+          ! bulk density
+          !
+          bulk_dens_sl(:,:,:) = sse_init_vars%bulk_density_sl(:,:,:)
+        ELSE
+          ! sand
+          !
+          sand_sl(:,:,:) = SPREAD(sse_init_vars%fr_sand(:,:), DIM = 2, ncopies = nsoil)
+          ! silt
+          !
+          silt_sl(:,:,:) = SPREAD(sse_init_vars%fr_silt(:,:), DIM = 2, ncopies = nsoil)
+          ! clay
+          !
+          clay_sl(:,:,:) = SPREAD(sse_init_vars%fr_clay(:,:), DIM = 2, ncopies = nsoil)
+          ! bulk density
+          !
+          bulk_dens_sl(:,:,:) = SPREAD(sse_init_vars%bulk_density(:,:), DIM = 2, ncopies = nsoil)
+        END IF
 
         ! Assertion that 'l_soil_texture' option is set to the same value in SSE_ and HYDRO_
         IF (.NOT. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN

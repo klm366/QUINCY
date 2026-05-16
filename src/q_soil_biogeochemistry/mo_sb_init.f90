@@ -52,13 +52,14 @@ MODULE mo_sb_init
   TYPE t_sb_init_vars
     REAL(wp), POINTER :: &
       & usda_taxonomy_class     (:,:) => NULL(), &
-      & nwrb_taxonomy_class     (:,:) => NULL(), &
-      & qmax_org_fine_particle  (:,:) => NULL(), &
-      & soil_ph                 (:,:) => NULL(), &
-      & soil_p_labile           (:,:) => NULL(), &
-      & soil_p_slow             (:,:) => NULL(), &
-      & soil_p_occluded         (:,:) => NULL(), &
-      & soil_p_primary          (:,:) => NULL()
+      & nwrb_taxonomy_class     (:,:) => NULL()
+    REAL(wp), POINTER :: &
+      & qmax_org_fine_particle  (:,:,:) => NULL(), &
+      & soil_ph                 (:,:,:) => NULL(), &
+      & soil_p_labile           (:,:,:) => NULL(), &
+      & soil_p_slow             (:,:,:) => NULL(), &
+      & soil_p_occluded         (:,:,:) => NULL(), &
+      & soil_p_primary          (:,:,:) => NULL()
     INTEGER, POINTER :: &
       & usda_taxonomy_class_int (:,:) => NULL(), &
       & nwrb_taxonomy_class_int (:,:) => NULL()
@@ -406,7 +407,7 @@ CONTAINS
 
     !>  1.2 init site-specific soil properties
     !>
-    ph_sl(:,:,:)              = SPREAD(sb_init_vars%soil_ph(:,:), DIM = 2, ncopies = nsoil_w)
+    ph_sl(:,:,:)              = sb_init_vars%soil_ph(:,:,:)
     Qmax_AlFe_cor(:,:,:)      = 1._wp                           !< ... docu ...
 
     !>  1.3 init SB_ variables from constants
@@ -434,11 +435,11 @@ CONTAINS
         & lctlib%k_som_slow_init, &
         & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
         & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
-        & SPREAD(sb_init_vars%qmax_org_fine_particle(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_labile(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_slow(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_occluded(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_primary(:,:), DIM = 2, ncopies = nsoil_w), &
+        & sb_init_vars%qmax_org_fine_particle(:,:,:), &
+        & sb_init_vars%soil_p_labile(:,:,:), &
+        & sb_init_vars%soil_p_slow(:,:,:), &
+        & sb_init_vars%soil_p_occluded(:,:,:), &
+        & sb_init_vars%soil_p_primary(:,:,:), &
         & dsl4jsb_Config(SB_)%soil_p_depth, &
         & soil_depth_sl(:,:,:), &
         & soil_lay_width_sl(:,:,:), &
@@ -494,11 +495,11 @@ CONTAINS
         & lctlib%growthform, &
         & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
         & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
-        & SPREAD(sb_init_vars%qmax_org_fine_particle(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_labile(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_slow(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_occluded(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_primary(:,:), DIM = 2, ncopies = nsoil_w), &
+        & sb_init_vars%qmax_org_fine_particle(:,:,:), &
+        & sb_init_vars%soil_p_labile(:,:,:), &
+        & sb_init_vars%soil_p_slow(:,:,:), &
+        & sb_init_vars%soil_p_occluded(:,:,:), &
+        & sb_init_vars%soil_p_primary(:,:,:), &
         & dsl4jsb_Config(SB_)%soil_p_depth, &
         & soil_depth_sl(:,:,:), &
         & soil_lay_width_sl(:,:,:), &
@@ -634,24 +635,24 @@ CONTAINS
     ALLOCATE( &
       & sb_init_vars%usda_taxonomy_class     (nproma, nblks),       &
       & sb_init_vars%nwrb_taxonomy_class     (nproma, nblks),       &
-      & sb_init_vars%qmax_org_fine_particle  (nproma, nblks),       &
-      & sb_init_vars%soil_ph                 (nproma, nblks),       &
-      & sb_init_vars%soil_p_labile           (nproma, nblks),       &
-      & sb_init_vars%soil_p_slow             (nproma, nblks),       &
-      & sb_init_vars%soil_p_occluded         (nproma, nblks),       &
-      & sb_init_vars%soil_p_primary          (nproma, nblks),       &
+      & sb_init_vars%qmax_org_fine_particle  (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_ph                 (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_labile           (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_slow             (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_occluded         (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_primary          (nproma, nsoil_w, nblks), &
       & sb_init_vars%usda_taxonomy_class_int (nproma, nblks),       &
       & sb_init_vars%nwrb_taxonomy_class_int (nproma, nblks)        &
       & )
 
     sb_init_vars%usda_taxonomy_class     (:,:) = missval
     sb_init_vars%nwrb_taxonomy_class     (:,:) = missval
-    sb_init_vars%qmax_org_fine_particle  (:,:) = missval
-    sb_init_vars%soil_ph                 (:,:) = missval
-    sb_init_vars%soil_p_labile           (:,:) = missval
-    sb_init_vars%soil_p_slow             (:,:) = missval
-    sb_init_vars%soil_p_occluded         (:,:) = missval
-    sb_init_vars%soil_p_primary          (:,:) = missval
+    sb_init_vars%qmax_org_fine_particle  (:,:,:) = missval
+    sb_init_vars%soil_ph                 (:,:,:) = missval
+    sb_init_vars%soil_p_labile           (:,:,:) = missval
+    sb_init_vars%soil_p_slow             (:,:,:) = missval
+    sb_init_vars%soil_p_occluded         (:,:,:) = missval
+    sb_init_vars%soil_p_primary          (:,:,:) = missval
     sb_init_vars%usda_taxonomy_class_int (:,:) = -9999
     sb_init_vars%nwrb_taxonomy_class_int (:,:) = -9999
 
@@ -668,27 +669,27 @@ CONTAINS
 
     !> qmax organic fine particle
     !>
-    sb_init_vars%qmax_org_fine_particle(:,:) = dsl4jsb_Config(SB_)%qmax_org_fine_particle
+    sb_init_vars%qmax_org_fine_particle(:,:,:) = dsl4jsb_Config(SB_)%qmax_org_fine_particle
 
     !> soil ph
     !>
-    sb_init_vars%soil_ph(:,:) = dsl4jsb_Config(SB_)%soil_ph
+    sb_init_vars%soil_ph(:,:,:) = dsl4jsb_Config(SB_)%soil_ph
 
     !> P labile
     !>
-    sb_init_vars%soil_p_labile(:,:) = dsl4jsb_Config(SB_)%soil_p_labile
+    sb_init_vars%soil_p_labile(:,:,:) = dsl4jsb_Config(SB_)%soil_p_labile
 
     !> P slow
     !>
-    sb_init_vars%soil_p_slow(:,:) = dsl4jsb_Config(SB_)%soil_p_slow
+    sb_init_vars%soil_p_slow(:,:,:) = dsl4jsb_Config(SB_)%soil_p_slow
 
     !> P occluded
     !>
-    sb_init_vars%soil_p_occluded(:,:) = dsl4jsb_Config(SB_)%soil_p_occluded
+    sb_init_vars%soil_p_occluded(:,:,:) = dsl4jsb_Config(SB_)%soil_p_occluded
 
     !> P primary (apatite)
     !>
-    sb_init_vars%soil_p_primary(:,:) = dsl4jsb_Config(SB_)%soil_p_primary
+    sb_init_vars%soil_p_primary(:,:,:) = dsl4jsb_Config(SB_)%soil_p_primary
   END SUBROUTINE sb_qs_read_init_vars
 #else
   ! ======================================================================================================= !
@@ -726,24 +727,24 @@ CONTAINS
     ALLOCATE( &
       & sb_init_vars%usda_taxonomy_class     (nproma, nblks),       &
       & sb_init_vars%nwrb_taxonomy_class     (nproma, nblks),       &
-      & sb_init_vars%qmax_org_fine_particle  (nproma, nblks),       &
-      & sb_init_vars%soil_ph                 (nproma, nblks),       &
-      & sb_init_vars%soil_p_labile           (nproma, nblks),       &
-      & sb_init_vars%soil_p_slow             (nproma, nblks),       &
-      & sb_init_vars%soil_p_occluded         (nproma, nblks),       &
-      & sb_init_vars%soil_p_primary          (nproma, nblks),       &
+      & sb_init_vars%qmax_org_fine_particle  (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_ph                 (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_labile           (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_slow             (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_occluded         (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_primary          (nproma, nsoil_w, nblks), &
       & sb_init_vars%usda_taxonomy_class_int (nproma, nblks),       &
       & sb_init_vars%nwrb_taxonomy_class_int (nproma, nblks)        &
       & )
 
     sb_init_vars%usda_taxonomy_class     (:,:) = missval
     sb_init_vars%nwrb_taxonomy_class     (:,:) = missval
-    sb_init_vars%qmax_org_fine_particle  (:,:) = missval
-    sb_init_vars%soil_ph                 (:,:) = missval
-    sb_init_vars%soil_p_labile           (:,:) = missval
-    sb_init_vars%soil_p_slow             (:,:) = missval
-    sb_init_vars%soil_p_occluded         (:,:) = missval
-    sb_init_vars%soil_p_primary          (:,:) = missval
+    sb_init_vars%qmax_org_fine_particle  (:,:,:) = missval
+    sb_init_vars%soil_ph                 (:,:,:) = missval
+    sb_init_vars%soil_p_labile           (:,:,:) = missval
+    sb_init_vars%soil_p_slow             (:,:,:) = missval
+    sb_init_vars%soil_p_occluded         (:,:,:) = missval
+    sb_init_vars%soil_p_primary          (:,:,:) = missval
     sb_init_vars%usda_taxonomy_class_int (:,:) = -9999
     sb_init_vars%nwrb_taxonomy_class_int (:,:) = -9999
 
@@ -769,52 +770,74 @@ CONTAINS
     sb_init_vars%nwrb_taxonomy_class(:,:)     = MERGE(ptr_2D, 1.0_wp, ptr_2D > 1.0_wp)
     sb_init_vars%nwrb_taxonomy_class_int(:,:) = INT(sb_init_vars%nwrb_taxonomy_class(:,:))
 
-    !> qmax organic fine particle
-    !>
-    ptr_2D => input_file%Read_2d(  &
-      & variable_name='qmax_org',  &
-      & fill_array = sb_init_vars%qmax_org_fine_particle)
-    sb_init_vars%qmax_org_fine_particle(:,:) = MERGE(ptr_2D, 6.5537_wp, ptr_2D > 0.0_wp)
-
-    !> soil ph
-    !>
-    ptr_2D => input_file%Read_2d(   &
-      & variable_name='PHIHOX',     &
-      & fill_array = sb_init_vars%soil_ph)
-    sb_init_vars%soil_ph(:,:) = MERGE(ptr_2D, 65.0_wp, ptr_2D > 0.0_wp)
-    ! divide by 10 to get the actual values within the correct range
-    sb_init_vars%soil_ph(:,:) = sb_init_vars%soil_ph(:,:) / 10.0_wp
-
-    !> P labile
-    !>
-    ptr_2D => input_file%Read_2d(           &
-      & variable_name='Labile_Inorganic_P', &
-      & fill_array = sb_init_vars%soil_p_labile)
-    sb_init_vars%soil_p_labile(:,:) = MERGE(ptr_2D, 50._wp, ptr_2D > 0.0_wp)
-
-    !> P slow
-    !>
-    ptr_2D => input_file%Read_2d(             &
-      & variable_name='Seconday_Mineral__P',  &
-      & fill_array = sb_init_vars%soil_p_slow)
-    sb_init_vars%soil_p_slow(:,:) = MERGE(ptr_2D, 70._wp, ptr_2D > 0.0_wp)
-
-    !> P occluded
-    !>
-    ptr_2D => input_file%Read_2d(     &
-      & variable_name='Occluded_P',   &
-      & fill_array = sb_init_vars%soil_p_occluded)
-    sb_init_vars%soil_p_occluded(:,:) = MERGE(ptr_2D, 150._wp, ptr_2D > 0.0_wp)
-
-    !> P primary (apatite)
-    !>
-    ptr_2D => input_file%Read_2d(  &
-      & variable_name='Apatite_P',  &
-      & fill_array = sb_init_vars%soil_p_primary)
-    sb_init_vars%soil_p_primary(:,:) = MERGE(ptr_2D, 100._wp, ptr_2D > 0.0_wp)
-
     CALL input_file%Close()
+
+    IF (model%config%l_read_quincy_soil_3d) THEN
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename_3d), model%grid_id)
+
+      CALL read_quincy_soil_input_3d(input_file, 'qmax_org',             sb_init_vars%qmax_org_fine_particle, 6.5537_wp)
+      CALL read_quincy_soil_input_3d(input_file, 'PHIHOX',               sb_init_vars%soil_ph,                65.0_wp, scale=0.1_wp)
+      CALL read_quincy_soil_input_3d(input_file, 'Labile_Inorganic_P',   sb_init_vars%soil_p_labile,          50._wp)
+      CALL read_quincy_soil_input_3d(input_file, 'Seconday_Mineral__P',  sb_init_vars%soil_p_slow,            70._wp)
+      CALL read_quincy_soil_input_3d(input_file, 'Occluded_P',           sb_init_vars%soil_p_occluded,        150._wp)
+      CALL read_quincy_soil_input_3d(input_file, 'Apatite_P',            sb_init_vars%soil_p_primary,         100._wp)
+
+      CALL input_file%Close()
+    ELSE
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename), model%grid_id)
+
+      CALL read_quincy_soil_input_2d(input_file, 'qmax_org',             sb_init_vars%qmax_org_fine_particle, 6.5537_wp)
+      CALL read_quincy_soil_input_2d(input_file, 'PHIHOX',               sb_init_vars%soil_ph,                65.0_wp, scale=0.1_wp)
+      CALL read_quincy_soil_input_2d(input_file, 'Labile_Inorganic_P',   sb_init_vars%soil_p_labile,          50._wp)
+      CALL read_quincy_soil_input_2d(input_file, 'Seconday_Mineral__P',  sb_init_vars%soil_p_slow,            70._wp)
+      CALL read_quincy_soil_input_2d(input_file, 'Occluded_P',           sb_init_vars%soil_p_occluded,        150._wp)
+      CALL read_quincy_soil_input_2d(input_file, 'Apatite_P',            sb_init_vars%soil_p_primary,         100._wp)
+
+      CALL input_file%Close()
+    END IF
   END SUBROUTINE sb_read_init_vars
+
+  SUBROUTINE read_quincy_soil_input_2d(input_file, variable_name, field, default, scale)
+    USE mo_jsb_io_netcdf,      ONLY: t_input_file
+
+    TYPE(t_input_file), INTENT(inout) :: input_file
+    CHARACTER(len=*),   INTENT(in)    :: variable_name
+    REAL(wp), TARGET,   INTENT(inout) :: field(:,:,:)
+    REAL(wp),           INTENT(in)    :: default
+    REAL(wp), OPTIONAL, INTENT(in)    :: scale
+
+    REAL(wp), ALLOCATABLE, TARGET :: field_2d(:,:)
+    REAL(wp), POINTER            :: ptr_2D(:,:)
+    INTEGER                      :: is
+
+    ALLOCATE(field_2d(SIZE(field,1), SIZE(field,3)))
+
+    ptr_2D => input_file%Read_2d(variable_name=variable_name, fill_array=field_2d)
+    field_2d(:,:) = MERGE(ptr_2D, default, ptr_2D > 0.0_wp)
+    IF (PRESENT(scale)) field_2d(:,:) = field_2d(:,:) * scale
+
+    DO is = 1, SIZE(field, 2)
+      field(:,is,:) = field_2d(:,:)
+    END DO
+
+    DEALLOCATE(field_2d)
+  END SUBROUTINE read_quincy_soil_input_2d
+
+  SUBROUTINE read_quincy_soil_input_3d(input_file, variable_name, field, default, scale)
+    USE mo_jsb_io_netcdf,      ONLY: t_input_file
+
+    TYPE(t_input_file), INTENT(inout) :: input_file
+    CHARACTER(len=*),   INTENT(in)    :: variable_name
+    REAL(wp), TARGET,   INTENT(inout) :: field(:,:,:)
+    REAL(wp),           INTENT(in)    :: default
+    REAL(wp), OPTIONAL, INTENT(in)    :: scale
+
+    REAL(wp), POINTER :: ptr_3D(:,:,:)
+
+    ptr_3D => input_file%Read_3d(variable_name=variable_name, fill_array=field)
+    field(:,:,:) = MERGE(ptr_3D, default, ptr_3D > 0.0_wp)
+    IF (PRESENT(scale)) field(:,:,:) = field(:,:,:) * scale
+  END SUBROUTINE read_quincy_soil_input_3d
 #endif
 
   ! ======================================================================================================= !
