@@ -31,7 +31,7 @@
 #   in the ICON output stream on the box tile.
 #------------------------------------------------------------------------------
 
-# set -euo pipefail
+set -euo pipefail
 
 # module unload cdo >/dev/null 2>&1 || true
 # module unload nco >/dev/null 2>&1 || true
@@ -44,7 +44,7 @@ cdo="cdo -s -P 8"
 # paths and filenames
 
 input_path="./"
-input_file="quincy_R2B5_land-CN-gswp3_S0_SS_forcing_lnd_basic_ml_20180101T000000Z.nc"
+input_file="quincy_R2B5_land-Conly-gswp3_S0_SS_forcing_lnd_basic_ml_20180101T000000Z.nc"
 output_path="./"
 output_file="bc_land_sb_analytical_init.nc"
 
@@ -286,12 +286,19 @@ done
 selvar_litter_keep="$(IFS=,; echo "${tmp_litter_keep[*]}")"
 ncks -O -v "${selvar_litter_keep}" "${tmp_litter}" "${tmp_litter}"
 
-# Remove singleton time dimension after timmean.
+# Remove singleton time dimension after timmean and drop leftover time metadata
+# variables so the analytical-init file is a clean static product.
 if ncks -m "${tmp_mean}" 2>/dev/null | grep -Eq 'time[[:space:]]*=|UNLIMITED[[:space:]]*//[[:space:]]*\(time'; then
   ncwa -O -a time "${tmp_mean}" "${tmp_mean}"
 fi
 if ncks -m "${tmp_litter}" 2>/dev/null | grep -Eq 'time[[:space:]]*=|UNLIMITED[[:space:]]*//[[:space:]]*\(time'; then
   ncwa -O -a time "${tmp_litter}" "${tmp_litter}"
+fi
+if ncks -m "${tmp_mean}" 2>/dev/null | grep -Fq "time"; then
+  ncks -O -x -v time,time_bnds "${tmp_mean}" "${tmp_mean}" 2>/dev/null || true
+fi
+if ncks -m "${tmp_litter}" 2>/dev/null | grep -Fq "time"; then
+  ncks -O -x -v time,time_bnds "${tmp_litter}" "${tmp_litter}" 2>/dev/null || true
 fi
 
 for mapping in "${direct_renames[@]}"; do
@@ -314,9 +321,29 @@ fi
 cp "${tmp_mean}" "${tmp_all}"
 ncks -A "${tmp_litter}" "${tmp_all}"
 
+# Clarify the aggregated litter metadata after summing across PFTs and
+# converting from [mol m-3 timestep-1] to [mol m-3 s-1].
+ncatted -h -O \
+  -a units,formation_soluable_litter_c,o,c,"mol m-3 s-1" \
+  -a long_name,formation_soluable_litter_c,o,c,"time-mean aggregated carbon input to soluable litter" \
+  -a standard_name,formation_soluable_litter_c,o,c,"formation_soluable_litter_c" \
+  -a units,formation_polymeric_litter_c,o,c,"mol m-3 s-1" \
+  -a long_name,formation_polymeric_litter_c,o,c,"time-mean aggregated carbon input to polymeric litter" \
+  -a standard_name,formation_polymeric_litter_c,o,c,"formation_polymeric_litter_c" \
+  -a units,formation_woody_litter_c,o,c,"mol m-3 s-1" \
+  -a long_name,formation_woody_litter_c,o,c,"time-mean aggregated carbon input to woody litter" \
+  -a standard_name,formation_woody_litter_c,o,c,"formation_woody_litter_c" \
+  "${tmp_all}"
+
+# The output is a static analytical-init file, not a time series.
+ncatted -h -O \
+  -a bounds,soil_depth_water,d,, \
+  "${tmp_all}" 2>/dev/null || true
+
 ncatted -h -O -a ,global,d,, "${tmp_all}"
 ncatted -h -O -a comment,global,o,c,"Time-aggregated analytical steady-state SB initialisation generated from ${input_filepath}" "${tmp_all}"
 ncatted -h -O -a dtime_seconds_used,global,o,d,"${dtime_seconds}" "${tmp_all}"
+ncatted -h -O -a sb_model_scheme,global,o,c,"${sb_model_scheme}" "${tmp_all}"
 
 mv "${tmp_all}" "${output_filepath}"
 
