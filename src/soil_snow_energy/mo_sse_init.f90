@@ -251,6 +251,20 @@ CONTAINS
       END SELECT
 #endif
 
+      ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
+      CALL soil_init_from_texture( &
+         heat_cap_sand, heat_cap_silt, heat_cap_clay, heat_cap_oc,                                          &
+         sse_init_vars%fr_sand(:,:), sse_init_vars%fr_silt(:,:), sse_init_vars%fr_clay(:,:),                &
+         sse_init_vars%fr_sand_deep(:,:), sse_init_vars%fr_silt_deep(:,:), sse_init_vars%fr_clay_deep(:,:), &
+         sse_init_vars%vol_heat_cap(:,:))
+
+      ! calculate soil heat conductivity incl. organic fraction
+      CALL soil_init_from_texture( &
+         heat_cond_sand, heat_cond_silt, heat_cond_clay, heat_cond_oc,                                      &
+         sse_init_vars%fr_sand(:,:), sse_init_vars%fr_silt(:,:), sse_init_vars%fr_clay(:,:),                &
+         sse_init_vars%fr_sand_deep(:,:), sse_init_vars%fr_silt_deep(:,:), sse_init_vars%fr_clay_deep(:,:), &
+         sse_init_vars%heat_cond(:,:))
+
     ELSE IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
 
       !>     - Fraction of sand in upper soil
