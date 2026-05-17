@@ -435,6 +435,7 @@ CONTAINS
         & lctlib%k_som_slow_init, &
         & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
         & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
+        & model%config%l_read_quincy_soil_3d, &
         & sb_init_vars%qmax_org_fine_particle(:,:,:), &
         & sb_init_vars%soil_p_labile(:,:,:), &
         & sb_init_vars%soil_p_slow(:,:,:), &
@@ -495,6 +496,7 @@ CONTAINS
         & lctlib%growthform, &
         & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
         & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
+        & model%config%l_read_quincy_soil_3d, &
         & sb_init_vars%qmax_org_fine_particle(:,:,:), &
         & sb_init_vars%soil_p_labile(:,:,:), &
         & sb_init_vars%soil_p_slow(:,:,:), &
@@ -775,7 +777,7 @@ CONTAINS
     IF (model%config%l_read_quincy_soil_3d) THEN
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename_3d), model%grid_id)
 
-      CALL read_quincy_soil_input_3d(input_file, 'qmax_org',             sb_init_vars%qmax_org_fine_particle, 6.5537_wp)
+      CALL read_quincy_soil_input_2d(input_file, 'qmax_org',             sb_init_vars%qmax_org_fine_particle, 6.5537_wp)
       CALL read_quincy_soil_input_3d(input_file, 'PHIHOX',               sb_init_vars%soil_ph,                65.0_wp, scale=0.1_wp)
       CALL read_quincy_soil_input_3d(input_file, 'Labile_Inorganic_P',   sb_init_vars%soil_p_labile,          50._wp)
       CALL read_quincy_soil_input_3d(input_file, 'Seconday_Mineral__P',  sb_init_vars%soil_p_slow,            70._wp)
@@ -853,6 +855,7 @@ CONTAINS
     & lctlib_k_som_slow_init, &
     & sb_model_scheme, &
     & flag_sb_double_langmuir, &
+    & l_read_quincy_soil_3d, &
     & qmax_org_fine_particle, &
     & soil_p_labile, &
     & soil_p_slow, &
@@ -929,6 +932,7 @@ CONTAINS
     REAL(wp),                   INTENT(in)    :: lctlib_k_som_slow_init
     CHARACTER(len=*),           INTENT(in)    :: sb_model_scheme                  !< SB_ config
     LOGICAL,                    INTENT(in)    :: flag_sb_double_langmuir          !< SB_ config
+    LOGICAL,                    INTENT(in)    :: l_read_quincy_soil_3d            !< model config
     REAL(wp),                   INTENT(in)    :: qmax_org_fine_particle(:,:,:)    !< bc_quincy_soil input file
     REAL(wp),                   INTENT(in)    :: soil_p_labile(:,:,:)             !< bc_quincy_soil input file
     REAL(wp),                   INTENT(in)    :: soil_p_slow(:,:,:)               !< bc_quincy_soil input file
@@ -1250,32 +1254,54 @@ CONTAINS
     !>
     ! initialise mineral soil P pools
     DO iblk = 1,nblks
-      CALL init_soil_p_pools( &
-        & nproma, &                         ! in
-        & nsoil_w, &
-        & num_sl_above_bedrock(:, iblk), &
-        & soil_lay_depth_center_sl(:,:,iblk), &
-        & flag_sb_double_langmuir, &
-        & soil_depth_sl(:,:,iblk), &
-        & bulk_dens_corr_sl(:,:,iblk), &
-        & root_fraction_sl(:,:,iblk), &
-        & soil_p_labile(:,:,iblk), &
-        & soil_p_slow(:,:,iblk), &
-        & soil_p_occluded(:,:,iblk), &
-        & soil_p_primary(:,:,iblk), &
-        & soil_p_depth, &
-        & p_labile_slow_site(:,:,iblk), &   ! in
-        & po4_solute(:,:,iblk), &           ! inout
-        & po4_assoc_fast(:,:,iblk), &
-        & po4_assoc_slow(:,:,iblk), &
-        & po4_occluded(:,:,iblk), &
-        & po4_primary(:,:,iblk), &
-        & qmax_po4(:,:,iblk), &
-        & km_adsorpt_po4_sl(:,:,iblk), &
-        & qmax_fast_po4(:,:,iblk), &
-        & qmax_slow_po4(:,:,iblk), &
-        & km_fast_po4(:,:,iblk), &
-        & km_slow_po4(:,:,iblk) )           ! inout
+      IF (l_read_quincy_soil_3d) THEN
+        CALL init_soil_p_pools_from_3d_input( &
+          & nproma, &                         ! in
+          & nsoil_w, &
+          & num_sl_above_bedrock(:, iblk), &
+          & flag_sb_double_langmuir, &
+          & soil_depth_sl(:,:,iblk), &
+          & soil_p_labile(:,:,iblk), &
+          & soil_p_slow(:,:,iblk), &
+          & soil_p_occluded(:,:,iblk), &
+          & soil_p_primary(:,:,iblk), &
+          & po4_solute(:,:,iblk), &           ! inout
+          & po4_assoc_fast(:,:,iblk), &
+          & po4_assoc_slow(:,:,iblk), &
+          & po4_occluded(:,:,iblk), &
+          & po4_primary(:,:,iblk), &
+          & qmax_po4(:,:,iblk), &
+          & km_adsorpt_po4_sl(:,:,iblk), &
+          & qmax_fast_po4(:,:,iblk), &
+          & km_fast_po4(:,:,iblk) )           ! inout
+      ELSE
+        CALL init_soil_p_pools( &
+          & nproma, &                         ! in
+          & nsoil_w, &
+          & num_sl_above_bedrock(:, iblk), &
+          & soil_lay_depth_center_sl(:,:,iblk), &
+          & flag_sb_double_langmuir, &
+          & soil_depth_sl(:,:,iblk), &
+          & bulk_dens_corr_sl(:,:,iblk), &
+          & root_fraction_sl(:,:,iblk), &
+          & soil_p_labile(:,:,iblk), &
+          & soil_p_slow(:,:,iblk), &
+          & soil_p_occluded(:,:,iblk), &
+          & soil_p_primary(:,:,iblk), &
+          & soil_p_depth, &
+          & p_labile_slow_site(:,:,iblk), &   ! in
+          & po4_solute(:,:,iblk), &           ! inout
+          & po4_assoc_fast(:,:,iblk), &
+          & po4_assoc_slow(:,:,iblk), &
+          & po4_occluded(:,:,iblk), &
+          & po4_primary(:,:,iblk), &
+          & qmax_po4(:,:,iblk), &
+          & km_adsorpt_po4_sl(:,:,iblk), &
+          & qmax_fast_po4(:,:,iblk), &
+          & qmax_slow_po4(:,:,iblk), &
+          & km_fast_po4(:,:,iblk), &
+          & km_slow_po4(:,:,iblk) )           ! inout
+      END IF
     END DO
 
     ! de-allocate local allocatable var
@@ -1293,6 +1319,7 @@ CONTAINS
     & lctlib_growthform, &
     & sb_model_scheme, &
     & flag_sb_double_langmuir, &
+    & l_read_quincy_soil_3d, &
     & qmax_org_fine_particle, &
     & soil_p_labile, &
     & soil_p_slow, &
@@ -1366,6 +1393,7 @@ CONTAINS
     INTEGER,                    INTENT(in)    :: lctlib_growthform
     CHARACTER(len=*),           INTENT(in)    :: sb_model_scheme                  !< SB_ config
     LOGICAL,                    INTENT(in)    :: flag_sb_double_langmuir          !< SB_ config
+    LOGICAL,                    INTENT(in)    :: l_read_quincy_soil_3d            !< model config
     REAL(wp),                   INTENT(in)    :: qmax_org_fine_particle(:,:,:)    !< bc_quincy_soil input file
     REAL(wp),                   INTENT(in)    :: soil_p_labile(:,:,:)             !< bc_quincy_soil input file
     REAL(wp),                   INTENT(in)    :: soil_p_slow(:,:,:)               !< bc_quincy_soil input file
@@ -1763,32 +1791,54 @@ CONTAINS
     !>
     ! initialise mineral soil P pools
     DO iblk = 1,nblks
-      CALL init_soil_p_pools( &
-        & nproma, &                               ! in
-        & nsoil_w, &
-        & num_sl_above_bedrock(:, iblk), &
-        & soil_lay_depth_center_sl(:,:,iblk), &
-        & flag_sb_double_langmuir, &
-        & soil_depth_sl(:,:,iblk), &
-        & bulk_dens_corr_sl(:,:,iblk), &
-        & root_fraction_sl(:,:,iblk), &
-        & soil_p_labile(:,:,iblk), &
-        & soil_p_slow(:,:,iblk), &
-        & soil_p_occluded(:,:,iblk), &
-        & soil_p_primary(:,:,iblk), &
-        & soil_p_depth, &
-        & p_labile_slow_site(:,:,iblk), &         ! in
-        & po4_solute(:,:,iblk), &                 ! inout
-        & po4_assoc_fast(:,:,iblk), &
-        & po4_assoc_slow(:,:,iblk), &
-        & po4_occluded(:,:,iblk), &
-        & po4_primary(:,:,iblk), &
-        & qmax_po4(:,:,iblk), &
-        & km_adsorpt_po4_sl(:,:,iblk), &
-        & qmax_fast_po4(:,:,iblk), &
-        & qmax_slow_po4(:,:,iblk), &
-        & km_fast_po4(:,:,iblk), &
-        & km_slow_po4(:,:,iblk) )                 ! inout
+      IF (l_read_quincy_soil_3d) THEN
+        CALL init_soil_p_pools_from_3d_input( &
+          & nproma, &                               ! in
+          & nsoil_w, &
+          & num_sl_above_bedrock(:, iblk), &
+          & flag_sb_double_langmuir, &
+          & soil_depth_sl(:,:,iblk), &
+          & soil_p_labile(:,:,iblk), &
+          & soil_p_slow(:,:,iblk), &
+          & soil_p_occluded(:,:,iblk), &
+          & soil_p_primary(:,:,iblk), &
+          & po4_solute(:,:,iblk), &                 ! inout
+          & po4_assoc_fast(:,:,iblk), &
+          & po4_assoc_slow(:,:,iblk), &
+          & po4_occluded(:,:,iblk), &
+          & po4_primary(:,:,iblk), &
+          & qmax_po4(:,:,iblk), &
+          & km_adsorpt_po4_sl(:,:,iblk), &
+          & qmax_fast_po4(:,:,iblk), &
+          & km_fast_po4(:,:,iblk) )                 ! inout
+      ELSE
+        CALL init_soil_p_pools( &
+          & nproma, &                               ! in
+          & nsoil_w, &
+          & num_sl_above_bedrock(:, iblk), &
+          & soil_lay_depth_center_sl(:,:,iblk), &
+          & flag_sb_double_langmuir, &
+          & soil_depth_sl(:,:,iblk), &
+          & bulk_dens_corr_sl(:,:,iblk), &
+          & root_fraction_sl(:,:,iblk), &
+          & soil_p_labile(:,:,iblk), &
+          & soil_p_slow(:,:,iblk), &
+          & soil_p_occluded(:,:,iblk), &
+          & soil_p_primary(:,:,iblk), &
+          & soil_p_depth, &
+          & p_labile_slow_site(:,:,iblk), &         ! in
+          & po4_solute(:,:,iblk), &                 ! inout
+          & po4_assoc_fast(:,:,iblk), &
+          & po4_assoc_slow(:,:,iblk), &
+          & po4_occluded(:,:,iblk), &
+          & po4_primary(:,:,iblk), &
+          & qmax_po4(:,:,iblk), &
+          & km_adsorpt_po4_sl(:,:,iblk), &
+          & qmax_fast_po4(:,:,iblk), &
+          & qmax_slow_po4(:,:,iblk), &
+          & km_fast_po4(:,:,iblk), &
+          & km_slow_po4(:,:,iblk) )                 ! inout
+      END IF
     END DO
 
     ! initialise diffusion by bioturbation
@@ -1877,6 +1927,71 @@ CONTAINS
     DEALLOCATE(arr_hlp8)
     DEALLOCATE(arr_hlp9)
   END SUBROUTINE sb_init_jsm
+
+  ! ======================================================================================================= !
+  !>Intialize soil P pools directly from layer-wise soil P maps
+  !>
+  SUBROUTINE init_soil_p_pools_from_3d_input(nc, &
+                                             nsoil_w, &
+                                             num_sl_above_bedrock, &
+                                             flag_sb_double_langmuir, &
+                                             soil_depth_sl, &
+                                             soil_p_labile, soil_p_slow, soil_p_occluded, soil_p_primary, &
+                                             po4_solute, po4_assoc_fast, po4_assoc_slow, po4_occluded, po4_primary, &
+                                             qmax_po4, km_po4, qmax_fast_po4, km_fast_po4)
+
+    USE mo_jsb_physical_constants, ONLY: molar_mass_P
+    USE mo_q_sb_jsm_processes,     ONLY: calc_fast_po4
+
+    INTEGER,                          INTENT(in)     :: nc                        !< dimensions
+    INTEGER                         , INTENT(in)     :: nsoil_w                   !< number of soil layers (water)
+    REAL(wp), DIMENSION(nc)         , INTENT(in)     :: num_sl_above_bedrock      !< number of soil layers with thickness > eps8
+    LOGICAL                         , INTENT(in)     :: flag_sb_double_langmuir   !< T: double Langmuir; F: traditional Langmuir
+    REAL(wp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_depth_sl             !< soil depth per soil layer, [m]
+    REAL(wp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_p_labile, &          !< labile P per soil layer, [g m-2]
+                                                        soil_p_slow, &            !< slow P per soil layer, [g m-2]
+                                                        soil_p_occluded, &        !< occluded P per soil layer, [g m-2]
+                                                        soil_p_primary            !< primary P per soil layer, [g m-2]
+    REAL(wp), DIMENSION(nc,nsoil_w) , INTENT(inout)  :: po4_solute, &             !< soluble Pi pool per soil layer, [mol m-3]
+                                                        po4_assoc_fast, &         !< fast associated PO4 pool, [mol m-3]
+                                                        po4_assoc_slow, &         !< slow associated PO4 pool, [mol m-3]
+                                                        po4_occluded, &           !< occluded PO4 pool, [mol m-3]
+                                                        po4_primary, &            !< primary PO4 pool, [mol m-3]
+                                                        qmax_po4, &               !< maximum PO4 sorption capacity, [mol m-3]
+                                                        km_po4, &                 !< half-saturation PO4 concentration, [mol m-3]
+                                                        qmax_fast_po4, &          !< fast pool maximum PO4 sorption capacity, [mol m-3]
+                                                        km_fast_po4               !< fast pool half-saturation, [mol m-3]
+    INTEGER                                          :: ic, is
+    REAL(wp)                                         :: labile_p_sl
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_p_pools_from_3d_input'
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting ...')
+
+    po4_solute(:,:)     = 0._wp
+    po4_assoc_fast(:,:) = 0._wp
+    po4_assoc_slow(:,:) = 0._wp
+    po4_occluded(:,:)   = 0._wp
+    po4_primary(:,:)    = 0._wp
+
+    DO ic = 1,nc
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
+        IF (soil_depth_sl(ic,is) > eps8) THEN
+          labile_p_sl        = soil_p_labile(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
+          po4_assoc_slow(ic,is) = soil_p_slow(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
+          po4_occluded(ic,is)   = soil_p_occluded(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
+          po4_primary(ic,is)    = soil_p_primary(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
+
+          IF (flag_sb_double_langmuir) THEN
+            po4_assoc_fast(ic,is) = calc_fast_po4(labile_p_sl, qmax_fast_po4(ic,is), km_fast_po4(ic,is))
+          ELSE
+            po4_assoc_fast(ic,is) = calc_fast_po4(labile_p_sl, qmax_po4(ic,is), km_po4(ic,is))
+          END IF
+          po4_solute(ic,is) = labile_p_sl - po4_assoc_fast(ic,is)
+        END IF
+      END DO
+    END DO
+
+  END SUBROUTINE init_soil_p_pools_from_3d_input
 
   ! ======================================================================================================= !
   !>Intialize soil P pools for all layers from the soil P maps (Yang et al. 2013)

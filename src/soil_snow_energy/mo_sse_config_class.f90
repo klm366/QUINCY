@@ -163,7 +163,7 @@ CONTAINS
     ic_filename_3d      = 'ic_land_soil_3d.nc'
     bc_filename_3d      = 'bc_land_soil_3d.nc'
     bc_quincy_soil_filename = 'bc_quincy_soil.nc'
-    bc_quincy_soil_filename_3d = 'bc_quincy_soil_3d.nc'
+    bc_quincy_soil_filename_3d = 'bc_land_soil_quincy_3d.nc'
     quincy_nsoil_e          = 0           ! by default the values is not set via namelist, but used from 'ic_filename'
 #ifdef __QUINCY_STANDALONE__
     quincy_nsoil_e          = 5           ! but use 5 soil layers as default for quincy standalone

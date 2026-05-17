@@ -261,7 +261,7 @@ CONTAINS
     ic_filename                 = 'ic_land_sb.nc'
     bc_filename                 = 'bc_land_srf.nc'
     bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
-    bc_quincy_soil_filename_3d  = 'bc_quincy_soil_3d.nc'
+    bc_quincy_soil_filename_3d  = 'bc_land_soil_quincy_3d.nc'
     deposition_filename_prefix  = 'bc_land_npdep_quincy'
     sb_model_scheme             = "simple_1d"       ! simple_1d jsm
     sb_nloss_scheme             = "dynamic"         ! none fixed dynamic
