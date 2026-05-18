@@ -80,10 +80,30 @@ trap 'rm -rf "${tmp_dir}"' EXIT
 tmp_mean="${tmp_dir}/analytical_init_timemean.nc"
 tmp_litter="${tmp_dir}/analytical_init_litter.nc"
 tmp_all="${tmp_dir}/analytical_init_all.nc"
+tmp_reduce="${tmp_dir}/analytical_init_reduce.nc"
 
 has_var () {
   local var_name="$1"
   cdo -s showname "${input_filepath}" | tr ' ' '\n' | grep -Fxq "${var_name}"
+}
+
+reduce_singleton_dimensions () {
+  local nc_file="$1"
+  local tmp_file="${tmp_reduce}"
+
+  if ${cdo} --no_history -b 64 --reduce_dim "${nc_file}" "${tmp_file}" 2>/dev/null; then
+    mv "${tmp_file}" "${nc_file}"
+  else
+    rm -f "${tmp_file}"
+  fi
+}
+
+rename_soil_dimension () {
+  local nc_file="$1"
+
+  ncrename -O -d ".soil_depth_water,soillev" "${nc_file}"
+  ncrename -O -v ".soil_depth_water,soillev" "${nc_file}"
+  ncrename -O -v ".soil_depth_water_bnds,soillev_bnds" "${nc_file}"
 }
 
 make_pft_list () {
@@ -251,13 +271,14 @@ done
 
 if [[ ${#selected_direct_vars[@]} -gt 0 ]]; then
   selvar_direct="$(IFS=,; echo "${selected_direct_vars[*]}")"
-  ${cdo} -b 64 timmean -selvar,"${selvar_direct}" "${input_filepath}" "${tmp_mean}"
+  ${cdo} --no_history -b 64 --reduce_dim timmean -selvar,"${selvar_direct}" "${input_filepath}" "${tmp_mean}"
 else
-  ncks -O -x -v time "${input_filepath}" "${tmp_mean}"
+  echo "No direct analytical-init variables selected from ICON output."
+  exit 1
 fi
 
 selvar_litter="$(IFS=,; echo "${selected_litter_vars[*]}")"
-${cdo} -b 64 timmean -selvar,"${selvar_litter}" "${input_filepath}" "${tmp_litter}"
+${cdo} --no_history -b 64 --reduce_dim timmean -selvar,"${selvar_litter}" "${input_filepath}" "${tmp_litter}"
 
 for mapping in "${litter_mappings[@]}"; do
   src_prefix="${mapping%%:*}"
@@ -288,18 +309,8 @@ ncks -O -v "${selvar_litter_keep}" "${tmp_litter}" "${tmp_litter}"
 
 # Remove singleton time dimension after timmean and drop leftover time metadata
 # variables so the analytical-init file is a clean static product.
-if ncks -m "${tmp_mean}" 2>/dev/null | grep -Eq 'time[[:space:]]*=|UNLIMITED[[:space:]]*//[[:space:]]*\(time'; then
-  ncwa -O -a time "${tmp_mean}" "${tmp_mean}"
-fi
-if ncks -m "${tmp_litter}" 2>/dev/null | grep -Eq 'time[[:space:]]*=|UNLIMITED[[:space:]]*//[[:space:]]*\(time'; then
-  ncwa -O -a time "${tmp_litter}" "${tmp_litter}"
-fi
-if ncks -m "${tmp_mean}" 2>/dev/null | grep -Fq "time"; then
-  ncks -O -x -v time,time_bnds "${tmp_mean}" "${tmp_mean}" 2>/dev/null || true
-fi
-if ncks -m "${tmp_litter}" 2>/dev/null | grep -Fq "time"; then
-  ncks -O -x -v time,time_bnds "${tmp_litter}" "${tmp_litter}" 2>/dev/null || true
-fi
+reduce_singleton_dimensions "${tmp_mean}"
+reduce_singleton_dimensions "${tmp_litter}"
 
 for mapping in "${direct_renames[@]}"; do
   src_var="${mapping%%:*}"
@@ -310,22 +321,28 @@ for mapping in "${direct_renames[@]}"; do
 done
 
 # Normalise dimensional names as far as possible for the jsbach reader.
-if ncks -m "${tmp_mean}" 2>/dev/null | grep -Fq "soil_depth_water"; then
-  ncrename -O -d "soil_depth_water,soillev" "${tmp_mean}"
-fi
-if ncks -m "${tmp_litter}" 2>/dev/null | grep -Fq "soil_depth_water"; then
-  ncrename -O -d "soil_depth_water,soillev" "${tmp_litter}"
-fi
+rename_soil_dimension "${tmp_mean}"
+rename_soil_dimension "${tmp_litter}"
 
 # Merge the direct analytical variables and the aggregated litter inputs.
 cp "${tmp_mean}" "${tmp_all}"
 ncks -A "${tmp_litter}" "${tmp_all}"
 
+# Enforce the final static analytical-init structure on the merged file:
+# 1. remove any remaining singleton time dimension
+# 2. rename the soil external dimension to soillev
+#
+# Keep the generated CDL/ncdump dimension order as (soillev, ncells).
+# This is the order that passes ICON's distributed Read_2d_extdim checks for
+# a layer-resolved variable with extdim_name='soillev'.
+reduce_singleton_dimensions "${tmp_all}"
+rename_soil_dimension "${tmp_all}"
+
 # Clarify the aggregated litter metadata after summing across PFTs and
 # converting from [mol m-3 timestep-1] to [mol m-3 s-1].
 ncatted -h -O \
   -a units,formation_soluable_litter_c,o,c,"mol m-3 s-1" \
-  -a long_name,formation_soluable_litter_c,o,c,"time-mean aggregated carbon input to soluable litter" \
+  -a long_name,formation_soluable_litter_c,o,c,"time-mean aggregated carbon input to soluble litter" \
   -a standard_name,formation_soluable_litter_c,o,c,"formation_soluable_litter_c" \
   -a units,formation_polymeric_litter_c,o,c,"mol m-3 s-1" \
   -a long_name,formation_polymeric_litter_c,o,c,"time-mean aggregated carbon input to polymeric litter" \
@@ -337,7 +354,7 @@ ncatted -h -O \
 
 # The output is a static analytical-init file, not a time series.
 ncatted -h -O \
-  -a bounds,soil_depth_water,d,, \
+  -a bounds,soillev,d,, \
   "${tmp_all}" 2>/dev/null || true
 
 ncatted -h -O -a ,global,d,, "${tmp_all}"
