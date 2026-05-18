@@ -721,6 +721,33 @@ CONTAINS
       !       column in lctlib) is not a PFT and ignored here.
       pft_ids(:) = (/ 1,2,3,4,9,10,11,12,14,15,19,20 /)
 
+    ELSE IF (npft == 13) THEN
+      pft_shortnames(:) = [character(len=5) ::               &
+        & 'pft01', 'pft02', 'pft03', 'pft04', 'pft05', 'pft06', &
+        & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11', 'pft12', &
+        & 'pft13' ]
+
+      pft_longnames(:) = [character(len=30) :: &
+        & 'Tropical broadleaf evergreen', &
+        & 'Tropical broadleaf deciduous', &
+        & 'Extra-tropical evergreen',     &
+        & 'Extra-tropical deciduous',     &
+        & 'Raingreen shrubs',             &
+        & 'Deciduous shrubs',             &
+        & 'C3 grass',                     &
+        & 'C4 grass',                     &
+        & 'C3 pasture',                   &
+        & 'C4 pasture',                   &
+        & 'C3 crops',                     &
+        & 'C4 crops',                     &
+        & 'Prescribed mangrove cover'    ]
+
+      ! Index of PFT for lctlib columns
+      ! Note: The IDs defined here are each one less than in the lctlib because glacier (first
+      !       column in lctlib) is not a PFT and ignored here.
+      ! Mangrove is lctlib column 22, therefore pft_id = 21.
+      pft_ids(:) = (/ 1,2,3,4,9,10,11,12,14,15,19,20,21 /)
+
     ELSE
       WRITE (message_text,*) 'Unsupported number of PFTs: ', npft
       CALL finish(routine, message_text)
