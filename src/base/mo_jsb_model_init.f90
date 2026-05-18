@@ -551,6 +551,8 @@ CONTAINS
         CYCLE
       END IF
 
+      CALL message(routine, 'Running process init at tile: '//TRIM(tile%name))
+
       ! ---------------------------------------------------------------------------------------------- !
       !>
       !>     2.1 Initialize each tile
@@ -683,6 +685,8 @@ CONTAINS
       CALL model%Goto_next_tile(tile)
       ! ---------------------------------------------------------------------------------------------- !
     END DO
+
+    CALL message(routine, 'Completed process init across all tiles')
 
     IF (model%config%ifs_input_file%is_open) CALL model%config%ifs_input_file%Close()
 
