@@ -171,7 +171,10 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< current tile
 
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
+
+    model => get_model(tile%owner_model_id)
 
 #ifdef __QUINCY_STANDALONE__
     CALL qs_hydro_read_init_vars(tile)
