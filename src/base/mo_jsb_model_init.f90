@@ -597,7 +597,6 @@ CONTAINS
         CALL turb_init(tile)
       END IF
 
-      ! Initialize PHENO_ / Q_PHENO_ before HYDRO_ and VEG_
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(PHENO_)) THEN
@@ -611,20 +610,16 @@ CONTAINS
 #endif
       END SELECT
 
-      ! SSE_ and HYDRO_
-      ! VEG_ and SB_
-      !
-      ! Initialize SSE_ before HYDRO_
       IF (tile%Is_process_active(SSE_)) THEN
         CALL sse_init(tile)
       END IF
-      ! Initialize HYDRO_ before VEG_
+
       IF (tile%Is_process_active(HYDRO_)) THEN
         CALL hydro_init(tile)
       END IF
+
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-      ! Needs both HYDRO_ and SSE_ to continue soil initialization from IFS
         IF (tile%Is_process_active(SSE_)) THEN
           CALL init_soil_properties(tile)
         END IF
