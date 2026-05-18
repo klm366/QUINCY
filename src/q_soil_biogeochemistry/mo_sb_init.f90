@@ -225,6 +225,10 @@ CONTAINS
     nblks         =  hgrid%nblks
     nproma        =  hgrid%nproma
     ! ----------------------------------------------------------------------------------------------------- !
+    CALL model%processes(HYDRO_)%p%Test_init_status_asked_by(SB_)  !< Test if process dependency is already initialized
+    CALL model%processes(SSE_)%p%Test_init_status_asked_by(SB_)    !< Test if process dependency is already initialized
+    CALL model%processes(VEG_)%p%Test_init_status_asked_by(SB_)    !< Test if process dependency is already initialized
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(HYDRO_)

@@ -1613,6 +1613,7 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(HYDRO_)
     IF (tile%contains_vegetation .AND. model%config%model_scheme == MODEL_JSBACH) THEN
+      CALL model%processes(PHENO_)%p%Test_init_status_asked_by(HYDRO_)    !< Test if process dependency is already initialized
       dsl4jsb_Get_memory(PHENO_)
     END IF
 

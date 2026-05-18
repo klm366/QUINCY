@@ -523,6 +523,8 @@ CONTAINS
     model => get_model(tile%owner_model_id)
     soil_e => Get_vgrid('soil_depth_energy')
 
+    CALL model%processes(SEB_)%p%Test_init_status_asked_by(SSE_)    !< Test if process dependency is already initialized
+
     ! Get soil memory of the tile
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SEB_)
@@ -646,8 +648,10 @@ CONTAINS
     dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_config(HYDRO_)
 
+    CALL model%processes(HYDRO_)%p%Test_init_status_asked_by(SSE_)  !< Test if process dependency is already initialized
+    CALL model%processes(SEB_)%p%Test_init_status_asked_by(SSE_)    !< Test if process dependency is already initialized
+
     ! Get reference to variables for domain
-    !
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SEB_)
