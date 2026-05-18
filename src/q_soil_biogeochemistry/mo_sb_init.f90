@@ -883,7 +883,7 @@ CONTAINS
     USE mo_q_sb_jsm_processes,            ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
       &                                         calc_qmax_bulk_density_correction, calc_Psorption_parameter, &
       &                                         calc_fast_po4
-    USE mo_spq_util,                      ONLY: calc_qmax_texture
+    USE mo_sb_util,                       ONLY: calc_qmax_texture
     USE mo_isotope_util,                  ONLY: calc_mixing_ratio_N15N14
     USE mo_veg_constants,                 ONLY: ITREE
     USE mo_sb_constants,                  ONLY: def_sb_pool_metabol_litter, def_sb_pool_simple_struct_litter, &
@@ -1331,7 +1331,7 @@ CONTAINS
       &                                         calc_qmax_bulk_density_correction, calc_Psorption_parameter, &
       &                                         calc_fast_po4
     USE mo_q_sb_jsm_transport,            ONLY: calc_bioturbation_rate
-    USE mo_spq_util,                      ONLY: calc_qmax_texture
+    USE mo_sb_util,                       ONLY: calc_qmax_texture
     USE mo_isotope_util,                  ONLY: calc_mixing_ratio_N15N14
     USE mo_veg_constants,                 ONLY: ITREE
     USE mo_sb_constants                   ! ..

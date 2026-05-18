@@ -171,17 +171,12 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< current tile
 
-    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
 
-    model  => Get_model(tile%owner_model_id)
-
 #ifdef __QUINCY_STANDALONE__
-    IF (model%config%use_soil_phys_jsbach) THEN
-      CALL qs_hydro_read_init_vars(tile)
-      CALL qs_hydro_init_ic_bc(tile)
-      CALL hydro_finalize_init_vars()
-    END IF
+    CALL qs_hydro_read_init_vars(tile)
+    CALL qs_hydro_init_ic_bc(tile)
+    CALL hydro_finalize_init_vars()
 #else
     ! Read initial and boundary condition data by the top tile, only.
     ! Note: this requires that the init routines in mo_jsb_model_init:jsbach_init are called starting

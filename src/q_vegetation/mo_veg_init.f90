@@ -1,4 +1,4 @@
-!> vegetation variables init (QUINCY)
+!> QUINCY vegetation variables init
 !>
 !> ICON-Land
 !>
@@ -520,7 +520,7 @@ CONTAINS
       root_fraction_sl(:, 1, :)          = 1.0_wp
       root_fraction_sl(:, 2:nsoil_w, :)  = 0.0_wp
     ELSE
-      !>     - fixed root fractions (no changes after init) depending on root_depth (SPQ variable)
+      !>     - fixed root fractions (no changes after init) depending on root_depth
       !>
       ! root fractions assuming an exponential distribution of roots \n
       !   Cr_l = Cr_0 * exp(-lctlib%k_root_dist*depth) \n
