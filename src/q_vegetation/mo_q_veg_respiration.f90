@@ -1,4 +1,4 @@
-!> calculate vegetation respiration (QUINCY)
+!> QUINCY calculate vegetation respiration
 !>
 !> ICON-Land
 !>
