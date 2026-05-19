@@ -211,7 +211,7 @@ CONTAINS
     LOGICAL                       :: use_tmx                      !< Use turbulent mixing scheme
     LOGICAL                       :: use_lakes                    !< Represent lakes
     LOGICAL                       :: use_glacier                  !< Represent glaciers
-    LOGICAL                       :: l_read_quincy_soil_3d        !< 
+    LOGICAL                       :: l_read_quincy_soil_3d        !<
     LOGICAL                       :: check_child_cf               !< Assert that cover fractions of children tiles sum up to the tile cf
     CHARACTER(len=10)             :: enforce_water_budget         !< Consequence of water balance errors
     CHARACTER(len=10)             :: quincy_model                 !< Quincy model version: 'canopy', 'plant'
