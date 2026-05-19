@@ -1,4 +1,4 @@
-!> vegetation process config (QUINCY)
+!> QUINCY vegetation process config
 !>
 !> ICON-Land
 !>
