@@ -17,7 +17,10 @@ MODULE mo_sse_memory_class
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: finish
 
-  USE mo_jsb_model_class,  ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
+  USE mo_jsb_model_class,  ONLY: t_jsb_model
+#ifndef __NO_QUINCY__
+  USE mo_jsb_model_class,  ONLY: MODEL_QUINCY
+#endif
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
@@ -33,7 +36,7 @@ MODULE mo_sse_memory_class
 
   PUBLIC :: t_sse_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 30
+  INTEGER, PARAMETER :: max_no_of_vars = 32
 
   TYPE, EXTENDS(t_jsb_memory) :: t_sse_memory
     !
@@ -46,6 +49,8 @@ MODULE mo_sse_memory_class
       & thermal_diffusivity     !< Thermal diffusivity of soil [m2 s-1]
     !
     TYPE(t_jsb_var_real3d) :: &
+      & vol_heat_cap_mineral_sl, & !< Volumetric heat capacity of dry mineral soil [J m-3 K-1]
+      & heat_cond_mineral_sl,    & !< Thermal conductivity of dry mineral soil [J m-1 s-1 K-1]
       & vol_heat_cap_sl,      & !< (dynamic) Volumetric heat capacity of dry soil [J m-3 K-1]
       & heat_cond_sl,         & !< (dynamic) Thermal conductivity of soil [J m-1 s-1 K-1]
       & t_soil_sl,            & !< Temperature of soil layers [K]
@@ -164,6 +169,26 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
+
+#ifndef __NO_QUINCY__
+    IF (model%config%model_scheme == MODEL_QUINCY .AND. model%config%l_read_quincy_soil_3d) THEN
+      CALL mem%Add_var( 'vol_heat_cap_mineral_sl', mem%vol_heat_cap_mineral_sl, &
+        & hgrid, soil_e,                                                       &
+        & t_cf('vol_heat_capacity_soil_mineral', 'J m-3 K-1', ''),             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp )
+
+      CALL mem%Add_var( 'heat_cond_mineral_sl', mem%heat_cond_mineral_sl,     &
+        & hgrid, soil_e,                                                       &
+        & t_cf('heat_cond_soil_mineral', 'J m-1 s-1 K-1', ''),                 &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp )
+    END IF
+#endif
 
     IF (      .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map                     &
       & .AND. .NOT. dsl4jsb_Config(SSE_)%l_soil_texture) THEN

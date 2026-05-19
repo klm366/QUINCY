@@ -18,7 +18,10 @@ MODULE mo_sse_init
   USE mo_exception,          ONLY: message, finish
   USE mo_jsb_control,        ONLY: debug_on
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+#ifndef __NO_QUINCY__
+  USE mo_jsb_model_class,    ONLY: MODEL_QUINCY
+#endif
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -26,7 +29,7 @@ MODULE mo_sse_init
   USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,             ONLY: missval
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
-  USE mo_util,               ONLY: int2string, soil_init_from_texture, read_bc_data
+  USE mo_util,               ONLY: int2string, soil_init_from_texture, soil_init_from_texture_layer, read_bc_data
 
   dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
   dsl4jsb_Use_config(SSE_)
@@ -72,6 +75,8 @@ MODULE mo_sse_init
       & fr_silt_sl  (:,:,:) => NULL(), &
       & fr_clay_sl  (:,:,:) => NULL(), &
       & bulk_density_sl(:,:,:) => NULL(), &
+      & vol_heat_cap_mineral_sl(:,:,:) => NULL(), &
+      & heat_cond_mineral_sl(:,:,:) => NULL(), &
       & t_srf_mon   (:,:,:) => NULL(), &
       & ifs_tsoil   (:,:,:) => NULL(), &
       & ifs_tskin   (:,:  ) => NULL()
@@ -128,6 +133,8 @@ CONTAINS
     IF (ASSOCIATED(sse_init_vars%fr_silt_sl)) DEALLOCATE(sse_init_vars%fr_silt_sl)
     IF (ASSOCIATED(sse_init_vars%fr_clay_sl)) DEALLOCATE(sse_init_vars%fr_clay_sl)
     IF (ASSOCIATED(sse_init_vars%bulk_density_sl)) DEALLOCATE(sse_init_vars%bulk_density_sl)
+    IF (ASSOCIATED(sse_init_vars%vol_heat_cap_mineral_sl)) DEALLOCATE(sse_init_vars%vol_heat_cap_mineral_sl)
+    IF (ASSOCIATED(sse_init_vars%heat_cond_mineral_sl)) DEALLOCATE(sse_init_vars%heat_cond_mineral_sl)
 
     IF (ASSOCIATED(sse_init_vars%t_srf_mon))    DEALLOCATE(sse_init_vars%t_srf_mon)
 
@@ -153,7 +160,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_e
     INTEGER :: nproma, nblks, isoil
-    LOGICAL :: l_organic
+    LOGICAL :: l_organic, l_read_quincy_soil_3d
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_read_init_vars'
 
@@ -172,6 +179,10 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
 
     l_organic = dsl4jsb_Config(HYDRO_)%l_organic
+    l_read_quincy_soil_3d = .FALSE.
+#ifndef __NO_QUINCY__
+    l_read_quincy_soil_3d = model%config%model_scheme == MODEL_QUINCY .AND. model%config%l_read_quincy_soil_3d
+#endif
 
     ALLOCATE(                                          &
       & sse_init_vars%vol_heat_cap(nproma, nblks    ), &
@@ -206,18 +217,22 @@ CONTAINS
       sse_init_vars%fr_clay_deep(:,:)   = missval
       sse_init_vars%bulk_density(:,:)   = missval
 
-      IF (model%config%l_read_quincy_soil_3d) THEN
+      IF (l_read_quincy_soil_3d) THEN
         ALLOCATE(                                             &
           & sse_init_vars%fr_sand_sl     (nproma, soil_e%n_levels, nblks), &
           & sse_init_vars%fr_silt_sl     (nproma, soil_e%n_levels, nblks), &
           & sse_init_vars%fr_clay_sl     (nproma, soil_e%n_levels, nblks), &
-          & sse_init_vars%bulk_density_sl(nproma, soil_e%n_levels, nblks)  &
+          & sse_init_vars%bulk_density_sl(nproma, soil_e%n_levels, nblks), &
+          & sse_init_vars%vol_heat_cap_mineral_sl(nproma, soil_e%n_levels, nblks), &
+          & sse_init_vars%heat_cond_mineral_sl   (nproma, soil_e%n_levels, nblks)  &
           & )
 
         sse_init_vars%fr_sand_sl     (:,:,:) = missval
         sse_init_vars%fr_silt_sl     (:,:,:) = missval
         sse_init_vars%fr_clay_sl     (:,:,:) = missval
         sse_init_vars%bulk_density_sl(:,:,:) = missval
+        sse_init_vars%vol_heat_cap_mineral_sl(:,:,:) = missval
+        sse_init_vars%heat_cond_mineral_sl   (:,:,:) = missval
       END IF
     END IF ! l_soil_texture
 
@@ -225,7 +240,7 @@ CONTAINS
 
     ! soil texture information
     !
-    IF (dsl4jsb_Config(SSE_)%l_soil_texture .AND. model%config%l_read_quincy_soil_3d) THEN
+    IF (dsl4jsb_Config(SSE_)%l_soil_texture .AND. l_read_quincy_soil_3d) THEN
 
       CALL input_file%Close()
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename_3d), model%grid_id)
@@ -251,7 +266,17 @@ CONTAINS
       END SELECT
 #endif
 
-      ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
+      CALL soil_init_from_texture_layer( &
+         heat_cap_sand, heat_cap_silt, heat_cap_clay, &
+         sse_init_vars%fr_sand_sl(:,:,:), sse_init_vars%fr_silt_sl(:,:,:), sse_init_vars%fr_clay_sl(:,:,:), &
+         sse_init_vars%vol_heat_cap_mineral_sl(:,:,:))
+
+      CALL soil_init_from_texture_layer( &
+         heat_cond_sand, heat_cond_silt, heat_cond_clay, &
+         sse_init_vars%fr_sand_sl(:,:,:), sse_init_vars%fr_silt_sl(:,:,:), sse_init_vars%fr_clay_sl(:,:,:), &
+         sse_init_vars%heat_cond_mineral_sl(:,:,:))
+
+      ! Keep the 2D variables as surface diagnostics / compatibility fields.
       CALL soil_init_from_texture( &
          heat_cap_sand, heat_cap_silt, heat_cap_clay, heat_cap_oc,                                          &
          sse_init_vars%fr_sand(:,:), sse_init_vars%fr_silt(:,:), sse_init_vars%fr_clay(:,:),                &
@@ -406,6 +431,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     TYPE(t_jsb_model), POINTER :: model
+    LOGICAL :: l_read_quincy_soil_3d
     CHARACTER(len=*), PARAMETER :: routine = modname//':qs_sse_init_bc'
 
     dsl4jsb_Def_config(SSE_)
@@ -418,11 +444,17 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: silt_sl
     dsl4jsb_Real3D_onDomain :: clay_sl
     dsl4jsb_Real3D_onDomain :: bulk_dens_sl
+    dsl4jsb_Real3D_onDomain :: vol_heat_cap_mineral_sl
+    dsl4jsb_Real3D_onDomain :: heat_cond_mineral_sl
 
     IF (.NOT. tile%Is_process_active(SSE_)) RETURN
     IF (debug_on()) CALL message(TRIM(routine), 'Setting QS soil energy boundary conditions for tile '//TRIM(tile%name))
 
     model => get_model(tile%owner_model_id)
+    l_read_quincy_soil_3d = .FALSE.
+#ifndef __NO_QUINCY__
+    l_read_quincy_soil_3d = model%config%model_scheme == MODEL_QUINCY .AND. model%config%l_read_quincy_soil_3d
+#endif
 
     dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_config(HYDRO_)
@@ -434,6 +466,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)
     dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)
     dsl4jsb_Get_var3D_onDomain(SSE_, bulk_dens_sl)
+    IF (l_read_quincy_soil_3d) THEN
+      dsl4jsb_Get_var3D_onDomain(SSE_, vol_heat_cap_mineral_sl)
+      dsl4jsb_Get_var3D_onDomain(SSE_, heat_cond_mineral_sl)
+    END IF
 
     ! Assertion that 'l_soil_texture' option is set to the same value in SSE_ and HYDRO_
     IF (dsl4jsb_Config(SSE_)%l_soil_texture .NEQV. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
@@ -467,6 +503,18 @@ CONTAINS
       &     sand_sl(:,1,:), silt_sl(:,1,:), clay_sl(:,1,:), &
       &     heat_cond(:,:))
 
+    IF (l_read_quincy_soil_3d) THEN
+      CALL soil_init_from_texture_layer( &
+        & heat_cap_sand, heat_cap_silt, heat_cap_clay, &
+        & sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), &
+        & vol_heat_cap_mineral_sl(:,:,:))
+
+      CALL soil_init_from_texture_layer( &
+        & heat_cond_sand, heat_cond_silt, heat_cond_clay, &
+        & sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), &
+        & heat_cond_mineral_sl(:,:,:))
+    END IF
+
   END SUBROUTINE qs_sse_init_bc
 #endif
 
@@ -480,6 +528,7 @@ CONTAINS
 
     INTEGER :: iblk
     INTEGER :: nsoil
+    LOGICAL :: l_read_quincy_soil_3d
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e
@@ -491,8 +540,14 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: silt_sl
     dsl4jsb_Real3D_onDomain :: clay_sl
     dsl4jsb_Real3D_onDomain :: bulk_dens_sl
+    dsl4jsb_Real3D_onDomain :: vol_heat_cap_mineral_sl
+    dsl4jsb_Real3D_onDomain :: heat_cond_mineral_sl
 
     model => get_model(tile%owner_model_id)
+    l_read_quincy_soil_3d = .FALSE.
+#ifndef __NO_QUINCY__
+    l_read_quincy_soil_3d = model%config%model_scheme == MODEL_QUINCY .AND. model%config%l_read_quincy_soil_3d
+#endif
     soil_e => Get_vgrid('soil_depth_energy')
 
     nsoil = soil_e%n_levels
@@ -514,6 +569,10 @@ CONTAINS
       dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)
       dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)
       dsl4jsb_Get_var3D_onDomain(SSE_, bulk_dens_sl)
+      IF (l_read_quincy_soil_3d) THEN
+        dsl4jsb_Get_var3D_onDomain(SSE_, vol_heat_cap_mineral_sl)
+        dsl4jsb_Get_var3D_onDomain(SSE_, heat_cond_mineral_sl)
+      END IF
     END SELECT
 #endif
 
@@ -543,7 +602,7 @@ CONTAINS
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
-        IF (model%config%l_read_quincy_soil_3d) THEN
+        IF (l_read_quincy_soil_3d) THEN
           ! sand
           !
           sand_sl(:,:,:) = sse_init_vars%fr_sand_sl(:,:,:)
@@ -556,6 +615,8 @@ CONTAINS
           ! bulk density
           !
           bulk_dens_sl(:,:,:) = sse_init_vars%bulk_density_sl(:,:,:)
+          vol_heat_cap_mineral_sl(:,:,:) = sse_init_vars%vol_heat_cap_mineral_sl(:,:,:)
+          heat_cond_mineral_sl   (:,:,:) = sse_init_vars%heat_cond_mineral_sl   (:,:,:)
         ELSE
           ! sand
           !
@@ -585,7 +646,12 @@ CONTAINS
         CALL message(TRIM(routine), 'Setting soil properties (sand,silt,clay,bulk_density) to default values '//TRIM(tile%name))
       END IF
 
-      !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), bulk_dens_sl(:,:,:)) ASYNC(1)
+      IF (l_read_quincy_soil_3d) THEN
+        !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), bulk_dens_sl(:,:,:), &
+        !$ACC   vol_heat_cap_mineral_sl(:,:,:), heat_cond_mineral_sl(:,:,:)) ASYNC(1)
+      ELSE
+        !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), bulk_dens_sl(:,:,:)) ASYNC(1)
+      END IF
     END SELECT
 #endif
 
@@ -705,6 +771,8 @@ CONTAINS
       & matric_pot_sl, &
       & bclapp_sl, &
       & fract_org_sl, &
+      & vol_heat_cap_mineral_sl, &
+      & heat_cond_mineral_sl, &
       & vol_heat_cap_sl, &
       & heat_cond_sl, &
       & vol_porosity_sl
@@ -726,12 +794,17 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e
 
     INTEGER  :: nsoil, nproma, nblks, ic, is, ib
+    LOGICAL  :: l_read_quincy_soil_3d
     REAL(wp), POINTER :: soil_e_dz(:)
     REAL(wp) ::heat_cap_sl, ws_max_sl
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_properties'
 
     model => Get_model(tile%owner_model_id)
+    l_read_quincy_soil_3d = .FALSE.
+#ifndef __NO_QUINCY__
+    l_read_quincy_soil_3d = model%config%model_scheme == MODEL_QUINCY .AND. model%config%l_read_quincy_soil_3d
+#endif
 
     soil_e => Get_vgrid('soil_depth_energy')
     nsoil = soil_e%n_levels
@@ -780,6 +853,9 @@ CONTAINS
     END IF
 
     dsl4jsb_Get_var2D_onDomain(SSE_,   vol_heat_cap)
+    IF (l_read_quincy_soil_3d) THEN
+      dsl4jsb_Get_var3D_onDomain(SSE_, vol_heat_cap_mineral_sl)
+    END IF
     dsl4jsb_Get_var3D_onDomain(HYDRO_, wtr_soil_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, ice_soil_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)
@@ -826,7 +902,11 @@ CONTAINS
       DO is = 1, nsoil
         DO ib = 1, nblks
           DO ic = 1, nproma
-            heat_cap_sl = soil_e_dz(is) * vol_heat_cap(ic,ib)
+            IF (l_read_quincy_soil_3d) THEN
+              heat_cap_sl = soil_e_dz(is) * vol_heat_cap_mineral_sl(ic,is,ib)
+            ELSE
+              heat_cap_sl = soil_e_dz(is) * vol_heat_cap(ic,ib)
+            END IF
             ice_soil_sl(ic,is,ib) = 0._wp
             IF (t_soil_sl(ic,is,ib) < tmelt .AND. wtr_soil_sl(ic,is,ib) > liquid_max(ic,is,ib)) THEN
               ice_soil_sl(ic,is,ib) = MIN(wtr_soil_sl(ic,is,ib) - liquid_max(ic,is,ib),                &
@@ -856,6 +936,9 @@ CONTAINS
     END IF
 
     dsl4jsb_Get_var2D_onDomain(SSE_,   heat_cond)
+    IF (l_read_quincy_soil_3d) THEN
+      dsl4jsb_Get_var3D_onDomain(SSE_, heat_cond_mineral_sl)
+    END IF
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)
@@ -879,8 +962,13 @@ CONTAINS
     DO is = 1, nsoil
       DO ib = 1, nblks
         DO ic = 1, nproma
-          vol_heat_cap_tmp(ic,is,ib) = vol_heat_cap(ic,ib)
-          heat_cond_tmp   (ic,is,ib) = heat_cond(ic,ib)
+          IF (l_read_quincy_soil_3d) THEN
+            vol_heat_cap_tmp(ic,is,ib) = vol_heat_cap_mineral_sl(ic,is,ib)
+            heat_cond_tmp   (ic,is,ib) = heat_cond_mineral_sl   (ic,is,ib)
+          ELSE
+            vol_heat_cap_tmp(ic,is,ib) = vol_heat_cap(ic,ib)
+            heat_cond_tmp   (ic,is,ib) = heat_cond(ic,ib)
+          END IF
         END DO
       END DO
     END DO
@@ -955,7 +1043,11 @@ CONTAINS
       DO is = 1, nsoil
         DO ib=1,nblks
           DO ic = 1, nproma
-            vol_heat_cap_sl(ic,is,ib) = vol_heat_cap(ic,ib)
+            IF (l_read_quincy_soil_3d) THEN
+              vol_heat_cap_sl(ic,is,ib) = vol_heat_cap_mineral_sl(ic,is,ib)
+            ELSE
+              vol_heat_cap_sl(ic,is,ib) = vol_heat_cap(ic,ib)
+            END IF
           END DO
         END DO
       END DO
@@ -1018,7 +1110,11 @@ CONTAINS
       DO is = 1, nsoil
         DO ib=1,nblks
           DO ic = 1, nproma
-            heat_cond_sl(ic,is,ib) = heat_cond(ic,ib)
+            IF (l_read_quincy_soil_3d) THEN
+              heat_cond_sl(ic,is,ib) = heat_cond_mineral_sl(ic,is,ib)
+            ELSE
+              heat_cond_sl(ic,is,ib) = heat_cond(ic,ib)
+            END IF
           END DO
         END DO
       END DO
