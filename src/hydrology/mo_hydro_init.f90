@@ -1148,9 +1148,10 @@ CONTAINS
           !>
           !>    C1: Soil texture maps with a soil-layer dimension - read if 3D QUINCY soil inputs are enabled.
           !>        Only primary texture fields are read, and hydrological soil properties are calculated from them.
+          !>        The texture fields are read from the compact optional QUINCY 3D soil input file.
           !>
           !>     - Fraction of sand, silt and clay within soil layers
-          input_file_3d = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename_3d), model%grid_id)
+          input_file_3d = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_quincy_soil_filename_3d), model%grid_id)
 
           CALL read_hydro_soil_texture_input_3d(input_file_3d, 'FR_SAND', hydro_init_vars%fr_sand_sl, 0.3_wp)
           CALL read_hydro_soil_texture_input_3d(input_file_3d, 'FR_SILT', hydro_init_vars%fr_silt_sl, 0.4_wp)

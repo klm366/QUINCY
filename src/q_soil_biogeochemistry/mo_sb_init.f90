@@ -753,7 +753,7 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
 
-    !> Soil taxonomy classes
+    !> Soil taxonomy classes and qmax_org
     !>  Read from the regular QUINCY soil boundary condition file. They are still 2D input fields.
     !>
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename), model%grid_id)
@@ -774,17 +774,19 @@ CONTAINS
     sb_init_vars%nwrb_taxonomy_class(:,:)     = MERGE(ptr_2D, 1.0_wp, ptr_2D > 1.0_wp)
     sb_init_vars%nwrb_taxonomy_class_int(:,:) = INT(sb_init_vars%nwrb_taxonomy_class(:,:))
 
+    !> qmax organic fine particle
+    !>
+    CALL read_quincy_soil_input_2d(input_file, 'qmax_org', sb_init_vars%qmax_org_fine_particle, 6.5537_wp)
+
     CALL input_file%Close()
 
     !> QUINCY soil biogeochemistry inputs
-    !>  In the default workflow, soil biogeochemistry maps are read as 2D fields and expanded to all soil layers.
-    !>  If l_read_quincy_soil_3d is enabled, selected variables are read layer-wise from the optional 3D file.
-    !>  qmax_org is kept as a 2D input because it follows the existing taxonomy-based map.
+    !>  In the default workflow, soil pH and inorganic P maps are read as 2D fields and expanded to all soil layers.
+    !>  If l_read_quincy_soil_3d is enabled, soil pH and inorganic P pools are read layer-wise from the optional 3D file.
     !>
     IF (model%config%l_read_quincy_soil_3d) THEN
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename_3d), model%grid_id)
 
-      CALL read_quincy_soil_input_2d(input_file, 'qmax_org',             sb_init_vars%qmax_org_fine_particle, 6.5537_wp)
       CALL read_quincy_soil_input_3d(input_file, 'PHIHOX',               sb_init_vars%soil_ph,                65.0_wp, scale=0.1_wp)
       CALL read_quincy_soil_input_3d(input_file, 'Labile_Inorganic_P',   sb_init_vars%soil_p_labile,          50._wp)
       CALL read_quincy_soil_input_3d(input_file, 'Seconday_Mineral__P',  sb_init_vars%soil_p_slow,            70._wp)
@@ -795,7 +797,6 @@ CONTAINS
     ELSE
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename), model%grid_id)
 
-      CALL read_quincy_soil_input_2d(input_file, 'qmax_org',             sb_init_vars%qmax_org_fine_particle, 6.5537_wp)
       CALL read_quincy_soil_input_2d(input_file, 'PHIHOX',               sb_init_vars%soil_ph,                65.0_wp, scale=0.1_wp)
       CALL read_quincy_soil_input_2d(input_file, 'Labile_Inorganic_P',   sb_init_vars%soil_p_labile,          50._wp)
       CALL read_quincy_soil_input_2d(input_file, 'Seconday_Mineral__P',  sb_init_vars%soil_p_slow,            70._wp)

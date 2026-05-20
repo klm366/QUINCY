@@ -44,8 +44,6 @@ MODULE mo_sse_config_class
     LOGICAL  :: l_uniform_snow  !< T: Temporary bugfix to use zero or one snow fraction for soil temperature computation
     REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
                                 !! temperature for freezing/melting [m water equivalent]
-    CHARACTER(len=filename_max) :: ic_filename_3d !< Initial condition data with soil-layer dimension
-    CHARACTER(len=filename_max) :: bc_filename_3d !< Boundary condition data with soil-layer dimension
     ! quincy
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< IQ (QUINCY) soil input data
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename_3d !< IQ (QUINCY) soil input data with soil-layer dimension
@@ -87,7 +85,7 @@ CONTAINS
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
     REAL(wp) :: dz_snow(max_snow_layers)
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename, ic_filename_3d, bc_filename_3d
+    CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     ! quincy
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename, bc_quincy_soil_filename_3d
@@ -114,9 +112,7 @@ CONTAINS
       & l_soil_texture, l_uniform_snow,         &
       & l_freeze, l_supercool, w_soil_critical, &
       & ic_filename,                            &
-      & ic_filename_3d,                            &
       & bc_filename,                            &
-      & bc_filename_3d,                            &
       & bc_quincy_soil_filename,                &
       & bc_quincy_soil_filename_3d,                &
 #ifdef __QUINCY_STANDALONE__
@@ -160,8 +156,6 @@ CONTAINS
     w_soil_critical  = 5.85036E-3_wp
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'
-    ic_filename_3d      = 'ic_land_soil_3d.nc'
-    bc_filename_3d      = 'bc_land_soil_3d.nc'
     bc_quincy_soil_filename = 'bc_quincy_soil.nc'
     bc_quincy_soil_filename_3d = 'bc_land_soil_quincy_3d.nc'
     quincy_nsoil_e          = 0           ! by default the values is not set via namelist, but used from 'ic_filename'
@@ -185,8 +179,6 @@ CONTAINS
     config%ic_filename             = ic_filename
     config%bc_filename             = bc_filename
     config%bc_quincy_soil_filename = bc_quincy_soil_filename
-    config%ic_filename_3d             = ic_filename_3d
-    config%bc_filename_3d             = bc_filename_3d
     config%bc_quincy_soil_filename_3d = bc_quincy_soil_filename_3d
 
     config%nsnow         = nsnow

@@ -239,15 +239,14 @@ CONTAINS
 
       !>
       !>    - Soil texture maps with a soil-layer dimension
+      !>      Read from the compact optional QUINCY 3D soil input file.
       !>
       !>     - Fraction of sand, silt and clay within soil layers
-      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename_3d), model%grid_id)
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_quincy_soil_filename_3d), model%grid_id)
 
       CALL read_sse_soil_texture_input_3d(input_file, 'FR_SAND', sse_init_vars%fr_sand_sl, 0.3_wp)
       CALL read_sse_soil_texture_input_3d(input_file, 'FR_SILT', sse_init_vars%fr_silt_sl, 0.4_wp)
       CALL read_sse_soil_texture_input_3d(input_file, 'FR_CLAY', sse_init_vars%fr_clay_sl, 0.3_wp)
-      CALL input_file%Close()
-
       sse_init_vars%fr_sand(:,:)      = sse_init_vars%fr_sand_sl(:,1,:)
       sse_init_vars%fr_silt(:,:)      = sse_init_vars%fr_silt_sl(:,1,:)
       sse_init_vars%fr_clay(:,:)      = sse_init_vars%fr_clay_sl(:,1,:)
@@ -256,9 +255,9 @@ CONTAINS
       sse_init_vars%fr_clay_deep(:,:) = sse_init_vars%fr_clay_sl(:,soil_e%n_levels,:)
 
       !>     - Soil bulk density within soil layers
-      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_quincy_soil_filename_3d), model%grid_id)
       CALL read_sse_soil_texture_input_3d(input_file, 'BLDFIE', sse_init_vars%bulk_density_sl, 1000.0_wp, &
         & lallow_zero=.FALSE.)
+      CALL input_file%Close()
       sse_init_vars%bulk_density(:,:) = sse_init_vars%bulk_density_sl(:,1,:)
 
       ! Calculate heat capacity of dry mineral soil for each soil layer
