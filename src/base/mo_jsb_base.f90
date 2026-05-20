@@ -60,17 +60,18 @@ CONTAINS
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
-    USE mo_spq_constants,       ONLY: init_spq_constants
     USE mo_turb_constants,      ONLY: init_turb_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 #endif
 
-    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, NLCC_, FLCC_, FAGE_, Q_SYL_, SPQ_, VEG_, ALCC_
+    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, CLIMBUF_, NLCC_, &
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, NLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, ALCC_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
+    dsl4jsb_Use_config(CLIMBUF_)
+    dsl4jsb_Use_config(NLCC_)
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
@@ -82,7 +83,6 @@ CONTAINS
     dsl4jsb_Use_config(ALCC_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Use_config(Q_SYL_)
-    dsl4jsb_Use_config(SPQ_)
     dsl4jsb_Use_config(VEG_)
 #endif
 
@@ -91,6 +91,8 @@ CONTAINS
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(RAD_)
+    dsl4jsb_Def_config(CLIMBUF_)
+    dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
@@ -102,7 +104,6 @@ CONTAINS
     dsl4jsb_Def_config(ALCC_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(Q_SYL_)
-    dsl4jsb_Def_config(SPQ_)
     dsl4jsb_Def_config(VEG_)
 #endif
 
@@ -197,7 +198,6 @@ CONTAINS
            CALL init_q_agr_constants
            CALL init_q_syl_constants
            CALL init_veg_constants
-           CALL init_spq_constants
            CALL init_turb_constants
            CALL init_sb_constants
            CALL init_q_pheno_parameters
@@ -276,6 +276,8 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
+        dsl4jsb_Get_config(CLIMBUF_)
+        dsl4jsb_Get_config(NLCC_)
         dsl4jsb_Get_config(CARBON_)
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
@@ -371,26 +373,6 @@ CONTAINS
             dsl4jsb_Config(Q_SYL_)%active = .FALSE.
           END IF
         END IF
-
-        ! check settings with jsbach soil physics and SPQ_
-        dsl4jsb_Get_config(SPQ_)
-        IF (model%config%use_soil_phys_jsbach .NEQV. dsl4jsb_Config(SPQ_)%active) THEN
-          IF (dsl4jsb_Config(SPQ_)%active) THEN
-            IF (model%config%use_lakes .OR. model%config%use_glacier) THEN
-              CALL finish(routine, &
-                & 'With the SPQ_ process active, use_lakes and use_glacier must be FALSE.')
-            END IF
-          END IF
-        ELSE
-          IF (model%config%use_soil_phys_jsbach) THEN
-            CALL finish(routine, &
-              & 'The SPQ_ process must not be active if use_soil_phys_jsbach is set to TRUE.')
-          ELSE
-            CALL finish(routine, &
-              & 'The SPQ_ process must be active if use_soil_phys_jsbach is set to FALSE.')
-          END IF
-        END IF
-
 #endif
 
       CASE (MODEL_JSBACH)
@@ -411,6 +393,18 @@ CONTAINS
           CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
         END IF
 
+        IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
+          dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on climate buffer process since natural lcc is active')
+        END IF
+        IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(CARBON_)) THEN
+          dsl4jsb_Config(CARBON_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on carbon process since natural lcc is active')
+        END IF
+        IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
+          dsl4jsb_Config(DISTURB_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on disturbance process since natural lcc process is active')
+        END IF
         IF (model%Is_process_enabled(FLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
           dsl4jsb_Config(DISTURB_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on disturbance process since fire lcc process is active')
@@ -427,8 +421,12 @@ CONTAINS
           dsl4jsb_Config(CARBON_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
         END IF
+        IF (model%Is_process_enabled(CARBON_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
+          dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on climate buffer process since carbon process is active')
+        END IF
 
-        IF(model%Is_process_enabled(FAGE_) &
+        IF (model%Is_process_enabled(FAGE_) &
             & .AND. .NOT. (TRIM(model%config%usecase) == 'jsbach_forest_age_classes')) THEN
           CALL finish(routine, &
             & 'The FAGE process should only be used with the jsbach_forest_age_classes usecase! Please check!')
@@ -488,7 +486,7 @@ CONTAINS
     ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
     ! quincy model with 13 PFT tiles incl. bare soil
-    CASE ('quincy_13_pfts_for_coupling', 'quincy_13_pfts')
+    CASE ('quincy_13_pfts')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT

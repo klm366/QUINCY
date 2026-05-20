@@ -39,17 +39,17 @@ MODULE mo_carbon_interface
                                  & i_RootDistBeta, permafrost_threshold
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
-  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, NLCC_, A2L_, L2A_, SSE_, HYDRO_
+  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, CLIMBUF_, DISTURB_, NLCC_, L2A_, SSE_, HYDRO_
 
   ! Use of process configurations
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
 
   ! Use of process memories (t_carbon_memory)
-  dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(CLIMBUF_)
   dsl4jsb_Use_memory(L2A_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(HYDRO_)
@@ -186,7 +186,6 @@ CONTAINS
     REAL(wp)                     :: lctlib_WoodLit_coef_acid, lctlib_WoodLit_coef_water
     REAL(wp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
     REAL(wp)                     :: lctlib_WoodLit_coef_humus
-    REAL(wp)                     :: F_pseudo_temp, N_pseudo_temp, F_pseudo_precip, N_pseudo_precip
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
     REAL(wp)                     :: dtime
     REAL(wp), DIMENSION(options%nc) :: MaxLai
@@ -216,16 +215,15 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
-    dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(NLCC_)
+
+    CLASS(t_jsb_tile_abstract), POINTER :: climbuf   ! Pointer to the climate buffer memory residing on the veg tile
+    dsl4jsb_Def_memory_tile(CLIMBUF_, climbuf)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk ::  pseudo_temp
-    dsl4jsb_Real2D_onChunk ::  pseudo_temp_yDay
-    dsl4jsb_Real2D_onChunk ::  pseudo_precip
-    dsl4jsb_Real2D_onChunk ::  pseudo_precip_yDay
+    dsl4jsb_Real2D_onChunk ::  temp_15d_yDay_climbuf
+    dsl4jsb_Real2D_onChunk ::  precip_15d_yDay_climbuf
 
     dsl4jsb_Real3D_onChunk ::  pseudo_t_soil_sl
     dsl4jsb_Real3D_onChunk ::  pseudo_t_soil_sl_yDay
@@ -349,9 +347,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: LAI
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
-    dsl4jsb_Real2D_onChunk :: t_air                       ! Atmosphere temperature (lowest layer) in Kelvin!
-    dsl4jsb_Real2D_onChunk :: rain
-    dsl4jsb_Real2D_onChunk :: snow
 
     ! variables needed for NLCC process
     dsl4jsb_Real2D_onChunk :: max_green_bio
@@ -418,12 +413,15 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(CARBON_)
-    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
-    IF (nlcc_is_enabled) THEN
-      dsl4jsb_Get_memory(NLCC_)
-    END IF
+
+    ! The climate buffer is calculated on the veg tile, we thus need a pointer to the veg tile. We call it
+    ! climbuf, as the pointer name is appended to the climate buffer variables below.
+    climbuf => tile%parent_tile
+    ! Make sure this is the veg tile
+    IF (TRIM(climbuf%name) /= 'veg') CALL finish(routine, 'Setup ERROR: expected parent tile to be the veg tile.')
+    dsl4jsb_Get_memory_tile(CLIMBUF_, climbuf)
 
     IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
       soil_c => Get_vgrid('soil_depth_carbon')
@@ -441,10 +439,8 @@ CONTAINS
     END IF
 
     ! Set process variables
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_temp)                ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_temp_yDay)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_precip)              ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_precip_yDay)         ! inout
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, temp_15d_yDay, climbuf)    ! in
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, precip_15d_yDay, climbuf)  ! in
 
     IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
       dsl4jsb_Get_var3D_onChunk(CARBON_,  pseudo_t_soil_sl)       ! inout
@@ -561,9 +557,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )      ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   LAI )                       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )             ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,     t_air)                      ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,     rain)                       ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,     snow)                       ! in
 
     ! variables needed for NLCC process
     IF (nlcc_is_enabled) THEN
@@ -583,12 +576,6 @@ CONTAINS
     lresume  = is_time_restart(options%current_datetime)
     new_day  = is_newday(options%current_datetime, dtime)
     new_year = is_newyear(options%current_datetime, dtime)
-
-    ! Constants needed to update the climate variables for yasso: pseudo 15-day-mean temperature and precipitation
-    F_pseudo_temp   = EXP(-dtime / (15._wp * 86400._wp))
-    N_pseudo_temp   = 1._wp - F_pseudo_temp
-    F_pseudo_precip = EXP(-dtime / (15._wp * 86400._wp))
-    N_pseudo_precip = 1._wp - F_pseudo_precip
 
     ! ---------------------------
     ! Go
@@ -622,6 +609,7 @@ CONTAINS
       END DO
       !$ACC END LOOP
     END IF
+    !$ACC END PARALLEL
 
     ! R: "IF (read_cpools .AND. (lstart .OR. lresume)) THEN ..." of JS3 is in JS4 now in SUBROUTINE carbon_init_ic(tile)!
 
@@ -650,24 +638,6 @@ CONTAINS
     ! Prepare area weighting factor to rescale from 1/[m^2(canopy)] to 1/[m^2(grid box)]
     ! areaWeightingFactor(:,:) = veg_fract_correction(:,:) * surface%cover_fract(kidx0:kidx1,:) &
     !                            * SPREAD(surface%veg_ratio_max(kidx0:kidx1),DIM=2,NCOPIES=ntiles)
-
-
-    ! Update pseudo-15day-mean air temperature and precipitation for pseudo_temp_yDay and pseudo_precip_yDay
-    ! These variables are needed for the "CALL calc_Cpools", where they given to yasso to calculte C decomposition.
-    ! pseudo_temp is a temperature that depicts the smoth course of the soil temperature following the air temperature.
-
-    !$ACC LOOP GANG(STATIC: 1) VECTOR
-    DO ic = 1, nc
-      pseudo_temp(ic)   = t_air(ic)             * N_pseudo_temp    +  F_pseudo_temp   * pseudo_temp(ic)
-      pseudo_precip(ic) = (rain(ic) + snow(ic)) * N_pseudo_precip  +  F_pseudo_precip * pseudo_precip(ic)
-
-      IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
-        pseudo_t_soil_sl(ic,:)       = t_soil_sl(ic,:)         * N_pseudo_temp    +  F_pseudo_temp   * pseudo_t_soil_sl(ic,:)
-        pseudo_wtr_soil_rel_sl(ic,:) = wtr_soil_rel_sl(ic,:)   * N_pseudo_temp    +  F_pseudo_precip * pseudo_wtr_soil_rel_sl(ic,:)
-      END IF
-    END DO
-    !$ACC END LOOP
-    !$ACC END PARALLEL
 
     IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
       soil_depth_thaw = MIN(soil_depth, max_thaw_prev_year)
@@ -751,9 +721,6 @@ CONTAINS
         GPP_sum(ic)             = gross_assimilation_ca(ic)
         !NPP_pot_rate_ca_acc(ic)        = NPP_pot_rate_ca(ic)/tmp_timesteps_per_day ! s.o.
 
-        ! Save previous day variables (for yasso)
-        pseudo_temp_yDay(ic)   = pseudo_temp(ic)
-        pseudo_precip_yDay(ic) = pseudo_precip(ic)
         IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
           pseudo_t_soil_sl_yDay(ic,:)       = pseudo_t_soil_sl(ic,:)
           pseudo_wtr_soil_rel_sl_yDay(ic,:) = pseudo_wtr_soil_rel_sl(ic,:)

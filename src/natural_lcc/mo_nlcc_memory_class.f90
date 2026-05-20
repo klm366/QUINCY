@@ -42,18 +42,6 @@ MODULE mo_nlcc_memory_class
 
     ! Common variables independent of lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & temp_sum_day, &
-      & temp_sum_month, &
-      & min_mmtemp_of_yr, &
-      & max_mmtemp_of_yr, &
-      & min_mmtemp20, &
-      & max_mmtemp20, &
-      & gdd_sum_year, &
-      & gdd_prev_year, &
-      & max_snow_year, &
-      & max_snow_prev_year, &
-      & max_thaw_year, &
-      & max_thaw_prev_year, &
       & bare_fpc, &
       & sum_green_bio_memory, &
       & desert_fpc
@@ -102,116 +90,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_nlcc_memory'
 
-    dsl4jsb_Def_config(NLCC_)
-
     model => Get_model(model_id)
-
-    dsl4jsb_Get_config(NLCC_)
 
     table = tables(1)
 
     hgrid     => Get_grid(mem%grid_id)
     surface   => Get_vgrid('surface')
-
-    CALL mem%Add_var('temp_sum_day', mem%temp_sum_day,                        &
-      & hgrid, surface,                                                       &
-      & t_cf('temp_sum_day', 'K', 'sum of air temperature in day'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var('temp_sum_month', mem%temp_sum_month,                    &
-      & hgrid, surface,                                                       &
-      & t_cf('temp_sum_month', 'K', 'sum of air temperature in month'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var('min_mmtemp_of_yr', mem%min_mmtemp_of_yr,                &
-      & hgrid, surface,                                                       &
-      & t_cf('min_mmtemp_of_yr', 'K', 'min monthly temperature of year'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=1000.0_wp )
-
-    CALL mem%Add_var('max_mmtemp_of_yr', mem%max_mmtemp_of_yr,                &
-      & hgrid, surface,                                                       &
-      & t_cf('max_mmtemp_of_yr', 'K', 'max temperature of year'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=-1000.0_wp )
-
-    CALL mem%Add_var('min_mmtemp20', mem%min_mmtemp20,                        &
-      & hgrid, surface,                                                       &
-      & t_cf('min_mmtemp20', 'K', 'min monthly temperature climatology'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=FULL,                                                   &
-      & initval_r=1000.0_wp )
-
-    CALL mem%Add_var('max_mmtemp20', mem%max_mmtemp20,                        &
-      & hgrid, surface,                                                       &
-      & t_cf('max_mmtemp20', 'K', 'max temperature climatology'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=FULL,                                                   &
-      & initval_r=-1000.0_wp )
-
-    CALL mem%Add_var('gdd_sum_year', mem%gdd_sum_year,                        &
-      & hgrid, surface,                                                       &
-      & t_cf('gdd_sum_year', 'degC days', 'gdd current year'),                &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var('gdd_prev_year', mem%gdd_prev_year,                      &
-      & hgrid, surface,                                                       &
-      & t_cf('gdd_prev_year', 'degC days', 'gdd previous year'),              &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=FULL,                                                    &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var('max_snow_year', mem%max_snow_year,                      &
-      & hgrid, surface,                                                       &
-      & t_cf('max_snow_year', 'm', 'max snow depth current year'),            &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var('max_snow_prev_year', mem%max_snow_prev_year,            &
-      & hgrid, surface,                                                       &
-      & t_cf('max_snow_prev_year', 'm', 'max snow depth previous year'),      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=FULL,                                                    &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var('max_thaw_year', mem%max_thaw_year,                      &
-      & hgrid, surface,                                                       &
-      & t_cf('max_thaw_year', 'm', 'max thaw depth current year'),            &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var('max_thaw_prev_year', mem%max_thaw_prev_year,            &
-      & hgrid, surface,                                                       &
-      & t_cf('max_thaw_prev_year', 'm', 'max thaw depth previous year'),      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=FULL,                                                    &
-      & initval_r=99.9_wp )
-
-    IF (dsl4jsb_config(NLCC_)%climbuf_only .OR. &
-       .NOT. dsl4jsb_config(NLCC_)%active) RETURN
-
     pft_vgrid => Get_vgrid('pfts')
 
     CALL mem%Add_var('act_fpc', mem%act_fpc,                                  &
