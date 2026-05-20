@@ -74,7 +74,7 @@ MODULE mo_q_dfire_config_class
     REAL(wp)          :: fract_crown_scorch(sf_fuel_classes_nr) !< Fraction of live fuel consumed in crown scorch. 4=fuel classes
 
     ! input data
-    CHARACTER(len=filename_max) :: ic_popdens_filename, ic_lightning_events_filename
+    CHARACTER(len=filename_max) :: ic_popdens_filename, ic_lightning_events_filename, ic_human_igns_filename 
 
     !< Fuel ratio flags (how much fuel allocate to the dead fuel classes)
     REAL(wp)          :: ratio_polymeric_litter_to_dead_fuel !< Ratio to include polymeric litter as dead fuel
@@ -132,6 +132,7 @@ CONTAINS
     REAL(wp)                      :: fract_crown_scorch(sf_fuel_classes_nr) !< Fraction of live fuel consumption from crown scorch
     CHARACTER(len=filename_max)   :: ic_popdens_filename                    !< Filename for human population density input, used in IQJ
     CHARACTER(len=filename_max)   :: ic_lightning_events_filename           !< Filename for lightning events input, used in IQJ
+    CHARACTER(len=filename_max)   :: ic_human_igns_filename                 !< Filename for human caused ignitions input, used in IQJ
 
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_dead_fuel_pools
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_live_fuel_pools
@@ -169,6 +170,7 @@ CONTAINS
       & a_nd,                                 &
       & ic_popdens_filename,                  &
       & ic_lightning_events_filename,         &
+      & ic_human_igns_filename,               &
       & fract_crown_scorch,                   &
       & ratio_polymeric_litter_to_dead_fuel,  &
       & ratio_dom_assoc_to_dead_fuel,         &
@@ -204,6 +206,7 @@ CONTAINS
     a_nd                     = 0.000048           !
     ic_popdens_filename      = "ic_popdens.nc"
     ic_lightning_events_filename = "ic_lightning_events.nc"
+    ic_human_igns_filename   = "ic_human_igns_events.nc"
     fract_crown_scorch       = [1.0, 0.05, 0., 0.]
     ratio_polymeric_litter_to_dead_fuel = 0._wp
     ratio_dom_assoc_to_dead_fuel        = 0._wp
@@ -240,6 +243,7 @@ CONTAINS
     config%a_nd                      = a_nd
     config%ic_popdens_filename       = TRIM(ic_popdens_filename)
     config%ic_lightning_events_filename = TRIM(ic_lightning_events_filename)
+    config%ic_human_igns_filename    = TRIM(ic_human_igns_filename)
     config%fract_crown_scorch        = fract_crown_scorch
     config%ratio_polymeric_litter_to_dead_fuel = ratio_polymeric_litter_to_dead_fuel
     config%ratio_dom_assoc_to_dead_fuel        = ratio_dom_assoc_to_dead_fuel

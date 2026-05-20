@@ -383,7 +383,7 @@ CONTAINS
     nblks  = hgrid%Get_nblks()
 
     ALLOCATE( &
-        & dfire_init_vars%pop_dens               (nproma, nblks)),       &
+        & dfire_init_vars%pop_dens               (nproma, nblks),       &
         & dfire_init_vars%a_nd                   (nproma, nblks))
 
     dfire_init_vars%pop_dens              (:,:) = missval
