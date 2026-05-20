@@ -1,0 +1,47 @@
+PFT13 Trait Regression Preprocessing Manifest
+=============================================
+
+Author:
+Dr. Sri Nandini-Weiss
+
+Date:
+19 May 2026
+
+Purpose
+-------
+This manifest documents the preprocessing workspace for
+TRY + CHELSA trait-climate regression development.
+
+Current branch
+--------------
+feature/pft13-trait-regressions
+
+Raw data locations
+------------------
+raw_climate/
+  CHELSA BIO01 and BIO12 GeoTIFF files
+
+raw_try/request_49898/
+  reserved for TRY Request 49898 download after approval
+
+Tracked workflow components
+---------------------------
+scripts/
+  preprocessing and diagnostic scripts
+
+logs/
+  reproducibility logs
+
+processed/
+  cleaned intermediate tables
+
+figures/
+  diagnostic plots and maps
+
+output/
+  final regression coefficients and trait-map products
+
+Important rule
+--------------
+Do not commit raw TRY data, CHELSA GeoTIFFs, or large NetCDF outputs to Git.
+Only commit scripts, small README files, metadata, and lightweight logs.
