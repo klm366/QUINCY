@@ -448,7 +448,7 @@ CONTAINS
     vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day             ! calibrated, from Yu et al. 2020
     vmax_depolymerisation_litter  = 0.3698_wp / one_year / one_day / 2._wp        ! calibrated, from Yu et al. 2020
     km_depolymerisation           = 0.08876_wp / 2._wp / molar_mass_C * 10._wp    ! calibrated, from Yu et al. 2020
-    enzyme_frac_total             = 0.05_wp
+    enzyme_frac_total             = 0.01_wp                                       ! tuned for analytical steady state spinup
     fc_p_res2dom                  = 0._wp                                         ! Yu et al. 2020, GMD
     fc_n_res2dom                  = 0.8_wp                                        ! Yu et al. 2020, GMD
     k_p_recyc_corr                = 0.3_wp                                        ! tuned [0,1], based on model-data comparison of 16 ecosystem traits (4 vegetation, 3 microbe, 9 soil) at 5 sites
