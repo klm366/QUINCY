@@ -110,6 +110,7 @@ MODULE mo_q_dfire_memory_class
 
     TYPE(t_jsb_var_real2d)               :: ic_pop_dens         !< Read data from [#events ha-1 day-1]
     TYPE(t_jsb_var_real3d)               :: ic_lightning_events_monthly !< Monthly lightning events data [#events ha-1 day-1]
+    TYPE(t_jsb_var_real2d)               :: a_nd                !< Read data from [#ignitions_indiv-1 day-1]
   CONTAINS
     PROCEDURE :: Init => Init_q_dfire_memory
   END TYPE t_q_dfire_memory
@@ -673,6 +674,18 @@ CONTAINS
         & hgrid, vgrid_months_in_year, &
         & t_cf('ic_lightning_events_monthly', '#lightnings h-1 d-1', &
             '# lightning events'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, & ! DIAGNOSTICS
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('a_nd', mem%a_nd, &
+        & hgrid, vgrid_surface, &
+        & t_cf('a_nd', '#ignitions_indiv-1 d-1', &
+            'Rate of human-caused ignitions per person'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

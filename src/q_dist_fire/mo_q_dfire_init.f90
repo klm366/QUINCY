@@ -40,6 +40,7 @@ MODULE mo_q_dfire_init
   TYPE :: t_q_dfire_init_vars
     REAL(wp), POINTER ::      &
         pop_dens(:,:) => NULL(), &
+        a_nd(:,:) => NULL(), &
         lightning_events(:,:,:) => NULL()
   END TYPE t_q_dfire_init_vars
 
@@ -134,6 +135,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: ic_pop_dens
     dsl4jsb_Real3D_onDomain      :: ic_lightning_events_monthly
     dsl4jsb_Real2D_onDomain      :: a2l_lightning_events
+    dsl4jsb_Real2D_onDomain      :: a_nd
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
     ! ----------------------------------------------------------------------------------------------------- !
@@ -206,6 +208,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, ic_pop_dens)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_, ic_lightning_events_monthly)
     dsl4jsb_Get_var2D_onDomain(A2L_, a2l_lightning_events)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_, a_nd)
     ! ----------------------------------------------------------------------------------------------------- !
     nesterov_index = 0._wp
     fdi = 0._wp
@@ -255,6 +258,7 @@ CONTAINS
     frac_consump_fcl = 0._wp
 
     ic_pop_dens = 0._wp
+    a_nd = 0._wp
 
     !< Chose daily precipitation. Those are calculated in 3 different ways.
     dfire_pm_id = dsl4jsb_Config(Q_DFIRE_)%dfire_precip_method_id
@@ -284,6 +288,7 @@ CONTAINS
 
     ic_pop_dens = dfire_init_vars%pop_dens
     a2l_lightning_events = dfire_init_vars%lightning_events(:,:,1)
+    a_nd = dfire_init_vars%a_nd
 #else
     !> IQ only
     !> -population density is loaded in q_dfire_read_init_vars
@@ -293,6 +298,7 @@ CONTAINS
       CALL q_dfire_read_init_vars(tile)
     END IF
     ic_pop_dens = dfire_init_vars%pop_dens(1,1)
+    a_nd = dfire_init_vars%a_nd(1,1)
 #endif
 
   END SUBROUTINE q_dfire_init
@@ -327,10 +333,12 @@ CONTAINS
 
     ALLOCATE( &
       & dfire_init_vars%pop_dens               (nproma, nblks),       &
+      & dfire_init_vars%a_nd                   (nproma, nblks),       &
       & dfire_init_vars%lightning_events       (nproma, nblks, 12),   & ! 12=months in a year
       & )
 
     dfire_init_vars%pop_dens              (:,:) = missval
+    dfire_init_vars%a_nd                  (:,:) = missval
     dfire_init_vars%lightning_events    (:,:,:) = missval
 
     dsl4jsb_Get_config(Q_DFIRE_)
@@ -338,6 +346,7 @@ CONTAINS
 
     dfire_init_vars%pop_dens(:,:) = dsl4jsb_Config(Q_DFIRE_)%density_human_population
     dfire_init_vars%lightning_events(:,:,:) = dsl4jsb_Config(Q_DFIRE_)%lightning_frequency
+    dfire_init_vars%a_nd(:,:) = dsl4jsb_Config(Q_DFIRE_)%a_nd
   END SUBROUTINE q_dfire_read_init_vars
 #else
   ! ======================================================================================================= !
@@ -374,12 +383,11 @@ CONTAINS
     nblks  = hgrid%Get_nblks()
 
     ALLOCATE( &
-        & dfire_init_vars%pop_dens               (nproma, nblks))!,       &
-!        & dfire_init_vars%lightning_events       (nproma, nblks, 12)    & ! months in 1 year
-!        & )
+        & dfire_init_vars%pop_dens               (nproma, nblks)),       &
+        & dfire_init_vars%a_nd                   (nproma, nblks))
 
     dfire_init_vars%pop_dens              (:,:) = missval
-!    dfire_init_vars%lightning_events    (:,:,:) = missval
+    dfire_init_vars%a_nd                  (:,:) = missval
 
     dsl4jsb_Get_config(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -393,6 +401,18 @@ CONTAINS
         & fill_array = dfire_init_vars%pop_dens)
     ! Clean: set negative values to 0
     dfire_init_vars%pop_dens = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+    CALL input_file%Close()
+
+    ! Read data from human ignitions file
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(Q_DFIRE_)%ic_human_igns_filename), model%grid_id)
+
+    !> a_nd
+    ptr_2D => input_file%Read_2d(  &
+        & variable_name='a_nd', &
+        & fill_array = dfire_init_vars%a_nd)
+    ! Clean: set negative values to 0
+    dfire_init_vars%a_nd = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
     CALL input_file%Close()
 

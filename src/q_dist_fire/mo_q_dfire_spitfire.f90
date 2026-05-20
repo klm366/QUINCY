@@ -218,7 +218,6 @@ CONTAINS
 
     INTEGER                               :: nr_of_children
 
-    REAL(wp)                              :: a_nd(options%nc)
     INTEGER                               :: ierror
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_DFIRE_)
@@ -312,6 +311,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: frac_consump_fcl          ! out [-]
     dsl4jsb_Real2D_onChunk                :: ic_pop_dens               ! in [#humans km-2]
     dsl4jsb_Real2D_onChunk                :: a2l_lightning_events      ! in [#events ha-1 d-1]
+    dsl4jsb_Real2D_onChunk                :: a_nd                      ! in [#ignitions_indiv-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -408,6 +408,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, frac_consump_fcl)          ! out [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, ic_pop_dens)               ! in [#humans km-2]
     dsl4jsb_Get_var2D_onChunk(A2L_, a2l_lightning_events)          ! in [#events ha-1 d-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, a_nd)                      ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     ! ----------------------------------------------------------------------------------------------------- !
@@ -469,10 +470,6 @@ CONTAINS
 
     ab_moisture = calc_ab_moisture(soil_depth_sl(:,sl_ixs), wtr_soil_sl(:,sl_ixs), wtr_soil_sat_sl(:,sl_ixs), &
                                     mask=mask_is_tile_enabled)
-
-    ! Load input data: rate of human-caused ignitions per person [#ign indiv-1 d-]
-    ! Todo: further research on this data, currently taken from a paper.
-    a_nd = a2l_lightning_events * 4._wp
 
     CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         dsl4jsb_Config(Q_DFIRE_)%ros_model_id, &
