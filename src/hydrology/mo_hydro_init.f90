@@ -41,7 +41,7 @@ MODULE mo_hydro_init
   USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,             ONLY: missval
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
-  USE mo_util,               ONLY: int2string, soil_init_from_texture, read_bc_data
+  USE mo_util,               ONLY: int2string, soil_init_from_texture, soil_init_from_texture_layer, read_bc_data
 
   dsl4jsb_Use_processes HYDRO_
   dsl4jsb_Use_config(HYDRO_)
@@ -51,7 +51,8 @@ MODULE mo_hydro_init
   dsl4jsb_Use_processes SSE_
   dsl4jsb_Use_config(SSE_)
 #else
-  dsl4jsb_Use_processes PHENO_
+  dsl4jsb_Use_processes PHENO_, SSE_
+  dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_memory(PHENO_)
 #endif
 
@@ -147,6 +148,17 @@ MODULE mo_hydro_init
       & fr_sand_deep     (:,:) => NULL(), & !< fraction of sand for deep soil index []
       & fr_silt_deep     (:,:) => NULL(), & !< fraction of silt for deep soil index []
       & fr_clay_deep     (:,:) => NULL(), & !< fraction of clay for deep soil index []
+      & fr_sand_sl     (:,:,:) => NULL(), & !< fraction of sand within soil layers []
+      & fr_silt_sl     (:,:,:) => NULL(), & !< fraction of silt within soil layers []
+      & fr_clay_sl     (:,:,:) => NULL(), & !< fraction of clay within soil layers []
+      & vol_porosity_sl(:,:,:) => NULL(), & !< volumetric soil porosity within soil layers []
+      & hyd_cond_sat_sl(:,:,:) => NULL(), & !< saturated hydraulic conductivity within soil layers [m s-1]
+      & matric_pot_sl  (:,:,:) => NULL(), & !< saturated matric potential within soil layers [m]
+      & bclapp_sl      (:,:,:) => NULL(), & !< Clapp and Hornberger exponent b within soil layers []
+      & pore_size_index_sl(:,:,:) => NULL(), & !< pore size distribution index within soil layers []
+      & vol_field_cap_sl(:,:,:) => NULL(), & !< volumetric soil field capacity within soil layers []
+      & vol_p_wilt_sl  (:,:,:) => NULL(), & !< volumetric wilting point within soil layers []
+      & vol_wres_sl    (:,:,:) => NULL(), & !< volumetric residual water content within soil layers []
       & ifs_smi_sl     (:,:,:) => NULL(), & !< volumetric soil water (soil moisture index) from IFS []
       & ifs_weq_snow     (:,:) => NULL(), & !< snow on surface from IFS [m water equivalent]
       & soil_sat_water_content(:,:) => NULL(), &  !< saturated water content (awc)
@@ -230,6 +242,17 @@ CONTAINS
     IF (ASSOCIATED(hydro_init_vars%fr_sand_deep)) DEALLOCATE(hydro_init_vars%fr_sand_deep)
     IF (ASSOCIATED(hydro_init_vars%fr_silt_deep)) DEALLOCATE(hydro_init_vars%fr_silt_deep)
     IF (ASSOCIATED(hydro_init_vars%fr_clay_deep)) DEALLOCATE(hydro_init_vars%fr_clay_deep)
+    IF (ASSOCIATED(hydro_init_vars%fr_sand_sl)) DEALLOCATE(hydro_init_vars%fr_sand_sl)
+    IF (ASSOCIATED(hydro_init_vars%fr_silt_sl)) DEALLOCATE(hydro_init_vars%fr_silt_sl)
+    IF (ASSOCIATED(hydro_init_vars%fr_clay_sl)) DEALLOCATE(hydro_init_vars%fr_clay_sl)
+    IF (ASSOCIATED(hydro_init_vars%vol_porosity_sl)) DEALLOCATE(hydro_init_vars%vol_porosity_sl)
+    IF (ASSOCIATED(hydro_init_vars%hyd_cond_sat_sl)) DEALLOCATE(hydro_init_vars%hyd_cond_sat_sl)
+    IF (ASSOCIATED(hydro_init_vars%matric_pot_sl)) DEALLOCATE(hydro_init_vars%matric_pot_sl)
+    IF (ASSOCIATED(hydro_init_vars%bclapp_sl)) DEALLOCATE(hydro_init_vars%bclapp_sl)
+    IF (ASSOCIATED(hydro_init_vars%pore_size_index_sl)) DEALLOCATE(hydro_init_vars%pore_size_index_sl)
+    IF (ASSOCIATED(hydro_init_vars%vol_field_cap_sl)) DEALLOCATE(hydro_init_vars%vol_field_cap_sl)
+    IF (ASSOCIATED(hydro_init_vars%vol_p_wilt_sl)) DEALLOCATE(hydro_init_vars%vol_p_wilt_sl)
+    IF (ASSOCIATED(hydro_init_vars%vol_wres_sl)) DEALLOCATE(hydro_init_vars%vol_wres_sl)
     IF (ASSOCIATED(hydro_init_vars%wtr_soil_sl))  DEALLOCATE(hydro_init_vars%wtr_soil_sl)
     IF (ASSOCIATED(hydro_init_vars%ifs_smi_sl))   DEALLOCATE(hydro_init_vars%ifs_smi_sl)
     IF (ASSOCIATED(hydro_init_vars%ifs_weq_snow)) DEALLOCATE(hydro_init_vars%ifs_weq_snow)
@@ -873,6 +896,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile      !< Current tile
 
     dsl4jsb_Def_config(HYDRO_)                  !< Configurable parameters of the HYDRO process
+    dsl4jsb_Def_config(SSE_)                    !< Configurable parameters of the SSE process
 
     REAL(wp), POINTER :: &
       & ptr_1D(:    ),   &                      !< Pointer to 1d variable
@@ -883,12 +907,14 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: grid              !< Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: soil_w            !< Vertical grid used for hydrology
     TYPE(t_input_file)         :: input_file        !< File containing input data to be read
+    TYPE(t_input_file)         :: input_file_3d     !< File containing layer-wise soil texture data
     INTEGER                    :: nproma, nblks     !< Dimensions of the horizontal grid
     INTEGER                    :: nsoil             !< Number of vertical soil layers of the vgrid 'soil_depth_water'
     INTEGER                    :: nsoil_input_file  !< Number of vertical soil layers as provided by the ic input file
     INTEGER                    :: isoil             !< Looping index for soil layers
     LOGICAL                    :: l_organic         !< T: read mineral soil properties (and calculate final properties
                                                     !< taking into account organic matter fraction)
+    LOGICAL                    :: l_read_quincy_soil_3d
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_read_init_vars'
 
     ! Assertion: do nothing if hydrology process is not active on this tile (should not happen)
@@ -899,6 +925,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(SSE_)
 
     grid   => Get_grid(model%grid_id)
     nproma = grid%Get_nproma()
@@ -906,6 +933,10 @@ CONTAINS
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
     l_organic = dsl4jsb_Config(HYDRO_)%l_organic
+    l_read_quincy_soil_3d = .FALSE.
+#ifndef __NO_QUINCY__
+    l_read_quincy_soil_3d = model%config%model_scheme == MODEL_QUINCY .AND. model%config%l_read_quincy_soil_3d
+#endif
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -980,6 +1011,35 @@ CONTAINS
       hydro_init_vars%fr_sand_deep(:,:) = missval
       hydro_init_vars%fr_silt_deep(:,:) = missval
       hydro_init_vars%fr_clay_deep(:,:) = missval
+      IF (l_read_quincy_soil_3d) THEN
+        !>     - Fraction of sand, silt and clay within soil layers
+        !>     - Layer-wise mineral soil properties calculated from soil texture
+        ALLOCATE( &
+          & hydro_init_vars%fr_sand_sl(nproma, nsoil, nblks), &
+          & hydro_init_vars%fr_silt_sl(nproma, nsoil, nblks), &
+          & hydro_init_vars%fr_clay_sl(nproma, nsoil, nblks), &
+          & hydro_init_vars%vol_porosity_sl(nproma, nsoil, nblks), &
+          & hydro_init_vars%hyd_cond_sat_sl(nproma, nsoil, nblks), &
+          & hydro_init_vars%matric_pot_sl(nproma, nsoil, nblks), &
+          & hydro_init_vars%bclapp_sl(nproma, nsoil, nblks), &
+          & hydro_init_vars%pore_size_index_sl(nproma, nsoil, nblks), &
+          & hydro_init_vars%vol_field_cap_sl(nproma, nsoil, nblks), &
+          & hydro_init_vars%vol_p_wilt_sl(nproma, nsoil, nblks), &
+          & hydro_init_vars%vol_wres_sl(nproma, nsoil, nblks) &
+          & )
+
+        hydro_init_vars%fr_sand_sl(:,:,:)         = missval
+        hydro_init_vars%fr_silt_sl(:,:,:)         = missval
+        hydro_init_vars%fr_clay_sl(:,:,:)         = missval
+        hydro_init_vars%vol_porosity_sl(:,:,:)    = missval
+        hydro_init_vars%hyd_cond_sat_sl(:,:,:)    = missval
+        hydro_init_vars%matric_pot_sl(:,:,:)      = missval
+        hydro_init_vars%bclapp_sl(:,:,:)          = missval
+        hydro_init_vars%pore_size_index_sl(:,:,:) = missval
+        hydro_init_vars%vol_field_cap_sl(:,:,:)   = missval
+        hydro_init_vars%vol_p_wilt_sl(:,:,:)      = missval
+        hydro_init_vars%vol_wres_sl(:,:,:)        = missval
+      END IF
     END IF ! l_soil_texture
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -1084,82 +1144,164 @@ CONTAINS
         !>    C: Soil textur maps - read if soil properties are to be calculated,
         !>       and then calculate the soil properties from these textures.
         !>
-        !>     - Fraction of sand in upper soil
-        CALL read_bc_data(input_file, 'FR_SAND', tile%name, hydro_init_vars%fr_sand, llimit=0._wp)
+        IF (l_read_quincy_soil_3d) THEN
+          !>
+          !>    C1: Soil texture maps with a soil-layer dimension - read if 3D QUINCY soil inputs are enabled.
+          !>        Only primary texture fields are read, and hydrological soil properties are calculated from them.
+          !>
+          !>     - Fraction of sand, silt and clay within soil layers
+          input_file_3d = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename_3d), model%grid_id)
 
-        !>     - Fraction of silt in upper soil
-        CALL read_bc_data(input_file, 'FR_SILT', tile%name, hydro_init_vars%fr_silt, llimit=0._wp)
+          CALL read_hydro_soil_texture_input_3d(input_file_3d, 'FR_SAND', hydro_init_vars%fr_sand_sl, 0.3_wp)
+          CALL read_hydro_soil_texture_input_3d(input_file_3d, 'FR_SILT', hydro_init_vars%fr_silt_sl, 0.4_wp)
+          CALL read_hydro_soil_texture_input_3d(input_file_3d, 'FR_CLAY', hydro_init_vars%fr_clay_sl, 0.3_wp)
+          CALL input_file_3d%Close()
 
-        !>     - Fraction of clay in upper soil
-        CALL read_bc_data(input_file, 'FR_CLAY', tile%name, hydro_init_vars%fr_clay, llimit=0._wp)
+          !>     - Surface and deepest-layer texture fields for compatibility with 2D diagnostics
+          hydro_init_vars%fr_sand(:,:)      = hydro_init_vars%fr_sand_sl(:,1,:)
+          hydro_init_vars%fr_silt(:,:)      = hydro_init_vars%fr_silt_sl(:,1,:)
+          hydro_init_vars%fr_clay(:,:)      = hydro_init_vars%fr_clay_sl(:,1,:)
+          hydro_init_vars%fr_sand_deep(:,:) = hydro_init_vars%fr_sand_sl(:,nsoil,:)
+          hydro_init_vars%fr_silt_deep(:,:) = hydro_init_vars%fr_silt_sl(:,nsoil,:)
+          hydro_init_vars%fr_clay_deep(:,:) = hydro_init_vars%fr_clay_sl(:,nsoil,:)
 
-        !>     - Fraction of sand in deep soil
-        CALL read_bc_data(input_file, 'SUB_FR_SAND', tile%name, hydro_init_vars%fr_sand_deep, llimit=0._wp)
+          ! Calculate volumetric soil porosity of mineral soil for each soil layer
+          CALL soil_init_from_texture_layer( &
+            & porosity_sand, porosity_silt, porosity_clay, porosity_oc, &
+            & hydro_init_vars%fr_sand_sl(:,:,:), hydro_init_vars%fr_silt_sl(:,:,:), hydro_init_vars%fr_clay_sl(:,:,:), &
+            & hydro_init_vars%vol_porosity_sl(:,:,:))
 
-        !>     - Fraction of silt in deep soil
-        CALL read_bc_data(input_file, 'SUB_FR_SILT', tile%name, hydro_init_vars%fr_silt_deep, llimit=0._wp)
+          ! Calculate saturated hydraulic conductivity of mineral soil for each soil layer
+          CALL soil_init_from_texture_layer( &
+            & hyd_cond_sand, hyd_cond_silt, hyd_cond_clay, hyd_cond_oc, &
+            & hydro_init_vars%fr_sand_sl(:,:,:), hydro_init_vars%fr_silt_sl(:,:,:), hydro_init_vars%fr_clay_sl(:,:,:), &
+            & hydro_init_vars%hyd_cond_sat_sl(:,:,:))
+          hydro_init_vars%hyd_cond_sat_sl(:,:,:) = hydro_init_vars%hyd_cond_sat_sl(:,:,:) * hyd_cond_sat_profile
 
-        !>     - Fraction of clay in deep soil
-        CALL read_bc_data(input_file, 'SUB_FR_CLAY', tile%name, hydro_init_vars%fr_clay_deep, llimit=0._wp)
+          ! Calculate volumetric field capacity [m/m] of mineral soil for each soil layer
+          CALL soil_init_from_texture_layer( &
+            & field_cap_sand, field_cap_silt, field_cap_clay, field_cap_oc, &
+            & hydro_init_vars%fr_sand_sl(:,:,:), hydro_init_vars%fr_silt_sl(:,:,:), hydro_init_vars%fr_clay_sl(:,:,:), &
+            & hydro_init_vars%vol_field_cap_sl(:,:,:))
 
-        ! Calculate the soil properties from soil textures
-        !
-        ! Calculate volumetric soil porosity of mineral soil
-        CALL soil_init_from_texture( &
-          & porosity_sand, porosity_silt, porosity_clay, porosity_oc,                                                &
-          & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
-          & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-          & hydro_init_vars%vol_porosity(:,:))
+          ! Calculate plant wilting point of mineral soil for each soil layer
+          CALL soil_init_from_texture_layer( &
+            & wilt_sand, wilt_silt, wilt_clay, wilt_oc, &
+            & hydro_init_vars%fr_sand_sl(:,:,:), hydro_init_vars%fr_silt_sl(:,:,:), hydro_init_vars%fr_clay_sl(:,:,:), &
+            & hydro_init_vars%vol_p_wilt_sl(:,:,:))
 
-        ! Calculate saturated hydraulic conductivity of mineral soil
-        CALL soil_init_from_texture( &
-          & hyd_cond_sand, hyd_cond_silt, hyd_cond_clay, hyd_cond_oc,                                                &
-          & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
-          & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-          & hydro_init_vars%hyd_cond_sat(:,:))
-        hydro_init_vars%hyd_cond_sat(:,:) = hydro_init_vars%hyd_cond_sat(:,:) * hyd_cond_sat_profile
+          ! Calculate residual soil water content of mineral soil for each soil layer
+          CALL soil_init_from_texture_layer( &
+            & wres_sand, wres_silt, wres_clay, wres_oc, &
+            & hydro_init_vars%fr_sand_sl(:,:,:), hydro_init_vars%fr_silt_sl(:,:,:), hydro_init_vars%fr_clay_sl(:,:,:), &
+            & hydro_init_vars%vol_wres_sl(:,:,:))
 
-        ! Calculate volumetric field capacity [m/m] of mineral soil
-        CALL soil_init_from_texture( &
-          & field_cap_sand, field_cap_silt, field_cap_clay, field_cap_oc,                                            &
-          & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
-          & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-          & hydro_init_vars%vol_field_cap(:,:))
+          ! Calculate matric potential of mineral soil for each soil layer
+          CALL soil_init_from_texture_layer( &
+            & matric_pot_sand, matric_pot_silt, matric_pot_clay, matric_pot_oc, &
+            & hydro_init_vars%fr_sand_sl(:,:,:), hydro_init_vars%fr_silt_sl(:,:,:), hydro_init_vars%fr_clay_sl(:,:,:), &
+            & hydro_init_vars%matric_pot_sl(:,:,:))
 
-        ! Calculate plant wilting point of mineral soil
-        CALL soil_init_from_texture( &
-          & wilt_sand, wilt_silt, wilt_clay, wilt_oc,                                                                &
-          & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
-          & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-          & hydro_init_vars%vol_p_wilt(:,:))
+          ! Calculate pore_size_index of mineral soil for each soil layer
+          CALL soil_init_from_texture_layer( &
+            & pore_size_index_sand, pore_size_index_silt, pore_size_index_clay, pore_size_index_oc, &
+            & hydro_init_vars%fr_sand_sl(:,:,:), hydro_init_vars%fr_silt_sl(:,:,:), hydro_init_vars%fr_clay_sl(:,:,:), &
+            & hydro_init_vars%pore_size_index_sl(:,:,:))
 
-        ! Calculate residual soil water content of mineral soil
-        CALL soil_init_from_texture( &
-           & wres_sand, wres_silt, wres_clay, wres_oc,                                                                &
-           & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
-           & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-           & hydro_init_vars%vol_wres(:,:))
+          ! Calculate exponent b in Clapp & Hornberger of mineral soil for each soil layer
+          CALL soil_init_from_texture_layer( &
+            & bclapp_sand, bclapp_silt, bclapp_clay, bclapp_oc, &
+            & hydro_init_vars%fr_sand_sl(:,:,:), hydro_init_vars%fr_silt_sl(:,:,:), hydro_init_vars%fr_clay_sl(:,:,:), &
+            & hydro_init_vars%bclapp_sl(:,:,:))
 
-        ! Calculate matric potential of mineral soil
-        CALL soil_init_from_texture( &
-           & matric_pot_sand, matric_pot_silt, matric_pot_clay, matric_pot_oc,                                        &
-           & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
-           & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-           & hydro_init_vars%matric_pot(:,:))
+          !>     - Surface-layer soil properties for compatibility with 2D diagnostics
+          hydro_init_vars%vol_porosity(:,:)    = hydro_init_vars%vol_porosity_sl(:,1,:)
+          hydro_init_vars%hyd_cond_sat(:,:)    = hydro_init_vars%hyd_cond_sat_sl(:,1,:)
+          hydro_init_vars%vol_field_cap(:,:)   = hydro_init_vars%vol_field_cap_sl(:,1,:)
+          hydro_init_vars%vol_p_wilt(:,:)      = hydro_init_vars%vol_p_wilt_sl(:,1,:)
+          hydro_init_vars%vol_wres(:,:)        = hydro_init_vars%vol_wres_sl(:,1,:)
+          hydro_init_vars%matric_pot(:,:)      = hydro_init_vars%matric_pot_sl(:,1,:)
+          hydro_init_vars%pore_size_index(:,:) = hydro_init_vars%pore_size_index_sl(:,1,:)
+          hydro_init_vars%bclapp(:,:)          = hydro_init_vars%bclapp_sl(:,1,:)
+        ELSE
+          !>
+          !>    C2: Soil texture maps without a soil-layer dimension
+          !>
+          !>     - Fraction of sand in upper soil
+          CALL read_bc_data(input_file, 'FR_SAND', tile%name, hydro_init_vars%fr_sand, llimit=0._wp)
 
-        ! Calculate pore_size_index of mineral soil
-        CALL soil_init_from_texture( &
-          & pore_size_index_sand, pore_size_index_silt, pore_size_index_clay, pore_size_index_oc,                    &
-          & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
-          & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-          & hydro_init_vars%pore_size_index(:,:))
+          !>     - Fraction of silt in upper soil
+          CALL read_bc_data(input_file, 'FR_SILT', tile%name, hydro_init_vars%fr_silt, llimit=0._wp)
 
-        ! Calculate exponent b in Clapp & Hornberger of mineral soil
-        CALL soil_init_from_texture( &
-          & bclapp_sand, bclapp_silt, bclapp_clay, bclapp_oc,                                                        &
-          & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
-          & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-          & hydro_init_vars%bclapp(:,:))
+          !>     - Fraction of clay in upper soil
+          CALL read_bc_data(input_file, 'FR_CLAY', tile%name, hydro_init_vars%fr_clay, llimit=0._wp)
+
+          !>     - Fraction of sand in deep soil
+          CALL read_bc_data(input_file, 'SUB_FR_SAND', tile%name, hydro_init_vars%fr_sand_deep, llimit=0._wp)
+
+          !>     - Fraction of silt in deep soil
+          CALL read_bc_data(input_file, 'SUB_FR_SILT', tile%name, hydro_init_vars%fr_silt_deep, llimit=0._wp)
+
+          !>     - Fraction of clay in deep soil
+          CALL read_bc_data(input_file, 'SUB_FR_CLAY', tile%name, hydro_init_vars%fr_clay_deep, llimit=0._wp)
+
+          ! Calculate volumetric soil porosity of mineral soil
+          CALL soil_init_from_texture( &
+            & porosity_sand, porosity_silt, porosity_clay, porosity_oc,                                              &
+            & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),              &
+            & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
+            & hydro_init_vars%vol_porosity(:,:))
+
+          ! Calculate saturated hydraulic conductivity of mineral soil
+          CALL soil_init_from_texture( &
+            & hyd_cond_sand, hyd_cond_silt, hyd_cond_clay, hyd_cond_oc,                                              &
+            & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),              &
+            & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
+            & hydro_init_vars%hyd_cond_sat(:,:))
+          hydro_init_vars%hyd_cond_sat(:,:) = hydro_init_vars%hyd_cond_sat(:,:) * hyd_cond_sat_profile
+
+          ! Calculate volumetric field capacity [m/m] of mineral soil
+          CALL soil_init_from_texture( &
+            & field_cap_sand, field_cap_silt, field_cap_clay, field_cap_oc,                                          &
+            & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),              &
+            & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
+            & hydro_init_vars%vol_field_cap(:,:))
+
+          ! Calculate plant wilting point of mineral soil
+          CALL soil_init_from_texture( &
+            & wilt_sand, wilt_silt, wilt_clay, wilt_oc,                                                              &
+            & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),              &
+            & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
+            & hydro_init_vars%vol_p_wilt(:,:))
+
+          ! Calculate residual soil water content of mineral soil
+          CALL soil_init_from_texture( &
+            & wres_sand, wres_silt, wres_clay, wres_oc,                                                              &
+            & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),              &
+            & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
+            & hydro_init_vars%vol_wres(:,:))
+
+          ! Calculate matric potential of mineral soil
+          CALL soil_init_from_texture( &
+            & matric_pot_sand, matric_pot_silt, matric_pot_clay, matric_pot_oc,                                      &
+            & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),              &
+            & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
+            & hydro_init_vars%matric_pot(:,:))
+
+          ! Calculate pore_size_index of mineral soil
+          CALL soil_init_from_texture( &
+            & pore_size_index_sand, pore_size_index_silt, pore_size_index_clay, pore_size_index_oc,                  &
+            & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),              &
+            & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
+            & hydro_init_vars%pore_size_index(:,:))
+
+          ! Calculate exponent b in Clapp & Hornberger of mineral soil
+          CALL soil_init_from_texture( &
+            & bclapp_sand, bclapp_silt, bclapp_clay, bclapp_oc,                                                      &
+            & hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),              &
+            & hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
+            & hydro_init_vars%bclapp(:,:))
+        END IF
 
       END IF ! l_soil_texture
 
@@ -1249,6 +1391,22 @@ CONTAINS
     END IF ! tile contains_soil
 
   END SUBROUTINE hydro_read_init_vars
+
+  !>#### Read hydrological soil texture input with a soil-layer dimension
+  !>
+  !> This routine is used for the optional QUINCY 3D soil input workflow. Missing or invalid
+  !> values are replaced by the provided default value.
+  SUBROUTINE read_hydro_soil_texture_input_3d(input_file, variable_name, field, default)
+    TYPE(t_input_file), INTENT(inout) :: input_file
+    CHARACTER(len=*),   INTENT(in)    :: variable_name
+    REAL(wp), TARGET,   INTENT(inout) :: field(:,:,:)
+    REAL(wp),           INTENT(in)    :: default
+
+    REAL(wp), POINTER :: ptr_3D(:,:,:)
+
+    ptr_3D => input_file%Read_3d(variable_name=variable_name, fill_array=field)
+    field(:,:,:) = MERGE(ptr_3D, default, ptr_3D >= 0.0_wp)
+  END SUBROUTINE read_hydro_soil_texture_input_3d
 
   ! ====================================================================================================== !
   !
@@ -1971,16 +2129,27 @@ CONTAINS
 
     ! -------------------------------------------------------------------------------------------------- !
     !
-    !> - Distribute 2d input parameters over all soil layers
-    !
-    hyd_cond_sat_sl   (:,:,:) = SPREAD(hyd_cond_sat   (:,:), DIM=2, ncopies=nsoil)
-    vol_porosity_sl   (:,:,:) = SPREAD(vol_porosity   (:,:), DIM=2, ncopies=nsoil)
-    bclapp_sl         (:,:,:) = SPREAD(bclapp         (:,:), DIM=2, ncopies=nsoil)
-    matric_pot_sl     (:,:,:) = SPREAD(matric_pot     (:,:), DIM=2, ncopies=nsoil)
-    pore_size_index_sl(:,:,:) = SPREAD(pore_size_index(:,:), DIM=2, ncopies=nsoil)
-    vol_field_cap_sl  (:,:,:) = SPREAD(vol_field_cap  (:,:), DIM=2, ncopies=nsoil)
-    vol_p_wilt_sl     (:,:,:) = SPREAD(vol_p_wilt     (:,:), DIM=2, ncopies=nsoil)
-    vol_wres_sl       (:,:,:) = SPREAD(vol_wres       (:,:), DIM=2, ncopies=nsoil)
+    !> - Initialize layer soil parameters from 3D input-derived values when available,
+    !>   otherwise distribute 2D input parameters over all soil layers.
+    IF (ASSOCIATED(hydro_init_vars%hyd_cond_sat_sl)) THEN
+      hyd_cond_sat_sl   (:,:,:) = hydro_init_vars%hyd_cond_sat_sl   (:,:,:)
+      vol_porosity_sl   (:,:,:) = hydro_init_vars%vol_porosity_sl   (:,:,:)
+      bclapp_sl         (:,:,:) = hydro_init_vars%bclapp_sl         (:,:,:)
+      matric_pot_sl     (:,:,:) = hydro_init_vars%matric_pot_sl     (:,:,:)
+      pore_size_index_sl(:,:,:) = hydro_init_vars%pore_size_index_sl(:,:,:)
+      vol_field_cap_sl  (:,:,:) = hydro_init_vars%vol_field_cap_sl  (:,:,:)
+      vol_p_wilt_sl     (:,:,:) = hydro_init_vars%vol_p_wilt_sl     (:,:,:)
+      vol_wres_sl       (:,:,:) = hydro_init_vars%vol_wres_sl       (:,:,:)
+    ELSE
+      hyd_cond_sat_sl   (:,:,:) = SPREAD(hyd_cond_sat   (:,:), DIM=2, ncopies=nsoil)
+      vol_porosity_sl   (:,:,:) = SPREAD(vol_porosity   (:,:), DIM=2, ncopies=nsoil)
+      bclapp_sl         (:,:,:) = SPREAD(bclapp         (:,:), DIM=2, ncopies=nsoil)
+      matric_pot_sl     (:,:,:) = SPREAD(matric_pot     (:,:), DIM=2, ncopies=nsoil)
+      pore_size_index_sl(:,:,:) = SPREAD(pore_size_index(:,:), DIM=2, ncopies=nsoil)
+      vol_field_cap_sl  (:,:,:) = SPREAD(vol_field_cap  (:,:), DIM=2, ncopies=nsoil)
+      vol_p_wilt_sl     (:,:,:) = SPREAD(vol_p_wilt     (:,:), DIM=2, ncopies=nsoil)
+      vol_wres_sl       (:,:,:) = SPREAD(vol_wres       (:,:), DIM=2, ncopies=nsoil)
+    END IF
 
     ! -------------------------------------------------------------------------------------------------- !
     !

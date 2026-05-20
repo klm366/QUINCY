@@ -189,12 +189,13 @@ CONTAINS
   !!
   !! Input to this routine should conform:
   !! fraction_sand + fraction_silt + fraction_clay = 1
-  PURE ELEMENTAL SUBROUTINE soil_init_from_texture_layer( &
-    & parameter_sand, parameter_silt, parameter_clay, &
+  !! parameter_oc is kept as a placeholder for consistency with soil_init_from_texture.
+  PURE ELEMENTAL SUBROUTINE soil_init_from_texture_layer(                 &
+    & parameter_sand, parameter_silt, parameter_clay, parameter_oc, &            ! Look up table values
     & fraction_sand, fraction_silt, fraction_clay, &
     & parameter_from_texture)
 
-    REAL(wp), INTENT(in)  :: parameter_sand, parameter_silt, parameter_clay
+    REAL(wp), INTENT(in)  :: parameter_sand, parameter_silt, parameter_clay, parameter_oc
     REAL(wp), INTENT(in)  :: fraction_sand, fraction_silt, fraction_clay
     REAL(wp), INTENT(out) :: parameter_from_texture
 

@@ -753,8 +753,10 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
 
+    !> Soil taxonomy classes
+    !>  Read from the regular QUINCY soil boundary condition file. They are still 2D input fields.
+    !>
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename), model%grid_id)
-
 
     !> USDA taxonomy soil class
     !>
@@ -774,6 +776,11 @@ CONTAINS
 
     CALL input_file%Close()
 
+    !> QUINCY soil biogeochemistry inputs
+    !>  In the default workflow, soil biogeochemistry maps are read as 2D fields and expanded to all soil layers.
+    !>  If l_read_quincy_soil_3d is enabled, selected variables are read layer-wise from the optional 3D file.
+    !>  qmax_org is kept as a 2D input because it follows the existing taxonomy-based map.
+    !>
     IF (model%config%l_read_quincy_soil_3d) THEN
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename_3d), model%grid_id)
 
@@ -799,6 +806,9 @@ CONTAINS
     END IF
   END SUBROUTINE sb_read_init_vars
 
+  ! ======================================================================================================= !
+  !> Read a QUINCY soil input variable from a 2D map and expand it to all soil layers
+  !>
   SUBROUTINE read_quincy_soil_input_2d(input_file, variable_name, field, default, scale)
     USE mo_jsb_io_netcdf,      ONLY: t_input_file
 
@@ -825,6 +835,9 @@ CONTAINS
     DEALLOCATE(field_2d)
   END SUBROUTINE read_quincy_soil_input_2d
 
+  ! ======================================================================================================= !
+  !> Read a QUINCY soil input variable with a soil-layer dimension
+  !>
   SUBROUTINE read_quincy_soil_input_3d(input_file, variable_name, field, default, scale)
     USE mo_jsb_io_netcdf,      ONLY: t_input_file
 
@@ -1255,6 +1268,9 @@ CONTAINS
     ! initialise mineral soil P pools
     DO iblk = 1,nblks
       IF (l_read_quincy_soil_3d) THEN
+        !> Use the layer-wise inorganic P pools directly
+        !>  These maps are expected to already contain the desired vertical distribution.
+        !>  No extrapolation from the shallow soil P data is applied.
         CALL init_soil_p_pools_from_3d_input( &
           & nproma, &                         ! in
           & nsoil_w, &
@@ -1275,6 +1291,8 @@ CONTAINS
           & qmax_fast_po4(:,:,iblk), &
           & km_fast_po4(:,:,iblk) )           ! inout
       ELSE
+        !> Use the original 2D soil P workflow and extrapolate the soil P maps over the soil profile
+        !>
         CALL init_soil_p_pools( &
           & nproma, &                         ! in
           & nsoil_w, &
@@ -1792,6 +1810,9 @@ CONTAINS
     ! initialise mineral soil P pools
     DO iblk = 1,nblks
       IF (l_read_quincy_soil_3d) THEN
+        !> Use the layer-wise inorganic P pools directly
+        !>  These maps are expected to already contain the desired vertical distribution.
+        !>  No extrapolation from the shallow soil P data is applied.
         CALL init_soil_p_pools_from_3d_input( &
           & nproma, &                               ! in
           & nsoil_w, &
@@ -1812,6 +1833,8 @@ CONTAINS
           & qmax_fast_po4(:,:,iblk), &
           & km_fast_po4(:,:,iblk) )                 ! inout
       ELSE
+        !> Use the original 2D soil P workflow and extrapolate the soil P maps over the soil profile
+        !>
         CALL init_soil_p_pools( &
           & nproma, &                               ! in
           & nsoil_w, &
@@ -1930,6 +1953,8 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>Intialize soil P pools directly from layer-wise soil P maps
+  !>  In contrast to init_soil_p_pools, this routine does not extrapolate shallow soil P maps over depth.
+  !>  The input file is expected to provide the full vertical distribution for each inorganic P pool.
   !>
   SUBROUTINE init_soil_p_pools_from_3d_input(nc, &
                                              nsoil_w, &
@@ -1973,6 +1998,8 @@ CONTAINS
     po4_occluded(:,:)   = 0._wp
     po4_primary(:,:)    = 0._wp
 
+    !> Convert areal P pools of each soil layer to volumetric molar pools
+    !>
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (soil_depth_sl(ic,is) > eps8) THEN
