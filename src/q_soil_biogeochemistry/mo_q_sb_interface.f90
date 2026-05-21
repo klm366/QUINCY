@@ -556,6 +556,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_config(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
@@ -572,6 +573,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_config(SB_)
 
     ! fluxes
     dsl4jsb_Aggregate_onChunk(SB_, het_respiration              , weighted_by_fract)
@@ -607,6 +609,14 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_ag_woody_litter_c   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_ag_woody_litter_n   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, sb_pool_ag_woody_litter_p   , weighted_by_fract)
+    IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
+      dsl4jsb_Aggregate_onChunk(SB_, sb_bgcm_pool_microbial_c    , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SB_, sb_bgcm_pool_microbial_n    , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SB_, sb_bgcm_pool_microbial_p    , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SB_, sb_bgcm_pool_mineral_assoc_c, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SB_, sb_bgcm_pool_mineral_assoc_n, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SB_, sb_bgcm_pool_mineral_assoc_p, weighted_by_fract)
+    END IF
 
     ! VEG_ fluxes
     dsl4jsb_Aggregate_onChunk(VEG_,   net_biosphere_production      , weighted_by_fract)
