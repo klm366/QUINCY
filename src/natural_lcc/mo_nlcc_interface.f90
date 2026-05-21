@@ -114,7 +114,6 @@ CONTAINS
                                  cover_fract_pot_to_cover_fract, desert_fraction, fpc_daily, scale_fpc
     USE mo_jsb_time,       ONLY: is_newyear, is_newday
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
-    USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -159,13 +158,12 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(DISTURB_)
-    dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(SSE_)
 
     ! Declare pointers to variables in climbuf memory
     dsl4jsb_Real2D_onChunk :: min_mmtemp_20yr
     dsl4jsb_Real2D_onChunk :: max_mmtemp_20yr
     dsl4jsb_Real2D_onChunk :: gdd_prev_year
+    dsl4jsb_Real2D_onChunk :: max_snow_prev_year
 
     ! Declare pointers to variables in nlcc memory
     dsl4jsb_Real3D_onChunk :: act_fpc
@@ -176,6 +174,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: bio_exist
     dsl4jsb_Real2D_onChunk :: sum_green_bio_memory
     dsl4jsb_Real2D_onChunk :: desert_fpc
+    dsl4jsb_Real3D_onChunk :: npp_pft
 
     ! Local variables
     LOGICAL :: new_year, new_day, init_nlcc
@@ -208,71 +207,6 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(DISTURB_)
-    dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(SSE_)
-
-    ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_day)     ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_month)   ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,min_mmtemp_of_yr) ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,max_mmtemp_of_yr) ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,min_mmtemp20)     ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,max_mmtemp20)     ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,gdd_sum_year)     ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,gdd_prev_year)    ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,max_snow_year)    ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,max_snow_prev_year)    ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,max_thaw_year)    ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,max_thaw_prev_year)    ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,act_fpc)          ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,bare_fpc)         ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,pot_fpc)          ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract_pot)  ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract)      ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,bio_exist)        ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,npp_pft)          ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)       ! inout
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
-    dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth)
-
-    IF (is_time_experiment_start(options%current_datetime) .OR. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
-      lstart = .TRUE.
-    ELSE
-      lstart = .FALSE.
-    END IF
-    new_year  = is_newyear (options%current_datetime, options%dtime)
-    new_month = is_newmonth(options%current_datetime, options%dtime)
-    new_day   = is_newday  (options%current_datetime, options%dtime)
-
-    seconds_day   = get_day_length()
-    seconds_month = get_previous_month_length(options%current_datetime)
-
-    ! Update climbuf
-    accelerate_nlcc    = dsl4jsb_Config(NLCC_)%accelerate_nlcc
-    init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
-    init_mmtemp20 = .TRUE.
-    IF (MAXVAL(min_mmtemp20(:)) > 999._wp .OR. MINVAL(max_mmtemp20(:)) < -999._wp) init_mmtemp20 = .FALSE.
-
-    DO i = 1,nc
-      snow_depth(i) = weq_snow_soil(i) * rhoh2o / snow_soil_dens(i)
-    END DO
-    CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
-                      seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
-                      min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20, &
-                      snow_depth, max_snow_year, max_snow_prev_year,                              &
-                      thaw_depth, max_thaw_year, max_thaw_prev_year,                              &
-                      gdd_sum_year, gdd_prev_year)
-
-    IF (.NOT. init_mmtemp20 .AND. debug_on() .AND. iblk==1) THEN
-       IF (MAXVAL(min_mmtemp20(:)) <= 999._wp .OR. MINVAL(max_mmtemp20(:)) >= -999._wp) &
-          CALL message(TRIM(routine), 'initialisation of mmtemp20')
-    ENDIF
-
-    ! For vertical yasso, only calc_climbuf is needed. Thus we can now return if no real NLCC_ is wanted
-    IF (dsl4jsb_Config(NLCC_)%climbuf_only) RETURN
 
     ! import lct information from PFT tiles
     !!$ TR collect_var_real2d has to be replaced by appropriate dsl4jsb invocations!
@@ -324,17 +258,19 @@ CONTAINS
     damaged_fract => disturb__mem%collect_var_real2d(ics, ice, iblk, no_children, disturb__mem%damaged_fract)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp_20yr)  ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp_20yr)  ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_prev_year)    ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,act_fpc)          ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,bare_fpc)         ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,pot_fpc)          ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract_pot)  ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract)      ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,bio_exist)        ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp_20yr)   ! in
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp_20yr)   ! in
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_prev_year)     ! in
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_snow_prev_year)! in
+    dsl4jsb_Get_var3D_onChunk(NLCC_,act_fpc)              ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,bare_fpc)             ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,pot_fpc)              ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract_pot)      ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract)          ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,bio_exist)            ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)       ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)           ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,npp_pft)              ! inout
 
     IF (.NOT. nlcc_initialized .AND. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
       init_nlcc = .TRUE.
@@ -389,7 +325,8 @@ CONTAINS
           CALL bioclim_limits (is_dynamic(:,itile), bclimit_min_cold_mmtemp(:,itile), bclimit_max_cold_mmtemp(:,itile),    &
                                bclimit_max_warm_mmtemp(:,itile), bclimit_min_temprange(:,itile), bclimit_min_gdd(:,itile), &
                                bclimit_min_snow(:,itile), &
-                               min_mmtemp_20yr(:), max_mmtemp_20yr(:), max_snow_prev_year(:), gdd_prev_year(:), bio_exist(:,itile))
+                               min_mmtemp_20yr(:), max_mmtemp_20yr(:), max_snow_prev_year(:), gdd_prev_year(:),    &
+                               bio_exist(:,itile))
        ENDDO
        IF (.NOT. lstart) THEN
           CALL potential_tree_fpc (nc, no_children, is_dynamic(:,:), is_woody(:,:), bio_exist(:,:), &

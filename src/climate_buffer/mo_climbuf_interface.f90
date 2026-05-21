@@ -34,7 +34,7 @@ MODULE mo_climbuf_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes A2L_, SEB_, CLIMBUF_
+  dsl4jsb_Use_processes A2L_, SEB_, SSE_, HYDRO_, CLIMBUF_
 
   ! Use of process configurations
   dsl4jsb_Use_config(CLIMBUF_)
@@ -42,6 +42,8 @@ MODULE mo_climbuf_interface
   ! Use of process memories
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(SSE_)
+  dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(CLIMBUF_)
 
   ! -------------------------------------------------------------------------------------------------------
@@ -103,8 +105,9 @@ CONTAINS
   !>
   SUBROUTINE update_climbuf(tile, options)
 
-    USE mo_climbuf_process,   ONLY: calc_climbuf, get_relative_humidity_air
+    USE mo_climbuf_process,   ONLY: calc_climbuf_2d, calc_climbuf_3d, get_relative_humidity_air
     USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
+    USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Current tile
@@ -127,6 +130,7 @@ CONTAINS
       & iblk,                & !< Currently processed block
       & ics,                 & !< First grid cell of the block
       & ice,                 & !< Last grid cell of the block
+      & i,                   & !< Index for grid cell loops
       & nc                     !< Number of grid cells in block
 
     REAL(wp) :: &
@@ -135,6 +139,7 @@ CONTAINS
       & dtime                  !< Time step length [s]
 
     REAL(wp), ALLOCATABLE :: &
+      & snow_depth(:),       & !< Snow depth on soil [m]
       & q_rel_air(:)           !< Relative humidity of the lowest level of the atmosphere [%]
 
     LOGICAL, SAVE :: &
@@ -147,6 +152,8 @@ CONTAINS
     dsl4jsb_Def_memory(CLIMBUF_)   !< Memory of the climate buffer process
     dsl4jsb_Def_memory(A2L_)       !< Memory for atmospheric variables for the land
     dsl4jsb_Def_memory(SEB_)       !< Memory of surface energy balance process
+    dsl4jsb_Def_memory(SSE_)       !< Memory of soil and snow energy process
+    dsl4jsb_Def_memory(HYDRO_)     !< Memory of hydrology process
 
     ! Declare pointers to variables in climbuf memory
     dsl4jsb_Real2D_onChunk :: temp_sum_day       !< Current temperature sum of the day [K]
@@ -161,11 +168,19 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: precip_15d_yDay    !< 15-day smoothed precipitation at the end of previous day [kg m-2 s-1]
     dsl4jsb_Real2D_onChunk :: gdd_sum_year       !< Current number of growing degree days in the year
     dsl4jsb_Real2D_onChunk :: gdd_prev_year      !< Growing degree days of the previous year
+    dsl4jsb_Real2D_onChunk :: max_snow_year      !< Maximum snow depth in current year [m]
+    dsl4jsb_Real2D_onChunk :: max_snow_prev_year !< Maximum snow depth in previous year [m]
+    dsl4jsb_Real2D_onChunk :: max_thaw_year      !< Maximum soil column thaw depth in current year [m]
+    dsl4jsb_Real2D_onChunk :: max_thaw_10year    !< Smoothed maximum soil column thaw depth (~10 years) [m]
     dsl4jsb_Real2D_onChunk :: max_wind_of_day    !< Current maximum 10m wind speed of the day
     dsl4jsb_Real2D_onChunk :: max_wind_yDay      !< Maximum 10m wind speed of the previous day
     dsl4jsb_Real2D_onChunk :: max_wind_4yr       !< Maximum 10m wind speed smoothed in time
     dsl4jsb_Real2D_onChunk :: q_rel_air_14d      !< Relative humidity smoothed in time (~14 days) [%]
     dsl4jsb_Real2D_onChunk :: q_rel_air_14d_yDay !< Previous day value of smoothed relative humidity [%]
+    dsl4jsb_Real3D_onChunk :: t_soil_sl_15d      !< 15-day smoothed soil layer temperature [K]
+    dsl4jsb_Real3D_onChunk :: t_soil_sl_15d_yDay !< 15-day smoothed soil layer temperature at the end of the previous day [K]
+    dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl_15d      !< 15-day smoothed relative soil layer moisture [-]
+    dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl_15d_yDay !< 15-day smoothed relative soil layer moisture at end of previous day [-]
 
     ! Declare pointers to variables in foreign memory
     dsl4jsb_Real2D_onChunk :: t_air              !< Near surface air temperature [K]
@@ -175,6 +190,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_unfilt           !< Surface temperature [K]
     dsl4jsb_Real2D_onChunk :: q_air              !< Specific humidity of lowest level of the atmosphere []
     dsl4jsb_Real2D_onChunk :: press_srf          !< Surface pressure [N m-2]
+    dsl4jsb_Real2D_onChunk :: weq_snow_soil      !< Snow water equivalent on the soils surface [m]
+    dsl4jsb_Real2D_onChunk :: snow_soil_dens     !< Density of snow on soil [kg m-3]
+    dsl4jsb_Real2D_onChunk :: thaw_depth         !< Active layer (thaw) depth in soil column [m]
+    dsl4jsb_Real3D_onChunk :: t_soil_sl          !< Soil layer temperature [K]
+    dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl    !< Relative soil layer water content [m]
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -196,6 +216,8 @@ CONTAINS
     dsl4jsb_Get_memory(CLIMBUF_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(HYDRO_)
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)                   ! in
@@ -205,6 +227,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)                   ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)               ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)                ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)           ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)          ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)              ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_rel_sl)         ! in
+
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_sum_day)           ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_sum_month)         ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp_of_yr)       ! inout
@@ -217,11 +245,19 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,precip_15d_yDay)        ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_sum_year)           ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_prev_year)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_snow_year)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_snow_prev_year)     ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_thaw_year)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_thaw_10year)        ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_of_day)        ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_yDay)          ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_4yr)           ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_14d)          ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_14d_yDay)     ! inout
+    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,t_soil_sl_15d)          ! inout
+    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,t_soil_sl_15d_yDay)     ! inout
+    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,wtr_soil_rel_sl_15d)    ! inout
+    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,wtr_soil_rel_sl_15d_yDay)!inout
 
     ! Generally, the climate buffer is initialized at model initialization (is_time_experiment_start).
     ! There is however the possibility to initialize it in restarted simulations by namelist parameter
@@ -244,23 +280,33 @@ CONTAINS
     seconds_day   = get_day_length()
     seconds_month = get_previous_month_length(options%current_datetime)
 
-    ALLOCATE (q_rel_air(nc))
-    !$ACC DATA ASYNC(acc_stream) CREATE(q_rel_air)
+    ALLOCATE (snow_depth(nc), q_rel_air(nc))
+    !$ACC DATA ASYNC(acc_stream) CREATE(snow_depth, q_rel_air)
 
     q_rel_air(:) = get_relative_humidity_air(q_air(:), t_unfilt(:), press_srf(:), model%config%use_tmx)
 
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO i = 1,nc
+      snow_depth(i) = weq_snow_soil(i) * rhoh2o / snow_soil_dens(i)
+    END DO
+    !$ACC END PARALLEL LOOP
+
     init_running_means = dsl4jsb_Config(CLIMBUF_)%init_running_means
-    CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
-      &               rain, snow, wind_10m, q_rel_air, seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
-      &               min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
-      &               temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
-      &               gdd_sum_year, gdd_prev_year, &
-      &               max_wind_of_day, max_wind_yDay, max_wind_4yr, &
-      &               q_rel_air_14d, q_rel_air_14d_yDay)
+    CALL calc_climbuf_2d(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
+      &                  rain, snow, wind_10m, q_rel_air, snow_depth, thaw_depth, &
+      &                  seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
+      &                  min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
+      &                  temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
+      &                  gdd_sum_year, gdd_prev_year, &
+      &                  max_snow_year, max_snow_prev_year, max_thaw_year, max_thaw_10year, &
+      &                  max_wind_of_day, max_wind_yDay, max_wind_4yr, &
+      &                  q_rel_air_14d, q_rel_air_14d_yDay)
+    CALL calc_climbuf_3d(lstart, new_day, dtime, t_soil_sl, wtr_soil_rel_sl, seconds_day, &
+      &                  t_soil_sl_15d, t_soil_sl_15d_yDay, wtr_soil_rel_sl_15d, wtr_soil_rel_sl_15d_yDay)
     climbuf_initialized = .TRUE.
 
     !$ACC END DATA
-    DEALLOCATE (q_rel_air)
+    DEALLOCATE (snow_depth, q_rel_air)
 
   END SUBROUTINE update_climbuf
 
@@ -315,6 +361,14 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, precip_15d_yDay, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, gdd_sum_year, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, gdd_prev_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_snow_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_snow_prev_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_thaw_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_thaw_10year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, t_soil_sl_15d, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, t_soil_sl_15d_yDay, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, wtr_soil_rel_sl_15d, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, wtr_soil_rel_sl_15d_yDay, weighted_by_fract)
 
     IF (debug_on() .AND. options%iblk==1) CALL message(TRIM(routine), 'Finished.')
 

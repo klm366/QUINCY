@@ -33,7 +33,7 @@ MODULE mo_disturb_interface
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
 
   ! Use of processes in this module (Get_disturb_memory and Get_disturb_config)
-  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, CLIMBUF_, CARBON_, FLCC_, WLCC_
+  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, CLIMBUF_, CARBON_, HYDRO_, FLCC_, WLCC_
 
   ! Use of process configurations (t_disturb_config)
   dsl4jsb_Use_config(DISTURB_)
@@ -45,6 +45,7 @@ MODULE mo_disturb_interface
   dsl4jsb_Use_memory(DISTURB_)
   dsl4jsb_Use_memory(FUEL_)
   dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(HYDRO_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables

@@ -31,8 +31,7 @@ MODULE mo_nlcc_config_class
     LOGICAL             ::  &
       & init_running_means, &
       & init_nlcc,          &
-      & update_cover_fract, &
-      & climbuf_only
+      & update_cover_fract
     REAL(wp)            ::  &
       & accelerate_nlcc
 
@@ -111,7 +110,6 @@ CONTAINS
     ELSE
       CALL message(TRIM(routine), 'NOT updating cover fractions')
     END IF
-    config%climbuf_only        = .FALSE. ! Can only be activated by using vertical carbon yasso
     config%accelerate_nlcc     = accelerate_nlcc
     IF (accelerate_nlcc /= 1._wp) THEN
       WRITE(message_text, *) 'NLCC calculations accelerated by factor ', accelerate_nlcc

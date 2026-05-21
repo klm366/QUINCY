@@ -65,7 +65,7 @@ CONTAINS
 #endif
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, CLIMBUF_, NLCC_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, NLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, ALCC_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, ALCC_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -76,7 +76,6 @@ CONTAINS
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
     dsl4jsb_Use_config(FAGE_)
-    dsl4jsb_Use_config(NLCC_)
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
@@ -97,7 +96,6 @@ CONTAINS
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
     dsl4jsb_Def_config(FAGE_)
-    dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_config(FLCC_)
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
@@ -282,7 +280,6 @@ CONTAINS
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
         dsl4jsb_Get_config(FAGE_)
-        dsl4jsb_Get_config(NLCC_)
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
 
@@ -376,15 +373,6 @@ CONTAINS
 #endif
 
       CASE (MODEL_JSBACH)
-
-        IF (.NOT. model%Is_process_enabled(NLCC_) .AND. ( &
-          & (model%Is_process_enabled(CARBON_) .AND. dsl4jsb_Config(CARBON_)%on_soillev)      &  ! Yasso active
-          & )) THEN
-          dsl4jsb_Config(NLCC_)%active = .TRUE.
-          dsl4jsb_Config(NLCC_)%climbuf_only = .TRUE.
-          CALL message(TRIM(routine), &
-            & 'Switching on nlcc process since vertical soil carbon representation is active')
-        ENDIF
 
         IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN
           CALL message(TRIM(routine), 'Using canopy albedo from ini file '//TRIM(dsl4jsb_Config(RAD_)%bc_filename)//&

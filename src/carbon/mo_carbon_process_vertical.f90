@@ -454,7 +454,7 @@ CONTAINS
 
       Y_debug = thaw_depth
       Y_debug_sl(:) = diff_coeff(:)
-      
+
       ! remove any C that might be below bedrock boundary
       CALL remove_C_below_bedrock(c_acid_bg1_sl, soil_depth, layer_thick)
       CALL remove_C_below_bedrock(c_acid_bg2_sl, soil_depth, layer_thick)

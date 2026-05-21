@@ -259,7 +259,7 @@ CONTAINS
       & t_cf('bclimit_min_snow', '', 'bclimit_min_snow'),                                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & output_level=BASIC,                                                               &
+      & output_level=MEDIUM,                                                              &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('tau_c_woods', mem%tau_c_woods,                                      &

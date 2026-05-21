@@ -53,7 +53,6 @@ MODULE mo_carbon_interface
   dsl4jsb_Use_memory(L2A_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(HYDRO_)
-  dsl4jsb_Use_memory(NLCC_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -224,11 +223,8 @@ CONTAINS
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk ::  temp_15d_yDay_climbuf
     dsl4jsb_Real2D_onChunk ::  precip_15d_yDay_climbuf
-
-    dsl4jsb_Real3D_onChunk ::  pseudo_t_soil_sl
-    dsl4jsb_Real3D_onChunk ::  pseudo_t_soil_sl_yDay
-    dsl4jsb_Real3D_onChunk ::  pseudo_wtr_soil_rel_sl
-    dsl4jsb_Real3D_onChunk ::  pseudo_wtr_soil_rel_sl_yDay
+    dsl4jsb_Real3D_onChunk ::  t_soil_sl_15d_yDay_climbuf
+    dsl4jsb_Real3D_onChunk ::  wtr_soil_rel_sl_15d_yDay_climbuf
 
     dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
 
@@ -382,7 +378,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl
 
     ! active layer thickness, soil depth
-    dsl4jsb_Real2D_onChunk :: max_thaw_prev_year      ! previous year active layer thickness
+    dsl4jsb_Real2D_onChunk :: max_thaw_10year_climbuf ! 10 years mean maximum active layer thickness
     dsl4jsb_Real2D_onChunk :: soil_depth              ! soil depth
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
 
@@ -441,13 +437,9 @@ CONTAINS
     ! Set process variables
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, temp_15d_yDay, climbuf)    ! in
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, precip_15d_yDay, climbuf)  ! in
-
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  pseudo_t_soil_sl)       ! inout
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  pseudo_t_soil_sl_yDay)       ! inout
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  pseudo_wtr_soil_rel_sl) ! inout
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  pseudo_wtr_soil_rel_sl_yDay) ! inout
-    END IF
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, max_thaw_10year, climbuf)  ! in
+    dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, t_soil_sl_15d_yDay, climbuf)        ! in
+    dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, wtr_soil_rel_sl_15d_yDay, climbuf)  ! in
 
     !
     ! This is on canopy area:
@@ -538,7 +530,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_anox_sl) ! inout
       !
       dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)                ! in
-      dsl4jsb_Get_var2D_onChunk(NLCC_,    max_thaw_prev_year)       ! in
       dsl4jsb_Get_var3D_onChunk(CARBON_,  t_max_soil_year)          ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  permafrost_layer)         ! inout
 
@@ -640,9 +631,9 @@ CONTAINS
     !                            * SPREAD(surface%veg_ratio_max(kidx0:kidx1),DIM=2,NCOPIES=ntiles)
 
     IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
-      soil_depth_thaw = MIN(soil_depth, max_thaw_prev_year)
+      soil_depth_thaw = MIN(soil_depth, max_thaw_10year_climbuf)
       max_layer_sl = depth_to_layers(soil_depth_thaw, layer_thick)
-      thaw_depth = max_thaw_prev_year;
+      thaw_depth = max_thaw_10year_climbuf
       thaw_depth_sl = depth_to_layers(thaw_depth, layer_thick);
     END IF
 
@@ -721,10 +712,6 @@ CONTAINS
         GPP_sum(ic)             = gross_assimilation_ca(ic)
         !NPP_pot_rate_ca_acc(ic)        = NPP_pot_rate_ca(ic)/tmp_timesteps_per_day ! s.o.
 
-        IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
-          pseudo_t_soil_sl_yDay(ic,:)       = pseudo_t_soil_sl(ic,:)
-          pseudo_wtr_soil_rel_sl_yDay(ic,:) = pseudo_wtr_soil_rel_sl(ic,:)
-        END IF
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -872,8 +859,8 @@ CONTAINS
           & WoodLit_coef_humus      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_humus)),      & ! in
           & WoodLitterSize          = dsl4jsb_Lctlib_param(WoodLitterSize),                    & ! in
           !
-          & temp                    = pseudo_temp_yDay,                                        & ! in
-          & precip                  = pseudo_precip_yDay,                                      & ! in
+          & temp                    = temp_15d_yDay_climbuf,                                   & ! in
+          & precip                  = precip_15d_yDay_climbuf,                                 & ! in
           !
           & Cflx_wood_2_litter      = cflux_c_wood_2_litter,                                   & ! in
           & Cflx_green_2_litter     = cflux_c_green_2_litter,                                  & ! in
@@ -911,10 +898,10 @@ CONTAINS
                LeafLit_coefV, WoodLit_coefV, MiscPar,                         & ! in
                dsl4jsb_Config(CARBON_)%resp_rate_modifier,                    & ! in
                !
-               temp                         = pseudo_temp_yDay(ic),           & ! in
-               precip                       = pseudo_precip_yDay(ic),         & ! in
-               t_soil_sl                    = pseudo_t_soil_sl_yDay(ic,:),    & ! in
-               wtr_soil_rel_sl              = pseudo_wtr_soil_rel_sl(ic,:),   & ! in
+               temp                         = temp_15d_yDay_climbuf(ic),      & ! in
+               precip                       = precip_15d_yDay_climbuf(ic),    & ! in
+               t_soil_sl                    = t_soil_sl_15d_yDay_climbuf(ic,:),         & ! in
+               wtr_soil_rel_sl              = wtr_soil_rel_sl_15d_yDay_climbuf(ic,:),   & ! in
                n_thaw_cycle                 = thaw_cycle_prev(ic),            & ! in
                !
                frac_inun                    = frac_inun_loc(ic),              & ! in
@@ -1212,8 +1199,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_soilresp_2_atm_ta, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_herb_2_atm_ta,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_npp_2_atm_yday_ta, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_temp,               weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_precip,             weighted_by_fract)
 
     ! variables for NLCC process
     dsl4jsb_Aggregate_onChunk(CARBON_, max_green_bio,            weighted_by_fract)
@@ -1247,10 +1232,6 @@ CONTAINS
 
       dsl4jsb_Aggregate_onChunk(CARBON_, permafrost_layer,         weighted_by_fract)             ! inout
       dsl4jsb_Aggregate_onChunk(CARBON_, YASSO_debug_sl,           weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_t_soil_sl_yDay,    weighted_by_fract)             ! inout
-      dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_wtr_soil_rel_sl_yDay, weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_t_soil_sl,         weighted_by_fract)             ! inout
-      dsl4jsb_Aggregate_onChunk(CARBON_, pseudo_wtr_soil_rel_sl,   weighted_by_fract)
     END IF
 
     CALL weighted_by_fract%EndAggregate()
