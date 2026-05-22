@@ -120,6 +120,9 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_w    !< Vertical grid for soil hydrology variables (vertical dim. = nsoil)
     INTEGER :: table
 
+    INTEGER  :: nsoil                        !< Number of soil layers
+    REAL(wp) :: max_depth                    !< lower boundary of deepest soil layer
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_climbuf_memory'
 
 
@@ -129,6 +132,9 @@ CONTAINS
     surface => Get_vgrid('surface')
     soil_e  => Get_vgrid('soil_depth_energy')
     soil_w  => Get_vgrid('soil_depth_water')
+
+    nsoil = soil_e%n_levels
+    max_depth = soil_e%ubounds(nsoil)
 
     CALL mem%Add_var( 'q_rel_air_14d', mem%q_rel_air_14d,                                 &
       & hgrid, surface,                                                                   &
@@ -281,7 +287,7 @@ CONTAINS
       & t_cf('max_thaw_year', 'm', 'Maximum thaw depth in current year'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & lrestart=.TRUE., initval_r=0.0_wp)
+      & lrestart=.TRUE., initval_r=max_depth)
 
     CALL mem%Add_var('max_thaw_10year', mem%max_thaw_10year,                              &
       & hgrid, surface,                                                                   &
@@ -289,7 +295,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=MEDIUM,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp)
+      & lrestart=.TRUE., initval_r=max_depth)
 
     CALL mem%Add_var('t_soil_sl_15d', mem%t_soil_sl_15d,                                  &
       & hgrid, soil_e,                                                                    &
