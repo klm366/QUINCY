@@ -51,6 +51,7 @@ MODULE mo_jsb4_forcing
   USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
   USE mo_atmland_constants,      ONLY: def_co2_deltaC13, def_co2_deltaC14
 
+
   IMPLICIT NONE
   PRIVATE
 
@@ -823,12 +824,16 @@ CONTAINS
 
     USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
     USE mo_jsb_io_netcdf_iface, ONLY: t_input_file, netcdf_open_input
+    USE mo_jsb_grid,       ONLY: Get_grid
+    USE mo_jsb_task_class,     ONLY: t_jsb_task_options
+
 
     INTEGER,  INTENT(in) :: model_id
     CHARACTER(len=*), INTENT(in) :: namelist_filename
     REAL(wp), INTENT(in) :: dtime
 
     TYPE(t_input_file) :: input_file
+    TYPE(t_jsb_grid),  POINTER           :: grid       ! Horizontal grid
 
     ! --- Namelist parameters
     INTEGER  :: cyclic_nyears           ! Number of years to use for cyclic forcing; default: 0
@@ -920,12 +925,22 @@ CONTAINS
       & forcing_c14_file_prefix, forcing_c14_frequ, forcing_c14_const_c14, forcing_c14_ocean, forcing_c14_unit
 
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
     INTEGER:: nml_handler, read_status, f_unit
-
+    TYPE(t_jsb_grid),  POINTER   :: grid
+    INTEGER                      :: iblk, ics, ice, nc
     CALL message('', '')
 
     !------------------------------------------------------------------------------------
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+
     model => Get_model(model_id)
+    grid => Get_grid(model%grid_id)
+    lat => grid%lat(ics:ice, iblk)
     delta_time    = dtime
     time_steps_per_day = 86400/INT(delta_time)
     ! Assertion: delta_time needs to be smaller or equal 86400
@@ -1108,6 +1123,7 @@ CONTAINS
           CALL finish(TRIM(routine),'Dimensions in GHG file differ from expectations')
         END IF
         CALL input_file%Close()
+
       END IF
     END IF
     ! ----- broadcast information
