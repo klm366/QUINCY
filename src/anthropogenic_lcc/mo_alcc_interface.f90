@@ -31,10 +31,7 @@ MODULE mo_alcc_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_lcc_class,      ONLY: max_tolerated_cf_mismatch
-
-#ifndef __NO_QUINCY__
   USE mo_quincy_model_config, ONLY: QLAND, QPLANT
-#endif
 
   ! Use of processes in this module
   dsl4jsb_Use_processes ALCC_, PPLCC_, FAGE_, NLCC_
@@ -556,12 +553,10 @@ CONTAINS
     ! Now do the matter translocation
     IF (model%config%model_scheme == MODEL_JSBACH) THEN
       CALL alcc_matter_translocation_jsb(tile, options)
-#ifndef __NO_QUINCY__
     ELSE IF (model%config%model_scheme == MODEL_QUINCY) THEN
       IF (model%config%qmodel_id == QLAND) THEN
         CALL alcc_matter_translocation_iq(tile, options)
       END IF
-#endif
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -738,7 +733,6 @@ CONTAINS
   END SUBROUTINE alcc_matter_translocation_jsb
 
 
-#ifndef __NO_QUINCY__
   ! ====================================================================================================== !
   !
   !> Do the matter translocation for quincy.
@@ -1026,7 +1020,6 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE alcc_matter_translocation_iq
-#endif
 
   ! ====================================================================================================== !
   !

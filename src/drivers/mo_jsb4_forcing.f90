@@ -36,9 +36,7 @@ MODULE mo_jsb4_forcing
   USE mo_orbit_solar,            ONLY: inquire_declination
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
-#ifndef __NO_QUINCY__
   USE mo_quincy_model_config,    ONLY: QCANOPY
-#endif
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
@@ -278,9 +276,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(model_id)
     force_c_isotopes = .FALSE.
-#ifndef __NO_QUINCY__
     force_c_isotopes = (model%config%force_c_isotopes)
-#endif
     lstart  = is_time_experiment_start(current_datetime)
     lresume = is_time_restart(current_datetime)
     use_quincy = (model_scheme == MODEL_QUINCY)
