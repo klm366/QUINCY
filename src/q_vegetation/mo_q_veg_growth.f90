@@ -16,7 +16,7 @@
 !>#### calculate vegetation growth including, e.g., diameter, height, allometry and nutrient uptake
 !>
 MODULE mo_q_veg_growth
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on

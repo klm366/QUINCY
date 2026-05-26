@@ -16,7 +16,7 @@
 !>#### routines for calculating the soil-biogeochemical pools using the fluxes that have been calculated
 !>
 MODULE mo_q_sb_update_pools
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
