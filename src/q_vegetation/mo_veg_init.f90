@@ -1,4 +1,4 @@
-!> vegetation variables init (QUINCY)
+!> QUINCY vegetation variables init
 !>
 !> ICON-Land
 !>

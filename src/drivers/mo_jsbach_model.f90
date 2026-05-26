@@ -897,10 +897,11 @@ CONTAINS
       l_shift_one_timestep = .TRUE.
     END IF
 
-    CALL getPTStringFromSeconds(-dtime, dtime_string)
-    dtime_mtime      => newTimedelta(dtime_string)
-    datetime_old     => newDatetime(datetime_new)
-    datetime_old     =  datetime_new + dtime_mtime
+    CALL getPTStringFromSeconds(-dtime, dtime_string) ! ATTN: dtime with negative sign!
+    dtime_mtime  => newTimedelta(dtime_string)
+    datetime_old => newDatetime(datetime_new)
+    datetime_old =  datetime_new + dtime_mtime ! Substract dtime from datetime_new to get datetime_old at beginning of the time step
+    ! TODO old_old is not used anymore and should be deleted
     datetime_old_old => newDatetime(datetime_old)
     datetime_old_old =  datetime_old + dtime_mtime
     CALL deallocateTimedelta(dtime_mtime)

@@ -1,4 +1,4 @@
-!> Contains structures and methods for JSBACH model config
+!> Contains structures and methods for the ICON-Land model configuration
 !>
 !> ICON-Land
 !>
@@ -11,69 +11,117 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!> Contains structures and methods for the ICON-Land model configuration
+!>
+!> Two configuration types are handled in this module: the basic model configuration ([[t_jsb_model_config]])
+!> and [[t_jsb_config]], the part of the individual process configurations common to all ICON-Land processes.
+!>
 MODULE mo_jsb_config_class
 #ifndef __NO_JSBACH__
-
+  !>
+  !> @TODO `filename_max` and explicit string length definitions should not be needed with
+  !>       `CHARACTER(len=:), ALLOCATABLE :: ` syntax.
+  !>
   USE mo_kind,               ONLY: wp
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message, finish, message_text
   USE mo_jsb_io_netcdf,      ONLY: t_input_file
-  ! USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY   ! comment out to avoid dependency cycle
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_jsb_config, t_jsb_config_p, t_jsb_model_config, new_model_config
 
-  ! Type for model configuration
+  !>
+  !> Type for basic model configuration
+  !>
+  !> @TODO Are `nr_of_elements`, `nr_of_used_elements`, `elements_index_map(:)`, and `is_element_used(:)` needed in the model config? They are not configurable!
+  !>
+  !> @TODO Check if `grid_filename` and `grid_name` variables are needed at all.
+  !>
+  !> @TODO State machine will be removed, this will affect `hsm_mode` variable.
+  !>
+  !> @TODO remove `relative_fractions_in_file` function. We agreed to always use relative fractions in the initial file, although absolute (grid box)
+  !>      fractions are used elsewhere in the code.
+  !>
+  !> @TODO: Are the `nr_of_elements`, `nr_of_used_elements`,
+  !> `elements_index_map(:)`, and `is_element_used(:)` variables needed
+  !> in the model config? They are not configurable!
+  !>
+  !> @TODO `l_transient_spinup` is a temporary solution for `model%config%options`.
+  !>
   TYPE t_jsb_model_config
-    CHARACTER(len=filename_max)    :: grid_filename
-    CHARACTER(len=filename_max)    :: fract_filename
-    CHARACTER(len=30)              :: grid_name
-    CHARACTER(len=40)              :: usecase
-    CHARACTER(len=20)              :: model_scheme_char   !< model_scheme from namelist (used in mo_jsb_lctlib_class)
-    INTEGER                        :: model_scheme        !< model_scheme as integer
-    INTEGER                        :: npft                !< Number of PFTs
-    LOGICAL                        :: use_tmx
-    LOGICAL                        :: use_lakes
-    LOGICAL                        :: use_glacier
-    LOGICAL                        :: check_child_cf      !< Assert that cover fractions of child tiles sum up to the tile cf
-    INTEGER                        :: enforce_water_budget!< descriptor for water balance 'ignore', 'logging', or 'error'
-    CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
-    INTEGER                        :: qmodel_id           !< defines the applied model configuration (quincy_model_name)
-    CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< For terraplanet setup: open/closed
-    CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
-    CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
-    LOGICAL                        :: relative_fractions_in_file  ! true: tile fractions in fract_filename are relative to parent tile
-#ifndef __NO_QUINCY__
-    ! Characteristics of bgc material in this model: flags specifying used elements and bookkeeping vector for elements used
-    ! Note: no logical for carbon because we presuppose that it is always used!
-    LOGICAL                        :: force_c_isotopes      !< If c isotopes forcing should be used (else use atmland constant)
-    LOGICAL                        :: include_nitrogen      !< If bgc materials contain nitrogen as element
-    LOGICAL                        :: include_phosphorus    !< If bgc materials contain phosphorus as element
-    LOGICAL                        :: include_carbon13      !< If bgc materials contain C13 as element
-    LOGICAL                        :: include_carbon14      !< If bgc materials contain C14 as element
-    LOGICAL                        :: include_nitrogen15    !< If bgc materials contain C15 as element
-    INTEGER                        :: nr_of_elements        !< for bookkeeping: number of elements
-    INTEGER                        :: nr_of_used_elements   !< for bookkeeping: number of actually used elements
-    INTEGER, ALLOCATABLE           :: elements_index_map(:) !< vector for ID -> IDX mapping of the elements
-    LOGICAL, ALLOCATABLE           :: is_element_used(:)    !< vector(ID) == .TRUE. if "element with ID" is used
 
-    ! slow sb pools spin-up accelerator
-    LOGICAL                     :: flag_slow_sb_pool_spinup_accelerator !< accelerating slow pool turnover during spin-up
-    INTEGER                     :: slow_sb_pool_spinup_accelerator_frequency !< The freqency [years] to execute spin-up accelerator
-    INTEGER                     :: slow_sb_pool_spinup_accelerator_length !< The length (loop times) of spin-up accelerator
-    INTEGER                     :: slow_sb_pool_spinup_accelerator_start_year !< The year in which the spin-up accelerator should first be executed
-    INTEGER                     :: slow_sb_pool_spinup_accelerator_max_executions !< maximum number of executions of spin-up accelerator
+    ! TODO Check if `grid_filename` and `grid_name` variables are needed at all.
+    CHARACTER(len=filename_max)    :: grid_filename       !< Model grid file name
+    CHARACTER(len=filename_max)    :: fract_filename      !< Name of file containing tile fractions
+    CHARACTER(len=30)              :: grid_name           !< Model grid name
+    CHARACTER(len=40)              :: usecase             !< Model use case
+    CHARACTER(len=20)              :: model_scheme_char   !< Model variant: 'jsbach' or 'quincy'
+    INTEGER                        :: model_scheme        !< Model variant identifier
+    INTEGER                        :: npft                !< Number of PFTs
+    LOGICAL                        :: use_tmx             !< Use turbulent mixing scheme
+    LOGICAL                        :: use_lakes           !< Lakes are represented
+    LOGICAL                        :: use_glacier         !< Glaciers are represented
+    LOGICAL                        :: check_child_cf      !< Assert that cover fractions of children tiles sum up to the tile cf
+    INTEGER                        :: enforce_water_budget!< How to deal with water balance errors?</br>
+                                                          !< 'ignore' (0):  short, one-line warning,</br>
+                                                          !< 'logging' (1): detailed debugging output,</br>
+                                                          !< 'error' (2):   debugging output and model stop.
+                                                          !< Note: HYDRO parameter [[t_hydro_config:enforce_water_budget]]
+                                                          !< can override this setting for the HYDRO process.
+    CHARACTER(len=10)              :: quincy_model        !< Quincy model configuration: 'canopy', 'plant'
+                                                          !< or 'land'
+    INTEGER                        :: qmodel_id           !< Identifier for the quincy model configuration
+    CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< Switch for Terraplanet setup: Handling of water
+                                                          !< cycle: 'open' or 'closed'
+    CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode            !< State machine mode
+                                                          ! TODO State machine will be removed, this
+                                                          ! will affect `hsm_mode` variable
+    CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  !< List of the tiles for which output will
+                                                                   !< be generated (default: 'box')
+    LOGICAL                        :: relative_fractions_in_file   !< Tile fractions in [[t_jsb_model_config:fract_filename]]
+                                                                   !< are relative to the parent tiles (true)
+                                                                   !< or relative to the grid box (false).
+    ! TODO remove `relative_fractions_in_file` function. We agreed to always use relative fractions in the initial file, although absolute (grid box)
+    !      fractions are used elsewhere in the code.
+
+#ifndef __NO_QUINCY__
+    ! Characteristics of biogeochemical (bgc) material in quincy: flags specifying the elements used and
+    ! corresponding bookkeeping vectors.
+    ! Note: No logical for carbon because we presuppose that it is always used.
+    LOGICAL                        :: force_c_isotopes      !< `.TRUE.`: Read carbon isotopes forcing from file. `.FALSE.`: use constant values defined in [[mo_atmland_constants]]
+    LOGICAL                        :: include_nitrogen      !< bgc materials contain nitrogen
+    LOGICAL                        :: include_phosphorus    !< bgc materials contain phosphorus
+    LOGICAL                        :: include_carbon13      !< bgc materials contain C13
+    LOGICAL                        :: include_carbon14      !< bgc materials contain C14
+    LOGICAL                        :: include_nitrogen15    !< bgc materials contain N15
+
+    ! TODO: Are the `nr_of_elements`, `nr_of_used_elements`,
+    ! `elements_index_map(:)`, and `is_element_used(:)` variables needed
+    ! in the model config? They are not configurable!
+    INTEGER                        :: nr_of_elements        !< For bookkeeping: number of elements in bgc materials
+    INTEGER                        :: nr_of_used_elements   !< For bookkeeping: number of actually used elements
+    INTEGER, ALLOCATABLE           :: elements_index_map(:) !< Vector for ID -> IDX mapping of the elements
+    LOGICAL, ALLOCATABLE           :: is_element_used(:)    !< Vector(ID) == .TRUE. if "element with ID" is used
+
+    ! Spinup accelerator for the slow soil biogeorchemical (sb) pools
+    LOGICAL ::  flag_slow_sb_pool_spinup_accelerator           !< Accelerate slow pool turnover (for spinup)
+    INTEGER ::  slow_sb_pool_spinup_accelerator_frequency      !< Frequency of spin-up accelerator runs [years]
+    INTEGER ::  slow_sb_pool_spinup_accelerator_length         !< Number of time loops in spin-up accelerator
+    INTEGER ::  slow_sb_pool_spinup_accelerator_start_year     !< Year of the first spin-up accelerator runs
+    INTEGER ::  slow_sb_pool_spinup_accelerator_max_executions !< Maximum number of spin-up accelerator runs
 #endif
 
-    ! quincy @TODO temporary solution for model%config%options
-    LOGICAL           :: l_transient_spinup
-    ! quincy - end
-    LOGICAL                        :: init_from_ifs    ! Initialize from IFS analysis
-    CHARACTER(len=:), ALLOCATABLE  :: ifs_filename
-    TYPE(t_input_file)             :: ifs_input_file
+    ! Option only used with quincy standalone:
+    ! TODO `l_transient_spinup` is a temporary solution for `model%config%options`
+    LOGICAL           :: l_transient_spinup            !< true: we are in quincy standalone spinup
+
+    ! Initialization from ECMWF Integrated Forecast System (IFS) analysis data
+    LOGICAL                        :: init_from_ifs            !< Initialize from IFS analysis
+    CHARACTER(len=:), ALLOCATABLE  :: ifs_filename             !< IFS input data file name
+    TYPE(t_input_file)             :: ifs_input_file           !< Structure for the IFS initial file
 
     ! Single site setup
     LOGICAL                        :: is_single_site        !< Single site model
@@ -83,38 +131,60 @@ MODULE mo_jsb_config_class
 
   END TYPE t_jsb_model_config
 
-  ! Abstract type for process configurations
+  !> Abstract type for process configurations
   TYPE, ABSTRACT :: t_jsb_config
-    LOGICAL :: active
-    LOGICAL :: lrestart_cont                    ! TRUE: Continue although process variables are missing in the restart file
-    CHARACTER(len=filename_max) :: ic_filename
-    CHARACTER(len=filename_max) :: bc_filename
-    CHARACTER(LEN=filename_max) :: namelist_filename
-    TYPE(t_jsb_model_config), POINTER :: model_config => NULL()
-    CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
+    LOGICAL :: active                                          !< The process is active in the current setup.
+    LOGICAL :: lrestart_cont                                   !< Continue although process variables are
+                                                               !< missing in the restart file.
+    CHARACTER(len=filename_max) :: ic_filename                 !< Name of the initial file
+    CHARACTER(len=filename_max) :: bc_filename                 !< Name of the boundary conditions file
+    CHARACTER(LEN=filename_max) :: namelist_filename           !< File containing the process namelist
+                                                               !< **Note**: generally all ICON-Land namelists are
+                                                               !< listed in one common namelist file
+    TYPE(t_jsb_model_config), POINTER :: model_config => NULL() !< Initialize model configuration pointer
+    CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:) !< List of tiles for which this process
+                                                                !< will write output
   CONTAINS
+    !> Each process needs to define an init function as extension of this abstract type.
     PROCEDURE (Init_config), DEFERRED, PASS(config) :: Init
   END TYPE t_jsb_config
 
+  !> Pointer type fot a `t_jsb_config` type
   TYPE t_jsb_config_p
     CLASS(t_jsb_config), POINTER :: p
   END TYPE t_jsb_config_p
 
   ABSTRACT INTERFACE
+    !> Definition of the interface of the init function (needed with deferred procedures).
+    !> The users are enforced to use the identical calling structure for all processes.
     SUBROUTINE Init_config(config)
       IMPORT :: t_jsb_config
       CLASS(t_jsb_config), INTENT(inout) :: config
     END SUBROUTINE Init_config
   END INTERFACE
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_config_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_config_class' !< Name of the module
 
 CONTAINS
 
+  ! ======================================================================================================= !
+  !>
+  !> Creates the model configuration
+  !>
+  !> The function reads the model configuration from namelist "jsb_model_nml" defined in the given namelist
+  !> file and returns a pointer to the model configuration structure.
+  !>
+  !> @TODO Are `grid_filename`, `grid_name` and the `jsb_grid_nml` needed at all?
+  !>
+  !> @TODO Dissolve the dependency<br>
+  !> `model_scheme` values are
+  !> defined here as `INTEGER` replacing the ENUM `USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY`
+  !> This is needed to avoid a dependency cycle, creating a compile error (tested with NAG):
+  !>  stating that in `mo_jsb_memory_class` the `mo_jsb_config_class` is not available for `USE mo_jsb_config_class,  ONLY: t_jsb_config`
   FUNCTION new_model_config(namelist_filename) RESULT(model_config)
 
     USE mo_jsb_namelist_iface,  ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_jsb_impl_constants,  ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
+    USE mo_jsb_impl_constants,  ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR    ! handling of water balance errors
     USE mo_jsb_control,         ONLY: jsbach_runs_standalone
     USE mo_util,                ONLY: tolower
 
@@ -122,52 +192,60 @@ CONTAINS
     USE mo_quincy_model_config, ONLY: QLAND, Get_quincy_model_config_id
 #endif
 
-    CHARACTER(len=*),         INTENT(in) :: namelist_filename
-    TYPE(t_jsb_model_config), POINTER    :: model_config
+    CHARACTER(len=*),         INTENT(in) :: namelist_filename     !< File containing the model namelist
+    TYPE(t_jsb_model_config), POINTER    :: model_config          !< Model configuration: structure
+                                                                  !< containing the configurable parameters
+    ! TODO Are `grid_filename`, `grid_name` and the `jsb_grid_nml` needed at all?
+    CHARACTER(len=filename_max) :: grid_filename                  !< File with the model grid file
+    CHARACTER(len=30)           :: grid_name                      !< Model grid name
 
-    CHARACTER(len=filename_max) :: grid_filename
-    CHARACTER(len=30)           :: grid_name
-    INTEGER                     :: MODEL_JSBACH, MODEL_QUINCY
+    INTEGER                     :: MODEL_JSBACH, MODEL_QUINCY     !< Identifiers for the model scheme
 
     NAMELIST /jsb_grid_nml/   &
       grid_filename,          &
       grid_name
 
-    CHARACTER(len=20)             :: model_scheme     !< model_scheme: jsbach / quincy
-    LOGICAL                       :: use_tmx
-    LOGICAL                       :: use_lakes
-    LOGICAL                       :: use_glacier
-    LOGICAL                       :: check_child_cf
-    CHARACTER(len=10)             :: enforce_water_budget
-    CHARACTER(len=10)             :: quincy_model
-    INTEGER                       :: qmodel_id
-    CHARACTER(len=filename_max)   :: fract_filename
-    CHARACTER(len=40)             :: usecase
-    INTEGER                       :: npft
-    CHARACTER(len=SHORT_NAME_LEN) :: tpe_scheme
-    CHARACTER(len=SHORT_NAME_LEN) :: hsm_mode
-    CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)
-    LOGICAL                       :: relative_fractions_in_file
+    !> Variables defined in [[t_jsb_model_config]]
+    CHARACTER(len=20)             :: model_scheme                 !< Model scheme: 'jsbach' or 'quincy'
+    LOGICAL                       :: use_tmx                      !< Use turbulent mixing scheme
+    LOGICAL                       :: use_lakes                    !< Represent lakes
+    LOGICAL                       :: use_glacier                  !< Represent glaciers
+    LOGICAL                       :: check_child_cf               !< Assert that cover fractions of children tiles sum up to the tile cf
+    CHARACTER(len=10)             :: enforce_water_budget         !< Consequence of water balance errors
+    CHARACTER(len=10)             :: quincy_model                 !< Quincy model version: 'canopy', 'plant'
+                                                                  !< or 'land'
+    INTEGER                       :: qmodel_id                    !< Identifier for the quincy model version
+    CHARACTER(len=filename_max)   :: fract_filename               !< File with the tile fractions
+    CHARACTER(len=40)             :: usecase                      !< ICON-Land use case
+    INTEGER                       :: npft                         !< Number of PFTs
+    CHARACTER(len=SHORT_NAME_LEN) :: tpe_scheme                   !< Terraplanet setup: Handling of water
+                                                                  !< cycle: 'open' or 'closed'
+    CHARACTER(len=SHORT_NAME_LEN) :: hsm_mode                     !< State machine mode
+    CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)             !< List of the output tiles
+    LOGICAL                       :: relative_fractions_in_file   !< Tile fractions in [[t_jsb_model_config:fract_filename]]
+                                                                  !< are relative to the parent tiles.
 #ifndef __NO_QUINCY__
-    LOGICAL :: force_c_isotopes           !< use c isotopes forcing
-    LOGICAL :: include_nitrogen           !< element variables in bgc_material (infrastructure)
-    LOGICAL :: include_phosphorus         !< element variables in bgc_material (infrastructure)
-    LOGICAL :: include_carbon13           !< element variables in bgc_material (infrastructure)
-    LOGICAL :: include_carbon14           !< element variables in bgc_material (infrastructure)
-    LOGICAL :: include_nitrogen15         !< element variables in bgc_material (infrastructure)
-    LOGICAL :: flag_slow_sb_pool_spinup_accelerator !< accelerating slow pool turnover during spin-up
-    INTEGER :: slow_sb_pool_spinup_accelerator_frequency !< The freqency [years] to execute spin-up accelerator
-    INTEGER :: slow_sb_pool_spinup_accelerator_length !< The length (loop times) of spin-up accelerator
-    INTEGER :: slow_sb_pool_spinup_accelerator_start_year !< The year in which the spin-up accelerator should first be executed
-    INTEGER :: slow_sb_pool_spinup_accelerator_max_executions !< maximum number of executions of spin-up accelerator
+    LOGICAL :: force_c_isotopes                                   !< Read carbon isotopes forcing
+    LOGICAL :: include_nitrogen                                   !< Nitrogen is element in bgc_material
+    LOGICAL :: include_phosphorus                                 !< Phosphorus is element in bgc_material
+    LOGICAL :: include_carbon13                                   !< C13 is element in bgc_material
+    LOGICAL :: include_carbon14                                   !< C14 is element in bgc_material
+    LOGICAL :: include_nitrogen15                                 !< N15 is element in bgc_material
+    LOGICAL :: flag_slow_sb_pool_spinup_accelerator               !< Accelerate slow pool turnover during spin-up
+    INTEGER :: slow_sb_pool_spinup_accelerator_frequency          !< Frequency of spin-up accelerator runs [years]
+    INTEGER :: slow_sb_pool_spinup_accelerator_length             !< The length (loop times) of spin-up accelerator
+    INTEGER :: slow_sb_pool_spinup_accelerator_start_year         !< Year in which spin-up accelerator is
+                                                                  !< executed for the first time
+    INTEGER :: slow_sb_pool_spinup_accelerator_max_executions     !< Maximum number of spin-up accelerator runs
 #endif
-    LOGICAL                       :: init_from_ifs
-    CHARACTER(len=filename_max)   :: ifs_filename
+    LOGICAL                       :: init_from_ifs                !< Initialize ICON-Land from IFS data
+    CHARACTER(len=filename_max)   :: ifs_filename                 !< File containing IFS data
     LOGICAL                       :: is_single_site
     CHARACTER(len=filename_max)   :: single_site_name
     CHARACTER(len=SHORT_NAME_LEN) :: single_site_shortname
     REAL(wp)                      :: single_site_lonlat(2)
 
+    ! Definition of the namelist
     NAMELIST /jsb_model_nml/  &
       model_scheme, &
       use_tmx, &
@@ -203,19 +281,24 @@ CONTAINS
       single_site_shortname, &
       single_site_lonlat
 
-    INTEGER :: nml_handler, nml_unit, istat, i
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':new_model_config'
+    INTEGER ::       &
+      & nml_handler, &     !< File handler for the namelist
+      & nml_unit,    &     !< Unit number of the namelist file
+      & istat,       &     !< Status reading the namelist
+      & i                  !< Looping index
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':new_model_config' !< Name of the module
 
     CALL message(TRIM(routine), 'Starting model configuration from '//TRIM(namelist_filename))
 
     ALLOCATE(model_config)
 
-    ! model_scheme values
-    ! define here as INTEGER replacing the ENUM "USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY"
-    ! this is needed to avoid a dependency cycle, creating a compile error (tested with NAG):
-    !  stating that in mo_jsb_memory_class the mo_jsb_config_class is not available for "USE mo_jsb_config_class,  ONLY: t_jsb_config"
-    ! TODO
+    ! TODO Dissolve the dependency<br>
+    ! `model_scheme` values are
+    ! defined here as `INTEGER` replacing the ENUM `USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY`
+    ! This is needed to avoid a dependency cycle, creating a compile error (tested with NAG):
+    !  stating that in `mo_jsb_memory_class` the `mo_jsb_config_class` is not available for `USE mo_jsb_config_class,  ONLY: t_jsb_config`
     MODEL_JSBACH               = 1
     MODEL_QUINCY               = 2
 
@@ -262,6 +345,7 @@ CONTAINS
     ! Read namelist
     nml_handler = open_nml(TRIM(namelist_filename))
 
+    ! jsb_grid_nml
     nml_unit = position_nml('jsb_grid_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_grid_nml)
 
@@ -269,6 +353,7 @@ CONTAINS
     model_config%grid_filename = grid_filename
     model_config%grid_name     = grid_name
 
+    ! jsb_model_nml
     nml_unit =  position_nml('jsb_model_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
     CALL close_nml(nml_handler)
@@ -284,7 +369,10 @@ CONTAINS
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Selected model_scheme '//TRIM(model_scheme)//' not available.')
     END SELECT
-    ! currently, no absolute fraction files are available, therefore, assert accidental use of flag:
+    !>
+    !> @TODO To be deleted: `relative_fractions_in_file` will be removed (clean up task)
+    !>
+    ! No absolute fraction files are available, therefore, assert accidental use of flag:
     IF(.NOT. relative_fractions_in_file) THEN
       CALL finish(TRIM(routine), 'relative_fractions_in_file was set to true, however, currently' &
       & // ' no absolute fraction files are available, please check.')
@@ -315,6 +403,7 @@ CONTAINS
     model_config%include_carbon13           = include_carbon13
     model_config%include_carbon14           = include_carbon14
     model_config%include_nitrogen15         = include_nitrogen15
+    ! The logicals are used to set up a bookkeeping list for the elements
     CALL setup_element_index_map_in_config(model_config, routine)
     model_config%flag_slow_sb_pool_spinup_accelerator   = flag_slow_sb_pool_spinup_accelerator
     model_config%slow_sb_pool_spinup_accelerator_frequency = slow_sb_pool_spinup_accelerator_frequency
@@ -323,6 +412,9 @@ CONTAINS
     model_config%slow_sb_pool_spinup_accelerator_max_executions = slow_sb_pool_spinup_accelerator_max_executions
 #endif
 
+    !>
+    !> @TODO To be deleted `relative_fractions_in_file` (clean up task).
+    !>
     ! Currently, no absolute fraction files are available. Assert, the flag was not set accidentally.
     IF(.NOT. relative_fractions_in_file) THEN
       CALL finish(TRIM(routine), 'relative_fractions_in_file was set to false, however, currently' &
@@ -346,8 +438,11 @@ CONTAINS
       CALL finish(TRIM(routine), 'enforce_water_budget == '//tolower(TRIM(enforce_water_budget))//' not available.')
     END SELECT
 
+    !>
+    !> @TODO Check if the `__NO_QUINCY__` check for setting the model configuration ID is still required - clean up task.
+    !>
 #ifndef __NO_QUINCY__
-    ! set the model configuration id
+    ! Set the model configuration id
 #ifdef __QUINCY_STANDALONE__
     model_config%qmodel_id = Get_quincy_model_config_id(model_config%quincy_model_name)
 #else
@@ -355,9 +450,12 @@ CONTAINS
 #endif
 #endif
 
-    ! quincy - temporary solution @TODO
+    !>
+    !> @TODO Find a final solution of the quincy standalone assignement of `model_config%l_transient_spinup`,
+    !> `model_config%init_from_ifs`, and `model_config%ifs_filename`.
+    !>
     model_config%l_transient_spinup           = .FALSE.
-    ! quincy - end
+
     model_config%init_from_ifs              = init_from_ifs
     model_config%ifs_filename               = TRIM(ifs_filename)
     model_config%is_single_site             = is_single_site
@@ -368,6 +466,11 @@ CONTAINS
     IF (is_single_site .AND. .NOT. jsbach_runs_standalone()) &
         & CALL finish(routine, 'Single site only allowed in standalone experiment')
 
+    ! Get the number of valid entries in the vector
+    !>
+    !> @TODO use `SIZE(output_tiles)` instead of `99` to explore the
+    !> `IF (output_tiles(i) == '') EXIT` cases.
+    !>
     DO i=1,99
       IF (output_tiles(i) == '') EXIT
     END DO
@@ -384,28 +487,30 @@ CONTAINS
 #ifndef __NO_QUINCY__
   ! ======================================================================================================= !
   !>
-  !> Uses the element flags to setup the element map and to identify the number of used elements
+  !> The logicals that indicate which chemical elements are to be included are used to set up
+  !> a bookkeeping list for the elements and to determine the number of elements actually in use.
+  !> The bookkeeping list contains the IDs of the elements in use.
+  !>
+  !> **Note**: It is assumed that carbon is always used (ID = index = 1).
   !>
   SUBROUTINE setup_element_index_map_in_config(config, caller)
     USE mo_lnd_bgcm_class,        ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID,  &
       &                                 ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, LAST_ELEM_ID
     ! -------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model_config), INTENT(INOUT) :: config  !< model config to be setup for used elements
-    CHARACTER(len=*),            INTENT(IN) :: caller  !< calling routine
+    TYPE(t_jsb_model_config), INTENT(INOUT) :: config  !< Model config to be setup for used elements
+    CHARACTER(len=*),            INTENT(IN) :: caller  !< Calling routine
     ! -------------------------------------------------------------------------------------------------- !
     ! allocate map with size "number of element IDs defined in mo_lnd_bgcm_class"
     config%nr_of_elements = LAST_ELEM_ID
     ALLOCATE(config%elements_index_map(config%nr_of_elements))
-    config%elements_index_map(:) = -1  ! set all IND to '-1' by default, -1 for "element not used"
+    config%elements_index_map(:) = -1  ! set all indices (IND) to '-1' by default, -1 for "element not used"
     config%nr_of_used_elements = 0     ! init for use in setup_element
     ! allocate vector with info about whether the element is used
     ALLOCATE(config%is_element_used(config%nr_of_elements))
     config%is_element_used(:) = .FALSE. ! set all elements to "not used" by default
-    ! information for logfile
     CALL message(TRIM(caller), 'Mapping of element ID -> IND:')
 
-    ! carbon
-    ! is presumed to always be used, with ID = IND = 1 (thus call first for carbon!)
+    ! carbon is presumed to always be used, with ID = IND = 1 (thus call first for carbon!)
     CALL setup_element(config, .TRUE., ELEM_C_ID, 'C', caller)
     ! nitrogen
     CALL setup_element(config, config%include_nitrogen, ELEM_N_ID, 'N', caller)
@@ -422,17 +527,16 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Small helper to setup a given element according to its given flag
+  !> Small helper to add a given element ID to the bookkeeping list - according to the given (include_) flag
   !>
   SUBROUTINE setup_element(config, elem_flag, elem_id, short_name, caller)
     ! -------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model_config), INTENT(INOUT) :: config       !< model config to be setup for used elements
-    LOGICAL,                     INTENT(IN) :: elem_flag    !< flag for element to be setup
-    INTEGER,                     INTENT(IN) :: elem_id      !< id of element to be setup
-    CHARACTER(len=*),            INTENT(IN) :: short_name   !< a short name for the element
-    CHARACTER(len=*),            INTENT(IN) :: caller       !< calling routine
+    TYPE(t_jsb_model_config), INTENT(INOUT) :: config       !< Model config to be setup for used elements
+    LOGICAL,                     INTENT(IN) :: elem_flag    !< Flag for element to be setup
+    INTEGER,                     INTENT(IN) :: elem_id      !< ID of element to be setup
+    CHARACTER(len=*),            INTENT(IN) :: short_name   !< A short name for the element
+    CHARACTER(len=*),            INTENT(IN) :: caller       !< Calling routine
     ! -------------------------------------------------------------------------------------------------- !
-    ! information for logfile
     CALL message(TRIM(caller), 'Setup element:')
 
     IF (elem_flag) THEN
