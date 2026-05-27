@@ -1,4 +1,4 @@
-!> Contains process factory.
+!> Core routines of the process factory
 !>
 !> ICON-Land
 !>
@@ -10,6 +10,13 @@
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
+!>
+!>#### Core routines of the process factory
+!>
+!> The module contains two core routines of the jsbach process factory.
+!> They have been separated from the main process factory module [[mo_jsb_process_factory]]
+!> to reduce re-compilation time after code changes, which had been especially an issue
+!> on GPU machines.
 !>
 MODULE mo_jsb_process_factory_core
 #ifndef __NO_JSBACH__
@@ -110,31 +117,51 @@ MODULE mo_jsb_process_factory_core
   PUBLIC :: Create_process_memory
   PUBLIC :: Create_process, max_no_of_processes
 
-  INTEGER, PARAMETER :: max_no_of_processes = 42
+  INTEGER, PARAMETER :: max_no_of_processes = 42  !< Maximum number of model processes
+                                                  ! Note: The number might need to be increased if new processes are added.
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_factory_core'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_factory_core'   !< Module name
 
 CONTAINS
 
+  ! ====================================================================================================== !
+  !>
+  !>#### Function to create a process structure and to register the process tasks
+  !>
+  !> The function defines a process structure containing e.g. process ID and name as well as a pointer
+  !> to the process configuration. A pointer to this structure is handed back to the calling routine.
+  !> Besides, the tasks of the specific process are registered in the function, i.e. they are added to
+  !> the process's task list.
+  !>
   FUNCTION Create_process(iproc, model_id, namelist_filename) RESULT(return_ptr)
 
-    INTEGER, INTENT(in) :: iproc
-    INTEGER, INTENT(in) :: model_id
-    CHARACTER(LEN=*), INTENT(in) :: namelist_filename
-    CLASS(t_jsb_process), POINTER :: return_ptr
+    INTEGER, INTENT(in) :: iproc                      !< Process ID
+    INTEGER, INTENT(in) :: model_id                   !< ID of this model instance
+    CHARACTER(LEN=*), INTENT(in) :: namelist_filename !< Name of the file containing the process namelist
 
+    ! Note: The pointer is declared as CLASS (not TYPE) as sizes and structures are different for the
+    !       different processes.
+    CLASS(t_jsb_process), POINTER :: return_ptr       !< Pointer to the process memory
+
+    !> - Allocation of the process pointer
+    !    Note: The '::' syntax in the ALLOCATE statement is needed with CLASSes
     ALLOCATE(t_jsb_process::return_ptr)
 
-    return_ptr%id             = iproc
-    return_ptr%name           = Get_process_name(iproc)
-    return_ptr%owner_model_id = model_id
+    !> - Configuration of objects common to all processes:
+    return_ptr%id             = iproc                    !< Process ID,
+    return_ptr%name           = Get_process_name(iproc)  !< Process name and
+    return_ptr%owner_model_id = model_id                 !< ID of the current model instance
 
-    ! Register tasks and set some process properties
-    ! e.g. the land cover change (lcc) processes should set l_changes_fractions to .TRUE. here
-    ! and processes that do not have a memory module also need to specify this here.
+    !> - Configuration of process specific objects:
+    !>   Registration of the process tasks and allocation of pointer to the process configuration.
+    !>   Besides, additional process properties might be set here:
+    !>    - `l_changes_fractions`: Processes doing land cover change (lcc) set this parameter to
+    !>       .TRUE.; default is .FALSE., compare [[mo_jsb_process_class]]).
+    !>    - `has_memory`: Processes that do not have a memory module need to set "has_memory = .FALSE."
+    !>
     SELECT CASE (iproc)
     CASE (A2L_, L2A_)
-      ! Do nothing for A2L and L2A: these processes currently have no tasks and no config
+      ! Do nothing for A2L and L2A: these processes currently have no tasks and no configurations
     CASE (RAD_)
       CALL Register_rad_tasks(return_ptr, model_id)
       ALLOCATE(t_rad_config::return_ptr%config)
@@ -222,6 +249,8 @@ CONTAINS
       return_ptr => NULL()
     END SELECT
 
+    !> Set a pointer to the namelist file name
+    !  Note: All process namelists are read from the same file.
     IF (ASSOCIATED(return_ptr)) THEN
       IF (ASSOCIATED(return_ptr%config)) THEN
         return_ptr%config%namelist_filename = TRIM(namelist_filename)
@@ -230,8 +259,16 @@ CONTAINS
 
   END FUNCTION Create_process
 
+  ! ====================================================================================================== !
+  !>
+  !>#### Set pointers to the process memory
+  !>
+  !> The function returns a pointer to the process memory, that allows referring to the memory of all
+  !> process variables. The process memory is an extension of the jsb_memory.
+  !>
   FUNCTION Create_process_memory(iproc) RESULT(return_ptr)
 
+    ! The maximum number of process variables was defined in the process memory module and is used here.
     USE mo_a2l_memory_class,     ONLY: max_no_of_a2l_vars => max_no_of_vars
     USE mo_l2a_memory_class,     ONLY: max_no_of_l2a_vars => max_no_of_vars
     USE mo_seb_memory_class,     ONLY: max_no_of_seb_vars => max_no_of_vars
@@ -260,9 +297,10 @@ CONTAINS
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
     USE mo_sb_memory_class,      ONLY: max_no_of_sb_vars => max_no_of_vars
 #endif
-    INTEGER, INTENT(in) :: iproc
-    CLASS(t_jsb_memory), POINTER   :: return_ptr
+    INTEGER, INTENT(in) :: iproc                   !< Process ID
+    CLASS(t_jsb_memory), POINTER   :: return_ptr   !< Pointer to the process memory
 
+    !> - Allocate a pointer to the process memory and get the maximum number of process variables
     SELECT CASE(iproc)
     CASE (A2L_)
       ALLOCATE(t_a2l_memory::return_ptr)
@@ -342,6 +380,9 @@ CONTAINS
 #endif
     END SELECT
 
+    !> - Set pointers to the process variables' memories
+    ! Note: We prepare pointers for the maximum number of variables, although not all variables might be needed.
+    !       The actual memory allocation happens with "mem%Add_var" calls in the process memory modules.
     ALLOCATE(return_ptr%vars(return_ptr%max_no_of_vars))
 
   END FUNCTION Create_process_memory

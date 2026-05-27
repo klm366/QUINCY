@@ -1,4 +1,4 @@
-!> alcc config - defines vgrid required in alcc memory
+!> Contains structures and methods for alcc config
 !>
 !> ICON-Land
 !>
@@ -11,7 +11,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!>#### Could contain namelist info (e.g. alcc scheme), but currently of no use beyond infrastructural requirements
+!>#### Configuration of the alcc process
 !>
 MODULE mo_alcc_config_class
 #ifndef __NO_JSBACH__
