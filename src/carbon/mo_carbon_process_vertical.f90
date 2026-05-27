@@ -79,10 +79,10 @@ CONTAINS
       Y_debug,                                &
       Y_debug_sl,                             &
       ! Output fluxes
-      c_decomp_humus_1_sum,                   &
-      c_decomp_humus_2_sum,                   &
-      c_into_humus_1_sum,                     &
-      c_into_humus_2_sum,                     &
+      c_loss_humus_1_sl_sum,                  &
+      c_loss_humus_2_sl_sum,                  &
+      c_gain_humus_1_sl_sum,                  &
+      c_gain_humus_2_sl_sum,                  &
       soilResp_oxic_sl,                       &
       soilResp_anox_sl                        &
       )
@@ -166,10 +166,10 @@ CONTAINS
     REAL(wp),                   INTENT(inout) :: Y_debug_sl(:)            ! debugging
 
     ! Decomposition fluxes
-    REAL(wp),                   INTENT(inout) :: c_decomp_humus_1_sum     ! annual cflux sum of humus decomposed (leaf)
-    REAL(wp),                   INTENT(inout) :: c_decomp_humus_2_sum     ! annual cflux sum of humus decomposed (wood)
-    REAL(wp),                   INTENT(inout) :: c_into_humus_1_sum       ! annual cflux sum into humus (leaf)
-    REAL(wp),                   INTENT(inout) :: c_into_humus_2_sum       ! annual cflux sum into humus (wood)
+    REAL(wp),                   INTENT(inout) :: c_loss_humus_1_sl_sum(:) ! annual cflux sum of carbon loss from humus layer (leaf)
+    REAL(wp),                   INTENT(inout) :: c_loss_humus_2_sl_sum(:) ! annual cflux sum of carbon loss from humus layer (wood)
+    REAL(wp),                   INTENT(inout) :: c_gain_humus_1_sl_sum(:) ! annual cflux sum of carbon gain into humus layer (leaf)
+    REAL(wp),                   INTENT(inout) :: c_gain_humus_2_sl_sum(:) ! annual cflux sum of carbon gain into humus layer (wood)
 
     REAL(wp),                   INTENT(out)   :: soilResp_oxic_sl(:)      ! soil respiration rate, oxic part
     REAL(wp),                   INTENT(out)   :: soilResp_anox_sl(:)      ! soil respiration rate, anoxic part
@@ -222,10 +222,6 @@ CONTAINS
     soilResp_anox        = 0._wp
     soilResp_oxic_sl(:)  = 0._wp
     soilResp_anox_sl(:)  = 0._wp
-    c_decomp_humus_1_sum = 0._wp
-    c_decomp_humus_2_sum = 0._wp
-    c_into_humus_1_sum   = 0._wp
-    c_into_humus_2_sum   = 0._wp
 
     ! get decomposition modifiers
     d_temp      = get_modifier_temp(temp)
@@ -256,7 +252,7 @@ CONTAINS
                             c_nonsoluble_ag1, tmp_out_humus, .false., Y_out_pools)
     ! Fluxes
     soilResp_oxic              = soilResp_oxic      + Y_out_fluxes(i_f_resp) / delta_time_C             ! respiration XXX SO FAR DOESN'T GO ANYWHERE
-    c_into_humus_1_sum         = c_into_humus_1_sum + Y_out_fluxes(i_f_2_humus)          ! decomposition into humus
+    c_gain_humus_1_sl_sum(1)   = c_gain_humus_1_sl_sum(1) + Y_out_fluxes(i_f_2_humus)          ! decomposition into humus
 
     ! call YASSO for inundated / anoxic
     IF (frac_inun_loc > EPSILON(1._wp)) THEN
@@ -269,7 +265,7 @@ CONTAINS
                               c_nonsoluble_ag1, tmp_out_humus, .true., Y_out_pools)
       ! Fluxes
       soilResp_anox            = soilResp_anox + Y_out_fluxes(i_f_resp) / delta_time_C             ! respiration XXX SO FAR DOESN'T GO ANYWHERE
-      c_into_humus_1_sum       = c_into_humus_1_sum   + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
+      c_gain_humus_1_sl_sum(1) = c_gain_humus_1_sl_sum(1) + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
     END IF
 
     ! -----------------
@@ -290,8 +286,8 @@ CONTAINS
                               c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), .false., Y_out_pools)
       ! Fluxes
       soilResp_oxic_sl(is)     = soilResp_oxic_sl(is)  + Y_out_fluxes(i_f_resp) / delta_time_C     ! respiration
-      c_decomp_humus_1_sum     = c_decomp_humus_1_sum + Y_out_fluxes(i_f_f_humus)        ! decomposition of humus
-      c_into_humus_1_sum       = c_into_humus_1_sum   + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
+      c_loss_humus_1_sl_sum(is) = c_loss_humus_1_sl_sum(is) + Y_out_fluxes(i_f_f_humus) ! decomposition of humus
+      c_gain_humus_1_sl_sum(is) = c_gain_humus_1_sl_sum(is) + Y_out_fluxes(i_f_2_humus) ! decomposition into humus
 
       ! call YASSO for inundated / anoxic
       IF (frac_inun_loc > EPSILON(1._wp)) THEN
@@ -305,8 +301,8 @@ CONTAINS
                                 c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), .true., Y_out_pools)
         ! Fluxes
         soilResp_anox_sl(is)   = soilResp_anox_sl(is) + Y_out_fluxes(i_f_resp) / delta_time_C      ! respiration
-        c_decomp_humus_1_sum   = c_decomp_humus_1_sum + Y_out_fluxes(i_f_f_humus)        ! decomposition of humus
-        c_into_humus_1_sum     = c_into_humus_1_sum   + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
+        c_loss_humus_1_sl_sum(is) = c_loss_humus_1_sl_sum(is) + Y_out_fluxes(i_f_f_humus) ! decomposition of humus
+        c_gain_humus_1_sl_sum(is) = c_gain_humus_1_sl_sum(is) + Y_out_fluxes(i_f_2_humus) ! decomposition into humus
       END IF
     END DO
     ! some C goes from ag to humus -- accounted for here
@@ -331,7 +327,7 @@ CONTAINS
                             c_nonsoluble_ag2, tmp_out_humus, .false., Y_out_pools)
     ! Fluxes
     soilResp_oxic              = soilResp_oxic + Y_out_fluxes(i_f_resp) / delta_time_C             ! respiration XXX SO FAR DOESN'T GO ANYWHERE
-    c_into_humus_2_sum         = c_into_humus_2_sum + Y_out_fluxes(i_f_2_humus)          ! decomposition into humus
+    c_gain_humus_2_sl_sum(1)   = c_gain_humus_2_sl_sum(1) + Y_out_fluxes(i_f_2_humus)          ! decomposition into humus
 
     IF (frac_inun_loc > EPSILON(1._wp)) THEN
       ! call YASSO for inundated / anoxic
@@ -344,7 +340,7 @@ CONTAINS
                               c_nonsoluble_ag2, tmp_out_humus, .true., Y_out_pools)
       ! Fluxes
       soilResp_anox            = soilResp_anox + Y_out_fluxes(i_f_resp) / delta_time_C             ! respiration XXX SO FAR DOESN'T GO ANYWHERE
-      c_into_humus_2_sum       = c_into_humus_2_sum + Y_out_fluxes(i_f_2_humus)          ! decomposition into humus
+      c_gain_humus_2_sl_sum(1)   = c_gain_humus_2_sl_sum(1) + Y_out_fluxes(i_f_2_humus)          ! decomposition into humus
     END IF
 
     ! -----------------
@@ -364,8 +360,8 @@ CONTAINS
                               c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), .false., Y_out_pools)
       ! Fluxes
       soilResp_oxic_sl(is)     = soilResp_oxic_sl(is) + Y_out_fluxes(i_f_resp) / delta_time_C      ! respiration
-      c_decomp_humus_2_sum     = c_decomp_humus_2_sum + Y_out_fluxes(i_f_f_humus)        ! decomposition of humus
-      c_into_humus_2_sum       = c_into_humus_2_sum   + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
+      c_loss_humus_2_sl_sum(is) = c_loss_humus_2_sl_sum(is) + Y_out_fluxes(i_f_f_humus)        ! decomposition of humus
+      c_gain_humus_2_sl_sum(is) = c_gain_humus_2_sl_sum(is) + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
 
       IF (frac_inun_loc > EPSILON(1._wp)) THEN
         ! call YASSO for inundated / anoxic
@@ -381,18 +377,18 @@ CONTAINS
 
         ! Fluxes
         soilResp_anox_sl(is)   = soilResp_anox_sl(is) + Y_out_fluxes(i_f_resp) / delta_time_C      ! respiration
-        c_decomp_humus_2_sum   = c_decomp_humus_2_sum + Y_out_fluxes(i_f_f_humus)        ! decomposition of humus
-        c_into_humus_2_sum     = c_into_humus_2_sum   + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
+        c_loss_humus_2_sl_sum(is) = c_loss_humus_2_sl_sum(is) + Y_out_fluxes(i_f_f_humus)        ! decomposition of humus
+        c_gain_humus_2_sl_sum(is) = c_gain_humus_2_sl_sum(is) + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
       END IF
     END DO
     ! some C goes from ag to humus -- accounted for here
     c_humus_2_sl(1) = c_humus_2_sl(1) + tmp_out_humus
     tmp_out_humus   = 0._wp
 
-    c_into_humus_1_sum   = c_into_humus_1_sum   +  &
-                           LeafLit_coefV(i_lctlib_humus) * leafLitter * delta_time_C
-    c_into_humus_2_sum   = c_into_humus_2_sum   +  &
-                           WoodLit_coefV(i_lctlib_humus) * woodLitter * delta_time_C
+    c_gain_humus_1_sl_sum(1) = c_gain_humus_1_sl_sum(1) &
+      &                      + LeafLit_coefV(i_lctlib_humus) * leafLitter * delta_time_C
+    c_gain_humus_2_sl_sum(1) = c_gain_humus_2_sl_sum(1) &
+      &                      + WoodLit_coefV(i_lctlib_humus) * woodLitter * delta_time_C
 
     ! soil respiration: ag respiration is really part of top soil layer respiration
     soilResp_oxic_sl(1)     = soilResp_oxic_sl(1) + soilResp_oxic
@@ -432,40 +428,40 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------
     ! vertical mixing
 
-      CALL move_ag_2_bg(c_acid_ag1, c_acid_bg1_sl, c_acid_ag2, c_acid_bg2_sl,             &
-          &             c_water_ag1, c_water_bg1_sl, c_water_ag2, c_water_bg2_sl,         &
-          &             c_ethanol_ag1, c_ethanol_bg1_sl, c_ethanol_ag2, c_ethanol_bg2_sl, &
-          &             c_nonsoluble_ag1, c_nonsoluble_bg1_sl, c_nonsoluble_ag2, c_nonsoluble_bg2_sl, &
-          &             c_humus_1_sl, c_humus_2_sl, max_depth, max_depth_sl, layer_thick, permafrost_layer)
+    CALL move_ag_2_bg(c_acid_ag1, c_acid_bg1_sl, c_acid_ag2, c_acid_bg2_sl,             &
+        &             c_water_ag1, c_water_bg1_sl, c_water_ag2, c_water_bg2_sl,         &
+        &             c_ethanol_ag1, c_ethanol_bg1_sl, c_ethanol_ag2, c_ethanol_bg2_sl, &
+        &             c_nonsoluble_ag1, c_nonsoluble_bg1_sl, c_nonsoluble_ag2, c_nonsoluble_bg2_sl, &
+        &             c_humus_1_sl, c_humus_2_sl, max_depth, max_depth_sl, layer_thick, permafrost_layer)
 
-      CALL set_diffusivity(diff_coeff, soil_depth, soil_depth_sl, thaw_depth, thaw_depth_sl, &
-                           max_depth, max_depth_sl, layer_depth, layer_thick, &
-                           t_soil_sl, wtr_soil_rel_sl, n_thaw_cycle, permafrost_layer)
-      CALL vertical_C_transport(c_acid_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-      CALL vertical_C_transport(c_acid_bg2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-      CALL vertical_C_transport(c_water_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-      CALL vertical_C_transport(c_water_bg2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-      CALL vertical_C_transport(c_ethanol_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-      CALL vertical_C_transport(c_ethanol_bg2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-      CALL vertical_C_transport(c_nonsoluble_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-      CALL vertical_C_transport(c_nonsoluble_bg2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-      CALL vertical_C_transport(c_humus_1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-      CALL vertical_C_transport(c_humus_2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
+    CALL set_diffusivity(diff_coeff, soil_depth, soil_depth_sl, thaw_depth, thaw_depth_sl, &
+                         max_depth, max_depth_sl, layer_depth, layer_thick, &
+                         t_soil_sl, wtr_soil_rel_sl, n_thaw_cycle, permafrost_layer)
+    CALL vertical_C_transport(c_acid_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
+    CALL vertical_C_transport(c_acid_bg2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
+    CALL vertical_C_transport(c_water_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
+    CALL vertical_C_transport(c_water_bg2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
+    CALL vertical_C_transport(c_ethanol_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
+    CALL vertical_C_transport(c_ethanol_bg2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
+    CALL vertical_C_transport(c_nonsoluble_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
+    CALL vertical_C_transport(c_nonsoluble_bg2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
+    CALL vertical_C_transport(c_humus_1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
+    CALL vertical_C_transport(c_humus_2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
 
-      Y_debug = thaw_depth
-      Y_debug_sl(:) = diff_coeff(:)
+    Y_debug = thaw_depth
+    Y_debug_sl(:) = diff_coeff(:)
 
-      ! remove any C that might be below bedrock boundary
-      CALL remove_C_below_bedrock(c_acid_bg1_sl, soil_depth, layer_thick)
-      CALL remove_C_below_bedrock(c_acid_bg2_sl, soil_depth, layer_thick)
-      CALL remove_C_below_bedrock(c_water_bg1_sl, soil_depth, layer_thick)
-      CALL remove_C_below_bedrock(c_water_bg2_sl, soil_depth, layer_thick)
-      CALL remove_C_below_bedrock(c_ethanol_bg1_sl, soil_depth, layer_thick)
-      CALL remove_C_below_bedrock(c_ethanol_bg2_sl, soil_depth, layer_thick)
-      CALL remove_C_below_bedrock(c_nonsoluble_bg1_sl, soil_depth, layer_thick)
-      CALL remove_C_below_bedrock(c_nonsoluble_bg2_sl, soil_depth, layer_thick)
-      CALL remove_C_below_bedrock(c_humus_1_sl, soil_depth, layer_thick)
-      CALL remove_C_below_bedrock(c_humus_2_sl, soil_depth, layer_thick)
+    ! remove any C that might be below bedrock boundary
+    CALL remove_C_below_bedrock(c_acid_bg1_sl, soil_depth, layer_thick)
+    CALL remove_C_below_bedrock(c_acid_bg2_sl, soil_depth, layer_thick)
+    CALL remove_C_below_bedrock(c_water_bg1_sl, soil_depth, layer_thick)
+    CALL remove_C_below_bedrock(c_water_bg2_sl, soil_depth, layer_thick)
+    CALL remove_C_below_bedrock(c_ethanol_bg1_sl, soil_depth, layer_thick)
+    CALL remove_C_below_bedrock(c_ethanol_bg2_sl, soil_depth, layer_thick)
+    CALL remove_C_below_bedrock(c_nonsoluble_bg1_sl, soil_depth, layer_thick)
+    CALL remove_C_below_bedrock(c_nonsoluble_bg2_sl, soil_depth, layer_thick)
+    CALL remove_C_below_bedrock(c_humus_1_sl, soil_depth, layer_thick)
+    CALL remove_C_below_bedrock(c_humus_2_sl, soil_depth, layer_thick)
 
   END SUBROUTINE calc_vertical_soil_c
 

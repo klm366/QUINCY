@@ -256,9 +256,15 @@ MODULE mo_carbon_memory_class
       t_max_soil_year,          & ! maximum soi ltamperature in year
       permafrost_layer            ! permafrost status layer
 
+    TYPE(t_jsb_var_real3d) ::      &
+    !Diagnostics for analytically equilibrating vertical YASSO humus pools outside of jsb4 simulations
+      c_loss_humus_1_sl_sum,    & ! annual cflux sum out of humus pool in YASSO (leaf) [mol(C)/m^2(canopy)]
+      c_loss_humus_2_sl_sum,    & ! annual cflux sum out of humus pool in YASSO (wood) [mol(C)/m^2(canopy)]
+      c_gain_humus_1_sl_sum,    & ! annual cflux sum into humus pool in YASSO (leaf) [mol(C)/m^2(canopy)]
+      c_gain_humus_2_sl_sum       ! annual cflux sum into humus pool in YASSO (wood) [mol(C)/m^2(canopy)]
 
     ! YASSO on soil layers, as tile average
-    TYPE(t_jsb_var_real3d) ::        &
+    TYPE(t_jsb_var_real3d) ::      &
      !SIZE CLASS 1
       c_acid_bg1_sl_ta,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(tile)]
       c_water_bg1_sl_ta,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile)]
@@ -275,6 +281,13 @@ MODULE mo_carbon_memory_class
                                      ! Without N limitation! Only with methane processes active
       soil_respiration_anox_sl_ta    ! mean daily rate of heterotrophic (anoxid soils) respiration [mol m-2(tile)].
                                      ! Without N limitation! Only with methane processes active
+
+    TYPE(t_jsb_var_real3d) ::      &
+    !Diagnostics for analytically equilibrating vertical YASSO humus pools outside of jsb4 simulations
+      c_loss_humus_1_sl_sum_ta,    & ! annual cflux sum out of humus pool in YASSO (leaf) [mol(C)/m^2(tile area)]
+      c_loss_humus_2_sl_sum_ta,    & ! annual cflux sum out of humus pool in YASSO (wood) [mol(C)/m^2(tile area)]
+      c_gain_humus_1_sl_sum_ta,    & ! annual cflux sum into humus pool in YASSO (leaf) [mol(C)/m^2(tile area)]
+      c_gain_humus_2_sl_sum_ta       ! annual cflux sum into humus pool in YASSO (wood) [mol(C)/m^2(tile area)]
 
     ! YASSO debugging output
     TYPE(t_jsb_var_real2d) ::        &
@@ -1323,7 +1336,6 @@ CONTAINS
         & output_level=MEDIUM,                                                    &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-
       CALL mem%Add_var('root_dist_sl', mem%root_dist_sl,  &
         & hgrid, soil_c,                                                          &
         & t_cf('root_dist_sl', '', 'Root distribution on soil layers'),              &
@@ -1365,6 +1377,62 @@ CONTAINS
         & prefix, suffix,                                                         &
         & output_level=FULL,                                                      &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+      CALL mem%Add_var('c_loss_humus_1_sl_sum', mem%c_loss_humus_1_sl_sum,                      &
+        & hgrid, soil_c,                                                                        &
+        & t_cf('c_loss_humus_1_sl_sum', 'mol(C) m-2(canopy)',                                   &
+        &      'Annual accumulated carbon loss from YASSO humus (leaf) pool'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix, lrestart=.FALSE., initval_r=0.0_wp)
+
+      CALL mem%Add_var('c_loss_humus_2_sl_sum', mem%c_loss_humus_2_sl_sum,                      &
+        & hgrid, soil_c,                                                                        &
+        & t_cf('c_loss_humus_2_sl_sum', 'mol(C) m-2(canopy)',                                   &
+        &      'Annual accumulated carbon loss from YASSO humus (wood) pool'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix, lrestart=.FALSE., initval_r=0.0_wp)
+
+      CALL mem%Add_var('c_gain_humus_1_sl_sum', mem%c_gain_humus_1_sl_sum,                      &
+        & hgrid, soil_c,                                                                        &
+        & t_cf('c_gain_humus_1_sl_sum', 'mol(C) m-2(canopy)',                                   &
+        &      'Annual accumulated carbon added to YASSO humus (leaf) pool'),                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix, lrestart=.FALSE., initval_r=0.0_wp)
+
+      CALL mem%Add_var('c_gain_humus_2_sl_sum', mem%c_gain_humus_2_sl_sum,                      &
+        & hgrid, soil_c,                                                                        &
+        & t_cf('c_gain_humus_2_sl_sum', 'mol(C) m-2(canopy)',                                   &
+        &      'Annual accumulated carbon added to YASSO humus (wood) pool'),                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix, lrestart=.FALSE., initval_r=0.0_wp)
+
+      CALL mem%Add_var('c_loss_humus_1_sl_sum_ta', mem%c_loss_humus_1_sl_sum_ta,                &
+        & hgrid, soil_c,                                                                        &
+        & t_cf('c_loss_humus_1_sl_sum_ta', 'mol(C) m-2',                                        &
+        &      'Annual accumulated carbon loss from YASSO humus (leaf) pool'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix, lrestart=dsl4jsb_Config(CARBON_)%diag_humus_fluxes, initval_r=0.0_wp)
+
+      CALL mem%Add_var('c_loss_humus_2_sl_sum_ta', mem%c_loss_humus_2_sl_sum_ta,                &
+        & hgrid, soil_c,                                                                        &
+        & t_cf('c_loss_humus_2_sl_sum_ta', 'mol(C) m-2',                                        &
+        &      'Annual accumulated carbon loss from YASSO humus (wood) pool'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix, lrestart=dsl4jsb_Config(CARBON_)%diag_humus_fluxes, initval_r=0.0_wp)
+
+      CALL mem%Add_var('c_gain_humus_1_sl_sum_ta', mem%c_gain_humus_1_sl_sum_ta,                &
+        & hgrid, soil_c,                                                                        &
+        & t_cf('c_gain_humus_1_sl_sum_ta', 'mol(C) m-2',                                        &
+        &      'Annual accumulated carbon added to YASSO humus (leaf) pool'),                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix, lrestart=dsl4jsb_Config(CARBON_)%diag_humus_fluxes, initval_r=0.0_wp)
+
+      CALL mem%Add_var('c_gain_humus_2_sl_sum_ta', mem%c_gain_humus_2_sl_sum_ta,                &
+        & hgrid, soil_c,                                                                        &
+        & t_cf('c_gain_humus_2_sl_sum_ta', 'mol(C) m-2',                                        &
+        &      'Annual accumulated carbon added to YASSO humus (wood) pool'),                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix, lrestart=dsl4jsb_Config(CARBON_)%diag_humus_fluxes, initval_r=0.0_wp)
 
     END IF
 
