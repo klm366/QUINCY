@@ -44,6 +44,7 @@ MODULE mo_carbon_interface
   ! Use of process configurations
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
+  dsl4jsb_Use_config(HYDRO_)
 
   ! Use of process memories (t_carbon_memory)
   dsl4jsb_Use_memory(ASSIMI_)
@@ -160,6 +161,9 @@ CONTAINS
     USE mo_carbon_process_vertical,  ONLY: calc_vertical_soil_c, depth_to_layers, check_permafrost
     USE mo_jsb_time,                 ONLY: is_newday, is_newyear, timesteps_per_day, &
       &                                    is_time_experiment_start, is_time_restart
+    USE mo_hydro_constants,          ONLY: vol_porosity_org_top, vol_porosity_org_below
+    USE mo_jsb_physical_constants,   ONLY: dens_soil
+    USE mo_carbon_constants,         ONLY: molarMassC_kg, C_2_biomass_ratio
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -203,6 +207,11 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc) :: frac_inun_loc
 
+    REAL(wp) :: porosity_mineral  !< porosity soil layer porosity without organic contribution [m3/m3]
+    REAL(wp) :: mass_mineral_soil !< mass of mineral soil fraction in a soil layer [kg/m2]
+    REAL(wp) :: mass_organic_soil !< mass of organic soil fraction in a soil layer [kg/m2]
+    REAL(wp) :: vol_porosity_org  !< porosity of pure organic soil layer [m3/m3]
+
     ! Cleaner parameter transfer for vertical YASSO
     REAL(wp) :: LeafLit_coefV(5)
     REAL(wp) :: WoodLit_coefV(5)
@@ -211,6 +220,7 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(CARBON_)
+    dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
@@ -225,6 +235,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  precip_15d_yDay_climbuf
     dsl4jsb_Real3D_onChunk ::  t_soil_sl_15d_yDay_climbuf
     dsl4jsb_Real3D_onChunk ::  wtr_soil_rel_sl_15d_yDay_climbuf
+    dsl4jsb_Real3D_onChunk ::  fract_org_sl           !< Soil layer organic matter fraction []
+    dsl4jsb_Real3D_onChunk ::  vol_porosity_sl        !< Volumetric soil layer porosity [m3/m3]
 
     dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
 
@@ -390,7 +402,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
 
     !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes)
+    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, vol_porosity_org)
 
     iblk  = options%iblk
     ics   = options%ics
@@ -405,6 +417,7 @@ CONTAINS
     nlcc_is_enabled = model%Is_process_enabled(NLCC_)     ! workaround currently needed for DWD NEC
 
     dsl4jsb_Get_config(CARBON_)
+    dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
@@ -440,6 +453,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, max_thaw_10year, climbuf)  ! in
     dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, t_soil_sl_15d_yDay, climbuf)        ! in
     dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, wtr_soil_rel_sl_15d_yDay, climbuf)  ! in
+
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)            ! inout
 
     !
     ! This is on canopy area:
@@ -641,7 +657,8 @@ CONTAINS
     IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
       DO ic = 1, nc
         DO is = 1, nsoil
-          CALL check_permafrost((new_year .OR. lstart .OR. lresume), t_soil_sl(ic,is), t_max_soil_year(ic,is), permafrost_layer(ic,is))
+          CALL check_permafrost((new_year .OR. lstart .OR. lresume), t_soil_sl(ic,is), &
+            &  t_max_soil_year(ic,is), permafrost_layer(ic,is))
         END DO
       END DO
     END IF
@@ -1046,6 +1063,41 @@ CONTAINS
 
       CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
         & current_fluxes(:), cconservation_calcCpools(:))
+
+      ! Update relative soil carbon content on soil layers
+      IF (dsl4jsb_Config(CARBON_)%on_soillev .AND. dsl4jsb_Config(CARBON_)%update_soil_props &
+        & .AND. dsl4jsb_Config(HYDRO_)%l_organic) THEN
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+        !$ACC LOOP SEQ
+        DO is = 1, nsoil
+          IF (is == 1) THEN
+            vol_porosity_org = vol_porosity_org_top
+          ELSE
+            vol_porosity_org = vol_porosity_org_below
+          END IF
+          !$ACC LOOP GANG VECTOR PRIVATE(porosity_mineral)
+          DO ic = 1, nc
+            !TODO:
+            ! - done: check which pools need to go into the soil carbon storage
+            ! - done: check correct molar mass for organic soil instead of only C
+            ! - check whether veg and fpc fraction are enough to convert to cell average
+            IF (fract_org_sl(ic,is) < 1._wp) THEN
+              porosity_mineral    = (vol_porosity_sl(ic,is) - vol_porosity_org * fract_org_sl(ic,is)) &
+                &                 / (1._wp - fract_org_sl(ic,is))
+              mass_mineral_soil   = layer_thick(is) * (1._wp - porosity_mineral) * dens_soil
+              mass_organic_soil   = molarMassC_kg / C_2_biomass_ratio * (                   &
+                &                   c_humus_1_sl(ic,is)        + c_humus_2_sl(ic,is)        &
+                &                 + c_acid_bg1_sl(ic,is)       + c_acid_bg2_sl(ic,is)       &
+                &                 + c_ethanol_bg1_sl(ic,is)    + c_ethanol_bg2_sl(ic,is)    &
+                &                 + c_water_bg1_sl(ic,is)      + c_water_bg2_sl(ic,is)      &
+                &                 + c_nonsoluble_bg1_sl(ic,is) + c_nonsoluble_bg2_sl(ic,is) &
+                &                 ) * veg_fract_correction(ic) * fract_fpc_max(ic)
+              fract_org_sl(ic,is) = mass_organic_soil / (mass_mineral_soil + mass_organic_soil)
+            END IF
+          END DO
+        END DO
+        !$ACC END PARALLEL
+      END IF
 
     END IF ! new day
 
