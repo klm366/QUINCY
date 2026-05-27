@@ -1303,7 +1303,6 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(HYDRO_)
 
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       ! HYDRO_ 2D
@@ -1314,7 +1313,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_ubound_sl)
       dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_center_sl)
     END SELECT
-#endif
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -1392,7 +1390,6 @@ CONTAINS
         & soil_w%dz(:))                                 ! Fixed soil layer thicknesses from vertical grid
       !>
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         ! pass these values to a HYDRO_ variable with an improved name
@@ -1441,7 +1438,6 @@ CONTAINS
 
       !$ACC UPDATE DEVICE(soil_lay_width_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:)) ASYNC(1)
       !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_center_sl(:,:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
-#endif
 
       ! -------------------------------------------------------------------------------------------------- !
       !>
