@@ -210,8 +210,9 @@ CONTAINS
     IF (has_live_fuel_lvg .AND. nesterov_index > 0._wp) THEN
       !< Thonicke et al. (2010) Eq. B2
       omega_lvg = max(0._wp, (10._wp/9._wp) * litter_moisture - (1._wp / 9._wp) )
+
       !< Derived from Eq. 6 from Thonicke et al. (2010)
-      alpha_lvg = - (log(omega_lvg) / nesterov_index)
+      IF (omega_lvg > 0._wp) alpha_lvg = - (log(omega_lvg) / nesterov_index)
     END IF
 
     !< Calculate 1hr fuel moisture
