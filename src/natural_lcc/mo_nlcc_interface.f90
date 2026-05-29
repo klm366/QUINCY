@@ -18,7 +18,7 @@ MODULE mo_nlcc_interface
   ! Used variables of module
 
   ! Use of basic structures
-  USE mo_jsb_control,     ONLY: debug_on
+  USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_jsb_time,        ONLY: is_time_experiment_start
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
@@ -39,7 +39,6 @@ MODULE mo_nlcc_interface
   dsl4jsb_Use_config(FAGE_)
 
   ! Use of process memories
-!! TR$  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
@@ -115,7 +114,7 @@ CONTAINS
   SUBROUTINE update_nlcc(tile, options)
 
     USE mo_nlcc_process,   ONLY: calc_climbuf, bioclim_limits, potential_tree_fpc, fpc_to_cover_fract_pot, &
-                                 cover_fract_pot_to_cover_fract, desert_fraction, fpc_daily, scale_fpc
+                                 cover_fract_pot_to_cover_fract, desert_fraction, fpc_daily, scale_fpc, fract_small
     USE mo_jsb_time,       ONLY: is_newyear, is_newmonth, is_newday, get_day_length, get_previous_month_length
     USE mo_jsb_grid,       ONLY: Get_grid
     USE mo_jsb_grid_class, ONLY: t_jsb_grid
@@ -131,19 +130,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),  POINTER  ::  ptr_tile
     LOGICAL  :: lstart, init_running_means, init_mmtemp20
     INTEGER  :: iblk, ics, ice, nc, no_children
-    INTEGER  :: i, itile
+    INTEGER  :: ic, itile
     REAL(wp) :: seconds_day   ! number of seconds per day
     REAL(wp) :: seconds_month ! number of seconds in previous month
     REAL(wp) :: dtime
     REAL(wp) :: accelerate_nlcc
     REAL(wp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_nlcc'
-    REAL(wp), POINTER  ::  var_collect(:,:)
-    LOGICAL, ALLOCATABLE  :: is_woody(:,:)
-    LOGICAL, ALLOCATABLE  :: is_grass(:,:)
-    LOGICAL, ALLOCATABLE  :: is_pasture(:,:)
-    LOGICAL, ALLOCATABLE  :: is_crop(:,:)
-    LOGICAL, ALLOCATABLE  :: is_dynamic(:,:)
+    REAL(wp), POINTER  ::  land_cover_class(:,:)
+    LOGICAL, ALLOCATABLE  :: is_woody(:)
+    LOGICAL, ALLOCATABLE  :: is_grass(:)
+    LOGICAL, ALLOCATABLE  :: is_pasture(:)
+    LOGICAL, ALLOCATABLE  :: is_crop(:)
+    LOGICAL, ALLOCATABLE  :: is_dynamic(:)
     REAL(wp), POINTER  ::  bclimit_min_cold_mmtemp(:,:)
     REAL(wp), POINTER  ::  bclimit_max_cold_mmtemp(:,:)
     REAL(wp), POINTER  ::  bclimit_max_warm_mmtemp(:,:)
@@ -186,8 +185,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: gdd_prev_year
     dsl4jsb_Real2D_onChunk :: sum_green_bio_memory
     dsl4jsb_Real2D_onChunk :: desert_fpc
+
     ! Declare pointers to variables in foreign memory
-!!$ TR    dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: t_air
 
     ! Local variables
@@ -224,30 +223,46 @@ CONTAINS
     dsl4jsb_Get_memory(DISTURB_)
 
     ! import lct information from PFT tiles
-    !!$ TR collect_var_real2d has to be replaced by appropriate dsl4jsb invocations!
-    ! build masks for different vegetation types (is_dynamic, is_woody, etc)
+    !TODO: collect_var_real2d has to be replaced by appropriate dsl4jsb invocations!
+
+    ! Define masks for different vegetation types
     no_children = tile%Get_no_of_children()
-    var_collect => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%land_cover_class)
-    ALLOCATE(is_woody(nc,no_children))
-    ALLOCATE(is_grass(nc,no_children))
-    ALLOCATE(is_pasture(nc,no_children))
-    ALLOCATE(is_crop(nc,no_children))
-    ALLOCATE(is_dynamic(nc,no_children))
-    is_woody(:,:) = .FALSE.
-    is_grass(:,:) = .FALSE.
-    is_pasture(:,:) = .FALSE.
-    is_crop(:,:) = .FALSE.
-    is_dynamic(:,:) = .FALSE.
-    DO i = 1,nc
-      DO itile = 1,no_children
-        ! Note: The numbers correspond to the land cover classes defined in lctlib file ("LandcoverClass")
-        IF (NINT(var_collect(i,itile)) == 3 .OR. NINT(var_collect(i,itile)) == 5) is_woody(i,itile) = .TRUE.
-        IF (NINT(var_collect(i,itile)) == 4) is_grass(i,itile) = .TRUE.
-        IF (NINT(var_collect(i,itile)) == 7) is_pasture(i,itile) = .TRUE.
-        IF (NINT(var_collect(i,itile)) == 6) is_crop(i,itile) = .TRUE.
-        IF (NINT(var_collect(i,itile)) == 3 .OR. NINT(var_collect(i,itile)) == 4 .OR. &
-            NINT(var_collect(i,itile)) == 5) is_dynamic(i,itile) = .TRUE.
-      END DO
+    land_cover_class => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%land_cover_class)
+    ALLOCATE(is_woody(no_children))
+    ALLOCATE(is_grass(no_children))
+    ALLOCATE(is_pasture(no_children))
+    ALLOCATE(is_crop(no_children))
+    ALLOCATE(is_dynamic(no_children))
+    ALLOCATE(cover_fract_sum(nc))
+    ALLOCATE(cover_fract_pot_previous_year(nc,no_children))
+    ALLOCATE(fuel(nc))
+    ALLOCATE(fract_fpc_max(nc,no_children))
+
+    !$ACC DATA ASYNC(acc_stream) &
+    !$ACC   CREATE(is_woody, is_grass, is_pasture, is_crop, is_dynamic) &
+    !$ACC   CREATE(cover_fract_sum, cover_fract_pot_previous_year, fuel, fract_fpc_max)
+
+    DO itile = 1, no_children
+      ! Point to the correct PFT
+      IF (itile == 1) THEN
+        ptr_tile => tile%Get_first_child_tile()
+      ELSE
+        ptr_tile => ptr_tile%Get_next_sibling_tile()
+      END IF
+      is_woody(itile)   = .FALSE.
+      is_grass(itile)   = .FALSE.
+      is_pasture(itile) = .FALSE.
+      is_crop(itile)    = .FALSE.
+      is_dynamic(itile) = .FALSE.
+
+      IF (  dsl4jsb_Lctlib_param_tile(LandcoverClass, ptr_tile) == 3 .OR. &
+          & dsl4jsb_Lctlib_param_tile(LandcoverClass, ptr_tile) == 5)       is_woody(itile)   = .TRUE.
+      IF (  dsl4jsb_Lctlib_param_tile(LandcoverClass, ptr_tile) == 4)       is_grass(itile)   = .TRUE.
+      IF (  dsl4jsb_Lctlib_param_tile(LandcoverClass, ptr_tile) == 7)       is_pasture(itile) = .TRUE.
+      IF (  dsl4jsb_Lctlib_param_tile(LandcoverClass, ptr_tile) == 6)       is_crop(itile)    = .TRUE.
+      IF (  dsl4jsb_Lctlib_param_tile(LandcoverClass, ptr_tile) == 3 .OR. &
+          & dsl4jsb_Lctlib_param_tile(LandcoverClass, ptr_tile) == 4 .OR. &
+          & dsl4jsb_Lctlib_param_tile(LandcoverClass, ptr_tile) == 5)       is_dynamic(itile) = .TRUE.
     END DO
 
     ! import bioclimatic limits from lct library
@@ -288,8 +303,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(NLCC_,bio_exist)        ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)       ! inout
-!!$ TR    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)    ! out
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)          ! in
 
     IF (is_time_experiment_start(options%current_datetime) .OR. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
       lstart = .TRUE.
@@ -303,115 +317,141 @@ CONTAINS
     seconds_day   = get_day_length()
     seconds_month = get_previous_month_length(options%current_datetime)
 
-    ! import cover fractions from grid
-    ALLOCATE (cover_fract_sum(nc))
-    cover_fract_sum(:) = 0._wp
+    ! Scale cover fractions relative to the veg tile fraction
+    ! The sum of all child PFT fractions gives the patrent tile fraction, i.e. the veg tile fraction.
+    ! TODO: Directly use the veg tile fraction
+
+    ! Import cover fractions from grid
     grid => Get_grid(model%grid_id)
-    DO itile = 1,no_children
-      ! Point to the correct pft
+
+    DO itile = 1, no_children
+      ! Point to the correct PFT
       IF (itile == 1) THEN
         ptr_tile => tile%Get_first_child_tile()
       ELSE
         ptr_tile => ptr_tile%Get_next_sibling_tile()
       END IF
-      ! get cover fractions
+      ! Get cover fractions
       CALL ptr_tile%Get_fraction(ics, ice, iblk, fract=cover_fract(:,itile))
-      cover_fract_sum(:) = cover_fract_sum(:) + cover_fract(:,itile)
+      DO ic = 1, nc
+        cover_fract_sum(ic) = cover_fract_sum(ic) + cover_fract(ic,itile)
+      END DO
     END DO ! itile
-    ! scale cover_fract to fractions relative to the veg_tile
-    cover_fract(:,:) = cover_fract(:,:) / MAX(SPREAD(cover_fract_sum(:), NCOPIES=no_children, DIM=2),1.e-10_wp)
-!!$    WRITE (*,*) 'sum of cover_fract: ',SUM(cover_fract(:,:),DIM=2)
+    ! Type-bound procedure Get_fraction cannot be called in parallel region
+    !$ACC UPDATE DEVICE(cover_fract, cover_fract_sum) ASYNC(acc_stream)
 
-    ! allocate more local variables
-    ALLOCATE (cover_fract_pot_previous_year(nc,no_children))
-    ALLOCATE (fuel(nc))
+    ! Do the scaling
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+    DO itile = 1, no_children
+      DO ic = 1, nc
+        cover_fract(ic,itile) = cover_fract(ic,itile) / MAX(cover_fract_sum(ic), fract_small)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
 
-    ! initialize act_fpc, bare fpc, and pot_fpc
+    ! Initialize act_fpc, bare fpc, and pot_fpc
     IF (lstart) THEN
-       act_fpc(:,:) = cover_fract(:,:)
-       bare_fpc(:) = 0._wp
-       CALL scale_fpc(routine, nc, iblk, no_children, is_dynamic, act_fpc, bare_fpc)
-       pot_fpc(:,:) = act_fpc(:,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        act_fpc(ic,:) = cover_fract(ic,:)
+        bare_fpc(ic) = 0._wp
+        CALL scale_fpc(no_children, is_dynamic(:), act_fpc(ic,:), bare_fpc(ic))
+        pot_fpc(ic,:) = act_fpc(ic,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
+      END DO
+      !$ACC END PARALLEL LOOP
     ENDIF
 
     accelerate_nlcc    = dsl4jsb_Config(NLCC_)%accelerate_nlcc
     init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
-    init_mmtemp20 = .TRUE.
-    IF (MAXVAL(min_mmtemp20(:)) > 999._wp .OR. MINVAL(max_mmtemp20(:)) < -999._wp) init_mmtemp20 = .FALSE.
-    CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
-                      seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
-                      min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20, &
-                      gdd_sum_year, gdd_prev_year)
 
-    IF (.NOT. init_mmtemp20 .AND. debug_on() .AND. iblk==1) THEN
-       IF (MAXVAL(min_mmtemp20(:)) <= 999._wp .OR. MINVAL(max_mmtemp20(:)) >= -999._wp) &
-          CALL message(TRIM(routine), 'initialisation of mmtemp20')
-    ENDIF
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air(ic), &
+        &               seconds_day, seconds_month, temp_sum_day(ic), temp_sum_month(ic), &
+        &               min_mmtemp_of_yr(ic), max_mmtemp_of_yr(ic), min_mmtemp20(ic), max_mmtemp20(ic), &
+        &               gdd_sum_year(ic), gdd_prev_year(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
 
-!!$ TR    WRITE (*,*) 't_air: ', lstart, new_day, t_air(:)
-!!$ TR    WRITE (*,*) 'temp_sum_day: ', lstart, new_day, temp_sum_day(:)
-
-    ! annual calculations
+    ! Annual calculations
     IF (new_year) THEN
-       DO itile = 1,no_children
-          CALL bioclim_limits (is_dynamic(:,itile), bclimit_min_cold_mmtemp(:,itile), bclimit_max_cold_mmtemp(:,itile),    &
-                               bclimit_max_warm_mmtemp(:,itile), bclimit_min_temprange(:,itile), bclimit_min_gdd(:,itile), &
-                               min_mmtemp20(:), max_mmtemp20(:), gdd_prev_year(:), bio_exist(:,itile))
-       ENDDO
-       IF (.NOT. lstart) THEN
-          CALL potential_tree_fpc (nc, no_children, is_dynamic(:,:), is_woody(:,:), bio_exist(:,:), &
-                                   NPP_mean_5year(:,:), act_fpc(:,:), pot_fpc(:,:))
-       ENDIF
-       cover_fract_pot_previous_year(:,:) = cover_fract_pot(:,:)
-       CALL fpc_to_cover_fract_pot(nc, no_children, is_dynamic(:,:), is_woody(:,:), &
-                                   act_fpc(:,:), bare_fpc(:), cover_fract_pot(:,:))
-       IF (.NOT. lstart) THEN
-          ! new cover fractions
-          CALL cover_fract_pot_to_cover_fract(nc, no_children, is_dynamic(:,:), is_woody(:,:), is_pasture(:,:), is_crop(:,:), &
-                                              cover_fract_pot(:,:), cover_fract_pot_previous_year(:,:), cover_fract(:,:))
-          DO itile = 1,no_children
-             ! Point to the correct pft
-             IF (itile == 1) THEN
-                ptr_tile => tile%Get_first_child_tile()
-             ELSE
-                ptr_tile => ptr_tile%Get_next_sibling_tile()
-             END IF
-             ! set cover fractions
-             CALL ptr_tile%Set_fraction(ics, ice, iblk, fract=cover_fract(:,itile) * cover_fract_sum(:))
-          END DO ! itile
-          ! new desert fraction
-          CALL desert_fraction(nc, no_children, init_running_means, accelerate_nlcc,   &
-                               is_woody(:,:), is_dynamic(:,:),                         &
-                               act_fpc(:,:), bare_fpc(:),                              &
-                               sla(:,:), max_green_bio(:,:),                           &
-                               sum_green_bio_memory(:), desert_fpc(:))
-!!$ TR          fract_fpc_max(:) = MAX(1.e-10_wp,1._wp - desert_fpc(:))
-          !  calculate fract_fpc_max and hand it back to child tiles (pft tiles)
-          ALLOCATE(fract_fpc_max(nc,no_children))
-          fract_fpc_max(:,:) = SPREAD(MAX(1.e-10_wp,1._wp - desert_fpc(:)),NCOPIES=no_children, DIM=2)
-          CALL pheno__mem%HandDown_var_real2d(ics, ice, iblk, no_children, pheno__mem%fract_fpc_max, fract_fpc_max)
-       ENDIF ! not lstart
-    ENDIF ! new_year
+      DO itile = 1,no_children
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic = 1, nc
+          CALL bioclim_limits (is_dynamic(itile), bclimit_min_cold_mmtemp(ic,itile), bclimit_max_cold_mmtemp(ic,itile),    &
+            &                  bclimit_max_warm_mmtemp(ic,itile), bclimit_min_temprange(ic,itile), bclimit_min_gdd(ic,itile), &
+            &                  min_mmtemp20(ic), max_mmtemp20(ic), gdd_prev_year(ic), bio_exist(ic,itile))
+        END DO
+        !$ACC END PARALLEL LOOP
+      END DO
+      IF (.NOT. lstart) THEN
+        CALL potential_tree_fpc (nc, no_children, is_dynamic(:), is_woody(:), bio_exist(:,:), &
+          &                      NPP_mean_5year(:,:), act_fpc(:,:), pot_fpc(:,:))
+      ENDIF
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO itile = 1, no_children
+        DO ic = 1, nc
+          cover_fract_pot_previous_year(ic,itile) = cover_fract_pot(ic,itile)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+      CALL fpc_to_cover_fract_pot(nc, no_children, is_dynamic(:), is_woody(:), &
+        &                         act_fpc(:,:), bare_fpc(:), cover_fract_pot(:,:))
+      IF (.NOT. lstart) THEN
+        ! new cover fractions
+        CALL cover_fract_pot_to_cover_fract(nc, no_children, is_dynamic(:), is_woody(:), is_pasture(:), is_crop(:), &
+          &                                 cover_fract_pot(:,:), cover_fract_pot_previous_year(:,:), cover_fract(:,:))
 
-    ! daily calculations
+        DO itile = 1, no_children
+          ! Point to the correct pft
+          IF (itile == 1) THEN
+            ptr_tile => tile%Get_first_child_tile()
+          ELSE
+            ptr_tile => ptr_tile%Get_next_sibling_tile()
+          END IF
+          ! Set cover fractions - and rescale from veg tile to the box tile fraction
+          CALL ptr_tile%Set_fraction(ics, ice, iblk, fract=cover_fract(:,itile) * cover_fract_sum(:))
+        END DO ! itile
+
+        ! Calculate desert fraction
+        CALL desert_fraction(nc, no_children, init_running_means, accelerate_nlcc,   &
+          &                  is_woody(:), is_dynamic(:),                             &
+          &                  act_fpc(:,:), bare_fpc(:),                              &
+          &                  sla(:,:), max_green_bio(:,:),                           &
+          &                  sum_green_bio_memory(:), desert_fpc(:))
+
+        ! Calculate fract_fpc_max and hand it back to child tiles (pft tiles)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+        DO itile = 1, no_children
+          DO ic = 1, nc
+            fract_fpc_max(ic,itile) = MAX(fract_small, 1._wp-desert_fpc(ic))
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
+        CALL pheno__mem%HandDown_var_real2d(ics, ice, iblk, no_children, pheno__mem%fract_fpc_max, fract_fpc_max)
+      END IF ! not lstart
+    END IF ! new_year
+
+    ! Daily calculations
     IF (new_day) THEN
-       CALL fpc_daily(nc, no_children, accelerate_nlcc, is_woody(:,:), is_dynamic(:,:), tau_c_woods(:,:),       &
-                      NPP_mean_5year(:,:), bio_exist(:,:), burned_fract(:,:), damaged_fract(:,:), pot_fpc(:,:), &
-                      act_fpc(:,:), bare_fpc(:), fuel(:))
+      CALL fpc_daily(nc, no_children, accelerate_nlcc, is_woody(:), is_dynamic(:), tau_c_woods(:,:),           &
+        &            NPP_mean_5year(:,:), bio_exist(:,:), burned_fract(:,:), damaged_fract(:,:), pot_fpc(:,:), &
+        &            act_fpc(:,:), bare_fpc(:), fuel(:))
     ENDIF
+
+    !$ACC END DATA
 
     DEALLOCATE(is_woody, is_grass, is_pasture, is_crop, is_dynamic)
     DEALLOCATE(bclimit_min_cold_mmtemp, bclimit_max_cold_mmtemp, &
                bclimit_max_warm_mmtemp, bclimit_min_temprange, bclimit_min_gdd, tau_c_woods)
-    IF (new_year .AND. .NOT. lstart) DEALLOCATE(fract_fpc_max)
+    DEALLOCATE(fract_fpc_max)
     DEALLOCATE(NPP_mean_5year)
     DEALLOCATE(burned_fract, damaged_fract)
     DEALLOCATE(max_green_bio, sla)
     DEALLOCATE(fuel)
     DEALLOCATE(cover_fract_pot_previous_year)
     DEALLOCATE(cover_fract_sum)
-    DEALLOCATE(var_collect)
-
+    DEALLOCATE(land_cover_class)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
