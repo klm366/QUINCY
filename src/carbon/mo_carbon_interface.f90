@@ -383,11 +383,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: root_dist_sl
     dsl4jsb_Real3D_onChunk :: max_layer_sl
 
-    dsl4jsb_Real3D_onChunk ::  c_loss_humus_1_sl_sum
-    dsl4jsb_Real3D_onChunk ::  c_loss_humus_2_sl_sum
-    dsl4jsb_Real3D_onChunk ::  c_gain_humus_1_sl_sum
-    dsl4jsb_Real3D_onChunk ::  c_gain_humus_2_sl_sum
-
     ! climatic soil conditions
     dsl4jsb_Real3D_onChunk :: t_soil_sl
     dsl4jsb_Real3D_onChunk :: t_max_soil_year
@@ -547,11 +542,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg2_sl)      ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_2_sl)             ! inout
       !
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_loss_humus_1_sl_sum )   ! inout
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_loss_humus_2_sl_sum )   ! inout
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_gain_humus_1_sl_sum )   ! inout
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_gain_humus_2_sl_sum )   ! inout
-
       dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_oxic_sl) ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_anox_sl) ! inout
       !
@@ -623,16 +613,6 @@ CONTAINS
         c_decomp_humus_2_sum(ic) =  0._wp
         c_into_humus_1_sum(ic)   =  0._wp
         c_into_humus_2_sum(ic)   =  0._wp
-      END DO
-      !$ACC END LOOP
-      !$ACC LOOP GANG VECTOR COLLAPSE(2)
-      DO is=1,nsoil
-        DO ic=1,nc
-          c_loss_humus_1_sl_sum(ic,is) = 0._wp
-          c_loss_humus_2_sl_sum(ic,is) = 0._wp
-          c_gain_humus_1_sl_sum(ic,is) = 0._wp
-          c_gain_humus_2_sl_sum(ic,is) = 0._wp
-        END DO
       END DO
       !$ACC END LOOP
     END IF
@@ -978,10 +958,10 @@ CONTAINS
             &  Y_debug                      = YASSO_debug(ic),                & ! inout
             &  Y_debug_sl                   = YASSO_debug_sl(ic,:),           & ! inout
                !
-            &  c_loss_humus_1_sl_sum        = c_loss_humus_1_sl_sum(ic,:),    & ! out
-            &  c_loss_humus_2_sl_sum        = c_loss_humus_2_sl_sum(ic,:),    & ! out
-            &  c_gain_humus_1_sl_sum        = c_gain_humus_1_sl_sum(ic,:),    & ! out
-            &  c_gain_humus_2_sl_sum        = c_gain_humus_2_sl_sum(ic,:),    & ! out
+            &  c_decomp_humus_1_sum         = c_decomp_humus_1_sum(ic),       & ! out
+            &  c_decomp_humus_2_sum         = c_decomp_humus_2_sum(ic),       & ! out
+            &  c_into_humus_1_sum           = c_into_humus_1_sum(ic),         & ! out
+            &  c_into_humus_2_sum           = c_into_humus_2_sum(ic),         & ! out
             &  soilResp_oxic_sl             = soil_respiration_oxic_sl(ic,:), & ! out
             &  soilResp_anox_sl             = soil_respiration_anox_sl(ic,:)  & ! out
             &  )
@@ -1065,10 +1045,6 @@ CONTAINS
           & c_acid_bg2_sl = c_acid_bg2_sl(:,:), c_water_bg2_sl = c_water_bg2_sl(:,:),                 &
           & c_ethanol_bg2_sl = c_ethanol_bg2_sl(:,:), c_nonsoluble_bg2_sl = c_nonsoluble_bg2_sl(:,:), &
           & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:),                       &
-          & c_loss_humus_1_sl_sum = c_loss_humus_1_sl_sum(:,:),                                       &
-          & c_loss_humus_2_sl_sum = c_loss_humus_2_sl_sum(:,:),                                       &
-          & c_gain_humus_1_sl_sum = c_gain_humus_1_sl_sum(:,:),                                       &
-          & c_gain_humus_2_sl_sum = c_gain_humus_2_sl_sum(:,:),                                       &
           & soil_respiration_oxic_sl = soil_respiration_oxic_sl(:,:),                                 &
           & soil_respiration_anox_sl = soil_respiration_anox_sl(:,:))
       END IF
@@ -1297,12 +1273,6 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2_sl_ta,   weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2_sl_ta,          weighted_by_fract)
 
-      ! Humus pool diagnostics
-      dsl4jsb_Aggregate_onChunk(CARBON_, c_loss_humus_1_sl_sum_ta, weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_, c_loss_humus_2_sl_sum_ta, weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_, c_gain_humus_1_sl_sum_ta, weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_, c_gain_humus_2_sl_sum_ta, weighted_by_fract)
-
       dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_oxic_sl_ta, weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_anox_sl_ta, weighted_by_fract)
 
@@ -1469,11 +1439,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk ::  c_nonsoluble_bg2_sl
     dsl4jsb_Real3D_onChunk ::  c_humus_2_sl
 
-    dsl4jsb_Real3D_onChunk ::  c_loss_humus_1_sl_sum
-    dsl4jsb_Real3D_onChunk ::  c_loss_humus_2_sl_sum
-    dsl4jsb_Real3D_onChunk ::  c_gain_humus_1_sl_sum
-    dsl4jsb_Real3D_onChunk ::  c_gain_humus_2_sl_sum
-
     ! Assertion: 0 < oldRedArea <= 1 and 0 < newRefArea <= 1
     ! TODO on GPU
 #ifndef _OPENACC
@@ -1539,11 +1504,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg2_sl )
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg2_sl )
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_2_sl )
-
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_loss_humus_1_sl_sum )
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_loss_humus_2_sl_sum )
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_gain_humus_1_sl_sum )
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_gain_humus_2_sl_sum )
     END IF
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
@@ -1583,20 +1543,16 @@ CONTAINS
 
     IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
       DO ic = 1, nc
-        c_acid_bg1_sl(ic,:)         = c_acid_bg1_sl(ic,:)         * refarea_scaling
-        c_water_bg1_sl(ic,:)        = c_water_bg1_sl(ic,:)        * refarea_scaling
-        c_ethanol_bg1_sl(ic,:)      = c_ethanol_bg1_sl(ic,:)      * refarea_scaling
-        c_nonsoluble_bg1_sl(ic,:)   = c_nonsoluble_bg1_sl(ic,:)   * refarea_scaling
-        c_humus_1_sl(ic,:)          = c_humus_1_sl(ic,:)          * refarea_scaling
-        c_acid_bg2_sl(ic,:)         = c_acid_bg2_sl(ic,:)         * refarea_scaling
-        c_water_bg2_sl(ic,:)        = c_water_bg2_sl(ic,:)        * refarea_scaling
-        c_ethanol_bg2_sl(ic,:)      = c_ethanol_bg2_sl(ic,:)      * refarea_scaling
-        c_nonsoluble_bg2_sl(ic,:)   = c_nonsoluble_bg2_sl(ic,:)   * refarea_scaling
-        c_humus_2_sl(ic,:)          = c_humus_2_sl(ic,:)          * refarea_scaling
-        c_loss_humus_1_sl_sum(ic,:) = c_loss_humus_1_sl_sum(ic,:) * refarea_scaling
-        c_loss_humus_2_sl_sum(ic,:) = c_loss_humus_2_sl_sum(ic,:) * refarea_scaling
-        c_gain_humus_1_sl_sum(ic,:) = c_gain_humus_1_sl_sum(ic,:) * refarea_scaling
-        c_gain_humus_2_sl_sum(ic,:) = c_gain_humus_2_sl_sum(ic,:) * refarea_scaling
+        c_acid_bg1_sl(ic,:)       = c_acid_bg1_sl(ic,:)       * refarea_scaling
+        c_water_bg1_sl(ic,:)      = c_water_bg1_sl(ic,:)      * refarea_scaling
+        c_ethanol_bg1_sl(ic,:)    = c_ethanol_bg1_sl(ic,:)    * refarea_scaling
+        c_nonsoluble_bg1_sl(ic,:) = c_nonsoluble_bg1_sl(ic,:) * refarea_scaling
+        c_humus_1_sl(ic,:)        = c_humus_1_sl(ic,:)        * refarea_scaling
+        c_acid_bg2_sl(ic,:)       = c_acid_bg2_sl(ic,:)       * refarea_scaling
+        c_water_bg2_sl(ic,:)      = c_water_bg2_sl(ic,:)      * refarea_scaling
+        c_ethanol_bg2_sl(ic,:)    = c_ethanol_bg2_sl(ic,:)    * refarea_scaling
+        c_nonsoluble_bg2_sl(ic,:) = c_nonsoluble_bg2_sl(ic,:) * refarea_scaling
+        c_humus_2_sl(ic,:)        = c_humus_2_sl(ic,:)        * refarea_scaling
       END DO
     END IF
 
@@ -1623,11 +1579,7 @@ CONTAINS
       & c_ethanol_bg1_sl = c_ethanol_bg1_sl(:,:), c_nonsoluble_bg1_sl = c_nonsoluble_bg1_sl(:,:), &
       & c_acid_bg2_sl = c_acid_bg2_sl(:,:), c_water_bg2_sl = c_water_bg2_sl(:,:),                 &
       & c_ethanol_bg2_sl = c_ethanol_bg2_sl(:,:), c_nonsoluble_bg2_sl = c_nonsoluble_bg2_sl(:,:), &
-      & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:),                       &
-      & c_loss_humus_1_sl_sum = c_loss_humus_1_sl_sum(:,:),                                       &
-      & c_loss_humus_2_sl_sum = c_loss_humus_2_sl_sum(:,:),                                       &
-      & c_gain_humus_1_sl_sum = c_gain_humus_1_sl_sum(:,:),                                       &
-      & c_gain_humus_2_sl_sum = c_gain_humus_2_sl_sum(:,:))
+      & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:))
     END IF
 
   END SUBROUTINE rescale_carbon_upon_reference_area_change
@@ -1828,9 +1780,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       & cflux_c_greenwood_2_litter,                                       &
       & c_acid_bg1_sl, c_water_bg1_sl, c_ethanol_bg1_sl, c_nonsoluble_bg1_sl,         &
       & c_acid_bg2_sl, c_water_bg2_sl, c_ethanol_bg2_sl, c_nonsoluble_bg2_sl,         &
-      & c_humus_1_sl, c_humus_2_sl,                                        &
-      & c_loss_humus_1_sl_sum, c_loss_humus_2_sl_sum,                      &
-      & c_gain_humus_1_sl_sum, c_gain_humus_2_sl_sum,                      &
+      & c_humus_1_sl, c_humus_2_sl,                                             &
       & soil_respiration_oxic_sl, soil_respiration_anox_sl )
 
     USE mo_carbon_shared, ONLY: get_per_tile
@@ -1893,10 +1843,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg2_sl(:,:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_humus_1_sl(:,:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_humus_2_sl(:,:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_loss_humus_1_sl_sum(:,:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_loss_humus_2_sl_sum(:,:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_gain_humus_1_sl_sum(:,:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_gain_humus_2_sl_sum(:,:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: soil_respiration_oxic_sl(:,:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: soil_respiration_anox_sl(:,:)
 
@@ -1968,11 +1914,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Real3D_onChunk ::  c_ethanol_bg2_sl_ta
     dsl4jsb_Real3D_onChunk ::  c_nonsoluble_bg2_sl_ta
     dsl4jsb_Real3D_onChunk ::  c_humus_2_sl_ta
-
-    dsl4jsb_Real3D_onChunk ::  c_loss_humus_1_sl_sum_ta
-    dsl4jsb_Real3D_onChunk ::  c_loss_humus_2_sl_sum_ta
-    dsl4jsb_Real3D_onChunk ::  c_gain_humus_1_sl_sum_ta
-    dsl4jsb_Real3D_onChunk ::  c_gain_humus_2_sl_sum_ta
 
     dsl4jsb_Real3D_onChunk ::  soil_respiration_oxic_sl_ta
     dsl4jsb_Real3D_onChunk ::  soil_respiration_anox_sl_ta
@@ -2047,11 +1988,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg2_sl_ta )      ! opt out
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg2_sl_ta )      ! opt out
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_2_sl_ta )      ! opt out
-
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_loss_humus_1_sl_sum_ta )      ! opt out
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_loss_humus_2_sl_sum_ta )      ! opt out
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_gain_humus_1_sl_sum_ta )      ! opt out
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  c_gain_humus_2_sl_sum_ta )      ! opt out
 
       dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_oxic_sl_ta )      ! opt out
       dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_anox_sl_ta )      ! opt out
@@ -2207,34 +2143,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       DO is = 1,nsoil
         CALL get_per_tile(c_humus_2_sl_ta(:,is), &
         & c_humus_2_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
-      END DO
-    END IF
-    IF (PRESENT(c_loss_humus_1_sl_sum)) THEN
-      nsoil = SIZE(c_loss_humus_1_sl_sum, DIM=2)
-      DO is = 1,nsoil
-        CALL get_per_tile(c_loss_humus_1_sl_sum_ta(:,is), &
-        & c_loss_humus_1_sl_sum(:,is), veg_fract_correction(:), fract_fpc_max(:))
-      END DO
-    END IF
-    IF (PRESENT(c_loss_humus_2_sl_sum)) THEN
-      nsoil = SIZE(c_loss_humus_2_sl_sum, DIM=2)
-      DO is = 1,nsoil
-        CALL get_per_tile(c_loss_humus_2_sl_sum_ta(:,is), &
-        & c_loss_humus_2_sl_sum(:,is), veg_fract_correction(:), fract_fpc_max(:))
-      END DO
-    END IF
-    IF (PRESENT(c_gain_humus_1_sl_sum)) THEN
-      nsoil = SIZE(c_gain_humus_1_sl_sum, DIM=2)
-      DO is = 1,nsoil
-        CALL get_per_tile(c_gain_humus_1_sl_sum_ta(:,is), &
-        & c_gain_humus_1_sl_sum(:,is), veg_fract_correction(:), fract_fpc_max(:))
-      END DO
-    END IF
-    IF (PRESENT(c_gain_humus_2_sl_sum)) THEN
-      nsoil = SIZE(c_gain_humus_2_sl_sum, DIM=2)
-      DO is = 1,nsoil
-        CALL get_per_tile(c_gain_humus_2_sl_sum_ta(:,is), &
-        & c_gain_humus_2_sl_sum(:,is), veg_fract_correction(:), fract_fpc_max(:))
       END DO
     END IF
     IF (PRESENT(soil_respiration_oxic_sl)) THEN

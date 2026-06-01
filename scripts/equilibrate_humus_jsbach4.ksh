@@ -106,23 +106,6 @@ else
   ${cp} ${path_restart}/${restartToModify} ${work}/tmp_restart.nc
 fi
 
-# Set correct variable names for single pool vs carbon on soil layers
-if [[ ${use_vertical_carbon} == true ]]; then
-  humus1_in="carbon_c_gain_humus_1_sl_sum_ta_"
-  humus2_in="carbon_c_gain_humus_2_sl_sum_ta_"
-  humus1_out="carbon_c_loss_humus_1_sl_sum_ta_"
-  humus2_out="carbon_c_loss_humus_2_sl_sum_ta_"
-  humus1_pool="carbon_c_humus_1_sl_"
-  humus2_pool="carbon_c_humus_2_sl_"
-else
-  humus1_in="carbon_c_into_humus_1_sum_ta_"
-  humus2_in="carbon_c_into_humus_2_sum_ta_"
-  humus1_out="carbon_c_decomp_humus_1_sum_ta_"
-  humus2_out="carbon_c_decomp_humus_2_sum_ta_"
-  humus1_pool="carbon_c_humus_1_"
-  humus2_pool="carbon_c_humus_2_"
-fi
-
 echo ""
 echo " Diagnose equilibrium humus pools"
 # loop over pfts
@@ -155,22 +138,28 @@ for ipft in ${pfts[@]}; do
     done
 
     # Extract fluxes to and from the humus pools from the list of restart files
-    humus_fluxes="${humus1_out}${fortile},${humus2_out}${fortile},${humus1_in}${fortile},${humus2_in}${fortile}"
+    humus_fluxes="carbon_c_decomp_humus_1_sum_ta_${fortile},carbon_c_decomp_humus_2_sum_ta_${fortile},carbon_c_into_humus_1_sum_ta_${fortile},carbon_c_into_humus_2_sum_ta_${fortile}"
     ${cdo} -timmean -mergetime -apply,-selname,${humus_fluxes} [ ${restart_files} ] \
            ${work}/humus_pools_${year_start}-${year_end}.nc
 
     # Calculate factors to equilibrate humus pools
-    ${cdo} -expr,"factor_humus1=${humus1_in}${fortile}/${humus1_out}${fortile}" \
+    ${cdo} -expr,"factor_humus1=carbon_c_into_humus_1_sum_ta_${fortile}/carbon_c_decomp_humus_1_sum_ta_${fortile}" \
            ${work}/humus_pools_${year_start}-${year_end}.nc   ${work}/factor_humus_1.nc
-    ${cdo} -expr,"factor_humus2=${humus2_in}${fortile}/${humus2_out}${fortile}" \
+    ${cdo} -expr,"factor_humus2=carbon_c_into_humus_2_sum_ta_${fortile}/carbon_c_decomp_humus_2_sum_ta_${fortile}" \
            ${work}/humus_pools_${year_start}-${year_end}.nc   ${work}/factor_humus_2.nc
   fi
 
   # Calculate equilibrium humus pools for the current pft
-  ${cdo} -mul -selvar,${humus1_pool}pft${ipft} ${path_restart}/${restartToModify} ${work}/factor_humus_1.nc \
-          ${work}/c_H1_eq_pft${ipft}.nc
-  ${cdo} -mul -selvar,${humus2_pool}pft${ipft} ${path_restart}/${restartToModify} ${work}/factor_humus_2.nc \
-          ${work}/c_H2_eq_pft${ipft}.nc
+  if [[ ${use_vertical_carbon} == true ]]; then
+    ${cdo} -mul -selvar,carbon_c_humus_1_sl_pft${ipft} ${path_restart}/${restartToModify} ${work}/factor_humus_1.nc \
+            ${work}/c_H1_eq_pft${ipft}_sl.nc
+    ${cdo} -mul -selvar,carbon_c_humus_2_sl_pft${ipft} ${path_restart}/${restartToModify} ${work}/factor_humus_2.nc \
+            ${work}/c_H2_eq_pft${ipft}_sl.nc
+  fi
+    ${cdo} -mul -selvar,carbon_c_humus_1_pft${ipft} ${path_restart}/${restartToModify} ${work}/factor_humus_1.nc \
+            ${work}/c_H1_eq_pft${ipft}.nc
+    ${cdo} -mul -selvar,carbon_c_humus_2_pft${ipft} ${path_restart}/${restartToModify} ${work}/factor_humus_2.nc \
+            ${work}/c_H2_eq_pft${ipft}.nc
 
   if [[ ${with_NLCC} == false ]]; then
     ${rm} ${work}/factor_humus_?.nc
