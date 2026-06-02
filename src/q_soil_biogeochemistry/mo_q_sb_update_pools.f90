@@ -1035,7 +1035,7 @@ CONTAINS
       !!   1) primary P will be depleted if the spin-up time is very long
       !!   2) we use the "soil P map" with the P status of about the year 1850 as model input
       !!      we may ensure that the soil P is not very different from this value after spinup, i.e., the transient simulation (usually starting 1900)
-      IF (dsl4jsb_Config(SB_)%l_exclude_weathering)) THEN
+      IF (dsl4jsb_Config(SB_)%l_exclude_weathering) THEN
         po4_occluded(:,:)   = po4_occluded(:,:)   +                         transport_po4_occluded(:,:)  * dtime / 1.e6_wp
         po4_primary(:,:)    = po4_primary(:,:)    +                         transport_po4_primary(:,:)   * dtime / 1.e6_wp
       ELSE
