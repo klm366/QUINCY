@@ -143,9 +143,9 @@ for ipft in ${pfts[@]}; do
            ${work}/humus_pools_${year_start}-${year_end}.nc
 
     # Calculate factors to equilibrate humus pools
-    ${cdo} -expr,"factor_humus1=carbon_c_into_humus_1_sum_ta_${fortile}/carbon_c_decomp_humus_1_sum_ta_${fortile}" \
+    ${cdo} -setmisstoc,1 -expr,"factor_humus1=carbon_c_into_humus_1_sum_ta_${fortile}/carbon_c_decomp_humus_1_sum_ta_${fortile}" \
            ${work}/humus_pools_${year_start}-${year_end}.nc   ${work}/factor_humus_1.nc
-    ${cdo} -expr,"factor_humus2=carbon_c_into_humus_2_sum_ta_${fortile}/carbon_c_decomp_humus_2_sum_ta_${fortile}" \
+    ${cdo} -setmisstoc,1 -expr,"factor_humus2=carbon_c_into_humus_2_sum_ta_${fortile}/carbon_c_decomp_humus_2_sum_ta_${fortile}" \
            ${work}/humus_pools_${year_start}-${year_end}.nc   ${work}/factor_humus_2.nc
   fi
 
@@ -171,7 +171,7 @@ echo ""
 echo " Adapt final restart file"
 $rm -f ${work}/humus_pools.nc
 ${cdo} merge ${work}/c_H1_eq_pft*.nc ${work}/c_H2_eq_pft*.nc ${work}/humus_pools.nc
-${cdo} replace ${path_restart}/${restartToModify} ${work}/humus_pools.nc \
+${cdo} -O merge -delname,carbon_c_humus_?_*pft* ${path_restart}/${restartToModify} ${work}/humus_pools.nc \
        ${path_restart_out}/${restartToModify%.nc}_eqC.nc
 
 # Clean up
