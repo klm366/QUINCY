@@ -296,6 +296,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SB_,    volume_min_sl)
     ! ----------------------------------------------------------------------------------------------------- !
 
+    !>0.7 preserve soil P pools during model spin-up, disable P weathering
+    !>
+    dsl4jsb_Config(SB_)%l_exclude_weathering = model%config%l_spinup
+
     !>0.8 apply calibration of soil-biogeochemistry constants if enabled
     !>
     IF (dsl4jsb_Config(SB_)%flag_apply_nml_parameters) THEN

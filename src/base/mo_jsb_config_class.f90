@@ -56,6 +56,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: include_carbon13      !< If bgc materials contain C13 as element
     LOGICAL                        :: include_carbon14      !< If bgc materials contain C14 as element
     LOGICAL                        :: include_nitrogen15    !< If bgc materials contain C15 as element
+    LOGICAL                        :: l_spinup              !< Running a spin-up simulation
     INTEGER                        :: nr_of_elements        !< for bookkeeping: number of elements
     INTEGER                        :: nr_of_used_elements   !< for bookkeeping: number of actually used elements
     INTEGER, ALLOCATABLE           :: elements_index_map(:) !< vector for ID -> IDX mapping of the elements
@@ -69,8 +70,6 @@ MODULE mo_jsb_config_class
     INTEGER                     :: slow_sb_pool_spinup_accelerator_max_executions !< maximum number of executions of spin-up accelerator
 #endif
 
-    ! quincy @TODO temporary solution for model%config%options
-    LOGICAL           :: l_transient_spinup
     ! quincy - end
     LOGICAL                        :: init_from_ifs    ! Initialize from IFS analysis
     CHARACTER(len=:), ALLOCATABLE  :: ifs_filename
@@ -149,6 +148,7 @@ CONTAINS
     LOGICAL :: include_carbon13           !< element variables in bgc_material (infrastructure)
     LOGICAL :: include_carbon14           !< element variables in bgc_material (infrastructure)
     LOGICAL :: include_nitrogen15         !< element variables in bgc_material (infrastructure)
+    LOGICAL :: l_spinup                   !< Running a spin-up simulation
     LOGICAL :: flag_slow_sb_pool_spinup_accelerator !< accelerating slow pool turnover during spin-up
     INTEGER :: slow_sb_pool_spinup_accelerator_frequency !< The freqency [years] to execute spin-up accelerator
     INTEGER :: slow_sb_pool_spinup_accelerator_length !< The length (loop times) of spin-up accelerator
@@ -181,6 +181,7 @@ CONTAINS
       include_carbon13, &
       include_carbon14, &
       include_nitrogen15, &
+      l_spinup, &
       flag_slow_sb_pool_spinup_accelerator, &
       slow_sb_pool_spinup_accelerator_frequency, &
       slow_sb_pool_spinup_accelerator_length, &
@@ -239,6 +240,7 @@ CONTAINS
     include_carbon13           = .TRUE.
     include_carbon14           = .TRUE.
     include_nitrogen15         = .TRUE.
+    l_spinup                   = .FALSE.
     flag_slow_sb_pool_spinup_accelerator    = .FALSE.
     slow_sb_pool_spinup_accelerator_frequency = 100
     slow_sb_pool_spinup_accelerator_length = 1000
@@ -317,6 +319,7 @@ CONTAINS
     model_config%include_carbon13           = include_carbon13
     model_config%include_carbon14           = include_carbon14
     model_config%include_nitrogen15         = include_nitrogen15
+    model_config%l_spinup                   = l_spinup
     CALL setup_element_index_map_in_config(model_config, routine)
     model_config%flag_slow_sb_pool_spinup_accelerator   = flag_slow_sb_pool_spinup_accelerator
     model_config%slow_sb_pool_spinup_accelerator_frequency = slow_sb_pool_spinup_accelerator_frequency
@@ -357,8 +360,6 @@ CONTAINS
 #endif
 #endif
 
-    ! quincy - temporary solution @TODO
-    model_config%l_transient_spinup           = .FALSE.
     ! quincy - end
     model_config%init_from_ifs              = init_from_ifs
     model_config%ifs_filename               = TRIM(ifs_filename)
