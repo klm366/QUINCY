@@ -1,9 +1,9 @@
-!> alcc config - defines vgrid required in alcc memory
+!> Contains structures and methods for alcc config
 !>
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -11,14 +11,14 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!>#### Could contain namelist info (e.g. alcc scheme), but currently of no use beyond infrastructural requirements
+!>#### Configuration of the alcc process
 !>
 MODULE mo_alcc_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,          ONLY: message, finish
   USE mo_io_units,           ONLY: filename_max
-  USE mo_util_string,        ONLY: tolower
+  USE mo_util,               ONLY: tolower
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
   USE mo_kind,               ONLY: wp
   USE mo_jsb_config_class,   ONLY: t_jsb_config
@@ -32,7 +32,7 @@ MODULE mo_alcc_config_class
      CHARACTER(len=filename_max-7) :: alcc_filename_prefix, alcc_transitions_filename_prefix
        !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
      CHARACTER(len=SHORT_NAME_LEN) :: scheme
-     CHARACTER(len=15), ALLOCATABLE :: trans_names(:)  
+     CHARACTER(len=15), ALLOCATABLE :: trans_names(:)
         !< specifies the transition types used in case of 'transition' scheme
      INTEGER, ALLOCATABLE          :: from_class(:), to_class(:), pft_class(:)
         !< from_class and to_class specify which class (natural, pasture, crop) loses/gains area through a transition type
@@ -86,8 +86,7 @@ CONTAINS
          alcc_filename_prefix,   &
          alcc_transitions_filename_prefix, &
          scheme,                 &
-         l_daily_alcc,           &
-         nr_of_pfts
+         l_daily_alcc
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -163,10 +162,11 @@ CONTAINS
 
     END SELECT
 
-    SELECT CASE (TRIM(tolower(config%scheme)))
-    CASE ('maps')
-      CALL message(TRIM(routine), 'Reading land use data from maps.')
-      config%scheme=tolower(config%scheme)
+    IF (config%active) THEN
+      SELECT CASE (TRIM(tolower(config%scheme)))
+      CASE ('maps')
+        CALL message(TRIM(routine), 'Reading land use data from maps.')
+        config%scheme=tolower(config%scheme)
 
       IF (l_daily_alcc) THEN
         CALL message(TRIM(routine), '... land use change will be applied on a daily basis, reading next years land cover map' &
@@ -176,23 +176,24 @@ CONTAINS
           &                       //' reading the land cover map of the current year to be applied in the first timestep.')
       END IF
 
-    CASE ('transition')
-      CALL message(TRIM(routine), 'Reading land use change from transitions data.')
-      DO i = 1, SIZE(trans_names)
-        CALL message(TRIM(routine), 'Transition type (' // TRIM(ADJUSTL(trans_names(i))) // ')')
-      END DO
-      config%scheme=tolower(config%scheme)
+      CASE ('transition')
+        CALL message(TRIM(routine), 'Reading land use change from transitions data.')
+        DO i = 1, SIZE(trans_names)
+          CALL message(TRIM(routine), 'Transition type (' // TRIM(ADJUSTL(trans_names(i))) // ')')
+        END DO
+        config%scheme=tolower(config%scheme)
 
-      IF(l_daily_alcc) THEN
-        CALL message(TRIM(routine), '... land use change will be applied on a daily basis.')
-      ELSE
-        CALL message(TRIM(routine), '... land use change will be applied on an annual basis.')
-      END IF
+        IF(l_daily_alcc) THEN
+          CALL message(TRIM(routine), '... land use change will be applied on a daily basis.')
+        ELSE
+          CALL message(TRIM(routine), '... land use change will be applied on an annual basis.')
+        END IF
 
 
-    CASE DEFAULT
-      CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
-    END SELECT
+      CASE DEFAULT
+        CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
+      END SELECT
+    END IF
 
     ! Create vertical axis
     ! JN-TODO (RS...): currently I get nr_of_pfts from namelist -> better way? usecase?
@@ -204,7 +205,6 @@ CONTAINS
     trans_layer  => new_vgrid('transitions', ZAXIS_GENERIC, SIZE(trans_names), &
       & levels=(/ (REAL(i,kind=wp),i=1,SIZE(trans_names)) /), units='')
     CALL register_vgrid(trans_layer)
-
 
   END SUBROUTINE Init_alcc_config
 

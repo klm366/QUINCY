@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -181,6 +181,10 @@ MODULE mo_hydro_constants
 
   REAL(wp), PARAMETER :: &
     & matric_pot_min          = -1000.0_wp       !< min value of matric potential ('mpot_act'), tuned [m]
+
+  REAL(wp), PARAMETER :: &
+    & wtr_density             = 998.0_wp, &      !< Density of water at 20 degrees C (e.g. Tanaka et al., 2001) [kg / m3]
+    & ice_density             = 916.7_wp         !< Density of ice, textbook value [kg / m3]
 
 #ifdef __QUINCY_STANDALONE__
   ! quincy standalone

@@ -54,15 +54,11 @@
     * [ ] exp.land_quincy_standalone_test_2y (NAG)
     * [ ] results of a quincy land CN simulation with and without restart are identical (NAG)
       * any additional info
-  * QUINCY with SPQ_ enabled:
-    * [ ] exp.land_quincy_standalone_test_2m_spq (NAG)
 * [ ] no water-balance issue
   * provide details about the test simulation
 
 #### associated merge requests
 * ICON-mpim MR: add link (full url) to the MR in the ICON-Land repository
 * QS MR: add link (full url) to the MR in the ICON-Land repository
-  * brief summary of IQ test simulations
+  * brief summary of QS test simulations
 * iq-scripts MR: add link (full url) to the MR in the ICON-Land repository
-
-closes issue [add link (full url) to issue]

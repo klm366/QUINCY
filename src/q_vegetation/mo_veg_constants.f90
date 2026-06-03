@@ -1,9 +1,9 @@
-!> vegetation constants (QUINCY)
+!> QUINCY vegetation constants
 !>
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -118,7 +118,11 @@ MODULE mo_veg_constants
       f_nacq_nh4           , &
       k_cost_symb_bnf      , & !< cost of symbiotic N fixation (mol C / mol N)
       t_opt_symb_bnf       , & !< optimal temperature for BNF (K)
+      k_topt_symb_bnf      , & !< slope of optimal temperature for symb. BNF vs. growth temperature
+      tacclim_nacq_min     , & !< minimum temperature to which N acquisition acclimates (degC)
+      tacclim_nacq_max     , & !< maximum temperature to which N acquisition acclimates (degC)
       ea_symb_bnf          , & !< activation energy for symbiotic N fixation (J mol-1)
+      k_ea_symb_bnf        , & !< slope of activation energy for symb. BNF vs. growth temperature
       ed_symb_bnf          , & !< de-activation energy for symbiotic N fixation (J mol-1)
       eta_nfixation        , & !< fractionation of N15 due to N fixation (per mill), parameter value from Robinson, Tree 2001
       f_myc_exudation_max  , & !< maximum fraction of current growth allocated to mycorrhiza
@@ -239,7 +243,7 @@ CONTAINS
   SUBROUTINE init_veg_constants
 
     USE mo_jsb_math_constants,     ONLY: one_day, one_year
-    USE mo_jsb_physical_constants, ONLY: molar_mass_C, molar_mass_N, molar_mass_P
+    USE mo_jsb_physical_constants, ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Tzero
 
     IMPLICIT NONE
     ! ---------------------------
@@ -318,9 +322,13 @@ CONTAINS
       f_nacq_nh4                  = transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4)
       f_nacq_no3                  = transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4)
       k_cost_symb_bnf             = 12.75_wp  / (molar_mass_C/molar_mass_N)     ! Average value from Kern 2021
-      t_opt_symb_bnf              = 32.0_wp+273.15_wp  ! calibrated from Bytnerowicz et al. 2022
-      ea_symb_bnf                 = 72000._wp          ! calibrated from Bytnerowicz et al. 2022
-      ed_symb_bnf                 = 250000._wp         ! calibrated from Bytnerowicz et al. 2022
+      t_opt_symb_bnf              = 28.15_wp + Tzero ! calibrated from Bytnerowicz et al. 2022, adjusted for acclimation of growth temperature
+      k_topt_symb_bnf             = 0.15_wp          ! calibrated based on Bytnerowicz et al. 2022, mean between measured biomes
+      k_ea_symb_bnf               = 0.04_wp          ! calibrated from Bytnerowicz et al. 2022
+      ea_symb_bnf                 = 72000._wp        ! calibrated from Bytnerowicz et al. 2022
+      ed_symb_bnf                 = 250000._wp       ! calibrated from Bytnerowicz et al. 2022
+      tacclim_nacq_min            = 15.0_wp
+      tacclim_nacq_max            = 30.0_wp
       eta_nfixation               = 3.0_wp                   ! Robinson, Tree 2001
       f_myc_exudation_max         = 0.3_wp
       f_mycorrhization_min        = 0.1_wp

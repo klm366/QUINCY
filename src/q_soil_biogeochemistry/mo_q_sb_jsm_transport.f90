@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -776,7 +776,7 @@ CONTAINS
         ! (incl. unit conversion of from s-1 to timestep-1 considering frac_wtr_transp_down_sl)
         IF (frac_wtr_transp_down_sl(ic,is) > 0.0_wp) THEN
           hlp1(ic) = frac_wtr_transp_down_sl(ic,is) * dtime / 1000._wp * pool(ic,is) * soil_depth_sl(ic,is)
-        ! upward transport - @TODO for now no upward transport - need to properly think about this in update_spq_physics
+        ! upward transport - @TODO for now NO upward transport
         ELSE
           hlp1(ic) = 0.0_wp ! frac_wtr_transp_down_sl(:,is) * dtime/1000._wp * pool(:,is+1) * soil_depth_sl(:,is+1)
         END IF

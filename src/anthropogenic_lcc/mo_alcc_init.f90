@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -17,7 +17,7 @@ MODULE mo_alcc_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message, finish
+  USE mo_exception,         ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_class,         ONLY: get_model
@@ -25,8 +25,10 @@ MODULE mo_alcc_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_time,          ONLY: get_year
   USE mo_jsb_control,       ONLY: debug_on
+  USE mo_nlcc_process,      ONLY: fract_small
 
   dsl4jsb_Use_processes ALCC_
+  dsl4jsb_Use_processes NLCC_
   dsl4jsb_Use_memory(ALCC_)
   dsl4jsb_Use_config(ALCC_)
 
@@ -77,6 +79,7 @@ CONTAINS
     USE mo_io_units,            ONLY: filename_max
     USE mo_jsb_parallel,        ONLY: Get_omp_thread
     USE mo_jsb_lcc_class,       ONLY: max_tolerated_cf_mismatch
+    USE mo_alcc_util,           ONLY: scale_anthro_fractions_for_nlcc
 
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
@@ -94,8 +97,9 @@ CONTAINS
     REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! In case of relative fracts in map files: cf of the veg tile
 
     REAL(wp), ALLOCATABLE   :: target_cf(:)
+    LOGICAL, ALLOCATABLE    :: nlcc_tile(:)
     INTEGER                 :: i_max_area
-    REAL(wp)                :: cf_sum
+    REAL(wp)                :: cf_sum, diff
 
     INTEGER :: target_year, iblk, ic, idx
     INTEGER :: current_year, i_tile, npft, no_omp_thread, nproma, nblks
@@ -144,7 +148,7 @@ CONTAINS
     dsl4jsb_Get_config(ALCC_)
 
     npft = tile%Get_no_of_children()
-    IF (.NOT. npft .EQ. dsl4jsb_Config(ALCC_)%nr_of_pfts) THEN
+    IF (.NOT. npft .EQ. model%config%npft) THEN
       CALL finish(TRIM(routine), &
         & 'Violation of assertion: Expected nr of pfts for alcc operations '&
         & //'did not match number of veg tile children, please check.')
@@ -152,10 +156,10 @@ CONTAINS
 
     ! Check if model runs with relative or absolute fractions
     IF (model%config%relative_fractions_in_file) THEN
-      ! In this case read fractions have to be corrected with veg fract share
-      CALL tile%Get_fraction(fract=cf_correction(:,:))
+      ! In this case the PFT fractions need to be scaled with the veg tile fraction
+      CALL tile%Get_fraction(fract=cf_correction(:,:))   ! veg tile fraction
     ELSE
-      ! If anyway already absolute fracts, cf_correction is not required
+      ! With absolute fractions, scaling is not required
       cf_correction(:,:) = 1.0_wp
     END IF
 
@@ -213,9 +217,38 @@ CONTAINS
         END IF
 
         current_tile => current_tile%Get_next_sibling_tile()
-      END DO
+      END DO ! child tiles
 
-      ! Cover fractions generally should not exceed 1.0_wp
+      ! Further scaling is needed with NLCC to assure the anthropogenic fractions leave space for minimum fractions of
+      ! at least fract_small for all natural vegetation tiles. This is assured for the relative tile fractions of the
+      ! boundary conditions file, but also needs to be true for absolute fractions.
+      IF (model%Is_process_enabled(NLCC_)) THEN
+
+        ! Identify "dynamic" PFTs of the NLCC process, i.e. the natural PFT tiles
+        ALLOCATE(nlcc_tile(npft))
+        current_tile => tile%Get_first_child_tile()
+        i_tile = 0
+        DO WHILE (ASSOCIATED(current_tile))
+          i_tile = i_tile + 1
+          nlcc_tile(i_tile) = .FALSE.
+          IF (dsl4jsb_Lctlib_param_tile(dynamic_PFT, current_tile)) THEN
+            nlcc_tile(i_tile) = .TRUE.
+          END IF
+          current_tile => current_tile%Get_next_sibling_tile()
+        END DO
+
+        ! Do the scaling
+        ! Note: The scaling only affects anthropogenic PFTs, natural PFT fractions are treated in the NLCC process.
+        ! Also the minimum fraction (fract_small) is set there.
+        DO iblk = 1, nblks
+          CALL scale_anthro_fractions_for_nlcc(nproma, npft, nlcc_tile(:), cf_correction(:,iblk), &
+              &                                cf_target_year(:,:,iblk))
+        END DO
+
+        DEALLOCATE(nlcc_tile)
+      END IF
+
+      ! Cover fractions must not exceed 1.0_wp
       cf_target_year(:,:,:) = MIN(cf_target_year(:,:,:), 1.0_wp)
 
       CALL input_file%Close()

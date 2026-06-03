@@ -1,9 +1,9 @@
-!> vegetation process config (QUINCY)
+!> QUINCY vegetation process config
 !>
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -33,8 +33,7 @@ MODULE mo_veg_config_class
   PRIVATE
   PUBLIC :: t_veg_config, Get_number_of_veg_compartments
   PUBLIC :: VEG_PART_LEAF_IDX , VEG_PART_FINE_ROOT_IDX, VEG_PART_COARSE_ROOT_IDX, VEG_PART_SAP_WOOD_IDX, &
-    &       VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, VEG_PART_RESERVE_IDX, VEG_PART_FRUIT_IDX, &
-    &       VEG_PART_SEED_BED_IDX
+    &       VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, VEG_PART_RESERVE_IDX, VEG_PART_FRUIT_IDX
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the vegetation process, derived from t_jsb_config
@@ -66,7 +65,6 @@ MODULE mo_veg_config_class
     LOGICAL          :: read_veg_state             !< TRUE: call veg_read_states (mo_veg_init) after init/restart from file
     LOGICAL          :: flag_dynamic_roots         !< roots across soil layers: fixed after init or dynamic over time
                                                    !! for the models QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION fixed roots are used
-                                                   !! by default; this is hard-coded in SPQ_ init
     LOGICAL          :: l_use_product_pools        !< enable product pools (required for crop/ and wood harvest processes); default: FALSE
     LOGICAL          :: flag_dynroots_h2o_n_limit  !< root growth across layers limited/affected by H2O and Nitrogen availability (needs flag_dynamic_roots="T")
     LOGICAL          :: flag_herbivory             !< whether herbivory (on grass PFT) is enabled
@@ -102,7 +100,6 @@ MODULE mo_veg_config_class
       & VEG_PART_LABILE_IDX,      &   !< labile
       & VEG_PART_RESERVE_IDX,     &   !< reserve
       & VEG_PART_FRUIT_IDX,       &   !< fruit
-      & VEG_PART_SEED_BED_IDX,    &   !< seed bed
       & LAST_VEG_PART_IDX ! needs to be the last -- it is used to determine the number of compartments
   END ENUM
 

@@ -1,9 +1,9 @@
-!> vegetation variables init (QUINCY)
+!> QUINCY vegetation variables init
 !>
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -24,7 +24,7 @@ MODULE mo_veg_init
   USE mo_jsb_math_constants,      ONLY: eps8
   USE mo_jsb_impl_constants,      ONLY: def_parameters
 
-  USE mo_jsb_process_class,       ONLY: VEG_, Q_AGR_, Q_SYL_
+  USE mo_jsb_process_class,       ONLY: VEG_, Q_AGR_, Q_SYL_, ALCC_
   USE mo_jsb_model_class,         ONLY: t_jsb_model
   USE mo_jsb_class,               ONLY: get_model
 
@@ -33,7 +33,7 @@ MODULE mo_veg_init
   USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store, get_bgcm_idx
-  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID
+  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_SEED_BED_POOL_ID
 
   dsl4jsb_Use_config(VEG_)
 
@@ -89,14 +89,16 @@ CONTAINS
     INTEGER                                 :: iblk, ic, is         !< loop dimensions
     INTEGER                                 :: nproma, nblks        !< dimensions
     INTEGER                                 :: nsoil_w              !< number of soil layers (water)
-    INTEGER                                 :: veg_pool_idx         !< index of the veg pool within the bgcm store
+    INTEGER                                 :: bgcm_idx             !< index of the veg/seed bed pool within the bgcm store
     REAL(wp), POINTER           :: veg_pool_mt_domain(:,:,:,:)      !< dim: compartments, elements, nc, nblks -- on domain!
+    REAL(wp), POINTER           :: seed_bed_pool_mt_domain(:,:,:)   !< dim: elements, nc, nblks -- on domain!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
+
     ! HYDRO_ 2D
     dsl4jsb_Real2D_onDomain    :: num_sl_above_bedrock
     dsl4jsb_Real2D_onDomain    :: root_depth
@@ -204,8 +206,10 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
-    veg_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile%name, routine)
-    veg_pool_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(veg_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
+    bgcm_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile%name, routine)
+    veg_pool_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(bgcm_idx))%mt_2l_2d_bgcm(:,:,:,:)
+    bgcm_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_SEED_BED_POOL_ID, tile%name, routine)
+    seed_bed_pool_mt_domain => bgcm_store%store_1l_2d_bgcms(bgcm_store%idx_in_store(bgcm_idx))%mt_1l_2d_bgcm(:,:,:)
     ! ----------------------------------------------------------------------------------------------------- !
     ! HYDRO_ 2D
     dsl4jsb_Get_var2D_onDomain(HYDRO_,   num_sl_above_bedrock)        ! in
@@ -364,6 +368,7 @@ CONTAINS
     !>0.9 init veg_pool_mt_domain with zero
     !>
     veg_pool_mt_domain(:,:,:,:) = 0.0_wp
+    seed_bed_pool_mt_domain(:,:,:) = 0.0_wp
 
     !>1.0 vegetation init specific to the SLM model
     !>
@@ -380,11 +385,11 @@ CONTAINS
       SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
       ! start bareground with vegetation dynamics switched on: population scheme
       CASE ("population")
-        veg_pool_mt_domain(ix_seed_bed, ixC, :, :) = lctlib%seed_size * 10.0_wp
+        seed_bed_pool_mt_domain(ixC, :, :) = lctlib%seed_size * 10.0_wp
         dens_ind(:,:)                       = 0.0_wp
-        veg_pool_mt_domain(ix_seed_bed, ixN, :, :) &
-          & = veg_pool_mt_domain(ix_seed_bed, ixC, :, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
-        veg_pool_mt_domain(ix_seed_bed, ixP, :, :) = veg_pool_mt_domain(ix_seed_bed, ixN, :, :) / lctlib%np_leaf
+        seed_bed_pool_mt_domain(ixN, :, :) &
+          & = seed_bed_pool_mt_domain(ixC, :, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
+        seed_bed_pool_mt_domain(ixP, :, :) = seed_bed_pool_mt_domain(ixN, :, :) / lctlib%np_leaf
         ! pool%seed_bed%carbon13
         IF (lctlib%ps_pathway == ic3phot) THEN
           hlp1 = discrimination_ps_c13(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, lctlib%ps_pathway)
@@ -393,9 +398,9 @@ CONTAINS
         ENDIF
         DO ic = 1,nproma
           DO iblk = 1,nblks
-            veg_pool_mt_domain(ix_seed_bed, ixC13, ic, iblk) = veg_pool_mt_domain(ix_seed_bed, ixC, ic, iblk) &
-              &                                                * calc_fractionation(def_co2_mixing_ratio,     &
-              &                                                          def_co2_mixing_ratio_C13, hlp1)
+            seed_bed_pool_mt_domain(ixC13, ic, iblk) = seed_bed_pool_mt_domain( ixC, ic, iblk) &
+              &                                        * calc_fractionation(def_co2_mixing_ratio,     &
+              &                                                             def_co2_mixing_ratio_C13, hlp1)
           ENDDO
         ENDDO
         ! pool%seed_bed%carbon14
@@ -406,11 +411,11 @@ CONTAINS
         ENDIF
         DO ic = 1,nproma
           DO iblk = 1,nblks
-            veg_pool_mt_domain(ix_seed_bed, ixC14, ic, iblk)  = calc_mixing_ratio_C14C(def_co2_deltaC13, &
+            seed_bed_pool_mt_domain(ixC14, ic, iblk)  = calc_mixing_ratio_C14C(def_co2_deltaC13, &
               &                                                             def_co2_deltaC14 - hlp1 )    &
-              &                                      * veg_pool_mt_domain(ix_seed_bed, ixC, ic, iblk)
-            veg_pool_mt_domain(ix_seed_bed, ixN15, ic, iblk)  = veg_pool_mt_domain(ix_seed_bed, ixN, ic, iblk) &
-              &                                      / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+              &                                         * seed_bed_pool_mt_domain(ixC, ic, iblk)
+            seed_bed_pool_mt_domain(ixN15, ic, iblk)  = seed_bed_pool_mt_domain(ixN, ic, iblk) &
+              &                                         / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
           ENDDO
         ENDDO
       ! no vegetation dynamics and not starting with bare ground
@@ -513,7 +518,7 @@ CONTAINS
       root_fraction_sl(:, 1, :)          = 1.0_wp
       root_fraction_sl(:, 2:nsoil_w, :)  = 0.0_wp
     ELSE
-      !>     - fixed root fractions (no changes after init) depending on root_depth (SPQ variable)
+      !>     - fixed root fractions (no changes after init) depending on root_depth
       !>
       ! root fractions assuming an exponential distribution of roots \n
       !   Cr_l = Cr_0 * exp(-lctlib%k_root_dist*depth) \n
@@ -692,9 +697,10 @@ CONTAINS
     USE mo_util,                    ONLY: read_2D_var, read_3D_var
     USE mo_lnd_bgcm_store,          ONLY: read_bgcm_from_file
     USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_PP_CROP_ID, VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, &
-      & VEG_BGCM_PP_FIBERBOARD_ID, VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID
+      & VEG_BGCM_PP_FIBERBOARD_ID, VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID, VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_SEED_BED_POOL_ID
     dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_config(Q_SYL_)
+    dsl4jsb_Use_config(ALCC_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile             !< one tile with data structure for one lct
@@ -710,6 +716,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(Q_AGR_)
+    dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Real2D_onDomain :: dens_ind
@@ -728,6 +735,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_SYL_)
     dsl4jsb_Get_config(Q_AGR_)
+    dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_var2D_onDomain(VEG_, dens_ind)
@@ -747,13 +755,20 @@ CONTAINS
     IF (ASSOCIATED(tile%bgcm_store)) THEN
       bgcm_store => tile%bgcm_store
       CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_POOL_ID, "veg", tile%name, routine, input_file)
+      CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_SEED_BED_POOL_ID, "veg", tile%name, routine, input_file)
 
       IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
-        IF (dsl4jsb_Config(Q_AGR_)%active) THEN
+        ! NOTE: here it is assumed that the state file only contains crop products on crop tiles and
+        !       wood products on forst tiles. This would not be correct if the states stem from a simulation
+        !       with alcc! Because in a simulation with alcc the product pools are passively relocated and
+        !       it is thus possible that crop products end up in grass or forest tiles and wood products can
+        !       in turn end up on grass or crop tiles, respectively.
+
+        IF (dsl4jsb_Config(Q_AGR_)%active .OR. dsl4jsb_Config(ALCC_)%active) THEN
           CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_CROP_ID, "veg", tile%name, routine, input_file)
         END IF
 
-        IF (dsl4jsb_Config(Q_SYL_)%active) THEN
+        IF (dsl4jsb_Config(Q_SYL_)%active .OR. dsl4jsb_Config(ALCC_)%active) THEN
           CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_FUEL_ID, "veg", tile%name, routine, input_file)
           CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_PAPER_ID, "veg", tile%name, routine, input_file)
           CALL read_bgcm_from_file(bgcm_store, VEG_BGCM_PP_FIBERBOARD_ID, "veg", tile%name, routine, input_file)

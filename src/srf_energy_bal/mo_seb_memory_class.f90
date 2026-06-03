@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -51,7 +51,6 @@ MODULE mo_seb_memory_class
       & qsat_star,              & !< Saturation specific humidity at surface (qsat^star, see manual) [kg kg-1]
                                   !! This is the qsat_srf that is used in the vertical diffusion
                                   !! scheme in the atmosphere
-      & q_sat_srf,              & !< surface saturated specific humidity  [?]
       & heat_cap,               & !< Heat capacity of surface layer                                  [J m-2 K-1]
       & latent_hflx,            & !< Latent heat flux                                                [W m-2]
       & sensible_hflx,          & !< Sensible heat flux                                              [W m-2]
@@ -274,9 +273,7 @@ CONTAINS
     END IF
 
     ! Additional variables for LAND lct
-    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
-      ! NOTE  temporary solution to run the SPQ_ process with SEB_ variables at PFT tiles
-      & .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
 
       CALL mem%Add_var( 's_star', mem%s_star,                                                &
         & hgrid, surface,                                                                    &
@@ -295,22 +292,6 @@ CONTAINS
         & lrestart=.TRUE.,                                                                   &
         & output_level=FULL,                                                                 &
         & initval_r=0.0075_wp)
-
-#ifndef __NO_QUINCY__
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_QUINCY)
-        CALL mem%Add_var('q_sat_srf', mem%q_sat_srf, &
-          & hgrid, surface, &
-          & t_cf('q_sat_srf', '[?]', 'surface saturated specific humidity'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart=.TRUE., &
-          & initval_r=0.0_wp)
-      END SELECT
-#endif
 
       CALL mem%Add_var( 't_unfilt_old', mem%t_unfilt_old,                                    &
         & hgrid, surface,                                                                    &

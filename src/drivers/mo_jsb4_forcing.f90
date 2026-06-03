@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -30,7 +30,7 @@ MODULE mo_jsb4_forcing
   USE mo_math_constants,         ONLY: pi
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message, message_text, finish
-  USE mo_util_string,            ONLY: tolower, int2string, real2string
+  USE mo_util,                   ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, vtmpc1, rdv
   USE mo_jsb_physical_constants, ONLY: grav, tmelt, rd, amco2, amd, rvd1, molar_mass_N, molar_mass_P
   USE mo_orbit_solar,            ONLY: inquire_declination
@@ -810,6 +810,7 @@ CONTAINS
     ALLOCATE(forcing_input(no_of_models))
     ALLOCATE(forcing_options(no_of_models))
 
+    CALL message('', '')
     CALL message(routine, 'Allocated forcing_input and forcing_options ('//TRIM(int2string(no_of_models))//')')
 
   END SUBROUTINE setup_forcing
@@ -920,6 +921,8 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     INTEGER:: nml_handler, read_status, f_unit
+
+    CALL message('', '')
 
     !------------------------------------------------------------------------------------
     model => Get_model(model_id)
@@ -1226,6 +1229,8 @@ CONTAINS
         & forcing_c14_file_prefix, forcing_c14_unit, forcing_c14_const_c14, forcing_input(model_id)%C14_concentr)
     END SELECT
 
+    CALL message('', '')
+
   END SUBROUTINE init_forcing
 
   ! ======================================================================================================= !
@@ -1448,7 +1453,11 @@ CONTAINS
       ! check timeseries
       IF (my_process_is_stdio()) THEN
         IF (TRIM(forcing_input_variable%variable_name) == 'precip') THEN
-          WRITE(message_text,*) ' Reading forcing for ', ydate
+          IF (model%config%is_single_site) THEN
+            WRITE(message_text,*) ' Reading forcing for ', ydate, '(site '//model%config%single_site_shortname//')'
+          ELSE
+            WRITE(message_text,*) ' Reading forcing for ', ydate
+          END IF
           CALL message('----- ', message_text)
         END IF
         !Assertion: currentTimeStep needs to be contained in the file
@@ -2592,6 +2601,7 @@ CONTAINS
         DO i=1,nc
           u(i,j) = sin_lat(i,j) * SIN(delta)
           v(i,j) = cos_lat(i,j) * COS(delta)
+          ! derive half day-length hh: time from solar noon to sunset (angular units)
           IF (u(i,j).GE.v(i,j)) THEN
             hh(i,j) = pi
           ELSE IF (u(i,j).LE.(0._wp-v(i,j))) THEN
@@ -2603,8 +2613,20 @@ CONTAINS
 
           !estimate of noon radiation giving rise to the recorded radiation sum
           rad_sw_in_corr(i,j) = 0._wp
-          IF((u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) .GT. 1e-5_wp)THEN
+
+          ! If the day is very short (half day length less then ~25 min.) we distribute the small
+          ! daily SW flux proportional to cos_zenith. With longer days, the daily-mean SW value
+          ! is normalized by the analytical integral of cos(zenith) over the daytime window.
+          IF (hh(i,j) .GE. 0.0_wp .AND. hh(i,j) .LT. 0.1_wp) THEN
+            ! Polar twilight: day-length integral is near-zero
+            IF (cos_zenith(i,j) .GT. 0._wp) THEN
+              rad_sw_in_corr(i,j) = rad_sw_in(i,j)
+            END IF
+          ELSE IF ((u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) .GT. 1e-5_wp) THEN
+            ! Longer days: normalization with the integral of cos(zenith)
             rad_sw_in_corr(i,j) = rad_sw_in(i,j) / (2._wp * (u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) * K) * 86400._wp
+            ! Cap to physically realistic maximum (top-of-atmosphere noon flux)
+            rad_sw_in_corr(i,j) = MIN(rad_sw_in_corr(i,j), solar_const * r_sun_earth_2)
           END IF
           rad_sw(i,j) = rad_sw_in_corr(i,j) * cos_zenith(i,j)
         END DO

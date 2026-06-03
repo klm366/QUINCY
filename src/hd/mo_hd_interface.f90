@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -362,7 +362,8 @@ CONTAINS
 
     REAL(wp), ALLOCATABLE  :: &
       & ztemp(:,:),           &
-      & in_domain(:,:)          ! 1: cell in domain, 0: halo cell
+      & in_domain(:,:)          ! 1._wp: cell in domain, 0._wp: halo cell (in_domain)
+                                ! - to mask all halo cells for global sums (otherwise these cells are counted twice)
     REAL(wp) :: &
       & factor, &
       & cos_lat                 ! Cosines of latitudes of cell centers
@@ -418,7 +419,6 @@ CONTAINS
     debug_hd              = dsl4jsb_Config(HD_)%debug_hd
     use_bifurcated_rivers = dsl4jsb_Config(HD_)%use_bifurcated_rivers
 
-    ! Domain Mask - to mask all halo cells for global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(nproma,nblks), ztemp(nproma,nblks))
     !$ACC DATA CREATE(in_domain, ztemp) ASYNC(acc_stream)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
@@ -1076,6 +1076,7 @@ CONTAINS
     ! No unit transformation [m3]: 1
     IF (dsl4jsb_memory(HD_)%water_error_gsum%is_in_output) &
       & water_error_gsum = global_water_error
+    !$ACC UPDATE ASYNC(acc_stream) DEVICE(water_error_gsum)
 
     !$ACC EXIT DATA DELETE(water_budget_old, water_flux) ASYNC(acc_stream)
     !$ACC WAIT(acc_stream)

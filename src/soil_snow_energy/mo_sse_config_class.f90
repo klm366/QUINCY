@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -25,12 +25,10 @@ MODULE mo_sse_config_class
   PRIVATE
 
   PUBLIC :: t_sse_config
+  PUBLIC :: max_soil_layers, max_snow_layers
 
   TYPE, EXTENDS(t_jsb_config) :: t_sse_config
     INTEGER  :: nsnow           !< Maximum number of snow layers
-    LOGICAL  :: l_snow          !< T: Use multi-layer snow scheme;
-                                !  Note: This affects thermal snow and soil properties:
-                                !  l_dynsnow, l_heat_cap_dyn and l_heat_cond_dyn are only effective if l_snow=.true.
     LOGICAL  :: l_dynsnow       !< T: Calculate snow heat cond. and heat cap. dynamically depending on snow density
     LOGICAL  :: l_heat_cap_dyn  !< T: Dynamic calculation of soil heat capacity;
                                 !  F: Static map or FAO data, depending on l_heat_cap_map
@@ -81,7 +79,7 @@ CONTAINS
     CLASS(t_sse_config), INTENT(inout) :: config
 
     LOGICAL  :: active, lrestart_cont
-    LOGICAL  :: l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_heat_cap_pond
+    LOGICAL  :: l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_heat_cap_pond
     LOGICAL  :: l_freeze, l_supercool, l_soil_texture, l_uniform_snow
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
@@ -106,7 +104,7 @@ CONTAINS
     NAMELIST /jsb_sse_nml/                      &
       & active,                                 &
       & lrestart_cont,                          &
-      & nsnow, dz_snow, l_snow, l_dynsnow,      &
+      & nsnow, dz_snow, l_dynsnow,              &
       & l_heat_cap_dyn, l_heat_cond_dyn,        &
       & l_heat_cap_map, l_heat_cond_map,        &
       & l_heat_cap_pond,                        &
@@ -143,7 +141,6 @@ CONTAINS
     nsnow            = 5
     dz_snow(:)       = 0._wp
     dz_snow(1:nsnow) = 0.05_wp
-    l_snow           = .TRUE.
     l_dynsnow        = .TRUE.
     l_heat_cap_dyn   = .TRUE.
     l_heat_cond_dyn  = .TRUE.
@@ -160,6 +157,7 @@ CONTAINS
     bc_quincy_soil_filename = 'bc_quincy_soil.nc'
     quincy_nsoil_e          = 0           ! by default the values is not set via namelist, but used from 'ic_filename'
 #ifdef __QUINCY_STANDALONE__
+    quincy_nsoil_e          = 5           ! but use 5 soil layers as default for quincy standalone
     qs_soil_sand            = 0.3_wp
     qs_soil_silt            = 0.4_wp
     qs_soil_clay            = 0.3_wp
@@ -180,37 +178,17 @@ CONTAINS
     config%bc_quincy_soil_filename = bc_quincy_soil_filename
 
     config%nsnow         = nsnow
-    IF (l_snow .AND. nsnow > max_snow_layers) THEN
+    IF (nsnow > max_snow_layers) THEN
       CALL finish(TRIM(routine), 'Too many snow layers, maximum is '//TRIM(int2string(max_snow_layers)))
-    END IF
-    IF (l_snow .AND. nsnow < 3) THEN
+    ELSE IF (nsnow < 3) THEN
       CALL finish(TRIM(routine), 'Number of snow layers must be larger than 2.')
-    END IF
-    config%l_snow        = l_snow
-    IF (l_snow) THEN
-      CALL message(TRIM(routine), 'Using '//TRIM(int2string(nsnow))//' snow layers.')
     ELSE
-      CALL message(TRIM(routine), 'Not using multi-layer snow model')
+      CALL message(TRIM(routine), 'Using '//TRIM(int2string(nsnow))//' snow layers.')
     END IF
 
-    IF (.NOT. l_snow .AND. l_dynsnow) THEN
-      config%l_dynsnow = .FALSE.
-      CALL message(TRIM(routine), 'l_dynsnow not in effect for l_snow=.false.')
-    ELSE
-      config%l_dynsnow       = l_dynsnow
-    END IF
-    IF (.NOT. l_snow .AND. l_heat_cap_dyn) THEN
-      config%l_heat_cap_dyn = .FALSE.
-      CALL message(TRIM(routine), 'l_heat_cap_dyn not in effect for l_snow=.false.')
-    ELSE
-      config%l_heat_cap_dyn  = l_heat_cap_dyn
-    END IF
-    IF (.NOT. l_snow .AND. l_heat_cond_dyn) THEN
-      config%l_heat_cond_dyn = .FALSE.
-      CALL message(TRIM(routine), 'l_heat_cond_dyn not in effect for l_snow=.false.')
-    ELSE
-      config%l_heat_cond_dyn = l_heat_cond_dyn
-    END IF
+    config%l_dynsnow       = l_dynsnow
+    config%l_heat_cap_dyn  = l_heat_cap_dyn
+    config%l_heat_cond_dyn = l_heat_cond_dyn
     config%l_heat_cap_map  = l_heat_cap_map
     config%l_heat_cond_map = l_heat_cond_map
     config%l_soil_texture  = l_soil_texture
@@ -326,7 +304,7 @@ CONTAINS
       !!
       !! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth" !
       !!
-      !! site-specific soil-layer thickness values are stored in soil_depth_sl (and calc in spq_init) \n
+      !! site-specific soil-layer thickness values are stored in soil_depth_sl \n
       !! the function new_vgrid() does: (a) check for 'dz(:) <= zero', and (b) calc levels & lbounds from ubounds and dz \n
       !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
       vgrid_soil_e => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
@@ -355,37 +333,35 @@ CONTAINS
     !
     !> create vertical grid for snow energy calculations
     !
-    IF (l_snow) THEN
-      IF (dz_snow(1) < snow_depth_min) THEN
-        CALL finish(TRIM(routine), 'Depth of first snow layer should be larger than snow_depth_min=' &
-          &                         //real2string(snow_depth_min))
-      END IF
-      ALLOCATE(depths(nsnow+1))
-      ALLOCATE(mids(nsnow))
-      depths(1) = 0._wp
-      DO i=1,nsnow
-        depths(i+1) = depths(i) + dz_snow(i)
-      END DO
-      mids(1:nsnow) = (depths(1:nsnow) + depths(2:nsnow+1)) / 2._wp
-
-      vgrid_snow_e  => new_vgrid('snow_depth_energy', ZAXIS_GENERIC, nsnow,     &
-        & levels    = mids                 (1:nsnow  ),                         &
-        & lbounds   = depths               (1:nsnow  ),                         &
-        & ubounds   = depths               (2:nsnow+1),                         &
-        & units='m')
-      CALL register_vgrid(vgrid_snow_e)
-
-      ! Info saved to logfile
-      WRITE(message_text, *) 'Snow levels in soil energy (upper) [m]: ', vgrid_snow_e%lbounds
-      CALL message(TRIM(routine), message_text)
-      WRITE(message_text, *) 'Snow levels in soil energy (mid)   [m]: ', vgrid_snow_e%levels
-      CALL message(TRIM(routine), message_text)
-      WRITE(message_text, *) 'Snow levels in soil energy (lower) [m]: ', vgrid_snow_e%ubounds
-      CALL message(TRIM(routine), message_text)
-      WRITE(message_text, *) 'Snow level depths in soil energy   [m]: ', vgrid_snow_e%dz
-      CALL message(TRIM(routine), message_text)
-      DEALLOCATE(depths, mids)
+    IF (dz_snow(1) < snow_depth_min) THEN
+      CALL finish(TRIM(routine), 'Depth of first snow layer should be larger than snow_depth_min=' &
+        &                         //real2string(snow_depth_min))
     END IF
+    ALLOCATE(depths(nsnow+1))
+    ALLOCATE(mids(nsnow))
+    depths(1) = 0._wp
+    DO i=1,nsnow
+      depths(i+1) = depths(i) + dz_snow(i)
+    END DO
+    mids(1:nsnow) = (depths(1:nsnow) + depths(2:nsnow+1)) / 2._wp
+
+    vgrid_snow_e  => new_vgrid('snow_depth_energy', ZAXIS_GENERIC, nsnow,     &
+      & levels    = mids                 (1:nsnow  ),                         &
+      & lbounds   = depths               (1:nsnow  ),                         &
+      & ubounds   = depths               (2:nsnow+1),                         &
+      & units='m')
+    CALL register_vgrid(vgrid_snow_e)
+
+    ! Info saved to logfile
+    WRITE(message_text, *) 'Snow levels in soil energy (upper) [m]: ', vgrid_snow_e%lbounds
+    CALL message(TRIM(routine), message_text)
+    WRITE(message_text, *) 'Snow levels in soil energy (mid)   [m]: ', vgrid_snow_e%levels
+    CALL message(TRIM(routine), message_text)
+    WRITE(message_text, *) 'Snow levels in soil energy (lower) [m]: ', vgrid_snow_e%ubounds
+    CALL message(TRIM(routine), message_text)
+    WRITE(message_text, *) 'Snow level depths in soil energy   [m]: ', vgrid_snow_e%dz
+    CALL message(TRIM(routine), message_text)
+    DEALLOCATE(depths, mids)
 
   END SUBROUTINE Init_sse_config
 

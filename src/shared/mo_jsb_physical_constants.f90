@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -11,42 +11,44 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!> The module provides physical constants, either directly defined here or from the host model via the constants iface adapter.
+!>
 MODULE mo_jsb_physical_constants
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
 
-  ! Most constants are USEd from host model (ICON) via mo_physical_constants_iface in mo_util_jsbach.f90:
+  ! Most constants are used from host model (ICON) via the adapter file mo_physical_constants_iface in mo_util_jsbach.f90:
   !   src/shared/mo_util_jsbach.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90
-  USE mo_physical_constants_iface
+  USE mo_physical_constants_iface ! TODO: add "ONLY" with an explicit list
 
   IMPLICIT NONE
   PUBLIC
 
   REAL(wp), PARAMETER :: &
-    & dens_soil          = 2700._wp,   & !< Density of soil particulate (Hillel 1980, Johansen 1977)           [kg/m3]
-    & dens_org           = 1300._wp,   & !< Density of organic part of soil                                    [kg/m3]
-    & dens_ice           = rhoi,       & !< Density of frozen water in soil (ice)                              [kg/m3]
-    & dens_snow          = rhos,       & !< =300.0  Density of snow                                            [kg/m3]
-    & dens_snow_min      = 50._wp        !< Minimum density of snow (for fresh snow)                           [kg/m3]
+    & dens_soil          = 2700._wp,   & !< Density of soil particulate (Hillel 1980, Johansen 1977) [kg/m3]
+    & dens_org           = 1300._wp,   & !< Density of organic part of soil                          [kg/m3]
+    & dens_ice           = rhoi,       & !< Density of frozen water in soil (ice)                    [kg/m3]
+    & dens_snow          = rhos,       & !< Density of snow                                          [kg/m3] (300.0_wp)
+    & dens_snow_min      = 50._wp        !< Minimum density of snow (for fresh snow)                 [kg/m3]
 
   REAL(wp), PARAMETER :: &
-    molarMassDryAir = amd   * 1.e-3_wp, & ! 28.970e-3_wp. Mass [kg] per amount of substance [mol] of dry air
-    molarMassCO2    = amco2 * 1.e-3_wp    ! 44.0095e-3_wp. Mass [kg] per amount of substance [mol] of CO2
+    molarMassDryAir = amd   * 1.e-3_wp, & !< Mass [kg] per amount of substance [mol] of dry air (28.970e-3_wp)
+    molarMassCO2    = amco2 * 1.e-3_wp    !< Mass [kg] per amount of substance [mol] of CO2 (44.0095e-3_wp)
   !$ACC DECLARE COPYIN(molarMassDryAir, molarMassCO2)
 
   REAL(wp), PARAMETER :: von_karman = 0.4_wp    !< von Karmann constant for evaporation
 
   !! quincy - physical constants
   REAL(wp), PARAMETER :: &
-    & r_gas        = argas            ,  &      !< universal gas constant (J / mol / K)
-    & r_gas_dryair = rd               ,  &      !< specific gas constant for dry air (J / kg / K)
-    & r_gas_vapour = rv               ,  &      !< specific gas constant for water vapour (J / kg / K)
-    & Dwv          = 0.0000242_wp     ,  &      !< diffusion coefficient for water vapour in air (m2 s-1)
-    & Dco2         = 0.0000151_wp     ,  &      !< diffusion coefficient for CO2 in air (m2 s-1)
-    & Tzero        = 273.15_wp        ,  &      !< the value of Tzero (QUINCY) is identical with tmelt (ECHAM/ICON/jsbach4)
-                                                !<  but in reality tmelt is not always at Tzero [K]
-    & rain_as_snow_temp_thresh = Tzero + 2.5_wp !< threshold below which rain falls as snow - source: OCN-weather generator
+    & r_gas        = argas            ,  &      !< Universal gas constant (J / mol / K)
+    & r_gas_dryair = rd               ,  &      !< Specific gas constant for dry air (J / kg / K)
+    & r_gas_vapour = rv               ,  &      !< Specific gas constant for water vapour (J / kg / K)
+    & Dwv          = 0.0000242_wp     ,  &      !< Diffusion coefficient for water vapour in air (m2 s-1)
+    & Dco2         = 0.0000151_wp     ,  &      !< Diffusion coefficient for CO2 in air (m2 s-1)
+    & Tzero        = 273.15_wp        ,  &      !< The value of Tzero (QUINCY) is identical with tmelt (ECHAM/ICON/jsbach4)
+                                                !<   but in reality tmelt is not always at Tzero [K]
+    & rain_as_snow_temp_thresh = Tzero + 2.5_wp !< Threshold below which rain falls as snow - source: OCN-weather generator
 
   REAL(wp), PARAMETER :: &
     & LatentHeatVaporization = alv , &          !< [J/kg]   latent heat for vaporisation
@@ -65,13 +67,13 @@ MODULE mo_jsb_physical_constants
   REAL(wp), PARAMETER :: &
     & PDB_STANDARD_C13           = 0.0112372_wp                    , &  !< 13C/12C PDB standard
     & AAB_STANDARD_C14           = 0.2261_wp                       , &  !< 0.95*0.238 Bq/gC is the absolute specific activity of
-                                                                          !< the radiocarbon standard (i.e. 95% of the activity of the OxA-I standard)
+                                                                        !<   the radiocarbon standard (i.e. 95% of the activity of the OxA-I standard)
     & ATM_STANDARD_N15           = 0.0036765_wp                    , &  !< 15N/14N atmospheric standard, Robinson 2001, TREE
     & AvogadroC                  = 6.022_wp * 1.e23_wp             , &  !< Avogadro Number
-    & lambda_C14                 = 3.8332_wp * 1.e-12_wp           , &  !< decay constant of C14 (1/s)
+    & lambda_C14                 = 3.8332_wp * 1.e-12_wp           , &  !< Decay constant of C14 (1/s)
     & AvogadroC_times_lambda_C14 = 6.022_wp * 3.8332_wp * 1.e11_wp , &  !< Avogadro Number * decay constant of C14 to
-                                                                          !< reduce the use of the very large/small AvogadroC/lambda_C14
-    & scale_correction_c14       = 1.e12_wp                             !< conversion from mol to pico-mol for C14 (for numerical precision)
+                                                                        !<   reduce the use of the very large/small AvogadroC/lambda_C14
+    & scale_correction_c14       = 1.e12_wp                             !< Conversion from mol to pico-mol for C14 (for numerical precision)
 
 #endif
 END MODULE mo_jsb_physical_constants
