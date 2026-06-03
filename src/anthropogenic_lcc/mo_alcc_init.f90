@@ -247,7 +247,7 @@ CONTAINS
       ALLOCATE(trans_names(SIZE(dsl4jsb_Config(ALCC_)%trans_names)))
       trans_names = dsl4jsb_Config(ALCC_)%trans_names
 
-      dsl4jsb_Get_var3D_onDomain(ALCC_, transition_rate)  
+      dsl4jsb_Get_var3D_onDomain(ALCC_, transition_rate)
 
       WRITE(filename_land_use_data,'(a,I4.4,a)') TRIM(dsl4jsb_Config(ALCC_)%alcc_transitions_filename_prefix), current_year, ".nc"
       CALL message(TRIM(routine), 'filename_land_use_data: '//TRIM(filename_land_use_data))

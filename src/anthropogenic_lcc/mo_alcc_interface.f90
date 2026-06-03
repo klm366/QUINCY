@@ -232,12 +232,12 @@ CONTAINS
       END DO ! current_tile
 
     CASE('transition')
-      
+
       IF (dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
         ! In case that area changes are daily the transition rates have to be divided by the number of days in the year
         ALLOCATE(trans_names(SIZE(dsl4jsb_Config(ALCC_)%trans_names)))
         trans_names = dsl4jsb_Config(ALCC_)%trans_names
-        
+
         DO idx = 1, SIZE(trans_names)
           DO ic = 1,nc
 
@@ -337,7 +337,7 @@ CONTAINS
     REAL(wp) :: dtime !< Time step length
 
     LOGICAL :: dynamic_tile !< Boolean indicating if a tile is a dynamic tile (participating in NLCC; only if NLCC is active)
-    
+
     CHARACTER(len=15), DIMENSION(:), ALLOCATABLE :: trans_names
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_alcc_translocation'
     ! -------------------------------------------------------------------------------------------------- !
@@ -359,7 +359,7 @@ CONTAINS
       dsl4jsb_Get_memory(NLCC_)
       dsl4jsb_Get_var3D_onChunk(NLCC_, cover_fract_pot)  ! in: potential cover fractions (no land use)
     END IF
-    ! Todo-AKN: How to get potential cover fractions if NLCC is not active? Maybe read in potential cover 
+    ! Todo-AKN: How to get potential cover fractions if NLCC is not active? Maybe read in potential cover
     ! fractions as part of the ALCC process' land use data in this case?
 
     ! If process is not to be calculated on this tile, do nothing
@@ -402,7 +402,7 @@ CONTAINS
     CASE('maps')
       idxe = 1
     END SELECT
-  
+
     DO idx = 1, idxe
       ! loop over all transition types for transitions scheme; only one iteration for 'maps' scheme
       initial_area(:,:) = 0.0_wp
@@ -444,18 +444,18 @@ CONTAINS
             !  CALL finish(TRIM(routine), 'Violation of assertion: cover fraction is smaller than allowed minimum. '  &
             !    & // 'Please check initial areas and transition rates. Tile: ' // TRIM(current_tile%name))
             !END IF
-       
+
             ! Now actually calculate from_cf_sum and to_cf_sum
             IF (dsl4jsb_Config(ALCC_)%from_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
               from_cf_sum(ic) = from_cf_sum(ic) + max(0.0_wp, initial_area(ic, i_tile) - fract_small)
             END IF
             IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
               IF (model%Is_process_enabled(NLCC_) .AND. dsl4jsb_Config(ALCC_)%to_class(idx) == 1) THEN
-                ! Back-conversion rule for agricultural lands to natural scales with the difference between 
+                ! Back-conversion rule for agricultural lands to natural scales with the difference between
                 ! potential cover fraction and current cover fraction
                 to_cf_sum(ic) = to_cf_sum(ic) + max(0.0_wp, cover_fract_pot(ic, i_tile) - initial_area(ic, i_tile))
               ELSE
-                ! For 'equal relative gain and loss' scale with the sum of the current cover fraction of the PFTs 
+                ! For 'equal relative gain and loss' scale with the sum of the current cover fraction of the PFTs
                 to_cf_sum(ic) = to_cf_sum(ic) + initial_area(ic, i_tile)
               END IF
             END IF
@@ -465,15 +465,15 @@ CONTAINS
         END DO ! current_tile
 
         ! Assure some conditions:
-        ! (1) transition rates <= from_cf_sum, i.e. that the transition does not remove more area than 
+        ! (1) transition rates <= from_cf_sum, i.e. that the transition does not remove more area than
         !     currently available in all tiles beloning to one transition class, taking into account that
         !     a minimum fraction needs to be kept to avoid numerical issues in NLCC
-        !     - Because the lost area for each tile is calculated as 
-        !       transition_rate * initial_area / from_cf_sum, 
+        !     - Because the lost area for each tile is calculated as
+        !       transition_rate * initial_area / from_cf_sum,
         !       this also ensures that the lost area does not exceed the initial area in each tile.
-        ! (2) for back-conversion of agricultural lands to natural: transition rates <= to_cf_sum, i.e. 
+        ! (2) for back-conversion of agricultural lands to natural: transition rates <= to_cf_sum, i.e.
         !     that the transition does not add more area than the potentially available in all natural tiles
-        ! (3) if not back-conversion of agricultural lands to natural: transition_rate + to_cf_sum <= 1, 
+        ! (3) if not back-conversion of agricultural lands to natural: transition_rate + to_cf_sum <= 1,
         !     i.e. that the transition does not add more area than available in the vegetated grid box
         DO ic = 1, nc
           !transition_rate(ic, idx) = MAX(0.0_wp, MIN(transition_rate(ic, idx), from_cf_sum(ic) - n_tile_fc * fract_small))
@@ -586,13 +586,13 @@ CONTAINS
               CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
             END IF
           CASE ('transition')
-            ! This implementation assumes that transition rates are given as change relative to the vegetated grid box, 
+            ! This implementation assumes that transition rates are given as change relative to the vegetated grid box,
             ! not relative to each pft's area.
             ! It applies (1) the rule of equal relative gain and loss, and (2) the rule for back-conversion of agricultural lands.
             ! Todo-AKN: Add correction to make sure that lost area equals gained area
 
             DO ic = 1,nc
-              
+
               IF (dsl4jsb_Config(ALCC_)%from_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
                 IF (from_cf_sum(ic) < 0.0_wp) THEN
                   CALL finish(TRIM(routine), 'Violation of assertion: from_cf_sum is negative. Please check transition rates' &
@@ -611,12 +611,12 @@ CONTAINS
                 END IF
                 IF (to_cf_sum(ic) > 0.0_wp) THEN
                   IF (model%Is_process_enabled(NLCC_) .AND.dsl4jsb_Config(ALCC_)%to_class(idx) == 1) THEN
-                    ! Back-conversion rule for agricultural lands to natural scales with the difference 
+                    ! Back-conversion rule for agricultural lands to natural scales with the difference
                     ! between potential cover fraction and current cover fraction
                     gained_area(ic, i_tile) = transition_rate(ic, idx) * &
                         max(0.0_wp, cover_fract_pot(ic, i_tile) - initial_area(ic, i_tile)) / to_cf_sum(ic)
                   ELSE
-                    ! Rule of equal relative gain 
+                    ! Rule of equal relative gain
                     gained_area(ic, i_tile) = transition_rate(ic, idx) * initial_area(ic, i_tile) / to_cf_sum(ic)
                   END IF
                 END IF
@@ -637,7 +637,7 @@ CONTAINS
             IF (ANY(current_fract(:) < 0.0_wp) .OR. ANY(current_fract(:) > 1.0_wp)) THEN
               CALL finish(TRIM(routine), 'Violation of assertion: cover fractions need to be between 0 and 1.' &
                & // ' Please check transition rates and initial areas. Tile: ' // TRIM(current_tile%name))
-            END IF 
+            END IF
             CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
             !END IF
 
