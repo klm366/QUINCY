@@ -195,13 +195,6 @@ CONTAINS
       END SELECT
     END IF
 
-    ! Create vertical axis
-    ! JN-TODO (RS...): currently I get nr_of_pfts from namelist -> better way? usecase?
-    ! -> + this grid might be useful in other contexts, too?
-    pft_layer  => new_vgrid('pfts', ZAXIS_GENERIC, nr_of_pfts, &
-      & levels=(/ (REAL(i,kind=wp),i=1,nr_of_pfts) /), units='')
-    CALL register_vgrid(pft_layer)
-
     trans_layer  => new_vgrid('transitions', ZAXIS_GENERIC, SIZE(trans_names), &
       & levels=(/ (REAL(i,kind=wp),i=1,SIZE(trans_names)) /), units='')
     CALL register_vgrid(trans_layer)
