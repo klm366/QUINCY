@@ -1515,7 +1515,6 @@ CONTAINS
     LOGICAL  :: ltpe_closed                      !< For terraplanet setup: Water balance is closed
     LOGICAL  :: l_latflow_to_streamflow          !< With "[[t_hydro_config:hydro_scale]]=Uniform" True:
                                                  !< outflow of intermediary runoff/drainage storage goes to streamflow
-
     INTEGER  :: &
       & iblk,   &                                !< Index of current block
       & ics,    &                                !< Index of first cell in block
@@ -1524,6 +1523,7 @@ CONTAINS
       & ic,     &                                !< Looping index for grid cells
       & is,     &                                !< Looping index for soil layers
       & nsoil                                    !< Number of vertical layers (grid dimension)
+
     REAL(wp) :: dtime                            !< Time step length [s]
 
     INTEGER :: last_soil_layer(options%nc)       !< Deepest active soil layer index (above the bedrock boundary)
@@ -1547,6 +1547,7 @@ CONTAINS
     LOGICAL :: &
       & l_fract(options%nc), &                   !< Tile has a non-zero grid cell fraction
       & l_pf_soil(options%nc)                    !< Permafrost affects bottom layer drainage
+
     REAL(wp), ALLOCATABLE :: wtr_soil_old_sl(:,:) !< wtr_soil_sl of previous timestep
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
@@ -2166,6 +2167,7 @@ CONTAINS
                                                      !< point.)
                                                      ! Note: with jsbach the wilting point in account for later.
                                                      ! TODO: do we need both variables?
+    dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl        !< Relative water content in soil column []
 
     INTEGER :: &
       & iblk, &                                      !< Current block index
@@ -2235,6 +2237,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail_max) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_plant_avail_rel)    ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_rel_sl)        ! out
 
     !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min, wpi_fcap_soil_sl) &
     !$ACC   CREATE(wpi_pwp_soil_sl, wtr_soil_pwp_sl, wtr_soil_avail_sl, wtr_soil_avail_max_sl) &
@@ -2367,6 +2370,20 @@ CONTAINS
       config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
       config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
+      ! determine relative soil moisture on all layers (needed for vertical yasso scheme)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          IF ( wtr_soil_avail_max_sl(ic,is) > 0._wp) THEN
+            wtr_soil_rel_sl(ic,is) =  MIN(wtr_soil_avail_sl(ic,is) / wtr_soil_avail_max_sl(ic,is), 1._wp)
+          ELSE
+            ! weq_rootzone_max is zero for glacier tiles
+            wtr_soil_rel_sl(ic,is) = 0._wp
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+
       ! Calculate water stress factor
       ! TODO: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -2467,6 +2484,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_scool_pot, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_scool_act, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_rel_sl,        weighted_by_fract)
 
     CALL weighted_by_fract%EndAggregate()
 

@@ -43,8 +43,9 @@ MODULE mo_hydro_init
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
   USE mo_util,               ONLY: int2string, soil_init_from_texture, read_bc_data
 
-  dsl4jsb_Use_processes HYDRO_, LEX_
+  dsl4jsb_Use_processes HYDRO_, CARBON_, LEX_
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(LEX_)
   dsl4jsb_Use_memory(HYDRO_)
 
@@ -175,7 +176,6 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< current tile
 
-    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
 
     dsl4jsb_Def_config(LEX_)                                        !< Configurable parameters of the LEX process
@@ -183,11 +183,9 @@ CONTAINS
     dsl4jsb_Get_config(LEX_)
 
 #ifdef __QUINCY_STANDALONE__
-    IF (model%config%use_soil_phys_jsbach) THEN
-      CALL qs_hydro_read_init_vars(tile)
-      CALL qs_hydro_init_ic_bc(tile)
-      CALL hydro_finalize_init_vars()
-    END IF
+    CALL qs_hydro_read_init_vars(tile)
+    CALL qs_hydro_init_ic_bc(tile)
+    CALL hydro_finalize_init_vars()
 #else
     IF (dsl4jsb_Config(LEX_)%active) THEN
       ! Read initial and boundary conditions on each tile, in case tile-specific fields are provided.
@@ -898,6 +896,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile      !< Current tile
 
     dsl4jsb_Def_config(HYDRO_)                  !< Configurable parameters of the HYDRO process
+    dsl4jsb_Def_config(CARBON_)                 !< Configurable parameters of the CARBON process
     dsl4jsb_Def_config(LEX_)                    !< Configurable parameters of the LEX process
 
     REAL(wp), POINTER :: &
@@ -925,6 +924,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(CARBON_)
 
     IF (tile%Is_process_active(LEX_)) THEN
       ! Get lateral exchange config
@@ -1221,7 +1221,7 @@ CONTAINS
       !>    D: Further soil data
       !>
       !>     - Soil organic carbon fractions for each soil layer
-      IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
+      IF (dsl4jsb_Config(HYDRO_)%l_socmap .AND. .NOT. dsl4jsb_Config(CARBON_)%update_soil_props) THEN
         DO isoil = 1,nsoil_input_file
           CALL read_bc_data(input_file, 'fract_org_sl', tile%name, hydro_init_vars%fract_org_sl(:,isoil,:), &
             &  default=0._wp, ilay=isoil, layer_name='soillev')
@@ -1321,6 +1321,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
     dsl4jsb_Def_config(HYDRO_)                        !< Configuration of the HYDRO process
+    dsl4jsb_Def_config(CARBON_)                       !< Configuration of the CARBON process
     dsl4jsb_Def_config(LEX_)                          !< Configuration of the LEX process
     dsl4jsb_Def_memory(HYDRO_)                        !< Memory of the HYDRO process
 
@@ -1356,6 +1357,7 @@ CONTAINS
     nproma = grid%nproma
 
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_config(LEX_)
     dsl4jsb_Get_memory(HYDRO_)
 
@@ -1605,7 +1607,7 @@ CONTAINS
       END DO
 
       !>     - Soil organic carbon fraction
-      IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
+      IF (dsl4jsb_Config(HYDRO_)%l_socmap .AND. .NOT. dsl4jsb_Config(CARBON_)%update_soil_props) THEN
         dsl4jsb_var_ptr(HYDRO_, fract_org_sl) = hydro_init_vars%fract_org_sl
       END IF
 
@@ -1684,6 +1686,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
     dsl4jsb_Def_config(HYDRO_)                        !< Configuration of the HYDRO process
+    dsl4jsb_Def_config(CARBON_)                       !< Configuration of the CARBON process
     dsl4jsb_Def_memory(HYDRO_)                        !< Memory of the HYDRO process
     dsl4jsb_Def_memory(PHENO_)                        !< Memory of the PHENO process
 
@@ -1704,6 +1707,7 @@ CONTAINS
     soil_w => Get_vgrid('soil_depth_water')
 
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_memory(HYDRO_)
     IF (tile%contains_vegetation .AND. model%config%model_scheme == MODEL_JSBACH) THEN
       dsl4jsb_Get_memory(PHENO_)
@@ -1780,13 +1784,14 @@ CONTAINS
       !>    been read from file ([[t_hydro_config:l_socmap]]=false, namelist 'jsb_hydro_nml'), the organic
       !>    fraction of the uppermost soil layer is initialized according to the forest fraction, while
       !>    it is zero in the deeper soil layers.
-      ! Note: Currently fract_org_sl does not change with time
 
       IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN        ! Explicitly represent organic soil fractions
 
         SELECT CASE (model%config%model_scheme)
         CASE (MODEL_JSBACH)
-          IF (.NOT. dsl4jsb_Config(HYDRO_)%l_socmap) THEN ! Not using organic soil fractions from a map
+          ! Use neither SOC from maps nor interactively computed SOC by carbon module
+          IF (.NOT. dsl4jsb_Config(HYDRO_)%l_socmap &
+            & .AND. .NOT. dsl4jsb_Config(CARBON_)%update_soil_props) THEN
 
             ! Initialize with zero
             dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp

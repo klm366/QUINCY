@@ -16,7 +16,7 @@ MODULE mo_carbon_config_class
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_exception,         ONLY: message
+  USE mo_exception,         ONLY: message, message_text
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -36,6 +36,10 @@ MODULE mo_carbon_config_class
                             !            in the experiment jobs following the first one! Or re-set it manually!
     LOGICAL  :: diag_humus_fluxes ! Activate diagnostic carbon fluxes to and from the yasso humus pools
                                   ! required for analytical humus pool equilibration (compare jsb3.2 svn rev 9934)
+    LOGICAL  :: on_soillev  ! T: Carbon calculated on vertical grid (soil layers)
+    LOGICAL  :: update_soil_props ! T: Computed carbon content used to update soil properties
+    LOGICAL  :: clear_frozen
+    REAL(wp) :: resp_rate_modifier
     REAL(wp) :: fire_fract_wood_2_atmos
 
    CONTAINS
@@ -53,6 +57,10 @@ CONTAINS
   SUBROUTINE Init_carbon_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
+    USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_carbon_constants,   ONLY: FireFracWood2Atmos
 
     CLASS(t_carbon_config), INTENT(inout) :: config
@@ -61,6 +69,11 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: with_nitrogen
     LOGICAL                     :: read_cpools, diag_humus_fluxes
+    LOGICAL                     :: on_soillev
+    LOGICAL                     :: update_soil_props
+    LOGICAL                     :: clear_frozen
+    REAL(wp)                    :: resp_rate_modifier
+
     REAL(wp)                    :: fire_fract_wood_2_atmos
     ! LOGICAL           :: lemissions
 
@@ -72,9 +85,18 @@ CONTAINS
          with_nitrogen,            &
          read_cpools,              &
          diag_humus_fluxes,        &
-         fire_fract_wood_2_atmos
+         on_soillev,               &
+         update_soil_props,        &
+         clear_frozen,             &
+         resp_rate_modifier
 
     INTEGER :: nml_handler, nml_unit, istat
+    TYPE(t_input_file) :: input_file
+    REAL(wp), POINTER :: ptr_1D(:)
+    REAL(wp), ALLOCATABLE :: depths(:), mids(:)
+    INTEGER :: nsoil
+
+    TYPE(t_jsb_vgrid), POINTER :: soil_c
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_carbon_config'
 
@@ -88,6 +110,10 @@ CONTAINS
     with_nitrogen          = .FALSE.
     read_cpools            = .FALSE.
     diag_humus_fluxes      = .FALSE.
+    on_soillev             = .FALSE.
+    update_soil_props      = .FALSE.
+    clear_frozen           = .FALSE.
+    resp_rate_modifier      = 1._wp
     fire_fract_wood_2_atmos = FireFracWood2Atmos
 
     ! Read namelist
@@ -106,7 +132,51 @@ CONTAINS
     config%with_nitrogen          = with_nitrogen
     config%read_cpools            = read_cpools
     config%diag_humus_fluxes      = diag_humus_fluxes
+    config%on_soillev             = on_soillev
+    config%update_soil_props      = update_soil_props
+    config%clear_frozen           = clear_frozen
+    config%resp_rate_modifier     = resp_rate_modifier
     config%fire_fract_wood_2_atmos = fire_fract_wood_2_atmos
+
+    IF (on_soillev) THEN
+      input_file = jsb_netcdf_open_input(ic_filename)
+
+      ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
+      nsoil = SIZE(ptr_1D)
+
+      ALLOCATE(depths(nsoil+1))
+      ALLOCATE(mids(nsoil))
+      depths(1) = 0._wp
+      depths(2:nsoil+1) = ptr_1D(1:nsoil)
+      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+      DEALLOCATE(ptr_1D)
+
+      CALL input_file%Close()
+
+      soil_c => new_vgrid('soil_depth_carbon', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
+        & levels  = mids                 (1:nsoil  ),                          &
+        & lbounds = depths               (1:nsoil  ),                          &
+        & ubounds = depths               (2:nsoil+1),                          &
+        & units='m')
+
+      CALL register_vgrid(soil_c)
+      WRITE(message_text, *) 'Soil levels in carbon (upper) [m]: ', soil_c%lbounds
+      CALL message(TRIM(routine), message_text)
+      WRITE(message_text, *) 'Soil levels in carbon (mid)   [m]: ', soil_c%levels
+      CALL message(TRIM(routine), message_text)
+      WRITE(message_text, *) 'Soil levels in carbon (lower) [m]: ', soil_c%ubounds
+      CALL message(TRIM(routine), message_text)
+      WRITE(message_text, *) 'Soil level depths in carbon   [m]: ', soil_c%dz
+      CALL message(TRIM(routine), message_text)
+      DEALLOCATE(depths, mids)
+    END IF
+
+    IF (update_soil_props .AND. .NOT. on_soillev) THEN
+      WRITE(message_text, *) 'Updating soil properties with interactive carbon only possible if ', &
+        & 'on_soillev = True'
+      CALL message(TRIM(routine), message_text)
+      config%update_soil_props = .FALSE.
+    END IF
 
   END SUBROUTINE Init_carbon_config
 

@@ -50,6 +50,7 @@ MODULE mo_assimi_memory_class
       bclimit_max_warm_mmtemp,    & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
       bclimit_min_temprange,      & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
       bclimit_min_gdd,            & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
+      bclimit_min_snow,           & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
 
       tau_c_woods                   ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
 
@@ -119,7 +120,7 @@ CONTAINS
   !>
   SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: MINIMUM, MEDIUM, FULL ! BASIC
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -164,7 +165,7 @@ CONTAINS
       & t_cf('gross_assimilation', 'mol(CO2)/m^2 (tile area) / s', 'Gross photosynthesis on tile area'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
-      & output_level=BASIC,                                                                                       &
+      & output_level=MINIMUM,                                                                                     &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('dark_respiration_ca', mem%dark_respiration_ca,                                              &
@@ -180,7 +181,7 @@ CONTAINS
       & t_cf('dark_respiration', 'mol(CO2)/m^2 (tile area) / s', 'Dark_respiration on tile area'),                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
-      & output_level=BASIC,                                                                                       &
+      & output_level=MINIMUM,                                                                                     &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('npp_pot_rate_ca', mem%NPP_pot_rate_ca,                              &
@@ -248,6 +249,14 @@ CONTAINS
     CALL mem%Add_var('bclimit_min_gdd', mem%bclimit_min_gdd,                              &
       & hgrid, surface,                                                                   &
       & t_cf('bclimit_min_gdd', '', 'bclimit_min_gdd'),                                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=MEDIUM,                                                              &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('bclimit_min_snow', mem%bclimit_min_snow,                            &
+      & hgrid, surface,                                                                   &
+      & t_cf('bclimit_min_snow', '', 'bclimit_min_snow'),                                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=MEDIUM,                                                              &

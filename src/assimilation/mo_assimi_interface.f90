@@ -1018,7 +1018,7 @@ CONTAINS
     INTEGER                    :: iblk, ics, ice !, nc
     REAL(wp)                   :: seconds_year   ! Number of seconds in previous year
     REAL(wp)                   :: dtime
-    LOGICAL                    :: lstart, init_running_means, init_npp, new_year
+    LOGICAL                    :: lstart, init_running_means, new_year
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_npp_buffer'
 
@@ -1037,6 +1037,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: bclimit_max_warm_mmtemp
     dsl4jsb_Real2D_onChunk :: bclimit_min_temprange
     dsl4jsb_Real2D_onChunk :: bclimit_min_gdd
+    dsl4jsb_Real2D_onChunk :: bclimit_min_snow
     dsl4jsb_Real2D_onChunk :: tau_c_woods
 
     ! Set local variables from options argument
@@ -1070,6 +1071,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   bclimit_max_warm_mmtemp) ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   bclimit_min_temprange)   ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   bclimit_min_gdd)         ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   bclimit_min_snow)        ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   tau_c_woods)             ! out
 
     ! Accumulate NPP_sum_year and update NPP_mean_5year for NLCC
@@ -1078,14 +1080,8 @@ CONTAINS
     seconds_year = get_previous_year_length(options%current_datetime)
 
     init_running_means = dsl4jsb_Config(ASSIMI_)%init_running_means
-    init_NPP = .TRUE.
-    IF (MINVAL(NPP_mean_5year(:)) < -999._wp) init_NPP = .FALSE.
     CALL calc_NPPbuf(lstart, init_running_means, new_year, dtime, NPP_pot_rate_ca, &
                      seconds_year, NPP_sum_year, NPP_mean_5year)
-
-    IF (.NOT. init_NPP .AND. debug_on() .AND. iblk==1) THEN
-       IF (MINVAL(NPP_mean_5year(:)) >= -999._wp) CALL message(TRIM(routine), 'initialisation of NPP_mean_5year')
-    ENDIF
 
     ! write lct information on variables to make them available on pft-tiles via function collect_var for NLCC
     land_cover_class(:) = REAL(dsl4jsb_Lctlib_param(LandcoverClass), wp)
@@ -1094,6 +1090,7 @@ CONTAINS
     bclimit_max_warm_mmtemp(:) = dsl4jsb_Lctlib_param(bclimit_max_warm_mmtemp)
     bclimit_min_temprange(:) = dsl4jsb_Lctlib_param(bclimit_min_temprange)
     bclimit_min_gdd(:) = dsl4jsb_Lctlib_param(bclimit_min_gdd)
+    bclimit_min_snow(:) = dsl4jsb_Lctlib_param(bclimit_min_snow)
     tau_c_woods(:) = dsl4jsb_Lctlib_param(tau_c_woods)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

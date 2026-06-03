@@ -29,6 +29,7 @@ MODULE mo_hydro_config_class
   USE mo_kind,               ONLY: wp
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_config_class,   ONLY: t_jsb_config
+  USE mo_sse_config_class,   ONLY: max_soil_layers
 
   IMPLICIT NONE
   PRIVATE
@@ -119,8 +120,6 @@ MODULE mo_hydro_config_class
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
   END type t_hydro_config
-
-  INTEGER, PARAMETER          :: max_soil_layers = 20  ! for quincy soil-layer calculations
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_config_class'
 
@@ -293,6 +292,7 @@ CONTAINS
     hydro_scale            = "semi_distributed"
     quincy_nsoil_w         = 0           ! by default the values is not set via namelist, but used from 'ic_filename'
 #ifdef __QUINCY_STANDALONE__
+    quincy_nsoil_w           = 5         ! but use 5 soil layers as default for quincy standalone
     qs_soil_depth            = 9.5
     qs_soil_awc_prescribe    = 300.0_wp
     qs_soil_theta_prescribe  = 1.0_wp
@@ -498,19 +498,20 @@ CONTAINS
 #ifndef __QUINCY_STANDALONE__
       input_file = jsb_netcdf_open_input(ic_filename)
 
+
       ! @todo: At the moment, the soil layers for the water calculations are the same as for the SSE_
-      ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of the bottom of each soil layer
-      nsoil = SIZE(ptr_1D)
+      ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
+      nsoil = SIZE(ptr_1D)                                     ! Number of soil layers
 
       IF (l_organic .AND. nsoil < 3) &
         & CALL finish(TRIM(routine), 'At least three soil layers required for using organic soil component')
 
       ! calculate mid-points of each soil layer
-      ALLOCATE(depths(nsoil+1))   ! Upper/lower bounds of soil layers
+      ALLOCATE(depths(nsoil+1))                                     ! Upper/lower bounds of soil layers
       ALLOCATE(mids(nsoil))
-      depths(1) = 0._wp
-      depths(2:nsoil+1) = ptr_1D(1:nsoil)
-      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+      depths(1) = 0._wp                                             ! lower bounds == top of the soil layer
+      depths(2:nsoil+1) = ptr_1D(1:nsoil)                           ! upper bounds == bottom of the soil layer
+      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp ! center depth of a layer
       DEALLOCATE(ptr_1D)
 
       CALL input_file%Close()
@@ -571,7 +572,7 @@ CONTAINS
       !!
       !! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth" !
       !!
-      !! site-specific soil-layer thickness values are stored in soil_depth_sl (and calc in spq_init) \n
+      !! site-specific soil-layer thickness values are stored in soil_depth_sl \n
       !! the function new_vgrid() does: (a) check for 'dz(:) <= zero', and (b) calc levels & lbounds from ubounds and dz \n
       !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
       vgrid_soil_w => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, nsoil, &

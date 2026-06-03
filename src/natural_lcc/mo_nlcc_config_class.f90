@@ -28,10 +28,11 @@ MODULE mo_nlcc_config_class
   PUBLIC :: t_nlcc_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_nlcc_config
-    LOGICAL             :: &
+    LOGICAL             ::  &
       & init_running_means, &
-      & init_nlcc
-    REAL(wp)            :: &
+      & init_nlcc,          &
+      & update_cover_fract
+    REAL(wp)            ::  &
       & accelerate_nlcc
 
    CONTAINS
@@ -59,6 +60,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: init_running_means
     LOGICAL                     :: init_nlcc
+    LOGICAL                     :: update_cover_fract
     REAL(wp)                    :: accelerate_nlcc
 
     NAMELIST /jsb_nlcc_nml/  &
@@ -68,6 +70,7 @@ CONTAINS
       &  bc_filename,        &
       &  init_running_means, &
       &  init_nlcc,          &
+      &  update_cover_fract, &
       &  accelerate_nlcc
 
     INTEGER :: nml_handler, nml_unit, istat, npft, i
@@ -83,6 +86,7 @@ CONTAINS
     ic_filename         = 'ic_land_nlcc.nc'
     init_running_means  = .FALSE.
     init_nlcc           = .FALSE.
+    update_cover_fract  = .TRUE.
     accelerate_nlcc     = 1._wp
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -98,9 +102,15 @@ CONTAINS
     config%bc_filename         = bc_filename
     config%init_running_means  = init_running_means
     IF (init_running_means) CALL message(TRIM(routine), 'Initializing climate buffer')
-    config%init_nlcc         = init_nlcc
+    config%init_nlcc           = init_nlcc
     IF (init_nlcc) CALL message(TRIM(routine), 'Initializing NLCC')
-    config%accelerate_nlcc   = accelerate_nlcc
+    config%update_cover_fract  = update_cover_fract
+    IF (update_cover_fract) THEN
+      CALL message(TRIM(routine), 'Updating cover fractions')
+    ELSE
+      CALL message(TRIM(routine), 'NOT updating cover fractions')
+    END IF
+    config%accelerate_nlcc     = accelerate_nlcc
     IF (accelerate_nlcc /= 1._wp) THEN
       WRITE(message_text, *) 'NLCC calculations accelerated by factor ', accelerate_nlcc
       CALL message(TRIM(routine), message_text)
