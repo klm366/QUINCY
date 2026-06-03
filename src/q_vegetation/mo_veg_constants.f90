@@ -1,4 +1,4 @@
-!> vegetation constants (QUINCY)
+!> QUINCY vegetation constants
 !>
 !> ICON-Land
 !>
