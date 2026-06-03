@@ -276,68 +276,47 @@ CONTAINS
     SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
     CASE ('maps')
 
-    DO WHILE (ASSOCIATED(current_tile))
-      i_cf_tile = i_cf_tile + 1
+      DO WHILE (ASSOCIATED(current_tile))
+        i_cf_tile = i_cf_tile + 1
 
-      ! Only calculate area fraction changes for the PFTs that are not handled in NLCC
-      IF (.NOT. nlcc_tile(i_cf_tile)) THEN
+        ! Only calculate area fraction changes for the PFTs that are not handled in NLCC
+        IF (.NOT. nlcc_tile(i_cf_tile)) THEN
 
-        CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract)
-        ! Init the boolean to false which tracks if a tile will change due to alcc on a grid-cell
-        current_tile%l_fract_alcc_change(ics:ice,iblk) = .FALSE.
+          CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract)
+          ! Init the boolean to false which tracks if a tile will change due to alcc on a grid-cell
+          current_tile%l_fract_alcc_change(ics:ice,iblk) = .FALSE.
 
-        ! Derive area changes
-        DO ic = 1,nc
-          IF (cf_target_year(ic, i_cf_tile) < 0.0_wp) THEN
-            ! This should only happen upon init with -0.1 / i.e. if not read from a file
-            cf_delta(ic, i_cf_tile) = 0.0_wp
-          ELSE
-            cf_delta(ic, i_cf_tile) = cf_target_year(ic, i_cf_tile) - current_fract(ic)
-          END IF
-
-          IF (dsl4jsb_Config(ALCC_)%l_daily_alcc .AND. &
-              & ABS(cf_delta(ic, i_cf_tile)) >= REAL(number_of_days, wp) * EPSILON(1._wp)) THEN
-            ! In case that area changes are daily the difference has to be distributed over the year
-            ! such that the target is reached at the end of the year
-            cf_delta(ic, i_cf_tile) = cf_delta(ic, i_cf_tile) / REAL(number_of_days, wp)
-          ELSE
-            cf_delta(ic, i_cf_tile) = 0._wp
-          END IF
-
-          IF (ABS(cf_delta(ic, i_cf_tile)) >= delta_threshold) THEN
-            ! If there are area changes above the threshold set l_fract_alcc_change flag (just required for QUINCY)
-            current_tile%l_fract_alcc_change(ics+ic-1,iblk) = .TRUE.
-          ELSE
-            ! else set to 0.0_wp
-            cf_delta(ic, i_cf_tile) = 0.0_wp
-          END IF
-        END DO
-
-      END IF ! not nlcc_tile
-
-      current_tile => current_tile%Get_next_sibling_tile()
-    END DO ! current_tile
-
-    CASE('transition')
-
-      IF (dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
-        ! In case that area changes are daily the transition rates have to be divided by the number of days in the year
-        ALLOCATE(trans_names(SIZE(dsl4jsb_Config(ALCC_)%trans_names)))
-        trans_names = dsl4jsb_Config(ALCC_)%trans_names
-
-        DO idx = 1, SIZE(trans_names)
+          ! Derive area changes
           DO ic = 1,nc
+            IF (cf_target_year(ic, i_cf_tile) < 0.0_wp) THEN
+              ! This should only happen upon init with -0.1 / i.e. if not read from a file
+              cf_delta(ic, i_cf_tile) = 0.0_wp
+            ELSE
+              cf_delta(ic, i_cf_tile) = cf_target_year(ic, i_cf_tile) - current_fract(ic)
+            END IF
 
-            transition_rate(ic, idx) = transition_rate(ic, idx) / REAL(number_of_days, wp)
-            !Todo-AKN: This only works if transition rates are given as change relative to whole area, not relative to pft area
-            ! "Zinseszins Problem"
+            IF (dsl4jsb_Config(ALCC_)%l_daily_alcc .AND. &
+                & ABS(cf_delta(ic, i_cf_tile)) >= REAL(number_of_days, wp) * EPSILON(1._wp)) THEN
+              ! In case that area changes are daily the difference has to be distributed over the year
+              ! such that the target is reached at the end of the year
+              cf_delta(ic, i_cf_tile) = cf_delta(ic, i_cf_tile) / REAL(number_of_days, wp)
+            ELSE
+              cf_delta(ic, i_cf_tile) = 0._wp
+            END IF
 
+            IF (ABS(cf_delta(ic, i_cf_tile)) >= delta_threshold) THEN
+              ! If there are area changes above the threshold set l_fract_alcc_change flag (just required for QUINCY)
+              current_tile%l_fract_alcc_change(ics+ic-1,iblk) = .TRUE.
+            ELSE
+              ! else set to 0.0_wp
+              cf_delta(ic, i_cf_tile) = 0.0_wp
+            END IF
           END DO
-        END DO
 
-      END IF
+        END IF ! not nlcc_tile
 
-    END SELECT
+        current_tile => current_tile%Get_next_sibling_tile()
+      END DO ! current_tile
 
     CASE('transition')
 
