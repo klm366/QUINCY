@@ -1454,13 +1454,14 @@ CONTAINS
     ENDIF
 #endif
 
-    dsl4jsb_Get_config(CARBON_)
-    dsl4jsb_Get_memory(CARBON_)
-
+    model => Get_model(tile%owner_model_id)
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+
+    dsl4jsb_Get_config(CARBON_)
+    dsl4jsb_Get_memory(CARBON_)
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_green )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve )           ! inout
