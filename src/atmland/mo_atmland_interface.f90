@@ -854,7 +854,7 @@ CONTAINS
       fract_lice_ptr        => dsl4jsb_var2D_onChunk(SEB_,   fract_lice)
     END IF
 
-    IF (tile%contains_lake .AND. .NOT. jsbach_runs_standalone() .AND. model%config%l_ice_on_lakes) THEN
+    IF (tile%contains_lake .AND. .NOT. jsbach_runs_standalone() .AND. dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
       t_lice_ptr            => dsl4jsb_var2D_onChunk(SEB_,   t_lice)
       qsat_lice_ptr         => dsl4jsb_var2D_onChunk(SEB_,   qsat_lice)
       s_lice_ptr            => dsl4jsb_var2D_onChunk(SEB_,   s_lice)
@@ -1209,7 +1209,7 @@ CONTAINS
 
     IF (model%use_multiple_queues) acc_stream = acc_stream + 1
     !$ACC WAIT(original_stream) ASYNC(acc_stream)
-    IF (tile%contains_lake .AND. .NOT. jsbach_runs_standalone() .AND. model%config%l_ice_on_lakes) THEN
+    IF (tile%contains_lake .AND. .NOT. jsbach_runs_standalone() .AND. dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 

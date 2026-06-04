@@ -24,7 +24,8 @@ MODULE mo_rad_memory_class
   dsl4jsb_Use_config(VEG_)
   dsl4jsb_Use_config(Q_ASSIMI_)
 #endif
-  dsl4jsb_Use_processes HYDRO_
+  dsl4jsb_Use_processes SEB_, HYDRO_
+  dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(HYDRO_)
 
   IMPLICIT NONE
@@ -176,7 +177,8 @@ CONTAINS
     INTEGER,             INTENT(in)            :: lct_ids(:)
     INTEGER,             INTENT(in)            :: lib_id     !< id of primary lct in lctlib
     INTEGER,             INTENT(in)            :: model_id
-
+    
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(HYDRO_)
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
@@ -232,6 +234,7 @@ CONTAINS
     vgrid_spectral => Get_vgrid('spectral_bands')
 #endif
 
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(HYDRO_)
     l_ponds = dsl4jsb_Config(HYDRO_)%l_ponds
 
@@ -563,7 +566,7 @@ CONTAINS
         & output_level=MEDIUM,                                                &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
 
-      IF (model%config%l_ice_on_lakes) THEN
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         CALL mem%Add_var( 'rad_net_lice', mem%rad_net_lice,                     &
           & hgrid, surface,                                                     &
           & t_cf('rad_net_lice', '', 'Net surface radiation over lake ice'),    &

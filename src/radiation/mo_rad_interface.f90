@@ -315,7 +315,7 @@ CONTAINS
         & )
 
       ! Ice on lake
-      IF (model%config%l_ice_on_lakes) THEN
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(SEB_, t_lice)       ! in
         dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)   ! in
         dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)  ! in
@@ -443,7 +443,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(RAD_, lw_srf_net,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lwtr,   weighted_by_fract)
 
-    IF (model%config%l_ice_on_lakes) THEN
+    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
       dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lice,   weighted_by_fract)
     END IF
 
@@ -1370,7 +1370,7 @@ CONTAINS
         !$ACC END PARALLEL LOOP
 
         ! Ice on lake
-        IF (model%config%l_ice_on_lakes) THEN
+        IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
           dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_lice)  ! in
           dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)     ! in
           dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)    ! inout

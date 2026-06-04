@@ -34,6 +34,7 @@ MODULE mo_seb_config_class
      REAL(wp)                    :: coef_ril_tp1           !< ... the drag coefficient at time t, but helps to maintain stability.
      REAL(wp)                    :: eb_threshold           !< Energy balance residuals greater than this threshold lead to
                                                            !< diagnostic logging. Negative threshold: no printing.
+     LOGICAL                     :: l_ice_on_lakes         !< Whether to use ice on lakes
      INTEGER                     :: niter_tmx              !< For tmx: number of iterations in seb solver
      LOGICAL                     :: l_skin_temp            !< Activate skin-temperature formulation.
    CONTAINS
@@ -55,6 +56,7 @@ CONTAINS
     CHARACTER(len=10)           :: scheme_albedo
     REAL(wp)                    :: lake_mixed_layer_depth, lake_min_ice_depth, eb_threshold, &
       &                            coef_ril_tm1, coef_ril_t, coef_ril_tp1
+    LOGICAL                     :: l_ice_on_lakes
     INTEGER                     :: niter_tmx
     LOGICAL                     :: l_skin_temp
 
@@ -69,6 +71,7 @@ CONTAINS
       coef_ril_t,                  &
       coef_ril_tp1,                &
       eb_threshold,                &
+      l_ice_on_lakes,              &
       niter_tmx,                   &
       l_skin_temp
 
@@ -90,6 +93,7 @@ CONTAINS
     eb_threshold    = -1.0_wp  ! Negative values correspond to no printouts
     lake_mixed_layer_depth = 10._wp
     lake_min_ice_depth     = 0.05_wp
+    l_ice_on_lakes  = .TRUE.
     niter_tmx       = 0
     l_skin_temp     = .FALSE.   ! default for QUINCY: TRUE
 
@@ -109,6 +113,7 @@ CONTAINS
     config%coef_ril_t                = coef_ril_t
     config%coef_ril_tp1              = coef_ril_tp1
     config%eb_threshold              = eb_threshold
+    config%l_ice_on_lakes            = l_ice_on_lakes
     config%niter_tmx                 = niter_tmx
     config%l_skin_temp               = l_skin_temp
 

@@ -168,7 +168,7 @@ CONTAINS
 
     ml_depth      = dsl4jsb_Config(SEB_)%lake_mixed_layer_depth
     min_ice_depth = dsl4jsb_Config(SEB_)%lake_min_ice_depth
-    config_l_ice_on_lakes = model%config%l_ice_on_lakes
+    config_l_ice_on_lakes = dsl4jsb_Config(SEB_)%l_ice_on_lakes
 
     jsb_standalone = jsbach_runs_standalone()
 
@@ -774,7 +774,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,   latent_hflx_wtr)   ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_wtr)         ! in
 
-    IF (model%config%l_ice_on_lakes) THEN
+    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
       IF (.NOT. use_tmx) THEN
         dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef_ice)       ! IN
         dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef_ice)       ! IN
@@ -811,7 +811,7 @@ CONTAINS
     ! ================================================================================================================================
     ! Surface fluxes for lake ice
 
-    IF (model%config%l_ice_on_lakes) THEN
+    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(acc_stream) GANG VECTOR PRIVATE(s_air, heat_tcoef)
       DO ic=1,nc
 

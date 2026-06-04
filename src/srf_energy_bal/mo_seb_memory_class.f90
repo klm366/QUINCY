@@ -468,7 +468,7 @@ CONTAINS
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp )
 
-      IF (model%config%l_ice_on_lakes) THEN
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
 
         CALL mem%Add_var( 't_lice', mem%t_lice,                                          &
           & hgrid, surface,                                                              &
