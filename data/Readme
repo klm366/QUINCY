@@ -1,0 +1,26 @@
+----------------------------------------
+ Land Cover Type Library (lctlib) files
+----------------------------------------
+
+Currently lctlib files for jsbach have 21 land cover types (nlct21), while the
+quincy lctlib files define 14 different land cover types (nlct14).
+
+
+ JSBACH lctlib files
+---------------------
+
+- lctlib_nlct21.def:   Original version
+
+- lctlib_nlct21_cmip7.def:   Same as lctlib_nlct21.def with the exception of
+  parameter "Fract_npp_2_woodPool" (fraction of NPP going to the vegetation wood
+  pool), being increased for all woody vegetation to increase global biomass
+  (compare https://gitlab.dkrz.de/jsbach/jsbach/-/issues/376).
+  This lctlib file should be used in setups with carbon cycle and PFT fractions
+  based on ESACCI land cover maps, which is typically the case in 12-PFT-setups.
+
+
+QUINCY lctlib files
+---------------------
+
+- lctlib_quincy_nlct14.def:   Original version
+
