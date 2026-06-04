@@ -270,7 +270,7 @@ CONTAINS
 #ifdef _OPENACC
       CALL finish(routine, 'Quincy not ported to GPU in coupled mode, yet. Stop.')
       ! Note: if aboves finish can be removed after teh QUINCY configuration was tested on GPU in a coupled setup,
-      !       it would still be necessary to test that the QUINCY canopy model-mode is used: 
+      !       it would still be necessary to test that the QUINCY canopy model-mode is used:
       ! IF (model%config%qmodel_id /= QCANOPY) THEN
       !   CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
       ! END IF
