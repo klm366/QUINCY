@@ -44,7 +44,7 @@ MODULE mo_phy_schemes
   !   PURE SUBROUTINE i_exchange_coefficients_procedure(           &
   !     & dz,                                                 &
   !     & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
-  !     & km, kh, km_neutral, kh_neutral                      &
+  !     & km, kh, interp_fac_2m, interp_fac_10m               &
   !     & )
   !     IMPORT :: wp
 
@@ -60,8 +60,8 @@ MODULE mo_phy_schemes
   !     REAL(wp), INTENT(out) :: &
   !       km,         &
   !       kh,         &
-  !       km_neutral, &
-  !       kh_neutral
+  !       interp_fac_2m, &
+  !       interp_fac_10m
 
   !   END SUBROUTINE
   ! END INTERFACE
@@ -83,7 +83,7 @@ CONTAINS
   ! SUBROUTINE exchange_coefficients(                       &
   !   & dz,                                                 &
   !   & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
-  !   & km, kh, km_neutral, kh_neutral                      &
+  !   & km, kh, interp_fac_2m, interp_fac_10m               &
   !   & )
 
   !   REAL(wp), DIMENSION(:), INTENT(in) :: &
@@ -98,8 +98,8 @@ CONTAINS
   !   REAL(wp), DIMENSION(:), INTENT(out) :: &
   !     km,         &
   !     kh,         &
-  !     km_neutral, &
-  !     kh_neutral
+  !     interp_fac_2m, &
+  !     interp_fac_10m
 
   !   INTEGER :: ic, nc
 
@@ -110,7 +110,7 @@ CONTAINS
   !     CALL registered_exchange_coefficients_procedure(                                &
   !       & dz(ic),                                                                     &
   !       & pqm1(ic), thetam1(ic), mwind(ic), rough_m(ic), theta_sfc(ic), qsat_sfc(ic), &
-  !       & km(ic), kh(ic), km_neutral(ic), kh_neutral(ic)                              &
+  !       & km(ic), kh(ic), interp_fac_2m(ic), interp_fac_10m(ic)                       &
   !       & )
   !   END DO
   !   !$ACC END PARALLEL LOOP

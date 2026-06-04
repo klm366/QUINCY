@@ -591,7 +591,7 @@ CONTAINS
     & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,                  &
     & rough_h_srf, rough_m_srf, q_snocpymlt,                                         &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,                            &
-    & kh, km, kh_neutral, km_neutral, CO2_flux,                                      &
+    & kh, km, interp_fac_2m, interp_fac_10m, interp_fac_tsfc, CO2_flux,              &
     & t_lwtr, t_lice, qsat_lwtr, qsat_lice, s_lwtr, s_lice,                          &
     & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                                 &
     & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                                 &
@@ -615,7 +615,8 @@ CONTAINS
       & alb_vis_dir_wtr(:), alb_vis_dif_wtr(:), alb_nir_dir_wtr(:),                  &
       & alb_nir_dif_wtr(:), albedo_lwtr(:), albedo_lice(:),                          &
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:),              &
-      & CO2_flux(:), kh(:), km(:), kh_neutral(:), km_neutral(:)
+      & CO2_flux(:), kh(:), km(:), interp_fac_2m(:), interp_fac_10m(:),              &
+      & interp_fac_tsfc(:)
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
@@ -667,8 +668,9 @@ CONTAINS
       & alb_nir_lnd_ptr, &
       & kh_ptr, &
       & km_ptr, &
-      & kh_neutral_ptr, &
-      & km_neutral_ptr, &
+      & interp_fac_2m_ptr, &
+      & interp_fac_10m_ptr, &
+      & interp_fac_tsfc_ptr, &
       & co2flux_npp_2_atm_ta_ptr, &
       & co2flux_soilresp_2_atm_ta_ptr, &
       & co2flux_herb_2_atm_ta_ptr, &
@@ -813,8 +815,9 @@ CONTAINS
       alb_nir_lnd_ptr       => dsl4jsb_var2D_onChunk(RAD_,   alb_nir)
       kh_ptr                => dsl4jsb_var2D_onChunk(TURB_,  kh)
       km_ptr                => dsl4jsb_var2D_onChunk(TURB_,  km)
-      kh_neutral_ptr        => dsl4jsb_var2D_onChunk(TURB_,  kh_neutral)
-      km_neutral_ptr        => dsl4jsb_var2D_onChunk(TURB_,  km_neutral)
+      interp_fac_2m_ptr     => dsl4jsb_var2D_onChunk(TURB_,  interp_fac_2m)
+      interp_fac_10m_ptr    => dsl4jsb_var2D_onChunk(TURB_,  interp_fac_10m)
+      interp_fac_tsfc_ptr   => dsl4jsb_var2D_onChunk(TURB_,  interp_fac_tsfc)
     ELSE
       t_filt_ptr            => dsl4jsb_var2D_onChunk(SEB_,   t_filt)
       evapotrans_lnd_ptr    => dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
@@ -1057,16 +1060,22 @@ CONTAINS
         km(i) = km_ptr(i)
       END DO
     END IF
-    IF (PRESENT(kh_neutral)) THEN
+    IF (PRESENT(interp_fac_2m)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
-        kh_neutral(i) = kh_neutral_ptr(i)
+        interp_fac_2m(i) = interp_fac_2m_ptr(i)
       END DO
     END IF
-    IF (PRESENT(km_neutral)) THEN
+    IF (PRESENT(interp_fac_10m)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
-        km_neutral(i) = km_neutral_ptr(i)
+        interp_fac_10m(i) = interp_fac_10m_ptr(i)
+      END DO
+    END IF
+    IF (PRESENT(interp_fac_tsfc)) THEN
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO i=1,nc
+        interp_fac_tsfc(i) = interp_fac_tsfc_ptr(i)
       END DO
     END IF
 

@@ -1,4 +1,4 @@
-!> helper routines for vegetation (QUINCY)
+!> QUINCY helper routines for vegetation
 !>
 !> ICON-Land
 !>

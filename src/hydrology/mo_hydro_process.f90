@@ -1747,7 +1747,8 @@ CONTAINS
         IF (is <= last_soil_layer(ic)) THEN
           ! Downward transport is calculated from the difference to the state before the transport
           ! calculations, the flux from above and the loss from transpiration.
-          wtr_transp_down_sl(ic,is) = wtr_soil_sl_t0(ic,is) - wtr_soil_sl(ic,is) + wtr_flux_top + transpiration_sl(ic,is)
+          wtr_transp_down_sl(ic,is) = wtr_soil_sl_t0(ic,is) - wtr_soil_sl(ic,is) + wtr_flux_top + transpiration_sl(ic,is) &
+            &   - drainage_sl(ic,is)
         END IF
       END DO
     END DO
