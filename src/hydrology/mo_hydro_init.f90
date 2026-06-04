@@ -175,6 +175,7 @@ CONTAINS
   SUBROUTINE hydro_init(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< current tile
+    TYPE(t_jsb_model), POINTER :: model                             !< Current instance of the model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
 

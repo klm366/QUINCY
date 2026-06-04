@@ -806,6 +806,10 @@ CONTAINS
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
           END IF
 
+          IF (model%processes(CLIMBUF_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
+          END IF
+
           ! Note: FLCC and WLCC are required for the fage usecase. Here, they can be activated for testing,
           !   however, for the pft usecase it currently makes more sense using DISTURB without FLCC and WLCC
           IF (model%processes(FLCC_)%p%config%active) THEN
@@ -968,6 +972,10 @@ CONTAINS
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
           END IF
 
+          IF (model%processes(CLIMBUF_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
+          END IF
+
           ! Note: FLCC and WLCC are required for the fage usecase. Here, they can be activated for testing,
           !   however, for the pft usecase it currently makes more sense using DISTURB without FLCC and WLCC
           IF (model%processes(FLCC_)%p%config%active) THEN
@@ -1125,6 +1133,14 @@ CONTAINS
 
           IF (model%processes(LEX_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(LEX_, ON_TILE_, AGGREGATE_)
+          END IF
+
+          IF (model%processes(ALCC_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
+          END IF
+
+          IF (model%processes(CLIMBUF_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
           END IF
 
           ! Note: FLCC and WLCC are required for the fage usecase. Here, they can be activated for testing,

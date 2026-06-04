@@ -85,7 +85,8 @@ CONTAINS
   !
   SUBROUTINE sse_init(tile)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile             !< current tile
+    TYPE(t_jsb_model), POINTER :: model                           !< Current instance of the model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
