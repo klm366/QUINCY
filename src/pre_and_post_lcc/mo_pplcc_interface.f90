@@ -196,17 +196,17 @@ CONTAINS
 
     IF (tile%Has_conserved_quantities()) THEN
 
-    IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      IF (model%config%qmodel_id == QCANOPY) THEN
-        ! If running in CANOPY configuration nothing needs to be conserved because the states are prescribed
-        RETURN
-      END IF
+      IF (model%config%model_scheme == MODEL_QUINCY) THEN
+        IF (model%config%qmodel_id == QCANOPY) THEN
+          ! If running in CANOPY configuration nothing needs to be conserved because the states are prescribed
+          RETURN
+        END IF
 
-      ! For the quincy model the variables need to be up to date with the content of the matrices before they are converted
-      IF (ASSOCIATED(tile%bgcm_store)) THEN
-        CALL tile%bgcm_store%Write_matrices_to_bgcm_vars(tile%name, ics, ice, iblk)
+        ! For the quincy model the variables need to be up to date with the content of the matrices before they are converted
+        IF (ASSOCIATED(tile%bgcm_store)) THEN
+          CALL tile%bgcm_store%Write_matrices_to_bgcm_vars(tile%name, ics, ice, iblk)
+        END IF
       END IF
-    END IF
 
       ! Iterate over all cq types and their vars and convert
       DO i_cqt = 1,tile%nr_of_cqts
