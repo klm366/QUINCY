@@ -168,7 +168,7 @@ CONTAINS
         CALL set_bgcm_element_idx(model%config%elements_index_map)
       END IF
 
-      !> 6. Set parameter init and test for `--enable-quincy` compile flag
+      !> 6. Set parameter init
       !>
       IF (model_idx == 1) THEN
         ! assuming the shared/constants/ modules are available here already (impl, math, physical)
