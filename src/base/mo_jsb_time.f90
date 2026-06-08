@@ -17,27 +17,53 @@ MODULE mo_jsb_time
   USE mo_kind,           ONLY: wp
   USE mo_exception,      ONLY: message, message_text, finish
   USE mo_jsb_control,    ONLY: jsbach_runs_standalone
-  USE mo_jsb_time_iface, ONLY: t_datetime, deallocateDatetime, get_time_previous, get_time_next, &
-                               get_date_components, get_time_start, &
-                               get_time_dt, is_time_experiment_start, get_time_experiment_start, is_time_restart, &
-                               get_year_length, get_month_length, get_day_length, get_year_day,   &
-                               is_time_ltrig_rad_m1, get_asselin_coef, &
-                               cache_time_interpolation_weights, get_time_interpolation_weights
+  USE mo_jsb_time_iface, ONLY: & ! Uses the mtime library
+    & t_datetime,              & ! Basic mtime type
+                                 ! Object containing year, month, day, hour, minutes, seconds, milliseconds
+                                 ! and routines to work with it
+    & deallocateDatetime,      & ! Deallocate datetime (mtime)
+    & get_time_next,           & ! Returns an object of t_datetime containing the next timestep - jsb util routine (not mtime)
+    & get_time_previous,       & ! Returns an object of t_datetime containing the previous timestep - jsb util routine
+    & get_date_components,     & ! jsb util routine: returns present components of this datetime object
+    & get_time_start,          &
+    & get_time_dt,             &
+    & is_time_experiment_start,  & ! jsb util routine: test if this is first timestep (i.e. start) of experiment
+    & get_time_experiment_start, &
+    & is_time_restart,           & ! jsb util routine: test if this is first timestep after restart
+    & get_year_length, get_month_length, get_day_length, get_year_day, &
+    & is_time_ltrig_rad_m1,      &      ! jsb util routine: check if this is the timestep before radiation calculation
+    & get_time_interpolation_weights, & ! jsb util routine: provides month index and weights for interpolation monthly values
+    & get_asselin_coef, &
+    & cache_time_interpolation_weights
 
   IMPLICIT NONE
   PRIVATE
 
 !!$  PUBLIC :: init_jsb_time
   PUBLIC :: init_time
-  PUBLIC :: t_datetime, deallocateDatetime, get_time_next
-  PUBLIC :: get_date_components, get_time_start, get_time_experiment_start, get_time_dt, &
-            is_time_experiment_start, is_time_restart, is_time_ltrig_rad_m1, &
+  PUBLIC :: &
+    & t_datetime, &         ! Basic mtime type provided for further use in ICON-Land
+    & deallocateDatetime, & ! mtime routine
+    & get_time_next         ! jsb util routine provided for further use in ICON-Land
+  PUBLIC :: get_date_components, get_time_start, get_time_experiment_start, &
+    & get_time_dt,              & ! jsb util routine
+    & is_time_experiment_start, & ! jsb util routine
+    & is_time_restart,          & ! jsb util routine
+    & is_time_ltrig_rad_m1,     & ! jsb util routine
             get_year_length, get_month_length, get_day_length, get_year_day
   PUBLIC :: is_newday, is_newmonth, is_newyear, get_year_at_model_start, get_year_at_experiment_start, &
             get_year, get_month, get_day, get_secs_of_day, get_previous_month_length, get_previous_year_length
-  PUBLIC :: cache_time_interpolation_weights, get_time_interpolation_weights
+  PUBLIC :: cache_time_interpolation_weights
+  PUBLIC :: get_time_interpolation_weights ! jsb util routine
   PUBLIC :: get_asselin_coef
   PUBLIC :: timestep_in_days, timesteps_per_day
+  PUBLIC :: execute_quincy_sb_accelerator_this_timestep
+  PUBLIC :: executed_quincy_sb_accelerator_previous_timestep
+
+  LOGICAL, SAVE :: execute_quincy_sb_accelerator_this_timestep = .FALSE.
+    !< Boolean indicating if the QUINCY SB_ slow-pool spinup-accelerator should be executed this timestep
+  LOGICAL, SAVE :: executed_quincy_sb_accelerator_previous_timestep = .FALSE.
+    !< Boolean indicating if the QUINCY SB_ slow-pool spinup-accelerator has been executed in the previous timestep
 
   TYPE(t_datetime), POINTER, SAVE :: start_date
   TYPE(t_datetime), POINTER, SAVE :: final_date
@@ -52,15 +78,18 @@ CONTAINS
 
     USE mo_jsb_time_iface, ONLY: read_time_namelist, & !, configure_time
                                  configure_time_and_events, &
-                                 get_time_start, get_time_stop, get_year_day
+                                 get_time_stop
 
-    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: namelist_filename
-    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: model_shortname
-    LOGICAL, OPTIONAL, INTENT(IN) :: restart_jsbach
+    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: namelist_filename !< Jsbach namelist file name
+    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: model_shortname   !< Jsbach model
+    LOGICAL, OPTIONAL, INTENT(IN) :: restart_jsbach             !< Restart state
 
     REAL(wp) :: eps
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_time'
+
+    ! NOTE this routine does not seem to be necessary for JSBACH within ICON anymore and is just
+    ! returning start_date and final_date. This should be solved in a more simple way.
 
     !TODO? currently the time is initalised from the namelist of the first processed model
     !      but then used globally for all models!
@@ -72,10 +101,10 @@ CONTAINS
     IF (.NOT. time_initialized) THEN
       CALL message(TRIM(routine), 'Initializing JSBACH time')
 
-      IF (PRESENT(restart_jsbach)) CONTINUE ! avoid compiler warnings about dummy arguments not being used
-      IF (PRESENT(namelist_filename)) CONTINUE ! avoid compiler warnings about dummy arguments not being used
-      ! IF (PRESENT(namelist_filename)) THEN                   ! present only for standalone model
-      !   CALL read_time_namelist(TRIM(namelist_filename))     ! already done from mo_util_jsbach.f90 in icon
+      IF (PRESENT(restart_jsbach)) CONTINUE    ! Avoid compiler warnings about dummy arguments not being used
+      IF (PRESENT(namelist_filename)) CONTINUE ! Avoid compiler warnings about dummy arguments not being used
+      ! IF (PRESENT(namelist_filename)) THEN                   ! Present only for standalone model
+      !   CALL read_time_namelist(TRIM(namelist_filename))     ! Already done from mo_util_jsbach.f90 in icon
       ! END IF
 
       IF (PRESENT(model_shortname)) THEN
@@ -87,7 +116,7 @@ CONTAINS
       start_date => get_time_start()
       final_date => get_time_stop()
 
-      ! just to avoid compiler warnings about variable set but never referenced
+      ! Just to avoid compiler warnings about variable set but never referenced
       IF (.FALSE.) THEN
         PRINT*, get_year_day(start_date)
         PRINT*, get_year_day(final_date)
@@ -107,6 +136,9 @@ CONTAINS
 
   END SUBROUTINE init_time
 
+  ! ======================================================================================================= !
+  !>
+  !> Returns true if the current and previous time step are from different days
   LOGICAL FUNCTION is_newday(current, dt)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: current
@@ -118,8 +150,6 @@ CONTAINS
 
     previous => get_time_previous(current, dt)
 
-    ! CALL get_date_components(current, day=current_day)
-    ! CALL get_date_components(previous, day=previous_day)
     current_day = INT(get_year_day(current))
     previous_day = INT(get_year_day(previous))
 
@@ -129,6 +159,9 @@ CONTAINS
 
   END FUNCTION is_newday
 
+  ! ======================================================================================================= !
+  !>
+  !> Returns true if the current and previous time step are from different months
   LOGICAL FUNCTION is_newmonth(current, dt)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: current
@@ -149,6 +182,9 @@ CONTAINS
 
   END FUNCTION is_newmonth
 
+  ! ======================================================================================================= !
+  !>
+  !> Returns true if the current and previous time step are from different years
   LOGICAL FUNCTION is_newyear(current, dt)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: current
@@ -160,8 +196,6 @@ CONTAINS
 
     previous => get_time_previous(current, dt)
 
-    ! CALL get_date_components(current, year=current_year)
-    ! CALL get_date_components(previous, year=previous_year)
     current_year  = get_year(current)
     previous_year = get_year(previous)
 
@@ -171,6 +205,9 @@ CONTAINS
 
   END FUNCTION is_newyear
 
+  ! ======================================================================================================= !
+  !>
+  !> Returns the year of the provided datetime variable
   INTEGER FUNCTION get_year(this_datetime)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: this_datetime
@@ -183,6 +220,9 @@ CONTAINS
 
   END FUNCTION get_year
 
+  ! ======================================================================================================= !
+  !>
+  !> Returns the month of the provided datetime variable
   INTEGER FUNCTION get_month(this_datetime)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: this_datetime
@@ -195,6 +235,9 @@ CONTAINS
 
   END FUNCTION get_month
 
+  ! ======================================================================================================= !
+  !>
+  !> Returns the day of the provided datetime variable
   INTEGER FUNCTION get_day(this_datetime)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: this_datetime
@@ -207,6 +250,9 @@ CONTAINS
 
   END FUNCTION get_day
 
+  ! ======================================================================================================= !
+  !>
+  !> Returns the number of seconds elapsed between start of a day and the provided datetime variable
   REAL(wp) FUNCTION get_secs_of_day(this_datetime)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: this_datetime
@@ -255,6 +301,10 @@ CONTAINS
 
   END FUNCTION get_previous_year_length
 
+  ! ======================================================================================================= !
+  !>
+  !> Returns the starting year of the current simulation
+  !! e.g. 1900 for a run (re)started 1900 even though the full experiment might have started earlier
   INTEGER FUNCTION get_year_at_model_start()
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_year_at_model_start'
@@ -266,6 +316,10 @@ CONTAINS
 
   END FUNCTION get_year_at_model_start
 
+  ! ======================================================================================================= !
+  !>
+  !> Returns the starting year of an experiment including time passed during earlier simulation periods
+  !! e.g. 1850 for an experiment which started 1850 even if the current run (re)started 1900
   INTEGER FUNCTION get_year_at_experiment_start()
 
     TYPE(t_datetime), POINTER :: temp_date
@@ -281,15 +335,18 @@ CONTAINS
 
   END FUNCTION get_year_at_experiment_start
 
-  REAL(wp) FUNCTION timestep_in_days(dt, model_id) ! EXPRESS the time step in days (as fraction of day)
-
-    REAL(wp), OPTIONAL, INTENT(in) :: dt
+  ! ======================================================================================================= !
+  !>
+  !> Returns the time step in days (as fraction of day)
+  !> e.g. two and a half days would yield 2.5
+  REAL(wp) FUNCTION timestep_in_days(dt, model_id)
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp), OPTIONAL, INTENT(in) :: dt        !< Timestep in seconds
     INTEGER,  OPTIONAL, INTENT(in) :: model_id
-
+    ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp) :: dt_loc
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':timestep_in_days'
-
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (PRESENT(dt)) THEN
       dt_loc = dt
     ELSE IF (PRESENT(model_id)) THEN
@@ -298,19 +355,21 @@ CONTAINS
       CALL finish(routine, 'Must provide either dt oder model_id')
     END IF
 
-    timestep_in_days = dt_loc / 86400._wp
+    timestep_in_days = dt_loc / 86400._wp ! dt by number of seconds in a day
 
   END FUNCTION timestep_in_days
 
-  INTEGER FUNCTION timesteps_per_day(dt, model_id) ! NUMBER of time steps per day
-
-    REAL(wp), OPTIONAL, INTENT(in) :: dt
+  ! ======================================================================================================= !
+  !>
+  !> Returns the number of time steps per day
+  INTEGER FUNCTION timesteps_per_day(dt, model_id)
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp), OPTIONAL, INTENT(in) :: dt        !< Timestep in seconds
     INTEGER,  OPTIONAL, INTENT(in) :: model_id
-
+    ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp) :: dt_loc
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':timesteps_per_day'
-
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (PRESENT(dt)) THEN
       dt_loc = dt
     ELSE IF (PRESENT(model_id)) THEN
@@ -319,7 +378,7 @@ CONTAINS
       CALL finish(routine, 'Must provide either dt oder model_id')
     END IF
 
-    timesteps_per_day = NINT(86400._wp/dt_loc)
+    timesteps_per_day = NINT(86400._wp/dt_loc) ! Assert that day length is an integer multiple of the time step
     IF (ABS(timesteps_per_day * dt_loc - 86400._wp) > EPSILON(1._wp)) &
       & CALL finish(routine, 'Time step must fit into day length')
 

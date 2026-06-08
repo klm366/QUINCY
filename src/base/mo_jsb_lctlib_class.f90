@@ -271,18 +271,14 @@ CONTAINS
     !
     ! The file can contain more keywords than needed --- therefore the same file can be used by several model components.
     !
+    USE mo_util, ONLY: tolower
+
 #ifndef __NO_QUINCY__
-#ifdef __QUINCY_STANDALONE__
-    USE mo_util,        ONLY: tolower
-#endif
-    USE mo_util_string, ONLY: tolower
     ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
     USE mo_jsb_math_constants,      ONLY: one_day, one_year
     USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree, icrop
     USE mo_q_assimi_constants,      ONLY: ic4phot
-#else
-    USE mo_util_string, ONLY: tolower
 #endif
 
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
@@ -1722,7 +1718,7 @@ CONTAINS
     SELECT CASE (usecase)
 #ifndef __NO_QUINCY__
     ! quincy model with 13 PFT tiles (of the 14 PFT that would be available with 'lctlib_quincy_nlct14.def')
-    CASE ('quincy_13_pfts_for_coupling', 'quincy_13_pfts')
+    CASE ('quincy_13_pfts')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
 #endif
