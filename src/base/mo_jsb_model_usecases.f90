@@ -729,12 +729,8 @@ CONTAINS
 
 #ifndef __NO_QUINCY__
   ! ======================================================================================================= !
-<<<<<<< HEAD
 
-  !> init routine for usecase quincy_13_pfts
-=======
   !>init routine for usecase quincy_13_pfts
->>>>>>> land4icon-mpim
   !>
   !>  works only in combination with 'model%config%model_scheme = MODEL_QUINCY'
   !>
@@ -909,8 +905,7 @@ CONTAINS
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
     IF (model%config%use_lakes)   NULLIFY(lake_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
-<<<<<<< HEAD
-  END SUBROUTINE init_usecase_quincy_13_pfts_for_coupling
+  END SUBROUTINE init_usecase_quincy_13_pfts
   ! --------------------------------------------------------------------------------------------------
   !> init routine for usecase quincy_13pS_pfts
   !>
@@ -1104,9 +1099,6 @@ CONTAINS
     IF (model%config%use_lakes)   NULLIFY(lake_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     END SUBROUTINE init_usecase_quincy_13pS_pfts
-=======
-  END SUBROUTINE init_usecase_quincy_13_pfts
->>>>>>> land4icon-mpim
 #endif
 
 #endif
