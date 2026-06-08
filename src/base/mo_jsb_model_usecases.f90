@@ -910,7 +910,6 @@ CONTAINS
   !> init routine for usecase quincy_13pS_pfts
   !>
   !>   works only in combination with 'model%config%model_scheme = MODEL_QUINCY'
-  !>     can run with either jsbach soil-physics processes or SPQ_
   !>
   !>   the data/lctlib_quincy_nlct14.def is used for this usecase (hardcoded in: mo_jsb_base:jsbach_setup_tiles)
   !>
@@ -995,73 +994,54 @@ CONTAINS
     !------------------------------------------------------------------------------------------------------ !
     ! land and lake tile
     !
-    IF (model%config%use_soil_phys_jsbach) THEN
-      IF (model%config%use_lakes) THEN
-        lake_tile => t_jsb_tile('lake', 'Lake tile', &
-          & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
-          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+    IF (model%config%use_lakes) THEN
+      lake_tile => t_jsb_tile('lake', 'Lake tile', &
+        & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
+        & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
         land_tile => t_jsb_tile('land', 'Land tile', &
-          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
-        !$ACC ENTER DATA COPYIN(lake_tile)
-      ELSE
-        land_tile => t_jsb_tile('land', 'Land tile', &
-          ! add processes here only to make model init and jsb4_forcing working
-          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          ! none of the tasks of these processes is running via task queue
-          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
-          & fract_varname='equal')   ! Fraction of land tile = 1
-                                     ! "equal" specifically means, no fraction input file is read and fraction is identical with above tile in hierarchy
-      END IF
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+        & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+     !$ACC ENTER DATA COPYIN(lake_tile)
     ELSE
       land_tile => t_jsb_tile('land', 'Land tile', &
         ! add processes here only to make model init and jsb4_forcing working
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
         ! none of the tasks of these processes is running via task queue
         & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
         & fract_varname='equal')   ! Fraction of land tile = 1
-                                   ! "equal" specifically means, no fraction input file is read and fraction is identical with above tile in hierarchy
+                                      ! "equal" specifically means, no fraction inpu
     END IF
-    !$ACC ENTER DATA COPYIN(land_tile)
+       !$ACC ENTER DATA COPYIN(land_tile)
 
     !------------------------------------------------------------------------------------------------------ !
     ! glacier tile
     !
-    IF (model%config%use_soil_phys_jsbach) THEN
-      IF (model%config%use_glacier) THEN
+    IF (model%config%use_glacier) THEN
         glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
           & processes = (/HYDRO_, SSE_/), &
           & process_actions = (/ON_TILE_, ON_TILE_/), &
           & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
           ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
         !$ACC ENTER DATA COPYIN(glacier_tile)
-      END IF
     END IF
 
     !------------------------------------------------------------------------------------------------------ !
     ! vegetation tile with PFT tiles as leafs
     !   fraction is "equal" because it is the only tile at this level (same as land tile)
     !
-    IF (model%config%use_soil_phys_jsbach) THEN
-      ! on veg tile:  SSE_ and HYDRO_
-      IF (model%config%use_glacier) THEN
-        veg_tile => t_jsb_tile('veg', 'Veg tile', &
-          & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_   /), &
-          & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_ /), &
-          & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-          & fract_varname='fract_veg')  ! fraction of land tile shared with glacier tile
-      ELSE
-        veg_tile => t_jsb_tile('veg', 'Veg tile', &
-          & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_   /), &
-          & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_ /), &
-          & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-          & fract_varname='equal')    ! fraction = 1.0
-      END IF
+    ! on veg tile:  SSE_ and HYDRO_
+    IF (model%config%use_glacier) THEN
+      veg_tile => t_jsb_tile('veg', 'Veg tile', &
+        & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_   /), &
+        & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_ /), &
+        & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+        & fract_varname='fract_veg')  ! fraction of land tile shared with glacier tile
     ELSE
       veg_tile => t_jsb_tile('veg', 'Veg tile', &
-        & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,       SEB_,      HYDRO_,     SPQ_      /), &
-        & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_, ON_LEAFS_,  ON_LEAFS_ /), &
+        & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SSE_,      HYDRO_   /), &
+        & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_,  ON_TILE_ /), &
         & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-        & fract_varname='equal')      ! fraction = 1.0
+        & fract_varname='equal')    ! fraction = 1.0
     END IF
     !$ACC ENTER DATA COPYIN(veg_tile)
 
