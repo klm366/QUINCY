@@ -215,12 +215,12 @@ CONTAINS
     NULLIFY(mem%GHG_atm_CO2%atm_vmr)
     NULLIFY(mem%GHG_atm_O2%atm_vmr)
 
-    CALL Init_chem_specie('CH4_dry',mem%CH4_dry,.FALSE.)
-    CALL Init_chem_specie('CH4_wet',mem%CH4_wet,.TRUE.,'ebul')
-    CALL Init_chem_specie('CO2_dry',mem%CO2_dry,.FALSE.)
-    CALL Init_chem_specie('CO2_wet',mem%CO2_wet,.FALSE.)
-    CALL Init_chem_specie('O2_dry', mem%O2_dry, .TRUE.)
-    CALL Init_chem_specie('O2_wet', mem%O2_wet, .TRUE.)
+    ! CALL Init_chem_specie('CH4_dry',mem%CH4_dry,.FALSE.)
+    ! CALL Init_chem_specie('CH4_wet',mem%CH4_wet,.TRUE.,'ebul')
+    ! CALL Init_chem_specie('CO2_dry',mem%CO2_dry,.FALSE.)
+    ! CALL Init_chem_specie('CO2_wet',mem%CO2_wet,.FALSE.)
+    ! CALL Init_chem_specie('O2_dry', mem%O2_dry, .TRUE.)
+    ! CALL Init_chem_specie('O2_wet', mem%O2_wet, .TRUE.)
 !    CALL Init_chem_specie('CH4_tot',mem%CH4_tot,.TRUE.,'ebul')
 
     CALL mem%Add_var( 'CH4_conc', mem%CH4_conc,                              &
