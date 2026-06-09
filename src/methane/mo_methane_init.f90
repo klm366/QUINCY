@@ -326,7 +326,7 @@ CONTAINS
     ! Determine distribution of roots in soil layers.
     ! NOTE: In case of dynamical roots, this should be moved into the time loop in update_methane
     !       and be changed from working on domain to chunk
-    IF (tile%is_vegetation) THEN
+    IF (tile%is_vegetation .AND. tile%lcts(1)%lib_id > 0) THEN
       DO j=1,nblks
         DO i=1,nproma
            CALL determine_root_dist(INT(mxlay_above_rock(i,j)+0.5_wp),layer%dz(:),layer%ubounds(:), &
