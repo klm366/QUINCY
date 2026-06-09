@@ -33,6 +33,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_assimi_memory_class,  ONLY: t_assimi_memory
   USE mo_pheno_memory_class,   ONLY: t_pheno_memory
   USE mo_rad_memory_class,     ONLY: t_rad_memory
+  USE mo_climbuf_memory_class, ONLY: t_climbuf_memory
   USE mo_carbon_memory_class,  ONLY: t_carbon_memory
   USE mo_disturb_memory_class, ONLY: t_disturb_memory
   USE mo_fuel_memory_class,    ONLY: t_fuel_memory
@@ -68,6 +69,8 @@ MODULE mo_jsb_process_factory_core
   USE mo_hd_interface,         ONLY: Register_hd_tasks
   USE mo_hd_config_class,      ONLY: t_hd_config
 #endif
+  USE mo_climbuf_interface,     ONLY: Register_climbuf_tasks
+  USE mo_climbuf_config_class,  ONLY: t_climbuf_config
   USE mo_carbon_interface,      ONLY: Register_carbon_tasks
   USE mo_carbon_config_class,   ONLY: t_carbon_config
   USE mo_disturb_interface,     ONLY: Register_disturb_tasks
@@ -101,7 +104,7 @@ MODULE mo_jsb_process_factory_core
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, &
+    & CLIMBUF_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, &
     & Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
   IMPLICIT NONE
@@ -181,6 +184,9 @@ CONTAINS
       CALL Register_hd_tasks(return_ptr, model_id)
       ALLOCATE(t_hd_config::return_ptr%config)
 #endif
+    CASE (CLIMBUF_)
+      CALL Register_climbuf_tasks(return_ptr, model_id)
+      ALLOCATE(t_climbuf_config::return_ptr%config)
     CASE (CARBON_)
       CALL Register_carbon_tasks(return_ptr, model_id)
       ALLOCATE(t_carbon_config::return_ptr%config)
@@ -266,6 +272,7 @@ CONTAINS
     USE mo_assimi_memory_class,  ONLY: max_no_of_assimi_vars => max_no_of_vars
     USE mo_pheno_memory_class,   ONLY: max_no_of_pheno_vars => max_no_of_vars
     USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
+    USE mo_climbuf_memory_class, ONLY: max_no_of_climbuf_vars => max_no_of_vars
     USE mo_carbon_memory_class,  ONLY: max_no_of_carbon_vars => max_no_of_vars
     USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
     USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
@@ -319,6 +326,9 @@ CONTAINS
       ALLOCATE(t_hd_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_hd_vars
 #endif
+    CASE (CLIMBUF_)
+      ALLOCATE(t_climbuf_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_climbuf_vars
     CASE (CARBON_)
       ALLOCATE(t_carbon_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_carbon_vars
