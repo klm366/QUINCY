@@ -1556,6 +1556,7 @@ CONTAINS
     lon        => grid%lon  (ics:ice, iblk)
 
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(SSE_)
 
     ! Variables used in terraplanet setup, i.e. in a land-only world without oceans
     ltpe_open = .FALSE.      ! Deep soils are artificially kept wet
@@ -3220,7 +3221,6 @@ CONTAINS
         fract_pond_old(ic) = fract_pond(ic)
       ELSE
         skinres_max(ic)    = 0._wp
-        fract_pond_old(ic) = 0._wp
       END IF
 
       !> Glaciers are entirely covered with snow. They do not have a wet fraction.

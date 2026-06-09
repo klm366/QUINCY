@@ -2947,14 +2947,14 @@ CONTAINS
           END IF
           IF (layer_below_saturated) THEN
             IF ((t_soil_sl(ic,is) < tmelt) .AND. .NOT. layer_below_unfrozen) THEN
-              water_table = water_table + dz
+              water_table(ic) = water_table(ic) + dz
             ELSE
               layer_below_unfrozen = .TRUE.
               IF (saturation > saturation_threshold) THEN
-                water_table = water_table + dz
+                water_table(ic) = water_table(ic) + dz
               ELSE
                 layer_below_saturated = .FALSE.
-                water_table = water_table + saturation * dz
+                water_table(ic) = water_table(ic) + saturation * dz
               ENDIF
             ENDIF
           ENDIF
