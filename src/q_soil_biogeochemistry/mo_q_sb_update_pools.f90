@@ -749,11 +749,11 @@ CONTAINS
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
       sb_pool_mt = sb_pool_mt + sb_formation_mt - sb_loss_mt + sb_transport_mt
 
-      IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
-        CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
-            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
-            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
-      END IF
+!      IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+!        CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
+!            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
+!            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
+!      END IF
     END IF
 
     !> 6.0 JSM:
@@ -773,9 +773,9 @@ CONTAINS
 
       !> 6.2 update fire disturbance flux pools
       IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
-        CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
-            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
-            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
+!        CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
+!            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
+!            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
         !sb_pool_mt = sb_pool_mt - sb_fire_emissions_mt
 
         !> 6.2.1 burned polymeric litter into polymeric

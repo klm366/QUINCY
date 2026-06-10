@@ -526,19 +526,19 @@ CONTAINS
         END DO
       END DO
 
-      IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
-        DO ic = 1, nc
-          DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
-            IF (model%config%is_element_used(id_elem)) THEN
-              ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
-              DO ix_comp = 1, nr_of_veg_bgcm_comp
-                veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
-                    veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
-              END DO ! ix_comp
-            END IF ! is_element_used(id_elem)
-          END DO ! id_elem
-        END DO ! ic
-      END IF ! flag_dfire
+!      IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+!        DO ic = 1, nc
+!          DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
+!            IF (model%config%is_element_used(id_elem)) THEN
+!              ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
+!              DO ix_comp = 1, nr_of_veg_bgcm_comp
+!                veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
+!                    veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
+!              END DO ! ix_comp
+!            END IF ! is_element_used(id_elem)
+!          END DO ! id_elem
+!        END DO ! ic
+!      END IF ! flag_dfire
 
       !>    1.8.1 ensure veg_pool does not become negative - quick-fix and debug
       !>

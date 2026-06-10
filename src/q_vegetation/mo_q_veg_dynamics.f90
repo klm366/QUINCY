@@ -589,7 +589,20 @@ CONTAINS
       ENDSELECT
     ENDSELECT ! veg_dynamics_scheme
 
-    !>2.0 calculate litter fall from mortality
+    !> 2.0 add fire disturbance into litterfall
+!    DO ic = 1, nc
+!      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+!        IF (is_element_used(ielem)) THEN
+!          ix_elem = elements_index_map(ielem)    ! get element index in bgcm
+!          DO ix_comp = 1, n_veg_bgcm_comp
+!            veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
+!                                                      veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
+!          END DO ! ix_comp = 1, n_veg_bgcm_comp
+!        END IF ! model%config%is_element_used(ielem)) THEN
+!     END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+!    END DO ! ic = 1, nc
+
+    !>3.0 calculate litter fall from mortality
     !>
     DO ic = 1,nc
       DO ix_comp = 1,n_veg_bgcm_comp
@@ -615,19 +628,6 @@ CONTAINS
         END DO
       END DO
     END DO
-
-    !> 3.0 add fire disturbance into litterfall
-    DO ic = 1, nc
-      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-        IF (is_element_used(ielem)) THEN
-          ix_elem = elements_index_map(ielem)    ! get element index in bgcm
-          DO ix_comp = 1, n_veg_bgcm_comp
-            veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
-                                                      veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
-          END DO ! ix_comp = 1, n_veg_bgcm_comp
-        END IF ! model%config%is_element_used(ielem)) THEN
-      END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-    END DO ! ic = 1, nc
   END SUBROUTINE calc_veg_mortality
 
   ! ======================================================================================================= !
