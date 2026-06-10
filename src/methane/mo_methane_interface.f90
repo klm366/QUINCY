@@ -427,12 +427,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_conc)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_conc)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_conc)
-    CALL methane_update_atm_GHG_conc(options,CH4_consts,dsl4jsb_Config(CH4_)%CH4_source,CH4_air, &
-                                     dsl4jsb_Config(CH4_)%CH4_conc,dsl4jsb_memory(CH4_)%GHG_atm_CH4,CH4_conc,dbg)
+    ! CALL methane_update_atm_GHG_conc(options,CH4_consts,dsl4jsb_Config(CH4_)%CH4_source,CH4_air, &
+    !                                  dsl4jsb_Config(CH4_)%CH4_conc,dsl4jsb_memory(CH4_)%GHG_atm_CH4,CH4_conc,dbg)
     CALL methane_update_atm_GHG_conc(options,CO2_consts,dsl4jsb_Config(CH4_)%CO2_source,CO2_air, &
                                      dsl4jsb_Config(CH4_)%CO2_conc,dsl4jsb_memory(CH4_)%GHG_atm_CO2,CO2_conc,.TRUE.)
-    CALL methane_update_atm_GHG_conc(options, O2_consts,dsl4jsb_Config(CH4_)%O2_source, O2_air, &
-                                     dsl4jsb_Config(CH4_)%O2_conc, dsl4jsb_memory(CH4_)%GHG_atm_O2,O2_conc,dbg)
+    ! CALL methane_update_atm_GHG_conc(options, O2_consts,dsl4jsb_Config(CH4_)%O2_source, O2_air, &
+    !                                  dsl4jsb_Config(CH4_)%O2_conc, dsl4jsb_memory(CH4_)%GHG_atm_O2,O2_conc,dbg)
 
     CALL get_date_components(options%current_datetime, year=year, hour=hour, minute=minute, second=sec)
     sec = sec + minute*60 + hour*3600
