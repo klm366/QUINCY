@@ -1347,7 +1347,7 @@ CONTAINS
 !      IF ((cover_type== 2) .OR. (cover_type== 3) .OR. &:
 !          (cover_type==10) .OR. &                      : PhenologyType == 2 (raingreen)
 !          (cover_type==13) .OR. (cover_type==16))      : C4Flag
-  PURE SUBROUTINE calc_methane_termites(is_crop, frac_tile, GPP, GDD, min_mmtemp20, GPP_dep_termites, &
+  PURE SUBROUTINE calc_methane_termites(is_crop, frac_tile, GPP, GDD, min_mmtemp_20yr, GPP_dep_termites, &
                                         termite_biomass, CH4_out_termite, frac_non_crop, sum_non_crop)
 
     USE mo_methane_constants,      ONLY: molarMassCO2_kg, molarMassCH4_kg, molarMassC_kg
@@ -1357,7 +1357,7 @@ CONTAINS
     REAL(wp),           INTENT(in)    :: frac_tile          ! Fraction of tile
     REAL(wp),           INTENT(in)    :: GPP                ! GPP of last year [mol(C) m-2 s-1]
     REAL(wp),           INTENT(in)    :: GDD                ! Growing degree days (of last year) [degC d]
-    REAL(wp),           INTENT(in)    :: min_mmtemp20       ! Long term minimum temperature [degC]
+    REAL(wp),           INTENT(in)    :: min_mmtemp_20yr       ! Long term minimum temperature [degC]
     LOGICAL,            INTENT(in)    :: GPP_dep_termites   ! Does termite biomass depend on GPP for this tile?
     REAL(wp),           INTENT(out)   :: termite_biomass    ! Biomass of termites [g m-2]
     REAL(wp),           INTENT(out)   :: CH4_out_termite    ! Methane production flux by termites [mol m-2 s-1]
@@ -1383,7 +1383,7 @@ CONTAINS
       ELSE
         ! non-tropical environment fixed termite biomass
         ! only if gddsum > 1200 and tmin > 3
-        IF ((min_mmtemp20-tmelt > 3._wp) .AND. (GDD > 1200._wp)) THEN
+        IF ((min_mmtemp_20yr-tmelt > 3._wp) .AND. (GDD > 1200._wp)) THEN
           termite_biomass = 3._wp
           termite_CH4_g_h = termite_biomass * efactor_CH4_TEM
         END IF
