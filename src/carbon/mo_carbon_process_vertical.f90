@@ -217,15 +217,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------
 
     ! setup: initialise variables
-    tmp_out_humus        = 0._wp
-    soilResp_oxic        = 0._wp
-    soilResp_anox        = 0._wp
-    soilResp_oxic_sl(:)  = 0._wp
-    soilResp_anox_sl(:)  = 0._wp
-    c_decomp_humus_1_sum = 0._wp
-    c_decomp_humus_2_sum = 0._wp
-    c_into_humus_1_sum   = 0._wp
-    c_into_humus_2_sum   = 0._wp
+    tmp_out_humus       = 0._wp
+    soilResp_oxic       = 0._wp
+    soilResp_anox       = 0._wp
+    soilResp_oxic_sl(:) = 0._wp
+    soilResp_anox_sl(:) = 0._wp
 
     ! get decomposition modifiers
     d_temp      = get_modifier_temp(temp)

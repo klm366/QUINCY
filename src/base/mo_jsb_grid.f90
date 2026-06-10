@@ -26,16 +26,22 @@ MODULE mo_jsb_grid
 
 CONTAINS
 
+  ! --------------------------------------------------------------------------------------------------------- !
+  !! Register a new horizontal grid.
+  !!
   SUBROUTINE Register_grid(grid)
 
-    TYPE(t_jsb_grid),  POINTER, INTENT(in)    :: grid
+    TYPE(t_jsb_grid),  POINTER, INTENT(in)    :: grid                            ! grid = pointer to grid
 
     INTEGER :: i, n
     TYPE(t_jsb_grid_ptr), ALLOCATABLE :: grids_temp(:)
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_grid:Register_grid'
 
-    IF (ALLOCATED(jsbach_grids)) THEN
+    ! If grid is new, add it to the list of horizontal grids (jsbach_grids)
+
+    ! Check if grid already exists
+    IF (ALLOCATED(jsbach_grids)) THEN                                            ! allocation of first grid (dim=1)
       DO i=1,SIZE(jsbach_grids)
         IF (ASSOCIATED(jsbach_grids(i)%p)) THEN
           IF (jsbach_grids(i)%p%id == grid%id) THEN
@@ -44,14 +50,14 @@ CONTAINS
         END IF
       END DO
       ! grid is new
-      n = SIZE(jsbach_grids)
-      ALLOCATE(grids_temp(n+1))
-      grids_temp(1:n) = jsbach_grids
-      grids_temp(n+1) = t_jsb_grid_ptr(grid)
-      CALL MOVE_ALLOC(grids_temp, jsbach_grids)
+      n = SIZE(jsbach_grids)                                                     ! check how many exist
+      ALLOCATE(grids_temp(n+1))                                                  ! reallocate with one entry more
+      grids_temp(1:n) = jsbach_grids                                             ! save already created grids
+      grids_temp(n+1) = t_jsb_grid_ptr(grid)                                     ! copy existing grid
+      CALL MOVE_ALLOC(grids_temp, jsbach_grids)                                  ! moves memeory from new to old
     ELSE
       ALLOCATE(jsbach_grids(1))
-      jsbach_grids(1) = t_jsb_grid_ptr(grid)
+      jsbach_grids(1) = t_jsb_grid_ptr(grid)                                     ! put grid in first component
     END IF
 
     CALL message(TRIM(routine), 'registered new JSBACH grid instance '//TRIM(grid%name))
@@ -59,8 +65,12 @@ CONTAINS
     ! !$ACC ENTER DATA CREATE(grid, grid%lat, grid%lon, grid%area, grid%lsm, grid%lsf)
     ! !$ACC UPDATE DEVICE(grid%lat, grid%lon, grid%area, grid%lsm, grid%lsf) ASYNC(1)
 
-  END SUBROUTINE Register_grid
+  END SUBROUTINE Register_grid                                                   ! all grids are now in jsb_grid.f90
 
+  ! --------------------------------------------------------------------------------------------------------- !
+  !>
+  !! Register a new vertical grid.
+  !!
   SUBROUTINE Register_vgrid(vgrid)
 
     USE mo_jsb_io_iface, ONLY: Create_zaxis
@@ -73,10 +83,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_grid:Register_vgrid'
 
+    ! If vgrid is new, add it to the list of vertical grids (mo_jsb_vertical_axes:jsbach_vgrids)
+
+    ! Check if vgrid already exists
     IF (ALLOCATED(jsbach_vgrids)) THEN
       DO i=1,SIZE(jsbach_vgrids)
         IF (ASSOCIATED(jsbach_vgrids(i)%p)) THEN
-          IF (jsbach_vgrids(i)%p%ZaxisID == vgrid%ZaxisID) THEN
+          IF (jsbach_vgrids(i)%p%ZaxisID == vgrid%ZaxisID) THEN ! ToDo this condition cannot be true and should be removed
             RETURN ! axis already exists and is already registered
           END IF
         END IF
@@ -94,6 +107,9 @@ CONTAINS
     vgrid%id = SIZE(jsbach_vgrids)
 
     length = vgrid%n_levels
+
+    ! Provide the vertical grid to CDI and get the ZaxisID in return
+    ! vgrid%cdi_axis_type' is one of many pre-defined axis types in ICON specified in new_vgrid() (e.g. 'ZAXIS_DEPTH_BELOW_LAND')
     CALL Create_zaxis(vgrid%ZaxisID, vgrid%echamZaxisIdx, &
       & vgrid%cdi_axis_type, length, vgrid%name, vgrid%levels(1:length), vgrid%units, vgrid%longname, &
       & vgrid%lbounds(1:length), vgrid%ubounds(1:length))
@@ -106,6 +122,9 @@ CONTAINS
     !$ACC WAIT(1)
   END SUBROUTINE Register_vgrid
 
+  ! --------------------------------------------------------------------------------------------------------- !
+  !! Return pointer to a horizontal grid selected by its id
+  !!
   FUNCTION Get_grid(id) RESULT(grid)
 
     INTEGER, INTENT(in)        :: id
@@ -116,9 +135,9 @@ CONTAINS
 
     grid => NULL()
     DO i=1,SIZE(jsbach_grids)
-      IF (ASSOCIATED(jsbach_grids(i)%p)) THEN
+      IF (ASSOCIATED(jsbach_grids(i)%p)) THEN                                                 ! search for grid in vector
         IF (jsbach_grids(i)%p%id == id) THEN
-          grid => jsbach_grids(i)%p
+          grid => jsbach_grids(i)%p                                                           ! pointer to grid
           EXIT
         END IF
       END IF
@@ -130,6 +149,10 @@ CONTAINS
 
   END FUNCTION Get_grid
 
+  ! --------------------------------------------------------------------------------------------------------- !
+  !>
+  !! Return pointer to a vertical grid selected by its name
+  !!
   FUNCTION Get_vgrid(name) RESULT(vgrid)
 
     USE mo_jsb_vertical_axes, ONLY: jsbach_vgrids

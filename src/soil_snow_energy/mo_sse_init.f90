@@ -86,15 +86,11 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
 #ifdef __QUINCY_STANDALONE__
-    model  => Get_model(tile%owner_model_id)
-    IF (model%config%use_soil_phys_jsbach) THEN
-      CALL qs_sse_init_bc(tile)
-      CALL sse_init_ic(tile)
-    END IF
+    CALL qs_sse_init_bc(tile)
+    CALL sse_init_ic(tile)
 #else
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL sse_read_init_vars(tile)

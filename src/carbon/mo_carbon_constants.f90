@@ -148,9 +148,9 @@ MODULE mo_carbon_constants
 
   ! ------------------------------------------------------------------------------------------
   ! Ratio of C mass to biomass (Spitfire and emission of chemical species by fire)
-  REAL(wp),  PARAMETER :: C_2_biomass_ratio = 0.5_wp
+  REAL(wp),  PARAMETER :: C_2_biomass_ratio = 0.5_wp  !< Conversion factor between SOC and SOM (Pribyl, 2010)
 
- !< organic matter [litter/duff?] bulk densities for below above and ground [kg/m3], see Chojnacky (2009), 0'Donnell (2009), (https://philbusey.com/sports_turf/organic_matter.html#table), Ahn (2009)
+  !< organic matter [litter/duff?] bulk densities for below above and ground [kg/m3], see Chojnacky (2009), 0'Donnell (2009), (https://philbusey.com/sports_turf/organic_matter.html#table), Ahn (2009)
   REAL(wp), PARAMETER ::  rho_org         = 100._wp
   REAL(wp), PARAMETER ::  rho_org_ag      =  75._wp
   REAL(wp), PARAMETER ::  rho_org_bg      = 150._wp

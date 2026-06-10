@@ -11,6 +11,8 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### Interface and routines to run a ICON-Land time step
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
@@ -32,7 +34,7 @@ MODULE mo_jsb_interface
   USE mo_quincy_model_config, ONLY: QLAND, QCANOPY, QSOIL
 #endif
   USE mo_jsb_subset,          ONLY: ON_CHUNK
-  USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
+  USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial
   USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_newday, get_year, &
       &                             is_time_experiment_start, is_time_restart, execute_quincy_sb_accelerator_this_timestep, &
       &                             executed_quincy_sb_accelerator_previous_timestep
@@ -62,7 +64,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Called by the host model (i.e. ICON) in simulations with atmospere
+  !> Called by the host model (i.e. ICON) in simulations with atmosphere
   !>
   !> @NOTE In standalone simulations 'mo_jsbach_model:jsbach_model' is called
   !>       and variables are provided via 'mo_jsbach_model:jsbach_model:get_standalone_driver'
@@ -70,7 +72,7 @@ CONTAINS
   SUBROUTINE interface_full( &
     & model_id,         &
     & iblk, ics, ice,   &
-    & current_datetime, &
+    & current_datetime, & !< in -- object containing date and time of the timestep we are working on
     & dtime,            &
     & t_air,            &
     & q_air,            &
@@ -249,14 +251,6 @@ CONTAINS
     model_scheme = model%config%model_scheme
 
     IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
-    ! ----------------------------------------------------------------------------------------------------- !
-
-!!$    WRITE(message_text, '(A,I4,A,I6,A,I6)') 'Updating '//TRIM(model%name)// &
-!!$      &                 ' for: block=', iblk, ', ics=', ics, ', ice=', ice
-!!$    CALL message(TRIM(routine), message_text, all_print=.TRUE.)
-!!$    p_pe = get_my_global_mpi_id()
-!!$    CALL message( TRIM(routine), 'Updating '//TRIM(model%name)//' on PE '//int2string(p_pe)// &
-!!$      &                          ', nblk='//int2string(iblk), all_print=.TRUE.)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 1.0 Update options
@@ -272,13 +266,13 @@ CONTAINS
     ! In case of quincy: check if model setup is supported
 #ifndef __NO_QUINCY__
     IF (model_scheme == MODEL_QUINCY) THEN
-      IF(.NOT. model%config%usecase == 'quincy_13_pfts_for_coupling') THEN
+      IF (.NOT. model%config%usecase == 'quincy_13_pfts') THEN
         CALL finish(TRIM(routine), 'The usecase currently to be used when running quincy coupled' &
-          &  //' would be quincy_13_pfts_for_coupling, not '// model%config%usecase)
+          &  //' would be quincy_13_pfts, but not '// model%config%usecase)
       END IF
 
 #ifdef _OPENACC
-      CALL finish(routine, 'Quincy has not been tested on GPU in coupled mode so far.')
+      CALL finish(routine, 'Quincy not ported to GPU in coupled mode, yet. Stop.')
 
       IF (model%config%qmodel_id /= QCANOPY) THEN
         CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
@@ -385,10 +379,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !> 5.0 messages
     !>
-!!$    IF (iblk == 1)                                                              &
-!!$      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//          &
-!!$      &                             ' on PE '//int2string(p_pe)//' completed.', &
-!!$      &              all_print=.TRUE.)
     IF (debug_on('basic') .AND. iblk == 1) &
       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
 
@@ -783,6 +773,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
 #ifndef __NO_QUINCY__
+    ! TBD: this is only required if restart or output is written for this timestep!
     ! BGCMs need to be copied back to the variables from the matrices on which calculations are conducted
     CALL model%Write_back_to_bgcms()
 #endif

@@ -22,7 +22,7 @@ MODULE mo_nlcc_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_climbuf, bioclim_limits, scale_fpc, potential_tree_fpc, calc_cover_fract_inst
+  PUBLIC :: bioclim_limits, scale_fpc, potential_tree_fpc, calc_cover_fract_inst
   PUBLIC :: fpc_to_cover_fract_pot, cover_fract_pot_to_cover_fract, desert_fraction, fpc_daily, fract_small
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_nlcc_process'
@@ -39,106 +39,6 @@ MODULE mo_nlcc_process
   REAL(wp), PARAMETER :: tau_desert = 50._wp       !! time constant [year] by which the extension of deserts is adapted
 
 CONTAINS
-  !
-  ! ===============================================================================================================================
-  !>
-  !! Compute running averages of climate variables for nlcc
-  !!
-
-  ELEMENTAL PURE SUBROUTINE calc_climbuf (lstart, init_running_means, new_day, new_month, new_year, delta_time, t_air, &
-                                          seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
-                                          min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20, &
-                                          snow_depth, max_snow_year, max_snow_prev_year,                              &
-                                          thaw_depth, max_thaw_year, max_thaw_prev_year,                              &
-                                          gdd_sum_year, gdd_prev_year)
-
-    LOGICAL, INTENT(in) :: lstart                 ! first time step in a simulation
-    LOGICAL, INTENT(in) :: init_running_means     ! initialize the min/max temperature climatology
-    LOGICAL, INTENT(in) :: new_day                ! first time step in a day
-    LOGICAL, INTENT(in) :: new_month              ! firest time step in a month
-    LOGICAL, INTENT(in) :: new_year               ! first time step in a year
-    REAL(wp), INTENT(in) :: delta_time            ! time step length [s]
-    REAL(wp), INTENT(in) :: seconds_day           ! lenght of a day [s]
-    REAL(wp), INTENT(in) :: seconds_month         ! length of the previous month [s]
-    REAL(wp), INTENT(in) :: t_air                 ! air temperature of lowest atmosphere level [K]
-    REAL(wp), INTENT(in) :: snow_depth            ! snow depth [m]
-    REAL(wp), INTENT(in) :: thaw_depth            ! thaw depth [m]
-    REAL(wp), INTENT(inout) :: temp_sum_day
-    REAL(wp), INTENT(inout) :: temp_sum_month
-    REAL(wp), INTENT(inout) :: min_mmtemp_of_yr   ! temperature of coldest month of previous year [K]
-    REAL(wp), INTENT(inout) :: max_mmtemp_of_yr   ! temperature of warmest month of previous year [K]
-    REAL(wp), INTENT(inout) :: min_mmtemp20       ! temperature of coldest month climatology [K]
-    REAL(wp), INTENT(inout) :: max_mmtemp20       ! temperature of warmest month climatology [K]
-    REAL(wp), INTENT(inout) :: max_snow_year      ! maximum snow depth in current year [m]
-    REAL(wp), INTENT(inout) :: max_snow_prev_year ! maximum snow depth in previous year [m]
-    REAL(wp), INTENT(inout) :: max_thaw_year      ! maximum thaw depth in current year [m]
-    REAL(wp), INTENT(inout) :: max_thaw_prev_year ! maximum thaw depth in previous year [m]
-    REAL(wp), INTENT(inout) :: gdd_sum_year       ! growing degree days of current year [C]
-    REAL(wp), INTENT(inout) :: gdd_prev_year      ! growing degree days of previous year [C]
-
-!   local variables
-    REAL(wp) :: prev_day_mean_temp                ! air temperature of previous day [K]
-    REAL(wp) :: prev_month_mean_temp              ! air temperature of previous month [K]
-    REAL(wp), PARAMETER :: averaging_time = 10.0_wp   ! [yrs] averaging time for thaw depth calculation
-
-    ! GDD
-    IF (new_year) THEN
-       gdd_prev_year = gdd_sum_year
-       gdd_sum_year = 0._wp
-    ENDIF
-
-    IF (.NOT. new_day .OR. lstart) THEN
-       temp_sum_day = temp_sum_day + t_air * delta_time
-    ELSE
-       prev_day_mean_temp = temp_sum_day / seconds_day
-       temp_sum_day = t_air * delta_time
-       gdd_sum_year = gdd_sum_year + MAX(0._wp,prev_day_mean_temp - tmelt - 5._wp)
-    ENDIF
-
-    ! snow depth
-    IF (.NOT. new_year .OR. lstart) THEN
-       max_snow_year = MAX(max_snow_year, snow_depth)
-    ELSE
-       max_snow_prev_year = max_snow_year
-       max_snow_year = 0._wp
-       max_snow_year = MAX(max_snow_year, snow_depth)
-    ENDIF
-
-    ! thaw depth
-    IF (.NOT. new_year .OR. lstart) THEN
-       max_thaw_year = MAX(max_thaw_year, thaw_depth)
-    ELSE
-!        max_thaw_prev_year = max_thaw_year
-       max_thaw_prev_year = (((averaging_time-1.0_wp)/averaging_time)*max_thaw_prev_year) + ((1.0_wp/averaging_time)*max_thaw_year)
-       max_thaw_year = 0._wp
-       max_thaw_year = MAX(max_thaw_year, thaw_depth)
-    ENDIF
-
-    IF (.NOT. new_month .OR. lstart) THEN
-       temp_sum_month = temp_sum_month + t_air * delta_time
-    ELSE
-       prev_month_mean_temp = temp_sum_month / seconds_month
-       temp_sum_month = t_air * delta_time
-       ! --- minimum/maximum monthly mean temperature (20 year climatology)
-       ! --- calculate coldest/warmest month of the year so far
-       min_mmtemp_of_yr = min(min_mmtemp_of_yr, prev_month_mean_temp)
-       max_mmtemp_of_yr = max(max_mmtemp_of_yr, prev_month_mean_temp)
-       IF (new_year) THEN
-          ! --- build 20yr running mean of coldest and warmest monthly temperature
-          IF (init_running_means) THEN
-             min_mmtemp20 = min_mmtemp_of_yr
-             max_mmtemp20 = max_mmtemp_of_yr
-          ELSE
-             min_mmtemp20 = (min_mmtemp20 * 19._wp + min_mmtemp_of_yr) / 20._wp
-             max_mmtemp20 = (max_mmtemp20 * 19._wp + max_mmtemp_of_yr) / 20._wp
-          ENDIF
-          ! --- reset for current year
-          min_mmtemp_of_yr =  1000._wp
-          max_mmtemp_of_yr = -1000._wp
-       END IF ! new_year
-    END IF ! new_month
-
-  END SUBROUTINE calc_climbuf
 
 ! --- bioclim_limits ---------------------------------------------------------------------------------------
 
