@@ -728,7 +728,6 @@ CONTAINS
         NPP_pot_sum(ic)         = NPP_pot_rate_ca(ic)
         GPP_sum(ic)             = gross_assimilation_ca(ic)
         !NPP_pot_rate_ca_acc(ic)        = NPP_pot_rate_ca(ic)/tmp_timesteps_per_day ! s.o.
-
       END DO
       !$ACC END PARALLEL LOOP
 

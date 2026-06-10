@@ -215,34 +215,6 @@ macros = {
         re.compile(r"dsl4jsb_var_ptr *\((.*?)_ *, *(.*?) *\)", re.IGNORECASE),
         r"\1__mem%\2%ptr",
     ],
-    "def_pool": [
-        re.compile(r"dsl4jsb_Def_pool *\((.*?) *\)", re.IGNORECASE),
-        r"TYPE(\1), POINTER",
-    ],
-    "get_pool": [
-        re.compile(
-            r"dsl4jsb_Get_pool *\((.*?)_ *, *(.*?) *, *(.*?) *\)", re.IGNORECASE
-        ),
-        r"\3 => \1__mem%\2",
-    ],
-    "get_pool_var2d_onchunk": [
-        re.compile(
-            r"dsl4jsb_Get_pool_var2D_onChunk *\((.*?)_ *, *(.*?) *, *(.*?) *\)",
-            re.IGNORECASE,
-        ),
-        r"\3 => \1__mem%\2%\3%ptr(ics:ice,iblk)",
-    ],
-    "get_pool_var3d_onchunk": [
-        re.compile(
-            r"dsl4jsb_Get_pool_var3D_onChunk *\((.*?)_ *, *(.*?) *, *(.*?) *\)",
-            re.IGNORECASE,
-        ),
-        r"\3 => \1__mem%\2%\3%ptr(ics:ice,:,iblk)",
-    ],
-    "pool": [
-        re.compile(r"dsl4jsb_pool *\((.*?)_ *, *(.*?) * *\)", re.IGNORECASE),
-        r"\1__mem%pools%\2",
-    ],
     "def_mt1l2d": [
         re.compile(r"dsl4jsb_Def_mt1L2D", re.IGNORECASE),
         r"REAL(wp), POINTER, DIMENSION(:,:)",

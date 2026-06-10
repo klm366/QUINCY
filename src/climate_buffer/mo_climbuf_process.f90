@@ -177,7 +177,6 @@ CONTAINS
 
     temp_15d   = t_air         * N_15d  +  F_15d * temp_15d
     precip_15d = (rain + snow) * N_15d  +  F_15d * precip_15d
-    ! TODO: Check, if these yDay variables are actually needed
     IF (new_day .AND. .NOT. lstart) THEN
       ! Save previous day variables (for yasso)
       temp_15d_yDay   = temp_15d
@@ -201,7 +200,7 @@ CONTAINS
     !  ---------------------
     persist = persist_rel_hum ** (dtime/seconds_day)
     q_rel_air_14d = q_rel_air_14d * persist + q_rel_air * (1._wp - persist)
-    ! Save previous day variables (for cbalance forcing) - TODO: still needed?
+    ! Save previous day variables
     IF (new_day .AND. .NOT. lstart) THEN
       q_rel_air_14d_yDay = q_rel_air_14d
     END IF
