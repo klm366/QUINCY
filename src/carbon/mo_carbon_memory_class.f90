@@ -41,12 +41,6 @@ MODULE mo_carbon_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_carbon_memory
 
     ! cbalance_type variables
-    TYPE(t_jsb_var_real3d) ::     &
-      pseudo_t_soil_sl,           & ! a proxy for 15-day mean soil temperature, [K] needed with yasso
-      pseudo_t_soil_sl_yDay,      &
-      pseudo_wtr_soil_rel_sl,     & ! a proxy for 15-day mean relative soil moisture needed with yasso
-      pseudo_wtr_soil_rel_sl_yDay
-
     TYPE(t_jsb_var_real2d) ::     &
       cconservation_calcCpools,   & ! Carbon conservation test: Deviation from conservation [mol(C)/m^2(grid box)]
       cflux_c_greenwood_2_litter, & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
@@ -320,53 +314,15 @@ CONTAINS
 
     model => Get_model(model_id)
 
+    dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(CARBON_)
+
     table = tables(1)
 
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
-
-    dsl4jsb_Get_config(PHENO_)
-    dsl4jsb_Get_config(CARBON_)
-
-    hgrid   => Get_grid(mem%grid_id)
-    surface => Get_vgrid('surface')
-
     IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
       soil_c  => Get_vgrid('soil_depth_carbon')
-    END IF
-
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
-      CALL mem%Add_var('pseudo_t_soil_sl', mem%pseudo_t_soil_sl,                                                   &
-        & hgrid, soil_c,                                                                                           &
-        & t_cf('pseudo_t_soil_sl', 'K', 'Pseudo-mean soil temperature over previous 15 days'),                     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
-        & prefix, suffix,                                                                                          &
-        & output_level=FULL,                                                                                       &
-        & lrestart=.TRUE., initval_r=285.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
-      CALL mem%Add_var('pseudo_t_soil_sl_yDay', mem%pseudo_t_soil_sl_yDay,                                              &
-        & hgrid, soil_c,                                                                                           &
-        & t_cf('pseudo_t_soil_sl_yDay', 'K', 'Yesterdays Pseudo-mean soil temperature over previous 15 days'),          &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
-        & prefix, suffix,                                                                                          &
-        & output_level=FULL,                                                                                       &
-        & lrestart=.TRUE., initval_r=285.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
-      CALL mem%Add_var('pseudo_wtr_soil_rel_sl', mem%pseudo_wtr_soil_rel_sl,                                       &
-        & hgrid, soil_c,                                                                                           &
-        & t_cf('pseudo_wtr_soil_rel_sl', '1', 'Pseudo-mean soil relative water over previous 15 days'),            &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
-        & prefix, suffix,                                                                                          &
-        & output_level=FULL,                                                                                       &
-        & lrestart=.TRUE., initval_r=0._wp, l_aggregate_all=.TRUE. )
-
-      CALL mem%Add_var('pseudo_wtr_soil_rel_sl_yDay', mem%pseudo_wtr_soil_rel_sl_yDay,                                  &
-        & hgrid, soil_c,                                                                                           &
-        & t_cf('pseudo_wtr_soil_rel_sl_yDay', '1', 'Yesterdays Pseudo-mean relative soil water over previous 15 days'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
-        & prefix, suffix,                                                                                          &
-        & output_level=FULL,                                                                                       &
-        & lrestart=.TRUE., initval_r=0._wp, l_aggregate_all=.TRUE. )
     END IF
 
     ! Carbon variables on canopy area

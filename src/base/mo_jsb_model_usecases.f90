@@ -32,7 +32,6 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE !, BARE_TYPE   ! define the type of the tile
-!  USE mo_test_pools,          ONLY: test_pools                                                  ! to debug and test pools implementation
 
   IMPLICIT NONE
   PRIVATE
@@ -673,8 +672,6 @@ CONTAINS
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile, fage_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
-
-    ! CALL test_pools()
 
   END SUBROUTINE init_usecase_pfts_with_forest_age_classes
 

@@ -49,7 +49,6 @@ MODULE mo_jsb_config_class
   !> `elements_index_map(:)`, and `is_element_used(:)` variables needed
   !> in the model config? They are not configurable!
   !>
-  !> @TODO `l_transient_spinup` is a temporary solution for `model%config%options`.
   !>
   TYPE t_jsb_model_config
 
@@ -98,7 +97,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: include_carbon13      !< bgc materials contain C13
     LOGICAL                        :: include_carbon14      !< bgc materials contain C14
     LOGICAL                        :: include_nitrogen15    !< bgc materials contain N15
-
+    LOGICAL                        :: l_spinup              !< Running a spin-up simulation
     ! TODO: Are the `nr_of_elements`, `nr_of_used_elements`,
     ! `elements_index_map(:)`, and `is_element_used(:)` variables needed
     ! in the model config? They are not configurable!
@@ -108,16 +107,12 @@ MODULE mo_jsb_config_class
     LOGICAL, ALLOCATABLE           :: is_element_used(:)    !< Vector(ID) == .TRUE. if "element with ID" is used
 
     ! Spinup accelerator for the slow soil biogeorchemical (sb) pools
-    LOGICAL ::  flag_slow_sb_pool_spinup_accelerator           !< Accelerate slow pool turnover (for spinup)
+    LOGICAL ::  flag_slow_sb_pool_spinup_accelerator           !< Accelerate slow pool turnover (for spin-up)
     INTEGER ::  slow_sb_pool_spinup_accelerator_frequency      !< Frequency of spin-up accelerator runs [years]
     INTEGER ::  slow_sb_pool_spinup_accelerator_length         !< Number of time loops in spin-up accelerator
     INTEGER ::  slow_sb_pool_spinup_accelerator_start_year     !< Year of the first spin-up accelerator runs
     INTEGER ::  slow_sb_pool_spinup_accelerator_max_executions !< Maximum number of spin-up accelerator runs
 #endif
-
-    ! Option only used with quincy standalone:
-    ! TODO `l_transient_spinup` is a temporary solution for `model%config%options`
-    LOGICAL           :: l_transient_spinup            !< true: we are in quincy standalone spinup
 
     ! Initialization from ECMWF Integrated Forecast System (IFS) analysis data
     LOGICAL                        :: init_from_ifs            !< Initialize from IFS analysis
@@ -233,6 +228,7 @@ CONTAINS
     LOGICAL :: include_carbon13                                   !< C13 is element in bgc_material
     LOGICAL :: include_carbon14                                   !< C14 is element in bgc_material
     LOGICAL :: include_nitrogen15                                 !< N15 is element in bgc_material
+    LOGICAL :: l_spinup                                           !< Running a spin-up simulation
     LOGICAL :: flag_slow_sb_pool_spinup_accelerator               !< Accelerate slow pool turnover during spin-up
     INTEGER :: slow_sb_pool_spinup_accelerator_frequency          !< Frequency of spin-up accelerator runs [years]
     INTEGER :: slow_sb_pool_spinup_accelerator_length             !< The length (loop times) of spin-up accelerator
@@ -271,6 +267,7 @@ CONTAINS
       include_carbon13, &
       include_carbon14, &
       include_nitrogen15, &
+      l_spinup, &
       flag_slow_sb_pool_spinup_accelerator, &
       slow_sb_pool_spinup_accelerator_frequency, &
       slow_sb_pool_spinup_accelerator_length, &
@@ -333,6 +330,7 @@ CONTAINS
     include_carbon13           = .TRUE.
     include_carbon14           = .TRUE.
     include_nitrogen15         = .TRUE.
+    l_spinup                   = .FALSE.
     flag_slow_sb_pool_spinup_accelerator    = .FALSE.
     slow_sb_pool_spinup_accelerator_frequency = 100
     slow_sb_pool_spinup_accelerator_length = 1000
@@ -408,6 +406,7 @@ CONTAINS
     model_config%include_carbon13           = include_carbon13
     model_config%include_carbon14           = include_carbon14
     model_config%include_nitrogen15         = include_nitrogen15
+    model_config%l_spinup                   = l_spinup
     ! The logicals are used to set up a bookkeeping list for the elements
     CALL setup_element_index_map_in_config(model_config, routine)
     model_config%flag_slow_sb_pool_spinup_accelerator   = flag_slow_sb_pool_spinup_accelerator
@@ -456,11 +455,8 @@ CONTAINS
 #endif
 
     !>
-    !> @TODO Find a final solution of the quincy standalone assignement of `model_config%l_transient_spinup`,
     !> `model_config%init_from_ifs`, and `model_config%ifs_filename`.
     !>
-    model_config%l_transient_spinup           = .FALSE.
-
     model_config%init_from_ifs              = init_from_ifs
     model_config%ifs_filename               = TRIM(ifs_filename)
     model_config%is_single_site             = is_single_site

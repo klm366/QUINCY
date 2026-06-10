@@ -147,7 +147,7 @@ CONTAINS
     CALL mem%Add_var( 'q_rel_air_14d_yday', mem%q_rel_air_14d_yday,                       &
       & hgrid, surface,                                                                   &
       & t_cf('q_rel_air_14d_yday', '%',                                                   &
-      & 'Relative humiditiy of lowest air layer smoothed in time at the end of the previous day.'), &
+      & "Previous day's relative humiditiy of lowest air layer smoothed in time."),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & lrestart=.FALSE., initval_r=50.0_wp )
@@ -177,7 +177,7 @@ CONTAINS
 
     CALL mem%Add_var('temp_sum_day', mem%temp_sum_day,                                    &
       & hgrid, surface,                                                                   &
-      & t_cf('temp_sum_day', 'Ks', 'Sum of air temperature (to calculate average)'),      &
+      & t_cf('temp_sum_day', 'Ks', 'Accumulated air temperature (to calculate average)'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & lrestart=.TRUE., initval_r=0.0_wp)

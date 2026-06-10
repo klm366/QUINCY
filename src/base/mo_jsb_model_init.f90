@@ -1043,6 +1043,11 @@ CONTAINS
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(CARBON_)) THEN
+          ! In some cases, it is necessary to read the carbon pools (again) from a file instead of
+          ! using the values from the restart file, e.g. during a spinup run where the humus pools
+          ! are equilibrated with an external script. In this case, `read_cpools` can be set to
+          ! true in a restarted run and the carbon pools will be read from the file after the
+          ! restart file has been read, thus overwriting the values from the restart file.
           IF (dsl4jsb_Config(CARBON_)%read_cpools) CALL carbon_read_cpools(tile)
         END IF
         IF (dsl4jsb_Config(HYDRO_)%sanitize_restart .AND. &

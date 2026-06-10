@@ -324,9 +324,8 @@ CONTAINS
        DO itile = 1,no_children
           CALL bioclim_limits (is_dynamic(:,itile), bclimit_min_cold_mmtemp(:,itile), bclimit_max_cold_mmtemp(:,itile),    &
                                bclimit_max_warm_mmtemp(:,itile), bclimit_min_temprange(:,itile), bclimit_min_gdd(:,itile), &
-                               bclimit_min_snow(:,itile), &
-                               min_mmtemp_20yr(:), max_mmtemp_20yr(:), max_snow_prev_year(:), gdd_prev_year(:),    &
-                               bio_exist(:,itile))
+                               bclimit_min_snow(:,itile), min_mmtemp_20yr(:), max_mmtemp_20yr(:), max_snow_prev_year(:),   &
+                               gdd_prev_year(:), bio_exist(:,itile))
        ENDDO
        IF (.NOT. lstart) THEN
           CALL potential_tree_fpc (nc, no_children, is_dynamic(:,:), is_woody(:,:), bio_exist(:,:), &
