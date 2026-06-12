@@ -57,6 +57,7 @@ year_end=2920        # last year of that period
 nyear_restart=1      # number of years within one restart cycle
 with_NLCC=false            # T: Simulation uses natural land cover change
 use_vertical_carbon=false  # T: Simulation done with carbon on soil layers
+use_hydrotiles=false       # T: Simulation done with hydrotile usecase
 pfts=( 01 02 03 04 05 06 07 08 09 10 11 12 )
 
 clean_up=true        # remove ${work} if script ran successfully
@@ -106,64 +107,71 @@ else
   ${cp} ${path_restart}/${restartToModify} ${work}/tmp_restart.nc
 fi
 
+if [[ ${use_hydrotiles} == true ]]; then
+  phyt="_ct1 _ct2 _ct3 _ct4"
+else
+  phyt=''
+
 echo ""
 echo " Diagnose equilibrium humus pools"
 # loop over pfts
-for ipft in ${pfts[@]}; do
-  echo "   pft${ipft} ..."
+for ihyt in ${phyt}; do
+  for ipft in ${pfts[@]}; do
+    echo "   pft${ipft}${ihyt} ..."
 
-  if [[ ${with_NLCC} == true ]]; then
-    # if with natural LCC: collect the information only once and for the veg tile
-    fortile=veg
-    if [[ ${ipft} == ${pfts[0]} ]]; then
-      calcFactors=true
+    if [[ ${with_NLCC} == true ]]; then
+      # if with natural LCC: collect the information only once and for the veg tile
+      fortile=veg${ihyt}
+      if [[ ${ipft} == ${pfts[0]} ]]; then
+        calcFactors=true
+      else
+        calcFactors=false
+      fi
     else
-      calcFactors=false
+      # collect it for the specific pft
+      fortile=pft${ipft}${ihyt}
+      calcFactors=true
     fi
-  else
-    # collect it for the specific pft
-    fortile=pft${ipft}
-    calcFactors=true
-  fi
 
-  # Generate a list of all restart files in the given time period to determine the
-  # average fluxes to and from the humus pools and the average decomposition rates.
-  if [[ ${calcFactors} == true ]]; then
-    # List of restart files
-    restart_files=""
-    year=${year_start}
-    while [ ${year} -le ${year_end} ] ; do
-      restart_files="${restart_files} ${path_restart}/${restartPrefix}${year}${restartSuffix}.nc"
-      (( year = year + 1 ))
-    done
+    # Generate a list of all restart files in the given time period to determine the
+    # average fluxes to and from the humus pools and the average decomposition rates.
+    if [[ ${calcFactors} == true ]]; then
+      # List of restart files
+      restart_files=""
+      year=${year_start}
+      while [ ${year} -le ${year_end} ] ; do
+        restart_files="${restart_files} ${path_restart}/${restartPrefix}${year}${restartSuffix}.nc"
+        (( year = year + 1 ))
+      done
 
-    # Extract fluxes to and from the humus pools from the list of restart files
-    humus_fluxes="carbon_c_decomp_humus_1_sum_ta_${fortile},carbon_c_decomp_humus_2_sum_ta_${fortile},carbon_c_into_humus_1_sum_ta_${fortile},carbon_c_into_humus_2_sum_ta_${fortile}"
-    ${cdo} -timmean -mergetime -apply,-selname,${humus_fluxes} [ ${restart_files} ] \
-           ${work}/humus_pools_${year_start}-${year_end}.nc
+      # Extract fluxes to and from the humus pools from the list of restart files
+      humus_fluxes="carbon_c_decomp_humus_1_sum_ta_${fortile},carbon_c_decomp_humus_2_sum_ta_${fortile},carbon_c_into_humus_1_sum_ta_${fortile},carbon_c_into_humus_2_sum_ta_${fortile}"
+      ${cdo} -timmean -mergetime -apply,-selname,${humus_fluxes} [ ${restart_files} ] \
+             ${work}/humus_pools_${year_start}-${year_end}.nc
 
-    # Calculate factors to equilibrate humus pools
-    ${cdo} -setmisstoc,1 -expr,"factor_humus1=carbon_c_into_humus_1_sum_ta_${fortile}/carbon_c_decomp_humus_1_sum_ta_${fortile}" \
-           ${work}/humus_pools_${year_start}-${year_end}.nc   ${work}/factor_humus_1.nc
-    ${cdo} -setmisstoc,1 -expr,"factor_humus2=carbon_c_into_humus_2_sum_ta_${fortile}/carbon_c_decomp_humus_2_sum_ta_${fortile}" \
-           ${work}/humus_pools_${year_start}-${year_end}.nc   ${work}/factor_humus_2.nc
-  fi
+      # Calculate factors to equilibrate humus pools
+      ${cdo} -setmisstoc,1 -expr,"factor_humus1=carbon_c_into_humus_1_sum_ta_${fortile}/carbon_c_decomp_humus_1_sum_ta_${fortile}" \
+             ${work}/humus_pools_${year_start}-${year_end}.nc   ${work}/factor_humus_1.nc
+      ${cdo} -setmisstoc,1 -expr,"factor_humus2=carbon_c_into_humus_2_sum_ta_${fortile}/carbon_c_decomp_humus_2_sum_ta_${fortile}" \
+             ${work}/humus_pools_${year_start}-${year_end}.nc   ${work}/factor_humus_2.nc
+    fi
 
-  # Calculate equilibrium humus pools for the current pft
-  if [[ ${use_vertical_carbon} == true ]]; then
-    ${cdo} -mul -selvar,carbon_c_humus_1_sl_pft${ipft} ${path_restart}/${restartToModify} ${work}/factor_humus_1.nc \
-            ${work}/c_H1_eq_pft${ipft}_sl.nc
-    ${cdo} -mul -selvar,carbon_c_humus_2_sl_pft${ipft} ${path_restart}/${restartToModify} ${work}/factor_humus_2.nc \
-            ${work}/c_H2_eq_pft${ipft}_sl.nc
-  fi
-    ${cdo} -mul -selvar,carbon_c_humus_1_pft${ipft} ${path_restart}/${restartToModify} ${work}/factor_humus_1.nc \
-            ${work}/c_H1_eq_pft${ipft}.nc
-    ${cdo} -mul -selvar,carbon_c_humus_2_pft${ipft} ${path_restart}/${restartToModify} ${work}/factor_humus_2.nc \
-            ${work}/c_H2_eq_pft${ipft}.nc
+    # Calculate equilibrium humus pools for the current pft
+    if [[ ${use_vertical_carbon} == true ]]; then
+      ${cdo} -mul -selvar,carbon_c_humus_1_sl_pft${ipft}${ihyt} ${path_restart}/${restartToModify} ${work}/factor_humus_1.nc \
+              ${work}/c_H1_eq_pft${ipft}${ihyt}_sl.nc
+      ${cdo} -mul -selvar,carbon_c_humus_2_sl_pft${ipft}${ihyt} ${path_restart}/${restartToModify} ${work}/factor_humus_2.nc \
+              ${work}/c_H2_eq_pft${ipft}${ihyt}_sl.nc
+    fi
+      ${cdo} -mul -selvar,carbon_c_humus_1_pft${ipft}${ihyt} ${path_restart}/${restartToModify} ${work}/factor_humus_1.nc \
+              ${work}/c_H1_eq_pft${ipft}${ihyt}.nc
+      ${cdo} -mul -selvar,carbon_c_humus_2_pft${ipft}${ihyt} ${path_restart}/${restartToModify} ${work}/factor_humus_2.nc \
+              ${work}/c_H2_eq_pft${ipft}${ihyt}.nc
 
-  if [[ ${with_NLCC} == false ]]; then
-    ${rm} ${work}/factor_humus_?.nc
-  fi
+    if [[ ${with_NLCC} == false ]]; then
+      ${rm} ${work}/factor_humus_?.nc
+    fi
+  done
 done
 
 # Replace newly calculated humus pools in the restart file
