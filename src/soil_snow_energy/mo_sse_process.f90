@@ -357,6 +357,7 @@ CONTAINS
     & enforce_water_budget,               &
     & t_soil_top,                         &
     & vol_heat_cap, heat_cond,            &
+    & lat_hflx,                           &
     & t_soil_sl,                          &
     & t_soil_acoef, t_soil_bcoef,         &
     & hcap_grnd, grnd_hflx,               &
@@ -388,6 +389,7 @@ CONTAINS
     REAL(wp), INTENT(in)    ::  t_soil_top(:)            !! surface temperature at top of soil [K]
     REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
     REAL(wp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
+    REAL(wp), INTENT(in)    ::  lat_hflx(:,:)            !! Lateral heat flux [J m-2 s-1]
 
     REAL(wp), INTENT(inout) ::  t_soil_sl(:,:)           !! soil temperature [K]
     REAL(wp), INTENT(inout) ::  t_soil_acoef(:,:)        !! soil A coefficient of Richtmyer and Morton scheme
@@ -502,6 +504,16 @@ CONTAINS
       END DO
       !$ACC END LOOP
       !$ACC END PARALLEL
+
+      ! Adding lateral heat fluxes if LEX is active, otherwise `lat_hflx` is zero
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO ic=1,nc
+        DO is = 1, nsoil
+          t_soil_sl(ic,is) = t_soil_sl(ic,is) &
+                         & + lat_hflx(ic,is) / heat_cap(ic,is) * delta_time
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
 
       ! Phase change calculations
       IF (l_freeze .AND. PRESENT(wtr)) THEN

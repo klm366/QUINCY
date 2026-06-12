@@ -44,7 +44,7 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_varlist,      ONLY: NONE, MINIMUM, BASIC, MEDIUM, FULL
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes HYDRO_, SSE_, SEB_
+  dsl4jsb_Use_processes HYDRO_, SSE_, SEB_, LEX_
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_processes ASSIMI_
 #endif
@@ -53,6 +53,7 @@ MODULE mo_hydro_memory_class
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_config(LEX_)
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_config(ASSIMI_)
 #endif
@@ -104,7 +105,10 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & elevation,            & !< Topographic height                                    [m]
       & oro_stddev,           & !< Standard deviation of the orography                   [m]
-      & steepness               !< Parameter defining subgrid scale slope                []
+      & steepness,            & !< Parameter defining subgrid scale slope                []
+      & char_area,            & !< characteristic area of tile                           [m2]
+      & char_h_surf,          & !< characteristic surface elevation of tile              [m]
+      & macro_slope             !< macro scale slope of tile                             []
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
@@ -142,6 +146,7 @@ MODULE mo_hydro_memory_class
       & fract_wet,            & !< Wet tile fraction (skin and ponds; soil and canopy)   []
       & fract_skin,           & !< Wet skin fraction (w/o ponds; soil and canopy)        []
       & wtr_skin,             & !< Water content in skin reservoir (soil and canopy)     [m]
+      & new_snow_soil,        & !< New snow on soil at non-glacier/non-lake land points  [m water equivalent]
       & snow_accum,           & !< Change in snow amount on non-glacier/non-lake land
                                 !< tiles                                   [m water equivalent / (time step)]
       & evapotrans_soil,      & !< Evapotranspiration from soil (w/o snow, skin or pond
@@ -160,8 +165,10 @@ MODULE mo_hydro_memory_class
       & wtr_latflow_res_srf,  & !< Water content of intermediary reservoir representing
                                 !< lateral flow of surface runoff (only with
                                 !< [[t_hydro_config:hydro_scale=Uniform]])               [m]
-      & wtr_latflow_srf         !< Outflow from the intermediary reservoir representing
+      & wtr_latflow_srf,      & !< Outflow from the intermediary reservoir representing
                                 !< lateral flow of surface runoff                        [kg m-2 s-1]
+      & water_to_soil_lex,    & !< Infiltratable water from connected tile               [m]
+      & wtr_lex_net_srf         !< Lateral exchange with connected tiles on the surface  [kg m-2 s-1]
 
     TYPE(t_jsb_var_real3d) :: &
       & vol_field_cap_sl,     & !< Volumetric soil field capacity                        [m/m]
@@ -191,8 +198,9 @@ MODULE mo_hydro_memory_class
       & wtr_latflow_res_sl,   & !< Water content of intermediary reservoir representing
                                 !< lateral flow of subsurface runoff (only with
                                 !< [[t_hydro_config:hydro_scale=Uniform]])               [m]
-      & wtr_latflow_sl          !< Outflow from the intermediary reservoir representing
+      & wtr_latflow_sl,       & !< Outflow from the intermediary reservoir representing
                                 !< lateral flow of subsurface runoff                     [kg m-2 s-1]
+      & wtr_lex_net_sl          !< Lateral exchange with connected tiles on soil layers  [kg m-2 s-1]
 
     TYPE(t_jsb_var_real2d) :: &
       & wtr_plant_avail_rel, &  !< relative plant available water (difference between saturation and PWP in root zone) [unitless]
@@ -293,6 +301,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)              !< Configurable settings of the hydrology process
     dsl4jsb_Def_config(SSE_)                !< Configurable settings of the soil and snow energy process
     dsl4jsb_Def_config(SEB_)                !< Configurable settings of surface energy balance process
+    dsl4jsb_Def_config(LEX_)
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_config(ASSIMI_)             !< Configurable settings of the assimilation process
 #endif
@@ -303,11 +312,14 @@ CONTAINS
       &                           soil_w        !< Vertical grid for soil hydrology
 
     INTEGER :: table                            !< Grib code table ID
+    INTEGER :: pond_output_level                !< Output level for pond vars (depends on [[t_hydro_config:l_ponds]])
+    INTEGER :: lex_output_level                 !< Output level for LEX vars (depends on [[t_lex_config:active]])
     TYPE(t_grib2) :: grib2_desc                 !< Grib2 related metadata
 
     REAL(wp) :: ini_snow_dens                   !< Initial value for snow density
     LOGICAL  :: l_ponds                         !< Abreviation: Local variable for [[t_hydro_config:l_ponds]]
     LOGICAL  :: l_uniform                       !< Abreviation: True if [[t_hydro_config:hydro_scale]]=Uniform
+    LOGICAL  :: l_lex                           !< Abreviation: Local variable for [[t_lex_config:active]]
     LOGICAL  :: lrestart_local                  !< add var to restart file, model specific (quincy/jsbach)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hydro_memory'
@@ -323,6 +335,7 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_config(SEB_)
+    dsl4jsb_Get_config(LEX_)
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Get_config(ASSIMI_)
 #endif
@@ -341,6 +354,19 @@ CONTAINS
       l_uniform = .FALSE.
     END IF
     l_ponds = dsl4jsb_Config(HYDRO_)%l_ponds
+    l_lex = dsl4jsb_Config(LEX_)%active
+
+    ! Define output levels for pond and LEX variables
+    IF (l_ponds) THEN
+      pond_output_level = BASIC
+    ELSE
+      pond_output_level = NONE
+    END IF
+    IF (l_lex) THEN
+      lex_output_level = BASIC
+    ELSE
+      lex_output_level = NONE
+    END IF
 
     ! set local lrestart switch to TRUE for the MODEL_QUINCY
     lrestart_local = .FALSE.
@@ -563,6 +589,27 @@ CONTAINS
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
     END IF
 
+    CALL mem%Add_var( 'char_area', mem%char_area,                                    &
+      & hgrid, surface,                                                              &
+      & t_cf('char_area', 'm2', 'characteristic area of tile'),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'char_h_surf', mem%char_h_surf,                                &
+      & hgrid, surface,                                                              &
+      & t_cf('char_h_surf', 'm', 'characteristic surface elevation of tile'),        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'macro_slope', mem%macro_slope,                                &
+      & hgrid, surface,                                                              &
+      & t_cf('macro_slope', '/', 'macro scale slope of tile'),                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
     ! Additional variables if the tile contains land, i.e. the tile or sub-tiles are land tiles
     ! ------------------------------------------------
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
@@ -647,9 +694,9 @@ CONTAINS
 
     ! Additional variables if the tile contains soil (i.e. non-glacier land)
     ! ------------------------------------------------
-    IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
-      &   .OR. One_of(BARE_TYPE, lct_ids(:)) > 0 &
-      &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
+    IF ( (     One_of(VEG_TYPE,  lct_ids(:))    > 0 &
+      &   .OR. One_of(BARE_TYPE, lct_ids(:))    > 0 &
+      &   .OR. One_of(LAND_TYPE, lct_ids(:))    > 0 &
       &  ) ) THEN
 
       CALL mem%Add_var( 'soil_depth', mem%soil_depth,                          &
@@ -905,6 +952,14 @@ CONTAINS
         & output_level=BASIC,                                                       &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      CALL mem%Add_var( 'new_snow_soil', mem%new_snow_soil,                         &
+        & hgrid, surface,                                                           &
+        & t_cf('new_snow_soil', 'm (water equivalent)',                             &
+        &      'Amount of new snow on the soil within the time step'),              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
       CALL mem%Add_var( 'snow_accum', mem%snow_accum,                               &
         & hgrid, surface,                                                           &
         & t_cf('snow_accum', 'm (water equivalent)',                                &
@@ -1089,6 +1144,14 @@ CONTAINS
         & prefix, suffix, lrestart=.FALSE.,                                                   &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      CALL mem%Add_var( 'wtr_lex_net_sl', mem%wtr_lex_net_sl,                                           &
+         & hgrid, soil_w,                                                                               &
+        & t_cf('wtr_lex_net_sl', 'kg m-2 s-1', 'Lateral exchange with connected tiles on soil layers'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
+        & prefix, suffix,                                                                               &
+        & output_level=lex_output_level,                                                                &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
       CALL mem%Add_var( 'wtr_latflow_res_srf', mem%wtr_latflow_res_srf,             &
         & hgrid, surface,                                                           &
         & t_cf('wtr_latflow_res_srf', 'm', 'Water content of latflow res. srf.'),   &
@@ -1102,6 +1165,22 @@ CONTAINS
         & t_cf('wtr_latflow_srf', 'kg m-2 s-1', 'Outflow from latflow res. srf'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix, lrestart=.FALSE.,                                         &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'water_to_soil_lex', mem%water_to_soil_lex,                   &
+        & hgrid, surface,                                                             &
+        & t_cf('water_to_soil_lex', 'm', 'Infiltratable water from connected tiles'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
+        & prefix, suffix,                                                             &
+        & output_level=lex_output_level,                                              &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_lex_net_srf', mem%wtr_lex_net_srf,                                         &
+        & hgrid, surface,                                                                               &
+        & t_cf('wtr_lex_net_srf', 'kg m-2 s-1', 'Lateral exchange with connected tiles on the surface'),&
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
+        & prefix, suffix,                                                                               &
+        & output_level=lex_output_level,                                                                &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('wtr_rootzone_rel', mem%wtr_rootzone_rel,                         &
@@ -1118,6 +1197,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & output_level=pond_output_level,                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'weq_pond', mem%weq_pond,                                      &
@@ -1126,6 +1206,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=l_ponds, lrestart_cont=.TRUE.       ,                               &
+        & output_level=pond_output_level,                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_pond', mem%wtr_pond,                                      &
@@ -1197,8 +1278,9 @@ CONTAINS
 
     ! Additional variables if the tile contains vegetation
     ! --------------------------
-    IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
-      &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
+    IF ( (     One_of(VEG_TYPE,  lct_ids(:))    > 0 &
+      &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
+      &   .OR. One_of(LAND_TYPE, lct_ids(:))    > 0 &
       &  ) ) THEN
 
       CALL mem%Add_var( 'root_depth', mem%root_depth,                                    &

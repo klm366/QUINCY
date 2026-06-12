@@ -147,6 +147,13 @@ macros = {
         ),
         r"\2 => \1__mem__\3%\2%ptr(ics:ice,:,iblk)",
     ],
+    "get_var3d_onchunk_tile_name": [
+        re.compile(
+            r"dsl4jsb_Get_var3D_onChunk_tile_name *\((.*?)_ *, *(.*?) *, *(.*?) *\)",
+            re.IGNORECASE,
+        ),
+        r"\2_\3 => \1__mem__\3%\2%ptr(ics:ice,:,iblk)",
+    ],
     "var2d_onchunk": [
         re.compile(r"dsl4jsb_var2D_onChunk *\((.*?)_ *, *(.*?) *\)", re.IGNORECASE),
         r"\1__mem%\2%ptr(ics:ice,iblk)",
@@ -161,6 +168,10 @@ macros = {
     "var3d_onchunk": [
         re.compile(r"dsl4jsb_var3D_onChunk *\((.*?)_ *, *(.*?) *\)", re.IGNORECASE),
         r"\1__mem%\2%ptr(ics:ice,:,iblk)",
+    ],
+    "var3d_onchunk_tile_name" : [
+        re.compile(r"dsl4jsb_var3D_onChunk_tile_name *\((.*?)_ *, *(.*?) *, *(.*?) *\)", re.IGNORECASE),
+        r'\1__mem__\3%\2%ptr(ics:ice,:,iblk)'
     ],
     "real2d_ondomain": [
         re.compile(r"dsl4jsb_Real2D_onDomain", re.IGNORECASE),

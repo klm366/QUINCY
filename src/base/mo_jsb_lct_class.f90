@@ -65,6 +65,7 @@ MODULE mo_jsb_lct_class
     CHARACTER(LEN=30) :: long_name = ""       !< Long name for lct
     REAL(wp), POINTER :: fract(:,:) => NULL() !< Cover fraction of this lct (relative to tile that owns this lct)
     INTEGER           :: lib_id               !< Id of lct in lctlib
+    INTEGER           :: lex_id               !< Id of lct for lateral exchange between tiles
   CONTAINS
     PROCEDURE :: Get_name     => Get_lct_type_name
     PROCEDURE :: Get_longname => Get_lct_type_longname
@@ -83,12 +84,13 @@ CONTAINS
   !
   !> Constructor for t_jsb_lct
   !
-  FUNCTION Construct_jsb_lct(id, name, long_name, lib_id) RESULT(return_value)
+  FUNCTION Construct_jsb_lct(id, name, long_name, lib_id, lex_id) RESULT(return_value)
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(in)                    :: id            !< the lct type id
     CHARACTER(LEN=*), INTENT(in), OPTIONAL :: name          !< the name of this lct
     CHARACTER(LEN=*), INTENT(in), OPTIONAL :: long_name     !< a long name for this lct
     INTEGER,          INTENT(in), OPTIONAL :: lib_id        !< in case of PFTs the id in the lctlib file
+    INTEGER,          INTENT(in), OPTIONAL :: lex_id        !< (lateral exchange) position in connection matrix
     TYPE(t_jsb_lct)                        :: return_value  !< the new instance
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':Construct_jsb_lct'
@@ -111,6 +113,12 @@ CONTAINS
       return_value%lib_id = lib_id
     ELSE
       return_value%lib_id = 0
+    END IF
+
+    IF (PRESENT(lex_id)) THEN
+      return_value%lex_id = lex_id
+    ELSE
+      return_value%lex_id = 0
     END IF
 
   END FUNCTION Construct_jsb_lct

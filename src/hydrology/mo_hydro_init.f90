@@ -43,8 +43,9 @@ MODULE mo_hydro_init
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
   USE mo_util,               ONLY: int2string, soil_init_from_texture, read_bc_data
 
-  dsl4jsb_Use_processes HYDRO_
+  dsl4jsb_Use_processes HYDRO_, LEX_
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(LEX_)
   dsl4jsb_Use_memory(HYDRO_)
 
 #ifdef __QUINCY_STANDALONE__
@@ -149,6 +150,9 @@ MODULE mo_hydro_init
       & fr_clay_deep     (:,:) => NULL(), & !< fraction of clay for deep soil index []
       & ifs_smi_sl     (:,:,:) => NULL(), & !< volumetric soil water (soil moisture index) from IFS []
       & ifs_weq_snow     (:,:) => NULL(), & !< snow on surface from IFS [m water equivalent]
+      & char_area        (:,:) => NULL(), & !< characteristic average size of tile features (e.g. depressions) [m2]
+      & char_h_srf       (:,:) => NULL(), & !< vertical offset of tile surface [m]
+      & char_slope       (:,:) => NULL(), & !< macro-scale slope of tile []
       & soil_sat_water_content(:,:) => NULL(), &  !< saturated water content (awc)
       & soil_theta_prescribe(:,:)   => NULL()     !< soil theta necessary for calc intial root-zone soil water
   END TYPE t_hydro_init_vars
@@ -171,29 +175,43 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< current tile
 
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
+    dsl4jsb_Def_config(LEX_)                                        !< Configurable parameters of the LEX process
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(LEX_)
 
 #ifdef __QUINCY_STANDALONE__
     CALL qs_hydro_read_init_vars(tile)
     CALL qs_hydro_init_ic_bc(tile)
     CALL hydro_finalize_init_vars()
 #else
-    ! Read initial and boundary condition data by the top tile, only.
-    ! Note: this requires that the init routines in mo_jsb_model_init:jsbach_init are called starting
-    !       from the top tile!
-    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN  ! This is the top tile.
+    IF (dsl4jsb_Config(LEX_)%active) THEN
+      ! Read initial and boundary conditions on each tile, in case tile-specific fields are provided.
       CALL hydro_read_init_vars(tile)
-    END IF
+      CALL hydro_init_bc(tile)
+      CALL hydro_init_ic(tile)
+      CALL hydro_finalize_init_vars()  ! TODO: Is this necessary? Or should it be done like below.
+    ELSE
+      ! Read initial and boundary condition data by the top tile, only.
+      ! Note: this requires that the init routines in mo_jsb_model_init:jsbach_init are called starting
+      !       from the top tile!
+      IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN  ! This is the top tile.
+        CALL hydro_read_init_vars(tile)
+      END IF
 
-    ! Set soil properties (on all tiles)
-    CALL hydro_init_bc(tile)
+      ! Set soil properties (on all tiles)
+      CALL hydro_init_bc(tile)
 
-    ! Set soil initial conditions (on all tiles)
-    CALL hydro_init_ic(tile)
+      ! Set soil initial conditions (on all tiles)
+      CALL hydro_init_ic(tile)
 
-    ! Finalize hydrology initialization after the last tile has been initialized
-    IF (tile%Is_last_process_tile(HYDRO_)) THEN
-      CALL hydro_finalize_init_vars()
+      ! Finalize hydrology initialization after the last tile has been initialized
+      IF (tile%Is_last_process_tile(HYDRO_)) THEN
+        CALL hydro_finalize_init_vars()
+      END IF
     END IF
 #endif
   END SUBROUTINE hydro_init
@@ -221,7 +239,13 @@ CONTAINS
       & hydro_init_vars%fract_org_sl    ,       &
       & hydro_init_vars%fract_pond_max  ,       &
       & hydro_init_vars%depth_pond_max  ,       &
-      & hydro_init_vars%weq_snow_soil)
+      & hydro_init_vars%weq_snow_soil           &
+      & )
+
+
+    IF (ASSOCIATED(hydro_init_vars%char_area))    DEALLOCATE(hydro_init_vars%char_area)
+    IF (ASSOCIATED(hydro_init_vars%char_h_srf))   DEALLOCATE(hydro_init_vars%char_h_srf)
+    IF (ASSOCIATED(hydro_init_vars%char_slope))   DEALLOCATE(hydro_init_vars%char_slope)
 
     IF (ASSOCIATED(hydro_init_vars%elevation))    DEALLOCATE(hydro_init_vars%elevation)
     IF (ASSOCIATED(hydro_init_vars%fr_sand))      DEALLOCATE(hydro_init_vars%fr_sand)
@@ -873,6 +897,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile      !< Current tile
 
     dsl4jsb_Def_config(HYDRO_)                  !< Configurable parameters of the HYDRO process
+    dsl4jsb_Def_config(LEX_)                    !< Configurable parameters of the LEX process
 
     REAL(wp), POINTER :: &
       & ptr_1D(:    ),   &                      !< Pointer to 1d variable
@@ -899,6 +924,11 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(HYDRO_)
+
+    IF (tile%Is_process_active(LEX_)) THEN
+      ! Get lateral exchange config
+      dsl4jsb_Get_config(LEX_)
+    END IF
 
     grid   => Get_grid(model%grid_id)
     nproma = grid%Get_nproma()
@@ -945,6 +975,16 @@ CONTAINS
       hydro_init_vars%weq_snow_soil  (:,:)   = missval     ! TODO only needed for init_from_ifs == .FALSE.
 
     ! Further memory allocation - depending on the setup
+
+    ! Setting initial variables for connected tiles
+    IF (tile%Is_process_active(LEX_)) THEN
+      ALLOCATE(hydro_init_vars%char_area(nproma, nblks))
+      ALLOCATE(hydro_init_vars%char_h_srf(nproma, nblks))
+      ALLOCATE(hydro_init_vars%char_slope(nproma, nblks))
+      hydro_init_vars%char_area(:,:)  = missval
+      hydro_init_vars%char_h_srf(:,:) = missval
+      hydro_init_vars%char_slope(:,:) = missval
+    END IF
 
     ! TODO only necessary for l_socmap == .TRUE.
     ALLOCATE(hydro_init_vars%fract_org_sl(nproma, nsoil, nblks))
@@ -996,16 +1036,29 @@ CONTAINS
 
     CALL read_bc_data(input_file, 'orostd', tile%name, hydro_init_vars%oro_stddev, llimit=0._wp)
 
-    !>     - Maximum fraction and depth of local surface depressions needed with the ponds scheme
-    IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. .NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
-      IF (input_file%Has_var('surf_depr_fract') .AND. input_file%Has_var('surf_depr_depth')) THEN
+    !>    - Maximum fraction and depth of local surface depressions needed with the ponds scheme
+    IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
+      IF (tile%Is_process_active(LEX_)) THEN
+        ! TODO there is a LEX config switch that allows for fractional ponds in depression. This
+        ! needs to be implemented later.
+        CALL read_bc_data(input_file, 'char_area',  tile%name, hydro_init_vars%char_area,  &
+          &  llimit=0._wp, fallback=10000._wp)
+        CALL read_bc_data(input_file, 'char_h_srf', tile%name, hydro_init_vars%char_h_srf, &
+          &  fallback=0._wp)
+        CALL read_bc_data(input_file, 'char_slope', tile%name, hydro_init_vars%char_slope, &
+          &  llimit=0._wp, fallback=-9999._wp)
+        ! Reset LEX l_dpr4ponds switch in case that tile specific depression data is provided
+        IF (input_file%Has_var('surf_depr_fract_'//TRIM(tile%name)) .AND. &
+          & input_file%Has_var('surf_depr_depth_'//TRIM(tile%name))) THEN
+          dsl4jsb_Config(LEX_)%l_dpr4ponds = .FALSE.
+        END IF
+      END IF
+
+      IF (dsl4jsb_Config(HYDRO_)%l_ponds .OR. tile%Is_process_active(LEX_)) THEN
         ! Use depression area fraction as maximum pond fraction
         CALL read_bc_data(input_file, 'surf_depr_fract', tile%name, hydro_init_vars%fract_pond_max, llimit=0._wp)
         ! Use depression depth as maximum pond depth (Attention: Values are negative!)
         CALL read_bc_data(input_file, 'surf_depr_depth', tile%name, hydro_init_vars%depth_pond_max, ulimit=0._wp)
-      ELSE
-        CALL finish(TRIM(routine), '*** Error: surf_depr_fract and/or surf_depr_depth not found in bc_sso file. '// &
-          & 'Pond scheme cannot run without these fields')
       END IF
     END IF
 
@@ -1267,6 +1320,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
     dsl4jsb_Def_config(HYDRO_)                        !< Configuration of the HYDRO process
+    dsl4jsb_Def_config(LEX_)                          !< Configuration of the LEX process
     dsl4jsb_Def_memory(HYDRO_)                        !< Memory of the HYDRO process
 
     TYPE(t_jsb_model), POINTER :: model               !< Current instance of ICON-Land
@@ -1301,6 +1355,7 @@ CONTAINS
     nproma = grid%nproma
 
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(LEX_)
     dsl4jsb_Get_memory(HYDRO_)
 
 #ifndef __NO_QUINCY__
@@ -1342,11 +1397,46 @@ CONTAINS
         & dsl4jsb_var_ptr(HYDRO_, steepness  ) (:,i)    &
         & )
     END DO
+    !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, steepness)) ASYNC(1)
+    !$ACC WAIT(1)
+
+    !>     - Topographic features relevant for lateral exchange between connected tiles
+    IF (tile%Is_process_active(LEX_)) THEN
+      dsl4jsb_var_ptr(HYDRO_, char_area)   = hydro_init_vars%char_area(:,:)
+      dsl4jsb_var_ptr(HYDRO_, char_h_surf) = hydro_init_vars%char_h_srf(:,:)
+      dsl4jsb_var_ptr(HYDRO_, macro_slope) = hydro_init_vars%char_slope(:,:)
+      ! Assigning macro-slope in case no tile-specific input was provided (init var is -9999.9)
+      IF (dsl4jsb_Config(LEX_)%l_noslope_dpr) THEN
+        ! Assuming zero slope on depression tiles (char_h_surf < 0.0) ...
+        WHERE ((dsl4jsb_var_ptr(HYDRO_, macro_slope) < 0.0_wp) .AND. &
+          &    (dsl4jsb_var_ptr(HYDRO_, char_h_surf) < 0.0_wp))
+          dsl4jsb_var_ptr(HYDRO_, macro_slope) = 0.0_wp
+        ! ... and steepness elsewhere
+        ELSE WHERE (dsl4jsb_var_ptr(HYDRO_, macro_slope) < 0.0_wp)
+          dsl4jsb_var_ptr(HYDRO_, macro_slope) = dsl4jsb_var_ptr(HYDRO_, steepness)
+        END WHERE
+      ELSE
+        ! Using Steepness
+        WHERE (dsl4jsb_var_ptr(HYDRO_, macro_slope) < 0.0_wp )
+          dsl4jsb_var_ptr(HYDRO_, macro_slope) = dsl4jsb_var_ptr(HYDRO_,steepness)
+        END WHERE
+      END IF
+    END IF
 
     !>     - Maximum depth and extent of surface water ponds
     IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
-
-      IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
+      IF (tile%Is_process_active(LEX_) .AND. dsl4jsb_Config(LEX_)%l_dpr4ponds) THEN
+        WHERE (dsl4jsb_var_ptr(HYDRO_, char_h_surf) < 0.0_wp)
+          ! Maximum pond fraction is set to 1 for depressions and 0 for non-depressions.
+          !   Note, surface elevation is given as negative value for depressions, but represent
+          !   a storage on top of the soil --> needs to be converted to positive values!
+          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 1.0_wp
+          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = dsl4jsb_var_ptr(HYDRO_, char_h_surf)  * (-1._wp)
+        ELSEWHERE
+          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0.0_wp
+          dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0.0_wp
+        END WHERE
+      ELSE IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
         ! Surface depression depth is given as negative value in the data, but represents
         ! a storage on top of the soil and thus needs to be converted to positive values.
         dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
@@ -1359,6 +1449,13 @@ CONTAINS
         dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0._wp
       END IF
     END IF
+
+    !$ACC UPDATE ASYNC(1) &
+    !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, fract_pond_max)), &
+    !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, weq_pond_max)),   &
+    !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, char_area)),      &
+    !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, char_h_surf)),    &
+    !$ACC   DEVICE(dsl4jsb_var_ptr(HYDRO_, macro_slope))
 
     IF (tile%contains_soil) THEN
 
@@ -1525,8 +1622,6 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, hyd_cond_sat)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_porosity)) &
       !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_org_sl)) &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_pond_max)), &
-      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, weq_pond_max)), &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, soil_depth))
 

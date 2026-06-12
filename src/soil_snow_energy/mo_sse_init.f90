@@ -28,8 +28,9 @@ MODULE mo_sse_init
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
   USE mo_util,               ONLY: int2string, soil_init_from_texture, read_bc_data
 
-  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
+  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_, LEX_
   dsl4jsb_Use_config(SSE_)
+  dsl4jsb_Use_config(LEX_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(SEB_)
@@ -86,21 +87,34 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
+
+    dsl4jsb_Def_config(LEX_)
 
 #ifdef __QUINCY_STANDALONE__
     CALL qs_sse_init_bc(tile)
     CALL sse_init_ic(tile)
 #else
-    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+    model => get_model(tile%owner_model_id)
+    dsl4jsb_Get_config(LEX_)
+
+    IF (dsl4jsb_Config(LEX_)%active) THEN
       CALL sse_read_init_vars(tile)
-    END IF
-
-    CALL sse_init_bc(tile)
-    CALL sse_init_ic(tile)
-
-    IF (tile%Is_last_process_tile(SSE_)) THEN
+      CALL sse_init_bc(tile)
+      CALL sse_init_ic(tile)
       CALL sse_finalize_init_vars()
+    ELSE
+      IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+        CALL sse_read_init_vars(tile)
+      END IF
+
+      CALL sse_init_bc(tile)
+      CALL sse_init_ic(tile)
+
+      IF (tile%Is_last_process_tile(SSE_)) THEN
+        CALL sse_finalize_init_vars()
+      END IF
     END IF
 #endif
   END SUBROUTINE sse_init

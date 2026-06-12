@@ -23,9 +23,10 @@ MODULE mo_jsb_model_usecases
 
   USE mo_exception,           ONLY: message, finish, message_text
 
+  USE mo_jsb_control,         ONLY: jsbach_runs_standalone
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                               CLIMBUF_, FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, &
+    &                               CLIMBUF_, FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, LEX_, &
     &                               Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
@@ -78,6 +79,10 @@ CONTAINS
     CASE ('jsbach_forest_age_classes')
       ! jsbach 11 PFTs + forest age-classes
       CALL init_usecase_pfts_with_forest_age_classes(model)
+
+    ! jsbach with hydrotiles
+    CASE ('jsbach_topolex')
+      CALL init_usecase_topolex(model)
 
 #ifndef __NO_QUINCY__
     ! QUINCY 13 PFTs
@@ -664,6 +669,169 @@ CONTAINS
 
   END SUBROUTINE init_usecase_pfts_with_forest_age_classes
 
+  ! ======================================================================================================= !
+  !> init routine for usecase jsbach_topolex
+  !>
+  !>   This usecase treats all tiles below the land tile individually with respect to hydrological and
+  !>   thermophysical processes on the land surface and accounts for lateral connections between the tiles.
+  !>   Here, the tile tree branches into several copys for, e.g. upland and lowland settings
+  !>   SEB is not run on the topo tiles but on the land tile.
+  !>
+  SUBROUTINE init_usecase_topolex(model)
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, &
+      & veg_tile, pft_tile
+
+    CHARACTER(len=5)  :: pft_shortnames(model%config%npft) !< Short names of the PFTs
+    CHARACTER(len=30) :: pft_longnames(model%config%npft)  !< Long names of the PFTs
+    INTEGER :: pft_ids(model%config%npft)                  !< IDs of PFTs in lctlib (shifted)
+    INTEGER :: i,t                                         !< Looping indexes
+
+    INTEGER, PARAMETER :: ncontis = 4
+
+    CHARACTER(len=7), PARAMETER :: conti_shortnames(ncontis) = [character(len=7)  ::  &
+      & 'ct1', 'ct2', 'ct3', 'ct4' ]
+
+    CHARACTER(len=50), PARAMETER :: conti_longnames(ncontis) = [character(len=50) :: &
+      & 'micro-ridges within upland fraction',      &
+      & 'micro-depressions within upland fraction', &
+      & 'micro-ridges within lowland fraction',     &
+      & 'micro-depressions within lowland fraction' ]
+
+    ! Index of tile in lateral coupling matrix
+    INTEGER, PARAMETER :: conti_ids(ncontis) = (/ 1,2,3,4 /)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
+
+    ! Define PFT names and indices depending on the number of PFTs
+    CALL set_jsbach_pfts(model%config%npft, pft_shortnames(:), pft_longnames(:), pft_ids(:))
+
+    ! overview of tile structure:
+    !
+    !  box
+    !   |
+    !   |-------
+    !   |      |
+    !  land  lakes
+    !   |
+    !   |---------------------------------------------------------------------------------------------
+    !   |                       |                         |                         |                |
+    !  veg_ct1                 veg_ct2                   veg_ct3                   veg_lct4         glacier
+    !   |                       |                         |                         |
+    !   |------------           |-------------            |-------------            |--------------
+    !   |           |           |            |            |            |            |             |
+    !  pft01_ct1   pftXX_ct1   pft01_ct2    pftXX_ct2    pft01_ct3    pftXX_ct3    pft01_ct4     pftXX_ct4
+    !
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', &
+      & processes      =(/A2L_,     L2A_,     RAD_  ,    TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+      & model_id=model%id, fract_varname='notsea')
+    model%top => box_tile
+    !$ACC ENTER DATA COPYIN(box_tile)
+
+#ifndef __NO_JSBACH_HD__
+    IF (model%processes(HD_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(HD_, ON_TILE_)
+    END IF
+#endif
+
+    IF (model%processes(PPLCC_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
+    END IF
+
+      IF (model%config%use_lakes) THEN
+        lake_tile => t_jsb_tile('lake', 'Lake tile', &
+          & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
+          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+        !$ACC ENTER DATA COPYIN(lake_tile, land_tile)
+      ELSE
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+          & fract_varname='equal')   ! Fraction = 1.
+        !$ACC ENTER DATA COPYIN(land_tile)
+      END IF
+
+        IF (model%config%use_glacier) THEN
+          glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
+            & processes       = (/HYDRO_,   SSE_/), &
+            & process_actions = (/ON_TILE_, ON_TILE_/), &
+            & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
+            ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+          !$ACC ENTER DATA COPYIN(glacier_tile)
+        END IF
+
+        ! Create identical tile trees for the different hydrological settings
+        DO t=1,ncontis
+
+          ! LEX_, HYDRO_ and SSE_ are active at veg tiles
+          veg_tile => t_jsb_tile('veg_'//TRIM(conti_shortnames(t)),           &
+            & 'Vegetation tile ('//TRIM(conti_longnames(t))//')',             &
+            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+            & lct=t_jsb_lct(VEG_TYPE, lex_id=conti_ids(t)), &
+            & parent=land_tile,  &
+            & fract_varname='fract_veg_'//TRIM(conti_shortnames(t)))
+          !$ACC ENTER DATA COPYIN(veg_tile)
+
+          IF (model%processes(LEX_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(LEX_, ON_TILE_, AGGREGATE_)
+          END IF
+
+          IF (model%processes(ALCC_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
+          END IF
+
+          ! Note: FLCC and WLCC are required for the fage usecase. Here, they can be activated for testing,
+          !   however, for the pft usecase it currently makes more sense using DISTURB without FLCC and WLCC
+          IF (model%processes(FLCC_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(FLCC_, ON_TILE_, AGGREGATE_)
+          END IF
+          IF (model%processes(WLCC_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
+          END IF
+
+          IF (model%processes(CLIMBUF_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
+          END IF
+          IF (model%processes(NLCC_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
+          END IF
+          !
+          IF (model%processes(CARBON_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
+          END IF
+          IF (model%processes(FUEL_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)
+          END IF
+          IF (model%processes(DISTURB_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
+          END IF
+
+          DO i=1,model%config%npft
+            pft_tile => t_jsb_tile(pft_shortnames(i)//'_'//TRIM(conti_shortnames(t)), &
+              & TRIM(pft_longnames(i)//' ('//TRIM(conti_longnames(t))//')'),          &
+              & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile,          &
+              & fract_varname='fract_'//pft_shortnames(i))
+            !$ACC ENTER DATA COPYIN(pft_tile)
+            NULLIFY(pft_tile)
+          END DO
+
+        ENDDO
+
+    NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
+    IF (model%config%use_glacier) NULLIFY(glacier_tile)
+    IF (model%config%use_lakes) NULLIFY(lake_tile)
+
+  END SUBROUTINE init_usecase_topolex
+
+  ! ======================================================================================================= !
   !>
   !> Set jsbach PFT names and indices
   !>

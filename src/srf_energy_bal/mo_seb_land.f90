@@ -1774,8 +1774,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)          ! in
     IF (.NOT. tile%is_lake .AND. .NOT. tile%is_glacier) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)          ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)            ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)        ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)          ! in
     END IF
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   sensible_hflx)       ! out

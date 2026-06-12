@@ -42,7 +42,7 @@ MODULE mo_hydro_interface
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_processes PHENO_
 #endif
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, A2L_, HYDRO_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, A2L_, HYDRO_, LEX_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -55,6 +55,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
+  dsl4jsb_Use_memory(LEX_)
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_memory(PHENO_)
 #endif
@@ -387,6 +388,7 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)       !< Memory of the soil and snow energy process
     dsl4jsb_Def_memory(SEB_)       !< Memory of process surface energy balance
     dsl4jsb_Def_memory(A2L_)       !< Memory of the atmosphere to land interface
+    dsl4jsb_Def_memory(LEX_)       !< Memory of the lateral exchange processes
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)     !< Memory of the phenology process
 #endif
@@ -407,6 +409,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_snow_soil      !< Amount of snow on the ground [m water equivalent]
     dsl4jsb_Real2D_onChunk :: snow_soil_dens     !< Snow density [kg m-3]
     dsl4jsb_Real2D_onChunk :: steepness          !< Parameter representing subgrid scale slopes []
+    dsl4jsb_Real2D_onChunk :: slope_eff          !< Effective slope used for lateral flow calculations []
+    dsl4jsb_Real2D_onChunk :: fact_lag_srf       !< Normalized lag for lateral surface fluxes [s-1]
     dsl4jsb_Real2D_onChunk :: fract_pond         !< Actual pond fraction []
     dsl4jsb_Real2D_onChunk :: fract_pond_max     !< Maximum pond fraction []
     dsl4jsb_Real2D_onChunk :: weq_pond_max       !< Maximum Water/ice in pond reservoir [m water equivalent]
@@ -417,6 +421,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: pond_melt          !< Amount of pond ice melting [m water equivalent]
     dsl4jsb_Real2D_onChunk :: wtr_pond_net_flx   !< Net water inflow into ponds [kg m-2 s-1]
     dsl4jsb_Real2D_onChunk :: weq_snow           !< Amount of snow [m water equivalent]
+    dsl4jsb_Real2D_onChunk :: new_snow_soil      !< Snowfall to soil within time step [m]
     dsl4jsb_Real2D_onChunk :: snow_accum         !< Snow budget change within time step [m water equivalent]
     dsl4jsb_Real2D_onChunk :: fract_snow         !< Snow cover fraction
     dsl4jsb_Real2D_onChunk :: weq_snow_can       !< Amount of snow on canopy [m water equivalent]
@@ -439,6 +444,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: drainage           !< Drainage [kg m-2 s-1]
     dsl4jsb_Real2D_onChunk :: runoff_glac        !< Runoff from glaciers [kg m-2 s-1]
     dsl4jsb_Real2D_onChunk :: water_to_soil      !< Water available for infiltration into the soil [m]
+    dsl4jsb_Real2D_onChunk :: water_to_soil_lex  !< Lateral surface water inflow from connected tiles [m]
     dsl4jsb_Real2D_onChunk :: weq_glac           !< Glacier depth [m water equivalent]
 
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl           !< Amount of soil water [m]
@@ -653,6 +659,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   fract_skin)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_skin)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   water_to_soil)    ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   water_to_soil_lex)! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   new_snow_soil)    ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   snow_accum)       ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapotrans_soil)  ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_skin)       ! out
@@ -694,8 +702,6 @@ CONTAINS
       END IF
     END IF
 
-    ! Set to true, until HydroTiles are implemented
-    l_latflow_to_streamflow = .TRUE.
 
     ! TODO: Is this needed?
     IF (is_experiment_start) THEN
@@ -764,12 +770,30 @@ CONTAINS
 
       !TODO: Move up to the other config parameter
       ret_macro_srf = dsl4jsb_Config(HYDRO_)%ret_macro_srf
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic=1,nc
-        slope_used(ic)   = steepness(ic)
-        flowlag_used(ic) = dtime / ret_macro_srf
-      END DO
-      !$ACC END PARALLEL LOOP
+
+      IF (tile%Is_process_calculated(LEX_)) THEN
+        ! Lateral flow is passed onto connected tiles based on effective slope and lag factor
+        l_latflow_to_streamflow = .FALSE.
+        dsl4jsb_Get_memory(LEX_)
+        dsl4jsb_Get_var2D_onChunk(LEX_, slope_eff)     ! in
+        dsl4jsb_Get_var2D_onChunk(LEX_, fact_lag_srf)  ! in
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic = 1, nc
+          slope_used(ic)   = slope_eff(ic)
+          flowlag_used(ic) = MIN(dtime * fact_lag_srf(ic), 0.5_wp)
+        END DO
+        !$ACC END PARALLEL LOOP
+      ELSE
+        ! No lateral flow to connected tiles, all surface runoff goes directly to streamflow
+        l_latflow_to_streamflow = .TRUE.
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic = 1, nc
+          slope_used(ic)        = steepness(ic)
+          flowlag_used(ic)      = dtime / ret_macro_srf
+          water_to_soil_lex(ic) = 0._wp
+        END DO
+        !$ACC END PARALLEL LOOP
+      END IF
 
       ! Calculate absolute layer values from the volumetric variables
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
@@ -939,6 +963,7 @@ CONTAINS
         & trans_tmp(:),                   & ! Transpiration [kg m-2 s-1]
         & rain(:),                        & ! Liquid precipitation [kg m-2 s-1]
         & snow(:),                        & ! Solid precipitation [kg m-2 s-1]
+        & water_to_soil_lex(:),           & ! Inflow from connected tiles exceeding the pond storage [m]
         & wpi_rootzone(:),                & ! Actual content of water plus ice in the root zone [m]
         & wpi_rootzone_max(:),            & ! Maximum possible content of water plus ice in the root zone [m]
         & wtr_soil(:),                    & ! Soil water content until bedrock (aggregated from soil layers) [m]
@@ -955,6 +980,7 @@ CONTAINS
         & le_pc_remain(:),                & ! (Remaining) latent energy for phase change [J m-2]
         ! out
         & q_snocpymlt(:),                 & ! Heating due to snow melt on canopy [W m-2]
+        & new_snow_soil(:),               & ! New snow on the soil within time step [m water equivalent]
         & snow_accum(:),                  & ! Snow budget change within time step [m water equivalent]
         & snowmelt(:),                    & ! Snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
         & pond_freeze(:),                 & ! Amount of water freezing within ponds [kg m-2 s-1]
@@ -1085,6 +1111,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, snowmelt,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, q_snocpymlt,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_glac,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, new_snow_soil,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_accum,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_soil_dens,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_soil,     weighted_by_fract)
@@ -1092,6 +1119,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_snow,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_pond,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_soil,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_soil_lex,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,              weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,              weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff_horton,       weighted_by_fract)
@@ -1452,6 +1480,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)                   !< Configurable parameters of the hydrology process
     dsl4jsb_Def_memory(HYDRO_)                   !< Variables of the hydrology process
     dsl4jsb_Def_memory(SSE_)                     !< Variables of the "snow and snow energy" process
+    dsl4jsb_Def_memory(LEX_)                     !< Variables of the "lateral exchange" process
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_memory(Q_ASSIMI_)
 #endif
@@ -1634,15 +1663,23 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    ! Set to true, until HydroTiles are implemented
-    l_latflow_to_streamflow = .TRUE.
-    ret_macro_blg = dsl4jsb_Config(HYDRO_)%ret_macro_blg
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic = 1, nc
-      slope_used(ic)   = steepness(ic)
-      flowlag_used(ic) = dtime / ret_macro_blg
-    END DO
-    !$ACC END PARALLEL LOOP
+    IF (tile%Is_process_calculated(LEX_)) THEN
+      ! Lateral flow is passed onto connected tiles based on effective slope and lag factor
+      l_latflow_to_streamflow = .FALSE.
+      dsl4jsb_Get_memory(LEX_)
+      slope_used   = dsl4jsb_var2D_onChunk (LEX_, slope_eff)
+      flowlag_used = MIN(dtime * dsl4jsb_var2D_onChunk (LEX_, fact_lag_blg), 0.5_wp)
+    ELSE
+      ! No lateral flow to connected tiles, all surface runoff/drainage goes directly to streamflow
+      l_latflow_to_streamflow = .TRUE.
+      ret_macro_blg = dsl4jsb_Config(HYDRO_)%ret_macro_blg
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        slope_used(ic)   = steepness(ic)
+        flowlag_used(ic) = dtime / ret_macro_blg
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
@@ -1655,6 +1692,7 @@ CONTAINS
         & lon(:), &
         & nsoil, &
         & dtime, &
+        & dsl4jsb_Config(HYDRO_)%k_brock,                         & ! Hydraulic coductivity of bedrock [m/s]
         & ltpe_closed, ltpe_open,                                 & ! Options for terraplanet setup
         & dsl4jsb_Config(HYDRO_)%enforce_water_budget,            & ! Options for water balance check
         & l_latflow_to_streamflow,                                & ! True: water from lateral flow reservoir
@@ -1741,6 +1779,7 @@ CONTAINS
         & lon(:), &
         & nsoil, &
         & dtime, &
+        & dsl4jsb_Config(HYDRO_)%k_brock,                         & ! Hydraulic coductivity of bedrock
         & ltpe_closed, ltpe_open,                                 &
         & dsl4jsb_Config(HYDRO_)%enforce_water_budget,            & ! Water balance check setting
         & l_latflow_to_streamflow,                                &
@@ -1934,6 +1973,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_transp_down_sl,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, char_area,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, char_h_surf,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, macro_slope,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_sl,      weighted_by_fract)
@@ -3310,6 +3352,7 @@ CONTAINS
 
     CALL weighted_by_fract%BeginAggregate()
 
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_wet,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_skin,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_pond,       weighted_by_fract)
@@ -3360,8 +3403,10 @@ CONTAINS
       & wtr_skin, &                  !< (Liquid) water in the skin reservoir [m]
       & weq_snow, &                  !< Amount of snow [m water equivalent]
       & weq_pond, &                  !< Water/ice in pond reservoir [m water equivalent]
+      & water_to_soil_lex, &         !< Lateral surface water inflow from connected tiles [m]
       & wtr_latflow_res_srf, &       !< Water content of intermediary reservoir representing lateral flow of
                                      !< surface runoff [m] (only with [[t_hydro_config:hydro_scale]]='Uniform')
+      & wtr_lex_net_srf,  &          !< Lateral exchange with connected tiles on the surface  [kg m-2 s-1]
       & weq_fluxes, &                !< Sum of all water fluxes [m3 s-1]
       & weq_land, &                  !< All liquid and frozen land water [m3]
       & weq_balance_err, &           !< Water imbalance within the time step [m3/(time step)]
@@ -3369,7 +3414,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: &
       & wtr_soil_sl, &               !< Amount of liquid water in the soil layers [m]
       & ice_soil_sl, &               !< Amount of ice in the soil layers [m]
-      & wtr_latflow_res_sl           !< Amount of water in lateral flow reservoir [m]
+      & wtr_latflow_res_sl, &        !< Amount of water in lateral flow reservoir [m]
+      & wtr_lex_net_sl               !< Lateral exchange with connected tiles on soil layers  [kg m-2 s-1]
 
     REAL(wp), POINTER :: &
       & tile_fract(:), &             !< Fraction of the tile (rel. to the grid cell) []
@@ -3385,7 +3431,8 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc) :: &
       & weq_soil, &                  !< Amount of water or ice in the soil [m water equivalent]
-      & wtr_latflow_res              !< Amount of water in the reservoir representing lateral flow [m]
+      & wtr_latflow_res, &           !< Amount of water in the reservoir representing lateral flow [m]
+      & wtr_latflow_net              !< Lateral exchange with connected tiles on (surface + soil layers) [kg m-2 s-1]
 
     INTEGER :: &
       & iblk, &                      !< Number of current nproma block
@@ -3452,8 +3499,11 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_snow)            ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond)            ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_to_soil_lex)   ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_latflow_res_srf) ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_latflow_res_sl)  ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_lex_net_srf)     ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_lex_net_sl)      ! in
     END IF
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)            ! out
@@ -3463,7 +3513,7 @@ CONTAINS
 
     n_errors = 0   ! initialize error counter
 
-    !$ACC PARALLEL DEFAULT(PRESENT) CREATE(weq_soil, wtr_latflow_res) ASYNC(acc_stream)
+    !$ACC PARALLEL DEFAULT(PRESENT) CREATE(weq_soil, wtr_latflow_net, wtr_latflow_res) ASYNC(acc_stream)
 
     ! Calculation of the amount of liquid or frozen water at the surface or in the soil as well as in
     ! the reservoir representing lateral flow.
@@ -3471,6 +3521,7 @@ CONTAINS
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         weq_soil(ic)        = 0._wp
+        wtr_latflow_net(ic) = wtr_lex_net_srf(ic)
         wtr_latflow_res(ic) = wtr_latflow_res_srf(ic)
       END DO
 
@@ -3479,6 +3530,7 @@ CONTAINS
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO ic = 1, nc
           weq_soil(ic)        = weq_soil(ic) + wtr_soil_sl(ic,is) + ice_soil_sl(ic,is) * ice2weq
+          wtr_latflow_net(ic) = wtr_latflow_net(ic) + wtr_lex_net_sl(ic,is)
           wtr_latflow_res(ic) = wtr_latflow_res(ic) + wtr_latflow_res_sl(ic,is)
         END DO
       END DO
@@ -3490,15 +3542,16 @@ CONTAINS
 
       ! Sum up all water fluxes (solid and liquid) of this time step
       weq_fluxes(ic) = rain(ic) + snow(ic) + evapotrans(ic) - runoff(ic) - drainage(ic)
-      weq_fluxes(ic) = weq_fluxes(ic) * tile_area / rhoh2o               ! kg m-2 s-1 -> m3/s
 
       IF (tile_contains_soil) THEN
-        weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) &
-          &            + weq_soil(ic) + wtr_latflow_res(ic))       &
+        weq_fluxes(ic) = weq_fluxes(ic) + wtr_latflow_net(ic)
+        weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) + weq_soil(ic) &
+          &          + water_to_soil_lex(ic) + wtr_latflow_res(ic))  &
           &          * tile_area          ! m -> m^3
       ELSE
         weq_land_new = 0._wp
       END IF
+      weq_fluxes(ic) = weq_fluxes(ic) * tile_area / rhoh2o               ! kg m-2 s-1 -> m3/s
 
       !  Calculate the water balance error
       !> For each grid cell the current water budget should match the water budget of the previous time step
@@ -3548,17 +3601,18 @@ CONTAINS
           & 'Drainage:           ', drainage(ic)   * tile_area / rhoh2o * dtime
         IF (tile%contains_soil) THEN
           WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
-            & 'Skin reservoir:     ', wtr_skin(ic)           * tile_area,              NEW_LINE('a'), &
-            & 'Snow reservoir:     ', weq_snow(ic)           * tile_area
+            & 'Skin reservoir:     ', wtr_skin(ic)        * tile_area,                 NEW_LINE('a'), &
+            & 'Snow reservoir:     ', weq_snow(ic)        * tile_area,                 NEW_LINE('a'), &
+            & 'Net lateral flow:   ', wtr_latflow_net(ic) * tile_area / rhoh2o * dtime
           IF (.NOT. tile%is_lake) THEN
             WRITE (message_text_long,*) TRIM(message_text_long),                       NEW_LINE('a'), &
-              & 'Pond reservoir:     ', weq_pond(ic)           * tile_area
+              & 'Pond reservoir:     ', weq_pond(ic)  * tile_area
           END IF
           WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
             & 'Soil water:         ', SUM(wtr_soil_sl(ic,:)) * tile_area,              NEW_LINE('a'), &
             & 'Soil ice weq:       ', SUM(ice_soil_sl(ic,:)) * ice2weq * tile_area,    NEW_LINE('a'), &
-            & 'Lat. flow. res. srf: ', wtr_latflow_res_srf(ic) * tile_area,            NEW_LINE('a'), &
-            & 'Lat. flow. res. blg: ', SUM(wtr_latflow_res_sl(ic,:)) * tile_area,      NEW_LINE('a'), &
+            & 'Lat. flow. res.:    ', wtr_latflow_res(ic)    * tile_area,              NEW_LINE('a'), &
+            & 'water_to_soil_lex: ' , water_to_soil_lex(ic)  * tile_area,              NEW_LINE('a'), &
             & 'Old reservoirs:     ', weq_land(ic),                                    NEW_LINE('a'), &
             & 'ET deficit:         ', evapo_deficit(ic) * tile_area / rhoh2o * dtime
         END IF

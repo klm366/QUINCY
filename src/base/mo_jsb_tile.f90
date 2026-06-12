@@ -243,7 +243,8 @@ CONTAINS
         iproc = processes(j)
         SELECT CASE (model%config%model_scheme)
         CASE (MODEL_JSBACH)
-          IF (.NOT. return_ptr%model%config%use_tmx .AND. iproc == SEB_ .AND. ALLOCATED(return_ptr%lcts)) THEN
+          IF (.NOT. (return_ptr%model%config%use_tmx) &
+            & .AND. iproc == SEB_ .AND. ALLOCATED(return_ptr%lcts)) THEN
             ! TODO hard coded checks of process dependencies - should not be handled here
             IF (return_ptr%lcts(1)%id /= LAND_TYPE .AND. return_ptr%lcts(1)%id /= LAKE_TYPE) THEN
               CALL finish(TRIM(routine), 'SEB_ process only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')

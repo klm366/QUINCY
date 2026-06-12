@@ -136,6 +136,12 @@ MODULE mo_hydro_constants
                                                       !< field capacity (Todini, 1996; Duemenil, 1992)
     & drain_exp   = 1.5_wp,                & !< drainage scaling exponent for ARNO scheme
 
+    ! Parameters required for unifrom scale and lateral exchange between tiles
+    & vel_lat_srf   = 10._wp/ 3600._wp,    &  !< Potential velocity of lateral flow through connected flow paths
+                                              !! at the surface [m s-1] (-> 10 m h-1; 10 * x_blg value)
+    & vel_lat_blg   = 1._wp / 3600._wp,    &  !< Potential velocity of lateral flow through below-ground flow paths [m s-1]
+                                              !! (-> 1 m h-1; roughly based on macropore enhancement (Milly2014))
+
     ! Parameters used for pond computations
     & oro_crit = 100._wp,                  & !< Reference topographic standard deviation for pond scaling factor [m]
 
