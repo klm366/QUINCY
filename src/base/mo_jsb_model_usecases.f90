@@ -797,6 +797,9 @@ CONTAINS
             CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
           END IF
 
+          IF (model%processes(CLIMBUF_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
+          END IF
           IF (model%processes(NLCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
           END IF

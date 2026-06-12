@@ -343,7 +343,7 @@ CONTAINS
     ! climbuf, as the pointer name is appended to the climate buffer variables below.
     climbuf => tile%parent_tile
     ! Make sure this is the veg tile
-    IF (TRIM(climbuf%name) /= 'veg') CALL finish(routine, 'Usecase setup ERROR: CLIMBUF needs to run on the veg tile.')
+    IF (TRIM(climbuf%name(1:3)) /= 'veg') CALL finish(routine, 'Usecase setup ERROR: CLIMBUF needs to run on the veg tile.')
     dsl4jsb_Get_memory_tile(CLIMBUF_, climbuf)
 
     ! Set process variables
