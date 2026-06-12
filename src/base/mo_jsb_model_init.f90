@@ -19,13 +19,14 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, LEX_,  &
-    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(FAGE_)
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(CLIMBUF_)
   dsl4jsb_Use_config(LEX_)
 #ifndef __NO_QUINCY__
   dsl4jsb_Use_config(VEG_)
@@ -242,6 +243,9 @@ CONTAINS
 
       IF (model%processes(NLCC_)%p%config%active) THEN
         CALL model%Queue_task(ASSIMI_, "npp_buffer")
+      END IF
+      IF (model%processes(CLIMBUF_)%p%config%active) THEN
+        CALL model%Queue_task(CLIMBUF_, "climbuf")
       END IF
 
       ! - area damaged by natural disturbances in this timestep are calculated before any lcc takes place
@@ -1039,6 +1043,11 @@ CONTAINS
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(CARBON_)) THEN
+          ! In some cases, it is necessary to read the carbon pools (again) from a file instead of
+          ! using the values from the restart file, e.g. during a spinup run where the humus pools
+          ! are equilibrated with an external script. In this case, `read_cpools` can be set to
+          ! true in a restarted run and the carbon pools will be read from the file after the
+          ! restart file has been read, thus overwriting the values from the restart file.
           IF (dsl4jsb_Config(CARBON_)%read_cpools) CALL carbon_read_cpools(tile)
         END IF
         IF (dsl4jsb_Config(HYDRO_)%sanitize_restart .AND. &
