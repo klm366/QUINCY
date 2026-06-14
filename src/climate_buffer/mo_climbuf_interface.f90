@@ -23,7 +23,7 @@ MODULE mo_climbuf_interface
   ! Used variables of module
 
   USE mo_kind,               ONLY: wp
-  USE mo_jsb_control,        ONLY: debug_on
+  USE mo_jsb_control,        ONLY: debug_on, acc_stream
   USE mo_jsb_time,           ONLY: is_time_experiment_start, is_newyear, is_newmonth, is_newday, &
     &                              get_day_length, get_previous_month_length
   USE mo_exception,          ONLY: message
@@ -127,6 +127,7 @@ CONTAINS
       & iblk,                & !< Currently processed block
       & ics,                 & !< First grid cell of the block
       & ice,                 & !< Last grid cell of the block
+      & ic,                  & !< Looping index for grid cells
       & nc                     !< Number of grid cells in block
 
     REAL(wp) :: &
@@ -139,6 +140,8 @@ CONTAINS
 
     LOGICAL, SAVE :: &
       & climbuf_initialized = .FALSE.    !< Climate buffer has been initialized
+    LOGICAL :: &
+      & use_tmx                !< Use tmx scheme; needed as local variable on GPUs
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_climbuf'
 
@@ -247,7 +250,12 @@ CONTAINS
     ALLOCATE (q_rel_air(nc))
     !$ACC DATA ASYNC(acc_stream) CREATE(q_rel_air)
 
-    q_rel_air(:) = get_relative_humidity_air(q_air(:), t_unfilt(:), press_srf(:), model%config%use_tmx)
+    use_tmx=model%config%use_tmx
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      q_rel_air(ic) = get_relative_humidity_air(q_air(ic), t_unfilt(ic), press_srf(ic), use_tmx)
+    END DO
+    !$ACC END PARALLEL LOOP
 
     init_running_means = dsl4jsb_Config(CLIMBUF_)%init_running_means
     CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
