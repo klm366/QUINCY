@@ -90,6 +90,7 @@ MODULE mo_a2l_memory_class
       & daylength_prev_day      , &  !< time of previous day with light available [s]
       & local_time_day_seconds       !< seconds passed on this day (local cell time)
 
+#ifdef __QUINCY_STANDALONE__
     ! For calculation of constant input values (add values over the 1st year, calc avrg, and use this as input for teh rest of the simulation)
     TYPE(t_jsb_var_real2d) :: &
       & nhx_deposition_acc, &             !< accumulate (simply add) input value of nhx_deposition [mumol m-2 sec-1]
@@ -108,6 +109,7 @@ MODULE mo_a2l_memory_class
       & co2_mixing_ratio_const, &         !< constant value (avrg of 1st year of input value) of co2_mixing_ratio [ppm]
       & co2_dC13_const, &                 !< constant value (avrg of 1st year of input value) of co2_dC13 [ppm]
       & co2_DC14_const                    !< constant value (avrg of 1st year of input value) of co2_DC14 [scaled]
+#endif
 
   CONTAINS
     PROCEDURE :: Init => Init_a2l_memory

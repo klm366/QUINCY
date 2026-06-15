@@ -220,7 +220,7 @@ CONTAINS
     !>
     !>     @todo Should be in separate subroutine
     !>
-    !>     Three Queues: MODEL_JSBACH / MODEL_QUINCY
+    !>     Two Queues: MODEL_JSBACH / MODEL_QUINCY
     !>
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)

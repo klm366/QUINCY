@@ -1434,10 +1434,10 @@ CONTAINS
             END DO
           END DO
         END DO
-      END SELECT
 
-      !$ACC UPDATE DEVICE(soil_lay_width_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:)) ASYNC(1)
-      !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_center_sl(:,:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
+        !$ACC UPDATE DEVICE(soil_lay_width_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:)) ASYNC(1)
+        !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_center_sl(:,:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
+      END SELECT
 
       ! -------------------------------------------------------------------------------------------------- !
       !>

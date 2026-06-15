@@ -762,7 +762,9 @@ CONTAINS
 
     ! TBD: this is only required if restart or output is written for this timestep!
     ! BGCMs need to be copied back to the variables from the matrices on which calculations are conducted
-    CALL model%Write_back_to_bgcms()
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      CALL model%Write_back_to_bgcms()
+    END IF
 
     ! Reset all tiles (needed for tile loops in following test routines)
     CALL model%Reset_tiles()
@@ -779,10 +781,11 @@ CONTAINS
     END IF
 
     ! Carbon conservation test Quincy
-    CALL model%Get_top_tile(tile)
     IF ((model%config%model_scheme == MODEL_QUINCY) .AND. (model%config%qmodel_id == QLAND)) THEN
       CALL test_carbon_conservation(tile, model%options(no_omp_thread)%dtime)
     END IF
+
+    CALL model%Get_top_tile(tile)
 
     ! Make sure temperatures are within an exceptable range
     IF (model%processes(SEB_)%p%config%active) THEN
