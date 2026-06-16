@@ -218,6 +218,7 @@ MODULE mo_q_dinsect_bark_beetle_effect
           !print*, 'dinsect_occupy_frac(ic)',dinsect_occupy_frac(ic)
           dinsect_occupy_frac(ic) = dinsect_occupy_frac(ic) * decay_factor_for_BB + &
                           dinsect_mort_dt(ic) * dinsect_disturbable_frac(ic)
+          dinsect_occupy_frac(ic) = 0._wp
           !dinsect_occupy_frac(ic) = (dinsect_deadheartwood_mt(ixC,ic) + dinsect_deadsapwood_mt(ixC,ic)) / &
           !& (veg_pool_mt(ix_heart_wood,ixC,ic) + veg_pool_mt(ix_sap_wood,ixC,ic) + &
           !& dinsect_deadheartwood_mt(ixC,ic) + dinsect_deadsapwood_mt(ixC,ic))
