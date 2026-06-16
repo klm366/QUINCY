@@ -47,7 +47,7 @@ MODULE mo_pplcc_interface
 
 #ifndef __NO_QUINCY__
   USE mo_quincy_model_config, ONLY: QCANOPY
-  USE mo_quincy_output_class, ONLY: unit_sb_pool, unit_sb_flux, unit_veg_pool_flux
+  USE mo_quincy_output_class, ONLY: unit_sb_pool, unit_sb_flux, unit_veg_flux
 #endif
 
   USE mo_carbon_interface,  ONLY: recalc_carbon_per_tile_vars
@@ -261,7 +261,7 @@ CONTAINS
               ! in quincy the 2D pool type variables are in mol per tile
               expected_string_in_unit = 'mol m-2'
             ELSE IF(cqt_id == IQ_FLUX_CQ_TYPE) THEN
-              expected_string_in_unit = unit_veg_pool_flux
+              expected_string_in_unit = unit_veg_flux
             ELSE IF(cqt_id == IQ_SL_POOL_CQ_TYPE) THEN
               ! in quincy the 3D pool type variables are in mol per tile and layer
               expected_string_in_unit = unit_sb_pool

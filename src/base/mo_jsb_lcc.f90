@@ -388,7 +388,7 @@ CONTAINS
     !> Assertion: initial area size needs to match number of tiles and vector length
     !>
     IF ((SIZE(initial_area,DIM=2) /= nr_of_tiles) .OR. (SIZE(initial_area,DIM=1) /= nc)) THEN
-      CALL finish(TRIM(routine), 'Violation of assertion: Area array has unexpected size. Please check!')
+      CALL finish(TRIM(routine), 'Violation of assertion: Array "initial_area" has unexpected size. Please check!')
     ENDIF
 
     ! Collect initial areas of all involved tiles
@@ -485,7 +485,12 @@ CONTAINS
     !>
     IF (ANY(lost_area < 0.0_wp) .OR. ANY(lost_area > 1.0_wp + max_tolerated_cf_mismatch) &
       & .OR. ANY(initial_area < 0.0_wp) .OR. ANY(initial_area > 1.0_wp + max_tolerated_cf_mismatch)) THEN
-      CALL finish(TRIM(routine), 'Violation of assertion: Area arrays have values out of range ([0.0, 1.0]). Please check!')
+      WRITE (message_text,*) 'Violation of assertion: Area arrays have values out of range ([0.0, 1.0]),', &
+        & ' Minimum lost_area: ', MINVAL(lost_area), ' at ', MINLOC(lost_area),           &
+        & ' Maximum lost_area: ', MAXVAL(lost_area), ' at ', MAXLOC(lost_area),           &
+        & ' Minimum initial_area: ', MINVAL(initial_area), ' at ', MINLOC(initial_area),  &
+        & ' Maximum initial_area: ', MAXVAL(initial_area), ' at ', MAXLOC(initial_area)
+      CALL finish(routine, message_text)
     ENDIF
     !>
     !> Assertion: lost area <= initial_area
