@@ -158,7 +158,7 @@ CONTAINS
     ! Use declarations
     USE mo_carbon_shared,            ONLY: calc_plant_c
     USE mo_carbon_process,           ONLY: calc_soil_c
-    USE mo_carbon_process_vertical,  ONLY: calc_vertical_soil_c, depth_to_layers, check_permafrost
+    USE mo_carbon_process_vertical,  ONLY: calc_vertical_soil_c, depth_to_layers
     USE mo_jsb_time,                 ONLY: is_newday, is_newyear, timesteps_per_day, &
       &                                    is_time_experiment_start, is_time_restart
     USE mo_hydro_constants,          ONLY: vol_porosity_org_top, vol_porosity_org_below
@@ -383,8 +383,7 @@ CONTAINS
 
     ! climatic soil conditions
     dsl4jsb_Real3D_onChunk :: t_soil_sl
-    dsl4jsb_Real3D_onChunk :: t_max_soil_year
-    dsl4jsb_Real3D_onChunk :: permafrost_layer
+    dsl4jsb_Real3D_onChunk :: permafrost_period_sl_climbuf
     dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl
 
     ! active layer thickness, soil depth
@@ -451,6 +450,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, max_thaw_prev_year, climbuf)  ! in
     dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, t_soil_sl_15d_yDay, climbuf)        ! in
     dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, wtr_soil_rel_sl_15d_yDay, climbuf)  ! in
+    dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, permafrost_period_sl, climbuf)  ! in
 
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)            ! inout
@@ -542,8 +542,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_anox_sl) ! inout
       !
       dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)                ! in
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  t_max_soil_year)          ! inout
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  permafrost_layer)         ! inout
 
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_rel_sl)          ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   soil_depth)               ! in
@@ -646,16 +644,6 @@ CONTAINS
       max_layer_sl = depth_to_layers(soil_depth_thaw, layer_thick)
       thaw_depth = max_thaw_prev_year_climbuf
       thaw_depth_sl = depth_to_layers(thaw_depth, layer_thick);
-    END IF
-
-    ! Check if permafrost
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
-      DO ic = 1, nc
-        DO is = 1, nsoil
-          CALL check_permafrost((new_year .OR. lstart .OR. lresume), t_soil_sl(ic,is), &
-            &  t_max_soil_year(ic,is), permafrost_layer(ic,is))
-        END DO
-      END DO
     END IF
 
     ! All per tile variables need to be re-calculated in case they are written to output
@@ -839,7 +827,7 @@ CONTAINS
         CALL message(TRIM(routine), 'update_C_NPP_pot_allocation: Clearing frozen C')
         DO ic = 1, nc
           DO is = 1, nsoil
-            IF (permafrost_layer(ic,is) > permafrost_threshold) THEN
+            IF (permafrost_period_sl_climbuf(ic,is) > permafrost_threshold) THEN
               c_acid_bg1_sl(ic,is)       = 0._wp
               c_water_bg1_sl(ic,is)      = 0._wp
               c_ethanol_bg1_sl(ic,is)    = 0._wp
@@ -924,7 +912,7 @@ CONTAINS
             &  thaw_depth                   = thaw_depth(ic),                 & ! in
             &  thaw_depth_sl                = thaw_depth_sl(ic,:),            & ! in
             &  root_dist_sl                 = root_dist_sl(ic,:),             & ! inout
-            &  permafrost_layer             = permafrost_layer(ic,:),         & ! in
+            &  permafrost_layer             = permafrost_period_sl_climbuf(ic,:),        & ! in
                !
             &  woodLitter                   = cflux_c_wood_2_litter(ic),      & ! in
             &  leafLitter                   = cflux_c_green_2_litter(ic),     & ! in
@@ -1267,8 +1255,6 @@ CONTAINS
 
       dsl4jsb_Aggregate_onChunk(CARBON_, root_dist_sl,             weighted_by_fract)             ! inout
       dsl4jsb_Aggregate_onChunk(CARBON_, max_layer_sl,             weighted_by_fract)             ! inout
-
-      dsl4jsb_Aggregate_onChunk(CARBON_, permafrost_layer,         weighted_by_fract)             ! inout
     END IF
 
     CALL weighted_by_fract%EndAggregate()

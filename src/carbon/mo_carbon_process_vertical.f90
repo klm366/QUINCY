@@ -21,7 +21,7 @@ MODULE mo_carbon_process_vertical
   PRIVATE
 
   PUBLIC :: calc_vertical_soil_c, depth_to_layers, relocate_carbon_vertical_fire, relocate_carbon_vertical_damage, &
-            check_permafrost, determine_root_dist  ! , yasso_minimal
+            determine_root_dist  ! , yasso_minimal
 
   CHARACTER(*), PARAMETER :: modname = 'mo_carbon_process_vertical'
 
@@ -1671,32 +1671,6 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
   END SUBROUTINE relocate_carbon_vertical_damage
-
-  ! --- check_permafrost() ---------------------------------------------------------------------------------------------------
-  !
-  ! Check for permafrost: If max. temperature last year < tmelt -> permafrost
-  ! determined on first timestep of year, other timesteps: determine maximum
-  !
-  SUBROUTINE check_permafrost(new_year, t_soil_sl, t_max_soil_year, permafrost_layer)
-    USE mo_jsb_physical_constants, ONLY: tmelt
-
-    LOGICAL,  INTENT(in)     :: new_year
-    REAL(wp), INTENT(in)     :: t_soil_sl
-    REAL(wp), INTENT(inout)  :: t_max_soil_year
-    REAL(wp), INTENT(inout)  :: permafrost_layer
-    REAL(wp), PARAMETER      :: averaging_time = 10.0_wp   ! [yrs] averaging time for thaw depth calculation
-
-    IF (new_year) THEN
-      permafrost_layer = ((averaging_time-1.0_wp)/averaging_time)*permafrost_layer
-      IF (t_max_soil_year < tmelt) THEN
-        permafrost_layer = permafrost_layer + ((1.0_wp/averaging_time)*1._wp)
-      END IF
-      t_max_soil_year = t_soil_sl
-    ELSE
-      t_max_soil_year = MAX(t_soil_sl, t_max_soil_year)
-    END IF
-
-  END SUBROUTINE check_permafrost
 
 #endif
 END MODULE mo_carbon_process_vertical

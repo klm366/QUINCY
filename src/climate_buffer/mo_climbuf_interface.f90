@@ -181,6 +181,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: t_soil_sl_15d_yDay !< 15-day smoothed soil layer temperature at the end of the previous day [K]
     dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl_15d      !< 15-day smoothed relative soil layer moisture [-]
     dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl_15d_yDay !< 15-day smoothed relative soil layer moisture at end of previous day [-]
+    dsl4jsb_Real3D_onChunk :: max_t_soil_sl_year !< Maximum soil layer temperature in previous year [K]
+    dsl4jsb_Real3D_onChunk :: permafrost_period_sl     !< Number of years of consecutively frozen soil layer [year]
 
     ! Declare pointers to variables in foreign memory
     dsl4jsb_Real2D_onChunk :: t_air              !< Near surface air temperature [K]
@@ -258,6 +260,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(CLIMBUF_,t_soil_sl_15d_yDay)     ! inout
     dsl4jsb_Get_var3D_onChunk(CLIMBUF_,wtr_soil_rel_sl_15d)    ! inout
     dsl4jsb_Get_var3D_onChunk(CLIMBUF_,wtr_soil_rel_sl_15d_yDay)!inout
+    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,max_t_soil_sl_year)     ! inout
+    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,permafrost_period_sl)   !inout
 
     ! Generally, the climate buffer is initialized at model initialization (is_time_experiment_start).
     ! There is however the possibility to initialize it in restarted simulations by namelist parameter
@@ -301,8 +305,9 @@ CONTAINS
       &                  max_snow_year, max_snow_prev_year, max_thaw_year, max_thaw_prev_year, &
       &                  max_wind_of_day, max_wind_yDay, max_wind_4yr, &
       &                  q_rel_air_14d, q_rel_air_14d_yDay)
-    CALL calc_climbuf_3d(lstart, new_day, dtime, t_soil_sl, wtr_soil_rel_sl, seconds_day, &
-      &                  t_soil_sl_15d, t_soil_sl_15d_yDay, wtr_soil_rel_sl_15d, wtr_soil_rel_sl_15d_yDay)
+    CALL calc_climbuf_3d(lstart, new_day, new_year, dtime, t_soil_sl, wtr_soil_rel_sl, seconds_day, &
+      &                  t_soil_sl_15d, t_soil_sl_15d_yDay, wtr_soil_rel_sl_15d, wtr_soil_rel_sl_15d_yDay, &
+      &                  max_t_soil_sl_year, permafrost_period_sl)
     climbuf_initialized = .TRUE.
 
     !$ACC END DATA
@@ -369,6 +374,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, t_soil_sl_15d_yDay, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, wtr_soil_rel_sl_15d, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, wtr_soil_rel_sl_15d_yDay, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_t_soil_sl_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, permafrost_period_sl, weighted_by_fract)
 
     IF (debug_on() .AND. options%iblk==1) CALL message(TRIM(routine), 'Finished.')
 

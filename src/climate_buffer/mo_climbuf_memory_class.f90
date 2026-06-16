@@ -76,7 +76,9 @@ MODULE mo_climbuf_memory_class
     & t_soil_sl_15d,            & !< 15-day smoothed soil layer temperature [K]
     & t_soil_sl_15d_yDay,       & !< 15-day smoothed soil layer temperature at the end of the previous day [K]
     & wtr_soil_rel_sl_15d,      & !< 15-day smoothed relative soil layer moisture [-]
-    & wtr_soil_rel_sl_15d_yDay    !< 15-day smoothed relative soil layer moisture at the end of the previous day [-]
+    & wtr_soil_rel_sl_15d_yDay, & !< 15-day smoothed relative soil layer moisture at the end of the previous day [-]
+    & max_t_soil_sl_year,       & !< Maximum soil layer temperature in previous year [K]
+    & permafrost_period_sl        !< Number of years of consecutively frozen soil layer [year]
 
   CONTAINS
     PROCEDURE :: Init => Init_climbuf_memory
@@ -326,6 +328,24 @@ CONTAINS
       & hgrid, soil_w,                                                                    &
       & t_cf('rel_soil_water_sl_15d_yDay', '-',                                           &
       &      '15-day smoothed rel soil layer water content at the end of the previous day'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=MEDIUM,                                                              &
+      & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var('max_t_soil_sl_year', mem%max_t_soil_sl_year,                        &
+      & hgrid, soil_w,                                                                    &
+      & t_cf('max_t_soil_sl_year', 'K',                                                   &
+      &      'Maximum soil layer temperature in current year'),                           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=MEDIUM,                                                              &
+      & lrestart=.TRUE., initval_r=280.0_wp)
+
+    CALL mem%Add_var('permafrost_period_sl', mem%permafrost_period_sl,                    &
+      & hgrid, soil_w,                                                                    &
+      & t_cf('permafrost_period_sl', 'yr',                                                &
+      &      'Number of years of consecutively frozen soil layer'),                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=MEDIUM,                                                              &

@@ -246,10 +246,7 @@ MODULE mo_carbon_memory_class
       soil_respiration_anox_sl, & ! mean daily rate of heterotrophic (anoxid soils) respiration [mol m-2(canopy)].
                                   ! Without N limitation! Only with methane processes active
       root_dist_sl,             & ! root distribution on soil layers
-      max_layer_sl,             & ! max layer thickness (soil / thaw depth dependent)
-      t_max_soil_year,          & ! maximum soi ltamperature in year
-      permafrost_layer            ! permafrost status layer
-
+      max_layer_sl                ! max layer thickness (soil / thaw depth dependent)
 
     ! YASSO on soil layers, as tile average
     TYPE(t_jsb_var_real3d) ::      &
@@ -1300,24 +1297,6 @@ CONTAINS
         & prefix, suffix,                                                         &
         & output_level=FULL,                                                      &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL mem%Add_var('t_max_soil_year', mem%t_max_soil_year,                    &
-        & hgrid, soil_c,                                                          &
-        & t_cf('t_max_soil_year', '', 'Maximum soil temperature in year'),        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
-        & prefix, suffix,                                                         &
-        & output_level=FULL,                                                      &
-        & lrestart_cont = .TRUE.,                                                 &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL mem%Add_var('permafrost_layer', mem%permafrost_layer,                  &
-        & hgrid, soil_c,                                                          &
-        & t_cf('permafrost_layer', '', 'Layer permafrost status'),                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
-        & prefix, suffix,                                                         &
-        & output_level=MEDIUM,                                                    &
-        & lrestart_cont = .TRUE.,                                                 &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     END IF
 

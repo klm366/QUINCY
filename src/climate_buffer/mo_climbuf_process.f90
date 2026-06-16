@@ -215,13 +215,15 @@ CONTAINS
   !>
   ! -------------------------------------------------------------------------------------------------------- !
   ELEMENTAL PURE SUBROUTINE calc_climbuf_3d ( &
-    & lstart, new_day, dtime, t_soil, wtr_soil_rel, seconds_day, &
-    & t_soil_15d, t_soil_15d_yDay, wtr_soil_rel_15d, wtr_soil_rel_15d_yDay &
-    & )
+    & lstart, new_day, new_year, dtime, t_soil, wtr_soil_rel, seconds_day, &
+    & t_soil_15d, t_soil_15d_yDay, wtr_soil_rel_15d, wtr_soil_rel_15d_yDay, &
+    & max_t_soil_year, permafrost_period)
+    USE mo_jsb_physical_constants, ONLY: tmelt
 
     LOGICAL, INTENT(in) :: &
       & lstart,                 & !< This is the first time step in a simulation
-      & new_day                   !< This is the first time step of the day
+      & new_day,                & !< This is the first time step of the day
+      & new_year                  !< This is the first time step of the year
 
     REAL(wp), INTENT(in) :: &
       & dtime,                  & !< Time step length [s]
@@ -233,7 +235,9 @@ CONTAINS
       & t_soil_15d,             & !< 15-day smoothed soil layer temperature [K]
       & t_soil_15d_yDay,        & !< 15-day smoothed soil layer temperature at the end of the previous day [K]
       & wtr_soil_rel_15d,       & !< 15-day smoothed relative soil layer moisture [-]
-      & wtr_soil_rel_15d_yDay     !< 15-day smoothed relative soil layer moisture at the end of the previous day [-]
+      & wtr_soil_rel_15d_yDay,  & !< 15-day smoothed relative soil layer moisture at the end of the previous day [-]
+      & max_t_soil_year,        & !< Maximum soil layer temperature in previous year [K]
+      & permafrost_period         !< Number of years of consecutively frozen soil layer [yr]
 
     ! Local variables
     REAL(wp) :: &
@@ -254,6 +258,19 @@ CONTAINS
       ! Save previous day variables (for yasso)
       t_soil_15d_yDay   = t_soil_15d
       wtr_soil_rel_15d_yDay = wtr_soil_rel_15d
+    END IF
+
+    !-- Soil thermal states (temperature and permafrost)
+    !  ---------------------
+    IF (new_year) THEN
+      IF (max_t_soil_year < tmelt) THEN
+        permafrost_period = permafrost_period + 1._wp
+      ELSE
+        permafrost_period = 0._wp
+      END IF
+      max_t_soil_year = t_soil
+    ELSE
+      max_t_soil_year = MAX(t_soil, max_t_soil_year)
     END IF
 
   END SUBROUTINE calc_climbuf_3d

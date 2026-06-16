@@ -143,8 +143,8 @@ MODULE mo_carbon_constants
   REAL(wp), PARAMETER   :: moist_p_d                 = 3.0_wp
 
 !   REAL(wp), PARAMETER   :: minimum_layer_thickness   = 0.00005_wp     ! [m] ignore layers thinner than this threshold
-  REAL(wp), PARAMETER   :: minimum_layer_thickness   = 0.05_wp     ! [m] ignore layers thinner than this threshold
-  REAL(wp), PARAMETER   :: permafrost_threshold      = 0.1_wp      ! threshold in the permafrost_layer variable to consider a layer permafrost
+  REAL(wp), PARAMETER   :: minimum_layer_thickness   = 0.05_wp ! [m] ignore layers thinner than this threshold
+  REAL(wp), PARAMETER   :: permafrost_threshold      = 1._wp   ! length [yr] threshold to consider a layer permafrost
 
   ! ------------------------------------------------------------------------------------------
   ! Ratio of C mass to biomass (Spitfire and emission of chemical species by fire)
