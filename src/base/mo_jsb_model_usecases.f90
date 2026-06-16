@@ -25,13 +25,12 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, &
+    &                               CLIMBUF_, FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, &
     &                               Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE !, BARE_TYPE   ! define the type of the tile
-!  USE mo_test_pools,          ONLY: test_pools                                                  ! to debug and test pools implementation
 
   IMPLICIT NONE
   PRIVATE
@@ -333,6 +332,9 @@ CONTAINS
           CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
         END IF
 
+        IF (model%processes(CLIMBUF_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
+        END IF
         IF (model%processes(NLCC_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
         END IF
@@ -455,6 +457,9 @@ CONTAINS
           CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
         END IF
 
+        IF (model%processes(CLIMBUF_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
+        END IF
         IF (model%processes(NLCC_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
         END IF
@@ -603,6 +608,9 @@ CONTAINS
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
           END IF
           !
+          IF (model%processes(CLIMBUF_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
+          END IF
           IF (model%processes(NLCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
           END IF
@@ -653,8 +661,6 @@ CONTAINS
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile, fage_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
-
-    ! CALL test_pools()
 
   END SUBROUTINE init_usecase_pfts_with_forest_age_classes
 
