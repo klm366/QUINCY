@@ -65,9 +65,7 @@ MODULE mo_sse_memory_class
       & grnd_hflx_old,        & !< ground heat flux (old)
       & thaw_depth,           & !< Thawing depth [m]
       & thaw_cycle,           & !< Freeze-thaw cycle number this year
-      & thaw_cycle_prev,      & !< Freeze-thaw cycle number prev year
-      & thaw_depth_max,       & !< Maximum thaw depth [m]
-      & thaw_depth_max_ym1      !< Last year's maximum thaw depth [m]
+      & thaw_cycle_prev         !< Freeze-thaw cycle number prev year
 
     ! soil physical properties
     TYPE(t_jsb_var_real3d) :: &
@@ -273,26 +271,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & initval_r=0.0_wp, &
-      & l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'thaw_depth_max', mem%thaw_depth_max,                  &
-      & hgrid, surface,                                                      &
-      & t_cf('thaw_depth_max', 'm', 'Maximum thaw depth'),                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
-      & output_level=BASIC, &
-      & initval_r=0.0_wp, &
-      & l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'thaw_depth_max_ym1', mem%thaw_depth_max_ym1,          &
-      & hgrid, surface,                                                      &
-      & t_cf('thaw_depth_max_ym1', 'm', 'Last years maximum thaw depth'),    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
-      & output_level=NONE, &
       & initval_r=0.0_wp, &
       & l_aggregate_all=.TRUE. )
 

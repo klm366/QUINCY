@@ -42,7 +42,7 @@ MODULE mo_hydro_interface
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_processes PHENO_
 #endif
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, A2L_, HYDRO_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, A2L_, HYDRO_, CLIMBUF_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -54,6 +54,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(SSE_)
+  dsl4jsb_Use_memory(CLIMBUF_)
   dsl4jsb_Use_memory(TURB_)
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_memory(PHENO_)
@@ -1452,6 +1453,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)                   !< Configurable parameters of the hydrology process
     dsl4jsb_Def_memory(HYDRO_)                   !< Variables of the hydrology process
     dsl4jsb_Def_memory(SSE_)                     !< Variables of the "snow and snow energy" process
+    dsl4jsb_Def_memory(CLIMBUF_)                 !< Variables of the "climate buffer" process
 #ifndef __NO_QUINCY__
     dsl4jsb_Def_memory(Q_ASSIMI_)
 #endif
@@ -1472,8 +1474,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: ice_pond           !< Amount of ice in the pond reservoir [m water equivalent]
     dsl4jsb_Real2D_onChunk :: weq_pond           !< Water/ice content of the pond reservoir [m water equiv.]
 
-    dsl4jsb_Real2D_onChunk :: thaw_depth_max     !< Maximum thaw depth in current year [m]
-    dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1 !< Maximum thaw depth of previous year [m]
+    dsl4jsb_Real2D_onChunk :: max_thaw_year      !< Maximum thaw depth in current year [m]
+    dsl4jsb_Real2D_onChunk :: max_thaw_prev_year !< Maximum thaw depth of previous year [m]
     dsl4jsb_Real2D_onChunk :: steepness          !< Parameter representing subgrid scale slopes []
     dsl4jsb_Real2D_onChunk :: soil_depth         !< Soil depth until bedrock [m]
 
@@ -1562,6 +1564,7 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(CLIMBUF_)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)      ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)      ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_weq_soil_sl)  ! out
@@ -1573,8 +1576,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)         ! out
 
-    dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max)     ! in
-    dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1) ! in
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_, max_thaw_year)      ! in
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_, max_thaw_prev_year) ! in
 
     !$ACC DATA ASYNC(acc_stream) CREATE(l_fract) &
     !$ACC   CREATE(l_pf_soil, depth_thrsh, slope_used, flowlag_used) &
@@ -1630,8 +1633,8 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       depth_thrsh(ic) = MAX(soil_depth(ic), 1.0_wp)
-      l_pf_soil(ic)   = (thaw_depth_max_ym1(ic) < depth_thrsh(ic) .AND. &
-        &                thaw_depth_max(ic)     < depth_thrsh(ic))
+      l_pf_soil(ic)   = (max_thaw_prev_year(ic) < depth_thrsh(ic) .AND. &
+        &                max_thaw_year(ic)      < depth_thrsh(ic))
     END DO
     !$ACC END PARALLEL LOOP
 

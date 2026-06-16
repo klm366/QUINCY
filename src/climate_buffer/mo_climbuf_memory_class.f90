@@ -70,7 +70,7 @@ MODULE mo_climbuf_memory_class
     & max_snow_year,            & !< Maximum snow depth in current year [m]
     & max_snow_prev_year,       & !< Maximum snow depth in previous year [m]
     & max_thaw_year,            & !< Maximum soil column thaw depth in current year [m]
-    & max_thaw_10year             !< Smoothed maximum soil column thaw depth (~10 years) [m]
+    & max_thaw_prev_year          !< Maximum soil column thaw depth in previous year [m]
 
   TYPE(t_jsb_var_real3d) ::     &
     & t_soil_sl_15d,            & !< 15-day smoothed soil layer temperature [K]
@@ -289,9 +289,9 @@ CONTAINS
       & prefix, suffix,                                                                   &
       & lrestart=.TRUE., initval_r=max_depth)
 
-    CALL mem%Add_var('max_thaw_10year', mem%max_thaw_10year,                              &
+    CALL mem%Add_var('max_thaw_prev_year', mem%max_thaw_prev_year,                        &
       & hgrid, surface,                                                                   &
-      & t_cf('max_thaw_10year', 'm', 'Maximum annual thaw depth with 10-years smoothing'),&
+      & t_cf('max_thaw_prev_year', 'm', 'Maximum annual thaw depth in previous year'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=MEDIUM,                                                              &

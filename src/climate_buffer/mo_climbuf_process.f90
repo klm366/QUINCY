@@ -46,7 +46,7 @@ CONTAINS
     & temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
     & gdd5_sum_year, gdd5_prev_year, &
     & max_snow_year, max_snow_prev_year, &
-    & max_thaw_year, max_thaw_10year, &
+    & max_thaw_year, max_thaw_prev_year, &
     & max_wind_of_day, max_wind_yDay, max_wind_4yr, &
     & q_rel_air_14d, q_rel_air_14d_yDay)
 
@@ -85,7 +85,7 @@ CONTAINS
       & max_snow_year,          & !< Maximum snow depth in current year [m]
       & max_snow_prev_year,     & !< Maximum snow depth in previous year [m]
       & max_thaw_year,          & !< Maximum soil column thaw depth in current year [m]
-      & max_thaw_10year,        & !< Smoothed maximum soil column thaw depth (~10 years) [m]
+      & max_thaw_prev_year,     & !< Maximum soil column thaw depth in previous year [m]
       & max_wind_of_day,        & !< Current maximum wind speed of the day [m s-1]
       & max_wind_yDay,          & !< Maximum wind speed of the previous day [m s-1]
       & max_wind_4yr,           & !< Smoothed maximum wind speed (~4 years) [m s-1]
@@ -100,7 +100,6 @@ CONTAINS
       & F_15d,                  & !< Factor for 15-day smoothing
       & N_15d                     !< Factor for 15-day smoothing
 
-    REAL(wp), PARAMETER :: persist_thaw_depth = 0.9_wp      ! ~10 years
     REAL(wp), PARAMETER :: persist_wind       = 0.9995_wp   ! ~4  years
     REAL(wp), PARAMETER :: persist_rel_hum    = 0.95_wp     ! ~14 days
     ! ------------------------------------------------------------------------------------------------------ !
@@ -143,7 +142,7 @@ CONTAINS
     IF (.NOT. new_year .OR. lstart) THEN
       max_thaw_year = MAX(max_thaw_year, thaw_depth)
     ELSE
-      max_thaw_10year = max_thaw_10year * persist_thaw_depth + max_thaw_year * (1._wp - persist_thaw_depth)
+      max_thaw_prev_year = max_thaw_year
       max_thaw_year = 0._wp
       max_thaw_year = MAX(max_thaw_year, thaw_depth)
     ENDIF

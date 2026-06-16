@@ -171,7 +171,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: max_snow_year      !< Maximum snow depth in current year [m]
     dsl4jsb_Real2D_onChunk :: max_snow_prev_year !< Maximum snow depth in previous year [m]
     dsl4jsb_Real2D_onChunk :: max_thaw_year      !< Maximum soil column thaw depth in current year [m]
-    dsl4jsb_Real2D_onChunk :: max_thaw_10year    !< Smoothed maximum soil column thaw depth (~10 years) [m]
+    dsl4jsb_Real2D_onChunk :: max_thaw_prev_year !< Maximum soil column thaw depth in previous year [m]
     dsl4jsb_Real2D_onChunk :: max_wind_of_day    !< Current maximum 10m wind speed of the day
     dsl4jsb_Real2D_onChunk :: max_wind_yDay      !< Maximum 10m wind speed of the previous day
     dsl4jsb_Real2D_onChunk :: max_wind_4yr       !< Maximum 10m wind speed smoothed in time
@@ -248,7 +248,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_snow_year)          ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_snow_prev_year)     ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_thaw_year)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_thaw_10year)        ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_thaw_prev_year)     ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_of_day)        ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_yDay)          ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_4yr)           ! inout
@@ -298,7 +298,7 @@ CONTAINS
       &                  min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
       &                  temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
       &                  gdd_sum_year, gdd_prev_year, &
-      &                  max_snow_year, max_snow_prev_year, max_thaw_year, max_thaw_10year, &
+      &                  max_snow_year, max_snow_prev_year, max_thaw_year, max_thaw_prev_year, &
       &                  max_wind_of_day, max_wind_yDay, max_wind_4yr, &
       &                  q_rel_air_14d, q_rel_air_14d_yDay)
     CALL calc_climbuf_3d(lstart, new_day, dtime, t_soil_sl, wtr_soil_rel_sl, seconds_day, &
@@ -364,7 +364,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_snow_year, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_snow_prev_year, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_thaw_year, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_thaw_10year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_thaw_prev_year, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, t_soil_sl_15d, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, t_soil_sl_15d_yDay, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, wtr_soil_rel_sl_15d, weighted_by_fract)
