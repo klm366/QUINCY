@@ -621,6 +621,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, n_processing_respiration            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c                  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c13                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c14                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_c              , weighted_by_fract)
 
     ! C isotopes needed for global analysis (not all fluxes required!)

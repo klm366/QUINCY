@@ -494,6 +494,8 @@ CONTAINS
 
     ! fluxes
     dsl4jsb_Aggregate_onChunk(SB_, het_respiration              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, het_respiration_c13          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, het_respiration_c14          , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, ecosystem_total_n_loss       , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, fertiliser_nh4               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, fertiliser_no3               , weighted_by_fract)
@@ -503,6 +505,11 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, emission_n2                  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, net_mineralisation_nh4       , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, net_mineralisation_no3       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, net_mineralisation_po4       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, weathering_po4               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, leaching_po4_solute          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, biochem_mineralisation_po4   , weighted_by_fract)
+
 
     ! pools
     ! 2D & 3D mixed
