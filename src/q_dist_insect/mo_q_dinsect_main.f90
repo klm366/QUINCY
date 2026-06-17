@@ -521,6 +521,13 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   model  => Get_model(tile%owner_model_id)
   lctlib => model%lctlib(tile%lcts(1)%lib_id)
   ! ----------------------------------------------------------------------------------------------------- !
+  IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+  IF (lctlib%PastureFlag) RETURN !< do not run this routine at tiles like "pasture pft"
+  IF (lctlib%CropFlag) RETURN !< do not run this routine at tiles like "crops pft"
+  IF (lctlib%GrassFlag) RETURN !< do not run this routine at tiles like "grass pft"
+  !< Needle-leaved evergreen trees (5) and breadleaved deciduous trees (3, 4)
+  IF (lctlib%LctNumber > 3 .OR. lctlib%LctNumber < 5) RETURN !< Only run on landcover types 3, 4, 5
+  ! ----------------------------------------------------------------------------------------------------- !
   dsl4jsb_Get_config(Q_DINSECT_)
   dsl4jsb_Get_config(VEG_)
   dsl4jsb_Get_memory(Q_DINSECT_)
@@ -664,6 +671,12 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   ! ----------------------------------------------------------------------------------------------------- !
   model  => Get_model(tile%owner_model_id)
   lctlib => model%lctlib(tile%lcts(1)%lib_id)
+  ! ----------------------------------------------------------------------------------------------------- !
+  IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+  IF (lctlib%PastureFlag) RETURN !< do not run this routine at tiles like "pasture pft"
+  IF (lctlib%CropFlag) RETURN !< do not run this routine at tiles like "crops pft"
+  IF (lctlib%GrassFlag) RETURN !< do not run this routine at tiles like "grass pft"
+  IF (lctlib%LctNumber /= 5) RETURN !< Only run on landcover type 5 (Needle-leaved evergreen trees)
   ! ----------------------------------------------------------------------------------------------------- !
   dsl4jsb_Get_config(Q_DINSECT_)
   dsl4jsb_Get_config(VEG_)
