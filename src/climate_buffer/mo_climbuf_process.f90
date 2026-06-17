@@ -282,46 +282,37 @@ CONTAINS
   !> We here calculate relative humidity of the lowest atmospheric level
   !>
   ! -------------------------------------------------------------------------------------------------------- !
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
   FUNCTION get_relative_humidity_air(air_moisture, air_temperature, air_press, use_tmx) RESULT(relative_humidity_air)
 
     USE mo_jsb_physical_constants, ONLY: rd  ! gas constant for dry air [J/(K*kg)]
     USE mo_jsb_physical_constants, ONLY: rv  ! gas constant for water vapor [J/(K*kg)]
     USE mo_phy_schemes,            ONLY: qsat_water, qsat_mixed
 
+    !$ACC ROUTINE SEQ
     REAL(wp), INTENT(in) :: &
-      & air_moisture(:),      & !< Specific humidity of air [kg kg-1]
-      & air_temperature(:),   & !< Temperature of air [K]
-      & air_press(:)            !< Pressure of air [Pa]
+      & air_moisture,       & !< Specific humidity of air [kg kg-1]
+      & air_temperature,    & !< Temperature of air [K]
+      & air_press             !< Pressure of air [Pa]
     LOGICAL, INTENT(in) :: &
-      & use_tmx                 !< Turbulent mixing scheme 'tmx' is used in coupling to the atmosphere:
-                                !< if true, we use qsat_water, else qsat_mixed
+      & use_tmx               !< Turbulent mixing scheme 'tmx' is used in coupling to the atmosphere:
+                              !< if true, we use qsat_water, else qsat_mixed
 
     REAL(wp) :: &
-      & air_qsat,             & !< Saturation specific humidity []
-      & relative_humidity_air(SIZE(air_moisture)) !< Relative humidity [%]
+      & air_qsat,           & !< Saturation specific humidity []
+      & relative_humidity_air !< Relative humidity [%]
 
-    INTEGER :: &
-      & ic,                   & !< Looping index for grid cells
-      & nc                      !< Number of grid cells in current block
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_relative_humidity_air'
-
-    nc = SIZE(air_moisture)
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
-    !$ACC   PRIVATE(air_qsat)
-    DO ic = 1, nc
-      IF (use_tmx) THEN
-        air_qsat = qsat_water(air_temperature(ic), air_press(ic))
-      ELSE
-        air_qsat = qsat_mixed(air_temperature(ic), air_press(ic))
-      END IF
-      relative_humidity_air(ic) = 100._wp * air_moisture(ic)                                       &
-                                 * (  (1._wp - rd / rv) * air_qsat + (rd / rv) )                   &
-                                 / ( ((1._wp - rd / rv) * air_moisture(ic) + (rd / rv)) * air_qsat )
-      relative_humidity_air(ic) = MIN(100._wp, relative_humidity_air(ic))
-    END DO
-    !$ACC END PARALLEL LOOP
+    IF (use_tmx) THEN
+      air_qsat = qsat_water(air_temperature, air_press)
+    ELSE
+      air_qsat = qsat_mixed(air_temperature, air_press)
+    END IF
+    relative_humidity_air = 100._wp * air_moisture                                           &
+                           * (  (1._wp - rd / rv) * air_qsat + (rd / rv) )                   &
+                           / ( ((1._wp - rd / rv) * air_moisture + (rd / rv)) * air_qsat )
+    relative_humidity_air = MIN(100._wp, relative_humidity_air)
 
   END FUNCTION get_relative_humidity_air
 #endif
