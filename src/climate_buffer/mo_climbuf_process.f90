@@ -78,8 +78,8 @@ CONTAINS
       & max_mmtemp_20yr,        & !< Climatological mean temperature of the warmest month [K]
       & temp_15d,               & !< 15-day smoothed temperature [K]
       & temp_15d_yDay,          & !< 15-day smoothed temperature at the end of the previous day [K]
-      & precip_15d,             & !< 15-day smoothed precipitation [K]
-      & precip_15d_yDay,        & !< 15-day smoothed precipitation at the end of the previous day [K]
+      & precip_15d,             & !< 15-day smoothed precipitation [kg m-2 s-1]
+      & precip_15d_yDay,        & !< 15-day smoothed precipitation at the end of the previous day [kg m-2 s-1]
       & gdd5_sum_year,          & !< Current number of growing degree days of this year
       & gdd5_prev_year,         & !< Growing degree days of previous year
       & max_snow_year,          & !< Maximum snow depth in current year [m]
