@@ -475,6 +475,8 @@ CONTAINS
         IF (model%config%qmodel_id == QLAND) THEN
           IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
             CALL model%Queue_task(Q_DINSECT_, "update_dinsect_effects") ! LAND ONLY
+            CALL model%Queue_task(Q_DINSECT_, "update_dinsect_barkbeetle") ! LAND ONLY
+            CALL model%Queue_task(Q_DINSECT_, "update_dinsect_defoliator") ! LAND ONLY
           ENDIF
           CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
         END IF
@@ -595,6 +597,8 @@ CONTAINS
         IF (model%config%qmodel_id == QLAND) THEN
           IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
             CALL model%Queue_task(Q_DINSECT_, "update_dinsect_effects") ! LAND ONLY
+            CALL model%Queue_task(Q_DINSECT_, "update_dinsect_barkbeetle") ! LAND ONLY
+            CALL model%Queue_task(Q_DINSECT_, "update_dinsect_defoliator") ! LAND ONLY
           ENDIF
           CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
         END IF
