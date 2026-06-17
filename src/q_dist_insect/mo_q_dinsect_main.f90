@@ -568,8 +568,72 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c14) ! inout
 
   ! ======================================================================================================= !
+  !>
   !> Go science
   !>
+
+  CALL derive_flux_frac_with_sigmoid_from_nml(&
+    & dsl4jsb_Config(Q_DINSECT_)%dinsect_start_doy, &
+    & dsl4jsb_Config(Q_DINSECT_)%dinsect_duration, &
+    & year, &
+    & doy, &
+    & hour, &
+    & yearly_damage_frac, &
+    & dinsect_flux_frac(ic))
+
+  !<  ------------------  2.1 get defoliation_dt ----------------------------------
+  dinsect_defoli_dt(:) = dinsect_flux_frac(:)
+
+  !<  ------------------  2.2 determine the defoliation  ----------------------------------
+  !CALL get_time_info(year, month, days_of_mon, doy)
+
+  ! Initialize or reset flags
+  ! defoliated_state is reset in every timestep
+  defoliated_state(:) = 0.0_wp
+
+  DO ic = 1, nc
+
+    IF (dinsect_defoli_dt(ic) > eps8) THEN  ! Once defoliation happened, this flag will be turned on
+      defoliated_state(ic) = 1.0_wp  ! Update at each timestep in mo_q_veg_growth.f
+    END IF
+
+    IF (is_insect_year(ic) > eps8) THEN  ! Outbreak happend in this year
+      IF (lctlib%phenology_type .eq. 1) THEN  ! is evergreen needleleaf
+        ! (1) the regrowth restriction should be adjusted, if required, according to the research
+        ! domain and plant leaf growth strategy; (2) the distribution of grid-based damage fraction
+        ! among PFTs should be pre-calculated before inputing (this point will be more easier
+        ! and clearer in coding and flexible in scientific using, but need to ask Ana firstly)
+        !
+        ! TODO: "prevent_late_summer_leaf_regrowth" (set the northern hemisphere as > =July 1 and
+        ! southern hemisphere as <= June 30) and make the evergreen PFT got this feature ?
+        ! Something like this
+        IF (int(month) > 6) THEN  ! any months after defoliation (here we generally say June)
+          defoliated_state(ic) = 1.0_wp  ! the flag for controling leaf reflush will be on, until next year
+        END IF
+      END IF
+    END IF
+
+    !< ---------------  2.3 Calculate effects (after defoliation event happens)-------------------------------
+    IF (dinsect_defoli_dt(ic) > eps8) THEN
+        defoliator_effects_triggered(ic) = defoliator_effects_triggered(ic) + 1.0_wp
+    END IF
+  END DO
+
+  CALL calc_defoliator_effects(&
+    & nc                                     , & ! in
+    & dtime                                  , & ! in
+    & doy                                    , & ! in
+    & dinsect_defoli_dt(:)                   , & ! in
+    & veg_pool_mt(:,:,:)                     , & ! in
+    & dsl4jsb_Config(Q_DINSECT_)%dinsect_online, & ! in
+    & dinsect_larva_mt(:,:)                  , & ! inout
+    & dinsect_veg_extract_mt(:,:,:)          , & ! inout
+    & dinsect_dropping_mt(:,:)               , & ! inout
+    & dinsect_slow_litter_mt(:,:,:)          , & ! inout
+    & dinsect_defoliator_resp_c(:)           , & ! inout
+    & dinsect_defoliator_resp_c13(:)         , & ! inout
+    & dinsect_defoliator_resp_c14(:)         , & ! inout
+    & mask=(defoliator_effects_triggered(:) > 0.0_wp)) ! optional(in)
 END SUBROUTINE update_dinsect_defoliator
 
 
@@ -720,6 +784,56 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   ! ======================================================================================================= !
   !> Go science
   !>
+
+  ! If the insect is bark beetle, the damage fraction is calculated as the relative damage fraction based on the last year's remaining pool
+  yearly_damage_frac = (yearly_damage_frac - yearly_damage_frac_base) / (1.0_wp - yearly_damage_frac_base)
+
+  CALL derive_flux_frac_with_sigmoid_from_nml(&
+    & dsl4jsb_Config(Q_DINSECT_)%dinsect_start_doy, &
+    & dsl4jsb_Config(Q_DINSECT_)%dinsect_duration, &
+    & year, &
+    & doy, &
+    & hour, &
+    & yearly_damage_frac, &
+    & dinsect_flux_frac(ic))
+
+  !< -----------------------   1.1 get mortality_dt ---------------------------------
+  dinsect_mort_dt(:) =  dinsect_flux_frac(:)
+  !< ------------------ 1.2 Calculate effects (after bark beetle event happens) --------------------
+  DO ic = 1, nc
+
+    IF (dinsect_mort_dt(ic) > eps8) THEN
+      barkbeetle_effects_triggered(ic) = barkbeetle_effects_triggered(ic) + 1.0_wp
+    END IF
+
+    IF ((ABS(barkbeetle_effects_triggered(ic)) - 1.0_wp) < eps4) THEN
+      dinsect_disturbable_frac(ic) = 1.0_wp
+    END IF
+
+  END DO
+
+  CALL calc_beetle_effects(&
+        & nc                                     , & ! in
+        & dtime                                  , & ! in
+        & dinsect_mort_dt(:)                     , & ! in
+        & veg_pool_mt(:,:,:)                     , & ! in
+        & seed_bed_pool_mt(:,:)                  , & ! in
+        & dsl4jsb_Config(Q_DINSECT_)%dinsect_online, & ! in
+        !& heartwood_C_zero(:)                    , & ! in
+        & dinsect_deadsapwood_mt(:,:)            , & ! inout
+        & dinsect_deadheartwood_mt(:,:)          , & ! inout
+        & dinsect_deadleaf_mt(:,:)               , & ! inout
+        & dinsect_veg_extract_mt(:,:,:)          , & ! inout
+        & dinsect_slow_litter_mt(:,:,:)          , & ! inout
+        & dinsect_fast_litter_mt(:,:,:)          , & ! inout
+        & dinsect_seedb_fastl_mt(:,:)   , & ! inout
+        & dinsect_barkbeetle_labile_c(:)         , & ! inout
+        & dinsect_barkbeetle_labile_c13(:)       , & ! inout
+        & dinsect_barkbeetle_labile_c14(:)       , & ! inout
+        & dinsect_occupy_frac(:)                 , & ! inout
+        & dinsect_disturbable_frac(:)            , & ! inout
+        & mask=(barkbeetle_effects_triggered(:) > 0.0_wp)) ! optional(in)
+
 END SUBROUTINE update_dinsect_barkbeetle
 
 
