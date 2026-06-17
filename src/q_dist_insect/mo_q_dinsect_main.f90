@@ -315,7 +315,11 @@ CONTAINS
 
 
     ! Determine Insect Type
+    ! TOOD:  only on evergreen needle leaf (PFT 5)
     is_bark_beetle = (dsl4jsb_Config(Q_DINSECT_)%dinsect_type == 1)
+    ! TODO:  evergreen needle leaf(restricted regrowth during the defoliated year) (PFT 5) ;
+    !        broad deciduous leaf (regrowth anytime during proper season),
+    !        PFT 3 (rain) and 4 (summer)
     is_defoliator = (dsl4jsb_Config(Q_DINSECT_)%dinsect_type == 2)
 
     ! Insect Specific Calculations
@@ -376,6 +380,14 @@ CONTAINS
 
           IF (is_insect_year(ic) > eps8) THEN  ! Outbreak happend in this year
             IF (lctlib%phenology_type .eq. 1) THEN  ! is evergreen needleleaf
+                ! (1) the regrowth restriction should be adjusted, if required, according to the research
+                ! domain and plant leaf growth strategy; (2) the distribution of grid-based damage fraction
+                ! among PFTs should be pre-calculated before inputing (this point will be more easier
+                ! and clearer in coding and flexible in scientific using, but need to ask Ana firstly)
+                !
+                ! TODO: "prevent_late_summer_leaf_regrowth" (set the northern hemisphere as > =July 1 and
+                ! southern hemisphere as <= June 30) and make the evergreen PFT got this feature ?
+                ! Something like this
                 IF (int(month) > 6) THEN  ! any months after defoliation (here we generally say June)
                   defoliated_state(ic) = 1.0_wp  ! the flag for controling leaf reflush will be on, until next year
                 END IF
