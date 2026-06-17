@@ -555,7 +555,7 @@ CONTAINS
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
       ! setup bgc material store for Quincy (if running with processes that have bgcms)
-      IF ((model%config%model_scheme == MODEL_QUINCY) THEN
+      IF (model%config%model_scheme == MODEL_QUINCY) THEN
         CALL tile%Count_and_classify_bgc_materials()
         CALL tile%Collect_bgc_materials()
       END IF
