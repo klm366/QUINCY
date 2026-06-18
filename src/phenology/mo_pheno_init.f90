@@ -440,7 +440,7 @@ CONTAINS
 
       dsl4jsb_Get_memory_tile(PHENO_, current_tile)
 
-      WRITE(varname, '(a,a)') 'lai_', TRIM(current_tile%name)
+      WRITE(varname, '(a,a)') 'pheno_lai_ta_', TRIM(current_tile%name)
 
       IF (debug_on()) CALL message(TRIM(routine), &
         & 'Reading '//TRIM(varname)//' for tile '//TRIM(current_tile%name))
