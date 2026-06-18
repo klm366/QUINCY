@@ -223,22 +223,10 @@ CONTAINS
       !>     - Fraction of clay in deep soil
       CALL read_bc_data(input_file, 'SUB_FR_CLAY', tile%name, sse_init_vars%fr_clay_deep, llimit=0._wp)
 
-      ! read 'bulk density' values from quincy specific input file
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-        ! close jsbach input file
-        CALL input_file%Close()
-        ! open quincy input file
-        input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename), model%grid_id)
-
-        ! bulk density
-        !
-        ptr_2D => input_file%Read_2d(  &
-          & variable_name='BLDFIE',    &
-          & fill_array = sse_init_vars%bulk_density)
-        sse_init_vars%bulk_density(:,:) = MERGE(ptr_2D, 1000.0_wp, ptr_2D > 0.0_wp)
-
-        ! quincy input file may be closed below
+        !>     - bulk density
+        CALL read_bc_data(input_file, 'BLDFIE', tile%name, sse_init_vars%bulk_density, llimit=1000._wp)
       END SELECT
 
       ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
