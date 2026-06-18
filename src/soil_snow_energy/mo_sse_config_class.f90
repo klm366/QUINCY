@@ -45,7 +45,6 @@ MODULE mo_sse_config_class
     REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
                                 !! temperature for freezing/melting [m water equivalent]
     ! quincy
-    CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< IQ (QUINCY) soil input data
     INTEGER                     :: quincy_nsoil_e           !< number of soil layers for soil energy calculations (equivalent 'quincy_nsoil_w' in HYDRO_)
 #ifdef __QUINCY_STANDALONE__
     ! quincy standalone
@@ -87,7 +86,6 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     ! quincy
-    CHARACTER(len=filename_max) :: bc_quincy_soil_filename
     REAL(wp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< intial estimate of soil profile using the upper bound of each soil layer [m]
     REAL(wp) :: k_soil_profile  !< for soil layer calculations
     REAL(wp) :: min_layer_depth !< for soil layer calculations
@@ -112,7 +110,6 @@ CONTAINS
       & l_freeze, l_supercool, w_soil_critical, &
       & ic_filename,                            &
       & bc_filename,                            &
-      & bc_quincy_soil_filename,                &
 #ifdef __QUINCY_STANDALONE__
       & qs_soil_sand, &
       & qs_soil_silt, &
@@ -154,7 +151,6 @@ CONTAINS
     w_soil_critical  = 5.85036E-3_wp
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'
-    bc_quincy_soil_filename = 'bc_quincy_soil.nc'
     quincy_nsoil_e          = 0           ! by default the values is not set via namelist, but used from 'ic_filename'
 #ifdef __QUINCY_STANDALONE__
     quincy_nsoil_e          = 5           ! but use 5 soil layers as default for quincy standalone
@@ -175,7 +171,6 @@ CONTAINS
     config%lrestart_cont = lrestart_cont
     config%ic_filename             = ic_filename
     config%bc_filename             = bc_filename
-    config%bc_quincy_soil_filename = bc_quincy_soil_filename
 
     config%nsnow         = nsnow
     IF (nsnow > max_snow_layers) THEN

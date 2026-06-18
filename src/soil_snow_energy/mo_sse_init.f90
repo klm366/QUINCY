@@ -229,7 +229,7 @@ CONTAINS
         ! close jsbach input file
         CALL input_file%Close()
         ! open quincy input file
-        input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_quincy_soil_filename), model%grid_id)
+        input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename), model%grid_id)
 
         ! bulk density
         !

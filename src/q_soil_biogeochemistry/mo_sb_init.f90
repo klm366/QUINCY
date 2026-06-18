@@ -754,7 +754,7 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename), model%grid_id)
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_filename), model%grid_id)
 
 
     !> USDA taxonomy soil class
