@@ -1443,7 +1443,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
     USE mo_hydro_constants,        ONLY: frac_wtr_vertical_transport_up_max, frac_wtr_vertical_transport_down_max, &
-      &                                  frac_w_lat_loss_max
+      &                                  frac_w_lat_loss_max, Uniform_
     USE mo_jsb_math_constants,     ONLY: eps8
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Current tile
@@ -1564,7 +1564,6 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
-    dsl4jsb_Get_memory(CLIMBUF_)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)      ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)      ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_weq_soil_sl)  ! out
@@ -1575,9 +1574,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)         ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)         ! out
-
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_, max_thaw_year)      ! in
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_, max_thaw_prev_year) ! in
 
     !$ACC DATA ASYNC(acc_stream) CREATE(l_fract) &
     !$ACC   CREATE(l_pf_soil, depth_thrsh, slope_used, flowlag_used) &
@@ -1627,16 +1623,31 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    ! In deep soils permafrost affects bottom layer drainage as long as the active layer is smaller than soil
-    ! depth. In shallow soils, bottom layer drainage is also affected if the whole soil column is in the
-    ! active zone, but permafrost remains (below bedrock) in less then 1m depth.
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic = 1, nc
-      depth_thrsh(ic) = MAX(soil_depth(ic), 1.0_wp)
-      l_pf_soil(ic)   = (max_thaw_prev_year(ic) < depth_thrsh(ic) .AND. &
-        &                max_thaw_year(ic)      < depth_thrsh(ic))
-    END DO
-    !$ACC END PARALLEL LOOP
+    IF (model%processes(CLIMBUF_)%p%config%active) THEN
+      dsl4jsb_Get_memory(CLIMBUF_)
+      dsl4jsb_Get_var2D_onChunk(CLIMBUF_, max_thaw_year)      ! in
+      dsl4jsb_Get_var2D_onChunk(CLIMBUF_, max_thaw_prev_year) ! in
+
+      ! In deep soils permafrost affects bottom layer drainage as long as the active layer is smaller than soil
+      ! depth. In shallow soils, bottom layer drainage is also affected if the whole soil column is in the
+      ! active zone, but permafrost remains (below bedrock) in less then 1m depth.
+      ! Note: this is only considered for hydro_scale == Uniform_
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        depth_thrsh(ic) = MAX(soil_depth(ic), 1.0_wp)
+        l_pf_soil(ic)   = (max_thaw_prev_year(ic) < depth_thrsh(ic) .AND. &
+          &                max_thaw_year(ic)      < depth_thrsh(ic))
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE IF (dsl4jsb_Config(HYDRO_)%hydro_scale == Uniform_) THEN
+      CALL finish(TRIM(routine), 'Uniform soil hydrology requires CLIMBUF_ to be active')
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        l_pf_soil(ic)   = .FALSE.
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     ! Set to true, until HydroTiles are implemented
     l_latflow_to_streamflow = .TRUE.
