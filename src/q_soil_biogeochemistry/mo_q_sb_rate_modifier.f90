@@ -16,7 +16,7 @@
 !>#### routines for the task update_sb_rate_modifier, i.e., biophysical rate modifiers
 !>
 MODULE mo_q_sb_rate_modifier
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, message_text, finish

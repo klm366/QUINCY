@@ -42,7 +42,7 @@ MODULE mo_hydro_interface
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_processes PHENO_
 #endif
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, A2L_, HYDRO_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, A2L_, HYDRO_, VEG_, Q_ASSIMI_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -55,14 +55,10 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
-#ifndef __QUINCY_STANDALONE__
-  dsl4jsb_Use_memory(PHENO_)
-#endif
-
-#ifndef __NO_QUINCY__
-  dsl4jsb_Use_processes VEG_, Q_ASSIMI_
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_memory(Q_ASSIMI_)
+#ifndef __QUINCY_STANDALONE__
+  dsl4jsb_Use_memory(PHENO_)
 #endif
 
   ! -------------------------------------------------------------------------------------------------------
@@ -387,11 +383,9 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)       !< Memory of the soil and snow energy process
     dsl4jsb_Def_memory(SEB_)       !< Memory of process surface energy balance
     dsl4jsb_Def_memory(A2L_)       !< Memory of the atmosphere to land interface
+    dsl4jsb_Def_memory(VEG_)       !< Memory of the vegetation process
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)     !< Memory of the phenology process
-#endif
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_memory(VEG_)       !< Memory of the vegetation process
 #endif
 
     ! Pointers to variables in memory
@@ -602,10 +596,8 @@ CONTAINS
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_memory(PHENO_)
 #endif
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_memory(VEG_)
-#endif
       END SELECT
     END IF
 
@@ -669,12 +661,10 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   pond_melt)        ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond_net_flx) ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_latflow_srf)  ! out
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_var3D_onChunk(HYDRO_,   wtr_soil_pot_sl)  ! out  [MPa]
       END SELECT
-#endif
 
       IF (tile%contains_vegetation) THEN
         ! Variables only needed on tiles with vegetation
@@ -686,10 +676,8 @@ CONTAINS
           dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)              ! in
           dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)    ! in
 #endif
-#ifndef __NO_QUINCY__
         CASE (MODEL_QUINCY)
           dsl4jsb_Get_var2D_onChunk(VEG_,     lai)              ! in
-#endif
         END SELECT
       END IF
     END IF
@@ -827,7 +815,6 @@ CONTAINS
           END DO
           !$ACC END PARALLEL LOOP
 #endif
-#ifndef __NO_QUINCY__
         CASE (MODEL_QUINCY)
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1,nc
@@ -836,7 +823,6 @@ CONTAINS
             skinres_canopy_max(ic) = config_w_skin_max * lai(ic)
           END DO
           !$ACC END PARALLEL LOOP
-#endif
         END SELECT
       ELSE
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -980,38 +966,36 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
-#ifndef __NO_QUINCY__
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_QUINCY)
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
 
-      ! Compute soil hydrological properties to get top layer ice impedance and
-      ! soil hydrological conductivity for point scale infiltration
-      !
-      ! called here to get an updated value of mpot_act_sl(:,:)
-      !
-      CALL get_soilhyd_properties(                                                           &
-        & dsl4jsb_Config(HYDRO_)%soilhydmodel,                                               &
-        & dsl4jsb_Config(HYDRO_)%interpol_mean,                                              &
-        & nc, nsoil, soil_depth_sl(:,:),                                                     &
-        & wtr_soil_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:),                    &
-        & wpi_wsat_soil_sl_tmp(:,:), wpi_wres_soil_sl_tmp(:,:),                              &
-        & hyd_cond_sat_sl(:,:), matric_pot_sl(:,:), bclapp_sl(:,:), pore_size_index_sl(:,:), &  ! in
-        & mpot_act=mpot_act_sl(:,:)                                                          &  ! out
-        )
+        ! Compute soil hydrological properties to get top layer ice impedance and
+        ! soil hydrological conductivity for point scale infiltration
+        !
+        ! called here to get an updated value of mpot_act_sl(:,:)
+        !
+        CALL get_soilhyd_properties(                                                           &
+          & dsl4jsb_Config(HYDRO_)%soilhydmodel,                                               &
+          & dsl4jsb_Config(HYDRO_)%interpol_mean,                                              &
+          & nc, nsoil, soil_depth_sl(:,:),                                                     &
+          & wtr_soil_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:),                    &
+          & wpi_wsat_soil_sl_tmp(:,:), wpi_wres_soil_sl_tmp(:,:),                              &
+          & hyd_cond_sat_sl(:,:), matric_pot_sl(:,:), bclapp_sl(:,:), pore_size_index_sl(:,:), &  ! in
+          & mpot_act=mpot_act_sl(:,:)                                                          &  ! out
+          )
 
-      ! Update soil water potential based on "soil matric potential"
-      !   includes unit conversion from: m -> J/N -> MPa
-      ! TODO: replace the 1000 with a parameter (rhoh2o from mo_jsb_physical_constants?)
+        ! Update soil water potential based on "soil matric potential"
+        !   includes unit conversion from: m -> J/N -> MPa
+        ! TODO: replace the 1000 with a parameter (rhoh2o from mo_jsb_physical_constants?)
 
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
-      DO is = 1, nsoil
-        DO ic = 1, nc
-          wtr_soil_pot_sl(ic, is) = mpot_act_sl(ic, is) * grav / 1000.0_wp
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+        DO is = 1, nsoil
+          DO ic = 1, nc
+            wtr_soil_pot_sl(ic, is) = mpot_act_sl(ic, is) * grav / 1000.0_wp
+          END DO
         END DO
-      END DO
-      !$ACC END PARALLEL
-    END SELECT
-#endif
+        !$ACC END PARALLEL
+      END SELECT
 
       !$ACC END DATA
     END IF ! NOT tile%is_glacier
@@ -1105,12 +1089,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_srf,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, le_pc_remain,        weighted_by_fract)
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pot_sl,     weighted_by_fract)
     END SELECT
-#endif
 
     CALL weighted_by_fract%EndAggregate()
 
@@ -1452,9 +1434,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)                   !< Configurable parameters of the hydrology process
     dsl4jsb_Def_memory(HYDRO_)                   !< Variables of the hydrology process
     dsl4jsb_Def_memory(SSE_)                     !< Variables of the "snow and snow energy" process
-#ifndef __NO_QUINCY__
     dsl4jsb_Def_memory(Q_ASSIMI_)
-#endif
 
     ! Pointers to variables in memory
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl        !< Amount of liquid water in soil layers [m]
@@ -1606,13 +1586,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_transp_down_sl)       ! out
 
     SELECT CASE (model%config%model_scheme)
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_transp_down_sl)  ! out
       dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)       ! out
       ALLOCATE(wtr_soil_old_sl(nc, nsoil))
       !$ACC ENTER DATA CREATE(wtr_soil_old_sl) ASYNC(acc_stream)
-#endif
     END SELECT
 
     ! Find out the tile's area fraction. Some processes are only calculated in grid cells with a relevant
@@ -1715,7 +1693,6 @@ CONTAINS
         & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_sl    )      & ! Outflow of wtr_latflow_res_sl [kg m-2 s-1]
         & )
 
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_memory(Q_ASSIMI_)
 
@@ -1834,8 +1811,7 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL
-#endif
-    END SELECT
+    END SELECT  ! JSBACH / QUINCY
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
@@ -1866,11 +1842,9 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     SELECT CASE (model%config%model_scheme)
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       !$ACC EXIT DATA DELETE(wtr_soil_old_sl) ASYNC(acc_stream)
       DEALLOCATE(wtr_soil_old_sl)
-#endif
     END SELECT
 
     !$ACC END DATA
@@ -1937,13 +1911,11 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_sl,      weighted_by_fract)
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       dsl4jsb_Aggregate_onChunk(HYDRO_, frac_wtr_transp_down_sl,     weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(HYDRO_, frac_w_lat_loss_sl,          weighted_by_fract)
     END SELECT
-#endif
     CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1969,11 +1941,9 @@ CONTAINS
 
     dsl4jsb_Def_memory(HYDRO_)                              !< Memory of hydrology process
     dsl4jsb_Def_memory(A2L_)                                !< Memory of "atmosphere to land" process
+    dsl4jsb_Def_memory(VEG_)                                !< Memory of vegetation process
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)                              !< Memory of phenology process
-#endif
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_memory(VEG_)                                !< Memory of vegetation process
 #endif
 
     TYPE(t_jsb_model), POINTER :: model   !!!vg check !!!
@@ -2013,11 +1983,9 @@ CONTAINS
       dsl4jsb_Get_memory(PHENO_)
       dsl4jsb_Get_var2D_onChunk(PHENO_,  lai)                   ! in
 #endif
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_memory(VEG_)
       dsl4jsb_Get_var2D_onChunk(VEG_,    lai)                   ! in
-#endif
     END SELECT
 
     dsl4jsb_Get_var2D_onChunk(A2L_,      swpar_srf_down)        ! in
@@ -2336,7 +2304,6 @@ CONTAINS
       !> Note, the logistic growth phenology (LoGro-P; compare [[mo_pheno_interface:update_phenology_logrop]]) has
       !> a different approach to account for water stress: there we use the relative soil moisture as measure
       !> for water stress directly, instead of using the water stress factor.
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       ! Calculate relative plant available water content of the root zone
       !
@@ -2352,7 +2319,6 @@ CONTAINS
         water_stress(ic) = wtr_plant_avail_rel(ic)
       END DO
       !$ACC END PARALLEL LOOP
-#endif
     END SELECT
 
     ! for diagnostic purposes, calculate root zone integrated water and ice stocks
@@ -2987,11 +2953,9 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)        !< Memory of surface energy balance process
     dsl4jsb_Def_memory(TURB_)       !< Memory of turbulence process
     dsl4jsb_Def_memory(HYDRO_)      !< Memory of hydrology process
+    dsl4jsb_Def_memory(VEG_)
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)      !< Memory of phenology process
-#endif
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_memory(VEG_)
 #endif
 
     ! Declare pointers to variables in memory
@@ -3075,10 +3039,8 @@ CONTAINS
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_memory(PHENO_)
 #endif
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_memory(VEG_)
-#endif
       END SELECT
     END IF
 
@@ -3104,18 +3066,16 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_pond)        ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_wet)         ! out
     END IF
-    IF (tile%contains_vegetation) THEN
 
+    IF (tile%contains_vegetation) THEN
       SELECT CASE (model%config%model_scheme)
 #ifndef __QUINCY_STANDALONE__
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)              ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)    ! in
 #endif
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_var2D_onChunk(VEG_,     lai)              ! in
-#endif
       END SELECT
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)    ! out
     END IF
@@ -3153,7 +3113,6 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
 #endif
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1,nc
@@ -3162,7 +3121,6 @@ CONTAINS
           skinres_canopy_max(ic) = config_w_skin_max * lai(ic)
         END DO
         !$ACC END PARALLEL LOOP
-#endif
       END SELECT
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)

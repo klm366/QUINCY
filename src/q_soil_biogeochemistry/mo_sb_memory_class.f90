@@ -16,7 +16,7 @@
 !>#### definition and init of (memory) variables for the soil-biogeochemistry process
 !>
 MODULE mo_sb_memory_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: finish, message

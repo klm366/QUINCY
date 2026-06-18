@@ -25,10 +25,8 @@ MODULE mo_rad_process
     & calc_par,                    &
     & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation, calc_snow_age,                 &
     & calc_soil_albedo, calc_pond_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos_of_vegtile, &
-    & get_surface_albedo_simple, get_litter_carbon, get_soil_carbon
-#ifndef __NO_QUINCY__
-  PUBLIC :: calc_canopy_radiation_budget
-#endif
+    & get_surface_albedo_simple, get_litter_carbon, get_soil_carbon,                                           &
+    & calc_canopy_radiation_budget
 
   INTERFACE Has_minimal_radiation
     MODULE PROCEDURE Has_minimal_radiation_1
@@ -1331,7 +1329,6 @@ CONTAINS
   !>
   ! ======================================================================================================= !
 
-#ifndef __NO_QUINCY__
   !-----------------------------------------------------------------------------------------------------
   !> calculate shortwave radiation budget of the canopy, given soil / snow albedo and incident radiation
   !!
@@ -1760,6 +1757,5 @@ CONTAINS
     !$ACC END DATA
   END SUBROUTINE calc_canopy_radiation_budget
 
-#endif
 #endif
 END MODULE mo_rad_process

@@ -16,7 +16,7 @@
 !>#### routine for updating the characteristics of the plants on a tile after changes in the vegetation pools
 !>
 MODULE mo_q_veg_plant_characteristics
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, finish
