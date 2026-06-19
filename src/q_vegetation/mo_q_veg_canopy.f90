@@ -16,7 +16,7 @@
 !>#### calculate canopy layer properties, e.g., C & N content, LAI, fractional allocation
 !>
 MODULE mo_q_veg_canopy
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                        ONLY: wp
   USE mo_jsb_impl_constants,          ONLY: test_false_true

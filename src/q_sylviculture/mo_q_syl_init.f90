@@ -16,7 +16,7 @@
 !>#### initialization of sylviculture memory variables using, e.g., ic & bc input files
 !>
 MODULE mo_q_syl_init
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish

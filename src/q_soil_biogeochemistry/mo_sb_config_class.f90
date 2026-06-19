@@ -16,7 +16,7 @@
 !>#### define soil-biogeochemistry config structure, read soil-biogeochemistry namelist and init configuration parameters
 !>
 MODULE mo_sb_config_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_io_units,            ONLY: filename_max

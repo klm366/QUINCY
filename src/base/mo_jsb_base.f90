@@ -44,7 +44,6 @@ CONTAINS
     USE mo_jsb_grid,            ONLY: Register_vgrid, Get_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, ZAXIS_GENERIC
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
-#ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT
     USE mo_rad_parameters,      ONLY: init_rad_parameters
     USE mo_atmland_constants,   ONLY: init_atmland_constants
@@ -56,7 +55,6 @@ CONTAINS
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
     USE mo_turb_constants,      ONLY: init_turb_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
-#endif
     !>
     !> 1. Setup the ICON-Land models
     !>
@@ -82,10 +80,8 @@ CONTAINS
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
     dsl4jsb_Use_config(ALCC_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(VEG_)
-#endif
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename !< icon_master.namelist - which models to run, which calendar, ...
 
@@ -102,10 +98,8 @@ CONTAINS
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
     dsl4jsb_Def_config(ALCC_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(VEG_)
-#endif
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
 
@@ -169,7 +163,6 @@ CONTAINS
          CALL finish(routine, 'Only one model_scheme allowed!')
       END IF
 
-#ifndef __NO_QUINCY__
       !>
       !> 5. Set the bgcm index var used in the scientific routines.
       !>   It depends on the model config and is identical across models,
@@ -178,13 +171,8 @@ CONTAINS
       IF (model_idx == 1) THEN
         CALL set_bgcm_element_idx(model%config%elements_index_map)
       END IF
-#else
-      IF (model_scheme == MODEL_QUINCY) THEN
-        CALL finish(routine, 'The model scheme QUINCY can only be run if compiled with --enable-quincy!')
-      END IF
-#endif
 
-      !> 6. Set parameter init and test for `--enable-quincy` compile flag
+      !> 6. Set parameter init
       !>
       IF (model_idx == 1) THEN
         ! assuming the shared/constants/ modules are available here already (impl, math, physical)
@@ -192,7 +180,6 @@ CONTAINS
         SELECT CASE (model_scheme)
         CASE (MODEL_QUINCY)
           CALL message(TRIM(routine), 'starting init of QUINCY process parameters')
-#ifndef __NO_QUINCY__
            CALL init_rad_parameters
            CALL init_q_assimi_parameters
            CALL init_q_agr_constants
@@ -202,7 +189,6 @@ CONTAINS
            CALL init_sb_constants
            CALL init_q_pheno_parameters
            CALL init_atmland_constants
-#endif
         CASE (MODEL_JSBACH)
           CALL message(TRIM(routine), 'starting init of JSBACH process parameters')
           CALL init_pheno_parameters
@@ -359,7 +345,6 @@ CONTAINS
         model%processes(ASSIMI_)%p%config%active = .FALSE.
         model%processes(PHENO_)%p%config%active = .FALSE.
 
-#ifndef __NO_QUINCY__
         ! The Q_SYL_ process requires the PPLCC process to be active
         dsl4jsb_Get_config(Q_SYL_)
         IF (dsl4jsb_Config(Q_SYL_)%active) THEN
@@ -388,7 +373,6 @@ CONTAINS
             dsl4jsb_Config(Q_SYL_)%active = .FALSE.
           END IF
         END IF
-#endif
 
       CASE (MODEL_JSBACH)
 

@@ -38,17 +38,14 @@ MODULE mo_pplcc_interface
   USE mo_jsb_process_class,   ONLY: t_jsb_process
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_var_class,       ONLY: REAL2D, REAL3D
+  USE mo_quincy_model_config, ONLY: QCANOPY
+  USE mo_quincy_output_class, ONLY: unit_sb_pool, unit_sb_flux, unit_veg_flux
 
   USE mo_jsb_time,          ONLY: is_newday
   USE mo_jsb_cqt_class,     ONLY: Get_cqt_name, LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
     &                             BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE, &
     &                             IQ_2L2D_POOL_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE, &
     &                             IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE
-
-#ifndef __NO_QUINCY__
-  USE mo_quincy_model_config, ONLY: QCANOPY
-  USE mo_quincy_output_class, ONLY: unit_sb_pool, unit_sb_flux, unit_veg_flux
-#endif
 
   USE mo_carbon_interface,  ONLY: recalc_carbon_per_tile_vars
 
@@ -199,9 +196,7 @@ CONTAINS
 
     IF (tile%Has_conserved_quantities()) THEN
 
-#ifndef __NO_QUINCY__
       IF (model%config%model_scheme == MODEL_QUINCY) THEN
-
         IF (model%config%qmodel_id == QCANOPY) THEN
           ! If running in CANOPY configuration nothing needs to be conserved because the states are prescribed
           RETURN
@@ -212,7 +207,6 @@ CONTAINS
           CALL tile%bgcm_store%Write_matrices_to_bgcm_vars(tile%name, ics, ice, iblk)
         END IF
       END IF
-#endif
 
       ! Iterate over all cq types and their vars and convert
       DO i_cqt = 1,tile%nr_of_cqts
@@ -250,7 +244,6 @@ CONTAINS
 
             conversion_factor(:) = conversion_factor(:) * veg_fract_correction(:) * fract_fpc_max(:)
 
-#ifndef __NO_QUINCY__
           CASE (IQ_2L2D_POOL_CQ_TYPE, IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE)
             ! in the current implementation of quincy to be conserved variables are only available on the pft tiles
             IF (.NOT. index(tile%name, 'pft') /= 0) THEN
@@ -278,7 +271,6 @@ CONTAINS
                 conversion_factor(ic) = 1.0_wp
               END IF
             END DO
-#endif
 
           ! CASE (WATER_CQ_TYPE)
           CASE DEFAULT
@@ -321,14 +313,12 @@ CONTAINS
         END DO
       END DO
 
-#ifndef __NO_QUINCY__
       IF (model%config%model_scheme == MODEL_QUINCY) THEN
         ! The bgcm matrices need to be updated after conversion because they are required in the alcc interface
         IF (ASSOCIATED(tile%bgcm_store)) THEN
           CALL tile%bgcm_store%Store_bgcm_vars_in_matrices(tile%name, ics, ice, iblk)
         END IF
       END IF
-#endif
 
     END IF ! IF (tile%Has_conserved_quantities())
 
@@ -396,7 +386,6 @@ CONTAINS
 
     IF (tile%Has_conserved_quantities()) THEN
 
-#ifndef __NO_QUINCY__
       IF (model%config%model_scheme == MODEL_QUINCY) THEN
         IF (model%config%qmodel_id == QCANOPY) THEN
           ! If running in CANOPY configuration nothing needs to be conserved because the states are prescribed
@@ -405,7 +394,6 @@ CONTAINS
         ! Since the lcc framework mainly working on the variables and only on additionally synchronised
         ! chuncks of selected matrices no sync from matrix to variables should be conducted before post lcc conversion
       END IF
-#endif
 
       ! Iterate over all cq types and their vars and convert
       DO i_cqt = 1,tile%nr_of_cqts
@@ -502,14 +490,12 @@ CONTAINS
         CALL recalc_carbon_per_tile_vars(tile, options)
       END IF
 
-#ifndef __NO_QUINCY__
       IF (model%config%model_scheme == MODEL_QUINCY) THEN
         ! For the quincy model the matrices need to be updated after post lcc conversion
         IF (ASSOCIATED(tile%bgcm_store)) THEN
           CALL tile%bgcm_store%Store_bgcm_vars_in_matrices(tile%name, ics, ice, iblk)
         END IF
       END IF
-#endif
 
     END IF ! IF (tile%Has_conserved_quantities())
 
