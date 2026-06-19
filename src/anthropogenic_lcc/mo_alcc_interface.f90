@@ -431,7 +431,8 @@ CONTAINS
       & i_cf_tile, &  !< Index of a PFT tile in the array with cover fractions changes
       & nr_of_tiles, & !< Number of tiles participating in the ALCC process
       & idx, &        !< Index for transition loop
-      & idxe          !< End index for transition loop
+      & idxe, &       !< End index for transition loop
+      & n_to_tiles    !< Number of to-tiles in the standard (non-NLCC back-conversion) case
 
     REAL(wp) :: dtime !< Time step length
 
@@ -520,6 +521,9 @@ CONTAINS
 
         from_cf_sum(:) = 0.0_wp
         to_cf_sum(:) = 0.0_wp
+        ! n_to_tiles counts tiles in the to-class for the standard (non-NLCC) case.
+        ! Used to distribute area equally when to_cf_sum == 0 (all to-tiles were absent at BOY).
+        n_to_tiles = 0
 
         DO WHILE (ASSOCIATED(current_tile))
           i_tile = i_tile + 1
@@ -536,6 +540,14 @@ CONTAINS
           IF (one_of(current_tile%name, lcc_relocations%tile_names) <= 0) THEN
             CALL finish(TRIM(routine), 'Violation of assertion: child tile of veg tile(' //TRIM(current_tile%name) &
             & //') is not part of the alcc lcc-structure. Current implementation assumes that all pfts are part of it.')
+          END IF
+
+          ! Count to-tiles for the standard (non-NLCC back-conversion) case.
+          ! This is cell-independent so it is evaluated outside the ic loop.
+          IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
+            IF (.NOT. (model%Is_process_enabled(NLCC_) .AND. dsl4jsb_Config(ALCC_)%to_class(idx) == 1)) THEN
+              n_to_tiles = n_to_tiles + 1
+            END IF
           END IF
 
           DO ic = 1,nc
@@ -620,6 +632,12 @@ CONTAINS
                 IF (cf_boy(ic, i_tile) > 0.0_wp) THEN
                   transition_rate(ic, idx) = MIN(transition_rate(ic, idx), &
                     MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)) * to_cf_sum(ic) / cf_boy(ic, i_tile))
+                ELSE IF (to_cf_sum(ic) == 0.0_wp .AND. n_to_tiles > 0) THEN
+                  ! All to-tiles had cf_boy == 0 at BOY: use equal distribution.
+                  ! gained_area = rate / n_to_tiles <= 1 - initial_area
+                  !               => rate <= (1 - initial_area) * n_to_tiles
+                  transition_rate(ic, idx) = MIN(transition_rate(ic, idx), &
+                    MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)) * REAL(n_to_tiles, wp))
                 END IF
               END IF
             END IF
@@ -770,10 +788,14 @@ CONTAINS
                   ! O(machine_epsilon). Clamp to prevent fractions exceeding 1.
                   gained_area(ic, i_tile) = MIN(gained_area(ic, i_tile), &
                       MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)))
-                END IF
-                IF (to_cf_sum(ic) == 0.0_wp .AND. transition_rate(ic, idx) > 0.0_wp) THEN
-                  CALL finish(TRIM(routine), 'Violation of assertion: to_cf_sum is zero while transition_rate is positive.' &
-                   & // ' Please check transition rates and initial areas. Tile: ' // TRIM(current_tile%name))
+                ELSE IF (.NOT. (model%Is_process_enabled(NLCC_) .AND. &
+                    & dsl4jsb_Config(ALCC_)%to_class(idx) == 1) .AND. n_to_tiles > 0) THEN
+                  ! to_cf_sum == 0: all to-tiles had cf_boy == 0 at the start of the year.
+                  ! Distribute the transition area equally among all n_to_tiles to-tiles.
+                  gained_area(ic, i_tile) = transition_rate(ic, idx) / REAL(n_to_tiles, wp)
+                  ! Floating-point safety clamp
+                  gained_area(ic, i_tile) = MIN(gained_area(ic, i_tile), &
+                      MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)))
                 END IF
                 current_fract(ic) = initial_area(ic, i_tile) + gained_area(ic, i_tile)
               ELSE
