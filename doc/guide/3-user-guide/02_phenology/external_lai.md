@@ -47,7 +47,7 @@ the restart file so that mid-year restarts resume the same linear ramp.
 ### File naming
 
 Files must follow the pattern `{extlai_filename_prefix}{YYYY}.nc`, e.g.
-`bc_land_lai_2010.nc` with the default prefix `bc_land_lai_`.
+`fc_land_lai_2010.nc` with the default prefix `fc_land_lai_`.
 
 | Mode | Year read | Purpose |
 |---|---|---|
@@ -56,10 +56,11 @@ Files must follow the pattern `{extlai_filename_prefix}{YYYY}.nc`, e.g.
 
 ### Variable names
 
-Each PFT tile must have its own variable in the file, named `lai_{tile_name}`, where
-`{tile_name}` is the name of the corresponding child tile of the `veg` tile in the model
-tile tree. For example, if your setup has tiles `trbee`, `trdc`, and `grass`, the file
-must contain variables `lai_trbee`, `lai_trdc`, and `lai_grass`.
+Each PFT tile must have its own variable in the file, named `pheno_lai_ta_{tile_name}`,
+where `{tile_name}` is the name of the corresponding child tile of the `veg` tile in the
+model tile tree. For example, if your setup has tiles `trbee`, `trdc`, and `grass`, the
+file must contain variables `pheno_lai_ta_trbee`, `pheno_lai_ta_trdc`, and
+`pheno_lai_ta_grass`.
 
 ### Dimensions and units
 
@@ -80,7 +81,7 @@ either constraint is violated.
 &jsb_pheno_nml
   scheme                  = 'external_lai'   ! Select this scheme
   extlai_mode             = 'monthly'        ! 'monthly' (default) or 'annual'
-  extlai_filename_prefix  = 'bc_land_lai_'   ! Prefix for yearly input files
+  extlai_filename_prefix  = 'fc_land_lai_'   ! Prefix for yearly input files
   extlai_lai_max          = 20.0             ! Upper bound guard [m2 m-2]
 /
 ```
@@ -89,7 +90,7 @@ either constraint is violated.
 |---|---|---|---|
 | `scheme` | string | `'logrop'` | Must be set to `'external_lai'` |
 | `extlai_mode` | string | `'monthly'` | `'monthly'` or `'annual'` |
-| `extlai_filename_prefix` | string | `'bc_land_lai_'` | File path prefix; year and `.nc` are appended |
+| `extlai_filename_prefix` | string | `'fc_land_lai_'` | File path prefix; year and `.nc` are appended |
 | `extlai_lai_max` | real | `20.0` | Maximum allowed LAI value; model aborts if exceeded |
 
 ---
