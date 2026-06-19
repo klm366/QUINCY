@@ -851,52 +851,54 @@ CONTAINS
 
       ! Calculate soil carbon pools
       IF (.NOT. dsl4jsb_Config(CARBON_)%on_soillev) THEN
-        CALL calc_soil_c( &
-          & sec_per_day,                                                                       & ! in
-          & LeafLit_coef_acid       = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_acid)),       & ! in
-          & LeafLit_coef_water      = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_water)),      & ! in
-          & LeafLit_coef_ethanol    = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_ethanol)),    & ! in
-          & LeafLit_coef_nonsoluble = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_nonsoluble)), & ! in
-          & LeafLit_coef_humus      = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_humus)),      & ! in
-          & WoodLit_coef_acid       = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_acid)),       & ! in
-          & WoodLit_coef_water      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_water)),      & ! in
-          & WoodLit_coef_ethanol    = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_ethanol)),    & ! in
-          & WoodLit_coef_nonsoluble = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_nonsoluble)), & ! in
-          & WoodLit_coef_humus      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_humus)),      & ! in
-          & WoodLitterSize          = dsl4jsb_Lctlib_param(WoodLitterSize),                    & ! in
-          !
-          & temp                    = temp_15d_yDay_climbuf,                                   & ! in
-          & precip                  = precip_15d_yDay_climbuf,                                 & ! in
-          !
-          & Cflx_wood_2_litter      = cflux_c_wood_2_litter,                                   & ! in
-          & Cflx_green_2_litter     = cflux_c_green_2_litter,                                  & ! in
-          & Cflx_2_root_exudates    = root_exudates,                                           & ! in
-          !
-          & c_acid_ag1              = c_acid_ag1,                                              & ! inout
-          & c_water_ag1             = c_water_ag1,                                             & ! inout
-          & c_ethanol_ag1           = c_ethanol_ag1,                                           & ! inout
-          & c_nonsoluble_ag1        = c_nonsoluble_ag1,                                        & ! inout
-          & c_acid_bg1              = c_acid_bg1,                                              & ! inout
-          & c_water_bg1             = c_water_bg1,                                             & ! inout
-          & c_ethanol_bg1           = c_ethanol_bg1,                                           & ! inout
-          & c_nonsoluble_bg1        = c_nonsoluble_bg1,                                        & ! inout
-          & c_humus_1               = c_humus_1,                                               & ! inout
-          & c_acid_ag2              = c_acid_ag2,                                              & ! inout
-          & c_water_ag2             = c_water_ag2,                                             & ! inout
-          & c_ethanol_ag2           = c_ethanol_ag2,                                           & ! inout
-          & c_nonsoluble_ag2        = c_nonsoluble_ag2,                                        & ! inout
-          & c_acid_bg2              = c_acid_bg2,                                              & ! inout
-          & c_water_bg2             = c_water_bg2,                                             & ! inout
-          & c_ethanol_bg2           = c_ethanol_bg2,                                           & ! inout
-          & c_nonsoluble_bg2        = c_nonsoluble_bg2,                                        & ! inout
-          & c_humus_2               = c_humus_2,                                               & ! inout
-          !
-          & c_decomp_humus_1_sum    = c_decomp_humus_1_sum,                                    & ! out
-          & c_decomp_humus_2_sum    = c_decomp_humus_2_sum,                                    & ! out
-          & c_into_humus_1_sum      = c_into_humus_1_sum,                                      & ! out
-          & c_into_humus_2_sum      = c_into_humus_2_sum,                                      & ! out
-          & Cflx_soil_respiration   = soil_respiration                                         & ! out
-          & )
+        DO ic = 1, nc
+          CALL calc_soil_c( &
+            & sec_per_day,                                                                       & ! in
+            & LeafLit_coef_acid       = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_acid)),       & ! in
+            & LeafLit_coef_water      = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_water)),      & ! in
+            & LeafLit_coef_ethanol    = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_ethanol)),    & ! in
+            & LeafLit_coef_nonsoluble = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_nonsoluble)), & ! in
+            & LeafLit_coef_humus      = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_humus)),      & ! in
+            & WoodLit_coef_acid       = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_acid)),       & ! in
+            & WoodLit_coef_water      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_water)),      & ! in
+            & WoodLit_coef_ethanol    = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_ethanol)),    & ! in
+            & WoodLit_coef_nonsoluble = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_nonsoluble)), & ! in
+            & WoodLit_coef_humus      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_humus)),      & ! in
+            & WoodLitterSize          = dsl4jsb_Lctlib_param(WoodLitterSize),                    & ! in
+            !
+            & temp                    = temp_15d_yDay_climbuf(ic),                               & ! in
+            & precip                  = precip_15d_yDay_climbuf(ic),                             & ! in
+            !
+            & Cflx_wood_2_litter      = cflux_c_wood_2_litter(ic),                               & ! in
+            & Cflx_green_2_litter     = cflux_c_green_2_litter(ic),                              & ! in
+            & Cflx_2_root_exudates    = root_exudates(ic),                                       & ! in
+            !
+            & c_acid_ag1              = c_acid_ag1(ic),                                          & ! inout
+            & c_water_ag1             = c_water_ag1(ic),                                         & ! inout
+            & c_ethanol_ag1           = c_ethanol_ag1(ic),                                       & ! inout
+            & c_nonsoluble_ag1        = c_nonsoluble_ag1(ic),                                    & ! inout
+            & c_acid_bg1              = c_acid_bg1(ic),                                          & ! inout
+            & c_water_bg1             = c_water_bg1(ic),                                         & ! inout
+            & c_ethanol_bg1           = c_ethanol_bg1(ic),                                       & ! inout
+            & c_nonsoluble_bg1        = c_nonsoluble_bg1(ic),                                    & ! inout
+            & c_humus_1               = c_humus_1(ic),                                           & ! inout
+            & c_acid_ag2              = c_acid_ag2(ic),                                          & ! inout
+            & c_water_ag2             = c_water_ag2(ic),                                         & ! inout
+            & c_ethanol_ag2           = c_ethanol_ag2(ic),                                       & ! inout
+            & c_nonsoluble_ag2        = c_nonsoluble_ag2(ic),                                    & ! inout
+            & c_acid_bg2              = c_acid_bg2(ic),                                          & ! inout
+            & c_water_bg2             = c_water_bg2(ic),                                         & ! inout
+            & c_ethanol_bg2           = c_ethanol_bg2(ic),                                       & ! inout
+            & c_nonsoluble_bg2        = c_nonsoluble_bg2(ic),                                    & ! inout
+            & c_humus_2               = c_humus_2(ic),                                           & ! inout
+            !
+            & c_decomp_humus_1_sum    = c_decomp_humus_1_sum(ic),                                & ! out
+            & c_decomp_humus_2_sum    = c_decomp_humus_2_sum(ic),                                & ! out
+            & c_into_humus_1_sum      = c_into_humus_1_sum(ic),                                  & ! out
+            & c_into_humus_2_sum      = c_into_humus_2_sum(ic),                                  & ! out
+            & Cflx_soil_respiration   = soil_respiration(ic)                                     & ! out
+            & )
+        END DO
       ELSE
         DO ic = 1, nc
           CALL calc_vertical_soil_c(sec_per_day,                                        &
