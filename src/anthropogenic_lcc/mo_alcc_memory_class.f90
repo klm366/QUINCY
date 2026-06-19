@@ -41,10 +41,9 @@ MODULE mo_alcc_memory_class
 
     TYPE(t_jsb_var_real3d) :: &
       & cf_target_year,       & !< Target cover fractions derived from annually read land use data []
-      & transition_rate,    & !< Transition rates for different transition types []
-      & cf_delta,              & !< Change in cover fractions calculated from cf_target_year []
+      & transition_rate,      & !< Transition rates for different transition types []
+      & cf_delta                !< Change in cover fractions calculated from cf_target_year []
                                 !< Change can be daily or annually, depending on if daily or annual alcc (l_daily_alcc) []
-      & cf_boy                 !< Cover fractions at beginning of year []
 
   CONTAINS
     PROCEDURE :: Init => Init_alcc_memory
@@ -109,14 +108,6 @@ CONTAINS
     CALL mem%Add_var('transition_rate', mem%transition_rate,                                            &
       & hgrid, trans_vgrid,                                                                 &
       & t_cf('transition_rate', '', 'Transition rates for different transition types.'),           &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & output_level=FULL,                                                                &
-      & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
-
-    CALL mem%Add_var('cf_boy', mem%cf_boy,                                                &
-      & hgrid, pft_vgrid,                                                                 &
-      & t_cf('cf_boy', '', 'Cover fractions at beginning of year (for linear transition scheme).'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=FULL,                                                                &

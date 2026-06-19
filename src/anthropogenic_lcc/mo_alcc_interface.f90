@@ -141,12 +141,11 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(ALCC_)                !< Memory of the anthropogenic land use change process
-    dsl4jsb_Def_config(ALCC_)                !< Configuration of the anthropogenic land use change process
-    dsl4jsb_Real3D_onChunk :: cf_target_year !< Target cover fractions derived from annually read land use data []
-    dsl4jsb_Real3D_onChunk :: cf_delta       !< Change in cover fractions derived from cf_target_year (annual or daily change) []
+    dsl4jsb_Def_memory(ALCC_)                 !< Memory of the anthropogenic land use change process
+    dsl4jsb_Def_config(ALCC_)                 !< Configuration of the anthropogenic land use change process
+    dsl4jsb_Real3D_onChunk :: cf_target_year  !< Target cover fractions derived from annually read land use data []
+    dsl4jsb_Real3D_onChunk :: cf_delta        !< Change in cover fractions derived from cf_target_year (annual or daily change) []
     dsl4jsb_Real3D_onChunk :: transition_rate !< transition rate as read in mo_alcc_init:read_land_use_data (annual or daily change) []
-    dsl4jsb_Real3D_onChunk :: cf_boy         !< Cover fractions at beginning of year (for linear transition scheme) []
 
     CLASS(t_jsb_tile_abstract), POINTER :: current_tile !< Pointer to the tile for which fraction changes are determined
     TYPE(t_jsb_model), POINTER          :: model        !< Current instance of the model
@@ -193,7 +192,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_target_year)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_delta)
     dsl4jsb_Get_var3D_onChunk(ALCC_, transition_rate)
-    dsl4jsb_Get_var3D_onChunk(ALCC_, cf_boy)
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(ALCC_)) RETURN
@@ -322,18 +320,6 @@ CONTAINS
 
     CASE('transition')
 
-      ! Snapshot beginning-of-year cover fractions to enable linear daily area changes.
-      ! cf_boy is used in update_alcc_translocation instead of live initial_area so that
-      ! from_cf_sum, to_cf_sum and the lost/gained area numerators are fixed throughout the year.
-      current_tile => tile%Get_first_child_tile()
-      i_cf_tile = 0
-      DO WHILE (ASSOCIATED(current_tile))
-        i_cf_tile = i_cf_tile + 1
-        CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
-        cf_boy(1:nc, i_cf_tile) = current_fract(1:nc)
-        current_tile => current_tile%Get_next_sibling_tile()
-      END DO
-
       IF (dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
         ! In case that area changes are daily the transition rates have to be divided by the number of days in the year
         ALLOCATE(trans_names(SIZE(dsl4jsb_Config(ALCC_)%trans_names)))
@@ -402,7 +388,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: cf_delta        !< Derived change in cover fractions (annual or daily change) []
     dsl4jsb_Real3D_onChunk :: transition_rate !< Transition rate (annual or daily change) []
     dsl4jsb_Real3D_onChunk :: cover_fract_pot !< Potential cover fractions (without land use) from NLCC []
-    dsl4jsb_Real3D_onChunk :: cf_boy          !< Cover fractions at beginning of year (for linear transition scheme) []
 
     CLASS(t_jsb_tile_abstract), POINTER :: current_tile    !< Pointer to the tile for which relocations are determined
     CLASS(t_jsb_tile_abstract), POINTER :: age_class_tile  !< Pointer to for age class tiles
@@ -455,7 +440,6 @@ CONTAINS
     dsl4jsb_Get_memory(ALCC_)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_delta)
     dsl4jsb_Get_var3D_onChunk(ALCC_, transition_rate)
-    dsl4jsb_Get_var3D_onChunk(ALCC_, cf_boy)
     IF (model%Is_process_enabled(NLCC_)) THEN
       dsl4jsb_Get_memory(NLCC_)
       dsl4jsb_Get_var3D_onChunk(NLCC_, cover_fract_pot)  ! in: potential cover fractions (no land use)
@@ -522,7 +506,7 @@ CONTAINS
         from_cf_sum(:) = 0.0_wp
         to_cf_sum(:) = 0.0_wp
         ! n_to_tiles counts tiles in the to-class for the standard (non-NLCC) case.
-        ! Used to distribute area equally when to_cf_sum == 0 (all to-tiles were absent at BOY).
+        ! Used to distribute area equally when to_cf_sum == 0.
         n_to_tiles = 0
 
         DO WHILE (ASSOCIATED(current_tile))
@@ -552,20 +536,18 @@ CONTAINS
 
           DO ic = 1,nc
             ! Now actually calculate from_cf_sum and to_cf_sum
-            ! Use cf_boy (beginning-of-year fractions) instead of live initial_area so that
-            ! these sums are fixed throughout the year.
             IF (dsl4jsb_Config(ALCC_)%from_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
-              from_cf_sum(ic) = from_cf_sum(ic) + cf_boy(ic, i_tile)
+              from_cf_sum(ic) = from_cf_sum(ic) + initial_area(ic, i_tile)
             END IF
             IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
               IF (model%Is_process_enabled(NLCC_) .AND. dsl4jsb_Config(ALCC_)%to_class(idx) == 1) THEN
                 ! Back-conversion rule for agricultural lands to natural scales with the difference between
                 ! potential cover fraction and current cover fraction
                 ! todo-AKN: adjust once pot cover fraction are available also if nlcc in not active
-                to_cf_sum(ic) = to_cf_sum(ic) + max(0.0_wp, cover_fract_pot(ic, i_tile) - cf_boy(ic, i_tile))
+                to_cf_sum(ic) = to_cf_sum(ic) + max(0.0_wp, cover_fract_pot(ic, i_tile) - initial_area(ic, i_tile))
               ELSE
                 ! For 'equal relative gain and loss' scale with the sum of the current cover fraction of the PFTs
-                to_cf_sum(ic) = to_cf_sum(ic) + cf_boy(ic, i_tile)
+                to_cf_sum(ic) = to_cf_sum(ic) + initial_area(ic, i_tile)
               END IF
             END IF
           END DO
@@ -595,55 +577,6 @@ CONTAINS
             transition_rate(ic, idx) = MIN(transition_rate(ic, idx), 1.0_wp - to_cf_sum(ic))
           END IF
         END DO
-
-        ! Additional per-tile tightening of transition_rate based on actual current areas (initial_area),
-        ! which may have been modified by earlier transitions in the same time step (idx loop).
-        ! By reducing transition_rate uniformly before applying the proportional loss/gain formulas,
-        ! we guarantee that no cover fraction leaves [0,1] while still conserving area
-        ! (SUM(lost_area) = SUM(gained_area) = transition_rate).
-        current_tile => tile%Get_first_child_tile()
-        i_tile = 0
-        DO WHILE (ASSOCIATED(current_tile))
-          i_tile = i_tile + 1
-          DO ic = 1, nc
-            ! From-tiles: lost_area = rate * cf_boy / from_cf_sum <= initial_area
-            !             => rate <= initial_area * from_cf_sum / cf_boy
-            IF (dsl4jsb_Config(ALCC_)%from_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
-              IF (cf_boy(ic, i_tile) > 0.0_wp) THEN
-                transition_rate(ic, idx) = MIN(transition_rate(ic, idx), &
-                  initial_area(ic, i_tile) * from_cf_sum(ic) / cf_boy(ic, i_tile))
-              END IF
-            END IF
-            ! To-tiles: gained_area = rate * weight / to_cf_sum <= 1 - initial_area
-            !           => rate <= (1 - initial_area) * to_cf_sum / weight
-            IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
-              IF (model%Is_process_enabled(NLCC_) .AND. dsl4jsb_Config(ALCC_)%to_class(idx) == 1) THEN
-                ! Back-conversion: weight = max(0, pot - cf_boy)
-                IF ((cover_fract_pot(ic, i_tile) - cf_boy(ic, i_tile)) > 0.0_wp) THEN
-                  transition_rate(ic, idx) = MIN(transition_rate(ic, idx), &
-                    MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)) * to_cf_sum(ic) / &
-                    (cover_fract_pot(ic, i_tile) - cf_boy(ic, i_tile)))
-                ELSE
-                  ! If there is no potential cover fraction available, we cannot allow any transition to this tile
-                  transition_rate(ic, idx) = 0.0_wp
-                END IF
-              ELSE
-                ! Equal relative gain: weight = cf_boy
-                IF (cf_boy(ic, i_tile) > 0.0_wp) THEN
-                  transition_rate(ic, idx) = MIN(transition_rate(ic, idx), &
-                    MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)) * to_cf_sum(ic) / cf_boy(ic, i_tile))
-                ELSE IF (to_cf_sum(ic) == 0.0_wp .AND. n_to_tiles > 0) THEN
-                  ! All to-tiles had cf_boy == 0 at BOY: use equal distribution.
-                  ! gained_area = rate / n_to_tiles <= 1 - initial_area
-                  !               => rate <= (1 - initial_area) * n_to_tiles
-                  transition_rate(ic, idx) = MIN(transition_rate(ic, idx), &
-                    MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)) * REAL(n_to_tiles, wp))
-                END IF
-              END IF
-            END IF
-          END DO
-          current_tile => current_tile%Get_next_sibling_tile()
-        END DO ! current_tile (tighter rate clamp)
 
       END SELECT
 
@@ -759,7 +692,7 @@ CONTAINS
                 END IF
                 IF (from_cf_sum(ic) > 0.0_wp) THEN
                   lost_area(ic, i_tile) = transition_rate(ic, idx) *  &
-                      max(0.0_wp, cf_boy(ic, i_tile)) / from_cf_sum(ic)
+                      max(0.0_wp, initial_area(ic, i_tile)) / from_cf_sum(ic)
                   ! Floating-point safety: the per-tile rate tightening above ensures lost_area <=
                   ! initial_area analytically, but the two-step multiply/divide can produce a result
                   ! that exceeds initial_area by O(machine_epsilon). Clamp to prevent -eps fractions.
@@ -777,10 +710,10 @@ CONTAINS
                     ! between potential cover fraction and current cover fraction
                     ! todo-AKN: adjust once pot cover fraction are available also if nlcc in not active
                     gained_area(ic, i_tile) = transition_rate(ic, idx) * &
-                        max(0.0_wp, cover_fract_pot(ic, i_tile) - cf_boy(ic, i_tile)) / to_cf_sum(ic)
+                        max(0.0_wp, cover_fract_pot(ic, i_tile) - initial_area(ic, i_tile)) / to_cf_sum(ic)
                   ELSE
                     ! Rule of equal relative gain:
-                    gained_area(ic, i_tile) = transition_rate(ic, idx) * cf_boy(ic, i_tile) / to_cf_sum(ic)
+                    gained_area(ic, i_tile) = transition_rate(ic, idx) * initial_area(ic, i_tile) / to_cf_sum(ic)
                   END IF
                   ! Floating-point safety: the per-tile rate tightening above ensures
                   ! gained_area <= 1 - initial_area analytically, but rounding errors in the
@@ -790,7 +723,7 @@ CONTAINS
                       MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)))
                 ELSE IF (.NOT. (model%Is_process_enabled(NLCC_) .AND. &
                     & dsl4jsb_Config(ALCC_)%to_class(idx) == 1) .AND. n_to_tiles > 0) THEN
-                  ! to_cf_sum == 0: all to-tiles had cf_boy == 0 at the start of the year.
+                  ! to_cf_sum == 0: all to-tiles have initial_area == 0.
                   ! Distribute the transition area equally among all n_to_tiles to-tiles.
                   gained_area(ic, i_tile) = transition_rate(ic, idx) / REAL(n_to_tiles, wp)
                   ! Floating-point safety clamp
