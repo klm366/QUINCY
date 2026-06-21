@@ -1710,7 +1710,7 @@ CONTAINS
           fleaf_sunlit_cl(ic,icanopy) = fsunlit_cl(ic,icanopy)
         END DO
       END DO
-      !$ACC END PARALLEL
+      !$ACC END PARALLEL LOOP
     END IF
 
     !> 2.2 Fraction of absorbed radiation (faPAR)
@@ -1724,7 +1724,7 @@ CONTAINS
           fapar(ic) = 0.0_wp
         END IF
       END DO
-      !$ACC END PARALLEL
+      !$ACC END PARALLEL LOOP
     END IF
 
     !> 2.3 Canopy and surface albedo
@@ -1751,7 +1751,7 @@ CONTAINS
           alb_lnd(ic) = irad_dif_up(ic) / (irad_dir_down(ic) + irad_dif_down(ic))
         END IF
       END DO
-      !$ACC END PARALLEL
+      !$ACC END PARALLEL LOOP
     END IF
 
     !$ACC END DATA

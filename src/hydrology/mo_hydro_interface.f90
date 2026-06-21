@@ -994,7 +994,7 @@ CONTAINS
             wtr_soil_pot_sl(ic, is) = mpot_act_sl(ic, is) * grav / 1000.0_wp
           END DO
         END DO
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
       END SELECT
 
       !$ACC END DATA
