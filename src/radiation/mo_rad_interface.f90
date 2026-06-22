@@ -1184,7 +1184,7 @@ CONTAINS
             END IF
           END DO
         END DO
-        !$ACC END PARALLEL LOOP
+        !$ACC END PARALLEL
       END SELECT
     END IF   ! perparations for alb_soil_scheme
 

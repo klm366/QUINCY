@@ -50,6 +50,7 @@ CONTAINS
     USE mo_jsb_math_constants,              ONLY: one_day, eps8
     USE mo_q_veg_canopy,                    ONLY: calc_canopy_layers
     USE mo_q_veg_growth,                    ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
+    USE mo_q_assimi_config_class,           ONLY: MEDLYN, BALLBERRY
     USE mo_veg_constants,                   ONLY: itree, k_fpc, k_sai2lai
     USE mo_turb_constants,                  ONLY: veg_height_to_rough_momentum, veg_min_roughness
     ! ----------------------------------------------------------------------------------------------------- !
@@ -78,7 +79,7 @@ CONTAINS
     REAL(wp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< grid dimensions
     INTEGER                           :: ic, is, icanopy        !< looping indices
-    CHARACTER(len=1024)               :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry - q_assimi config
+    INTEGER                           :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry - q_assimi config
     LOGICAL                           :: flag_optimal_Nfraction !< on/off optimise leaf internal N allocation - q_assimi config
     REAL(wp) :: config_blending_height
     REAL(wp) :: lctlib_sla, lctlib_np_leaf, lctlib_allom_k1, lctlib_allom_k2
@@ -237,15 +238,15 @@ CONTAINS
     lctlib_g0 = dsl4jsb_Lctlib_param(g0)
     lctlib_t_jmax_omega = dsl4jsb_Lctlib_param(t_jmax_omega)
 
-    canopy_cond_scheme = TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme)
+    canopy_cond_scheme = dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme
     flag_optimal_Nfraction = dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction
 
     !>0.9 set g1 according to canopy_conductance_scheme
     !>
     SELECT CASE(canopy_cond_scheme)
-      CASE ("medlyn")
+      CASE (MEDLYN)
         lctlib_g1 = dsl4jsb_Lctlib_param(g1_medlyn)
-      CASE ("ballberry")
+      CASE (BALLBERRY)
         lctlib_g1 = dsl4jsb_Lctlib_param(g1_bberry)
     END SELECT
 
