@@ -16,7 +16,7 @@
 !>#### multiple routines for the processes using with JSM (jena soil model), e.g., turnover, in- / organic matter fluxes
 !>
 MODULE mo_q_sb_jsm_processes
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish
@@ -1912,7 +1912,7 @@ CONTAINS
     USE mo_sb_constants,   ONLY: qmax_po4_silt, qmax_po4_sand, qmax_po4_clay, qmax_po4_OM, qmax_po4_mineral, &
       & km_adsorpt_silt_po4, km_adsorpt_clay_po4, km_adsorpt_sand_po4, km_adsorpt_OM_po4, &
       & km_adsorpt_mineral_po4, km_po4_ph, min_fraction_default_sb
-    USE mo_spq_util,       ONLY: calc_qmax_texture
+    USE mo_sb_util,        ONLY: calc_qmax_texture
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL,      INTENT(in)    :: flag_sb_double_langmuir      !< conventional or double Langmuir
     REAL(wp),     INTENT(in)    :: clay_sl                      !< clay content of soil layer [-]

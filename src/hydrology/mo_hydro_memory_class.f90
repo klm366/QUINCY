@@ -41,7 +41,7 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, LAKE_TYPE, GLACIER_TYPE
-  USE mo_jsb_varlist,      ONLY: NONE, BASIC, MEDIUM, FULL
+  USE mo_jsb_varlist,      ONLY: NONE, MINIMUM, BASIC, MEDIUM, FULL
 
   ! Use of processes in this module
   dsl4jsb_Use_processes HYDRO_, SSE_, SEB_
@@ -369,7 +369,7 @@ CONTAINS
       & t_cf('fract_snow', '-', 'Snow area fraction'),                         &
       & t_grib1(table, 255, grib_bits), grib2_desc,                            &
       & prefix, suffix,                                                        &
-      & output_level=BASIC,                                                    &
+      & output_level=MINIMUM,                                                  &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     IF (TRIM(mem%owner_tile_name) == 'box') THEN
@@ -382,7 +382,7 @@ CONTAINS
       & t_cf('weq_snow', 'm (water equivalent)', 'Snow amount'),               &
       & t_grib1(table, 255, grib_bits), grib2_desc,                            &
       & prefix, suffix,                                                        &
-      & output_level=BASIC,                                                    &
+      & output_level=MINIMUM,                                                  &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'evapotrans', mem%evapotrans,                                      &
@@ -432,7 +432,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
-      & loutput=.TRUE., output_level=BASIC,                                          &
+      & loutput=.TRUE., output_level=MINIMUM,                                        &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'runoff_horton', mem%runoff_horton,                            &
@@ -457,7 +457,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
-      & loutput=.TRUE., output_level=BASIC,                                          &
+      & loutput=.TRUE., output_level=MINIMUM,                                        &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'wtr_transp_down_sl', mem%wtr_transp_down_sl,                  &
@@ -661,7 +661,6 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         CALL mem%Add_var('num_sl_above_bedrock', mem%num_sl_above_bedrock, &
@@ -675,7 +674,6 @@ CONTAINS
           & lrestart=.TRUE., &
           & initval_r=0.0_wp)
       END SELECT
-#endif
 
       CALL mem%Add_var( 'soil_depth_sl', mem%soil_depth_sl,                    &
         & hgrid, soil_w,                                                       &
@@ -696,7 +694,6 @@ CONTAINS
           & initval_r=0.0_wp )
       END IF
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         CALL mem%Add_var('soil_lay_width_sl', mem%soil_lay_width_sl, &
@@ -743,7 +740,6 @@ CONTAINS
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
       END SELECT
-#endif
 
       CALL mem%Add_var( 'wpi_rootzone_max', mem%wpi_rootzone_max,                    &
         & hgrid, surface,                                                            &
@@ -973,7 +969,7 @@ CONTAINS
         & t_cf('wtr_rootzone', 'm', 'Liquid water content of the root zone'),  &
         & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
-        & loutput=.TRUE., output_level=BASIC,                                  &
+        & loutput=.TRUE., output_level=MINIMUM,                                &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'ice_rootzone', mem%ice_rootzone,                                &
@@ -990,7 +986,7 @@ CONTAINS
         & t_cf('wtr_soil_sl', 'm', 'Water content of soil layers'),            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & loutput=.TRUE., output_level=BASIC,                                  &
+        & loutput=.TRUE., output_level=MINIMUM,                                &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'ice_soil_sl', mem%ice_soil_sl,                        &
@@ -998,7 +994,7 @@ CONTAINS
         & t_cf('ice_soil_sl', 'm', 'Ice content of soil layers'),              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & loutput=.TRUE., output_level=BASIC,                                  &
+        & loutput=.TRUE., output_level=MINIMUM,                                &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'vol_weq_soil_sl', mem%vol_weq_soil_sl,                       &
@@ -1109,7 +1105,7 @@ CONTAINS
         & t_cf('wtr_rootzone_rel', '-', 'Relative root zone moisture'),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
-        & output_level=BASIC,                                                            &
+        & output_level=MINIMUM,                                                          &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'fract_pond', mem%fract_pond,                                  &
@@ -1303,7 +1299,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE.,                                                              &
-        & loutput=.TRUE., output_level=BASIC,                                            &
+        & loutput=.TRUE., output_level=MINIMUM,                                          &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('wtr_plant_avail_rel', mem%wtr_plant_avail_rel, &
@@ -1317,7 +1313,6 @@ CONTAINS
         & lrestart = lrestart_local, &
         & initval_r = 0.0_wp)
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         CALL mem%Add_var('w_soil_root_fc', mem%w_soil_root_fc, &
@@ -1365,9 +1360,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
           & initval_r = 0.0_wp)
-      END SELECT
-#endif
-
+      END SELECT  ! QUINCY
     END IF ! VEG_TYPE/LAND_TYPE
 
     ! Additional variables for tiles containing GLACIER lct

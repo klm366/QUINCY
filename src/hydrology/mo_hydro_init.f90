@@ -171,16 +171,12 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< current tile
 
-    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
 
 #ifdef __QUINCY_STANDALONE__
-    model  => Get_model(tile%owner_model_id)
-    IF (model%config%use_soil_phys_jsbach) THEN
-      CALL qs_hydro_read_init_vars(tile)
-      CALL qs_hydro_init_ic_bc(tile)
-      CALL hydro_finalize_init_vars()
-    END IF
+    CALL qs_hydro_read_init_vars(tile)
+    CALL qs_hydro_init_ic_bc(tile)
+    CALL hydro_finalize_init_vars()
 #else
     ! Read initial and boundary condition data by the top tile, only.
     ! Note: this requires that the init routines in mo_jsb_model_init:jsbach_init are called starting
@@ -1029,6 +1025,7 @@ CONTAINS
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%ic_filename))
       ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of the bottom of each soil layer
       nsoil_input_file = SIZE(ptr_1D)                          ! number of soil layers provided by the ic input file
+      DEALLOCATE(ptr_1D)
       ! Close input file - ic
       CALL input_file%Close()
 
@@ -1171,14 +1168,14 @@ CONTAINS
       !>
       !>     - Soil organic carbon fractions for each soil layer
       IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
-        DO isoil=1,nsoil
+        DO isoil = 1,nsoil_input_file
           CALL read_bc_data(input_file, 'fract_org_sl', tile%name, hydro_init_vars%fract_org_sl(:,isoil,:), &
             &  default=0._wp, ilay=isoil, layer_name='soillev')
         END DO
         ! apply the value from the lowest soil layer (of the input file) to all soil layers below
         IF (nsoil > nsoil_input_file) THEN
           DO isoil = nsoil_input_file+1, nsoil
-            hydro_init_vars%fract_org_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+            hydro_init_vars%fract_org_sl(:,isoil,:) = hydro_init_vars%fract_org_sl(:,nsoil_input_file,:)
           END DO
         END IF
       END IF
@@ -1205,6 +1202,7 @@ CONTAINS
         ptr_3D => model%config%ifs_input_file%Read_2d_time( &
           & variable_name='W_SNOW', start_time_step=1, end_time_step=1)
         hydro_init_vars%ifs_weq_snow(:,:) = ptr_3D(:,:,1)
+        DEALLOCATE(ptr_3D)
 
       ELSE
         IF (input_file%Has_var('snow')) THEN
@@ -1226,20 +1224,19 @@ CONTAINS
           ptr_2D => model%config%ifs_input_file%Read_2d_1lev_1time( &
             & variable_name='SMIL'//int2string(isoil))
           hydro_init_vars%ifs_smi_sl(:,isoil,:) = ptr_2D(:,:)
+          DEALLOCATE(ptr_2D)
         END DO
 
       ELSE
 
-        DO isoil = 1,nsoil_input_file
-          ptr_3D => input_file%Read_2d_extdim( &
-            & variable_name='layer_moist',     &
-            & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
-          hydro_init_vars%wtr_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
-        END DO
+        ptr_3D => input_file%Read_3d(variable_name='layer_moist')
+        hydro_init_vars%wtr_soil_sl(:,1:nsoil_input_file,:) = MERGE(ptr_3D(:,:,:), 0._wp, ptr_3D(:,:,:) >= 0._wp)
+        DEALLOCATE(ptr_3D)
+
         ! apply the value from the lowest soil layer (of the input file) to all soil layers below
         IF (nsoil > nsoil_input_file) THEN
           DO isoil = nsoil_input_file+1, nsoil
-            hydro_init_vars%wtr_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+            hydro_init_vars%wtr_soil_sl(:,isoil,:) = hydro_init_vars%wtr_soil_sl(:,nsoil_input_file,:)
           END DO
         END IF
 
@@ -1306,7 +1303,6 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(HYDRO_)
 
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       ! HYDRO_ 2D
@@ -1317,7 +1313,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_ubound_sl)
       dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_center_sl)
     END SELECT
-#endif
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -1395,7 +1390,6 @@ CONTAINS
         & soil_w%dz(:))                                 ! Fixed soil layer thicknesses from vertical grid
       !>
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         ! pass these values to a HYDRO_ variable with an improved name
@@ -1440,11 +1434,10 @@ CONTAINS
             END DO
           END DO
         END DO
-      END SELECT
 
-      !$ACC UPDATE DEVICE(soil_lay_width_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:)) ASYNC(1)
-      !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_center_sl(:,:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
-#endif
+        !$ACC UPDATE DEVICE(soil_lay_width_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:)) ASYNC(1)
+        !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_center_sl(:,:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
+      END SELECT
 
       ! -------------------------------------------------------------------------------------------------- !
       !>

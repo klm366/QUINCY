@@ -81,7 +81,7 @@ CONTAINS
 
   SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: NONE, BASIC, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: NONE, MINIMUM, BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -181,7 +181,7 @@ CONTAINS
       & t_cf('soil_temperature', 'K', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & output_level=BASIC,                                                  &
+      & output_level=MINIMUM,                                                &
       & initval_r=280.0_wp )
 
     CALL mem%Add_var( 't_soil_acoef', mem%t_soil_acoef,                      &
@@ -251,7 +251,7 @@ CONTAINS
       & t_cf('grnd_hflx', 'J m-2 s-1', 'Ground heat flux'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & output_level=BASIC,                                                  &
+      & output_level=MINIMUM,                                                &
       & initval_r=10.0_wp )
 
     CALL mem%Add_var( 'grnd_hflx_old', mem%grnd_hflx_old,                    &
@@ -291,7 +291,6 @@ CONTAINS
       & initval_r=0.0_wp, &
       & l_aggregate_all=.TRUE. )
 
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       CALL mem%Add_var('bulk_dens_sl', mem%bulk_dens_sl, &
@@ -339,7 +338,6 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
     END SELECT
-#endif
 
   END SUBROUTINE Init_sse_memory
 
