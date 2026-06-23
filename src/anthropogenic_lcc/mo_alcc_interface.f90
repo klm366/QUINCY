@@ -330,6 +330,11 @@ CONTAINS
 
             transition_rate(ic, idx) = transition_rate(ic, idx) / REAL(number_of_days, wp)
 
+            IF (transition_rate(ic, idx) < delta_threshold) THEN
+              ! in analog to the maps scheme set to 0.0_wp
+              transition_rate(ic, idx) = 0.0_wp
+            END IF
+
           END DO
         END DO
 
