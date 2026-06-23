@@ -16,7 +16,7 @@
 !>#### calculate decay of product pools
 !>
 MODULE mo_q_veg_products_decay
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on

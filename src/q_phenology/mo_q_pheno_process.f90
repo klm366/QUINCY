@@ -16,7 +16,7 @@
 !>#### determine onset and end of the growing season across plant functional types (PFT)
 !>
 MODULE mo_q_pheno_process
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                 ONLY: wp
   USE mo_lnd_bgcm_idx

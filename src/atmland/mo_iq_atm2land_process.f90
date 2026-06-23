@@ -14,7 +14,7 @@
 !>### Contains routines for the a2l (atm2land) proc
 !>
 MODULE mo_iq_atm2land_process
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_math_constants,    ONLY: eps1, eps8

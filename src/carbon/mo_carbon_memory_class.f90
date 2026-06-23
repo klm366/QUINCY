@@ -42,12 +42,6 @@ MODULE mo_carbon_memory_class
 
     ! cbalance_type variables
     TYPE(t_jsb_var_real2d) ::     &
-      pseudo_temp,                & ! a proxy for 15-day mean air temperature, [K] needed with yasso
-      pseudo_temp_yDay,           & !
-      pseudo_precip,              & ! a proxy for 15-day mean preciptation rate [Kg/m^2 s] needed with yasso
-      pseudo_precip_yDay            !
-
-    TYPE(t_jsb_var_real2d) ::     &
       cconservation_calcCpools,   & ! Carbon conservation test: Deviation from conservation [mol(C)/m^2(grid box)]
       cflux_c_greenwood_2_litter, & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
                                     !    [mol(C)/m^2(canopy) s]
@@ -270,38 +264,6 @@ CONTAINS
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(CARBON_)
-
-    CALL mem%Add_var('pseudo_temp', mem%pseudo_temp,                                                 &
-      & hgrid, surface,                                                                              &
-      & t_cf('pseudo_temp', 'K', 'Pseudo-mean air temperature over previous 15 days'),               &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                              &
-      & output_level=MEDIUM,                                                                         &
-      & lrestart=.TRUE., initval_r=285.0_wp ) ! initval taken from JSBACH3, arbitary.
-
-    ! R: In the output it should be the same as pseudo_temp, I do not understand why it was written out in JS3.
-    CALL mem%Add_var('pseudo_temp_yDay', mem%pseudo_temp_yDay,                                         &
-      & hgrid, surface,                                                                                &
-      & t_cf('pseudo_temp_yDay', 'K', 'Yesterdays pseudo-mean air temperature over previous 15 days'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
-      & prefix, suffix,                                                                                &
-      & lrestart=.TRUE., initval_r=285.0_wp ) ! initval taken from JSBACH3, arbitary.
-
-    CALL mem%Add_var('pseudo_precip', mem%pseudo_precip,                                             &
-      & hgrid, surface,                                                                              &
-      & t_cf('pseudo_precip', 'Kg m-2 s-1', 'Pseudo-mean precipitation rate over previous 15 days'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                              &
-      & output_level=MEDIUM,                                                                         &
-      & lrestart=.TRUE., initval_r=3.0E-5_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3, arbitary.
-
-    ! R: In the output it should be the same as pseudo_precip, I do not understand why it was written out in JS3.
-    CALL mem%Add_var('pseudo_precip_yDay', mem%pseudo_precip_yDay,                                   &
-      & hgrid, surface,                                                                              &
-      & t_cf('pseudo_precip_yDay', 'Kg m-2 s-1', 'Yesterdays pseudo-mean precipitation rate over previous 15 days'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                              &
-      & lrestart=.TRUE., initval_r=3.0E-5_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3, arbitary.
 
     ! Carbon variables on canopy area
     CALL mem%Add_var('c_greenwood2litter', mem%cflux_c_greenwood_2_litter,                             &
