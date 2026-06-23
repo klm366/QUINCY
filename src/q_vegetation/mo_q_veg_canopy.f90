@@ -16,7 +16,7 @@
 !>#### calculate canopy layer properties, e.g., C & N content, LAI, fractional allocation
 !>
 MODULE mo_q_veg_canopy
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                        ONLY: wp
   USE mo_jsb_impl_constants,          ONLY: test_false_true
@@ -106,7 +106,7 @@ CONTAINS
     REAL(wp),         INTENT(in)              :: lctlib_g1             !< lctlib parameter
     REAL(wp),         INTENT(in)              :: lctlib_t_jmax_omega   !< lctlib parameter
     LOGICAL,          INTENT(in)              :: flag_optimal_Nfraction!< on/off optimise leaf internal N allocation
-    CHARACTER(len=*), INTENT(in)              :: canopy_cond_scheme    !< canopy_conductance_scheme: medlyn / ballberry
+    INTEGER,          INTENT(in)              :: canopy_cond_scheme    !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp),         INTENT(in)              :: leaf_nitrogen(:)      !< total canopy N (mol/m2)
     REAL(wp),         INTENT(in)              :: lai(:)                !< total leaf area index
     REAL(wp),         INTENT(inout)           :: ppfd_sunlit_cl(:,:)   !< absorbed Photosynthetically Active Photon Flux Density on sunlit leafes (average over time)
@@ -463,7 +463,7 @@ CONTAINS
                                                lctlib_g1                  , &
                                                lctlib_t_jmax_omega        , &
                                                lctlib_ps_pathway          , & ! lctlib
-                                               TRIM(canopy_cond_scheme)   , & ! Q_ASSIMI_ config
+                                               canopy_cond_scheme         , & ! Q_ASSIMI_ config
                                                lai_cl(:,icanopy)          , & ! in
                                                leaf_nitrogen_cl(:,icanopy), &
                                                ppfd_sunlit_cl(:,icanopy)  , &
@@ -542,7 +542,7 @@ CONTAINS
                                                g1              , &    !< land-cover-type library parameter
                                                t_jmax_omega           !< land-cover-type library parameter
     INTEGER,                  INTENT(in)    :: ps_pathway             !< land-cover-type library parameter
-    CHARACTER(len=*),         INTENT(IN)    :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry
+    INTEGER,                  INTENT(IN)    :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp),                 INTENT(in)    :: lai_cl
     REAL(wp),                 INTENT(in)    :: leaf_nitrogen_cl, &    !< total canopy N content
                                                ppfd_sunlit_cl,   &    !< Photosynthetically Active Photon Flux Density
@@ -975,7 +975,7 @@ CONTAINS
     REAL(wp),                               INTENT(in) :: lctlib_t_jmax_omega           !< lctlib parameter
     REAL(wp),                               INTENT(in) :: lctlib_sigma_vis              !< lctlib parameter
     LOGICAL,                                INTENT(in) :: flag_optimal_Nfraction        !< on/off optimise leaf internal N allocation
-    CHARACTER(len=*),                       INTENT(IN) :: canopy_cond_scheme            !< canopy_conductance_scheme: medlyn / ballberry
+    INTEGER,                                INTENT(IN) :: canopy_cond_scheme            !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp),DIMENSION(nc),                 INTENT(in) :: t_air                   , &   !< air temperature (K)
                                                           press_srf               , &   !< air pressure (Pa)
                                                           q_air                   , &   !< air specific humidity (--)
@@ -1265,7 +1265,7 @@ CONTAINS
     REAL(wp),                               INTENT(in)    :: lctlib_t_jmax_omega            !< lctlib parameter
     REAL(wp),                               INTENT(in)    :: lctlib_tau_leaf                !< lctlib parameter
     LOGICAL,                                INTENT(in)    :: flag_optimal_Nfraction         !< on/off optimise leaf internal N allocation
-    CHARACTER(len=*),                       INTENT(IN)    :: canopy_cond_scheme             !< canopy_conductance_scheme: medlyn / ballberry
+    INTEGER,                                INTENT(IN)    :: canopy_cond_scheme             !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp),DIMENSION(nc),                 INTENT(in)    :: growing_season                 !< growing season
     REAL(wp),DIMENSION(nc),                 INTENT(in)    :: veg_pool_leaf_carbon       , &
                                                              veg_pool_leaf_nitrogen     , &

@@ -38,17 +38,14 @@ MODULE mo_pplcc_interface
   USE mo_jsb_process_class,   ONLY: t_jsb_process
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_var_class,       ONLY: REAL2D, REAL3D
+  USE mo_quincy_model_config, ONLY: QCANOPY
+  USE mo_quincy_output_class, ONLY: unit_sb_pool, unit_sb_flux, unit_veg_flux
 
   USE mo_jsb_time,          ONLY: is_newday
   USE mo_jsb_cqt_class,     ONLY: Get_cqt_name, LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
     &                             BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE, &
     &                             IQ_2L2D_POOL_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE, &
     &                             IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE
-
-#ifndef __NO_QUINCY__
-  USE mo_quincy_model_config, ONLY: QCANOPY
-  USE mo_quincy_output_class, ONLY: unit_sb_pool, unit_sb_flux, unit_veg_pool_flux
-#endif
 
   USE mo_carbon_interface,  ONLY: recalc_carbon_per_tile_vars
 
@@ -199,9 +196,7 @@ CONTAINS
 
     IF (tile%Has_conserved_quantities()) THEN
 
-#ifndef __NO_QUINCY__
       IF (model%config%model_scheme == MODEL_QUINCY) THEN
-
         IF (model%config%qmodel_id == QCANOPY) THEN
           ! If running in CANOPY configuration nothing needs to be conserved because the states are prescribed
           RETURN
@@ -212,7 +207,6 @@ CONTAINS
           CALL tile%bgcm_store%Write_matrices_to_bgcm_vars(tile%name, ics, ice, iblk)
         END IF
       END IF
-#endif
 
       ! Iterate over all cq types and their vars and convert
       DO i_cqt = 1,tile%nr_of_cqts
@@ -249,7 +243,6 @@ CONTAINS
 
             conversion_factor(:) = conversion_factor(:) * veg_fract_correction(:) * fract_fpc_max(:)
 
-#ifndef __NO_QUINCY__
           CASE (IQ_2L2D_POOL_CQ_TYPE, IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE)
             ! in the current implementation of quincy to be conserved variables are only available on the pft tiles
             IF (.NOT. index(tile%name, 'pft') /= 0) THEN
@@ -261,7 +254,7 @@ CONTAINS
               ! in quincy the 2D pool type variables are in mol per tile
               expected_string_in_unit = 'mol m-2'
             ELSE IF(cqt_id == IQ_FLUX_CQ_TYPE) THEN
-              expected_string_in_unit = unit_veg_pool_flux
+              expected_string_in_unit = unit_veg_flux
             ELSE IF(cqt_id == IQ_SL_POOL_CQ_TYPE) THEN
               ! in quincy the 3D pool type variables are in mol per tile and layer
               expected_string_in_unit = unit_sb_pool
@@ -277,7 +270,6 @@ CONTAINS
                 conversion_factor(ic) = 1.0_wp
               END IF
             END DO
-#endif
 
           ! CASE (WATER_CQ_TYPE)
           CASE DEFAULT
@@ -320,14 +312,12 @@ CONTAINS
         END DO
       END DO
 
-#ifndef __NO_QUINCY__
       IF (model%config%model_scheme == MODEL_QUINCY) THEN
         ! The bgcm matrices need to be updated after conversion because they are required in the alcc interface
         IF (ASSOCIATED(tile%bgcm_store)) THEN
           CALL tile%bgcm_store%Store_bgcm_vars_in_matrices(tile%name, ics, ice, iblk)
         END IF
       END IF
-#endif
 
     END IF ! IF (tile%Has_conserved_quantities())
 
@@ -395,7 +385,6 @@ CONTAINS
 
     IF (tile%Has_conserved_quantities()) THEN
 
-#ifndef __NO_QUINCY__
       IF (model%config%model_scheme == MODEL_QUINCY) THEN
         IF (model%config%qmodel_id == QCANOPY) THEN
           ! If running in CANOPY configuration nothing needs to be conserved because the states are prescribed
@@ -404,7 +393,6 @@ CONTAINS
         ! Since the lcc framework mainly working on the variables and only on additionally synchronised
         ! chuncks of selected matrices no sync from matrix to variables should be conducted before post lcc conversion
       END IF
-#endif
 
       ! Iterate over all cq types and their vars and convert
       DO i_cqt = 1,tile%nr_of_cqts
@@ -500,14 +488,12 @@ CONTAINS
         CALL recalc_carbon_per_tile_vars(tile, options)
       END IF
 
-#ifndef __NO_QUINCY__
       IF (model%config%model_scheme == MODEL_QUINCY) THEN
         ! For the quincy model the matrices need to be updated after post lcc conversion
         IF (ASSOCIATED(tile%bgcm_store)) THEN
           CALL tile%bgcm_store%Store_bgcm_vars_in_matrices(tile%name, ics, ice, iblk)
         END IF
       END IF
-#endif
 
     END IF ! IF (tile%Has_conserved_quantities())
 
@@ -676,22 +662,17 @@ CONTAINS
   !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE global_pplcc_diagnostics(tile)
+  SUBROUTINE global_pplcc_diagnostics(tile, area_scaling)
 
-    USE mo_sync,                  ONLY: global_sum_array
-    USE mo_jsb_grid,              ONLY: Get_grid
-    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
-
-    ! Argument
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-
-    ! Local variables
-    !
+    USE mo_jsb_control,             ONLY: acc_stream
+    USE mo_util,                    ONLY: scaled_global_sum_2D
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile              !< Current tile
+    REAL(wp),                   INTENT(in) :: area_scaling(:,:) !< Area scaling factor (accounting for halo cells)
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(PPLCC_)
 
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_pplcc_diagnostics'
-
-    ! Pointers to variables in memory
 
     dsl4jsb_Real2D_onDomain :: tree_fract
     dsl4jsb_Real2D_onDomain :: shrub_fract
@@ -710,16 +691,7 @@ CONTAINS
     REAL(wp), POINTER       :: baresoil_area_gsum(:)
     REAL(wp), POINTER       :: C3pft_area_gsum(:)
     REAL(wp), POINTER       :: C4pft_area_gsum(:)
-
-    TYPE(t_jsb_model), POINTER      :: model
-    TYPE(t_jsb_grid),  POINTER      :: grid
-
-    REAL(wp), POINTER      :: area(:,:)
-    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
-    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
-    REAL(wp), ALLOCATABLE  :: scaling (:,:)
-
-
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(PPLCC_)
     dsl4jsb_Get_var2D_onDomain(PPLCC_,  tree_fract)                 ! in
     dsl4jsb_Get_var2D_onDomain(PPLCC_,  shrub_fract)                ! in
@@ -730,7 +702,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(PPLCC_,  C3pft_fract)                ! in
     dsl4jsb_Get_var2D_onDomain(PPLCC_,  C4pft_fract)                ! in
 
-
     tree_area_gsum     => PPLCC__mem%tree_area_gsum%ptr(:)        ! out
     shrub_area_gsum    => PPLCC__mem%shrub_area_gsum%ptr(:)       ! out
     grass_area_gsum    => PPLCC__mem%grass_area_gsum%ptr(:)       ! out
@@ -740,48 +711,43 @@ CONTAINS
     C3pft_area_gsum    => PPLCC__mem%C3pft_area_gsum%ptr(:)       ! out
     C4pft_area_gsum    => PPLCC__mem%C4pft_area_gsum%ptr(:)       ! out
 
-
-    model => Get_model(tile%owner_model_id)
-    grid  => Get_grid(model%grid_id)
-    area         => grid%area(:,:)
-    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
-
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
-
-    ! Domain Mask - to mask all halo cells for global sums (otherwise these
-    ! cells are counted twice)
-    ALLOCATE (in_domain(grid%nproma,grid%nblks))
-    WHERE (is_in_domain(:,:))
-      in_domain = 1._wp
-    ELSEWHERE
-      in_domain = 0._wp
-    END WHERE
-
-    ALLOCATE (scaling(grid%nproma,grid%nblks))
 
     ! Calculate 1d global land variables, if requested for output
     ! Unit transformation from [m2] to [Mio km2]: 1.e-12
-    scaling(:,:) = area(:,:) * in_domain(:,:) * 1.e-12_wp
-    IF (PPLCC__mem%tree_area_gsum%is_in_output)     &
-      &  tree_area_gsum       = global_sum_array(tree_fract(:,:)     * scaling(:,:))
-    IF (PPLCC__mem%shrub_area_gsum%is_in_output)    &
-      &  shrub_area_gsum      = global_sum_array(shrub_fract(:,:)    * scaling(:,:))
-    IF (PPLCC__mem%grass_area_gsum%is_in_output)    &
-      &  grass_area_gsum      = global_sum_array(grass_fract(:,:)    * scaling(:,:))
-    IF (PPLCC__mem%crop_area_gsum%is_in_output)     &
-      &  crop_area_gsum       = global_sum_array(crop_fract(:,:)     * scaling(:,:))
-    IF (PPLCC__mem%pasture_area_gsum%is_in_output)  &
-      &  pasture_area_gsum    = global_sum_array(pasture_fract(:,:)  * scaling(:,:))
-    IF (PPLCC__mem%baresoil_area_gsum%is_in_output) &
-      &  baresoil_area_gsum   = global_sum_array(baresoil_fract(:,:) * scaling(:,:))
-    IF (PPLCC__mem%C3pft_area_gsum%is_in_output)    &
-      &  C3pft_area_gsum      = global_sum_array(C3pft_fract(:,:)    * scaling(:,:))
-    IF (PPLCC__mem%C4pft_area_gsum%is_in_output)    &
-      &  C4pft_area_gsum      = global_sum_array(C4pft_fract(:,:)    * scaling(:,:))
-
-    DEALLOCATE (scaling, in_domain)
+    IF (PPLCC__mem%tree_area_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(tree_area_gsum, tree_fract, area_scaling, 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%tree_area_gsum%ptr(:))
+    END IF
+    IF (PPLCC__mem%shrub_area_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(shrub_area_gsum, shrub_fract, area_scaling, 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%shrub_area_gsum%ptr(:))
+    END IF
+    IF (PPLCC__mem%grass_area_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(grass_area_gsum, grass_fract, area_scaling, 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%grass_area_gsum%ptr(:))
+    END IF
+    IF (PPLCC__mem%crop_area_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(crop_area_gsum, crop_fract, area_scaling, 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%crop_area_gsum%ptr(:))
+    END IF
+    IF (PPLCC__mem%pasture_area_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(pasture_area_gsum, pasture_fract, area_scaling, 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%pasture_area_gsum%ptr(:))
+    END IF
+    IF (PPLCC__mem%baresoil_area_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(baresoil_area_gsum, baresoil_fract, area_scaling, 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%baresoil_area_gsum%ptr(:))
+    END IF
+    IF (PPLCC__mem%C3pft_area_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(C3pft_area_gsum, C3pft_fract, area_scaling, 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%C3pft_area_gsum%ptr(:))
+    END IF
+    IF (PPLCC__mem%C4pft_area_gsum%is_in_output) THEN
+      CALL scaled_global_sum_2D(C4pft_area_gsum, C4pft_fract, area_scaling, 1.e-12_wp, acc_stream)
+      !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%C4pft_area_gsum%ptr(:))
+    END IF
 
   END SUBROUTINE global_pplcc_diagnostics
 

@@ -16,7 +16,7 @@
 !>#### main routines for the SSM (simple soil model), calculating the soil biogeochemical pools
 !>
 MODULE mo_q_sb_ssm_main
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
@@ -689,7 +689,7 @@ CONTAINS
       & nsoil_w, &
       & dtime, &
       & num_sl_above_bedrock(:), &
-      & dsl4jsb_Config(SB_)%flag_sb_prescribe_po4, &
+      & dsl4jsb_Config(SB_)%flag_sb_interactive_p, &
       & rtm_decomposition(:,:), &
       & rmm_decomposition(:,:), &
       & km_dip_biochem_po4_act(:,:), &
@@ -1895,7 +1895,7 @@ CONTAINS
                                         nsoil_w, &
                                         dtime, &
                                         num_sl_above_bedrock, &
-                                        flag_sb_prescribe_po4, &
+                                        flag_sb_interactive_p, &
                                         rtm_decomposition, &
                                         rmm_decomposition, &
                                         km_dip_biochem_po4_act, &
@@ -1925,7 +1925,7 @@ CONTAINS
     INTEGER,                           INTENT(in)  :: nsoil_w                       !< number of soil layers (water)
     REAL(wp),                          INTENT(in)  :: dtime                         !< timestep length
     REAL(wp), DIMENSION(nc),           INTENT(in)  :: num_sl_above_bedrock          !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    LOGICAL,                           INTENT(in)  :: flag_sb_prescribe_po4         !< whether or not solute PO4 is prescribed
+    LOGICAL,                           INTENT(in)  :: flag_sb_interactive_p         !< whether or not solute PO4 is causing biochem_mineralisation_po4
     REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)  :: rtm_decomposition, &          !< temperature response of decomposition
                                                       rmm_decomposition, &          !< moisture response of decomposition
                                                       km_dip_biochem_po4_act, &     !< actual half-saturation soluble P for biochem_mineralisation_po4 [mol P / m3]
@@ -1978,7 +1978,7 @@ CONTAINS
 
     !> 2.0 Calculate potential P biomineralisation from slow organic P pool (mol /m3 / timestep)
     !!
-    IF(.NOT. flag_sb_prescribe_po4) THEN
+    IF (flag_sb_interactive_p) THEN
       DO ic = 1,nc
         DO is = 1,INT(num_sl_above_bedrock(ic))
           hlp1(ic, is) = km_dip_biochem_po4_act(ic, is) / (km_dip_biochem_po4_act(ic, is) + po4_solute(ic, is))
@@ -2155,8 +2155,12 @@ CONTAINS
     ! 0.2 Local
     INTEGER                           :: ic, is      !< looping
     REAL(wp), DIMENSION(nc, nsoil_w)  :: hlp1, hlp2
-    REAL(wp), DIMENSION(nc, nsoil_w)  :: transfer_c
-    REAL(wp), DIMENSION(nc, nsoil_w)  :: f_uptake_nh4_sl
+    REAL(wp), DIMENSION(nc, nsoil_w)  :: litter_requirement_n   !< nitrogen required for litter decomposition
+    REAL(wp)                          :: litter_deficit_n, &    !< difference between N requirement and N provided by litter
+                                                                !< and asymbiotic N fixation (only if N cycle is activated)
+                                         f_uptake_nh4_sl, &     !< fraction of microbial uptake that is satisfied by NH4 (as opposed to NO3)
+                                         affinity_nh4, &        !< affinity of microbial uptake to NH4
+                                         affinity_no3           !< affinity of microbial uptake to NO3
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_actual_flux_rates'
 
     !> init out var
@@ -2165,64 +2169,97 @@ CONTAINS
     microbial_uptake_no3_sl(:,:) = 0.0_wp
     microbial_uptake_po4_sl(:,:) = 0.0_wp
 
-    !> 1.0 formation of fast SOM from litter
-    !!
+    !>1.0 formation of fast SOM from litter
+    !>
+    DO ic = 1, nc
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
 
-    !> 1.1 calculate potential transfer from litter decay to fast SOM pool, and associated potential microbial
-    !!     immobilisation rate as difference between maximal growth rate and N in litter
-    transfer_c(:,:) = frac_litter2fast_som * &
-                      (sb_loss_mt(ix_soluable_litter, ixC, :, :) + &
-                       sb_loss_mt(ix_polymeric_litter, ixC, :, :))
+        !>1.1 calculate potential transfer from litter decay to fast SOM pool, and associated potential microbial
+        !>    immobilisation rate as difference between maximal growth rate and N in litter and asymbiotic N fixation
+        !>    note: asymb_n_fixation is zero on entry for BNF-scheme 'unlimited' and 'none'
+        !>
+        litter_requirement_n(ic, is) = frac_litter2fast_som / apparent_fast_som_cn(ic, is) &
+          &                            * (sb_loss_mt(ix_soluable_litter, ixC, ic, is) &
+          &                               + sb_loss_mt(ix_polymeric_litter, ixC, ic, is))
+        litter_deficit_n             = litter_requirement_n(ic, is)  &
+          &                            - microbial_nue * (sb_loss_mt(ix_soluable_litter, ixN, ic, is) &
+          &                                               + sb_loss_mt(ix_polymeric_litter, ixN, ic, is)) &
+          &                            - asymb_n_fixation(ic, is)
 
-    !> 1.2 calculate partitioning of N immobilisation to NH4 and NO3 according to their abundance and the
-    !!     affinities of the uptake channels to either species
-    DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
-        IF (nh4_solute(ic, is) + no3_solute(ic, is) > eps8) THEN
-          f_uptake_nh4_sl(ic, is) = vmax_mic_uptake_nh4 * nh4_solute(ic, is) &
-            &                       / (nh4_solute(ic, is) + km_mic_uptake_nh4_act(ic, is)) &
-            &                       / (vmax_mic_uptake_nh4 * nh4_solute(ic, is) / (nh4_solute(ic, is) &
-            &                       + km_mic_uptake_nh4_act(ic, is)) + vmax_mic_uptake_no3 &
-            &                       * no3_solute(ic, is) / (no3_solute(ic, is) + km_mic_uptake_no3_act(ic, is)))
-        ELSE
-          f_uptake_nh4_sl(ic, is) = 1.0_wp
-        ENDIF
+        !>1.2 calculate partitioning of N immobilisation to NH4 and NO3 according to their abundance and the
+        !>    affinities of the uptake channels to either species
+        !>    for simplificty, assuming unlimited BNF implies that no uptake of NO3 is required
+        !>    and therefore the NO3 uptake is set to zero
+        !>
+        SELECT CASE(TRIM(bnf_scheme))
+        CASE("unlimited")
+          f_uptake_nh4_sl = 1.0_wp
 
-        microbial_uptake_nh4_sl(ic, is) = f_uptake_nh4_sl(ic, is) * &
-                                                 (transfer_c(ic, is) / apparent_fast_som_cn(ic, is) - &
-                                                  microbial_nue * (sb_loss_mt(ix_soluable_litter, ixN, ic, is) + &
-                                                                  sb_loss_mt(ix_polymeric_litter, ixN, ic, is)) - &
-                                                  asymb_n_fixation(ic, is))
+        CASE("none", "dynamic", "fixed")
+          affinity_nh4 = vmax_mic_uptake_nh4 * nh4_solute(ic, is) &
+            &            / (nh4_solute(ic, is) + km_mic_uptake_nh4_act(ic, is))
+          affinity_no3 = vmax_mic_uptake_no3 * no3_solute(ic, is) &
+            &            / (no3_solute(ic, is) + km_mic_uptake_no3_act(ic, is))
+          IF (nh4_solute(ic, is) + no3_solute(ic, is) > eps8) THEN
+            f_uptake_nh4_sl = affinity_nh4 / (affinity_nh4 + affinity_no3)
+          ELSE
+            f_uptake_nh4_sl = 1.0_wp
+          END IF
+        END SELECT
 
-        microbial_uptake_no3_sl(ic, is) = (1.0_wp - f_uptake_nh4_sl(ic, is)) * &
-                                                 (transfer_c(ic, is) / apparent_fast_som_cn(ic, is) - &
-                                                  microbial_nue * (sb_loss_mt(ix_soluable_litter, ixN, ic, is) + &
-                                                                  sb_loss_mt(ix_polymeric_litter, ixN, ic, is)) - &
-                                                  asymb_n_fixation(ic, is))
+        microbial_uptake_nh4_sl(ic, is) = f_uptake_nh4_sl * litter_deficit_n
+        microbial_uptake_no3_sl(ic, is) = (1.0_wp - f_uptake_nh4_sl) * litter_deficit_n
 
         !! limit uptake rate at low nitrogen assuming a Michaelis-Menten Kinetic
-        hlp1(ic, is)                    = nh4_solute(ic, is) / ( km_mic_uptake_nh4_act(ic, is) + nh4_solute(ic, is) )
-        microbial_uptake_nh4_sl(ic, is) = microbial_uptake_nh4_sl(ic, is) * MIN(hlp1(ic, is), 1.0_wp)
+        !! only for cases without unlimited BNF. In unlimited BNF, the missing N will be supplied via BNF
+        SELECT CASE(TRIM(bnf_scheme))
+          CASE("unlimited")
+            !! asymbiotic N fixation is the difference between the required uptake and the available N
+            asymb_n_fixation(ic, is) = MAX(microbial_uptake_nh4_sl(ic, is) &
+              &                            - (nh4_solute(ic, is) + transport_nh4_solute(ic, is)), 0.0_wp)
+            !! microbial uptake is corrected to be the actual update, i.e. reduced by the amount added as asymbiotic n fixation
+            microbial_uptake_nh4_sl(ic, is) = microbial_uptake_nh4_sl(ic, is) - asymb_n_fixation(ic, is)
 
-        hlp1(ic, is)                    = no3_solute(ic, is) / ( km_mic_uptake_no3_act(ic, is) + no3_solute(ic, is) )
-        microbial_uptake_no3_sl(ic, is) = microbial_uptake_no3_sl(ic, is) * MIN(hlp1(ic, is), 1.0_wp)
-      ENDDO
-    ENDDO
+          CASE("none", "dynamic", "fixed")
+            hlp1(ic, is) = nh4_solute(ic, is) / ( nh4_solute(ic, is) + km_mic_uptake_nh4_act(ic, is) )
+            microbial_uptake_nh4_sl(ic, is) = microbial_uptake_nh4_sl(ic, is) * MIN(hlp1(ic, is), 1.0_wp)
 
-    !>1.3  Limit microbial, mycorrhizal and plant uptake, as well as nitrification to available NH4 minus transport losses
+            hlp1(ic, is) = no3_solute(ic, is) / ( no3_solute(ic, is) + km_mic_uptake_no3_act(ic, is) )
+            microbial_uptake_no3_sl(ic, is) = microbial_uptake_no3_sl(ic, is) * MIN(hlp1(ic, is), 1.0_wp)
+        END SELECT
+      END DO
+    END DO
+
+    !>1.3 Limit microbial, mycorrhizal and plant uptake, as well as nitrification to available NH4 minus transport losses
     !>
     SELECT CASE(TRIM(bnf_scheme))
     CASE("unlimited")
-      asymb_n_fixation(:,:) = MAX(microbial_uptake_nh4_sl(:,:) + plant_uptake_nh4_sl(:,:) + nitrification_no3(:,:) + &
-                              mycorrhiza_uptake_nh4_sl(:,:) - (nh4_solute(:,:) + transport_nh4_solute(:,:)), 0.0_wp)
+      DO ic = 1, nc
+        DO is = 1, NINT(num_sl_above_bedrock(ic))
+          hlp1(ic, is) = plant_uptake_nh4_sl(ic, is) + nitrification_no3(ic, is) + mycorrhiza_uptake_nh4_sl(ic, is)
+          hlp2(ic, is) = nh4_solute(ic, is) + transport_nh4_solute(ic, is) - microbial_uptake_nh4_sl(ic, is)
+          IF (hlp2(ic, is) < hlp1(ic, is)) THEN
+            IF (hlp1(ic, is) > eps8) THEN
+              plant_uptake_nh4_sl(ic, is)      = hlp2(ic, is) * plant_uptake_nh4_sl(ic, is) / hlp1(ic, is)
+              nitrification_no3(ic, is)        = hlp2(ic, is) * nitrification_no3(ic, is) / hlp1(ic, is)
+              mycorrhiza_uptake_nh4_sl(ic, is) = hlp2(ic, is) * mycorrhiza_uptake_nh4_sl(ic, is) / hlp1(ic, is)
+            ELSE
+              plant_uptake_nh4_sl(ic, is)      = 0.0_wp
+              nitrification_no3(ic, is)        = 0.0_wp
+              mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_wp
+            END IF
+          END IF
+        END DO
+      END DO
+
     ! for the SB_ asymbiotic N fixation no difference is made between "dynamic" and "fixed"
     !  ("fixed" is only available in the VEG_ symbiotic N fixation)
     CASE("none", "dynamic", "fixed")
-      DO ic = 1,nc
-        DO is = 1,INT(num_sl_above_bedrock(ic))
-          IF (microbial_uptake_nh4_sl(ic, is) >= 0.0_wp) THEN
-            hlp1(ic, is) = microbial_uptake_nh4_sl(ic, is) + plant_uptake_nh4_sl(ic, is) + nitrification_no3(ic, is) + &
-                        mycorrhiza_uptake_nh4_sl(ic, is)
+      DO ic = 1, nc
+        DO is = 1, NINT(num_sl_above_bedrock(ic))
+          IF (microbial_uptake_nh4_sl(ic, is) > 0.0_wp) THEN
+            hlp1(ic, is) = microbial_uptake_nh4_sl(ic, is) + plant_uptake_nh4_sl(ic, is) + nitrification_no3(ic, is) &
+              &            + mycorrhiza_uptake_nh4_sl(ic, is)
             hlp2(ic, is) = nh4_solute(ic, is) + transport_nh4_solute(ic, is)
             IF (hlp2(ic, is) < hlp1(ic, is)) THEN
               IF (hlp1(ic, is) > eps8) THEN
@@ -2235,8 +2272,8 @@ CONTAINS
                 plant_uptake_nh4_sl(ic, is)      = 0.0_wp
                 nitrification_no3(ic, is)        = 0.0_wp
                 mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_wp
-              ENDIF
-            ENDIF
+              END IF
+            END IF
           ELSE
             hlp1(ic, is) = plant_uptake_nh4_sl(ic, is) + nitrification_no3(ic, is) + mycorrhiza_uptake_nh4_sl(ic, is)
             hlp2(ic, is) = nh4_solute(ic, is) + transport_nh4_solute(ic, is) - microbial_uptake_nh4_sl(ic, is)
@@ -2249,11 +2286,11 @@ CONTAINS
                 plant_uptake_nh4_sl(ic, is)      = 0.0_wp
                 nitrification_no3(ic, is)        = 0.0_wp
                 mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_wp
-              ENDIF
-            ENDIF
-          ENDIF
-        ENDDO
-      ENDDO
+              END IF
+            END IF
+          END IF
+        END DO
+      END DO
     CASE DEFAULT
       CALL finish(TRIM(routine),'No such bnf_scheme available here.')
     END SELECT
@@ -2261,10 +2298,10 @@ CONTAINS
     !> 1.4  limit plant uptake and denitrification to available NO3 minus transport losses
     !!
     DO ic = 1, nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
-        IF (microbial_uptake_no3_sl(ic,is) >= 0.0_wp) THEN
-          hlp1(ic,is) = microbial_uptake_no3_sl(ic,is) + plant_uptake_no3_sl(ic,is) + &
-                  denitrification_n2(ic,is) + mycorrhiza_uptake_no3_sl(ic,is)
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
+        IF (microbial_uptake_no3_sl(ic,is) > 0.0_wp) THEN
+          hlp1(ic,is) = microbial_uptake_no3_sl(ic,is) + plant_uptake_no3_sl(ic,is) &
+            &           + denitrification_n2(ic,is) + mycorrhiza_uptake_no3_sl(ic,is)
           hlp2(ic,is) = no3_solute(ic,is) + transport_no3_solute(ic,is)
           IF (hlp2(ic,is) < hlp1(ic,is)) THEN
             IF (hlp1(ic,is) > eps8) THEN
@@ -2277,8 +2314,8 @@ CONTAINS
               plant_uptake_no3_sl(ic,is)      = 0.0_wp
               denitrification_n2(ic,is)       = 0.0_wp
               mycorrhiza_uptake_no3_sl(ic,is) = 0.0_wp
-            ENDIF
-          ENDIF
+            END IF
+          END IF
         ELSE
           hlp1(ic,is) = plant_uptake_no3_sl(ic,is) + denitrification_n2(ic,is) + mycorrhiza_uptake_no3_sl(ic,is)
           hlp2(ic,is) = no3_solute(ic,is) + transport_no3_solute(ic,is) - microbial_uptake_no3_sl(ic,is)
@@ -2291,23 +2328,23 @@ CONTAINS
               plant_uptake_no3_sl(ic,is)      = 0.0_wp
               denitrification_n2(ic,is)       = 0.0_wp
               mycorrhiza_uptake_no3_sl(ic,is) = 0.0_wp
-            ENDIF
-          ENDIF
-        ENDIF  !< microbial_uptake_no3_sl(ic,is) >= 0.0_wp
-      ENDDO
-    ENDDO
+            END IF
+          END IF
+        END IF  !< microbial_uptake_no3_sl(ic,is) >= 0.0_wp
+      END DO
+    END DO
 
     !> 2.0 determine actual growth rate of fast SOM pool
     !!
 
     !> 2.1 Calculate actual litter loss rate, calculated such that litter decomposition
     !! matches the actual immobilisation flux and CN uptake from litter given actual CUE
-    DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
-        hlp1(ic, is) = frac_litter2fast_som / apparent_fast_som_cn(ic, is) &
-          &         * (sb_loss_mt(ix_soluable_litter, ixC, ic, is) + sb_loss_mt(ix_polymeric_litter, ixC, ic, is)) &
-          &         - (asymb_n_fixation(ic, is) + microbial_nue &
-          &         * (sb_loss_mt(ix_soluable_litter, ixN, ic, is) + sb_loss_mt(ix_polymeric_litter, ixN, ic, is)))
+    DO ic = 1, nc
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
+        hlp1(ic, is) = litter_requirement_n(ic, is) &
+          &            - microbial_nue * (sb_loss_mt(ix_soluable_litter, ixN, ic, is) &
+          &                               + sb_loss_mt(ix_polymeric_litter, ixN, ic, is)) &
+          &            - asymb_n_fixation(ic, is)
         IF ((microbial_uptake_nh4_sl(ic, is) + microbial_uptake_no3_sl(ic, is)) < hlp1(ic, is)) THEN
           IF (hlp1(ic, is) > eps8) THEN
             hlp2(ic, is) = (microbial_uptake_nh4_sl(ic, is) + microbial_uptake_no3_sl(ic, is)) / hlp1(ic, is)
@@ -2333,8 +2370,8 @@ CONTAINS
 
     !>3.0 calculate potential microbial P uptake from soluable pool (mol /m3 / timestep)
     !>
-    DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+    DO ic = 1, nc
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
         microbial_uptake_po4_sl(ic, is) = frac_litter2fast_som / apparent_fast_som_cn(ic, is) / k_fast_som_np &
           &                               * (sb_loss_mt(ix_soluable_litter, ixC, ic, is) &
           &                               + sb_loss_mt(ix_polymeric_litter, ixC, ic, is)) &

@@ -67,10 +67,8 @@ MODULE mo_jsb_tile
     PROCEDURE :: Count_conserved_quantities       => Count_conserved_quantities_on_tile
     PROCEDURE :: Collect_conserved_variables      => Collect_conserved_variables_on_tile
     PROCEDURE :: Check_child_cover_fractions      => Check_child_cover_fractions_on_tile
-#ifndef __NO_QUINCY__
     PROCEDURE :: Count_and_classify_bgc_materials => Count_and_classify_bgc_materials_on_tile
     PROCEDURE :: Collect_bgc_materials            => Collect_bgc_materials_on_tile
-#endif
     PROCEDURE :: Print                            => Print_tile
     PROCEDURE :: Handler                          => Process_task_on_tile
   END TYPE t_jsb_tile
@@ -437,7 +435,7 @@ CONTAINS
   !>
   !> Add and initialise fraction variables for this tile - either from a file or according to specification
   !>
-  SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
+  SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions, is_sitelevel)
 
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_varlist,         ONLY: jsb_add_var, VARNAME_LEN
@@ -455,6 +453,7 @@ CONTAINS
     LOGICAL,           INTENT(in)    :: l_rel_fractions
       !< Tile fractions in input file are usually relative with respect to parent (historical reasons)
       !< while the fractions in the code are absolute (with respect to the box tile)
+    LOGICAL,           INTENT(in)    :: is_sitelevel       !< Is this a site-level model configuration?
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
     CLASS(t_jsb_aggregator),                  POINTER :: aggregator
@@ -580,7 +579,13 @@ CONTAINS
         CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
         CALL this%Set_fraction(fract=MAX(0._wp, return_pointer(:,:)*tmp_fract(:,:)))
       ELSE
-        CALL this%Set_fraction(fract=return_pointer(:,:))
+        IF (is_sitelevel .AND. .NOT. ASSOCIATED(this%parent_tile)) THEN
+          ! For site-level, set fraction of box tile to 1
+          tmp_fract(:,:) = 1._wp
+          CALL this%Set_fraction(fract=tmp_fract(:,:))
+        ELSE
+          CALL this%Set_fraction(fract=return_pointer(:,:))
+        END IF
         CALL this%Get_fraction(fract=hgrid%lsf(:,:))
         hgrid%lsm(:,:) = hgrid%lsf(:,:) > 0._wp
         !$ACC UPDATE DEVICE(hgrid%lsf, hgrid%lsm) ASYNC(1)
@@ -761,7 +766,6 @@ CONTAINS
 
   END FUNCTION Has_process_memory_on_tile
 
-#ifndef __NO_QUINCY__
   ! ======================================================================================================= !
   !>
   !> Identifies the number and types of bgc materials on this tile
@@ -774,14 +778,14 @@ CONTAINS
   SUBROUTINE Count_and_classify_bgc_materials_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
-    USE mo_jsb_pool_class,      ONLY: t_jsb_pool
+    USE mo_lnd_bgcm_class,      ONLY: t_lnd_bgcm
     USE mo_lnd_bgcm_store,      ONLY: t_lnd_bgcm_store
     USE mo_lnd_bgcm_class,      ONLY: assert_no_compartment_bgc_materials, get_dimension_of_element_variables
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the bgc materials are checked
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_memory), POINTER     :: mem
-    CLASS(t_jsb_pool), POINTER       :: bgcm
+    CLASS(t_lnd_bgcm), POINTER       :: bgcm
     CLASS(t_lnd_bgcm_store), POINTER :: bgcm_store
     INTEGER                          :: i_proc, i_bgcm, i_compartment
     INTEGER                          :: nr_of_bgcms_this_proc, nr_of_compartments
@@ -813,10 +817,10 @@ CONTAINS
           this%bgcm_store => bgcm_store
         ENDIF
 
-        nr_of_bgcms_this_proc = SIZE(mem%bgc_material%pool_list)
+        nr_of_bgcms_this_proc = SIZE(mem%bgc_material%bgcm_list)
         this%bgcm_store%nr_of_bgc_materials = this%bgcm_store%nr_of_bgc_materials + nr_of_bgcms_this_proc
         DO i_bgcm = 1, nr_of_bgcms_this_proc
-          bgcm => mem%bgc_material%pool_list(i_bgcm)%p
+          bgcm => mem%bgc_material%bgcm_list(i_bgcm)%p
 
           IF(bgcm%contains_elements) THEN
             ! i.e. directly elements and no compartments
@@ -830,17 +834,17 @@ CONTAINS
           ELSE
             ! i.e. no elements but one layer of compartments which are then expected to have elements
             ! but no further compartments!
-            nr_of_compartments = SIZE(bgcm%pool_list)
+            nr_of_compartments = SIZE(bgcm%bgcm_list)
             common_dim = -1
             DO i_compartment = 1, nr_of_compartments
-              IF(.NOT. bgcm%pool_list(i_compartment)%p%contains_elements) THEN
+              IF(.NOT. bgcm%bgcm_list(i_compartment)%p%contains_elements) THEN
                 CALL finish(TRIM(routine), 'Found bgcm '//TRIM(bgcm%name)//' in tile '//TRIM(this%name)// &
                   & ' that contains a compartment without elements '//                                    &
-                  &  TRIM(bgcm%pool_list(i_compartment)%p%name)//                                         &
+                  &  TRIM(bgcm%bgcm_list(i_compartment)%p%name)//                                         &
                   & ' but no behaviour is implemented for this so far, please check!')
               ENDIF
-              CALL assert_no_compartment_bgc_materials(bgcm%pool_list(i_compartment)%p, this%name, routine)
-              this_dim = get_dimension_of_element_variables(bgcm%pool_list(i_compartment)%p, this%name, routine)
+              CALL assert_no_compartment_bgc_materials(bgcm%bgcm_list(i_compartment)%p, this%name, routine)
+              this_dim = get_dimension_of_element_variables(bgcm%bgcm_list(i_compartment)%p, this%name, routine)
               IF(i_compartment == 1) THEN
                 common_dim = this_dim
               ELSEIF(common_dim /= this_dim) THEN
@@ -927,7 +931,6 @@ CONTAINS
     ENDDO
 
   END SUBROUTINE Collect_bgc_materials_on_tile
-#endif
 
   ! ======================================================================================================= !
   !>

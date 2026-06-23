@@ -36,14 +36,10 @@ MODULE mo_a2l_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & DEBUG_VAR           , &
       & CO2_air             , &
-      & CO2_air_mol
-
-#ifndef __NO_QUINCY__
-    TYPE(t_jsb_var_real2d) :: &
+      & CO2_air_mol         , &
       & CO2_mixing_ratio    , & !< surface air CO2 mixing ratio [ppmv]   >> mo_atmland_interface: CO2_mixing_ratio = CO2_air_mol * 1000000._wp
       & CO2_mixing_ratio_C13, & !< surface air 13CO2 mixing ratio [ppmv]
       & CO2_mixing_ratio_C14    !< surface air 14CO2 mixing ratio [scaled]
-#endif
 
     TYPE(t_jsb_var_real2d) :: &
       t_air              , &
@@ -80,7 +76,6 @@ MODULE mo_a2l_memory_class
       q_acoef_ice        , &
       q_bcoef_ice
 
-#ifndef __NO_QUINCY__
     ! N & P deposition
     TYPE(t_jsb_var_real2d) ::   &
       & nhx_deposition        , &  !< surface downward reduced nitrogen deposition velocity [mumol m-2 sec-1]
@@ -95,12 +90,6 @@ MODULE mo_a2l_memory_class
       & daylength_prev_day      , &  !< time of previous day with light available [s]
       & local_time_day_seconds       !< seconds passed on this day (local cell time)
 
-    ! For slow soil pool spin-up accelerator
-    TYPE(t_jsb_var_real2d) ::   &
-      & slow_sb_pool_accelerator_execution_counter, & !< the number of executions of spin-up accelerator [#]
-      & slow_sb_pool_accelerator_execute              !< logical value: execute the spin-up accelerator or not (0 = FALSE, 1= True)
-#endif
-
 #ifdef __QUINCY_STANDALONE__
     ! For calculation of constant input values (add values over the 1st year, calc avrg, and use this as input for teh rest of the simulation)
     TYPE(t_jsb_var_real2d) :: &
@@ -112,6 +101,7 @@ MODULE mo_a2l_memory_class
       & co2_DC14_acc, &                   !< accumulate (simply add) input value of co2_DC14 [scaled]
       & const_input_timestep_counter      !< count number of timesteps since simulation start [unitless]
 
+    ! Constant input values
     TYPE(t_jsb_var_real2d) :: &
       & nhx_deposition_const, &           !< constant value (avrg of 1st year of input value) of nhx_deposition [mumol m-2 sec-1]
       & noy_deposition_const, &           !< constant value (avrg of 1st year of input value) of noy_deposition [mumol m-2 sec-1]
@@ -188,42 +178,40 @@ CONTAINS
       & output_level=BASIC, &
       & lrestart=.FALSE., initval_r=4.0E-4_wp ) ! R: I just choosed this value for 400 ppm
 
-      IF (model%config%model_scheme == MODEL_QUINCY) THEN
-#ifndef __NO_QUINCY__
-        CALL mem%Add_var('co2_mixing_ratio', mem%co2_mixing_ratio, &
-          & hgrid, surface, &
-          & t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level=FULL, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      CALL mem%Add_var('co2_mixing_ratio', mem%co2_mixing_ratio, &
+        & hgrid, surface, &
+        & t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level=FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
 
-        CALL mem%Add_var('co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13, &
-          & hgrid, surface, &
-          & t_cf('co2_mixing_ratio_C13', 'ppm', 'surface air 13co2 mixing ratio'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level=FULL, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
+      CALL mem%Add_var('co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13, &
+        & hgrid, surface, &
+        & t_cf('co2_mixing_ratio_C13', 'ppm', 'surface air 13co2 mixing ratio'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level=FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
 
-        CALL mem%Add_var('co2_mixing_ratio_C14', mem%co2_mixing_ratio_c14, &
-          & hgrid, surface, &
-          & t_cf('co2_mixing_ratio_c14', 'scaled', 'surface air 14co2 mixing ratio'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level=FULL, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-#endif
-      END IF
+      CALL mem%Add_var('co2_mixing_ratio_C14', mem%co2_mixing_ratio_c14, &
+        & hgrid, surface, &
+        & t_cf('co2_mixing_ratio_c14', 'scaled', 'surface air 14co2 mixing ratio'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level=FULL, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+    END IF
 
     CALL mem%Add_var( 't_air', mem%t_air,                                    &
       & hgrid, surface,                                                      &
@@ -506,7 +494,6 @@ CONTAINS
 
     END IF ! lakes
 
-#ifndef __NO_QUINCY__
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
 
       CALL mem%Add_var('nhx_deposition', mem%nhx_deposition, &
@@ -594,31 +581,7 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-      IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
-        CALL mem%Add_var('slow_sb_pool_accelerator_execution_counter', mem%slow_sb_pool_accelerator_execution_counter, &
-          & hgrid, surface, &
-          & t_cf('slow_sb_pool_accelerator_execution_counter', ' ', 'the number of executions of spin-up accelerator'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('slow_sb_pool_accelerator_execute', mem%slow_sb_pool_accelerator_execute, &
-          & hgrid, surface, &
-          & t_cf('slow_sb_pool_accelerator_execute', ' ', 'logical to determine if executing the spin-up acclerator or not'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = FULL, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-      END IF
     END IF ! MODEL_QUINCY
-#endif
 
 #ifdef __QUINCY_STANDALONE__
     CALL mem%Add_var('nhx_deposition_acc', mem%nhx_deposition_acc, &

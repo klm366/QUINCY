@@ -16,12 +16,14 @@
 !>#### routines for photosynthesis related processes, e.g., calculation of photosynthesis
 !>
 MODULE mo_q_assimi_process
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_math_constants,    ONLY: eps4, eps8
-  USE mo_jsb_control,           ONLY: debug_on, jsbach_runs_standalone
+  USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, message_text, finish
+
+  USE mo_q_assimi_config_class,  ONLY: MEDLYN, BALLBERRY
 
   IMPLICIT NONE
 
@@ -43,7 +45,7 @@ CONTAINS
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
-    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, HYDRO_, TURB_
+    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, HYDRO_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_atmland_constants,      ONLY: min_wind, max_wind
@@ -58,7 +60,6 @@ CONTAINS
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(HYDRO_)
-    dsl4jsb_Use_memory(TURB_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -76,14 +77,11 @@ CONTAINS
     REAL(wp)                              :: dtime                    !< step length
     REAL(wp)                              :: alpha                    !< implicitness factor
 
-    CHARACTER(len=1024)                   :: canopy_cond_scheme       !< canopy_conductance_scheme: medlyn / ballberry
+    INTEGER                               :: canopy_cond_scheme       !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp)                              :: lctlib_g1                !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     REAL(wp)                              :: lctlib_phi_leaf_min, lctlib_gmin, lctlib_g0
     REAL(wp)                              :: lctlib_t_jmax_omega, lctlib_t_jmax_opt
     INTEGER                               :: lctlib_phenology_type, lctlib_ps_pathway
-    REAL(wp), ALLOCATABLE                 :: drag_srf_local(:)            !< surface drag, provided by atmosphere or TURB_
-    REAL(wp), ALLOCATABLE                 :: ftranspiration_sum_local(:)  !< sum of ftranspiration_sl over soil layers
-    LOGICAL                               :: jsb_standalone               !< standalone / coupled simulation
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -92,7 +90,6 @@ CONTAINS
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
@@ -138,11 +135,7 @@ CONTAINS
     ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk      :: num_sl_above_bedrock
     ! HYDRO_ 3D
-    dsl4jsb_Real3D_onChunk      :: wtr_soil_pwp_sl
-    dsl4jsb_Real3D_onChunk      :: wtr_soil_fc_sl
     dsl4jsb_Real3D_onChunk      :: wtr_soil_pot_sl
-    ! TURB_ 2D
-    dsl4jsb_Real2D_onChunk      :: drag_srf_stdalone
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
@@ -172,7 +165,6 @@ CONTAINS
     ncanopy                =  vgrid_canopy_q_assimi%n_levels
     vgrid_soil_w           => Get_vgrid('soil_depth_water')
     nsoil_w                =  vgrid_soil_w%n_levels
-    jsb_standalone         =  jsbach_runs_standalone()
     ! ----------------------------------------------------------------------------------------------------- !
     IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -182,7 +174,6 @@ CONTAINS
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                          ! in
@@ -211,7 +202,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs)              ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_ps)              ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, t_jmax_opt)                ! out
-    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, wtr_soil_root_pot)         ! out   (with SPQ_: in)
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, wtr_soil_root_pot)         ! out
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, net_assimilation_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(Q_ASSIMI_, gross_assimilation_cl)     ! out
@@ -227,11 +218,7 @@ CONTAINS
     ! HYDRO_ 2D
     dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)         ! in
     ! HYDRO_ 3D
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)              ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)               ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_sl)              ! in
-    ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(TURB_, drag_srf_stdalone)             ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                            ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                ! in
@@ -255,7 +242,7 @@ CONTAINS
     lctlib_ps_pathway = dsl4jsb_Lctlib_param(ps_pathway)
     lctlib_t_jmax_opt = dsl4jsb_Lctlib_param(t_jmax_opt)
 
-    canopy_cond_scheme = TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme)
+    canopy_cond_scheme = dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme
 
     !>0.9.1 set output to zero
     !>
@@ -269,40 +256,30 @@ CONTAINS
     !>0.9.2 set g1 according to canopy_conductance_scheme
     !>
     SELECT CASE(canopy_cond_scheme)
-      CASE ("medlyn")
+      CASE (MEDLYN)
         lctlib_g1 = dsl4jsb_Lctlib_param(g1_medlyn)
-      CASE ("ballberry")
+      CASE (BALLBERRY)
         lctlib_g1 = dsl4jsb_Lctlib_param(g1_bberry)
     END SELECT
 
-    !>0.9.3 allocate local 2D
-    !>
-    ALLOCATE(drag_srf_local(nc))
-    ALLOCATE(ftranspiration_sum_local(nc))
-    !$ACC ENTER DATA CREATE(drag_srf_local, ftranspiration_sum_local)
-
     !>1.0 calculate root zone water potential (MPa)
     !>
-    !>  only with jsbach soil physics processes enabled, otherwise calculated with SPQ_
-    !>
-    IF (model%config%use_soil_phys_jsbach) THEN
-      ! set to zero
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    ! set to zero
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      wtr_soil_root_pot(ic) = 0.0_wp
+    END DO
+    !$ACC END PARALLEL LOOP
+    ! calculate
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
+    DO is = 1, nsoil_w
+      !$ACC LOOP GANG VECTOR
       DO ic = 1, nc
-        wtr_soil_root_pot(ic) = 0.0_wp
+        wtr_soil_root_pot(ic) = wtr_soil_root_pot(ic) + (root_fraction_sl(ic, is) * wtr_soil_pot_sl(ic, is))
       END DO
-      !$ACC END PARALLEL LOOP
-      ! calculate
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-      !$ACC LOOP SEQ
-      DO is = 1, nsoil_w
-        !$ACC LOOP GANG VECTOR
-        DO ic = 1, nc
-          wtr_soil_root_pot(ic) = wtr_soil_root_pot(ic) + (root_fraction_sl(ic, is) * wtr_soil_pot_sl(ic, is))
-        END DO
-      END DO
-      !$ACC END PARALLEL
-    END IF
+    END DO
+    !$ACC END PARALLEL
 
     !>2.0 calculate the moisture scaling factor for photosynthesis
     !>
@@ -321,29 +298,11 @@ CONTAINS
 
     !>  2.1 determine aerodynamic conductance
     !>
-    !> use drag_srf from A2L_ or SEB_ or SPQ_ - differs between: standalone / coupled simulations / quincy SPQ_ / jsbach soil-physics
-    !>
-    ! use for: QUINCY SPQ_ standalone
-    IF (jsb_standalone .AND. .NOT. model%config%use_soil_phys_jsbach) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO ic = 1, nc
-        drag_srf_local(ic) = drag_srf_stdalone(ic)
-      END DO
-      !$ACC END PARALLEL LOOP
-    ! use for: QUINCY SPQ_ coupled and QUINCY with JSBACH physics coupled & standalone
-    ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-      DO ic = 1, nc
-        drag_srf_local(ic) = drag_srf(ic)
-      END DO
-      !$ACC END PARALLEL LOOP
-    END IF
-
     ! calc aerodynamic conductance
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       aerodyn_cond(ic) = MAX(min_aerodyn_cond, &
-        &                heat_transfer_coef(drag_srf_local(ic), dtime, alpha) * MIN( MAX(wind_10m(ic), min_wind), max_wind))
+        &                heat_transfer_coef(drag_srf(ic), dtime, alpha) * MIN( MAX(wind_10m(ic), min_wind), max_wind))
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -398,17 +357,15 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       ! potential correction of assimilation and canopy conductance
-      IF (model%config%use_soil_phys_jsbach) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-        DO ic = 1, nc
-          IF (wtr_soil_root_pot(ic) < lctlib_phi_leaf_min) THEN
-            gross_assimilation_cl(ic,icanopy) = 0.0_wp
-            net_assimilation_cl(ic,icanopy)   = -1.0_wp * maint_respiration_leaf_cl(ic,icanopy)
-            canopy_cond_cl(ic,icanopy)        = 0.0_wp
-          END IF
-        END DO
-        !$ACC END PARALLEL LOOP
-      END IF
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        IF (wtr_soil_root_pot(ic) < lctlib_phi_leaf_min) THEN
+          gross_assimilation_cl(ic,icanopy) = 0.0_wp
+          net_assimilation_cl(ic,icanopy)   = -1.0_wp * maint_respiration_leaf_cl(ic,icanopy)
+          canopy_cond_cl(ic,icanopy)        = 0.0_wp
+        END IF
+      END DO
+      !$ACC END PARALLEL LOOP
 
       ! gross_assimilation incl. C13 & C14
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
@@ -507,18 +464,12 @@ CONTAINS
     ENDIF
 
     !$ACC WAIT(1)
-
-    !$ACC EXIT DATA DELETE(drag_srf_local, ftranspiration_sum_local)
-    DEALLOCATE(drag_srf_local)
-    DEALLOCATE(ftranspiration_sum_local)
-
   END SUBROUTINE update_canopy_fluxes
 
 
   ! ======================================================================================================= !
   !>Update the fraction of transpiration per soil layer
   !>
-  !>  used only with QUINCY and jsbach soil physics processes (not with SPQ_)
   !>
   SUBROUTINE update_ftranspiration_per_sl(tile, options)
     USE mo_jsb_class,              ONLY: Get_model
@@ -665,7 +616,7 @@ CONTAINS
     &                                     g1              , &     !< land-cover-type library parameter
     &                                     t_jmax_omega            !< land-cover-type library parameter
   INTEGER,                  INTENT(IN) :: ps_pathway              !< land-cover-type library parameter
-  CHARACTER(len=*),         INTENT(IN) :: canopy_cond_scheme      !< canopy_conductance_scheme: medlyn / ballberry
+  INTEGER,                  INTENT(IN) :: canopy_cond_scheme      !< canopy_conductance_scheme: medlyn / ballberry
   REAL(wp),                 INTENT(IN) :: t_air                   !< 2m air temperature [K]
   REAL(wp),                 INTENT(IN) :: press_srf               !< air pressure (Pa)
   REAL(wp),                 INTENT(IN) :: aerodyn_cond            !< ga -- aerodynamic conductance (m s-1)
@@ -925,10 +876,10 @@ CONTAINS
 
         !> calculate canopy conductance (m/s)
         SELECT CASE(canopy_cond_scheme)
-          CASE ("medlyn")
+          CASE (MEDLYN)
             !following Medlyn et al. 2011 [default]
             gs_cl = MAX(g0, 1.6_wp * ( 1._wp + g1 * beta_air * beta_soil_gs ) * an_cl / ( co2_mixing_ratio )) * rtck / press_srf
-          CASE ("ballberry")
+          CASE (BALLBERRY)
             ! following Ball & Berry
             gs_cl = MAX(gmin, g0 + g1 * an_cl * beta_air * beta_soil_gs / ( co2_mixing_ratio )) * rtck / press_srf
         END SELECT
@@ -1001,7 +952,7 @@ CONTAINS
     USE mo_phy_schemes,        ONLY: qsat_mixed
     USE mo_atmland_constants,  ONLY: eps_vpd
     ! ----------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), INTENT(IN)  :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry
+    INTEGER, INTENT(IN)           :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp),INTENT(in)           :: t_air                  !< air temperature in K
     REAL(wp),INTENT(in)           :: q_air                  !< specific air humidity (g g-1)
     REAL(wp),INTENT(in)           :: press_srf              !< air pressure (Pa)
@@ -1022,10 +973,10 @@ CONTAINS
     !>  1.2 scalar for atmospheric humidity as relative humidity (fractions)
     !>
     SELECT CASE(canopy_cond_scheme)
-      CASE ("medlyn")
+      CASE (MEDLYN)
         !following Medlyn et al. 2011 [default]
         beta = MIN(5._wp, 1._wp / SQRT(vpd + eps8))
-      CASE ("ballberry")
+      CASE (BALLBERRY)
         ! following Ball & Berry
         beta = q_air / q_sat
     END SELECT
@@ -1242,7 +1193,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>Calculate the fraction of transpiration per soil layer
   !>
-  !>  called only with QUINCY and jsbach soil physics processes (not with SPQ_)
+  !>  called only with QUINCY and jsbach soil physics processes
   !>
   SUBROUTINE calc_ftranspiration_sl( &
     & nc, &
@@ -1319,7 +1270,7 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$ACC END PARALLEL
+    !$ACC END PARALLEL LOOP
 
     !$ACC END DATA
 

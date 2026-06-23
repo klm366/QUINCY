@@ -18,7 +18,7 @@
 !> also calculate turnover of sapwood to heartwood and fruits to seed_bed
 !>
 MODULE mo_q_veg_turnover
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on
@@ -424,7 +424,7 @@ CONTAINS
     INTEGER                     :: ielem                            !< loop over bgcm elements
     INTEGER                     :: ix_elem                          !< index of element in bgcm, used for looping
     REAL(wp), DIMENSION(nc)     :: fturn_leaf                       !< fraction of leaves turning over
-    REAL(wp), DIMENSION(nc)     :: fturn                            !< other tissue turnover fraction
+    REAL(wp), DIMENSION(nc)     :: fturn                            !< other tissue turnover fraction, helper variable
     REAL(wp), DIMENSION(nc)     :: retranslocation                  !< retranslocation before shedding
     REAL(wp), DIMENSION(nc)     :: nitrogen_recycling_fract         !< recycling fraction of N
     REAL(wp), DIMENSION(nc)     :: phosphorus_recycling_fract       !< recycling fraction of P
@@ -433,9 +433,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_turnover'
     ! ----------------------------------------------------------------------------------------------------- !
 
-    !>0.9 init output variable
+    !>0.9 init output and local variables
     !>
     net_growth(:) = 0.0_wp
+    fturn_leaf(:) = 0.0_wp
 
     !>1.0 foliage turnover, including recycling of nutrients
     !>

@@ -1,4 +1,4 @@
-!> helper routines for vegetation (QUINCY)
+!> QUINCY helper routines for vegetation
 !>
 !> ICON-Land
 !>
@@ -19,7 +19,7 @@
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
 MODULE mo_veg_util
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
@@ -201,7 +201,7 @@ CONTAINS
             END IF
           END DO
         END DO
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
           seed_bed_growth_mt(ix_elem,ic)     = zero
@@ -214,7 +214,7 @@ CONTAINS
             veg_pp_flux_harvest_mt(ix_elem,ic) = zero
           END IF
         END DO
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
       END IF
     END DO
 
@@ -1112,9 +1112,10 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: VEG_, SB_, HYDRO_, L2A_
+    USE mo_jsb_time,              ONLY: executed_quincy_sb_accelerator_previous_timestep
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_memory(L2A_)
     dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_memory(L2A_)
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_config(VEG_)
@@ -1131,8 +1132,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':test_carbon_conservation'
     ! ----------------------------------------------------------------------------------------------------- !
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(L2A_)
     dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(L2A_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_config(VEG_)
@@ -1157,8 +1158,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_config(VEG_)
@@ -1181,7 +1182,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(SB_, sb_pool_total_c)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
 
-      ! Do not test as long as the variables still carry the initialisation value
+      ! Only test conservation if the variable does not carry the initialisation value anymore
       IF (.NOT. (ALL(q_c_conservation_test(:) == -999.0_wp))) THEN
         DO ic = 1, nc
           ! vegetation and soil carbon
@@ -1192,7 +1193,13 @@ CONTAINS
             q_total_c_new(ic) = q_total_c_new(ic) + veg_products_total_c(ic)
           END IF
 
-          q_c_conservation_test(ic) = q_total_c_new(ic) - q_total_c(ic) - (net_biosphere_production(ic) * dtime / 1000000.0_wp)
+          IF (model%config%flag_slow_sb_pool_spinup_accelerator .AND. executed_quincy_sb_accelerator_previous_timestep) THEN
+            ! The SB_ slow-pool spinup-accelerator does not conserve matter
+            ! therefore set conservation test to zero in the timestep after it ran
+            q_c_conservation_test(ic) = 0.0_wp
+          ELSE
+            q_c_conservation_test(ic) = q_total_c_new(ic) - q_total_c(ic) - (net_biosphere_production(ic) * dtime / 1000000.0_wp)
+          END IF
 
           IF (dsl4jsb_Config(VEG_)%flag_log_c_conservation) THEN
             IF ((ABS(q_c_conservation_test(ic)) > 1.e-11_wp) .AND. (ABS(q_total_c(ic)) > 0.0_wp)) THEN
@@ -1200,8 +1207,10 @@ CONTAINS
                 & '; new total c: ', q_total_c_new(ic), '; old total c: ', q_total_c(ic),                            &
                 & '; nbp ',  (net_biosphere_production(ic) * dtime / 1000000.0_wp), NEW_LINE('a'),                   &
                 & ' on lat =',    lat(ic,iblk), ' and lon =', lon(ic,iblk), NEW_LINE('a'),                           &
-                & ' with ', veg_pool_total_c(ic), ' and sb sum ', SUM(sb_pool_total_c(ic,:) * soil_depth_sl(ic,:)),  &
-                & ' and ', veg_products_total_c(ic)
+                & ' with veg ', veg_pool_total_c(ic), ' and sb sum ', SUM(sb_pool_total_c(ic,:) * soil_depth_sl(ic,:))
+               IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
+                 WRITE(message_text,*) TRIM(message_text),' and products ', veg_products_total_c(ic)
+               END IF
               CALL message(TRIM(routine), message_text, all_print=.TRUE.)
             END IF
           END IF
@@ -1213,6 +1222,11 @@ CONTAINS
       END IF
     END DO
 
+    IF (model%config%flag_slow_sb_pool_spinup_accelerator .AND. executed_quincy_sb_accelerator_previous_timestep) THEN
+      WRITE(message_text,*) 'Set q_c_conservation_test to zero at the timestep after ', &
+          & 'the SB_ slow-pool spinup-accelerator was running, to avoid carbon-conservation test fail messages.'
+      CALL message(TRIM(routine), message_text)
+    END IF
     DEALLOCATE(q_total_c_new)
 
   END SUBROUTINE test_carbon_conservation

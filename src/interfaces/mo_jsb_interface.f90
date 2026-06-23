@@ -11,6 +11,8 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### Interface and routines to run a ICON-Land time step
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
@@ -18,8 +20,8 @@ MODULE mo_jsb_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: message, finish !,message_text
-  ! USE mo_util_string,         ONLY: int2string
+  USE mo_exception,           ONLY: message, finish !, message_text
+  ! USE mo_util,         ONLY: int2string
 
   USE mo_jsb_control,         ONLY: debug_on, timer_on, l_timer_host, timer_jsbach, jsbach_runs_standalone
   USE mo_timer,               ONLY: timer_start, timer_stop
@@ -28,17 +30,16 @@ MODULE mo_jsb_interface
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
-#ifndef __NO_QUINCY__
-  USE mo_quincy_model_config, ONLY: QLAND, QCANOPY
-#endif
+  USE mo_quincy_model_config, ONLY: QLAND, QCANOPY, QSOIL
   USE mo_jsb_subset,          ONLY: ON_CHUNK
-  USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
-  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_newday, &
-                                    is_time_experiment_start, is_time_restart
+  USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial
+  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_newday, get_year, &
+      &                             is_time_experiment_start, is_time_restart, execute_quincy_sb_accelerator_this_timestep, &
+      &                             executed_quincy_sb_accelerator_previous_timestep
   USE mo_jsb_physical_constants, ONLY: cvdifts
   USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
-  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_, SEB_, HYDRO_, PHENO_, PPLCC_
 
   IMPLICIT NONE
   PRIVATE
@@ -61,7 +62,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Called by the host model (i.e. ICON) in simulations with atmospere
+  !> Called by the host model (i.e. ICON) in simulations with atmosphere
   !>
   !> @NOTE In standalone simulations 'mo_jsbach_model:jsbach_model' is called
   !>       and variables are provided via 'mo_jsbach_model:jsbach_model:get_standalone_driver'
@@ -69,7 +70,7 @@ CONTAINS
   SUBROUTINE interface_full( &
     & model_id,         &
     & iblk, ics, ice,   &
-    & current_datetime, &
+    & current_datetime, & !< in -- object containing date and time of the timestep we are working on
     & dtime,            &
     & t_air,            &
     & q_air,            &
@@ -248,14 +249,6 @@ CONTAINS
     model_scheme = model%config%model_scheme
 
     IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
-    ! ----------------------------------------------------------------------------------------------------- !
-
-!!$    WRITE(message_text, '(A,I4,A,I6,A,I6)') 'Updating '//TRIM(model%name)// &
-!!$      &                 ' for: block=', iblk, ', ics=', ics, ', ice=', ice
-!!$    CALL message(TRIM(routine), message_text, all_print=.TRUE.)
-!!$    p_pe = get_my_global_mpi_id()
-!!$    CALL message( TRIM(routine), 'Updating '//TRIM(model%name)//' on PE '//int2string(p_pe)// &
-!!$      &                          ', nblk='//int2string(iblk), all_print=.TRUE.)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 1.0 Update options
@@ -268,25 +261,21 @@ CONTAINS
     !> 2.0 Put atmospheric forcing into the a2l memory
     !>
 
-    ! In case of quincy: check if model setup is supported
-#ifndef __NO_QUINCY__
+    ! QUINCY model: check if model setup is supported
     IF (model_scheme == MODEL_QUINCY) THEN
-      IF(.NOT. model%config%usecase == 'quincy_13_pfts_for_coupling') THEN
+      IF (.NOT. model%config%usecase == 'quincy_13_pfts') THEN
         CALL finish(TRIM(routine), 'The usecase currently to be used when running quincy coupled' &
-          &  //' would be quincy_13_pfts_for_coupling, not '// model%config%usecase)
+          &  //' would be quincy_13_pfts, but not '// model%config%usecase)
       END IF
-
 #ifdef _OPENACC
-      CALL finish(routine, 'Quincy has not been tested on GPU in coupled mode so far.')
-
-      IF (model%config%qmodel_id /= QCANOPY) THEN
-        CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
-      END IF
+      CALL finish(routine, 'Quincy not ported to GPU in coupled mode, yet. Stop.')
+      ! Note: when the finish above can be removed after the QUINCY configuration was tested on GPU in a coupled setup,
+      !       it would currently still be necessary to test that the QUINCY canopy model-mode is used:
+      ! IF (model%config%qmodel_id /= QCANOPY) THEN
+      !   CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
+      ! END IF
 #endif
-
     END IF
-#endif
-
 
     CALL model%Get_top_tile(tile)
       CALL update_atm2land(                           &
@@ -384,10 +373,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !> 5.0 messages
     !>
-!!$    IF (iblk == 1)                                                              &
-!!$      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//          &
-!!$      &                             ' on PE '//int2string(p_pe)//' completed.', &
-!!$      &              all_print=.TRUE.)
     IF (debug_on('basic') .AND. iblk == 1) &
       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
 
@@ -435,8 +420,9 @@ CONTAINS
     & alb_nir_dif,      &
     & kh,               &
     & km,               &
-    & kh_neutral,       &
-    & km_neutral,       &
+    & interp_fac_2m,    &
+    & interp_fac_10m,   &
+    & interp_fac_tsfc,  &
     & CO2_flux          &
     & )
 
@@ -488,8 +474,9 @@ CONTAINS
       & alb_nir_dif       (:), &
       & kh                (:), &
       & km                (:), &
-      & kh_neutral        (:), &
-      & km_neutral        (:), &
+      & interp_fac_2m     (:), &
+      & interp_fac_10m    (:), &
+      & interp_fac_tsfc   (:), &
       & CO2_flux          (:)
 
     ! Local variables
@@ -570,8 +557,9 @@ CONTAINS
       & alb_nir_dif        = alb_nir_dif,        &
       & kh                 = kh,                 &
       & km                 = km,                 &
-      & kh_neutral         = kh_neutral,         &
-      & km_neutral         = km_neutral,         &
+      & interp_fac_2m      = interp_fac_2m,      &
+      & interp_fac_10m     = interp_fac_10m,     &
+      & interp_fac_tsfc    = interp_fac_tsfc,    &
       & CO2_flux           = CO2_flux            &
       & )
     NULLIFY(tile)
@@ -619,11 +607,10 @@ CONTAINS
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
     USE mo_alcc_init,           ONLY : read_land_use_data
-#ifndef __NO_QUINCY__
     USE mo_sb_init,             ONLY : provide_n_and_p_deposition
     USE mo_q_syl_init,          ONLY : read_harvest_fraction
     USE mo_q_agr_init,          ONLY : read_fertiliser_input
-#endif
+    USE mo_jsb_math_constants,  ONLY : eps1
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -631,6 +618,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),  POINTER :: model
     INTEGER                     :: no_omp_thread
+    INTEGER                     :: current_year     !< The current year (requried for Quincy SB_ slow-pool spinup-accelerator control)
+    INTEGER                     :: nr_years_passed  !< Years passed since start of Quincy SB_ slow-pool spinup-accelerator (if used)
+    INTEGER                     :: nr_of_executions !< How often the Quincy SB_ slow-pool spinup-accelerator could be executed (if used)
+                                                    !< given its intervall and its the start year
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_start_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
@@ -655,27 +646,58 @@ CONTAINS
       CALL read_land_use_data(model_id, current_datetime)
     END IF
 
-#ifndef __NO_QUINCY__
-    IF (model%config%model_scheme == MODEL_QUINCY .AND. model%config%qmodel_id == QLAND) THEN
-
-      ! For the Q_SYL_ and the Q_AGR_ process data might have to be read once a year / at the beginning of a simulation
-      IF ((is_newyear(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime))) THEN
-        IF (model%processes(Q_SYL_)%p%config%active) THEN
-          CALL read_harvest_fraction(model_id, current_datetime)
-        END IF
-        IF (model%processes(Q_AGR_)%p%config%active) THEN
-          CALL read_fertiliser_input(model_id, current_datetime)
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      IF (model%config%qmodel_id == QLAND) THEN
+        ! For the Q_SYL_ and the Q_AGR_ process data might have to be read once a year / at the beginning of a simulation
+        IF ((is_newyear(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime))) THEN
+          IF (model%processes(Q_SYL_)%p%config%active) THEN
+            CALL read_harvest_fraction(model_id, current_datetime)
+          END IF
+          IF (model%processes(Q_AGR_)%p%config%active) THEN
+            CALL read_fertiliser_input(model_id, current_datetime)
+          END IF
         END IF
       END IF
 
-      ! For the SB process data on n and p deposition might have to be read once a year / at the beginning of a simulation
-      ! and might need to be updated once a month
-      IF ((is_newmonth(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime)) &
-          & .AND. model%processes(SB_)%p%config%active) THEN
-        CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
-      END IF
-    END IF
-#endif
+      IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QSOIL) THEN
+        ! For the SB process data on n and p deposition might have to be read once a year / at the beginning of a simulation
+        ! and might need to be updated once a month
+        IF ((is_newmonth(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime)) &
+            & .AND. model%processes(SB_)%p%config%active) THEN
+          CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
+        END IF
+
+        ! For the SB process also check if the SB_ slow-pool spinup-accelerator has been or should be executed
+        IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
+          ! Check if it has been running in the previous timestep
+          IF (execute_quincy_sb_accelerator_this_timestep) THEN
+            execute_quincy_sb_accelerator_this_timestep = .FALSE.
+            executed_quincy_sb_accelerator_previous_timestep = .TRUE.
+          ELSE
+            executed_quincy_sb_accelerator_previous_timestep = .FALSE.
+          END IF
+
+          ! Check if it should be executed this timestep
+          IF (is_newyear(current_datetime, dtime)) THEN
+            current_year  = get_year(current_datetime)
+            IF (current_year >= model%config%slow_sb_pool_spinup_accelerator_start_year) THEN
+              ! 2. The year needs to be a multiple of the accelerator frequency
+              IF (MOD(current_year - model%config%slow_sb_pool_spinup_accelerator_start_year, &
+                  &     model%config%slow_sb_pool_spinup_accelerator_frequency) < eps1 ) THEN
+                ! 3. And the maximum number of executions should not be exceeded
+                nr_years_passed = current_year - model%config%slow_sb_pool_spinup_accelerator_start_year
+                nr_of_executions = nr_years_passed / model%config%slow_sb_pool_spinup_accelerator_frequency
+                IF (nr_of_executions < model%config%slow_sb_pool_spinup_accelerator_max_executions) THEN
+                  execute_quincy_sb_accelerator_this_timestep = .TRUE.
+
+                  CALL message(TRIM(routine), 'Execute QUINCY SB_ slow-pool spinup-accelerator this timestep.')
+                END IF
+              END IF
+            END IF
+          END IF ! IF new year
+        END IF ! IF running with SB_ slow-pool spinup-accelerator
+      END IF ! IF QSOIL or QLAND mode
+    END IF ! IF QUINCY MODEL
 
     ! If this is .true., old graphs will be invalidated and the new ones will be captured
     invalidate_cuda_graphs = .FALSE.
@@ -705,26 +727,14 @@ CONTAINS
     USE mo_util,        ONLY: report_memory_usage
     USE mo_jsb_control, ONLY: get_debug_memory_level
     USE mo_jsb_time,    ONLY: is_newmonth
-    USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
-    USE mo_seb_interface,      ONLY: global_seb_diagnostics, seb_check_temperature_range
-    USE mo_hydro_interface,    ONLY: global_hydrology_diagnostics
-    USE mo_pheno_interface,    ONLY: global_phenology_diagnostics
-    USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
-    USE mo_pplcc_interface,    ONLY: global_pplcc_diagnostics
+    USE mo_carbon_interface,   ONLY: yday_carbon_conservation_test
+    USE mo_seb_interface,      ONLY: seb_check_temperature_range
+    USE mo_veg_util,           ONLY: test_carbon_conservation
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
-#ifndef __NO_QUINCY__
-    USE mo_q_veg_interface,    ONLY: global_q_veg_diagnostics
-    USE mo_q_sb_interface,     ONLY: global_q_sb_diagnostics
-    USE mo_veg_util,           ONLY: test_carbon_conservation
-#endif
-    dsl4jsb_Use_processes SEB_
-    dsl4jsb_Use_processes HYDRO_
-    dsl4jsb_Use_processes PHENO_
-    dsl4jsb_Use_processes PPLCC_
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -750,10 +760,12 @@ CONTAINS
     IF (PRESENT(init)) linit = init
     ! ----------------------------------------------------------------------------------------------------- !
 
-#ifndef __NO_QUINCY__
+    ! TBD: this is only required if restart or output is written for this timestep!
     ! BGCMs need to be copied back to the variables from the matrices on which calculations are conducted
-    CALL model%Write_back_to_bgcms()
-#endif
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      CALL model%Write_back_to_bgcms()
+    END IF
+
     ! Reset all tiles (needed for tile loops in following test routines)
     CALL model%Reset_tiles()
 
@@ -768,13 +780,11 @@ CONTAINS
       END IF
     END IF
 
-#ifndef __NO_QUINCY__
     ! Carbon conservation test Quincy
-    CALL model%Get_top_tile(tile)
     IF ((model%config%model_scheme == MODEL_QUINCY) .AND. (model%config%qmodel_id == QLAND)) THEN
+      CALL model%Get_top_tile(tile)
       CALL test_carbon_conservation(tile, model%options(no_omp_thread)%dtime)
     END IF
-#endif
 
     ! Make sure temperatures are within an exceptable range
     IF (model%processes(SEB_)%p%config%active) THEN
@@ -798,32 +808,7 @@ CONTAINS
 ! #endif
 
     ! Global diagnostics
-    !TODO: go through all processes.
-    IF (model%processes(SEB_)%p%config%active) THEN
-      CALL global_seb_diagnostics(tile)
-    END IF
-    IF (model%processes(HYDRO_)%p%config%active) THEN
-      CALL global_hydrology_diagnostics(tile)
-    END IF
-    IF (model%processes(PHENO_)%p%config%active) THEN
-      CALL global_phenology_diagnostics(tile)
-    END IF
-    IF (model%processes(CARBON_)%p%config%active) THEN
-      CALL global_carbon_diagnostics(tile)
-    END IF
-    IF (model%processes(PPLCC_)%p%config%active) THEN
-      CALL global_pplcc_diagnostics(tile)
-    END IF
-#ifndef __NO_QUINCY__
-    IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      IF (model%processes(VEG_)%p%config%active) THEN
-        CALL global_q_veg_diagnostics(tile)
-      END IF
-      IF (model%processes(SB_)%p%config%active) THEN
-        CALL global_q_sb_diagnostics(tile)
-      END IF
-    END IF
-#endif
+    CALL global_diagnostics(tile)
 
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())
@@ -839,6 +824,115 @@ CONTAINS
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
   END SUBROUTINE jsbach_finish_timestep
+
+
+  ! ======================================================================================================== !
+  !>
+  !>#### Routine encapsulating the call of global land diagnostic routines on the different processes
+  !>
+  !> Calculates area scaling factors and calls global diagnostic routines for active processes which
+  !> provide such a routine
+  !>
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE global_diagnostics(tile)
+
+    USE mo_jsb_control,         ONLY: acc_stream
+    USE mo_sync,                ONLY: global_sum_array
+    USE mo_jsb_grid,            ONLY: Get_grid
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+    USE mo_jsb_process_factory, ONLY: max_no_of_processes
+
+    USE mo_seb_interface,      ONLY: global_seb_diagnostics
+    USE mo_hydro_interface,    ONLY: global_hydrology_diagnostics
+    USE mo_pheno_interface,    ONLY: global_phenology_diagnostics
+    USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
+    USE mo_pplcc_interface,    ONLY: global_pplcc_diagnostics
+    USE mo_q_veg_interface,    ONLY: global_q_veg_diagnostics
+    USE mo_q_sb_interface,     ONLY: global_q_sb_diagnostics
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile  !< Current tile
+    ! ----------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_diagnostics'
+
+    TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_jsb_grid),  POINTER      :: grid
+
+    INTEGER                :: iproc, jc, blk
+    REAL(wp), POINTER      :: area(:,:)
+    REAL(wp), POINTER      :: notsea(:,:)
+    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
+    REAL(wp), ALLOCATABLE  :: in_domain(:,:)    ! 1._wp: cell in domain, 0._wp: halo cell
+                                                ! - to mask all halo cells for global sums (otherwise these cells are counted twice)
+    REAL(wp), ALLOCATABLE  :: area_scaling(:,:)
+    REAL(wp), ALLOCATABLE  :: land_area_scaling(:,:)
+    REAL(wp)               :: global_land_area
+    ! ----------------------------------------------------------------------------------------------------- !
+    notsea => tile%fract(:,:)   ! fraction of the box tile: notsea
+    model  => Get_model(tile%owner_model_id)
+    grid   => Get_grid(model%grid_id)
+    area         => grid%area(:,:)
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
+
+    ALLOCATE (in_domain(grid%nproma,grid%nblks), area_scaling(grid%nproma,grid%nblks), land_area_scaling(grid%nproma,grid%nblks))
+    !$ACC ENTER DATA CREATE(in_domain, area_scaling, land_area_scaling) ASYNC(acc_stream)
+
+    ! Calculate global land area
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
+    DO blk = 1, grid%nblks
+      DO jc = 1, grid%nproma
+        IF (is_in_domain(jc,blk)) THEN
+          in_domain(jc,blk) = 1._wp
+        ELSE
+          in_domain(jc,blk) = 0._wp
+        END IF
+
+        area_scaling(jc,blk) = area(jc,blk) * in_domain(jc,blk)
+        land_area_scaling(jc,blk) = area_scaling(jc,blk) * notsea(jc,blk)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    global_land_area = global_sum_array(land_area_scaling, lacc=.TRUE.)
+
+    DO iproc = 1, max_no_of_processes
+      IF (ASSOCIATED(model%processes(iproc)%p)) THEN
+        IF (ASSOCIATED(model%processes(iproc)%p%config)) THEN
+          IF (model%processes(iproc)%p%config%active) THEN
+            SELECT CASE (iproc)
+            CASE (SEB_)
+              CALL global_seb_diagnostics(tile, global_land_area, land_area_scaling)
+            CASE (HYDRO_)
+              CALL global_hydrology_diagnostics(tile, global_land_area, in_domain, land_area_scaling)
+            CASE (PHENO_)
+              CALL global_phenology_diagnostics(tile, global_land_area, land_area_scaling)
+            CASE (CARBON_)
+              CALL global_carbon_diagnostics(tile, land_area_scaling)
+            CASE (PPLCC_)
+              CALL global_pplcc_diagnostics(tile, area_scaling)
+            END SELECT
+            IF (model%config%model_scheme == MODEL_QUINCY) THEN
+              SELECT CASE (iproc)
+              CASE (VEG_)
+                CALL global_q_veg_diagnostics(tile, global_land_area, land_area_scaling)
+              CASE (SB_)
+                CALL global_q_sb_diagnostics(tile, land_area_scaling)
+              END SELECT
+            END IF
+          END IF
+        END IF
+      END IF
+    END DO
+
+    !$ACC WAIT(acc_stream)
+    !$ACC EXIT DATA DELETE(in_domain, area_scaling, land_area_scaling) ASYNC(acc_stream)
+    DEALLOCATE (area_scaling, in_domain, land_area_scaling)
+
+  END SUBROUTINE global_diagnostics
+
 
   ! ====================================================================================================== !
   !
