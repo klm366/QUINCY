@@ -11,6 +11,7 @@ and climatological `climatology` schemes. This is useful for offline LAI reconst
 sensitivity studies, and atmospheric reanalysis driving.
 
 Activate it with:
+
 ```fortran
 &jsb_pheno_nml
   scheme = 'external_lai'
@@ -32,7 +33,7 @@ boundaries.
 At experiment start three files are read:
 
 | File year | Content used |
-|---|---|
+| --- | --- |
 | *Y* − 1 | December mean → slot 0 (lower bound for January interpolation) |
 | *Y* | January–December means → slots 1–12 |
 | *Y* + 1 | All 12 months → internal preload buffer `lai_mon_next`; January → slot 13 |
@@ -61,22 +62,22 @@ Files must follow the pattern `{extlai_filename_prefix}{YYYY}.nc`, e.g.
 `fc_land_lai_2010.nc` with the default prefix `fc_land_lai_`.
 
 | Mode | Year read | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `monthly` | *Y* | Current-year monthly LAI values |
 | `annual` | *Y* + 1 | End-of-year LAI target for year *Y* |
 
 ### Variable names
 
-Each PFT tile must have its own variable in the file, named `pheno_lai_ta_{tile_name}`,
+Each PFT tile must have its own variable in the file, named `pheno_lai_{tile_name}`,
 where `{tile_name}` is the name of the corresponding child tile of the `veg` tile in the
 model tile tree. For example, if your setup has tiles `trbee`, `trdc`, and `grass`, the
-file must contain variables `pheno_lai_ta_trbee`, `pheno_lai_ta_trdc`, and
-`pheno_lai_ta_grass`.
+file must contain variables `pheno_lai_trbee`, `pheno_lai_trdc`, and
+`pheno_lai_grass`.
 
 ### Dimensions and units
 
 | Mode | Expected variable dimensions | Units |
-|---|---|---|
+| --- | --- | --- |
 | `monthly` | `(nproma, nblks, 12)` | m² m⁻² |
 | `annual` | `(nproma, nblks)` | m² m⁻² |
 
@@ -98,7 +99,7 @@ either constraint is violated.
 ```
 
 | Key | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `scheme` | string | `'logrop'` | Must be set to `'external_lai'` |
 | `extlai_mode` | string | `'monthly'` | `'monthly'` or `'annual'` |
 | `extlai_filename_prefix` | string | `'fc_land_lai_'` | File path prefix; year and `.nc` are appended |

@@ -59,7 +59,7 @@ per-second increment `(target − current_lai) / year_length_s` is computed and 
 ## Input file conventions
 
 - Filename pattern: `{extlai_filename_prefix}{YYYY}.nc`
-- Variable names: `pheno_lai_ta_{tile_name}` for each PFT child tile of `veg`
+- Variable names: `pheno_lai_{tile_name}` for each PFT child tile of `veg`
 - Monthly mode dimensions: `(nproma, nblks, 12)` — annual mode: `(nproma, nblks)`
 
 ## General-purpose extvar reader (`src/shared/mo_jsb_extvar_reader.f90`)

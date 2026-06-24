@@ -427,7 +427,7 @@ CONTAINS
 
         dsl4jsb_Get_memory_tile(PHENO_, current_tile)
 
-        WRITE(varname, '(a,a)') 'pheno_lai_ta_', TRIM(current_tile%name)
+        WRITE(varname, '(a,a)') 'pheno_lai_', TRIM(current_tile%name)
 
         CALL extvar_monthly_update(ctx, TRIM(varname),           &
           & pheno__mem__current_tile%lai_mon,                    &
@@ -454,7 +454,7 @@ CONTAINS
 
         dsl4jsb_Get_memory_tile(PHENO_, current_tile)
 
-        WRITE(varname, '(a,a)') 'pheno_lai_ta_', TRIM(current_tile%name)
+        WRITE(varname, '(a,a)') 'pheno_lai_', TRIM(current_tile%name)
 
         ptr2d => input_file%Read_2d(variable_name=TRIM(varname),            &
           & fill_array=pheno__mem__current_tile%extlai_target%ptr(:,:), &

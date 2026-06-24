@@ -40,7 +40,7 @@ fname = extvar_filename('/data/bc_lai_', 2010)  ! → '/data/bc_lai_2010.nc'
 ### Variable naming
 
 Variable names within the file are left entirely to the caller.  A recommended convention
-(used by `external_lai`) is `{process_prefix}_{tile_name}`, e.g. `pheno_lai_ta_trbee`.
+(used by `external_lai`) is `{process_prefix}_{tile_name}`, e.g. `pheno_lai_trbee`.
 
 ---
 
