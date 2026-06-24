@@ -26,10 +26,21 @@ Activate it with:
 Each yearly file contains 12 monthly-mean LAI fields per PFT. At every model timestep the
 LAI is linearly interpolated between the two bracketing monthly-mean values, using the same
 time-interpolation weights as the built-in `climatology` scheme. This produces a smooth,
-continuously varying LAI within each year.
+continuously varying LAI within each year, including a seamless transition across year
+boundaries.
 
-The current-year file is read at experiment start and at the first timestep of each new
-year.
+At experiment start three files are read:
+
+| File year | Content used |
+|---|---|
+| *Y* − 1 | December mean → slot 0 (lower bound for January interpolation) |
+| *Y* | January–December means → slots 1–12 |
+| *Y* + 1 | All 12 months → internal preload buffer `lai_mon_next`; January → slot 13 |
+
+At each subsequent year transition only **one file** is read (*Y*+2, the year after next), which is
+preloaded into `lai_mon_next`. The new interpolation buffer is then assembled from the old December
+(old slot 12 → new slot 0), the preload buffer (new slots 1–12), and the newly read January of *Y*+2
+(new slot 13) — without re-reading any previously processed year.
 
 ### Annual mode (`extlai_mode = 'annual'`)
 

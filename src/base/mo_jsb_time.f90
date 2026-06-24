@@ -32,7 +32,9 @@ MODULE mo_jsb_time
     & is_time_restart,           & ! jsb util routine: test if this is first timestep after restart
     & get_year_length, get_month_length, get_day_length, get_year_day, &
     & is_time_ltrig_rad_m1,      &      ! jsb util routine: check if this is the timestep before radiation calculation
-    & get_time_interpolation_weights, & ! jsb util routine: provides month index and weights for interpolation monthly values
+    & get_time_interpolation_weights,       & ! jsb util routine: provides month index and weights for interpolation monthly values
+    & t_time_interpolation_weights,         & ! type holding month indices and interpolation weights
+    & calculate_time_interpolation_weights, & ! compute interpolation weights for an explicit datetime
     & get_asselin_coef, &
     & cache_time_interpolation_weights
 
@@ -54,7 +56,8 @@ MODULE mo_jsb_time
   PUBLIC :: is_newday, is_newmonth, is_newyear, get_year_at_model_start, get_year_at_experiment_start, &
             get_year, get_month, get_day, get_secs_of_day, get_previous_month_length, get_previous_year_length
   PUBLIC :: cache_time_interpolation_weights
-  PUBLIC :: get_time_interpolation_weights ! jsb util routine
+  PUBLIC :: get_time_interpolation_weights   ! jsb util routine
+  PUBLIC :: t_time_interpolation_weights, calculate_time_interpolation_weights
   PUBLIC :: get_asselin_coef
   PUBLIC :: timestep_in_days, timesteps_per_day
   PUBLIC :: execute_quincy_sb_accelerator_this_timestep

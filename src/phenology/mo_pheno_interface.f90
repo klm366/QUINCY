@@ -178,8 +178,8 @@ CONTAINS
   !!
   SUBROUTINE update_phenology_external_lai(tile, options)
 
-    USE mo_jsb_time, ONLY: get_time_interpolation_weights, is_newyear, is_time_experiment_start, &
-      &                    get_year, get_year_length
+    USE mo_jsb_time,         ONLY: is_newyear, is_time_experiment_start, get_year, get_year_length
+    USE mo_jsb_extvar_reader, ONLY: calculate_time_interpolation_weights, t_time_interpolation_weights
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -189,6 +189,7 @@ CONTAINS
     INTEGER  :: current_year
     REAL(wp) :: wgt1, wgt2
     INTEGER  :: nmw1, nmw2
+    TYPE(t_time_interpolation_weights) :: tiw
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -225,8 +226,10 @@ CONTAINS
       ! Monthly mode: interpolate between the two bracketing monthly means
       lai_mon(1:,0:) => dsl4jsb_memory(PHENO_)%lai_mon(ics:ice, iblk, :)  ! in
 
-      !$ACC DATA CREATE(wgt1, wgt2, nmw1, nmw2) ASYNC(acc_stream)
-      CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2, acc_stream)
+      tiw  = calculate_time_interpolation_weights(options%current_datetime)
+      wgt1 = tiw%weight1;       wgt2 = tiw%weight2
+      nmw1 = tiw%month1_index;  nmw2 = tiw%month2_index
+      !$ACC DATA COPYIN(wgt1, wgt2, nmw1, nmw2) ASYNC(acc_stream)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, nmw1, wgt2, nmw2) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         lai(ic) = REAL(wgt1, wp) * lai_mon(ic, nmw1) + REAL(wgt2, wp) * lai_mon(ic, nmw2)
