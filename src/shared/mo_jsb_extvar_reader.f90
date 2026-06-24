@@ -16,20 +16,20 @@
 !>
 !> Yearly files follow the naming pattern `{filename_prefix}{YYYY}.nc`.
 !>
-!> **File-reading API** — all read routines operate on a `t_input_file` that the caller has already
+!> **File-reading API** -- all read routines operate on a `t_input_file` that the caller has already
 !> opened with `jsb_netcdf_open_input`.  Optional `val_min` / `val_max` arguments trigger a hard
 !> abort when any read value falls outside the specified range.
 !>
-!> - `extvar_filename`       — build the filename for a given year (aborts on non-4-digit year)
+!> - `extvar_filename`       -- build the filename for a given year (aborts on non-4-digit year)
 !>
-!> **Time-interpolation API** — uses ICON's time management via `mo_jsb_time`, avoiding
+!> **Time-interpolation API** -- uses ICON's time management via `mo_jsb_time`, avoiding
 !> reliance on the JSBach time-interpolation cache.
 !>
-!> - `t_time_interpolation_weights`     — re-exported type (fields: `weight1`, `weight2`,
-!>   `month1_index`, `month2_index` in MPIM 0–13 range)
-!> - `calculate_time_interpolation_weights` — re-exported function; call with the current datetime
+!> - `t_time_interpolation_weights`     -- re-exported type (fields: `weight1`, `weight2`,
+!>   `month1_index`, `month2_index` in MPIM 0-13 range)
+!> - `calculate_time_interpolation_weights` -- re-exported function; call with the current datetime
 !>   to obtain weights for linear mid-month interpolation
-!> - `extvar_interpolate_monthly`       — apply the weights to a `(nproma,nblks,0:13)` monthly
+!> - `extvar_interpolate_monthly`       -- apply the weights to a `(nproma,nblks,0:13)` monthly
 !>   buffer; OpenACC-capable via optional `lacc` / `acc_stream` arguments
 !>
 MODULE mo_jsb_extvar_reader
@@ -64,11 +64,11 @@ MODULE mo_jsb_extvar_reader
   ! File-reading utilities
   PUBLIC :: extvar_filename
 
-  ! Monthly-buffer management — high-level context API
+  ! Monthly-buffer management -- high-level context API
   PUBLIC :: extvar_monthly_open
   PUBLIC :: extvar_monthly_update
   PUBLIC :: extvar_monthly_close
-  ! Monthly-buffer management — lower-level (single-phase) routines
+  ! Monthly-buffer management -- lower-level (single-phase) routines
   PUBLIC :: extvar_monthly_buffer_init
   PUBLIC :: extvar_monthly_buffer_advance
 
@@ -82,7 +82,7 @@ CONTAINS
   ! ======================================================================================================= !
   !> Build the path for a yearly boundary-condition file.
   !>
-  !> Returns `'{filename_prefix}{YYYY}.nc'`.  Aborts if `year` is outside the 4-digit range 1000–9999.
+  !> Returns `'{filename_prefix}{YYYY}.nc'`.  Aborts if `year` is outside the 4-digit range 1000-9999.
   !>
   FUNCTION extvar_filename(filename_prefix, year) RESULT(filename)
 
@@ -93,7 +93,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':extvar_filename'
 
     IF ((year < 1000) .OR. (year > 9999)) &
-      CALL finish(TRIM(routine), 'Yearly BC filenames require a 4-digit year (1000–9999).')
+      CALL finish(TRIM(routine), 'Yearly BC filenames require a 4-digit year (1000-9999).')
 
     WRITE(filename, '(a,I4.4,a)') TRIM(filename_prefix), year, '.nc'
 
@@ -219,11 +219,11 @@ CONTAINS
   END SUBROUTINE extvar_monthly_buffer_init
 
   ! ======================================================================================================= !
-  !> Advance a `(nproma, nblks, 0:13)` monthly buffer at a year transition Y → Y+1.
+  !> Advance a `(nproma, nblks, 0:13)` monthly buffer at a year transition Y -> Y+1.
   !>
   !> Rotates the existing data without file I/O, then preloads year Y+2 from `file_next`:
-  !>   - `monthly_buf(:,:,0)`    ← old `monthly_buf(:,:,12)` (December of Y, free)
-  !>   - `monthly_buf(:,:,1:12)` ← `preload_buf` (months of Y+1, free)
+  !>   - `monthly_buf(:,:,0)`    <- old `monthly_buf(:,:,12)` (December of Y, free)
+  !>   - `monthly_buf(:,:,1:12)` <- `preload_buf` (months of Y+1, free)
   !>   - `preload_buf`           = all months of `file_next` (year Y+2; one file read)
   !>   - `monthly_buf(:,:,13)`   = `preload_buf(:,:,1)` (January of Y+2, free)
   !>
@@ -264,9 +264,9 @@ CONTAINS
 
     REAL(wp), INTENT(in)           :: monthly_buffer(:,:,0:)  !< Monthly buffer, 3rd dim bounds 0:13
     REAL(wp), INTENT(in)           :: weight1                 !< Weight for month1_idx
-    INTEGER,  INTENT(in)           :: month1_idx              !< Month index (MPIM style, 0–13)
+    INTEGER,  INTENT(in)           :: month1_idx              !< Month index (MPIM style, 0-13)
     REAL(wp), INTENT(in)           :: weight2                 !< Weight for month2_idx
-    INTEGER,  INTENT(in)           :: month2_idx              !< Month index (MPIM style, 0–13)
+    INTEGER,  INTENT(in)           :: month2_idx              !< Month index (MPIM style, 0-13)
     REAL(wp), INTENT(out)          :: data_out(:,:)           !< Interpolated field
     LOGICAL,  INTENT(in), OPTIONAL :: lacc                    !< Run on GPU if .TRUE.
     INTEGER,  INTENT(in), OPTIONAL :: acc_stream              !< OpenACC async stream (default: 1)
