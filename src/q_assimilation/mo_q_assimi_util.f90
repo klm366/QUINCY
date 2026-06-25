@@ -14,7 +14,7 @@
 !>#### various helper routines for the assimilation process
 !>
 MODULE mo_q_assimi_util
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,        ONLY: wp
   USE mo_jsb_control, ONLY: debug_on

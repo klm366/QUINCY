@@ -16,7 +16,7 @@
 !>#### calculate vegetation maintenance-respiration considering, e.g., temperature and acclimation
 !>
 MODULE mo_q_veg_respiration
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   IMPLICIT NONE
   PRIVATE

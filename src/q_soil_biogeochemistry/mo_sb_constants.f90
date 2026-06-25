@@ -16,7 +16,7 @@
 !>#### declare and define soil-biogeochemistry constants
 !>
 MODULE mo_sb_constants
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
 

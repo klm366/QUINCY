@@ -92,9 +92,7 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Run_tasks
     PROCEDURE :: Set_options
     PROCEDURE :: Set_subset
-#ifndef __NO_QUINCY__
     PROCEDURE :: Write_back_to_bgcms
-#endif
 #ifdef _OPENACC
     PROCEDURE :: gpu_to_cpu => Sync_vars_from_gpu_to_cpu
     PROCEDURE :: cpu_to_gpu => Sync_vars_from_cpu_to_gpu
@@ -549,7 +547,6 @@ CONTAINS
 
   END SUBROUTINE Set_subset
 
-#ifndef __NO_QUINCY__
   ! ====================================================================================================== !
   !>
   !> Write all values from matrices back to the bgcms for all tiles that have a bgcm store
@@ -596,7 +593,6 @@ CONTAINS
     END DO
 
   END SUBROUTINE Write_back_to_bgcms
-#endif
 
   ! ====================================================================================================== !
   !>

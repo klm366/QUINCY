@@ -353,7 +353,6 @@ CONTAINS
       dsl4jsb_Config(RAD_)%AlbedoCanopySnow = &
         & albedo_age_weight * AlbedoCanopySnow_age + (1._wp - albedo_age_weight) * AlbedoCanopySnow_temp
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)   =  150.0_wp
@@ -367,8 +366,6 @@ CONTAINS
         !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)) &
         !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl))
       END SELECT
-#endif
-
     END IF
     !$ACC WAIT(1)
 
