@@ -16,7 +16,7 @@
 !>#### definition and init of (memory) variables for the soil-biogeochemistry process
 !>
 MODULE mo_sb_memory_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: finish, message
@@ -2330,7 +2330,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
@@ -2414,7 +2414,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = output_level_local, &
-        & loutput = output_switch_local, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
@@ -2534,7 +2534,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)

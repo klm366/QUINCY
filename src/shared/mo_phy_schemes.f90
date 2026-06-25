@@ -27,14 +27,12 @@ MODULE mo_phy_schemes
   PRIVATE
 
   PUBLIC :: specific_humidity, qsat_water, qsat_ice, qsat_mixed, sat_pres_water, sat_pres_ice, sat_pres_mixed, &
-    & update_drag, &
-    & q_effective, surface_dry_static_energy, heat_transfer_coef, &
-    & thermal_radiation, lwnet_from_lwdown, potential_temperature
+    &       update_drag, &
+    &       q_effective, surface_dry_static_energy, heat_transfer_coef, &
+    &       thermal_radiation, lwnet_from_lwdown, potential_temperature, &
+    &       calc_peaked_arrhenius_function
 #ifndef __NO_AES__
     PUBLIC :: sfc_exchange_coefficients
-#endif
-#ifndef __NO_QUINCY__
-  PUBLIC :: calc_peaked_arrhenius_function
 #endif
 
     ! Note: nvhpc doesn't support function pointers
@@ -292,7 +290,6 @@ ELEMENTAL &
   !>
   !>  Output: rate modifier (unitless)
   !>
-#ifndef __NO_QUINCY__
   ELEMENTAL FUNCTION calc_peaked_arrhenius_function(temp, Ea, Ed, temp_opt) RESULT(rate_modifier)
 
     USE mo_jsb_physical_constants,  ONLY: r_gas, Tzero
@@ -322,7 +319,6 @@ ELEMENTAL &
     END IF
 
   END FUNCTION calc_peaked_arrhenius_function
-#endif
 
   ! ======================================================================================================= !
   !>
@@ -463,11 +459,9 @@ ELEMENTAL &
         CASE (MODEL_JSBACH)
           zg  = height_wind * grav
           zgh = height_humidity * grav ! jsb3 "HeightHumidity and HeightTemperature have to be equal"
-#ifndef __NO_QUINCY__
         CASE (MODEL_QUINCY)
           zg  = (height_wind + 3._wp / 10._wp * height(ic)) * grav
           zgh = zg
-#endif
         END SELECT
       ELSE
         zg = ztvir * rd * LOG(1._wp / zsigma)
@@ -490,10 +484,8 @@ ELEMENTAL &
         SELECT CASE (config_model_scheme)
         CASE (MODEL_JSBACH)
           zril = zg * ( ztvd - ztvs_act ) / ( zdu2 * (ztvd + ztvs_act) / 2._wp )
-#ifndef __NO_QUINCY__
         CASE (MODEL_QUINCY)
           zril = MIN(zg * ( ztvd - ztvs_act ) / ( zdu2 * (ztvd + ztvs_act) / 2._wp ), 0.5_wp)
-#endif
         END SELECT
       dzril = -4._wp * zg / zdu2 * ztvd / (ztvd + ztvs_act)**2 * dztvs_act
       END IF

@@ -293,8 +293,6 @@ CONTAINS
       !>     - Fraction of clay in deep soil
       CALL read_bc_data(input_file, 'SUB_FR_CLAY', tile%name, sse_init_vars%fr_clay_deep, llimit=0._wp)
 
-#ifndef __NO_QUINCY__
-      ! quincy
       ! read 'bulk density' values from quincy specific input file
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
@@ -312,7 +310,6 @@ CONTAINS
 
         ! quincy input file may be closed below
       END SELECT
-#endif
 
       ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
       CALL soil_init_from_texture( &
@@ -543,7 +540,6 @@ CONTAINS
       !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SSE_,thermal_diffusivity)) ASYNC(1)
     END IF
 
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)
@@ -591,7 +587,6 @@ CONTAINS
         !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), bulk_dens_sl(:,:,:)) ASYNC(1)
       END IF
     END SELECT
-#endif
 
     !$ACC UPDATE ASYNC(1) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap)) &

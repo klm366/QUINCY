@@ -316,7 +316,6 @@ CONTAINS
       & initval_r=0.0_wp, &
       & l_aggregate_all=.TRUE. )
 
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       CALL mem%Add_var('bulk_dens_sl', mem%bulk_dens_sl, &
@@ -364,7 +363,6 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
     END SELECT
-#endif
 
   END SUBROUTINE Init_sse_memory
 
