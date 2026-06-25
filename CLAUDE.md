@@ -13,7 +13,7 @@ Activate with `scheme = 'external_lai'` in `&jsb_pheno_nml`.
 | File | Role |
 |---|---|
 | `src/phenology/mo_pheno_config_class.f90` | New namelist parameters: `extlai_mode`, `extlai_filename_prefix`, `extlai_lai_max`; validation against QUINCY / forest-age-class usecases |
-| `src/phenology/mo_pheno_memory_class.f90` | New fields: `extlai_target`, `extlai_incr` (annual mode); `lai_mon_next` (monthly mode preload buffer) |
+| `src/phenology/mo_pheno_memory_class.f90` | New fields: `extlai_target`, `extlai_incr` (annual mode) |
 | `src/phenology/mo_pheno_init.f90` | `read_extlai_data()`: reads yearly NetCDF files via `mo_jsb_extvar_reader` context API |
 | `src/phenology/mo_pheno_interface.f90` | `update_phenology_external_lai()`: per-timestep LAI update for both modes |
 | `src/shared/mo_jsb_extvar_reader.f90` | **NEW** — general-purpose reader and interpolator for external yearly BC variables; see API below |
@@ -32,19 +32,22 @@ The interpolation buffer `lai_mon(0:13)` stores:
 - Slots 1–12 : January–December of year Y
 - Slot 13 : January of year Y+1
 
-**File reading strategy (1 file/year after init):**
+**File reading strategy (2 files/year after init, no preload buffer):**
 
-At experiment start, three files are read (Y−1, Y, Y+1).  The Y+1 months are kept in the
-CPU-only preload buffer `lai_mon_next(1:12)`.
+At experiment start, three files are read (Y−1, Y, Y+1):
 
-At each year transition Y → Y+1, only **one file** (Y+2) is read into `lai_mon_next`.
-The new interpolation buffer is then assembled entirely from already-resident data:
+```
+lai_mon(:,:,0)    = file(Y-1), month 12     ! Dec of Y-1
+lai_mon(:,:,1:12) = file(Y),   months 1-12  ! full year Y
+lai_mon(:,:,13)   = file(Y+1), month 1      ! Jan of Y+1
+```
+
+At each year transition Y → Y+1, two files are read (Y+1 and Y+2):
 
 ```
 lai_mon(:,:,0)    = lai_mon(:,:,12)          ! Dec of Y, free
-lai_mon(:,:,1:12) = lai_mon_next             ! months of Y+1, free (preloaded)
-lai_mon_next      = file(Y+2)                ! 1 file read
-lai_mon(:,:,13)   = lai_mon_next(:,:,1)      ! Jan of Y+2, free
+lai_mon(:,:,1:12) = file(Y+1), months 1-12  ! full year Y+1
+lai_mon(:,:,13)   = file(Y+2), month 1      ! Jan of Y+2
 ```
 
 `lai_mon` is read-only on the GPU; the CPU copy is always authoritative.
@@ -82,7 +85,7 @@ Opaque type `t_extvar_monthly_ctx` holds the open files and an `is_init` flag.
 ```fortran
 CALL extvar_monthly_open(ctx, current_datetime, filename_prefix, grid_id)
 DO WHILE (ASSOCIATED(current_tile))
-  CALL extvar_monthly_update(ctx, varname, tile_lai_mon, tile_lai_mon_next, val_min=, val_max=)
+  CALL extvar_monthly_update(ctx, varname, tile_lai_mon, val_min=, val_max=)
   ! !$ACC UPDATE DEVICE(monthly_buf) ASYNC(1) is issued inside extvar_monthly_update
   ...
 END DO
@@ -91,7 +94,7 @@ CALL extvar_monthly_close(ctx)
 ```
 
 `extvar_monthly_open` calls `is_time_experiment_start` internally: at experiment start it opens
-three files (Y-1, Y, Y+1); at every subsequent year transition it opens one file (Y+1).
+three files (Y-1, Y, Y+1); at every subsequent year transition it opens two files (Y+1, Y+2).
 `extvar_monthly_update` dispatches to `extvar_monthly_buffer_init` or `extvar_monthly_buffer_advance`
 accordingly.  The lower-level `buffer_init` / `buffer_advance` routines are also public for
 callers that need finer control.

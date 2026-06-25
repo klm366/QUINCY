@@ -50,7 +50,6 @@ MODULE mo_pheno_memory_class
     ! variables NOT added to varlist
     REAL(wp), POINTER :: lai_mon(:,:,:)       => NULL()   !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14> !
     REAL(wp), POINTER :: fract_fpc_mon(:,:,:) => NULL()   !< Monthly fpc (per year or climatology) <nproma x nblks x 14> !
-    REAL(wp), POINTER :: lai_mon_next(:,:,:)  => NULL()   !< Preloaded next-year monthly LAI for external_lai monthly mode <nproma x nblks x 12>
 
     ! --- external_lai scheme state (annual mode only; monthly mode reuses lai_mon above) ---
     TYPE(t_jsb_var_real2d) :: extlai_target  !< Annual target LAI [m2 m-2]; initval -1.0 = sentinel (not yet read)
@@ -182,12 +181,6 @@ CONTAINS
         !$ACC ENTER DATA CREATE(mem%lai_mon, mem%fract_fpc_mon)
         !$ACC ENTER DATA ATTACH(mem%lai_mon, mem%fract_fpc_mon)
       ! END IF
-
-      IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'external_lai' .AND. &
-        & TRIM(dsl4jsb_Config(PHENO_)%extlai_mode) == 'monthly'  .AND. &
-        & lib_id > 0) THEN                                               ! PFT tiles only
-        ALLOCATE(mem%lai_mon_next(hgrid%nproma, hgrid%nblks, 1:12))
-      END IF
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'external_lai' .AND. &
         & TRIM(dsl4jsb_Config(PHENO_)%extlai_mode) == 'annual'   .AND. &

@@ -51,9 +51,14 @@ MODULE mo_jsb_extvar_reader
   !> Opaque context for one monthly-buffer update cycle (experiment start or year transition).
   !> Create with `extvar_monthly_open`, use in the tile loop with `extvar_monthly_update`,
   !> then release with `extvar_monthly_close`.
+  !>
+  !> At experiment start: `file_prev` (Y-1), `file_curr` (Y), `file_next` (Y+1) are all open.
+  !> At a year transition: only `file_curr` (Y+1) and `file_next` (Y+2) are open.
   TYPE, PUBLIC :: t_extvar_monthly_ctx
     PRIVATE
-    TYPE(t_input_file) :: file_prev, file_curr, file_next
+    TYPE(t_input_file) :: file_prev  !< Open at experiment start only (year Y-1)
+    TYPE(t_input_file) :: file_curr  !< Year Y at init; year Y+1 at advance
+    TYPE(t_input_file) :: file_next  !< Year Y+1 at init; year Y+2 at advance (Jan only)
     LOGICAL            :: is_init = .FALSE.
   END TYPE t_extvar_monthly_ctx
 
@@ -103,7 +108,7 @@ CONTAINS
   !> Open the yearly BC file(s) needed for one monthly-buffer update cycle.
   !>
   !> At experiment start (`is_time_experiment_start`) three files are opened: year Y-1, Y, and Y+1.
-  !> At every subsequent year transition only the single file Y+1 is opened.
+  !> At every subsequent year transition two files are opened: year Y+1 (full) and Y+2 (Jan only).
   !> The resulting context is passed unchanged to `extvar_monthly_update` (once per tile) and finally
   !> to `extvar_monthly_close`.
   !>
@@ -131,8 +136,11 @@ CONTAINS
       ctx%file_curr = jsb_netcdf_open_input(TRIM(fname_curr), grid_id)
       ctx%file_next = jsb_netcdf_open_input(TRIM(fname_next), grid_id)
     ELSE
+      fname_curr = extvar_filename(filename_prefix, year)
       fname_next = extvar_filename(filename_prefix, year + 1)
-      IF (debug_on()) CALL message(TRIM(routine), 'Year transition: opening '//TRIM(fname_next))
+      IF (debug_on()) CALL message(TRIM(routine), 'Year transition: opening ' &
+        & //TRIM(fname_curr)//', '//TRIM(fname_next))
+      ctx%file_curr = jsb_netcdf_open_input(TRIM(fname_curr), grid_id)
       ctx%file_next = jsb_netcdf_open_input(TRIM(fname_next), grid_id)
     END IF
 
@@ -146,21 +154,20 @@ CONTAINS
   !> Call once per tile inside the tile loop between `extvar_monthly_open` and
   !> `extvar_monthly_close`.
   !>
-  SUBROUTINE extvar_monthly_update(ctx, varname, monthly_buf, preload_buf, val_min, val_max)
+  SUBROUTINE extvar_monthly_update(ctx, varname, monthly_buf, val_min, val_max)
 
     TYPE(t_extvar_monthly_ctx), INTENT(inout)        :: ctx
     CHARACTER(len=*),           INTENT(in)           :: varname
     REAL(wp),                   INTENT(inout)        :: monthly_buf(:,:,0:)  !< (nproma, nblks, 0:13)
-    REAL(wp),                   INTENT(inout)        :: preload_buf(:,:,:)   !< (nproma, nblks, 1:12)
     REAL(wp),                   INTENT(in), OPTIONAL :: val_min
     REAL(wp),                   INTENT(in), OPTIONAL :: val_max
 
     IF (ctx%is_init) THEN
       CALL extvar_monthly_buffer_init(ctx%file_prev, ctx%file_curr, ctx%file_next, varname, &
-        &                             monthly_buf, preload_buf, val_min=val_min, val_max=val_max)
+        &                             monthly_buf, val_min=val_min, val_max=val_max)
     ELSE
-      CALL extvar_monthly_buffer_advance(ctx%file_next, varname, &
-        &                                monthly_buf, preload_buf, val_min=val_min, val_max=val_max)
+      CALL extvar_monthly_buffer_advance(ctx%file_curr, ctx%file_next, varname, &
+        &                                monthly_buf, val_min=val_min, val_max=val_max)
     END IF
 
     !$ACC UPDATE DEVICE(monthly_buf) ASYNC(1)
@@ -174,10 +181,8 @@ CONTAINS
 
     TYPE(t_extvar_monthly_ctx), INTENT(inout) :: ctx
 
-    IF (ctx%is_init) THEN
-      CALL ctx%file_prev%Close()
-      CALL ctx%file_curr%Close()
-    END IF
+    IF (ctx%is_init) CALL ctx%file_prev%Close()
+    CALL ctx%file_curr%Close()
     CALL ctx%file_next%Close()
 
   END SUBROUTINE extvar_monthly_close
@@ -188,18 +193,16 @@ CONTAINS
   !> Three yearly files must be open.  Slots are populated as:
   !>   - `monthly_buf(:,:,0)`    = month 12 of `file_prev`  (December of year Y-1)
   !>   - `monthly_buf(:,:,1:12)` = all months of `file_curr` (year Y)
-  !>   - `preload_buf(:,:,:)`    = all months of `file_next` (year Y+1)
-  !>   - `monthly_buf(:,:,13)`   = `preload_buf(:,:,1)` (January of year Y+1, free)
+  !>   - `monthly_buf(:,:,13)`   = month 1 of `file_next`   (January of year Y+1)
   !>
   SUBROUTINE extvar_monthly_buffer_init(file_prev, file_curr, file_next, varname, &
-    &                                   monthly_buf, preload_buf, val_min, val_max)
+    &                                   monthly_buf, val_min, val_max)
 
     TYPE(t_input_file), INTENT(inout)        :: file_prev            !< Open file for year Y-1
     TYPE(t_input_file), INTENT(inout)        :: file_curr            !< Open file for year Y
     TYPE(t_input_file), INTENT(inout)        :: file_next            !< Open file for year Y+1
     CHARACTER(len=*),   INTENT(in)           :: varname
     REAL(wp),           INTENT(inout)        :: monthly_buf(:,:,0:)  !< (nproma, nblks, 0:13)
-    REAL(wp),           INTENT(out)          :: preload_buf(:,:,:)   !< (nproma, nblks, 1:12)
     REAL(wp),           INTENT(in), OPTIONAL :: val_min
     REAL(wp),           INTENT(in), OPTIONAL :: val_max
 
@@ -209,9 +212,8 @@ CONTAINS
       & val_min=val_min, val_max=val_max)
     ptr_3d => file_curr%Read_2d_time(varname, fill_array=monthly_buf(:,:, 1:12), start_time_step=1, end_time_step=12, &
       & val_min=val_min, val_max=val_max)
-    ptr_3d => file_next%Read_2d_time(varname, fill_array=preload_buf(:,:, :),    start_time_step=1, end_time_step=12, &
+    ptr_2d => file_next%Read_2d_one_time(varname, time=1, fill_array=monthly_buf(:,:, 13), &
       & val_min=val_min, val_max=val_max)
-    monthly_buf(:,:, 13) = preload_buf(:,:, 1)
 
     NULLIFY(ptr_2d)
     NULLIFY(ptr_3d)
@@ -221,28 +223,29 @@ CONTAINS
   ! ======================================================================================================= !
   !> Advance a `(nproma, nblks, 0:13)` monthly buffer at a year transition Y -> Y+1.
   !>
-  !> Rotates the existing data without file I/O, then preloads year Y+2 from `file_next`:
+  !> Copies December in-place, then reads the new year and the next January from file:
   !>   - `monthly_buf(:,:,0)`    <- old `monthly_buf(:,:,12)` (December of Y, free)
-  !>   - `monthly_buf(:,:,1:12)` <- `preload_buf` (months of Y+1, free)
-  !>   - `preload_buf`           = all months of `file_next` (year Y+2; one file read)
-  !>   - `monthly_buf(:,:,13)`   = `preload_buf(:,:,1)` (January of Y+2, free)
+  !>   - `monthly_buf(:,:,1:12)` = all months of `file_curr` (year Y+1; one file read)
+  !>   - `monthly_buf(:,:,13)`   = month 1 of `file_next`    (January of Y+2; one time-step read)
   !>
-  SUBROUTINE extvar_monthly_buffer_advance(file_next, varname, monthly_buf, preload_buf, val_min, val_max)
+  SUBROUTINE extvar_monthly_buffer_advance(file_curr, file_next, varname, monthly_buf, val_min, val_max)
 
+    TYPE(t_input_file), INTENT(inout)        :: file_curr            !< Open file for year Y+1
     TYPE(t_input_file), INTENT(inout)        :: file_next            !< Open file for year Y+2
     CHARACTER(len=*),   INTENT(in)           :: varname
     REAL(wp),           INTENT(inout)        :: monthly_buf(:,:,0:)  !< (nproma, nblks, 0:13)
-    REAL(wp),           INTENT(inout)        :: preload_buf(:,:,:)   !< (nproma, nblks, 1:12)
     REAL(wp),           INTENT(in), OPTIONAL :: val_min
     REAL(wp),           INTENT(in), OPTIONAL :: val_max
 
-    REAL(wp), POINTER :: ptr(:,:,:)
+    REAL(wp), POINTER :: ptr_2d(:,:), ptr_3d(:,:,:)
 
-    monthly_buf(:,:, 0)    = monthly_buf(:,:, 12)
-    monthly_buf(:,:, 1:12) = preload_buf(:,:, :)
-    ptr => file_next%Read_2d_time(TRIM(varname), fill_array=preload_buf(:,:, :), val_min=val_min, val_max=val_max)
-    NULLIFY(ptr)
-    monthly_buf(:,:, 13)   = preload_buf(:,:, 1)
+    monthly_buf(:,:, 0) = monthly_buf(:,:, 12)
+    ptr_3d => file_curr%Read_2d_time(TRIM(varname), fill_array=monthly_buf(:,:, 1:12), &
+      & start_time_step=1, end_time_step=12, val_min=val_min, val_max=val_max)
+    NULLIFY(ptr_3d)
+    ptr_2d => file_next%Read_2d_one_time(TRIM(varname), time=1, fill_array=monthly_buf(:,:, 13), &
+      & val_min=val_min, val_max=val_max)
+    NULLIFY(ptr_2d)
 
   END SUBROUTINE extvar_monthly_buffer_advance
 

@@ -358,10 +358,9 @@ CONTAINS
   !> Called at experiment start and once per new year from jsbach_start_timestep.
   !>
   !> Monthly mode:
-  !>   At experiment start: reads files Y-1, Y, and Y+1 to fill slots 0..13 and lai_mon_next.
-  !>   At each year transition (Y->Y+1): reads only file Y+2 (preloads lai_mon_next for the following
-  !>   year), then builds the new lai_mon buffer from old slot 12 (slot 0), lai_mon_next (slots 1-12),
-  !>   and the newly read January (slot 13).  Cost: 1 file read per year after init.
+  !>   At experiment start: reads files Y-1, Y, and Y+1 to fill slots 0..13.
+  !>   At each year transition (Y->Y+1): copies slot 12 to slot 0 (free), then reads all 12 months
+  !>   from file Y+1 (slots 1-12) and January from file Y+2 (slot 13).  Cost: 2 file reads per year.
   !>
   !> Annual  mode: reads a single annual target from the next-year file into extlai_target (ALCC convention).
   !>
@@ -431,7 +430,6 @@ CONTAINS
 
         CALL extvar_monthly_update(ctx, TRIM(varname),           &
           & pheno__mem__current_tile%lai_mon,                    &
-          & pheno__mem__current_tile%lai_mon_next,               &
           & val_min=0._wp, val_max=dsl4jsb_Config(PHENO_)%extlai_lai_max)
 
         current_tile => current_tile%Get_next_sibling_tile()
