@@ -130,27 +130,27 @@ CONTAINS
       SELECT CASE (TRIM(config%model_config%usecase))
       CASE ('jsbach_pfts')
         ALLOCATE(trans_names(6))
-        trans_names = [character(len=15) :: &              !< 6 transition types for 'jsbach_pfts' (11 PFTs)
+        trans_names = [character(len=15) :: &             !< 6 transition types for 'jsbach_pfts' (11 PFTs)
           'crop2pasture',   'crop2natural',   &
           'pasture2crop',   'pasture2natural', &
           'natural2crop',   'natural2pasture']
-        ALLOCATE(from_class(6), to_class(6))
+        ALLOCATE(from_class(6), to_class(6))              ! Indices of classes losing/gaining area through a transition type
         from_class = [3, 3, 2, 2, 1, 1]                   ! 1: natural, 2: pasture, 3: crop
         to_class   = [2, 1, 3, 1, 3, 2]
         ALLOCATE(pft_class(11))
-        pft_class  = [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3]   ! 8 natural, 2 pasture, 1 crop
+        pft_class  = [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3]    ! 8x natural, 2x pasture, 1x crop
       CASE ('jsbach_12pfts')
         ALLOCATE(trans_names(12))
-        trans_names = [character(len=15) :: &              !< 12 transition types for 'jsbach_12pfts' (12 PFTs)
+        trans_names = [character(len=15) :: &             !< 12 transition types for 'jsbach_12pfts' (12 PFTs)
           'c3crop2c4crop',  'c3crop2pasture',  'c3crop2natural',  &
           'c4crop2c3crop',  'c4crop2pasture',  'c4crop2natural',  &
           'pasture2c3crop', 'pasture2c4crop',  'pasture2natural', &
           'natural2c3crop', 'natural2c4crop',  'natural2pasture']
-        ALLOCATE(from_class(12), to_class(12))
+        ALLOCATE(from_class(12), to_class(12))            ! Indices of classes losing/gaining area through a transition type
         from_class = [3, 3, 3, 4, 4, 4, 2, 2, 2, 1, 1, 1] ! 1: natural, 2: pasture, 3: c3crop, 4: c4crop
         to_class   = [4, 2, 1, 3, 2, 1, 3, 4, 1, 3, 4, 2]
         ALLOCATE(pft_class(12))
-        pft_class  = [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 4] ! 8 natural, 2 pasture, 1 c3crop, 1 c4crop
+        pft_class  = [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 4] ! 8x natural, 2x pasture, 1x c3crop, 1x c4crop
       CASE DEFAULT
         CALL finish(TRIM(routine), 'Transition setup not defined for usecase: '// TRIM(config%model_config%usecase))
       END SELECT

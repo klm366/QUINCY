@@ -392,7 +392,6 @@ CONTAINS
     dsl4jsb_Def_config(ALCC_)          !< Configuration of the anthropogenic land use change process
     dsl4jsb_Real3D_onChunk :: cf_delta        !< Derived change in cover fractions (annual or daily change) []
     dsl4jsb_Real3D_onChunk :: transition_rate !< Transition rate (annual or daily change) []
-    dsl4jsb_Real3D_onChunk :: cover_fract_pot !< Potential cover fractions (without land use) from NLCC []
 
     CLASS(t_jsb_tile_abstract), POINTER :: current_tile    !< Pointer to the tile for which relocations are determined
     CLASS(t_jsb_tile_abstract), POINTER :: age_class_tile  !< Pointer to for age class tiles
@@ -447,10 +446,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ALCC_, transition_rate)
     IF (model%Is_process_enabled(NLCC_)) THEN
       dsl4jsb_Get_memory(NLCC_)
-      dsl4jsb_Get_var3D_onChunk(NLCC_, cover_fract_pot)  ! in: potential cover fractions (no land use)
     END IF
-    ! Todo-AKN: How to get potential cover fractions if NLCC is not active? Maybe read in potential cover
-    ! fractions as part of the ALCC process' land use data in this case?
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(ALCC_)) RETURN
@@ -510,8 +506,7 @@ CONTAINS
 
         from_cf_sum(:) = 0.0_wp
         to_cf_sum(:) = 0.0_wp
-        ! n_to_tiles counts tiles in the to-class for the standard (non-NLCC) case.
-        ! Used to distribute area equally when to_cf_sum == 0.
+        ! n_to_tiles counts tiles in the to-class; used to distribute area equally when to_cf_sum = 0.
         n_to_tiles = 0
 
         DO WHILE (ASSOCIATED(current_tile))
@@ -534,9 +529,7 @@ CONTAINS
           ! Count to-tiles for the standard (non-NLCC back-conversion) case.
           ! This is cell-independent so it is evaluated outside the ic loop.
           IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
-            IF (.NOT. (model%Is_process_enabled(NLCC_) .AND. dsl4jsb_Config(ALCC_)%to_class(idx) == 1)) THEN
-              n_to_tiles = n_to_tiles + 1
-            END IF
+            n_to_tiles = n_to_tiles + 1
           END IF
 
           DO ic = 1,nc
@@ -545,15 +538,7 @@ CONTAINS
               from_cf_sum(ic) = from_cf_sum(ic) + initial_area(ic, i_tile)
             END IF
             IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
-              IF (model%Is_process_enabled(NLCC_) .AND. dsl4jsb_Config(ALCC_)%to_class(idx) == 1) THEN
-                ! Back-conversion rule for agricultural lands to natural scales with the difference between
-                ! potential cover fraction and current cover fraction
-                ! todo-AKN: adjust once pot cover fraction are available also if nlcc in not active
-                to_cf_sum(ic) = to_cf_sum(ic) + max(0.0_wp, cover_fract_pot(ic, i_tile) - initial_area(ic, i_tile))
-              ELSE
-                ! For 'equal relative gain and loss' scale with the sum of the current cover fraction of the PFTs
-                to_cf_sum(ic) = to_cf_sum(ic) + initial_area(ic, i_tile)
-              END IF
+              to_cf_sum(ic) = to_cf_sum(ic) + initial_area(ic, i_tile)
             END IF
           END DO
 
@@ -566,21 +551,11 @@ CONTAINS
         !     - Because the lost area for each tile is calculated as
         !       transition_rate * initial_area / from_cf_sum,
         !       this also ensures that the lost area does not exceed the initial area in each tile.
-        ! (2) for back-conversion of agricultural lands to natural: transition rates <= to_cf_sum, i.e.
-        !     that the transition does not add more area than the potentially available in all natural tiles
-        ! (3) if not back-conversion of agricultural lands to natural: transition_rate + to_cf_sum <= 1,
+        ! (2) transition_rate + to_cf_sum <= 1,
         !     i.e. that the transition does not add more area than available in the vegetated grid box
         DO ic = 1, nc
-          ! this one is redudant given the tighter condition with initial_area below
-          ! todo-AKN: check if we can remove this one
           transition_rate(ic, idx) = MIN(transition_rate(ic, idx), from_cf_sum(ic))
-
-          IF ((model%Is_process_enabled(NLCC_)) .AND. (dsl4jsb_Config(ALCC_)%to_class(idx) == 1)) THEN
-            ! todo-AKN: adjust once pot cover fraction are available also if nlcc in not active
-            transition_rate(ic, idx) = MIN(transition_rate(ic, idx), to_cf_sum(ic))
-          ELSE
-            transition_rate(ic, idx) = MIN(transition_rate(ic, idx), 1.0_wp - to_cf_sum(ic))
-          END IF
+          transition_rate(ic, idx) = MIN(transition_rate(ic, idx), 1.0_wp - to_cf_sum(ic))
         END DO
 
       END SELECT
@@ -595,7 +570,7 @@ CONTAINS
         i_cf_tile = i_cf_tile + 1
 
         ! Identify the "dynamic" PFTs of the NLCC process, whose fractions should not be replaced
-        ! by the map's fractions.
+        ! by the map's fractions or modified by the transitions.
         nlcc_tile = .FALSE.
         IF (model%Is_process_enabled(NLCC_) .AND. dsl4jsb_Lctlib_param_tile(dynamic_PFT, current_tile)) THEN
           nlcc_tile = .TRUE.
@@ -637,7 +612,7 @@ CONTAINS
         ELSE
           ! Pft without children (either pft usecase or non forest pfts in fage usecase!)
           ! in the pft usecase i_cf_tile equals i_tile, however, this is not the case for non forest pfts in fage usecase
-          ! therefore cf_delta is are used with pft index (i_cf_tile), while the lcc arrays (initial_area, lost_area and gained_area)
+          ! therefore cf_delta is used with pft index (i_cf_tile), while the lcc arrays (initial_area, lost_area and gained_area)
           ! are used with the current tile index (i_tile)
 
           ! Assert: pft without children
@@ -654,9 +629,9 @@ CONTAINS
             & //') is not part of the alcc lcc-structure. Current implementation assumes that all pfts are part of it.')
           END IF
 
-          SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
-          CASE ('maps')
-            IF (.NOT. nlcc_tile) THEN
+          IF (.NOT. nlcc_tile) THEN
+            SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
+            CASE ('maps')
               DO ic = 1,nc
                 cf_diff(ic) = cf_delta(ic, i_cf_tile)
 
@@ -682,81 +657,70 @@ CONTAINS
                 END IF
               END DO
               CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
-            END IF
-          CASE ('transition')
-            ! This implementation assumes that transition rates are given as change relative to the vegetated grid box,
-            ! not relative to each pft's area.
-            ! It applies (1) the rule of equal relative gain and loss, and (2) the rule for back-conversion of agricultural lands.
 
-            DO ic = 1,nc
+            CASE ('transition')
+              ! This implementation assumes that transition rates are given as change relative to the vegetated grid box,
+              ! not relative to each pft's area.
+              ! It applies (1) the rule of equal relative gain and loss, and (2) the rule for back-conversion of agricultural lands.
 
-              IF (dsl4jsb_Config(ALCC_)%from_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
-                IF (from_cf_sum(ic) < 0.0_wp) THEN
-                  CALL finish(TRIM(routine), 'Violation of assertion: from_cf_sum is negative. Please check transition rates' &
-                  & // ' and initial areas. Tile: ' // TRIM(current_tile%name))
-                END IF
-                IF (from_cf_sum(ic) > 0.0_wp) THEN
-                  lost_area(ic, i_tile) = transition_rate(ic, idx) *  &
-                      max(0.0_wp, initial_area(ic, i_tile)) / from_cf_sum(ic)
-                  ! Floating-point safety: the per-tile rate tightening above ensures lost_area <=
-                  ! initial_area analytically, but the two-step multiply/divide can produce a result
-                  ! that exceeds initial_area by O(machine_epsilon). Clamp to prevent -eps fractions.
-                  lost_area(ic, i_tile) = MIN(lost_area(ic, i_tile), initial_area(ic, i_tile))
-                END IF
-                current_fract(ic) = initial_area(ic, i_tile) - lost_area(ic, i_tile)
-              ELSE IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
-                IF (to_cf_sum(ic) < 0.0_wp) THEN
-                  CALL finish(TRIM(routine), 'Violation of assertion: to_cf_sum is negative. Please check transition rates' &
-                   & // ' and initial areas. Tile: ' // TRIM(current_tile%name))
-                END IF
-                IF (to_cf_sum(ic) > 0.0_wp) THEN
-                  IF (model%Is_process_enabled(NLCC_) .AND.dsl4jsb_Config(ALCC_)%to_class(idx) == 1) THEN
-                    ! Back-conversion rule for agricultural lands to natural scales with the difference
-                    ! between potential cover fraction and current cover fraction
-                    ! todo-AKN: adjust once pot cover fraction are available also if nlcc in not active
-                    gained_area(ic, i_tile) = transition_rate(ic, idx) * &
-                        max(0.0_wp, cover_fract_pot(ic, i_tile) - initial_area(ic, i_tile)) / to_cf_sum(ic)
-                  ELSE
-                    ! Rule of equal relative gain:
-                    gained_area(ic, i_tile) = transition_rate(ic, idx) * initial_area(ic, i_tile) / to_cf_sum(ic)
+              DO ic = 1,nc
+
+                IF (dsl4jsb_Config(ALCC_)%from_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
+                  IF (from_cf_sum(ic) < 0.0_wp) THEN
+                    CALL finish(TRIM(routine), 'Violation of assertion: from_cf_sum is negative. Please check transition rates' &
+                    & // ' and initial areas. Tile: ' // TRIM(current_tile%name))
                   END IF
-                  ! Floating-point safety: the per-tile rate tightening above ensures
-                  ! gained_area <= 1 - initial_area analytically, but rounding errors in the
-                  ! two-step multiply/divide can push gained_area above 1 - initial_area by
-                  ! O(machine_epsilon). Clamp to prevent fractions exceeding 1.
-                  gained_area(ic, i_tile) = MIN(gained_area(ic, i_tile), &
-                      MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)))
-                ELSE IF (.NOT. (model%Is_process_enabled(NLCC_) .AND. &
-                    & dsl4jsb_Config(ALCC_)%to_class(idx) == 1) .AND. n_to_tiles > 0) THEN
-                  ! to_cf_sum == 0: all to-tiles have initial_area == 0.
-                  ! Distribute the transition area equally among all n_to_tiles to-tiles.
-                  gained_area(ic, i_tile) = transition_rate(ic, idx) / REAL(n_to_tiles, wp)
-                  ! Floating-point safety clamp
-                  gained_area(ic, i_tile) = MIN(gained_area(ic, i_tile), &
-                      MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)))
+                  IF (from_cf_sum(ic) > 0.0_wp) THEN
+                    lost_area(ic, i_tile) = transition_rate(ic, idx) *  &
+                        max(0.0_wp, initial_area(ic, i_tile)) / from_cf_sum(ic)
+                    ! Floating-point safety: the per-tile rate tightening above ensures lost_area <=
+                    ! initial_area analytically, but the two-step multiply/divide can produce a result
+                    ! that exceeds initial_area by O(machine_epsilon). Clamp to prevent -eps fractions.
+                    lost_area(ic, i_tile) = MIN(lost_area(ic, i_tile), initial_area(ic, i_tile))
+                  END IF
+                  current_fract(ic) = initial_area(ic, i_tile) - lost_area(ic, i_tile)
+                ELSE IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
+                  IF (to_cf_sum(ic) < 0.0_wp) THEN
+                    CALL finish(TRIM(routine), 'Violation of assertion: to_cf_sum is negative. Please check transition rates' &
+                    & // ' and initial areas. Tile: ' // TRIM(current_tile%name))
+                  END IF
+                  IF (to_cf_sum(ic) > 0.0_wp) THEN
+                    gained_area(ic, i_tile) = transition_rate(ic, idx) * initial_area(ic, i_tile) / to_cf_sum(ic)
+                    ! Floating-point safety: the per-tile rate tightening above ensures
+                    ! gained_area <= 1 - initial_area analytically, but rounding errors in the
+                    ! two-step multiply/divide can push gained_area above 1 - initial_area by
+                    ! O(machine_epsilon). Clamp to prevent fractions exceeding 1.
+                    gained_area(ic, i_tile) = MIN(gained_area(ic, i_tile), &
+                        MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)))
+                  ELSE IF (n_to_tiles > 0) THEN
+                    ! to_cf_sum == 0: all to-tiles have initial_area == 0.
+                    ! Distribute the transition area equally among all n_to_tiles to-tiles.
+                    gained_area(ic, i_tile) = transition_rate(ic, idx) / REAL(n_to_tiles, wp)
+                    ! Floating-point safety clamp
+                    gained_area(ic, i_tile) = MIN(gained_area(ic, i_tile), &
+                        MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)))
+                  END IF
+                  current_fract(ic) = initial_area(ic, i_tile) + gained_area(ic, i_tile)
+                ELSE
+                  current_fract(ic) = initial_area(ic, i_tile)
                 END IF
-                current_fract(ic) = initial_area(ic, i_tile) + gained_area(ic, i_tile)
-              ELSE
-                current_fract(ic) = initial_area(ic, i_tile)
-              END IF
 
-            END DO
+              END DO
 
-            IF (.NOT. nlcc_tile) THEN
               IF (ANY(current_fract(:) < 0.0_wp) .OR. ANY(current_fract(:) > 1.0_wp)) THEN
                 CALL finish(TRIM(routine), 'Violation of assertion: cover fractions need to be between 0 and 1.' &
-                 & // ' Please check transition rates and initial areas. Tile: ' // TRIM(current_tile%name))
+                & // ' Please check transition rates and initial areas. Tile: ' // TRIM(current_tile%name))
               END IF
               CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
-            END IF
 
-          END SELECT
+            END SELECT
+          END IF ! not nlcc_tile
         END IF ! If running with jsbach_forest_age_classes usecase and a forest pft or ELSE a pft without leaves as current tile
 
         current_tile => current_tile%Get_next_sibling_tile()
       END DO ! Current_tile
 
-      ! If demanded: handle dynamic (natural) PFTs of the NLCC process in maps scheme
+      ! If demanded: handle dynamic (natural) PFTs of the NLCC process in maps/transition scheme
       IF (model%Is_process_enabled(NLCC_)) THEN
         CALL handle_nlcc_pfts(tile, options, initial_area, gained_area, lost_area)
       END IF
@@ -775,15 +739,15 @@ CONTAINS
       END IF
 
       ! Now do the matter translocation
-    IF (model%config%model_scheme == MODEL_JSBACH) THEN
+      IF (model%config%model_scheme == MODEL_JSBACH) THEN
         CALL alcc_matter_translocation_jsb(tile, options)
 #ifndef __NO_QUINCY__
-    ELSE IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      IF (model%config%qmodel_id == QLAND) THEN
-        CALL alcc_matter_translocation_iq(tile, options)
-      END IF
+      ELSE IF (model%config%model_scheme == MODEL_QUINCY) THEN
+        IF (model%config%qmodel_id == QLAND) THEN
+          CALL alcc_matter_translocation_iq(tile, options)
+        END IF
 #endif
-    END IF
+      END IF
     END DO ! idx for transition names
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

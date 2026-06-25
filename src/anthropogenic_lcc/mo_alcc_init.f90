@@ -299,7 +299,6 @@ CONTAINS
 
       CALL input_file%Close()
 
-      ! todo-AKN: add checks on transition rates? assertions?
       ! todo-AKN: apply cf_correction if required?
 
 
