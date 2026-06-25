@@ -16,7 +16,7 @@
 !>#### update veg and product pools and call litter formation on harvest
 !>
 MODULE mo_q_veg_update_pools_on_harvest
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on

@@ -16,7 +16,7 @@
 !>#### routines for calculating the soil-biogeochemical pools using the fluxes that have been calculated
 !>
 MODULE mo_q_sb_update_pools
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
@@ -650,6 +650,7 @@ CONTAINS
     END IF
     !------------------------------------------------------------------------------------------------------ !
 
+
     !> 1.0 correct the plant uptake of nh4, no3 and po4 for soil model
     !>
     IF (model%config%qmodel_id == QSOIL) THEN
@@ -1030,17 +1031,17 @@ CONTAINS
                                        slow_exchange_po4(:,:), &
                                        fast_exchange_po4(:,:))
 
-      !! not update the primary and the occlusion pool during transient-forcing spinup (i.e., before the actual transient simulation)
-      !!  -> not balancing the delta pool P and total flux P as we keep the primary P pool constant
-      !!     despite a non-zero weathering flux from primary to solute P
-      !!  -> this results in the "mass balance" not closed during spinup for both simple soil-model and jsm
-      !!  -> To close the mass balance check, ONLY DURING SPIN-UP, we would need to add the weathering flux to the pool change
-      !!     (as positive pool change).
-      !! we do this because:
-      !!   1) primary P will be depleted if the spin-up time is very long
-      !!   2) we use the "soil P map" with the P status of about the year 1850 as model input
-      !!      we may ensure that the soil P is not very different from this value after spinup, i.e., the transient simulation (usually starting 1900)
-      IF (model%config%l_transient_spinup) THEN
+      ! DO not update the primary and the occlusion pool during model-spinup
+      !  -> not balancing the delta pool P and total flux P as we keep the primary P pool constant
+      !     despite a non-zero weathering flux from primary to solute P
+      !  -> this results in the "mass balance" not closed during spinup for both simple soil-model and jsm
+      !  -> To close the mass balance check, ONLY DURING SPIN-UP, we would need to add the weathering flux to the pool change
+      !     (as positive pool change).
+      ! we do this because:
+      !   1) primary P will be depleted if the spin-up time is very long
+      !   2) we use the "soil P map" with the P status of about the year 1850 as model input
+      !      we may ensure that the soil P is not very different from this value after spinup, i.e., the transient simulation (usually starting 1900)
+      IF (dsl4jsb_Config(SB_)%l_exclude_weathering) THEN
         po4_occluded(:,:)   = po4_occluded(:,:)   +                         transport_po4_occluded(:,:)  * dtime / 1.e6_wp
         po4_primary(:,:)    = po4_primary(:,:)    +                         transport_po4_primary(:,:)   * dtime / 1.e6_wp
       ELSE

@@ -16,7 +16,7 @@
 !>#### multiple routines for the processes using with JSM (jena soil model), e.g., turnover, in- / organic matter fluxes
 !>
 MODULE mo_q_sb_jsm_processes
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish
