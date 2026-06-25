@@ -22,15 +22,13 @@
 !>
 !> - `extvar_filename`       -- build the filename for a given year (aborts on non-4-digit year)
 !>
-!> **Time-interpolation API** -- uses ICON's time management via `mo_jsb_time`, avoiding
-!> reliance on the JSBach time-interpolation cache.
+!> **Time-interpolation API** -- fetches the cached interpolation weights via
+!> `get_time_interpolation_weights` and applies mid-month linear interpolation.
 !>
-!> - `t_time_interpolation_weights`     -- re-exported type (fields: `weight1`, `weight2`,
-!>   `month1_index`, `month2_index` in MPIM 0-13 range)
-!> - `calculate_time_interpolation_weights` -- re-exported function; call with the current datetime
-!>   to obtain weights for linear mid-month interpolation
-!> - `extvar_interpolate_monthly`       -- apply the weights to a `(nproma,nblks,0:13)` monthly
-!>   buffer; OpenACC-capable via optional `lacc` / `acc_stream` arguments
+!> - `extvar_interpolate_monthly(buf, out [,acc_stream])` -- generic; dispatch is by rank:
+!>   - full-field: `buf(:,:,0:)`, `out(:,:)` (INTENT OUT)
+!>   - on-chunk:   `buf(:,0:)`,   `out(:)`   (INTENT INOUT, writes in-place)
+!>   Both overloads call `get_time_interpolation_weights` internally; no weight arguments needed.
 !>
 MODULE mo_jsb_extvar_reader
 #ifndef __NO_JSBACH__
@@ -41,8 +39,7 @@ MODULE mo_jsb_extvar_reader
   USE mo_jsb_io_netcdf, ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_io_units,      ONLY: filename_max
   USE mo_jsb_time,      ONLY: t_datetime,                        &
-    &                         t_time_interpolation_weights,      &
-    &                         calculate_time_interpolation_weights, &
+    &                         get_time_interpolation_weights,    &
     &                         get_year, is_time_experiment_start
 
   IMPLICIT NONE
@@ -62,10 +59,6 @@ MODULE mo_jsb_extvar_reader
     LOGICAL            :: is_init = .FALSE.
   END TYPE t_extvar_monthly_ctx
 
-  ! Re-exports via mo_jsb_time
-  PUBLIC :: t_time_interpolation_weights
-  PUBLIC :: calculate_time_interpolation_weights
-
   ! File-reading utilities
   PUBLIC :: extvar_filename
 
@@ -77,7 +70,11 @@ MODULE mo_jsb_extvar_reader
   PUBLIC :: extvar_monthly_buffer_init
   PUBLIC :: extvar_monthly_buffer_advance
 
-  ! Time-interpolation utility
+  ! Time-interpolation utility — generic: 3D/2D (full-field) or 2D/1D (on-chunk)
+  INTERFACE extvar_interpolate_monthly
+    MODULE PROCEDURE extvar_interpolate_monthly_2d
+    MODULE PROCEDURE extvar_interpolate_monthly_1d
+  END INTERFACE extvar_interpolate_monthly
   PUBLIC :: extvar_interpolate_monthly
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_extvar_reader'
@@ -250,48 +247,63 @@ CONTAINS
   END SUBROUTINE extvar_monthly_buffer_advance
 
   ! ======================================================================================================= !
-  !> Linearly interpolate a `(nproma, nblks, 0:13)` monthly buffer to a `(nproma, nblks)` field.
+  !> Mid-month linear interpolation of a monthly buffer using the current cached time weights.
   !>
-  !> Implements mid-month linear interpolation:
-  !>   `data_out = weight1 * monthly_buffer(:,:,month1_idx) + weight2 * monthly_buffer(:,:,month2_idx)`
+  !> Generic interface; dispatch is by rank of the first two arguments:
+  !>   - full-field: `monthly_buffer(:,:,0:)`, `data_out(:,:)` (INTENT OUT)
+  !>   - on-chunk:   `monthly_buffer(:,0:)`,   `data_out(:)`   (INTENT INOUT, writes in-place)
   !>
-  !> The four scalar arguments are typically obtained by unpacking a `t_time_interpolation_weights`
-  !> value returned by `calculate_time_interpolation_weights(current_datetime)`.
+  !> Interpolation weights and month indices are obtained internally from
+  !> `get_time_interpolation_weights`; no weight arguments are needed at the call site.
   !>
-  !> OpenACC: when `lacc=.TRUE.`, `monthly_buffer` and `data_out` must already be present on the device
-  !> (e.g. via prior `!$ACC ENTER DATA` or `DEFAULT(PRESENT)` context).  `weight1`, `weight2`,
-  !> `month1_idx`, `month2_idx` are scalar and are copied to device automatically.
+  !> OpenACC: `monthly_buffer` and `data_out` must already be present on the device
+  !> (e.g. via prior `!$ACC ENTER DATA` or `DEFAULT(PRESENT)` context).
   !>
-  SUBROUTINE extvar_interpolate_monthly(monthly_buffer, weight1, month1_idx, weight2, month2_idx, &
-    &                                   data_out, lacc, acc_stream)
+  SUBROUTINE extvar_interpolate_monthly_2d(monthly_buffer, data_out, acc_stream)
 
     REAL(wp), INTENT(in)           :: monthly_buffer(:,:,0:)  !< Monthly buffer, 3rd dim bounds 0:13
-    REAL(wp), INTENT(in)           :: weight1                 !< Weight for month1_idx
-    INTEGER,  INTENT(in)           :: month1_idx              !< Month index (MPIM style, 0-13)
-    REAL(wp), INTENT(in)           :: weight2                 !< Weight for month2_idx
-    INTEGER,  INTENT(in)           :: month2_idx              !< Month index (MPIM style, 0-13)
     REAL(wp), INTENT(out)          :: data_out(:,:)           !< Interpolated field
-    LOGICAL,  INTENT(in), OPTIONAL :: lacc                    !< Run on GPU if .TRUE.
     INTEGER,  INTENT(in), OPTIONAL :: acc_stream              !< OpenACC async stream (default: 1)
 
-    LOGICAL :: lzacc
-    INTEGER :: iacc_stream, ic, ib
+    REAL(wp) :: w1, w2
+    INTEGER  :: n1, n2, iacc_stream, ic, ib
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':extvar_interpolate_monthly'
+    iacc_stream = 1;  IF (PRESENT(acc_stream)) iacc_stream = acc_stream
 
-    lzacc       = .FALSE.; IF (PRESENT(lacc))       lzacc       = lacc
-    iacc_stream = 1;       IF (PRESENT(acc_stream)) iacc_stream = acc_stream
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(iacc_stream) COLLAPSE(2) IF(lzacc)
+    !$ACC DATA CREATE(w1, w2, n1, n2) ASYNC(iacc_stream)
+    CALL get_time_interpolation_weights(w1, w2, n1, n2, iacc_stream)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(w1, w2, n1, n2) GANG VECTOR ASYNC(iacc_stream) COLLAPSE(2)
     DO ib = 1, SIZE(data_out, 2)
       DO ic = 1, SIZE(data_out, 1)
-        data_out(ic,ib) = weight1 * monthly_buffer(ic,ib,month1_idx) &
-          &             + weight2 * monthly_buffer(ic,ib,month2_idx)
+        data_out(ic,ib) = w1 * monthly_buffer(ic,ib,n1) + w2 * monthly_buffer(ic,ib,n2)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
+    !$ACC END DATA
 
-  END SUBROUTINE extvar_interpolate_monthly
+  END SUBROUTINE extvar_interpolate_monthly_2d
+
+  SUBROUTINE extvar_interpolate_monthly_1d(monthly_buffer, data_out, acc_stream)
+
+    REAL(wp), INTENT(in)           :: monthly_buffer(:,0:)   !< Monthly buffer, 2nd dim bounds 0:13
+    REAL(wp), INTENT(inout)        :: data_out(:)            !< Interpolated field (on-chunk)
+    INTEGER,  INTENT(in), OPTIONAL :: acc_stream             !< OpenACC async stream (default: 1)
+
+    REAL(wp) :: w1, w2
+    INTEGER  :: n1, n2, iacc_stream, ic
+
+    iacc_stream = 1;  IF (PRESENT(acc_stream)) iacc_stream = acc_stream
+
+    !$ACC DATA CREATE(w1, w2, n1, n2) ASYNC(iacc_stream)
+    CALL get_time_interpolation_weights(w1, w2, n1, n2, iacc_stream)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(w1, w2, n1, n2) GANG VECTOR ASYNC(iacc_stream)
+    DO ic = 1, SIZE(data_out)
+      data_out(ic) = w1 * monthly_buffer(ic, n1) + w2 * monthly_buffer(ic, n2)
+    END DO
+    !$ACC END PARALLEL LOOP
+    !$ACC END DATA
+
+  END SUBROUTINE extvar_interpolate_monthly_1d
 
 #endif
 END MODULE mo_jsb_extvar_reader

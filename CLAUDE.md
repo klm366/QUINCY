@@ -99,15 +99,12 @@ three files (Y-1, Y, Y+1); at every subsequent year transition it opens two file
 accordingly.  The lower-level `buffer_init` / `buffer_advance` routines are also public for
 callers that need finer control.
 
-### Time-interpolation API (re-exported via `mo_jsb_time`)
+### Time-interpolation API
 
-- `t_time_interpolation_weights` — `weight1`, `weight2`, `month1_index`, `month2_index` (MPIM 0–13)
-- `calculate_time_interpolation_weights(datetime)` — stateless; avoids JSBach global cache
-- `extvar_interpolate_monthly(buf(:,:,0:), w1, m1, w2, m2, out(:,:), [lacc], [acc_stream])`
-
-**Pending (ICON side):** `mo_util_jsbach.f90` must add `t_time_interpolation_weights` and
-`calculate_time_interpolation_weights` to its USE from `mo_bcs_time_interpolation` and re-export
-them, to complete the adapter chain for `mo_jsb_time_iface`.
+- `extvar_interpolate_monthly(buf, out [,acc_stream])` — generic; fetches cached weights via
+  `get_time_interpolation_weights` internally, no weight arguments at the call site:
+  - full-field: `buf(:,:,0:)`, `out(:,:)` (`INTENT(OUT)`)
+  - on-chunk:   `buf(:,0:)`,   `out(:)`   (`INTENT(INOUT)`, writes in-place)
 
 ## Constraints
 
