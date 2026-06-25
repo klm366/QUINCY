@@ -16,7 +16,7 @@
 !>#### define phenology config structure, read phenology namelist and init configuration parameters
 !>
 MODULE mo_q_pheno_config_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message

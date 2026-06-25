@@ -63,6 +63,7 @@ CONTAINS
     & Cflx_herb_2_atm,            &
     & Cflx_crop_harvest_2_atm     &
     & )
+    !$ACC ROUTINE SEQ
 
     USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround !, days_per_year
     !
@@ -397,6 +398,7 @@ CONTAINS
   SUBROUTINE yasso (dt, Yasso_in_pools, Weather, c_2_litter, Lit_coefV, WoodLitterSize, Yasso_out, fract_aboveground, &
                     c_2_rootExudates, redFact_Nlimit, is_anoxic, is_peat,                                             &
                     A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H)
+  !$ACC ROUTINE SEQ
     !! DSG: 11.03.2013
     !! modified Yasso soil C model using an Euler scheme and readable coding style
     !! AWEN (Acid, Water, Ethanol, Nonsoluble) pools are the yasso pools without the humus pools.
@@ -907,6 +909,7 @@ CONTAINS
 #endif
   SUBROUTINE distribute_yasso_litter(c_acid, c_water, c_ethanol, c_nonsoluble, c_humus, &
                                      litter, fraction, coefficients)
+  !$ACC ROUTINE SEQ
     USE mo_carbon_constants, ONLY:   i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol,    &
                                      i_lctlib_nonsoluble, i_lctlib_humus
     IMPLICIT NONE
@@ -937,6 +940,7 @@ CONTAINS
   ELEMENTAL &
 #endif
   SUBROUTINE add_litter_to_yasso_pool(this_pool, litter, fraction, coefficient)
+  !$ACC ROUTINE SEQ
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     REAL(wp), INTENT(INOUT) :: this_pool     !< target yasso pool

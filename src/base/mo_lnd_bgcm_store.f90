@@ -16,7 +16,7 @@
 !>#### defines methods (used on tiles) for collecting, storing and providing bgc materials
 !>
 MODULE mo_lnd_bgcm_store
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_exception,             ONLY: finish, message
   USE mo_kind,                  ONLY: wp

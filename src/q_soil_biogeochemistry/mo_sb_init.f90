@@ -16,7 +16,7 @@
 !>#### initialization of soil-biogeochemistry memory variables using, e.g., ic & bc input files
 !>
 MODULE mo_sb_init
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: finish, message

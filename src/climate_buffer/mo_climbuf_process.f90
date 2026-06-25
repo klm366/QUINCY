@@ -46,7 +46,7 @@ CONTAINS
     & temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
     & gdd5_sum_year, gdd5_prev_year, &
     & max_snow_year, max_snow_prev_year, &
-    & max_thaw_year, max_thaw_10year, &
+    & max_thaw_year, max_thaw_prev_year, &
     & max_wind_of_day, max_wind_yDay, max_wind_4yr, &
     & q_rel_air_14d, q_rel_air_14d_yDay)
 
@@ -78,14 +78,14 @@ CONTAINS
       & max_mmtemp_20yr,        & !< Climatological mean temperature of the warmest month [K]
       & temp_15d,               & !< 15-day smoothed temperature [K]
       & temp_15d_yDay,          & !< 15-day smoothed temperature at the end of the previous day [K]
-      & precip_15d,             & !< 15-day smoothed precipitation [K]
-      & precip_15d_yDay,        & !< 15-day smoothed precipitation at the end of the previous day [K]
+      & precip_15d,             & !< 15-day smoothed precipitation [kg m-2 s-1]
+      & precip_15d_yDay,        & !< 15-day smoothed precipitation at the end of the previous day [kg m-2 s-1]
       & gdd5_sum_year,          & !< Current number of growing degree days of this year
       & gdd5_prev_year,         & !< Growing degree days of previous year
       & max_snow_year,          & !< Maximum snow depth in current year [m]
       & max_snow_prev_year,     & !< Maximum snow depth in previous year [m]
       & max_thaw_year,          & !< Maximum soil column thaw depth in current year [m]
-      & max_thaw_10year,        & !< Smoothed maximum soil column thaw depth (~10 years) [m]
+      & max_thaw_prev_year,     & !< Maximum soil column thaw depth in previous year [m]
       & max_wind_of_day,        & !< Current maximum wind speed of the day [m s-1]
       & max_wind_yDay,          & !< Maximum wind speed of the previous day [m s-1]
       & max_wind_4yr,           & !< Smoothed maximum wind speed (~4 years) [m s-1]
@@ -100,7 +100,6 @@ CONTAINS
       & F_15d,                  & !< Factor for 15-day smoothing
       & N_15d                     !< Factor for 15-day smoothing
 
-    REAL(wp), PARAMETER :: persist_thaw_depth = 0.9_wp      ! ~10 years
     REAL(wp), PARAMETER :: persist_wind       = 0.9995_wp   ! ~4  years
     REAL(wp), PARAMETER :: persist_rel_hum    = 0.95_wp     ! ~14 days
     ! ------------------------------------------------------------------------------------------------------ !
@@ -143,7 +142,7 @@ CONTAINS
     IF (.NOT. new_year .OR. lstart) THEN
       max_thaw_year = MAX(max_thaw_year, thaw_depth)
     ELSE
-      max_thaw_10year = max_thaw_10year * persist_thaw_depth + max_thaw_year * (1._wp - persist_thaw_depth)
+      max_thaw_prev_year = max_thaw_year
       max_thaw_year = 0._wp
       max_thaw_year = MAX(max_thaw_year, thaw_depth)
     ENDIF
@@ -216,13 +215,15 @@ CONTAINS
   !>
   ! -------------------------------------------------------------------------------------------------------- !
   ELEMENTAL PURE SUBROUTINE calc_climbuf_3d ( &
-    & lstart, new_day, dtime, t_soil, wtr_soil_rel, seconds_day, &
-    & t_soil_15d, t_soil_15d_yDay, wtr_soil_rel_15d, wtr_soil_rel_15d_yDay &
-    & )
+    & lstart, new_day, new_year, dtime, t_soil, wtr_soil_rel, seconds_day, &
+    & t_soil_15d, t_soil_15d_yDay, wtr_soil_rel_15d, wtr_soil_rel_15d_yDay, &
+    & max_t_soil_year, permafrost_period)
+    USE mo_jsb_physical_constants, ONLY: tmelt
 
     LOGICAL, INTENT(in) :: &
       & lstart,                 & !< This is the first time step in a simulation
-      & new_day                   !< This is the first time step of the day
+      & new_day,                & !< This is the first time step of the day
+      & new_year                  !< This is the first time step of the year
 
     REAL(wp), INTENT(in) :: &
       & dtime,                  & !< Time step length [s]
@@ -234,7 +235,9 @@ CONTAINS
       & t_soil_15d,             & !< 15-day smoothed soil layer temperature [K]
       & t_soil_15d_yDay,        & !< 15-day smoothed soil layer temperature at the end of the previous day [K]
       & wtr_soil_rel_15d,       & !< 15-day smoothed relative soil layer moisture [-]
-      & wtr_soil_rel_15d_yDay     !< 15-day smoothed relative soil layer moisture at the end of the previous day [-]
+      & wtr_soil_rel_15d_yDay,  & !< 15-day smoothed relative soil layer moisture at the end of the previous day [-]
+      & max_t_soil_year,        & !< Maximum soil layer temperature in previous year [K]
+      & permafrost_period         !< Number of years of consecutively frozen soil layer [yr]
 
     ! Local variables
     REAL(wp) :: &
@@ -257,6 +260,19 @@ CONTAINS
       wtr_soil_rel_15d_yDay = wtr_soil_rel_15d
     END IF
 
+    !-- Soil thermal states (temperature and permafrost)
+    !  ---------------------
+    IF (new_year) THEN
+      IF (max_t_soil_year < tmelt) THEN
+        permafrost_period = permafrost_period + 1._wp
+      ELSE
+        permafrost_period = 0._wp
+      END IF
+      max_t_soil_year = t_soil
+    ELSE
+      max_t_soil_year = MAX(t_soil, max_t_soil_year)
+    END IF
+
   END SUBROUTINE calc_climbuf_3d
 
   ! ======================================================================================================== !
@@ -266,46 +282,37 @@ CONTAINS
   !> We here calculate relative humidity of the lowest atmospheric level
   !>
   ! -------------------------------------------------------------------------------------------------------- !
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
   FUNCTION get_relative_humidity_air(air_moisture, air_temperature, air_press, use_tmx) RESULT(relative_humidity_air)
 
     USE mo_jsb_physical_constants, ONLY: rd  ! gas constant for dry air [J/(K*kg)]
     USE mo_jsb_physical_constants, ONLY: rv  ! gas constant for water vapor [J/(K*kg)]
     USE mo_phy_schemes,            ONLY: qsat_water, qsat_mixed
 
+    !$ACC ROUTINE SEQ
     REAL(wp), INTENT(in) :: &
-      & air_moisture(:),      & !< Specific humidity of air [kg kg-1]
-      & air_temperature(:),   & !< Temperature of air [K]
-      & air_press(:)            !< Pressure of air [Pa]
+      & air_moisture,       & !< Specific humidity of air [kg kg-1]
+      & air_temperature,    & !< Temperature of air [K]
+      & air_press             !< Pressure of air [Pa]
     LOGICAL, INTENT(in) :: &
-      & use_tmx                 !< Turbulent mixing scheme 'tmx' is used in coupling to the atmosphere:
-                                !< if true, we use qsat_water, else qsat_mixed
+      & use_tmx               !< Turbulent mixing scheme 'tmx' is used in coupling to the atmosphere:
+                              !< if true, we use qsat_water, else qsat_mixed
 
     REAL(wp) :: &
-      & air_qsat,             & !< Saturation specific humidity []
-      & relative_humidity_air(SIZE(air_moisture)) !< Relative humidity [%]
+      & air_qsat,           & !< Saturation specific humidity []
+      & relative_humidity_air !< Relative humidity [%]
 
-    INTEGER :: &
-      & ic,                   & !< Looping index for grid cells
-      & nc                      !< Number of grid cells in current block
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_relative_humidity_air'
-
-    nc = SIZE(air_moisture)
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
-    !$ACC   PRIVATE(air_qsat)
-    DO ic = 1, nc
-      IF (use_tmx) THEN
-        air_qsat = qsat_water(air_temperature(ic), air_press(ic))
-      ELSE
-        air_qsat = qsat_mixed(air_temperature(ic), air_press(ic))
-      END IF
-      relative_humidity_air(ic) = 100._wp * air_moisture(ic)                                       &
-                                 * (  (1._wp - rd / rv) * air_qsat + (rd / rv) )                   &
-                                 / ( ((1._wp - rd / rv) * air_moisture(ic) + (rd / rv)) * air_qsat )
-      relative_humidity_air(ic) = MIN(100._wp, relative_humidity_air(ic))
-    END DO
-    !$ACC END PARALLEL LOOP
+    IF (use_tmx) THEN
+      air_qsat = qsat_water(air_temperature, air_press)
+    ELSE
+      air_qsat = qsat_mixed(air_temperature, air_press)
+    END IF
+    relative_humidity_air = 100._wp * air_moisture                                           &
+                           * (  (1._wp - rd / rv) * air_qsat + (rd / rv) )                   &
+                           / ( ((1._wp - rd / rv) * air_moisture + (rd / rv)) * air_qsat )
+    relative_humidity_air = MIN(100._wp, relative_humidity_air)
 
   END FUNCTION get_relative_humidity_air
 #endif

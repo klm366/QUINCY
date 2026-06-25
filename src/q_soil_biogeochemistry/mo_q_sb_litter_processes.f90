@@ -16,7 +16,7 @@
 !>#### routines for litter transport and partitioning for the both JSM and SSM (soil models in QUINCY)
 !>
 MODULE mo_q_sb_litter_processes
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,            ONLY: wp
   USE mo_lnd_bgcm_idx
