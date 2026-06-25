@@ -16,7 +16,7 @@
 !>#### definition and init of (memory) variables for the soil-biogeochemistry process
 !>
 MODULE mo_sb_memory_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: finish, message
@@ -24,12 +24,12 @@ MODULE mo_sb_memory_class
 
   USE mo_jsb_process_class,      ONLY: SB_
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
-    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id
+    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id, &
+    &                                  t_lnd_bgcm
   USE mo_lnd_bgcm_store_class,   ONLY: SB_BGCM_POOL_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
     &                                  SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
-  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
   USE mo_jsb_cqt_class,          ONLY: IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE
 
@@ -400,7 +400,7 @@ MODULE mo_sb_memory_class
   !>
   !> Type definition for sb_bgc_material_elements
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_sb_bgcm_with_elements
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_sb_bgcm_with_elements
     TYPE(t_jsb_var_real3d), POINTER :: carbon
     TYPE(t_jsb_var_real3d), POINTER :: nitrogen
     TYPE(t_jsb_var_real3d), POINTER :: phosphorus
@@ -416,7 +416,7 @@ MODULE mo_sb_memory_class
   !>
   !> Type definition for sb_bgc_material_components
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_sb_bgcm_with_components
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_sb_bgcm_with_components
     TYPE(t_sb_bgcm_with_elements), POINTER :: dom              !< elements of dissolved organic matter
     TYPE(t_sb_bgcm_with_elements), POINTER :: dom_assoc        !< elements of minerally associated dissolved organic matter
     TYPE(t_sb_bgcm_with_elements), POINTER :: soluable_litter  !< elements of metabolic litter (sugars, cellulose etc.)
@@ -435,17 +435,17 @@ MODULE mo_sb_memory_class
   !>
   !> Type definition for sb_bgc_material_main
   !> the main bgc_material structure containing all SB_ bgc_material structures
-  !> main structure, added directly into the "TYPE(t_jsb_memory) :: t_sb_memory" as "CLASS(t_jsb_pool) :: bgc_material"
+  !> main structure, added directly into the "TYPE(t_jsb_memory) :: t_sb_memory" as "CLASS(t_lnd_bgcm) :: bgc_material"
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_sb_bgcm_main
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_sb_bgcm_main
     !! pools
-    TYPE(t_sb_bgcm_with_components), POINTER :: sbbpool
-    TYPE(t_sb_bgcm_with_elements),   POINTER :: sbbdelta_pools
+    TYPE(t_sb_bgcm_with_components), POINTER :: sb_pool
+    TYPE(t_sb_bgcm_with_elements),   POINTER :: sb_delta_pools
     ! !! fluxes
-    TYPE(t_sb_bgcm_with_components), POINTER :: sbbformation
-    TYPE(t_sb_bgcm_with_components), POINTER :: sbbloss
-    TYPE(t_sb_bgcm_with_components), POINTER :: sbbtransport
-    TYPE(t_sb_bgcm_with_elements),   POINTER :: sbbmyco_export
+    TYPE(t_sb_bgcm_with_components), POINTER :: sb_formation
+    TYPE(t_sb_bgcm_with_components), POINTER :: sb_loss
+    TYPE(t_sb_bgcm_with_components), POINTER :: sb_transport
+    TYPE(t_sb_bgcm_with_elements),   POINTER :: sb_myco_export
   CONTAINS
     PROCEDURE :: Get_element_name_by_id     => sb_bgcm_main_get_element_name_by_id
     PROCEDURE :: Init                       => sb_bgcm_main_init
@@ -553,7 +553,6 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !>  1.0 bgc_material structures
       !>
-      !>  @TODO replace "b" in bgcm object names by "_" (sbbpool -> sb_pool) !!
       !>
       ! copy elements_index_map from config to local
       elem_idx_map(:) = model%config%elements_index_map(:)
@@ -578,19 +577,19 @@ CONTAINS
       !>
       ! "shortname" is used for model output names
       ! sb_pool
-      mem%sb_bgcm_main%sbbpool => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+      mem%sb_bgcm_main%sb_pool => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
         & SB_BGCM_POOL_ID, name = 'soil_biogeochemistry_bgcm_pool', shortname = 'sb_bgcm_pool', &
         & unit = unit_sb_pool, elements_index_map = elem_idx_map(:))
       ! sb_formation
-      mem%sb_bgcm_main%sbbformation => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,                   &
+      mem%sb_bgcm_main%sb_formation => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,                   &
         & SB_BGCM_FORMATION_ID, name = 'soil_biogeochemistry_bgcm_formation', shortname = 'sb_bgcm_formation', &
         & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
       ! sb_loss
-      mem%sb_bgcm_main%sbbloss => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+      mem%sb_bgcm_main%sb_loss => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
         & SB_BGCM_LOSS_ID, name = 'soil_biogeochemistry_bgcm_loss', shortname = 'sb_bgcm_loss', &
         & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
       ! sb_transport
-      mem%sb_bgcm_main%sbbtransport => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+      mem%sb_bgcm_main%sb_transport => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
         & SB_BGCM_TRANSPORT_ID, name = 'soil_biogeochemistry_bgcm_transport', shortname = 'sb_bgcm_transport', &
         & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
 
@@ -599,11 +598,11 @@ CONTAINS
       !>
       ! "shortname" is used for model output names
       ! sb_delta_pools
-      mem%sb_bgcm_main%sbbdelta_pools => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,            &
+      mem%sb_bgcm_main%sb_delta_pools => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,            &
         & name = 'soil_biogeochemistry_bgcm_delta_pools', shortname = 'sb_bgcm_delta_pools',            &
         & elements_index_map = elem_idx_map(:), unit = unit_sb_pool, bgcm_id = SB_BGCM_DELTA_POOLS_ID)
       ! sb_myco_export
-      mem%sb_bgcm_main%sbbmyco_export => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,        &
+      mem%sb_bgcm_main%sb_myco_export => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,        &
         & name = 'soil_biogeochemistry_bgcm_myco_export', shortname = 'sb_bgcm_myc_exp',            &
         & elements_index_map = elem_idx_map(:), unit = unit_sb_flux, bgcm_id = SB_BGCM_MYCO_EXPORT_ID)
 
@@ -611,7 +610,7 @@ CONTAINS
       CALL mem%bgc_material%Set_paths()
 
       ! add variables to bgc_material
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbpool,                                 &
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_pool,                                 &
         & hgrid, surface, vgrid_soil_w,                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
@@ -620,7 +619,7 @@ CONTAINS
         & lrestart = .TRUE.,                                                     &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE,                                &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbformation,                            &
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_formation,                            &
         & hgrid, surface, vgrid_soil_w,                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
@@ -630,7 +629,7 @@ CONTAINS
         & cons_quan_type_id = IQ_SL_FLUX_CQ_TYPE,                                &
         & transfer_all = .TRUE.,                                                 &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbloss, &
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_loss, &
         & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -638,7 +637,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbtransport, &
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_transport, &
         & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -646,7 +645,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbdelta_pools, &
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_delta_pools, &
         & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -654,7 +653,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbmyco_export, &
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_myco_export, &
         & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -806,7 +805,7 @@ CONTAINS
 
       CALL mem%Add_var('sb_pool_total_bg_soil_n15', mem%sb_pool_total_bg_soil_n15, &
         & hgrid, vgrid_soil_w, &
-        & t_cf('sb_pool_total_som_n15', 'mol m-3', 'total N15, sum of SOM and below ground litter in sb_pool components'), &
+        & t_cf('sb_pool_total_bg_soil_n15', 'mol m-3', 'total N15, sum of SOM and below ground litter in sb_pool components'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2328,7 +2327,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
@@ -2412,7 +2411,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = output_level_local, &
-        & loutput = output_switch_local, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
@@ -2532,7 +2531,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp, &
         & l_aggregate_all = .TRUE.)
@@ -3598,10 +3597,10 @@ CONTAINS
     &                                   l_elements, element_list, element_unit)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_sb_bgcm_with_elements),     INTENT(inout) :: this                   ! bgcm object
-    CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! bgcm name       (No spaces !)
+    CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! bgcm short name (No spaces !)
     INTEGER,                            INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,         INTENT(in)    :: element_list(:) ! @TODO remove | list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,         INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3654,10 +3653,10 @@ CONTAINS
   SUBROUTINE sb_bgcm_with_components_init(this, name, shortname, elements_index_map, &
     &                                     l_elements, element_list, element_unit)
     CLASS(t_sb_bgcm_with_components),     INTENT(inout) :: this                   ! bgcm object
-    CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! bgcm name       (No spaces !)
+    CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! bgcm short name (No spaces !)
     INTEGER,                              INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,           INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,           INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3681,10 +3680,10 @@ CONTAINS
   SUBROUTINE sb_bgcm_main_init(this, name, shortname, elements_index_map, &
     &                          l_elements, element_list, element_unit)
     CLASS(t_sb_bgcm_main),          INTENT(inout) :: this                   ! bgcm object
-    CHARACTER(LEN=*),               INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),               INTENT(in)    :: name                   ! bgcm name       (No spaces !)
+    CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! bgcm short name (No spaces !)
     INTEGER,                        INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,     INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,     INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3700,10 +3699,10 @@ CONTAINS
   !>
   !> create, init and append a sb bgcm with components
   !>
-  FUNCTION Add_sb_bgc_material_with_components(pool, bgcm_id, name, shortname, unit, elements_index_map) &
+  FUNCTION Add_sb_bgc_material_with_components(bgcm, bgcm_id, name, shortname, unit, elements_index_map) &
       & RESULT(sb_bgcm_with_components)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool), TARGET,  INTENT(INOUT) :: pool                  !< pool to which this pool with component should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: bgcm                  !< bgcm to which this bgcm with component should be added
     INTEGER,                    INTENT(in)    :: bgcm_id               !< id of this sb bgcm with components
     CHARACTER(LEN=*),           INTENT(in)    :: name                  !< name of this sb bgcm with components
     CHARACTER(LEN=*),           INTENT(in)    :: shortname             !< shortname of this sb bgcm with components
@@ -3748,18 +3747,18 @@ CONTAINS
     sb_bgcm_with_components%residue_assoc => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
       & name = 'residue_assoc_bgcm', shortname = 'residue_assoc', elements_index_map = elements_index_map(:), unit = unit)
 
-    ! Add the bookkeepoing for this sb bgcm with components
-    CALL pool%Add_pool(sb_bgcm_with_components, bgcm_id)
+    ! Add the bookkeeping for this sb bgcm with components
+    CALL bgcm%Add_bgcm(sb_bgcm_with_components, bgcm_id)
   END FUNCTION Add_sb_bgc_material_with_components
 
   ! ======================================================================================================= !
   !>
   !> create, init and append a sb bgcm with elements
   !>
-  FUNCTION Add_sb_bgc_material_with_elements(pool,  name, shortname, elements_index_map, unit, bgcm_id) &
+  FUNCTION Add_sb_bgc_material_with_elements(bgcm,  name, shortname, elements_index_map, unit, bgcm_id) &
       & RESULT(sb_bgcm_with_elements)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool), TARGET,  INTENT(INOUT) :: pool                  !< pool to which this pool with elements should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: bgcm                  !< bgcm to which this bgcm with elements should be added
     CHARACTER(LEN=*),           INTENT(in)    :: name                  !< name of this sb bgcm with elements
     CHARACTER(LEN=*),           INTENT(in)    :: shortname             !< shortname of this sb bgcm with elements
     INTEGER,                    INTENT(in)    :: elements_index_map(:) !< mapping elements ID -> IND
@@ -3772,7 +3771,7 @@ CONTAINS
 
     CALL sb_bgcm_with_elements%Init(name = name, shortname = shortname,  &
       & elements_index_map = elements_index_map(:), l_elements = .TRUE., element_unit = unit)
-    CALL pool%Add_pool(sb_bgcm_with_elements, bgcm_id)
+    CALL bgcm%Add_bgcm(sb_bgcm_with_elements, bgcm_id)
   END FUNCTION Add_sb_bgc_material_with_elements
 
 #endif

@@ -815,14 +815,10 @@ CONTAINS
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
 
-#ifndef __NO_QUINCY__
     USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter
     USE mo_quincy_model_config,       ONLY: QCANOPY
     USE mo_isotope_util,              ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     dsl4jsb_Use_processes A2L_, HYDRO_
-#else
-    dsl4jsb_Use_processes A2L_, HYDRO_
-#endif
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -852,7 +848,6 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: evapopot
     dsl4jsb_Real2D_onDomain :: co2_air
     dsl4jsb_Real2D_onDomain :: co2_air_mol
-#ifndef __NO_QUINCY__
     ! quincy
     dsl4jsb_Real2D_onDomain :: co2_mixing_ratio
     dsl4jsb_Real2D_onDomain :: CO2_mixing_ratio_c13
@@ -861,7 +856,6 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: daytime_counter
     dsl4jsb_Real2D_onDomain :: daylength_prev_day
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
-#endif
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:), co2_air_dc13(:,:), co2_air_Dc14(:,:)
@@ -991,18 +985,14 @@ CONTAINS
         !$ACC END PARALLEL LOOP
 
       END IF
-#ifndef __NO_QUINCY__
 
-      ! if quincy
       IF (model%config%model_scheme == MODEL_QUINCY) THEN
        ! Allocate and enter data for C13 and C14 based on configuration flags
         ALLOCATE(co2_air_dc13(nproma, nblks))
         !$ACC ENTER DATA CREATE(co2_air_dc13)
         ALLOCATE(co2_air_Dc14(nproma, nblks))
         !$ACC ENTER DATA CREATE(co2_air_Dc14)
-
       END IF
-#endif
 
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_forcing(model%id))
 
@@ -1038,7 +1028,6 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
           & dsl4jsb_var2D_onDomain(A2L_, press_srf)                                    &
           & )
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         CALL get_standalone_driver( &
           ! in
@@ -1066,7 +1055,6 @@ CONTAINS
           & co2_air_dc13,                                                              &
           & co2_air_Dc14                                                               &
           & )
-#endif
       END SELECT
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
@@ -1080,14 +1068,6 @@ CONTAINS
       ENDDO
       !$ACC END PARALLEL LOOP
 
-      !> Check that the QUINCY code has been compiled (--enable-quincy configure flag)
-      !> if the ICON-Land QUINCY model is selected to run.
-      !>
-#ifdef __NO_QUINCY__
-      IF (model%config%model_scheme == MODEL_QUINCY) &
-        &  CALL finish(routine, 'The ICON-Land QUINCY model requires the --enable-quincy compile flag. Stop.')
-#endif
-#ifndef __NO_QUINCY__
       ! --------------------------------------------------------------------------------------------------- !
       !> code specific to the QUINCY model
       !>
@@ -1143,7 +1123,6 @@ CONTAINS
         !$ACC END PARALLEL LOOP
 
       END SELECT
-#endif
 
       !$ACC WAIT(1)
 
