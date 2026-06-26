@@ -52,6 +52,11 @@ PROGRAM example
   dsl4jsb_var3D_onDomain(SOIL_,ws_l)
   dsl4jsb_Aggregate_onChunk(SOIL_,ws, aggregator)
 
+  dsl4jsb_Def_pool(t_basic_pool) :: green
+  dsl4jsb_Get_pool(CARBON_, pools%plant%green, green)
+  dsl4jsb_pool(CARBON_, pools%plant%green)%carbon
+  dsl4jsb_Get_pool_var2d_onChunk(CARBON_, pools%soil, soil_respiration)
+
   dsl4jsb_Get_lcc_relocations(WLCC_, lcc_relocations)
   dsl4jsb_Get_lcc_area_matrix(initial_area)
 

@@ -22,7 +22,7 @@ MODULE mo_quincy_output_class
   PRIVATE
 
   PUBLIC :: unit_flux, unit_pool, unit_soillayer_flux, unit_soillayer_pool, unit_cn, unit_nc, unit_np, unit_pn, unit_cp
-  PUBLIC :: unitless, unit_hydro_pool, unit_hydro_flux, unit_water_potential, unit_veg_pool, unit_veg_flux, unit_assimi_rates
+  PUBLIC :: unitless, unit_hydro_pool, unit_hydro_flux, unit_water_potential, unit_veg_pool_flux, unit_assimi_rates
   PUBLIC :: unit_fraction, unit_energy, unit_temperature, unit_speed, unit_size, unit_bulk_dens, unit_rain
   PUBLIC :: unit_conductivity, unit_sb_pool, unit_sb_flux
 
@@ -57,8 +57,7 @@ MODULE mo_quincy_output_class
   CHARACTER(len=*), PARAMETER :: unitless             = '--'
   CHARACTER(len=*), PARAMETER :: unit_conductivity    = "m s-1"
 
-  CHARACTER(len=*), PARAMETER :: unit_veg_pool  = 'mol m-2'
-  CHARACTER(len=*), PARAMETER :: unit_veg_flux  = 'mol m-2 timestep-1'
+  CHARACTER(len=*), PARAMETER :: unit_veg_pool_flux   = 'mol m-2 timestep-1'
 
   CHARACTER(len=*), PARAMETER :: unit_sb_pool   = 'mol m-3'
   CHARACTER(len=*), PARAMETER :: unit_sb_flux   = 'mol m-3 timestep-1'

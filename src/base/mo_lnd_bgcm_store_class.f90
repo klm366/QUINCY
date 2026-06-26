@@ -19,7 +19,7 @@ MODULE mo_lnd_bgcm_store_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
-  USE mo_lnd_bgcm_class,      ONLY: t_lnd_bgcm
+  USE mo_jsb_pool_class,      ONLY: t_jsb_pool
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p
   USE mo_jsb_varlist,         ONLY: VARNAME_LEN
   USE mo_jsb_impl_constants,  ONLY: MEDIUM_NAME_LEN, SHORT_NAME_LEN
@@ -135,9 +135,9 @@ MODULE mo_lnd_bgcm_store_class
   ABSTRACT INTERFACE
     SUBROUTINE Append_bgcms_interface(this, main_bgcm, nblks, nproma, nsoil, tile_name, idx_bgcm, &
         &                             idx_1l_2d_bgcm, idx_2l_2d_bgcm, idx_1l_3d_bgcm, idx_2l_3d_bgcm)
-      IMPORT :: t_lnd_bgcm_store_abstract, t_lnd_bgcm
+      IMPORT :: t_lnd_bgcm_store_abstract, t_jsb_pool
       CLASS(t_lnd_bgcm_store_abstract), INTENT(inout) :: this
-      CLASS(t_lnd_bgcm),                INTENT(in)    :: main_bgcm
+      CLASS(t_jsb_pool),                INTENT(in)    :: main_bgcm
       INTEGER,                          INTENT(in)    :: nblks, nproma, nsoil
       CHARACTER(len=*),                 INTENT(in)    :: tile_name
       INTEGER,                          INTENT(inout) :: idx_bgcm

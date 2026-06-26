@@ -38,14 +38,15 @@ MODULE mo_pplcc_interface
   USE mo_jsb_process_class,   ONLY: t_jsb_process
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_var_class,       ONLY: REAL2D, REAL3D
-  USE mo_quincy_model_config, ONLY: QCANOPY
-  USE mo_quincy_output_class, ONLY: unit_sb_pool, unit_sb_flux, unit_veg_flux
 
   USE mo_jsb_time,          ONLY: is_newday
   USE mo_jsb_cqt_class,     ONLY: Get_cqt_name, LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
     &                             BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE, &
     &                             IQ_2L2D_POOL_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE, &
     &                             IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE
+
+  USE mo_quincy_model_config, ONLY: QCANOPY
+  USE mo_quincy_output_class, ONLY: unit_sb_pool, unit_sb_flux, unit_veg_pool_flux
 
   USE mo_carbon_interface,  ONLY: recalc_carbon_per_tile_vars
 
@@ -254,7 +255,7 @@ CONTAINS
               ! in quincy the 2D pool type variables are in mol per tile
               expected_string_in_unit = 'mol m-2'
             ELSE IF(cqt_id == IQ_FLUX_CQ_TYPE) THEN
-              expected_string_in_unit = unit_veg_flux
+              expected_string_in_unit = unit_veg_pool_flux
             ELSE IF(cqt_id == IQ_SL_POOL_CQ_TYPE) THEN
               ! in quincy the 3D pool type variables are in mol per tile and layer
               expected_string_in_unit = unit_sb_pool
