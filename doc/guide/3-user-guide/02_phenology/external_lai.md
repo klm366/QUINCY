@@ -36,21 +36,11 @@ At experiment start three files are read:
 | --- | --- |
 | *Y* − 1 | December mean → slot 0 (lower bound for January interpolation) |
 | *Y* | January–December means → slots 1–12 |
-| *Y* + 1 | All 12 months → internal preload buffer `lai_mon_next`; January → slot 13 |
+| *Y* + 1 | January mean → slot 13 (upper bound for December interpolation) |
 
-At each subsequent year transition only **one file** is read (*Y*+2, the year after next), which is
-preloaded into `lai_mon_next`. The new interpolation buffer is then assembled from the old December
-(old slot 12 → new slot 0), the preload buffer (new slots 1–12), and the newly read January of *Y*+2
-(new slot 13) — without re-reading any previously processed year.
-
-### Annual mode (`extlai_mode = 'annual'`)
-
-Each yearly file contains a single annual target LAI per PFT. Following the ALCC
-convention, the file for year *Y*+1 is read at the beginning of year *Y* and used as the
-end-of-year target. A constant per-second increment is computed from
-`(target_lai - current_lai) / year_length_in_seconds` and applied every model timestep, so
-that LAI reaches the prescribed target value by 31 December. The increment is stored in
-the restart file so that mid-year restarts resume the same linear ramp.
+At each subsequent year transition **two files** are read (*Y*+1 and *Y*+2). The December value
+from the old slot 12 is copied to slot 0 (no re-read), slots 1–12 are filled from file *Y*+1,
+and slot 13 is filled with January from file *Y*+2.
 
 ---
 
@@ -64,7 +54,6 @@ Files must follow the pattern `{extlai_filename_prefix}{YYYY}.nc`, e.g.
 | Mode | Year read | Purpose |
 | --- | --- | --- |
 | `monthly` | *Y* | Current-year monthly LAI values |
-| `annual` | *Y* + 1 | End-of-year LAI target for year *Y* |
 
 ### Variable names
 
@@ -79,7 +68,6 @@ file must contain variables `pheno_lai_trbee`, `pheno_lai_trdc`, and
 | Mode | Expected variable dimensions | Units |
 | --- | --- | --- |
 | `monthly` | `(nproma, nblks, 12)` | m² m⁻² |
-| `annual` | `(nproma, nblks)` | m² m⁻² |
 
 All LAI values must be **non-negative** and must not exceed the configured upper bound
 `extlai_lai_max` (default 20 m² m⁻²). The model aborts with a clear error message if
@@ -92,7 +80,7 @@ either constraint is violated.
 ```fortran
 &jsb_pheno_nml
   scheme                  = 'external_lai'   ! Select this scheme
-  extlai_mode             = 'monthly'        ! 'monthly' (default) or 'annual'
+  extlai_mode             = 'monthly'        ! only 'monthly' is currently implemented
   extlai_filename_prefix  = 'fc_land_lai_'   ! Prefix for yearly input files
   extlai_lai_max          = 20.0             ! Upper bound guard [m2 m-2]
 /
@@ -101,7 +89,7 @@ either constraint is violated.
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `scheme` | string | `'logrop'` | Must be set to `'external_lai'` |
-| `extlai_mode` | string | `'monthly'` | `'monthly'` or `'annual'` |
+| `extlai_mode` | string | `'monthly'` | Temporal mode; only `'monthly'` is currently implemented |
 | `extlai_filename_prefix` | string | `'fc_land_lai_'` | File path prefix; year and `.nc` are appended |
 | `extlai_lai_max` | real | `20.0` | Maximum allowed LAI value; model aborts if exceeded |
 

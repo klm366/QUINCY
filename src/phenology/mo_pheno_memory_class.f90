@@ -51,10 +51,6 @@ MODULE mo_pheno_memory_class
     REAL(wp), POINTER :: lai_mon(:,:,:)       => NULL()   !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14> !
     REAL(wp), POINTER :: fract_fpc_mon(:,:,:) => NULL()   !< Monthly fpc (per year or climatology) <nproma x nblks x 14> !
 
-    ! --- external_lai scheme state (annual mode only; monthly mode reuses lai_mon above) ---
-    TYPE(t_jsb_var_real2d) :: extlai_target  !< Annual target LAI [m2 m-2]; initval -1.0 = sentinel (not yet read)
-    TYPE(t_jsb_var_real2d) :: extlai_incr    !< Per-timestep LAI increment [m2 m-2 s-1]; restartable
-
     ! Diagnostic land mean phenology e.g. for monitoring (only available with ICON)
     TYPE(t_jsb_var_real1d) ::           &
       & lai_ta_gmean,                   & !< Global Land mean LAI (box tile)
@@ -181,26 +177,6 @@ CONTAINS
         !$ACC ENTER DATA CREATE(mem%lai_mon, mem%fract_fpc_mon)
         !$ACC ENTER DATA ATTACH(mem%lai_mon, mem%fract_fpc_mon)
       ! END IF
-
-      IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'external_lai' .AND. &
-        & TRIM(dsl4jsb_Config(PHENO_)%extlai_mode) == 'annual'   .AND. &
-        & lib_id > 0) THEN                                               ! PFT tiles only
-
-        CALL mem%Add_var( 'extlai_target', mem%extlai_target,                          &
-          & hgrid, surface,                                                             &
-          & t_cf('extlai_target', 'm2 m-2', 'Annual external LAI target (from file)'), &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
-          & prefix, suffix,                                                             &
-          & loutput=.FALSE., lrestart=.FALSE., initval_r=-1.0_wp )                      ! -1.0: sentinel, not yet read
-
-        CALL mem%Add_var( 'extlai_incr', mem%extlai_incr,                              &
-          & hgrid, surface,                                                             &
-          & t_cf('extlai_incr', 'm2 m-2 s-1', 'Per-timestep LAI increment'),           &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
-          & prefix, suffix,                                                             &
-          & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp )
-
-      END IF
 
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(2,0,28, grib_bits)

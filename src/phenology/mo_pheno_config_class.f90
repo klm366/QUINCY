@@ -33,7 +33,7 @@ MODULE mo_pheno_config_class
     !LOGICAL :: first_call_phenology_this_day         !< TRUE marks if a new day has just started and
     !                                                 !< update_phenology is called for the top tile
     ! --- external_lai scheme settings ---
-    CHARACTER(len=:), ALLOCATABLE :: extlai_mode             !< Temporal mode for external LAI: 'monthly' or 'annual'
+    CHARACTER(len=:), ALLOCATABLE :: extlai_mode             !< Temporal mode for external LAI (only 'monthly' currently implemented)
     CHARACTER(len=:), ALLOCATABLE :: extlai_filename_prefix  !< Filename prefix for external LAI yearly files (prefix + YYYY.nc)
     REAL(wp)                      :: extlai_lai_max          !< Upper bound guard for external LAI values (m2/m2)
     CONTAINS
@@ -106,6 +106,10 @@ CONTAINS
 
     ! Cross-check: external_lai scheme is not supported with QUINCY or with jsbach_forest_age_classes
     IF (TRIM(config%scheme) == 'external_lai') THEN
+      IF (TRIM(config%extlai_mode) /= 'monthly') THEN
+        CALL finish(TRIM(routine), &
+          & 'Unsupported extlai_mode: '''//TRIM(config%extlai_mode)//'''. Currently only ''monthly'' is implemented.')
+      END IF
       IF (TRIM(config%model_config%model_scheme_char) == 'quincy') THEN
         CALL finish(TRIM(routine), &
           & 'The external_lai phenology scheme is not supported with QUINCY.')

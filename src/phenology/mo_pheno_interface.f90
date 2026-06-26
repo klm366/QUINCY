@@ -178,15 +178,12 @@ CONTAINS
   !!
   SUBROUTINE update_phenology_external_lai(tile, options)
 
-    USE mo_jsb_time,          ONLY: is_newyear, is_time_experiment_start, get_year, get_year_length
     USE mo_jsb_extvar_reader, ONLY: extvar_interpolate_monthly
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: dtime, year_length_secs
-    INTEGER  :: current_year
+    INTEGER  :: iblk, ics, ice, nc
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -194,8 +191,6 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
 
     dsl4jsb_Real2D_onChunk :: lai
-    dsl4jsb_Real2D_onChunk :: extlai_target
-    dsl4jsb_Real2D_onChunk :: extlai_incr
     REAL(wp), POINTER      :: lai_mon(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology_external_lai'
@@ -205,7 +200,6 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
-    dtime = options%dtime
 
     IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
@@ -226,40 +220,8 @@ CONTAINS
       CALL extvar_interpolate_monthly(lai_mon, lai, acc_stream)
 
     ELSE
-
-      ! Annual mode: linear ramp from current LAI toward the annually prescribed target value.
-      ! extlai_target holds the end-of-year target read at the beginning of the year;
-      ! extlai_incr   holds the constant per-second increment, recomputed each new year.
-      dsl4jsb_Get_var2D_onChunk(PHENO_, extlai_target)  ! in
-      dsl4jsb_Get_var2D_onChunk(PHENO_, extlai_incr)    ! inout
-
-      current_year     = get_year(options%current_datetime)
-      year_length_secs = REAL(get_year_length(current_year), wp) * 86400.0_wp
-
-      ! (Re-)compute the per-second increment at every new year and at experiment start
-      IF (is_newyear(options%current_datetime, dtime) .OR. &
-        & is_time_experiment_start(options%current_datetime)) THEN
-
-        IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), &
-          & 'Annual mode: recomputing LAI increment for tile '//TRIM(tile%name))
-
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic = 1, nc
-          ! Guard against sentinel value -1.0 (target not yet read from file)
-          IF (extlai_target(ic) >= 0.0_wp) THEN
-            extlai_incr(ic) = (extlai_target(ic) - lai(ic)) / year_length_secs
-          END IF
-        END DO
-        !$ACC END PARALLEL LOOP
-      END IF
-
-      ! Apply the per-second increment every timestep; clamp to non-negative LAI
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic = 1, nc
-        lai(ic) = MAX(0.0_wp, lai(ic) + extlai_incr(ic) * dtime)
-      END DO
-      !$ACC END PARALLEL LOOP
-
+      CALL finish(TRIM(routine), &
+        & 'Unsupported extlai_mode: '''//TRIM(dsl4jsb_Config(PHENO_)%extlai_mode)//'''.')
     END IF
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')

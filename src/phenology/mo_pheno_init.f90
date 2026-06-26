@@ -25,8 +25,7 @@ MODULE mo_pheno_init
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,              ONLY: missval
-  USE mo_jsb_extvar_reader,   ONLY: extvar_filename,                &
-    &                               t_extvar_monthly_ctx,           &
+  USE mo_jsb_extvar_reader,   ONLY: t_extvar_monthly_ctx,           &
     &                               extvar_monthly_open, extvar_monthly_update, extvar_monthly_close
 
   dsl4jsb_Use_processes PHENO_, HYDRO_, RAD_
@@ -357,19 +356,10 @@ CONTAINS
   !>
   !> Called at experiment start and once per new year from jsbach_start_timestep.
   !>
-  !> Monthly mode:
-  !>   At experiment start: reads files Y-1, Y, and Y+1 to fill slots 0..13.
-  !>   At each year transition (Y->Y+1): copies slot 12 to slot 0 (free), then reads all 12 months
-  !>   from file Y+1 (slots 1-12) and January from file Y+2 (slot 13).  Cost: 2 file reads per year.
-  !>
-  !> Annual  mode: reads a single annual target from the next-year file into extlai_target (ALCC convention).
-  !>
   SUBROUTINE read_extlai_data(model_id, current_datetime)
 
     USE mo_jsb_time_iface,  ONLY: t_datetime
-    USE mo_jsb_time,        ONLY: get_year
     USE mo_jsb_varlist,     ONLY: VARNAME_LEN
-    USE mo_io_units,        ONLY: filename_max
     USE mo_jsb_parallel,    ONLY: Get_omp_thread
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
@@ -380,11 +370,8 @@ CONTAINS
 
     dsl4jsb_Def_memory_tile(PHENO_, current_tile)
 
-    INTEGER                     :: current_year, no_omp_thread
+    INTEGER                     :: no_omp_thread
     TYPE(t_extvar_monthly_ctx)  :: ctx
-    TYPE(t_input_file)          :: input_file
-    REAL(wp), POINTER           :: ptr2d(:,:)
-    CHARACTER(len=filename_max) :: filename
     CHARACTER(len=VARNAME_LEN)  :: varname
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_extlai_data'
     ! -------------------------------------------------------------------------------------------------- !
@@ -414,8 +401,6 @@ CONTAINS
     ! Early return when not using the external_lai scheme
     IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'external_lai') RETURN
 
-    current_year = get_year(current_datetime)
-
     IF (TRIM(dsl4jsb_Config(PHENO_)%extlai_mode) == 'monthly') THEN
 
       CALL extvar_monthly_open(ctx, current_datetime, &
@@ -439,35 +424,9 @@ CONTAINS
 
       CALL extvar_monthly_close(ctx)
 
-    ELSE  ! annual mode: read next year's target
-
-      filename = extvar_filename(dsl4jsb_Config(PHENO_)%extlai_filename_prefix, current_year + 1)
-
-      IF (debug_on()) CALL message(TRIM(routine), 'Annual mode: reading target from '//TRIM(filename))
-
-      input_file = jsb_netcdf_open_input(TRIM(filename), model%grid_id)
-
-      current_tile => tile%Get_first_child_tile()
-      DO WHILE (ASSOCIATED(current_tile))
-
-        dsl4jsb_Get_memory_tile(PHENO_, current_tile)
-
-        WRITE(varname, '(a,a)') 'pheno_lai_', TRIM(current_tile%name)
-
-        ptr2d => input_file%Read_2d(variable_name=TRIM(varname),            &
-          & fill_array=pheno__mem__current_tile%extlai_target%ptr(:,:), &
-          & val_min=0._wp, val_max=dsl4jsb_Config(PHENO_)%extlai_lai_max)
-        NULLIFY(ptr2d)
-
-        !$ACC UPDATE DEVICE(pheno__mem__current_tile%extlai_target%ptr) ASYNC(1)
-
-        current_tile => current_tile%Get_next_sibling_tile()
-      END DO
-
-      !$ACC WAIT(1)
-
-      CALL input_file%Close()
-
+    ELSE
+      CALL finish(TRIM(routine), &
+        & 'Unsupported extlai_mode: '''//TRIM(dsl4jsb_Config(PHENO_)%extlai_mode)//'''.')
     END IF
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')

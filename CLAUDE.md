@@ -13,9 +13,9 @@ Activate with `scheme = 'external_lai'` in `&jsb_pheno_nml`.
 | File | Role |
 |---|---|
 | `src/phenology/mo_pheno_config_class.f90` | New namelist parameters: `extlai_mode`, `extlai_filename_prefix`, `extlai_lai_max`; validation against QUINCY / forest-age-class usecases |
-| `src/phenology/mo_pheno_memory_class.f90` | New fields: `extlai_target`, `extlai_incr` (annual mode) |
+| `src/phenology/mo_pheno_memory_class.f90` | No new fields; `external_lai` reuses `lai_mon` from the climatology scheme |
 | `src/phenology/mo_pheno_init.f90` | `read_extlai_data()`: reads yearly NetCDF files via `mo_jsb_extvar_reader` context API |
-| `src/phenology/mo_pheno_interface.f90` | `update_phenology_external_lai()`: per-timestep LAI update for both modes |
+| `src/phenology/mo_pheno_interface.f90` | `update_phenology_external_lai()`: per-timestep LAI interpolation (monthly mode) |
 | `src/shared/mo_jsb_extvar_reader.f90` | **NEW** — general-purpose reader and interpolator for external yearly BC variables; see API below |
 | `src/base/mo_jsb_time.f90` | Added `t_time_interpolation_weights` and `calculate_time_interpolation_weights` to PUBLIC (re-exported from `mo_jsb_time_iface`) |
 | `doc/guide/3-user-guide/02_phenology/external_lai.md` | User-facing documentation |
@@ -53,17 +53,11 @@ lai_mon(:,:,13)   = file(Y+2), month 1      ! Jan of Y+2
 `lai_mon` is read-only on the GPU; the CPU copy is always authoritative.
 No `ACC UPDATE HOST` is needed before the year-transition copy.
 
-### Annual mode (`extlai_mode = 'annual'`)
-
-Following the ALCC convention, file Y+1 is read at the start of year Y.  A constant
-per-second increment `(target − current_lai) / year_length_s` is computed and stored in
-`extlai_incr` (restart-capable).  LAI ramps linearly to reach the target by 31 December.
-
 ## Input file conventions
 
 - Filename pattern: `{extlai_filename_prefix}{YYYY}.nc`
 - Variable names: `pheno_lai_{tile_name}` for each PFT child tile of `veg`
-- Monthly mode dimensions: `(nproma, nblks, 12)` — annual mode: `(nproma, nblks)`
+- Monthly mode dimensions: `(nproma, nblks, 12)`
 
 ## General-purpose extvar reader (`src/shared/mo_jsb_extvar_reader.f90`)
 
