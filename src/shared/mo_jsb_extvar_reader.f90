@@ -70,7 +70,7 @@ MODULE mo_jsb_extvar_reader
   PUBLIC :: extvar_monthly_buffer_init
   PUBLIC :: extvar_monthly_buffer_advance
 
-  ! Time-interpolation utility — generic: 3D/2D (full-field) or 2D/1D (on-chunk)
+  ! Time-interpolation utility - generic: 3D/2D (full-field) or 2D/1D (on-chunk)
   INTERFACE extvar_interpolate_monthly
     MODULE PROCEDURE extvar_interpolate_monthly_2d
     MODULE PROCEDURE extvar_interpolate_monthly_1d
