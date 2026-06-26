@@ -168,13 +168,13 @@ CONTAINS
         CALL message(TRIM(routine), 'Reading land use data from maps.')
         config%scheme=tolower(config%scheme)
 
-      IF (l_daily_alcc) THEN
-        CALL message(TRIM(routine), '... land use change will be applied on a daily basis, reading next years land cover map' &
-          &                       //' as target land cover to reach by the end of the year.')
-      ELSE
-        CALL message(TRIM(routine), '... land use change will be applied on an annual basis,' &
-          &                       //' reading the land cover map of the current year to be applied in the first timestep.')
-      END IF
+        IF (l_daily_alcc) THEN
+          CALL message(TRIM(routine), '... land use change will be applied on a daily basis, reading next years land cover map' &
+            &                       //' as target land cover to reach by the end of the year.')
+        ELSE
+          CALL message(TRIM(routine), '... land use change will be applied on an annual basis,' &
+            &                       //' reading the land cover map of the current year to be applied in the first timestep.')
+        END IF
 
       CASE ('transition')
         CALL message(TRIM(routine), 'Reading land use change from transitions data.')
@@ -189,15 +189,14 @@ CONTAINS
           CALL message(TRIM(routine), '... land use change will be applied on an annual basis.')
         END IF
 
+        trans_layer  => new_vgrid('transitions', ZAXIS_GENERIC, SIZE(trans_names), &
+          & levels=(/ (REAL(i,kind=wp),i=1,SIZE(trans_names)) /), units='')
+        CALL register_vgrid(trans_layer)
 
       CASE DEFAULT
         CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
       END SELECT
     END IF
-
-    trans_layer  => new_vgrid('transitions', ZAXIS_GENERIC, SIZE(trans_names), &
-      & levels=(/ (REAL(i,kind=wp),i=1,SIZE(trans_names)) /), units='')
-    CALL register_vgrid(trans_layer)
 
   END SUBROUTINE Init_alcc_config
 

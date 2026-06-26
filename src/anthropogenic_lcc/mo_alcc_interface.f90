@@ -145,7 +145,8 @@ CONTAINS
     dsl4jsb_Def_config(ALCC_)                 !< Configuration of the anthropogenic land use change process
     dsl4jsb_Real3D_onChunk :: cf_target_year  !< Target cover fractions derived from annually read land use data []
     dsl4jsb_Real3D_onChunk :: cf_delta        !< Change in cover fractions derived from cf_target_year (annual or daily change) []
-    dsl4jsb_Real3D_onChunk :: transition_rate !< transition rate as read in mo_alcc_init:read_land_use_data (annual or daily change) []
+    dsl4jsb_Real3D_onChunk :: transition_rate !< transition rate as read in mo_alcc_init:read_land_use_data
+                                              !< (annual or daily change) []
 
     CLASS(t_jsb_tile_abstract), POINTER :: current_tile !< Pointer to the tile for which fraction changes are determined
     TYPE(t_jsb_model), POINTER          :: model        !< Current instance of the model
@@ -191,7 +192,6 @@ CONTAINS
     dsl4jsb_Get_memory(ALCC_)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_target_year)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_delta)
-    dsl4jsb_Get_var3D_onChunk(ALCC_, transition_rate)
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(ALCC_)) RETURN
@@ -319,6 +319,7 @@ CONTAINS
       END DO ! current_tile
 
     CASE('transition')
+      dsl4jsb_Get_var3D_onChunk(ALCC_, transition_rate)
 
       IF (dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN
         ! In case that area changes are daily the transition rates have to be divided by the number of days in the year
@@ -443,7 +444,6 @@ CONTAINS
     dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_memory(ALCC_)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_delta)
-    dsl4jsb_Get_var3D_onChunk(ALCC_, transition_rate)
     IF (model%Is_process_enabled(NLCC_)) THEN
       dsl4jsb_Get_memory(NLCC_)
     END IF
@@ -482,6 +482,7 @@ CONTAINS
 
     SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
     CASE('transition')
+      dsl4jsb_Get_var3D_onChunk(ALCC_, transition_rate)
       ALLOCATE(trans_names(SIZE(dsl4jsb_Config(ALCC_)%trans_names)))
       trans_names = dsl4jsb_Config(ALCC_)%trans_names
       idxe = SIZE(trans_names)

@@ -25,10 +25,10 @@ MODULE mo_alcc_memory_class
   USE mo_jsb_varlist,            ONLY: FULL
 
   ! Use of processes in this module
-  ! dsl4jsb_Use_processes ALCC_
+  dsl4jsb_Use_processes ALCC_
 
   ! Use process configurations
-  ! dsl4jsb_Use_config(ALCC_)
+  dsl4jsb_Use_config(ALCC_)
 
   IMPLICIT NONE
   PRIVATE
@@ -68,7 +68,7 @@ CONTAINS
     INTEGER,               INTENT(in)             :: lib_id     !< id of primary lct in lctlib
     INTEGER,               INTENT(in)             :: model_id
     ! -------------------------------------------------------------------------------------------------- !
-!    dsl4jsb_Def_config(ALCC_)
+    dsl4jsb_Def_config(ALCC_)              !< Configuration of the anthropogenic land use change process
 
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid               ! Horizontal grid
@@ -86,9 +86,8 @@ CONTAINS
     ! Set pointers to variables in the "grid"
     hgrid   => Get_grid(mem%grid_id)
     pft_vgrid    => Get_vgrid('pfts')
-    trans_vgrid  => Get_vgrid('transitions')
 
-!    dsl4jsb_Get_config(ALCC_)
+    dsl4jsb_Get_config(ALCC_)
 
     CALL mem%Add_var('cf_target_year', mem%cf_target_year,                                &
       & hgrid, pft_vgrid,                                                                 &
@@ -105,13 +104,19 @@ CONTAINS
       & output_level=FULL,                                                                &
       & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var('transition_rate', mem%transition_rate,                                            &
-      & hgrid, trans_vgrid,                                                                 &
-      & t_cf('transition_rate', '', 'Transition rates for different transition types.'),           &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & output_level=FULL,                                                                &
-      & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
+
+    SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
+    CASE ('transition')
+      trans_vgrid  => Get_vgrid('transitions')
+
+      CALL mem%Add_var('transition_rate', mem%transition_rate,                                            &
+        & hgrid, trans_vgrid,                                                                 &
+        & t_cf('transition_rate', '', 'Transition rates for different transition types.'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & output_level=FULL,                                                                &
+        & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
+    END SELECT
 
   END SUBROUTINE Init_alcc_memory
 
