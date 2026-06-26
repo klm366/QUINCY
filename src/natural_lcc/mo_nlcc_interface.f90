@@ -243,6 +243,12 @@ CONTAINS
     bclimit_min_snow => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%bclimit_min_snow)
     tau_c_woods => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%tau_c_woods)
 
+    ! Check whether optional values were read from lctlib
+    IF (ALL(bclimit_min_snow < -990._wp)) THEN
+      CALL finish(TRIM(routine), 'BCLIMIT_MIN_SNOW is required in lctlib file for simulations ' // &
+        & 'using NLCC')
+    END IF
+
     ! import specific leave area from lct library
     sla => carbon__mem%collect_var_real2d(ics, ice, iblk, no_children, carbon__mem%sla)
 

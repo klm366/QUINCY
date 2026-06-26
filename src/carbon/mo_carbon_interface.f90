@@ -772,6 +772,12 @@ CONTAINS
       MiscPar(i_WoodLitSize)  = dsl4jsb_Lctlib_param(WoodLitterSize)
       MiscPar(i_RootDistBeta) = dsl4jsb_Lctlib_param(root_dist_beta)
 
+      ! Check whether optional values were read from lctlib
+      IF (MiscPar(i_RootDistBeta) < -990._wp .AND. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+        CALL finish(TRIM(routine), 'ROOT_DIST_BETA is required in lctlib file for simulations ' // &
+          & 'using vertically stratified yasso scheme')
+      END IF
+
       ! Calculate current carbon sum before the update - for C conservation test
       CALL recalc_carbon_per_tile_vars(tile, options)
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
