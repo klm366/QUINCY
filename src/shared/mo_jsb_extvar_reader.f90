@@ -50,7 +50,8 @@ MODULE mo_jsb_extvar_reader
   !> Create with `extvar_monthly_open`, use in the tile loop with `extvar_monthly_update`,
   !> then release with `extvar_monthly_close`.
   !>
-  !> `need_prev`: slot 0 (Dec Y-1) is read only when the experiment start is before mid-January.
+  !> `need_prev`: slot 0 (Dec Y-1) is read only at experiment start or restart, and only when
+  !>              the current date is before mid-January.
   !> `need_next`: slot 13 (Jan Y+1 or Y+2) is read only when the experiment stop reaches mid-December
   !>              of the year being filled.
   TYPE, PUBLIC :: t_extvar_monthly_ctx
@@ -108,8 +109,8 @@ CONTAINS
   ! ======================================================================================================= !
   !> Open the yearly BC file(s) needed for one monthly-buffer update cycle.
   !>
-  !> `file_prev` (year Y-1) is opened only at experiment start and only when the start date is
-  !> before mid-January (i.e., slot 0 = Dec Y-1 is needed for interpolation).
+  !> `file_prev` (year Y-1) is opened only at experiment start or restart, and only when the
+  !> current date is before mid-January (i.e., slot 0 = Dec Y-1 is needed for interpolation).
   !> `file_next` is opened only when the experiment stop date reaches mid-December of the year
   !> being filled (i.e., slot 13 = Jan of the following year is needed).
   !> The resulting context is passed unchanged to `extvar_monthly_update` (once per tile) and finally
@@ -131,7 +132,7 @@ CONTAINS
     year        = get_year(current_datetime)
     ctx%is_init = is_time_experiment_start(current_datetime) .OR. is_time_restart(current_datetime)
 
-    ! Slot 0 (Dec Y-1): only needed at init when start is before mid-January
+    ! Slot 0 (Dec Y-1): only needed at init/restart when current date is before mid-January
     weights = calculate_time_interpolation_weights(current_datetime)
     ctx%need_prev = ctx%is_init .AND. (weights%month1_index == 0)
 
@@ -185,8 +186,8 @@ CONTAINS
   ! ======================================================================================================= !
   !> Update a per-tile monthly buffer using the context created by `extvar_monthly_open`.
   !>
-  !> At experiment start: fills slot 0 (Dec Y-1) only if `need_prev`, slots 1-12, and slot 13
-  !> (Jan Y+1) only if `need_next`.  At a year transition: copies slot 12 into slot 0, reads
+  !> At experiment start or restart: fills slot 0 (Dec Y-1) only if `need_prev`, slots 1-12, and
+  !> slot 13 (Jan Y+1) only if `need_next`.  At a year transition: copies slot 12 into slot 0, reads
   !> slots 1-12, and fills slot 13 only if `need_next`.
   !> Call once per tile inside the tile loop between `extvar_monthly_open` and
   !> `extvar_monthly_close`.

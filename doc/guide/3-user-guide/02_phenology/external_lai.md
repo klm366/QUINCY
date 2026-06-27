@@ -30,17 +30,19 @@ time-interpolation weights as the built-in `climatology` scheme. This produces a
 continuously varying LAI within each year, including a seamless transition across year
 boundaries.
 
-At experiment start three files are read:
+At experiment start (and on restart) the boundary slots are filled only when actually needed for
+interpolation:
 
-| File year | Content used |
-| --- | --- |
-| *Y* − 1 | December mean → slot 0 (lower bound for January interpolation) |
-| *Y* | January–December means → slots 1–12 |
-| *Y* + 1 | January mean → slot 13 (upper bound for December interpolation) |
+| File year | Content used | Read when |
+| --- | --- | --- |
+| *Y* − 1 | December mean → slot 0 (lower bound for January interpolation) | start/restart date is before mid-January |
+| *Y* | January–December means → slots 1–12 | always |
+| *Y* + 1 | January mean → slot 13 (upper bound for December interpolation) | experiment stop reaches mid-December of year *Y* |
 
-At each subsequent year transition **two files** are read (*Y*+1 and *Y*+2). The December value
-from the old slot 12 is copied to slot 0 (no re-read), slots 1–12 are filled from file *Y*+1,
-and slot 13 is filled with January from file *Y*+2.
+At each subsequent year transition **one file** is always read (*Y*+1 full year). The December
+value from the old slot 12 is copied to slot 0 (no re-read). File *Y*+2 is opened and slot 13
+is filled with its January only when the experiment stop reaches mid-December of year *Y*+1;
+otherwise slot 13 is left unused.
 
 ---
 

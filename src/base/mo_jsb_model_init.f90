@@ -181,7 +181,7 @@ CONTAINS
     USE mo_jsb_io,              ONLY: cdiDefMissval, missval
     USE mo_util,                ONLY: one_of
 
-    USE mo_jsb_time,            ONLY: t_datetime, deallocateDateTime, get_time_start
+    USE mo_jsb_time,            ONLY: t_datetime, deallocateDateTime, get_time_start, cache_time_interpolation_weights
 
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(in) :: model_id !< ID of the model instance to be initialized
