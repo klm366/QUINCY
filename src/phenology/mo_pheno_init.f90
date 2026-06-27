@@ -297,7 +297,6 @@ CONTAINS
     !$ACC DATA CREATE(wgt1, wgt2, nmw1, nmw2)
 
     ! Set initial leaf area index from climatology (read in pheno_init_bc)
-    CALL cache_time_interpolation_weights()
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, wgt2, nmw1, nmw2) GANG VECTOR ASYNC(1) COLLAPSE(2)
     DO ib=1,nblks

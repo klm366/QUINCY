@@ -74,7 +74,7 @@ Abstracts file I/O and buffer management for any variable read from yearly NetCD
 
 ### Monthly-buffer context API (preferred for monthly mode)
 
-Opaque type `t_extvar_monthly_ctx` holds the open files and an `is_init` flag.
+Opaque type `t_extvar_monthly_ctx` holds the open files, an `is_init` flag, and `need_prev`/`need_next` flags.
 
 ```fortran
 CALL extvar_monthly_open(ctx, current_datetime, filename_prefix, grid_id)
@@ -87,12 +87,14 @@ END DO
 CALL extvar_monthly_close(ctx)
 ```
 
-`extvar_monthly_open` calls `is_time_experiment_start` internally: at experiment start it opens
-three files (Y-1, Y, Y+1); at every subsequent year transition it opens two files (Y+1, Y+2).
-`extvar_monthly_update` dispatches to `extvar_monthly_buffer_init` or `extvar_monthly_buffer_advance`
-accordingly.  The lower-level `buffer_init` / `buffer_advance` routines are also public for
-callers that need finer control.
-
+`extvar_monthly_open` sets `is_init` when `is_time_experiment_start OR is_time_restart`, then sets
+`need_prev`/`need_next` by calling `calculate_time_interpolation_weights` on the current and experiment
+stop dates:
+- `need_prev` (.TRUE. only at init/restart): slot 0 (Dec Y-1) is required only when the current date is before mid-January.
+- `need_next`: slot 13 (Jan Y+1 or Y+2) is required only when the experiment stop reaches mid-December of the year being filled.
+`extvar_monthly_update` handles both phases inline, skipping boundary-slot reads when the corresponding
+flag is false. The lower-level `buffer_init` / `buffer_advance` routines are also public for callers
+that need finer control.
 ### Time-interpolation API
 
 - `extvar_interpolate_monthly(buf, out [,acc_stream])` — generic; fetches cached weights via

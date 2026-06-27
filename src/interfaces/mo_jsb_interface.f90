@@ -639,6 +639,10 @@ CONTAINS
 
     CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
 
+    ! Save time interpolation weights for further usage
+    ! This simplifies access of the weights in case of CUDA graphs
+    CALL cache_time_interpolation_weights(current_datetime)
+
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
 
@@ -713,10 +717,6 @@ CONTAINS
       ! Invalidate graphs when the workflow is changing
       invalidate_cuda_graphs = .TRUE.
     END IF
-
-    ! Save time interpolation weights for further usage
-    ! This simplifies access of the weights in case of CUDA graphs
-    CALL cache_time_interpolation_weights()
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 

@@ -38,9 +38,10 @@ MODULE mo_jsb_extvar_reader
   USE mo_jsb_control,            ONLY: debug_on
   USE mo_jsb_io_netcdf, ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_io_units,      ONLY: filename_max
-  USE mo_jsb_time,      ONLY: t_datetime,                        &
-    &                         get_time_interpolation_weights,    &
-    &                         get_year, is_time_experiment_start
+  USE mo_jsb_time,      ONLY: &
+    & t_datetime, deallocateDatetime, is_time_experiment_start, is_time_restart, &
+    & get_time_experiment_stop, get_date_components, get_year,                   &
+    & t_time_interpolation_weights, get_time_interpolation_weights, calculate_time_interpolation_weights
 
   IMPLICIT NONE
   PRIVATE
@@ -49,14 +50,17 @@ MODULE mo_jsb_extvar_reader
   !> Create with `extvar_monthly_open`, use in the tile loop with `extvar_monthly_update`,
   !> then release with `extvar_monthly_close`.
   !>
-  !> At experiment start: `file_prev` (Y-1), `file_curr` (Y), `file_next` (Y+1) are all open.
-  !> At a year transition: only `file_curr` (Y+1) and `file_next` (Y+2) are open.
+  !> `need_prev`: slot 0 (Dec Y-1) is read only when the experiment start is before mid-January.
+  !> `need_next`: slot 13 (Jan Y+1 or Y+2) is read only when the experiment stop reaches mid-December
+  !>              of the year being filled.
   TYPE, PUBLIC :: t_extvar_monthly_ctx
     PRIVATE
-    TYPE(t_input_file) :: file_prev  !< Open at experiment start only (year Y-1)
+    TYPE(t_input_file) :: file_prev  !< Open at experiment start only (year Y-1); only if need_prev
     TYPE(t_input_file) :: file_curr  !< Year Y at init; year Y+1 at advance
-    TYPE(t_input_file) :: file_next  !< Year Y+1 at init; year Y+2 at advance (Jan only)
-    LOGICAL            :: is_init = .FALSE.
+    TYPE(t_input_file) :: file_next  !< Year Y+1 at init; year Y+2 at advance; only if need_next
+    LOGICAL            :: is_init   = .FALSE.
+    LOGICAL            :: need_prev = .FALSE.  !< .TRUE. iff slot 0 is required
+    LOGICAL            :: need_next = .TRUE.   !< .TRUE. iff slot 13 is required
   END TYPE t_extvar_monthly_ctx
 
   ! File-reading utilities
@@ -104,8 +108,10 @@ CONTAINS
   ! ======================================================================================================= !
   !> Open the yearly BC file(s) needed for one monthly-buffer update cycle.
   !>
-  !> At experiment start (`is_time_experiment_start`) three files are opened: year Y-1, Y, and Y+1.
-  !> At every subsequent year transition two files are opened: year Y+1 (full) and Y+2 (Jan only).
+  !> `file_prev` (year Y-1) is opened only at experiment start and only when the start date is
+  !> before mid-January (i.e., slot 0 = Dec Y-1 is needed for interpolation).
+  !> `file_next` is opened only when the experiment stop date reaches mid-December of the year
+  !> being filled (i.e., slot 13 = Jan of the following year is needed).
   !> The resulting context is passed unchanged to `extvar_monthly_update` (once per tile) and finally
   !> to `extvar_monthly_close`.
   !>
@@ -116,29 +122,62 @@ CONTAINS
     CHARACTER(len=*),           INTENT(in)  :: filename_prefix  !< Prefix for `{prefix}{YYYY}.nc`
     INTEGER,                    INTENT(in)  :: grid_id
 
-    INTEGER                    :: year
-    CHARACTER(len=filename_max) :: fname_prev, fname_curr, fname_next
+    INTEGER                            :: year, stop_year
+    CHARACTER(len=filename_max)        :: fname_prev, fname_curr, fname_next
+    TYPE(t_datetime), POINTER          :: stop_datetime
+    TYPE(t_time_interpolation_weights) :: weights
     CHARACTER(len=*), PARAMETER :: routine = modname//':extvar_monthly_open'
 
-    year          = get_year(current_datetime)
-    ctx%is_init   = is_time_experiment_start(current_datetime)
+    year        = get_year(current_datetime)
+    ctx%is_init = is_time_experiment_start(current_datetime) .OR. is_time_restart(current_datetime)
+
+    ! Slot 0 (Dec Y-1): only needed at init when start is before mid-January
+    weights = calculate_time_interpolation_weights(current_datetime)
+    ctx%need_prev = ctx%is_init .AND. (weights%month1_index == 0)
+
+    ! Slot 13 (Jan of year+1): needed only if the experiment reaches mid-December of year `year`
+    stop_datetime => get_time_experiment_stop()
+    CALL get_date_components(stop_datetime, year=stop_year)
+    weights = calculate_time_interpolation_weights(stop_datetime)
+    CALL deallocateDatetime(stop_datetime)
+    ctx%need_next = (stop_year > year) .OR. &
+      & (stop_year == year .AND. weights%month2_index == 13)
+
+    fname_curr = extvar_filename(filename_prefix, year)
+    IF (ctx%need_prev) fname_prev = extvar_filename(filename_prefix, year - 1)
+    IF (ctx%need_next) fname_next = extvar_filename(filename_prefix, year + 1)
 
     IF (ctx%is_init) THEN
-      fname_prev = extvar_filename(filename_prefix, year - 1)
-      fname_curr = extvar_filename(filename_prefix, year)
-      fname_next = extvar_filename(filename_prefix, year + 1)
-      IF (debug_on()) CALL message(TRIM(routine), 'Experiment start: opening ' &
-        & //TRIM(fname_prev)//', '//TRIM(fname_curr)//', '//TRIM(fname_next))
-      ctx%file_prev = jsb_netcdf_open_input(TRIM(fname_prev), grid_id)
+      ! IF (debug_on()) THEN
+        IF (ctx%need_prev .AND. ctx%need_next) THEN
+          CALL message(TRIM(routine), 'Experiment start: opening ' &
+            & //TRIM(fname_prev)//', '//TRIM(fname_curr)//', '//TRIM(fname_next))
+        ELSE IF (ctx%need_prev) THEN
+          CALL message(TRIM(routine), 'Experiment start: opening ' &
+            & //TRIM(fname_prev)//', '//TRIM(fname_curr)//' (no next-year file needed)')
+        ELSE IF (ctx%need_next) THEN
+          CALL message(TRIM(routine), 'Experiment start: opening ' &
+            & //TRIM(fname_curr)//', '//TRIM(fname_next)//' (no prev-year file needed)')
+        ELSE
+          CALL message(TRIM(routine), 'Experiment start: opening ' &
+            & //TRIM(fname_curr)//' (no boundary-year files needed)')
+        END IF
+      ! END IF
+      IF (ctx%need_prev) ctx%file_prev = jsb_netcdf_open_input(TRIM(fname_prev), grid_id)
       ctx%file_curr = jsb_netcdf_open_input(TRIM(fname_curr), grid_id)
-      ctx%file_next = jsb_netcdf_open_input(TRIM(fname_next), grid_id)
+      IF (ctx%need_next) ctx%file_next = jsb_netcdf_open_input(TRIM(fname_next), grid_id)
     ELSE
-      fname_curr = extvar_filename(filename_prefix, year)
-      fname_next = extvar_filename(filename_prefix, year + 1)
-      IF (debug_on()) CALL message(TRIM(routine), 'Year transition: opening ' &
-        & //TRIM(fname_curr)//', '//TRIM(fname_next))
+      ! IF (debug_on()) THEN
+        IF (ctx%need_next) THEN
+          CALL message(TRIM(routine), 'Year transition: opening ' &
+            & //TRIM(fname_curr)//', '//TRIM(fname_next))
+        ELSE
+          CALL message(TRIM(routine), 'Year transition: opening ' &
+            & //TRIM(fname_curr)//' (no next-year file needed)')
+        END IF
+      ! END IF
       ctx%file_curr = jsb_netcdf_open_input(TRIM(fname_curr), grid_id)
-      ctx%file_next = jsb_netcdf_open_input(TRIM(fname_next), grid_id)
+      IF (ctx%need_next) ctx%file_next = jsb_netcdf_open_input(TRIM(fname_next), grid_id)
     END IF
 
   END SUBROUTINE extvar_monthly_open
@@ -146,8 +185,9 @@ CONTAINS
   ! ======================================================================================================= !
   !> Update a per-tile monthly buffer using the context created by `extvar_monthly_open`.
   !>
-  !> Dispatches to `extvar_monthly_buffer_init` (experiment start) or
-  !> `extvar_monthly_buffer_advance` (year transition) depending on the context flag.
+  !> At experiment start: fills slot 0 (Dec Y-1) only if `need_prev`, slots 1-12, and slot 13
+  !> (Jan Y+1) only if `need_next`.  At a year transition: copies slot 12 into slot 0, reads
+  !> slots 1-12, and fills slot 13 only if `need_next`.
   !> Call once per tile inside the tile loop between `extvar_monthly_open` and
   !> `extvar_monthly_close`.
   !>
@@ -159,12 +199,32 @@ CONTAINS
     REAL(wp),                   INTENT(in), OPTIONAL :: val_min
     REAL(wp),                   INTENT(in), OPTIONAL :: val_max
 
+    REAL(wp), POINTER :: ptr_2d(:,:), ptr_3d(:,:,:)
+
     IF (ctx%is_init) THEN
-      CALL extvar_monthly_buffer_init(ctx%file_prev, ctx%file_curr, ctx%file_next, varname, &
-        &                             monthly_buf, val_min=val_min, val_max=val_max)
+      IF (ctx%need_prev) THEN
+        ptr_2d => ctx%file_prev%Read_2d_one_time(varname, time=12, fill_array=monthly_buf(:,:, 0), &
+          & val_min=val_min, val_max=val_max)
+        NULLIFY(ptr_2d)
+      END IF
+      ptr_3d => ctx%file_curr%Read_2d_time(varname, fill_array=monthly_buf(:,:, 1:12), &
+        & start_time_step=1, end_time_step=12, val_min=val_min, val_max=val_max)
+      NULLIFY(ptr_3d)
+      IF (ctx%need_next) THEN
+        ptr_2d => ctx%file_next%Read_2d_one_time(varname, time=1, fill_array=monthly_buf(:,:, 13), &
+          & val_min=val_min, val_max=val_max)
+        NULLIFY(ptr_2d)
+      END IF
     ELSE
-      CALL extvar_monthly_buffer_advance(ctx%file_curr, ctx%file_next, varname, &
-        &                                monthly_buf, val_min=val_min, val_max=val_max)
+      monthly_buf(:,:, 0) = monthly_buf(:,:, 12)
+      ptr_3d => ctx%file_curr%Read_2d_time(varname, fill_array=monthly_buf(:,:, 1:12), &
+        & start_time_step=1, end_time_step=12, val_min=val_min, val_max=val_max)
+      NULLIFY(ptr_3d)
+      IF (ctx%need_next) THEN
+        ptr_2d => ctx%file_next%Read_2d_one_time(varname, time=1, fill_array=monthly_buf(:,:, 13), &
+          & val_min=val_min, val_max=val_max)
+        NULLIFY(ptr_2d)
+      END IF
     END IF
 
     !$ACC UPDATE DEVICE(monthly_buf) ASYNC(1)
@@ -178,9 +238,9 @@ CONTAINS
 
     TYPE(t_extvar_monthly_ctx), INTENT(inout) :: ctx
 
-    IF (ctx%is_init) CALL ctx%file_prev%Close()
+    IF (ctx%need_prev) CALL ctx%file_prev%Close()
     CALL ctx%file_curr%Close()
-    CALL ctx%file_next%Close()
+    IF (ctx%need_next) CALL ctx%file_next%Close()
 
   END SUBROUTINE extvar_monthly_close
 
