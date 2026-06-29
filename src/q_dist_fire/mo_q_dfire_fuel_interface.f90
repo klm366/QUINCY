@@ -93,7 +93,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_q_dfire_fuel::return_ptr)
-    CALL return_ptr%Construct(name='q_dfire_fuel', process_id=Q_DFIRE_FUEL_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='q_dfire_sf_fuel', process_id=Q_DFIRE_FUEL_, owner_model_id=model_id)
   END FUNCTION Create_task_q_dfire_fuel
 
   ! ======================================================================================================= !
@@ -168,7 +168,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_q_dfire_post::return_ptr)
-    CALL return_ptr%Construct(name='q_dfire_post', process_id=Q_DFIRE_FUEL_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='q_dfire_sf_impacts', process_id=Q_DFIRE_FUEL_, owner_model_id=model_id)
   END FUNCTION Create_task_q_dfire_post
 
   ! ======================================================================================================= !
@@ -184,7 +184,7 @@ CONTAINS
     TYPE(t_jsb_model),        POINTER         :: model
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice, nc
-    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_fuel'
+    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_post'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_DFIRE_)
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)

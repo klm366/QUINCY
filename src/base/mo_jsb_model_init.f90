@@ -469,9 +469,11 @@ CONTAINS
 
       IF (model%config%qmodel_id == QLAND) THEN
         IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
-          CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_fuel")    ! LAND ONLY
-          CALL model%Queue_task(Q_DFIRE_, "q_dfire_spitfire")     ! LAND ONLY
-          CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_post")    ! LAND ONLY
+          CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_sf_fuel")       ! LAND ONLY
+          CALL model%Queue_task(Q_DFIRE_,      "q_dfire_sf_dynamics")   ! LAND ONLY
+          CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_sf_impacts")    ! LAND ONLY
+!          CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_sf_update")     ! LAND ONLY, update pools, update fractions, ...
+!          CALL model%Queue_task(VEG_,          "plant_characteristics") ! LAND ONLY, ensure consistency after update
         ENDIF
         CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
       END IF
