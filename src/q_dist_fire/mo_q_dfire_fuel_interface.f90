@@ -23,6 +23,7 @@ MODULE mo_q_dfire_fuel_interface
   USE mo_jsb_process_class,           ONLY: t_jsb_process, Q_DFIRE_FUEL_, Q_DFIRE_
   USE mo_q_dfire_fuel,                ONLY: update_q_dfire_fuel
   USE mo_q_dfire_post,                ONLY: update_q_dfire_post
+  USE mo_q_dfire_sf_update,           ONLY: update_q_dfire_sf_update
 
   dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
 
@@ -64,9 +65,27 @@ MODULE mo_q_dfire_fuel_interface
   !>
   !> Constructor interface: tsk_dfire_post task
   !>
-  INTERFACE tsk_q_dfire_post
-    PROCEDURE Create_task_q_dfire_post         !< Constructor function for task
-  END INTERFACE tsk_q_dfire_post
+  INTERFACE tsk_q_dfire_sf_update
+    PROCEDURE Create_task_q_dfire_sf_update         !< Constructor function for task
+  END INTERFACE tsk_q_dfire_sf_update
+
+  ! ======================================================================================================= !
+  !>
+  !> Type definition: dfire_sf_fuel task
+  !>
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_q_dfire_sf_update
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_q_dfire_sf_update      !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggr_q_dfire_sf_update        !< Aggregates computed task variables
+  END TYPE tsk_q_dfire_sf_update
+
+  ! ======================================================================================================= !
+  !>
+  !> Constructor interface: dfire_sf_fuel task
+  !>
+  INTERFACE tsk_q_dfire_fuel
+    PROCEDURE Create_task_q_dfire_fuel         !< Constructor function for task
+  END INTERFACE tsk_q_dfire_fuel
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel_interface'
 
@@ -237,6 +256,58 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggr_q_dfire_post
+
+  ! ======================================================================================================= !
+  !>
+  !> Constructor: dfire_sf_update task
+  !>
+  FUNCTION Create_task_q_dfire_sf_update(model_id) RESULT(return_ptr)
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_q_dfire_sf_update::return_ptr)
+    CALL return_ptr%Construct(name='q_dfire_sf_update', process_id=Q_DFIRE_FUEL_, owner_model_id=model_id)
+  END FUNCTION Create_task_q_dfire_sf_update
+
+  ! ======================================================================================================= !
+  !>
+  !> Implementation of "aggregate": dfire_sf_update task
+  !>
+  SUBROUTINE aggr_q_dfire_sf_update(tile, options)
+    dsl4jsb_Use_config(Q_DFIRE_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),        POINTER         :: model
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice, nc
+    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_sf_update'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(Q_DFIRE_)
+    dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Go aggregate
+    ! ----------------------------------------------------------------------------------------------------- !
+
+!    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, veg_fire_litterfall_total_els , weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+  END SUBROUTINE aggr_q_dfire_sf_update
 
 
 #endif
