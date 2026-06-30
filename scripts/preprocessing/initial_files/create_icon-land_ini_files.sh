@@ -32,7 +32,7 @@
 #     - run extpar to generate soil texture data as well as albedo, roughness
 #       length, forest fraction and LAI and vegetation fraction climatologies.
 #
-#  3) bc_files_from_extpar.sh
+#  3) create_icon-land_ic_bc_files.sh
 #     Generate ic/bc files containing the new expar data:
 #     - Lake mask replaced (-> bc_land_frac)
 #     - Albedo, roughness length, forest fraction, lai_clim and veg_fract
@@ -80,12 +80,12 @@ set -e
 # Which sections of this script should be run?
 #  It is possible to run one task after the other, which might be useful in case of problems
 
-run_extpar4jsbach_mpim_icon=false  # Generally available in /pool/data/JSBACH/icon/extpar4jsbach/
-run_generate_fractional_mask=false # Only needed for coupled setups with new grid combination
-run_bc_files_from_extpar=true
-run_adapt_nwp_extpar_file=true     # Only needed for configurations with NWP atmosphere
-run_calc_hd_receive_mask=false     # Only needed for coupled setups with external HD model
-run_generate_hdpara_file=true      # Needed with internal HD model
+run_extpar4jsbach_mpim_icon=false     # Generally available in /pool/data/JSBACH/icon/extpar4jsbach/
+run_generate_fractional_mask=false    # Only needed for coupled setups with new grid combination
+run_create_iconland_ic_bc_files=true  # Create ICON-Land ic/bc files based on extpar and other sources
+run_adapt_nwp_extpar_file=true        # Only needed for configurations with NWP atmosphere
+run_calc_hd_receive_mask=false        # Only needed for coupled setups with external HD model
+run_generate_hdpara_file=true         # Needed with internal HD model
 
 #-----------------------------------------------------------------------------
 #
@@ -269,7 +269,7 @@ export hd_receive=${hd_file_dir}/hd_receive_${grid_label}.nc
 # Depending on min- and max_fract, the fractional mask in bc_land_frac ('notsea') might
 # not be identical to the mask in ${fractional_mask}. For a consistent setup, we thus use
 # the bc_land_frac fractions also for hd parameter generation. The defaults set here refer
-# to a setup where land bc/ic files are generated anew (run_bc_files_from_extpar=true).
+# to a setup where land bc/ic files are generated anew (run_create_iconland_ic_bc_files=true).
 export keep_hd_output_dir=false   # keep additional output from HD parameter generation
                                   # for debugging etc.
 export hd_fractional_mask=${bc_file_dir}/bc_land_frac.nc
@@ -438,16 +438,16 @@ if [[ ${run_extpar4jsbach_mpim_icon} == true ]]; then
 fi
 
 #-----------------------------------------------------------------------------
-# 3. Run bc_files_from_extpar
-if [[ ${run_bc_files_from_extpar} == true ]]; then
+# 3. Run create_iconland_ic_bc_files
+if [[ ${run_create_iconland_ic_bc_files} == true ]]; then
 
   if [[ ! -f ${extpar_dir}/${extpar_file} ]]; then
     echo "${extpar_dir}/${extpar_file} does not exist."
     exit 1
   fi
 
-  ${scripts_dir}/bc_files_from_extpar.sh
-  cp ${scripts_dir}/bc_files_from_extpar.sh ${bc_file_dir}/scripts
+  ${scripts_dir}/create_icon-land_ic_bc_files.sh
+  cp ${scripts_dir}/create_icon-land_ic_bc_files.sh ${bc_file_dir}/scripts
 fi
 
 #-----------------------------------------------------------------------------

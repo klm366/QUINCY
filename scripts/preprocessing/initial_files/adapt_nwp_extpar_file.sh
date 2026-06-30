@@ -57,7 +57,7 @@ $cdo setvar,ICE          -selvar,glac   ${bc_frac}       new_ICE.nc
 $cdo setvar,FR_LAKE      -selvar,lake   ${bc_frac}       new_FR_LAKE.nc
 
 # Variables from bc_land_phys
-# Z0 should be identical, as it was used from extpar in bc_files_from_extpar.sh
+# Z0 should be identical, as it was used from extpar in create_icon-land_ic_bc_files.sh
 $cdo setvar,SKC  -selvar,skin_conductivity ${bc_phys}    new_SKC.nc
 
 # Variables from bc_land_sso
