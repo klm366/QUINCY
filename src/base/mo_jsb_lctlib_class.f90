@@ -229,7 +229,7 @@ MODULE mo_jsb_lctlib_class
       & k_som_fast_init               , &
       & k_som_slow_init
 
-    ! --- Parameters used in Quincy SPITFIRE (mo_q_dfire_spitfire.f90) -------------------------------------------------------------
+    ! --- Parameters used in Quincy SPITFIRE (mo_q_dfire_sf_dynamics.f90) -------------------------------------------------------------
     REAL(wp) :: q_emissions_co2_mol          , &
                 q_emissions_co_mol           , &
                 q_emissions_ch4_mol          , &

@@ -34,7 +34,7 @@
 !>    - Calc dead fuel consumption (mo_q_dfire_sf_fuel_consumption.f90)
 !>    - Calc fire intensity (-)
 !>
-MODULE mo_q_dfire_spitfire
+MODULE mo_q_dfire_sf_dynamics
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
@@ -84,13 +84,13 @@ MODULE mo_q_dfire_spitfire
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_q_dfire_spitfire, sf_calc_fire_intensity, t_sf_spitfire, calc_ab_moisture
+  PUBLIC :: update_q_dfire_sf_dynamics, sf_calc_fire_intensity, t_sf_spitfire, calc_ab_moisture
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_spitfire'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_dynamics'
 
   !<
   !< Calculated Spitfire values
-  !< Move spitfire data from calc_spitfire <-> update_q_dfire_spitfire subroutines
+  !< Move spitfire data from calc_spitfire <-> update_q_dfire_sf_dynamics subroutines
   !<
   TYPE t_sf_spitfire
     REAL(wp), ALLOCATABLE :: e_n_ignitions(:)
@@ -160,7 +160,7 @@ CONTAINS
   !> Compute spitfire for current time step
   !> It links Quincy and Spitfire
   !>
-  SUBROUTINE update_q_dfire_spitfire(tile, options)
+  SUBROUTINE update_q_dfire_sf_dynamics(tile, options)
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
@@ -189,7 +189,7 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc, ic, is
     INTEGER                               :: no_children
     REAL(wp)                              :: dtime      !< timestep
-    CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_q_fdire_sf_spitfire'
+    CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_q_dfire_sf_dynamics'
 
     REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2]
     REAL(wp), POINTER                     :: tile_fract(:) ! [%]
@@ -542,7 +542,7 @@ CONTAINS
 #ifdef __QUINCY_STANDALONE__
     DEALLOCATE(grid_cell_area)
 #endif
-  END SUBROUTINE update_q_dfire_spitfire
+  END SUBROUTINE update_q_dfire_sf_dynamics
 
 
   ! ======================================================================================================= !
@@ -1123,4 +1123,4 @@ CONTAINS
   END SUBROUTINE run_diagnostics_at_tile
 
 #endif
-END MODULE mo_q_dfire_spitfire
+END MODULE mo_q_dfire_sf_dynamics

@@ -21,32 +21,32 @@ MODULE mo_q_dfire_interface
   USE mo_jsb_tile_class,              ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_process_class,           ONLY: t_jsb_process, Q_DFIRE_
-  USE mo_q_dfire_spitfire,            ONLY: update_q_dfire_spitfire
+  USE mo_q_dfire_sf_dynamics,         ONLY: update_q_dfire_sf_dynamics
 
   dsl4jsb_Use_memory(Q_DFIRE_)
 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: Register_q_dfire_tasks
-  PUBLIC :: update_time_average_q_dist_fire, update_q_dfire_spitfire
+  PUBLIC :: update_time_average_q_dist_fire, update_q_dfire_sf_dynamics
 
   ! ======================================================================================================= !
   !>
   !> Type definition: dfire_sf_fuel task
   !>
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_q_dfire_spitfire
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_q_dfire_sf_dynamics
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_q_dfire_spitfire      !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggr_q_dfire_spitfire        !< Aggregates computed task variables
-  END TYPE tsk_q_dfire_spitfire
+    PROCEDURE, NOPASS :: Integrate => update_q_dfire_sf_dynamics      !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggr_q_dfire_sf_dynamics        !< Aggregates computed task variables
+  END TYPE tsk_q_dfire_sf_dynamics
 
   ! ======================================================================================================= !
   !>
   !> Constructor interface: dfire_sf_fuel task
   !>
-  INTERFACE tsk_q_dfire_spitfire
-    PROCEDURE Create_task_q_dfire_spitfire         !< Constructor function for task
-  END INTERFACE tsk_q_dfire_spitfire
+  INTERFACE tsk_q_dfire_sf_dynamics
+    PROCEDURE Create_task_q_dfire_sf_dynamics         !< Constructor function for task
+  END INTERFACE tsk_q_dfire_sf_dynamics
 
   ! ======================================================================================================= !
   !>
@@ -78,7 +78,7 @@ CONTAINS
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
-    CALL this%Register_task(tsk_q_dfire_spitfire(model_id))
+    CALL this%Register_task(tsk_q_dfire_sf_dynamics(model_id))
     CALL this%Register_task(tsk_time_average_q_dist_fire(model_id))
   END SUBROUTINE Register_q_dfire_tasks
 
@@ -86,26 +86,26 @@ CONTAINS
   !>
   !> Constructor: dfire_sf_fuel task
   !>
-  FUNCTION Create_task_q_dfire_spitfire(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_q_dfire_sf_dynamics(model_id) RESULT(return_ptr)
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_q_dfire_spitfire::return_ptr)
+    ALLOCATE(tsk_q_dfire_sf_dynamics::return_ptr)
     CALL return_ptr%Construct(name='q_dfire_sf_dynamics', process_id=Q_DFIRE_, owner_model_id=model_id)
-  END FUNCTION Create_task_q_dfire_spitfire
+  END FUNCTION Create_task_q_dfire_sf_dynamics
 
   ! ======================================================================================================= !
   !>
-  !> Implementation of "aggregate": dfire_spitfire task
+  !> Implementation of "aggregate": dfire_sf_dynamics task
   !>
-  SUBROUTINE aggr_q_dfire_spitfire(tile, options)
+  SUBROUTINE aggr_q_dfire_sf_dynamics(tile, options)
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER         :: model
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice, nc
-    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_sf_fuel'
+    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_sf_dynamics'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(Q_DFIRE_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -166,7 +166,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_, pot_burn_area, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-  END SUBROUTINE aggr_q_dfire_spitfire
+  END SUBROUTINE aggr_q_dfire_sf_dynamics
 
 
   ! ======================================================================================================= !
