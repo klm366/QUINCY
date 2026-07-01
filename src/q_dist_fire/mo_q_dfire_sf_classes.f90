@@ -10,7 +10,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-MODULE mo_q_dfire_sf_ros_type
+MODULE mo_q_dfire_sf_classes
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
@@ -22,7 +22,7 @@ MODULE mo_q_dfire_sf_ros_type
   PRIVATE
   PUBLIC :: t_sf_ros
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_type'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_classes'
 
   !< Rate of spread characteristics type
   TYPE t_sf_ros
@@ -106,4 +106,4 @@ CONTAINS
 
 
 #endif
-END MODULE mo_q_dfire_sf_ros_type
+END MODULE mo_q_dfire_sf_classes

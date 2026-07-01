@@ -72,7 +72,7 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
   USE mo_q_dfire_sf_ros_thon_class,     ONLY: sf_calc_rate_of_spread_thon
   USE mo_q_dfire_sf_ros_ober_class,     ONLY: sf_calc_rate_of_spread_ober
-  USE mo_q_dfire_sf_ros_type,           ONLY: t_sf_ros
+  USE mo_q_dfire_sf_classes,            ONLY: t_sf_ros
   USE mo_q_dfire_sf_ros_ober_class,     ONLY: calc_live_me
   USE mo_q_dfire_sf_frac_consump_class, ONLY: sf_calc_frac_consump
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption

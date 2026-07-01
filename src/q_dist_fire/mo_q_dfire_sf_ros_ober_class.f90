@@ -29,7 +29,7 @@ MODULE mo_q_dfire_sf_ros_ober_class
   USE mo_jsb_math_constants,    ONLY: pi
 
   USE mo_q_dfire_sf_ros_eqs,    ONLY: calc_opt_react_velocity, calc_prop_flux_ratio, calc_wind_factor
-  USE mo_q_dfire_sf_ros_type,   ONLY: t_sf_ros
+  USE mo_q_dfire_sf_classes,    ONLY: t_sf_ros
 
   IMPLICIT NONE
 

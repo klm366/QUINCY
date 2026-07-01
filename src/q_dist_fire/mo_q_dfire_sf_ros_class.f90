@@ -21,7 +21,7 @@ MODULE mo_q_dfire_sf_ros_class
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
 
-  USE mo_q_dfire_sf_ros_type,       ONLY: t_sf_ros
+  USE mo_q_dfire_sf_classes,        ONLY: t_sf_ros
   USE mo_q_dfire_config_class,      ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
   USE mo_q_dfire_sf_ros_ober_class, ONLY: sf_calc_rate_of_spread_ober, calc_live_me
   USE mo_q_dfire_sf_ros_thon_class, ONLY: sf_calc_rate_of_spread_thon
