@@ -24,7 +24,7 @@
 !> Adjust flux units
 !> (enabled?) Run diagnostics
 !>
-MODULE mo_q_dfire_post
+MODULE mo_q_dfire_sf_impacts
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
@@ -74,9 +74,9 @@ MODULE mo_q_dfire_post
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_q_dfire_post, sf_calc_residue
+  PUBLIC :: update_q_dfire_sf_impacts, sf_calc_residue
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_post'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_impacts'
 
 CONTAINS
 
@@ -84,7 +84,7 @@ CONTAINS
   !>
   !>
   !>
-  SUBROUTINE update_q_dfire_post(tile, options)
+  SUBROUTINE update_q_dfire_sf_impacts(tile, options)
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_grid_class,          ONLY: t_jsb_grid
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
@@ -604,7 +604,7 @@ CONTAINS
     IF (dsl4jsb_Config(Q_DFIRE_)%has_diagnostics) THEN
       CALL run_diagnostics_at_pft(nc, sb_pool_mt, sb_fire_emissions_mt, sb_fire_litter_ash_mt)
     ENDIF
-  END SUBROUTINE update_q_dfire_post
+  END SUBROUTINE update_q_dfire_sf_impacts
 
 
   ! ======================================================================================================= !
@@ -689,4 +689,4 @@ CONTAINS
   END SUBROUTINE sf_calc_residue
 
 #endif
-END MODULE mo_q_dfire_post
+END MODULE mo_q_dfire_sf_impacts
