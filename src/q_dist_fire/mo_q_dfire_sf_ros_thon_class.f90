@@ -36,9 +36,9 @@ MODULE mo_q_dfire_sf_ros_thon_class
                                       df_sf_fuel_heat_content
 
   USE mo_quincy_stats,          ONLY: stats_average_weight
-  USE mo_q_dfire_sf_ros_eqs,    ONLY: calc_opt_react_velocity, &
-                                       calc_prop_flux_ratio, &
-                                       calc_wind_factor
+  USE mo_q_dfire_sf_ros_eqs,    ONLY: calc_ros_opt_react_velocity, &
+                                       calc_ros_prop_flux_ratio, &
+                                       calc_ros_wind_factor
   USE mo_q_dfire_sf_classes,    ONLY: t_sf_ros
 
 
@@ -97,7 +97,7 @@ CONTAINS
 
         A_var(inc) = 8.9033_wp * (sigma(inc) ** (-0.7913)) !< Table A1, 4th equation from Thonicke et al. (2010)
         max_reaction_velocity(inc) = 1._wp / (0.0591_wp  + 2.926_wp * sigma(inc) ** (-1.5_wp)) !< Table A1, 2nd equation from Thonicke et al. (2010) [min-1]
-        ros%opt_react_velo(inc) = calc_opt_react_velocity(max_reaction_velocity(inc), beta(inc), &
+        ros%opt_react_velo(inc) = calc_ros_opt_react_velocity(max_reaction_velocity(inc), beta(inc), &
             beta_op(inc), A_var(inc)) ! Table A1, 1st equation from Thonicke et al. (2010) [min-1]
 
         ros%moist_damp_coeff(inc) = calc_moist_damp_coeff(omega_o(inc), moist_extinction(inc)) !< Table A1, 6th equation from Thonicke et al. (2010)
@@ -108,8 +108,8 @@ CONTAINS
                                       ros%net_fuel_load(inc) * df_sf_fuel_heat_content * &
                                       ros%moist_damp_coeff(inc) * df_sf_mineral_damp_coeff !< [kJ m-2 min-1]
 
-        ros%prop_flux_ratio(inc) = calc_prop_flux_ratio(sigma(inc), beta(inc)) !< Eq. A2 from Thonicke et al. (2010) [-]
-        ros%wind_factor(inc) = calc_wind_factor(u_f_wind(inc), sigma(inc), beta(inc), beta_op(inc)) !< Eq. A5 from Thonicke et al. (2010) [-]
+        ros%prop_flux_ratio(inc) = calc_ros_prop_flux_ratio(sigma(inc), beta(inc)) !< Eq. A2 from Thonicke et al. (2010) [-]
+        ros%wind_factor(inc) = calc_ros_wind_factor(u_f_wind(inc), sigma(inc), beta(inc), beta_op(inc)) !< Eq. A5 from Thonicke et al. (2010) [-]
         ros%eff_heating_number(inc) = exp(-4.528_wp / sigma(inc)) !< (Eq. A3 from Thonicke et al. (2010)) [-]
         ros%pre_ign_heat(inc) = 581._wp + 2594._wp * omega_o(inc) !< (Eq. A4 from Thonicke et al. (2010)) [kJ kg-1]
 

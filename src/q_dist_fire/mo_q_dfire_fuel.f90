@@ -38,7 +38,7 @@ MODULE mo_q_dfire_fuel
 
   USE mo_lnd_bgcm_idx,            ONLY: ixC
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class
-  USE mo_q_dfire_sf_ros_eqs,      ONLY: calc_fbd
+  USE mo_q_dfire_sf_ros_eqs,      ONLY: calc_ros_fbd
   USE mo_q_dfire_config_class,    ONLY: Q_DFIRE_ROS_OBERHAGEMANN, Q_DFIRE_ROS_THONICKE
 
   !< Live fraction allocation for dead and live fuels
@@ -297,7 +297,7 @@ CONTAINS
     dead_fuel_spread_fcl = SUM(dead_fuel_fcl(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2 = fuel pools dimension index
     DO ic = 1, nc
       IF (SUM(dead_fuel_spread_fcl(ic,:)) > 0._wp) THEN
-        fuel_bulk_density(ic) = calc_fbd(3, lctlib%q_fuel_bulk_density, dead_fuel_spread_fcl(ic,:)) ! 3=fuel classes (1,10 and 100 hours)
+        fuel_bulk_density(ic) = calc_ros_fbd(3, lctlib%q_fuel_bulk_density, dead_fuel_spread_fcl(ic,:)) ! 3=fuel classes (1,10 and 100 hours)
       ENDIF
     END DO
 

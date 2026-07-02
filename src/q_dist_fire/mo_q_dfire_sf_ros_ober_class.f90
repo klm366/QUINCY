@@ -28,7 +28,7 @@ MODULE mo_q_dfire_sf_ros_ober_class
   USE mo_quincy_stats,          ONLY: stats_average_weight
   USE mo_jsb_math_constants,    ONLY: pi
 
-  USE mo_q_dfire_sf_ros_eqs,    ONLY: calc_opt_react_velocity, calc_prop_flux_ratio, calc_wind_factor
+  USE mo_q_dfire_sf_ros_eqs,    ONLY: calc_ros_opt_react_velocity, calc_ros_prop_flux_ratio, calc_ros_wind_factor
   USE mo_q_dfire_sf_classes,    ONLY: t_sf_ros
 
   IMPLICIT NONE
@@ -259,13 +259,13 @@ CONTAINS
         gamma_max(ic) = 1._wp / (0.0591_wp  + 2.926_wp * sigma%total(ic) ** (-1.5_wp)) !< Table A1, 2nd equation from Thonicke et al. (2010) [min-1]
         ! - optimum reaction velocity
         A_var(ic) = 8.9033_wp * (sigma%total(ic) ** (-0.7913)) !< Table A1, 4th equation from Thonicke et al. (2010)
-        gamma(ic) = calc_opt_react_velocity(gamma_max(ic), beta(ic), beta_op(ic), A_var(ic)) ! Table A1, 1st equation from Thonicke et al. (2010) [min-1]
+        gamma(ic) = calc_ros_opt_react_velocity(gamma_max(ic), beta(ic), beta_op(ic), A_var(ic)) ! Table A1, 1st equation from Thonicke et al. (2010) [min-1]
         ! - reaction intensity
         ir%d(ic) =  wn%d(ic) * df_sf_fuel_heat_content * eta_m%d(ic) * df_sf_mineral_damp_coeff !< [kJ m-2 min-1]
         ir%l(ic) =  wn%l(ic) * df_sf_fuel_heat_content * eta_m%l(ic) * df_sf_mineral_damp_coeff !< [kJ m-2 min-1]
         ir%total(ic) = gamma(ic) * (ir%d(ic) + ir%l(ic))
         ! - propagating flux ratio
-        xi(ic) = calc_prop_flux_ratio(sigma%total(ic), beta(ic))
+        xi(ic) = calc_ros_prop_flux_ratio(sigma%total(ic), beta(ic))
         ! - no-wind, no-slope propagating flux
 
         ! WIND AND SLOPE
@@ -276,7 +276,7 @@ CONTAINS
         !< wind speed limit according to Patricia L. Andrews et al. 2012.
         IF (U_var(ic) / ir%total(ic) > 0.9_wp) U_var(ic) = 0.9_wp * ir%total(ic)
         ! - wind factor
-        phi_w(ic) = calc_wind_factor(U_var(ic), sigma%total(ic), beta(ic), beta_op(ic)) !< Eq. A5 from Thonicke et al. (2010) [-]
+        phi_w(ic) = calc_ros_wind_factor(U_var(ic), sigma%total(ic), beta(ic), beta_op(ic)) !< Eq. A5 from Thonicke et al. (2010) [-]
 
         ! HEAT SOURCE
         IF (phi_w(ic) + phi_s(ic) > 0._wp) THEN !< if there is wind speed or slope then account for it
