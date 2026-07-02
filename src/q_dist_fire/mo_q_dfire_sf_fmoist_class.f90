@@ -24,26 +24,26 @@ MODULE mo_q_dfire_sf_fmoist_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_fuel_moisture, sf_calc_fuel_moisture_ober, t_gsi_param, t_gsi, t_sf_lfmc, t_mf, calc_mflg_ober
+  PUBLIC :: sf_calc_fuel_moisture, sf_calc_fuel_moisture_ober, t_sf_lfmc, t_sf_mf, calc_mflg_ober
 
   !> GSI parameters
-  TYPE :: t_gsi_param
-    REAL(wp) :: slope
-    REAL(wp) :: base
-    REAL(wp) :: tau
-  END TYPE t_gsi_param
+  ! TYPE :: t_gsi_param
+  !   REAL(wp) :: slope
+  !   REAL(wp) :: base
+  !   REAL(wp) :: tau
+  ! END TYPE t_gsi_param
 
-  !> GSI phenology components, from Oberhagemann et al. (2025)
-  TYPE :: t_gsi
-    TYPE(t_gsi_param) :: cold
-    TYPE(t_gsi_param) :: heat
-    TYPE(t_gsi_param) :: light
-    TYPE(t_gsi_param) :: water
-  END TYPE t_gsi
+  ! !> GSI phenology components, from Oberhagemann et al. (2025)
+  ! TYPE :: t_gsi
+  !   TYPE(t_gsi_param) :: cold
+  !   TYPE(t_gsi_param) :: heat
+  !   TYPE(t_gsi_param) :: light
+  !   TYPE(t_gsi_param) :: water
+  ! END TYPE t_gsi
 
-  INTERFACE t_gsi
-    MODULE PROCEDURE :: create_gsi_from_lctlib
-  END INTERFACE t_gsi
+  ! INTERFACE t_gsi
+  !   MODULE PROCEDURE :: create_gsi_from_lctlib
+  ! END INTERFACE t_gsi
 
   !> Livegrass fuel moisture content paremeters from Oberhagemann et al. (2025)
   TYPE :: t_sf_lfmc
@@ -54,27 +54,27 @@ MODULE mo_q_dfire_sf_fmoist_class
     MODULE PROCEDURE :: create_lfmc_from_lctlib
   END INTERFACE
 
-  TYPE :: t_mf !< fuel moisture
+  TYPE :: t_sf_mf !< fuel moisture
     !< oberhagemann et al. (2025)
     REAL(wp), ALLOCATABLE :: dead(:,:) !< dead fuel moisture (#nc,#dead fuel moisture -1hr, 10hrs, 100hrs, 1000hrs, dry livegrass- )
     REAL(wp), ALLOCATABLE :: live(:,:) !< live fuel moisture (#nc, -wet livegrass, woody-)
     !< Weighted fuel moisture
     REAL(wp), ALLOCATABLE :: val(:) !< weighted fuel moisture (mixed-1,10,100 and lvg-, fine fuels-1hr and lvg-)
-  END TYPE t_mf
+  END TYPE t_sf_mf
 
-  INTERFACE t_mf
-    MODULE PROCEDURE :: create_t_mf
+  INTERFACE t_sf_mf
+    MODULE PROCEDURE :: create_t_sf_mf
   END INTERFACE
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 CONTAINS
 
   !>
-  !> t_mf constructor
+  !> t_sf_mf constructor
   !>
-  FUNCTION create_t_mf(nc, ndd, nlv) RESULT (mf)
+  FUNCTION create_t_sf_mf(nc, ndd, nlv) RESULT (mf)
     INTEGER, INTENT(in) :: nc, ndd, nlv
-    TYPE(t_mf) :: mf
+    TYPE(t_sf_mf) :: mf
 
     ALLOCATE(mf%dead(nc,ndd))
     ALLOCATE(mf%live(nc,nlv))
@@ -82,7 +82,7 @@ CONTAINS
     mf%dead = 0._wp
     mf%live = 0._wp
     mf%val = 0._wp
-  END FUNCTION create_t_mf
+  END FUNCTION create_t_sf_mf
 
 
   ! ======================================================================================================= !
@@ -104,15 +104,15 @@ CONTAINS
   !>
   !> t_gsi constructor
   !>
-  FUNCTION create_gsi_from_lctlib(lctlib) RESULT (gsi)
-    TYPE(t_lctlib_element) :: lctlib
-    TYPE(t_gsi) :: gsi
+  ! FUNCTION create_gsi_from_lctlib(lctlib) RESULT (gsi)
+  !   TYPE(t_lctlib_element) :: lctlib
+  !   TYPE(t_gsi) :: gsi
 
-    gsi % cold = t_gsi_param( lctlib%q_tmin_slope, lctlib%q_tmin_base, lctlib%q_tmin_tau)
-    gsi % heat = t_gsi_param( lctlib%q_tmax_slope, lctlib%q_tmax_base, lctlib%q_tmax_tau)
-    gsi % light = t_gsi_param( lctlib%q_light_slope, lctlib%q_light_base, lctlib%q_light_tau)
-    gsi % water = t_gsi_param( lctlib%q_water_slope, lctlib%q_water_base, lctlib%q_water_tau)
-  END FUNCTION create_gsi_from_lctlib
+  !   gsi % cold = t_gsi_param( lctlib%q_tmin_slope, lctlib%q_tmin_base, lctlib%q_tmin_tau)
+  !   gsi % heat = t_gsi_param( lctlib%q_tmax_slope, lctlib%q_tmax_base, lctlib%q_tmax_tau)
+  !   gsi % light = t_gsi_param( lctlib%q_light_slope, lctlib%q_light_base, lctlib%q_light_tau)
+  !   gsi % water = t_gsi_param( lctlib%q_water_slope, lctlib%q_water_base, lctlib%q_water_tau)
+  ! END FUNCTION create_gsi_from_lctlib
 
 
   ! ======================================================================================================= !
@@ -285,7 +285,7 @@ CONTAINS
     REAL(wp), INTENT(in)      :: dead_fuel_grass(nc)     !< dead fuel grass [g DM m-2] (#nc)
     REAL(wp), INTENT(in)      :: nesterov_index(nc)      !< Nesterov index = Dryness index [Celsius^2]
     LOGICAL, INTENT(in)       :: mask(nc)
-    TYPE(t_mf) :: mf
+    TYPE(t_sf_mf) :: mf
 
     REAL(wp) :: dead_fuel(nc,4) !< [g DM m-2]
     REAL(wp) :: alphas_weighted_ros(nc) !<  [deg C-2]
@@ -293,7 +293,7 @@ CONTAINS
     REAL(wp) :: mf_10hr
     INTEGER :: ic
 
-    mf = t_mf(nc, ndd, nlv)
+    mf = t_sf_mf(nc, ndd, nlv)
     DO ic = 1, nc
       dead_fuel(ic,:) = [dead_fuel_litter(ic,:), dead_fuel_grass(ic)]
     ENDDO
@@ -417,53 +417,53 @@ CONTAINS
   !> Paper: https://bg.copernicus.org/articles/11/7025/2014/bg-11-7025-2014.pdf, eqs. 6, 7, 8, 9
   !> Component limiting function
   !>
-  FUNCTION calc_f_comp_PFT(nc, params, f_old, comp, ispositive) RESULT (f)
-    INTEGER, INTENT(in)           :: nc
-    TYPE(t_gsi_param), INTENT(in) :: params
-    REAL(wp), INTENT(in)          :: f_old(nc) !< previous TS value
-    REAL(wp), INTENT(in)          :: comp(nc) !< physical variable
-    LOGICAL, INTENT(in)           :: ispositive !< true: increase, false=decrease
-    REAL(wp) :: f(nc)
+  ! FUNCTION calc_f_comp_PFT(nc, params, f_old, comp, ispositive) RESULT (f)
+  !   INTEGER, INTENT(in)           :: nc
+  !   TYPE(t_gsi_param), INTENT(in) :: params
+  !   REAL(wp), INTENT(in)          :: f_old(nc) !< previous TS value
+  !   REAL(wp), INTENT(in)          :: comp(nc) !< physical variable
+  !   LOGICAL, INTENT(in)           :: ispositive !< true: increase, false=decrease
+  !   REAL(wp) :: f(nc)
 
-    REAL(wp) :: term(nc)
-    INTEGER :: ic
-    REAL(wp) :: slope
-    REAL(wp) :: tau_30min
+  !   REAL(wp) :: term(nc)
+  !   INTEGER :: ic
+  !   REAL(wp) :: slope
+  !   REAL(wp) :: tau_30min
 
-    IF (ispositive) THEN
-      slope = params%slope ! slope increase
-    ELSE
-      slope = -params%slope ! slope decrease
-    ENDIF
+  !   IF (ispositive) THEN
+  !     slope = params%slope ! slope increase
+  !   ELSE
+  !     slope = -params%slope ! slope decrease
+  !   ENDIF
 
-    ASSOCIATE(base => params%base, tau_daily => params%tau)
-      tau_30min = 1._wp - (1._wp - tau_daily)**(1.0_wp / 48.0_wp)
+  !   ASSOCIATE(base => params%base, tau_daily => params%tau)
+  !     tau_30min = 1._wp - (1._wp - tau_daily)**(1.0_wp / 48.0_wp)
 
-      DO ic=1, nc
-        term(ic) = calc_term(comp(ic), slope, base)
-        f(ic) = f_old(ic) + (term(ic) - f_old(ic))  * tau_30min
-      ENDDO
-    END ASSOCIATE
+  !     DO ic=1, nc
+  !       term(ic) = calc_term(comp(ic), slope, base)
+  !       f(ic) = f_old(ic) + (term(ic) - f_old(ic))  * tau_30min
+  !     ENDDO
+  !   END ASSOCIATE
 
-  END FUNCTION calc_f_comp_PFT
+  ! END FUNCTION calc_f_comp_PFT
 
 
   ! ======================================================================================================= !
   !>
   !> calc_term
   !>
-  ELEMENTAL PURE FUNCTION calc_term(comp, slope, base) RESULT (f)
-     REAL(wp), INTENT(in) :: comp
-     REAL(wp), INTENT(in) :: slope !< sign included here
-     REAL(wp), INTENT(in) :: base
-     REAL(wp) :: f
-     REAL(wp), PARAMETER :: overflow_thd = 200._wp
+  ! ELEMENTAL PURE FUNCTION calc_term(comp, slope, base) RESULT (f)
+  !    REAL(wp), INTENT(in) :: comp
+  !    REAL(wp), INTENT(in) :: slope !< sign included here
+  !    REAL(wp), INTENT(in) :: base
+  !    REAL(wp) :: f
+  !    REAL(wp), PARAMETER :: overflow_thd = 200._wp
 
-     IF (slope * (comp - base) < 200) THEN
-       f = 1.0_wp / (1._wp + exp(slope * (comp - base))) !< 1=slope index, 2=base index
-     ELSE
-       f = 0._wp
-     ENDIF
-  END FUNCTION calc_term
+  !    IF (slope * (comp - base) < 200) THEN
+  !      f = 1.0_wp / (1._wp + exp(slope * (comp - base))) !< 1=slope index, 2=base index
+  !    ELSE
+  !      f = 0._wp
+  !    ENDIF
+  ! END FUNCTION calc_term
 #endif
 END MODULE mo_q_dfire_sf_fmoist_class

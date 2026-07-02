@@ -66,7 +66,7 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_q_dfire_config_class,    ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
-  USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture, t_mf, sf_calc_fuel_moisture_ober
+  USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture, t_sf_mf, sf_calc_fuel_moisture_ober
   USE mo_q_dfire_sf_ignition_class,     ONLY: calc_q_sf_ignition, t_q_sf_ignitions
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
@@ -630,7 +630,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE   :: tot_live_fuel_tree(:)            !< Total live fuel tree [g DM m-2] (#nc)
     REAL(wp), ALLOCATABLE   :: fuel_moisture_for_fc(:,:)        !< fuel moisture (or omega) [%] (#nc,#fuel classes-1,10,100,1000hrs-)
     !< Oberhagemann related
-    TYPE(t_mf), ALLOCATABLE :: fuel_moisture_ober
+    TYPE(t_sf_mf), ALLOCATABLE :: fuel_moisture_ober
     !< ROS related
     REAL(wp)                :: u_f_wind(nc)                     !< Wind speed at vegetation cover [m min-1]
 
@@ -680,7 +680,7 @@ CONTAINS
                                     mask=has_fire_conditions) !< optional
     ELSE IF (config_ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
       ALLOCATE(fuel_moisture_ober)
-      fuel_moisture_ober = t_mf(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr)
+      fuel_moisture_ober = t_sf_mf(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr)
 
       ALLOCATE(tot_live_fuel_tree(nc))
       DO CONCURRENT (i=1:SIZE(live_tree_fuel,2), j=1:SIZE(live_tree_fuel,3)) !2=fuel pools, 3=fuel classes
@@ -892,7 +892,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: tot_dead_fuel_grass(:) !< [g DM m-2]
     REAL(wp), INTENT(in) :: tot_live_fuel_tree(:) !< [g DM m-2]
     REAL(wp), INTENT(in) :: lvg_moisture(:) !< [%], Note: up to 250%
-    TYPE(t_mf), INTENT(out) :: fuel_moisture !< Fuel moisture
+    TYPE(t_sf_mf), INTENT(out) :: fuel_moisture !< Fuel moisture
     REAL(wp), INTENT(out) :: fdi(:) !< Fire danger index [%]
     TYPE(t_sf_ros), INTENT(out) :: ros !< Rate of spread [-]
     LOGICAL, OPTIONAL :: mask(:) !< True: gridcell enabled
