@@ -461,7 +461,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Calculate wind factor (Eq. A5 from Thonicke et al. (2010))
+  !> Calculate wind factor (Eq. A5 from Thonicke et al. (2010)), used to calculate rate of spread
   !>
   ELEMENTAL PURE FUNCTION calc_ros_wind_factor(u_f_wind, sigma, beta, beta_op) RESULT (wind_factor)
     REAL(wp), INTENT(in)        :: u_f_wind     !< Forward wind [m min-1]
@@ -485,6 +485,8 @@ CONTAINS
   !>
   !> Calculate propagation flux ratio (Eq. A2 from Thonicke et al. (2010))
   !>
+  !> Used to calculate rate of spread
+  !>
   ELEMENTAL PURE FUNCTION calc_ros_prop_flux_ratio(sigma, beta) RESULT (prop_flux_ratio)
     REAL(wp), INTENT(in) :: sigma           !< surface-area to volume ratio of the fuel [cm-1]
     REAL(wp), INTENT(in) :: beta            !< packing ratio [-]
@@ -500,6 +502,8 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> Calculate The optimum reaction velocity (Table A1, 1st from Thonicke et al. (2010))
+  !>
+  !> Used to calculate rate of spread
   !>
   ELEMENTAL PURE FUNCTION calc_ros_opt_react_velocity(max_react_vel, beta, beta_op, A_var) RESULT (opt_react_vel)
     REAL(wp), INTENT(in)        :: max_react_vel   !< Maximum reaction velocity [min-1]
@@ -522,6 +526,8 @@ CONTAINS
   !> when accounting for the other pfts.
   !> Thonicke's et al. (2010) is not used as the equation does not seems correct when accounting for
   !> 10 and 100 hours fuel bulk densities (slightly more).
+  !>
+  !> Used to calculate rate of spread
   !>
   FUNCTION calc_ros_fbd(nfclasses, fuel_bulk_density, dead_fuel) RESULT (fbd)
     USE mo_q_dfire_constants, ONLY: df_sf_fuel_class_factors
