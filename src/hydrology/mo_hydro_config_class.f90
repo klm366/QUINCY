@@ -469,19 +469,20 @@ CONTAINS
 #ifndef __QUINCY_STANDALONE__
       input_file = jsb_netcdf_open_input(ic_filename)
 
+
       ! @todo: At the moment, the soil layers for the water calculations are the same as for the SSE_
-      ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of the bottom of each soil layer
-      nsoil = SIZE(ptr_1D)
+      ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
+      nsoil = SIZE(ptr_1D)                                     ! Number of soil layers
 
       IF (l_organic .AND. nsoil < 3) &
         & CALL finish(TRIM(routine), 'At least three soil layers required for using organic soil component')
 
       ! calculate mid-points of each soil layer
-      ALLOCATE(depths(nsoil+1))   ! Upper/lower bounds of soil layers
+      ALLOCATE(depths(nsoil+1))                                     ! Upper/lower bounds of soil layers
       ALLOCATE(mids(nsoil))
-      depths(1) = 0._wp
-      depths(2:nsoil+1) = ptr_1D(1:nsoil)
-      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+      depths(1) = 0._wp                                             ! lower bounds == top of the soil layer
+      depths(2:nsoil+1) = ptr_1D(1:nsoil)                           ! upper bounds == bottom of the soil layer
+      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp ! center depth of a layer
       DEALLOCATE(ptr_1D)
 
       CALL input_file%Close()

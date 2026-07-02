@@ -1,4 +1,4 @@
-!> Contains main JSBACH structure and methods.
+!> Orchestrates setting up the ICON-Land model structure
 !>
 !> ICON-Land
 !>
@@ -27,15 +27,9 @@ MODULE mo_jsb_base
 CONTAINS
 
   ! ======================================================================================================= !
-  !>
-  !> Setup the ICON-Land models
-  !>
-  !>   Routine is called by both:
-  !>      ICON-Land standalone: jsbach: src/drivers/mo_jsbach_model.f90: jsbach_model
-  !>      host model (ICON):    icon: src/drivers/mo_atmo_model.f90: construct_atmo_model
-  !>
-  SUBROUTINE jsbach_setup_models(master_namelist_filename)
+  !> Orchestrates setting up the ICON-Land model structure
 
+  SUBROUTINE jsbach_setup_models(master_namelist_filename)
     USE mo_kind,                ONLY: wp
     USE mo_util,                ONLY: separator
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
@@ -50,7 +44,6 @@ CONTAINS
     USE mo_jsb_grid,            ONLY: Register_vgrid, Get_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, ZAXIS_GENERIC
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
-#ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT
     USE mo_rad_parameters,      ONLY: init_rad_parameters
     USE mo_atmland_constants,   ONLY: init_atmland_constants
@@ -63,15 +56,24 @@ CONTAINS
     USE mo_q_dfire_constants,   ONLY: init_q_dfire_constants
     USE mo_turb_constants,      ONLY: init_turb_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
-#endif
+    !>
+    !> 1. Setup the ICON-Land models
+    !>
+    !>     1a. Routine is called by both:
+    !>      ICON-Land standalone: jsbach: src/drivers/mo_jsbach_model.f90: jsbach_model
+    !>
+    !>     1b. Host model (ICON):    icon: src/drivers/mo_atmo_model.f90: construct_atmo_model
+    !>
 
-    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
+    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, CLIMBUF_, NLCC_, &
       &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, ALCC_, &
       &                   Q_DFIRE_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
+    dsl4jsb_Use_config(CLIMBUF_)
+    dsl4jsb_Use_config(NLCC_)
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
@@ -80,16 +82,16 @@ CONTAINS
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
     dsl4jsb_Use_config(ALCC_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(VEG_)
-#endif
 
-    CHARACTER(len=*), INTENT(in) :: master_namelist_filename
+    CHARACTER(len=*), INTENT(in) :: master_namelist_filename !< icon_master.namelist - which models to run, which calendar, ...
 
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(RAD_)
+    dsl4jsb_Def_config(CLIMBUF_)
+    dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
@@ -98,42 +100,39 @@ CONTAINS
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
     dsl4jsb_Def_config(ALCC_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(VEG_)
-#endif
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
-    TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w, snow_e
 
-    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
-    TYPE(t_jsb_vgrid), POINTER :: pft_layer                    ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w, snow_e       !< Vertical soil and snow grids
+    TYPE(t_jsb_vgrid), POINTER :: surface                      !< Vertical grid for surface (only one layer)
+    TYPE(t_jsb_vgrid), POINTER :: pft_layer                    !< Vertical grid
 
-    INTEGER :: no_of_models, model_idx, iproc
-    INTEGER :: nsoil_e, nsoil_w, nsnow_e
-    INTEGER :: model_scheme
+    INTEGER :: no_of_models, model_idx, iproc                  !< IDs of models and process
+    INTEGER :: nsoil_e, nsoil_w, nsnow_e                       !< Number of vertical soil and snow layers
+    INTEGER :: model_scheme                                    !< Choice of model (JSBACH or Quincy)
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_models'
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_models' !< Name of this routine
 
     CALL message('', '')
     CALL message('', separator)
     CALL message('', 'ICON-Land model configuration:')
     CALL message('', '')
 
-    CALL init_parallel_iface
+    CALL init_parallel_iface ! setup communicator for MPI
 
-    CALL init_jsb_master_control(master_namelist_filename)
+    CALL init_jsb_master_control(master_namelist_filename) ! read ICON-LAND part of master namelist and basic setup (timers, ...)
 
-    !IF (jsbach_runs_standalone()) CALL init_mpi_communicators !TODO-check-with-RMS: remove: done in the driver!
-
+    !> 2. Register all model instances
     no_of_models = get_no_of_models()
     ALLOCATE(jsbach%models(no_of_models))
     jsbach%no_of_models = no_of_models
 
     ALLOCATE(jsbach_subsets(no_of_models))
 
-    ! Create models according to master namelist
+    !> 3. Create models according to master namelist and add to jsbach model registry
     DO model_idx=1,no_of_models
       NULLIFY(model)
       model => new_model(jsb_models_nml(model_idx)%model_id,                &
@@ -145,50 +144,44 @@ CONTAINS
       ALLOCATE(jsbach_subsets(model_idx)%sub(Get_omp_no_of_threads()))
     END DO
 
-    ! Configure models according to model namelist(s)
+    !> 4. Configure models according to model namelist(s) and (grid namelist(s) if standalone)
     DO model_idx=1,no_of_models
-       NULLIFY(model)
-       model => jsbach%models(model_idx)%m
-       model%config => new_model_config(model%namelist_filename)
+      NULLIFY(model)
+      model => jsbach%models(model_idx)%m
+      model%config => new_model_config(model%namelist_filename)
 
-       CALL message(TRIM(routine), 'New ICON-Land model: '//TRIM(model%shortname))
-       CALL message('     ', '... ID: '//TRIM(int2string(model%id)))
-       IF (model%config%is_single_site) &
-         & CALL message('     ', '... Single site: '//TRIM(model%config%single_site_name))
-       CALL message('     ', '... Usecase: '//TRIM(model%config%usecase))
-       CALL message('     ', '... Using configuration from namelist: '//TRIM(model%namelist_filename))
-       CALL message('     ', '... Using tile fractions from: '//TRIM(model%config%fract_filename))
+      CALL message(TRIM(routine), 'New ICON-Land model: '//TRIM(model%shortname))
+      CALL message('     ', '... ID: '//TRIM(int2string(model%id)))
+      IF (model%config%is_single_site) &
+        & CALL message('     ', '... Single site: '//TRIM(model%config%single_site_name))
+      CALL message('     ', '... Usecase: '//TRIM(model%config%usecase))
+      CALL message('     ', '... Using configuration from namelist: '//TRIM(model%namelist_filename))
+      CALL message('     ', '... Using tile fractions from: '//TRIM(model%config%fract_filename))
 
-       ! Require that only one model_scheme is used!
-       IF (model_idx == 1) THEN
-         model_scheme = model%config%model_scheme
-       ELSE IF (model%config%model_scheme /= model_scheme) THEN
-          CALL finish(routine, 'Only one model_scheme allowed!')
-       END IF
-
-#ifndef __NO_QUINCY__
-       !> set the bgcm index var used in the scientific routines
-       !>   it depends on the model config and is identical across models
-       !>   assuming the namelist options are identical across models
-       !>
-       IF (model_idx == 1) THEN
-         CALL set_bgcm_element_idx(model%config%elements_index_map)
-       END IF
-#else
-      IF (model_scheme == MODEL_QUINCY) THEN
-        CALL finish(routine, 'The model scheme QUINCY can only be run if compiled with --enable-quincy!')
+      ! Require that only one model_scheme is used!
+      IF (model_idx == 1) THEN
+        model_scheme = model%config%model_scheme
+      ELSE IF (model%config%model_scheme /= model_scheme) THEN
+         CALL finish(routine, 'Only one model_scheme allowed!')
       END IF
-#endif
 
-       !> parameter init and test for '--enable-quincy' compile flag
-       !>
-       IF (model_idx == 1) THEN
-         ! assuming the shared/constants/ modules are available here already (impl, math, physical)
-         ! model specific
-         SELECT CASE (model_scheme)
-         CASE (MODEL_QUINCY)
-           CALL message(TRIM(routine), 'starting init of QUINCY process parameters')
-#ifndef __NO_QUINCY__
+      !>
+      !> 5. Set the bgcm index var used in the scientific routines.
+      !>   It depends on the model config and is identical across models,
+      !>   assuming the namelist options are identical across models
+      !>
+      IF (model_idx == 1) THEN
+        CALL set_bgcm_element_idx(model%config%elements_index_map)
+      END IF
+
+      !> 6. Set parameter init
+      !>
+      IF (model_idx == 1) THEN
+        ! assuming the shared/constants/ modules are available here already (impl, math, physical)
+        ! model specific
+        SELECT CASE (model_scheme)
+        CASE (MODEL_QUINCY)
+          CALL message(TRIM(routine), 'starting init of QUINCY process parameters')
            CALL init_rad_parameters
            CALL init_q_assimi_parameters
            CALL init_q_agr_constants
@@ -199,26 +192,36 @@ CONTAINS
            CALL init_q_dfire_constants
            CALL init_q_pheno_parameters
            CALL init_atmland_constants
-#endif
-         CASE (MODEL_JSBACH)
-           CALL message(TRIM(routine), 'starting init of JSBACH process parameters')
-           CALL init_pheno_parameters
-         END SELECT
-       END IF
+        CASE (MODEL_JSBACH)
+          CALL message(TRIM(routine), 'starting init of JSBACH process parameters')
+          CALL init_pheno_parameters
+        END SELECT
+      END IF
 
-       IF (jsbach_runs_standalone()) THEN
-         CALL init_time(TRIM(model%namelist_filename), TRIM(model%shortname), jsbach_is_restarted())
-       ELSE
-         CALL init_time()
-       END IF
+      !> 7. Standalone simulation initialize all time infos here, coupled simulations get most of it from ICON
+      IF (jsbach_runs_standalone()) THEN
+        CALL init_time(TRIM(model%namelist_filename), TRIM(model%shortname), jsbach_is_restarted())
+      ELSE
+        CALL init_time()
+      END IF
 
       CALL model%Set_mode(model%config%hsm_mode)
       ! Disable multi-queue processing for QUINCY while it's not ready
       CALL model%Set_multi_queues(model_scheme /= MODEL_QUINCY)
 
+      !>
+      !> 8. Create and register surface grid, other grids are created by the processes that needs them.
       surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
       CALL register_vgrid(surface)
 
+      !>
+      !> 9. Create model processes.
+      !>    9.a Note, that the maximum number of processes are create, but processes
+      !  beyond the used processes get a NULL pointer
+      !>
+      !>  @TODO We need a better error message in case the number of processes used is > max_no_of_processes
+      !>        or a different way to the the maximum number of processes automatically.
+      !>
       ALLOCATE(model%processes(max_no_of_processes))
       DO iproc=1,max_no_of_processes
         model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
@@ -233,7 +236,7 @@ CONTAINS
         ENDIF
       ENDDO
 
-      ! Configure processes: run 'Init_PROC_config'
+      !> 10. Configure processes: run `Init_PROC_config` (read namelists and create vertical axis if necessary, method from mo_jsb_class)
       CALL model%Configure_processes()
 
       dsl4jsb_Get_config(RAD_)
@@ -241,7 +244,8 @@ CONTAINS
       dsl4jsb_Get_config(HYDRO_)
       dsl4jsb_Get_config(PPLCC_)
 
-      ! Make number of vertical layers available from the options type
+      !>
+      !>     10a. Make number of vertical layers available from the options type
       IF (model%Is_process_enabled(HYDRO_)) THEN
         soil_w => Get_vgrid('soil_depth_water')
         nsoil_w = soil_w%n_levels
@@ -263,7 +267,8 @@ CONTAINS
       END IF
       CALL model%Set_options(npft=model%config%npft)
 
-      ! Crosscheck process configs
+      !>
+      !>     10b. Crosscheck process configs
       IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
         & .AND. (nsoil_e /= nsoil_w)) THEN
         CALL finish(routine, &
@@ -271,8 +276,12 @@ CONTAINS
           & //' nsoil_w = '//TRIM(int2string(nsoil_w))//', nsoil_e = '//TRIM(int2string(nsoil_e)))
       END IF
 
+      !>
+      !>     10c. Configure JSABCH processes (CARBON, FUEL, DISTURB, FAGE, WLCC, FLCC)
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
+        dsl4jsb_Get_config(CLIMBUF_)
+        dsl4jsb_Get_config(NLCC_)
         dsl4jsb_Get_config(CARBON_)
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
@@ -296,7 +305,8 @@ CONTAINS
         END IF
       END IF
 
-      ! --- check process dependencies
+      !>
+      !>     10d. Check process dependencies
 #ifdef _OPENACC
       ! If running on GPU assert that required processes are ported
       IF (model%Do_fractions_change()) THEN
@@ -313,11 +323,10 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-        ! There are several jsbach processes for which active is set to TRUE as default, however, these are not required for IQ:
+        ! There are several jsbach processes for which active is set to TRUE as default, however, these are not required for IQJ:
         model%processes(ASSIMI_)%p%config%active = .FALSE.
         model%processes(PHENO_)%p%config%active = .FALSE.
 
-#ifndef __NO_QUINCY__
         ! The Q_SYL_ process requires the PPLCC process to be active
         dsl4jsb_Get_config(Q_SYL_)
         IF (dsl4jsb_Config(Q_SYL_)%active) THEN
@@ -346,7 +355,6 @@ CONTAINS
             dsl4jsb_Config(Q_SYL_)%active = .FALSE.
           END IF
         END IF
-#endif
 
       CASE (MODEL_JSBACH)
 
@@ -357,6 +365,18 @@ CONTAINS
           CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
         END IF
 
+        IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
+          dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on climate buffer process since natural lcc is active')
+        END IF
+        IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(CARBON_)) THEN
+          dsl4jsb_Config(CARBON_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on carbon process since natural lcc is active')
+        END IF
+        IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
+          dsl4jsb_Config(DISTURB_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on disturbance process since natural lcc process is active')
+        END IF
         IF (model%Is_process_enabled(FLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
           dsl4jsb_Config(DISTURB_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on disturbance process since fire lcc process is active')
@@ -373,8 +393,12 @@ CONTAINS
           dsl4jsb_Config(CARBON_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
         END IF
+        IF (model%Is_process_enabled(CARBON_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
+          dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on climate buffer process since carbon process is active')
+        END IF
 
-        IF(model%Is_process_enabled(FAGE_) &
+        IF (model%Is_process_enabled(FAGE_) &
             & .AND. .NOT. (TRIM(model%config%usecase) == 'jsbach_forest_age_classes')) THEN
           CALL finish(routine, &
             & 'The FAGE process should only be used with the jsbach_forest_age_classes usecase! Please check!')
@@ -415,6 +439,17 @@ CONTAINS
 
   END SUBROUTINE jsbach_setup_models
 
+  ! ======================================================================================================= !
+  !>
+  !> Set up tiles including provision of lctlib.
+  !>
+  !> Routine is called by both:
+  !>
+  !>  - ICON-Land standalone: jsbach: src/drivers/mo_jsbach_model.f90: jsbach_model
+  !>
+  !>  - Host model (ICON):    icon: src/drivers/mo_atmo_model.f90: construct_atmo_model
+  !> after setting up the model(s).
+  !>
   SUBROUTINE jsbach_setup_tiles(model_id)
 
     USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -422,16 +457,24 @@ CONTAINS
     USE mo_jsb_model_usecases, ONLY: init_usecase
     USE mo_jsb_lctlib_class,   ONLY: Read_lctlib
 
-    INTEGER, INTENT(in) :: model_id
+    INTEGER, INTENT(in) :: model_id !< model id (id of the domain in ICON)
 
-    TYPE(t_jsb_model), POINTER  :: model
-    CHARACTER(LEN=30)           :: lctlib_filename
+    TYPE(t_jsb_model), POINTER  :: model               !< Current instance of the model
+    CHARACTER(LEN=30)           :: lctlib_filename     !< Name of the to be read lctlib file
+
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_tiles'
 
     model => Get_model(model_id)
 
-    ! select lctlib file depending on the usecase
-    ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
+    !>
+    !> @TODO `lctlib_filename` should be specified as namelist parameter instead of being hardcoded here.
+    !>
+    !> @TODO `lctlib_filename` should always link to the same lctlib filename and do the rest by scripting environment.
+    !>
+    !> 1. Set-up the lctlib.
+    !>
+    !>     - Select lctlib file depending on the usecase.
+    !>
     SELECT CASE (TRIM(model%config%usecase))
     ! quincy model with 13 PFT tiles incl. bare soil
     CASE ('quincy_13_pfts')
@@ -441,7 +484,8 @@ CONTAINS
       lctlib_filename = 'lctlib_nlct21.def'
     END SELECT
 
-    ! import lctlib
+    !>     - Import lctlib.
+    !>
     ! use model_scheme_char, instead of the ENUM model_scheme, to differentiate between model schemes
     !  because mo_jsb_model_class is not used in this function
     model%lctlib => Read_lctlib(TRIM(lctlib_filename), &
@@ -450,13 +494,17 @@ CONTAINS
     CALL message(TRIM(routine), 'Imported lctlib from '//TRIM(lctlib_filename)// &
       &                         ' using the model scheme '//model%config%model_scheme_char)
 
-    ! initialize usecase if defined via namelist
+    !>
+    !> 2. Initialize usecase
+    !>
     IF (model%config%usecase /= '') THEN
       ! Shortcut model configuration through usecase
       CALL init_usecase(model)
     ELSE
       ! Explicit model configuration through namelist
-      ! TODO
+      !>
+      !> @TODO  At least add a finish in the if structure to initialize the model configuration thorugh the usecase or the namelist.
+      !>
     END IF
 
   END SUBROUTINE jsbach_setup_tiles

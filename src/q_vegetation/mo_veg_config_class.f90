@@ -1,4 +1,4 @@
-!> vegetation process config (QUINCY)
+!> QUINCY vegetation process config
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### define vegetation config structure, read vegetation namelist and init configuration parameters
 !>
 MODULE mo_veg_config_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module

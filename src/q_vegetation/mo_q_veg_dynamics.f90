@@ -16,7 +16,7 @@
 !>#### calculate vegetation dynamics, e.g., establishment and mortality
 !>
 MODULE mo_q_veg_dynamics
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                 ONLY: wp
   USE mo_jsb_impl_constants,   ONLY: true, false, test_false_true

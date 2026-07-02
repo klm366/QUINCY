@@ -1,4 +1,4 @@
-!> vegetation constants (QUINCY)
+!> QUINCY vegetation constants
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### declare and define vegetation constants
 !>
 MODULE mo_veg_constants
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
 
