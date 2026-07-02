@@ -24,7 +24,7 @@ MODULE mo_q_dfire_sf_fmoist_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_fuel_moisture, sf_calc_fuel_moisture_ober, t_gsi_param, t_gsi, t_lfmc, t_mf, calc_mflg_ober
+  PUBLIC :: sf_calc_fuel_moisture, sf_calc_fuel_moisture_ober, t_gsi_param, t_gsi, t_sf_lfmc, t_mf, calc_mflg_ober
 
   !> GSI parameters
   TYPE :: t_gsi_param
@@ -46,11 +46,11 @@ MODULE mo_q_dfire_sf_fmoist_class
   END INTERFACE t_gsi
 
   !> Livegrass fuel moisture content paremeters from Oberhagemann et al. (2025)
-  TYPE :: t_lfmc
+  TYPE :: t_sf_lfmc
     REAL(wp) :: min, max, b, c
-  END TYPE t_lfmc
+  END TYPE t_sf_lfmc
 
-  INTERFACE t_lfmc
+  INTERFACE t_sf_lfmc
     MODULE PROCEDURE :: create_lfmc_from_lctlib
   END INTERFACE
 
@@ -87,11 +87,11 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> t_lfmc constructor
+  !> t_sf_lfmc constructor
   !>
   FUNCTION create_lfmc_from_lctlib(lctlib) RESULT (lfmc)
     TYPE(t_lctlib_element) :: lctlib
-    TYPE(t_lfmc) :: lfmc
+    TYPE(t_sf_lfmc) :: lfmc
 
     lfmc % min = lctlib%q_lfmc_min
     lfmc % max = lctlib%q_lfmc_max
@@ -349,7 +349,7 @@ CONTAINS
   !>
   FUNCTION calc_mflg_with_gsi_ober(nc, lfmc_par, gsi_par, tair, sw_rad, water) RESULT (mf_lg)
     INTEGER, INTENT(in) :: nc
-    TYPE(t_lfmc), INTENT(in) :: lfmc_par !< livegrass moisture parameters
+    TYPE(t_sf_lfmc), INTENT(in) :: lfmc_par !< livegrass moisture parameters
     TYPE(t_gsi), INTENT(in) :: gsi_par   !< Parameters used to calculate gsi phenology
     REAL(wp), INTENT(in) :: tair(nc)     !< Air temperature [deg C]
     REAL(wp), INTENT(in) :: sw_rad(nc)   !< Shortwave-downward radiation [W m-2]
@@ -399,7 +399,7 @@ CONTAINS
   !>
   FUNCTION calc_mflg_ober(nc, lfmc_par, phen) RESULT (mf_lg)
     INTEGER, INTENT(in) :: nc
-    TYPE(t_lfmc), INTENT(in) :: lfmc_par  !< livegrass moisture parameters
+    TYPE(t_sf_lfmc), INTENT(in) :: lfmc_par  !< livegrass moisture parameters
     REAL(wp), INTENT(in) :: phen(nc)      !< Livegrass phenological status [0 to 1]
     REAL(wp), ALLOCATABLE :: mf_lg(:)     ! Livegrass moisture [0.3 to 2.5]
 

@@ -48,7 +48,7 @@ MODULE mo_q_dfire_fuel
 
   USE mo_q_dfire_sf_adaptor,      ONLY: sf_convert_units
   USE mo_q_dfire_constants,       ONLY: df_sf_units_k_to_c
-  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg_ober, t_lfmc
+  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg_ober, t_sf_lfmc
 
   IMPLICIT NONE
 
@@ -57,7 +57,7 @@ MODULE mo_q_dfire_fuel
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel'
 
-  TYPE(t_lfmc), SAVE, ALLOCATABLE :: lfmc_par
+  TYPE(t_sf_lfmc), SAVE, ALLOCATABLE :: lfmc_par
 
 CONTAINS
 
@@ -258,7 +258,7 @@ CONTAINS
 
     IF (lctlib%growthform == igrass) THEN
       IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-        IF (.NOT. allocated(lfmc_par)) lfmc_par = t_lfmc(lctlib)
+        IF (.NOT. allocated(lfmc_par)) lfmc_par = t_sf_lfmc(lctlib)
         lvg_moisture = calc_mflg_ober(nc, lfmc_par, growing_season)
 
         !< Oberhagemann et al. (2025), Section "Improvements to the treatment of live grass moisture in SPITFIRE", page 2031-2032
