@@ -907,7 +907,6 @@ CONTAINS
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
     REAL(wp), POINTER :: fract_sum(:,:)
     REAL(wp), POINTER :: data_sum(:,:)
-    LOGICAL, ALLOCATABLE :: mask_use_child(:)
 
     INTEGER :: no_children, icount,ichild, i, iproc, j
     LOGICAL :: l_aggregate_all
@@ -985,8 +984,6 @@ CONTAINS
       !
       !$ACC LOOP SEQ
       DO i=1,no_children
-        IF (.NOT. mask_use_child(i)) CYCLE ! skip current child
-
         ! Check if the var exists on this tile (could be a tile on which the according process is not running)
         IF ( var%child_idx(i) > 0 ) THEN
           ! The variable exists on the child tile
@@ -1079,7 +1076,6 @@ CONTAINS
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
     REAL(wp), POINTER :: fract_sum(:,:)
     REAL(wp), POINTER :: data_sum(:,:)
-    LOGICAL, ALLOCATABLE :: mask_use_child(:)
 
     INTEGER :: no_children, icount, ichild, i, iproc, ilev, nlev, j
     LOGICAL :: l_aggregate_all
@@ -1160,8 +1156,6 @@ CONTAINS
       END DO
       !$ACC LOOP SEQ
       DO i=1,no_children
-        IF (.NOT. mask_use_child(i)) CYCLE
-
         ! Check if the var exists on this tile (could be a tile on which the according process is not running)
         IF (var%child_idx(i) > 0) THEN
           !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1188,8 +1182,6 @@ CONTAINS
 
         !$ACC LOOP SEQ
         DO i=1,no_children
-          IF (.NOT. mask_use_child(i)) CYCLE
-
           IF (var%child_idx(i) > 0) THEN
             !$ACC LOOP GANG(STATIC: 1) VECTOR
             DO j = ics, ice
@@ -1504,15 +1496,13 @@ CONTAINS
   !>
   !> Aggregation of a 2d variable from the child tiles by sum all
   !>
-  SUBROUTINE Aggregate_sum_2d(this, tile, var, ics, ice, iblk, caller, mask, mask_on_tile)
+  SUBROUTINE Aggregate_sum_2d(this, tile, var, ics, ice, iblk, caller)
 
     CLASS(t_jsb_aggregator_sum),               INTENT(inout) :: this           !< Aggregator
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
     TYPE(t_jsb_var_real2d),                    INTENT(inout) :: var            !< to be aggregated 2d variable
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
     CHARACTER(len=*),                          INTENT(in)    :: caller         !< calling aggregation routine
-    LOGICAL,  OPTIONAL,                        INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
-    CHARACTER(len=*), OPTIONAL,                INTENT(in)    :: mask_on_tile   !< Apply mask at a specific tile level
 
     REAL(wp), POINTER :: ptr(:,:)
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
@@ -1528,10 +1518,6 @@ CONTAINS
       routine = modname//':Aggregate_sum_2d'//'(called by '//TRIM(caller)//')'
     ELSE
       routine = modname//':Aggregate_sum_2d'
-    END IF
-
-    IF (PRESENT(mask)) THEN
-      CALL finish(routine, "mask not yet implemented")
     END IF
 
     no_children = tile%Get_no_of_children()
@@ -1660,15 +1646,13 @@ CONTAINS
   !> Aggregation of a 3d variable from the child tiles by sum
   !> todo: ensure it works
   !>
-  SUBROUTINE Aggregate_sum_3d(this, tile, var, ics, ice, iblk, caller, mask, mask_on_tile)
+  SUBROUTINE Aggregate_sum_3d(this, tile, var, ics, ice, iblk, caller)
 
     CLASS(t_jsb_aggregator_sum),               INTENT(inout) :: this           !< Aggregator
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
     TYPE(t_jsb_var_real3d),                    INTENT(inout) :: var            !< to be aggregated 3d variable
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
     CHARACTER(len=*),                          INTENT(in)    :: caller         !< calling aggregation routine
-    LOGICAL,  OPTIONAL,                        INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
-    CHARACTER(len=*), OPTIONAL,                INTENT(in)    :: mask_on_tile   !< Apply mask at a specific tile level
 
     CLASS(t_jsb_var), POINTER :: ptr
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
@@ -1684,10 +1668,6 @@ CONTAINS
       routine = modname//':Aggregate_sum_3d'//'(called by '//TRIM(caller)//')'
     ELSE
       routine = modname//':Aggregate_sum_3d'
-    END IF
-
-    IF (PRESENT(mask)) THEN
-      CALL finish(routine, "mask not yet implemented")
     END IF
 
     no_children = tile%Get_no_of_children()

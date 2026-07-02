@@ -52,7 +52,6 @@ MODULE mo_jsb_process_factory_core
   USE mo_sb_memory_class,      ONLY: t_sb_memory
   USE mo_q_dfire_memory_class,      ONLY: t_q_dfire_memory
   USE mo_q_dfire_fuel_memory_class, ONLY: t_q_dfire_fuel_memory
-#endif
 
   USE mo_rad_interface,        ONLY: Register_rad_tasks
   USE mo_rad_config_class,     ONLY: t_rad_config
@@ -108,7 +107,6 @@ MODULE mo_jsb_process_factory_core
   USE mo_q_dfire_config_class,  ONLY: t_q_dfire_config
   USE mo_q_dfire_fuel_interface,ONLY: Register_q_dfire_fuel_tasks
   USE mo_q_dfire_fuel_config_class, ONLY: t_q_dfire_fuel_config
-#endif
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
@@ -305,7 +303,6 @@ CONTAINS
     USE mo_sb_memory_class,      ONLY: max_no_of_sb_vars => max_no_of_vars
     USE mo_q_dfire_memory_class, ONLY: max_no_of_q_dfire_vars => max_no_of_vars
     USE mo_q_dfire_fuel_memory_class, ONLY: max_no_of_q_dfire_fuel_vars => max_no_of_vars
-#endif
 
     INTEGER, INTENT(in) :: iproc                   !< Process ID
     CLASS(t_jsb_memory), POINTER   :: return_ptr   !< Pointer to the process memory

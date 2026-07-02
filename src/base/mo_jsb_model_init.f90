@@ -203,7 +203,6 @@ CONTAINS
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_config(Q_DFIRE_)
     dsl4jsb_Def_config(Q_DFIRE_FUEL_)
-#endif
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
     ! -------------------------------------------------------------------------------------------------- !
