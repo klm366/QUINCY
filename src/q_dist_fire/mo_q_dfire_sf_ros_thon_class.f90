@@ -36,7 +36,7 @@ MODULE mo_q_dfire_sf_ros_thon_class
                                       df_sf_fuel_heat_content
 
   USE mo_quincy_stats,          ONLY: stats_average_weight
-  USE mo_q_dfire_sf_ros_eqs,    ONLY: calc_ros_opt_react_velocity, &
+  USE mo_q_dfire_util,          ONLY: calc_ros_opt_react_velocity, &
                                        calc_ros_prop_flux_ratio, &
                                        calc_ros_wind_factor
   USE mo_q_dfire_sf_classes,    ONLY: t_sf_ros
