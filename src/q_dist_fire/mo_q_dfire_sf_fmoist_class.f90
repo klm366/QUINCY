@@ -26,25 +26,6 @@ MODULE mo_q_dfire_sf_fmoist_class
   PRIVATE
   PUBLIC :: sf_calc_fuel_moisture, sf_calc_fuel_moisture_ober, t_sf_lfmc, t_sf_mf, calc_mflg_ober
 
-  !> GSI parameters
-  ! TYPE :: t_gsi_param
-  !   REAL(wp) :: slope
-  !   REAL(wp) :: base
-  !   REAL(wp) :: tau
-  ! END TYPE t_gsi_param
-
-  ! !> GSI phenology components, from Oberhagemann et al. (2025)
-  ! TYPE :: t_gsi
-  !   TYPE(t_gsi_param) :: cold
-  !   TYPE(t_gsi_param) :: heat
-  !   TYPE(t_gsi_param) :: light
-  !   TYPE(t_gsi_param) :: water
-  ! END TYPE t_gsi
-
-  ! INTERFACE t_gsi
-  !   MODULE PROCEDURE :: create_gsi_from_lctlib
-  ! END INTERFACE t_gsi
-
   !> Livegrass fuel moisture content paremeters from Oberhagemann et al. (2025)
   TYPE :: t_sf_lfmc
     REAL(wp) :: min, max, b, c
@@ -98,21 +79,6 @@ CONTAINS
     lfmc % b = lctlib%q_lfmc_b
     lfmc % c = lctlib%q_lfmc_c
   END FUNCTION create_lfmc_from_lctlib
-
-
-  ! ======================================================================================================= !
-  !>
-  !> t_gsi constructor
-  !>
-  ! FUNCTION create_gsi_from_lctlib(lctlib) RESULT (gsi)
-  !   TYPE(t_lctlib_element) :: lctlib
-  !   TYPE(t_gsi) :: gsi
-
-  !   gsi % cold = t_gsi_param( lctlib%q_tmin_slope, lctlib%q_tmin_base, lctlib%q_tmin_tau)
-  !   gsi % heat = t_gsi_param( lctlib%q_tmax_slope, lctlib%q_tmax_base, lctlib%q_tmax_tau)
-  !   gsi % light = t_gsi_param( lctlib%q_light_slope, lctlib%q_light_base, lctlib%q_light_tau)
-  !   gsi % water = t_gsi_param( lctlib%q_water_slope, lctlib%q_water_base, lctlib%q_water_tau)
-  ! END FUNCTION create_gsi_from_lctlib
 
 
   ! ======================================================================================================= !
@@ -320,80 +286,6 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> calc_alphas
-  !> Calculate alphas from Thonicke et. al. (2010).
-  !> Alphas are the inverse proportion to their Surface-area-to-volume ratios. [deg Celsius-2]
-  !>
-  FUNCTION calc_alphas(sigmas) RESULT (alphas)
-    REAL(wp), INTENT(in)  :: sigmas(:) !< Surface-area-to-volume ratio [cm2/cm3]
-    REAL(wp), ALLOCATABLE :: alphas(:) !< Inverse proportionto to their SAV [deg Celsius-2]
-    REAL(wp), PARAMETER :: init_alpha = 0.001_wp
-    INTEGER :: isig
-    REAL(wp) :: ratio
-
-    ratio = 1.
-    ALLOCATE(alphas, mold=sigmas)
-
-    alphas(1) = init_alpha
-    DO isig = 2, SIZE(sigmas)
-      ratio = ratio * sigmas(isig-1) / sigmas(isig)
-      alphas(isig) = alphas(1) / ratio
-    END DO
-  END FUNCTION calc_alphas
-
-
-  ! ======================================================================================================= !
-  !>
-  !> calc_mflg_with_gsi_ober
-  !> Calculate livegrass moisture based on Oberhagemann et al. (2025), related to equation 4.
-  !>
-  FUNCTION calc_mflg_with_gsi_ober(nc, lfmc_par, gsi_par, tair, sw_rad, water) RESULT (mf_lg)
-    INTEGER, INTENT(in) :: nc
-    TYPE(t_sf_lfmc), INTENT(in) :: lfmc_par !< livegrass moisture parameters
-    TYPE(t_gsi), INTENT(in) :: gsi_par   !< Parameters used to calculate gsi phenology
-    REAL(wp), INTENT(in) :: tair(nc)     !< Air temperature [deg C]
-    REAL(wp), INTENT(in) :: sw_rad(nc)   !< Shortwave-downward radiation [W m-2]
-    REAL(wp), INTENT(in) :: water(nc)    !< Daily water availability: is a ratio between water
-                                         !< supply from soil moisture and atmospheric water demand [0 to 100]%
-    REAL(wp), ALLOCATABLE :: mf_lg(:) ! Livegrass moisture [0.3 to 2.5]
-
-    REAL(wp) :: f_cold(nc), f_heat(nc), f_water(nc), f_light(nc) !< phenology components
-    REAL(wp), ALLOCATABLE, SAVE :: f_cold_old(:), f_heat_old(:), f_water_old(:), f_light_old(:) !< from previous timestep
-    !REAL(wp), PARAMETER :: mflg_max = 2.5_wp
-    REAL(wp) :: phen(nc)
-
-    IF (.NOT. ALLOCATED(f_cold_old)) THEN ! initilize
-      ALLOCATE(f_cold_old(nc), f_heat_old(nc), f_water_old(nc), f_light_old(nc))
-      f_cold_old = calc_term(tair, - gsi_par%cold%slope, gsi_par%cold%base)! slope, base
-      f_heat_old = calc_term(tair, gsi_par%heat%slope, gsi_par%heat%base)
-      f_light_old = calc_term(sw_rad, -gsi_par%light%slope, gsi_par%light%base)
-      f_water_old = calc_term(water, -gsi_par%water%slope, gsi_par%water%base)
-    END IF
-    ALLOCATE(mf_lg(nc))
-
-    !< Calc phenology
-    f_cold = calc_f_comp_PFT(nc, gsi_par%cold, f_cold_old, tair, .FALSE.)
-    f_heat = calc_f_comp_PFT(nc, gsi_par%heat, f_heat_old, tair, .TRUE.)
-    f_light = calc_f_comp_PFT(nc, gsi_par%light, f_light_old, sw_rad, .FALSE.)
-    f_water = calc_f_comp_PFT(nc, gsi_par%water, f_water_old, water, .FALSE.)
-    !< Forkel et al. (2014), eq. 5
-    phen = f_cold * f_heat * f_water * f_light
-
-    !< save for next TS
-    f_cold_old = f_cold
-    f_heat_old = f_heat
-    f_water_old = f_water
-    f_light_old = f_light
-
-    ! As paper's source code, eq. 4, todo: remove and rename to calc_gsi_phen
-    mf_lg = lfmc_par%b + lfmc_par%c * phen
-    WHERE (mf_lg < lfmc_par%min) mf_lg = lfmc_par%min !< set min value
-    WHERE (mf_lg > lfmc_par%max) mf_lg = lfmc_par%max !< up to 250% livegrass moisture
-  END FUNCTION calc_mflg_with_gsi_ober
-
-
-  ! ======================================================================================================= !
-  !>
   !> calc_mflg_ober
   !> Calculate livegrass moisture based on Oberhagemann et al. (2025), eq. 4.
   !>
@@ -409,61 +301,5 @@ CONTAINS
     WHERE (mf_lg > lfmc_par%max) mf_lg = lfmc_par%max !< up to 250% livegrass moisture
   END FUNCTION calc_mflg_ober
 
-
-  ! ======================================================================================================= !
-  !>
-  !> calc_f_comp_PFT
-  !>
-  !> Paper: https://bg.copernicus.org/articles/11/7025/2014/bg-11-7025-2014.pdf, eqs. 6, 7, 8, 9
-  !> Component limiting function
-  !>
-  ! FUNCTION calc_f_comp_PFT(nc, params, f_old, comp, ispositive) RESULT (f)
-  !   INTEGER, INTENT(in)           :: nc
-  !   TYPE(t_gsi_param), INTENT(in) :: params
-  !   REAL(wp), INTENT(in)          :: f_old(nc) !< previous TS value
-  !   REAL(wp), INTENT(in)          :: comp(nc) !< physical variable
-  !   LOGICAL, INTENT(in)           :: ispositive !< true: increase, false=decrease
-  !   REAL(wp) :: f(nc)
-
-  !   REAL(wp) :: term(nc)
-  !   INTEGER :: ic
-  !   REAL(wp) :: slope
-  !   REAL(wp) :: tau_30min
-
-  !   IF (ispositive) THEN
-  !     slope = params%slope ! slope increase
-  !   ELSE
-  !     slope = -params%slope ! slope decrease
-  !   ENDIF
-
-  !   ASSOCIATE(base => params%base, tau_daily => params%tau)
-  !     tau_30min = 1._wp - (1._wp - tau_daily)**(1.0_wp / 48.0_wp)
-
-  !     DO ic=1, nc
-  !       term(ic) = calc_term(comp(ic), slope, base)
-  !       f(ic) = f_old(ic) + (term(ic) - f_old(ic))  * tau_30min
-  !     ENDDO
-  !   END ASSOCIATE
-
-  ! END FUNCTION calc_f_comp_PFT
-
-
-  ! ======================================================================================================= !
-  !>
-  !> calc_term
-  !>
-  ! ELEMENTAL PURE FUNCTION calc_term(comp, slope, base) RESULT (f)
-  !    REAL(wp), INTENT(in) :: comp
-  !    REAL(wp), INTENT(in) :: slope !< sign included here
-  !    REAL(wp), INTENT(in) :: base
-  !    REAL(wp) :: f
-  !    REAL(wp), PARAMETER :: overflow_thd = 200._wp
-
-  !    IF (slope * (comp - base) < 200) THEN
-  !      f = 1.0_wp / (1._wp + exp(slope * (comp - base))) !< 1=slope index, 2=base index
-  !    ELSE
-  !      f = 0._wp
-  !    ENDIF
-  ! END FUNCTION calc_term
 #endif
 END MODULE mo_q_dfire_sf_fmoist_class
