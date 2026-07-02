@@ -162,7 +162,7 @@ CONTAINS
     USE mo_jsb_time,                 ONLY: is_newday, is_newyear, timesteps_per_day, &
       &                                    is_time_experiment_start, is_time_restart
     USE mo_hydro_constants,          ONLY: vol_porosity_org_top, vol_porosity_org_below
-    USE mo_jsb_physical_constants,   ONLY: dens_soil
+    USE mo_jsb_physical_constants,   ONLY: dens_soil, dens_org
     USE mo_carbon_constants,         ONLY: molarMassC_kg, C_2_biomass_ratio
 
     ! Arguments
@@ -234,7 +234,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  precip_15d_yDay_climbuf          !< Smoothed precipitation [kg m-2 s-1]
     dsl4jsb_Real3D_onChunk ::  t_soil_sl_15d_yDay_climbuf       !< Smoothed soil temperature [K]
     dsl4jsb_Real3D_onChunk ::  wtr_soil_rel_sl_15d_yDay_climbuf !< Smoothed relative soil water content [-]
-    dsl4jsb_Real3D_onChunk ::  fract_org_sl                     !< Soil layer organic matter fraction [-]
+    dsl4jsb_Real3D_onChunk ::  fract_org_sl                     !< Vol. soil layer organic matter fraction [-]
     dsl4jsb_Real3D_onChunk ::  vol_porosity_sl                  !< Volumetric soil layer porosity [m3/m3]
 
     dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
@@ -1082,7 +1082,8 @@ CONTAINS
                 &                 + c_water_bg1_sl(ic,is)      + c_water_bg2_sl(ic,is)      &
                 &                 + c_nonsoluble_bg1_sl(ic,is) + c_nonsoluble_bg2_sl(ic,is) &
                 &                 ) * veg_fract_correction(ic) * fract_fpc_max(ic)
-              fract_org_sl(ic,is) = mass_organic_soil / (mass_mineral_soil + mass_organic_soil)
+              fract_org_sl(ic,is) = (mass_organic_soil / dens_org) &
+                &                 / (mass_mineral_soil / dens_soil + mass_organic_soil / dens_org)
             END IF
           END DO
         END DO

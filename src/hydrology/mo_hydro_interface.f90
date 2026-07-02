@@ -1138,7 +1138,7 @@ CONTAINS
       & vol_p_wilt,           &         !< Volumetric moisture at permanent wilting point [m/m]
       & vol_wres                        !< Volumetric residual water content [m/m]
     dsl4jsb_Real3D_onChunk :: &
-      & fract_org_sl,         &         !< Soil layer organic matter fraction []
+      & fract_org_sl,         &         !< Volumetric fraction of soil organic matter in soil layers []
       & hyd_cond_sat_sl,      &         !< Saturated hydraulic conductivity of soil layer [m/s]
       & vol_porosity_sl,      &         !< Volumetric soil layer porosity [m3/m3]
       & bclapp_sl,            &         !< Clapp and Hornberger exponent b in soil layer []
