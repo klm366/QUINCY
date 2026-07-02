@@ -22,8 +22,11 @@ MODULE mo_q_dfire_sf_update
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
   USE mo_jsb_grid,              ONLY: Get_grid
 
-  USE mo_q_dfire_util, ONLY: dfire_update_pools
+  USE mo_q_dfire_util,          ONLY: dfire_update_pools
   USE mo_lnd_bgcm_idx
+  USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, &
+                                      SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID, &
+                                      VEG_BGCM_FIRE_EMISSIONS_ID, VEG_BGCM_FIRE_LITTERFALL_ID
 
   IMPLICIT NONE
 
@@ -143,37 +146,37 @@ CONTAINS
     !< Spitfire is now updated here
 
     !< Update pools
-    CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
-                            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
-                            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
+!    CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
+!                            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
+!                            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
 
-    nr_of_veg_bgcm_comp = SIZE(veg_pool_mt,1)
+!    nr_of_veg_bgcm_comp = SIZE(veg_pool_mt,1)
 
     !> 3.0 add fire disturbance into litterfall
-    DO ic = 1, nc
-      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-        IF (model%config%is_element_used(ielem)) THEN
-          ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-          DO ix_comp = 1, nr_of_veg_bgcm_comp
-            veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
-                                                      veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
-          END DO ! ix_comp = 1, n_veg_bgcm_comp
-        END IF ! model%config%is_element_used(ielem)) THEN
-     END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-    END DO ! ic = 1, nc
+!    DO ic = 1, nc
+!      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+!        IF (model%config%is_element_used(ielem)) THEN
+!          ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+!          DO ix_comp = 1, nr_of_veg_bgcm_comp
+!            veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
+!                                                      veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
+!          END DO ! ix_comp = 1, n_veg_bgcm_comp
+!        END IF ! model%config%is_element_used(ielem)) THEN
+!     END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+!    END DO ! ic = 1, nc
 
     !> update veg fire emissions
-    DO ic = 1, nc
-      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-        IF (model%config%is_element_used(ielem)) THEN
-          ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-          DO ix_comp = 1, nr_of_veg_bgcm_comp
-                veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
-                    veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
-          END DO ! ix_comp
-        END IF ! is_element_used(ielem)
-      END DO ! ielem
-    END DO ! ic
+!    DO ic = 1, nc
+!      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+!        IF (model%config%is_element_used(ielem)) THEN
+!          ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+!          DO ix_comp = 1, nr_of_veg_bgcm_comp
+!                veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
+!                    veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
+!          END DO ! ix_comp
+!        END IF ! is_element_used(ielem)
+!      END DO ! ielem
+!    END DO ! ic
 
   END SUBROUTINE update_q_dfire_sf_update
 

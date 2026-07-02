@@ -65,9 +65,9 @@ MODULE mo_q_dfire_fuel_interface
   !>
   !> Constructor interface: tsk_dfire_sf_impacts task
   !>
-  INTERFACE tsk_q_dfire_sf_update
-    PROCEDURE Create_task_q_dfire_sf_update         !< Constructor function for task
-  END INTERFACE tsk_q_dfire_sf_update
+  INTERFACE tsk_q_dfire_sf_impacts
+    PROCEDURE Create_task_q_dfire_sf_impacts         !< Constructor function for task
+  END INTERFACE tsk_q_dfire_sf_impacts
 
   ! ======================================================================================================= !
   !>
@@ -81,11 +81,11 @@ MODULE mo_q_dfire_fuel_interface
 
   ! ======================================================================================================= !
   !>
-  !> Constructor interface: dfire_sf_fuel task
+  !> Constructor interface: dfire_sf_update task
   !>
-  INTERFACE tsk_q_dfire_fuel
-    PROCEDURE Create_task_q_dfire_fuel         !< Constructor function for task
-  END INTERFACE tsk_q_dfire_fuel
+  INTERFACE tsk_q_dfire_sf_update
+    PROCEDURE Create_task_q_dfire_sf_update         !< Constructor function for task
+  END INTERFACE tsk_q_dfire_sf_update
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel_interface'
 

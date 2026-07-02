@@ -84,7 +84,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Constructor: dfire_sf_fuel task
+  !> Constructor: dfire_sf_dynamics task
   !>
   FUNCTION Create_task_q_dfire_sf_dynamics(model_id) RESULT(return_ptr)
     INTEGER,                   INTENT(in) :: model_id
