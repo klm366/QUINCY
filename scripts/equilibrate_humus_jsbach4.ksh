@@ -111,6 +111,7 @@ if [[ ${use_hydrotiles} == true ]]; then
   phyt="_ct1 _ct2 _ct3 _ct4"
 else
   phyt=''
+fi
 
 echo ""
 echo " Diagnose equilibrium humus pools"
