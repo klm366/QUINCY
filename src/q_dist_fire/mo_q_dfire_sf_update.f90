@@ -75,12 +75,15 @@ CONTAINS
     REAL(wp)                              :: dtime      !< timestep
 
     ! add here local variables
+    REAL(wp), POINTER                     :: area(:), tile_fract(:)
     INTEGER                               :: nr_of_veg_bgcm_comp, ielem, ix_elem, ix_comp
+    REAL(wp)                              :: area_burned_fract_pft(options%nc) !< Fraction of the area burned for current PFT [-]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_dfire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
-    !dsl4jsb_Real3D_onChunk                :: live_tree_fuel_1hr_lfp    ! in [g DM m-2]
-
+    dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! in [-]
+    dsl4jsb_Real2D_onChunk                :: delta_dens_ind            ! in [-]
+    dsl4jsb_Real2D_onChunk                :: delta_root_fraction_sl    ! in [-]
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
@@ -124,7 +127,9 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
-    !dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp)    ! in [g DM m-2]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_fract)         ! in [-]
+    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                ! in [-]
+    dsl4jsb_Get_var2D_onChunk(VEG_, delta_root_fraction_sl)        ! in [-]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -137,7 +142,15 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! init here
-
+    #ifdef __QUINCY_STANDALONE__
+        ALLOCATE(area(1), tile_fract(1))
+        area = 1._wp
+        tile_fract = 1._wp
+    #else
+        area => grid %area (ics:ice, iblk)
+        tile_fract => tile%fract(ics:ice, iblk)
+    #endif
+    area_burned_fract_pft = area_burned_fract * tile_fract
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -181,8 +194,34 @@ CONTAINS
       END DO ! ielem
     END DO ! ic
 
-    ! update delta dens ind
-    ! update delta root fraction sl
+    !>
+    !> Update delta_dens_ind to properly run plant_characteristics in mo_q_model_init.f90
+    !> Calculate change in individual density from Area burned
+    ! ----------------------------------------------------------------------------------------------------- !
+    !>
+    !> - Adapt the change of individual density to account for the harvested fraction (only for tiles with forest type)
+    !>
+    IF (lctlib%growthform == itree) THEN
+      DO ic = 1,nc
+        delta_dens_ind(ic) = - (area_burned_fract_pft(ic) * dens_ind(ic))
+      END DO
+    END IF
+
+    !> Update delta_root_fraction_sl to properly run plant_characteristics in mo_q_model_init.f90
+    !>
+    ! ! ----------------------------------------------------------------------------------------------------- !
+    !>
+    !> - Adapt the change of individual density to account for the harvested fraction (only for tiles with forest type)
+    !>
+    DO ic = 1,nc
+      delta_root_fraction_sl(ic,df_sf_spq_layer_top_sl) = - (area_burned_fract_pft(ic) * root_fraction_sl(ic,df_sf_spq_layer_top_sl))
+    END DO
+
+    ! Release memory
+    #ifdef __QUINCY_STANDALONE__
+      DEALLOCATE(area, tile_fract)
+    #endif
+    NULLIFY(area, tile_fract)
 
   END SUBROUTINE update_q_dfire_sf_update
 
