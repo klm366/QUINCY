@@ -35,7 +35,7 @@ MODULE mo_turb_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes TURB_, A2L_, SEB_, HYDRO_, SSE_
+  dsl4jsb_Use_processes TURB_, A2L_, SEB_, HYDRO_, SSE_, VEG_, Q_ASSIMI_
 
 
   ! Use process configurations
@@ -48,6 +48,8 @@ MODULE mo_turb_interface
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(Q_ASSIMI_)
 
 #ifndef __QUINCY_STANDALONE__
   ! Use of processes in this module
@@ -57,13 +59,6 @@ MODULE mo_turb_interface
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
 #endif
-#ifndef __NO_QUINCY__
-  dsl4jsb_Use_processes VEG_, Q_ASSIMI_
-  dsl4jsb_Use_memory(VEG_)
-  dsl4jsb_Use_memory(Q_ASSIMI_)
-#endif
-
-
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -560,11 +555,9 @@ CONTAINS
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(VEG_)
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)
-#endif
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_memory(VEG_)
 #endif
 
     ! Declare pointers to variables in memory
@@ -675,7 +668,6 @@ CONTAINS
           END DO
           !$ACC END PARALLEL LOOP
 #endif
-#ifndef __NO_QUINCY__
         CASE (MODEL_QUINCY)
           dsl4jsb_Get_memory(VEG_)
           dsl4jsb_Get_var2D_onChunk(VEG_, rough_veg_star)    ! in
@@ -685,7 +677,6 @@ CONTAINS
             fract_fol_proj_cov(ic) = fract_fpc(ic)
           END DO
           !$ACC END PARALLEL LOOP
-#endif
         END SELECT
 
         IF (dsl4jsb_Config(TURB_)%l_roughness_lai) THEN
@@ -708,7 +699,6 @@ CONTAINS
             END DO
             !$ACC END PARALLEL LOOP
 #endif
-#ifndef __NO_QUINCY__
           CASE (MODEL_QUINCY)
             !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
             DO ic = 1, nc
@@ -716,13 +706,13 @@ CONTAINS
               rough_veg_star_local(ic) = rough_veg_star(ic)
             END DO
             !$ACC END PARALLEL LOOP
-#endif
           END SELECT
 
         ELSE
-#ifndef __NO_QUINCY__
-          IF (model%config%model_scheme == MODEL_QUINCY) CALL finish(TRIM(routine), 'QUINCY: roughness calc. should depend on LAI')
-#endif
+          IF (model%config%model_scheme == MODEL_QUINCY) THEN
+            CALL finish(TRIM(routine), 'QUINCY: roughness calc. should depend on LAI')
+          END IF
+
           lctlib_VegRoughness = dsl4jsb_Lctlib_param(VegRoughness)
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
@@ -752,10 +742,12 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
 
-      ELSE IF (tile%is_vegetation) THEN ! vegetated tile in a run without PFTs, e.g. jsbach_lite
-#ifndef __NO_QUINCY__
-        IF (model%config%model_scheme == MODEL_QUINCY) CALL finish(TRIM(routine), 'QUINCY: always running with PFT.')
-#endif
+      ! Vegetated tile without PFT, e.g., jsbach_lite
+      ELSE IF (tile%is_vegetation) THEN
+        IF (model%config%model_scheme == MODEL_QUINCY) THEN
+          CALL finish(TRIM(routine), 'QUINCY: always running with PFT.')
+        END IF
+
         ! rough_m and rough_m_star are taken from values from init
         !
         ! We don't have PFTs so use rough_m from ini file
@@ -930,13 +922,11 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(Q_ASSIMI_)
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
-#endif
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(Q_ASSIMI_)
 #endif
 
     ! Declare pointers to variables in memory
@@ -1027,13 +1017,11 @@ CONTAINS
         END IF
       END IF
 #endif
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       IF (tile%contains_vegetation) THEN
         dsl4jsb_Get_memory(VEG_)
         dsl4jsb_Get_memory(Q_ASSIMI_)
       END IF
-#endif
     END SELECT
 
     ! Set pointers to variables in memory
@@ -1100,7 +1088,6 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
 #endif
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_var2D_onChunk(VEG_,      fract_fpc)                     ! in
         dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, canopy_cond)                   ! in
@@ -1115,7 +1102,6 @@ CONTAINS
           mask(ic) = canopy_conductance(ic) > eps8 .AND. (qsat_star(ic) - q_air(ic)) > 0.0_wp
         END DO
         !$ACC END PARALLEL LOOP
-#endif
       END SELECT
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)

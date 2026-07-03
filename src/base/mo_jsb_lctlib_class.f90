@@ -21,7 +21,7 @@ MODULE mo_jsb_lctlib_class
 
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_kind,         ONLY: wp
-  USE mo_exception,    ONLY: message_text, finish
+  USE mo_exception,    ONLY: message_text, finish, message
   USE mo_util,         ONLY: int2string
 
   IMPLICIT NONE
@@ -274,14 +274,11 @@ CONTAINS
     ! The file can contain more keywords than needed --- therefore the same file can be used by several model components.
     !
     USE mo_util, ONLY: tolower
-
-#ifndef __NO_QUINCY__
     ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
     USE mo_jsb_math_constants,      ONLY: one_day, one_year
     USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree, icrop
     USE mo_q_assimi_constants,      ONLY: ic4phot
-#endif
 
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
     CHARACTER(len=*), INTENT(in) :: model_scheme_char
@@ -1170,8 +1167,6 @@ CONTAINS
               CALL finish('init_lctlib','No data for BCLIMIT_MIN_TEMPRANGE found in '//TRIM(lctlib_file_name))
          IF(.NOT.exists_bclimit_min_gdd ) &
               CALL finish('init_lctlib','No data for BCLIMIT_MIN_GDD found in '//TRIM(lctlib_file_name))
-         IF(.NOT.exists_bclimit_min_snow ) &
-              CALL finish('init_lctlib','No data for BCLIMIT_MIN_SNOW found in '//TRIM(lctlib_file_name))
          IF(.NOT. exists_gdd_base) &
               CALL finish('init_lctlib','No data for GDD_BASE found in '//TRIM(lctlib_file_name))
          IF(.NOT. exists_upper_tlim) &
@@ -1206,8 +1201,6 @@ CONTAINS
               CALL finish('init_lctlib','No data for LEAFLIT_COEF found in '//TRIM(lctlib_file_name))
          IF(.NOT. exists_litveg_coef) &
               CALL finish('init_lctlib','No data for LITVEG_COEF found in '//TRIM(lctlib_file_name))
-         IF(.NOT. exists_root_dist_beta) &
-              CALL finish('init_lctlib','No data for ROOT_DIST_BETA found in '//TRIM(lctlib_file_name))
          !------------------------------------------------------------------------------------------
          ! kalle, 151004
          ! Set carbox rate to  [Mol(CO2)/m^2/s]
@@ -1217,9 +1210,25 @@ CONTAINS
            lctlib(i)%CarboxRate=lctlib(i)%CarboxRate * 1.e-06_wp
          END DO
          !------------------------------------------------------------------------------------------
+         ! Some parameters are conditional and not needed if those processes are not
+         ! enabled. Instead of stopping the simulation if these parameters are not found,
+         ! they are filled with error values and checked in the respective process.
+         IF(.NOT. exists_bclimit_min_snow) THEN
+           CALL message('init_lctlib', 'No data for BCLIMIT_MIN_SNOW found in ' &
+             & //TRIM(lctlib_file_name) // '. Consider updating your lctlib file!')
+           DO i=1,nlct
+             lctLib(i)%bclimit_min_snow = -999._wp
+           END DO
+         END IF
+         IF(.NOT. exists_root_dist_beta) THEN
+           CALL message('init_lctlib','No data for ROOT_DIST_BETA found in ' &
+             & //TRIM(lctlib_file_name) // '. Consider updating your lctlib file!')
+           DO i=1,nlct
+             lctLib(i)%root_dist_beta = -999._wp
+           END DO
+         END IF
        END IF
 
-#ifndef __NO_QUINCY__
        ! model scheme: quincy
        IF (model_scheme_char == "quincy") THEN
         IF(.NOT. exists_growthform) &
@@ -1362,11 +1371,9 @@ CONTAINS
           & CALL finish('init_lctlib','No data for MaxVegRoughness found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
-#endif
 
        CLOSE(unit=lctlib_file_unit) ! Closing access to lctlib file
 
-#ifndef __NO_QUINCY__
        !------------------------------------------------------------------------------------------
        !>Modify the input values of some quincy lctlib parameters
        !>
@@ -1473,7 +1480,6 @@ CONTAINS
          END DO
 
        END IF ! (model_scheme_char == "quincy")
-#endif
 
        !------------------------------------------------------------------------------------------
 
@@ -1651,8 +1657,8 @@ CONTAINS
         CALL p_bcast(lctlib(:)%WoodLitterSize, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%root_dist_beta, p_io, mpi_comm)
       END IF
-#ifndef __NO_QUINCY__
-      ! model schmeme: quincy
+
+      ! model scheme: quincy
       IF (model_scheme_char == "quincy") THEN
         CALL p_bcast(lctlib(:)%growthform, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%ps_pathway, p_io, mpi_comm)
@@ -1724,7 +1730,6 @@ CONTAINS
         CALL p_bcast(lctlib(:)%MinVegRoughness, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%MaxVegRoughness, p_io, mpi_comm)
       END IF
-#endif
     END IF
 
     IF(npft > nlct) CALL finish('init_lctlib','npft larger than nlct: '//int2string(npft)//' > '//int2string(nlct))
@@ -1732,12 +1737,10 @@ CONTAINS
     !> Throw away values for glacier (first column) for jsbach model usecases (mo_jsb_usecases)
     !>
     SELECT CASE (usecase)
-#ifndef __NO_QUINCY__
     ! quincy model with 13 PFT tiles (of the 14 PFT that would be available with 'lctlib_quincy_nlct14.def')
     CASE ('quincy_13_pfts')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
-#endif
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT
       nlct = nlct - 1

@@ -23,8 +23,9 @@ MODULE mo_climbuf_interface
   ! Used variables of module
 
   USE mo_kind,               ONLY: wp
-  USE mo_jsb_control,        ONLY: debug_on
-  USE mo_jsb_time,           ONLY: is_time_experiment_start, is_newyear, is_newmonth, is_newday, &
+  USE mo_jsb_control,        ONLY: debug_on, acc_stream
+  USE mo_jsb_time,           ONLY: is_time_experiment_start, is_time_restart, &
+    &                              is_newyear, is_newmonth, is_newday, &
     &                              get_day_length, get_previous_month_length
   USE mo_exception,          ONLY: message
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -130,7 +131,7 @@ CONTAINS
       & iblk,                & !< Currently processed block
       & ics,                 & !< First grid cell of the block
       & ice,                 & !< Last grid cell of the block
-      & i,                   & !< Index for grid cell loops
+      & ic,                  & !< Looping index for grid cells
       & nc                     !< Number of grid cells in block
 
     REAL(wp) :: &
@@ -142,8 +143,8 @@ CONTAINS
       & snow_depth(:),       & !< Snow depth on soil [m]
       & q_rel_air(:)           !< Relative humidity of the lowest level of the atmosphere [%]
 
-    LOGICAL, SAVE :: &
-      & climbuf_initialized = .FALSE.    !< Climate buffer has been initialized
+    LOGICAL :: &
+      & use_tmx                !< Use tmx scheme; needed as local variable on GPUs
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_climbuf'
 
@@ -171,7 +172,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: max_snow_year      !< Maximum snow depth in current year [m]
     dsl4jsb_Real2D_onChunk :: max_snow_prev_year !< Maximum snow depth in previous year [m]
     dsl4jsb_Real2D_onChunk :: max_thaw_year      !< Maximum soil column thaw depth in current year [m]
-    dsl4jsb_Real2D_onChunk :: max_thaw_10year    !< Smoothed maximum soil column thaw depth (~10 years) [m]
+    dsl4jsb_Real2D_onChunk :: max_thaw_prev_year !< Maximum soil column thaw depth in previous year [m]
     dsl4jsb_Real2D_onChunk :: max_wind_of_day    !< Current maximum 10m wind speed of the day
     dsl4jsb_Real2D_onChunk :: max_wind_yDay      !< Maximum 10m wind speed of the previous day
     dsl4jsb_Real2D_onChunk :: max_wind_4yr       !< Maximum 10m wind speed smoothed in time
@@ -181,6 +182,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: t_soil_sl_15d_yDay !< 15-day smoothed soil layer temperature at the end of the previous day [K]
     dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl_15d      !< 15-day smoothed relative soil layer moisture [-]
     dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl_15d_yDay !< 15-day smoothed relative soil layer moisture at end of previous day [-]
+    dsl4jsb_Real3D_onChunk :: max_t_soil_sl_year !< Maximum soil layer temperature in previous year [K]
+    dsl4jsb_Real3D_onChunk :: permafrost_period_sl     !< Number of years of consecutively frozen soil layer [year]
 
     ! Declare pointers to variables in foreign memory
     dsl4jsb_Real2D_onChunk :: t_air              !< Near surface air temperature [K]
@@ -248,7 +251,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_snow_year)          ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_snow_prev_year)     ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_thaw_year)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_thaw_10year)        ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_thaw_prev_year)     ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_of_day)        ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_yDay)          ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_4yr)           ! inout
@@ -258,11 +261,14 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(CLIMBUF_,t_soil_sl_15d_yDay)     ! inout
     dsl4jsb_Get_var3D_onChunk(CLIMBUF_,wtr_soil_rel_sl_15d)    ! inout
     dsl4jsb_Get_var3D_onChunk(CLIMBUF_,wtr_soil_rel_sl_15d_yDay)!inout
+    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,max_t_soil_sl_year)     ! inout
+    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,permafrost_period_sl)   !inout
 
     ! Generally, the climate buffer is initialized at model initialization (is_time_experiment_start).
     ! There is however the possibility to initialize it in restarted simulations by namelist parameter
     ! 'init_climbuf'. We here make sure, the buffer is initialized only at the first time step of the run.
-    IF (.NOT. climbuf_initialized .AND. dsl4jsb_Config(CLIMBUF_)%init_climbuf) THEN
+    IF ((is_time_experiment_start(options%current_datetime) .OR. is_time_restart(options%current_datetime)) &
+        & .AND. dsl4jsb_Config(CLIMBUF_)%init_climbuf) THEN
       init_climbuf = .TRUE.
     ELSE
       init_climbuf = .FALSE.
@@ -283,11 +289,11 @@ CONTAINS
     ALLOCATE (snow_depth(nc), q_rel_air(nc))
     !$ACC DATA ASYNC(acc_stream) CREATE(snow_depth, q_rel_air)
 
-    q_rel_air(:) = get_relative_humidity_air(q_air(:), t_unfilt(:), press_srf(:), model%config%use_tmx)
-
+    use_tmx=model%config%use_tmx
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO i = 1,nc
-      snow_depth(i) = weq_snow_soil(i) * rhoh2o / snow_soil_dens(i)
+    DO ic = 1, nc
+      q_rel_air(ic)  = get_relative_humidity_air(q_air(ic), t_unfilt(ic), press_srf(ic), use_tmx)
+      snow_depth(ic) = weq_snow_soil(ic) * rhoh2o / snow_soil_dens(ic)
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -298,12 +304,12 @@ CONTAINS
       &                  min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
       &                  temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
       &                  gdd_sum_year, gdd_prev_year, &
-      &                  max_snow_year, max_snow_prev_year, max_thaw_year, max_thaw_10year, &
+      &                  max_snow_year, max_snow_prev_year, max_thaw_year, max_thaw_prev_year, &
       &                  max_wind_of_day, max_wind_yDay, max_wind_4yr, &
       &                  q_rel_air_14d, q_rel_air_14d_yDay)
-    CALL calc_climbuf_3d(lstart, new_day, dtime, t_soil_sl, wtr_soil_rel_sl, seconds_day, &
-      &                  t_soil_sl_15d, t_soil_sl_15d_yDay, wtr_soil_rel_sl_15d, wtr_soil_rel_sl_15d_yDay)
-    climbuf_initialized = .TRUE.
+    CALL calc_climbuf_3d(lstart, new_day, new_year, dtime, t_soil_sl, wtr_soil_rel_sl, seconds_day, &
+      &                  t_soil_sl_15d, t_soil_sl_15d_yDay, wtr_soil_rel_sl_15d, wtr_soil_rel_sl_15d_yDay, &
+      &                  max_t_soil_sl_year, permafrost_period_sl)
 
     !$ACC END DATA
     DEALLOCATE (snow_depth, q_rel_air)
@@ -364,11 +370,13 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_snow_year, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_snow_prev_year, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_thaw_year, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_thaw_10year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_thaw_prev_year, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, t_soil_sl_15d, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, t_soil_sl_15d_yDay, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, wtr_soil_rel_sl_15d, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, wtr_soil_rel_sl_15d_yDay, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_t_soil_sl_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, permafrost_period_sl, weighted_by_fract)
 
     IF (debug_on() .AND. options%iblk==1) CALL message(TRIM(routine), 'Finished.')
 

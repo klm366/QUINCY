@@ -198,7 +198,6 @@ CONTAINS
       & initval_r = 0.0_wp)
 
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
-#ifndef __NO_QUINCY__
       CALL mem%Add_var('q_total_c', mem%q_total_c, &
         & hgrid, surface, &
         & t_cf('q_total_c', '[mol m-2]', 'total C, sum of all quincy carbon pools'), &
@@ -220,11 +219,9 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = -999.0_wp)
-#endif
     ELSE
 #ifdef __QUINCY_STANDALONE__
 #else
-
       ! jsbach carbon
       IF (model%processes(CARBON_)%p%config%active) THEN
         CALL mem%Add_var( 'carbon_conservation_test', mem%carbon_conservation_test,      &
@@ -242,9 +239,9 @@ CONTAINS
           & prefix, suffix,                                                                          &
           & loutput = .TRUE., lrestart=.TRUE., lrestart_cont=.TRUE.,                                 &
           & initval_r=0.0_wp )
-      END IF
+      END IF ! CARBON_ active
 #endif
-    END IF
+    END IF  ! QUINCY / JSBACH
 
     ! lake
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN

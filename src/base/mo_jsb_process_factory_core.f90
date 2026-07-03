@@ -45,14 +45,12 @@ MODULE mo_jsb_process_factory_core
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
-#ifndef __NO_QUINCY__
   USE mo_q_assimi_memory_class,ONLY: t_q_assimi_memory
   USE mo_q_syl_memory_class,   ONLY: t_q_syl_memory
   USE mo_q_agr_memory_class,   ONLY: t_q_agr_memory
   USE mo_q_pheno_memory_class, ONLY: t_q_pheno_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
   USE mo_sb_memory_class,      ONLY: t_sb_memory
-#endif
 
   USE mo_rad_interface,        ONLY: Register_rad_tasks
   USE mo_rad_config_class,     ONLY: t_rad_config
@@ -94,7 +92,6 @@ MODULE mo_jsb_process_factory_core
   USE mo_wlcc_config_class,     ONLY: t_wlcc_config
   USE mo_nlcc_interface,        ONLY: Register_nlcc_tasks
   USE mo_nlcc_config_class,     ONLY: t_nlcc_config
-#ifndef __NO_QUINCY__
   USE mo_q_assimi_interface,    ONLY: Register_q_assimi_tasks
   USE mo_q_assimi_config_class, ONLY: t_q_assimi_config
   USE mo_q_syl_interface,       ONLY: Register_q_syl_tasks
@@ -107,7 +104,6 @@ MODULE mo_jsb_process_factory_core
   USE mo_veg_config_class,      ONLY: t_veg_config
   USE mo_q_sb_interface,        ONLY: Register_sb_tasks_quincy
   USE mo_sb_config_class,       ONLY: t_sb_config
-#endif
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
@@ -231,7 +227,6 @@ CONTAINS
     CASE (LEX_)
       CALL Register_lex_tasks(return_ptr, model_id)
       ALLOCATE(t_lex_config::return_ptr%config)
-#ifndef __NO_QUINCY__
     CASE (Q_ASSIMI_)
       CALL Register_q_assimi_tasks(return_ptr, model_id)
       ALLOCATE(t_q_assimi_config::return_ptr%config)
@@ -250,7 +245,6 @@ CONTAINS
     CASE (SB_)
       CALL Register_sb_tasks_quincy(return_ptr, model_id)
       ALLOCATE(t_sb_config::return_ptr%config)
-#endif
     CASE DEFAULT
       return_ptr => NULL()
     END SELECT
@@ -296,14 +290,12 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 #endif
-#ifndef __NO_QUINCY__
     USE mo_q_assimi_memory_class,ONLY: max_no_of_q_assimi_vars => max_no_of_vars
     USE mo_q_syl_memory_class,   ONLY: max_no_of_q_syl_vars => max_no_of_vars
     USE mo_q_agr_memory_class,   ONLY: max_no_of_q_agr_vars => max_no_of_vars
     USE mo_q_pheno_memory_class, ONLY: max_no_of_q_pheno_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
     USE mo_sb_memory_class,      ONLY: max_no_of_sb_vars => max_no_of_vars
-#endif
     INTEGER, INTENT(in) :: iproc                   !< Process ID
     CLASS(t_jsb_memory), POINTER   :: return_ptr   !< Pointer to the process memory
 
@@ -368,7 +360,6 @@ CONTAINS
     CASE (NLCC_)
       ALLOCATE(t_nlcc_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_nlcc_vars
-#ifndef __NO_QUINCY__
     CASE (Q_ASSIMI_)
       ALLOCATE(t_q_assimi_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_q_assimi_vars
@@ -387,7 +378,6 @@ CONTAINS
     CASE (SB_)
       ALLOCATE(t_sb_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_sb_vars
-#endif
     END SELECT
 
     !> - Set pointers to the process variables' memories

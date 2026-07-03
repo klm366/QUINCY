@@ -67,10 +67,8 @@ MODULE mo_jsb_tile
     PROCEDURE :: Count_conserved_quantities       => Count_conserved_quantities_on_tile
     PROCEDURE :: Collect_conserved_variables      => Collect_conserved_variables_on_tile
     PROCEDURE :: Check_child_cover_fractions      => Check_child_cover_fractions_on_tile
-#ifndef __NO_QUINCY__
     PROCEDURE :: Count_and_classify_bgc_materials => Count_and_classify_bgc_materials_on_tile
     PROCEDURE :: Collect_bgc_materials            => Collect_bgc_materials_on_tile
-#endif
     PROCEDURE :: Print                            => Print_tile
     PROCEDURE :: Handler                          => Process_task_on_tile
   END TYPE t_jsb_tile
@@ -769,7 +767,6 @@ CONTAINS
 
   END FUNCTION Has_process_memory_on_tile
 
-#ifndef __NO_QUINCY__
   ! ======================================================================================================= !
   !>
   !> Identifies the number and types of bgc materials on this tile
@@ -935,7 +932,6 @@ CONTAINS
     ENDDO
 
   END SUBROUTINE Collect_bgc_materials_on_tile
-#endif
 
   ! ======================================================================================================= !
   !>

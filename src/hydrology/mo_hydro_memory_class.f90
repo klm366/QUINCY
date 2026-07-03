@@ -121,7 +121,7 @@ MODULE mo_hydro_memory_class
     ! Additional variables for soil
     TYPE(t_jsb_var_real3d) :: &
       & soil_depth_sl,        & !< Thickness of each soil layer until bedrock            [m]
-      & fract_org_sl            !< Fractions of organic material in soil layers          []
+      & fract_org_sl            !< Volumetric fraction of organic matter in soil layers  []
 
     TYPE(t_jsb_var_real3d) :: &
       & soil_lay_width_sl, &        !< thickness of each soil layer that can be saturated with water, identical with soil_depth_sl (until bedrock) [m]
@@ -712,7 +712,6 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         CALL mem%Add_var('num_sl_above_bedrock', mem%num_sl_above_bedrock, &
@@ -726,7 +725,6 @@ CONTAINS
           & lrestart=.TRUE., &
           & initval_r=0.0_wp)
       END SELECT
-#endif
 
       CALL mem%Add_var( 'soil_depth_sl', mem%soil_depth_sl,                    &
         & hgrid, soil_w,                                                       &
@@ -738,16 +736,16 @@ CONTAINS
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-        CALL mem%Add_var( 'fract_org_sl', mem%fract_org_sl,                          &
-          & hgrid, soil_w,                                                           &
-          & t_cf('fract_org_sl', '-', 'Fraction of organic material in soil layer'), &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
-          & prefix, suffix,                                                          &
-          & lrestart=.TRUE.,                                                         &
+        CALL mem%Add_var( 'fract_org_sl', mem%fract_org_sl,                    &
+          & hgrid, soil_w,                                                     &
+          & t_cf('fract_org_sl', '-',                                          &
+          &      'Volumetric fraction of organic material in soil layer'),     &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & lrestart=.TRUE.,                                                   &
           & initval_r=0.0_wp )
       END IF
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         CALL mem%Add_var('soil_lay_width_sl', mem%soil_lay_width_sl, &
@@ -794,7 +792,6 @@ CONTAINS
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
       END SELECT
-#endif
 
       CALL mem%Add_var( 'wpi_rootzone_max', mem%wpi_rootzone_max,                    &
         & hgrid, surface,                                                            &
@@ -1413,7 +1410,6 @@ CONTAINS
         & lrestart = lrestart_local, &
         & initval_r = 0.0_wp)
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         CALL mem%Add_var('w_soil_root_fc', mem%w_soil_root_fc, &
@@ -1461,9 +1457,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
           & initval_r = 0.0_wp)
-      END SELECT
-#endif
-
+      END SELECT  ! QUINCY
     END IF ! VEG_TYPE/LAND_TYPE
 
     ! Additional variables for tiles containing GLACIER lct

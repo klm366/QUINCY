@@ -169,8 +169,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: matric_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
     dsl4jsb_Real2D_onChunk :: thaw_depth
-    dsl4jsb_Real2D_onChunk :: thaw_depth_max
-    dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
     dsl4jsb_Real2D_onChunk :: heat_cond
     dsl4jsb_Real2D_onChunk :: vol_heat_cap
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
@@ -267,8 +265,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_scool_sl) ! out
     END IF
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)          ! out
-    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max)      ! out
-    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1)  ! out
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   heat_cond)
     dsl4jsb_Get_var2D_onChunk(SSE_,   vol_heat_cap)
@@ -605,31 +601,6 @@ CONTAINS
 
     END IF
 
-    IF ((.NOT. lstart) .AND. is_newyear(options%current_datetime, options%dtime)) THEN
-#ifdef _CRAYFTN
-      ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem) GANG VECTOR ASYNC(acc_stream)
-#else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-#endif
-      DO ic = 1,nc
-        thaw_depth_max_ym1(ic) = thaw_depth_max(ic)
-        thaw_depth_max(ic)     = 0._wp
-      END DO
-      !$ACC END PARALLEL LOOP
-    ELSE
-#ifdef _CRAYFTN
-      ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
-      !$ACC PARALLEL LOOP PRESENT(sse__mem) GANG VECTOR ASYNC(acc_stream)
-#else
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-#endif
-      DO ic = 1,nc
-        thaw_depth_max(ic) = MAX(thaw_depth_max(ic),thaw_depth(ic))
-      END DO
-      !$ACC END PARALLEL LOOP
-    END IF
-
     IF (.NOT. tile%is_glacier) THEN
 #ifdef _CRAYFTN
       ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
@@ -708,8 +679,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pot_scool_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, le_pc_remain,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max_ym1,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   vol_heat_cap,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   heat_cond,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_cycle,            weighted_by_fract)

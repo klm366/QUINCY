@@ -19,7 +19,7 @@ MODULE mo_nlcc_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
-  USE mo_jsb_time,        ONLY: is_time_experiment_start
+  USE mo_jsb_time,        ONLY: is_time_experiment_start, is_time_restart
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
@@ -174,11 +174,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: bio_exist
     dsl4jsb_Real2D_onChunk :: sum_green_bio_memory
     dsl4jsb_Real2D_onChunk :: desert_fpc
-    dsl4jsb_Real3D_onChunk :: npp_pft
 
     ! Local variables
     LOGICAL :: new_year, new_day, init_nlcc
-    LOGICAL, SAVE :: nlcc_initialized = .FALSE.
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -244,6 +242,12 @@ CONTAINS
     bclimit_min_snow => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%bclimit_min_snow)
     tau_c_woods => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%tau_c_woods)
 
+    ! Check whether optional values were read from lctlib
+    IF (ALL(bclimit_min_snow < -990._wp)) THEN
+      CALL finish(TRIM(routine), 'BCLIMIT_MIN_SNOW is required in lctlib file for simulations ' // &
+        & 'using NLCC')
+    END IF
+
     ! import specific leave area from lct library
     sla => carbon__mem%collect_var_real2d(ics, ice, iblk, no_children, carbon__mem%sla)
 
@@ -270,9 +274,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(NLCC_,bio_exist)            ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)           ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,npp_pft)              ! inout
 
-    IF (.NOT. nlcc_initialized .AND. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
+    IF ((is_time_experiment_start(options%current_datetime) .OR. is_time_restart(options%current_datetime)) &
+        & .AND. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
       init_nlcc = .TRUE.
     ELSE
       init_nlcc = .FALSE.
@@ -314,8 +318,6 @@ CONTAINS
        pot_fpc(:,:) = act_fpc(:,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
     ENDIF
 
-    npp_pft(:,:) = NPP_mean_5year(:,:)
-
     accelerate_nlcc    = dsl4jsb_Config(NLCC_)%accelerate_nlcc
     init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
 
@@ -334,7 +336,7 @@ CONTAINS
        cover_fract_pot_previous_year(:,:) = cover_fract_pot(:,:)
        CALL fpc_to_cover_fract_pot(nc, no_children, is_dynamic(:,:), is_woody(:,:), &
                                    act_fpc(:,:), bare_fpc(:), cover_fract_pot(:,:))
-       IF ((.NOT. lstart) .AND. dsl4jsb_Config(NLCC_)%update_cover_fract) THEN
+       IF (.NOT. lstart) THEN
           ! new cover fractions
           CALL cover_fract_pot_to_cover_fract(nc, no_children, is_dynamic(:,:), is_woody(:,:), is_pasture(:,:), is_crop(:,:), &
                                               cover_fract_pot(:,:), cover_fract_pot_previous_year(:,:), cover_fract(:,:))
@@ -369,12 +371,10 @@ CONTAINS
                       act_fpc(:,:), bare_fpc(:), fuel(:))
     ENDIF
 
-    nlcc_initialized = .TRUE.
-
     DEALLOCATE(is_woody, is_grass, is_pasture, is_crop, is_dynamic)
     DEALLOCATE(bclimit_min_cold_mmtemp, bclimit_max_cold_mmtemp, &
                bclimit_max_warm_mmtemp, bclimit_min_temprange, bclimit_min_gdd, bclimit_min_snow, tau_c_woods)
-    IF (new_year .AND. .NOT. lstart .AND. dsl4jsb_Config(NLCC_)%update_cover_fract) DEALLOCATE(fract_fpc_max)
+    IF (new_year .AND. .NOT. lstart) DEALLOCATE(fract_fpc_max)
     DEALLOCATE(NPP_mean_5year)
     DEALLOCATE(burned_fract, damaged_fract)
     DEALLOCATE(max_green_bio, sla)
@@ -425,7 +425,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(NLCC_, cover_fract_pot,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(NLCC_, cover_fract,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(NLCC_, bio_exist,             weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(NLCC_, npp_pft,               weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

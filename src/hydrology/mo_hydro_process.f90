@@ -876,7 +876,8 @@ CONTAINS
       &    drain_bot, drainage_sl, wtr_transp_down_sl,                                 &  ! out
       &    tpe_overflow, evapo_deficit,                                                &  ! inout
       &    wtr_soilhyd_res, hyd_cond_bot,                                              &  ! out
-      &    ltpe_closed, ltpe_open, ftranspiration_sl)                                     ! in
+      &    ltpe_closed, ltpe_open,                                                     &  ! in
+      &    ftranspiration_sl)                                                             ! OPTIONAL IN (used with QUINCY)
 
     IF (hydro_scale == Uniform_) THEN
       ! Handling of quasi lateral fluxes (within the grid cell) and respective reservoirs in case
@@ -1394,7 +1395,8 @@ CONTAINS
       &                      w_soil_wilt_fract, root_depth_sl, dsoil, wtr_field_cap_sl, &
       &                      transpiration_in_m, evapo_soil_in_m, wtr_mobile_sl,        &
       &                      evapo_deficit, evapo_soil_sl1, transpiration_sl,           &
-      &                      deficit_sevap, deficit_trans, ftranspiration_sl)
+      &                      deficit_sevap, deficit_trans,                              &
+      &                      ftranspiration_sl)                                           ! OPTIONAL IN (used with QUINCY)
 
     ! Determine hydraulic conductivity and diffusivity on layers and at layer interfaces
     !   Note that the indexing uses the upper interface -> interface Ii = I(i,i-1)
@@ -2423,7 +2425,11 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
-    IF (model_scheme == MODEL_QUINCY .AND. PRESENT(ftranspiration_sl)) THEN
+    IF (model_scheme == MODEL_QUINCY) THEN
+      ! The QUINCY model should always run with 'ftranspiration_sl' from Q_ASSIMI_
+      IF (.NOT. PRESENT(ftranspiration_sl)) THEN
+        CALL finish (TRIM(routine), " QUINCY model cannot run without ftranspiration_sl from Q_ASSIMI_. Please check.")
+      END IF
       ! With QUINCY, we do not need the redistribution and deficit calculation.
       ! Slight excess transpiration below the wilting point is tolerated, in which case the transpiration function
       ! will then be zero for this layer in the next time step, so that there is no excess transpiration possible
