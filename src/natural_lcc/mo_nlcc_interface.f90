@@ -19,7 +19,7 @@ MODULE mo_nlcc_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
-  USE mo_jsb_time,        ONLY: is_time_experiment_start
+  USE mo_jsb_time,        ONLY: is_time_experiment_start, is_time_restart
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
@@ -177,7 +177,6 @@ CONTAINS
 
     ! Local variables
     LOGICAL :: new_year, new_day, init_nlcc
-    LOGICAL, SAVE :: nlcc_initialized = .FALSE.
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -276,7 +275,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)           ! inout
 
-    IF (.NOT. nlcc_initialized .AND. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
+    IF ((is_time_experiment_start(options%current_datetime) .OR. is_time_restart(options%current_datetime)) &
+        & .AND. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
       init_nlcc = .TRUE.
     ELSE
       init_nlcc = .FALSE.
@@ -370,8 +370,6 @@ CONTAINS
                       NPP_mean_5year(:,:), bio_exist(:,:), burned_fract(:,:), damaged_fract(:,:), pot_fpc(:,:), &
                       act_fpc(:,:), bare_fpc(:), fuel(:))
     ENDIF
-
-    nlcc_initialized = .TRUE.
 
     DEALLOCATE(is_woody, is_grass, is_pasture, is_crop, is_dynamic)
     DEALLOCATE(bclimit_min_cold_mmtemp, bclimit_max_cold_mmtemp, &
