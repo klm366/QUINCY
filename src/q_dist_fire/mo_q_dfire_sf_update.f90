@@ -22,6 +22,8 @@ MODULE mo_q_dfire_sf_update
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
   USE mo_jsb_grid,              ONLY: Get_grid
 
+  USE mo_veg_constants,         ONLY: itree
+  USE mo_q_dfire_constants,     ONLY: df_sf_spq_layer_top_sl
   USE mo_q_dfire_util,          ONLY: dfire_update_pools
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, &
@@ -82,8 +84,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_dfire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! in [-]
-    dsl4jsb_Real2D_onChunk                :: delta_dens_ind            ! in [-]
-    dsl4jsb_Real2D_onChunk                :: delta_root_fraction_sl    ! in [-]
+    dsl4jsb_Real2D_onChunk                :: delta_dens_ind            ! out [-]
+    dsl4jsb_Real3D_onChunk                :: delta_root_fraction_sl    ! out [-]
+    dsl4jsb_Real2D_onChunk                :: dens_ind                  ! in [-]
+    dsl4jsb_Real3D_onChunk                :: root_fraction_sl          ! in [-]
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
@@ -128,8 +132,10 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_fract)         ! in [-]
-    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                ! in [-]
-    dsl4jsb_Get_var2D_onChunk(VEG_, delta_root_fraction_sl)        ! in [-]
+    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                ! out [-]
+    dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)        ! out[-]
+    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                      ! in [-]
+    dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)              ! in [-]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -142,14 +148,14 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! init here
-    #ifdef __QUINCY_STANDALONE__
-        ALLOCATE(area(1), tile_fract(1))
+#ifdef __QUINCY_STANDALONE__
+        ALLOCATE(area(nc), tile_fract(nc))
         area = 1._wp
         tile_fract = 1._wp
-    #else
+#else
         area => grid %area (ics:ice, iblk)
         tile_fract => tile%fract(ics:ice, iblk)
-    #endif
+#endif
     area_burned_fract_pft = area_burned_fract * tile_fract
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -218,9 +224,9 @@ CONTAINS
     END DO
 
     ! Release memory
-    #ifdef __QUINCY_STANDALONE__
+#ifdef __QUINCY_STANDALONE__
       DEALLOCATE(area, tile_fract)
-    #endif
+#endif
     NULLIFY(area, tile_fract)
 
   END SUBROUTINE update_q_dfire_sf_update
