@@ -10,7 +10,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-MODULE mo_q_dfire_fuel_interface
+MODULE mo_q_dfire_fuel_sf_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                        ONLY: wp
@@ -21,7 +21,7 @@ MODULE mo_q_dfire_fuel_interface
   USE mo_jsb_tile_class,              ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_process_class,           ONLY: t_jsb_process, Q_DFIRE_FUEL_, Q_DFIRE_SF_
-  USE mo_q_dfire_fuel,                ONLY: update_q_dfire_fuel
+  USE mo_q_dfire_sf_fuel,             ONLY: update_q_dfire_sf_fuel
   USE mo_q_dfire_sf_impacts,          ONLY: update_q_dfire_sf_impacts
   USE mo_q_dfire_sf_update,           ONLY: update_q_dfire_sf_update
 
@@ -29,27 +29,27 @@ MODULE mo_q_dfire_fuel_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_q_dfire_fuel_tasks
-  PUBLIC :: update_q_dfire_fuel, update_q_dfire_sf_impacts
+  PUBLIC :: Register_q_dfire_fuel_sf_tasks
+  PUBLIC :: update_q_dfire_sf_fuel, update_q_dfire_sf_impacts
 
 
   ! ======================================================================================================= !
   !>
-  !> Type definition: dfire_sf_fuel task
+  !> Type definition: dfire_fuel_sf task
   !>
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_q_dfire_fuel
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_q_dfire_fuel_sf
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_q_dfire_fuel      !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggr_q_dfire_fuel        !< Aggregates computed task variables
-  END TYPE tsk_q_dfire_fuel
+    PROCEDURE, NOPASS :: Integrate => update_q_dfire_sf_fuel      !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggr_q_dfire_fuel_sf        !< Aggregates computed task variables
+  END TYPE tsk_q_dfire_fuel_sf
 
   ! ======================================================================================================= !
   !>
   !> Constructor interface: dfire_sf_fuel task
   !>
-  INTERFACE tsk_q_dfire_fuel
-    PROCEDURE Create_task_q_dfire_fuel         !< Constructor function for task
-  END INTERFACE tsk_q_dfire_fuel
+  INTERFACE tsk_q_dfire_fuel_sf
+    PROCEDURE Create_task_q_dfire_fuel_sf         !< Constructor function for task
+  END INTERFACE tsk_q_dfire_fuel_sf
 
   ! ======================================================================================================= !
   !>
@@ -87,7 +87,7 @@ MODULE mo_q_dfire_fuel_interface
     PROCEDURE Create_task_q_dfire_sf_update         !< Constructor function for task
   END INTERFACE tsk_q_dfire_sf_update
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel_sf_interface'
 
 CONTAINS
 
@@ -95,31 +95,32 @@ CONTAINS
   !>
   !> Register tasks: Q_DFIRE_SF_ process
   !>
-  SUBROUTINE Register_q_dfire_fuel_tasks(this, model_id)
+  SUBROUTINE Register_q_dfire_fuel_sf_tasks(this, model_id)
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
-    CALL this%Register_task(tsk_q_dfire_fuel(model_id))
+    CALL this%Register_task(tsk_q_dfire_fuel_sf(model_id))
     CALL this%Register_task(tsk_q_dfire_sf_impacts(model_id))
-  END SUBROUTINE Register_q_dfire_fuel_tasks
+    CALL this%Register_task(tsk_q_dfire_sf_update(model_id))
+  END SUBROUTINE Register_q_dfire_fuel_sf_tasks
 
   ! ======================================================================================================= !
   !>
   !> Constructor: dfire_sf_fuel task
   !>
-  FUNCTION Create_task_q_dfire_fuel(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_q_dfire_fuel_sf(model_id) RESULT(return_ptr)
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_q_dfire_fuel::return_ptr)
-    CALL return_ptr%Construct(name='q_dfire_sf_fuel', process_id=Q_DFIRE_FUEL_, owner_model_id=model_id)
-  END FUNCTION Create_task_q_dfire_fuel
+    ALLOCATE(tsk_q_dfire_fuel_sf::return_ptr)
+    CALL return_ptr%Construct(name='q_dfire_fuel_sf', process_id=Q_DFIRE_FUEL_, owner_model_id=model_id)
+  END FUNCTION Create_task_q_dfire_fuel_sf
 
   ! ======================================================================================================= !
   !>
   !> Implementation of "aggregate": dfire_fuel task
   !>
-  SUBROUTINE aggr_q_dfire_fuel(tile, options)
+  SUBROUTINE aggr_q_dfire_fuel_sf(tile, options)
     dsl4jsb_Use_config(Q_DFIRE_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -129,7 +130,7 @@ CONTAINS
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     CLASS(t_jsb_aggregator),  POINTER         :: sum_agg
     INTEGER                                   :: iblk, ics, ice, nc
-    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_fuel'
+    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_fuel_sf'
     LOGICAL                                   :: is_mask_enabled
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_DFIRE_SF_)
@@ -176,7 +177,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, grass_fract      , sum_agg)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-  END SUBROUTINE aggr_q_dfire_fuel
+  END SUBROUTINE aggr_q_dfire_fuel_sf
 
   ! ======================================================================================================= !
   !>
@@ -311,4 +312,4 @@ CONTAINS
 
 
 #endif
-END MODULE mo_q_dfire_fuel_interface
+END MODULE mo_q_dfire_fuel_sf_interface

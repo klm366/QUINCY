@@ -20,7 +20,7 @@
 !> Precalc fuel bulk density
 !> Move fuel(s) into process memory
 !>
-MODULE mo_q_dfire_fuel
+MODULE mo_q_dfire_sf_fuel
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
@@ -53,9 +53,9 @@ MODULE mo_q_dfire_fuel
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_q_dfire_fuel
+  PUBLIC :: update_q_dfire_sf_fuel
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fuel'
 
   TYPE(t_lfmc), SAVE, ALLOCATABLE :: lfmc_par
 
@@ -66,7 +66,7 @@ CONTAINS
   !> Compute spitfire for current time step
   !> It links Quincy and Spitfire
   !>
-  SUBROUTINE update_q_dfire_fuel(tile, options)
+  SUBROUTINE update_q_dfire_sf_fuel(tile, options)
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
@@ -320,8 +320,8 @@ CONTAINS
     END IF
 
     NULLIFY(live_fuel_frac)
-  END SUBROUTINE update_q_dfire_fuel
+  END SUBROUTINE update_q_dfire_sf_fuel
 
 
 #endif
-END MODULE mo_q_dfire_fuel
+END MODULE mo_q_dfire_sf_fuel
