@@ -10,7 +10,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-MODULE mo_q_dfire_util
+MODULE mo_q_dfire_sf_util
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
@@ -30,7 +30,7 @@ MODULE mo_q_dfire_util
   !< Rate of spread related methods
   PUBLIC :: calc_ros_opt_react_velocity, calc_ros_prop_flux_ratio, calc_ros_wind_factor, calc_ros_fbd
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_util'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_util'
 
 CONTAINS
 
@@ -545,4 +545,4 @@ CONTAINS
     fbd = fbd_accounting_fc / total_dead_fuel
   END FUNCTION calc_ros_fbd
 #endif
-END MODULE mo_q_dfire_util
+END MODULE mo_q_dfire_sf_util
