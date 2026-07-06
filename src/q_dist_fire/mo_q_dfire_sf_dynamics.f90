@@ -22,7 +22,7 @@
 !>    - Save data into process memory
 !>
 !> -calc_spitfire: spitfire subroutine which calls
-!>    - Initialize t_sf_spitfire, used to output data
+!>    - Initialize t_sf_dynamics, used to output data
 !>    - Calc Nesterov index (mo_q_dfire_sf_nesterov.f90)
 !>    - Calc Thonicke's / Oberhagemann implementation
 !>    -   Calc fuel moisture (mo_q_dfire_sf_fmoist_class.f90)
@@ -84,7 +84,7 @@ MODULE mo_q_dfire_sf_dynamics
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_q_dfire_sf_dynamics, sf_calc_fire_intensity, t_sf_spitfire, calc_ab_moisture
+  PUBLIC :: update_q_dfire_sf_dynamics, sf_calc_fire_intensity, t_sf_dynamics, calc_ab_moisture
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_dynamics'
 
@@ -92,7 +92,7 @@ MODULE mo_q_dfire_sf_dynamics
   !< Calculated Spitfire values
   !< Move spitfire data from calc_spitfire <-> update_q_dfire_sf_dynamics subroutines
   !<
-  TYPE t_sf_spitfire
+  TYPE t_sf_dynamics
     REAL(wp), ALLOCATABLE :: e_n_ignitions(:)
     REAL(wp), ALLOCATABLE :: e_n_humans(:)
     REAL(wp), ALLOCATABLE :: e_n_lightning(:)
@@ -108,11 +108,11 @@ MODULE mo_q_dfire_sf_dynamics
     REAL(wp), ALLOCATABLE :: i_surface(:)               !< Fire intensity [kW m-1]
 
     LOGICAL, ALLOCATABLE  :: is_fire_intense_enough(:)  !< mask, TRUE= fire intensity is strong enough to exist
-  END TYPE t_sf_spitfire
+  END TYPE t_sf_dynamics
 
-  INTERFACE t_sf_spitfire
-    MODULE PROCEDURE :: create_sf_spitfire
-  END INTERFACE t_sf_spitfire
+  INTERFACE t_sf_dynamics
+    MODULE PROCEDURE :: create_sf_dynamics
+  END INTERFACE t_sf_dynamics
 
 
   TYPE t_sf_bgcm_2L3D_p ! todo: remove
@@ -122,13 +122,13 @@ MODULE mo_q_dfire_sf_dynamics
 CONTAINS
 
   !>
-  !> t_sf_spitfire constructor: Allocate and initialize
+  !> t_sf_dynamics constructor: Allocate and initialize
   !>
-  FUNCTION create_sf_spitfire(nc, nfuels, ndeadpools) RESULT (sf_spitfire)
+  FUNCTION create_sf_dynamics(nc, nfuels, ndeadpools) RESULT (sf_spitfire)
     INTEGER, INTENT(in) :: nc          !< #Gridcells
     INTEGER, INTENT(in) :: nfuels      !< # fuel classes
     INTEGER, INTENT(in) :: ndeadpools  !< # dead fuel pools
-    TYPE(t_sf_spitfire) :: sf_spitfire !< Output
+    TYPE(t_sf_dynamics) :: sf_spitfire !< Output
 
     ALLOCATE(sf_spitfire % e_n_ignitions(nc))
     ALLOCATE(sf_spitfire % e_n_humans(nc))
@@ -153,7 +153,7 @@ CONTAINS
     sf_spitfire % i_surface = 0._wp
     sf_spitfire % is_fire_intense_enough = .FALSE.
 
-  END FUNCTION create_sf_spitfire
+  END FUNCTION create_sf_dynamics
 
   ! ======================================================================================================= !
   !>
@@ -214,7 +214,7 @@ CONTAINS
     REAL(wp)                              :: burnable_area_ha(options%nc)                 !< Burnable area [ha]
     LOGICAL, PARAMETER                    :: are_all_pfts_wave =.FALSE. ! todo: replace by config option, flag_wa_pfts=all|only
 
-    TYPE(t_sf_spitfire)                   :: sf_spitfire
+    TYPE(t_sf_dynamics)                   :: sf_spitfire
 
     INTEGER                               :: nr_of_children
 
@@ -471,7 +471,7 @@ CONTAINS
     ab_moisture = calc_ab_moisture(soil_depth_sl(:,sl_ixs), wtr_soil_sl(:,sl_ixs), wtr_soil_sat_sl(:,sl_ixs), &
                                     mask=mask_is_tile_enabled)
 
-    CALL calc_spitfire(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
+    CALL calc_sf_dynamics(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         dsl4jsb_Config(Q_DFIRE_)%ros_model_id, &
                         fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
                         ic_pop_dens, & ! ignition events
@@ -549,7 +549,7 @@ CONTAINS
   !>
   !> Run science
   !>
-  SUBROUTINE calc_spitfire(nc, nalphas, nfuelclasses, dtime, one_day, & ! in
+  SUBROUTINE calc_sf_dynamics(nc, nalphas, nfuelclasses, dtime, one_day, & ! in
                   config_ros_model_id, &
                   lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
                   density_human_population, a_nd, lightning_frequency, & ! ignition events
@@ -609,7 +609,7 @@ CONTAINS
 
     REAL(wp), INTENT(out)   :: fuel_moisture(nc,df_sf_omegas_nr)   !< Fuel moisture (#nc, #omega_nr (omega_o, omega_nl))
 
-    TYPE(t_sf_spitfire), INTENT(out)    :: spitfire                !< Spitfire outputs
+    TYPE(t_sf_dynamics), INTENT(out)    :: spitfire                !< Spitfire outputs
     LOGICAL, INTENT(in), OPTIONAL       :: mask(nc)                !< Gridcell can burn
 
     LOGICAL :: mask_tile_enabled(nc)
@@ -650,7 +650,7 @@ CONTAINS
     has_fire_conditions = mask_tile_enabled .AND. has_dead_fuel
 
     sf_ignitions = t_q_sf_ignitions(nc)
-    spitfire = t_sf_spitfire(nc, ndeadpools, sf_fuel_live_fuel_nr)
+    spitfire = t_sf_dynamics(nc, ndeadpools, sf_fuel_live_fuel_nr)
 
     !> Calculate whether there are conditions for fire based on the Nesterov Index,
     !> following Thonicke et al. (2010) with modifications from Pfeiffer et al. (2013)
@@ -667,7 +667,7 @@ CONTAINS
     tot_dead_fuel_grass = SUM(cured_live_grass_fuel(:,:,ix_1hr), DIM=2) ! 2 = fuel classes
     IF (config_ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
-      CALL calc_spitfire_thonicke(nc, nalphas, df_sf_fc_spread_nr, &
+      CALL calc_sf_dynamics_for_thonicke(nc, nalphas, df_sf_fc_spread_nr, &
                                     alphas, &
                                     lctlib_fuel_bulk_density, &
                                     u_f_wind, &
@@ -687,7 +687,7 @@ CONTAINS
         tot_live_fuel_tree = SUM(live_tree_fuel(:,i,j)) ! sum multiple dimensions
       END DO
 
-      CALL calc_spitfire_oberhagemann(nc, &
+      CALL calc_sf_dynamics_for_oberhagemann(nc, &
           df_sf_sigma_dd_nr, & ! all dead fuel classes
           df_sf_sigma_dd_ros_nr, & ! dead fuel classes involved in fire spread
           df_sf_sigma_lv_nr, & ! live fuel classes
@@ -709,7 +709,7 @@ CONTAINS
        !< used in thonicke's implementation
        fuel_moisture = 0._wp
     ELSE
-      CALL finish("calc_spitfire", "Unexpected fire sub-model found")
+      CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
     END IF
     CALL sf_calc_rate_of_spread(nc, &
                   lctlib_fwd_wind_factor, wind_sf, &
@@ -754,7 +754,7 @@ CONTAINS
       fuel_moisture_for_fc(:,ix_100hr) = fuel_moisture_ober%dead(:,ix_100hr)
       fuel_moisture_for_fc(:,ix_1000hr) = fuel_moisture_ober%dead(:,ix_1000hr)
     ELSE
-      CALL finish("calc_spitfire", "Unexpected fire sub-model found")
+      CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
     END IF
 
     !< Fraction of consumption used to calculate dead fuel consumption (Thonicke et al. (2010),
@@ -782,14 +782,14 @@ CONTAINS
     spitfire % is_fire_intense_enough = has_fire_conditions .AND. &
                                           (spitfire % i_surface >= const_i_surface_thd)
 
-  END SUBROUTINE calc_spitfire
+  END SUBROUTINE calc_sf_dynamics
 
 
   ! ======================================================================================================= !
   !>
   !> Calculate spitfire thonicke's implementation
   !>
-  SUBROUTINE calc_spitfire_thonicke(nc, nalphas, nspread, &
+  SUBROUTINE calc_sf_dynamics_for_thonicke(nc, nalphas, nspread, &
                                     alphas, &
                                     fuel_bulk_density, &
                                     u_f_wind, &
@@ -843,14 +843,14 @@ CONTAINS
                       dead_fuel_litter * df_sf_units_g_to_kg, &
                       fuel_moisture(:,df_sf_omega_o_idx), &
                       has_fire_conditions)
-  END SUBROUTINE calc_spitfire_thonicke
+  END SUBROUTINE calc_sf_dynamics_for_thonicke
 
 
   ! ======================================================================================================= !
   !>
   !> Calculate spitfire Oberhagemann's implementation
   !>
-  SUBROUTINE calc_spitfire_oberhagemann(nc, &
+  SUBROUTINE calc_sf_dynamics_for_oberhagemann(nc, &
                   ndd, & ! 5=1,10,100,1000 hours, cured live grass
                   nddros, & ! 4 = 1,10,100, cured live grass
                   nlv, & ! 2=live grass, woody
@@ -946,7 +946,7 @@ CONTAINS
       fdi = max(0._wp, 1._wp  - (fuel_moisture%val / moisture_extinction))
     ENDWHERE
 
-  END SUBROUTINE calc_spitfire_oberhagemann
+  END SUBROUTINE calc_sf_dynamics_for_oberhagemann
 
   ! ======================================================================================================= !
   !>
@@ -1072,7 +1072,7 @@ CONTAINS
   SUBROUTINE run_diagnostics_at_tile(nc, iblk, grid_cell_area, sf_outputs)
     INTEGER, INTENT(in) :: nc, iblk
     REAL(wp), INTENT(in) :: grid_cell_area(:)
-    TYPE(t_sf_spitfire), INTENT(in) :: sf_outputs
+    TYPE(t_sf_dynamics), INTENT(in) :: sf_outputs
 
     LOGICAL :: test_BAfract_is_outside_limits
     LOGICAL :: test_BA_is_bigger_than_gridcellarea
