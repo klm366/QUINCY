@@ -53,7 +53,7 @@ MODULE mo_q_dfire_sf_impacts
                                         df_sf_species_n2_idx
 
   USE mo_q_dfire_sf_damage_class, ONLY: t_sf_prob_mort, calc_prob_mortality
-  USE mo_q_dfire_sf_util,         ONLY: real2logical
+  USE mo_q_dfire_sf_util,         ONLY: real2logical, dfire_update_pools
 
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption, &
                                               sf_calc_dead_fuel_consumption, &
@@ -68,7 +68,6 @@ MODULE mo_q_dfire_sf_impacts
                                       SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID, &
                                       VEG_BGCM_FIRE_EMISSIONS_ID, VEG_BGCM_FIRE_LITTERFALL_ID
 
-  USE mo_q_dfire_util, ONLY: dfire_update_pools
   USE mo_lnd_bgcm_idx
 
   IMPLICIT NONE
