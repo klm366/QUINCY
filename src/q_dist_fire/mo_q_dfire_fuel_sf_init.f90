@@ -10,7 +10,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-MODULE mo_q_dfire_fuel_init
+MODULE mo_q_dfire_fuel_sf_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
@@ -21,9 +21,9 @@ MODULE mo_q_dfire_fuel_init
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: q_dfire_fuel_init
+  PUBLIC :: q_dfire_fuel_sf_init
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel_init'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel_sf_init'
 
 CONTAINS
 
@@ -31,7 +31,7 @@ CONTAINS
   !>
   !> Intialize disturbance fire process (after memory has been set up)
   !>
-  SUBROUTINE q_dfire_fuel_init(tile)
+  SUBROUTINE q_dfire_fuel_sf_init(tile)
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: Q_DFIRE_FUEL_
@@ -44,7 +44,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib !< land-cover-type library - parameter across pfts
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':q_dfire_fuel_init'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':q_dfire_fuel_sf_init'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
@@ -159,7 +159,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, sb_fire_emissions_total_els)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_, sb_fire_litter_ash_total_els)
     ! ----------------------------------------------------------------------------------------------------- !
-    !WRITE(*,*) "Computing q_dfire_fuel_init..."
     dead_fuel_1hr_dfp = 0._wp
     dead_fuel_10hr_dfp = 0._wp
     dead_fuel_100hr_dfp = 0._wp
@@ -209,7 +208,7 @@ CONTAINS
     veg_fire_emissions_total_els = 0._wp
     sb_fire_emissions_total_els = 0._wp
     sb_fire_litter_ash_total_els = 0._wp
-  END SUBROUTINE q_dfire_fuel_init
+  END SUBROUTINE q_dfire_fuel_sf_init
 
 #endif
-END MODULE mo_q_dfire_fuel_init
+END MODULE mo_q_dfire_fuel_sf_init
