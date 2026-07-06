@@ -153,7 +153,7 @@ MODULE mo_q_agr_process
       !>  0.9 memorise old growing season state, and update last year's number of growing season if now is
       !>      a new year
       !>
-      ix_ct = INT(crop_type_index(ic))
+      ix_ct = NINT(crop_type_index(ic))
       growing_season_old = growing_season(ic)
       IF (is_newyear) THEN
         crop_season_per_year_mavg(ic) = crop_season_per_year_mavg(ic) * (1._wp - 1._wp/mavg_period_cropseason) + &
