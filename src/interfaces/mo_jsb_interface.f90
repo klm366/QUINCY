@@ -278,7 +278,7 @@ CONTAINS
       END IF
 
 #ifdef _OPENACC
-      CALL finish(routine, 'Quincy has not been tested on GPU in coupled mode so far.')
+!      CALL finish(routine, 'Quincy has not been tested on GPU in coupled mode so far.')
 
       IF (model%config%qmodel_id /= QCANOPY) THEN
         CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
