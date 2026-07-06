@@ -89,14 +89,14 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_SF_
+    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_SF_, Q_DFIRE_SF_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_math_constants,      ONLY: one_day
 
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
+    dsl4jsb_Use_memory(Q_DFIRE_FUEL_SF_)
     dsl4jsb_Use_memory(Q_DFIRE_SF_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
@@ -222,7 +222,7 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_fire_litterfall_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_DFIRE_SF_)
-    dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
+    dsl4jsb_Def_memory(Q_DFIRE_FUEL_SF_)
     dsl4jsb_Def_memory(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -237,7 +237,7 @@ CONTAINS
     nc      = options%nc
     dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(Q_DFIRE_FUEL_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(Q_DFIRE_FUEL_SF_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
@@ -250,46 +250,46 @@ CONTAINS
     grid => Get_grid(model%grid_id)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DFIRE_SF_)
-    dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
+    dsl4jsb_Get_memory(Q_DFIRE_FUEL_SF_)
     dsl4jsb_Get_memory(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)               ! in [?]
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp)    ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp)   ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp)  ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, live_tree_fuel_1hr_lfp)    ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, live_tree_fuel_10hr_lfp)   ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, live_tree_fuel_100hr_lfp)  ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, live_tree_fuel_1000hr_lfp) ! in [g DM m-2]
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_10hr_dfp)    ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_100hr_dfp)   ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1000hr_dfp)  ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, dead_fuel_1hr_dfp)     ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, dead_fuel_10hr_dfp)    ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, dead_fuel_100hr_dfp)   ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, dead_fuel_1000hr_dfp)  ! in [g DM m-2]
 
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned)               ! in [ha ts-1]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned_fract)         ! in [-]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_frac_consumption)     ! in [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, i_surface)                 ! in [kW m-1]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, mask_is_fire_intense_enough)! in [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_prop_ck)           ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_fire)              ! out [- ts-1]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_fire_output)       ! out [- s-1]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_tau)               ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, tau_l)                ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, tau_c)                ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, bark_thickness)       ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, DBH_diag)             ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, par1_diag)            ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, par2_diag)            ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, pm_prop_ck)           ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, pm_fire)              ! out [- ts-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, pm_fire_output)       ! out [- s-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, pm_tau)               ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, tau_l)                ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, tau_c)                ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, bark_thickness)       ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, DBH_diag)             ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, par1_diag)            ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, par2_diag)            ! out [-]
 
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, ck)                   ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, r_ck)                 ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, ck_p)                 ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, scorch_height)        ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, F_scorch_height)      ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, crown_length)         ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, tree_height)          ! out [m]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, ck)                   ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, r_ck)                 ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, ck_p)                 ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, scorch_height)        ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, F_scorch_height)      ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, crown_length)         ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, tree_height)          ! out [m]
 
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
@@ -299,16 +299,16 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_100hr) ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_1000hr) ! in [g DM m-2]
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, fuel_consumption_els) ! out
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, emissions_spc)        ! out
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, emissions_els)        ! out
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, residue_els)          ! out
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, overflow_els)         ! out
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, fuel_consumption_els) ! out
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, emissions_spc)        ! out
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, emissions_els)        ! out
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, residue_els)          ! out
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, overflow_els)         ! out
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, veg_fire_litterfall_total_els) ! out [umol X m-2 s-1]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, veg_fire_emissions_total_els) ! out [umol X m-2 s-1]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, sb_fire_emissions_total_els) ! out [umol X m-2 s-1]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, sb_fire_litter_ash_total_els) ! out [umol X m-2 s-1]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, veg_fire_litterfall_total_els) ! out [umol X m-2 s-1]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, veg_fire_emissions_total_els) ! out [umol X m-2 s-1]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, sb_fire_emissions_total_els) ! out [umol X m-2 s-1]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, sb_fire_litter_ash_total_els) ! out [umol X m-2 s-1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
