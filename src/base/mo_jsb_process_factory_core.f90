@@ -51,7 +51,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_veg_memory_class,     ONLY: t_veg_memory
   USE mo_sb_memory_class,      ONLY: t_sb_memory
   USE mo_q_dfire_sf_memory_class,   ONLY: t_q_dfire_sf_memory
-  USE mo_q_dfire_fuel_memory_class, ONLY: t_q_dfire_fuel_memory
+  USE mo_q_dfire_fuel_sf_memory_class, ONLY: t_q_dfire_fuel_sf_memory
 
   USE mo_rad_interface,        ONLY: Register_rad_tasks
   USE mo_rad_config_class,     ONLY: t_rad_config
@@ -302,7 +302,7 @@ CONTAINS
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
     USE mo_sb_memory_class,      ONLY: max_no_of_sb_vars => max_no_of_vars
     USE mo_q_dfire_sf_memory_class, ONLY: max_no_of_q_dfire_vars => max_no_of_vars
-    USE mo_q_dfire_fuel_memory_class, ONLY: max_no_of_q_dfire_fuel_vars => max_no_of_vars
+    USE mo_q_dfire_fuel_sf_memory_class, ONLY: max_no_of_q_dfire_fuel_vars => max_no_of_vars
 
     INTEGER, INTENT(in) :: iproc                   !< Process ID
     CLASS(t_jsb_memory), POINTER   :: return_ptr   !< Pointer to the process memory
@@ -387,7 +387,7 @@ CONTAINS
       ALLOCATE(t_q_dfire_sf_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_q_dfire_vars
     CASE (Q_DFIRE_FUEL_)
-      ALLOCATE(t_q_dfire_fuel_memory::return_ptr)
+      ALLOCATE(t_q_dfire_fuel_sf_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_q_dfire_fuel_vars
     END SELECT
 
