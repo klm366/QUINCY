@@ -10,7 +10,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-MODULE mo_q_dfire_init
+MODULE mo_q_dfire_sf_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
@@ -29,13 +29,13 @@ MODULE mo_q_dfire_init
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: q_dfire_init
+  PUBLIC :: q_dfire_sf_init
 
 #ifndef __QUINCY_STANDALONE__
   PUBLIC ::  provide_lightning_events
 #endif
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_init'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_init'
 
   TYPE :: t_q_dfire_init_vars
     REAL(wp), POINTER ::      &
@@ -52,7 +52,7 @@ CONTAINS
   !>
   !> Intialize disturbance fire process (after memory has been set up)
   !>
-  SUBROUTINE q_dfire_init(tile)
+  SUBROUTINE q_dfire_sf_init(tile)
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_grid,                ONLY: Get_grid
 
@@ -70,7 +70,7 @@ CONTAINS
     TYPE(t_jsb_grid),       POINTER              :: hgrid              !< Horizontal grid
     INTEGER                                      :: iblk, ics, ice, nc, npft
     INTEGER :: nblks, nproma
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':q_dfire_init'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':q_dfire_sf_init'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(Q_DFIRE_)
@@ -301,7 +301,7 @@ CONTAINS
     a_nd = dfire_init_vars%a_nd(1,1)
 #endif
 
-  END SUBROUTINE q_dfire_init
+  END SUBROUTINE q_dfire_sf_init
 
 
 #ifdef __QUINCY_STANDALONE__
@@ -518,4 +518,4 @@ CONTAINS
 #endif
 
 #endif
-END MODULE mo_q_dfire_init
+END MODULE mo_q_dfire_sf_init

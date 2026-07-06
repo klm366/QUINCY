@@ -608,7 +608,7 @@ CONTAINS
 
     USE mo_alcc_init,           ONLY : read_land_use_data
     USE mo_sb_init,             ONLY : provide_n_and_p_deposition
-    USE mo_q_dfire_init,        ONLY : provide_lightning_events
+    USE mo_q_dfire_sf_init,     ONLY : provide_lightning_events
     USE mo_q_syl_init,          ONLY : read_harvest_fraction
     USE mo_q_agr_init,          ONLY : read_fertiliser_input
     USE mo_jsb_math_constants,  ONLY : eps1

@@ -171,7 +171,7 @@ CONTAINS
     USE mo_q_agr_init,          ONLY: q_agr_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
-    USE mo_q_dfire_init,        ONLY: q_dfire_init
+    USE mo_q_dfire_sf_init,     ONLY: q_dfire_sf_init
     USE mo_q_dfire_fuel_init,   ONLY: q_dfire_fuel_init
     USE mo_fage_init,           ONLY: fage_init
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
@@ -664,7 +664,7 @@ CONTAINS
         IF(model%config%qmodel_id == QLAND) THEN
           IF (tile%Is_process_active(Q_DFIRE_FUEL_) .AND. tile%Is_process_active(Q_DFIRE_)) THEN
             CALL q_dfire_fuel_init(tile)
-            CALL q_dfire_init(tile)
+            CALL q_dfire_sf_init(tile)
           END IF
         END IF
       END SELECT
