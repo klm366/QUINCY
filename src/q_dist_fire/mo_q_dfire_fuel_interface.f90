@@ -20,7 +20,7 @@ MODULE mo_q_dfire_fuel_interface
   USE mo_jsb_model_class,             ONLY: t_jsb_model
   USE mo_jsb_tile_class,              ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
-  USE mo_jsb_process_class,           ONLY: t_jsb_process, Q_DFIRE_FUEL_, Q_DFIRE_
+  USE mo_jsb_process_class,           ONLY: t_jsb_process, Q_DFIRE_FUEL_, Q_DFIRE_SF_
   USE mo_q_dfire_fuel,                ONLY: update_q_dfire_fuel
   USE mo_q_dfire_sf_impacts,          ONLY: update_q_dfire_sf_impacts
   USE mo_q_dfire_sf_update,           ONLY: update_q_dfire_sf_update
@@ -93,7 +93,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Register tasks: Q_DFIRE_ process
+  !> Register tasks: Q_DFIRE_SF_ process
   !>
   SUBROUTINE Register_q_dfire_fuel_tasks(this, model_id)
     CLASS(t_jsb_process), INTENT(inout) :: this
@@ -120,7 +120,7 @@ CONTAINS
   !> Implementation of "aggregate": dfire_fuel task
   !>
   SUBROUTINE aggr_q_dfire_fuel(tile, options)
-    dsl4jsb_Use_config(Q_DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -132,7 +132,7 @@ CONTAINS
     CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_fuel'
     LOGICAL                                   :: is_mask_enabled
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -146,7 +146,7 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     sum_agg => tile%Get_aggregator("sum")
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(Q_DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -195,7 +195,7 @@ CONTAINS
   !> Implementation of "aggregate": dfire_fuel task
   !>
   SUBROUTINE aggr_q_dfire_sf_impacts(tile, options)
-    dsl4jsb_Use_config(Q_DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -205,7 +205,7 @@ CONTAINS
     INTEGER                                   :: iblk, ics, ice, nc
     CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_sf_impacts'
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -218,7 +218,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(Q_DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -274,7 +274,7 @@ CONTAINS
   !> Implementation of "aggregate": dfire_sf_update task
   !>
   SUBROUTINE aggr_q_dfire_sf_update(tile, options)
-    dsl4jsb_Use_config(Q_DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -284,7 +284,7 @@ CONTAINS
     INTEGER                                   :: iblk, ics, ice, nc
     CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_sf_update'
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -297,7 +297,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(Q_DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
 
     ! ----------------------------------------------------------------------------------------------------- !

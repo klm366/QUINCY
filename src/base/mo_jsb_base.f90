@@ -67,7 +67,7 @@ CONTAINS
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, CLIMBUF_, NLCC_, &
       &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, ALCC_, &
-      &                   Q_DFIRE_
+      &                   Q_DFIRE_SF_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)

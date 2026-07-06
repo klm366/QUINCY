@@ -130,7 +130,7 @@ CONTAINS
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_q_dfire_memory), INTENT(inout), TARGET  :: mem         !> dfire memory
+    CLASS(t_q_dfire_sf_memory), INTENT(inout), TARGET  :: mem         !> dfire memory
     CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
     CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
     INTEGER,              INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
@@ -146,7 +146,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_moisture              !> Fuel fuel moisture
     TYPE(t_jsb_vgrid), POINTER :: vgrid_months_in_year             !> Number of months in a year
     INTEGER                    :: table
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_q_dfire_memory'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_q_dfire_sf_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     model                 => Get_model(model_id)
     table                 =  tables(1)

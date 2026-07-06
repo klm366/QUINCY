@@ -53,14 +53,14 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_AGR_, Q_PHENO_, HYDRO_, Q_SYL_, Q_DFIRE_, Q_DFIRE_FUEL_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_AGR_, Q_PHENO_, HYDRO_, Q_SYL_, Q_DFIRE_SF_, Q_DFIRE_FUEL_
     USE mo_veg_constants,         ONLY: itree, rfr_ratio_toc, k_r2fr_chl
 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_config(Q_SYL_)
-    dsl4jsb_Use_config(Q_DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_SF_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(HYDRO_)
@@ -93,7 +93,7 @@ CONTAINS
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_config(Q_SYL_)
-    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -155,7 +155,7 @@ CONTAINS
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_config(Q_SYL_)
-    dsl4jsb_Get_config(Q_DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -230,7 +230,7 @@ CONTAINS
     ENDSELECT
 
     !> 1.2 Load mortality_rate_fire
-    IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+    IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
       mortality_rate_fire(:) = pm_fire(:)
     ELSE
       mortality_rate_fire(:) = 0._wp !< no change

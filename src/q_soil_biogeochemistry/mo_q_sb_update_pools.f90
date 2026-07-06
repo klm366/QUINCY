@@ -63,7 +63,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_process_class,      ONLY: A2L_, SEB_, TURB_, HYDRO_, HYDRO_, VEG_, SSE_, Q_ASSIMI_, Q_PHENO_, SB_, &
-                                         Q_DFIRE_
+                                         Q_DFIRE_SF_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_jsb_time,               ONLY: execute_quincy_sb_accelerator_this_timestep
@@ -77,7 +77,7 @@ CONTAINS
     USE mo_sb_util,                ONLY: calc_qmax_texture
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
-    dsl4jsb_Use_config(Q_DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_SF_)
 
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)
@@ -133,7 +133,7 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
-    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
@@ -380,7 +380,7 @@ CONTAINS
     ! ---------------------------
     ! Get process config
     dsl4jsb_Get_config(SB_)
-    dsl4jsb_Get_config(Q_DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -750,7 +750,7 @@ CONTAINS
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
       sb_pool_mt = sb_pool_mt + sb_formation_mt - sb_loss_mt + sb_transport_mt
 
-!      IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+!      IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
 !        CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
 !            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
 !            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
@@ -773,7 +773,7 @@ CONTAINS
       sb_pool_mt                   = sb_pool_mt + sb_formation_mt - sb_loss_mt + sb_transport_mt
 
       !> 6.2 update fire disturbance flux pools
-      IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+      IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
 !        CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
 !            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
 !            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))

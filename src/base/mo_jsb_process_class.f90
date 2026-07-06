@@ -39,7 +39,7 @@ MODULE mo_jsb_process_class
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     &       CLIMBUF_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, &
-    &       Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, Q_DFIRE_, Q_DFIRE_FUEL_
+    &       Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, Q_DFIRE_SF_, Q_DFIRE_FUEL_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -69,7 +69,7 @@ MODULE mo_jsb_process_class
   ENUM, BIND(C)
     ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
       &           CLIMBUF_, FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, &
-      &           Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, Q_DFIRE_, Q_DFIRE_FUEL_
+      &           Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, Q_DFIRE_SF_, Q_DFIRE_FUEL_
   END ENUM
 
   ! -------------------------------------------------------------------------------------------------- !
@@ -128,7 +128,7 @@ CONTAINS
       return_value = 'q_agr'
     CASE (Q_PHENO_)
       return_value = 'q_pheno'
-    CASE (Q_DFIRE_)
+    CASE (Q_DFIRE_SF_)
       return_value = 'q_dfire_sf'
     CASE (Q_DFIRE_FUEL_)
       return_value = 'q_dfire_fuel'
@@ -203,7 +203,7 @@ CONTAINS
     CASE ('q_pheno')
       return_value = Q_PHENO_
     CASE ('q_dfire_sf')
-      return_value = Q_DFIRE_
+      return_value = Q_DFIRE_SF_
     CASE ('q_dfire_fuel')
       return_value = Q_DFIRE_FUEL_
 #ifndef __NO_JSBACH_HD__

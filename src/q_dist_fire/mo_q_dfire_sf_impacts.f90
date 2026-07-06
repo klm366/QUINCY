@@ -89,7 +89,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_
+    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_SF_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -97,11 +97,11 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
-    dsl4jsb_Use_memory(Q_DFIRE_)
+    dsl4jsb_Use_memory(Q_DFIRE_SF_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_config(Q_DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -221,9 +221,9 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_fire_emissions_mt
     dsl4jsb_Def_mt2L2D :: veg_fire_litterfall_mt
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
-    dsl4jsb_Def_memory(Q_DFIRE_)
+    dsl4jsb_Def_memory(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -249,9 +249,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     grid => Get_grid(model%grid_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(Q_DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
-    dsl4jsb_Get_memory(Q_DFIRE_)
+    dsl4jsb_Get_memory(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -267,11 +267,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_100hr_dfp)   ! in [g DM m-2]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1000hr_dfp)  ! in [g DM m-2]
 
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned)               ! in [ha ts-1]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_fract)         ! in [-]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_frac_consumption)     ! in [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, i_surface)                 ! in [kW m-1]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, mask_is_fire_intense_enough)! in [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned)               ! in [ha ts-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned_fract)         ! in [-]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_frac_consumption)     ! in [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, i_surface)                 ! in [kW m-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, mask_is_fire_intense_enough)! in [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_prop_ck)           ! out [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_fire)              ! out [- ts-1]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_fire_output)       ! out [- s-1]
@@ -294,10 +294,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_1hr) ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_10hr) ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_100hr) ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_1000hr) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_1hr) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_10hr) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_100hr) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_1000hr) ! in [g DM m-2]
 
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, fuel_consumption_els) ! out
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, emissions_spc)        ! out
@@ -413,8 +413,8 @@ CONTAINS
                                     lctlib%q_crown_length, lctlib%q_crown_damage_p, lctlib%q_crown_damage_r_ck, &
                                     lctlib%q_scorch_height_f, &
                                     lctlib%q_bark_thickness_par1, lctlib%q_bark_thickness_par2, &
-                                    height * dsl4jsb_Config(Q_DFIRE_)%tree_height_factor, & ! Tree characteristics
-                                    dbh * dsl4jsb_Config(Q_DFIRE_)%tree_diameter_factor, &
+                                    height * dsl4jsb_Config(Q_DFIRE_SF_)%tree_height_factor, & ! Tree characteristics
+                                    dbh * dsl4jsb_Config(Q_DFIRE_SF_)%tree_diameter_factor, &
                                     i_surface, & ! Fire intensity
                                     w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
                                     dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
@@ -422,7 +422,7 @@ CONTAINS
                                     mask_opt=is_fire_intense_enough)
 
       fc_live = sf_calc_live_fuel_consumption(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
-                                    dsl4jsb_Config(Q_DFIRE_)%fract_crown_scorch, &
+                                    dsl4jsb_Config(Q_DFIRE_SF_)%fract_crown_scorch, &
                                     prob_mort % prop_ck, &
                                     area_burned_fract_pft, &
                                     live_tree_fuel_cls, &
@@ -433,7 +433,7 @@ CONTAINS
       bark_thickness = prob_mort % bark_thickness
       par1_diag = lctlib%q_bark_thickness_par1
       par2_diag = lctlib%q_bark_thickness_par2
-      dbh_diag = dbh * dsl4jsb_Config(Q_DFIRE_)%tree_diameter_factor
+      dbh_diag = dbh * dsl4jsb_Config(Q_DFIRE_SF_)%tree_diameter_factor
 
       ck = prob_mort % prop_ck
       scorch_height = prob_mort % scorch_height
@@ -442,9 +442,9 @@ CONTAINS
       r_ck = lctlib%q_crown_damage_r_ck
       ck_p = lctlib%q_crown_damage_p
       F_scorch_height = lctlib%q_scorch_height_f
-      tree_height = height * dsl4jsb_Config(Q_DFIRE_)%tree_height_factor
+      tree_height = height * dsl4jsb_Config(Q_DFIRE_SF_)%tree_height_factor
 
-      If (dsl4jsb_Config(Q_DFIRE_)%flag_has_prob_mort_feedback) THEN
+      If (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_prob_mort_feedback) THEN
         ! todo: add pm_fire_diag -> always output (even when false)
         pm_fire = pm_fire * area_burned_fract_pft
         pm_fire_output = pm_fire / dtime !< from ts-1 to seconds-1
@@ -503,7 +503,7 @@ CONTAINS
                           mass_imbalance_emitted_live_el) ! [molX/m2]
 
     ! Feedbacks
-    IF (dsl4jsb_Config(Q_DFIRE_)%flag_has_dead_feedback) THEN
+    IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_dead_feedback) THEN
       ! Convert sb_pool related dead fuel pools into m3 to operate with sb_pool related fluxes
       ALLOCATE(emissions_dead_in_m3, source=emissions_dead_el)
       emissions_dead_in_m3 = 0._wp
@@ -528,7 +528,7 @@ CONTAINS
 
     END IF
 
-    IF (dsl4jsb_Config(Q_DFIRE_)%flag_has_live_feedback) THEN
+    IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_live_feedback) THEN
       !< Feedback: live fuel consumption is removed using veg_fire_emissions (combusted)
       !< Residue is transfered through veg_litterfall
       CALL calc_sf_feedback_live(emissions_live_el, &
@@ -600,7 +600,7 @@ CONTAINS
     veg_fire_emissions_total_els = veg_fire_emissions_total_els / dtime * 1000000._wp
     sb_fire_litter_ash_total_els = sb_fire_litter_ash_total_els / dtime * 1000000._wp
 
-    IF (dsl4jsb_Config(Q_DFIRE_)%has_diagnostics) THEN
+    IF (dsl4jsb_Config(Q_DFIRE_SF_)%has_diagnostics) THEN
       CALL run_diagnostics_at_pft(nc, sb_pool_mt, sb_fire_emissions_mt, sb_fire_litter_ash_mt)
     ENDIF
   END SUBROUTINE update_q_dfire_sf_impacts

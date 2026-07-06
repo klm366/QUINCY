@@ -51,7 +51,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_
+    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_SF_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -59,11 +59,11 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
-    dsl4jsb_Use_memory(Q_DFIRE_)
+    dsl4jsb_Use_memory(Q_DFIRE_SF_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_config(Q_DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -97,9 +97,9 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_fire_emissions_mt
     dsl4jsb_Def_mt2L2D :: veg_fire_litterfall_mt
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
-    dsl4jsb_Def_memory(Q_DFIRE_)
+    dsl4jsb_Def_memory(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -125,13 +125,13 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     grid => Get_grid(model%grid_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(Q_DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
-    dsl4jsb_Get_memory(Q_DFIRE_)
+    dsl4jsb_Get_memory(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_fract)         ! in [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned_fract)         ! in [-]
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                ! out [-]
     dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)        ! out[-]
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                      ! in [-]

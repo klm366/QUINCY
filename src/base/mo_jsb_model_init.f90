@@ -18,7 +18,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_,        &
-    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, Q_DFIRE_, Q_DFIRE_FUEL_
+    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, Q_DFIRE_SF_, Q_DFIRE_FUEL_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -28,7 +28,7 @@ MODULE mo_jsb_model_init
   dsl4jsb_Use_config(CLIMBUF_)
   dsl4jsb_Use_config(VEG_)
   dsl4jsb_Use_config(SB_)
-  dsl4jsb_Use_config(Q_DFIRE_)
+  dsl4jsb_Use_config(Q_DFIRE_SF_)
   dsl4jsb_Use_config(Q_DFIRE_FUEL_)
 
   USE mo_jsb_class,        ONLY: Get_model
@@ -201,7 +201,7 @@ CONTAINS
     dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
-    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_config(Q_DFIRE_FUEL_)
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
@@ -393,7 +393,7 @@ CONTAINS
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_config(VEG_)
       dsl4jsb_Get_config(SB_)
-      dsl4jsb_Get_config(Q_DFIRE_)
+      dsl4jsb_Get_config(Q_DFIRE_SF_)
       dsl4jsb_Get_config(Q_DFIRE_FUEL_)
 
       !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
@@ -463,9 +463,9 @@ CONTAINS
       CALL model%Queue_task(HYDRO_,     "soil_properties")
 
       IF (model%config%qmodel_id == QLAND) THEN
-        IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+        IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
           CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_sf_fuel")       ! LAND ONLY
-          CALL model%Queue_task(Q_DFIRE_,      "q_dfire_sf_dynamics")   ! LAND ONLY
+          CALL model%Queue_task(Q_DFIRE_SF_,      "q_dfire_sf_dynamics")   ! LAND ONLY
           CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_sf_impacts")    ! LAND ONLY
           CALL model%Queue_task(Q_DFIRE_FUEL_, "q_dfire_sf_update")     ! LAND ONLY, update pools, update fractions, ...
           CALL model%Queue_task(VEG_,          "plant_characteristics") ! LAND ONLY, ensure consistency after update
@@ -517,9 +517,9 @@ CONTAINS
 
       !-- averaging variables in time ------------------------------------------------------------------- !
       IF(model%config%qmodel_id == QLAND) THEN
-        IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+        IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
           !            WRITE(*,*) "jsb_model_init.f90:: registering tavrg_q_dist_fire (new soil phys)..."
-          CALL model%Queue_task(Q_DFIRE_, "tavrg_q_dist_fire")    ! LAND ONLY
+          CALL model%Queue_task(Q_DFIRE_SF_, "tavrg_q_dist_fire")    ! LAND ONLY
         ENDIF
       ENDIF
 
@@ -662,7 +662,7 @@ CONTAINS
           END IF
         ENDIF
         IF(model%config%qmodel_id == QLAND) THEN
-          IF (tile%Is_process_active(Q_DFIRE_FUEL_) .AND. tile%Is_process_active(Q_DFIRE_)) THEN
+          IF (tile%Is_process_active(Q_DFIRE_FUEL_) .AND. tile%Is_process_active(Q_DFIRE_SF_)) THEN
             CALL q_dfire_fuel_init(tile)
             CALL q_dfire_sf_init(tile)
           END IF

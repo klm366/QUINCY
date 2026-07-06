@@ -111,7 +111,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     & CLIMBUF_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, &
-    & Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, Q_DFIRE_, Q_DFIRE_FUEL_
+    & Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, Q_DFIRE_SF_, Q_DFIRE_FUEL_
 
   IMPLICIT NONE
   PRIVATE
@@ -245,7 +245,7 @@ CONTAINS
     CASE (SB_)
       CALL Register_sb_tasks_quincy(return_ptr, model_id)
       ALLOCATE(t_sb_config::return_ptr%config)
-    CASE (Q_DFIRE_)
+    CASE (Q_DFIRE_SF_)
       CALL Register_q_dfire_tasks(return_ptr, model_id)
       ALLOCATE(t_q_dfire_sf_config::return_ptr%config)
     CASE (Q_DFIRE_FUEL_)
@@ -383,7 +383,7 @@ CONTAINS
     CASE (SB_)
       ALLOCATE(t_sb_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_sb_vars
-    CASE (Q_DFIRE_)
+    CASE (Q_DFIRE_SF_)
       ALLOCATE(t_q_dfire_sf_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_q_dfire_vars
     CASE (Q_DFIRE_FUEL_)

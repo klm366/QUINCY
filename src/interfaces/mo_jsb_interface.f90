@@ -39,7 +39,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_physical_constants, ONLY: cvdifts
   USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
-  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_, SEB_, HYDRO_, PHENO_, PPLCC_, Q_DFIRE_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_, SEB_, HYDRO_, PHENO_, PPLCC_, Q_DFIRE_SF_
 
   IMPLICIT NONE
   PRIVATE
@@ -668,7 +668,7 @@ CONTAINS
           CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
         END IF
         ! For the Q_DFIRE process, data on lightning events is read at the start of the simulation and updated monthly
-        IF (model%processes(Q_DFIRE_)%p%config%active) THEN
+        IF (model%processes(Q_DFIRE_SF_)%p%config%active) THEN
           CALL provide_lightning_events(model_id, current_datetime, dtime)
         END IF
 
