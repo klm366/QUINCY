@@ -129,7 +129,7 @@ CONTAINS
     CASE (Q_PHENO_)
       return_value = 'q_pheno'
     CASE (Q_DFIRE_)
-      return_value = 'q_dfire'
+      return_value = 'q_dfire_sf'
     CASE (Q_DFIRE_FUEL_)
       return_value = 'q_dfire_fuel'
 #ifndef __NO_JSBACH_HD__
@@ -202,7 +202,7 @@ CONTAINS
       return_value = Q_AGR_
     CASE ('q_pheno')
       return_value = Q_PHENO_
-    CASE ('q_dfire')
+    CASE ('q_dfire_sf')
       return_value = Q_DFIRE_
     CASE ('q_dfire_fuel')
       return_value = Q_DFIRE_FUEL_
