@@ -210,7 +210,7 @@ CONTAINS
           veg_exudation_mt(ix_elem,ic)       = zero
           veg_reserve_use_mt(ix_elem,ic)     = zero
 
-          IF (config_l_use_pp) THEN
+          IF (config_l_use_pp .AND. (config_qmodel_id == QLAND .OR. config_qmodel_id == QPLANT)) THEN
             veg_pp_flux_harvest_mt(ix_elem,ic) = zero
           END IF
         END DO
