@@ -363,9 +363,9 @@ CONTAINS
       & // ' no absolute fraction files are available, please check.')
     ENDIF
 
-    IF (model_config%model_scheme /= MODEL_JSBACH .AND. use_tmx) THEN
-      CALL finish(routine, 'tmx currently only implemented for JSBACH.')
-    END IF
+!    IF (model_config%model_scheme /= MODEL_JSBACH .AND. use_tmx) THEN
+!      CALL finish(routine, 'tmx currently only implemented for JSBACH.')
+!    END IF
 
     model_config%relative_fractions_in_file = relative_fractions_in_file
     ! set other namelist options
