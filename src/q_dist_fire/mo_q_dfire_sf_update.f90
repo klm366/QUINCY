@@ -24,7 +24,7 @@ MODULE mo_q_dfire_sf_update
 
   USE mo_veg_constants,         ONLY: itree
   USE mo_q_dfire_sf_constants,  ONLY: df_sf_spq_layer_top_sl
-  USE mo_q_dfire_sf_util,       ONLY: dfire_update_pools
+  USE mo_q_dfire_sf_util,       ONLY: dfire_sf_sb_update_pools, dfire_sf_veg_update_pools
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, &
                                       SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID, &
@@ -78,7 +78,6 @@ CONTAINS
 
     ! add here local variables
     REAL(wp), POINTER                     :: area(:), tile_fract(:)
-    INTEGER                               :: nr_of_veg_bgcm_comp, ielem, ix_elem, ix_comp
     REAL(wp)                              :: area_burned_fract_pft(options%nc) !< Fraction of the area burned for current PFT [-]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_dfire_sf_fuel'
@@ -167,38 +166,42 @@ CONTAINS
     !< Spitfire is now updated here
 
     !< Update SB pools
-    CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
-                            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
-                            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
+    CALL dfire_sf_sb_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
+                                  sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
+                                  sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
 
-    nr_of_veg_bgcm_comp = SIZE(veg_pool_mt,1)
+    CALL dfire_sf_veg_update_pools(nc, model, &
+                                  veg_fire_emissions_mt, veg_fire_litterfall_mt, &
+                                  veg_pool_mt, veg_litterfall_mt)
 
-    !< Update VEG pools
-    !> 3.0 add fire disturbance into litterfall
-    DO ic = 1, nc
-      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-        IF (model%config%is_element_used(ielem)) THEN
-          ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-          DO ix_comp = 1, nr_of_veg_bgcm_comp
-            veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
-                                                      veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
-          END DO ! ix_comp = 1, n_veg_bgcm_comp
-        END IF ! model%config%is_element_used(ielem)) THEN
-     END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-    END DO ! ic = 1, nc
+    ! nr_of_veg_bgcm_comp = SIZE(veg_pool_mt,1)
 
-    !> update veg fire emissions
-    DO ic = 1, nc
-      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-        IF (model%config%is_element_used(ielem)) THEN
-          ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-          DO ix_comp = 1, nr_of_veg_bgcm_comp
-                veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
-                    veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
-          END DO ! ix_comp
-        END IF ! is_element_used(ielem)
-      END DO ! ielem
-    END DO ! ic
+    ! !< Update VEG pools
+    ! !> 3.0 add fire disturbance into litterfall
+    ! DO ic = 1, nc
+    !   DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+    !     IF (model%config%is_element_used(ielem)) THEN
+    !       ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+    !       DO ix_comp = 1, nr_of_veg_bgcm_comp
+    !         veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
+    !                                                   veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
+    !       END DO ! ix_comp = 1, n_veg_bgcm_comp
+    !     END IF ! model%config%is_element_used(ielem)) THEN
+    !  END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+    ! END DO ! ic = 1, nc
+
+    ! !> update veg fire emissions
+    ! DO ic = 1, nc
+    !   DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+    !     IF (model%config%is_element_used(ielem)) THEN
+    !       ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+    !       DO ix_comp = 1, nr_of_veg_bgcm_comp
+    !             veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
+    !                 veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
+    !       END DO ! ix_comp
+    !     END IF ! is_element_used(ielem)
+    !   END DO ! ielem
+    ! END DO ! ic
 
     !>
     !> Update delta_dens_ind to properly run plant_characteristics in mo_q_model_init.f90

@@ -155,8 +155,6 @@ CONTAINS
 
     REAL(wp), ALLOCATABLE                 :: lctlib_emission_factors(:)         !< Array packed with emission factors from lctlib (#species)
 
-    INTEGER :: ix_elem, ielem, ix_comp, nr_of_veg_bgcm_comp
-
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real3D_onChunk                :: live_tree_fuel_1hr_lfp    ! in [g DM m-2]

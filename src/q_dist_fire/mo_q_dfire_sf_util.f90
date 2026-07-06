@@ -17,13 +17,15 @@ MODULE mo_q_dfire_sf_util
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   USE mo_jsb_math_constants,    ONLY: eps8, eps1
+  USE mo_jsb_model_class,       ONLY: t_jsb_model
+  USE mo_lnd_bgcm_idx
 
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC :: calculate_time_average_q_dist_fire, calculate_daily_weather, calculate_pure_moving_averages
   PUBLIC :: utils_linspace
-  PUBLIC :: dfire_update_pools
+  PUBLIC :: dfire_sf_sb_update_pools, dfire_sf_veg_update_pools
 
   PUBLIC :: logical2real, real2logical
 
@@ -403,11 +405,11 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Apply dfire_update_pools
+  !> Update SB pools
   !> 1. Remove fire emissions from sb_pool
   !> 2. Transfer litter pools (residue) into polymeric litter
   !>
-  SUBROUTINE dfire_update_pools(sb_fire_emissions, sb_fire_litter_ash, sb_pool)
+  SUBROUTINE dfire_sf_sb_update_pools(sb_fire_emissions, sb_fire_litter_ash, sb_pool)
     USE mo_lnd_bgcm_idx, ONLY: ix_woody_litter, ix_polymeric_litter, ix_soluable_litter, &
                                ix_residue, ix_residue_assoc, ix_dom, ix_dom_assoc
 
@@ -442,7 +444,57 @@ CONTAINS
     CALL pool_transfer(sb_fire_litter_ash(ix_dom_assoc,:,:), & ! amount (IN)
                         sb_pool(ix_dom_assoc,:,:), & ! pool from (INOUT)
                         sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
-  END SUBROUTINE dfire_update_pools
+  END SUBROUTINE dfire_sf_sb_update_pools
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Update VEG_ pools
+  !>
+  SUBROUTINE dfire_sf_veg_update_pools(nc, model, &
+                                       veg_fire_emissions_mt, veg_fire_litterfall_mt, & ! in
+                                       veg_pool_mt, veg_litterfall_mt) ! inout
+
+    INTEGER, INTENT(IN)              :: nc
+    TYPE(t_jsb_model), POINTER       :: model
+    REAL(wp), INTENT(IN)             :: veg_fire_emissions_mt(:,:,:)
+    REAL(wp), INTENT(IN)             :: veg_fire_litterfall_mt(:,:,:)
+    REAL(wp), INTENT(INOUT)          :: veg_pool_mt(:,:,:)
+    REAL(wp), INTENT(INOUT)          :: veg_litterfall_mt(:,:,:)
+
+    INTEGER                          :: nr_of_veg_bgcm_comp
+    INTEGER                          :: ic, ielem, ix_elem, ix_comp
+
+    nr_of_veg_bgcm_comp = SIZE(veg_pool_mt,1)
+
+    !< Update VEG pools
+    !> 3.0 add fire disturbance into litterfall
+    DO ic = 1, nc
+        DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+            IF (model%config%is_element_used(ielem)) THEN
+                ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+                DO ix_comp = 1, nr_of_veg_bgcm_comp
+                veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
+                                                            veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
+                END DO ! ix_comp = 1, n_veg_bgcm_comp
+            END IF ! model%config%is_element_used(ielem)) THEN
+        END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+    END DO ! ic = 1, nc
+
+    !> update veg fire emissions
+    DO ic = 1, nc
+        DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+        IF (model%config%is_element_used(ielem)) THEN
+            ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+            DO ix_comp = 1, nr_of_veg_bgcm_comp
+                veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
+                    veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
+            END DO ! ix_comp
+        END IF ! is_element_used(ielem)
+        END DO ! ielem
+    END DO ! ic = 1, nc
+
+  END SUBROUTINE dfire_sf_veg_update_pools
 
 
   ! ======================================================================================================= !
