@@ -530,7 +530,7 @@ CONTAINS
   !> Used to calculate rate of spread
   !>
   FUNCTION calc_ros_fbd(nfclasses, fuel_bulk_density, dead_fuel) RESULT (fbd)
-    USE mo_q_dfire_constants, ONLY: df_sf_fuel_class_factors
+    USE mo_q_dfire_sf_constants, ONLY: df_sf_fuel_class_factors
 
     INTEGER, INTENT(in)         :: nfclasses !< The number of used fuel classes
     REAL(wp), INTENT(in)        :: fuel_bulk_density !< [kg m-3]

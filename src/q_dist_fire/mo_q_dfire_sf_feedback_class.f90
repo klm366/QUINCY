@@ -16,16 +16,16 @@ MODULE mo_q_dfire_sf_feedback_class
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
 
-  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix, & !< dead fuel pools indices (from sb_pool_mt)
+  USE mo_q_dfire_sf_constants, ONLY: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix, & !< dead fuel pools indices (from sb_pool_mt)
                                       t_sf_fuel_dead_fuel_dom_assoc_ix, t_sf_fuel_dead_fuel_dom_ix, &
                                       t_sf_fuel_dead_fuel_res_ix, t_sf_fuel_dead_fuel_res_assoc_ix, &
                                       t_sf_fuel_dead_fuel_soluable_ix
 
-  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_live_fuel_leaf_ix, t_sf_fuel_live_fuel_sap_wood_ix, & !< live fuel pool indices
+  USE mo_q_dfire_sf_constants, ONLY: t_sf_fuel_live_fuel_leaf_ix, t_sf_fuel_live_fuel_sap_wood_ix, & !< live fuel pool indices
                                       t_sf_fuel_live_fuel_heart_wood_ix, t_sf_fuel_live_fuel_labile_ix, &
                                       t_sf_fuel_live_fuel_reserve_ix, t_sf_fuel_live_fuel_fruit_ix
 
-  USE mo_q_dfire_constants,     ONLY: t_sf_fuel_dead_fuel_grass_fruit_ix, t_sf_fuel_dead_fuel_grass_labile_ix, & !< grass dead fuel pools indices (from veg_pool_mt)
+  USE mo_q_dfire_sf_constants, ONLY: t_sf_fuel_dead_fuel_grass_fruit_ix, t_sf_fuel_dead_fuel_grass_labile_ix, & !< grass dead fuel pools indices (from veg_pool_mt)
                                       t_sf_fuel_dead_fuel_grass_leaf_ix, t_sf_fuel_dead_fuel_grass_reserve_ix, &
                                       t_sf_fuel_dead_fuel_grass_sap_ix
 

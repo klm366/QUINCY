@@ -48,12 +48,12 @@ CONTAINS
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_io_iface,       ONLY: zaxis_generic
     USE mo_jsb_grid,           ONLY: register_vgrid
-    USE mo_q_dfire_constants,  ONLY: df_sf_vgrid_dead_fuel_pools_name
-    USE mo_q_dfire_constants,  ONLY: df_sf_vgrid_live_fuel_pools_name, &
+    USE mo_q_dfire_sf_constants,  ONLY: df_sf_vgrid_dead_fuel_pools_name
+    USE mo_q_dfire_sf_constants,  ONLY: df_sf_vgrid_live_fuel_pools_name, &
                                       df_sf_vgrid_elements_name, &
                                       df_sf_vgrid_species_name
-    USE mo_q_dfire_constants,  ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
-    USE mo_q_dfire_constants,  ONLY: df_sf_elements_nr, df_sf_species_nr
+    USE mo_q_dfire_sf_constants,  ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
+    USE mo_q_dfire_sf_constants,  ONLY: df_sf_elements_nr, df_sf_species_nr
 
 
     ! ----------------------------------------------------------------------------------------------------- !

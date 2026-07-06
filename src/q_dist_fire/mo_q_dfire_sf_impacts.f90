@@ -37,16 +37,16 @@ MODULE mo_q_dfire_sf_impacts
   USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
   USE mo_jsb_grid,              ONLY: Get_grid
 
-  USE mo_q_dfire_constants,     ONLY: df_sf_spq_layer_top_sl
-  USE mo_q_dfire_constants,     ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr
-  USE mo_q_dfire_constants,     ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
-  USE mo_q_dfire_constants,     ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
-  USE mo_q_dfire_constants,     ONLY: df_sf_elements_nr
-  USE mo_q_dfire_constants,     ONLY: df_sf_species_nr
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_spq_layer_top_sl
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
+  USE mo_q_dfire_sf_constants,  ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_elements_nr
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_species_nr
 
-  USE mo_q_dfire_constants,     ONLY: ixs_sf_dead_litter_fuel_pools
+  USE mo_q_dfire_sf_constants,  ONLY: ixs_sf_dead_litter_fuel_pools
 
-  USE mo_q_dfire_constants,     ONLY: df_sf_species_nr, df_sf_species_co2_idx, df_sf_species_co_idx, &
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_species_nr, df_sf_species_co2_idx, df_sf_species_co_idx, &
                                         df_sf_species_ch4_idx, &
                                         !df_sf_species_voc_idx, df_sf_species_tpm_idx, & df_sf_species_nox_idx, &
                                         df_sf_species_nh3_idx, df_sf_species_n2o_idx, &

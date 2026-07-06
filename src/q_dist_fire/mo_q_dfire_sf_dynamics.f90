@@ -44,26 +44,26 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_LOSS_ID, SB_BGCM_POOL_ID
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
-  USE mo_q_dfire_constants,       ONLY: sl_ixs => df_sf_sl_indices !< Soil related constants: top soil moisture layers
+  USE mo_q_dfire_sf_constants,  ONLY: sl_ixs => df_sf_sl_indices !< Soil related constants: top soil moisture layers
 
-  USE mo_q_dfire_constants,       ONLY: df_sf_max_density_human_pop
-  USE mo_q_dfire_constants,       ONLY: df_sf_fc_spread_nr
-  USE mo_q_dfire_constants,       ONLY: df_sf_alpha_nr, df_sf_alphas !< Drying parameters
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_max_density_human_pop
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_fc_spread_nr
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_alpha_nr, df_sf_alphas !< Drying parameters
 
-  USE mo_q_dfire_constants,       ONLY: df_sf_calorific_heat_content, df_sf_isurface_extinc_th
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_calorific_heat_content, df_sf_isurface_extinc_th
 
-  USE mo_q_dfire_constants,       ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
+  USE mo_q_dfire_sf_constants,  ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
                                       df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx !< fuel classes indices
 
-  USE mo_q_dfire_constants,       ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
                                       df_sf_omega_o_idx, & !< omega_o index from sf_calc_fuel_moisture output (array)
                                       df_sf_omega_nl_idx
 
-  USE mo_q_dfire_constants,       ONLY: ixs_sf_dead_litter_fuel_pools
-  USE mo_q_dfire_constants,       ONLY: df_sf_units_g_to_kg
-  USE mo_q_dfire_constants,       ONLY: df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, df_sf_sigma_dd_ros_nr
-  USE mo_q_dfire_constants,       ONLY: df_sigmas_dead, df_sigmas_live, df_alphas_dead
-  USE mo_q_dfire_config_class,    ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
+  USE mo_q_dfire_sf_constants,  ONLY: ixs_sf_dead_litter_fuel_pools
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_units_g_to_kg
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, df_sf_sigma_dd_ros_nr
+  USE mo_q_dfire_sf_constants,  ONLY: df_sigmas_dead, df_sigmas_live, df_alphas_dead
+  USE mo_q_dfire_sf_config_class,  ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
   USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture, t_mf, sf_calc_fuel_moisture_ober
@@ -567,7 +567,7 @@ CONTAINS
                   spitfire, & ! out
                   mask)
 
-    USE mo_q_dfire_constants, ONLY:  ix_1hr => df_sf_ix_sigma_dd_1hr, &
+    USE mo_q_dfire_sf_constants, ONLY:  ix_1hr => df_sf_ix_sigma_dd_1hr, &
                                     ix_10hr => df_sf_ix_sigma_dd_10hr, &
                                    ix_100hr => df_sf_ix_sigma_dd_100hr, &
                                   ix_1000hr => df_sf_ix_sigma_dd_1000hr
@@ -869,7 +869,7 @@ CONTAINS
                   ros, &
                   mask) ! optional
 
-    USE mo_q_dfire_constants, ONLY: ixs_ros => df_sf_ix_sigma_dd_ros, &
+    USE mo_q_dfire_sf_constants, ONLY: ixs_ros => df_sf_ix_sigma_dd_ros, &
                                     ix_clvg => df_sf_ix_sigma_dd_clvg, &
                                      ix_1hr => df_sf_ix_sigma_dd_1hr, &
                                     ix_10hr => df_sf_ix_sigma_dd_10hr, &

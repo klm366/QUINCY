@@ -31,23 +31,23 @@ MODULE mo_q_dfire_fuel
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
 
   USE mo_veg_constants,           ONLY: ITREE, IGRASS
-  USE mo_q_dfire_constants,       ONLY: df_sf_spq_layer_top_sl
+  USE mo_q_dfire_sf_constants,    ONLY: df_sf_spq_layer_top_sl
 
-  USE mo_q_dfire_constants,       ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
-  USE mo_q_dfire_constants,       ONLY: ratio_as_dead_fuel !< variable sb pool ratios to dead fuel
+  USE mo_q_dfire_sf_constants,    ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
+  USE mo_q_dfire_sf_constants,    ONLY: ratio_as_dead_fuel !< variable sb pool ratios to dead fuel
 
   USE mo_lnd_bgcm_idx,            ONLY: ixC
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class
   USE mo_q_dfire_sf_util,         ONLY: calc_ros_fbd
-  USE mo_q_dfire_config_class,    ONLY: Q_DFIRE_ROS_OBERHAGEMANN, Q_DFIRE_ROS_THONICKE
+  USE mo_q_dfire_sf_config_class, ONLY: Q_DFIRE_ROS_OBERHAGEMANN, Q_DFIRE_ROS_THONICKE
 
   !< Live fraction allocation for dead and live fuels
-  USE mo_q_dfire_constants,       ONLY: df_sf_live_frac_tree, &
+  USE mo_q_dfire_sf_constants,    ONLY: df_sf_live_frac_tree, &
                                         df_sf_live_frac_grass
-  USE mo_q_dfire_constants,       ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
+  USE mo_q_dfire_sf_constants,    ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
 
   USE mo_q_dfire_sf_adaptor,      ONLY: sf_convert_units
-  USE mo_q_dfire_constants,       ONLY: df_sf_units_k_to_c
+  USE mo_q_dfire_sf_constants,    ONLY: df_sf_units_k_to_c
   USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg_ober, t_lfmc
 
   IMPLICIT NONE

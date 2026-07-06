@@ -21,7 +21,7 @@ MODULE mo_q_dfire_init
   USE mo_jsb_grid_class,          ONLY: t_jsb_grid
   USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
 
-  USE mo_q_dfire_constants,       ONLY: ratio_as_dead_fuel
+  USE mo_q_dfire_sf_constants,    ONLY: ratio_as_dead_fuel
 #ifndef __QUINCY_STANDALONE__
   USE mo_jsb_time,                ONLY: timestep_in_days
 #endif
@@ -56,7 +56,7 @@ CONTAINS
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_grid,                ONLY: Get_grid
 
-    USE mo_q_dfire_constants,       ONLY: Q_DFIRE_PRECIP_METHOD_DAYTIME, & !< Method to compute precipitation
+    USE mo_q_dfire_sf_constants,    ONLY: Q_DFIRE_PRECIP_METHOD_DAYTIME, & !< Method to compute precipitation
                                           Q_DFIRE_PRECIP_METHOD_APROX_MAVG, &
                                           Q_DFIRE_PRECIP_METHOD_MAVG
 

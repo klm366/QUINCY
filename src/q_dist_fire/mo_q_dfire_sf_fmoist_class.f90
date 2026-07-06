@@ -19,7 +19,7 @@ MODULE mo_q_dfire_sf_fmoist_class
   USE mo_quincy_stats,        ONLY: stats_average_weight
   USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element
   !< Total number of fuel moisture(omega_o and omega_nl), omega_o index, omega_nl index
-  USE mo_q_dfire_constants,   ONLY: df_sf_omegas_nr, df_sf_omega_o_idx, df_sf_omega_nl_idx
+  USE mo_q_dfire_sf_constants, ONLY: df_sf_omegas_nr, df_sf_omega_o_idx, df_sf_omega_nl_idx
 
   IMPLICIT NONE
 
@@ -267,12 +267,12 @@ CONTAINS
                                         nesterov_index, &
                                         mask) &
                                         RESULT (mf)
-    USE mo_q_dfire_constants, ONLY: ix_1hr => df_sf_ix_sigma_dd_1hr, & !< dead fuel moisture indices
+    USE mo_q_dfire_sf_constants, ONLY: ix_1hr => df_sf_ix_sigma_dd_1hr, & !< dead fuel moisture indices
                                         ix_10hr => df_sf_ix_sigma_dd_10hr, &
                                         ix_100hr => df_sf_ix_sigma_dd_100hr, &
                                         ix_1000hr => df_sf_ix_sigma_dd_1000hr, &
                                         ix_clvg => df_sf_ix_sigma_dd_clvg
-    USE mo_q_dfire_constants, ONLY: ix_lvg => df_sf_ix_sigma_lv_lvg, & ! live fuel moisture indices
+    USE mo_q_dfire_sf_constants, ONLY: ix_lvg => df_sf_ix_sigma_lv_lvg, & ! live fuel moisture indices
                                         ix_wdy => df_sf_ix_sigma_lv_wdy
 
     INTEGER, INTENT(in)       :: nc

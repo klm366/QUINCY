@@ -10,7 +10,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-MODULE mo_q_dfire_constants
+MODULE mo_q_dfire_sf_constants
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                 ONLY: wp
@@ -23,7 +23,7 @@ MODULE mo_q_dfire_constants
   !>
   !> dfire parameters
   !>
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_dfire_constants'
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_dfire_sf_constants'
 
   !< sb pool to dead fuel ratios (polymeric is not included as it is fundamental)
   TYPE :: t_sf_litter_ratios
@@ -249,8 +249,8 @@ CONTAINS
   !>
   !> Initialize constants used in the dfire process
   !>
-  SUBROUTINE init_q_dfire_constants
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_q_dfire_constants'
+  SUBROUTINE init_q_dfire_sf_constants
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_q_dfire_sf_constants'
     ! ----------------------------------------------------------------------------------------------------- !
     df_sf_carbon_to_biomass_factor    = 1._wp / carbon_per_dryweight_leaf
 
@@ -285,7 +285,7 @@ CONTAINS
     df_sf_dead_frac(:,t_sf_fuel_dead_fuel_grass_labile_ix) =  df_sf_fuel_frac_fast
     df_sf_dead_frac(:,t_sf_fuel_dead_fuel_grass_reserve_ix) = df_sf_fuel_frac_fast
     df_sf_dead_frac(:,t_sf_fuel_dead_fuel_grass_fruit_ix) =   df_sf_fuel_frac_fast
-  END SUBROUTINE init_q_dfire_constants
+  END SUBROUTINE init_q_dfire_sf_constants
 
 #endif
-END MODULE mo_q_dfire_constants
+END MODULE mo_q_dfire_sf_constants

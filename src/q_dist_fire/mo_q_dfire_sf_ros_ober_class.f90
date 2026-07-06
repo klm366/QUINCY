@@ -18,9 +18,9 @@ MODULE mo_q_dfire_sf_ros_ober_class
   USE mo_exception,             ONLY: message, finish
   !< Total number of sigmas (1,10,100) hours,  Pfeiffer el al. (2013), Eq. A18 - Used to calculate fuel bulk density
   !
-  USE mo_q_dfire_constants,     ONLY: df_sf_fire_duration_thd
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_fire_duration_thd
   !<  Rate of spread constants
-  USE mo_q_dfire_constants,     ONLY: df_sf_oven_dry_part_dens, &
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_oven_dry_part_dens, &
                                       df_sf_mineral_fract, df_sf_mineral_damp_coeff, &
                                       df_sf_fuel_heat_content
   USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
@@ -360,7 +360,7 @@ CONTAINS
   !> Calculate g weighting factors
   !>
   FUNCTION calc_g_weighting_factors(fs, sigmas) RESULT (gs)
-    USE mo_q_dfire_constants, ONLY: feet_to_cm => df_sf_units_ft_to_cm
+    USE mo_q_dfire_sf_constants, ONLY: feet_to_cm => df_sf_units_ft_to_cm
 
     REAL(wp), INTENT(in)  :: fs(:)     !< f weighting factor (#fuel classes) [-]
     REAL(wp), INTENT(in)  :: sigmas(:) !< surface area to volume ratio (#fuel classes) [m2/m3]
@@ -403,7 +403,7 @@ CONTAINS
   !> USDA Forest Service RMRS-GTR-371. 2018 Table 6a
   !>
   FUNCTION calc_live_me(nc, ndd, nlv, mf_dd, me_dd, woi_dd, woi_lv, sigmas_dd, sigmas_lv, mask) RESULT (me)
-    USE mo_q_dfire_constants, ONLY: df_sf_units_ft_to_cm
+    USE mo_q_dfire_sf_constants, ONLY: df_sf_units_ft_to_cm
 
     INTEGER, INTENT(in) :: nc, ndd, nlv
     REAL(wp), INTENT(in) :: mf_dd(nc,ndd) !< Dead fuel moisture [-]
@@ -471,7 +471,7 @@ CONTAINS
   !> USDA Forest Service RMRS-GTR-371. 2018 Table 6a
   !>
   FUNCTION calc_fine_dead_fuel_moisture(nc, ndd, mf_dd, woi_dd, sigmas_dd, mask) RESULT (mfdead)
-    USE mo_q_dfire_constants, ONLY: df_sf_units_ft_to_cm
+    USE mo_q_dfire_sf_constants, ONLY: df_sf_units_ft_to_cm
     INTEGER, INTENT(in) :: nc, ndd
     REAL(wp), INTENT(in) :: mf_dd(nc,ndd) !< Dead fuel moisture [-]
     REAL(wp), INTENT(in) :: woi_dd(nc,ndd) !< Dead fuel load [kg DM m-2]

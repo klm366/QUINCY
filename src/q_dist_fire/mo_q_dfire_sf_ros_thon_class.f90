@@ -28,10 +28,10 @@ MODULE mo_q_dfire_sf_ros_thon_class
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   !< Total number of sigmas (1,10,100) hours,  Pfeiffer el al. (2013), Eq. A18 - Used to calculate fuel bulk density
-  USE mo_q_dfire_constants,     ONLY: df_sf_sigma_tho_nr
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_sigma_tho_nr
   !<
   !<  Rate of spread constants
-  USE mo_q_dfire_constants,     ONLY: df_sf_oven_dry_part_dens, df_sigmas_tho, &
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_oven_dry_part_dens, df_sigmas_tho, &
                                       df_sf_mineral_fract, df_sf_mineral_damp_coeff, &
                                       df_sf_fuel_heat_content
 

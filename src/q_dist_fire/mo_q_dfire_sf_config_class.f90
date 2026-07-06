@@ -10,7 +10,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-MODULE mo_q_dfire_config_class
+MODULE mo_q_dfire_sf_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message, finish, message_text
@@ -18,17 +18,17 @@ MODULE mo_q_dfire_config_class
   USE mo_kind,              ONLY: wp
   USE mo_util,              ONLY: tolower
   USE mo_jsb_config_class,  ONLY: t_jsb_config
-  USE mo_q_dfire_constants,   ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr
-  USE mo_q_dfire_constants,   ONLY: df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_live_fuel_pools_name, &
+  USE mo_q_dfire_sf_constants, ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr
+  USE mo_q_dfire_sf_constants, ONLY: df_sf_vgrid_dead_fuel_pools_name, df_sf_vgrid_live_fuel_pools_name, &
                                   df_sf_vgrid_fuel_classes_name, df_sf_vgrid_fuel_moisture_name, &
                                   df_sf_vgrid_months_in_year_name
-  USE mo_q_dfire_constants,   ONLY: df_sf_omegas_nr, & !< fuel moisture (omega_o and omega_n_l)
+  USE mo_q_dfire_sf_constants, ONLY: df_sf_omegas_nr, & !< fuel moisture (omega_o and omega_n_l)
                                   sf_fuel_classes_nr   !< total number of fuel classes
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_q_dfire_config
+  PUBLIC :: t_q_dfire_sf_config
   PUBLIC :: Q_DFIRE_MODEL_SF, Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
   !>
@@ -56,7 +56,7 @@ MODULE mo_q_dfire_config_class
   !>
   !> config TYPE of the dist_fire process, derived from t_jsb_config
   !>
-  TYPE, EXTENDS(t_jsb_config) :: t_q_dfire_config
+  TYPE, EXTENDS(t_jsb_config) :: t_q_dfire_sf_config
     LOGICAL           :: flag_dfire                  !< on/off disturbance fire process [boolean]
     CHARACTER(len=20) :: dfire_modelname             !< name of fire model to run
     INTEGER           :: dfire_model_id              !< fire model ID
@@ -74,7 +74,7 @@ MODULE mo_q_dfire_config_class
     REAL(wp)          :: fract_crown_scorch(sf_fuel_classes_nr) !< Fraction of live fuel consumed in crown scorch. 4=fuel classes
 
     ! input data
-    CHARACTER(len=filename_max) :: ic_popdens_filename, ic_lightning_events_filename, ic_human_igns_filename 
+    CHARACTER(len=filename_max) :: ic_popdens_filename, ic_lightning_events_filename, ic_human_igns_filename
 
     !< Fuel ratio flags (how much fuel allocate to the dead fuel classes)
     REAL(wp)          :: ratio_polymeric_litter_to_dead_fuel !< Ratio to include polymeric litter as dead fuel
@@ -95,10 +95,10 @@ MODULE mo_q_dfire_config_class
     LOGICAL           :: has_diagnostics             !< Enable diagnostics for spitfire, in case of any inconsistencies it stops the simulation
 
   CONTAINS
-    PROCEDURE :: Init => Init_q_dfire_config
-  END type t_q_dfire_config
+    PROCEDURE :: Init => Init_q_dfire_sf_config
+  END type t_q_dfire_sf_config
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_config_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_config_class'
 
 CONTAINS
 
@@ -106,14 +106,14 @@ CONTAINS
   !>
   !> configuration routine of t_dfire_config
   !>
-  SUBROUTINE Init_q_dfire_config(config)
+  SUBROUTINE Init_q_dfire_sf_config(config)
     USE mo_jsb_namelist_iface,  ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
     USE mo_jsb_grid,           ONLY: register_vgrid
 
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_q_dfire_config), INTENT(inout) :: config    !< config type for dfire
+    CLASS(t_q_dfire_sf_config), INTENT(inout) :: config    !< config type for dfire
     ! ----------------------------------------------------------------------------------------------------- !
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                       :: active
@@ -155,7 +155,7 @@ CONTAINS
     REAL(wp)                      :: live_fuel_factor            !< Live fuel factor for spitfire
     LOGICAL                       :: has_diagnostics             !< Enable diagnostics for spitfire, in case of any inconsistencies it stops the simulation
 
-    CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_q_dfire_config'
+    CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_q_dfire_sf_config'
     ! ----------------------------------------------------------------------------------------------------- !
     NAMELIST /lnd_q_dist_fire_nml/            &
       & active,                               &
@@ -298,7 +298,7 @@ CONTAINS
     CALL register_vgrid(vgrid_fuel_classes)
     CALL register_vgrid(vgrid_fuel_moisture)
     CALL register_vgrid(vgrid_months_in_year)
-  END SUBROUTINE Init_q_dfire_config
+  END SUBROUTINE Init_q_dfire_sf_config
 
 
   ! ====================================================================================================== !
@@ -346,7 +346,7 @@ CONTAINS
   !> Returns the id for this fire precipitation method name
   !>
   FUNCTION Get_Precip_Method_id(name) RESULT(return_value)
-    USE mo_q_dfire_constants,   ONLY: Q_DFIRE_PRECIP_METHOD_DAYTIME, &
+    USE mo_q_dfire_sf_constants, ONLY: Q_DFIRE_PRECIP_METHOD_DAYTIME, &
                                       Q_DFIRE_PRECIP_METHOD_MAVG, &
                                       Q_DFIRE_PRECIP_METHOD_APROX_MAVG
     ! ----------------------------------------------------------------------------------------------------- !
@@ -368,4 +368,4 @@ CONTAINS
     END SELECT
   END FUNCTION Get_Precip_Method_id
 #endif
-END MODULE mo_q_dfire_config_class
+END MODULE mo_q_dfire_sf_config_class
