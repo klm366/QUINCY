@@ -10,7 +10,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-MODULE mo_q_dfire_interface
+MODULE mo_q_dfire_sf_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                        ONLY: wp
@@ -66,7 +66,7 @@ MODULE mo_q_dfire_interface
     PROCEDURE Create_task_update_time_average_q_dist_fire         !< Constructor function for task
   END INTERFACE tsk_time_average_q_dist_fire
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_interface'
 
 CONTAINS
 
@@ -253,4 +253,4 @@ CONTAINS
   END SUBROUTINE aggregate_time_average_q_dist_fire
 
 #endif
-END MODULE mo_q_dfire_interface
+END MODULE mo_q_dfire_sf_interface

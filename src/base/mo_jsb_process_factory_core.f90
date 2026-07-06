@@ -103,8 +103,8 @@ MODULE mo_jsb_process_factory_core
   USE mo_veg_config_class,      ONLY: t_veg_config
   USE mo_q_sb_interface,        ONLY: Register_sb_tasks_quincy
   USE mo_sb_config_class,       ONLY: t_sb_config
-  USE mo_q_dfire_interface,     ONLY: Register_q_dfire_tasks
-  USE mo_q_dfire_sf_config_class,   ONLY: t_q_dfire_sf_config
+  USE mo_q_dfire_sf_interface,  ONLY: Register_q_dfire_tasks
+  USE mo_q_dfire_sf_config_class, ONLY: t_q_dfire_sf_config
   USE mo_q_dfire_fuel_interface,    ONLY: Register_q_dfire_fuel_tasks
   USE mo_q_dfire_fuel_config_class, ONLY: t_q_dfire_fuel_config
 
