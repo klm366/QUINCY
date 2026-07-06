@@ -3380,7 +3380,6 @@ CONTAINS
       bulk_dens_corr_sl(:,:,iblk) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:,iblk), &
         &                                                        soil_litter_carbon_sl(:,:,iblk), &
         &                                                        bulk_dens_sl(:,:,iblk))
-      IF (TRIM(sb_init_scheme) /= 'analytical_ss') THEN
       !> po4/OC adsorption parameter intialisation
       !! OC adsorption
       qmax_org_min_sl(:,:,iblk) = calc_qmax_texture(qmax_org_fine_particle(:,:,iblk), &
@@ -3399,13 +3398,14 @@ CONTAINS
         END DO
       END DO
 
-      CALL calc_qmax_bulk_density_correction( &
-        & bulk_soil_carbon_sl(:,:,iblk), &    ! in
-        & volume_min_sl(:,:,iblk), &
-        & bulk_dens_sl(:,:,iblk), &
-        & 0._wp, &
-        & qmax_org_min_sl(:,:,iblk), &        ! in
-        & qmax_org(:,:,iblk) )                ! out
+      IF (TRIM(sb_init_scheme) /= 'analytical_ss') THEN
+        CALL calc_qmax_bulk_density_correction( &
+          & bulk_soil_carbon_sl(:,:,iblk), &    ! in
+          & volume_min_sl(:,:,iblk), &
+          & bulk_dens_sl(:,:,iblk), &
+          & 0._wp, &
+          & qmax_org_min_sl(:,:,iblk), &        ! in
+          & qmax_org(:,:,iblk) )                ! out
       END IF
     END DO
 
