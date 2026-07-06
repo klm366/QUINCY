@@ -24,7 +24,7 @@ MODULE mo_q_dfire_sf_update
 
   USE mo_veg_constants,         ONLY: itree
   USE mo_q_dfire_constants,     ONLY: df_sf_spq_layer_top_sl
-  USE mo_q_dfire_util,          ONLY: dfire_update_pools
+  USE mo_q_dfire_sf_util,       ONLY: dfire_update_pools
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, &
                                       SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID, &

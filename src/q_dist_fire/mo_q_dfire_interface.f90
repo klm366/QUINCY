@@ -193,7 +193,7 @@ CONTAINS
     USE mo_jsb_control,         ONLY: debug_on
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,      ONLY: t_jsb_task_options
-    USE mo_q_dfire_util,        ONLY: calculate_time_average_q_dist_fire,  &
+    USE mo_q_dfire_sf_util,     ONLY: calculate_time_average_q_dist_fire,  &
                                       calculate_daily_weather, &
                                       calculate_pure_moving_averages
 

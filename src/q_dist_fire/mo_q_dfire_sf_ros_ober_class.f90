@@ -28,7 +28,7 @@ MODULE mo_q_dfire_sf_ros_ober_class
   USE mo_quincy_stats,          ONLY: stats_average_weight
   USE mo_jsb_math_constants,    ONLY: pi
 
-  USE mo_q_dfire_util,          ONLY: calc_ros_opt_react_velocity, calc_ros_prop_flux_ratio, calc_ros_wind_factor
+  USE mo_q_dfire_sf_util,       ONLY: calc_ros_opt_react_velocity, calc_ros_prop_flux_ratio, calc_ros_wind_factor
   USE mo_q_dfire_sf_classes,    ONLY: t_sf_ros
 
   IMPLICIT NONE

@@ -33,7 +33,7 @@ MODULE mo_q_sb_update_pools
     &                                   SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID
   USE mo_q_dfire_constants,       ONLY: df_sf_spq_layer_top_sl !< Top soil layer used by spitfire
-  USE mo_q_dfire_util,            ONLY: dfire_update_pools
+  USE mo_q_dfire_sf_util,         ONLY: dfire_update_pools
 
   IMPLICIT NONE
 
