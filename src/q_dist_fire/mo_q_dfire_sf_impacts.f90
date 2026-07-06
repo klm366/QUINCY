@@ -53,7 +53,7 @@ MODULE mo_q_dfire_sf_impacts
                                         df_sf_species_n2_idx
 
   USE mo_q_dfire_sf_damage_class, ONLY: t_sf_prob_mort, calc_prob_mortality
-  USE mo_q_dfire_sf_util,         ONLY: real2logical, dfire_update_pools
+  USE mo_q_dfire_sf_util,         ONLY: real2logical
 
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption, &
                                               sf_calc_dead_fuel_consumption, &
@@ -538,44 +538,6 @@ CONTAINS
                                 mask=is_fire_intense_enough)
 
     END IF
-
-    !< Enforce to update pools due to Spitfire impacts. Temporary solution until a permanent solution
-    !< is found to properly deal.
-    !< Spitfire is now updated here
-
-    !< Update pools
-    CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
-                            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
-                            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
-
-    nr_of_veg_bgcm_comp = SIZE(veg_pool_mt,1)
-
-    !> 3.0 add fire disturbance into litterfall
-    DO ic = 1, nc
-      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-        IF (model%config%is_element_used(ielem)) THEN
-          ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-          DO ix_comp = 1, nr_of_veg_bgcm_comp
-            veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
-                                                      veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
-          END DO ! ix_comp = 1, n_veg_bgcm_comp
-        END IF ! model%config%is_element_used(ielem)) THEN
-     END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-    END DO ! ic = 1, nc
-
-    !> update veg fire emissions
-    DO ic = 1, nc
-      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-        IF (model%config%is_element_used(ielem)) THEN
-          ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-          DO ix_comp = 1, nr_of_veg_bgcm_comp
-                veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
-                    veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
-          END DO ! ix_comp
-        END IF ! is_element_used(ielem)
-      END DO ! ielem
-    END DO ! ic
-
 
     ! for diagnostics:
     fuel_consumption_els = (SUM(fc_dead_el, DIM=2) + SUM(fc_live_el, DIM=2)) / dtime * 1000000._wp !< 2 = fuel pool index
