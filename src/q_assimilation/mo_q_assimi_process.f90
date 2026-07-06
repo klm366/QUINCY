@@ -43,7 +43,7 @@ CONTAINS
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_model_class,        ONLY: t_jsb_model
-    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, HYDRO_
+    USE mo_jsb_process_class,      ONLY: A2L_, Q_ASSIMI_, VEG_, RAD_, HYDRO_, TURB_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_atmland_constants,      ONLY: min_wind, max_wind
@@ -57,6 +57,7 @@ CONTAINS
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(RAD_)
+    dsl4jsb_Use_memory(TURB_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -87,6 +88,7 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -101,6 +103,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: swvis_srf_down
     dsl4jsb_Real2D_onChunk      :: swnir_srf_down
     dsl4jsb_Real2D_onChunk      :: drag_srf
+    ! TURB
+    dsl4jsb_Real2D_onChunk      :: ch                   !< Surface transfer coefficient for heat [???]
     ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
@@ -171,6 +175,7 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -183,7 +188,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)                 ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)                       ! in     ! drag coefficient calculated by jsbach for standalone ("update_surface_temperature_standalone()")
+
+
+      IF (model%config%use_tmx) THEN
+        dsl4jsb_Get_var2D_onChunk(TURB_, ch)
+      ELSE
+        dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)                       ! in     ! drag coefficient calculated by jsbach for standalone ("update_surface_temperature_standalone()")
+      END IF
+
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation)        ! out
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, gross_assimilation_C13)    ! out
@@ -296,13 +308,22 @@ CONTAINS
 
     !>  2.1 determine aerodynamic conductance
     !>
-    ! calc aerodynamic conductance
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic = 1, nc
-      aerodyn_cond(ic) = MAX(min_aerodyn_cond, &
-        &                heat_transfer_coef(drag_srf(ic), dtime, alpha) * MIN( MAX(wind_10m(ic), min_wind), max_wind))
-    END DO
-    !$ACC END PARALLEL LOOP
+
+    IF (model%config%use_tmx) THEN
+        ! TODO: please provide a formulation based on dsl4jsb_Get_var2D_onChunk(TURB_, ch)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+        DO ic = 1, nc
+          aerodyn_cond(ic) = min_aerodyn_cond
+        END DO
+        !$ACC END PARALLEL LOOP
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        aerodyn_cond(ic) = MAX(min_aerodyn_cond, &
+          &                heat_transfer_coef(drag_srf(ic), dtime, alpha) * MIN( MAX(wind_10m(ic), min_wind), max_wind))
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     ! calc scaling factor to account for the 'state of acclimation' of evergreen conifers in spring
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
