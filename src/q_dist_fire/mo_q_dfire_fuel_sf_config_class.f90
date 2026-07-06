@@ -10,7 +10,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-MODULE mo_q_dfire_fuel_config_class
+MODULE mo_q_dfire_fuel_sf_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message, finish, message_text
@@ -22,28 +22,28 @@ MODULE mo_q_dfire_fuel_config_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_q_dfire_fuel_config
+  PUBLIC :: t_q_dfire_fuel_sf_config
 
   ! ======================================================================================================= !
   !>
   !> config TYPE of the dist_fire process, derived from t_jsb_config
   !>
-  TYPE, EXTENDS(t_jsb_config) :: t_q_dfire_fuel_config
+  TYPE, EXTENDS(t_jsb_config) :: t_q_dfire_fuel_sf_config
     LOGICAL           :: flag_dfire_fuel              !< on/off disturbance fire process [boolean]
 
   CONTAINS
-    PROCEDURE :: Init => Init_q_dfire_fuel_config
-  END type t_q_dfire_fuel_config
+    PROCEDURE :: Init => Init_q_dfire_fuel_sf_config
+  END type t_q_dfire_fuel_sf_config
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel_config_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel_sf_config_class'
 
 CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> configuration routine of t_q_dfire_fuel_config
+  !> configuration routine of t_q_dfire_fuel_sf_config
   !>
-  SUBROUTINE Init_q_dfire_fuel_config(config)
+  SUBROUTINE Init_q_dfire_fuel_sf_config(config)
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_io_iface,       ONLY: zaxis_generic
@@ -57,7 +57,7 @@ CONTAINS
 
 
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_q_dfire_fuel_config), INTENT(inout) :: config    !< config type for dfire_fuel
+    CLASS(t_q_dfire_fuel_sf_config), INTENT(inout) :: config    !< config type for dfire_fuel
     ! ----------------------------------------------------------------------------------------------------- !
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                       :: active
@@ -70,7 +70,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_species
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_elements
 
-    CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_q_dfire_fuel_config'
+    CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_q_dfire_fuel_sf_config'
     ! ----------------------------------------------------------------------------------------------------- !
     NAMELIST /lnd_q_dist_fire_fuel_nml/        &
       & active,                     &
@@ -122,7 +122,7 @@ CONTAINS
     CALL register_vgrid(vgrid_live_fuel_pools)
     CALL register_vgrid(vgrid_species)
     CALL register_vgrid(vgrid_elements)
-  END SUBROUTINE Init_q_dfire_fuel_config
+  END SUBROUTINE Init_q_dfire_fuel_sf_config
 
 #endif
-END MODULE mo_q_dfire_fuel_config_class
+END MODULE mo_q_dfire_fuel_sf_config_class

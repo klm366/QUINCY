@@ -106,7 +106,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_q_dfire_sf_interface,  ONLY: Register_q_dfire_tasks
   USE mo_q_dfire_sf_config_class, ONLY: t_q_dfire_sf_config
   USE mo_q_dfire_fuel_sf_interface, ONLY: Register_q_dfire_fuel_sf_tasks
-  USE mo_q_dfire_fuel_config_class, ONLY: t_q_dfire_fuel_config
+  USE mo_q_dfire_fuel_sf_config_class, ONLY: t_q_dfire_fuel_sf_config
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
@@ -250,7 +250,7 @@ CONTAINS
       ALLOCATE(t_q_dfire_sf_config::return_ptr%config)
     CASE (Q_DFIRE_FUEL_)
       CALL Register_q_dfire_fuel_sf_tasks(return_ptr, model_id)
-      ALLOCATE(t_q_dfire_fuel_config::return_ptr%config)
+      ALLOCATE(t_q_dfire_fuel_sf_config::return_ptr%config)
     CASE DEFAULT
       return_ptr => NULL()
     END SELECT
