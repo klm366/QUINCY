@@ -28,7 +28,6 @@ MODULE mo_alcc_config_class
   PUBLIC :: t_alcc_config
 
   TYPE, EXTENDS(t_jsb_config)      :: t_alcc_config
-     INTEGER                       :: nr_of_pfts
      CHARACTER(len=filename_max-7) :: alcc_filename_prefix, alcc_transitions_filename_prefix
        !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
      CHARACTER(len=SHORT_NAME_LEN) :: scheme
@@ -69,12 +68,13 @@ CONTAINS
     CHARACTER(len=filename_max-7) :: alcc_filename_prefix, alcc_transitions_filename_prefix
     CHARACTER(len=SHORT_NAME_LEN) :: scheme
     LOGICAL                       :: l_daily_alcc
-    TYPE(t_jsb_vgrid), POINTER    :: pft_layer
     TYPE(t_jsb_vgrid), POINTER    :: trans_layer
-    INTEGER                       :: i, nr_of_pfts
+    INTEGER                       :: i
+    CHARACTER(len=32)             :: npft_str
     ! trans_names, from_class, to_class and pft_class are filled below depending on use case (jsbach_pfts, jsbach_12pfts, etc.)
     CHARACTER(len=15), ALLOCATABLE :: trans_names(:)  !< names of transition types
-    INTEGER, ALLOCATABLE           :: from_class(:)   !< class losing area per transition (1: natural, 2: pasture, 3: c3crop/crop, 4: c4crop)
+    INTEGER, ALLOCATABLE           :: from_class(:)   !< class losing area per transition
+                                                      !< (1: natural, 2: pasture, 3: c3crop/crop, 4: c4crop)
     INTEGER, ALLOCATABLE           :: to_class(:)     !< class gaining area per transition
     INTEGER, ALLOCATABLE           :: pft_class(:)    !< class index for each PFT
 
@@ -102,7 +102,6 @@ CONTAINS
     ic_filename          = 'ic_land_alcc.nc'
     alcc_filename_prefix = 'bc_land_frac_11pfts_'
     alcc_transitions_filename_prefix = 'LUH_transitions_'
-    nr_of_pfts           = 11
     scheme               = 'maps'        ! options: 'maps', 'transition'
     l_daily_alcc         = .TRUE.
 
@@ -121,14 +120,12 @@ CONTAINS
     config%alcc_transitions_filename_prefix = alcc_transitions_filename_prefix
     config%scheme               = scheme
     config%l_daily_alcc         = l_daily_alcc
-    config%nr_of_pfts           = nr_of_pfts
 
     SELECT CASE (TRIM(tolower(config%scheme)))
     CASE ('transition')
 
-      ! Fill trans_names, from_class, to_class and pft_class based on the model use case
-      SELECT CASE (TRIM(config%model_config%usecase))
-      CASE ('jsbach_pfts')
+      ! Fill trans_names, from_class, to_class and pft_class based on number of PFTs and use case
+      IF (TRIM(config%model_config%usecase) == 'jsbach_pfts' .AND. config%model_config%npft == 11) THEN
         ALLOCATE(trans_names(6))
         trans_names = [character(len=15) :: &             !< 6 transition types for 'jsbach_pfts' (11 PFTs)
           'crop2pasture',   'crop2natural',   &
@@ -139,7 +136,7 @@ CONTAINS
         to_class   = [2, 1, 3, 1, 3, 2]
         ALLOCATE(pft_class(11))
         pft_class  = [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3]    ! 8x natural, 2x pasture, 1x crop
-      CASE ('jsbach_12pfts')
+      ELSE IF (TRIM(config%model_config%usecase) == 'jsbach_pfts' .AND. config%model_config%npft == 12) THEN
         ALLOCATE(trans_names(12))
         trans_names = [character(len=15) :: &             !< 12 transition types for 'jsbach_12pfts' (12 PFTs)
           'c3crop2c4crop',  'c3crop2pasture',  'c3crop2natural',  &
@@ -151,9 +148,11 @@ CONTAINS
         to_class   = [4, 2, 1, 3, 2, 1, 3, 4, 1, 3, 4, 2]
         ALLOCATE(pft_class(12))
         pft_class  = [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 4] ! 8x natural, 2x pasture, 1x c3crop, 1x c4crop
-      CASE DEFAULT
-        CALL finish(TRIM(routine), 'Transition setup not defined for usecase: '// TRIM(config%model_config%usecase))
-      END SELECT
+      ELSE
+        WRITE(npft_str, '(I0)') config%model_config%npft
+        CALL finish(TRIM(routine), 'Transition setup not defined for usecase: '// TRIM(config%model_config%usecase) &
+          &                        // ' and npft: '// TRIM(npft_str))
+      END IF
 
       config%trans_names          = trans_names
       config%from_class           = from_class
