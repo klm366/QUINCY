@@ -14,22 +14,20 @@
 !>#### Initialize JSBACH instance with grid, task queue, tile structure, initial/boundary conditions etc.
 !>
 MODULE mo_jsb_model_init
-
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_,        &
-    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(FAGE_)
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(HYDRO_)
-#ifndef __NO_QUINCY__
+  dsl4jsb_Use_config(CLIMBUF_)
   dsl4jsb_Use_config(VEG_)
   dsl4jsb_Use_config(SB_)
-#endif
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -164,7 +162,6 @@ CONTAINS
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_rad_init,            ONLY: rad_init
     USE mo_carbon_init,         ONLY: carbon_init
-#ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
     USE mo_q_assimi_init,       ONLY: q_assimi_init
     USE mo_q_pheno_init,        ONLY: q_pheno_init
@@ -172,9 +169,7 @@ CONTAINS
     USE mo_q_agr_init,          ONLY: q_agr_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
-#endif
     USE mo_fage_init,           ONLY: fage_init
-
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
     USE mo_fage_init_lcc,       ONLY: fage_init_lcc
     USE mo_flcc_init_lcc,       ONLY: flcc_init_lcc
@@ -200,10 +195,8 @@ CONTAINS
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(FAGE_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
-#endif
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
     ! -------------------------------------------------------------------------------------------------- !
@@ -227,7 +220,7 @@ CONTAINS
     !>
     !>     @todo Should be in separate subroutine
     !>
-    !>     Three Queues: MODEL_JSBACH / MODEL_QUINCY
+    !>     Two Queues: MODEL_JSBACH / MODEL_QUINCY
     !>
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
@@ -240,6 +233,9 @@ CONTAINS
 
       IF (model%processes(NLCC_)%p%config%active) THEN
         CALL model%Queue_task(ASSIMI_, "npp_buffer")
+      END IF
+      IF (model%processes(CLIMBUF_)%p%config%active) THEN
+        CALL model%Queue_task(CLIMBUF_, "climbuf")
       END IF
 
       ! - area damaged by natural disturbances in this timestep are calculated before any lcc takes place
@@ -368,7 +364,6 @@ CONTAINS
         CALL model%Queue_task(FUEL_, "fuel")
       END IF
 
-#ifndef __NO_QUINCY__
     ! ----------------------------------------------------------------------------------------------------- !
     !
     ! MODEL_QUINCY
@@ -513,7 +508,6 @@ CONTAINS
         CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")   ! LAND or PLANT
       END IF
 
-#endif
     END SELECT  ! MODEL_JSBACH / MODEL_QUINCY
     ! Task Queue created
     !-------------------------------------------------------------------------------------------- !
@@ -562,11 +556,11 @@ CONTAINS
         & grid_id = model%grid_id,                                              &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
-#ifndef __NO_QUINCY__
-      ! setup bgc material store (if running with processes that have bgcms)
-      CALL tile%Count_and_classify_bgc_materials()
-      CALL tile%Collect_bgc_materials()
-#endif
+      ! setup bgc material store for Quincy (if running with processes that have bgcms)
+      IF (model%config%model_scheme == MODEL_QUINCY) THEN
+        CALL tile%Count_and_classify_bgc_materials()
+        CALL tile%Collect_bgc_materials()
+      END IF
 
       ! ---------------------------------------------------------------------------------------------- !
       !>
@@ -604,12 +598,10 @@ CONTAINS
         IF (tile%Is_process_active(PHENO_)) THEN
           CALL pheno_init(tile)
         END IF
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (tile%Is_process_active(Q_PHENO_)) THEN
           CALL q_pheno_init(tile)
         END IF
-#endif
       END SELECT
 
       IF (tile%Is_process_active(SSE_)) THEN
@@ -625,8 +617,6 @@ CONTAINS
         IF (tile%Is_process_active(SSE_)) THEN
           CALL init_soil_properties(tile)
         END IF
-
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (tile%Is_process_active(VEG_)) THEN
           CALL veg_init(tile)
@@ -646,7 +636,6 @@ CONTAINS
             CALL q_agr_init(tile)
           END IF
         END IF
-#endif
       END SELECT
 
       SELECT CASE (model%config%model_scheme)
@@ -654,12 +643,10 @@ CONTAINS
         !IF (tile%Is_process_active(ASSIMI_)) THEN
         !  CALL assimi_init(tile)
         !END IF
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (tile%Is_process_active(Q_ASSIMI_)) THEN
           CALL q_assimi_init(tile)
         END IF
-#endif
       END SELECT
 
       SELECT CASE (model%config%model_scheme)
@@ -690,12 +677,13 @@ CONTAINS
 
     IF (model%config%ifs_input_file%is_open) CALL model%config%ifs_input_file%Close()
 
-#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
       ! Write back all values from the matrices to the bgcm variables that have been set
       ! in the init routines -- this is required when writing the init values to the output
       ! before the time-loop is started
       CALL model%Write_back_to_bgcms()
-#endif
+    END SELECT
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -938,11 +926,8 @@ CONTAINS
     USE mo_carbon_init,         ONLY: carbon_read_cpools
     USE mo_hydro_init,          ONLY: hydro_sanitize_state
     USE mo_util,                ONLY: one_of
-#ifndef __NO_QUINCY__
     USE mo_veg_init,            ONLY: veg_read_states
     USE mo_sb_init,             ONLY: sb_read_states
-#endif
-
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(in) :: model_id !< ID of model instance to be initialized
     ! -------------------------------------------------------------------------------------------------- !
@@ -953,11 +938,8 @@ CONTAINS
 
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(HYDRO_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
-#endif
-
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_init_after_restart'
     ! -------------------------------------------------------------------------------------------------- !
@@ -977,11 +959,9 @@ CONTAINS
     CASE (MODEL_JSBACH)
       dsl4jsb_Get_config(CARBON_)
       dsl4jsb_Get_config(HYDRO_)
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_config(VEG_)
       dsl4jsb_Get_config(SB_)
-#endif
     END SELECT
 
     ! Iterate over tiles and call initialization if necessary
@@ -1004,13 +984,17 @@ CONTAINS
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(CARBON_)) THEN
+          ! In some cases, it is necessary to read the carbon pools (again) from a file instead of
+          ! using the values from the restart file, e.g. during a spinup run where the humus pools
+          ! are equilibrated with an external script. In this case, `read_cpools` can be set to
+          ! true in a restarted run and the carbon pools will be read from the file after the
+          ! restart file has been read, thus overwriting the values from the restart file.
           IF (dsl4jsb_Config(CARBON_)%read_cpools) CALL carbon_read_cpools(tile)
         END IF
         IF (dsl4jsb_Config(HYDRO_)%sanitize_restart .AND. &
           & tile%Is_process_active(HYDRO_)) THEN
           CALL hydro_sanitize_state(tile)
         END IF
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (tile%Is_process_calculated(VEG_)) THEN
           IF (dsl4jsb_Config(VEG_)%read_veg_state) CALL veg_read_states(tile)
@@ -1025,7 +1009,6 @@ CONTAINS
             CALL tile%bgcm_store%Store_bgcm_vars_in_matrices(tile%name, jcs, jce, blk)
           ENDDO
         END IF
-#endif
       END SELECT
 
       CALL model%Goto_next_tile(tile)

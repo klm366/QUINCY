@@ -16,7 +16,7 @@
 !>#### provides index variables for bgc material compartments and elements in the bgcm_store
 !>
 MODULE mo_lnd_bgcm_idx
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_veg_config_class,        ONLY: VEG_PART_LEAF_IDX , VEG_PART_FINE_ROOT_IDX, VEG_PART_COARSE_ROOT_IDX, &
     &                                   VEG_PART_SAP_WOOD_IDX, VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, &

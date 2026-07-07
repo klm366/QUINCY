@@ -36,10 +36,7 @@ MODULE mo_atmland_interface
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(CARBON_)
-
-#ifndef __NO_QUINCY__
   dsl4jsb_Use_memory(VEG_)
-#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -92,14 +89,12 @@ CONTAINS
     & )
 
     USE mo_jsb_physical_constants, ONLY: molarMassDryAir, molarMassCO2
-#ifndef __NO_QUINCY__
     USE mtime,                     ONLY: datetime
     USE mo_time_config,            ONLY: time_config
     USE mo_jsb_time,               ONLY: get_secs_of_day, get_year, is_newyear
     USE mo_iq_atm2land_process,    ONLY: update_local_time_and_daytime_counter
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     USE mo_atmland_constants,      ONLY: def_co2_deltaC13, def_co2_deltaC14
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)             :: tile
     TYPE(t_jsb_task_options),   INTENT(in)                :: options
@@ -122,13 +117,9 @@ CONTAINS
     REAL(wp), POINTER :: lon(:)
     INTEGER :: model_scheme
     LOGICAL :: tile_contains_lake
-
-#ifndef __NO_QUINCY__
     TYPE(datetime),    POINTER :: mtime_current !< elapsed simulation time
     INTEGER  :: global_seconds_day, current_year
     REAL(wp) :: co2_dC13_constant, co2_dC14_constant
-#endif
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
 
     dsl4jsb_Real2D_onChunk ::  &
@@ -166,17 +157,13 @@ CONTAINS
       & t_acoef_ice_ptr,       &
       & t_bcoef_ice_ptr,       &
       & q_acoef_ice_ptr,       &
-      & q_bcoef_ice_ptr
-
-#ifndef __NO_QUINCY__
-    dsl4jsb_Real2D_onChunk ::                 &
+      & q_bcoef_ice_ptr,       &
       & CO2_mixing_ratio_ptr,                 &
       & CO2_mixing_ratio_C13_ptr,             &
       & CO2_mixing_ratio_C14_ptr,             &
       & daytime_counter_ptr,                  &
       & daylength_prev_day_ptr,               &
       & local_time_day_seconds_ptr
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
@@ -193,11 +180,9 @@ CONTAINS
     model_scheme = model%config%model_scheme
 
     IF (model_scheme == MODEL_QUINCY) THEN
-#ifndef __NO_QUINCY__
       mtime_current => time_config%tc_current_date
       global_seconds_day = NINT(get_secs_of_day(mtime_current))  ! TODO time steps w/ fractional seconds not supported by quincy, yet!
       current_year = get_year(mtime_current)
-#endif
     END IF
 
     ! make this logical accessible in the OpenACC code directly
@@ -276,17 +261,17 @@ CONTAINS
     IF (PRESENT(cos_zenith_angle)) THEN
       cos_zenith_angle_ptr  => dsl4jsb_var2D_onChunk(A2L_, cos_zenith_angle)
     END IF
+
     IF (PRESENT(CO2_air)) THEN
       CO2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
       CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
-#ifndef __NO_QUINCY__
       IF (model_scheme == MODEL_QUINCY) THEN
         CO2_mixing_ratio_ptr      => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
         CO2_mixing_ratio_C13_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio_C13)
         CO2_mixing_ratio_C14_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio_C14)
       END IF
-#endif
     END IF
+
     IF (tile_contains_lake) THEN
       IF (PRESENT(drag_wtr)) THEN
         drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)
@@ -321,7 +306,6 @@ CONTAINS
     END IF
 
     IF (model_scheme == MODEL_QUINCY) THEN
-#ifndef __NO_QUINCY__
       daytime_counter_ptr         => dsl4jsb_var2D_onChunk(A2L_, daytime_counter)
       daylength_prev_day_ptr      => dsl4jsb_var2D_onChunk(A2L_, daylength_prev_day)
       local_time_day_seconds_ptr  => dsl4jsb_var2D_onChunk(A2L_, local_time_day_seconds)
@@ -330,7 +314,6 @@ CONTAINS
         CALL finish(TRIM(routine), 'As soon as 13C or 14C are provided by the atmosphere,' &
           & //' the appropriate conversion should be implemented below, depending on the passed form.')
       END IF
-#endif
     END IF
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
@@ -474,6 +457,7 @@ CONTAINS
         cos_zenith_angle_ptr(i) = cos_zenith_angle(i)
       END DO
     END IF
+
     IF (PRESENT(CO2_air)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
@@ -482,7 +466,6 @@ CONTAINS
         CO2_air_mol_ptr(i) = CO2_air(i) * molarMassDryAir / molarMassCO2
       END DO
       IF (model_scheme == MODEL_QUINCY) THEN
-#ifndef __NO_QUINCY__
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
@@ -504,7 +487,6 @@ CONTAINS
             CO2_mixing_ratio_c14_ptr(i) = CO2_air(i) / (1._wp + 1._wp / co2_dC14_constant)
           END DO
         END IF
-#endif
       END IF ! IF (model_scheme == MODEL_QUINCY) THEN
     END IF ! IF (PRESENT(CO2_air)) THEN
 
@@ -577,11 +559,9 @@ CONTAINS
     !$ACC END PARALLEL
 
     IF (model_scheme == MODEL_QUINCY) THEN
-#ifndef __NO_QUINCY__
       ! Update local time and the daytime counter
       CALL update_local_time_and_daytime_counter(global_seconds_day, dtime, lon, swpar_srf_down, &
           &                                      daytime_counter_ptr, daylength_prev_day_ptr, local_time_day_seconds_ptr)
-#endif
     END IF
   END SUBROUTINE update_atm2land
 
@@ -624,10 +604,7 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(CARBON_)
-
-#ifndef __NO_QUINCY__
     dsl4jsb_Def_memory(VEG_)
-#endif
 
     TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_tile_abstract), POINTER :: land_tile
@@ -724,10 +701,9 @@ CONTAINS
     dsl4jsb_Get_memory(RAD_)
 
     IF (model_scheme == MODEL_QUINCY) THEN
-#ifndef __NO_QUINCY__
       dsl4jsb_Get_memory(VEG_)
-#endif
     ELSE IF (tile_is_carbon_active) THEN
+      ! JSBACH process
       dsl4jsb_Get_memory(CARBON_)
     END IF
 
@@ -831,10 +807,8 @@ CONTAINS
 
     IF (tile_is_carbon_active) THEN
       IF (model_scheme == MODEL_QUINCY) THEN
-#ifndef __NO_QUINCY__
         ! Note: the co2flux components of JSBACH have a different unit and different sign
         net_biosphere_production_ptr => dsl4jsb_var2D_onChunk(VEG_, net_biosphere_production)
-#endif
       ELSE
         co2flux_npp_2_atm_ta_ptr      => dsl4jsb_var2D_onChunk(CARBON_,co2flux_npp_2_atm_ta)
         co2flux_soilresp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,co2flux_soilresp_2_atm_ta)
@@ -1017,6 +991,7 @@ CONTAINS
         alb_nir_dif(i) = alb_nir_lnd_ptr(i)
       END DO
     END IF
+
     IF (PRESENT(CO2_flux)) THEN
       IF (tile_is_carbon_active) THEN
         IF (.NOT. model_scheme == MODEL_QUINCY) THEN
@@ -1030,7 +1005,6 @@ CONTAINS
               & )
           END DO
         ELSE
-#ifndef __NO_QUINCY__
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO i=1,nc
             ! micro-mol CO2 m-2 s-1 -> kg(CO2) m-2 s-1
@@ -1039,7 +1013,6 @@ CONTAINS
             !   ... note: in jsbach the negation of the fluxes is already done in the carbon interface
             CO2_flux(i) = fact_land(i) * net_biosphere_production_ptr(i) * molarMassCO2 * 0.000001_wp * (-1.0_wp)
           END DO
-#endif
         END IF
       ELSE
         !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1048,6 +1021,7 @@ CONTAINS
         END DO
       END IF
     END IF
+
     IF (PRESENT(kh)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc

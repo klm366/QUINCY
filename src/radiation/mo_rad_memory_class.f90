@@ -19,14 +19,12 @@ MODULE mo_rad_memory_class
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
-#ifndef __NO_QUINCY__
-  USE mo_jsb_process_class,ONLY: VEG_, Q_ASSIMI_
-  dsl4jsb_Use_config(VEG_)
-  dsl4jsb_Use_config(Q_ASSIMI_)
-#endif
-  dsl4jsb_Use_processes SEB_, HYDRO_
+
+  dsl4jsb_Use_processes SEB_, HYDRO_, VEG_, Q_ASSIMI_
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(VEG_)
+  dsl4jsb_Use_config(Q_ASSIMI_)
 
   IMPLICIT NONE
   PRIVATE
@@ -167,9 +165,7 @@ CONTAINS
     USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
     USE mo_jsb_class,         ONLY: Get_model
     USE mo_rad_constants,     ONLY: AlbedoLakeWater, AlbedoLakeIceMin
-#ifndef __NO_QUINCY__
     USE mo_quincy_output_class, ONLY: unitless
-#endif
 
     CLASS(t_rad_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)            :: prefix
@@ -180,10 +176,8 @@ CONTAINS
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(HYDRO_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(Q_ASSIMI_)
-#endif
 
     TYPE(t_jsb_model), POINTER  :: model                        !< model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        !< Horizontal grid
@@ -203,10 +197,8 @@ CONTAINS
     table        = tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-#ifndef __NO_QUINCY__
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(Q_ASSIMI_)
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     ! determine which variables are required in the restart
     restart_veg_optimal = .FALSE.
@@ -217,7 +209,6 @@ CONTAINS
     CASE (MODEL_JSBACH)
       canopy_layer => Get_vgrid('canopy_layer')
 #endif
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       canopy_layer   => Get_vgrid('q_canopy_layer')
       IF (dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction) THEN
@@ -228,7 +219,6 @@ CONTAINS
         restart_veg_optimal = .TRUE.
         restart_veg_optimal_stoichiometry = .TRUE.
       END IF
-#endif
     END SELECT
 #ifdef __QUINCY_STANDALONE__
     vgrid_spectral => Get_vgrid('spectral_bands')
@@ -587,7 +577,6 @@ CONTAINS
       END IF ! l_ice_on_lakes
     END IF ! lakes
 
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
 
@@ -757,7 +746,6 @@ CONTAINS
 
       END IF   ! land/vegetation var (for quincy)
     END SELECT
-#endif
 
 #ifdef __QUINCY_STANDALONE__
     IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
