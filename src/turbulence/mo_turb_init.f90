@@ -73,6 +73,7 @@ CONTAINS
 
     ! Mark process as successfully initialized
     CALL model%processes(TURB_)%p%Set_init_status_true
+
   END SUBROUTINE turb_init
 
 #ifdef __QUINCY_STANDALONE__

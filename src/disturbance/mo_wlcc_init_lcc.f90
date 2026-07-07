@@ -82,6 +82,7 @@ CONTAINS
 
     ! Mark process as successfully initialized
     CALL model%processes(WLCC_)%p%Set_init_status_true
+
   END SUBROUTINE wlcc_init_lcc
 
 #endif

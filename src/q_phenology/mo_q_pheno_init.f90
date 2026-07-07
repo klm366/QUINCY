@@ -59,6 +59,7 @@ CONTAINS
 
     ! Mark process as successfully initialized
     CALL model%processes(Q_PHENO_)%p%Set_init_status_true
+
   END SUBROUTINE q_pheno_init
 
   ! ======================================================================================================= !

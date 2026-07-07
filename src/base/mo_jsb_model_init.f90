@@ -545,7 +545,7 @@ CONTAINS
         CYCLE
       END IF
 
-      CALL message(routine, 'Running process init at tile: '//TRIM(tile%name))
+      IF (debug_on()) CALL message(routine, 'Running process init for tile: '//TRIM(tile%name))
 
       ! ---------------------------------------------------------------------------------------------- !
       !>

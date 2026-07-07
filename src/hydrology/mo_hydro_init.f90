@@ -202,6 +202,7 @@ CONTAINS
 
     ! Mark process as successfully initialized
     CALL model%processes(HYDRO_)%p%Set_init_status_true
+
   END SUBROUTINE hydro_init
 
   ! ====================================================================================================== !

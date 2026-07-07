@@ -252,7 +252,7 @@ CONTAINS
 
     ! Check whether the task belongs to the actual process
     IF (this%id /= task%process_id) &
-      CALL finish(TRIM(routine), 'Task is for another process')
+      CALL finish(routine, 'Task is for another process')
 
     ! Add task as first element of the task list
     IF (.NOT. ALLOCATED(this%task_list)) THEN
@@ -267,8 +267,8 @@ CONTAINS
       CALL MOVE_ALLOC(task_temp, this%task_list)
     END IF
 
-    IF (debug_on()) CALL message(TRIM(routine), 'Registered task "'//TRIM(task%name)// &
-      &                                         '" for process "'//TRIM(this%name)//'".')
+    IF (debug_on()) CALL message(routine, 'Registered task "'//TRIM(task%name)// &
+      &                                   '" for process "'//TRIM(this%name)//'".')
 
   END SUBROUTINE Register_task
 
@@ -323,6 +323,7 @@ CONTAINS
   !>#### Mark process as successfully initialized - set 'is_initialized' to TRUE
   !>
   SUBROUTINE Set_init_status_true(this)
+
     CLASS(t_jsb_process), INTENT(inout) :: this
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_init_status_true'
@@ -330,15 +331,17 @@ CONTAINS
     ! mark as initialized and add info to logfile only if not yet initialized
     IF (.NOT. this%is_initialized) THEN
       this%is_initialized = .TRUE.
-      CALL message(TRIM(routine), "Process initialization successful: "//Get_process_name(this%id))
+      CALL message(routine, "Process initialization successful: "//Get_process_name(this%id))
     END IF
+
   END SUBROUTINE Set_init_status_true
 
   ! ======================================================================================================= !
   !>
-  !>#### Test if process the process is already initialized, if not: finish the model
+  !>#### Test if the process is already initialized, if not: finish the model
   !>
   SUBROUTINE Test_init_status(this, process_asking)
+
     CLASS(t_jsb_process), INTENT(in) :: this
     INTEGER                          :: process_asking  !< Process that depends on 'this' process
 
@@ -346,13 +349,14 @@ CONTAINS
 
     IF (this%is_initialized) THEN
       IF (debug_on()) THEN
-        CALL message(TRIM(routine), "Process dependency check: "//Get_process_name(process_asking)// &
-          &                         " depends on "//Get_process_name(this%id))
+        CALL message(routine, "Process dependency check: "//Get_process_name(process_asking)// &
+          &                   " depends on "//Get_process_name(this%id))
       END IF
     ELSE
-      CALL finish(TRIM(routine), "Failed process dependency: "//Get_process_name(process_asking)// &
-        &                         " depends on "//Get_process_name(this%id)//", which is not initialized yet.")
+      CALL finish(routine, "Failed process dependency: "//Get_process_name(process_asking)// &
+        &                  " depends on "//Get_process_name(this%id)//", which is not initialized yet.")
     END IF
+
   END SUBROUTINE Test_init_status
 
   ! ====================================================================================================== !

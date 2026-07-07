@@ -687,6 +687,7 @@ CONTAINS
 
     ! Mark process as successfully initialized
     CALL model%processes(VEG_)%p%Set_init_status_true
+
   END SUBROUTINE veg_init
 
 #ifndef __QUINCY_STANDALONE__

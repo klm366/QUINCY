@@ -57,6 +57,7 @@ CONTAINS
 
     ! Mark process as successfully initialized
     CALL model%processes(FAGE_)%p%Set_init_status_true
+
   END SUBROUTINE fage_init
 
   ! ====================================================================================================== !

@@ -70,6 +70,7 @@ CONTAINS
 
     ! Mark process as successfully initialized
     CALL model%processes(CARBON_)%p%Set_init_status_true
+
   END SUBROUTINE carbon_init
 
   SUBROUTINE carbon_init_bc(tile)

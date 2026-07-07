@@ -79,6 +79,7 @@ CONTAINS
 
     ! Mark process as successfully initialized
     CALL model%processes(PHENO_)%p%Set_init_status_true
+
   END SUBROUTINE pheno_init
 
   SUBROUTINE pheno_finalize_init_vars

@@ -104,6 +104,7 @@ CONTAINS
 
     ! Mark process as successfully initialized
     CALL model%processes(SB_)%p%Set_init_status_true
+
   END SUBROUTINE sb_init
 
   ! ======================================================================================================= !

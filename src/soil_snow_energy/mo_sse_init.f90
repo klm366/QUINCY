@@ -109,6 +109,7 @@ CONTAINS
 
     ! Mark process as successfully initialized
     CALL model%processes(SSE_)%p%Set_init_status_true
+
   END SUBROUTINE sse_init
 
   SUBROUTINE sse_finalize_init_vars

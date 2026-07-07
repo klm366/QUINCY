@@ -157,6 +157,7 @@ CONTAINS
 
     ! Mark process as successfully initialized
     CALL model%processes(Q_ASSIMI_)%p%Set_init_status_true
+
   END SUBROUTINE q_assimi_init
 
 #endif

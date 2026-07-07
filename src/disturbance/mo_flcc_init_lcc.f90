@@ -81,6 +81,7 @@ CONTAINS
 
     ! Mark process as successfully initialized
     CALL model%processes(FLCC_)%p%Set_init_status_true
+
   END SUBROUTINE flcc_init_lcc
 
 #endif
