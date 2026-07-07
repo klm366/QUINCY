@@ -44,7 +44,7 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_varlist,      ONLY: NONE, MINIMUM, BASIC, MEDIUM, FULL
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes HYDRO_, SSE_, SEB_
+  dsl4jsb_Use_processes HYDRO_, SSE_, SEB_, CARBON_
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_processes ASSIMI_
 #endif
@@ -53,6 +53,7 @@ MODULE mo_hydro_memory_class
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_config(CARBON_)
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_config(ASSIMI_)
 #endif
@@ -294,6 +295,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)              !< Configurable settings of the hydrology process
     dsl4jsb_Def_config(SSE_)                !< Configurable settings of the soil and snow energy process
     dsl4jsb_Def_config(SEB_)                !< Configurable settings of surface energy balance process
+    dsl4jsb_Def_config(CARBON_)             !< Configurable settings of the carbon process
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_config(ASSIMI_)             !< Configurable settings of the assimilation process
 #endif
@@ -324,6 +326,7 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_config(SEB_)
+    dsl4jsb_Get_config(CARBON_)
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Get_config(ASSIMI_)
 #endif
@@ -692,8 +695,8 @@ CONTAINS
           &      'Volumetric fraction of organic material in soil layer'),     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & lrestart=.TRUE.,                                                   &
-          & initval_r=0.0_wp )
+          & lrestart=dsl4jsb_Config(CARBON_)%update_soil_props,                &
+          & lrestart_cont=.TRUE., initval_r=0.0_wp )
       END IF
 
       SELECT CASE (model%config%model_scheme)

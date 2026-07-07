@@ -1067,17 +1067,15 @@ CONTAINS
           ! compute its relative fraction wrt total soil mass.
           !$ACC LOOP GANG VECTOR PRIVATE(mass_organic_soil)
           DO ic = 1, nc
-            IF (fract_org_sl(ic,is) < 1._wp) THEN
-              mass_organic_soil   = molarMassC_kg / C_2_biomass_ratio * (                   &
-                &                   c_humus_1_sl(ic,is)        + c_humus_2_sl(ic,is)        &
-                &                 + c_acid_bg1_sl(ic,is)       + c_acid_bg2_sl(ic,is)       &
-                &                 + c_ethanol_bg1_sl(ic,is)    + c_ethanol_bg2_sl(ic,is)    &
-                &                 + c_water_bg1_sl(ic,is)      + c_water_bg2_sl(ic,is)      &
-                &                 + c_nonsoluble_bg1_sl(ic,is) + c_nonsoluble_bg2_sl(ic,is) &
-                &                 ) * veg_fract_correction(ic) * fract_fpc_max(ic)
-              fract_org_sl(ic,is) = MAX(0._wp, MIN(1.0_wp, &
-                & (mass_organic_soil / bulk_density_org) / layer_thick(is)))
-            END IF
+            mass_organic_soil   = molarMassC_kg / C_2_biomass_ratio * (                   &
+              &                   c_humus_1_sl(ic,is)        + c_humus_2_sl(ic,is)        &
+              &                 + c_acid_bg1_sl(ic,is)       + c_acid_bg2_sl(ic,is)       &
+              &                 + c_ethanol_bg1_sl(ic,is)    + c_ethanol_bg2_sl(ic,is)    &
+              &                 + c_water_bg1_sl(ic,is)      + c_water_bg2_sl(ic,is)      &
+              &                 + c_nonsoluble_bg1_sl(ic,is) + c_nonsoluble_bg2_sl(ic,is) &
+              &                 ) * veg_fract_correction(ic) * fract_fpc_max(ic)
+            fract_org_sl(ic,is) = MAX(0._wp, MIN(1.0_wp, &
+              & (mass_organic_soil / bulk_density_org) / layer_thick(is)))
           END DO
         END DO
         !$ACC END PARALLEL
