@@ -113,7 +113,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_q_dfire_fuel_sf::return_ptr)
-    CALL return_ptr%Construct(name='q_dfire_fuel_sf', process_id=Q_DFIRE_FUEL_SF_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='q_dfire_sf_fuel', process_id=Q_DFIRE_FUEL_SF_, owner_model_id=model_id)
   END FUNCTION Create_task_q_dfire_fuel_sf
 
   ! ======================================================================================================= !
