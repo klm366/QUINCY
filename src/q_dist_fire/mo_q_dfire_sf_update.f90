@@ -170,38 +170,10 @@ CONTAINS
                                   sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
                                   sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
 
+    !< Update VEG pools
     CALL dfire_sf_veg_update_pools(nc, model, &
                                   veg_fire_emissions_mt, veg_fire_litterfall_mt, &
                                   veg_pool_mt, veg_litterfall_mt)
-
-    ! nr_of_veg_bgcm_comp = SIZE(veg_pool_mt,1)
-
-    ! !< Update VEG pools
-    ! !> 3.0 add fire disturbance into litterfall
-    ! DO ic = 1, nc
-    !   DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-    !     IF (model%config%is_element_used(ielem)) THEN
-    !       ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-    !       DO ix_comp = 1, nr_of_veg_bgcm_comp
-    !         veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
-    !                                                   veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
-    !       END DO ! ix_comp = 1, n_veg_bgcm_comp
-    !     END IF ! model%config%is_element_used(ielem)) THEN
-    !  END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-    ! END DO ! ic = 1, nc
-
-    ! !> update veg fire emissions
-    ! DO ic = 1, nc
-    !   DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-    !     IF (model%config%is_element_used(ielem)) THEN
-    !       ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-    !       DO ix_comp = 1, nr_of_veg_bgcm_comp
-    !             veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
-    !                 veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
-    !       END DO ! ix_comp
-    !     END IF ! is_element_used(ielem)
-    !   END DO ! ielem
-    ! END DO ! ic
 
     !>
     !> Update delta_dens_ind to properly run plant_characteristics in mo_q_model_init.f90
