@@ -213,7 +213,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     IF (tile%is_lake) THEN
-      CALL update_surface_energy_lake(tile, options)
+      ! CALL update_surface_energy_lake(tile, options)
     ELSE IF (tile%is_land .AND. .NOT. model%config%use_tmx) THEN
       CALL update_surface_energy_land(tile, options)
     ELSE IF (model%config%use_tmx) THEN

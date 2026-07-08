@@ -187,6 +187,8 @@ CONTAINS
       & albedo_lice,          & !< albedo of ice on lake water
       & latent_hflx_wtr,      & !< latent heat flux over water                                      [W m-2]
       & sensible_hflx_wtr,    & !< sensible heat flux over water                                    [W m-2]
+      & latent_hflx,          & !< latent heat flux                                                 [W m-2]
+      & sensible_hflx,        & !< sensible heat flux                                    [W m-2]
       & qsat_lwtr,            & !< saturation specific humidity at surface over lake water          [kg kg-1]
       & s_lwtr,               & !< surface dry static energy over lake water                        [m2 s-2]
       & latent_hflx_ice,      & !< latent heat flux over ice                                        [W m-2]
@@ -286,21 +288,23 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)     ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)     ! in
 
+    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr)  ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_ice)  ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx)      ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)    ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_ice)    ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx)        ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_wtr)        ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)        ! in
+
     dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lwtr)        ! in
     dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)        ! in
 
-    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)    ! out
-    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_ice)    ! out 
     dsl4jsb_Get_var2D_onChunk(SEB_, qsat_lwtr)          ! out 
     dsl4jsb_Get_var2D_onChunk(SEB_, qsat_lice)          ! out 
     dsl4jsb_Get_var2D_onChunk(SEB_, s_lwtr)             ! out 
     dsl4jsb_Get_var2D_onChunk(SEB_, s_lice)             ! out 
-    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr)  ! out
-    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_ice)  ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, T_lwtr)             ! inout
-
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_wtr)        ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)       ! out
 
     dsl4jsb_Get_var2D_onChunk(FLAKE_, z0u_sf)           ! out
     dsl4jsb_Get_var2D_onChunk(FLAKE_, z0t_sf)           ! out
@@ -365,29 +369,31 @@ CONTAINS
     Q_w = lwnet_from_lwdown(lw_srf_down, T_lwtr)     ! Radiation of the atmosphere 
 
     !  Compute the surface friction velocity and fluxes of sensible and latent heat 
-    CALL calc_momsenlat ( h_atmvars, h_atmvars, fetch, wind_air, t_air, q_air, T_lwtr, press_srf, h_ice,  &
-                            Q_momentum, Q_sensible, Q_latent, Q_watvap, z0u_sf, z0t_sf, u_star ) 
+    ! CALL calc_momsenlat ( h_atmvars, h_atmvars, fetch, wind_air, t_air, q_air, T_lwtr, press_srf, h_ice,  &
+    !                         Q_momentum, Q_sensible, Q_latent, Q_watvap, z0u_sf, z0t_sf, u_star ) 
+    Q_momentum = 0._wp
     u_star_sf = SQRT(-Q_momentum/rhoh2o) !zr todo: Check differences between u_star and u_star_sf
 
-    WHERE(h_ice.GE.h_Ice_min)  
-      latent_hflx_wtr   = 0._wp
-      sensible_hflx_wtr = 0._wp
-      evapo_wtr         = 0._wp
-      latent_hflx_ice   = Q_latent
-      sensible_hflx_ice = Q_sensible
-      evapo_ice        = Q_watvap
-    ELSEWHERE
-      latent_hflx_wtr   = Q_latent
-      sensible_hflx_wtr = Q_sensible
-      evapo_wtr         = Q_watvap
-      latent_hflx_ice   = 0._wp
-      sensible_hflx_ice = 0._wp
-      evapo_ice        = 0._wp
-    END WHERE
+    ! WHERE(h_ice.GE.h_Ice_min)  
+    !   latent_hflx_wtr   = 0._wp
+    !   sensible_hflx_wtr = 0._wp
+    !   evapo_wtr         = 0._wp
+    !   latent_hflx_ice   = Q_latent
+    !   sensible_hflx_ice = Q_sensible
+    !   evapo_ice        = Q_watvap
+    ! ELSEWHERE
+    !   latent_hflx_wtr   = Q_latent
+    !   sensible_hflx_wtr = Q_sensible
+    !   evapo_wtr         = Q_watvap
+    !   latent_hflx_ice   = 0._wp
+    !   sensible_hflx_ice = 0._wp
+    !   evapo_ice        = 0._wp
+    ! END WHERE
 
     !  Compute heat fluxes Q_snow, Q_ice, Q_w
 
-    Q_w = Q_w - Q_sensible - Q_latent  ! Add sensible and latent heat fluxes (notice the signs)
+    ! Q_w = Q_w - Q_sensible - Q_latent  ! Add sensible and latent heat fluxes (notice the signs)
+    Q_w = Q_w + sensible_hflx + latent_hflx
 
     WHERE (h_ice >= h_Ice_min .AND. h_snow >= h_Snow_min)             ! Ice and snow exist
         !Q_snow = Q_w
@@ -444,7 +450,7 @@ CONTAINS
                                       & par_Coriolis,         & ! in
                                       & Q_bot,                & ! in
                                       & Q_star,               & ! in
-                                      & u_star,               & ! in 
+                                      & u_star_sf,            & ! in 
                                       & C_T,                  & ! inout
                                       & Q_w,                  & ! inout
                                       & T_bot,                & ! inout

@@ -391,6 +391,7 @@ MODULE mo_flake_process
             R_Tstar_icesnow = (1._wp - C_I)*R_TI_icesnow    ! Dimensionless parameter
             flk_str_2  = Q_ice+I_ice-I_w                    ! Atmospheric fluxes
             flk_str_1  = C_I*h_ice_p
+            d_T_ice_dt = 0._wp
             d_T_ice_dt = d_T_ice_dt + tpl_kappa_I*(tpl_T_f-T_ice)/h_ice_p*Phi_I_pr0       &
                       * (1._wp-R_Tstar_icesnow)             ! Add flux due to heat conduction
             d_T_ice_dt = d_T_ice_dt - R_Tstar_icesnow*Q_w   ! Add flux from water to ice
