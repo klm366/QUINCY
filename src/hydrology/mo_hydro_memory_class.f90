@@ -44,7 +44,7 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_varlist,      ONLY: NONE, MINIMUM, BASIC, MEDIUM, FULL
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes HYDRO_, SSE_, SEB_
+  dsl4jsb_Use_processes HYDRO_, SSE_, SEB_, CARBON_
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_processes ASSIMI_
 #endif
@@ -53,6 +53,7 @@ MODULE mo_hydro_memory_class
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_config(CARBON_)
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_config(ASSIMI_)
 #endif
@@ -118,7 +119,7 @@ MODULE mo_hydro_memory_class
     ! Additional variables for soil
     TYPE(t_jsb_var_real3d) :: &
       & soil_depth_sl,        & !< Thickness of each soil layer until bedrock            [m]
-      & fract_org_sl            !< Fractions of organic material in soil layers          []
+      & fract_org_sl            !< Volumetric fraction of organic matter in soil layers  []
 
     TYPE(t_jsb_var_real3d) :: &
       & soil_lay_width_sl, &        !< thickness of each soil layer that can be saturated with water, identical with soil_depth_sl (until bedrock) [m]
@@ -297,6 +298,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)              !< Configurable settings of the hydrology process
     dsl4jsb_Def_config(SSE_)                !< Configurable settings of the soil and snow energy process
     dsl4jsb_Def_config(SEB_)                !< Configurable settings of surface energy balance process
+    dsl4jsb_Def_config(CARBON_)             !< Configurable settings of the carbon process
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_config(ASSIMI_)             !< Configurable settings of the assimilation process
 #endif
@@ -327,6 +329,7 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_config(SEB_)
+    dsl4jsb_Get_config(CARBON_)
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Get_config(ASSIMI_)
 #endif
@@ -689,13 +692,14 @@ CONTAINS
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-        CALL mem%Add_var( 'fract_org_sl', mem%fract_org_sl,                          &
-          & hgrid, soil_w,                                                           &
-          & t_cf('fract_org_sl', '-', 'Fraction of organic material in soil layer'), &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
-          & prefix, suffix,                                                          &
-          & lrestart=.TRUE.,                                                         &
-          & initval_r=0.0_wp )
+        CALL mem%Add_var( 'fract_org_sl', mem%fract_org_sl,                    &
+          & hgrid, soil_w,                                                     &
+          & t_cf('fract_org_sl', '-',                                          &
+          &      'Volumetric fraction of organic material in soil layer'),     &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & lrestart=dsl4jsb_Config(CARBON_)%update_soil_props,                &
+          & lrestart_cont=.TRUE., initval_r=0.0_wp )
       END IF
 
       SELECT CASE (model%config%model_scheme)

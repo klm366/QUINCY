@@ -162,7 +162,7 @@ CONTAINS
     USE mo_jsb_time,                 ONLY: is_newday, is_newyear, timesteps_per_day, &
       &                                    is_time_experiment_start, is_time_restart
     USE mo_hydro_constants,          ONLY: vol_porosity_org_top, vol_porosity_org_below
-    USE mo_jsb_physical_constants,   ONLY: dens_soil
+    USE mo_jsb_physical_constants,   ONLY: dens_org
     USE mo_carbon_constants,         ONLY: molarMassC_kg, C_2_biomass_ratio
 
     ! Arguments
@@ -206,10 +206,8 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc) :: frac_inun_loc    !< Surface inundation fraction [m]
 
-    REAL(wp) :: porosity_mineral  !< porosity soil layer porosity without organic contribution [m3/m3]
-    REAL(wp) :: mass_mineral_soil !< mass of mineral soil fraction in a soil layer [kg/m2]
     REAL(wp) :: mass_organic_soil !< mass of organic soil fraction in a soil layer [kg/m2]
-    REAL(wp) :: vol_porosity_org  !< porosity of pure organic soil layer [m3/m3]
+    REAL(wp) :: bulk_density_org  !< bulk density of pure soil organic matter [kg/m3]
 
     ! Cleaner parameter transfer for vertical YASSO
     REAL(wp) :: LeafLit_coefV(5)  !< Array with leaf litter coefficients
@@ -234,8 +232,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  precip_15d_yDay_climbuf          !< Smoothed precipitation [kg m-2 s-1]
     dsl4jsb_Real3D_onChunk ::  t_soil_sl_15d_yDay_climbuf       !< Smoothed soil temperature [K]
     dsl4jsb_Real3D_onChunk ::  wtr_soil_rel_sl_15d_yDay_climbuf !< Smoothed relative soil water content [-]
-    dsl4jsb_Real3D_onChunk ::  fract_org_sl                     !< Soil layer organic matter fraction [-]
-    dsl4jsb_Real3D_onChunk ::  vol_porosity_sl                  !< Volumetric soil layer porosity [m3/m3]
+    dsl4jsb_Real3D_onChunk ::  fract_org_sl                     !< Vol. soil layer organic matter fraction [-]
 
     dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
 
@@ -411,7 +408,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
 
     !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, vol_porosity_org)
+    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, bulk_density_org)
 
     iblk  = options%iblk
     ics   = options%ics
@@ -464,7 +461,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, wtr_soil_rel_sl_15d_yDay, climbuf)  ! in
     dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, permafrost_period_sl, climbuf)  ! in
 
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)            ! inout
 
     !
@@ -785,6 +781,12 @@ CONTAINS
       MiscPar(i_WoodLitSize)  = dsl4jsb_Lctlib_param(WoodLitterSize)
       MiscPar(i_RootDistBeta) = dsl4jsb_Lctlib_param(root_dist_beta)
 
+      ! Check whether optional values were read from lctlib
+      IF (MiscPar(i_RootDistBeta) < -990._wp .AND. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+        CALL finish(TRIM(routine), 'ROOT_DIST_BETA is required in lctlib file for simulations ' // &
+          & 'using vertically stratified yasso scheme')
+      END IF
+
       ! Calculate current carbon sum before the update - for C conservation test
       CALL recalc_carbon_per_tile_vars(tile, options)
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
@@ -1070,27 +1072,23 @@ CONTAINS
         !$ACC LOOP SEQ
         DO is = 1, nsoil
           IF (is == 1) THEN
-            vol_porosity_org = vol_porosity_org_top
+            bulk_density_org = dens_org * vol_porosity_org_top
           ELSE
-            vol_porosity_org = vol_porosity_org_below
+            bulk_density_org = dens_org * vol_porosity_org_below
           END IF
           ! Accumulated below ground soil carbon content, convert to organic matter mass and
           ! compute its relative fraction wrt total soil mass.
-          !$ACC LOOP GANG VECTOR PRIVATE(porosity_mineral)
+          !$ACC LOOP GANG VECTOR PRIVATE(mass_organic_soil)
           DO ic = 1, nc
-            IF (fract_org_sl(ic,is) < 1._wp) THEN
-              porosity_mineral    = (vol_porosity_sl(ic,is) - vol_porosity_org * fract_org_sl(ic,is)) &
-                &                 / (1._wp - fract_org_sl(ic,is))
-              mass_mineral_soil   = layer_thick(is) * (1._wp - porosity_mineral) * dens_soil
-              mass_organic_soil   = molarMassC_kg / C_2_biomass_ratio * (                   &
-                &                   c_humus_1_sl(ic,is)        + c_humus_2_sl(ic,is)        &
-                &                 + c_acid_bg1_sl(ic,is)       + c_acid_bg2_sl(ic,is)       &
-                &                 + c_ethanol_bg1_sl(ic,is)    + c_ethanol_bg2_sl(ic,is)    &
-                &                 + c_water_bg1_sl(ic,is)      + c_water_bg2_sl(ic,is)      &
-                &                 + c_nonsoluble_bg1_sl(ic,is) + c_nonsoluble_bg2_sl(ic,is) &
-                &                 ) * veg_fract_correction(ic) * fract_fpc_max(ic)
-              fract_org_sl(ic,is) = mass_organic_soil / (mass_mineral_soil + mass_organic_soil)
-            END IF
+            mass_organic_soil   = molarMassC_kg / C_2_biomass_ratio * (                   &
+              &                   c_humus_1_sl(ic,is)        + c_humus_2_sl(ic,is)        &
+              &                 + c_acid_bg1_sl(ic,is)       + c_acid_bg2_sl(ic,is)       &
+              &                 + c_ethanol_bg1_sl(ic,is)    + c_ethanol_bg2_sl(ic,is)    &
+              &                 + c_water_bg1_sl(ic,is)      + c_water_bg2_sl(ic,is)      &
+              &                 + c_nonsoluble_bg1_sl(ic,is) + c_nonsoluble_bg2_sl(ic,is) &
+              &                 ) * veg_fract_correction(ic) * fract_fpc_max(ic)
+            fract_org_sl(ic,is) = MAX(0._wp, MIN(1.0_wp, &
+              & (mass_organic_soil / bulk_density_org) / layer_thick(is)))
           END DO
         END DO
         !$ACC END PARALLEL

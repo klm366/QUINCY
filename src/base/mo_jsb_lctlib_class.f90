@@ -21,7 +21,7 @@ MODULE mo_jsb_lctlib_class
 
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_kind,         ONLY: wp
-  USE mo_exception,    ONLY: message_text, finish
+  USE mo_exception,    ONLY: message_text, finish, message
   USE mo_util,         ONLY: int2string
 
   IMPLICIT NONE
@@ -1167,8 +1167,6 @@ CONTAINS
               CALL finish('init_lctlib','No data for BCLIMIT_MIN_TEMPRANGE found in '//TRIM(lctlib_file_name))
          IF(.NOT.exists_bclimit_min_gdd ) &
               CALL finish('init_lctlib','No data for BCLIMIT_MIN_GDD found in '//TRIM(lctlib_file_name))
-         IF(.NOT.exists_bclimit_min_snow ) &
-              CALL finish('init_lctlib','No data for BCLIMIT_MIN_SNOW found in '//TRIM(lctlib_file_name))
          IF(.NOT. exists_gdd_base) &
               CALL finish('init_lctlib','No data for GDD_BASE found in '//TRIM(lctlib_file_name))
          IF(.NOT. exists_upper_tlim) &
@@ -1203,8 +1201,6 @@ CONTAINS
               CALL finish('init_lctlib','No data for LEAFLIT_COEF found in '//TRIM(lctlib_file_name))
          IF(.NOT. exists_litveg_coef) &
               CALL finish('init_lctlib','No data for LITVEG_COEF found in '//TRIM(lctlib_file_name))
-         IF(.NOT. exists_root_dist_beta) &
-              CALL finish('init_lctlib','No data for ROOT_DIST_BETA found in '//TRIM(lctlib_file_name))
          !------------------------------------------------------------------------------------------
          ! kalle, 151004
          ! Set carbox rate to  [Mol(CO2)/m^2/s]
@@ -1214,6 +1210,23 @@ CONTAINS
            lctlib(i)%CarboxRate=lctlib(i)%CarboxRate * 1.e-06_wp
          END DO
          !------------------------------------------------------------------------------------------
+         ! Some parameters are conditional and not needed if those processes are not
+         ! enabled. Instead of stopping the simulation if these parameters are not found,
+         ! they are filled with error values and checked in the respective process.
+         IF(.NOT. exists_bclimit_min_snow) THEN
+           CALL message('init_lctlib', 'No data for BCLIMIT_MIN_SNOW found in ' &
+             & //TRIM(lctlib_file_name) // '. Consider updating your lctlib file!')
+           DO i=1,nlct
+             lctLib(i)%bclimit_min_snow = -999._wp
+           END DO
+         END IF
+         IF(.NOT. exists_root_dist_beta) THEN
+           CALL message('init_lctlib','No data for ROOT_DIST_BETA found in ' &
+             & //TRIM(lctlib_file_name) // '. Consider updating your lctlib file!')
+           DO i=1,nlct
+             lctLib(i)%root_dist_beta = -999._wp
+           END DO
+         END IF
        END IF
 
        ! model scheme: quincy

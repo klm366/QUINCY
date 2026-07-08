@@ -141,7 +141,7 @@ MODULE mo_hydro_init
       & fract_pond_max   (:,:) => NULL(), & !< maximum pond fraction []
       & depth_pond_max   (:,:) => NULL(), & !< maximum pond depth [m]
       & wtr_soil_sl    (:,:,:) => NULL(), & !< initial soil moisture within soil layers [m water equivalent]
-      & fract_org_sl   (:,:,:) => NULL(), & !< fraction of soil organic matter within soil layers []
+      & fract_org_sl   (:,:,:) => NULL(), & !< vol. fraction of soil organic matter within soil layers []
       & fr_sand          (:,:) => NULL(), & !< fraction of sand for soil index []
       & fr_silt          (:,:) => NULL(), & !< fraction of silt for soil index []
       & fr_clay          (:,:) => NULL(), & !< fraction of clay for soil index []
@@ -1169,7 +1169,7 @@ CONTAINS
       !>
       !>    D: Further soil data
       !>
-      !>     - Soil organic carbon fractions for each soil layer
+      !>     - Volumetric fraction of soil organic matter for each soil layer
       IF (dsl4jsb_Config(HYDRO_)%l_socmap .AND. .NOT. dsl4jsb_Config(CARBON_)%update_soil_props) THEN
         DO isoil = 1,nsoil_input_file
           CALL read_bc_data(input_file, 'fract_org_sl', tile%name, hydro_init_vars%fract_org_sl(:,isoil,:), &
