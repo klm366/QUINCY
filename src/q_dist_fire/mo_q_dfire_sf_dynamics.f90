@@ -114,11 +114,6 @@ MODULE mo_q_dfire_sf_dynamics
     MODULE PROCEDURE :: create_sf_dynamics
   END INTERFACE t_sf_dynamics
 
-
-  TYPE t_sf_bgcm_2L3D_p ! todo: remove
-    REAL(wp), POINTER :: p(:,:,:,:) !< dims: (part,elem,nc,layer)
-  END TYPE t_sf_bgcm_2L3D_p
-
 CONTAINS
 
   !>
