@@ -67,7 +67,7 @@ MODULE mo_q_dfire_sf_dynamics
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
   USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture, t_sf_mf, sf_calc_fuel_moisture_ober
-  USE mo_q_dfire_sf_ignition_class,     ONLY: calc_q_sf_ignition, t_q_sf_ignitions
+  USE mo_q_dfire_sf_ignition_class,     ONLY: calc_q_sf_ignition, t_sf_ignitions
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
   USE mo_q_dfire_sf_ros_thon_class,     ONLY: sf_calc_rate_of_spread_thon
@@ -549,7 +549,7 @@ CONTAINS
     LOGICAL :: mask_tile_enabled(nc)
 
     ! locals
-    TYPE(t_q_sf_ignitions)  :: sf_ignitions
+    TYPE(t_sf_ignitions)  :: sf_ignitions
     REAL(wp)                :: w_oi(nc,df_sf_fc_spread_nr)      !< Dead fuel by spread fuel classes (litter only)  [g DM m-2]
     REAL(wp), ALLOCATABLE   :: dry_lvg(:,:)                     !< Dry live grass, considered dead fuel [g DM m-2] (#nc,#livegrass fuel pools, #fuel classes)
     REAL(wp)                :: tot_lvg_fuel(nc)                 !< Total livegrass fuel [g DM m-2]
@@ -583,7 +583,7 @@ CONTAINS
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions = mask_tile_enabled .AND. has_dead_fuel
 
-    sf_ignitions = t_q_sf_ignitions(nc)
+    sf_ignitions = t_sf_ignitions(nc)
     spitfire = t_sf_dynamics(nc, ndeadpools, sf_fuel_live_fuel_nr)
 
     !> Calculate whether there are conditions for fire based on the Nesterov Index,

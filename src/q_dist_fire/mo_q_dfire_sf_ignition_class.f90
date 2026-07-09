@@ -24,29 +24,29 @@ MODULE mo_q_dfire_sf_ignition_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: t_q_sf_ignitions, calc_q_sf_ignition
+  PUBLIC :: t_sf_ignitions, calc_q_sf_ignition
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_ignition_class'
 
 
-  TYPE t_q_sf_ignitions
+  TYPE t_sf_ignitions
     REAL(wp), ALLOCATABLE :: human(:)
     REAL(wp), ALLOCATABLE :: lightning(:)
     REAL(wp), ALLOCATABLE :: total(:)
-  END TYPE t_q_sf_ignitions
+  END TYPE t_sf_ignitions
 
 
-  INTERFACE t_q_sf_ignitions
-    MODULE PROCEDURE :: create_t_q_sf_ignitions
+  INTERFACE t_sf_ignitions
+    MODULE PROCEDURE :: create_t_sf_ignitions
   END INTERFACE
 
 
 CONTAINS
 
 
-  FUNCTION create_t_q_sf_ignitions(nc) RESULT (sf_ignitions)
+  FUNCTION create_t_sf_ignitions(nc) RESULT (sf_ignitions)
     INTEGER, INTENT(in) :: nc
-    TYPE(t_q_sf_ignitions) :: sf_ignitions
+    TYPE(t_sf_ignitions) :: sf_ignitions
     ALLOCATE(sf_ignitions%human(nc))
     ALLOCATE(sf_ignitions%lightning(nc))
     ALLOCATE(sf_ignitions%total(nc))
@@ -54,7 +54,7 @@ CONTAINS
     sf_ignitions%human = 0._wp
     sf_ignitions%lightning = 0._wp
     sf_ignitions%total = 0._wp
-  END FUNCTION create_t_q_sf_ignitions
+  END FUNCTION create_t_sf_ignitions
 
 
   ! ======================================================================================================= !
@@ -70,7 +70,7 @@ CONTAINS
     REAL(wp), INTENT(in)   :: n_lightning_ig(nc)     !< average number of flashes per day [ha-1 d-1]
     REAL(wp), INTENT(in)   :: a_nd(nc)               !< propensity to people to produce ignitions events
                                                      !< [ignitions individual-1 d-1]
-    TYPE(t_q_sf_ignitions) :: sf_ignitions           !< (output)
+    TYPE(t_sf_ignitions) :: sf_ignitions           !< (output)
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_q_sf_ignition'
     REAL(wp)             :: sel_dens_hum_pop(nc)     !< selected average human population density [indiv km-2]
@@ -78,7 +78,7 @@ CONTAINS
     INTEGER              :: ic
 
     !< Initialize output to 0
-    sf_ignitions = t_q_sf_ignitions(nc)
+    sf_ignitions = t_sf_ignitions(nc)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
