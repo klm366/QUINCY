@@ -52,7 +52,7 @@ MODULE mo_q_dfire_sf_impacts
                                         df_sf_species_nh3_idx, df_sf_species_n2o_idx, &
                                         df_sf_species_n2_idx
 
-  USE mo_q_dfire_sf_damage_class, ONLY: t_sf_prob_mort, calc_prob_mortality
+  USE mo_q_dfire_sf_damage_class, ONLY: t_sf_prob_mort, calc_sf_tree_damage
   USE mo_q_dfire_sf_util,         ONLY: real2logical
 
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption, &
@@ -407,7 +407,7 @@ CONTAINS
                                 (tile_fract > 0._wp) .AND. & ! tile is empty, skip
                                 (height > 0._wp) ! height is not yet initialized, skip
 
-      CALL calc_prob_mortality(nc, df_sf_fc_spread_nr, &
+      CALL calc_sf_tree_damage(nc, df_sf_fc_spread_nr, &
                                     lctlib%q_crown_length, lctlib%q_crown_damage_p, lctlib%q_crown_damage_r_ck, &
                                     lctlib%q_scorch_height_f, &
                                     lctlib%q_bark_thickness_par1, lctlib%q_bark_thickness_par2, &

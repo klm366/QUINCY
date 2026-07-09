@@ -24,7 +24,7 @@ MODULE mo_q_dfire_sf_damage_class
 
   PRIVATE
   PUBLIC :: calc_tau_l, calc_prop_ck, t_sf_prob_mort
-  PUBLIC :: calc_prob_mortality
+  PUBLIC :: calc_sf_tree_damage
 
   TYPE t_sf_prob_mort
     REAL(wp), ALLOCATABLE :: pm_ck(:)         !< probability of post fire mortality due to crown damage [-]
@@ -49,7 +49,7 @@ MODULE mo_q_dfire_sf_damage_class
     MODULE PROCEDURE :: create_t_sf_prob_mort
   END INTERFACE t_sf_prob_mort
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_effects'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_damage_class'
 
 CONTAINS
 
@@ -127,7 +127,7 @@ CONTAINS
   !> Calculate probability of mortality (Section 2.2.6 from Thonicke et al. (2010))
   !> (Tree only)
   !>
-  SUBROUTINE calc_prob_mortality(nc, nfuels, lctlib_crown_length, lctlib_r_ck, lctlib_ck_p, &
+  SUBROUTINE calc_sf_tree_damage(nc, nfuels, lctlib_crown_length, lctlib_r_ck, lctlib_ck_p, &
                               lctlib_F_scorch_height, lctlib_par1, lctlib_par2, &
                               height, dbh, i_surface, dead_fuel, frac_consump, &
                               prob_mort, &
@@ -184,7 +184,7 @@ CONTAINS
         prob_mort%F_scorch_height = lctlib_F_scorch_height
       END IF
     END DO
-  END SUBROUTINE calc_prob_mortality
+  END SUBROUTINE calc_sf_tree_damage
 
 
   ! ======================================================================================================= !
