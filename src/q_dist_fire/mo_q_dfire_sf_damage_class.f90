@@ -12,6 +12,8 @@
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
+!>#### routine for updating calculate tree damage due to fire
+!>
 MODULE mo_q_dfire_sf_damage_class
 #ifndef __NO_JSBACH__
 

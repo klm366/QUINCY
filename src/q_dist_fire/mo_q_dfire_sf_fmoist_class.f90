@@ -9,6 +9,8 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### routine to calculate fuel moisture
+!>
 MODULE mo_q_dfire_sf_fmoist_class
 #ifndef __NO_JSBACH__
 

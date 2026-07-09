@@ -10,6 +10,8 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### Derived types for the fire model
+!>
 MODULE mo_q_dfire_sf_classes
 #ifndef __NO_JSBACH__
 

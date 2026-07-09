@@ -10,7 +10,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!> Add description here
+!>#### task to update fire impacts into the model
 !>
 MODULE mo_q_dfire_sf_update
 #ifndef __NO_JSBACH__

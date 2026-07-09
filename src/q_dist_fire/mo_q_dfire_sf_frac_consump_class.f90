@@ -9,6 +9,8 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### routine to calculate fraction of consumption of dead fuel for each fuel class
+!>
 MODULE mo_q_dfire_sf_frac_consump_class
 #ifndef __NO_JSBACH__
 
