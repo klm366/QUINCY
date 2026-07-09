@@ -20,7 +20,7 @@ MODULE mo_q_dfire_sf_classes
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: t_sf_ros, t_sf_dynamics
+  PUBLIC :: t_sf_ros, t_sf_dynamics, t_sf_tree_damage
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_classes'
 
@@ -78,6 +78,29 @@ MODULE mo_q_dfire_sf_classes
     MODULE PROCEDURE :: create_sf_dynamics
   END INTERFACE t_sf_dynamics
 
+
+  TYPE t_sf_tree_damage
+    REAL(wp), ALLOCATABLE :: pm_ck(:)         !< probability of post fire mortality due to crown damage [-]
+    REAL(wp), ALLOCATABLE :: r_ck             !< Resistance factor against crown damage [-]
+    REAL(wp), ALLOCATABLE :: ck_p             !< Parameter for woody PFTs used in Pm (CK) equation [-]
+    REAL(wp), ALLOCATABLE :: F_scorch_height  !< PFT-parameter in crown scorch equation [-]
+    REAL(wp), POINTER :: pm_fire(:) => NULL() !< mix of tau and ck [-]
+    REAL(wp), POINTER :: pm_tau(:)  => NULL() !< probability of post fire mortality due to cambial damage [-]
+    REAL(wp), POINTER :: tau_l(:)             !< Residence time of the fire [min]
+    REAL(wp), POINTER :: tau_c(:)             !< Critical time for cambial damage [min]
+    REAL(wp), POINTER :: bark_thickness(:)    !< Tree barth thickness [cm]
+    REAL(wp), POINTER :: prop_ck(:)           !< Fraction of the crown scorch [-]
+    REAL(wp), POINTER :: scorch_height(:)     !< Scorch height [m]
+    REAL(wp), POINTER :: crown_length(:)      !< Crown length of woody PFT [m]
+  CONTAINS
+    PROCEDURE :: copy_from_prob_mort
+    GENERIC, PUBLIC :: assignment(=) => copy_from_prob_mort
+  END TYPE t_sf_tree_damage
+
+
+  INTERFACE t_sf_tree_damage
+    MODULE PROCEDURE :: create_t_sf_prob_mort
+  END INTERFACE t_sf_tree_damage
 CONTAINS
 
 
@@ -164,5 +187,75 @@ CONTAINS
     sf_spitfire % is_fire_intense_enough = .FALSE.
 
   END FUNCTION create_sf_dynamics
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Constructor for t_sf_prob_mort
+  !>
+  FUNCTION create_t_sf_prob_mort(nc, pm_fire, pm_tau, tau_l, tau_c, &
+                  bark_thickness, prop_ck, scorch_height, &
+                  crown_length) RESULT (sf_pm)
+    INTEGER, INTENT(in) :: nc
+    REAL(wp), INTENT(inout), POINTER :: pm_fire(:)
+    REAL(wp), INTENT(inout), POINTER :: pm_tau(:)
+    REAL(wp), INTENT(inout), POINTER :: tau_l(:)
+    REAL(wp), INTENT(inout), POINTER :: tau_c(:)
+    REAL(wp), INTENT(inout), POINTER :: bark_thickness(:)
+    REAL(wp), INTENT(inout), POINTER :: prop_ck(:)
+    REAL(wp), INTENT(inout), POINTER :: scorch_height(:)
+    REAL(wp), INTENT(inout), POINTER :: crown_length(:)
+    TYPE(t_sf_tree_damage) :: sf_pm
+
+    ALLOCATE(sf_pm%pm_ck(nc))
+    ALLOCATE(sf_pm%r_ck)
+    ALLOCATE(sf_pm%ck_p)
+    ALLOCATE(sf_pm%F_scorch_height)
+    sf_pm%pm_fire => pm_fire
+    sf_pm%pm_tau => pm_tau
+    sf_pm%tau_l => tau_l
+    sf_pm%tau_c => tau_c
+    sf_pm%bark_thickness => bark_thickness
+    sf_pm%prop_ck => prop_ck
+    sf_pm%scorch_height => scorch_height
+    sf_pm%crown_length => crown_length
+
+    sf_pm%pm_fire = 0._wp
+    sf_pm%pm_tau = 0._wp
+    sf_pm%pm_ck = 0._wp
+    sf_pm%tau_l = 0._wp
+    sf_pm%tau_c = 0._wp
+    sf_pm%bark_thickness = 0._wp
+    sf_pm%prop_ck = 0._wp
+    sf_pm%r_ck = 0._wp
+    sf_pm%ck_p = 0._wp
+    sf_pm%scorch_height = 0._wp
+    sf_pm%F_scorch_height = 0._wp
+    sf_pm%crown_length = 0._wp
+  END FUNCTION create_t_sf_prob_mort
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Copy from "other" into "self"
+  !>
+  SUBROUTINE copy_from_prob_mort(self, other)
+    CLASS(t_sf_tree_damage), INTENT(inout) :: self
+    CLASS(t_sf_tree_damage), INTENT(in)    :: other
+
+    self % pm_ck = other % pm_ck ! copy data
+    self % r_ck = other % r_ck
+    self % ck_p = other % ck_p
+    self % F_scorch_height = other % F_scorch_height
+    self % pm_fire => other % pm_fire ! copy pointer reference
+    self % pm_tau => other % pm_tau
+    self % tau_l => other % tau_l
+    self % tau_c => other % tau_c
+    self % bark_thickness => other % bark_thickness
+    self % prop_ck => other % prop_ck
+    self % scorch_height => other % scorch_height
+    self % crown_length => other % crown_length
+  END SUBROUTINE copy_from_prob_mort
+
 #endif
 END MODULE mo_q_dfire_sf_classes
