@@ -23,10 +23,10 @@ MODULE mo_q_dfire_sf_damage_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: calc_tau_l, calc_prop_ck, t_sf_prob_mort
+  PUBLIC :: calc_tau_l, calc_prop_ck, t_sf_tree_damage
   PUBLIC :: calc_sf_tree_damage
 
-  TYPE t_sf_prob_mort
+  TYPE t_sf_tree_damage
     REAL(wp), ALLOCATABLE :: pm_ck(:)         !< probability of post fire mortality due to crown damage [-]
     REAL(wp), ALLOCATABLE :: r_ck             !< Resistance factor against crown damage [-]
     REAL(wp), ALLOCATABLE :: ck_p             !< Parameter for woody PFTs used in Pm (CK) equation [-]
@@ -42,12 +42,12 @@ MODULE mo_q_dfire_sf_damage_class
   CONTAINS
     PROCEDURE :: copy_from_prob_mort
     GENERIC, PUBLIC :: assignment(=) => copy_from_prob_mort
-  END TYPE t_sf_prob_mort
+  END TYPE t_sf_tree_damage
 
 
-  INTERFACE t_sf_prob_mort
+  INTERFACE t_sf_tree_damage
     MODULE PROCEDURE :: create_t_sf_prob_mort
-  END INTERFACE t_sf_prob_mort
+  END INTERFACE t_sf_tree_damage
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_damage_class'
 
@@ -69,7 +69,7 @@ CONTAINS
     REAL(wp), INTENT(inout), POINTER :: prop_ck(:)
     REAL(wp), INTENT(inout), POINTER :: scorch_height(:)
     REAL(wp), INTENT(inout), POINTER :: crown_length(:)
-    TYPE(t_sf_prob_mort) :: sf_pm
+    TYPE(t_sf_tree_damage) :: sf_pm
 
     ALLOCATE(sf_pm%pm_ck(nc))
     ALLOCATE(sf_pm%r_ck)
@@ -104,8 +104,8 @@ CONTAINS
   !> Copy from "other" into "self"
   !>
   SUBROUTINE copy_from_prob_mort(self, other)
-    CLASS(t_sf_prob_mort), INTENT(inout) :: self
-    CLASS(t_sf_prob_mort), INTENT(in)    :: other
+    CLASS(t_sf_tree_damage), INTENT(inout) :: self
+    CLASS(t_sf_tree_damage), INTENT(in)    :: other
 
     self % pm_ck = other % pm_ck ! copy data
     self % r_ck = other % r_ck
@@ -145,7 +145,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: lctlib_F_scorch_height          !< Scorch height parameter [-]
     REAL(wp), INTENT(in) :: lctlib_par1                     !< Bark thickness par1 parameter [-]
     REAL(wp), INTENT(in) :: lctlib_par2                     !< Bark thickness par2 parameter [-]
-    TYPE(t_sf_prob_mort), INTENT(inout) :: prob_mort        !< output
+    TYPE(t_sf_tree_damage), INTENT(inout) :: prob_mort        !< output
     LOGICAL, INTENT(in), OPTIONAL :: mask_opt(nc)           !< True = Compute gridcell(s) (default = true)
 
     LOGICAL :: mask(nc)

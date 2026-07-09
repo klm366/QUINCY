@@ -52,7 +52,7 @@ MODULE mo_q_dfire_sf_impacts
                                         df_sf_species_nh3_idx, df_sf_species_n2o_idx, &
                                         df_sf_species_n2_idx
 
-  USE mo_q_dfire_sf_damage_class, ONLY: t_sf_prob_mort, calc_sf_tree_damage
+  USE mo_q_dfire_sf_damage_class, ONLY: t_sf_tree_damage, calc_sf_tree_damage
   USE mo_q_dfire_sf_util,         ONLY: real2logical
 
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption, &
@@ -132,7 +132,7 @@ CONTAINS
     REAL(wp)                              :: area_burned_pft(options%nc) !< Area burned for current PFT [ha]
     REAL(wp)                              :: area_burned_fract_pft(options%nc) !< Fraction of the area burned for current PFT [-]
 
-    TYPE(t_sf_prob_mort)                  :: prob_mort                 !< Tree mortality
+    TYPE(t_sf_tree_damage)                :: prob_mort                 !< Tree mortality
     REAL(wp), ALLOCATABLE                 :: live_tree_fuel_cls(:,:,:) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
 
     REAL(wp), ALLOCATABLE                 :: fc_live_mol_m2(:,:)  !< Total live fuel consumption (nc, live fuels) [molX/m2]
@@ -394,7 +394,7 @@ CONTAINS
       live_tree_fuel_cls(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr_lfp
 
       ! ref vars and init to 0
-      prob_mort = t_sf_prob_mort(nc, pm_fire, pm_tau, tau_l, tau_c, &
+      prob_mort = t_sf_tree_damage(nc, pm_fire, pm_tau, tau_l, tau_c, &
                                bark_thickness, pm_prop_ck, scorch_height, &
                                crown_length )
 
