@@ -11,6 +11,10 @@
 !>
 !>#### routine to calculate fuel moisture
 !>
+!> There are 2 implementations found in the code
+!>  - Thonicke et al. (2010)
+!>  - Oberhagemann et al. (2025)
+!>
 MODULE mo_q_dfire_sf_fmoist_class
 #ifndef __NO_JSBACH__
 
@@ -141,7 +145,7 @@ CONTAINS
                                                         [live_fuel_lvg, dead_fuel_1hr] )
 
     !< Calculate omega_o (1, 10, 100 and 1000 hours dead fuel + live grass)
-    !< According to Thonicke et al. (2010), Eq.6 the ALPHAS must be weighted in order to compule omega_o
+    !< According to Thonicke et al. (2010), Eq.6 the ALPHAS must be weighted in order to compute omega_o
 
     !< Incorporate livegrass fuel (1 hour)
     fuels_o(ix_fuel_lvg) = live_fuel_lvg
@@ -158,7 +162,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> calc_omega
-  !> Calculate the dead fuel moisture
+  !> Calculate relative fuel moisture content (omega)
   !>
   !> Eq. 6 from Thonicke et al. (2010)
   !>
@@ -175,6 +179,10 @@ CONTAINS
   !>
   !> calc_sf_fuel_moisture_for_oberhagemann
   !> Calculate the fuel moisture as in Pfeiffer, Andrews PL and Oberhagemann
+  !>
+  !> Fuel moisture is calculated for dead fuel classes and live fuel classes separately:
+  !>  - Dead fuel classes (1, 10, 100 and 1000 hours) and dry cured grass
+  !>  - Live fuel classes (woody-not yet implemented- and live grass)
   !>
   FUNCTION calc_sf_fuel_moisture_for_oberhagemann(nc, ndd, nlitros, nlv, &
                                         alphas_dd, &
