@@ -41,7 +41,7 @@ MODULE mo_q_dfire_sf_classes
     REAL(wp), ALLOCATABLE :: wind_factor(:)        !< wind_factor is a multiplier that accounts for the effect of wind in increasing the effective value of prop_flux_ratio[-]
     REAL(wp), ALLOCATABLE :: fbd(:)                !< Weighted average across PFT for fuel bulk density [kg m-3]
     REAL(wp), ALLOCATABLE :: eff_heating_number(:) !< the proportion of a fuel particle that is heated to ...
-    !< the proportion of a fuel particle that is heated to [-]
+                                                   !< the proportion of a fuel particle that is heated to [-]
     REAL(wp), ALLOCATABLE :: pre_ign_heat(:)       !< the amount of heat required to ignite a given mass of fuel [kJ kg-1]
 
     REAL(wp), ALLOCATABLE :: opt_react_velo(:)     !< Optimum reaction velocity [min-1]
@@ -59,15 +59,15 @@ MODULE mo_q_dfire_sf_classes
   !< Move spitfire dynamics data from calc_sf_dynamics <-> update_q_dfire_sf_dynamics subroutines
   !<
   TYPE t_sf_dynamics
-    REAL(wp), ALLOCATABLE :: e_n_ignitions(:)
-    REAL(wp), ALLOCATABLE :: e_n_humans(:)
-    REAL(wp), ALLOCATABLE :: e_n_lightning(:)
+    REAL(wp), ALLOCATABLE :: e_n_ignitions(:)           !< total number of ignitions per unit area [ha-1 ts-1]
+    REAL(wp), ALLOCATABLE :: e_n_humans(:)              !< number of human ignitions per unit area [ha-1 ts-1]
+    REAL(wp), ALLOCATABLE :: e_n_lightning(:)           !< number of lightning ignitions per unit area [ha-1 ts-1]
 
-    REAL(wp), ALLOCATABLE :: fdi(:) !< fire danger index [0 to 1]
-    TYPE(t_sf_ros)        :: ros    !< fire dynamics
+    REAL(wp), ALLOCATABLE :: fdi(:)                     !< fire danger index [0 to 1]
+    TYPE(t_sf_ros)        :: ros                        !< Rate of spread
 
-    REAL(wp), ALLOCATABLE :: area_burned(:)             !<
-    REAL(wp), ALLOCATABLE :: area_burned_fract(:)
+    REAL(wp), ALLOCATABLE :: area_burned(:)             !< total area burned per unit area [ha ts-1]
+    REAL(wp), ALLOCATABLE :: area_burned_fract(:)       !< fraction of area burned per unit area [0 to 1 ts-1]
 
     REAL(wp), ALLOCATABLE :: dead_frac_consump(:,:)     !< Dead fraction of consumption (#nc, #fuel classes) [0 to 1]
     REAL(wp), ALLOCATABLE :: fc_dead_cls(:,:,:)         !< dead fuel consumption (#nc, #dead pools, #fuels classes) [g DM m-2]
