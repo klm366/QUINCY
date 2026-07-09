@@ -72,7 +72,7 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
   USE mo_q_dfire_sf_ros_thon_class,     ONLY: sf_calc_rate_of_spread_thon
   USE mo_q_dfire_sf_ros_ober_class,     ONLY: sf_calc_rate_of_spread_ober
-  USE mo_q_dfire_sf_classes,            ONLY: t_sf_ros
+  USE mo_q_dfire_sf_classes,            ONLY: t_sf_ros, t_sf_dynamics
   USE mo_q_dfire_sf_ros_ober_class,     ONLY: calc_live_me
   USE mo_q_dfire_sf_frac_consump_class, ONLY: sf_calc_frac_consump
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption
@@ -84,73 +84,12 @@ MODULE mo_q_dfire_sf_dynamics
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_q_dfire_sf_dynamics, sf_calc_fire_intensity, t_sf_dynamics, calc_ab_moisture
+  PUBLIC :: update_q_dfire_sf_dynamics, sf_calc_fire_intensity, calc_ab_moisture
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_dynamics'
 
-  !<
-  !< Calculated Spitfire values
-  !< Move spitfire data from calc_spitfire <-> update_q_dfire_sf_dynamics subroutines
-  !<
-  TYPE t_sf_dynamics
-    REAL(wp), ALLOCATABLE :: e_n_ignitions(:)
-    REAL(wp), ALLOCATABLE :: e_n_humans(:)
-    REAL(wp), ALLOCATABLE :: e_n_lightning(:)
-
-    REAL(wp), ALLOCATABLE :: fdi(:) !< fire danger index [0 to 1]
-    TYPE(t_sf_ros)        :: ros    !< fire dynamics
-
-    REAL(wp), ALLOCATABLE :: area_burned(:)             !<
-    REAL(wp), ALLOCATABLE :: area_burned_fract(:)
-
-    REAL(wp), ALLOCATABLE :: dead_frac_consump(:,:)     !< Dead fraction of consumption (#nc, #fuel classes) [0 to 1]
-    REAL(wp), ALLOCATABLE :: fc_dead_cls(:,:,:)         !< dead fuel consumption (#nc, #dead pools, #fuels classes) [g DM m-2]
-    REAL(wp), ALLOCATABLE :: i_surface(:)               !< Fire intensity [kW m-1]
-
-    LOGICAL, ALLOCATABLE  :: is_fire_intense_enough(:)  !< mask, TRUE= fire intensity is strong enough to exist
-  END TYPE t_sf_dynamics
-
-  INTERFACE t_sf_dynamics
-    MODULE PROCEDURE :: create_sf_dynamics
-  END INTERFACE t_sf_dynamics
-
 CONTAINS
 
-  !>
-  !> t_sf_dynamics constructor: Allocate and initialize
-  !>
-  FUNCTION create_sf_dynamics(nc, nfuels, ndeadpools) RESULT (sf_spitfire)
-    INTEGER, INTENT(in) :: nc          !< #Gridcells
-    INTEGER, INTENT(in) :: nfuels      !< # fuel classes
-    INTEGER, INTENT(in) :: ndeadpools  !< # dead fuel pools
-    TYPE(t_sf_dynamics) :: sf_spitfire !< Output
-
-    ALLOCATE(sf_spitfire % e_n_ignitions(nc))
-    ALLOCATE(sf_spitfire % e_n_humans(nc))
-    ALLOCATE(sf_spitfire % e_n_lightning(nc))
-    ALLOCATE(sf_spitfire % fdi(nc))
-    ALLOCATE(sf_spitfire % area_burned(nc))
-    ALLOCATE(sf_spitfire % area_burned_fract(nc))
-    ALLOCATE(sf_spitfire % dead_frac_consump(nc, nfuels))
-    ALLOCATE(sf_spitfire % fc_dead_cls(nc, ndeadpools, nfuels)) ! spitfire dead fuel consumption (fuel classes)
-    ALLOCATE(sf_spitfire % i_surface(nc))
-    ALLOCATE(sf_spitfire % is_fire_intense_enough(nc))
-
-    sf_spitfire % e_n_ignitions = 0._wp
-    sf_spitfire % e_n_humans = 0._wp
-    sf_spitfire % e_n_lightning = 0._wp
-    sf_spitfire % fdi = 0._wp
-    sf_spitfire % ros = t_sf_ros(nc)
-    sf_spitfire % area_burned = 0._wp
-    sf_spitfire % area_burned_fract = 0._wp
-    sf_spitfire % dead_frac_consump = 0._wp
-    sf_spitfire % fc_dead_cls = 0._wp
-    sf_spitfire % i_surface = 0._wp
-    sf_spitfire % is_fire_intense_enough = .FALSE.
-
-  END FUNCTION create_sf_dynamics
-
-  ! ======================================================================================================= !
   !>
   !> Compute spitfire for current time step
   !> It links Quincy and Spitfire
