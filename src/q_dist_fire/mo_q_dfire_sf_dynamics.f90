@@ -67,7 +67,7 @@ MODULE mo_q_dfire_sf_dynamics
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
   USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture, t_sf_mf, sf_calc_fuel_moisture_ober
-  USE mo_q_dfire_sf_ignition_class,     ONLY: calc_q_sf_ignition
+  USE mo_q_dfire_sf_ignition_class,     ONLY: calc_sf_ignition
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
   USE mo_q_dfire_sf_ros_thon_class,     ONLY: sf_calc_rate_of_spread_thon
@@ -653,7 +653,7 @@ CONTAINS
                   spitfire % ros)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
-    sf_ignitions = calc_q_sf_ignition(nc, density_human_population, &
+    sf_ignitions = calc_sf_ignition(nc, density_human_population, &
                                     a_nd, lightning_frequency, &
                                     df_sf_max_density_human_pop)
     !< From daily to ts
