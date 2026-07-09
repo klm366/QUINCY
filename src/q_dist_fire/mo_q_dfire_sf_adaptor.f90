@@ -16,9 +16,9 @@ MODULE mo_q_dfire_sf_adaptor
   USE mo_kind,                     ONLY: wp
   USE mo_jsb_control,              ONLY: debug_on
   USE mo_exception,                ONLY: finish, message_text
-  USE mo_q_dfire_constants,        ONLY: df_sf_carbon_to_biomass_factor, df_sf_units_g_to_kg
+  USE mo_q_dfire_sf_constants,     ONLY: df_sf_carbon_to_biomass_factor, df_sf_units_g_to_kg
 
-  USE mo_q_dfire_constants,        ONLY: df_sk_units_kgm2s_to_mmday, df_sf_units_k_to_c, &
+  USE mo_q_dfire_sf_constants,     ONLY: df_sk_units_kgm2s_to_mmday, df_sf_units_k_to_c, &
                                           df_sf_units_sec_to_min, df_sf_units_m_to_cm, &
                                           df_sf_units_m2_to_ha
   USE mo_jsb_physical_constants,   ONLY: molar_mass_C
@@ -44,7 +44,7 @@ CONTAINS
   !> Units conversion from 'src' to 'dst' from the given variable 'var' for scalar wp values
   !>
   RECURSIVE FUNCTION convert_units_real_wp_scalar(src, dst, varIn, aux) RESULT (varOut)
-    USE mo_q_dfire_constants, ONLY: df_sf_units_km2_to_ha
+    USE mo_q_dfire_sf_constants, ONLY: df_sf_units_km2_to_ha
     CHARACTER(*), INTENT(in)        :: src, dst
     REAL(wp), INTENT(in)            :: varIn
     REAL(wp), INTENT(in), OPTIONAL  :: aux        !< auxiliary values for conversion

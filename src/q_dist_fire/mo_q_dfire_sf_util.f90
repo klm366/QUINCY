@@ -10,29 +10,34 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-MODULE mo_q_dfire_util
+MODULE mo_q_dfire_sf_util
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   USE mo_jsb_math_constants,    ONLY: eps8, eps1
+  USE mo_jsb_model_class,       ONLY: t_jsb_model
+  USE mo_lnd_bgcm_idx
 
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC :: calculate_time_average_q_dist_fire, calculate_daily_weather, calculate_pure_moving_averages
   PUBLIC :: utils_linspace
-  PUBLIC :: dfire_update_pools
+  PUBLIC :: dfire_sf_sb_update_pools, dfire_sf_veg_update_pools
 
   PUBLIC :: logical2real, real2logical
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_util'
+  !< Rate of spread related methods
+  PUBLIC :: calc_ros_opt_react_velocity, calc_ros_prop_flux_ratio, calc_ros_wind_factor, calc_ros_fbd
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_util'
 
 CONTAINS
 
   ! ======================================================================================================= !
-  !> calculate time moving averages and daytime averages for Q_DFIRE_
+  !> calculate time moving averages and daytime averages for Q_DFIRE_SF_
   !>
   SUBROUTINE calculate_time_average_q_dist_fire(tile, options)
 
@@ -45,9 +50,9 @@ CONTAINS
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_lnd_time_averages,       ONLY: mavg_period_dfire, calc_time_mavg
     !------------------------------------------------------------------------------------------------------ !
-    dsl4jsb_Use_processes A2L_, Q_DFIRE_
+    dsl4jsb_Use_processes A2L_, Q_DFIRE_SF_
     dsl4jsb_Use_memory(A2L_)
-    dsl4jsb_Use_memory(Q_DFIRE_)
+    dsl4jsb_Use_memory(Q_DFIRE_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -60,12 +65,12 @@ CONTAINS
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_q_dist_fire'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(Q_DFIRE_)
+    dsl4jsb_Def_memory(Q_DFIRE_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: rain
     dsl4jsb_Real2D_onChunk      :: snow
-    ! Q_DFIRE_
+    ! Q_DFIRE_SF_
     dsl4jsb_Real2D_onChunk      :: precip_qc_mavg
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -74,7 +79,7 @@ CONTAINS
     nc      = options%nc
     dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(Q_DFIRE_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(Q_DFIRE_SF_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
@@ -82,13 +87,13 @@ CONTAINS
     ncanopy       =  vgrid_canopy%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(Q_DFIRE_)
+    dsl4jsb_Get_memory(Q_DFIRE_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, rain)
     dsl4jsb_Get_var2D_onChunk(A2L_, snow)
-    ! Q_DFIRE_
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, precip_qc_mavg)
+    ! Q_DFIRE_SF_
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, precip_qc_mavg)
     ! ----------------------------------------------------------------------------------------------------- !
 
     precip_qc_mavg(:) = calc_time_mavg(dtime, precip_qc_mavg(:), (rain(:)+snow(:)), mavg_period_dfire)
@@ -116,9 +121,9 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
 
     ! Use of process memories
-    dsl4jsb_Use_processes A2L_, Q_DFIRE_
+    dsl4jsb_Use_processes A2L_, Q_DFIRE_SF_
     dsl4jsb_Use_memory(A2L_)
-    dsl4jsb_Use_memory(Q_DFIRE_)
+    dsl4jsb_Use_memory(Q_DFIRE_SF_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -136,14 +141,14 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(Q_DFIRE_)
+    dsl4jsb_Def_memory(Q_DFIRE_SF_)
     ! Declare pointers to variables in memory
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: rain
     dsl4jsb_Real2D_onChunk      :: snow
     dsl4jsb_Real2D_onChunk      :: local_time_day_seconds
-    ! Q_DFIRE_ 2D
+    ! Q_DFIRE_SF_ 2D
     dsl4jsb_Real2D_onChunk      :: precip_daytime         !<
     dsl4jsb_Real2D_onChunk      :: t_air_max              !<
     dsl4jsb_Real2D_onChunk      :: t_air_min              !<
@@ -158,7 +163,7 @@ CONTAINS
     dtime   = options%dtime
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_active(Q_DFIRE_)) RETURN   ! ask for all processes considered here ?
+    IF (.NOT. tile%Is_process_active(Q_DFIRE_SF_)) RETURN   ! ask for all processes considered here ?
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
@@ -167,19 +172,19 @@ CONTAINS
     !..
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(Q_DFIRE_)
+    dsl4jsb_Get_memory(Q_DFIRE_SF_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
     dsl4jsb_Get_var2D_onChunk(A2L_, rain)
     dsl4jsb_Get_var2D_onChunk(A2L_, snow)
     dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)         ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, precip_daytime)
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, t_air_max)
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, t_air_min)
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, precip_daytime_old)
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, t_air_max_old)
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, t_air_min_old)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, precip_daytime)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, t_air_max)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, t_air_min)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, precip_daytime_old)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, t_air_max_old)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, t_air_min_old)
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -244,9 +249,9 @@ CONTAINS
     USE mo_quincy_mavg_class,       ONLY: t_mavg
 
     ! Use of process memories
-    dsl4jsb_Use_processes A2L_, Q_DFIRE_
+    dsl4jsb_Use_processes A2L_, Q_DFIRE_SF_
     dsl4jsb_Use_memory(A2L_)
-    dsl4jsb_Use_memory(Q_DFIRE_)
+    dsl4jsb_Use_memory(Q_DFIRE_SF_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -265,12 +270,12 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(Q_DFIRE_)
+    dsl4jsb_Def_memory(Q_DFIRE_SF_)
     ! Declare pointers to variables in memory
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: rain
     dsl4jsb_Real2D_onChunk      :: snow
-    ! Q_DFIRE_ 2D
+    ! Q_DFIRE_SF_ 2D
     dsl4jsb_Real2D_onChunk      :: precip_mavg
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -280,7 +285,7 @@ CONTAINS
     dtime   = options%dtime
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_active(Q_DFIRE_)) RETURN   ! ask for all processes considered here ?
+    IF (.NOT. tile%Is_process_active(Q_DFIRE_SF_)) RETURN   ! ask for all processes considered here ?
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
@@ -289,12 +294,12 @@ CONTAINS
     !..
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(Q_DFIRE_)
+    dsl4jsb_Get_memory(Q_DFIRE_SF_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_, rain)
     dsl4jsb_Get_var2D_onChunk(A2L_, snow)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, precip_mavg)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, precip_mavg)
     IF (.NOT. ALLOCATED(precip_mavg_type)) THEN
       ALLOCATE(precip_mavg_type(nc))
       precip_mavg_type = t_mavg(dtime, 1) !< 1=to daily
@@ -400,11 +405,11 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Apply dfire_update_pools
+  !> Update SB pools
   !> 1. Remove fire emissions from sb_pool
   !> 2. Transfer litter pools (residue) into polymeric litter
   !>
-  SUBROUTINE dfire_update_pools(sb_fire_emissions, sb_fire_litter_ash, sb_pool)
+  SUBROUTINE dfire_sf_sb_update_pools(sb_fire_emissions, sb_fire_litter_ash, sb_pool)
     USE mo_lnd_bgcm_idx, ONLY: ix_woody_litter, ix_polymeric_litter, ix_soluable_litter, &
                                ix_residue, ix_residue_assoc, ix_dom, ix_dom_assoc
 
@@ -439,7 +444,57 @@ CONTAINS
     CALL pool_transfer(sb_fire_litter_ash(ix_dom_assoc,:,:), & ! amount (IN)
                         sb_pool(ix_dom_assoc,:,:), & ! pool from (INOUT)
                         sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
-  END SUBROUTINE dfire_update_pools
+  END SUBROUTINE dfire_sf_sb_update_pools
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Update VEG_ pools
+  !>
+  SUBROUTINE dfire_sf_veg_update_pools(nc, model, &
+                                       veg_fire_emissions_mt, veg_fire_litterfall_mt, & ! in
+                                       veg_pool_mt, veg_litterfall_mt) ! inout
+
+    INTEGER, INTENT(IN)              :: nc
+    TYPE(t_jsb_model), POINTER       :: model
+    REAL(wp), INTENT(IN)             :: veg_fire_emissions_mt(:,:,:)
+    REAL(wp), INTENT(IN)             :: veg_fire_litterfall_mt(:,:,:)
+    REAL(wp), INTENT(INOUT)          :: veg_pool_mt(:,:,:)
+    REAL(wp), INTENT(INOUT)          :: veg_litterfall_mt(:,:,:)
+
+    INTEGER                          :: nr_of_veg_bgcm_comp
+    INTEGER                          :: ic, ielem, ix_elem, ix_comp
+
+    nr_of_veg_bgcm_comp = SIZE(veg_pool_mt,1)
+
+    !< Update VEG pools
+    !> 3.0 add fire disturbance into litterfall
+    DO ic = 1, nc
+        DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+            IF (model%config%is_element_used(ielem)) THEN
+                ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+                DO ix_comp = 1, nr_of_veg_bgcm_comp
+                veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
+                                                            veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
+                END DO ! ix_comp = 1, n_veg_bgcm_comp
+            END IF ! model%config%is_element_used(ielem)) THEN
+        END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+    END DO ! ic = 1, nc
+
+    !> update veg fire emissions
+    DO ic = 1, nc
+        DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+        IF (model%config%is_element_used(ielem)) THEN
+            ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+            DO ix_comp = 1, nr_of_veg_bgcm_comp
+                veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
+                    veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
+            END DO ! ix_comp
+        END IF ! is_element_used(ielem)
+        END DO ! ielem
+    END DO ! ic = 1, nc
+
+  END SUBROUTINE dfire_sf_veg_update_pools
 
 
   ! ======================================================================================================= !
@@ -454,5 +509,92 @@ CONTAINS
     from = from - amount
     to = to + amount
   END SUBROUTINE pool_transfer
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate wind factor (Eq. A5 from Thonicke et al. (2010)), used to calculate rate of spread
+  !>
+  ELEMENTAL PURE FUNCTION calc_ros_wind_factor(u_f_wind, sigma, beta, beta_op) RESULT (wind_factor)
+    REAL(wp), INTENT(in)        :: u_f_wind     !< Forward wind [m min-1]
+    REAL(wp), INTENT(in)        :: sigma        !< Surface area to volume ratio of the fuel [cm-1]
+    REAL(wp), INTENT(in)        :: beta         !< Packing ratio [-]
+    REAL(wp), INTENT(in)        :: beta_op      !< Optimum packing ratio [-]
+    REAL(wp)                    :: wind_factor  !< Output [-]
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp)                    :: C_var, B_var, E_var
+    REAL(wp)                    :: beta_ratio
+    ! ----------------------------------------------------------------------------------------------------- !
+    C_var = 7.47_wp * exp(-0.8711_wp * (sigma**0.55_wp)) !< Eq. A8
+    B_var = 0.15988_wp * (sigma ** 0.54_wp) !< Eq. A7
+    E_var = 0.7515_wp * exp(-0.01094_wp * sigma) !< Eq. A9
+    beta_ratio = beta / beta_op
+    wind_factor = C_var * ((3.281_wp * u_f_wind) ** B_var) * (beta_ratio ** (-E_var))
+  END FUNCTION calc_ros_wind_factor
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate propagation flux ratio (Eq. A2 from Thonicke et al. (2010))
+  !>
+  !> Used to calculate rate of spread
+  !>
+  ELEMENTAL PURE FUNCTION calc_ros_prop_flux_ratio(sigma, beta) RESULT (prop_flux_ratio)
+    REAL(wp), INTENT(in) :: sigma           !< surface-area to volume ratio of the fuel [cm-1]
+    REAL(wp), INTENT(in) :: beta            !< packing ratio [-]
+    REAL(wp)             :: prop_flux_ratio !< output [-]
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp) :: e_calc
+    ! ----------------------------------------------------------------------------------------------------- !
+    e_calc = (0.792_wp + 3.7597_wp * sqrt(sigma)) * (beta + 0.1_wp)
+    prop_flux_ratio = exp(e_calc) / (192._wp + 7.9095_wp * sigma)
+  END FUNCTION calc_ros_prop_flux_ratio
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate The optimum reaction velocity (Table A1, 1st from Thonicke et al. (2010))
+  !>
+  !> Used to calculate rate of spread
+  !>
+  ELEMENTAL PURE FUNCTION calc_ros_opt_react_velocity(max_react_vel, beta, beta_op, A_var) RESULT (opt_react_vel)
+    REAL(wp), INTENT(in)        :: max_react_vel   !< Maximum reaction velocity [min-1]
+    REAL(wp), INTENT(in)        :: beta            !< packing ratio [kg m-3]
+    REAL(wp), INTENT(in)        :: beta_op         !< Eq. A6 [-]
+    REAL(wp), INTENT(in)        :: A_var           !< [-]
+    REAL(wp)                    :: opt_react_vel   !< output [min-1]
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp) :: beta_ratio
+    ! ----------------------------------------------------------------------------------------------------- !
+    beta_ratio = beta / beta_op
+    opt_react_vel = max_react_vel * (beta_ratio ** A_var) * exp(A_var * (1 - beta_ratio))
+  END FUNCTION calc_ros_opt_react_velocity
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate the weighted average of the Fuel bulk density for the current PFT.
+  !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
+  !> when accounting for the other pfts.
+  !> Thonicke's et al. (2010) is not used as the equation does not seems correct when accounting for
+  !> 10 and 100 hours fuel bulk densities (slightly more).
+  !>
+  !> Used to calculate rate of spread
+  !>
+  FUNCTION calc_ros_fbd(nfclasses, fuel_bulk_density, dead_fuel) RESULT (fbd)
+    USE mo_q_dfire_sf_constants, ONLY: df_sf_fuel_class_factors
+
+    INTEGER, INTENT(in)         :: nfclasses !< The number of used fuel classes
+    REAL(wp), INTENT(in)        :: fuel_bulk_density !< [kg m-3]
+    REAL(wp), INTENT(in)        :: dead_fuel(nfclasses) !< 1, 10, 100 hours [gDM m-2]
+    REAL(wp)                    :: fbd !< output [kg m-3]
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp)                    :: total_dead_fuel
+    REAL(wp)                    :: fbd_accounting_fc
+    ! ----------------------------------------------------------------------------------------------------- !
+    total_dead_fuel = sum(dead_fuel)
+    fbd_accounting_fc = fuel_bulk_density * SUM(dead_fuel * df_sf_fuel_class_factors)
+    fbd = fbd_accounting_fc / total_dead_fuel
+  END FUNCTION calc_ros_fbd
 #endif
-END MODULE mo_q_dfire_util
+END MODULE mo_q_dfire_sf_util

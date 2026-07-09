@@ -37,17 +37,17 @@ MODULE mo_carbon_interface
                                  & i_lctlib_nonsoluble, i_lctlib_humus
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
-  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, NLCC_, A2L_, L2A_
+  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, CLIMBUF_, DISTURB_, NLCC_, L2A_
 
   ! Use of process configurations
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
 
   ! Use of process memories (t_carbon_memory)
-  dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(CLIMBUF_)
   dsl4jsb_Use_memory(L2A_)
 
   ! -------------------------------------------------------------------------------------------------------
@@ -176,7 +176,6 @@ CONTAINS
     REAL(wp)                     :: lctlib_WoodLit_coef_acid, lctlib_WoodLit_coef_water
     REAL(wp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
     REAL(wp)                     :: lctlib_WoodLit_coef_humus
-    REAL(wp)                     :: F_pseudo_temp, N_pseudo_temp, F_pseudo_precip, N_pseudo_precip
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
     REAL(wp)                     :: dtime
     REAL(wp), DIMENSION(options%nc) :: MaxLai
@@ -187,13 +186,13 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
-    dsl4jsb_Def_memory(A2L_)
+
+    CLASS(t_jsb_tile_abstract), POINTER :: climbuf   ! Pointer to the climate buffer memory residing on the veg tile
+    dsl4jsb_Def_memory_tile(CLIMBUF_, climbuf)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk ::  pseudo_temp
-    dsl4jsb_Real2D_onChunk ::  pseudo_temp_yDay
-    dsl4jsb_Real2D_onChunk ::  pseudo_precip
-    dsl4jsb_Real2D_onChunk ::  pseudo_precip_yDay
+    dsl4jsb_Real2D_onChunk ::  temp_15d_yDay_climbuf
+    dsl4jsb_Real2D_onChunk ::  precip_15d_yDay_climbuf
 
     dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
 
@@ -307,9 +306,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: LAI
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
-    dsl4jsb_Real2D_onChunk :: t_air                       ! Atmosphere temperature (lowest layer) in Kelvin!
-    dsl4jsb_Real2D_onChunk :: rain
-    dsl4jsb_Real2D_onChunk :: snow
 
     ! variables needed for NLCC process
     dsl4jsb_Real2D_onChunk :: max_green_bio
@@ -342,13 +338,17 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(CARBON_)
-    dsl4jsb_Get_memory(A2L_)
+
+    ! The climate buffer is calculated on the veg tile, we thus need a pointer to the veg tile. We call it
+    ! climbuf, as the pointer name is appended to the climate buffer variables below.
+    climbuf => tile%parent_tile
+    ! Make sure this is the veg tile
+    IF (TRIM(climbuf%name) /= 'veg') CALL finish(routine, 'Usecase setup ERROR: CLIMBUF needs to run on the veg tile.')
+    dsl4jsb_Get_memory_tile(CLIMBUF_, climbuf)
 
     ! Set process variables
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_temp)                ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_temp_yDay)           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_precip)              ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  pseudo_precip_yDay)         ! inout
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, temp_15d_yDay, climbuf)    ! in
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, precip_15d_yDay, climbuf)  ! in
 
     !
     ! This is on canopy area:
@@ -424,9 +424,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )      ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   LAI )                       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )             ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,     t_air)                      ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,     rain)                       ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,     snow)                       ! in
 
     ! variables needed for NLCC process
     IF (nlcc_is_enabled) THEN
@@ -437,12 +434,6 @@ CONTAINS
     lstart   = is_time_experiment_start(options%current_datetime)
     new_day  = is_newday(options%current_datetime, dtime)
     new_year = is_newyear(options%current_datetime, dtime)
-
-    ! Constants needed to update the climate variables for yasso: pseudo 15-day-mean temperature and precipitation
-    F_pseudo_temp   = EXP(-dtime / (15._wp * 86400._wp))
-    N_pseudo_temp   = 1._wp - F_pseudo_temp
-    F_pseudo_precip = EXP(-dtime / (15._wp * 86400._wp))
-    N_pseudo_precip = 1._wp - F_pseudo_precip
 
     ! ---------------------------
     ! Go
@@ -476,6 +467,7 @@ CONTAINS
       END DO
       !$ACC END LOOP
     END IF
+    !$ACC END PARALLEL
 
     ! R: "IF (read_cpools .AND. (lstart .OR. lresume)) THEN ..." of JS3 is in JS4 now in SUBROUTINE carbon_init_ic(tile)!
 
@@ -504,19 +496,6 @@ CONTAINS
     ! Prepare area weighting factor to rescale from 1/[m^2(canopy)] to 1/[m^2(grid box)]
     ! areaWeightingFactor(:,:) = veg_fract_correction(:,:) * surface%cover_fract(kidx0:kidx1,:) &
     !                            * SPREAD(surface%veg_ratio_max(kidx0:kidx1),DIM=2,NCOPIES=ntiles)
-
-
-    ! Update pseudo-15day-mean air temperature and precipitation for pseudo_temp_yDay and pseudo_precip_yDay
-    ! These variables are needed for the "CALL calc_Cpools", where they given to yasso to calculte C decomposition.
-    ! pseudo_temp is a temperature that depicts the smoth course of the soil temperature following the air temperature.
-
-    !$ACC LOOP GANG(STATIC: 1) VECTOR
-    DO ic = 1, nc
-      pseudo_temp(ic)   = t_air(ic)             * N_pseudo_temp    +  F_pseudo_temp   * pseudo_temp(ic)
-      pseudo_precip(ic) = (rain(ic) + snow(ic)) * N_pseudo_precip  +  F_pseudo_precip * pseudo_precip(ic)
-    END DO
-    !$ACC END LOOP
-    !$ACC END PARALLEL
 
     ! All per tile variables need to be re-calculated in case they are written to output
     CALL recalc_per_tile_vars(tile, options,                                      &
@@ -566,10 +545,6 @@ CONTAINS
         NPP_pot_sum(ic)         = NPP_pot_rate_ca(ic)
         GPP_sum(ic)             = gross_assimilation_ca(ic)
         !NPP_pot_rate_ca_acc(ic)        = NPP_pot_rate_ca(ic)/tmp_timesteps_per_day ! s.o.
-
-        ! Save previous day variables (for yasso)
-        pseudo_temp_yDay(ic)   = pseudo_temp(ic)
-        pseudo_precip_yDay(ic) = pseudo_precip(ic)
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -653,8 +628,8 @@ CONTAINS
           &  NPP_act_yDayMean(ic),                              & ! out
           !
           ! Variables only needed with yasso:
-          &  temp2_30d        =  pseudo_temp_yDay(ic),          & ! in
-          &  precip_30d       =  pseudo_precip_yDay(ic),        & ! in
+          &  temp2_30d        =  temp_15d_yDay_climbuf(ic),     & ! in
+          &  precip_30d       =  precip_15d_yDay_climbuf(ic),   & ! in
 
           &  c_acid_ag1       =  c_acid_ag1(ic),                & ! inout
           &  c_water_ag1      =  c_water_ag1(ic),               & ! inout

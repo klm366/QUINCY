@@ -10,7 +10,7 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-MODULE mo_q_dfire_memory_class
+MODULE mo_q_dfire_sf_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                   ONLY: wp
@@ -19,7 +19,7 @@ MODULE mo_q_dfire_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
-  USE mo_q_dfire_constants,      ONLY: df_sf_vgrid_dead_fuel_pools_name, &
+  USE mo_q_dfire_sf_constants,   ONLY: df_sf_vgrid_dead_fuel_pools_name, &
                                       df_sf_vgrid_live_fuel_pools_name, &
                                       df_sf_vgrid_fuel_classes_name, &
                                       df_sf_vgrid_fuel_moisture_name, &
@@ -28,7 +28,7 @@ MODULE mo_q_dfire_memory_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: t_q_dfire_memory, max_no_of_vars
+  PUBLIC :: t_q_dfire_sf_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars = 80
 
@@ -36,7 +36,7 @@ MODULE mo_q_dfire_memory_class
   !>
   !> Type definition for dfire memory
   !>
-  TYPE, EXTENDS(t_jsb_memory) :: t_q_dfire_memory
+  TYPE, EXTENDS(t_jsb_memory) :: t_q_dfire_sf_memory
     TYPE(t_jsb_var_real3d)               :: fuel_moisture       !< moisture in fuel [0 to 1]
     ! diagnostic vars related to fuel moisture
     TYPE(t_jsb_var_real2d)               :: ab_moisture_diag    !< Soil moisture of the top layers (average of the 1st and 2nd)
@@ -112,10 +112,10 @@ MODULE mo_q_dfire_memory_class
     TYPE(t_jsb_var_real3d)               :: ic_lightning_events_monthly !< Monthly lightning events data [#events ha-1 day-1]
     TYPE(t_jsb_var_real2d)               :: a_nd                !< Read data from [#ignitions_indiv-1 day-1]
   CONTAINS
-    PROCEDURE :: Init => Init_q_dfire_memory
-  END TYPE t_q_dfire_memory
+    PROCEDURE :: Init => Init_q_dfire_sf_memory
+  END TYPE t_q_dfire_sf_memory
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_memory_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_memory_class'
 
 CONTAINS
 
@@ -123,14 +123,14 @@ CONTAINS
   !>
   !> initialize memory (variables) for the process: dist_fire
   !>
-  SUBROUTINE Init_q_dfire_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
+  SUBROUTINE Init_q_dfire_sf_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_q_dfire_memory), INTENT(inout), TARGET  :: mem         !> dfire memory
+    CLASS(t_q_dfire_sf_memory), INTENT(inout), TARGET  :: mem         !> dfire memory
     CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
     CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
     INTEGER,              INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
@@ -146,7 +146,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: vgrid_fuel_moisture              !> Fuel fuel moisture
     TYPE(t_jsb_vgrid), POINTER :: vgrid_months_in_year             !> Number of months in a year
     INTEGER                    :: table
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_q_dfire_memory'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_q_dfire_sf_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     model                 => Get_model(model_id)
     table                 =  tables(1)
@@ -694,7 +694,7 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-  END SUBROUTINE Init_q_dfire_memory
+  END SUBROUTINE Init_q_dfire_sf_memory
 
 #endif
-END MODULE mo_q_dfire_memory_class
+END MODULE mo_q_dfire_sf_memory_class

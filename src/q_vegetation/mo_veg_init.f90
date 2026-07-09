@@ -1,4 +1,4 @@
-!> vegetation variables init (QUINCY)
+!> QUINCY vegetation variables init
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### initialization of vegetation memory variables using, e.g., ic & bc input files
 !>
 MODULE mo_veg_init
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
   USE mo_exception,               ONLY: message, finish, message_text

@@ -11,6 +11,8 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### Interface and routines to run a ICON-Land time step
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
@@ -28,18 +30,16 @@ MODULE mo_jsb_interface
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
-#ifndef __NO_QUINCY__
   USE mo_quincy_model_config, ONLY: QLAND, QCANOPY, QSOIL
-#endif
   USE mo_jsb_subset,          ONLY: ON_CHUNK
-  USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
+  USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial
   USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_newday, get_year, &
       &                             is_time_experiment_start, is_time_restart, execute_quincy_sb_accelerator_this_timestep, &
       &                             executed_quincy_sb_accelerator_previous_timestep
   USE mo_jsb_physical_constants, ONLY: cvdifts
   USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
-  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_, SEB_, HYDRO_, PHENO_, PPLCC_, Q_DFIRE_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_, SEB_, HYDRO_, PHENO_, PPLCC_, Q_DFIRE_SF_
 
   IMPLICIT NONE
   PRIVATE
@@ -62,7 +62,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Called by the host model (i.e. ICON) in simulations with atmospere
+  !> Called by the host model (i.e. ICON) in simulations with atmosphere
   !>
   !> @NOTE In standalone simulations 'mo_jsbach_model:jsbach_model' is called
   !>       and variables are provided via 'mo_jsbach_model:jsbach_model:get_standalone_driver'
@@ -70,7 +70,7 @@ CONTAINS
   SUBROUTINE interface_full( &
     & model_id,         &
     & iblk, ics, ice,   &
-    & current_datetime, &
+    & current_datetime, & !< in -- object containing date and time of the timestep we are working on
     & dtime,            &
     & t_air,            &
     & q_air,            &
@@ -249,14 +249,6 @@ CONTAINS
     model_scheme = model%config%model_scheme
 
     IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
-    ! ----------------------------------------------------------------------------------------------------- !
-
-!!$    WRITE(message_text, '(A,I4,A,I6,A,I6)') 'Updating '//TRIM(model%name)// &
-!!$      &                 ' for: block=', iblk, ', ics=', ics, ', ice=', ice
-!!$    CALL message(TRIM(routine), message_text, all_print=.TRUE.)
-!!$    p_pe = get_my_global_mpi_id()
-!!$    CALL message( TRIM(routine), 'Updating '//TRIM(model%name)//' on PE '//int2string(p_pe)// &
-!!$      &                          ', nblk='//int2string(iblk), all_print=.TRUE.)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 1.0 Update options
@@ -269,25 +261,21 @@ CONTAINS
     !> 2.0 Put atmospheric forcing into the a2l memory
     !>
 
-    ! In case of quincy: check if model setup is supported
-#ifndef __NO_QUINCY__
+    ! QUINCY model: check if model setup is supported
     IF (model_scheme == MODEL_QUINCY) THEN
       IF (.NOT. model%config%usecase == 'quincy_13_pfts') THEN
         CALL finish(TRIM(routine), 'The usecase currently to be used when running quincy coupled' &
           &  //' would be quincy_13_pfts, but not '// model%config%usecase)
       END IF
-
 #ifdef _OPENACC
-      CALL finish(routine, 'Quincy has not been tested on GPU in coupled mode so far.')
-
-      IF (model%config%qmodel_id /= QCANOPY) THEN
-        CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
-      END IF
+      CALL finish(routine, 'Quincy not ported to GPU in coupled mode, yet. Stop.')
+      ! Note: when the finish above can be removed after the QUINCY configuration was tested on GPU in a coupled setup,
+      !       it would currently still be necessary to test that the QUINCY canopy model-mode is used:
+      ! IF (model%config%qmodel_id /= QCANOPY) THEN
+      !   CALL finish(routine,'QUINCY is currently only ported to GPU for the CANOPY mode, not for '//model%config%quincy_model)
+      ! END IF
 #endif
-
     END IF
-#endif
-
 
     CALL model%Get_top_tile(tile)
       CALL update_atm2land(                           &
@@ -385,10 +373,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !> 5.0 messages
     !>
-!!$    IF (iblk == 1)                                                              &
-!!$      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//          &
-!!$      &                             ' on PE '//int2string(p_pe)//' completed.', &
-!!$      &              all_print=.TRUE.)
     IF (debug_on('basic') .AND. iblk == 1) &
       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
 
@@ -623,13 +607,11 @@ CONTAINS
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
     USE mo_alcc_init,           ONLY : read_land_use_data
-#ifndef __NO_QUINCY__
     USE mo_sb_init,             ONLY : provide_n_and_p_deposition
-    USE mo_q_dfire_init,        ONLY : provide_lightning_events
+    USE mo_q_dfire_sf_init,     ONLY : provide_lightning_events
     USE mo_q_syl_init,          ONLY : read_harvest_fraction
     USE mo_q_agr_init,          ONLY : read_fertiliser_input
     USE mo_jsb_math_constants,  ONLY : eps1
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -665,7 +647,6 @@ CONTAINS
       CALL read_land_use_data(model_id, current_datetime)
     END IF
 
-#ifndef __NO_QUINCY__
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
       IF (model%config%qmodel_id == QLAND) THEN
         ! For the Q_SYL_ and the Q_AGR_ process data might have to be read once a year / at the beginning of a simulation
@@ -687,7 +668,7 @@ CONTAINS
           CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
         END IF
         ! For the Q_DFIRE process, data on lightning events is read at the start of the simulation and updated monthly
-        IF (model%processes(Q_DFIRE_)%p%config%active) THEN
+        IF (model%processes(Q_DFIRE_SF_)%p%config%active) THEN
           CALL provide_lightning_events(model_id, current_datetime, dtime)
         END IF
 
@@ -722,7 +703,6 @@ CONTAINS
         END IF ! IF running with SB_ slow-pool spinup-accelerator
       END IF ! IF QSOIL or QLAND mode
     END IF ! IF QUINCY MODEL
-#endif
 
     ! If this is .true., old graphs will be invalidated and the new ones will be captured
     invalidate_cuda_graphs = .FALSE.
@@ -755,12 +735,10 @@ CONTAINS
 
     USE mo_carbon_interface,   ONLY: yday_carbon_conservation_test
     USE mo_seb_interface,      ONLY: seb_check_temperature_range
+    USE mo_veg_util,           ONLY: test_carbon_conservation
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
-#endif
-#ifndef __NO_QUINCY__
-    USE mo_veg_util,           ONLY: test_carbon_conservation
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
@@ -787,10 +765,12 @@ CONTAINS
     IF (PRESENT(init)) linit = init
     ! ----------------------------------------------------------------------------------------------------- !
 
-#ifndef __NO_QUINCY__
+    ! TBD: this is only required if restart or output is written for this timestep!
     ! BGCMs need to be copied back to the variables from the matrices on which calculations are conducted
-    CALL model%Write_back_to_bgcms()
-#endif
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      CALL model%Write_back_to_bgcms()
+    END IF
+
     ! Reset all tiles (needed for tile loops in following test routines)
     CALL model%Reset_tiles()
 
@@ -805,13 +785,11 @@ CONTAINS
       END IF
     END IF
 
-#ifndef __NO_QUINCY__
     ! Carbon conservation test Quincy
-    CALL model%Get_top_tile(tile)
     IF ((model%config%model_scheme == MODEL_QUINCY) .AND. (model%config%qmodel_id == QLAND)) THEN
+      CALL model%Get_top_tile(tile)
       CALL test_carbon_conservation(tile, model%options(no_omp_thread)%dtime)
     END IF
-#endif
 
     ! Make sure temperatures are within an exceptable range
     IF (model%processes(SEB_)%p%config%active) THEN
@@ -874,11 +852,8 @@ CONTAINS
     USE mo_pheno_interface,    ONLY: global_phenology_diagnostics
     USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
     USE mo_pplcc_interface,    ONLY: global_pplcc_diagnostics
-
-#ifndef __NO_QUINCY__
     USE mo_q_veg_interface,    ONLY: global_q_veg_diagnostics
     USE mo_q_sb_interface,     ONLY: global_q_sb_diagnostics
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile  !< Current tile
     ! ----------------------------------------------------------------------------------------------------- !
@@ -944,7 +919,6 @@ CONTAINS
             CASE (PPLCC_)
               CALL global_pplcc_diagnostics(tile, area_scaling)
             END SELECT
-#ifndef __NO_QUINCY__
             IF (model%config%model_scheme == MODEL_QUINCY) THEN
               SELECT CASE (iproc)
               CASE (VEG_)
@@ -953,7 +927,6 @@ CONTAINS
                 CALL global_q_sb_diagnostics(tile, land_area_scaling)
               END SELECT
             END IF
-#endif
           END IF
         END IF
       END IF

@@ -16,7 +16,7 @@
 !>#### routines for calculating the vegetation pools using the fluxes that have been calculated
 !>
 MODULE mo_q_veg_update_pools
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, finish, message_text
@@ -52,7 +52,7 @@ CONTAINS
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QCANOPY
-    USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, Q_SYL_, ALCC_, Q_DFIRE_, Q_DFIRE_FUEL_
+    USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, Q_SYL_, ALCC_, Q_DFIRE_SF_, Q_DFIRE_FUEL_SF_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid, t_jsb_grid
     USE mo_jsb_grid,                        ONLY: Get_vgrid, Get_grid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14
@@ -61,7 +61,7 @@ CONTAINS
     USE mo_veg_constants,                   ONLY: eta_nfixation, max_leaf_shedding_rate
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
-    dsl4jsb_Use_config(Q_DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_SF_)
     dsl4jsb_Use_config(ALCC_)
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(Q_AGR_)
@@ -69,7 +69,7 @@ CONTAINS
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
-    dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
+    dsl4jsb_Use_memory(Q_DFIRE_FUEL_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -115,7 +115,7 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: prod_decay_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
-    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(Q_AGR_)
@@ -123,7 +123,7 @@ CONTAINS
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
+    dsl4jsb_Def_memory(Q_DFIRE_FUEL_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
@@ -233,7 +233,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
-    dsl4jsb_Get_config(Q_DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_config(Q_SYL_)
     dsl4jsb_Get_config(Q_AGR_)
@@ -241,7 +241,7 @@ CONTAINS
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
+    dsl4jsb_Get_memory(Q_DFIRE_FUEL_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     config_flag_log_negative_vegpool = dsl4jsb_Config(VEG_)%flag_log_negative_vegpool
     config_l_use_product_pools = dsl4jsb_Config(VEG_)%l_use_product_pools
@@ -526,7 +526,7 @@ CONTAINS
         END DO
       END DO
 
-!      IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+!      IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
 !        DO ic = 1, nc
 !          DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
 !            IF (model%config%is_element_used(id_elem)) THEN

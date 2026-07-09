@@ -16,7 +16,7 @@
 !>#### routines for calculating the soil-biogeochemical pools using the fluxes that have been calculated
 !>
 MODULE mo_q_sb_update_pools
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
@@ -32,8 +32,7 @@ MODULE mo_q_sb_update_pools
     &                                   SB_BGCM_TRANSPORT_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_MYCO_EXPORT_ID, &
     &                                   SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID
-  USE mo_q_dfire_constants,       ONLY: df_sf_spq_layer_top_sl !< Top soil layer used by spitfire
-  USE mo_q_dfire_util,            ONLY: dfire_update_pools
+  USE mo_q_dfire_sf_constants,    ONLY: df_sf_spq_layer_top_sl !< Top soil layer used by spitfire
 
   IMPLICIT NONE
 
@@ -63,7 +62,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
     USE mo_jsb_process_class,      ONLY: A2L_, SEB_, TURB_, HYDRO_, HYDRO_, VEG_, SSE_, Q_ASSIMI_, Q_PHENO_, SB_, &
-                                         Q_DFIRE_
+                                         Q_DFIRE_SF_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_jsb_time,               ONLY: execute_quincy_sb_accelerator_this_timestep
@@ -77,7 +76,7 @@ CONTAINS
     USE mo_sb_util,                ONLY: calc_qmax_texture
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
-    dsl4jsb_Use_config(Q_DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_SF_)
 
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)
@@ -133,7 +132,7 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
-    dsl4jsb_Def_config(Q_DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
@@ -380,7 +379,7 @@ CONTAINS
     ! ---------------------------
     ! Get process config
     dsl4jsb_Get_config(SB_)
-    dsl4jsb_Get_config(Q_DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -655,6 +654,7 @@ CONTAINS
     END IF
     !------------------------------------------------------------------------------------------------------ !
 
+
     !> 1.0 correct the plant uptake of nh4, no3 and po4 for soil model
     !>
     IF (model%config%qmodel_id == QSOIL) THEN
@@ -749,7 +749,7 @@ CONTAINS
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
       sb_pool_mt = sb_pool_mt + sb_formation_mt - sb_loss_mt + sb_transport_mt
 
-!      IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+!      IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
 !        CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
 !            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
 !            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
@@ -772,7 +772,7 @@ CONTAINS
       sb_pool_mt                   = sb_pool_mt + sb_formation_mt - sb_loss_mt + sb_transport_mt
 
       !> 6.2 update fire disturbance flux pools
-      IF (dsl4jsb_Config(Q_DFIRE_)%flag_dfire) THEN
+      IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
 !        CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
 !            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
 !            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
@@ -1059,17 +1059,17 @@ CONTAINS
                                        slow_exchange_po4(:,:), &
                                        fast_exchange_po4(:,:))
 
-      !! not update the primary and the occlusion pool during transient-forcing spinup (i.e., before the actual transient simulation)
-      !!  -> not balancing the delta pool P and total flux P as we keep the primary P pool constant
-      !!     despite a non-zero weathering flux from primary to solute P
-      !!  -> this results in the "mass balance" not closed during spinup for both simple soil-model and jsm
-      !!  -> To close the mass balance check, ONLY DURING SPIN-UP, we would need to add the weathering flux to the pool change
-      !!     (as positive pool change).
-      !! we do this because:
-      !!   1) primary P will be depleted if the spin-up time is very long
-      !!   2) we use the "soil P map" with the P status of about the year 1850 as model input
-      !!      we may ensure that the soil P is not very different from this value after spinup, i.e., the transient simulation (usually starting 1900)
-      IF (model%config%l_transient_spinup) THEN
+      ! DO not update the primary and the occlusion pool during model-spinup
+      !  -> not balancing the delta pool P and total flux P as we keep the primary P pool constant
+      !     despite a non-zero weathering flux from primary to solute P
+      !  -> this results in the "mass balance" not closed during spinup for both simple soil-model and jsm
+      !  -> To close the mass balance check, ONLY DURING SPIN-UP, we would need to add the weathering flux to the pool change
+      !     (as positive pool change).
+      ! we do this because:
+      !   1) primary P will be depleted if the spin-up time is very long
+      !   2) we use the "soil P map" with the P status of about the year 1850 as model input
+      !      we may ensure that the soil P is not very different from this value after spinup, i.e., the transient simulation (usually starting 1900)
+      IF (dsl4jsb_Config(SB_)%l_exclude_weathering) THEN
         po4_occluded(:,:)   = po4_occluded(:,:)   +                         transport_po4_occluded(:,:)  * dtime / 1.e6_wp
         po4_primary(:,:)    = po4_primary(:,:)    +                         transport_po4_primary(:,:)   * dtime / 1.e6_wp
       ELSE

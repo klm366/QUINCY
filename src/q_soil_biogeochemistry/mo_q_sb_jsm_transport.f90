@@ -16,7 +16,7 @@
 !>#### multiple routines for the vertical transport along the soil column used with JSM (jena soil model)
 !>
 MODULE mo_q_sb_jsm_transport
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: message, finish

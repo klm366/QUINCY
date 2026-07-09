@@ -17,7 +17,7 @@ MODULE mo_q_dfire_sf_ignition_class
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
 
-  USE mo_q_dfire_constants,   ONLY: df_sf_lign_cg, df_sf_lign_eff
+  USE mo_q_dfire_sf_constants, ONLY: df_sf_lign_cg, df_sf_lign_eff
 
   IMPLICIT NONE
 

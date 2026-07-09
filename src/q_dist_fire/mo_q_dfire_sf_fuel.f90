@@ -20,7 +20,7 @@
 !> Precalc fuel bulk density
 !> Move fuel(s) into process memory
 !>
-MODULE mo_q_dfire_fuel
+MODULE mo_q_dfire_sf_fuel
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
@@ -31,20 +31,20 @@ MODULE mo_q_dfire_fuel
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, VEG_BGCM_POOL_ID
 
   USE mo_veg_constants,           ONLY: ITREE, IGRASS
-  USE mo_q_dfire_constants,       ONLY: df_sf_spq_layer_top_sl
+  USE mo_q_dfire_sf_constants,    ONLY: df_sf_spq_layer_top_sl
 
-  USE mo_q_dfire_constants,       ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
-  USE mo_q_dfire_constants,       ONLY: ratio_as_dead_fuel !< variable sb pool ratios to dead fuel
+  USE mo_q_dfire_sf_constants,    ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
+  USE mo_q_dfire_sf_constants,    ONLY: ratio_as_dead_fuel !< variable sb pool ratios to dead fuel
 
   USE mo_lnd_bgcm_idx,            ONLY: ixC
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class
-  USE mo_q_dfire_sf_ros_eqs,      ONLY: calc_fbd
-  USE mo_q_dfire_config_class,    ONLY: Q_DFIRE_ROS_OBERHAGEMANN, Q_DFIRE_ROS_THONICKE
+  USE mo_q_dfire_sf_util,         ONLY: calc_ros_fbd
+  USE mo_q_dfire_sf_config_class, ONLY: Q_DFIRE_ROS_OBERHAGEMANN, Q_DFIRE_ROS_THONICKE
 
   !< Live fraction allocation for dead and live fuels
-  USE mo_q_dfire_constants,       ONLY: df_sf_live_frac_tree, &
+  USE mo_q_dfire_sf_constants,    ONLY: df_sf_live_frac_tree, &
                                         df_sf_live_frac_grass
-  USE mo_q_dfire_constants,       ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
+  USE mo_q_dfire_sf_constants,    ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
 
   USE mo_q_dfire_sf_adaptor,      ONLY: sf_convert_units
   USE mo_q_dfire_constants,       ONLY: df_sf_units_k_to_c
@@ -53,9 +53,9 @@ MODULE mo_q_dfire_fuel
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_q_dfire_fuel
+  PUBLIC :: update_q_dfire_sf_fuel
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_fuel'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fuel'
 
   TYPE(t_sf_lfmc), SAVE, ALLOCATABLE :: lfmc_par
 
@@ -66,26 +66,26 @@ CONTAINS
   !> Compute spitfire for current time step
   !> It links Quincy and Spitfire
   !>
-  SUBROUTINE update_q_dfire_fuel(tile, options)
+  SUBROUTINE update_q_dfire_sf_fuel(tile, options)
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_, A2L_, Q_PHENO_
+    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_SF_, Q_DFIRE_SF_, A2L_, Q_PHENO_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid_class,          ONLY: t_jsb_grid
     USE mo_jsb_math_constants,      ONLY: one_day
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
-    dsl4jsb_Use_memory(Q_DFIRE_)
+    dsl4jsb_Use_memory(Q_DFIRE_FUEL_SF_)
+    dsl4jsb_Use_memory(Q_DFIRE_SF_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_config(Q_DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -123,8 +123,8 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(Q_DFIRE_)
-    dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
+    dsl4jsb_Def_memory(Q_DFIRE_FUEL_SF_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(Q_PHENO_)
@@ -137,7 +137,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: height                ! in [m]
     dsl4jsb_Real2D_onChunk      :: growing_season        ! in [%]
 
-    !< Q_DFIRE_
+    !< Q_DFIRE_SF_
     dsl4jsb_Real3D_onChunk      :: dead_fuel_1hr_dfp     ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: dead_fuel_10hr_dfp    ! out [g DM m-2]
     dsl4jsb_Real3D_onChunk      :: dead_fuel_100hr_dfp   ! out [g DM m-2]
@@ -165,7 +165,7 @@ CONTAINS
     nc      = options%nc
     dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(Q_DFIRE_FUEL_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(Q_DFIRE_FUEL_SF_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
@@ -176,8 +176,8 @@ CONTAINS
     IF (lctlib%PastureFlag) RETURN !< do not run this routine at tiles like "pasture pft"
     IF (lctlib%CropFlag) RETURN !< do not run this routine at tiles like "crops pft"
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(Q_DFIRE_)
-    dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
+    dsl4jsb_Get_memory(Q_DFIRE_FUEL_SF_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(Q_PHENO_)
@@ -187,25 +187,25 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)   ! in [%]
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_10hr_dfp)    ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_100hr_dfp)   ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1000hr_dfp)  ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, cured_live_grass_fuel_1hr_dfp) ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, dead_fuel_1hr_dfp)     ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, dead_fuel_10hr_dfp)    ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, dead_fuel_100hr_dfp)   ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, dead_fuel_1000hr_dfp)  ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, cured_live_grass_fuel_1hr_dfp) ! out [g DM m-2]
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_grass_fuel_1hr_lfp)    ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp)     ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp)    ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp)   ! out [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp)  ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, live_grass_fuel_1hr_lfp)    ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, live_tree_fuel_1hr_lfp)     ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, live_tree_fuel_10hr_lfp)    ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, live_tree_fuel_100hr_lfp)   ! out [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, live_tree_fuel_1000hr_lfp)  ! out [g DM m-2]
 
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, forest_fract)          ! out [%]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, grass_fract)           ! out [%]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, forest_fract)          ! out [%]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, grass_fract)           ! out [%]
 
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, fuel_bulk_density)     ! out [kg m-3]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, moisture_extinction)   ! out [0 to 1]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, fwd_wind_factor)       ! out [0 to 1]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, lvg_moisture)          ! out [%]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, fuel_bulk_density)     ! out [kg m-3]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, moisture_extinction)   ! out [0 to 1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, fwd_wind_factor)       ! out [0 to 1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, lvg_moisture)          ! out [%]
 
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -223,9 +223,9 @@ CONTAINS
     fuel_bulk_density = 0._wp
     top_soil_depth_sl = soil_depth_sl(:,df_sf_spq_layer_top_sl)
     lctlib_growthform(:) = lctlib%growthform
-    IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
+    IF (dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
       moisture_extinction = lctlib%q_moisture_extinction_thon
-    ELSE IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+    ELSE IF (dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
       moisture_extinction = lctlib%q_moisture_extinction_ober
     END IF
     fwd_wind_factor = lctlib%q_fwd_wind_factor
@@ -285,7 +285,7 @@ CONTAINS
                             sb_pool_in_gdm, veg_pool_in_gdm, &
                             ratio_as_dead_fuel, cured_lvg_fract)
 
-    dead_fuel_fcl = fuel_cls % Calc_dead_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
+    dead_fuel_fcl = fuel_cls % Calc_dead_fuel() * dsl4jsb_Config(Q_DFIRE_SF_)%dead_fuel_factor
 
     !> Calculate the weighted average of the Fuel bulk density for the current PFT.
     !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
@@ -297,7 +297,7 @@ CONTAINS
     dead_fuel_spread_fcl = SUM(dead_fuel_fcl(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2 = fuel pools dimension index
     DO ic = 1, nc
       IF (SUM(dead_fuel_spread_fcl(ic,:)) > 0._wp) THEN
-        fuel_bulk_density(ic) = calc_fbd(3, lctlib%q_fuel_bulk_density, dead_fuel_spread_fcl(ic,:)) ! 3=fuel classes (1,10 and 100 hours)
+        fuel_bulk_density(ic) = calc_ros_fbd(3, lctlib%q_fuel_bulk_density, dead_fuel_spread_fcl(ic,:)) ! 3=fuel classes (1,10 and 100 hours)
       ENDIF
     END DO
 
@@ -307,12 +307,12 @@ CONTAINS
     dead_fuel_1000hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
 
     IF (lctlib%growthform == igrass) THEN
-      live_grass_fuel_fcl = fuel_cls % Calc_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
+      live_grass_fuel_fcl = fuel_cls % Calc_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_SF_)%live_fuel_factor
       live_grass_fuel_1hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx)
-      cured_live_grass_fuel_fcl = fuel_cls % Calc_cured_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_)%dead_fuel_factor
+      cured_live_grass_fuel_fcl = fuel_cls % Calc_cured_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_SF_)%dead_fuel_factor
       cured_live_grass_fuel_1hr_dfp = cured_live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx)
     ELSE IF (lctlib%growthform == itree) THEN
-      live_tree_fuel_fcl = fuel_cls % Calc_live_tree_fuel() * dsl4jsb_Config(Q_DFIRE_)%live_fuel_factor
+      live_tree_fuel_fcl = fuel_cls % Calc_live_tree_fuel() * dsl4jsb_Config(Q_DFIRE_SF_)%live_fuel_factor
       live_tree_fuel_1hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_1hr_idx)
       live_tree_fuel_10hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx)
       live_tree_fuel_100hr_lfp = live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx)
@@ -320,8 +320,8 @@ CONTAINS
     END IF
 
     NULLIFY(live_fuel_frac)
-  END SUBROUTINE update_q_dfire_fuel
+  END SUBROUTINE update_q_dfire_sf_fuel
 
 
 #endif
-END MODULE mo_q_dfire_fuel
+END MODULE mo_q_dfire_sf_fuel

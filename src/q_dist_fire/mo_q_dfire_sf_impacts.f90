@@ -37,23 +37,23 @@ MODULE mo_q_dfire_sf_impacts
   USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
   USE mo_jsb_grid,              ONLY: Get_grid
 
-  USE mo_q_dfire_constants,     ONLY: df_sf_spq_layer_top_sl
-  USE mo_q_dfire_constants,     ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr
-  USE mo_q_dfire_constants,     ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
-  USE mo_q_dfire_constants,     ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
-  USE mo_q_dfire_constants,     ONLY: df_sf_elements_nr
-  USE mo_q_dfire_constants,     ONLY: df_sf_species_nr
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_spq_layer_top_sl
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_fc_spread_nr, df_sf_fc_full_nr
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx
+  USE mo_q_dfire_sf_constants,  ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_elements_nr
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_species_nr
 
-  USE mo_q_dfire_constants,     ONLY: ixs_sf_dead_litter_fuel_pools
+  USE mo_q_dfire_sf_constants,  ONLY: ixs_sf_dead_litter_fuel_pools
 
-  USE mo_q_dfire_constants,     ONLY: df_sf_species_nr, df_sf_species_co2_idx, df_sf_species_co_idx, &
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_species_nr, df_sf_species_co2_idx, df_sf_species_co_idx, &
                                         df_sf_species_ch4_idx, &
                                         !df_sf_species_voc_idx, df_sf_species_tpm_idx, & df_sf_species_nox_idx, &
                                         df_sf_species_nh3_idx, df_sf_species_n2o_idx, &
                                         df_sf_species_n2_idx
 
   USE mo_q_dfire_sf_damage_class, ONLY: t_sf_prob_mort, calc_prob_mortality
-  USE mo_q_dfire_util,          ONLY: real2logical
+  USE mo_q_dfire_sf_util,         ONLY: real2logical
 
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption, &
                                               sf_calc_dead_fuel_consumption, &
@@ -68,7 +68,6 @@ MODULE mo_q_dfire_sf_impacts
                                       SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID, &
                                       VEG_BGCM_FIRE_EMISSIONS_ID, VEG_BGCM_FIRE_LITTERFALL_ID
 
-  USE mo_q_dfire_util, ONLY: dfire_update_pools
   USE mo_lnd_bgcm_idx
 
   IMPLICIT NONE
@@ -90,19 +89,19 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_, Q_DFIRE_
+    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_SF_, Q_DFIRE_SF_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_math_constants,      ONLY: one_day
 
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
-    dsl4jsb_Use_memory(Q_DFIRE_)
+    dsl4jsb_Use_memory(Q_DFIRE_FUEL_SF_)
+    dsl4jsb_Use_memory(Q_DFIRE_SF_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Use_config(Q_DFIRE_)
+    dsl4jsb_Use_config(Q_DFIRE_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -155,8 +154,6 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: residue_dead_in_m3(:,:,:)          !< (#nc,#pools,#elements) sb_pool fuels in molX/m3, veg_pool fuels in molX/m2
 
     REAL(wp), ALLOCATABLE                 :: lctlib_emission_factors(:)         !< Array packed with emission factors from lctlib (#species)
-
-    INTEGER :: ix_elem, ielem, ix_comp, nr_of_veg_bgcm_comp
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -222,9 +219,9 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_fire_emissions_mt
     dsl4jsb_Def_mt2L2D :: veg_fire_litterfall_mt
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(Q_DFIRE_)
-    dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
-    dsl4jsb_Def_memory(Q_DFIRE_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
+    dsl4jsb_Def_memory(Q_DFIRE_FUEL_SF_)
+    dsl4jsb_Def_memory(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -238,7 +235,7 @@ CONTAINS
     nc      = options%nc
     dtime   = options%dtime
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_calculated(Q_DFIRE_FUEL_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(Q_DFIRE_FUEL_SF_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
@@ -250,66 +247,66 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     grid => Get_grid(model%grid_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(Q_DFIRE_)
-    dsl4jsb_Get_memory(Q_DFIRE_FUEL_)
-    dsl4jsb_Get_memory(Q_DFIRE_)
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
+    dsl4jsb_Get_memory(Q_DFIRE_FUEL_SF_)
+    dsl4jsb_Get_memory(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)               ! in [?]
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1hr_lfp)    ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp)   ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp)  ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, live_tree_fuel_1hr_lfp)    ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, live_tree_fuel_10hr_lfp)   ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, live_tree_fuel_100hr_lfp)  ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, live_tree_fuel_1000hr_lfp) ! in [g DM m-2]
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1hr_dfp)     ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_10hr_dfp)    ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_100hr_dfp)   ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, dead_fuel_1000hr_dfp)  ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, dead_fuel_1hr_dfp)     ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, dead_fuel_10hr_dfp)    ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, dead_fuel_100hr_dfp)   ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, dead_fuel_1000hr_dfp)  ! in [g DM m-2]
 
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned)               ! in [ha ts-1]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, area_burned_fract)         ! in [-]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_frac_consumption)     ! in [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, i_surface)                 ! in [kW m-1]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_, mask_is_fire_intense_enough)! in [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_prop_ck)           ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_fire)              ! out [- ts-1]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_fire_output)       ! out [- s-1]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, pm_tau)               ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, tau_l)                ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, tau_c)                ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, bark_thickness)       ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, DBH_diag)             ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, par1_diag)            ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, par2_diag)            ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned)               ! in [ha ts-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned_fract)         ! in [-]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_frac_consumption)     ! in [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, i_surface)                 ! in [kW m-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, mask_is_fire_intense_enough)! in [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, pm_prop_ck)           ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, pm_fire)              ! out [- ts-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, pm_fire_output)       ! out [- s-1]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, pm_tau)               ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, tau_l)                ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, tau_c)                ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, bark_thickness)       ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, DBH_diag)             ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, par1_diag)            ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, par2_diag)            ! out [-]
 
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, ck)                   ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, r_ck)                 ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, ck_p)                 ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, scorch_height)        ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, F_scorch_height)      ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, crown_length)         ! out [-]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_, tree_height)          ! out [m]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, ck)                   ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, r_ck)                 ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, ck_p)                 ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, scorch_height)        ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, F_scorch_height)      ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, crown_length)         ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, tree_height)          ! out [m]
 
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, height)                      ! in
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_1hr) ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_10hr) ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_100hr) ! in [g DM m-2]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_, dead_fuel_consumption_1000hr) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_1hr) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_10hr) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_100hr) ! in [g DM m-2]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_1000hr) ! in [g DM m-2]
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, fuel_consumption_els) ! out
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, emissions_spc)        ! out
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, emissions_els)        ! out
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, residue_els)          ! out
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, overflow_els)         ! out
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, fuel_consumption_els) ! out
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, emissions_spc)        ! out
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, emissions_els)        ! out
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, residue_els)          ! out
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, overflow_els)         ! out
 
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, veg_fire_litterfall_total_els) ! out [umol X m-2 s-1]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, veg_fire_emissions_total_els) ! out [umol X m-2 s-1]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, sb_fire_emissions_total_els) ! out [umol X m-2 s-1]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_, sb_fire_litter_ash_total_els) ! out [umol X m-2 s-1]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, veg_fire_litterfall_total_els) ! out [umol X m-2 s-1]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, veg_fire_emissions_total_els) ! out [umol X m-2 s-1]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, sb_fire_emissions_total_els) ! out [umol X m-2 s-1]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_FUEL_SF_, sb_fire_litter_ash_total_els) ! out [umol X m-2 s-1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -414,8 +411,8 @@ CONTAINS
                                     lctlib%q_crown_length, lctlib%q_crown_damage_p, lctlib%q_crown_damage_r_ck, &
                                     lctlib%q_scorch_height_f, &
                                     lctlib%q_bark_thickness_par1, lctlib%q_bark_thickness_par2, &
-                                    height * dsl4jsb_Config(Q_DFIRE_)%tree_height_factor, & ! Tree characteristics
-                                    dbh * dsl4jsb_Config(Q_DFIRE_)%tree_diameter_factor, &
+                                    height * dsl4jsb_Config(Q_DFIRE_SF_)%tree_height_factor, & ! Tree characteristics
+                                    dbh * dsl4jsb_Config(Q_DFIRE_SF_)%tree_diameter_factor, &
                                     i_surface, & ! Fire intensity
                                     w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
                                     dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
@@ -423,7 +420,7 @@ CONTAINS
                                     mask_opt=is_fire_intense_enough)
 
       fc_live = sf_calc_live_fuel_consumption(nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, &
-                                    dsl4jsb_Config(Q_DFIRE_)%fract_crown_scorch, &
+                                    dsl4jsb_Config(Q_DFIRE_SF_)%fract_crown_scorch, &
                                     prob_mort % prop_ck, &
                                     area_burned_fract_pft, &
                                     live_tree_fuel_cls, &
@@ -434,7 +431,7 @@ CONTAINS
       bark_thickness = prob_mort % bark_thickness
       par1_diag = lctlib%q_bark_thickness_par1
       par2_diag = lctlib%q_bark_thickness_par2
-      dbh_diag = dbh * dsl4jsb_Config(Q_DFIRE_)%tree_diameter_factor
+      dbh_diag = dbh * dsl4jsb_Config(Q_DFIRE_SF_)%tree_diameter_factor
 
       ck = prob_mort % prop_ck
       scorch_height = prob_mort % scorch_height
@@ -443,9 +440,9 @@ CONTAINS
       r_ck = lctlib%q_crown_damage_r_ck
       ck_p = lctlib%q_crown_damage_p
       F_scorch_height = lctlib%q_scorch_height_f
-      tree_height = height * dsl4jsb_Config(Q_DFIRE_)%tree_height_factor
+      tree_height = height * dsl4jsb_Config(Q_DFIRE_SF_)%tree_height_factor
 
-      If (dsl4jsb_Config(Q_DFIRE_)%flag_has_prob_mort_feedback) THEN
+      If (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_prob_mort_feedback) THEN
         ! todo: add pm_fire_diag -> always output (even when false)
         pm_fire = pm_fire * area_burned_fract_pft
         pm_fire_output = pm_fire / dtime !< from ts-1 to seconds-1
@@ -504,7 +501,7 @@ CONTAINS
                           mass_imbalance_emitted_live_el) ! [molX/m2]
 
     ! Feedbacks
-    IF (dsl4jsb_Config(Q_DFIRE_)%flag_has_dead_feedback) THEN
+    IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_dead_feedback) THEN
       ! Convert sb_pool related dead fuel pools into m3 to operate with sb_pool related fluxes
       ALLOCATE(emissions_dead_in_m3, source=emissions_dead_el)
       emissions_dead_in_m3 = 0._wp
@@ -529,7 +526,7 @@ CONTAINS
 
     END IF
 
-    IF (dsl4jsb_Config(Q_DFIRE_)%flag_has_live_feedback) THEN
+    IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_live_feedback) THEN
       !< Feedback: live fuel consumption is removed using veg_fire_emissions (combusted)
       !< Residue is transfered through veg_litterfall
       CALL calc_sf_feedback_live(emissions_live_el, &
@@ -539,44 +536,6 @@ CONTAINS
                                 mask=is_fire_intense_enough)
 
     END IF
-
-    !< Enforce to update pools due to Spitfire impacts. Temporary solution until a permanent solution
-    !< is found to properly deal.
-    !< Spitfire is now updated here
-
-    !< Update pools
-    CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
-                            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
-                            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
-
-    nr_of_veg_bgcm_comp = SIZE(veg_pool_mt,1)
-
-    !> 3.0 add fire disturbance into litterfall
-    DO ic = 1, nc
-      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-        IF (model%config%is_element_used(ielem)) THEN
-          ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-          DO ix_comp = 1, nr_of_veg_bgcm_comp 
-            veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
-                                                      veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
-          END DO ! ix_comp = 1, n_veg_bgcm_comp
-        END IF ! model%config%is_element_used(ielem)) THEN
-     END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-    END DO ! ic = 1, nc
-
-    !> update veg fire emissions
-    DO ic = 1, nc
-      DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
-        IF (model%config%is_element_used(ielem)) THEN
-          ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-          DO ix_comp = 1, nr_of_veg_bgcm_comp
-                veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
-                    veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
-          END DO ! ix_comp
-        END IF ! is_element_used(ielem)
-      END DO ! ielem
-    END DO ! ic
-
 
     ! for diagnostics:
     fuel_consumption_els = (SUM(fc_dead_el, DIM=2) + SUM(fc_live_el, DIM=2)) / dtime * 1000000._wp !< 2 = fuel pool index
@@ -601,7 +560,7 @@ CONTAINS
     veg_fire_emissions_total_els = veg_fire_emissions_total_els / dtime * 1000000._wp
     sb_fire_litter_ash_total_els = sb_fire_litter_ash_total_els / dtime * 1000000._wp
 
-    IF (dsl4jsb_Config(Q_DFIRE_)%has_diagnostics) THEN
+    IF (dsl4jsb_Config(Q_DFIRE_SF_)%has_diagnostics) THEN
       CALL run_diagnostics_at_pft(nc, sb_pool_mt, sb_fire_emissions_mt, sb_fire_litter_ash_mt)
     ENDIF
   END SUBROUTINE update_q_dfire_sf_impacts
