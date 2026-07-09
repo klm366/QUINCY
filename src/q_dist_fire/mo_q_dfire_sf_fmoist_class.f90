@@ -22,68 +22,16 @@ MODULE mo_q_dfire_sf_fmoist_class
   USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element
   !< Total number of fuel moisture(omega_o and omega_nl), omega_o index, omega_nl index
   USE mo_q_dfire_sf_constants, ONLY: df_sf_omegas_nr, df_sf_omega_o_idx, df_sf_omega_nl_idx
+  USE mo_q_dfire_sf_classes,   ONLY: t_sf_lfmc, t_sf_mf
 
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC :: calc_sf_fuel_moisture_for_thonicke, calc_sf_fuel_moisture_for_oberhagemann, &
-            t_sf_lfmc, t_sf_mf, calc_mflg_ober
-
-  !> Livegrass fuel moisture content paremeters from Oberhagemann et al. (2025)
-  TYPE :: t_sf_lfmc
-    REAL(wp) :: min, max, b, c
-  END TYPE t_sf_lfmc
-
-  INTERFACE t_sf_lfmc
-    MODULE PROCEDURE :: create_lfmc_from_lctlib
-  END INTERFACE
-
-  TYPE :: t_sf_mf !< fuel moisture
-    !< oberhagemann et al. (2025)
-    REAL(wp), ALLOCATABLE :: dead(:,:) !< dead fuel moisture (#nc,#dead fuel moisture -1hr, 10hrs, 100hrs, 1000hrs, dry livegrass- )
-    REAL(wp), ALLOCATABLE :: live(:,:) !< live fuel moisture (#nc, -wet livegrass, woody-)
-    !< Weighted fuel moisture
-    REAL(wp), ALLOCATABLE :: val(:) !< weighted fuel moisture (mixed-1,10,100 and lvg-, fine fuels-1hr and lvg-)
-  END TYPE t_sf_mf
-
-  INTERFACE t_sf_mf
-    MODULE PROCEDURE :: create_t_sf_mf
-  END INTERFACE
+            calc_mflg_ober
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 CONTAINS
-
-  !>
-  !> t_sf_mf constructor
-  !>
-  FUNCTION create_t_sf_mf(nc, ndd, nlv) RESULT (mf)
-    INTEGER, INTENT(in) :: nc, ndd, nlv
-    TYPE(t_sf_mf) :: mf
-
-    ALLOCATE(mf%dead(nc,ndd))
-    ALLOCATE(mf%live(nc,nlv))
-    ALLOCATE(mf%val(nc))
-    mf%dead = 0._wp
-    mf%live = 0._wp
-    mf%val = 0._wp
-  END FUNCTION create_t_sf_mf
-
-
-  ! ======================================================================================================= !
-  !>
-  !> t_sf_lfmc constructor
-  !>
-  FUNCTION create_lfmc_from_lctlib(lctlib) RESULT (lfmc)
-    TYPE(t_lctlib_element) :: lctlib
-    TYPE(t_sf_lfmc) :: lfmc
-
-    lfmc % min = lctlib%q_lfmc_min
-    lfmc % max = lctlib%q_lfmc_max
-    lfmc % b = lctlib%q_lfmc_b
-    lfmc % c = lctlib%q_lfmc_c
-  END FUNCTION create_lfmc_from_lctlib
-
-
   ! ======================================================================================================= !
   !>
   !> Fuel moisture calculation:
