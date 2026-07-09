@@ -26,7 +26,8 @@ MODULE mo_q_dfire_sf_fmoist_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_fuel_moisture, sf_calc_fuel_moisture_ober, t_sf_lfmc, t_sf_mf, calc_mflg_ober
+  PUBLIC :: sf_calc_fuel_moisture_for_thonicke, sf_calc_fuel_moisture_for_oberhagemann, &
+            t_sf_lfmc, t_sf_mf, calc_mflg_ober
 
   !> Livegrass fuel moisture content paremeters from Oberhagemann et al. (2025)
   TYPE :: t_sf_lfmc
@@ -89,7 +90,7 @@ CONTAINS
   !> - omega_o: dead fuel for 1, 10 and 100 hours + live grass (accounted for 1 hour)
   !> - omega_n,l: 1 hour dead fuel + live grass
   !>
-  FUNCTION sf_calc_fuel_moisture(nc, nalphas, nfuels, alphas, nesterov_index, litter_moisture, w_oi, live_fuel_lvg) &
+  FUNCTION sf_calc_fuel_moisture_for_thonicke(nc, nalphas, nfuels, alphas, nesterov_index, litter_moisture, w_oi, live_fuel_lvg) &
                                       RESULT (fuel_moisture)
     INTEGER, INTENT(in)                 :: nc, nalphas, nfuels        !< Number of gridcells, number of alpha params, number of fuels used to calc fuel moisture
     REAL(wp), INTENT(in)                :: alphas(nalphas)            !< Drying parameter for 1, 10 and 100 hours fuel class [Celsius-2]
@@ -118,7 +119,7 @@ CONTAINS
     END DO
 
     fuel_moisture = omegas
-  END FUNCTION sf_calc_fuel_moisture
+  END FUNCTION sf_calc_fuel_moisture_for_thonicke
 
 
   ! ======================================================================================================= !
@@ -227,7 +228,7 @@ CONTAINS
   !> sf_calc_fuel_moisture_ober
   !> Calculate the fuel moisture as in Pfeiffer, Andrews PL and Oberhagemann
   !>
-  FUNCTION sf_calc_fuel_moisture_ober(nc, ndd, nlitros, nlv, &
+  FUNCTION sf_calc_fuel_moisture_for_oberhagemann(nc, ndd, nlitros, nlv, &
                                         alphas_dd, &
                                         lvg_moisture, &
                                         dead_fuel_litter, &
@@ -283,7 +284,7 @@ CONTAINS
     ENDDO
     mf%live(:,ix_lvg) = lvg_moisture
     mf%live(:,ix_wdy) = 0._wp !  For later, for shrubs
-  END FUNCTION sf_calc_fuel_moisture_ober
+  END FUNCTION sf_calc_fuel_moisture_for_oberhagemann
 
 
   ! ======================================================================================================= !

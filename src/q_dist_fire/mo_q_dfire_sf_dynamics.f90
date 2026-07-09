@@ -66,7 +66,7 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_q_dfire_sf_config_class,  ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
-  USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture, t_sf_mf, sf_calc_fuel_moisture_ober
+  USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture_for_thonicke, t_sf_mf, sf_calc_fuel_moisture_for_oberhagemann
   USE mo_q_dfire_sf_ignition_class,     ONLY: calc_sf_ignition
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
@@ -757,7 +757,7 @@ CONTAINS
     IF (PRESENT(mask)) has_fire_conditions = mask
 
     !< Compute fuel moisture (omega_o, omega_nl)
-    fuel_moisture = sf_calc_fuel_moisture(nc, nalphas, nspread, alphas, &
+    fuel_moisture = sf_calc_fuel_moisture_for_thonicke(nc, nalphas, nspread, alphas, &
                                           nesterov_index, ab_moisture, &
                                           dead_fuel_litter, &
                                           tot_dead_fuel_grass)
@@ -837,7 +837,7 @@ CONTAINS
     REAL(wp) :: me_lv(nc)             !< Live moisture of extinction [-] (#nc)
 
     fdi = 0._wp
-    fuel_moisture = sf_calc_fuel_moisture_ober(nc, &
+    fuel_moisture = sf_calc_fuel_moisture_for_oberhagemann(nc, &
                       ndd, & ! 5 = 1, 10, 100, 1000 hours and cured live grass
                       nlitros, & ! 3=1, 10 and 100 hours
                       nlv, &
