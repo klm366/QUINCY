@@ -340,8 +340,7 @@ CONTAINS
     albedo_snow  = albedo_lice
     
 
-    !  Set initial values
-    I_atm = lw_srf_down + swvis_srf_down + swnir_srf_down
+    I_atm = swvis_srf_down + swnir_srf_down
 
     !  Compute solar radiation fluxes (positive downward)    (needed?)
     ! I_atm_flk = I_atm_in
