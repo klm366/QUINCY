@@ -22,7 +22,7 @@ MODULE mo_q_dfire_sf_classes
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: t_sf_ros, t_sf_dynamics, t_sf_tree_damage
+  PUBLIC :: t_sf_ros, t_sf_dynamics, t_sf_tree_damage, t_sf_ignitions
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_classes'
 
@@ -103,6 +103,17 @@ MODULE mo_q_dfire_sf_classes
   INTERFACE t_sf_tree_damage
     MODULE PROCEDURE :: create_t_sf_prob_mort
   END INTERFACE t_sf_tree_damage
+
+
+  TYPE t_sf_ignitions
+    REAL(wp), ALLOCATABLE :: human(:)
+    REAL(wp), ALLOCATABLE :: lightning(:)
+    REAL(wp), ALLOCATABLE :: total(:)
+  END TYPE t_sf_ignitions
+
+  INTERFACE t_sf_ignitions
+    MODULE PROCEDURE :: create_t_sf_ignitions
+  END INTERFACE
 CONTAINS
 
 
@@ -258,6 +269,23 @@ CONTAINS
     self % scorch_height => other % scorch_height
     self % crown_length => other % crown_length
   END SUBROUTINE copy_from_prob_mort
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Copy from "other" into "self"
+  !>
+  FUNCTION create_t_sf_ignitions(nc) RESULT (sf_ignitions)
+    INTEGER, INTENT(in) :: nc
+    TYPE(t_sf_ignitions) :: sf_ignitions
+    ALLOCATE(sf_ignitions%human(nc))
+    ALLOCATE(sf_ignitions%lightning(nc))
+    ALLOCATE(sf_ignitions%total(nc))
+
+    sf_ignitions%human = 0._wp
+    sf_ignitions%lightning = 0._wp
+    sf_ignitions%total = 0._wp
+  END FUNCTION create_t_sf_ignitions
 
 #endif
 END MODULE mo_q_dfire_sf_classes

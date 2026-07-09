@@ -67,12 +67,12 @@ MODULE mo_q_dfire_sf_dynamics
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
   USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture, t_sf_mf, sf_calc_fuel_moisture_ober
-  USE mo_q_dfire_sf_ignition_class,     ONLY: calc_q_sf_ignition, t_sf_ignitions
+  USE mo_q_dfire_sf_ignition_class,     ONLY: calc_q_sf_ignition
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
   USE mo_q_dfire_sf_ros_thon_class,     ONLY: sf_calc_rate_of_spread_thon
   USE mo_q_dfire_sf_ros_ober_class,     ONLY: sf_calc_rate_of_spread_ober
-  USE mo_q_dfire_sf_classes,            ONLY: t_sf_ros, t_sf_dynamics
+  USE mo_q_dfire_sf_classes,            ONLY: t_sf_ros, t_sf_dynamics, t_sf_ignitions
   USE mo_q_dfire_sf_ros_ober_class,     ONLY: calc_live_me
   USE mo_q_dfire_sf_frac_consump_class, ONLY: sf_calc_frac_consump
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption

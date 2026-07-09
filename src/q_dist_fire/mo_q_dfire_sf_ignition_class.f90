@@ -20,42 +20,16 @@ MODULE mo_q_dfire_sf_ignition_class
   USE mo_exception,           ONLY: message
 
   USE mo_q_dfire_sf_constants, ONLY: df_sf_lign_cg, df_sf_lign_eff
+  USE mo_q_dfire_sf_classes,  ONLY: t_sf_ignitions
 
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: t_sf_ignitions, calc_q_sf_ignition
+  PUBLIC :: t_sf_ignitions
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_ignition_class'
 
-
-  TYPE t_sf_ignitions
-    REAL(wp), ALLOCATABLE :: human(:)
-    REAL(wp), ALLOCATABLE :: lightning(:)
-    REAL(wp), ALLOCATABLE :: total(:)
-  END TYPE t_sf_ignitions
-
-
-  INTERFACE t_sf_ignitions
-    MODULE PROCEDURE :: create_t_sf_ignitions
-  END INTERFACE
-
-
 CONTAINS
-
-
-  FUNCTION create_t_sf_ignitions(nc) RESULT (sf_ignitions)
-    INTEGER, INTENT(in) :: nc
-    TYPE(t_sf_ignitions) :: sf_ignitions
-    ALLOCATE(sf_ignitions%human(nc))
-    ALLOCATE(sf_ignitions%lightning(nc))
-    ALLOCATE(sf_ignitions%total(nc))
-
-    sf_ignitions%human = 0._wp
-    sf_ignitions%lightning = 0._wp
-    sf_ignitions%total = 0._wp
-  END FUNCTION create_t_sf_ignitions
-
 
   ! ======================================================================================================= !
   !>
