@@ -39,7 +39,7 @@ MODULE mo_flake_process
     
   CONTAINS
   
-    PURE ELEMENTAL SUBROUTINE calc_radflux ( &  !    & depth_w,        & ! in
+    PURE ELEMENTAL SUBROUTINE calc_radflux ( depth_w,        & ! in
       & albedo_water,   & ! in
       & albedo_ice,     & ! in
       & albedo_snow,    & ! in
@@ -65,7 +65,6 @@ MODULE mo_flake_process
       !  and the mean radiation flux over the thermocline.
 
       USE mo_flake_parameters , ONLY : & 
-        depth_w               , & ! lake depth, constant as a first attempt
         h_Snow_min            , & ! Minimum snow thickness [m]
         h_Ice_min             , & ! Minimum ice thickness [m]
         h_ML_min              , &  ! Minimum mixed-layer depth [m]
@@ -77,7 +76,7 @@ MODULE mo_flake_process
         extincoef_optic_snow      ! Optical characteristics of snow 
 
       REAL (KIND = wp), INTENT(IN) ::   &
-        ! depth_w       , & ! The lake depth [m]
+        depth_w       , & ! The lake depth [m]
         albedo_water  , & ! Albedo of the water surface 
         albedo_ice    , & ! Albedo of the ice surface
         albedo_snow   , & ! Albedo of the snow surface
@@ -200,11 +199,12 @@ MODULE mo_flake_process
     END SUBROUTINE calc_buoypar
 
     PURE ELEMENTAL SUBROUTINE calc_ice_water_heatfluxes( &
+      & depth_w,    & ! in
       & h_ice,      & ! in
       & h_ML,       & ! in
       & T_bot,      & ! in
       & T_wML,      & ! in
-      & C_T,        & ! in  ! & depth_w,    & ! in
+      & C_T,        & ! in
       & I_w,        & ! in
       & I_h,        & ! in
       & I_intm_0_h, & ! in
@@ -220,13 +220,13 @@ MODULE mo_flake_process
         & Phi_T_pr0_2
 
       USE mo_flake_parameters, ONLY: &
-        & depth_w,       &
         & h_Ice_min,     &
         & h_ML_min,      &
         & albedo_bot    
         
-        
-      REAL(wp), INTENT(in) :: h_ice,      & ! Ice thickness [m]
+      REAL(wp), INTENT(in) :: &
+                            & depth_w,    & ! Waterbody depth [m]
+                            & h_ice,      & ! Ice thickness [m]
                             & h_ML,       & ! Thickness of the mixed-layer [m] 
                             & T_bot,      & ! Temperature at the water-bottom sediment interface [K] 
                             & T_wML,      & ! Mixed-layer temperature [K] 
@@ -234,7 +234,6 @@ MODULE mo_flake_process
                             & I_w,        & ! Radiation flux through the ice-water or air-water interface [W m^{-2}]
                             & I_h,        & ! Radiation flux through the mixed-layer-thermocline interface [W m^{-2}]
                             & I_intm_0_h!, & ! Mean radiation flux over the mixed layer [W m^{-1}]
-                            !& depth_w       ! Waterbody depth [m]
 
       REAL(wp),  INTENT(inout) :: I_bot,    &  ! Radiation flux through the water-bottom sediment interface [W m^{-2}]
         &                         Q_w,      &  ! Heat flux through the ice-water or air-water interface [W m^{-2}]
@@ -429,7 +428,8 @@ MODULE mo_flake_process
 
     
     PURE ELEMENTAL SUBROUTINE calc_lake_temp_stratification( &
-      & del_time,             & ! in & depth_w,              & ! in & extincoef_water_typ,  & ! in
+      & del_time,             & ! in
+      & depth_w,              & ! in & extincoef_water_typ,  & ! in
       & l_ice_create,         & ! in
       & h_ice,                & ! in
       & I_bot,                & ! in
@@ -473,12 +473,12 @@ MODULE mo_flake_process
         & h_ML_min,     &
         & h_ML_max,     & 
         & h_Ice_min,    &
-        & depth_w,      &
         & u_star_min
       
       USE mo_jsb_physical_constants,    ONLY: clw     ! Specific heat capacity of liquid water [J/(K kg)]
 
       REAL(wp), INTENT(in) :: del_time,             & ! The model time step [s]
+                            & depth_w,              & ! Waterbody depth [m]
                             & h_ice,                & ! Ice thickness [m]
                             & I_bot,                & ! Radiation flux through the water-bottom sediment interface [W m^{-2}]
                             & I_h,                  & ! Radiation flux through the mixed-layer-thermocline interface [W m^{-2}]

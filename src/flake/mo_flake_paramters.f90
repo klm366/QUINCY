@@ -35,8 +35,6 @@ MODULE mo_flake_parameters
     
 
     REAL(wp), SAVE :: &
-      & depth_w                   = def_parameters,   & ! constant lake depth                   [m] 
-
       & frac_optic_water(2)       = def_parameters,   & ! Fractions of total radiation flux     [-] 
       & extincoef_optic_water(2)  = def_parameters,   & ! Extinction coefficients per fraction  [m^{-1}]
       & frac_optic_ice(1)         = def_parameters,   & ! Fractions of total radiation flux     [-] 
@@ -84,9 +82,6 @@ MODULE mo_flake_parameters
     !>
     SUBROUTINE init_flake_parameters
       CHARACTER(len=*), PARAMETER :: routine = modname//':init_flake_parameters'
-
-      ! As a first step, keep lake depths constant
-      depth_w   = 10.0_wp  
 
       ! ! Optical parameters
       ! These parameters should be carefully reviewed before using them

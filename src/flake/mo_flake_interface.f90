@@ -154,6 +154,7 @@ CONTAINS
 
     ! Local variables
     INTEGER                     :: iblk, ics, ice, nc
+    REAL(wp)                    :: depth_w
     REAL(wp), POINTER           :: lat(:)
     REAL(wp)                    :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_flake_wbphysics'
@@ -271,13 +272,15 @@ CONTAINS
 
     jsb_standalone = jsbach_runs_standalone()
 
-
     ! Get process memories
     dsl4jsb_Get_memory(FLAKE_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
+
+    dsl4jsb_Get_config(FLAKE_)
+    depth_w = dsl4jsb_Config(FLAKE_)%depth
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(A2L_, wind_air)           ! in
@@ -347,7 +350,7 @@ CONTAINS
     ! Q_bot_flk = Q_bot_in
 
     call calc_radflux ( &
-                        !& depth_w,        & ! in
+                        & depth_w,        & ! in
                         & albedo_lwtr,    & ! in
                         & albedo_lice,    & ! in
                         & albedo_snow,    & ! in
@@ -411,11 +414,13 @@ CONTAINS
     !  Advance FLake variables 
     !  From here on the original file flake_driver is included but split into the routines
 
-    call calc_ice_water_heatfluxes( h_ice,      & ! in
+    call calc_ice_water_heatfluxes( &
+                                  & depth_w,    & ! in
+                                  & h_ice,      & ! in
                                   & h_ML,       & ! in
                                   & T_bot,      & ! in
                                   & T_wML,      & ! in
-                                  & C_T,        & ! in  ! & depth_w,    & ! in
+                                  & C_T,        & ! in
                                   & I_w,        & ! in
                                   & I_h,        & ! in
                                   & I_intm_0_h, & ! in
@@ -438,7 +443,8 @@ CONTAINS
                       & l_ice_create  & ! out
                       )
 
-    call calc_lake_temp_stratification( dtime,                & ! in & depth_w,  & extincoef_optic_water,   & ! in
+    call calc_lake_temp_stratification( dtime,                & ! in & extincoef_optic_water,   & ! in
+                                      & depth_w,              & ! in
                                       & l_ice_create,         & ! in
                                       & h_ice,                & ! in
                                       & I_bot,                & ! in
