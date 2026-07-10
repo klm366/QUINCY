@@ -256,7 +256,7 @@ MODULE mo_flake_process
       END IF   
         
       ! A generalized heat flux scale 
-      I_bot = (1._wp - albedo_bot)*I_bot
+      ! I_bot = (1._wp - albedo_bot)*I_bot ! TODO Why is this line here? It is not used in the original flake model
       Q_star = Q_w + I_w + I_h - 2._wp*I_intm_0_h         
     END SUBROUTINE calc_ice_water_heatfluxes
 
