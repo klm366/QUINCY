@@ -33,7 +33,9 @@
 
 start_year=1979
 end_year=1982
-usecase="12pfts"  # 12pfts, 11pfts
+pft_tag="12pfts"  # options: 12pfts, 11pfts; recommended: 12pfts
+                  # Note that "11pfts" is also possible for transitions, but consistent cover fractions
+                  # (i.e. based on LUH3 states) are not available for 11 PFTs at the moment.
 
 module load nco
 module unload cdo
@@ -58,7 +60,7 @@ mainStatesFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/${version}/multiple-sta
 fixedInputFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/${version}/multiple-static_input4MIPs_landState_CMIP_UofMD-landState-3-1-1_gn.nc
 
 #outfolder=./YOUROUTPUTFOLDER
-outfolder=./test_output
+outfolder=/work/bm0891/m300218/LUH3/prepare_transitions
 
 #-------------------------------------
 echo "--> ${scriptName}"
@@ -72,12 +74,12 @@ luh3_comment="${luh3_comment} Rangelands on potential forests are treated as pas
 # mapping of original to aggregated states
 # NOTE: Range is listed twice. Rangelands are aggregated to pasture or natural vegetation depending on the fstnf value
 org_states=( primf primn urban secdf secdn pastr range range c3ann c3per c4ann c4per c3nfx )
-if [ "$usecase" = "11pfts" ]; then
+if [ "$pft_tag" = "11pfts" ]; then
   aggregated_states=( natural natural pasture natural natural pasture natural pasture crop crop crop crop crop )
-elif [ "$usecase" = "12pfts" ]; then
+elif [ "$pft_tag" = "12pfts" ]; then
   aggregated_states=( natural natural pasture natural natural pasture natural pasture c3crop c3crop c4crop c4crop c3crop )
 else
-  echo "unknown usecase: ${usecase}"
+  echo "unknown pft_tag: ${pft_tag}"
   exit 1
 fi
 # Note: the "pltns" state variable and accoridng transitions contain zeros only in LUH3 V1; prop. needs to be handled > V1
@@ -198,85 +200,14 @@ ${ncatted} -O -a ,global,d,, LUH_trans_${start_year}-${end_year}.nc
 ${ncatted} -O -a luh3_comment,global,o,c,"${luh3_comment}" LUH_trans_${start_year}-${end_year}.nc
 ${ncatted} -O -a luh3_preprocessing,global,o,c,"${luh3_preprocessing}" LUH_trans_${start_year}-${end_year}.nc
 
+# JSBACH and the JSBACH scripting expect one file per year
+${cdo} -splityear LUH_trans_${start_year}-${end_year}.nc LUH_transitions_${pft_tag}_
+rm LUH_trans_${start_year}-${end_year}.nc
 
-#------------------
-# remapping to ICON grid and rescaling
-# - In LUH3, land-use transitions are given as the fraction of each grid-cell that transitions one from land-use
-#   state to another in a given year. JSBACH needs the transition rates relative to the vegetated fraction of the grid cell.
-#   Therefore, the transition rates from LUH3 need to be scaled with land * fract_veg * veg_ratio_max.
-# --- TBD: Do remapping to ICON grid and rescaling here only for test purposes.
-#          Later this should be incorporated in the ICON-Land preprocessing chain, possibly in generate_bc_land_fraction.sh.
+# reduce time dimension
+files=$( ls LUH_transitions_${pft_tag}_????.nc )
 
-testing_only=false
-if [ "$testing_only" = true ]; then
-  echo "Remapping to ICON grid for testing purpose..."
-  targetGrid2=/pool/data/ICON/grids/public/mpim/0049/icon_grid_0049_R02B04_G.nc   # mpim R2B4 grid
-  # targetGrid2=/pool/data/ICON/grids/public/edzw/icon_grid_0030_R02B05_G.nc   # dwd R2B5 grid
-  ${cdo} -remapcon,${targetGrid2} LUH_trans_${start_year}-${end_year}.nc tmp_remapped.nc
-  rm LUH_trans_${start_year}-${end_year}.nc
-
-  echo "Scaling transitions with land * fract_veg * veg_ratio_max..."
-  # vrm is constant in time
-  if [ "$usecase" = "11pfts" ]; then
-    vrm_file=/pool/data/ICON/grids/public/mpim/0049/land/r0101/bc_land_frac.nc
-  elif [ "$usecase" = "12pfts" ]; then
-    vrm_file=/pool/data/ICON/grids/public/mpim/0049/land/r0103/bc_land_frac.nc
-  else
-    echo "unknown usecase: ${usecase}"
-    exit 1
-  fi
-
-  ${cdo} -selvar,veg_ratio_max ${vrm_file} vrm.nc
-  ${cdo} -selvar,land ${vrm_file} land.nc
-  ${cdo} -selvar,fract_veg ${vrm_file} fract_veg.nc
-  ${cdo} -mul land.nc fract_veg.nc veg.nc
-  ${cdo} -mul veg.nc vrm.nc veg_vrm.nc
-  rm land.nc fract_veg.nc veg.nc vrm.nc
-
-  # divide tmp_remapped.nc by veg_vrm.nc for all variables:
-  # - when veg_vrm is zero, then set the result to zero instead of NaN
-  # - retain NaN when the original value is NaN
-  # - when the result is >1, set it to 1 (this concerns <300 grid cells with very low veg_vrm in JSB and
-  #   relatively high transition rates in the LUH3 data)
-  varList=$(${cdo} -showvar tmp_remapped.nc)
-  years=$(seq ${start_year} ${end_year})
-  for year in ${years}; do
-    for var in ${varList}; do
-      ${cdo} -selvar,${var} -selyear,${year} tmp_remapped.nc tmp_year.nc
-      ${cdo} -ifthenelse veg_vrm.nc -div tmp_year.nc veg_vrm.nc veg_vrm.nc tmp2_year.nc
-      ${cdo} -expr,"${var}=(${var}>1)?1:${var}" tmp2_year.nc tmp_scaled_${year}_${var}.nc
-      rm tmp_year.nc tmp2_year.nc
-    done
-    # JSBACH and the JSBACH scripting expect one file per year
-    if [ -f LUH_transitions_r2b4_${usecase}_${year}.nc ]; then
-      rm LUH_transitions_r2b4_${usecase}_${year}.nc
-    fi
-    ${cdo} -merge tmp_scaled_${year}_*.nc LUH_transitions_r2b4_${usecase}_${year}.nc
-    rm tmp_scaled_${year}_*.nc
-  done
-  rm tmp_remapped.nc veg_vrm.nc
-
-  # reduce time dimension
-  files=$( ls LUH_transitions_r2b4_${usecase}_????.nc )
-
-  for file in ${files}; do
-    ${cdo} --reduce_dim copy ${file} tmp.nc
-    mv tmp.nc ${file}
-  done
-
-else
-  echo "No remapping to ICON grid..."
-  echo "No scaling with vrm..."
-
-  # JSBACH and the JSBACH scripting expect one file per year
-  ${cdo} -splityear LUH_trans_${start_year}-${end_year}.nc LUH_transitions_${usecase}_
-  rm LUH_trans_${start_year}-${end_year}.nc
-
-  # reduce time dimension
-  files=$( ls LUH_transitions_${usecase}_????.nc )
-
-  for file in ${files}; do
-    ${cdo} --reduce_dim copy ${file} tmp.nc
-    mv tmp.nc ${file}
-  done
-fi
+for file in ${files}; do
+  ${cdo} --reduce_dim copy ${file} tmp.nc
+  mv tmp.nc ${file}
+done

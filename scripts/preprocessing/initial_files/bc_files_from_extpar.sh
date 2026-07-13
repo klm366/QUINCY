@@ -50,6 +50,7 @@ generate_bc_land_soil=true
 generate_bc_land_phys=true
 generate_bc_land_sso=true
 generate_ic_land_soil=true
+generate_bc_land_trans=true
 
 # Information for history attribute
 #vg git_repo=$(git remote -v | head -1 | cut -f2 | cut -f1 -d' ')
@@ -236,6 +237,14 @@ fi
 if [[ ${generate_ic_land_soil} == true ]]; then
   ${scripts_dir}/generate_ic_land_soil.sh
   cp ${scripts_dir}/generate_ic_land_soil.sh ${bc_file_dir}/scripts
+fi
+
+# ----------------------------------------------------------------------------
+#  6. bc transition files
+# -----------------------------
+if [[ ${generate_bc_land_trans} == true ]]; then
+  ${scripts_dir}/generate_bc_land_transitions.sh
+  cp ${scripts_dir}/generate_bc_land_transitions.sh ${bc_file_dir}/scripts
 fi
 
 # ----------------------------------------------------------------------------
