@@ -168,6 +168,19 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: max_wind_4yr       !< Maximum 10m wind speed smoothed in time
     dsl4jsb_Real2D_onChunk :: q_rel_air_14d      !< Relative humidity smoothed in time (~14 days) [%]
     dsl4jsb_Real2D_onChunk :: q_rel_air_14d_yDay !< Previous day value of smoothed relative humidity [%]
+    dsl4jsb_Real2D_onChunk :: temp_sum_year      !< Current annual air-temperature integral [K s]
+    dsl4jsb_Real2D_onChunk :: time_sum_year      !< Current accumulated time within the year [s]
+    dsl4jsb_Real2D_onChunk :: precip_sum_year    !< Current annual precipitation accumulation [kg m-2]
+    dsl4jsb_Real2D_onChunk :: mat_prev_year      !< Previous-year mean air temperature [K]
+    dsl4jsb_Real2D_onChunk :: map_prev_year      !< Previous-year total precipitation [kg m-2]
+    dsl4jsb_Real2D_onChunk :: max_mmtemp_prev_year !< Previous-year warmest monthly mean temperature [K]
+    dsl4jsb_Real2D_onChunk :: pft13_vcmax25_raw  !< Unbounded PFT13 Vcmax25 diagnostic [umol m-2 s-1]
+    dsl4jsb_Real2D_onChunk :: pft13_vcmax25_pred !< Bounded PFT13 Vcmax25 diagnostic [umol m-2 s-1]
+    dsl4jsb_Real2D_onChunk :: pft13_jmax25_raw   !< Unbounded PFT13 Jmax25 diagnostic [umol m-2 s-1]
+    dsl4jsb_Real2D_onChunk :: pft13_jmax25_pred  !< Bounded PFT13 Jmax25 diagnostic [umol m-2 s-1]
+    dsl4jsb_Real2D_onChunk :: pft13_sla_raw      !< Unbounded PFT13 SLA diagnostic [m2 gC-1]
+    dsl4jsb_Real2D_onChunk :: pft13_sla_pred     !< Bounded PFT13 SLA diagnostic [m2 gC-1]
+    dsl4jsb_Real2D_onChunk :: pft13_jmax_vcmax_ratio !< Unbounded PFT13 Jmax25 to Vcmax25 ratio [-]
 
     ! Declare pointers to variables in foreign memory
     dsl4jsb_Real2D_onChunk :: t_air              !< Near surface air temperature [K]
@@ -224,6 +237,19 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_4yr)           ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_14d)          ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_14d_yDay)     ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,temp_sum_year)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,time_sum_year)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,precip_sum_year)        ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,mat_prev_year)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,map_prev_year)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp_prev_year)   ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,pft13_vcmax25_raw)      ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,pft13_vcmax25_pred)     ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,pft13_jmax25_raw)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,pft13_jmax25_pred)      ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,pft13_sla_raw)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,pft13_sla_pred)         ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,pft13_jmax_vcmax_ratio) ! inout
 
     ! Generally, the climate buffer is initialized at model initialization (is_time_experiment_start).
     ! There is however the possibility to initialize it in restarted simulations by namelist parameter
@@ -262,9 +288,11 @@ CONTAINS
       &               rain, snow, wind_10m, q_rel_air, seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
       &               min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
       &               temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
-      &               gdd_sum_year, gdd_prev_year, &
-      &               max_wind_of_day, max_wind_yDay, max_wind_4yr, &
-      &               q_rel_air_14d, q_rel_air_14d_yDay)
+      &               gdd_sum_year, gdd_prev_year, max_wind_of_day, max_wind_yDay, max_wind_4yr, &
+      &               q_rel_air_14d, q_rel_air_14d_yDay, temp_sum_year, time_sum_year, precip_sum_year, &
+      &               mat_prev_year, map_prev_year, max_mmtemp_prev_year, &
+      &               pft13_vcmax25_raw, pft13_vcmax25_pred, pft13_jmax25_raw, pft13_jmax25_pred, &
+      &               pft13_sla_raw, pft13_sla_pred, pft13_jmax_vcmax_ratio)
 
     !$ACC END DATA
     DEALLOCATE (q_rel_air)
@@ -322,6 +350,19 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, precip_15d_yDay, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, gdd_sum_year, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, gdd_prev_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, temp_sum_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, time_sum_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, precip_sum_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, mat_prev_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, map_prev_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_mmtemp_prev_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, pft13_vcmax25_raw, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, pft13_vcmax25_pred, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, pft13_jmax25_raw, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, pft13_jmax25_pred, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, pft13_sla_raw, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, pft13_sla_pred, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, pft13_jmax_vcmax_ratio, weighted_by_fract)
 
     IF (debug_on() .AND. options%iblk==1) CALL message(TRIM(routine), 'Finished.')
 
