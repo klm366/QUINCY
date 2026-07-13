@@ -16,7 +16,7 @@
 !>#### defines QUINCY model parameters, units and helpers for model output
 !>
 MODULE mo_quincy_output_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   IMPLICIT NONE
   PRIVATE

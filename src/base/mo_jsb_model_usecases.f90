@@ -79,11 +79,9 @@ CONTAINS
       ! jsbach 11 PFTs + forest age-classes
       CALL init_usecase_pfts_with_forest_age_classes(model)
 
-#ifndef __NO_QUINCY__
     ! QUINCY 13 PFTs
     CASE ('quincy_13_pfts')
       CALL init_usecase_quincy_13_pfts(model)
-#endif
 
     ! catch wrong usecase setting
     CASE DEFAULT
@@ -758,7 +756,6 @@ CONTAINS
 
     END SUBROUTINE set_jsbach_pfts
 
-#ifndef __NO_QUINCY__
   ! ======================================================================================================= !
   !>init routine for usecase quincy_13_pfts
   !>
@@ -936,7 +933,6 @@ CONTAINS
     IF (model%config%use_lakes)   NULLIFY(lake_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
   END SUBROUTINE init_usecase_quincy_13_pfts
-#endif
 
 #endif
 END MODULE mo_jsb_model_usecases

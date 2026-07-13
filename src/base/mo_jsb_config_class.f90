@@ -86,7 +86,6 @@ MODULE mo_jsb_config_class
     ! TODO remove `relative_fractions_in_file` function. We agreed to always use relative fractions in the initial file, although absolute (grid box)
     !      fractions are used elsewhere in the code.
 
-#ifndef __NO_QUINCY__
     ! Characteristics of biogeochemical (bgc) material in quincy: flags specifying the elements used and
     ! corresponding bookkeeping vectors.
     ! Note: No logical for carbon because we presuppose that it is always used.
@@ -111,7 +110,6 @@ MODULE mo_jsb_config_class
     INTEGER ::  slow_sb_pool_spinup_accelerator_length         !< Number of time loops in spin-up accelerator
     INTEGER ::  slow_sb_pool_spinup_accelerator_start_year     !< Year of the first spin-up accelerator runs
     INTEGER ::  slow_sb_pool_spinup_accelerator_max_executions !< Maximum number of spin-up accelerator runs
-#endif
 
     ! Initialization from ECMWF Integrated Forecast System (IFS) analysis data
     LOGICAL                        :: init_from_ifs            !< Initialize from IFS analysis
@@ -182,10 +180,7 @@ CONTAINS
     USE mo_jsb_impl_constants,  ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR    ! handling of water balance errors
     USE mo_jsb_control,         ONLY: jsbach_runs_standalone
     USE mo_util,                ONLY: tolower
-
-#ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, Get_quincy_model_config_id
-#endif
 
     CHARACTER(len=*),         INTENT(in) :: namelist_filename     !< File containing the model namelist
     TYPE(t_jsb_model_config), POINTER    :: model_config          !< Model configuration: structure
@@ -219,7 +214,6 @@ CONTAINS
     CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)             !< List of the output tiles
     LOGICAL                       :: relative_fractions_in_file   !< Tile fractions in [[t_jsb_model_config:fract_filename]]
                                                                   !< are relative to the parent tiles.
-#ifndef __NO_QUINCY__
     LOGICAL :: force_c_isotopes                                   !< Read carbon isotopes forcing
     LOGICAL :: include_nitrogen                                   !< Nitrogen is element in bgc_material
     LOGICAL :: include_phosphorus                                 !< Phosphorus is element in bgc_material
@@ -233,7 +227,6 @@ CONTAINS
     INTEGER :: slow_sb_pool_spinup_accelerator_start_year         !< Year in which spin-up accelerator is
                                                                   !< executed for the first time
     INTEGER :: slow_sb_pool_spinup_accelerator_max_executions     !< Maximum number of spin-up accelerator runs
-#endif
     LOGICAL                       :: init_from_ifs                !< Initialize ICON-Land from IFS data
     CHARACTER(len=filename_max)   :: ifs_filename                 !< File containing IFS data
     LOGICAL                       :: is_single_site
@@ -257,7 +250,6 @@ CONTAINS
       fract_filename, &
       output_tiles, &
       relative_fractions_in_file, &
-#ifndef __NO_QUINCY__
       force_c_isotopes, &
       include_nitrogen, &
       include_phosphorus, &
@@ -270,7 +262,6 @@ CONTAINS
       slow_sb_pool_spinup_accelerator_length, &
       slow_sb_pool_spinup_accelerator_start_year, &
       slow_sb_pool_spinup_accelerator_max_executions, &
-#endif
       init_from_ifs, &
       ifs_filename, &
       is_single_site, &
@@ -307,9 +298,7 @@ CONTAINS
     check_child_cf             = .FALSE.
     enforce_water_budget       = 'ignore'
     quincy_model               = 'land'
-#ifndef __NO_QUINCY__
     qmodel_id                  = QLAND
-#endif
     grid_filename              = ''
     grid_name                  = ''
     usecase                    = ''
@@ -319,7 +308,6 @@ CONTAINS
     fract_filename             = 'bc_land_frac.nc'
     output_tiles(:)            = ''
     relative_fractions_in_file = .TRUE.
-#ifndef __NO_QUINCY__
     force_c_isotopes           = .TRUE.
     include_nitrogen           = .TRUE.
     include_phosphorus         = .TRUE.
@@ -332,7 +320,6 @@ CONTAINS
     slow_sb_pool_spinup_accelerator_length = 1000
     slow_sb_pool_spinup_accelerator_start_year = 300
     slow_sb_pool_spinup_accelerator_max_executions = 4
-#endif
     init_from_ifs              = .FALSE.
     ifs_filename               = 'ifs2icon.nc'
     is_single_site             = .FALSE.
@@ -393,9 +380,8 @@ CONTAINS
     model_config%tpe_scheme                 = tpe_scheme
     model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
-#ifndef __NO_QUINCY__
     model_config%force_c_isotopes           = force_c_isotopes
-    ! organise elements
+    ! organise bgcm elements
     model_config%include_nitrogen           = include_nitrogen
     model_config%include_phosphorus         = include_phosphorus
     model_config%include_carbon13           = include_carbon13
@@ -409,7 +395,6 @@ CONTAINS
     model_config%slow_sb_pool_spinup_accelerator_length = slow_sb_pool_spinup_accelerator_length
     model_config%slow_sb_pool_spinup_accelerator_start_year = slow_sb_pool_spinup_accelerator_start_year
     model_config%slow_sb_pool_spinup_accelerator_max_executions = slow_sb_pool_spinup_accelerator_max_executions
-#endif
 
     !>
     !> @TODO To be deleted `relative_fractions_in_file` (clean up task).
@@ -437,17 +422,7 @@ CONTAINS
       CALL finish(TRIM(routine), 'enforce_water_budget == '//tolower(TRIM(enforce_water_budget))//' not available.')
     END SELECT
 
-    !>
-    !> @TODO Check if the `__NO_QUINCY__` check for setting the model configuration ID is still required - clean up task.
-    !>
-#ifndef __NO_QUINCY__
-    ! Set the model configuration id
-#ifdef __QUINCY_STANDALONE__
-    model_config%qmodel_id = Get_quincy_model_config_id(model_config%quincy_model_name)
-#else
-    model_config%qmodel_id = Get_quincy_model_config_id(model_config%quincy_model)
-#endif
-#endif
+    model_config%qmodel_id = Get_quincy_model_config_id(model_config%quincy_model)  ! QLAND, QPLANT, ...
 
     !>
     !> `model_config%init_from_ifs`, and `model_config%ifs_filename`.
@@ -480,10 +455,9 @@ CONTAINS
 
   END FUNCTION new_model_config
 
-#ifndef __NO_QUINCY__
   ! ======================================================================================================= !
   !>
-  !> The logicals that indicate which chemical elements are to be included are used to set up
+  !> The logicals that indicate which bgcm elements are to be included are used to set up
   !> a bookkeeping list for the elements and to determine the number of elements actually in use.
   !> The bookkeeping list contains the IDs of the elements in use.
   !>
@@ -545,7 +519,6 @@ CONTAINS
     CALL message(TRIM(short_name), TRIM(message_text))
 
   END SUBROUTINE setup_element
-#endif
 
 #endif
 END MODULE mo_jsb_config_class
