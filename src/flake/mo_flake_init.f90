@@ -19,9 +19,9 @@ MODULE mo_flake_init
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on
 
-  !USE mo_jsb_model_class,   ONLY: t_jsb_model
+  USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
-  !USE mo_jsb_class,         ONLY: get_model
+  USE mo_jsb_class,         ONLY: get_model
   !USE mo_jsb_io_netcdf,     ONLY: t_input_file !, jsb_netcdf_open_input
 
   dsl4jsb_Use_processes FLAKE_
@@ -49,6 +49,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':flake_init'
     
+    TYPE(t_jsb_model), POINTER :: model
+
     dsl4jsb_Real2D_onDomain :: &
       & c_t   , &
       & h_ice , &
@@ -63,9 +65,19 @@ CONTAINS
       & fetch
 
     dsl4jsb_Def_memory(FLAKE_)
+    dsl4jsb_Def_config(FLAKE_)
+
+    model => get_model(tile%owner_model_id)
+
     dsl4jsb_Get_memory(FLAKE_)
+    dsl4jsb_Get_config(FLAKE_)
 
     IF (tile%contains_lake) THEN
+
+      IF (.NOT. model%config%is_single_site) THEN
+        CALL message(routine, 'WARNING: Initialization of the Flake process is currently using constant values from namelist')
+      END IF
+
       dsl4jsb_Get_var2D_onDomain(FLAKE_, c_t)    ! OUT
       dsl4jsb_Get_var2D_onDomain(FLAKE_, h_ice)  ! OUT
       dsl4jsb_Get_var2D_onDomain(FLAKE_, h_ML)   ! OUT
@@ -78,17 +90,17 @@ CONTAINS
       dsl4jsb_Get_var2D_onDomain(FLAKE_, T_wML)  ! OUT
       dsl4jsb_Get_var2D_onDomain(FLAKE_, fetch)  ! OUT
 
-      c_t         = 0.5_wp 
-      h_ice       = 0.0_wp
-      h_ML        = 1.0_wp
-      h_snow      = 0.0_wp
-      T_bot       = tpl_T_r
-      T_lice       = tpl_T_f
-      T_mnw       = tpl_T_f
-      ! T_sfc       = tpl_T_f
-      ! T_snow      = tpl_T_f
-      T_wML       = tpl_T_f
-      fetch       = 1.0E+04_wp ! 10km
+      c_t(:,:)    = dsl4jsb_Config(FLAKE_)%c_t
+      h_ice(:,:)  = dsl4jsb_Config(FLAKE_)%h_ice
+      h_ML(:,:)   = dsl4jsb_Config(FLAKE_)%h_ML
+      h_snow(:,:) = dsl4jsb_Config(FLAKE_)%h_snow
+      T_bot(:,:)  = dsl4jsb_Config(FLAKE_)%T_bot
+      T_lice(:,:) = dsl4jsb_Config(FLAKE_)%T_lice
+      T_mnw(:,:)  = dsl4jsb_Config(FLAKE_)%T_mnw
+      ! T_sfc       = dsl4jsb_Config(FLAKE_, T_sfc)
+      ! T_snow      = dsl4jsb_Config(FLAKE_, T_snow)
+      T_wML(:,:)  = dsl4jsb_Config(FLAKE_)%T_wML
+      fetch(:,:)  = dsl4jsb_Config(FLAKE_)%fetch
 
     END IF
 

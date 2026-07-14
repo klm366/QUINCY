@@ -43,20 +43,20 @@ MODULE mo_flake_memory_class
 
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & c_t,          &  !< lake tc shape factor
-      & T_lice,       &  !< lake ice temperature 
+      & c_t,          &  !< Shape factor with respect to the temperature profile in thermocline
+      & T_lice,       &  !< Temperature of lake ice [K]
       ! & T_sfc,        &  !< lake surface temperature wtr
-      & t_bot,        &  !< lake bottom temperature at water/sediment interface
-      & t_wml,        &  !< lake mixed-layer temperaturer wtr
-      & t_mnw,        &  !< lake mean wtr temperature
-      & h_ice,        &  !< lake ice height
-      & h_ML,         &  !< lake mixed-layer height
-      & h_snow,       &  !< lake snow-layer height
-      & fetch,        &  !< lake fetch
-      & w_star,       &  !< convective velocity scale 
-      & z0t_sf, &
-      & z0u_sf, &
-      & Q_bot!, & !< ! Heat flux through the water-bottom sediment interface [W m^{-2}]
+      & t_bot,        &  !< Temperature at the water-sediment interface [K]
+      & t_wml,        &  !< Temperature in the mixed layer [K]
+      & t_mnw,        &  !< Mean temperature of the water column [K]
+      & h_ice,        &  !< Ice thickness [m]
+      & h_ML,         &  !< Mixed layer thickness [m]
+      & h_snow,       &  !< Snow thickness [m]
+      & fetch,        &  !< Fetch length [m]
+      & w_star,       &  !< Convective velocity scale [m/s]
+      & z0t_sf,       &  !< Surface roughness length for temperature [m]
+      & z0u_sf,       &  !< Surface roughness length for velocity [m]
+      & Q_bot!,       &  !< Heat flux through the water-bottom sediment interface [W m^{-2}]
       !X add your 2D variables here e.g: & t_wtr,                & !< Lake surface temperature (water)     [K]
 
   CONTAINS
