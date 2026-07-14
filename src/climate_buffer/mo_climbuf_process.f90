@@ -56,7 +56,7 @@ CONTAINS
   !> atmospheric forcing data.
   !>
   ! -------------------------------------------------------------------------------------------------------- !
-  ELEMENTAL PURE SUBROUTINE calc_climbuf (lstart, init_running_means, new_day, new_month, new_year, &
+  ELEMENTAL PURE SUBROUTINE calc_climbuf (lstart, init_running_means, new_day, new_month, new_year, is_pft13, &
     &                                     dtime, t_air, rain, snow, wind_10m, q_rel_air, &
     &                                     seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
     &                                     min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
@@ -75,7 +75,8 @@ CONTAINS
       & init_running_means,     & !< Initialize the min/max temperature climatology
       & new_day,                & !< This is the first time step of the day
       & new_month,              & !< This is the first time step of the month
-      & new_year                  !< This is the first time step of the year
+      & new_year,               & !< This is the first time step of the year
+      & is_pft13                  !< True only for the explicit PFT13 child tile
 
     REAL(wp), INTENT(in) :: &
       & dtime,                  & !< Time step length [s]
@@ -187,29 +188,42 @@ CONTAINS
         mat_prev_c  = mat_prev_year - tmelt
         tmax_prev_c = max_mmtemp_prev_year - tmelt
 
-        pft13_vcmax25_raw = pft13_vcmax25_intercept &
-          & + pft13_vcmax25_mat_coef * mat_prev_c &
-          & + pft13_vcmax25_map_coef * map_prev_year
+        ! Previous behaviour, retained in Git history:
+        ! the PFT13-named diagnostics were evaluated on every CLIMBUF tile.
+        ! The explicit tile guard below restricts their calculation to PFT13.
+        IF (is_pft13) THEN
+          pft13_vcmax25_raw = pft13_vcmax25_intercept &
+            & + pft13_vcmax25_mat_coef * mat_prev_c &
+            & + pft13_vcmax25_map_coef * map_prev_year
 
-        pft13_jmax25_raw = pft13_jmax25_intercept &
-          & + pft13_jmax25_mat_coef * mat_prev_c &
-          & + pft13_jmax25_map_coef * map_prev_year
+          pft13_jmax25_raw = pft13_jmax25_intercept &
+            & + pft13_jmax25_mat_coef * mat_prev_c &
+            & + pft13_jmax25_map_coef * map_prev_year
 
-        pft13_sla_raw = pft13_sla_intercept &
-          & + pft13_sla_map_coef * map_prev_year &
-          & + pft13_sla_tmax_coef * tmax_prev_c &
-          & + pft13_sla_map_tmax_coef * map_prev_year * tmax_prev_c
+          pft13_sla_raw = pft13_sla_intercept &
+            & + pft13_sla_map_coef * map_prev_year &
+            & + pft13_sla_tmax_coef * tmax_prev_c &
+            & + pft13_sla_map_tmax_coef * map_prev_year * tmax_prev_c
 
-        pft13_vcmax25_pred = MIN(pft13_vcmax25_upper, &
-          & MAX(pft13_vcmax25_lower, pft13_vcmax25_raw))
-        pft13_jmax25_pred = MIN(pft13_jmax25_upper, &
-          & MAX(pft13_jmax25_lower, pft13_jmax25_raw))
-        pft13_sla_pred = MIN(pft13_sla_upper, &
-          & MAX(pft13_sla_lower, pft13_sla_raw))
+          pft13_vcmax25_pred = MIN(pft13_vcmax25_upper, &
+            & MAX(pft13_vcmax25_lower, pft13_vcmax25_raw))
+          pft13_jmax25_pred = MIN(pft13_jmax25_upper, &
+            & MAX(pft13_jmax25_lower, pft13_jmax25_raw))
+          pft13_sla_pred = MIN(pft13_sla_upper, &
+            & MAX(pft13_sla_lower, pft13_sla_raw))
 
-        IF (ABS(pft13_vcmax25_raw) > EPSILON(1._wp)) THEN
-          pft13_jmax_vcmax_ratio = pft13_jmax25_raw / pft13_vcmax25_raw
+          IF (ABS(pft13_vcmax25_raw) > EPSILON(1._wp)) THEN
+            pft13_jmax_vcmax_ratio = pft13_jmax25_raw / pft13_vcmax25_raw
+          ELSE
+            pft13_jmax_vcmax_ratio = 0._wp
+          END IF
         ELSE
+          pft13_vcmax25_raw = 0._wp
+          pft13_vcmax25_pred = 0._wp
+          pft13_jmax25_raw = 0._wp
+          pft13_jmax25_pred = 0._wp
+          pft13_sla_raw = 0._wp
+          pft13_sla_pred = 0._wp
           pft13_jmax_vcmax_ratio = 0._wp
         END IF
       END IF

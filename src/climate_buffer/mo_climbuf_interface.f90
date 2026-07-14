@@ -143,6 +143,7 @@ CONTAINS
       & use_tmx                !< Use tmx scheme; needed as local variable on GPUs
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_climbuf'
+    LOGICAL :: is_pft13  !< True only for the explicit PFT13 child tile
 
     ! Declare process memories
     dsl4jsb_Def_config(CLIMBUF_)   !< Configuration of the climate buffer process
@@ -204,6 +205,11 @@ CONTAINS
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(CLIMBUF_)) RETURN
+
+    ! Restrict the mangrove trait diagnostics to the explicit PFT13 child tile.
+    ! Generic CLIMBUF calculations remain active on all tiles on which the
+    ! CLIMBUF process is calculated.
+    is_pft13 = TRIM(tile%name) == 'pft13'
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -284,7 +290,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     init_running_means = dsl4jsb_Config(CLIMBUF_)%init_running_means
-    CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
+    CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, is_pft13, dtime, t_air, &
       &               rain, snow, wind_10m, q_rel_air, seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
       &               min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
       &               temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
