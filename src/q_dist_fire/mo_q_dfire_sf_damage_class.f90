@@ -12,6 +12,8 @@
 !>
 !> For more information on the QUINCY model see: <https://doi.org/10.17871/quincy-model-2019>
 !>
+!>#### routine for updating calculate tree damage due to fire
+!>
 MODULE mo_q_dfire_sf_damage_class
 #ifndef __NO_JSBACH__
 
@@ -19,107 +21,17 @@ MODULE mo_q_dfire_sf_damage_class
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_math_constants,  ONLY: eps8, one_day
+  USE mo_q_dfire_sf_classes,  ONLY: t_sf_tree_damage
 
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: calc_tau_l, calc_prop_ck, t_sf_prob_mort
-  PUBLIC :: calc_prob_mortality
+  PUBLIC :: calc_tau_l, calc_prop_ck,
+  PUBLIC :: calc_sf_tree_damage
 
-  TYPE t_sf_prob_mort
-    REAL(wp), ALLOCATABLE :: pm_ck(:)         !< probability of post fire mortality due to crown damage [-]
-    REAL(wp), ALLOCATABLE :: r_ck             !< Resistance factor against crown damage [-]
-    REAL(wp), ALLOCATABLE :: ck_p             !< Parameter for woody PFTs used in Pm (CK) equation [-]
-    REAL(wp), ALLOCATABLE :: F_scorch_height  !< PFT-parameter in crown scorch equation [-]
-    REAL(wp), POINTER :: pm_fire(:) => NULL() !< mix of tau and ck [-]
-    REAL(wp), POINTER :: pm_tau(:)  => NULL() !< probability of post fire mortality due to cambial damage [-]
-    REAL(wp), POINTER :: tau_l(:)             !< Residence time of the fire [min]
-    REAL(wp), POINTER :: tau_c(:)             !< Critical time for cambial damage [min]
-    REAL(wp), POINTER :: bark_thickness(:)    !< Tree barth thickness [cm]
-    REAL(wp), POINTER :: prop_ck(:)           !< Fraction of the crown scorch [-]
-    REAL(wp), POINTER :: scorch_height(:)     !< Scorch height [m]
-    REAL(wp), POINTER :: crown_length(:)      !< Crown length of woody PFT [m]
-  CONTAINS
-    PROCEDURE :: copy_from_prob_mort
-    GENERIC, PUBLIC :: assignment(=) => copy_from_prob_mort
-  END TYPE t_sf_prob_mort
-
-
-  INTERFACE t_sf_prob_mort
-    MODULE PROCEDURE :: create_t_sf_prob_mort
-  END INTERFACE t_sf_prob_mort
-
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_effects'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_damage_class'
 
 CONTAINS
-
-  ! ======================================================================================================= !
-  !>
-  !> Constructor for t_sf_prob_mort
-  !>
-  FUNCTION create_t_sf_prob_mort(nc, pm_fire, pm_tau, tau_l, tau_c, &
-                  bark_thickness, prop_ck, scorch_height, &
-                  crown_length) RESULT (sf_pm)
-    INTEGER, INTENT(in) :: nc
-    REAL(wp), INTENT(inout), POINTER :: pm_fire(:)
-    REAL(wp), INTENT(inout), POINTER :: pm_tau(:)
-    REAL(wp), INTENT(inout), POINTER :: tau_l(:)
-    REAL(wp), INTENT(inout), POINTER :: tau_c(:)
-    REAL(wp), INTENT(inout), POINTER :: bark_thickness(:)
-    REAL(wp), INTENT(inout), POINTER :: prop_ck(:)
-    REAL(wp), INTENT(inout), POINTER :: scorch_height(:)
-    REAL(wp), INTENT(inout), POINTER :: crown_length(:)
-    TYPE(t_sf_prob_mort) :: sf_pm
-
-    ALLOCATE(sf_pm%pm_ck(nc))
-    ALLOCATE(sf_pm%r_ck)
-    ALLOCATE(sf_pm%ck_p)
-    ALLOCATE(sf_pm%F_scorch_height)
-    sf_pm%pm_fire => pm_fire
-    sf_pm%pm_tau => pm_tau
-    sf_pm%tau_l => tau_l
-    sf_pm%tau_c => tau_c
-    sf_pm%bark_thickness => bark_thickness
-    sf_pm%prop_ck => prop_ck
-    sf_pm%scorch_height => scorch_height
-    sf_pm%crown_length => crown_length
-
-    sf_pm%pm_fire = 0._wp
-    sf_pm%pm_tau = 0._wp
-    sf_pm%pm_ck = 0._wp
-    sf_pm%tau_l = 0._wp
-    sf_pm%tau_c = 0._wp
-    sf_pm%bark_thickness = 0._wp
-    sf_pm%prop_ck = 0._wp
-    sf_pm%r_ck = 0._wp
-    sf_pm%ck_p = 0._wp
-    sf_pm%scorch_height = 0._wp
-    sf_pm%F_scorch_height = 0._wp
-    sf_pm%crown_length = 0._wp
-  END FUNCTION create_t_sf_prob_mort
-
-
-  ! ======================================================================================================= !
-  !>
-  !> Copy from "other" into "self"
-  !>
-  SUBROUTINE copy_from_prob_mort(self, other)
-    CLASS(t_sf_prob_mort), INTENT(inout) :: self
-    CLASS(t_sf_prob_mort), INTENT(in)    :: other
-
-    self % pm_ck = other % pm_ck ! copy data
-    self % r_ck = other % r_ck
-    self % ck_p = other % ck_p
-    self % F_scorch_height = other % F_scorch_height
-    self % pm_fire => other % pm_fire ! copy pointer reference
-    self % pm_tau => other % pm_tau
-    self % tau_l => other % tau_l
-    self % tau_c => other % tau_c
-    self % bark_thickness => other % bark_thickness
-    self % prop_ck => other % prop_ck
-    self % scorch_height => other % scorch_height
-    self % crown_length => other % crown_length
-  END SUBROUTINE copy_from_prob_mort
 
 
   ! ======================================================================================================= !
@@ -127,7 +39,7 @@ CONTAINS
   !> Calculate probability of mortality (Section 2.2.6 from Thonicke et al. (2010))
   !> (Tree only)
   !>
-  SUBROUTINE calc_prob_mortality(nc, nfuels, lctlib_crown_length, lctlib_r_ck, lctlib_ck_p, &
+  SUBROUTINE calc_sf_tree_damage(nc, nfuels, lctlib_crown_length, lctlib_r_ck, lctlib_ck_p, &
                               lctlib_F_scorch_height, lctlib_par1, lctlib_par2, &
                               height, dbh, i_surface, dead_fuel, frac_consump, &
                               prob_mort, &
@@ -145,7 +57,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: lctlib_F_scorch_height          !< Scorch height parameter [-]
     REAL(wp), INTENT(in) :: lctlib_par1                     !< Bark thickness par1 parameter [-]
     REAL(wp), INTENT(in) :: lctlib_par2                     !< Bark thickness par2 parameter [-]
-    TYPE(t_sf_prob_mort), INTENT(inout) :: prob_mort        !< output
+    TYPE(t_sf_tree_damage), INTENT(inout) :: prob_mort        !< output
     LOGICAL, INTENT(in), OPTIONAL :: mask_opt(nc)           !< True = Compute gridcell(s) (default = true)
 
     LOGICAL :: mask(nc)
@@ -184,7 +96,7 @@ CONTAINS
         prob_mort%F_scorch_height = lctlib_F_scorch_height
       END IF
     END DO
-  END SUBROUTINE calc_prob_mortality
+  END SUBROUTINE calc_sf_tree_damage
 
 
   ! ======================================================================================================= !

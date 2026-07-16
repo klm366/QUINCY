@@ -9,6 +9,8 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### routine to calculate fuel from the model pools
+!>
 MODULE mo_q_dfire_sf_fuel_class
 #ifndef __NO_JSBACH__
 
@@ -44,7 +46,6 @@ MODULE mo_q_dfire_sf_fuel_class
 
   PUBLIC :: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
   PUBLIC :: t_sf_fuel_dead_fuel_woody_ix, t_sf_fuel_dead_fuel_polymeric_ix
-  PUBLIC :: create_fuel_class ! DEBUG only
 
   PRIVATE
 

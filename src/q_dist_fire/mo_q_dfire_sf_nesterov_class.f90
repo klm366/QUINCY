@@ -10,6 +10,8 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### routine to calculate nesterov index (dryness index)
+!>
 MODULE mo_q_dfire_sf_nesterov_class
 #ifndef __NO_JSBACH__
 

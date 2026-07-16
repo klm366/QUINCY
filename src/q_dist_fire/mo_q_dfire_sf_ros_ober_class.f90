@@ -10,6 +10,8 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### routine to calculate fire rate of spread including Oberhagemann improvements from Thonicke's paper
+!>
 MODULE mo_q_dfire_sf_ros_ober_class
 #ifndef __NO_JSBACH__
 

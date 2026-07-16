@@ -10,6 +10,8 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### routine to calculate fuel consumption
+!>
 MODULE mo_q_dfire_sf_fuel_consump_class
 #ifndef __NO_JSBACH__
 

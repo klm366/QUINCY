@@ -56,7 +56,7 @@ MODULE mo_q_dfire_sf_dynamics
                                       df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx !< fuel classes indices
 
   USE mo_q_dfire_sf_constants,  ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
-                                      df_sf_omega_o_idx, & !< omega_o index from sf_calc_fuel_moisture output (array)
+                                      df_sf_omega_o_idx, & !< omega_o index from calc_sf_fuel_moisture_for_thonicke output (array)
                                       df_sf_omega_nl_idx
 
   USE mo_q_dfire_sf_constants,  ONLY: ixs_sf_dead_litter_fuel_pools
@@ -66,14 +66,13 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_q_dfire_sf_config_class,  ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
-  USE mo_q_dfire_sf_fmoist_class, ONLY: sf_calc_fuel_moisture, t_mf, sf_calc_fuel_moisture_ober
-  USE mo_q_dfire_sf_ignition_class,     ONLY: calc_q_sf_ignition, t_q_sf_ignitions
+  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_sf_fuel_moisture_for_thonicke, calc_sf_fuel_moisture_for_oberhagemann
+  USE mo_q_dfire_sf_ignition_class,     ONLY: calc_sf_ignition
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
   USE mo_q_dfire_sf_ros_thon_class,     ONLY: sf_calc_rate_of_spread_thon
-  USE mo_q_dfire_sf_ros_ober_class,     ONLY: sf_calc_rate_of_spread_ober
-  USE mo_q_dfire_sf_classes,            ONLY: t_sf_ros
-  USE mo_q_dfire_sf_ros_ober_class,     ONLY: calc_live_me
+  USE mo_q_dfire_sf_ros_ober_class,     ONLY: sf_calc_rate_of_spread_ober, calc_live_me
+  USE mo_q_dfire_sf_classes,            ONLY: t_sf_ros, t_sf_dynamics, t_sf_ignitions, t_sf_mf
   USE mo_q_dfire_sf_frac_consump_class, ONLY: sf_calc_frac_consump
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption
 
@@ -84,78 +83,12 @@ MODULE mo_q_dfire_sf_dynamics
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_q_dfire_sf_dynamics, sf_calc_fire_intensity, t_sf_dynamics, calc_ab_moisture
+  PUBLIC :: update_q_dfire_sf_dynamics, sf_calc_fire_intensity, calc_ab_moisture
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_dynamics'
 
-  !<
-  !< Calculated Spitfire values
-  !< Move spitfire data from calc_spitfire <-> update_q_dfire_sf_dynamics subroutines
-  !<
-  TYPE t_sf_dynamics
-    REAL(wp), ALLOCATABLE :: e_n_ignitions(:)
-    REAL(wp), ALLOCATABLE :: e_n_humans(:)
-    REAL(wp), ALLOCATABLE :: e_n_lightning(:)
-
-    REAL(wp), ALLOCATABLE :: fdi(:) !< fire danger index [0 to 1]
-    TYPE(t_sf_ros)        :: ros    !< fire dynamics
-
-    REAL(wp), ALLOCATABLE :: area_burned(:)             !<
-    REAL(wp), ALLOCATABLE :: area_burned_fract(:)
-
-    REAL(wp), ALLOCATABLE :: dead_frac_consump(:,:)     !< Dead fraction of consumption (#nc, #fuel classes) [0 to 1]
-    REAL(wp), ALLOCATABLE :: fc_dead_cls(:,:,:)         !< dead fuel consumption (#nc, #dead pools, #fuels classes) [g DM m-2]
-    REAL(wp), ALLOCATABLE :: i_surface(:)               !< Fire intensity [kW m-1]
-
-    LOGICAL, ALLOCATABLE  :: is_fire_intense_enough(:)  !< mask, TRUE= fire intensity is strong enough to exist
-  END TYPE t_sf_dynamics
-
-  INTERFACE t_sf_dynamics
-    MODULE PROCEDURE :: create_sf_dynamics
-  END INTERFACE t_sf_dynamics
-
-
-  TYPE t_sf_bgcm_2L3D_p ! todo: remove
-    REAL(wp), POINTER :: p(:,:,:,:) !< dims: (part,elem,nc,layer)
-  END TYPE t_sf_bgcm_2L3D_p
-
 CONTAINS
 
-  !>
-  !> t_sf_dynamics constructor: Allocate and initialize
-  !>
-  FUNCTION create_sf_dynamics(nc, nfuels, ndeadpools) RESULT (sf_spitfire)
-    INTEGER, INTENT(in) :: nc          !< #Gridcells
-    INTEGER, INTENT(in) :: nfuels      !< # fuel classes
-    INTEGER, INTENT(in) :: ndeadpools  !< # dead fuel pools
-    TYPE(t_sf_dynamics) :: sf_spitfire !< Output
-
-    ALLOCATE(sf_spitfire % e_n_ignitions(nc))
-    ALLOCATE(sf_spitfire % e_n_humans(nc))
-    ALLOCATE(sf_spitfire % e_n_lightning(nc))
-    ALLOCATE(sf_spitfire % fdi(nc))
-    ALLOCATE(sf_spitfire % area_burned(nc))
-    ALLOCATE(sf_spitfire % area_burned_fract(nc))
-    ALLOCATE(sf_spitfire % dead_frac_consump(nc, nfuels))
-    ALLOCATE(sf_spitfire % fc_dead_cls(nc, ndeadpools, nfuels)) ! spitfire dead fuel consumption (fuel classes)
-    ALLOCATE(sf_spitfire % i_surface(nc))
-    ALLOCATE(sf_spitfire % is_fire_intense_enough(nc))
-
-    sf_spitfire % e_n_ignitions = 0._wp
-    sf_spitfire % e_n_humans = 0._wp
-    sf_spitfire % e_n_lightning = 0._wp
-    sf_spitfire % fdi = 0._wp
-    sf_spitfire % ros = t_sf_ros(nc)
-    sf_spitfire % area_burned = 0._wp
-    sf_spitfire % area_burned_fract = 0._wp
-    sf_spitfire % dead_frac_consump = 0._wp
-    sf_spitfire % fc_dead_cls = 0._wp
-    sf_spitfire % i_surface = 0._wp
-    sf_spitfire % is_fire_intense_enough = .FALSE.
-
-  END FUNCTION create_sf_dynamics
-
-  ! ======================================================================================================= !
   !>
   !> Compute spitfire for current time step
   !> It links Quincy and Spitfire
@@ -615,7 +548,7 @@ CONTAINS
     LOGICAL :: mask_tile_enabled(nc)
 
     ! locals
-    TYPE(t_q_sf_ignitions)  :: sf_ignitions
+    TYPE(t_sf_ignitions)  :: sf_ignitions
     REAL(wp)                :: w_oi(nc,df_sf_fc_spread_nr)      !< Dead fuel by spread fuel classes (litter only)  [g DM m-2]
     REAL(wp), ALLOCATABLE   :: dry_lvg(:,:)                     !< Dry live grass, considered dead fuel [g DM m-2] (#nc,#livegrass fuel pools, #fuel classes)
     REAL(wp)                :: tot_lvg_fuel(nc)                 !< Total livegrass fuel [g DM m-2]
@@ -630,7 +563,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE   :: tot_live_fuel_tree(:)            !< Total live fuel tree [g DM m-2] (#nc)
     REAL(wp), ALLOCATABLE   :: fuel_moisture_for_fc(:,:)        !< fuel moisture (or omega) [%] (#nc,#fuel classes-1,10,100,1000hrs-)
     !< Oberhagemann related
-    TYPE(t_mf), ALLOCATABLE :: fuel_moisture_ober
+    TYPE(t_sf_mf), ALLOCATABLE :: fuel_moisture_ober
     !< ROS related
     REAL(wp)                :: u_f_wind(nc)                     !< Wind speed at vegetation cover [m min-1]
 
@@ -649,7 +582,7 @@ CONTAINS
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions = mask_tile_enabled .AND. has_dead_fuel
 
-    sf_ignitions = t_q_sf_ignitions(nc)
+    sf_ignitions = t_sf_ignitions(nc)
     spitfire = t_sf_dynamics(nc, ndeadpools, sf_fuel_live_fuel_nr)
 
     !> Calculate whether there are conditions for fire based on the Nesterov Index,
@@ -680,7 +613,7 @@ CONTAINS
                                     mask=has_fire_conditions) !< optional
     ELSE IF (config_ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
       ALLOCATE(fuel_moisture_ober)
-      fuel_moisture_ober = t_mf(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr)
+      fuel_moisture_ober = t_sf_mf(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr)
 
       ALLOCATE(tot_live_fuel_tree(nc))
       DO CONCURRENT (i=1:SIZE(live_tree_fuel,2), j=1:SIZE(live_tree_fuel,3)) !2=fuel pools, 3=fuel classes
@@ -719,7 +652,7 @@ CONTAINS
                   spitfire % ros)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
-    sf_ignitions = calc_q_sf_ignition(nc, density_human_population, &
+    sf_ignitions = calc_sf_ignition(nc, density_human_population, &
                                     a_nd, lightning_frequency, &
                                     df_sf_max_density_human_pop)
     !< From daily to ts
@@ -823,7 +756,7 @@ CONTAINS
     IF (PRESENT(mask)) has_fire_conditions = mask
 
     !< Compute fuel moisture (omega_o, omega_nl)
-    fuel_moisture = sf_calc_fuel_moisture(nc, nalphas, nspread, alphas, &
+    fuel_moisture = calc_sf_fuel_moisture_for_thonicke(nc, nalphas, nspread, alphas, &
                                           nesterov_index, ab_moisture, &
                                           dead_fuel_litter, &
                                           tot_dead_fuel_grass)
@@ -892,7 +825,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: tot_dead_fuel_grass(:) !< [g DM m-2]
     REAL(wp), INTENT(in) :: tot_live_fuel_tree(:) !< [g DM m-2]
     REAL(wp), INTENT(in) :: lvg_moisture(:) !< [%], Note: up to 250%
-    TYPE(t_mf), INTENT(out) :: fuel_moisture !< Fuel moisture
+    TYPE(t_sf_mf), INTENT(out) :: fuel_moisture !< Fuel moisture
     REAL(wp), INTENT(out) :: fdi(:) !< Fire danger index [%]
     TYPE(t_sf_ros), INTENT(out) :: ros !< Rate of spread [-]
     LOGICAL, OPTIONAL :: mask(:) !< True: gridcell enabled
@@ -903,7 +836,7 @@ CONTAINS
     REAL(wp) :: me_lv(nc)             !< Live moisture of extinction [-] (#nc)
 
     fdi = 0._wp
-    fuel_moisture = sf_calc_fuel_moisture_ober(nc, &
+    fuel_moisture = calc_sf_fuel_moisture_for_oberhagemann(nc, &
                       ndd, & ! 5 = 1, 10, 100, 1000 hours and cured live grass
                       nlitros, & ! 3=1, 10 and 100 hours
                       nlv, &
