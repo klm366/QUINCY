@@ -166,14 +166,18 @@ CONTAINS
     !< Spitfire is now updated here
 
     !< Update SB pools
-    CALL dfire_sf_sb_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
-                                  sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
-                                  sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
+    IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_dead_feedback) THEN
+      CALL dfire_sf_sb_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
+                                    sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
+                                    sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
+    END IF
 
     !< Update VEG pools
-    CALL dfire_sf_veg_update_pools(nc, model, &
-                                  veg_fire_emissions_mt, veg_fire_litterfall_mt, &
-                                  veg_pool_mt, veg_litterfall_mt)
+    IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_live_feedback) THEN
+      CALL dfire_sf_veg_update_pools(nc, model, &
+                                    veg_fire_emissions_mt, veg_fire_litterfall_mt, &
+                                    veg_pool_mt, veg_litterfall_mt)
+    END IF
 
     !>
     !> Update delta_dens_ind to properly run plant_characteristics in mo_q_model_init.f90

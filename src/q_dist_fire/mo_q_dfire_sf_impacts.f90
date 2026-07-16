@@ -500,42 +500,35 @@ CONTAINS
                           residue_live_el, & ! out [molX/m2]
                           mass_imbalance_emitted_live_el) ! [molX/m2]
 
-    ! Feedbacks
-    IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_dead_feedback) THEN
-      ! Convert sb_pool related dead fuel pools into m3 to operate with sb_pool related fluxes
-      ALLOCATE(emissions_dead_in_m3, source=emissions_dead_el)
-      emissions_dead_in_m3 = 0._wp
-      emissions_dead_in_m3(:,ixs_sf_dead_litter_fuel_pools,:) = sf_convert_units("-/m2", "-/m3", &
-                            emissions_dead_el(:,ixs_sf_dead_litter_fuel_pools,:), &
-                            soil_depth_sl(:,df_sf_spq_layer_top_sl))
+    ! Convert sb_pool related dead fuel pools into m3 to operate with sb_pool related fluxes
+    ALLOCATE(emissions_dead_in_m3, source=emissions_dead_el)
+    emissions_dead_in_m3 = 0._wp
+    emissions_dead_in_m3(:,ixs_sf_dead_litter_fuel_pools,:) = sf_convert_units("-/m2", "-/m3", &
+                          emissions_dead_el(:,ixs_sf_dead_litter_fuel_pools,:), &
+                          soil_depth_sl(:,df_sf_spq_layer_top_sl))
 
-      ALLOCATE(residue_dead_in_m3, source=residue_dead_el)
-      residue_dead_in_m3 = 0._wp
-      residue_dead_in_m3(:,ixs_sf_dead_litter_fuel_pools,:) = sf_convert_units("-/m2", "-/m3", &
-                            residue_dead_el(:,ixs_sf_dead_litter_fuel_pools,:), &
-                            soil_depth_sl(:,df_sf_spq_layer_top_sl))
+    ALLOCATE(residue_dead_in_m3, source=residue_dead_el)
+    residue_dead_in_m3 = 0._wp
+    residue_dead_in_m3(:,ixs_sf_dead_litter_fuel_pools,:) = sf_convert_units("-/m2", "-/m3", &
+                          residue_dead_el(:,ixs_sf_dead_litter_fuel_pools,:), &
+                          soil_depth_sl(:,df_sf_spq_layer_top_sl))
 
-      !< Feedback: dead fuel consumption is removed through veg_fire_emissions, sb_fire_emissions_mt for emissions
-      !< Residue is transfered through sb_fire_litter_ash and veg_fire_litterfall
-      CALL calc_sf_feedback_dead(emissions_dead_in_m3, &
-                                residue_dead_in_m3, &
-                                sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), & ! todo: create flux pool with top layer only
-                                sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
-                                veg_fire_emissions_mt, veg_fire_litterfall_mt, &
-                                mask=is_fire_intense_enough)
+    !< Transfer SB impacts into spitfire fluxes
+    !< Residue is transfered through sb_fire_litter_ash and veg_fire_litterfall
+    CALL calc_sf_feedback_dead(emissions_dead_in_m3, &
+                              residue_dead_in_m3, &
+                              sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), & ! todo: create flux pool with top layer only
+                              sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
+                              veg_fire_emissions_mt, veg_fire_litterfall_mt, &
+                              mask=is_fire_intense_enough)
 
-    END IF
-
-    IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_live_feedback) THEN
-      !< Feedback: live fuel consumption is removed using veg_fire_emissions (combusted)
-      !< Residue is transfered through veg_litterfall
-      CALL calc_sf_feedback_live(emissions_live_el, &
-                                residue_live_el, &
-                                veg_fire_emissions_mt, &
-                                veg_fire_litterfall_mt, &
-                                mask=is_fire_intense_enough)
-
-    END IF
+    !< Transfer VEG impacts into spitfire fluxes
+    !< Residue is transfered through veg_litterfall
+    CALL calc_sf_feedback_live(emissions_live_el, &
+                              residue_live_el, &
+                              veg_fire_emissions_mt, &
+                              veg_fire_litterfall_mt, &
+                              mask=is_fire_intense_enough)
 
     ! for diagnostics:
     fuel_consumption_els = (SUM(fc_dead_el, DIM=2) + SUM(fc_live_el, DIM=2)) / dtime * 1000000._wp !< 2 = fuel pool index

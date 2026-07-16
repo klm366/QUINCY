@@ -1229,16 +1229,26 @@ CONTAINS
     !>   see also 'update_veg_pools()'
     net_biosphere_production(:) = net_biosphere_production(:) &
       &          - SUM((het_respiration(:,:) + lateral_loss_dom_carbon_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
-      &          - leaching_dom_carbon(:) &
-      &          - SUM((SUM(sb_fire_emissions_mt(:,ixC,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._wp
+      &          - leaching_dom_carbon(:)
     net_biosphere_production_c13(:) = net_biosphere_production_c13(:) &
       &          - SUM((het_respiration_c13(:,:) + lateral_loss_dom_carbon13_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
-      &          - leaching_dom_carbon13(:) &
-      &          - SUM((SUM(sb_fire_emissions_mt(:,ixC13,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._wp
+      &          - leaching_dom_carbon13(:)
     net_biosphere_production_c14(:) = net_biosphere_production_c14(:) &
       &          - SUM((het_respiration_c14(:,:) + lateral_loss_dom_carbon14_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
-      &          - leaching_dom_carbon14(:) &
-      &          - SUM((SUM(sb_fire_emissions_mt(:,ixC14,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._wp
+      &          - leaching_dom_carbon14(:)
+
+    ! subtract fire emissions from net biosphere production when Spitfire dead feedback is enabled
+    IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
+      IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_dead_feedback) THEN
+        net_biosphere_production(:) = net_biosphere_production(:) - &
+          SUM((SUM(sb_fire_emissions_mt(:,ixC,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._wp
+        net_biosphere_production_c13(:) = net_biosphere_production_c13(:) - &
+          SUM((SUM(sb_fire_emissions_mt(:,ixC13,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._wp
+        net_biosphere_production_c14(:) = net_biosphere_production_c14(:) - &
+          SUM((SUM(sb_fire_emissions_mt(:,ixC14,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._wp
+      ENDIF
+    ENDIF
+
     ! biological N fixation (VEG_ and SB_ processes)
     biological_n_fixation(:)    = biological_n_fixation(:) &
       &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)

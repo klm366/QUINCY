@@ -840,18 +840,27 @@ CONTAINS
       net_biosphere_production(ic) = net_biosphere_production(ic) &
         & + gross_assimilation(ic) &
         & - maint_respiration(ic)   - growth_respiration(ic) - n_processing_respiration(ic) &
-        & - herbivory_leaf_resp(ic) - herbivory_fruit_resp(ic) &
-        & - SUM((veg_fire_emissions_mt(:,ixC,ic)) / dtime * 1000000._wp )
+        & - herbivory_leaf_resp(ic) - herbivory_fruit_resp(ic)
       net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) &
         & + gross_assimilation_C13(ic) &
         & - maint_respiration_c13(ic)   - growth_respiration_c13(ic) - n_processing_respiration_c13(ic) &
-        & - herbivory_leaf_resp_c13(ic) - herbivory_fruit_resp_c13(ic) &
-        & - SUM((veg_fire_emissions_mt(:,ixC13,ic)) / dtime * 1000000._wp )
+        & - herbivory_leaf_resp_c13(ic) - herbivory_fruit_resp_c13(ic)
       net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) &
         & + gross_assimilation_C14(ic) &
         & - maint_respiration_c14(ic)   - growth_respiration_c14(ic) - n_processing_respiration_c14(ic) &
-        & - herbivory_leaf_resp_c14(ic) - herbivory_fruit_resp_c14(ic) &
-        & - SUM((veg_fire_emissions_mt(:,ixC14,ic)) / dtime * 1000000._wp )
+        & - herbivory_leaf_resp_c14(ic) - herbivory_fruit_resp_c14(ic)
+
+      ! subtract fire emissions from net biosphere production when spitfire live feedback is enabled
+      IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
+        IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_live_feedback) THEN
+          net_biosphere_production(ic) = net_biosphere_production(ic) - &
+            SUM((veg_fire_emissions_mt(:,ixC,ic)) / dtime * 1000000._wp )
+          net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - &
+            SUM((veg_fire_emissions_mt(:,ixC13,ic)) / dtime * 1000000._wp )
+          net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - &
+            SUM((veg_fire_emissions_mt(:,ixC14,ic)) / dtime * 1000000._wp )
+        ENDIF
+      ENDIF
 
       ! biological N fixation (VEG_ and SB_ processes)
       biological_n_fixation(ic)    = biological_n_fixation(ic) + n_fixation(ic)
