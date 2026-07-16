@@ -77,8 +77,10 @@ CONTAINS
     REAL(wp)                              :: dtime      !< timestep
 
     ! add here local variables
-    REAL(wp), POINTER                     :: area(:), tile_fract(:)
-    REAL(wp)                              :: area_burned_fract_pft(options%nc) !< Fraction of the area burned for current PFT [-]
+    REAL(wp), POINTER                     :: area(:)
+    REAL(wp), DIMENSION(options%nc)       :: cover_fraction             !< current tile area
+    REAL(wp), DIMENSION(options%nc)       :: area_burned_fract_pft !< Fraction of the area burned for current PFT [-]
+    REAL(wp), DIMENSION(options%nc)       :: fract_area_burned_rel_to_tile  !< area burned fraction relative to the tile area
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_dfire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -130,7 +132,7 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned_fract)         ! in [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned_fract)      ! in [-]
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                ! out [-]
     dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)        ! out[-]
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                      ! in [-]
@@ -148,14 +150,15 @@ CONTAINS
 
     ! init here
 #ifdef __QUINCY_STANDALONE__
-        ALLOCATE(area(nc), tile_fract(nc))
+        ALLOCATE(area(nc))
         area = 1._wp
-        tile_fract = 1._wp
+        cover_fraction = 1._wp
 #else
         area => grid %area (ics:ice, iblk)
-        tile_fract => tile%fract(ics:ice, iblk)
+        CALL tile%Get_fraction(ics, ice, iblk, fract=cover_fraction)
 #endif
-    area_burned_fract_pft = area_burned_fract * tile_fract
+    area_burned_fract_pft = area_burned_fract * cover_fraction
+    delta_dens_ind = 0._wp
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -187,8 +190,17 @@ CONTAINS
     !> - Adapt the change of individual density to account for the harvested fraction (only for tiles with forest type)
     !>
     IF (lctlib%growthform == itree) THEN
+      area_burned_fract_rel_to_tile = 0._wp
+
+      !< Calculate area burned fraction relative to tile area
       DO ic = 1,nc
-        delta_dens_ind(ic) = - (area_burned_fract_pft(ic) * dens_ind(ic))
+        IF (cover_fraction(ic) > eps8) THEN !< is cover fraction too small to consider?
+          area_burned_fract_rel_to_tile(ic) = MIN(1.0_wp, area_burned_fract_pft(ic) / cover_fraction(ic))
+        END IF
+      END DO
+
+      DO ic = 1,nc
+        delta_dens_ind(ic) = - (area_burned_fract_rel_to_tile(ic) * dens_ind(ic))
       END DO
     END IF
 
