@@ -26,7 +26,7 @@ MODULE mo_q_dfire_sf_damage_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: calc_tau_l, calc_prop_ck,
+  PUBLIC :: calc_tau_l, calc_prop_ck
   PUBLIC :: calc_sf_tree_damage
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_damage_class'

@@ -21,6 +21,7 @@ MODULE mo_q_dfire_sf_update
   USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
   USE mo_jsb_grid,              ONLY: Get_grid
+  USE mo_jsb_math_constants,    ONLY: eps8
 
   USE mo_veg_constants,         ONLY: itree
   USE mo_q_dfire_sf_constants,  ONLY: df_sf_spq_layer_top_sl
@@ -190,25 +191,19 @@ CONTAINS
     !> - Adapt the change of individual density to account for the harvested fraction (only for tiles with forest type)
     !>
     IF (lctlib%growthform == itree) THEN
-      area_burned_fract_rel_to_tile = 0._wp
+      fract_area_burned_rel_to_tile = 0._wp
 
       !< Calculate area burned fraction relative to tile area
       DO ic = 1,nc
         IF (cover_fraction(ic) > eps8) THEN !< is cover fraction too small to consider?
-          area_burned_fract_rel_to_tile(ic) = MIN(1.0_wp, area_burned_fract_pft(ic) / cover_fraction(ic))
+          fract_area_burned_rel_to_tile(ic) = MIN(1.0_wp, area_burned_fract_pft(ic) / cover_fraction(ic))
         END IF
       END DO
 
       DO ic = 1,nc
-        delta_dens_ind(ic) = - (area_burned_fract_rel_to_tile(ic) * dens_ind(ic))
+        delta_dens_ind(ic) = - (fract_area_burned_rel_to_tile(ic) * dens_ind(ic))
       END DO
     END IF
-
-    ! Release memory
-#ifdef __QUINCY_STANDALONE__
-      DEALLOCATE(area, tile_fract)
-#endif
-    NULLIFY(area, tile_fract)
 
   END SUBROUTINE update_q_dfire_sf_update
 

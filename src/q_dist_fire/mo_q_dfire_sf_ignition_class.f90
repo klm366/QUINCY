@@ -25,7 +25,7 @@ MODULE mo_q_dfire_sf_ignition_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: t_sf_ignitions
+  PUBLIC :: t_sf_ignitions, calc_sf_ignition
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_ignition_class'
 

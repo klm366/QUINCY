@@ -47,7 +47,7 @@ MODULE mo_q_dfire_sf_fuel
   USE mo_q_dfire_sf_constants,    ONLY: dead_fuel_frac => df_sf_dead_frac      !< Fuel fraction to allocate from sb_pool
 
   USE mo_q_dfire_sf_adaptor,      ONLY: sf_convert_units
-  USE mo_q_dfire_constants,       ONLY: df_sf_units_k_to_c
+  USE mo_q_dfire_sf_constants,    ONLY: df_sf_units_k_to_c
   USE mo_q_dfire_sf_fmoist_class, ONLY: calc_mflg_ober
   USE mo_q_dfire_sf_classes,      ONLY: t_sf_lfmc
 
@@ -261,7 +261,7 @@ CONTAINS
     cured_lvg_fract = 1._wp !< Thonicke's considers all live grass as dead fuel.
 
     IF (lctlib%growthform == igrass) THEN
-      IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+      IF (dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
         IF (.NOT. allocated(lctlib_lfmc)) lctlib_lfmc = t_sf_lfmc(lctlib)
         lvg_moisture = calc_mflg_ober(nc, lctlib_lfmc, growing_season)
 

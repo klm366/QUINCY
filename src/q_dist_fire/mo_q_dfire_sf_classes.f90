@@ -19,10 +19,12 @@ MODULE mo_q_dfire_sf_classes
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
 
+  USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: t_sf_ros, t_sf_dynamics, t_sf_tree_damage, t_sf_ignitions
+  PUBLIC :: t_sf_ros, t_sf_dynamics, t_sf_tree_damage, t_sf_ignitions, t_sf_mf, t_sf_lfmc, create_t_sf_prob_mort
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_classes'
 
@@ -191,34 +193,34 @@ CONTAINS
   !>
   !> t_sf_dynamics constructor: Allocate and initialize
   !>
-  FUNCTION create_sf_dynamics(nc, nfuels, ndeadpools) RESULT (sf_spitfire)
+  FUNCTION create_sf_dynamics(nc, nfuels, ndeadpools) RESULT (sf_dynamics)
     INTEGER, INTENT(in) :: nc          !< #Gridcells
     INTEGER, INTENT(in) :: nfuels      !< # fuel classes
     INTEGER, INTENT(in) :: ndeadpools  !< # dead fuel pools
-    TYPE(t_sf_dynamics) :: sf_spitfire !< Output
+    TYPE(t_sf_dynamics) :: sf_dynamics !< Output
 
-    ALLOCATE(sf_spitfire % e_n_ignitions(nc))
-    ALLOCATE(sf_spitfire % e_n_humans(nc))
-    ALLOCATE(sf_spitfire % e_n_lightning(nc))
-    ALLOCATE(sf_spitfire % fdi(nc))
-    ALLOCATE(sf_spitfire % area_burned(nc))
-    ALLOCATE(sf_spitfire % area_burned_fract(nc))
-    ALLOCATE(sf_spitfire % dead_frac_consump(nc, nfuels))
-    ALLOCATE(sf_spitfire % fc_dead_cls(nc, ndeadpools, nfuels)) ! spitfire dead fuel consumption (fuel classes)
-    ALLOCATE(sf_spitfire % i_surface(nc))
-    ALLOCATE(sf_spitfire % is_fire_intense_enough(nc))
+    ALLOCATE(sf_dynamics % e_n_ignitions(nc))
+    ALLOCATE(sf_dynamics % e_n_humans(nc))
+    ALLOCATE(sf_dynamics % e_n_lightning(nc))
+    ALLOCATE(sf_dynamics % fdi(nc))
+    ALLOCATE(sf_dynamics % area_burned(nc))
+    ALLOCATE(sf_dynamics % area_burned_fract(nc))
+    ALLOCATE(sf_dynamics % dead_frac_consump(nc, nfuels))
+    ALLOCATE(sf_dynamics % fc_dead_cls(nc, ndeadpools, nfuels)) ! spitfire dead fuel consumption (fuel classes)
+    ALLOCATE(sf_dynamics % i_surface(nc))
+    ALLOCATE(sf_dynamics % is_fire_intense_enough(nc))
 
-    sf_spitfire % e_n_ignitions = 0._wp
-    sf_spitfire % e_n_humans = 0._wp
-    sf_spitfire % e_n_lightning = 0._wp
-    sf_spitfire % fdi = 0._wp
-    sf_spitfire % ros = t_sf_ros(nc)
-    sf_spitfire % area_burned = 0._wp
-    sf_spitfire % area_burned_fract = 0._wp
-    sf_spitfire % dead_frac_consump = 0._wp
-    sf_spitfire % fc_dead_cls = 0._wp
-    sf_spitfire % i_surface = 0._wp
-    sf_spitfire % is_fire_intense_enough = .FALSE.
+    sf_dynamics % e_n_ignitions = 0._wp
+    sf_dynamics % e_n_humans = 0._wp
+    sf_dynamics % e_n_lightning = 0._wp
+    sf_dynamics % fdi = 0._wp
+    sf_dynamics % ros = t_sf_ros(nc)
+    sf_dynamics % area_burned = 0._wp
+    sf_dynamics % area_burned_fract = 0._wp
+    sf_dynamics % dead_frac_consump = 0._wp
+    sf_dynamics % fc_dead_cls = 0._wp
+    sf_dynamics % i_surface = 0._wp
+    sf_dynamics % is_fire_intense_enough = .FALSE.
 
   END FUNCTION create_sf_dynamics
 
