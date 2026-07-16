@@ -192,11 +192,6 @@ CONTAINS
       END DO
     END IF
 
-    !> Update delta_root_fraction_sl to properly run plant_characteristics in mo_q_model_init.f90
-    DO ic = 1,nc
-      delta_root_fraction_sl(ic,df_sf_spq_layer_top_sl) = - (area_burned_fract_pft(ic) * root_fraction_sl(ic,df_sf_spq_layer_top_sl))
-    END DO
-
     ! Release memory
 #ifdef __QUINCY_STANDALONE__
       DEALLOCATE(area, tile_fract)
