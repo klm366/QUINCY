@@ -457,19 +457,22 @@ CONTAINS
         END IF
       END IF
 
-      CALL model%Queue_task(RAD_,       "surface_radiation")
-      CALL model%Queue_task(Q_PHENO_,   "q_phenology")
-      CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
-      CALL model%Queue_task(HYDRO_,     "soil_properties")
-
       IF (model%config%qmodel_id == QLAND) THEN
         IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
           CALL model%Queue_task(Q_DFIRE_FUEL_SF_, "q_dfire_sf_fuel")       ! LAND ONLY
           CALL model%Queue_task(Q_DFIRE_SF_,      "q_dfire_sf_dynamics")   ! LAND ONLY
           CALL model%Queue_task(Q_DFIRE_FUEL_SF_, "q_dfire_sf_impacts")    ! LAND ONLY
           CALL model%Queue_task(Q_DFIRE_FUEL_SF_, "q_dfire_sf_update")     ! LAND ONLY, update pools, update fractions, ...
-          CALL model%Queue_task(VEG_,          "plant_characteristics") ! LAND ONLY, ensure consistency after update
+          CALL model%Queue_task(VEG_,             "plant_characteristics") ! LAND ONLY, ensure consistency after update
         ENDIF
+      ENDIF
+
+      CALL model%Queue_task(RAD_,       "surface_radiation")
+      CALL model%Queue_task(Q_PHENO_,   "q_phenology")
+      CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
+      CALL model%Queue_task(HYDRO_,     "soil_properties")
+
+      IF (model%config%qmodel_id == QLAND) THEN
         CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
       END IF
 
