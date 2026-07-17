@@ -29,22 +29,9 @@ MODULE mo_climbuf_process
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_climbuf_process'
 
-  REAL(wp), PARAMETER :: pft13_vcmax25_intercept = 49.5690779208497_wp
-  REAL(wp), PARAMETER :: pft13_vcmax25_mat_coef  = -0.391997574087549_wp
-  REAL(wp), PARAMETER :: pft13_vcmax25_map_coef  = 0.001594603433354_wp
-  REAL(wp), PARAMETER :: pft13_jmax25_intercept  = 180.411473978400_wp
-  REAL(wp), PARAMETER :: pft13_jmax25_mat_coef   = -3.09078405961564_wp
-  REAL(wp), PARAMETER :: pft13_jmax25_map_coef   = -0.00485175158785102_wp
-  REAL(wp), PARAMETER :: pft13_sla_intercept     = 0.060960327_wp
-  REAL(wp), PARAMETER :: pft13_sla_map_coef      = -0.000045172134_wp
-  REAL(wp), PARAMETER :: pft13_sla_tmax_coef     = -0.0015723334_wp
-  REAL(wp), PARAMETER :: pft13_sla_map_tmax_coef = 0.0000015332445_wp
-  REAL(wp), PARAMETER :: pft13_vcmax25_lower     = 16.5700_wp
-  REAL(wp), PARAMETER :: pft13_vcmax25_upper     = 66.2500_wp
-  REAL(wp), PARAMETER :: pft13_jmax25_lower      = 46.3775_wp
-  REAL(wp), PARAMETER :: pft13_jmax25_upper      = 131.4725_wp
-  REAL(wp), PARAMETER :: pft13_sla_lower         = 0.006295_wp
-  REAL(wp), PARAMETER :: pft13_sla_upper         = 0.0323334_wp
+  ! PFT-specific trait coefficients and calculations were moved to
+  ! mo_trait_process. The original implementation is preserved in Git commit
+  ! 3aec7fd132d4ef193169d78967b4d18a36a662fe.
 
 CONTAINS
   !
@@ -56,7 +43,7 @@ CONTAINS
   !> atmospheric forcing data.
   !>
   ! -------------------------------------------------------------------------------------------------------- !
-  ELEMENTAL PURE SUBROUTINE calc_climbuf (lstart, init_running_means, new_day, new_month, new_year, is_pft13, &
+  ELEMENTAL PURE SUBROUTINE calc_climbuf (lstart, init_running_means, new_day, new_month, new_year, &
     &                                     dtime, t_air, rain, snow, wind_10m, q_rel_air, &
     &                                     seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
     &                                     min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
@@ -65,18 +52,14 @@ CONTAINS
     &                                     max_wind_of_day, max_wind_yDay, max_wind_4yr, &
     &                                     q_rel_air_14d, q_rel_air_14d_yDay, &
     &                                     temp_sum_year, time_sum_year, precip_sum_year, &
-    &                                     mat_prev_year, map_prev_year, max_mmtemp_prev_year, &
-    &                                     pft13_vcmax25_raw, pft13_vcmax25_pred, &
-    &                                     pft13_jmax25_raw, pft13_jmax25_pred, &
-    &                                     pft13_sla_raw, pft13_sla_pred, pft13_jmax_vcmax_ratio)
+    &                                     mat_prev_year, map_prev_year, max_mmtemp_prev_year)
 
     LOGICAL, INTENT(in) :: &
       & lstart,                 & !< This is the first time step in a simulation
       & init_running_means,     & !< Initialize the min/max temperature climatology
       & new_day,                & !< This is the first time step of the day
       & new_month,              & !< This is the first time step of the month
-      & new_year,               & !< This is the first time step of the year
-      & is_pft13                  !< True only for the explicit PFT13 child tile
+      & new_year                  !< This is the first time step of the year
 
     REAL(wp), INTENT(in) :: &
       & dtime,                  & !< Time step length [s]
@@ -111,14 +94,7 @@ CONTAINS
       & precip_sum_year,        & !< Current annual precipitation accumulation [kg m-2]
       & mat_prev_year,          & !< Previous-year mean air temperature [K]
       & map_prev_year,          & !< Previous-year total precipitation [kg m-2]
-      & max_mmtemp_prev_year,   & !< Previous-year warmest monthly mean temperature [K]
-      & pft13_vcmax25_raw,      & !< Unbounded PFT13 Vcmax25 diagnostic [umol m-2 s-1]
-      & pft13_vcmax25_pred,     & !< Bounded PFT13 Vcmax25 diagnostic [umol m-2 s-1]
-      & pft13_jmax25_raw,       & !< Unbounded PFT13 Jmax25 diagnostic [umol m-2 s-1]
-      & pft13_jmax25_pred,      & !< Bounded PFT13 Jmax25 diagnostic [umol m-2 s-1]
-      & pft13_sla_raw,          & !< Unbounded PFT13 SLA diagnostic [m2 gC-1]
-      & pft13_sla_pred,         & !< Bounded PFT13 SLA diagnostic [m2 gC-1]
-      & pft13_jmax_vcmax_ratio    !< Unbounded PFT13 Jmax25 to Vcmax25 ratio [-]
+      & max_mmtemp_prev_year      !< Previous-year warmest monthly mean temperature [K]
 
     ! Local variables
     REAL(wp) :: &
@@ -126,9 +102,7 @@ CONTAINS
       & prev_month_mean_temp,   & !< Air temperature of previous month [K]
       & persist,                & !< Persistence factor adapted to model time step
       & F_15d,                  & !< Factor for 15-day smoothing
-      & N_15d,                  & !< Factor for 15-day smoothing
-      & mat_prev_c,             & !< Previous-year mean air temperature [degC]
-      & tmax_prev_c               !< Previous-year warmest monthly mean temperature [degC]
+      & N_15d                     !< Factor for 15-day smoothing
 
     REAL(wp), PARAMETER :: persist_wind     = 0.9995_wp   ! ~4 years
     REAL(wp), PARAMETER :: persist_rel_hum  = 0.95_wp     ! ~14 days
@@ -177,55 +151,13 @@ CONTAINS
       END IF ! new_year
     END IF
 
-    !-- Previous-year climate predictors and PFT13 trait diagnostics
+    !-- Previous-year climate predictors
     !  ----------------------
     IF (new_year .AND. .NOT. lstart) THEN
       IF (time_sum_year > 0._wp) THEN
         mat_prev_year = temp_sum_year / time_sum_year
         map_prev_year = precip_sum_year
         max_mmtemp_prev_year = max_mmtemp_of_yr
-
-        mat_prev_c  = mat_prev_year - tmelt
-        tmax_prev_c = max_mmtemp_prev_year - tmelt
-
-        ! Previous behaviour, retained in Git history:
-        ! the PFT13-named diagnostics were evaluated on every CLIMBUF tile.
-        ! The explicit tile guard below restricts their calculation to PFT13.
-        IF (is_pft13) THEN
-          pft13_vcmax25_raw = pft13_vcmax25_intercept &
-            & + pft13_vcmax25_mat_coef * mat_prev_c &
-            & + pft13_vcmax25_map_coef * map_prev_year
-
-          pft13_jmax25_raw = pft13_jmax25_intercept &
-            & + pft13_jmax25_mat_coef * mat_prev_c &
-            & + pft13_jmax25_map_coef * map_prev_year
-
-          pft13_sla_raw = pft13_sla_intercept &
-            & + pft13_sla_map_coef * map_prev_year &
-            & + pft13_sla_tmax_coef * tmax_prev_c &
-            & + pft13_sla_map_tmax_coef * map_prev_year * tmax_prev_c
-
-          pft13_vcmax25_pred = MIN(pft13_vcmax25_upper, &
-            & MAX(pft13_vcmax25_lower, pft13_vcmax25_raw))
-          pft13_jmax25_pred = MIN(pft13_jmax25_upper, &
-            & MAX(pft13_jmax25_lower, pft13_jmax25_raw))
-          pft13_sla_pred = MIN(pft13_sla_upper, &
-            & MAX(pft13_sla_lower, pft13_sla_raw))
-
-          IF (ABS(pft13_vcmax25_raw) > EPSILON(1._wp)) THEN
-            pft13_jmax_vcmax_ratio = pft13_jmax25_raw / pft13_vcmax25_raw
-          ELSE
-            pft13_jmax_vcmax_ratio = 0._wp
-          END IF
-        ELSE
-          pft13_vcmax25_raw = 0._wp
-          pft13_vcmax25_pred = 0._wp
-          pft13_jmax25_raw = 0._wp
-          pft13_jmax25_pred = 0._wp
-          pft13_sla_raw = 0._wp
-          pft13_sla_pred = 0._wp
-          pft13_jmax_vcmax_ratio = 0._wp
-        END IF
       END IF
     END IF
 

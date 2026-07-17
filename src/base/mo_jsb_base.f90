@@ -64,7 +64,7 @@ CONTAINS
     !>     1b. Host model (ICON):    icon: src/drivers/mo_atmo_model.f90: construct_atmo_model
     !>
 
-    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, CLIMBUF_, NLCC_, &
+    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, CLIMBUF_, TRAIT_, NLCC_, &
       &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, ALCC_
 
     dsl4jsb_Use_config(SSE_)
@@ -393,6 +393,13 @@ CONTAINS
         IF (model%Is_process_enabled(CARBON_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
           dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on climate buffer process since carbon process is active')
+        END IF
+        IF (model%Is_process_enabled(TRAIT_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
+          dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on climate buffer process since trait process is active')
+        END IF
+        IF (model%Is_process_enabled(TRAIT_) .AND. TRIM(model%config%usecase) /= 'jsbach_pfts') THEN
+          CALL finish(routine, 'The TRAIT process is currently implemented only for the jsbach_pfts usecase.')
         END IF
 
         IF (model%Is_process_enabled(FAGE_) &

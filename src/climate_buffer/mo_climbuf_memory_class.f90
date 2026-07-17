@@ -72,14 +72,7 @@ MODULE mo_climbuf_memory_class
     & precip_sum_year,          & !< Current annual precipitation accumulation [kg m-2]
     & mat_prev_year,            & !< Previous-year mean air temperature [K]
     & map_prev_year,            & !< Previous-year total precipitation [kg m-2]
-    & max_mmtemp_prev_year,     & !< Previous-year warmest monthly mean temperature [K]
-    & pft13_vcmax25_raw,        & !< Unbounded PFT13 Vcmax25 diagnostic [umol m-2 s-1]
-    & pft13_vcmax25_pred,       & !< Bounded PFT13 Vcmax25 diagnostic [umol m-2 s-1]
-    & pft13_jmax25_raw,         & !< Unbounded PFT13 Jmax25 diagnostic [umol m-2 s-1]
-    & pft13_jmax25_pred,        & !< Bounded PFT13 Jmax25 diagnostic [umol m-2 s-1]
-    & pft13_sla_raw,            & !< Unbounded PFT13 SLA diagnostic [m2 gC-1]
-    & pft13_sla_pred,           & !< Bounded PFT13 SLA diagnostic [m2 gC-1]
-    & pft13_jmax_vcmax_ratio      !< Unbounded PFT13 Jmax25 to Vcmax25 ratio [-]
+    & max_mmtemp_prev_year        !< Previous-year warmest monthly mean temperature [K]
 
   CONTAINS
     PROCEDURE :: Init => Init_climbuf_memory
@@ -305,61 +298,9 @@ CONTAINS
       & output_level=MEDIUM,                                                              &
       & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var('pft13_vcmax25_raw', mem%pft13_vcmax25_raw,                          &
-      & hgrid, surface,                                                                   &
-      & t_cf('pft13_vcmax25_raw', 'umol m-2 s-1', 'Unbounded PFT13 Vcmax25 diagnostic'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & output_level=MEDIUM,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp)
-
-    CALL mem%Add_var('pft13_vcmax25_pred', mem%pft13_vcmax25_pred,                        &
-      & hgrid, surface,                                                                   &
-      & t_cf('pft13_vcmax25_pred', 'umol m-2 s-1', 'Bounded PFT13 Vcmax25 diagnostic'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & output_level=MEDIUM,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp)
-
-    CALL mem%Add_var('pft13_jmax25_raw', mem%pft13_jmax25_raw,                            &
-      & hgrid, surface,                                                                   &
-      & t_cf('pft13_jmax25_raw', 'umol m-2 s-1', 'Unbounded PFT13 Jmax25 diagnostic'),   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & output_level=MEDIUM,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp)
-
-    CALL mem%Add_var('pft13_jmax25_pred', mem%pft13_jmax25_pred,                          &
-      & hgrid, surface,                                                                   &
-      & t_cf('pft13_jmax25_pred', 'umol m-2 s-1', 'Bounded PFT13 Jmax25 diagnostic'),    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & output_level=MEDIUM,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp)
-
-    CALL mem%Add_var('pft13_sla_raw', mem%pft13_sla_raw,                                  &
-      & hgrid, surface,                                                                   &
-      & t_cf('pft13_sla_raw', 'm2 gC-1', 'Unbounded PFT13 SLA diagnostic'),               &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & output_level=MEDIUM,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp)
-
-    CALL mem%Add_var('pft13_sla_pred', mem%pft13_sla_pred,                                &
-      & hgrid, surface,                                                                   &
-      & t_cf('pft13_sla_pred', 'm2 gC-1', 'Bounded PFT13 SLA diagnostic'),                &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & output_level=MEDIUM,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp)
-
-    CALL mem%Add_var('pft13_jmax_vcmax_ratio', mem%pft13_jmax_vcmax_ratio,                &
-      & hgrid, surface,                                                                   &
-      & t_cf('pft13_jmax_vcmax_ratio', '1', 'Unbounded PFT13 Jmax25 to Vcmax25 ratio'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & output_level=MEDIUM,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp)
+    ! PFT-specific trait diagnostics are stored by the separate TRAIT process.
+    ! The original CLIMBUF implementation is preserved in Git commit
+    ! 3aec7fd132d4ef193169d78967b4d18a36a662fe.
 
   END SUBROUTINE Init_climbuf_memory
 

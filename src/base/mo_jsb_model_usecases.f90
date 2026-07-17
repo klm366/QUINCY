@@ -25,7 +25,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                               CLIMBUF_, FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, &
+    &                               CLIMBUF_, TRAIT_, FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, &
     &                               Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
@@ -333,6 +333,9 @@ CONTAINS
         IF (model%processes(CLIMBUF_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
         END IF
+        IF (model%processes(TRAIT_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(TRAIT_, ON_LEAFS_, AGGREGATE_)
+        END IF
         IF (model%processes(NLCC_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
         END IF
@@ -457,6 +460,9 @@ CONTAINS
 
         IF (model%processes(CLIMBUF_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
+        END IF
+        IF (model%processes(TRAIT_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(TRAIT_, ON_LEAFS_, AGGREGATE_)
         END IF
         IF (model%processes(NLCC_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
@@ -721,6 +727,33 @@ CONTAINS
       ! Note: The IDs defined here are each one less than in the lctlib because glacier (first
       !       column in lctlib) is not a PFT and ignored here.
       pft_ids(:) = (/ 1,2,3,4,9,10,11,12,14,15,19,20 /)
+
+    ELSE IF (npft == 13) THEN
+      pft_shortnames(:) = [character(len=5) ::               &
+        & 'pft01', 'pft02', 'pft03', 'pft04', 'pft05', 'pft06', &
+        & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11', 'pft12', &
+        & 'pft13' ]
+
+      pft_longnames(:) = [character(len=30) :: &
+        & 'Tropical broadleaf evergreen', &
+        & 'Tropical broadleaf deciduous', &
+        & 'Extra-tropical evergreen',     &
+        & 'Extra-tropical deciduous',     &
+        & 'Raingreen shrubs',             &
+        & 'Deciduous shrubs',             &
+        & 'C3 grass',                     &
+        & 'C4 grass',                     &
+        & 'C3 pasture',                   &
+        & 'C4 pasture',                   &
+        & 'C3 crops',                     &
+        & 'C4 crops',                     &
+        & 'Prescribed mangrove cover'    ]
+
+      ! Index of PFT for lctlib columns
+      ! Note: The IDs defined here are each one less than in the lctlib because glacier (first
+      !       column in lctlib) is not a PFT and ignored here.
+      ! Mangrove is lctlib column 22, therefore pft_id = 21.
+      pft_ids(:) = (/ 1,2,3,4,9,10,11,12,14,15,19,20,21 /)
 
     ELSE
       WRITE (message_text,*) 'Unsupported number of PFTs: ', npft

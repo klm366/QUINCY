@@ -38,7 +38,7 @@ MODULE mo_jsb_process_class
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    &       CLIMBUF_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, &
+    &       CLIMBUF_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, TRAIT_, &
     &       Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
@@ -69,7 +69,7 @@ MODULE mo_jsb_process_class
   ENUM, BIND(C)
     ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
       &           CLIMBUF_, FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, &
-      &           Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+      &           Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, TRAIT_
   END ENUM
 
   ! -------------------------------------------------------------------------------------------------- !
@@ -156,6 +156,8 @@ CONTAINS
       return_value = 'veg'
     CASE (SB_)
       return_value = 'sb'
+    CASE (TRAIT_)
+      return_value = 'trait'
     CASE DEFAULT
       return_value = ''
     END SELECT
@@ -226,6 +228,8 @@ CONTAINS
       return_value = VEG_
     CASE ('sb')
       return_value = SB_
+    CASE ('trait')
+      return_value = TRAIT_
     CASE DEFAULT
       return_value = 0
     END SELECT

@@ -18,7 +18,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_,        &
-    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                   CLIMBUF_, TRAIT_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -236,6 +236,9 @@ CONTAINS
       END IF
       IF (model%processes(CLIMBUF_)%p%config%active) THEN
         CALL model%Queue_task(CLIMBUF_, "climbuf")
+      END IF
+      IF (model%processes(TRAIT_)%p%config%active) THEN
+        CALL model%Queue_task(TRAIT_, "trait")
       END IF
 
       ! - area damaged by natural disturbances in this timestep are calculated before any lcc takes place
