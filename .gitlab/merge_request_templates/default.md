@@ -43,11 +43,10 @@
     * if you find side effect please add an explanation and docu
 * compile with NAG / nvhpc at levante and run:
   * JSBACH:
-    * [ ] land_jsbach_R2B4_test with `--enable-quincy` CPU (NAG, nvcpu)
-    * [ ] land_jsbach_R2B4_test with `--enable-quincy` GPU
-    * [ ] land_jsbach_R2B4_test with `--disable-quincy` CPU (NAG)
-    * [ ] atm_nwp_jsbach_test with `--disable-quincy` CPU (NAG) note: needs to set 80 GB of mem
-    * [ ] aes_amip_test with `--disable-quincy` CPU (NAG)
+    * [ ] land_jsbach_R2B4_test with CPU (NAG, nvcpu)
+    * [ ] land_jsbach_R2B4_test with GPU
+    * [ ] atm_nwp_jsbach_test with CPU (NAG) note: needs to set 80 GB of mem
+    * [ ] aes_amip_test with CPU (NAG)
   * QUINCY with JSBACH soil-physics enabled:
     * [ ] exp.land_quincy_canopy_R2B4_test (NAG)
     * [ ] exp.land_quincy_canopy_R2B4_test with gpu.nvhpc

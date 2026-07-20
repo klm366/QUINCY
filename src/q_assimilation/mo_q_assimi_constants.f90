@@ -16,7 +16,7 @@
 !>#### declare and define assimilation constants
 !>
 MODULE mo_q_assimi_constants
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_physical_constants,  ONLY: Dwv, &            !< diffusion coefficient for water vapour in air

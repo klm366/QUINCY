@@ -272,14 +272,11 @@ CONTAINS
     ! The file can contain more keywords than needed --- therefore the same file can be used by several model components.
     !
     USE mo_util, ONLY: tolower
-
-#ifndef __NO_QUINCY__
     ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
     USE mo_jsb_math_constants,      ONLY: one_day, one_year
     USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree, icrop
     USE mo_q_assimi_constants,      ONLY: ic4phot
-#endif
 
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
     CHARACTER(len=*), INTENT(in) :: model_scheme_char
@@ -1205,7 +1202,6 @@ CONTAINS
          !------------------------------------------------------------------------------------------
        END IF
 
-#ifndef __NO_QUINCY__
        ! model scheme: quincy
        IF (model_scheme_char == "quincy") THEN
         IF(.NOT. exists_growthform) &
@@ -1348,11 +1344,9 @@ CONTAINS
           & CALL finish('init_lctlib','No data for MaxVegRoughness found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
-#endif
 
        CLOSE(unit=lctlib_file_unit) ! Closing access to lctlib file
 
-#ifndef __NO_QUINCY__
        !------------------------------------------------------------------------------------------
        !>Modify the input values of some quincy lctlib parameters
        !>
@@ -1459,7 +1453,6 @@ CONTAINS
          END DO
 
        END IF ! (model_scheme_char == "quincy")
-#endif
 
        !------------------------------------------------------------------------------------------
 
@@ -1634,8 +1627,8 @@ CONTAINS
         END DO
         CALL p_bcast(lctlib(:)%WoodLitterSize, p_io, mpi_comm)
       END IF
-#ifndef __NO_QUINCY__
-      ! model schmeme: quincy
+
+      ! model scheme: quincy
       IF (model_scheme_char == "quincy") THEN
         CALL p_bcast(lctlib(:)%growthform, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%ps_pathway, p_io, mpi_comm)
@@ -1707,19 +1700,16 @@ CONTAINS
         CALL p_bcast(lctlib(:)%MinVegRoughness, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%MaxVegRoughness, p_io, mpi_comm)
       END IF
-#endif
     END IF
 
     IF(npft > nlct) CALL finish('init_lctlib','npft larger than nlct: '//int2string(npft)//' > '//int2string(nlct))
     !> Throw away values for glacier (first column) for jsbach model usecases (mo_jsb_usecases)
     !>
     SELECT CASE (usecase)
-#ifndef __NO_QUINCY__
     ! quincy model with 13 PFT tiles (of the 14 PFT that would be available with 'lctlib_quincy_nlct14.def')
     CASE ('quincy_13_pfts', 'quincy_13pS_pfts')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
-#endif
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT
       nlct = nlct - 1

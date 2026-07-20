@@ -16,7 +16,7 @@
 !>#### definition and init of tasks for the quincy agriculture process
 !>
 MODULE mo_q_agr_interface
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on
