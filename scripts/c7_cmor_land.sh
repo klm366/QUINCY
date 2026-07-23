@@ -714,10 +714,11 @@ fi
     ;;
   snc )
     # Fraction of each grid cell that is occupied by snow that rests on land portion of cell.
+    # area: mean where land
     $cdo -setattribute,${var}@long_name="Snow Area Percentage" \
         -setattribute,${var}@units="%" \
-        -mul -expr,"${var}=100.*hydro_fract_snow_soil_box" \
-        ${lnd_2d} fract_box.nc ${var}.nc
+        -div -expr,"${var}=100.*hydro_fract_snow_soil_box" \
+        ${lnd_2d} fract_land_box.nc ${var}.nc
     ;;
   snd )
     # where land over land, this is computed as the mean thickness of snow in the land portion of
