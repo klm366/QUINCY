@@ -107,6 +107,7 @@ case $var in
   burntFractionAll )
     # Percentage of grid cell burned due to all fires including natural and anthropogenic fires and
     # those associated with anthropogenic land use change.
+    # COMMENT: This is the monthly sum of daily burnt fractions.
     $cdo -setattribute,${var}@long_name="Percentage of Entire Grid Cell That Is Covered by Burnt Vegetation (All Classes)" \
         -setattribute,${var}@units="%" \
         -muldpm -expr,"${var}=100.*(disturb_burned_fract_box)*fract_box" \
@@ -277,10 +278,14 @@ fi
         -expr,"${var}=100.*fract_pft12*pheno_fract_fpc_max_box" ${lnd_frac} ${var}.nc
     ;;
   depthsl )
-    # Total (cumulative) thickness of all soil layers. This is the sum of individual thicknesses of all soil layers.
+    # Total (cumulative) thickness of all soil layers. This is the sum of individual thicknesses
+    # of all soil layers.
+    # Note: we need to limit soil depth by the lower bound of the lowest model layer.
+    # COMMENT: This is the soil depth until bedrock used in hydrology.
+    limit=$(ncdump -c ${bc_soil} | grep ' soillev = 0' | cut -f5 -d, | cut -f2 -d' ')
     $cdo -setattribute,${var}@long_name="Total (Cumulative) Thickness of All Soil Layers" \
         -setattribute,${var}@units="m" \
-        -setvar,${var} -ifthen with_land.nc -selvar,soil_depth ${bc_soil} ${var}.nc
+        -setvar,${var} -ifthen with_land.nc -expr,"${var}=min(${limit},soil_depth)" ${bc_soil} ${var}.nc
     ;;
   evspsblsoi )
     # includes sublimation
@@ -702,9 +707,10 @@ fi
     ;;
   slthick )
     # Thickness of Soil Layers
+    # COMMENT: This is the soil depth until bedrock used in hydrology.
     $cdo -setattribute,${var}@long_name="Thickness of Soil Layers" \
         -setattribute,${var}@units="m" \
-        -expr,"${var}=hydro_soil_depth_sl_land" ${lnd_2d} ${var}.nc
+        -expr,"${var}=hydro_soil_depth_sl_land*(1.-fract_glac_land)" ${lnd_2d} ${var}.nc
     ;;
   snc )
     # Fraction of each grid cell that is occupied by snow that rests on land portion of cell.
