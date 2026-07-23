@@ -707,9 +707,13 @@ CONTAINS
     END IF
 
     ! Is tile any kind of vegentation? Should always be the case in JSB4 since this process is only active on veg-tiles
-    is_veg = dsl4jsb_Lctlib_param(NaturalVegFlag) .OR. &
-             dsl4jsb_Lctlib_param(PastureFlag)    .OR. &
-             dsl4jsb_Lctlib_param(CropFlag)
+    IF (tile%lcts(1)%lib_id /= 0) THEN
+      is_veg = dsl4jsb_Lctlib_param(NaturalVegFlag) .OR. &
+               dsl4jsb_Lctlib_param(PastureFlag)    .OR. &
+               dsl4jsb_Lctlib_param(CropFlag)
+    ELSE
+      is_veg = .FALSE.
+    ENDIF
 
     ! In case of dynamic roots, the root distribution should be re-calculated here
     IF (is_veg) THEN
