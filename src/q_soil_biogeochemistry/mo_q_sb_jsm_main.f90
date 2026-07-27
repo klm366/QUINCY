@@ -16,7 +16,7 @@
 !>#### main routines for JSM (jena soil model), calculating the soil biogeochemical pools
 !>
 MODULE mo_q_sb_jsm_main
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on

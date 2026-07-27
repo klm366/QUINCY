@@ -36,9 +36,7 @@ MODULE mo_jsb4_forcing
   USE mo_orbit_solar,            ONLY: inquire_declination
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
-#ifndef __NO_QUINCY__
   USE mo_quincy_model_config,    ONLY: QCANOPY
-#endif
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
@@ -278,9 +276,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(model_id)
     force_c_isotopes = .FALSE.
-#ifndef __NO_QUINCY__
     force_c_isotopes = (model%config%force_c_isotopes)
-#endif
     lstart  = is_time_experiment_start(current_datetime)
     lresume = is_time_restart(current_datetime)
     use_quincy = (model_scheme == MODEL_QUINCY)
@@ -810,6 +806,7 @@ CONTAINS
     ALLOCATE(forcing_input(no_of_models))
     ALLOCATE(forcing_options(no_of_models))
 
+    CALL message('', '')
     CALL message(routine, 'Allocated forcing_input and forcing_options ('//TRIM(int2string(no_of_models))//')')
 
   END SUBROUTINE setup_forcing
@@ -920,6 +917,8 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     INTEGER:: nml_handler, read_status, f_unit
+
+    CALL message('', '')
 
     !------------------------------------------------------------------------------------
     model => Get_model(model_id)
@@ -1225,6 +1224,8 @@ CONTAINS
       CALL init_forcing_input_variable(C14_varname, forcing_c14_frequ, forcing_c14_ocean, &
         & forcing_c14_file_prefix, forcing_c14_unit, forcing_c14_const_c14, forcing_input(model_id)%C14_concentr)
     END SELECT
+
+    CALL message('', '')
 
   END SUBROUTINE init_forcing
 
@@ -2596,6 +2597,7 @@ CONTAINS
         DO i=1,nc
           u(i,j) = sin_lat(i,j) * SIN(delta)
           v(i,j) = cos_lat(i,j) * COS(delta)
+          ! derive half day-length hh: time from solar noon to sunset (angular units)
           IF (u(i,j).GE.v(i,j)) THEN
             hh(i,j) = pi
           ELSE IF (u(i,j).LE.(0._wp-v(i,j))) THEN
@@ -2607,8 +2609,20 @@ CONTAINS
 
           !estimate of noon radiation giving rise to the recorded radiation sum
           rad_sw_in_corr(i,j) = 0._wp
-          IF((u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) .GT. 1e-5_wp)THEN
+
+          ! If the day is very short (half day length less then ~25 min.) we distribute the small
+          ! daily SW flux proportional to cos_zenith. With longer days, the daily-mean SW value
+          ! is normalized by the analytical integral of cos(zenith) over the daytime window.
+          IF (hh(i,j) .GE. 0.0_wp .AND. hh(i,j) .LT. 0.1_wp) THEN
+            ! Polar twilight: day-length integral is near-zero
+            IF (cos_zenith(i,j) .GT. 0._wp) THEN
+              rad_sw_in_corr(i,j) = rad_sw_in(i,j)
+            END IF
+          ELSE IF ((u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) .GT. 1e-5_wp) THEN
+            ! Longer days: normalization with the integral of cos(zenith)
             rad_sw_in_corr(i,j) = rad_sw_in(i,j) / (2._wp * (u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) * K) * 86400._wp
+            ! Cap to physically realistic maximum (top-of-atmosphere noon flux)
+            rad_sw_in_corr(i,j) = MIN(rad_sw_in_corr(i,j), solar_const * r_sun_earth_2)
           END IF
           rad_sw(i,j) = rad_sw_in_corr(i,j) * cos_zenith(i,j)
         END DO

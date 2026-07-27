@@ -42,12 +42,6 @@ MODULE mo_carbon_memory_class
 
     ! cbalance_type variables
     TYPE(t_jsb_var_real2d) ::     &
-      pseudo_temp,                & ! a proxy for 15-day mean air temperature, [K] needed with yasso
-      pseudo_temp_yDay,           & !
-      pseudo_precip,              & ! a proxy for 15-day mean preciptation rate [Kg/m^2 s] needed with yasso
-      pseudo_precip_yDay            !
-
-    TYPE(t_jsb_var_real2d) ::     &
       cconservation_calcCpools,   & ! Carbon conservation test: Deviation from conservation [mol(C)/m^2(grid box)]
       cflux_c_greenwood_2_litter, & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
                                     !    [mol(C)/m^2(canopy) s]
@@ -237,7 +231,7 @@ CONTAINS
 
   SUBROUTINE Init_carbon_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: MINIMUM, BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -270,38 +264,6 @@ CONTAINS
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(CARBON_)
-
-    CALL mem%Add_var('pseudo_temp', mem%pseudo_temp,                                                 &
-      & hgrid, surface,                                                                              &
-      & t_cf('pseudo_temp', 'K', 'Pseudo-mean air temperature over previous 15 days'),               &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                              &
-      & output_level=MEDIUM,                                                                         &
-      & lrestart=.TRUE., initval_r=285.0_wp ) ! initval taken from JSBACH3, arbitary.
-
-    ! R: In the output it should be the same as pseudo_temp, I do not understand why it was written out in JS3.
-    CALL mem%Add_var('pseudo_temp_yDay', mem%pseudo_temp_yDay,                                         &
-      & hgrid, surface,                                                                                &
-      & t_cf('pseudo_temp_yDay', 'K', 'Yesterdays pseudo-mean air temperature over previous 15 days'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
-      & prefix, suffix,                                                                                &
-      & lrestart=.TRUE., initval_r=285.0_wp ) ! initval taken from JSBACH3, arbitary.
-
-    CALL mem%Add_var('pseudo_precip', mem%pseudo_precip,                                             &
-      & hgrid, surface,                                                                              &
-      & t_cf('pseudo_precip', 'Kg m-2 s-1', 'Pseudo-mean precipitation rate over previous 15 days'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                              &
-      & output_level=MEDIUM,                                                                         &
-      & lrestart=.TRUE., initval_r=3.0E-5_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3, arbitary.
-
-    ! R: In the output it should be the same as pseudo_precip, I do not understand why it was written out in JS3.
-    CALL mem%Add_var('pseudo_precip_yDay', mem%pseudo_precip_yDay,                                   &
-      & hgrid, surface,                                                                              &
-      & t_cf('pseudo_precip_yDay', 'Kg m-2 s-1', 'Yesterdays pseudo-mean precipitation rate over previous 15 days'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                              &
-      & lrestart=.TRUE., initval_r=3.0E-5_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3, arbitary.
 
     ! Carbon variables on canopy area
     CALL mem%Add_var('c_greenwood2litter', mem%cflux_c_greenwood_2_litter,                             &
@@ -837,7 +799,7 @@ CONTAINS
       & t_cf('C_sum_veg_ta', 'mol(C) m-2', 'Sum of all vegetation C pools.'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
-      & output_level=BASIC,                                                    &
+      & output_level=MINIMUM,                                                  &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('c_sum_litter_ag_ta', mem%C_sum_litter_ag_ta,                           &
@@ -845,7 +807,7 @@ CONTAINS
       & t_cf('C_sum_litter_ag_ta', 'mol(C) m-2', 'Sum of all above ground litter C pools.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
       & prefix, suffix,                                                                      &
-      & output_level=BASIC,                                                                  &
+      & output_level=MINIMUM,                                                                &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'c_sum_litter_bg_ta', mem%C_sum_litter_bg_ta,                          &
@@ -853,7 +815,7 @@ CONTAINS
       & t_cf('C_sum_litter_bg_ta', 'mol(C) m-2', 'Sum of all below ground litter C pools.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
       & prefix, suffix,                                                                      &
-      & output_level=BASIC,                                                                  &
+      & output_level=MINIMUM,                                                                &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('c_sum_humus_ta', mem%C_sum_humus_ta,                     &
@@ -861,7 +823,7 @@ CONTAINS
       & t_cf('C_sum_humus_ta', 'mol(C) m-2', 'Sum of all humus C pools.'),     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
-      & output_level=BASIC,                                                    &
+      & output_level=MINIMUM,                                                  &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('c_sum_natural_ta', mem%C_sum_natural_ta,                 &
@@ -869,7 +831,7 @@ CONTAINS
       & t_cf('C_sum_natural_ta', 'mol(C) m-2', 'Sum of all natural C pools.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
-      & output_level=BASIC,                                                    &
+      & output_level=MINIMUM,                                                  &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('soil_respiration_ta', mem%soil_respiration_ta,        &
@@ -924,7 +886,7 @@ CONTAINS
       & t_cf('NPP_act_yDayMean_ta', 'mol(C) m-2 s-1', 'Actual NPP Rate of the previous day.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
       & prefix, suffix,                                                                             &
-      & output_level=BASIC,                                                                                &
+      & output_level=BASIC,                                                                         &
       & lrestart=.FALSE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
                                                   ! in a zero divide in the first time step of an initialized run.
 
@@ -933,7 +895,7 @@ CONTAINS
       & t_cf('GPP_yDayMean_ta', 'mol(C) m-2 s-1', 'Mean GPP Rate of the previous day.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
-      & output_level=BASIC,                                                                                &
+      & output_level=BASIC,                                                              &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
 
@@ -974,7 +936,7 @@ CONTAINS
       & t_cf('co2flux_fire_all_2_atm_ta', 'kg(CO2) m-2 s-1', 'CO2 flux from C pools to atmosphere due to fire.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                &
       & prefix, suffix, loutput=.TRUE.,                                                                   &
-      & output_level=BASIC,                                                                               &
+      & output_level=MINIMUM,                                                                             &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('co2_l2a_npp_ta', mem%co2flux_npp_2_atm_ta,                                                     &
@@ -982,7 +944,7 @@ CONTAINS
       & t_cf('co2flux_npp_2_atm_ta', 'kg(CO2) m-2 s-1', 'Net CO2 fluxes between biosphere and atmosphere due to NPP.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                           &
       & prefix, suffix,                                                                                              &
-      & output_level=BASIC,                                                                                &
+      & output_level=MINIMUM,                                                                                        &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('co2_l2a_resp_ta', mem%co2flux_soilresp_2_atm_ta,                                     &
@@ -991,7 +953,7 @@ CONTAINS
       &      'Net CO2 fluxes between biosphere and atmosphere due to soil respiration.'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                 &
       & prefix, suffix,                                                                                    &
-      & output_level=BASIC,                                                                                &
+      & output_level=MINIMUM,                                                                              &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('co2_l2a_herb_ta', mem%co2flux_herb_2_atm_ta,                                          &
@@ -1000,7 +962,7 @@ CONTAINS
       &      'Net CO2 fluxes between biosphere and atmosphere due to herbivory.'),                          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
       & prefix, suffix,                                                                                     &
-      & output_level=BASIC,                                                                                &
+      & output_level=MINIMUM,                                                                               &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('co2_l2a_npp_yday_ta', mem%co2flux_npp_2_atm_yday_ta,                                           &

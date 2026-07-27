@@ -16,7 +16,7 @@
 !>#### routines for calculating the vegetation pools using the fluxes that have been calculated
 !>
 MODULE mo_q_veg_update_pools
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, finish, message_text

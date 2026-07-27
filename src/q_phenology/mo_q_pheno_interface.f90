@@ -16,7 +16,7 @@
 !>#### definition and init of tasks for the phenology process incl. update and aggregate routines
 !>
 MODULE mo_q_pheno_interface
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_kind,               ONLY: wp

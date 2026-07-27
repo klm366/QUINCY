@@ -26,7 +26,7 @@ MODULE mo_sse_init
   USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,             ONLY: missval
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
-  USE mo_util,               ONLY: int2string, soil_init_from_texture
+  USE mo_util,               ONLY: int2string, soil_init_from_texture, read_bc_data
 
   dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
   dsl4jsb_Use_config(SSE_)
@@ -86,15 +86,11 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
 #ifdef __QUINCY_STANDALONE__
-    model  => Get_model(tile%owner_model_id)
-    IF (model%config%use_soil_phys_jsbach) THEN
-      CALL qs_sse_init_bc(tile)
-      CALL sse_init_ic(tile)
-    END IF
+    CALL qs_sse_init_bc(tile)
+    CALL sse_init_ic(tile)
 #else
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL sse_read_init_vars(tile)
@@ -149,6 +145,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_e
     INTEGER :: nproma, nblks, isoil
+    LOGICAL :: l_organic
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_read_init_vars'
 
@@ -165,6 +162,8 @@ CONTAINS
     ! Get config parameters
     dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_config(HYDRO_)
+
+    l_organic = dsl4jsb_Config(HYDRO_)%l_organic
 
     ALLOCATE(                                          &
       & sse_init_vars%vol_heat_cap(nproma, nblks    ), &
@@ -205,38 +204,25 @@ CONTAINS
     ! soil texture information
     !
     IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
-      ptr_2D => input_file%Read_2d(             &
-        & variable_name='FR_SAND',              &
-        & fill_array = sse_init_vars%fr_sand)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
-      ptr_2D => input_file%Read_2d(             &
-        & variable_name='FR_SILT',              &
-        & fill_array = sse_init_vars%fr_silt)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+      !>     - Fraction of sand in upper soil
+      CALL read_bc_data(input_file, 'FR_SAND', tile%name, sse_init_vars%fr_sand, llimit=0._wp)
 
-      ptr_2D => input_file%Read_2d(             &
-        & variable_name='FR_CLAY',              &
-        & fill_array = sse_init_vars%fr_clay)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+      !>     - Fraction of silt in upper soil
+      CALL read_bc_data(input_file, 'FR_SILT', tile%name, sse_init_vars%fr_silt, llimit=0._wp)
 
-      ptr_2D => input_file%Read_2d(             &
-        & variable_name='SUB_FR_SAND',              &
-        & fill_array = sse_init_vars%fr_sand_deep)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+      !>     - Fraction of clay in upper soil
+      CALL read_bc_data(input_file, 'FR_CLAY', tile%name, sse_init_vars%fr_clay, llimit=0._wp)
 
-      ptr_2D => input_file%Read_2d(             &
-        & variable_name='SUB_FR_SILT',              &
-        & fill_array = sse_init_vars%fr_silt_deep)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+      !>     - Fraction of sand in deep soil
+      CALL read_bc_data(input_file, 'SUB_FR_SAND', tile%name, sse_init_vars%fr_sand_deep, llimit=0._wp)
 
-      ptr_2D => input_file%Read_2d(             &
-        & variable_name='SUB_FR_CLAY',              &
-        & fill_array = sse_init_vars%fr_clay_deep)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+      !>     - Fraction of silt in deep soil
+      CALL read_bc_data(input_file, 'SUB_FR_SILT', tile%name, sse_init_vars%fr_silt_deep, llimit=0._wp)
 
-#ifndef __NO_QUINCY__
-      ! quincy
+      !>     - Fraction of clay in deep soil
+      CALL read_bc_data(input_file, 'SUB_FR_CLAY', tile%name, sse_init_vars%fr_clay_deep, llimit=0._wp)
+
       ! read 'bulk density' values from quincy specific input file
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
@@ -253,8 +239,7 @@ CONTAINS
         sse_init_vars%bulk_density(:,:) = MERGE(ptr_2D, 1000.0_wp, ptr_2D > 0.0_wp)
 
         ! quincy input file may be closed below
-    END SELECT
-#endif
+      END SELECT
 
       ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
       CALL soil_init_from_texture( &
@@ -272,39 +257,21 @@ CONTAINS
     ELSE
       IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
         ! FAO
-        ptr_2D => input_file%Read_2d(variable_name='fao')
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+        CALL read_bc_data(input_file, 'fao', tile%name, sse_init_vars%fao, default=0._wp)
         sse_init_vars%fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),wp), &
-                                     MIN(REAL(UBOUND(fao_thermal_diff,1),wp), ptr_2D(:,:)))
+                                     MIN(REAL(UBOUND(fao_thermal_diff,1),wp), sse_init_vars%fao(:,:)))
       END IF
 
       IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
         ! Volumetric heat capacity of dry soil [J/(m^3*K)]
-
-        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-          ptr_2D => input_file%Read_2d(                   &
-            & variable_name='heat_capacity_mineral',      &
-            & fill_array = sse_init_vars%vol_heat_cap)
-        ELSE
-          ptr_2D => input_file%Read_2d(                   &
-            & variable_name='heat_capacity',              &
-            & fill_array = sse_init_vars%vol_heat_cap)
-        END IF
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 2.e6_wp, ptr_2D(:,:) > 0._wp)
+        CALL read_bc_data(input_file, 'heat_capacity', tile%name, sse_init_vars%vol_heat_cap, &
+          &  l_organic=l_organic, default=2.e6_wp)
       END IF
 
       IF (dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
         ! Heat conductivity of mineral soil
-        IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-          ptr_2D => input_file%Read_2d(                   &
-            & variable_name='heat_conductivity_mineral',  &
-            & fill_array = sse_init_vars%heat_cond)
-        ELSE
-          ptr_2D => input_file%Read_2d(                   &
-            & variable_name='heat_conductivity',          &
-            & fill_array = sse_init_vars%heat_cond)
-        END IF
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) > 0._wp)
+        CALL read_bc_data(input_file, 'heat_conductivity', tile%name, sse_init_vars%heat_cond, &
+          &  l_organic=l_organic, default=0.2_wp)
       END IF
 
     END IF ! l_soil_texture
@@ -321,10 +288,12 @@ CONTAINS
         ptr_2D => model%config%ifs_input_file%Read_2d_1lev_1time( &
           & variable_name='STL'//int2string(isoil))
         sse_init_vars%ifs_tsoil(:,isoil,:) = ptr_2D(:,:)
+        DEALLOCATE(ptr_2D)
       END DO
       ptr_3D => model%config%ifs_input_file%Read_2d_time( &
         & variable_name='SKT', start_time_step=1, end_time_step=1)
       sse_init_vars%ifs_tskin(:,:) = ptr_3D(:,:,1)
+      DEALLOCATE(ptr_3D)
 
     ELSE
 
@@ -337,6 +306,7 @@ CONTAINS
       ptr_3D => input_file%Read_2d_time( &
         & variable_name='surf_temp')
       sse_init_vars%t_srf_mon(:,:,:) = MERGE(ptr_3D, 280._wp, ptr_3D > 0._wp)
+      DEALLOCATE(ptr_3D)
 
       CALL input_file%Close()
 
@@ -451,7 +421,6 @@ CONTAINS
     ! Get process memory
     dsl4jsb_Get_memory(SSE_)
 
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       ! SSE_ 3D
@@ -460,7 +429,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)
       dsl4jsb_Get_var3D_onDomain(SSE_, bulk_dens_sl)
     END SELECT
-#endif
 
     ! Volumetric heat capacity of dry soil [J/(m^3*K)]
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. dsl4jsb_Config(SSE_)%l_soil_texture) THEN
@@ -484,7 +452,6 @@ CONTAINS
       !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SSE_,thermal_diffusivity)) ASYNC(1)
     END IF
 
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
@@ -517,7 +484,6 @@ CONTAINS
 
       !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), bulk_dens_sl(:,:,:)) ASYNC(1)
     END SELECT
-#endif
 
     !$ACC UPDATE ASYNC(1) &
     !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap)) &

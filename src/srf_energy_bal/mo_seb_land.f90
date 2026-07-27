@@ -31,7 +31,7 @@ MODULE mo_seb_land
   USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone, acc_stream
   USE mo_jsb_time,           ONLY: is_time_experiment_start, get_asselin_coef
 
-  dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_
+  dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_, VEG_
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
 
@@ -41,11 +41,7 @@ MODULE mo_seb_land
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(HYDRO_)
-
-#ifndef __NO_QUINCY__
-  dsl4jsb_Use_processes VEG_
   dsl4jsb_Use_memory(VEG_)
-#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -80,9 +76,7 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Def_memory(VEG_)
-#endif
 
     LOGICAL                :: lstart
 
@@ -218,13 +212,11 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       veg__mem => NULL()
       dsl4jsb_Get_memory(VEG_)
     END SELECT
-#endif
 
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)          ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)        ! IN/OUT (coupled/standalone)
@@ -307,7 +299,6 @@ CONTAINS
     !$ACC   CREATE(is_glacier, tile_fract_zero, frozen_fract, t_radref, le_freeze_pot, le_melt_pot)
 
     SELECT CASE (model%config%model_scheme)
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_var2D_onChunk(VEG_,   height)       ! in
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -315,7 +306,6 @@ CONTAINS
         veg_height(ic) = height(ic)
       END DO
       !$ACC END PARALLEL LOOP
-#endif
     CASE DEFAULT
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
