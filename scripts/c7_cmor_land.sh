@@ -36,7 +36,7 @@ varlist_cap7="baresoilFrac burntFractionAll cLand cLitter cLitterCwd cProduct cS
     grassFrac lai landCoverFrac mrfso mrro mrrob mrros mrso mrsofc mrsol mrsos nbp \
     netAtmosLandCO2Flux npp nppGrass nppShrub nppTree orog pastureFrac ra raGrass raShrub raTree \
     residualFrac rh rhGrass rhShrub rhTree rootd sftgif sftlaf shrubFrac slthick snc snd snw \
-    tran treeFrac tsl vegFrac"
+    snwc tran treeFrac tsl vegFrac"
 # Additional CMOR variables not requested in CAP7
 varlist_cmor="${varlist_cap7} c3PftFrac c4PftFrac cnc cropFracC3 cropFracC4 depthsl grassFracC3 \
     grassFracC4 mrsfl mrsll pastureFracC3 pastureFracC4"
@@ -167,12 +167,28 @@ case $var in
   cProduct )
     # Carbon mass per unit area that has been removed from the environment through land use change.
     # COMMENT: The variable only contains a crop harvest pool.
-if [[ no_var_missing == true ]]; then
     $cdo -setattribute,${var}@long_name="Carbon Mass in Products of Land-Use Change" \
         -setattribute,${var}@units="kg m-2" \
         -div -expr,"${var}=${C_mol2kg}*carbon_c_crop_harvest_ta_box" \
         ${lnd_2d} fract_land_box.nc ${var}.nc
-fi
+    ;;
+  cropFrac )
+    # Percentage of entire grid cell that is covered by crop.
+    $cdo -setattribute,${var}@long_name="Percentage Crop Cover" \
+        -setattribute,${var}@units="%" \
+        -expr,"${var}=100.*(fract_pft11+fract_pft12)*pheno_fract_fpc_max_box" ${lnd_frac} ${var}.nc
+    ;;
+  cropFracC3 )
+    # Percentage of entire grid cell that is covered by C3 crops.
+    $cdo -setattribute,${var}@long_name="Percentage Crop Cover" \
+        -setattribute,${var}@units="%" \
+        -expr,"${var}=100.*fract_pft11*pheno_fract_fpc_max_box" ${lnd_frac} ${var}.nc
+    ;;
+  cropFracC4 )
+    # Percentage of entire grid cell that is covered by C4 crops.
+    $cdo -setattribute,${var}@long_name="Percentage Crop Cover" \
+        -setattribute,${var}@units="%" \
+        -expr,"${var}=100.*fract_pft12*pheno_fract_fpc_max_box" ${lnd_frac} ${var}.nc
     ;;
   cSoil )
     # Carbon mass in the full depth of the soil model.
@@ -285,7 +301,7 @@ fi
     limit=$(ncdump -c ${bc_soil} | grep ' soillev = 0' | cut -f5 -d, | cut -f2 -d' ')
     $cdo -setattribute,${var}@long_name="Total (Cumulative) Thickness of All Soil Layers" \
         -setattribute,${var}@units="m" \
-        -setvar,${var} -ifthen with_land.nc -expr,"${var}=min(${limit},soil_depth)" ${bc_soil} ${var}.nc
+        -ifthen with_land.nc -expr,"${var}=min(${limit},soil_depth)" ${bc_soil} ${var}.nc
     ;;
   evspsblsoi )
     # includes sublimation
@@ -427,9 +443,10 @@ fi
     # land portion of the grid cell divided by the land area in the grid cell.
     # Note: We need hydro_runoff_land, excluding lakes and glaciers, where runoff is calculated as
     #  "runoff(glacier;lake) = rain + snow + evapotrans" just to close the water balance.
+    #cmor:   _mask=fract_land_box>0.;mrro=_mask?(hydro_runoff_land+hydro_drainage_land):missval(hydro_runoff_land)
     $cdo -setattribute,${var}@long_name="Total Runoff" \
         -setattribute,${var}@units="kg m-2 s-1" \
-        -expr,"${var}=hydro_runoff_land+hydro_drainage_land" \
+        -ifthen with_land.nc -expr,"${var}=hydro_runoff_land+hydro_drainage_land" \
         ${lnd_2d} ${var}.nc
     ;;
   mrrob )
@@ -441,9 +458,10 @@ fi
     ;;
   mrros )
     # the total surface runoff leaving the land portion of the grid cell.
+    #cmor:   _mask=fract_land_box>0.;mrros=_mask?(hydro_runoff_land):missval(hydro_runoff_land)
     $cdo -setattribute,${var}@long_name="Surface Runoff" \
         -setattribute,${var}@units="kg m-2 s-1" \
-        -expr,"${var}=hydro_runoff_land" \
+        -ifthen with_land.nc -expr,"${var}=hydro_runoff_land" \
         ${lnd_2d} ${var}.nc
     ;;
   mrsfl )
@@ -671,8 +689,8 @@ if [[ no_var_missing == true ]]; then
     $cdo -setattribute,${var}@long_name="Heterotrophic Respiration on Tree Tiles as Carbon Mass Flux" \
         -setattribute,${var}@units="kg m-2 s-1" \
         -expr,"${var}=${CO2_to_C}*( fract_pft01*(carbon_co2_l2a_resp_ta_pft01+carbon_co2_l2a_herb_ta_pft01) \
-                                   +fract_pft02*(carbon_co2_l2a_resp_ta_pft02+carbon_co2_l2a_herb_ta_pft02)) \
-                                   +fract_pft03*(carbon_co2_l2a_resp_ta_pft03+carbon_co2_l2a_herb_ta_pft03)) \
+                                   +fract_pft02*(carbon_co2_l2a_resp_ta_pft02+carbon_co2_l2a_herb_ta_pft02) \
+                                   +fract_pft03*(carbon_co2_l2a_resp_ta_pft03+carbon_co2_l2a_herb_ta_pft03) \
                                    +fract_pft04*(carbon_co2_l2a_resp_ta_pft04+carbon_co2_l2a_herb_ta_pft04)) \
                                  /(pheno_fract_fpc_max_box*(fract_pft01+fract_pft02+fract_pft03+fract_pft04))" \
         ${lnd_2d} ${var}.nc
@@ -740,16 +758,17 @@ fi
     ;;
   snwc )
     # canopy_snow_amount
+    # mean: where land
     $cdo -setattribute,${var}@long_name="Snow Water Equivalent Intercepted by the Vegetation" \
         -setattribute,${var}@units="kg m-2" \
-        -div -expr,"${var}=${rhoh2o}*hydro_weq_snow_soil_box" \
-        ${lnd_2d} fract_land_box.nc ${var}.nc
+        -div -expr,"${var}=${rhoh2o}*hydro_weq_snow_can_box" \
+        ${lnd_2dC} fract_land_box.nc ${var}.nc
     ;;
   tran )
     # Transpiration (may include dew formation as a negative flux).
     $cdo -setattribute,${var}@long_name="Transpiration" \
         -setattribute,${var}@units="kg m-2 s-1" \
-        -div -expr,"${var}=hydro_transpiration_box" \
+        -div -expr,"${var}=-1.*hydro_transpiration_box" \
         ${lnd_2d} fract_land_box.nc ${var}.nc
     ;;
   treeFrac )
