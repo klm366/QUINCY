@@ -199,7 +199,6 @@ CONTAINS
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_config(Q_DINSECT_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
 

@@ -23,7 +23,8 @@ MODULE mo_q_dinsect_memory_class
   !USE mo_jsb_utils_iface,        ONLY: assign_if_present_allocatable
   USE mo_jsb_process_class,      ONLY: Q_DINSECT_
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
-    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id
+    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id, &
+    &                                  t_lnd_bgcm
   USE mo_lnd_bgcm_store_class,   ONLY: DINSECT_BGCM_DEADSAPWOOD_ID, DINSECT_BGCM_DEADHEARTWOOD_ID, &
     &                                  DINSECT_BGCM_DEADLEAF_ID, DINSECT_BGCM_VEG_EXTRACT_ID, &
     &                                  DINSECT_BGCM_FAST_LITTER_ID, DINSECT_BGCM_SLOW_LITTER_ID, &
@@ -90,7 +91,7 @@ MODULE mo_q_dinsect_memory_class
   ! ======================================================================================================= !
   !> Type definition for dinsect_bgc_material_elements
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_dinsect_bgcm_with_elements
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_dinsect_bgcm_with_elements
     TYPE(t_jsb_var_real2d), POINTER :: carbon
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen
     TYPE(t_jsb_var_real2d), POINTER :: phosphorus
@@ -106,7 +107,7 @@ MODULE mo_q_dinsect_memory_class
   ! ======================================================================================================= !
   !> Type definition for dinsect_bgc_material_components
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_dinsect_bgcm_with_components
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_dinsect_bgcm_with_components
     TYPE(t_dinsect_bgcm_with_elements),    POINTER :: leaf
     TYPE(t_dinsect_bgcm_with_elements),    POINTER :: fine_root
     TYPE(t_dinsect_bgcm_with_elements),    POINTER :: coarse_root
@@ -125,7 +126,7 @@ MODULE mo_q_dinsect_memory_class
   !>
   !> main structure, added fastly into the "TYPE(t_jsb_memory) :: t_q_dinsect_memory" as "CLASS(t_jsb_pool) :: bgc_material"
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_dinsect_bgcm_main
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_dinsect_bgcm_main
     !! pools
     TYPE(t_dinsect_bgcm_with_elements),    POINTER :: dinsectbdeadsapwood
     TYPE(t_dinsect_bgcm_with_elements),    POINTER :: dinsectbdeadheartwood
@@ -284,7 +285,7 @@ CONTAINS
       CALL mem%bgc_material%Set_paths()
 
       ! add variables to bgc_material
-      CALL mem%Add_var(mem%dinsect_bgcm_main%dinsectbvegextract, &
+      CALL mem%t_jsb_memory_add_bgcm(mem%dinsect_bgcm_main%dinsectbvegextract, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -727,7 +728,7 @@ END SUBROUTINE dinsect_bgcm_main_init
 FUNCTION Add_dinsect_bgc_material_with_components(pool, bgcm_id, name, shortname, unit, elements_index_map) &
     & RESULT(dinsect_bgcm_with_components)
   ! ----------------------------------------------------------------------------------------------------- !
-  CLASS(t_jsb_pool), TARGET,  INTENT(INOUT)  :: pool                  !< pool to which this pool with component should be added
+  CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT)  :: pool                  !< pool to which this pool with component should be added
   INTEGER,                    INTENT(in)     :: bgcm_id               !< id of this dinsect bgcm with components
   CHARACTER(LEN=*),           INTENT(in)     :: name                  !< name of this dinsect bgcm with components
   CHARACTER(LEN=*),           INTENT(in)     :: shortname             !< shortname of this dinsect bgcm with components
@@ -768,14 +769,14 @@ FUNCTION Add_dinsect_bgc_material_with_components(pool, bgcm_id, name, shortname
     & name = 'fruit_bgcm', shortname = 'fruit', elements_index_map = elements_index_map(:), unit = unit)
 
   ! Add the bookkeeping for this dinsect bgcm with components
-  CALL pool%Add_pool(dinsect_bgcm_with_components, bgcm_id)
+  CALL pool%Add_bgcm(dinsect_bgcm_with_components, bgcm_id)
 
 END FUNCTION Add_dinsect_bgc_material_with_components
 
 FUNCTION Add_dinsect_bgc_material_with_elements(pool, name, shortname, elements_index_map, unit, bgcm_id) &
     & RESULT(dinsect_bgcm_with_elements)
   ! ----------------------------------------------------------------------------------------------------- !
-  CLASS(t_jsb_pool), TARGET,  INTENT(INOUT) :: pool                   !< pool to which this pool with elements should be added
+  CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: pool                   !< pool to which this pool with elements should be added
   CHARACTER(LEN=*),           INTENT(in)    :: name                   !< name of this dinsect bgcm with elements
   CHARACTER(LEN=*),           INTENT(in)    :: shortname              !< shortname of this dinsect bgcm with elements
   INTEGER,                    INTENT(in)    :: elements_index_map(:)  !< mapping elements ID -> IND
@@ -788,7 +789,7 @@ FUNCTION Add_dinsect_bgc_material_with_elements(pool, name, shortname, elements_
   ALLOCATE(dinsect_bgcm_with_elements)
   CALL dinsect_bgcm_with_elements%Init(name = name, shortname = shortname, &
     & elements_index_map = elements_index_map(:), l_elements = .TRUE., element_unit = unit)
-  CALL pool%Add_pool(dinsect_bgcm_with_elements, bgcm_id)
+  CALL pool%Add_bgcm(dinsect_bgcm_with_elements, bgcm_id)
 
 END FUNCTION Add_dinsect_bgc_material_with_elements
 

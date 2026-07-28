@@ -391,7 +391,7 @@ CONTAINS
   !> Implementation of "aggregate": update_dinsect_effects task
   !!
   !-------------------------------------------------------------------------------------------------------- !
-  SUBROUTINE aggr_dinsect_defoliatior(tile, options)
+  SUBROUTINE aggr_dinsect_defoliator(tile, options)
 
     IMPLICIT NONE
     ! ---------------------------
