@@ -282,7 +282,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    CALL model%Get_top_tile(box_tile)
     vgrid_soil_w  => Get_vgrid('soil_depth_water')
     nsoil_w       =  vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
@@ -295,7 +294,6 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
     ALLOCATE(apparent_fast_som_cn(nc, nsoil_w))
     ALLOCATE(apparent_fast_som_np(nc, nsoil_w))
@@ -331,7 +329,10 @@ CONTAINS
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
     ! Q_AGR_ 2D
-    IF(dsl4jsb_Config(Q_AGR_)%active.AND.lctlib%PastureFlag) THEN
+    IF (dsl4jsb_Config(Q_AGR_)%active .AND. lctlib%PastureFlag) THEN
+      ! NOTE: the Q_AGR_ process is running only on crop PFT, see quincy model_usecase 'IF (model%lctlib(pft_ids(i))%CropFlag)'
+      !       this should not be an issue as: the below three Q_AGR_ variables are not modified by the Q_AGR_ routines
+      CALL model%Get_top_tile(box_tile)
       dsl4jsb_Get_memory_tile(Q_AGR_, box_tile)
       dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, n_manure_pasture, box_tile) ! in
       dsl4jsb_Get_var2D_onChunk_tile(Q_AGR_, nh4_fertiliser_pasture, box_tile) ! in
