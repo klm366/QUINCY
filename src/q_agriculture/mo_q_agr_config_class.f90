@@ -16,7 +16,7 @@
 !>#### define agriculture config structure, read agriculture namelist and init configuration parameters
 !>
 MODULE mo_q_agr_config_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message, message_text, finish
   USE mo_io_units,          ONLY: filename_max

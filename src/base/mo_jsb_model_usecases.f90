@@ -25,7 +25,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, &
+    &                               CLIMBUF_, FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, &
     &                               Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
@@ -79,11 +79,9 @@ CONTAINS
       ! jsbach 11 PFTs + forest age-classes
       CALL init_usecase_pfts_with_forest_age_classes(model)
 
-#ifndef __NO_QUINCY__
     ! QUINCY 13 PFTs
     CASE ('quincy_13_pfts')
       CALL init_usecase_quincy_13_pfts(model)
-#endif
 
     ! catch wrong usecase setting
     CASE DEFAULT
@@ -332,6 +330,9 @@ CONTAINS
           CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
         END IF
 
+        IF (model%processes(CLIMBUF_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
+        END IF
         IF (model%processes(NLCC_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
         END IF
@@ -454,6 +455,9 @@ CONTAINS
           CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
         END IF
 
+        IF (model%processes(CLIMBUF_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
+        END IF
         IF (model%processes(NLCC_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
         END IF
@@ -602,6 +606,9 @@ CONTAINS
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
           END IF
           !
+          IF (model%processes(CLIMBUF_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
+          END IF
           IF (model%processes(NLCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
           END IF
@@ -722,7 +729,6 @@ CONTAINS
 
     END SUBROUTINE set_jsbach_pfts
 
-#ifndef __NO_QUINCY__
   ! ======================================================================================================= !
   !>init routine for usecase quincy_13_pfts
   !>
@@ -900,7 +906,6 @@ CONTAINS
     IF (model%config%use_lakes)   NULLIFY(lake_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
   END SUBROUTINE init_usecase_quincy_13_pfts
-#endif
 
 #endif
 END MODULE mo_jsb_model_usecases

@@ -16,7 +16,7 @@
 !>#### declare and define agriculture constants
 !>
 MODULE mo_q_agr_constants
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_impl_constants,  ONLY: def_parameters

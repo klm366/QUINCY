@@ -661,7 +661,6 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         CALL mem%Add_var('num_sl_above_bedrock', mem%num_sl_above_bedrock, &
@@ -675,7 +674,6 @@ CONTAINS
           & lrestart=.TRUE., &
           & initval_r=0.0_wp)
       END SELECT
-#endif
 
       CALL mem%Add_var( 'soil_depth_sl', mem%soil_depth_sl,                    &
         & hgrid, soil_w,                                                       &
@@ -696,7 +694,6 @@ CONTAINS
           & initval_r=0.0_wp )
       END IF
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         CALL mem%Add_var('soil_lay_width_sl', mem%soil_lay_width_sl, &
@@ -743,7 +740,6 @@ CONTAINS
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
       END SELECT
-#endif
 
       CALL mem%Add_var( 'wpi_rootzone_max', mem%wpi_rootzone_max,                    &
         & hgrid, surface,                                                            &
@@ -1317,7 +1313,6 @@ CONTAINS
         & lrestart = lrestart_local, &
         & initval_r = 0.0_wp)
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         CALL mem%Add_var('w_soil_root_fc', mem%w_soil_root_fc, &
@@ -1365,9 +1360,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
           & initval_r = 0.0_wp)
-      END SELECT
-#endif
-
+      END SELECT  ! QUINCY
     END IF ! VEG_TYPE/LAND_TYPE
 
     ! Additional variables for tiles containing GLACIER lct

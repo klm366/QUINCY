@@ -16,7 +16,7 @@
 !>#### routines for agriculture processes
 !>
 MODULE mo_q_agr_process
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_jsb_math_constants,  ONLY: eps4, eps8
