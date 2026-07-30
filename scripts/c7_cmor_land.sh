@@ -45,7 +45,7 @@ varlist_all="${varlist_cmor}"
 
 test_list="test01 test02 test03 test04 test05 test06 test07 test08 test09 test10 \
            test11 test12 test13 test14 test15 test16 test17 test18 test19 test20 \
-           test21 test22 test23 test24        test26 test27"
+           test21 test22 test23 test24 test25 test26 test27 test28"
 #test_list="test26"
 #-------------------------------------------------------------------------------------------------
 
@@ -274,24 +274,6 @@ case $var in
                                   +fract_pft03*carbon_c_sum_veg_ta_pft03+fract_pft04*carbon_c_sum_veg_ta_pft04) \
                                  /(fract_pft01+fract_pft02+fract_pft03+fract_pft04)" \
         ${lnd_2d} ${var}.nc
-    ;;
-  cropFrac )
-    # Percentage of entire grid cell that is covered by crop.
-    $cdo -setattribute,${var}@long_name="Percentage Crop Cover" \
-        -setattribute,${var}@units="%" \
-        -expr,"${var}=100.*(fract_pft11+fract_pft12)*pheno_fract_fpc_max_box" ${lnd_frac} ${var}.nc
-    ;;
-  cropFracC3 )
-    # Percentage of entire grid cell that is covered by C3 crops.
-    $cdo -setattribute,${var}@long_name="Percentage Crop Cover" \
-        -setattribute,${var}@units="%" \
-        -expr,"${var}=100.*fract_pft11*pheno_fract_fpc_max_box" ${lnd_frac} ${var}.nc
-    ;;
-  cropFracC4 )
-    # Percentage of entire grid cell that is covered by C4 crops.
-    $cdo -setattribute,${var}@long_name="Percentage Crop Cover" \
-        -setattribute,${var}@units="%" \
-        -expr,"${var}=100.*fract_pft12*pheno_fract_fpc_max_box" ${lnd_frac} ${var}.nc
     ;;
   depthsl )
     # Total (cumulative) thickness of all soil layers. This is the sum of individual thicknesses
@@ -1004,20 +986,40 @@ if [[ ${do_tests} == yes ]]; then
           $cdo sub ${cmordir}/nbp.nc nbp.test $test.nc
         fi
         ;;
-      test25 ) # nep = gpp - ra - (rh - crop_harvest) - fFireAll - grazing
-        # Note: grazing and crop harvest fluxes are included i/cVegn rh. As nep excludes fluxes from
-        # anthropogenic land use we would need to add crop harvest here, the variable is however
-        # not available as model output.
-        if [[ -f ${cmordir}/nep.nc && -f ${cmordir}/gpp.nc && -f ${cmordir}/ra.nc \
+      test25) # netAtmosLandCO2Flux = gpp - ra - rh - fFire - fHarvestToAtmos - fDeforestToAtmos - fProductDecomp
+        # Note: grazing and the product pool decomposition flux (from crop harvest) are included in
+        # rh. There is no wood harvest nor deforestation flux.
+        # => netAtmosLandCO2Flux = gpp - ra - rh - fFireAll
+        # (same as nbp test above)
+        if [[ -f ${cmordir}/netAtmosLandCO2Flux.nc && -f ${cmordir}/gpp.nc && -f ${cmordir}/ra.nc \
            && -f ${cmordir}/rh.nc && -f ${cmordir}/fFireAll.nc ]]; then
           $cdo -O enssum        ${cmordir}/gpp.nc      \
                       -mulc,-1. ${cmordir}/ra.nc       \
                       -mulc,-1. ${cmordir}/rh.nc       \
-                      -mulc,-1. ${cmordir}/fFireAll.nc  nep.test
-           $cdo sub ${cmordir}/nep.nc nep.test $test.nc
+                      -mulc,-1. ${cmordir}/fFireAll.nc  netAtmosLandCO2Flux.test
+          $cdo sub ${cmordir}/netAtmosLandCO2Flux.nc netAtmosLandCO2Flux.test $test.nc
         fi
         ;;
-      test26 ) # d/dt(cLand) = npp - fFireAll - rh - grazing - fCLandToOcean - fAnthDisturb - fProductDecomp
+      #test25 ) # nep = gpp - ra - (rh - crop_harvest) - fFireAll - grazing
+      #  # Note: grazing and crop harvest fluxes are included in rh. As nep excludes fluxes from
+      #  # anthropogenic land use we would need to add crop harvest here, the variable is however
+      #  # not available as model output.
+      #  if [[ -f ${cmordir}/nep.nc && -f ${cmordir}/gpp.nc && -f ${cmordir}/ra.nc \
+      #     && -f ${cmordir}/rh.nc && -f ${cmordir}/fFireAll.nc ]]; then
+      #    $cdo -O enssum        ${cmordir}/gpp.nc      \
+      #                -mulc,-1. ${cmordir}/ra.nc       \
+      #                -mulc,-1. ${cmordir}/rh.nc       \
+      #                -mulc,-1. ${cmordir}/fFireAll.nc  nep.test
+      #     $cdo sub ${cmordir}/nep.nc nep.test $test.nc
+      #  fi
+      #  ;;
+      test26 ) # nbp = netAtmosLandCO2Flux - fCLandToOcean
+        # As in fCLandToOcean = 0, nbp = netAtmosLandCO2Flux.
+        if [[ -f ${cmordir}/netAtmosLandCO2Flux.nc && -f ${cmordir}/nbp.nc ]]; then
+          $cdo sub ${cmordir}/netAtmosLandCO2Flux.nc ${cmordir}/nbp.nc $test.nc
+        fi
+        ;;
+      test27 ) # d/dt(cLand) = npp - fFireAll - rh - grazing - fCLandToOcean - fAnthDisturb - fProductDecomp
         # Note: grazing and crop harvest fluxes are included in rh, fCLandTocean=0., fAnthDisturb=0.
         # Note: Differences due to 15 day time shift between monthly mean fluxes and monthly mean state
         if [[ -f ${cmordir}/cLand.nc && -f ${cmordir}/npp.nc && -f ${cmordir}/fFireAll.nc && -f ${cmordir}/rh.nc ]]; then
@@ -1027,7 +1029,7 @@ if [[ ${do_tests} == yes ]]; then
           $cdo sub -deltat ${cmordir}/cLand.nc  -mulc,86400. -muldpm fluxes_cLand.test  $test.nc
         fi
         ;;
-      test27 ) # depthsl = vertsum(slthick)
+      test28 ) # depthsl = vertsum(slthick)
         if [[ -f ${cmordir}/depthsl.nc && -f ${cmordir}/slthick.nc ]]; then
           $cdo sub ${cmordir}/depthsl.nc -vertsum ${cmordir}/slthick.nc $test.nc
         fi
