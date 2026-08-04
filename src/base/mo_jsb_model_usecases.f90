@@ -919,7 +919,7 @@ CONTAINS
   !>
   !>   works only in combination with 'model%config%model_scheme = MODEL_QUINCY'
   !>
-  !>   the data/lctlib_quincy_nlct14.def is used for this usecase (hardcoded in: mo_jsb_base:jsbach_setup_tiles)
+  !>   the data/lctlib_quincy_nlct16.def is used for this usecase (hardcoded in: mo_jsb_base:jsbach_setup_tiles)
   !>
   SUBROUTINE init_usecase_quincy_13pS_pfts(model)
 
@@ -935,7 +935,8 @@ CONTAINS
     CHARACTER(len=5), PARAMETER   :: pft_shortnames(npft) = [character(len=5) :: &
       &                              'pft01', 'pft02', 'pft03', 'pft04', &
       &                              'pft05', 'pft06', 'pft07', 'pft08', &
-      &                              'pft09', 'pft10', 'pft11', 'pft12', 'pft13','pft14','pft15'  ]
+      &                              'pft09', 'pft10', 'pft11', 'pft12', &
+                                     'pft13', 'pft14', 'pft15'  ]
     ! pft long names
     CHARACTER(len=30), PARAMETER  :: pft_longnames(npft) = [character(len=30) ::    &
       &                              'BEM:  moist broadleaved evergreen',           &
@@ -951,8 +952,8 @@ CONTAINS
       &                              'TeC:  C3 crop',                               &
       &                              'TrC:  C4 crop',                               &
       &                              'BSO:  bare soil',                             &
-      &                              'CSH:  low NE shrubs',                         &
-      &                              'BSH:  BD shrubs'          ]
+      &                              'CSH:  low needle-leaved shrubs',              &
+      &                              'BSH:  broadleaved deciduous shrubs'          ]
 
     ! index of PFT (columns) in the lctlib file
     INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 /)
@@ -1089,5 +1090,4 @@ CONTAINS
     END SUBROUTINE init_usecase_quincy_13pS_pfts
 #endif
 
-#endif
 END MODULE mo_jsb_model_usecases
