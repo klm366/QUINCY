@@ -4,7 +4,7 @@
 #
 #    The output files are not cmor compliant but have cmor variable names and units.
 #
-#       --- WARNING: not tested, incomplete and preliminary ---
+#       --- WARNING: not fully tested and preliminary ---
 #
 #                                                              Veronika Gayler  MPIM, August 2025
 #-------------------------------------------------------------------------------------------------
@@ -28,25 +28,26 @@ set -e
 
 cdo="cdo -s"
 #-------------------------------------------------------------------------------------------------
-# CMOR variable list: MIP "CAP7" - Realm "land"
+# CMOR variable list: MIP "CAP7" - Realm "land" and "landIce"
 #--------------------
 
+# Variables provided by ICON-XPP
 varlist_cap7="baresoilFrac burntFractionAll cLand cLitter cLitterCwd cProduct cSoil cSoilPools \
     cVeg cVegGrass cVegShrub cVegTree cropFrac evspsblsoi fFireAll gpp gppGrass gppShrub gppTree \
     grassFrac lai landCoverFrac mrfso mrro mrrob mrros mrso mrsofc mrsol mrsos nbp \
     netAtmosLandCO2Flux npp nppGrass nppShrub nppTree orog pastureFrac ra raGrass raShrub raTree \
     residualFrac rh rhGrass rhShrub rhTree rootd sftgif sftlaf shrubFrac slthick snc snd snw \
     snwc tran treeFrac tsl vegFrac"
-# Additional CMOR variables not requested in CAP7
+# Additional CMOR variables not requested in CAP7 but provided anyway
 varlist_cmor="${varlist_cap7} c3PftFrac c4PftFrac cnc cropFracC3 cropFracC4 depthsl grassFracC3 \
     grassFracC4 mrsfl mrsll pastureFracC3 pastureFracC4"
 varlist_all="${varlist_cmor}"
-#varlist_all="rh"
+#varlist_all="nbp"
 
 test_list="test01 test02 test03 test04 test05 test06 test07 test08 test09 test10 \
            test11 test12 test13 test14 test15 test16 test17 test18 test19 test20 \
            test21 test22 test23 test24 test25 test26 test27 test28"
-#test_list="test26"
+#test_list=""
 #-------------------------------------------------------------------------------------------------
 
 data=/scratch/local1/m220053/CMIP7
@@ -55,12 +56,13 @@ datadir=${data}/testdata                      # Directory containing model outpu
 bc_soil=${datadir}/bc_land_soil.nc
 bc_sso=${datadir}/bc_land_sso.nc
 
-# As soon as basic output is complete, the second file should no longer be needed
-# TODO: Adapt script to run with fractions only included in separate file
-lnd_2d=${datadir}/cmip7-production-cdriven-PiCtl-0007_lnd_P1M_mean_21510101T000000Z.nc
+# JSBACH CMIP7 output file
+# TODO: Adapt script to run with basic output and fractions in separate files (will only work for
+#       a reduced lsit of cmor variables)
+lnd_2d=${datadir}/cmip7-production-cdriven-PiCtl-0007_lnd_P1M_mean_21500101T000000Z.nc
 lnd_frac=${lnd_2d}
 
-do_tests=yes
+do_tests=yes                            # Run consistency tests
 
 cmordir=${data}/cmor                    # Directory for the CMOR-like output
 testdir=${data}/tests                   # Directory for consitency test arrays (with do_tests=yes)
@@ -741,10 +743,12 @@ fi
   snwc )
     # canopy_snow_amount
     # mean: where land
+if [[ no_var_missing == true ]]; then
     $cdo -setattribute,${var}@long_name="Snow Water Equivalent Intercepted by the Vegetation" \
         -setattribute,${var}@units="kg m-2" \
         -div -expr,"${var}=${rhoh2o}*hydro_weq_snow_can_box" \
-        ${lnd_2dC} fract_land_box.nc ${var}.nc
+        ${lnd_2d} fract_land_box.nc ${var}.nc
+fi
     ;;
   tran )
     # Transpiration (may include dew formation as a negative flux).
