@@ -153,7 +153,7 @@ MODULE mo_q_agr_process
       !>  0.9 memorise old growing season state, and update last year's number of growing season if now is
       !>      a new year
       !>
-      ix_ct = INT(crop_type_index(ic))
+      ix_ct = NINT(crop_type_index(ic))
       growing_season_old = growing_season(ic)
       IF (is_newyear) THEN
         crop_season_per_year_mavg(ic) = crop_season_per_year_mavg(ic) * (1._wp - 1._wp/mavg_period_cropseason) + &
@@ -265,7 +265,7 @@ MODULE mo_q_agr_process
     ! if growth phase equal zero and there is a seed pool, add transfer initial planting mass to establishment
     ! flux
     DO ic = 1,nc
-      IF (INT(crop_growth_phase(ic)) == ix_planting .AND. seed_bed_pool_mt(ixC, ic) > eps8 ) THEN
+      IF (NINT(crop_growth_phase(ic)) == ix_planting .AND. seed_bed_pool_mt(ixC, ic) > eps8 ) THEN
         planting_rate = MIN(crop_planting_mass, seed_bed_pool_mt(ixC, ic)) / seed_bed_pool_mt(ixC, ic)
         veg_establishment_mt(:,ic) = veg_establishment_mt(:,ic) + planting_rate * seed_bed_pool_mt(:, ic)
       END IF
@@ -295,7 +295,7 @@ MODULE mo_q_agr_process
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_crop_n_fixation_status'
 
-    active_n_fixation = cttab_active_n_fixation(INT(crop_type_index))
+    active_n_fixation = cttab_active_n_fixation(NINT(crop_type_index))
 
   END FUNCTION set_crop_n_fixation_status
 
@@ -348,11 +348,11 @@ MODULE mo_q_agr_process
 
       !> 0.9  cropindex and GDD requirement for maturity
       !>
-      ix_ct = INT(crop_type_index(ic))
+      ix_ct = NINT(crop_type_index(ic))
       gdd_mat = get_gdd_mat(ix_ct,gdd_mavg(ic))
 
       !> 1.0 advance growth phase to next stage if conditions are met
-      SELECT CASE (INT(crop_growth_phase(ic)))
+      SELECT CASE (NINT(crop_growth_phase(ic)))
         !> 1.1  when the crop is in planting mode
         !>
         CASE (ix_planting)
@@ -461,7 +461,7 @@ MODULE mo_q_agr_process
 
       !> 0.9  crop type index and other helper variables
       !>
-      ix_ct = INT(crop_type_index(ic))
+      ix_ct = NINT(crop_type_index(ic))
       ! GDD needed to reach maturity
       gdd_mat = get_gdd_mat(ix_ct,gdd_mavg(ic))
       ! Heat index (defined as the fraction of GDD for maturity that induces grain filling)
@@ -489,7 +489,7 @@ MODULE mo_q_agr_process
       ! this is also applied during harvesting to avoid prolonged harvesting due to a burst in leaf growth
       ! as the LAI drops below the cttab_lai_max(ix_ct)
       IF (lai(ic) > cttab_lai_max(ix_ct) &
-          .OR. INT(crop_growth_phase(ic)) == ix_harvest) leaf2root_mass_ratio(ic) = leaf2root_min_ratio
+          .OR. NINT(crop_growth_phase(ic)) == ix_harvest) leaf2root_mass_ratio(ic) = leaf2root_min_ratio
 
       !> 2.0  calculate grainfill ratio for crop allocation
       !>
@@ -498,7 +498,7 @@ MODULE mo_q_agr_process
       !> the calculation consistent with the assumptions in calc_allocation_fraction is mo_veg_growth. The consequence
       !> of this formulation is nevertheless that leaf, root and shoot allocation decline in the grainfilling period
       !>
-      IF (INT(crop_growth_phase(ic)) == ix_grainfilling .OR. INT(crop_growth_phase(ic)) == ix_harvest) THEN
+      IF (NINT(crop_growth_phase(ic)) == ix_grainfilling .OR. NINT(crop_growth_phase(ic)) == ix_harvest) THEN
         hlp1 = MIN(1.0_wp,MAX(0.01_wp,(gdd(ic) - heat_index) / (gdd_mat - heat_index)))
         falloc_fruit_crop(ic) = cttab_falloc_fruit_max(ix_ct) * (1._wp - (1._wp - hlp1)**cttab_k_hi_leaf(ix_ct))
       ELSE
@@ -634,8 +634,8 @@ MODULE mo_q_agr_process
     INTEGER              :: ix_ct
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_crop_harvest_fraction'
 
-    ix_ct = INT(crop_type_index)
-    IF (INT(crop_growth_phase) == ix_harvest) THEN
+    ix_ct = NINT(crop_type_index)
+    IF (NINT(crop_growth_phase) == ix_harvest) THEN
       IF (lai > min_lai) THEN
         fract_harvest_rel_to_tile = MIN(1.0_wp, MAX(eps4, max_harvesting_rate * dtime / one_day &
           &                                             * cttab_lai_max(ix_ct) / lai))
@@ -711,12 +711,12 @@ MODULE mo_q_agr_process
       !>
       !> 0.9  crop type index
       !>
-      ix_ct = INT(crop_type_index(ic))
+      ix_ct = NINT(crop_type_index(ic))
       !> adjust LAI max from CTTAB maximum (with dynamic carbon) to calibrated value
       lai_max = canopy_mode_correction_factor * cttab_lai_max(ix_ct)
 
       !> 1.0 update leaf growth and/or litter fall based on crop growth phase
-      SELECT CASE (INT(crop_growth_phase(ic)))
+      SELECT CASE (NINT(crop_growth_phase(ic)))
         !> 1.1  when the crop is growing, add leaves to meet target LAI
         !>
         CASE (ix_planting, ix_emergence, ix_grainfilling )
