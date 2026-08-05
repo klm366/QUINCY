@@ -538,8 +538,8 @@ MODULE mo_q_agr_process
     USE mo_jsb_math_constants,     ONLY: one_day
     USE mo_jsb_impl_constants,     ONLY: test_false_true
     USE mo_q_agr_constants,        ONLY: fcs_fertappl_day1, fcs_fertappl_day2, fcs_fertappl_day3, &
-                                         fcs_fertappl_day4, frac_fertil_nh4, frac_fertil_po4, eta_fertiliser, &
-                                         frac_manure_nh4, frac_manure_po4, eta_manure
+        &                                fcs_fertappl_day4, frac_fertil_nh4, frac_fertil_po4, eta_fertiliser, &
+        &                                frac_manure_nh4, frac_manure_po4, eta_manure
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                         !< dimensions
@@ -561,7 +561,7 @@ MODULE mo_q_agr_process
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_fertiliser_application'
     ! ----------------------------------------------------------------------------------------------------- !
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(is_fertiliser_day, hlp1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) PRIVATE(is_fertiliser_day, hlp1, hlp2, hlp3, hlp4)
     DO ic = 1,nc
       !> 1.0 determine if today is a fertiliser day (given that this is a FLOOR, this is true for 24h)
       !>     the first application day is forced to be the first day after planting to avoid fertilisation
@@ -573,9 +573,9 @@ MODULE mo_q_agr_process
       hlp4 = nd_crop_season(ic) - FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day4)
 
       IF ((hlp1 > eps4 .AND. hlp1 < 1.0_wp + eps4) &
-          .OR. (hlp2 > eps4 .AND. hlp2 < 1.0_wp + eps4) &
-          .OR. (hlp3 > eps4 .AND. hlp3 < 1.0_wp + eps4) &
-          .OR. (hlp4 > eps4 .AND. hlp4 < 1.0_wp + eps4)) THEN
+          & .OR. (hlp2 > eps4 .AND. hlp2 < 1.0_wp + eps4) &
+          & .OR. (hlp3 > eps4 .AND. hlp3 < 1.0_wp + eps4) &
+          & .OR. (hlp4 > eps4 .AND. hlp4 < 1.0_wp + eps4)) THEN
         is_fertiliser_day = .TRUE.
       ELSE
         is_fertiliser_day = .FALSE.
@@ -588,16 +588,16 @@ MODULE mo_q_agr_process
         ! combination of ammoniunm added as inorganic and organic fertiliser
         fertiliser_nh4(ic) = (nh4_fertiliser(ic) + frac_manure_nh4 * n_manure(ic)) * hlp1
         fertiliser_nh4_n15(ic) = (nh4_fertiliser(ic) / &
-                                   ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser)) + &
-                                 (frac_manure_nh4 * n_manure(ic))/ &
-                                   ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))) * hlp1
+          &                      ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser)) + &
+          &                      (frac_manure_nh4 * n_manure(ic))/ &
+          &                      ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))) * hlp1
         fertiliser_no3(ic) = (no3_fertiliser(ic) +  (1._wp - frac_manure_nh4) * n_manure(ic)) * hlp1
         fertiliser_no3_n15(ic) = (no3_fertiliser(ic) / &
-                                   ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser)) + &
-                                 ((1._wp - frac_manure_nh4) * n_manure(ic)) / &
-                                   ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))) * hlp1
+          &                      ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser)) + &
+          &                      ((1._wp - frac_manure_nh4) * n_manure(ic)) / &
+          &                      ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))) * hlp1
         fertiliser_po4(ic) = ((nh4_fertiliser(ic) + no3_fertiliser(ic)) * frac_fertil_po4 + &
-                              n_manure(ic) * frac_manure_po4) * hlp1
+          &                   n_manure(ic) * frac_manure_po4) * hlp1
       END IF
     END DO
     !$ACC END PARALLEL LOOP

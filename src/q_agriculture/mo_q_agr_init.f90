@@ -57,7 +57,7 @@ CONTAINS
   !>
   SUBROUTINE q_agr_init(tile)
     USE mo_q_agr_constants,       ONLY: qs_def_n_fertiliser, ix_wheat, ix_tecorn, ix_trcorn, ix_trsoy, &
-                                        frac_fertil_nh4
+        &                               frac_fertil_nh4
     USE mo_q_assimi_constants,    ONLY: ic3phot
     dsl4jsb_Use_memory(Q_AGR_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -226,8 +226,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_crop)
     dsl4jsb_Get_var2D_onDomain(Q_AGR_, n_manure_pasture)
 
-    ALLOCATE(hlp1(nproma, nblks))
-
     IF (.NOT. dsl4jsb_Config(Q_AGR_)%l_read_fertiliser) THEN
       ! ... use background rate
       nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * iq_background_n_fertiliser_rate
@@ -250,7 +248,7 @@ CONTAINS
       WRITE (filename_fertiliser_data,'(a,a,I4.4,a)') &
         & TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_filename_prefix), '_', current_year, ".nc"
 
-      IF(TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_data_source)=='LUH') THEN
+      IF (TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_data_source) == 'LUH') THEN
 
         input_file = jsb_netcdf_open_input(TRIM(filename_fertiliser_data), model%grid_id)
         ptr_2D => input_file%Read_2d(variable_name='fertl_c3crops', fill_array = nh4_fertiliser_c3crops(:,:))
@@ -273,7 +271,9 @@ CONTAINS
         nh4_fertiliser_pasture(:,:) = 0.0_wp
         no3_fertiliser_pasture(:,:) = 0.0_wp
 
-      ELSE IF (TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_data_source)=='NMIP') THEN
+      ELSE IF (TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_data_source) == 'NMIP') THEN
+
+        ALLOCATE(hlp1(nproma, nblks))
 
         input_file = jsb_netcdf_open_input(TRIM(filename_fertiliser_data), model%grid_id)
         ptr_2D => input_file%Read_2d(variable_name='fertl_crops_nh4', fill_array = nh4_fertiliser_c3crops(:,:))
@@ -285,15 +285,15 @@ CONTAINS
         ! The actually applied fertiliser is the maximum of the default and the read fertiliser
         hlp1(:,:) = nh4_fertiliser_c3crops(:,:) + no3_fertiliser_c3crops(:,:)
         ! If fertiliser is zero in the input, applying the minimum fertiliser rate and default NH4/NO3 ratio
-        WHERE(hlp1(:,:) <= eps8)
+        WHERE (hlp1(:,:) <= eps8)
           nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * iq_background_n_fertiliser_rate
           no3_fertiliser_c3crops(:,:) = (1._wp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
         ! IF fertiliser is non-zero but low, applying the minimum fertiliser rate but original NH4/NO3 ratio
-        ELSEWHERE(hlp1(:,:) > eps8 .AND. hlp1(:,:) <= iq_background_n_fertiliser_rate * 10._wp * molar_mass_N)
+        ELSEWHERE (hlp1(:,:) > eps8 .AND. hlp1(:,:) <= iq_background_n_fertiliser_rate * 10._wp * molar_mass_N)
           nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / hlp1(:,:) &
-                                        * iq_background_n_fertiliser_rate
+            &                           * iq_background_n_fertiliser_rate
           no3_fertiliser_c3crops(:,:) = no3_fertiliser_c3crops(:,:) / hlp1(:,:) &
-                                        * iq_background_n_fertiliser_rate
+            &                           * iq_background_n_fertiliser_rate
         ELSEWHERE
           ! Convert unit from kg N ha-1 yr-1 to mol N m-2 yr-1
           nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N
@@ -308,6 +308,7 @@ CONTAINS
         nh4_fertiliser_pasture(:,:) = nh4_fertiliser_pasture(:,:) / 10._wp / molar_mass_N
         no3_fertiliser_pasture(:,:) = no3_fertiliser_pasture(:,:) / 10._wp / molar_mass_N
 
+        DEALLOCATE(hlp1)
       ELSE
         CALL finish(TRIM(routine), 'Invalid fertiliser data source. Please check your settings.')
       END IF
@@ -319,14 +320,14 @@ CONTAINS
     !$ACC WAIT(1)
 
     IF (TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_data_source)=='NMIP'.AND. &
-        dsl4jsb_Config(Q_AGR_)%l_read_manure) THEN
+        &                             dsl4jsb_Config(Q_AGR_)%l_read_manure) THEN
       ! search a file ending on the current year
       current_year  = get_year(current_datetime)
 
-      !>
-      !> Assertion: routine currently expects filenames with 4 digits, and that manure is provided in the same input
-      !>            file as N fertiliser
-      !>
+      !
+      ! Assertion: routine currently expects filenames with 4 digits, and that manure is provided in the same input
+      !            file as N fertiliser
+      !
       IF (( current_year > 9999) .OR. (current_year < 1000)) THEN
         CALL finish(TRIM(routine), 'Violation of assertion: this routine currently expects filenames with 4 digits.')
       END IF
@@ -350,8 +351,6 @@ CONTAINS
 
     !$ACC UPDATE DEVICE(n_manure_crop, n_manure_pasture) ASYNC(1)
     !$ACC WAIT(1)
-
-    DEALLOCATE(hlp1)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
 

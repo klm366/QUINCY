@@ -165,7 +165,7 @@ CONTAINS
     frac_manure_nh4                   = 0.988_wp                    !< assuming manure cattle manure, and organic N = NH4,
                                                                     !< Whalen et al. 2001, https://doi.org/10.1007/s003740100416
     frac_manure_po4                   = 0.145_wp * &                !< assuming manure cattle manure, Whalen et al. 2001 https://doi.org/10.1007/s003740100416
-                                        molar_mass_N / molar_mass_P
+      &                                 molar_mass_N / molar_mass_P
     canopy_mode_correction_factor     = 0.8_wp                      !< tuned to get reasonable maximum LAI globally in CANOPY mode
     eta_fertiliser                    = 0._wp                       !< Bateman & Kelly, 2007, https://doi.org/10.1080/10256010701550732
     eta_manure                        = 8._wp                       !< Bateman & Kelly, 2007, https://doi.org/10.1080/10256010701550732

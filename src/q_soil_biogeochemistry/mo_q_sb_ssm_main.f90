@@ -78,8 +78,8 @@ CONTAINS
     INTEGER                               :: isoil                !< loop over nsoil_w
     INTEGER                               :: ic, is               !< loop over dimensions
     REAL(wp)                              :: n_manure(options%nc) !< local copy of manure fertiliser application
-    REAL(wp)                              :: nh4_fertiliser(options%nc) !< local copy of manure fertiliser application
-    REAL(wp)                              :: no3_fertiliser(options%nc) !< local copy of manure fertiliser application
+    REAL(wp)                              :: nh4_fertiliser(options%nc) !< local copy of nh4 fertiliser application
+    REAL(wp)                              :: no3_fertiliser(options%nc) !< local copy of no3 fertiliser application
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: apparent_fast_som_cn      , &
                                              apparent_fast_som_np      , &
                                              fine_root_carbon_sl, &
@@ -973,7 +973,7 @@ CONTAINS
 
     ! 6.1 for lctlib type PASTURE, add manure to applied fertiliser variable
     !>
-    IF(lctlib%PastureFlag) THEN
+    IF (lctlib%PastureFlag) THEN
 #ifdef __QUINCY_STANDALONE__
       n_manure(:) = qs_def_n_manure
       nh4_fertiliser(:) = 0.0_wp
@@ -3700,10 +3700,10 @@ CONTAINS
     REAL(wp), DIMENSION(nc), INTENT(in)  :: nh4_fertiliser         !< manure application mol / m2 / yr
     REAL(wp), DIMENSION(nc), INTENT(in)  :: no3_fertiliser         !< manure application mol / m2 / yr
     REAL(wp), DIMENSION(nc), INTENT(out) :: fertiliser_nh4, &      !< NH4 manure application [micro-mol / m2 / s]
-                                            fertiliser_nh4_n15, &  !< 15NH4 manure application [micro-mol / m2 / s]
-                                            fertiliser_no3, &      !< NO3 manure application [micro-mol / m2 / s]
-                                            fertiliser_no3_n15, &  !< 15NO3 manure application [micro-mol / m2 / s]
-                                            fertiliser_po4         !< PO4 manure application [micro-mol / m2 / s]
+        &                                   fertiliser_nh4_n15, &  !< 15NH4 manure application [micro-mol / m2 / s]
+        &                                   fertiliser_no3, &      !< NO3 manure application [micro-mol / m2 / s]
+        &                                   fertiliser_no3_n15, &  !< 15NO3 manure application [micro-mol / m2 / s]
+        &                                   fertiliser_po4         !< PO4 manure application [micro-mol / m2 / s]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)                             :: hlp1                   !< helper variable
     INTEGER                              :: ic                     !< loop grid cells
@@ -3715,16 +3715,16 @@ CONTAINS
       hlp1 = 1._wp / one_year / one_day * 1.e6_wp ! unit conversion
       fertiliser_nh4(ic) = (nh4_fertiliser(ic) + frac_manure_nh4 * n_manure(ic)) * hlp1
       fertiliser_nh4_n15(ic) = (nh4_fertiliser(ic) / &
-                                 ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser)) + &
-                               (frac_manure_nh4 * n_manure(ic))/ &
-                                 ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))) * hlp1
+        &                      ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser)) + &
+        &                      (frac_manure_nh4 * n_manure(ic))/ &
+        &                      ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))) * hlp1
       fertiliser_no3(ic) = (no3_fertiliser(ic) +  (1._wp - frac_manure_nh4) * n_manure(ic)) * hlp1
       fertiliser_no3_n15(ic) = (no3_fertiliser(ic) / &
-                                 ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser)) + &
-                               ((1._wp - frac_manure_nh4) * n_manure(ic)) / &
-                                 ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))) * hlp1
+        &                      ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser)) + &
+        &                      ((1._wp - frac_manure_nh4) * n_manure(ic)) / &
+        &                      ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_manure))) * hlp1
       fertiliser_po4(ic) = ((nh4_fertiliser(ic) + no3_fertiliser(ic)) * frac_fertil_po4 + &
-                            n_manure(ic) * frac_manure_po4) * hlp1
+        &                   n_manure(ic) * frac_manure_po4) * hlp1
 
    END DO
 
