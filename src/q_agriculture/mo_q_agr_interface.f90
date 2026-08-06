@@ -344,7 +344,7 @@ MODULE mo_q_agr_interface
     !>
     !> - Apply fertiliser if today is a fertiliser day
     !>
-    !$ACC DATA CREATE(n_fertiliser) ASYNC(1)
+    !$ACC DATA CREATE(nh4_fertiliser, no3_fertiliser) ASYNC(1)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1,nc
       IF (lctlib_ps_pathway == ic3phot) THEN
