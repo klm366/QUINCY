@@ -79,7 +79,7 @@ if [[ ${var_list} == *"soil_depth"* || ${var_list} == *"root_depth"* ]]; then
   $cp ${atmGridID}_root_depth.nc ${atmGridID}_root_depth.keep
 fi
 
-
+# main loop over var_list (runs variable processing in parallel, see '&' after closing '}')
 for var in ${var_list}; do
   {
   echo "   ${var} ..."

@@ -77,7 +77,7 @@
 #-----------------------------------------------------------------------------
 set -e
 
-# Which sections of this script should be run?
+# Which sections of this script should be run [true,false]?
 #  It is possible to run one task after the other, which might be useful in case of problems
 
 run_extpar4jsbach_mpim_icon=false     # Generally available in /pool/data/JSBACH/icon/extpar4jsbach/
