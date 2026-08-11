@@ -55,6 +55,7 @@ CONTAINS
     USE mo_q_veg_respiration,       ONLY: temperature_response_respiration, calc_maintenance_respiration
     USE mo_q_veg_canopy,            ONLY: calc_dir_optimal_cn_leaf, calc_marginal_canopy_flux_increment
     USE mo_veg_constants,           ONLY: fmaint_rate_base
+    USE mo_q_assimi_config_class,   ONLY: MEDLYN, BALLBERRY
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(Q_ASSIMI_)
     dsl4jsb_Use_config(Q_AGR_)
@@ -486,10 +487,10 @@ CONTAINS
 
     !>0.9 set g1 according to canopy_conductance_scheme
     !>
-    SELECT CASE(TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme))
-      CASE ("medlyn")
+    SELECT CASE(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme)
+      CASE (MEDLYN)
         lctlib_g1 = lctlib%g1_medlyn
-      CASE ("ballberry")
+      CASE (BALLBERRY)
         lctlib_g1 = lctlib%g1_bberry
     END SELECT
 
@@ -617,8 +618,8 @@ CONTAINS
         & lctlib_g1                                               , &
         & lctlib%t_jmax_omega                                     , &
         & lctlib%tau_leaf                                         , &
-        & dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction          , &
-        & TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme) , & ! Q_ASSIMI_ config
+        & dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction        , &
+        & dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme     , & ! Q_ASSIMI_ config
         & growing_season(:)                                       , &
         & veg_pool_mt(ix_leaf, ixC, :)                            , &
         & veg_pool_mt(ix_leaf, ixN, :)                            , &
@@ -712,8 +713,8 @@ CONTAINS
       & lctlib_g1                                               , &
       & lctlib%t_jmax_omega                                     , &
       & lctlib%sigma_vis                                        , &
-      & dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction          , &
-      & TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme) , &
+      & dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction        , &
+      & dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme     , &
       & t_air(:)                                                , &
       & press_srf(:)                                            , &
       & q_air(:)                                                , &

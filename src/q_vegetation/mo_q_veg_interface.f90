@@ -30,6 +30,7 @@ MODULE mo_q_veg_interface
   USE mo_jsb_tile_class,              ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_process_class,           ONLY: t_jsb_process
+  USE mo_quincy_model_config,         ONLY: QLAND, QPLANT
 
   ! "Integrate" routines
   USE mo_q_veg_turnover,                ONLY: update_veg_turnover_real => update_veg_turnover
@@ -620,16 +621,22 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, growth_respiration                  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, n_processing_respiration            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c                  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c13                , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c14                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_c              , weighted_by_fract)
+    SELECT CASE(model%config%qmodel_id)
+    CASE(QPLANT, QLAND)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c                  , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c13                , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c14                , weighted_by_fract)
+    END SELECT
 
     ! C isotopes needed for global analysis (not all fluxes required!)
-    dsl4jsb_Aggregate_onChunk(VEG_, npp_c13                             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c13        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, npp_c14                             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c14        , weighted_by_fract)
+    SELECT CASE(model%config%qmodel_id)
+    CASE(QPLANT, QLAND)
+      dsl4jsb_Aggregate_onChunk(VEG_, npp_c13                             , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c13        , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, npp_c14                             , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c14        , weighted_by_fract)
+    END SELECT
 
     ! N fluxes
     dsl4jsb_Aggregate_onChunk(VEG_, n_fixation                          , weighted_by_fract)
@@ -641,9 +648,12 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_n              , weighted_by_fract)
 
     ! P fluxes
-    dsl4jsb_Aggregate_onChunk(VEG_, uptake_po4                          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_p                  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_p              , weighted_by_fract)
+    SELECT CASE(model%config%qmodel_id)
+    CASE(QPLANT, QLAND)
+      dsl4jsb_Aggregate_onChunk(VEG_, uptake_po4                          , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_p                  , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_p              , weighted_by_fract)
+    END SELECT
 
     ! Fluxes due to product pool decay if product pool is present
     IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
@@ -664,10 +674,13 @@ CONTAINS
     ! VEG_ bgcm pools needed to close global mass balance
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_n            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_p            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c13          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c14          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_n15          , weighted_by_fract)
+    SELECT CASE(model%config%qmodel_id)
+    CASE(QPLANT, QLAND)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_p            , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c13          , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c14          , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_n15          , weighted_by_fract)
+    END SELECT
     IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
       dsl4jsb_Aggregate_onChunk(VEG_, veg_products_total_c      , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(VEG_, veg_products_total_n      , weighted_by_fract)
@@ -677,15 +690,20 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(VEG_, veg_products_total_n15    , weighted_by_fract)
     END IF
     ! special diagnostic output for specific pools
+    ! CN
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_c             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_n             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_p             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_wood_c             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_wood_n             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_wood_p             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_fine_root_c        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_fine_root_n        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_fine_root_p        , weighted_by_fract)
+    ! P
+    SELECT CASE(model%config%qmodel_id)
+    CASE(QPLANT, QLAND)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_p             , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_wood_p             , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_fine_root_p        , weighted_by_fract)
+    END SELECT
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggregate_veg_pools

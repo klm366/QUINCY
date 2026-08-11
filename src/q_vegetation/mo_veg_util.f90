@@ -201,7 +201,7 @@ CONTAINS
             END IF
           END DO
         END DO
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
           seed_bed_growth_mt(ix_elem,ic)     = zero
@@ -214,7 +214,7 @@ CONTAINS
             veg_pp_flux_harvest_mt(ix_elem,ic) = zero
           END IF
         END DO
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
       END IF
     END DO
 
