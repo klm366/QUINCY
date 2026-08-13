@@ -93,7 +93,7 @@ MODULE mo_q_dinsect_bark_beetle_effect
       ! Local Variables
       INTEGER  :: ic                                  !< loop counter for cells
       REAL(wp), DIMENSION(nc) :: mortality_dt         !< mortality rate [fraction/timestep]
-      REAL(wp) :: decay_factor_for_BB              ! the decay factor for calculating bark beetle snag effects
+      ! REAL(wp) :: decay_factor_for_BB              ! the decay factor for calculating bark beetle snag effects
       CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_beetle_effects'
       LOGICAL :: mask_all(nc)
 
@@ -110,7 +110,7 @@ MODULE mo_q_dinsect_bark_beetle_effect
       DO ic = 1, nc
         IF (.NOT. mask_all(ic)) CYCLE
 
-        mortality_dt(ic) = dinsect_mort_dt(ic)
+        mortality_dt(ic) = dinsect_mort_dt(ic) ! todo: no need for that, use original variable
 
         !> 1.1 Update dead pools with killed vegetation
         dinsect_deadleaf_mt(:, ic) = dinsect_deadleaf_mt(:, ic) + &
@@ -203,29 +203,29 @@ MODULE mo_q_dinsect_bark_beetle_effect
 
         !> 3.0 Calculate space occupation effects
         !>
-        IF (online_flag) THEN
-          !> 3.1 Calculate fraction of area occupied by snags, the effects is exterted in veg_update_pools
-          decay_factor_for_BB = EXP(-dtime / (tau_dead_heartwood * one_year * one_day))
+        ! IF (online_flag) THEN
+        !   !> 3.1 Calculate fraction of area occupied by snags, the effects is exterted in veg_update_pools
+        !   decay_factor_for_BB = EXP(-dtime / (tau_dead_heartwood * one_year * one_day))
 
-          IF (dinsect_mort_dt(ic) .lt. eps8) THEN
-              dinsect_disturbable_frac(ic) = dinsect_disturbable_frac(ic)
-          ELSE
-              dinsect_disturbable_frac(ic) = dinsect_disturbable_frac(ic) * (1.0_wp - mortality_dt(ic))
-          END IF
-          !print*, 'decay_factor_for_BB',decay_factor_for_BB
-          !print*, 'dinsect_mort_dt(ic)',dinsect_mort_dt(ic)
-          !print*, 'dinsect_disturbable_frac(ic)',dinsect_disturbable_frac(ic)
-          !print*, 'dinsect_occupy_frac(ic)',dinsect_occupy_frac(ic)
-          dinsect_occupy_frac(ic) = dinsect_occupy_frac(ic) * decay_factor_for_BB + &
-                          dinsect_mort_dt(ic) * dinsect_disturbable_frac(ic)
-          dinsect_occupy_frac(ic) = 0._wp
-          !dinsect_occupy_frac(ic) = (dinsect_deadheartwood_mt(ixC,ic) + dinsect_deadsapwood_mt(ixC,ic)) / &
-          !& (veg_pool_mt(ix_heart_wood,ixC,ic) + veg_pool_mt(ix_sap_wood,ixC,ic) + &
-          !& dinsect_deadheartwood_mt(ixC,ic) + dinsect_deadsapwood_mt(ixC,ic))
+        !   IF (dinsect_mort_dt(ic) .lt. eps8) THEN
+        !       dinsect_disturbable_frac(ic) = dinsect_disturbable_frac(ic)
+        !   ELSE
+        !       dinsect_disturbable_frac(ic) = dinsect_disturbable_frac(ic) * (1.0_wp - mortality_dt(ic))
+        !   END IF
+        !   !print*, 'decay_factor_for_BB',decay_factor_for_BB
+        !   !print*, 'dinsect_mort_dt(ic)',dinsect_mort_dt(ic)
+        !   !print*, 'dinsect_disturbable_frac(ic)',dinsect_disturbable_frac(ic)
+        !   !print*, 'dinsect_occupy_frac(ic)',dinsect_occupy_frac(ic)
+        !   dinsect_occupy_frac(ic) = dinsect_occupy_frac(ic) * decay_factor_for_BB + &
+        !                   dinsect_mort_dt(ic) * dinsect_disturbable_frac(ic)
+        !   dinsect_occupy_frac(ic) = 0._wp
+        !   !dinsect_occupy_frac(ic) = (dinsect_deadheartwood_mt(ixC,ic) + dinsect_deadsapwood_mt(ixC,ic)) / &
+        !   !& (veg_pool_mt(ix_heart_wood,ixC,ic) + veg_pool_mt(ix_sap_wood,ixC,ic) + &
+        !   !& dinsect_deadheartwood_mt(ixC,ic) + dinsect_deadsapwood_mt(ixC,ic))
 
-          !dinsect_occupy_frac(ic) = 0.0_wp
+        !   !dinsect_occupy_frac(ic) = 0.0_wp
 
-        END IF
+        ! END IF
 
       END DO
 
