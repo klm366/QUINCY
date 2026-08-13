@@ -64,8 +64,6 @@ MODULE mo_q_dinsect_bark_beetle_effect
       & dinsect_barkbeetle_labile_c   , &  !< the defence used labile C from bark beetle attack [mol C/m2/timestep]
       & dinsect_barkbeetle_labile_c13 , &  !< the defence used labile C13 from bark beetle attack [mol C13/m2/timestep]
       & dinsect_barkbeetle_labile_c14 , &  !< the defence used labile C14 from bark beetle attack [mol C14/m2/timestep]
-      & dinsect_occupy_frac           , &  !< the fraction of snag occupyed area, which cause the waste of seed.
-      & dinsect_disturbable_frac      , &  !< the fraction of disturbable tree resources
       & mask)                              !< Gridcells to compute (default: all gridcells)
       ! ----------------------------------------------------------------------------------------------------- !
       ! Input/Output Variables
@@ -86,8 +84,6 @@ MODULE mo_q_dinsect_bark_beetle_effect
       REAL(wp), INTENT(inout) :: dinsect_barkbeetle_labile_c(:)   !< the defence used labile C from bark beetle attack [mol C/m2/timestep]
       REAL(wp), INTENT(inout) :: dinsect_barkbeetle_labile_c13(:) !< the defence used labile C13 from bark beetle attack [mol C13/m2/timestep]
       REAL(wp), INTENT(inout) :: dinsect_barkbeetle_labile_c14(:) !< the defence used labile C14 from bark beetle attack [mol C14/m2/timestep]
-      REAL(wp), INTENT(inout) :: dinsect_occupy_frac(:)           !< the fraction of snag occupyed area, which cause the waste of seed.
-      REAL(wp), INTENT(inout) :: dinsect_disturbable_frac(:)      !< the fraction of disturbable tree resources
       LOGICAL, intent(in), optional :: mask(:)                    !< Gridcells to compute (default: all gridcells)
       ! ----------------------------------------------------------------------------------------------------- !
       ! Local Variables
@@ -200,33 +196,6 @@ MODULE mo_q_dinsect_bark_beetle_effect
           dinsect_deadheartwood_mt(:, ic) = dinsect_deadheartwood_mt(:, ic) - dinsect_deadheartwood_mt(:, ic)&
           &  * (1.0_wp - EXP(-1.0_wp / (tau_dead_heartwood * one_year * one_day / dtime)))
         END IF
-
-        !> 3.0 Calculate space occupation effects
-        !>
-        ! IF (online_flag) THEN
-        !   !> 3.1 Calculate fraction of area occupied by snags, the effects is exterted in veg_update_pools
-        !   decay_factor_for_BB = EXP(-dtime / (tau_dead_heartwood * one_year * one_day))
-
-        !   IF (dinsect_mort_dt(ic) .lt. eps8) THEN
-        !       dinsect_disturbable_frac(ic) = dinsect_disturbable_frac(ic)
-        !   ELSE
-        !       dinsect_disturbable_frac(ic) = dinsect_disturbable_frac(ic) * (1.0_wp - mortality_dt(ic))
-        !   END IF
-        !   !print*, 'decay_factor_for_BB',decay_factor_for_BB
-        !   !print*, 'dinsect_mort_dt(ic)',dinsect_mort_dt(ic)
-        !   !print*, 'dinsect_disturbable_frac(ic)',dinsect_disturbable_frac(ic)
-        !   !print*, 'dinsect_occupy_frac(ic)',dinsect_occupy_frac(ic)
-        !   dinsect_occupy_frac(ic) = dinsect_occupy_frac(ic) * decay_factor_for_BB + &
-        !                   dinsect_mort_dt(ic) * dinsect_disturbable_frac(ic)
-        !   dinsect_occupy_frac(ic) = 0._wp
-        !   !dinsect_occupy_frac(ic) = (dinsect_deadheartwood_mt(ixC,ic) + dinsect_deadsapwood_mt(ixC,ic)) / &
-        !   !& (veg_pool_mt(ix_heart_wood,ixC,ic) + veg_pool_mt(ix_sap_wood,ixC,ic) + &
-        !   !& dinsect_deadheartwood_mt(ixC,ic) + dinsect_deadsapwood_mt(ixC,ic))
-
-        !   !dinsect_occupy_frac(ic) = 0.0_wp
-
-        ! END IF
-
       END DO
 
     END SUBROUTINE calc_beetle_effects

@@ -122,7 +122,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: dinsect_mort_dt               ! addtional mortality rate caused by bark beetle
     dsl4jsb_Real2D_onChunk      :: dinsect_defoli_dt             ! defoliation rate caused by defoliator  !dsl4jsb_Real2D_onChunk      :: heartwood_C_zero              ! the amount of heartwood C at the first timestep of bark beetle event
     dsl4jsb_Real2D_onChunk      :: dinsect_flux_frac             ! the fraction of disturbed fraction of target variables.
-    dsl4jsb_Real2D_onChunk      :: dinsect_disturbable_frac      ! the fraction of remaining undisturbable tree resources.
     dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c     ! defoliator respiration C flux [mol/m2/timestep]
     dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c13   ! defoliator respiration C13 flux [mol/m2/timestep]
     dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c14   ! defoliator respiration C14 flux [mol/m2/timestep]
@@ -176,7 +175,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, barkbeetle_effects_triggered) ! inout
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_occupy_frac) ! inout
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_mort_dt) ! inout
-    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_disturbable_frac) ! inout
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_defoli_dt) ! inout
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_flux_frac) ! inout
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliated_state) ! inout
@@ -338,15 +336,9 @@ CONTAINS
         dinsect_mort_dt(:) =  dinsect_flux_frac(:)
         !< ------------------ 1.2 Calculate effects (after bark beetle event happens) --------------------
         DO ic = 1, nc
-
           IF (dinsect_mort_dt(ic) > eps8) THEN
               barkbeetle_effects_triggered(ic) = barkbeetle_effects_triggered(ic) + 1.0_wp
           END IF
-
-          IF ((ABS(barkbeetle_effects_triggered(ic)) - 1.0_wp) < eps4) THEN
-              dinsect_disturbable_frac(ic) = 1.0_wp
-          END IF
-
         END DO
 
         CALL calc_beetle_effects(&
@@ -367,16 +359,7 @@ CONTAINS
         & dinsect_barkbeetle_labile_c(:)         , & ! inout
         & dinsect_barkbeetle_labile_c13(:)       , & ! inout
         & dinsect_barkbeetle_labile_c14(:)       , & ! inout
-        & dinsect_occupy_frac(:)                 , & ! inout
-        & dinsect_disturbable_frac(:)            , & ! inout
         & mask=(barkbeetle_effects_triggered(:) > 0.0_wp)) ! optional(in)
-
-        DO ic = 1, nc
-          IF (barkbeetle_effects_triggered(ic) > 0.0_wp ) THEN
-            WRITE(*,*) "dinsect_main.f90:: barkbeetle_effects_triggered, dinsect_disturbable_frac=", &
-                      barkbeetle_effects_triggered(ic), dinsect_disturbable_frac
-          END IF
-        ENDDO
 
     ELSE IF (is_defoliator) THEN
         !<  ------------------  2.1 get defoliation_dt ----------------------------------
@@ -518,7 +501,6 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Real2D_onChunk      :: dinsect_mort_dt               ! addtional mortality rate caused by bark beetle
   dsl4jsb_Real2D_onChunk      :: dinsect_defoli_dt             ! defoliation rate caused by defoliator  !dsl4jsb_Real2D_onChunk      :: heartwood_C_zero              ! the amount of heartwood C at the first timestep of bark beetle event
   dsl4jsb_Real2D_onChunk      :: dinsect_flux_frac             ! the fraction of disturbed fraction of target variables.
-  dsl4jsb_Real2D_onChunk      :: dinsect_disturbable_frac      ! the fraction of remaining undisturbable tree resources.
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c     ! defoliator respiration C flux [mol/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c13   ! defoliator respiration C13 flux [mol/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c14   ! defoliator respiration C14 flux [mol/m2/timestep]
@@ -572,7 +554,6 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, barkbeetle_effects_triggered) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_occupy_frac) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_mort_dt) ! inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_disturbable_frac) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_defoli_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_flux_frac) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliated_state) ! inout
@@ -740,7 +721,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Real2D_onChunk      :: dinsect_mort_dt               ! addtional mortality rate caused by bark beetle
   dsl4jsb_Real2D_onChunk      :: dinsect_defoli_dt             ! defoliation rate caused by defoliator  !dsl4jsb_Real2D_onChunk      :: heartwood_C_zero              ! the amount of heartwood C at the first timestep of bark beetle event
   dsl4jsb_Real2D_onChunk      :: dinsect_flux_frac             ! the fraction of disturbed fraction of target variables.
-  dsl4jsb_Real2D_onChunk      :: dinsect_disturbable_frac      ! the fraction of remaining undisturbable tree resources.
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c     ! defoliator respiration C flux [mol/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c13   ! defoliator respiration C13 flux [mol/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c14   ! defoliator respiration C14 flux [mol/m2/timestep]
@@ -793,7 +773,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, barkbeetle_effects_triggered) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_occupy_frac) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_mort_dt) ! inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_disturbable_frac) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_defoli_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_flux_frac) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliated_state) ! inout
@@ -825,7 +804,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   !>
 
   dinsect_mort_dt(:) =  dinsect_flux_frac(:)
-  dinsect_disturbable_frac = 0.0_wp
 
   CALL calc_beetle_effects(&
          & nc                                     , & ! in
@@ -845,8 +823,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
          & dinsect_barkbeetle_labile_c(:)         , & ! inout
          & dinsect_barkbeetle_labile_c13(:)       , & ! inout
          & dinsect_barkbeetle_labile_c14(:)       , & ! inout
-         & dinsect_occupy_frac(:)                 , & ! inout, to remove
-         & dinsect_disturbable_frac(:)            , & ! inout, to remove
          & mask=(dinsect_mort_dt(:) > 0.0_wp)) ! optional(in)
 
     dinsect_pool_total_c(:) = dinsect_pool_total_c(:) + &
