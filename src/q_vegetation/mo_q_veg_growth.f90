@@ -3069,6 +3069,7 @@ CONTAINS
     REAL(wp),                 INTENT(in)    :: veg_litterfall_mt(:,:,:)
     REAL(wp),                 INTENT(in)    :: veg_reserve_use_mt(:,:)
     REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)               !< labile pool size of the plant
+    LOGICAL,                  INTENT(in)    :: dinsect_online                    !< a flag to indicate if dinsect is online or not
     REAL(wp),                 INTENT(inout) :: defoliated_state(:)              !< a flag to indicate if the plant is in defoliation stage
     REAL(wp), DIMENSION(nc),  INTENT(inout) :: n_processing_respiration     , & !< respiration associated with N processing
                                                maint_respiration_c13        , & !< maintenance respiration
@@ -3084,8 +3085,8 @@ CONTAINS
     !------------------------------------------------------------------------------------------------------ !
     REAL(wp), DIMENSION(nc)     :: hlp1
     REAL(wp)                    :: hlp2
+    REAL(wp)                    :: f_leaf_alloc, renorm_alloc
     INTEGER :: ic
-    LOGICAL  :: dinsect_online           !< a flag to indicate if dinsect is online or not
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_partitioning'
     !------------------------------------------------------------------------------------------------------ !
 
@@ -3185,16 +3186,20 @@ CONTAINS
     !! A reminder from yma: please check the writing style of code block above, all with "WHERE" statement, I will delete this line afterwards
     !!
     !> If it's in defoliation stage, the allocation fraction of leaves is set to 0.
-    IF (dinsect_online .eqv. .True.) THEN
+    IF (dinsect_online) THEN
 
         DO ic = 1, nc
             IF (defoliated_state(ic) > eps8) THEN
-                veg_frac_alloc_mt(ix_leaf, ixC, ic)   = 0.0_wp
-                veg_frac_alloc_mt(ix_leaf, ixN, ic)   = 0.0_wp
-                veg_frac_alloc_mt(ix_leaf, ixP, ic)   = 0.0_wp
-                veg_frac_alloc_mt(ix_leaf, ixC13, ic) = 0.0_wp
-                veg_frac_alloc_mt(ix_leaf, ixC14, ic) = 0.0_wp
-                veg_frac_alloc_mt(ix_leaf, ixN15, ic) = 0.0_wp
+                f_leaf_alloc = veg_frac_alloc_mt(ix_leaf, ixC, ic)
+                veg_frac_alloc_mt(ix_leaf, :, ic) = 0.0_wp
+                ! Renormalize non-leaf fractions so labile outflow (-G) matches structural influx (+G)
+                IF (f_leaf_alloc > eps8 .AND. f_leaf_alloc < 1.0_wp - eps8) THEN
+                    renorm_alloc = 1.0_wp / (1.0_wp - f_leaf_alloc)
+                    veg_frac_alloc_mt(ix_fine_root, :, ic)   = veg_frac_alloc_mt(ix_fine_root, :, ic)   * renorm_alloc
+                    veg_frac_alloc_mt(ix_coarse_root, :, ic) = veg_frac_alloc_mt(ix_coarse_root, :, ic) * renorm_alloc
+                    veg_frac_alloc_mt(ix_sap_wood, :, ic)    = veg_frac_alloc_mt(ix_sap_wood, :, ic)    * renorm_alloc
+                    veg_frac_alloc_mt(ix_fruit, :, ic)       = veg_frac_alloc_mt(ix_fruit, :, ic)       * renorm_alloc
+                END IF
             END IF
         END DO
 
