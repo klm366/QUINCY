@@ -657,7 +657,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   !< NOTE: make sure this task is executed before update_dinsect_barkbeetle in the call stack
   !< Otherwise it will remove the defoliator Carbon
   !< Used to test mass conservation
-  dinsect_pool_total_c(:) = 0._wp !dinsect_larva_mt(ixC,:)
+  dinsect_pool_total_c(:) = dinsect_pool_total_c(:) + dinsect_larva_mt(ixC,:)
 END SUBROUTINE update_dinsect_defoliator
 
 
@@ -879,8 +879,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
                 lctlib%LctNumber, dtime, doy, one_day, dinsect_flux_frac(1), &
                 one_day / dtime
 
-    !< NOTE: make sure this task is executed after update_dinsect_defoliator
-    !<       So its values are properly initialized to 0 as well its account for defoliator carbon
     dinsect_pool_total_c(:) = dinsect_pool_total_c(:) + &
                               dinsect_deadsapwood_mt(ixC,:) + &
                               dinsect_deadheartwood_mt(ixC,:) + &
