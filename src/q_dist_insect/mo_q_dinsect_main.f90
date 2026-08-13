@@ -432,7 +432,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   USE mo_jsb_task_class,          ONLY: t_jsb_task_options
   USE mo_jsb_model_class,         ONLY: t_jsb_model
   USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-  USE mo_jsb_process_class,       ONLY: VEG_, Q_DINSECT_
+  USE mo_jsb_process_class,       ONLY: VEG_, Q_DINSECT_, Q_PHENO_
   USE mo_q_dinsect_constants
 #ifdef __QUINCY_STANDALONE__
   USE mo_qs_forcing,              ONLY: forcing_options
@@ -455,9 +455,10 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store             !< the bgcm store of this tile
   ! ----------------------------------------------------------------------------------------------------- !
   TYPE(t_jsb_model),      POINTER       :: model
+  LOGICAL                               :: is_growing_season(options%nc)
   TYPE(t_lctlib_element), POINTER       :: lctlib             !< land-cover-type library - parameter across pft's
 
-  INTEGER                               :: iblk, ics, ice, ic, nc, iy
+  INTEGER                               :: iblk, ics, ice, ic, nc, iy, ic
 
   INTEGER                               :: year, month, doy,  days_of_mon
 
@@ -505,6 +506,8 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c13 ! the defence used labile C13 from bark beetle attack [mol C13/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c14 ! the defence used labile C14 from bark beetle attack [mol C14/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_pool_total_c          ! total C from insect pools [mol C/m2]
+  ! Q_PHENO_
+  dsl4jsb_Real2D_onChunk      :: growing_season               !< Growing season indicator (1 = growing, 0 = not growing)
   ! ----------------------------------------------------------------------------------------------------- !
   iblk    = options%iblk
   ics     = options%ics
@@ -562,6 +565,17 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c13) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c14) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_pool_total_c) ! inout
+  ! Q_PHENO_
+  dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season) ! in
+
+  ! transform REAL growing_season into LOGICAL is_growing_season
+  DO ic = 1, nc
+    IF (growing_season(ic) > test_false_true) THEN
+      is_growing_season(ic) = .TRUE.
+    ELSE
+      is_growing_season(ic) = .FALSE.
+    END IF
+  END DO
 
   ! ======================================================================================================= !
   !>
@@ -603,7 +617,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
         ! TODO: "prevent_late_summer_leaf_regrowth" (set the northern hemisphere as > =July 1 and
         ! southern hemisphere as <= June 30) and make the evergreen PFT got this feature ?
         ! Something like this
-        IF (int(month) > 6) THEN  ! any months after defoliation (here we generally say June)
+        IF (is_growing_season(ic)) THEN  ! any months after defoliation (here we generally say June)
           defoliated_state(ic) = 1.0_wp  ! the flag for controling leaf reflush will be on, until next year
         END IF
       END IF
@@ -615,21 +629,21 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
     END IF
   END DO
 
-  ! CALL calc_defoliator_effects(&
-  !   & nc                                     , & ! in
-  !   & dtime                                  , & ! in
-  !   & doy                                    , & ! in
-  !   & dinsect_defoli_dt(:)                   , & ! in
-  !   & veg_pool_mt(:,:,:)                     , & ! in
-  !   & dsl4jsb_Config(Q_DINSECT_)%dinsect_online, & ! in
-  !   & dinsect_larva_mt(:,:)                  , & ! inout (pool)
-  !   & dinsect_veg_extract_mt(:,:,:)          , & ! inout
-  !   & dinsect_dropping_mt(:,:)               , & ! inout
-  !   & dinsect_slow_litter_mt(:,:,:)          , & ! inout
-  !   & dinsect_defoliator_resp_c(:)           , & ! inout
-  !   & dinsect_defoliator_resp_c13(:)         , & ! inout
-  !   & dinsect_defoliator_resp_c14(:)         , & ! inout
-  !   & mask=(defoliator_effects_triggered(:) > 0.0_wp)) ! optional(in)
+  CALL calc_defoliator_effects(&
+     & nc                                     , & ! in
+     & dtime                                  , & ! in
+     & doy                                    , & ! in
+     & dinsect_defoli_dt(:)                   , & ! in
+     & veg_pool_mt(:,:,:)                     , & ! in
+     & dsl4jsb_Config(Q_DINSECT_)%dinsect_online, & ! in
+     & dinsect_larva_mt(:,:)                  , & ! inout (pool)
+     & dinsect_veg_extract_mt(:,:,:)          , & ! inout
+     & dinsect_dropping_mt(:,:)               , & ! inout
+     & dinsect_slow_litter_mt(:,:,:)          , & ! inout
+     & dinsect_defoliator_resp_c(:)           , & ! inout
+     & dinsect_defoliator_resp_c13(:)         , & ! inout
+     & dinsect_defoliator_resp_c14(:)         , & ! inout
+     & mask=(defoliator_effects_triggered(:) > 0.0_wp)) ! optional(in)
 
   !< Used in mass conservation test
   dinsect_pool_total_c(:) = dinsect_pool_total_c(:) + dinsect_larva_mt(ixC,:)
