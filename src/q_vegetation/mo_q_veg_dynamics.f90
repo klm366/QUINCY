@@ -117,7 +117,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     ! Q_DINSECT_ 2D
     dsl4jsb_Real2D_onChunk      :: dinsect_mort_dt
-    dsl4jsb_Real2D_onChunk      :: dinsect_occupy_frac
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
@@ -203,7 +202,6 @@ CONTAINS
 
     ! Q_DINSECT_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_mort_dt)        ! in
-    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_occupy_frac)    ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp)        ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp_c13)    ! out
@@ -358,8 +356,7 @@ CONTAINS
             & seed_bed_pool_mt(:,:)               , & ! in
             & veg_establishment_mt(:,:)           , &   ! inout
             & dsl4jsb_Config(Q_DINSECT_)%dinsect_online, & ! in
-            & dinsect_seedb_fastl_mt(:,:), & ! inout
-            & dinsect_occupy_frac(:)              )   ! in
+            & dinsect_seedb_fastl_mt(:,:)) ! inout
         ELSE
           ! Stand replacing harvest in QS is an exceptional case in which the establishment is initialised in a particular way
           hlp1(:) = 0.0_wp
@@ -822,8 +819,7 @@ CONTAINS
     & seed_bed_pool_mt            , &
     & veg_establishment_mt        , &
     & dinsect_online              , &
-    & dinsect_seedb_fastl_mt, &
-    & dinsect_occupy_frac         )
+    & dinsect_seedb_fastl_mt      )
 
     USE mo_veg_constants,               ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist, &
       &                                       rfr_ratio_toc
@@ -842,7 +838,6 @@ CONTAINS
     REAL(wp),                 INTENT(in)    :: seed_bed_pool_mt(:,:)        !< bgcm: seed_bed pool
     REAL(wp),                 INTENT(inout) :: veg_establishment_mt(:,:)    !< bgcm flux: vegetation establishment
     REAL(wp),                 INTENT(inout) :: dinsect_seedb_fastl_mt(:,:)!< bgcm flux: fast litter seed bed due to insect disturbance, which will add to veg_litterfall_mt
-    REAL(wp),                 INTENT(in)    :: dinsect_occupy_frac(:)       !< the fraction of snag occupyed area, which cause the waste of seed.
     LOGICAL,                  INTENT(in)    :: dinsect_online              !< if insect disturbance is online
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: ielem              !< loop over bgcm elements
@@ -886,20 +881,6 @@ CONTAINS
     WHERE(establishment_rate(:) < eps8)
       establishment_rate(:) = 0.0_wp
     ENDWHERE
-
-    !< when insect disturbance is online, the establishment rate will be reduced by the fraction of snag occupyed area, which cause the waste of seed.
-    IF (dinsect_online .eqv. .TRUE.)  THEN
-      DO ic = 1, nc
-        IF (dinsect_occupy_frac(ic) > eps8) THEN
-          !< the wasted seedbed will be added to the fast litter due to insect disturbance, which will add to veg_litterfall_mt
-          dinsect_seedb_fastl_mt(:,ic) = dinsect_seedb_fastl_mt(:,ic) &
-            &                                      + seed_bed_pool_mt(:,ic) * establishment_rate(ic) * dinsect_occupy_frac(ic)
-
-          establishment_rate(ic) = establishment_rate(ic) * (1.0_wp - dinsect_occupy_frac(ic))
-
-        END IF
-      END DO
-    END IF
 
     ! calc vegetation establishment
     ! loop over bgcm elements

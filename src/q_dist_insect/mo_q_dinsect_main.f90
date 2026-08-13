@@ -115,7 +115,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: mortality_rate                ! global used mortality rate
     dsl4jsb_Real2D_onChunk      :: defoliator_effects_triggered   ! counter for accumulating the sum of timesteps
     dsl4jsb_Real2D_onChunk      :: barkbeetle_effects_triggered
-    dsl4jsb_Real2D_onChunk      :: dinsect_occupy_frac           ! the fraction of snag occupyed area, which cause the waste of seed.
     dsl4jsb_Real2D_onChunk      :: defoliated_state              ! defoliation on or off
     dsl4jsb_Real2D_onChunk      :: is_insect_year                ! is insect disturbance year or not (1: true, 0: false)
     dsl4jsb_Real2D_onChunk      :: dinsect_year_since_start      ! the number of years since the start of insect disturbance
@@ -173,7 +172,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)  !inout
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliator_effects_triggered) ! inout
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, barkbeetle_effects_triggered) ! inout
-    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_occupy_frac) ! inout
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_mort_dt) ! inout
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_defoli_dt) ! inout
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_flux_frac) ! inout
@@ -494,7 +492,6 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Real2D_onChunk      :: mortality_rate                ! global used mortality rate
   dsl4jsb_Real2D_onChunk      :: defoliator_effects_triggered   ! counter for accumulating the sum of timesteps
   dsl4jsb_Real2D_onChunk      :: barkbeetle_effects_triggered
-  dsl4jsb_Real2D_onChunk      :: dinsect_occupy_frac           ! the fraction of snag occupyed area, which cause the waste of seed.
   dsl4jsb_Real2D_onChunk      :: defoliated_state              ! defoliation on or off
   dsl4jsb_Real2D_onChunk      :: is_insect_year                ! is insect disturbance year or not (1: true, 0: false)
   dsl4jsb_Real2D_onChunk      :: dinsect_year_since_start      ! the number of years since the start of insect disturbance
@@ -552,7 +549,6 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)  !inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliator_effects_triggered) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, barkbeetle_effects_triggered) ! inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_occupy_frac) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_mort_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_defoli_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_flux_frac) ! inout
@@ -714,7 +710,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Real2D_onChunk      :: mortality_rate                ! global used mortality rate
   dsl4jsb_Real2D_onChunk      :: defoliator_effects_triggered   ! counter for accumulating the sum of timesteps
   dsl4jsb_Real2D_onChunk      :: barkbeetle_effects_triggered
-  dsl4jsb_Real2D_onChunk      :: dinsect_occupy_frac           ! the fraction of snag occupyed area, which cause the waste of seed.
   dsl4jsb_Real2D_onChunk      :: defoliated_state              ! defoliation on or off
   dsl4jsb_Real2D_onChunk      :: is_insect_year                ! is insect disturbance year or not (1: true, 0: false)
   dsl4jsb_Real2D_onChunk      :: dinsect_year_since_start      ! the number of years since the start of insect disturbance
@@ -771,7 +766,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)  !inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliator_effects_triggered) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, barkbeetle_effects_triggered) ! inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_occupy_frac) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_mort_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_defoli_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_flux_frac) ! inout
