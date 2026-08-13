@@ -824,32 +824,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   !> Go science
   !>
 
-  ! ! If the insect is bark beetle, the damage fraction is calculated as the relative damage fraction based on the last year's remaining pool
-  ! yearly_damage_frac = (yearly_damage_frac - yearly_damage_frac_base) / (1.0_wp - yearly_damage_frac_base)
-
-  ! CALL derive_flux_frac_with_sigmoid_from_nml(&
-  !   & dsl4jsb_Config(Q_DINSECT_)%dinsect_start_doy, &
-  !   & dsl4jsb_Config(Q_DINSECT_)%dinsect_duration, &
-  !   & year, &
-  !   & doy, &
-  !   & hour, &
-  !   & yearly_damage_frac, &
-  !   & dinsect_flux_frac(ic))
-
-  !< -----------------------   1.1 get mortality_dt ---------------------------------
   dinsect_mort_dt(:) =  dinsect_flux_frac(:)
-  !< ------------------ 1.2 Calculate effects (after bark beetle event happens) --------------------
-  ! DO ic = 1, nc
-
-  !   ! IF (dinsect_mort_dt(ic) > eps8) THEN
-  !   !   barkbeetle_effects_triggered(ic) = barkbeetle_effects_triggered(ic) + 1.0_wp
-  !   ! END IF
-
-  !   IF ((ABS(barkbeetle_effects_triggered(ic)) - 1.0_wp) < eps4) THEN
-  !     dinsect_disturbable_frac(ic) = 1.0_wp
-  !   END IF
-
-  ! END DO
   dinsect_disturbable_frac = 0.0_wp
 
   CALL calc_beetle_effects(&
@@ -873,11 +848,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
          & dinsect_occupy_frac(:)                 , & ! inout, to remove
          & dinsect_disturbable_frac(:)            , & ! inout, to remove
          & mask=(dinsect_mort_dt(:) > 0.0_wp)) ! optional(in)
-
-    WRITE(*,*) "dinsect_main:: update_dinsect_BB:: lctnumber, dtime(s), doy(d), one_day(?), ", &
-            "dist_fract, oneday/dtime, dist_fract(doy)=", &
-                lctlib%LctNumber, dtime, doy, one_day, dinsect_flux_frac(1), &
-                one_day / dtime
 
     dinsect_pool_total_c(:) = dinsect_pool_total_c(:) + &
                               dinsect_deadsapwood_mt(ixC,:) + &
