@@ -1149,7 +1149,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_total_c
     dsl4jsb_Real3D_onChunk :: sb_pool_total_c
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: dinsect_pool_total_c
+    dsl4jsb_Real2D_onChunk :: dinsect_pool_total_c
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(L2A_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !

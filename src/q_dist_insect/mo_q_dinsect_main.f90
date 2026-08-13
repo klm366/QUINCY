@@ -525,6 +525,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c   ! the defence used labile C from bark beetle attack [mol C/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c13 ! the defence used labile C13 from bark beetle attack [mol C13/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c14 ! the defence used labile C14 from bark beetle attack [mol C14/m2/timestep]
+  dsl4jsb_Real2D_onChunk      :: dinsect_pool_total_c          ! total C from insect pools [mol C/m2]
   ! ----------------------------------------------------------------------------------------------------- !
   iblk    = options%iblk
   ics     = options%ics
@@ -583,6 +584,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c13) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c14) ! inout
+  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_pool_total_c) ! inout
 
   ! ======================================================================================================= !
   !>
@@ -745,6 +747,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c   ! the defence used labile C from bark beetle attack [mol C/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c13 ! the defence used labile C13 from bark beetle attack [mol C13/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c14 ! the defence used labile C14 from bark beetle attack [mol C14/m2/timestep]
+  dsl4jsb_Real2D_onChunk      :: dinsect_pool_total_c          ! total C from insect pools [mol C/m2]
   ! ----------------------------------------------------------------------------------------------------- !
   iblk    = options%iblk
   ics     = options%ics
@@ -802,6 +805,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c13) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c14) ! inout
+  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_pool_total_c) ! inout
 
 #ifdef __QUINCY_STANDALONE__
       year = forcing_options%forcing_year
@@ -873,8 +877,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
     WRITE(*,*) "dinsect_main:: update_dinsect_BB:: lctnumber, dtime(s), doy(d), one_day(?), ", &
             "dist_fract, oneday/dtime, dist_fract(doy)=", &
                 lctlib%LctNumber, dtime, doy, one_day, dinsect_flux_frac(1), &
-                one_day / dtime, &
-                dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_bb_forcing_dist_frac(doy), &
+                one_day / dtime
 
     !< NOTE: make sure this task is executed after update_dinsect_defoliator
     !<       So its values are properly initialized to 0 as well its account for defoliator carbon
