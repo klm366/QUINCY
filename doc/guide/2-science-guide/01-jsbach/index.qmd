@@ -19,5 +19,5 @@ Considered processes are
 - biogeographical processes (dynamic vegetation)
 - land use change
 
-The detailed description of JSBACH v4 can be found under [here](./jsbach_documentation.html).
+The detailed description of JSBACH v4 can be found under [here](./jsbach-documentation.html).
 
