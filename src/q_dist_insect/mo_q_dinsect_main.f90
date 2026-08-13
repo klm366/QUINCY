@@ -142,6 +142,14 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
+    IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
+    IF (lctlib%PastureFlag) RETURN !< do not run this routine at tiles like "pasture pft"
+    IF (lctlib%CropFlag) RETURN !< do not run this routine at tiles like "crops pft"
+    IF (lctlib%GrassFlag) RETURN !< do not run this routine at tiles like "grass pft"
+    !< DF: Needle-leaved evergreen trees (5) and breadleaved deciduous trees (3, 4)
+    !< BB: Needle-leaved evergreen trees (5)
+    IF (lctlib%LctNumber < 3 .OR. lctlib%LctNumber > 5) RETURN !< Only run on landcover types 3, 4, 5
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DINSECT_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(Q_DINSECT_)
@@ -202,6 +210,8 @@ CONTAINS
 
     start_of_year =  is_newyear(options%current_datetime, dtime)
 
+    WRITE(*,*) "dinsect_main:: running... (type=), lctnumber=", &
+    dsl4jsb_Config(Q_DINSECT_)%dinsect_type, lctlib%LctNumber
     ! if prescribe is true, the source of flux is either from namelist or from default values
     ! In Phase 2, it can be predicted by insect population model
     DO ic = 1, nc
@@ -360,6 +370,13 @@ CONTAINS
         & dinsect_occupy_frac(:)                 , & ! inout
         & dinsect_disturbable_frac(:)            , & ! inout
         & mask=(barkbeetle_effects_triggered(:) > 0.0_wp)) ! optional(in)
+
+        DO ic = 1, nc
+          IF (barkbeetle_effects_triggered(ic) > 0.0_wp ) THEN
+            WRITE(*,*) "dinsect_main.f90:: barkbeetle_effects_triggered, dinsect_disturbable_frac=", &
+                      barkbeetle_effects_triggered(ic), dinsect_disturbable_frac
+          END IF
+        ENDDO
 
     ELSE IF (is_defoliator) THEN
         !<  ------------------  2.1 get defoliation_dt ----------------------------------
@@ -526,7 +543,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   IF (lctlib%CropFlag) RETURN !< do not run this routine at tiles like "crops pft"
   IF (lctlib%GrassFlag) RETURN !< do not run this routine at tiles like "grass pft"
   !< Needle-leaved evergreen trees (5) and breadleaved deciduous trees (3, 4)
-  IF (lctlib%LctNumber > 3 .OR. lctlib%LctNumber < 5) RETURN !< Only run on landcover types 3, 4, 5
+  IF (lctlib%LctNumber < 3 .OR. lctlib%LctNumber > 5) RETURN !< Only run on landcover types 3, 4, 5
   ! ----------------------------------------------------------------------------------------------------- !
   dsl4jsb_Get_config(Q_DINSECT_)
   dsl4jsb_Get_config(VEG_)
@@ -634,6 +651,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
     & dinsect_defoliator_resp_c13(:)         , & ! inout
     & dinsect_defoliator_resp_c14(:)         , & ! inout
     & mask=(defoliator_effects_triggered(:) > 0.0_wp)) ! optional(in)
+
 END SUBROUTINE update_dinsect_defoliator
 
 
@@ -781,59 +799,80 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c13) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c14) ! inout
 
+#ifdef __QUINCY_STANDALONE__
+      year = forcing_options%forcing_year
+      doy = forcing_options%forcing_doy
+      hour = forcing_options%forcing_hour
+#else
+      year = get_year(options%current_datetime)
+      doy = INT(get_year_day(options%current_datetime))
+      hour = get_secs_of_day(options%current_datetime) / 3600._wp ! seconds to hours
+#endif
+
+  ! (fake) read input data (daily), import from namelist, apply same data to every year
+  dinsect_flux_frac(:) = dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_bb_forcing_dist_frac(doy) / (one_day / dtime) ! distribute bb outbreak accross the whole day
+
   ! ======================================================================================================= !
   !> Go science
   !>
 
-  ! If the insect is bark beetle, the damage fraction is calculated as the relative damage fraction based on the last year's remaining pool
-  yearly_damage_frac = (yearly_damage_frac - yearly_damage_frac_base) / (1.0_wp - yearly_damage_frac_base)
+  ! ! If the insect is bark beetle, the damage fraction is calculated as the relative damage fraction based on the last year's remaining pool
+  ! yearly_damage_frac = (yearly_damage_frac - yearly_damage_frac_base) / (1.0_wp - yearly_damage_frac_base)
 
-  CALL derive_flux_frac_with_sigmoid_from_nml(&
-    & dsl4jsb_Config(Q_DINSECT_)%dinsect_start_doy, &
-    & dsl4jsb_Config(Q_DINSECT_)%dinsect_duration, &
-    & year, &
-    & doy, &
-    & hour, &
-    & yearly_damage_frac, &
-    & dinsect_flux_frac(ic))
+  ! CALL derive_flux_frac_with_sigmoid_from_nml(&
+  !   & dsl4jsb_Config(Q_DINSECT_)%dinsect_start_doy, &
+  !   & dsl4jsb_Config(Q_DINSECT_)%dinsect_duration, &
+  !   & year, &
+  !   & doy, &
+  !   & hour, &
+  !   & yearly_damage_frac, &
+  !   & dinsect_flux_frac(ic))
 
   !< -----------------------   1.1 get mortality_dt ---------------------------------
   dinsect_mort_dt(:) =  dinsect_flux_frac(:)
   !< ------------------ 1.2 Calculate effects (after bark beetle event happens) --------------------
-  DO ic = 1, nc
+  ! DO ic = 1, nc
 
-    IF (dinsect_mort_dt(ic) > eps8) THEN
-      barkbeetle_effects_triggered(ic) = barkbeetle_effects_triggered(ic) + 1.0_wp
-    END IF
+  !   ! IF (dinsect_mort_dt(ic) > eps8) THEN
+  !   !   barkbeetle_effects_triggered(ic) = barkbeetle_effects_triggered(ic) + 1.0_wp
+  !   ! END IF
 
-    IF ((ABS(barkbeetle_effects_triggered(ic)) - 1.0_wp) < eps4) THEN
-      dinsect_disturbable_frac(ic) = 1.0_wp
-    END IF
+  !   IF ((ABS(barkbeetle_effects_triggered(ic)) - 1.0_wp) < eps4) THEN
+  !     dinsect_disturbable_frac(ic) = 1.0_wp
+  !   END IF
 
-  END DO
+  ! END DO
+  dinsect_disturbable_frac = 0.0_wp
 
   CALL calc_beetle_effects(&
-        & nc                                     , & ! in
-        & dtime                                  , & ! in
-        & dinsect_mort_dt(:)                     , & ! in
-        & veg_pool_mt(:,:,:)                     , & ! in
-        & seed_bed_pool_mt(:,:)                  , & ! in
-        & dsl4jsb_Config(Q_DINSECT_)%dinsect_online, & ! in
-        !& heartwood_C_zero(:)                    , & ! in
-        & dinsect_deadsapwood_mt(:,:)            , & ! inout
-        & dinsect_deadheartwood_mt(:,:)          , & ! inout
-        & dinsect_deadleaf_mt(:,:)               , & ! inout
-        & dinsect_veg_extract_mt(:,:,:)          , & ! inout
-        & dinsect_slow_litter_mt(:,:,:)          , & ! inout
-        & dinsect_fast_litter_mt(:,:,:)          , & ! inout
-        & dinsect_seedb_fastl_mt(:,:)   , & ! inout
-        & dinsect_barkbeetle_labile_c(:)         , & ! inout
-        & dinsect_barkbeetle_labile_c13(:)       , & ! inout
-        & dinsect_barkbeetle_labile_c14(:)       , & ! inout
-        & dinsect_occupy_frac(:)                 , & ! inout
-        & dinsect_disturbable_frac(:)            , & ! inout
-        & mask=(barkbeetle_effects_triggered(:) > 0.0_wp)) ! optional(in)
+         & nc                                     , & ! in
+         & dtime                                  , & ! in
+         & dinsect_mort_dt(:)                     , & ! in
+         & veg_pool_mt(:,:,:)                     , & ! in
+         & seed_bed_pool_mt(:,:)                  , & ! in
+         & dsl4jsb_Config(Q_DINSECT_)%dinsect_online, & ! in
+          !& heartwood_C_zero(:)                    , & ! in
+         & dinsect_deadsapwood_mt(:,:)            , & ! inout (pool)
+         & dinsect_deadheartwood_mt(:,:)          , & ! inout (pool)
+         & dinsect_deadleaf_mt(:,:)               , & ! inout (pool)
+         & dinsect_veg_extract_mt(:,:,:)          , & ! inout (flux)
+         & dinsect_slow_litter_mt(:,:,:)          , & ! inout (flux)
+         & dinsect_fast_litter_mt(:,:,:)          , & ! inout (flux)
+         & dinsect_seedb_fastl_mt(:,:)            , & ! inout (flux)
+         & dinsect_barkbeetle_labile_c(:)         , & ! inout
+         & dinsect_barkbeetle_labile_c13(:)       , & ! inout
+         & dinsect_barkbeetle_labile_c14(:)       , & ! inout
+         & dinsect_occupy_frac(:)                 , & ! inout, to remove
+         & dinsect_disturbable_frac(:)            , & ! inout, to remove
+         & mask=(dinsect_mort_dt(:) > 0.0_wp)) ! optional(in)
 
+    WRITE(*,*) "dinsect_main:: update_dinsect_BB:: lctnumber, dtime(s), doy(d), one_day(?), ", &
+            "dist_fract, oneday/dtime, dist_fract(doy)=", &
+                lctlib%LctNumber, dtime, doy, one_day, dinsect_flux_frac(1), &
+                one_day / dtime, &
+                dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_bb_forcing_dist_frac(doy), &
+                
+         
 END SUBROUTINE update_dinsect_barkbeetle
 
 
