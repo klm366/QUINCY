@@ -81,6 +81,9 @@ MODULE mo_q_dinsect_memory_class
                                     dinsect_mort_dt, &                     !< the addtional mortality caused by bark beetle
                                     dinsect_flux_frac, &                   !< the fraction of disturbed fraction of target variable at each timestep.
                                     dinsect_disturbable_frac               !< the remaining fraction of live trees that can be disturbable
+    TYPE(t_jsb_var_real2d)          :: &
+                                    dinsect_pool_total_c                   !< Total carbon from insect pools [mol C/m2/timestep]
+
   !------------------------------------------------------------------------------------------------------ !
 
   CONTAINS
@@ -538,6 +541,17 @@ CONTAINS
       CALL mem%Add_var('dinsect_flux_frac', mem%dinsect_flux_frac, &
         & hgrid, surface, &
         & t_cf('dinsect_flux_frac', '% timestep-1', 'dinsect_flux_frac'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('dinsect_pool_total_c', mem%dinsect_pool_total_c, &
+        & hgrid, surface, &
+        & t_cf('dinsect_pool_total_c', 'mol C m-2 timestep-1', 'Total Carbon from insect pools'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

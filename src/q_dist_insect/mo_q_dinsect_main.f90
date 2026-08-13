@@ -589,14 +589,14 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   !> Go science
   !>
 
-  CALL derive_flux_frac_with_sigmoid_from_nml(&
-    & dsl4jsb_Config(Q_DINSECT_)%dinsect_start_doy, &
-    & dsl4jsb_Config(Q_DINSECT_)%dinsect_duration, &
-    & year, &
-    & doy, &
-    & hour, &
-    & yearly_damage_frac, &
-    & dinsect_flux_frac(ic))
+  ! CALL derive_flux_frac_with_sigmoid_from_nml(&
+  !   & dsl4jsb_Config(Q_DINSECT_)%dinsect_start_doy, &
+  !   & dsl4jsb_Config(Q_DINSECT_)%dinsect_duration, &
+  !   & year, &
+  !   & doy, &
+  !   & hour, &
+  !   & yearly_damage_frac, &
+  !   & dinsect_flux_frac(ic))
 
   !<  ------------------  2.1 get defoliation_dt ----------------------------------
   dinsect_defoli_dt(:) = dinsect_flux_frac(:)
@@ -636,22 +636,26 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
     END IF
   END DO
 
-  CALL calc_defoliator_effects(&
-    & nc                                     , & ! in
-    & dtime                                  , & ! in
-    & doy                                    , & ! in
-    & dinsect_defoli_dt(:)                   , & ! in
-    & veg_pool_mt(:,:,:)                     , & ! in
-    & dsl4jsb_Config(Q_DINSECT_)%dinsect_online, & ! in
-    & dinsect_larva_mt(:,:)                  , & ! inout
-    & dinsect_veg_extract_mt(:,:,:)          , & ! inout
-    & dinsect_dropping_mt(:,:)               , & ! inout
-    & dinsect_slow_litter_mt(:,:,:)          , & ! inout
-    & dinsect_defoliator_resp_c(:)           , & ! inout
-    & dinsect_defoliator_resp_c13(:)         , & ! inout
-    & dinsect_defoliator_resp_c14(:)         , & ! inout
-    & mask=(defoliator_effects_triggered(:) > 0.0_wp)) ! optional(in)
+  ! CALL calc_defoliator_effects(&
+  !   & nc                                     , & ! in
+  !   & dtime                                  , & ! in
+  !   & doy                                    , & ! in
+  !   & dinsect_defoli_dt(:)                   , & ! in
+  !   & veg_pool_mt(:,:,:)                     , & ! in
+  !   & dsl4jsb_Config(Q_DINSECT_)%dinsect_online, & ! in
+  !   & dinsect_larva_mt(:,:)                  , & ! inout (pool)
+  !   & dinsect_veg_extract_mt(:,:,:)          , & ! inout
+  !   & dinsect_dropping_mt(:,:)               , & ! inout
+  !   & dinsect_slow_litter_mt(:,:,:)          , & ! inout
+  !   & dinsect_defoliator_resp_c(:)           , & ! inout
+  !   & dinsect_defoliator_resp_c13(:)         , & ! inout
+  !   & dinsect_defoliator_resp_c14(:)         , & ! inout
+  !   & mask=(defoliator_effects_triggered(:) > 0.0_wp)) ! optional(in)
 
+  !< NOTE: make sure this task is executed before update_dinsect_barkbeetle in the call stack
+  !< Otherwise it will remove the defoliator Carbon
+  !< Used to test mass conservation
+  dinsect_pool_total_c(:) = 0._wp !dinsect_larva_mt(ixC,:)
 END SUBROUTINE update_dinsect_defoliator
 
 
@@ -871,8 +875,13 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
                 lctlib%LctNumber, dtime, doy, one_day, dinsect_flux_frac(1), &
                 one_day / dtime, &
                 dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_bb_forcing_dist_frac(doy), &
-                
-         
+
+    !< NOTE: make sure this task is executed after update_dinsect_defoliator
+    !<       So its values are properly initialized to 0 as well its account for defoliator carbon
+    dinsect_pool_total_c(:) = dinsect_pool_total_c(:) + &
+                              dinsect_deadsapwood_mt(ixC,:) + &
+                              dinsect_deadheartwood_mt(ixC,:) + &
+                              dinsect_deadleaf_mt(ixC,:)
 END SUBROUTINE update_dinsect_barkbeetle
 
 
