@@ -631,9 +631,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   !   & dinsect_defoliator_resp_c14(:)         , & ! inout
   !   & mask=(defoliator_effects_triggered(:) > 0.0_wp)) ! optional(in)
 
-  !< NOTE: make sure this task is executed before update_dinsect_barkbeetle in the call stack
-  !< Otherwise it will remove the defoliator Carbon
-  !< Used to test mass conservation
+  !< Used in mass conservation test
   dinsect_pool_total_c(:) = dinsect_pool_total_c(:) + dinsect_larva_mt(ixC,:)
 END SUBROUTINE update_dinsect_defoliator
 
@@ -819,6 +817,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
          & dinsect_barkbeetle_labile_c14(:)       , & ! inout
          & mask=(dinsect_mort_dt(:) > 0.0_wp)) ! optional(in)
 
+    ! Used in mass conservation test
     dinsect_pool_total_c(:) = dinsect_pool_total_c(:) + &
                               dinsect_deadsapwood_mt(ixC,:) + &
                               dinsect_deadheartwood_mt(ixC,:) + &
