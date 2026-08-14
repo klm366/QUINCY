@@ -402,11 +402,11 @@ CONTAINS
       & * ( ( sb_formation_mt(ix_dom, ixC, :, 1)              - sb_loss_mt(ix_dom, ixC, :, 1)               &
       &   + sb_formation_mt(ix_soluable_litter, ixC, :, 1)  - sb_loss_mt(ix_soluable_litter, ixC, :, 1)   &
       &   + sb_formation_mt(ix_polymeric_litter, ixC, :, 1) - sb_loss_mt(ix_polymeric_litter, ixC, :, 1)  &
-      &   + sb_formation_mt(ix_dom_assoc, ixC, :, 1)        - sb_loss_mt(ix_dom_assoc, ixC, :, 1)         &
-      &   + sb_formation_mt(ix_mycorrhiza, ixC, :, 1)       - sb_loss_mt(ix_mycorrhiza, ixC, :, 1) )      &
+      &   + sb_formation_mt(ix_mycorrhiza, ixC, :, 1)       - sb_loss_mt(ix_mycorrhiza, ixC, :, 1)       &
+      &   + sb_formation_mt(ix_microbial, ixC, :, 1)        - sb_loss_mt(ix_microbial, ixC, :, 1)        &
+      &   + sb_formation_mt(ix_residue, ixC, :, 1)          - sb_loss_mt(ix_residue, ixC, :, 1) )         &
       &     * surface_burial_frac(:,1)                                                                    &
-      &   + sb_formation_mt(ix_microbial, ixC, :, 1)        - sb_loss_mt(ix_microbial, ixC, :, 1)         &
-      &   + sb_formation_mt(ix_residue, ixC, :, 1)          - sb_loss_mt(ix_residue, ixC, :, 1)           &
+      &   + sb_formation_mt(ix_dom_assoc, ixC, :, 1)        - sb_loss_mt(ix_dom_assoc, ixC, :, 1)         &
       &   + sb_formation_mt(ix_residue_assoc, ixC, :, 1)    - sb_loss_mt(ix_residue_assoc, ixC, :, 1)  )  &
       & / (carbon_per_dryweight_SOM / molar_mass_C * 1000._wp)
 
