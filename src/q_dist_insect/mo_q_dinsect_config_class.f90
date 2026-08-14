@@ -68,7 +68,7 @@ MODULE mo_q_dinsect_config_class
 
     !> Development flags
     REAL(wp)          :: dinsect_dev_bb_forcing_dist_frac(366) !< Daily Prescribed mortality/defoliation rate for an entire year [0-1]
-
+    REAL(wp)          :: dinsect_dev_df_forcing_dist_frac(366) !< Daily Prescribed mortality/defoliation rate for an entire year [0-1]
 
    CONTAINS
      PROCEDURE :: Init => Init_dinsect_config
@@ -116,6 +116,7 @@ CONTAINS
     REAL(wp)          :: dinsect_damage_year10       !< Prescribed mortality/defoliation rate [0-1] for the tenth disturbance year
 
     REAL(wp)          :: dinsect_dev_bb_forcing_dist_frac(366) !< Prescribed for an entire year (daily data). For dev purposes only.
+    REAL(wp)          :: dinsect_dev_df_forcing_dist_frac(366) !< Prescribed for an entire year (daily data). For dev purposes only.
                                                      !< Todo: properly read netcdf files with daily data
 
 
@@ -142,7 +143,8 @@ CONTAINS
       dinsect_damage_year8,          &
       dinsect_damage_year9,          &
       dinsect_damage_year10,         &
-      dinsect_dev_bb_forcing_dist_frac
+      dinsect_dev_bb_forcing_dist_frac, &
+      dinsect_dev_df_forcing_dist_frac
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! variables for reading model-options from namelist
@@ -173,6 +175,7 @@ CONTAINS
     dinsect_damage_year9          = 0._wp
     dinsect_damage_year10         = 0._wp
     dinsect_dev_bb_forcing_dist_frac = 0._wp
+    dinsect_dev_df_forcing_dist_frac = 0._wp
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! read the namelist
@@ -204,6 +207,7 @@ CONTAINS
     config%dinsect_damage_year9         = dinsect_damage_year9
     config%dinsect_damage_year10        = dinsect_damage_year10
     config%dinsect_dev_bb_forcing_dist_frac = dinsect_dev_bb_forcing_dist_frac
+    config%dinsect_dev_df_forcing_dist_frac = dinsect_dev_df_forcing_dist_frac
 
     CALL close_nml(nml_handler)
   END SUBROUTINE Init_dinsect_config
