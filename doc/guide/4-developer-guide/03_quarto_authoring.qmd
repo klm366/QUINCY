@@ -1,0 +1,221 @@
+---
+title: Authoring the ICON-Land Guide
+image: /media/documentation-guide.svg
+order: 3
+---
+
+The guide you are reading lives in `doc/guide` and is written in
+[Quarto](https://quarto.org/){.external target="_blank"}. Any text editor will do; to build
+it you need Quarto installed, see the
+[Quarto get-started page](https://quarto.org/docs/get-started/){.external target="_blank"}.
+
+For the FORD-generated reference documentation of the source code see
+[Documenting the Code with FORD](02_documentation.qmd).
+
+## Previewing while you write
+
+From the `doc` directory:
+
+```bash
+quarto preview
+```
+
+This serves the site locally and re-renders on every save, which is much faster than a full
+build. `./build-doc.sh -p` renders the guide the way CI does, and `./build-doc.sh` adds the
+FORD run on top.
+
+::: {.callout-warning}
+## Do not run a full build while a preview is running
+
+`quarto preview` and `build-doc.sh` share the `doc/_site` and `doc/.quarto` state. Running a
+build underneath a live preview desynchronises the preview's incremental renderer: it keeps
+serving pages happily, reports "Watching files for changes", and yet silently stops picking
+up your edits. If the browser disagrees with the source, suspect this first. The cure is to
+stop the preview, delete `doc/_site` and `doc/.quarto`, and start it again.
+:::
+
+## Adding a page
+
+Create a `.qmd` file in the appropriate `doc/guide` subdirectory. The sidebar is generated
+automatically (`contents: auto` in `doc/_quarto.yml`), so a new file appears by itself. The
+front matter controls how:
+
+``` yaml
+---
+title: Authoring the ICON-Land Guide
+image: /media/documentation-guide.svg
+order: 3
+---
+```
+
+- `title` is the sidebar entry and the page heading.
+- `order` positions the page among its siblings; without it the ordering falls back to the
+  file name.
+- `image` is the card picture on the section landing pages, which are `listing` grids.
+
+Because the whole page is one document, start its headings at level 1 (`#`). Section
+numbering is on (`number-sections` in `doc/_quarto.yml`).
+
+## Cross-references
+
+Quarto resolves a reference from a label you attach to the target. Never type the number
+yourself: hand-written numbers go stale the moment anything is inserted above them, and
+nothing warns you when they do.
+
+::: {.callout-important}
+## References work within a page only
+
+This is a `website` project, and Quarto cannot resolve a crossref that points into another
+`.qmd`. `@sec-x` referring to a label on a different page renders as the literal text
+`?@sec-x` and emits `WARNING ... Unable to resolve crossref`. To point at another page,
+write an ordinary link instead, and give it the target's title as the visible text so that
+it cannot silently go stale:
+
+``` markdown
+see [Documenting the Code with FORD](02_documentation.qmd)
+```
+
+Root-relative paths such as `/guide/4-developer-guide/02_documentation.qmd` also work and
+survive being moved to a different depth.
+:::
+
+### Sections
+
+Attach a label to the heading, then reference it:
+
+``` markdown
+## Vertical discretisation {#sec-vertical-discretisation}
+
+... as defined in @sec-vertical-discretisation.
+```
+
+The label must start with `sec-`. The reference supplies the word in front of the number by
+itself, so write the bare `@sec-...`:
+
+``` markdown
+as defined in @sec-vertical-discretisation      <!-- renders "Section 1.2" -->
+as defined in Sect. @sec-vertical-discretisation <!-- renders "Sect. Section 1.2" -->
+```
+
+The prefix is configurable per document under `language` in the front matter, for example
+`crossref-sec-prefix: "Sect."`, which is what the QUINCY scientific documentation uses. Note
+that keys such as `section-prefix` at the top level of the front matter are silently ignored
+by Quarto, so a prefix that looks configured may not be in effect.
+
+### Tables
+
+Give the table a caption line beginning with `:` and put the label there:
+
+``` markdown
+| Symbol | Description | Value |
+|:-------|:------------|:-----:|
+| $k_n$  | extinction coefficient | 0.11 |
+
+: Photosynthesis parameters {#tbl-assimi:param}
+```
+
+Reference it with `@tbl-assimi:param`, which renders as "Table 2.1" and links to it. The
+label must start with `tbl-`.
+
+## Equations
+
+Equations do **not** use Quarto's own crossref machinery here. The project applies the Lua
+filter `doc/auto-subeqn.lua` (declared under `filters` in `doc/_quarto.yml`), which numbers
+display equations `<chapter>.<n>` and letters the rows of a multi-line group. References are
+resolved by MathJax from LaTeX labels.
+
+### Writing an equation
+
+Put the `\label{}` **inside** the `$$` block, and leave a blank line before the `$$`:
+
+``` markdown
+The fraction of structural N is calculated as
+
+$$
+\label{eq-veg-struc_n}
+fN_{struc,cl}=k^{struc}_0-k^{struc}_1 N_{leaf,cl}
+$$
+```
+
+Both details matter:
+
+- A label written outside the block, or on the same line as surrounding text, is never seen
+  by MathJax. The equation then has no anchor and every reference to it silently fails.
+- Without the blank line the block is not a paragraph of its own, and the filter's handling
+  of grouped equations does not apply to it.
+
+Do not write the number into the source, and do not use Quarto's `$$ ... $$ {#eq-label}`
+syntax on this site: it mixes two numbering mechanisms in one document.
+
+### Referencing an equation
+
+In running text use `\Eqref`, which renders as "Eq. 3.10" and links to the equation:
+
+``` markdown
+sink-limitation down-regulates photosynthesis ($\Eqref{eq-veg-growth-rate}$)
+```
+
+Where only the bare number belongs, such as the *Equation* column of a parameter table, use
+`\ref`:
+
+``` markdown
+| $k_n$ | extinction coefficient | 0.11 | $\ref{eq-veg-canopy_n_distribution}$ |
+```
+
+Both must sit inside `$...$`. Two things to avoid:
+
+- A markdown link such as `[Eq. 3.9](#eq-veg-growth-rate)` does **not** work. MathJax
+  registers equations under `mjx-eqn:` anchors, so the link target does not exist and the
+  number is frozen at whatever was true when it was typed.
+- Lowercase `\eqref` is MathJax's own macro and renders an unresolved reference as `(???)`
+  rather than failing loudly. Use `\Eqref`, which the project defines in
+  `doc/mathjax-config.html`.
+
+### Groups of equations and sub-equations
+
+An `align` block with an outer label becomes a numbered group: the filter letters the rows
+and generates a label per row by appending `_a`, `_b`, and so on.
+
+``` markdown
+$$
+\label{eq-veg-growth-rate}
+\begin{align}
+G_C &\le G^{*}_C \\
+G_N &\le \frac{k^{nut}_{labile}}{\tau_{labile}} \times N_{labile} \times dt
+\end{align}
+$$
+```
+
+This renders as 3.10a and 3.10b. Reference the whole group with `$\Eqref{eq-veg-growth-rate}$`
+and a single row with `$\Eqref{eq-veg-growth-rate_b}$`. A row may also carry its own
+`\label{}`, which is kept and numbered in sequence with its siblings.
+
+::: {.callout-note}
+## A single equation broken across lines needs `aligned`, not `align`
+
+`align` means "several equations, number each row". If one long equation is merely wrapped
+over several lines for readability, use `aligned`; the filter then gives the block one
+number. With `align` every continuation line is treated as a row of its own and MathJax
+reports `Multiple \tag`.
+:::
+
+## Checking your work
+
+Look at the rendered page, not only at the source. In particular, **equation references are
+resolved by MathJax in the browser**, so they cannot be checked by reading the generated
+HTML: an unresolved one appears as `(???)` on screen while the HTML contains no trace of the
+failure.
+
+Worth a glance before you push:
+
+- every reference shows a sensible number, and clicking it lands on the right target;
+- no `(???)`, no `?@sec-...`, and no equation numbered `(1)` in the middle of a lettered
+  group;
+- the render log is free of `Unable to resolve crossref` warnings.
+
+::: {.callout-tip}
+MathJax is pinned to a fixed version in `doc/_quarto.yml`. It is loaded from a CDN, and the
+markup it produces for references differs slightly between releases, so leaving it floating
+made the rendered result depend on when and where the page was opened. Change the pin
+deliberately, and re-check the equation references afterwards.
+:::
