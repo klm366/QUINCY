@@ -119,7 +119,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: is_insect_year                ! is insect disturbance year or not (1: true, 0: false)
     dsl4jsb_Real2D_onChunk      :: dinsect_year_since_start      ! the number of years since the start of insect disturbance
     dsl4jsb_Real2D_onChunk      :: dinsect_mort_dt               ! addtional mortality rate caused by bark beetle
-    dsl4jsb_Real2D_onChunk      :: dinsect_defoli_dt             ! defoliation rate caused by defoliator  !dsl4jsb_Real2D_onChunk      :: heartwood_C_zero              ! the amount of heartwood C at the first timestep of bark beetle event
+    dsl4jsb_Real2D_onChunk      :: dinsect_defoli_dt             ! defoliation rate caused by defoliator
     dsl4jsb_Real2D_onChunk      :: dinsect_flux_frac             ! the fraction of disturbed fraction of target variables.
     dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c     ! defoliator respiration C flux [mol/m2/timestep]
     dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c13   ! defoliator respiration C13 flux [mol/m2/timestep]
@@ -497,7 +497,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Real2D_onChunk      :: is_insect_year                ! is insect disturbance year or not (1: true, 0: false)
   dsl4jsb_Real2D_onChunk      :: dinsect_year_since_start      ! the number of years since the start of insect disturbance
   dsl4jsb_Real2D_onChunk      :: dinsect_mort_dt               ! addtional mortality rate caused by bark beetle
-  dsl4jsb_Real2D_onChunk      :: dinsect_defoli_dt             ! defoliation rate caused by defoliator  !dsl4jsb_Real2D_onChunk      :: heartwood_C_zero              ! the amount of heartwood C at the first timestep of bark beetle event
+  ! dsl4jsb_Real2D_onChunk      :: dinsect_defoli_dt             ! defoliation rate caused by defoliator
   dsl4jsb_Real2D_onChunk      :: dinsect_flux_frac             ! the fraction of disturbed fraction of target variables.
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c     ! defoliator respiration C flux [mol/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c13   ! defoliator respiration C13 flux [mol/m2/timestep]
@@ -553,7 +553,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliator_effects_triggered) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, barkbeetle_effects_triggered) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_mort_dt) ! inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_defoli_dt) ! inout
+  ! dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_defoli_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_flux_frac) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliated_state) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, is_insect_year) ! inout
@@ -582,58 +582,27 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   !> Go science
   !>
 
-  ! CALL derive_flux_frac_with_sigmoid_from_nml(&
-  !   & dsl4jsb_Config(Q_DINSECT_)%dinsect_start_doy, &
-  !   & dsl4jsb_Config(Q_DINSECT_)%dinsect_duration, &
-  !   & year, &
-  !   & doy, &
-  !   & hour, &
-  !   & yearly_damage_frac, &
-  !   & dinsect_flux_frac(ic))
-
   !<  ------------------  2.1 get defoliation_dt ----------------------------------
-  dinsect_defoli_dt(:) = dinsect_flux_frac(:)
-
+  dinsect_flux_frac = dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_df_forcing_dist_frac(doy) / (one_day / dtime) ! distribute DF outbreak accross the whole day
   !<  ------------------  2.2 determine the defoliation  ----------------------------------
-  !CALL get_time_info(year, month, days_of_mon, doy)
 
-  ! Initialize or reset flags
-  ! defoliated_state is reset in every timestep
-  defoliated_state(:) = 0.0_wp
-
-  DO ic = 1, nc
-
-    IF (dinsect_defoli_dt(ic) > eps8) THEN  ! Once defoliation happened, this flag will be turned on
-      defoliated_state(ic) = 1.0_wp  ! Update at each timestep in mo_q_veg_growth.f
-    END IF
-
-    IF (is_insect_year(ic) > eps8) THEN  ! Outbreak happend in this year
-      IF (lctlib%phenology_type .eq. 1) THEN  ! is evergreen needleleaf
-        ! (1) the regrowth restriction should be adjusted, if required, according to the research
-        ! domain and plant leaf growth strategy; (2) the distribution of grid-based damage fraction
-        ! among PFTs should be pre-calculated before inputing (this point will be more easier
-        ! and clearer in coding and flexible in scientific using, but need to ask Ana firstly)
-        !
-        ! TODO: "prevent_late_summer_leaf_regrowth" (set the northern hemisphere as > =July 1 and
-        ! southern hemisphere as <= June 30) and make the evergreen PFT got this feature ?
-        ! Something like this
-        IF (is_growing_season(ic)) THEN  ! any months after defoliation (here we generally say June)
-          defoliated_state(ic) = 1.0_wp  ! the flag for controling leaf reflush will be on, until next year
-        END IF
-      END IF
-    END IF
-
-    !< ---------------  2.3 Calculate effects (after defoliation event happens)-------------------------------
-    IF (dinsect_defoli_dt(ic) > eps8) THEN
-        defoliator_effects_triggered(ic) = defoliator_effects_triggered(ic) + 1.0_wp
-    END IF
-  END DO
+  ! Defoliated_state is reset in every timestep
+  defoliated_state = 0.0_wp
+  IF (lctlib%phenology_type .eq. 1) THEN  ! is evergreen needleleaf
+    DO ic = 1, nc
+        IF (is_growing_season(ic)) THEN !< is the tree in the growing season?
+            IF ( dinsect_flux_frac(ic) > eps8) THEN ! is there an outbreak going on?
+                defoliated_state(ic) = 1.0_wp ! the flag for controling leaf reflush is turned on
+            ENDIF
+        ENDIF
+    END DO
+  ENDIF
 
   CALL calc_defoliator_effects(&
      & nc                                     , & ! in
      & dtime                                  , & ! in
      & doy                                    , & ! in
-     & dinsect_defoli_dt(:)                   , & ! in
+     & dinsect_flux_frac(:)                   , & ! in
      & veg_pool_mt(:,:,:)                     , & ! in
      & dsl4jsb_Config(Q_DINSECT_)%dinsect_online, & ! in
      & dinsect_larva_mt(:,:)                  , & ! inout (pool)
@@ -643,7 +612,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
      & dinsect_defoliator_resp_c(:)           , & ! inout
      & dinsect_defoliator_resp_c13(:)         , & ! inout
      & dinsect_defoliator_resp_c14(:)         , & ! inout
-     & mask=(defoliator_effects_triggered(:) > 0.0_wp)) ! optional(in)
+     & mask=(dinsect_flux_frac(:) > 0.0_wp)) ! optional(in)
 
   !< Used in mass conservation test
   dinsect_pool_total_c(:) = dinsect_pool_total_c(:) + dinsect_larva_mt(ixC,:)
@@ -726,8 +695,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Real2D_onChunk      :: is_insect_year                ! is insect disturbance year or not (1: true, 0: false)
   dsl4jsb_Real2D_onChunk      :: dinsect_year_since_start      ! the number of years since the start of insect disturbance
   dsl4jsb_Real2D_onChunk      :: dinsect_mort_dt               ! addtional mortality rate caused by bark beetle
-  dsl4jsb_Real2D_onChunk      :: dinsect_defoli_dt             ! defoliation rate caused by defoliator  !dsl4jsb_Real2D_onChunk      :: heartwood_C_zero              ! the amount of heartwood C at the first timestep of bark beetle event
-  dsl4jsb_Real2D_onChunk      :: dinsect_flux_frac             ! the fraction of disturbed fraction of target variables.
+  dsl4jsb_Real2D_onChunk      :: dinsect_defoli_dt             ! defoliation rate caused by defoliator
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c     ! defoliator respiration C flux [mol/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c13   ! defoliator respiration C13 flux [mol/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c14   ! defoliator respiration C14 flux [mol/m2/timestep]
@@ -780,7 +748,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, barkbeetle_effects_triggered) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_mort_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_defoli_dt) ! inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_flux_frac) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliated_state) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, is_insect_year) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_year_since_start) ! inout
@@ -803,13 +770,11 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
 #endif
 
   ! (fake) read input data (daily), import from namelist, apply same data to every year
-  dinsect_flux_frac(:) = dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_bb_forcing_dist_frac(doy) / (one_day / dtime) ! distribute bb outbreak accross the whole day
+  dinsect_mort_dt(:) = dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_bb_forcing_dist_frac(doy) / (one_day / dtime) ! distribute bb outbreak accross the whole day
 
   ! ======================================================================================================= !
   !> Go science
   !>
-
-  dinsect_mort_dt(:) =  dinsect_flux_frac(:)
 
   CALL calc_beetle_effects(&
          & nc                                     , & ! in
