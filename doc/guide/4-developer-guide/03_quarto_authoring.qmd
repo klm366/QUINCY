@@ -162,14 +162,17 @@ Where only the bare number belongs, such as the *Equation* column of a parameter
 | $k_n$ | extinction coefficient | 0.11 | $\ref{eq-veg-canopy_n_distribution}$ |
 ```
 
-Both must sit inside `$...$`. Two things to avoid:
+Both must sit inside `$...$`, and each must be the whole content of its `$...$`. The filter
+resolves them while the page is built: by the time it is served, a reference is an ordinary
+link carrying the number as text, so it costs the browser nothing and does not depend on
+MathJax having typeset the target.
 
-- A markdown link such as `[Eq. 3.9](#eq-veg-growth-rate)` does **not** work. MathJax
-  registers equations under `mjx-eqn:` anchors, so the link target does not exist and the
-  number is frozen at whatever was true when it was typed.
-- Lowercase `\eqref` is MathJax's own macro and renders an unresolved reference as `(???)`
-  rather than failing loudly. Use `\Eqref`, which the project defines in
-  `doc/mathjax-config.html`.
+Two things to avoid:
+
+- A markdown link such as `[Eq. 3.9](#eq-veg-growth-rate)` does **not** work, and freezes
+  the number at whatever was true when it was typed.
+- Lowercase `\eqref` is MathJax's own macro. The filter does not rewrite it, and MathJax
+  renders it as `(???)` when it cannot resolve it. Use `\Eqref`.
 
 ### Groups of equations and sub-equations
 
@@ -201,21 +204,32 @@ reports `Multiple \tag`.
 
 ## Checking your work
 
-Look at the rendered page, not only at the source. In particular, **equation references are
-resolved by MathJax in the browser**, so they cannot be checked by reading the generated
-HTML: an unresolved one appears as `(???)` on screen while the HTML contains no trace of the
-failure.
+An equation reference that names a label which does not exist is reported by the build:
 
-Worth a glance before you push:
+```
+auto-subeqn.lua: unresolved equation reference 'eq-does-not-exist'
+```
 
-- every reference shows a sensible number, and clicking it lands on the right target;
-- no `(???)`, no `?@sec-...`, and no equation numbered `(1)` in the middle of a lettered
-  group;
-- the render log is free of `Unable to resolve crossref` warnings.
+and shows up in the page as a bold `[?eq-does-not-exist]`, so it is hard to miss. Watch the
+render output for those, and for Quarto's own `Unable to resolve crossref` warnings, which
+are what a broken `@sec-` or `@tbl-` reference produces.
+
+Then look at the page itself and check that every reference shows a sensible number and
+that clicking it lands on the right target. Two things that only show up on screen:
+
+- `(???)`, which means a lowercase `\eqref` slipped in;
+- an equation numbered `(1)` in the middle of a lettered group, which means a row of an
+  `align` block is not being numbered with its siblings.
 
 ::: {.callout-tip}
-MathJax is pinned to a fixed version in `doc/_quarto.yml`. It is loaded from a CDN, and the
-markup it produces for references differs slightly between releases, so leaving it floating
-made the rendered result depend on when and where the page was opened. Change the pin
-deliberately, and re-check the equation references afterwards.
+## Why the maths appears as you scroll
+
+MathJax is configured for lazy typesetting, so equations are rendered as they come into
+view. The QUINCY documentation alone holds around 1500 expressions, and typesetting them all
+at once made the page slow to open. This is only safe because references are resolved at
+build time; if that ever changes, lazy typesetting has to go with it, or every reference to
+an equation further down the page will render as `(???)` until the reader scrolls past it.
+
+MathJax is also pinned to a fixed version in `doc/_quarto.yml`, since the markup it produces
+differs between releases. Change the pin deliberately.
 :::

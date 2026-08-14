@@ -5,6 +5,77 @@
 local equation_counter = 0
 local current_section = 0
 
+-- label -> displayed number ("3.10", "3.10b"), filled in as equations are numbered.
+-- References are resolved from this at build time rather than by MathJax, see the
+-- resolve_reference pass at the bottom of this file.
+local numbers = {}
+local anchors_for = {}
+
+-- Drop the group's own \label{} where its rows have been given labels of their own.
+-- The rows carry \label{outer_a}, \label{outer_b} and so on, so leaving the group label
+-- loose in the same align declares it twice and MathJax reports "Multiple \label".
+-- The group stays reachable: record_numbers maps it to the group number and with_anchors
+-- emits an anchor for it.
+function strip_floating_label(text)
+  local lines = {}
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = line end
+  local kept = {}
+  for _, line in ipairs(lines) do
+    local lone = line:match("^%s*\\label{([^}]+)}%s*$")
+    local drop = false
+    if lone then
+      local escaped = lone:gsub("([^%w])", "%%%1")
+      -- the same label, or a lettered row of it, is attached to a numbered row
+      drop = text:match("\\label{" .. escaped .. "_%a}%s*\\tag{") ~= nil
+          or text:match("\\label{" .. escaped .. "}%s*\\tag{") ~= nil
+    end
+    if not drop then kept[#kept + 1] = line end
+  end
+  return table.concat(kept, "\n")
+end
+
+-- Read the label/tag pairs back out of a block once it has been numbered. Working from
+-- the finished text keeps this in step with every branch above, rather than repeating
+-- their numbering rules.
+function record_numbers(text)
+  local found = {}
+  -- a label immediately followed by its tag: sub-equation rows, and rows carrying a
+  -- hand-written label
+  for label, tag in text:gmatch("\\label{([^}]+)}%s*\\tag{([^}]+)}") do
+    numbers[label] = tag
+    found[#found + 1] = label
+  end
+  -- a plain equation: one label, one tag, anywhere in the block
+  local labels, tags = {}, {}
+  for l in text:gmatch("\\label{([^}]+)}") do labels[#labels + 1] = l end
+  for t in text:gmatch("\\tag{([^}]+)}") do tags[#tags + 1] = t end
+  if #labels == 1 and #tags == 1 and not numbers[labels[1]] then
+    numbers[labels[1]] = tags[1]
+    found[#found + 1] = labels[1]
+  end
+  -- the group label of a sub-equation block refers to the group as a whole
+  local outer = text:match("\\label{([^}]+)_a}")
+  local base = text:match("\\tag{(%d+%.%d+)a}")
+  if outer and base and not numbers[outer] then
+    numbers[outer] = base
+    found[#found + 1] = outer
+  end
+  anchors_for[text] = found
+end
+
+-- Emit an anchor of our own for every label in the block. MathJax also creates anchors,
+-- but only while typesetting, so with lazy typesetting they do not exist until the
+-- reader has scrolled past the equation. These are in the HTML from the start.
+function with_anchors(el)
+  local labels = anchors_for[el.text]
+  if not labels or #labels == 0 then return el end
+  local spans = {}
+  for _, label in ipairs(labels) do
+    spans[#spans + 1] = string.format('<span id="eq:%s" class="eq-anchor"></span>', label)
+  end
+  return { pandoc.RawInline("html", table.concat(spans)), el }
+end
+
 function Header(el)
   -- Count level 1 headers to track section numbers
   if el.level == 1 then
@@ -239,39 +310,35 @@ function Math(el)
     text = table.concat(lines, "\n")
     el.text = text
   end
-  
-  return el
+
+  el.text = strip_floating_label(el.text)
+  record_numbers(el.text)
+  return with_anchors(el)
 end
 
--- Second-pass Para filter: inject a phantom display equation carrying the outer group label.
--- After the Math filter runs, sub-equation lines have \label{outer_a}\tag{X.Ya} etc.
--- This pass detects that pattern, strips the now-redundant floating \label{outer} from the
--- align block, and prepends a separate $$\label{outer}\tag{X.Y}$$ equation so that
--- \Eqref{outer} resolves to "X.Y" while each sub-equation still shows "X.Ya", "X.Yb", etc.
-local function inject_outer_label_phantom(el)
-  if #el.content ~= 1 then return nil end
-  local math_el = el.content[1]
-  if not (math_el.t == "Math" and math_el.mathtype == "DisplayMath") then return nil end
+-- Third pass: turn each reference into an ordinary link carrying the number as text.
+--
+-- \Eqref and \ref are MathJax macros resolved in the browser from labels registered while
+-- typesetting. That ties a reference to its target having been typeset, which breaks under
+-- lazy typesetting and can never reach another page. The numbers are known here, so the
+-- reference is written out as plain HTML instead: it needs no MathJax, it is present in
+-- the generated file where it can be checked, and it costs nothing to render.
+local function resolve_reference(el)
+  if el.mathtype ~= "InlineMath" then return nil end
+  local kind, label = el.text:match("^%s*\\(%a+){([^}]+)}%s*$")
+  if not (kind == "Eqref" or kind == "ref") then return nil end
 
-  local text = math_el.text
-  if not text:match("\\begin{align}") then return nil end
+  local number = numbers[label]
+  if not number then
+    -- Loud on purpose: an unresolved reference used to appear only as "(???)" in the
+    -- browser, with nothing in the build output to notice.
+    io.stderr:write("auto-subeqn.lua: unresolved equation reference '" .. label .. "'\n")
+    return pandoc.Strong(pandoc.Str("[?" .. label .. "]"))
+  end
 
-  -- Detect a processed sub-equation block by the presence of \label{outer_a}\tag{X.Ya}
-  local outer_label = text:match("\\label{([^}]+)_a}")
-  local base_num = text:match("\\tag{(%d+%.%d+)a}")
-  if not outer_label or not base_num then return nil end
-
-  -- Remove the floating outer \label{outer} to avoid a duplicate label alongside the phantom
-  local escaped = outer_label:gsub("([%(%)%.%%%+%-%*%?%[%^%$])", "%%%1")
-  local new_text = text:gsub("\\label{" .. escaped .. "}([%s]*\n?)", "%1", 1)
-
-  -- Hidden block: registers \label{outer} at X.Y without visible output.
-  -- Uses height:0/overflow:hidden (not display:none) so the browser can still
-  -- scroll to the anchor when following an \Eqref link.
-  local phantom = pandoc.RawBlock("html",
-    string.format('<div style="height:0;overflow:hidden;margin:0;padding:0">\\[\\label{%s}\\tag{%s}\\]</div>',
-      outer_label, base_num))
-  return {phantom, pandoc.Para({pandoc.Math("DisplayMath", new_text)})}
+  local text = (kind == "Eqref") and ("Eq.\u{00A0}" .. number) or number
+  return pandoc.RawInline("html", string.format(
+    '<a href="#eq:%s" class="quarto-eq-ref">%s</a>', label, text))
 end
 
 return {
@@ -281,6 +348,6 @@ return {
     traverse = 'topdown'
   },
   {
-    Para = inject_outer_label_phantom
+    Math = resolve_reference
   }
 }

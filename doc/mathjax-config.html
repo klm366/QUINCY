@@ -1,5 +1,14 @@
 <script>
   window.MathJax = {
+    // Typeset maths only as it scrolls into view. The QUINCY scientific
+    // documentation alone holds around 1500 expressions, and rendering them all
+    // up front is what makes that page slow to open.
+    loader: {
+      load: ['ui/lazy']
+    },
+    // Nothing needs exempting from that: equation references are resolved by
+    // doc/auto-subeqn.lua at build time and are plain links by the time the page
+    // is served, so they no longer depend on MathJax having typeset the target.
     tex: {
       tags: 'ams',
       packages: {'[+]': ['ams', 'noerrors']},

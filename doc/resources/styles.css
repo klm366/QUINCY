@@ -81,54 +81,16 @@ div[role="doc-bibliography"] div {
 }
 
 /* Equation cross-references.
-   MathJax renders \ref and \Eqref as an <a> whose content is MathJax glyph
-   markup. Bootstrap's link colour never reaches those glyphs, so the numbers
-   came out as plain body text and did not read as links. Colour them from the
-   theme's link variables so they match ordinary links and follow the
-   light/dark switch.
-
-   Two quirks drive the shape of these rules:
-   - text-decoration does not paint on MathJax output (its elements carry
-     line-height: 0), so the underline is drawn as a border instead.
-   - the "Eq." that \Eqref prepends sits outside the <a> MathJax builds, so
-     resources/eqref-links.html moves the link onto the whole reference and
-     tags it .quarto-eq-ref. Styling that wrapper keeps what looks clickable
-     and what is clickable the same thing.
-
-   The bare .MathJax_ref rule is the fallback for before that script runs, or
-   if it never does: then only the number is highlighted, which is still
-   truthful, because only the number is the link. */
-.MathJax_ref {
-  color: var(--bs-link-color, #006c66);
+   doc/auto-subeqn.lua resolves these at build time, so they arrive as ordinary
+   links in the body text and inherit Bootstrap's link colour by themselves. The
+   underline is the only addition, to match how Quarto renders its own section
+   and table cross-references. */
+.quarto-eq-ref {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 }
 
-/* The underline goes on the container, not on the anchor. MathJax's elements
-   carry line-height: 0, so a border on the inline anchor is painted well below
-   the text, landing on the following line. The container is a sane box, and
-   since each reference is alone in its span it spans exactly "Eq. 1.2". */
-mjx-container:has(a.quarto-eq-ref) {
-  color: var(--bs-link-color, #006c66);
-  border-bottom: 1px solid currentColor;
-}
-
-/* MathJax's own stylesheet colours links inside maths with the browser's system
-   colours: "mjx-container a[data-mjx-href] { color: LinkText }". It is injected
-   at runtime and outranks a plain a.quarto-eq-ref, which turned "Eq." the
-   browser's link blue while the number kept its teal from .MathJax_ref. The
-   class is repeated below purely to raise specificity above that rule without
-   resorting to !important. */
-mjx-container a.quarto-eq-ref.quarto-eq-ref,
-mjx-container a.quarto-eq-ref.quarto-eq-ref:link,
-mjx-container a.quarto-eq-ref.quarto-eq-ref:visited {
-  color: var(--bs-link-color, #006c66);
-  text-decoration: none;
-}
-
-mjx-container a.quarto-eq-ref.quarto-eq-ref:hover,
-mjx-container a.quarto-eq-ref.quarto-eq-ref:focus,
-mjx-container:has(a.quarto-eq-ref:hover),
-mjx-container:has(a.quarto-eq-ref:focus),
-a:hover .MathJax_ref,
-a:focus .MathJax_ref {
-  color: var(--bs-link-hover-color, #005650);
+/* The anchors the filter emits carry no content and must not affect layout. */
+.eq-anchor {
+  display: inline;
 }
