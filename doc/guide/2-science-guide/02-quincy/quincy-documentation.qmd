@@ -206,10 +206,9 @@ A_j=& m_1 \times J_{max}, where \\
 \end{align}
 $$
 
-where $c_i$ is the intercellular partial pressure of $\mathrm{CO_2}$ ($\mathrm{Pa}$, [Eq.
-2.18](#eq-stomatal_coupling)), and $\Gamma^{*}$ is the $\mathrm{CO_2}$ compensation point in the
+where $c_i$ is the intercellular partial pressure of $\mathrm{CO_2}$ ($\mathrm{Pa}$, $\Eqref{eq:stomatal-coupling}$), and $\Gamma^{*}$ is the $\mathrm{CO_2}$ compensation point in the
 absence of dark respiration. $\beta_{sinklim}^{ps}$ is a signal to reduce photosynthesis in the case
-of sink limitation ([Eq. 3.24](#eq-sinklim_c)) and $\beta_{soa}^{ps}$ is accounting for the effect
+of sink limitation ($\Eqref{eq-sinklim-c}$) and $\beta_{soa}^{ps}$ is accounting for the effect
 of low-temperature acclimation in the evergreen species ($\Eqref{eq:veg-soa}$). 
 
 Excessive soil moisture constraints (as discussed in @Rogers:2017np) are assumed to reduce light-saturated
@@ -219,7 +218,7 @@ $$
 \beta_{soil}^{ps} = \sum_{i=1}^{nsoil} \times fract_{root,i} \times (1 - \frac{\Psi_{soil,i}}{\Psi_{leaf}^{min}}),
 $$
 
-where $fract_{root,i}$ is the fraction of fine roots in the $i^{th}$ soil layer, $\Psi_{soil,i}$ is the soil water potential in the $i^{th}$ soil layer, ([Eq.6.19](#eq-sse:soil_matrix_potential)), and $\Psi_{leaf}^{min}$ is the PFT-specific minimum leaf water
+where $fract_{root,i}$ is the fraction of fine roots in the $i^{th}$ soil layer, $\Psi_{soil,i}$ is the soil water potential in the $i^{th}$ soil layer (see @sec-sse-surface-hydrology), and $\Psi_{leaf}^{min}$ is the PFT-specific minimum leaf water
 potential. 
 
 The temperature sensitivity of electron transport is assumed to follow the bell-shaped
@@ -253,7 +252,7 @@ $$
 
 where $O_i$ is the intercellular partial pressure of $\mathrm{O_2}$, and $k_c$ and $k_o$ are the
 Michaelis-Menten constants for $\mathrm{CO_2}$ and $\mathrm{O_2}$ respectively, derived $E^{kc}_0$,
-$E^{kc}_1$, or $E^{ko}_0$, $E^{ko}_0$ using [Eq. 2.3](#eq-ps_t_sensitivity).
+$E^{kc}_1$, or $E^{ko}_0$, $E^{ko}_0$ using $\Eqref{eq-ps_t_sensitivity}$.
 
 The N-specific light-saturated rate of C3 photosynthesis can then be calculated as:
 
@@ -302,7 +301,7 @@ $$
 
 where $\alpha_i$ is the intrinsic quantum efficiency for $\mathrm{CO_2}$ uptake, $PPFD_0$ is the
 photosynthetic photon flux density (PPFD) penetrating sunlit or shaded foliage, converted from the
-adsorbed radiation of the canopy layer ([Eq. 6.9](#eq-rad:a_shadesunlit)), and $k_a$ as well as
+adsorbed radiation of the canopy layer ($\Eqref{eq-rad-a-shadesunlit}$), and $k_a$ as well as
 $a_{chl}^n$ are parameters specified in @tbl-assimi:param.
 
 As @Kull:1998cr show, this system of equations ($\Eqref{eq:jmax}$ -
@@ -344,8 +343,7 @@ range 0.1 and 1.
 ## Photosynthetic sink limitation {#sec-veg-sinklim}
 
 In the case that the labile carbon pool exceeds its target size substantially because growth is
-limited by temperature, moisture, or because sufficient nutrients are lacking to allow growth ([Eq.
-3.9](#eq-veg:growth_rate_x)), sink-limitation down-regulates photosynthetic activity so that:
+limited by temperature, moisture, or because sufficient nutrients are lacking to allow growth ($\Eqref{eq-veg-growth-rate}$), sink-limitation down-regulates photosynthetic activity so that:
 
 $$
 \label{eq-sinklim-c}
@@ -356,8 +354,7 @@ $$
 $$
 
 Here, $\beta_{sinklim, min}$, $\lambda_{sinklim}^{ps}$ and $k_{sinklim}^{ps}$ are parameters (see
-@tbl-veg:param) and $C_{labile}^{target}$ is the target value for the labile pool ([Eq.
-3.19](#eq-target_labile)).
+@tbl-veg:param) and $C_{labile}^{target}$ is the target value for the labile pool ($\Eqref{eq-target-labile}$).
 
 In addition, if the C:N or N:P ratios of the labile pool exceed those of the target labile pool, the
 sink limitation factor is further modified as a function of the stoichiometric ratio of the labile
@@ -385,8 +382,7 @@ c_i &= c_1 \times c_a - c_2 \times A_n \times ( \frac{D_{air}^{wv2co2}}{g_s} + \
 \end{align}
 $$
 
-where $f_{sunlit}$ is the fraction of sunlit leaves in a canopy layer (see [Eq.
-6.8](#eq-rad:fsunlit)), $R_l$ is the maintenance respiration of leaves (see @sec-veg-MaintResp), $g_0$ and $g_1$
+where $f_{sunlit}$ is the fraction of sunlit leaves in a canopy layer (see $\Eqref{eq-rad-fsunlit}$), $R_l$ is the maintenance respiration of leaves (see @sec-veg-MaintResp), $g_0$ and $g_1$
 are PFT-specific parameters, $R$ is the molar gas constant, $T_{air}$ is air temperature (K), $p$
 air pressure (Pa), $c_1$ converts $\mathrm{CO_2}$ concentration from ppm to Pa, $c_2$ converts
 $\mathrm{\mu mol m^{-2} s^{-1}}$ to $\mathrm{mol m^{-2} s^{-1}}$, $g_a$ is the aerodynamic
@@ -405,7 +401,7 @@ $$
 \beta_{soil}^{gs} = \sum_{i=1}^{nsoil} \times fract_{root,i} \times (1 - \frac{\Psi_{soil,i}}{\Psi_{leaf}^{min}}),
 $$
 
-where $fract_{root,i}$ is the fraction of fine roots in the $i^{th}$ soil layer, $\Psi_{soil,i}$ is the soil water potential in the $i^{th}$ soil layer, ([Eq.6.19](#eq-sse:soil_matrix_potential)), and $\Psi_{leaf}^{min}$ is the PFT-specific minimum leaf water potential. 
+where $fract_{root,i}$ is the fraction of fine roots in the $i^{th}$ soil layer, $\Psi_{soil,i}$ is the soil water potential in the $i^{th}$ soil layer (see @sec-sse-surface-hydrology), and $\Psi_{leaf}^{min}$ is the PFT-specific minimum leaf water potential. 
 
 ## Canopy integration {#canopy-integration}
 
@@ -419,45 +415,44 @@ $$
 where $F$ is the canopy-level equivalent of a leaf-level variable $F_{cl}$ (per unit leaf-area),
 such as gross photosynthesis ($A_g$), net photosynthesis ($A_n$), and leaf-level stomatal
 conductance ($g_s$), (see @sec-assimi-leaf-ps and @sec-assimi-stomatal-coupling) and $LAI_{cl}$ is the leaf area index of the canopy layer. The
-resulting canopy net assimilation $A_g$ is used as input to the vegetation model ([Eq.
-3.1](#eq-veg:labile_pool_dynamics)), the canopy conductance ($G_s$) is used for the calculation of
-ecosystem transpiration ([Eq. 6.14](#eq-sse_surface_energy_balance)).
+resulting canopy net assimilation $A_g$ is used as input to the vegetation model ($\Eqref{eq-veg-labile-pool-dynamics}$), the canopy conductance ($G_s$) is used for the calculation of
+ecosystem transpiration ($\Eqref{eq-sse-surface-energy-balance}$).
 
 
 
 | Symbol | Description | Value | Unit | Equation | Citation |
 |:----------------|:----------------|:----------------|:----------------|:---------------:|:----------------|
-| $j_{max}^n$ | electron-transport limited carboxylation rate per unit N | 4.4 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \ensuremath{\mathrm{CO_2}}}{mmol \hspace{0.1em} N}}$ | [2.4](#eq-jmax) | @Niinemets:1997ha |
-| $v_{cmax}^n$ | Rubisco limited carboxylation rate per unit N | 1.8 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \ensuremath{\mathrm{CO_2}}}{mmol \hspace{0.1em} N}}$ | [2.7](#eq-vcmax) | @Niinemets:1997ha |
-| $v_{pepc}^n$ | PePC limited carboxylation rate per unit N | 98777.97 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \ensuremath{\mathrm{CO_2}}}{mmol \hspace{0.1em} N}}$ | [2.9](#eq-pepc) | @Tazoe:2006hc |
+| $j_{max}^n$ | electron-transport limited carboxylation rate per unit N | 4.4 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \ensuremath{\mathrm{CO_2}}}{mmol \hspace{0.1em} N}}$ | $\ref{eq:jmax}$ | @Niinemets:1997ha |
+| $v_{cmax}^n$ | Rubisco limited carboxylation rate per unit N | 1.8 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \ensuremath{\mathrm{CO_2}}}{mmol \hspace{0.1em} N}}$ | $\ref{eq-vcmax}$ | @Niinemets:1997ha |
+| $v_{pepc}^n$ | PePC limited carboxylation rate per unit N | 98777.97 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \ensuremath{\mathrm{CO_2}}}{mmol \hspace{0.1em} N}}$ | $\ref{eq-pepc}$ | @Tazoe:2006hc |
 | $fN_{pep}$ | fraction of N in PEP and PPKD (C4 plants only) | 0.045 | \- | Sect. | @Makino2003-kc |
 | $r_{J2V}$ | ratio of Jmax25/Vcmax25 (C3/C4) plants | 1.97 / 1.4 | \- | Sect. | @Wullschleger1993-bk |
-| $a_{chl}^n$ | chlorophyll N content | 25.12 | $\mathrm{\frac{mol}{mmol}}$ | [2.12](#eq-ps_lightharvesting) | @Evans:1989bg |
-| $\alpha_i$ | intrinsic quantum efficiency | 0.0561 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} CO_2}{mol \hspace{0.2em} quanta}}$ | [2.12](#eq-ps_lightharvesting) | @Kull:1998cr |
-| $k_a$ | extinction coefficient for PAR on chlorophyll | 0.005 | $\mathrm{mol^{-1}}$ | [2.12](#eq-ps_lightharvesting) | @Kull:1998cr |
-| $k_n$ | extinction coefficient to describe decline of N within the canopy | 0.11 | \- | [1.3](#eq-veg:canopy_n_distribution) | @Zaehle:2010cz |
-| $k^{struc}_1$ | slope of structural leaf N with total N | 7.14 $\times 10^3$ | $\mathrm{g^{-1}N}$ | [2.1](#eq-veg:struc_n) | @Evans:1989bg |
-| $k_0^{chl}$ | chlorophyll distribution with canopy depth for C3/C4 plants | 6.0 / 15.0 | \- | [2.2](#eq-canopy_chl) | @Zaehle:2010cz |
-| $k_1^{chl}$ | chlorophyll distribution with canopy depth for C3/C4 plants | 3.6 / 4.4 | \- | [2.2](#eq-canopy_chl) | @Zaehle:2010cz |
-| $k_{fn}^{chl}$ | chlorophyll distribution with canopy depth | 0.7 | \- | [2.2](#eq-canopy_chl) | @Friend2001-xy |
-| $E_0^{kc}$ | Scaling constant of $k_c$ | 38.05 | \- | [2.3](#eq-ps_t_sensitivity) | @Bernacchi:2001wv |
-| $E_1^{kc}$ | Activation energy of $k_c$ | 79.43 | $\mathrm{\frac{kJ}{mol}}$ | [2.3](#eq-ps_t_sensitivity) | @Bernacchi:2001wv |
-| $E_0^{ko}$ | Scaling constant of $k_o$ | 20.3 | \- | [2.3](#eq-ps_t_sensitivity) | @Bernacchi:2001wv |
-| $E_1^{ko}$ | Activation energy of $k_o$ | 36.38 | $\mathrm{\frac{kJ}{mol}}$ | [2.3](#eq-ps_t_sensitivity) | @Bernacchi:2001wv |
-| $E_0^{\Gamma^{*}}$ | Scaling constant of photosynthetic compensation point | 19.02 | \- | [2.3](#eq-ps_t_sensitivity) | @Bernacchi:2001wv |
-| $E_1^{\Gamma^{*}}$ | Activation energy of photosynthetic compensation point | 37.83 | $\mathrm{\frac{kJ}{mol}}$ | [2.3](#eq-ps_t_sensitivity) | @Bernacchi:2001wv |
-| $E_0^{vcmax}$ | Scaling constant of of Rubisco | 26.35 | \- | [2.3](#eq-ps_t_sensitivity) | @Bernacchi:2001wv |
-| $E_1^{vcmax}$ | Temperature sensitivity of Rubisco | 65.33 | $\mathrm{\frac{kJ}{mol}}$ | [2.3](#eq-ps_t_sensitivity) | @Bernacchi:2001wv |
-| $k0_{jmax}^{topt}$ | Offset of the $T_{jmax}^{opt}$ to $T_{air}$ relationship | 17.0 | $\mathrm{^{\circ}C}$ | [2.6](#eq-tjmax) | @Friend:2010je |
-| $k1_{jmax}^{topt}$ | Slope of the $T_{jmax}^{opt}$ to $T_{air}$ relationship | 0.35 | \- | [2.6](#eq-tjmax) | @Friend:2010je |
-| $T_{jmax,min}^{opt}$ | Minimum of $T_{jmax}^{opt}$ | 17.0 | $\mathrm{^{\circ}C}$ | [2.6](#eq-tjmax) | @Friend:2010je |
-| $T_{jmax,max}^{opt}$ | Maximum of $T_{jmax}^{opt}$ | 38.0 | $\mathrm{^{\circ}C}$ | [2.6](#eq-tjmax) | @Friend:2010je |
-| $T_{ref}^{pepc}$ | Reference temperature of PePC C4 photosynthesis | 25.0 | $^{\circ}C$ | [2.10](#eq-pepc_t_sensitivity) | @Friend:2009tf |
-| $T_{base}^{pepc}$ | Base temperature of PePC C4 photosynthesis | 10.0 | $^{\circ}C$ | [2.10](#eq-pepc_t_sensitivity) | @Friend:2009tf |
-| $D_{air}^{wv2co2}$ | Ratio of diffusion coefficient for $\mathrm{H_2O}$ and $\mathrm{CO_2}$ in air | 1.6 | \- | [2.18](#eq-stomatal_coupling) | @Monteith:2013 |
-| $D_{turb}^{wv2co2}$ | Ratio of diffusion coefficient for $\mathrm{H_2O}$ and $\mathrm{CO_2}$ in turbulent air | 1.37 | \- | [2.18](#eq-stomatal_coupling) | @Monteith:2013 |
-| $O_i$ | Partial Pressure of $\mathrm{O_2}$ | 20.9 | kPa | [2.7](#eq-vcmax) | \- |
-| $c_{i,max}$ | Saturating Ci in C4 plants | 7800.0 | Pa | [2.9](#eq-pepc) | @Friend:2009tf |
+| $a_{chl}^n$ | chlorophyll N content | 25.12 | $\mathrm{\frac{mol}{mmol}}$ | $\ref{eq:ps-lightharvesting}$ | @Evans:1989bg |
+| $\alpha_i$ | intrinsic quantum efficiency | 0.0561 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} CO_2}{mol \hspace{0.2em} quanta}}$ | $\ref{eq:ps-lightharvesting}$ | @Kull:1998cr |
+| $k_a$ | extinction coefficient for PAR on chlorophyll | 0.005 | $\mathrm{mol^{-1}}$ | $\ref{eq:ps-lightharvesting}$ | @Kull:1998cr |
+| $k_n$ | extinction coefficient to describe decline of N within the canopy | 0.11 | \- | $\ref{eq-veg:canopy_n_distribution}$ | @Zaehle:2010cz |
+| $k^{struc}_1$ | slope of structural leaf N with total N | 7.14 $\times 10^3$ | $\mathrm{g^{-1}N}$ | $\ref{eq-veg:struc_n}$ | @Evans:1989bg |
+| $k_0^{chl}$ | chlorophyll distribution with canopy depth for C3/C4 plants | 6.0 / 15.0 | \- | $\ref{eq-canopy_chl}$ | @Zaehle:2010cz |
+| $k_1^{chl}$ | chlorophyll distribution with canopy depth for C3/C4 plants | 3.6 / 4.4 | \- | $\ref{eq-canopy_chl}$ | @Zaehle:2010cz |
+| $k_{fn}^{chl}$ | chlorophyll distribution with canopy depth | 0.7 | \- | $\ref{eq-canopy_chl}$ | @Friend2001-xy |
+| $E_0^{kc}$ | Scaling constant of $k_c$ | 38.05 | \- | $\ref{eq-ps_t_sensitivity}$ | @Bernacchi:2001wv |
+| $E_1^{kc}$ | Activation energy of $k_c$ | 79.43 | $\mathrm{\frac{kJ}{mol}}$ | $\ref{eq-ps_t_sensitivity}$ | @Bernacchi:2001wv |
+| $E_0^{ko}$ | Scaling constant of $k_o$ | 20.3 | \- | $\ref{eq-ps_t_sensitivity}$ | @Bernacchi:2001wv |
+| $E_1^{ko}$ | Activation energy of $k_o$ | 36.38 | $\mathrm{\frac{kJ}{mol}}$ | $\ref{eq-ps_t_sensitivity}$ | @Bernacchi:2001wv |
+| $E_0^{\Gamma^{*}}$ | Scaling constant of photosynthetic compensation point | 19.02 | \- | $\ref{eq-ps_t_sensitivity}$ | @Bernacchi:2001wv |
+| $E_1^{\Gamma^{*}}$ | Activation energy of photosynthetic compensation point | 37.83 | $\mathrm{\frac{kJ}{mol}}$ | $\ref{eq-ps_t_sensitivity}$ | @Bernacchi:2001wv |
+| $E_0^{vcmax}$ | Scaling constant of of Rubisco | 26.35 | \- | $\ref{eq-ps_t_sensitivity}$ | @Bernacchi:2001wv |
+| $E_1^{vcmax}$ | Temperature sensitivity of Rubisco | 65.33 | $\mathrm{\frac{kJ}{mol}}$ | $\ref{eq-ps_t_sensitivity}$ | @Bernacchi:2001wv |
+| $k0_{jmax}^{topt}$ | Offset of the $T_{jmax}^{opt}$ to $T_{air}$ relationship | 17.0 | $\mathrm{^{\circ}C}$ | $\ref{eq:tjmax}$ | @Friend:2010je |
+| $k1_{jmax}^{topt}$ | Slope of the $T_{jmax}^{opt}$ to $T_{air}$ relationship | 0.35 | \- | $\ref{eq:tjmax}$ | @Friend:2010je |
+| $T_{jmax,min}^{opt}$ | Minimum of $T_{jmax}^{opt}$ | 17.0 | $\mathrm{^{\circ}C}$ | $\ref{eq:tjmax}$ | @Friend:2010je |
+| $T_{jmax,max}^{opt}$ | Maximum of $T_{jmax}^{opt}$ | 38.0 | $\mathrm{^{\circ}C}$ | $\ref{eq:tjmax}$ | @Friend:2010je |
+| $T_{ref}^{pepc}$ | Reference temperature of PePC C4 photosynthesis | 25.0 | $^{\circ}C$ | $\ref{eq-pepc-t-sensitivity}$ | @Friend:2009tf |
+| $T_{base}^{pepc}$ | Base temperature of PePC C4 photosynthesis | 10.0 | $^{\circ}C$ | $\ref{eq-pepc-t-sensitivity}$ | @Friend:2009tf |
+| $D_{air}^{wv2co2}$ | Ratio of diffusion coefficient for $\mathrm{H_2O}$ and $\mathrm{CO_2}$ in air | 1.6 | \- | $\ref{eq:stomatal-coupling}$ | @Monteith:2013 |
+| $D_{turb}^{wv2co2}$ | Ratio of diffusion coefficient for $\mathrm{H_2O}$ and $\mathrm{CO_2}$ in turbulent air | 1.37 | \- | $\ref{eq:stomatal-coupling}$ | @Monteith:2013 |
+| $O_i$ | Partial Pressure of $\mathrm{O_2}$ | 20.9 | kPa | $\ref{eq-vcmax}$ | \- |
+| $c_{i,max}$ | Saturating Ci in C4 plants | 7800.0 | Pa | $\ref{eq-pepc}$ | @Friend:2009tf |
 
 : Photosynthesis parameters {#tbl-assimi:param}
 
@@ -536,13 +531,12 @@ turnover rate of the labile pool ($1/\tau_{labile}$) and the labile pool size ($
 sink limitation processes operate, which control the down-regulation of this potential growth rate
 to the actual growth rates ($G_X$):
 
--   the temperature and moisture sensitivity of the meristem ([Eq. 3.6](#eq-veg:k0_lab));
+-   the temperature and moisture sensitivity of the meristem ($\Eqref{eq-veg-k0-lab}$);
 
--   the requirement for maintenance respiration ([Eq. 3.2](#eq-veg:respiration)), which takes
+-   the requirement for maintenance respiration ($\Eqref{eq-veg:respiration}$), which takes
     priority over new growth; and
 
--   the co-limitation of growth by the nutrients required to grow specific pools ([Eq.
-    3.9](#eq-veg:growth_rate)).
+-   the co-limitation of growth by the nutrients required to grow specific pools ($\Eqref{eq-veg-growth-rate}$).
 
 The meteorological/environmental control on the meristem mechanism is represented by a reduction of
 the maximum turnover rate at low temperatures and low soil moisture conditions.
@@ -553,7 +547,7 @@ k^{*}_{labile} = \frac{1}{\tau_{labile}} \times e^{-(\lambda^{labile}_{temp}\tim
 $$
 
 where $T_{air}$ is air temperature in degrees Celsius, $\Theta$ is the fractional soil moisture
-content ([Eq. 6.18](#eq-sse:theta)), and the $\lambda$ and $k$ are parameters. $k^{*}_{labile}$ is
+content ($\Eqref{eq-sse-theta}$), and the $\lambda$ and $k$ are parameters. $k^{*}_{labile}$ is
 set to zero outside the growing season (see @sec-veg-phen).
 
 Respiration is assumed to have priority over growth. However, under severe C deficit, the meristem
@@ -588,7 +582,7 @@ G_P &= req^{growth}_{N:P} \times G_N = req^{growth}_{P:N} \times req^{growth}_{N
 \end{align}
 $$
 
-Note that only the minimum of the three rates in [Eq. 3.9](#eq-veg-growth-rate) can actually be
+Note that only the minimum of the three rates in $\Eqref{eq-veg-growth-rate}$ can actually be
 realised. The other two growth rates are adjusted, implying a relative accumulation of these
 elements in the labile pool. The use of $k^{nut}_{labile}$ implies a stronger mobilisation capacity
 for nutrients than for carbon growth. The assumption behind this is that the temperature and
@@ -638,7 +632,7 @@ $$
 
 $X_{labile}$ refers to the content of the respective element in the labile pool and
 $req^{growth}_{NC}$ and $req^{growth}_{PN}$ are the N:C and P:N ratios required for growth,
-respectively (see eqn. [Eq. 3.8](#eq-veg-req-growth)). For the water limited allocation,
+respectively (see $\Eqref{eq-veg-req-growth}$). For the water limited allocation,
 $W^{alloc}_{soil,crit}$ is the critical level of soil moisture below which root allocation increases
 and $W_{soil,root}$ is calculated as the ratio between the current water content in the root zone
 and the water content in the root zone at field capacity.
@@ -754,7 +748,7 @@ $$
 
 In the above, $\chi^{X:Y}_{leaf,min}$ and $\chi^{X:Y}_{leaf,max}$ are PFT-specific parameters. The
 condition refers to the relationship between the nutrients available for growth in the labile pool
-and the nutrients required for growth ([Eq. 3.8](#eq-veg-r0-growth)), averaged at the time-scale of
+and the nutrients required for growth ($\Eqref{eq-veg-req-growth}$), averaged at the time-scale of
 $\tau_{mavg}^{\chi}$. The stoichiometric ratios of the fine roots vary proportionally to those of
 the leaves, whereas the stoichiometry of wood is assumed time-invariant [@Meyerholt:2015hh]. The
 stoichiometry of the labile and reserve pools are prognostic properties, as described in @sec-veg-stoichem.
@@ -791,7 +785,7 @@ C^{target}_{reserve} &= min(k_{reserve} \times (1+f_{resp,growth}) \times \frac{
 $$
 
 where $sla$ the PFT-specific specific leaf area, $\tau_{leaf}$ and
-$\tau_{fine\_root}$ are the PFT-specific turnover times of foliage and fine roots, and $R_{leaf:fine\_root}$ is the leaf to root ratio ([Eq. 3.12](#eq-veg:dynamic_alloc)) averaged over the lifetime of the fine roots ($\tau_{mavg}^{root}$). 
+$\tau_{fine\_root}$ are the PFT-specific turnover times of foliage and fine roots, and $R_{leaf:fine\_root}$ is the leaf to root ratio ($\Eqref{eq-veg-dynamic-alloc}$) averaged over the lifetime of the fine roots ($\tau_{mavg}^{root}$). 
 $LAI^{target}$ is the target leaf area index, which is calculated differently for tree and herbaceous PFTs. For tree PFTs, $LAI^{target}$ is a function of the implied leaf area calculated from the actual sapwood area (see @sec-veg-allocation). For herbaceous PFTs, $LAI^{target}$ corresponds to the long-term average LAI. For both PFT types, $LAI^{target}$ is constrained to values between $LAI_{min}$ and $LAI^{target}_{max}$.
 The target reserve pool size is limited to a maximum storage capacity of leaves, fine roots and stems, with an assumed maximum fractional storage capacity for each tissue type ($f_{store,i}^{max}$). The N and P target pools are defined in an
 equivalent manner, respecting the current target stoichiometry of leaves and fine roots (@sec-veg-stoichem). 
@@ -857,7 +851,7 @@ maximum growing degree days requirement ($GDD_{req}^{max}$) to account for the c
 of the buds [@Krinner:2005wg].
 
 For rain deciduous phenology, the start of the growing season is triggered when the soil moisture
-stress factor ($\beta_{soil}^{gs}$, see [Eq. 2.19](#eq-veg:beta_soil_gs)) is larger than a
+stress factor ($\beta_{soil}^{gs}$, see $\Eqref{eq-veg-beta-soil-gs}$) is larger than a
 PFT-specific threshold ($\beta_{soil}^{flush}$). This criterion is also applied for herbaceous PFTs
 in addition to the $GDD$-criterion.
 
@@ -871,9 +865,9 @@ PFT-specific threshold ($age^{leaf}_{min}$).
 
 The phenology of vegetation, describing the seasonal development of foliage biomass, is then simulated
 prognostically given the ability of the plant to grow new tissues, which depends on the size and
-turnover of the meristems ([Eq. 3.9](#eq-veg:growth_rate)), as well as the fractional allocation of
+turnover of the meristems ($\Eqref{eq-veg-growth-rate}$), as well as the fractional allocation of
 growth to plant organs (see @sec-veg-allocation). Plant growth set to zero outside the growing season
-([Eq. 3.9](#eq-veg:growth_rate)). 
+($\Eqref{eq-veg-growth-rate}$). 
 
 While the beginning and ending mark the start and end of tissue production, only the turnover of the leaves is directly affected by phenological triggers. The turnover of all other
 tissues is assumed to be constant (see @sec-veg-turnover). A notable exception are herbaceaous PFTs, in which the growing season ends due to water stress. In these, root shedding occurs at the same rate as leaf shedding.
@@ -992,7 +986,7 @@ $$
 
 where $k_{fpc}$ is a paramter. To avoid strong seasonal cycles in foliage projective cover for the
 calculation of vegetation dynamics [@Krinner:2005wg; @Zaehle:2010cz], $LAI_{ind}$ is diagnosed from
-the sapwood area implied by the pipe-model ([Eq. 3.14](#eq-veg:latosa)), implying that $FPC$ is
+the sapwood area implied by the pipe-model ($\Eqref{eq-veg-latosa}$), implying that $FPC$ is
 essentially representing last year's maximum LAI. For grasses, the calculation of $FPC$ is not
 required and it is set to zero.
 
@@ -1059,7 +1053,7 @@ $$
 \frac{dens_{ind}}{dt} = f_{mort} \times dens_{ind} + \frac{flux_{est,C}}{k_{seed}}
 $$
 
-where $flux_{est,C}$ is the carbon flux defined by [Eq. 3.34](#eq-veg:flux_est), and $k_{seed}$ is
+where $flux_{est,C}$ is the carbon flux defined by $\Eqref{eq-veg-flux_est}$, and $k_{seed}$ is
 the PFT-specific seed size.
 
 ## Herbivory
@@ -1086,79 +1080,79 @@ where $\chi^{C:N}_{leaf,min}$ is the PFT-specific minimum leaf C:N ratio. To rep
 |:----------------|:----------------|:----------------|:----------------|:---------------:|:----------------|
 | **Respiration** |  |  |  |  |  |
 |  |  |  |  |  |  |
-| $f_{resp, growth}$ | Growth respiration fraction per unit new biomass | 0.25 | $\mathrm{\frac{mol C}{mol C}}$ | [3.1](#eq-veg:labile_pool_dynamics) | @Sprugel1995-gy |
-| $f_{resp, maint}^{\it non-woody}$ | Maintenance respiration rate for fine roots and leaves | 1.0 | $\mathrm{\frac{{\mu}mol CO_2}{mmol N \hspace{0.2em} s}}$ | [3.2](#eq-veg:respiration) | @Sprugel1995-gy |
-| $f_{resp, maint}^{\it woody}$ | Maintenance respiration rate for wood | 0.25 | $\mathrm{\frac{{\mu}mol CO_2}{mmol N\hspace{0.2em}  s}}$ | [3.2](#eq-veg:respiration) | @Sprugel1995-gy |
-| $t_{k1}$ | Coefficient for temperature sensitivity of respiration | 308.56 | $\mathrm{K}$ | [3.3](#eq-veg:t_resp) | @Lloyd1994-jn |
-| $t_{k2}$ | Coefficient for temperature sensitivity of respiration | 56.02 | K | [3.3](#eq-veg:t_resp) | @Lloyd1994-jn |
-| $t_{k3}$ | Coefficient for temperature sensitivity of respiration | 227.13 | K | [3.3](#eq-veg:t_resp) | @Lloyd1994-jn |
-| $T_{acclim, ref}$ | Base temperature for respiration acclimation | 283.15 | K | [3.4](#eq-veg:resp_acclim) | @Atkin:2014 |
-| $f_{resp\_acclim}$ | Respiration temperature acclimation factor | -0.008 | $\mathrm{K^{-1}}$ | [3.4](#eq-veg:resp_acclim) | @Atkin:2014 |
-| $cost_{NH4}$ | Transformation and uptake cost for plant uptake of $\mathrm{NH_4}$ | 1.7 | $\mathrm{gC g^{-1}N}$ | [3.5](#eq-veg:nutrient_costs) | @Zerihun:1998 |
-| $cost_{NO3}$ | Transformation and uptake cost for plant uptake of $\mathrm{NO_3}$ | 2.3 | $\mathrm{gC g^{-1}N}$ | [3.5](#eq-veg:nutrient_costs) | @Zerihun:1998 |
+| $f_{resp, growth}$ | Growth respiration fraction per unit new biomass | 0.25 | $\mathrm{\frac{mol C}{mol C}}$ | $\ref{eq-veg-labile-pool-dynamics}$ | @Sprugel1995-gy |
+| $f_{resp, maint}^{\it non-woody}$ | Maintenance respiration rate for fine roots and leaves | 1.0 | $\mathrm{\frac{{\mu}mol CO_2}{mmol N \hspace{0.2em} s}}$ | $\ref{eq-veg:respiration}$ | @Sprugel1995-gy |
+| $f_{resp, maint}^{\it woody}$ | Maintenance respiration rate for wood | 0.25 | $\mathrm{\frac{{\mu}mol CO_2}{mmol N\hspace{0.2em}  s}}$ | $\ref{eq-veg:respiration}$ | @Sprugel1995-gy |
+| $t_{k1}$ | Coefficient for temperature sensitivity of respiration | 308.56 | $\mathrm{K}$ | $\ref{eq-veg-t-resp}$ | @Lloyd1994-jn |
+| $t_{k2}$ | Coefficient for temperature sensitivity of respiration | 56.02 | K | $\ref{eq-veg-t-resp}$ | @Lloyd1994-jn |
+| $t_{k3}$ | Coefficient for temperature sensitivity of respiration | 227.13 | K | $\ref{eq-veg-t-resp}$ | @Lloyd1994-jn |
+| $T_{acclim, ref}$ | Base temperature for respiration acclimation | 283.15 | K | $\ref{eq-veg-resp-acclim}$ | @Atkin:2014 |
+| $f_{resp\_acclim}$ | Respiration temperature acclimation factor | -0.008 | $\mathrm{K^{-1}}$ | $\ref{eq-veg-resp-acclim}$ | @Atkin:2014 |
+| $cost_{NH4}$ | Transformation and uptake cost for plant uptake of $\mathrm{NH_4}$ | 1.7 | $\mathrm{gC g^{-1}N}$ | $\ref{eq-veg-nutrient-costs}$ | @Zerihun:1998 |
+| $cost_{NO3}$ | Transformation and uptake cost for plant uptake of $\mathrm{NO_3}$ | 2.3 | $\mathrm{gC g^{-1}N}$ | $\ref{eq-veg-nutrient-costs}$ | @Zerihun:1998 |
 | **Labile Pool** |  |  |  |  |  |
-| $\tau_{labile}$ | Turnover time of the labile pool | 5 | days | [3.6](#eq-veg:k0_lab) | @Thum:2019mm |
-| $\lambda^{labile}_{temp}$ | Temperature response function of labile pool | 0.5 | $\mathrm{K^{-1}}$ | [3.6](#eq-veg:k0_lab) | @Thum:2019mm |
-| $k^{labile}_{temp}$ | Shape parameter of the labile pool's temperature response | 2.0 | \- | [3.6](#eq-veg:k0_lab) | @Thum:2019mm |
-| $\lambda^{labile}_{\theta}$ | Moisture response function of labile pool | 10.0 | \- | [3.6](#eq-veg:k0_lab) | @Thum:2019mm |
-| $k^{labile}_{\theta}$ | Moisture response function of labile pool | 2.0 | \- | [3.6](#eq-veg:k0_lab) | @Thum:2019mm |
-| $k^{nut}_{labile}$ | Rate at which N/P can be quicker retrieved than C | 1.2 | \- | [3.9](#eq-veg:growth_rate) | @Thum:2019mm |
+| $\tau_{labile}$ | Turnover time of the labile pool | 5 | days | $\ref{eq-veg-k0-lab}$ | @Thum:2019mm |
+| $\lambda^{labile}_{temp}$ | Temperature response function of labile pool | 0.5 | $\mathrm{K^{-1}}$ | $\ref{eq-veg-k0-lab}$ | @Thum:2019mm |
+| $k^{labile}_{temp}$ | Shape parameter of the labile pool's temperature response | 2.0 | \- | $\ref{eq-veg-k0-lab}$ | @Thum:2019mm |
+| $\lambda^{labile}_{\theta}$ | Moisture response function of labile pool | 10.0 | \- | $\ref{eq-veg-k0-lab}$ | @Thum:2019mm |
+| $k^{labile}_{\theta}$ | Moisture response function of labile pool | 2.0 | \- | $\ref{eq-veg-k0-lab}$ | @Thum:2019mm |
+| $k^{nut}_{labile}$ | Rate at which N/P can be quicker retrieved than C | 1.2 | \- | $\ref{eq-veg-growth-rate}$ | @Thum:2019mm |
 | **Allometry and allocation** |  |  |  |  |  |
-| $k1^{fruit}_{alloc}$ | Minimum fraction of allocation going to fruit | 0.01 | \- | [3.10](#eq-veg:falloc_fruit) | @Thum:2019mm |
-| $k3^{fruit}_{alloc}$ | Reserve usage rate below which fruit growth starts | 0.1 | $\mathrm{\frac{{\mu}mol C}{m^2 \hspace{0.2em} s}}$ | [3.10](#eq-veg:falloc_fruit) | @Thum:2019mm |
-| $\lambda^{fruit}_{alloc}$ | Shape parameter in the fruit allocation response to reserve changes | 10.0 | \- | [3.10](#eq-veg:falloc_fruit) | @Thum:2019mm |
-| $k4^{fruit}_{alloc}$ | Shape parameter in the fruit allocation response to reserve changes | 2.0 | \- | [3.10](#eq-veg:falloc_fruit) | @Thum:2019mm |
-| $W^{alloc}_{soil,crit}$ | Fraction of root zone water at field capacity below which root allocation starts responding | 0.8 | \- | [3.12](#eq-veg:dynamic_alloc) | @Thum:2019mm |
-| $k_{htol}$ | Stem mass to leaf mass ratio of grasses | 0.05 | \- | [3.13](#eq-l2s_grass) | @Zaehle:2010cz |
+| $k1^{fruit}_{alloc}$ | Minimum fraction of allocation going to fruit | 0.01 | \- | $\ref{eq-veg-falloc-fruit}$ | @Thum:2019mm |
+| $k3^{fruit}_{alloc}$ | Reserve usage rate below which fruit growth starts | 0.1 | $\mathrm{\frac{{\mu}mol C}{m^2 \hspace{0.2em} s}}$ | $\ref{eq-veg-falloc-fruit}$ | @Thum:2019mm |
+| $\lambda^{fruit}_{alloc}$ | Shape parameter in the fruit allocation response to reserve changes | 10.0 | \- | $\ref{eq-veg-falloc-fruit}$ | @Thum:2019mm |
+| $k4^{fruit}_{alloc}$ | Shape parameter in the fruit allocation response to reserve changes | 2.0 | \- | $\ref{eq-veg-falloc-fruit}$ | @Thum:2019mm |
+| $W^{alloc}_{soil,crit}$ | Fraction of root zone water at field capacity below which root allocation starts responding | 0.8 | \- | $\ref{eq-veg-dynamic-alloc}$ | @Thum:2019mm |
+| $k_{htol}$ | Stem mass to leaf mass ratio of grasses | 0.05 | \- | $\ref{eq-l2s-grass}$ | @Zaehle:2010cz |
 | **Stoichiometry** |  |  |  |  |  |
 | $C_m$ | Carbon mass per unit dry weight of leaves | 0.48 | $\mathrm{\frac{g C}{g DW}}$ | \- | @Kattge:2011fc |
 | $\chi_{root}^{C:N}$ | Relative C:N of fine roots compared to leaves | 0.85 | \- | Sect.  | @Zaehle:2010cz |
 | $\chi_{wood}^{C:N}$ | Relative C:N of woody biomass compared to leaves | 0.145 | \- | Sect.  | @Zaehle:2010cz |
 | $\chi_{root}^{N:P}$ | Relative N:P of fine roots compared to leaves | 1.0 | \- | Sect.  | @Thum:2019mm |
 | $\chi_{wood}^{N:P}$ | Relative N:P of woody biomass compared to leaves | 1.0 | \- | Sect. | @Thum:2019mm |
-| $\delta^{\chi}_{leaf}$ | Maximum rate of foliar stoichiometry change | 0.0048 | $\mathrm{day^{-1}}$ | [3.18](#eq-veg:stoichem_dynamic) | @Zaehle:2010cz |
-| $\lambda^{\chi}_{leaf}$ | Shape parameter in leaf stoichiometry nutrient response | 2.0 | \- | [3.18](#eq-veg:stoichem_dynamic) | @Zaehle:2010cz |
-| $k^{\chi}_{leaf}$ | Shape parameter in leaf stoichiometry nutrient response | 8.0 | \- | [3.18](#eq-veg:stoichem_dynamic) | @Zaehle:2010cz |
+| $\delta^{\chi}_{leaf}$ | Maximum rate of foliar stoichiometry change | 0.0048 | $\mathrm{day^{-1}}$ | $\ref{eq-veg-stoichem-dynamic}$ | @Zaehle:2010cz |
+| $\lambda^{\chi}_{leaf}$ | Shape parameter in leaf stoichiometry nutrient response | 2.0 | \- | $\ref{eq-veg-stoichem-dynamic}$ | @Zaehle:2010cz |
+| $k^{\chi}_{leaf}$ | Shape parameter in leaf stoichiometry nutrient response | 8.0 | \- | $\ref{eq-veg-stoichem-dynamic}$ | @Zaehle:2010cz |
 | **Reserve dynamics** |  |  |  |  |  |
-| $LAI^{target}_{max}$ | Maximum LAI target for reserve use calculations | 5.0 | $\mathrm{\frac{m^2}{m^2}}$ | [3.20](#eq-target_storage) | @Thum:2019mm |
-| $\lambda^{\Phi}_{maint, C}$ | Shape parameter for pull from reserve C to labile C pools | 4.0 | \- | [3.21](#eq-veg:phimaint) | @Thum:2019mm |
-| $k^{\Phi}_{maint, C}$ | Shape parameter for pull from reserve C to labile C pools | 1.2 | \- | [3.21](#eq-veg:phimaint) | @Thum:2019mm |
-| $k^{\Phi}_{maint,NP}$ | Shape parameter for pull from reserve N\|P to labile N\|P pools | 1.6 | \- | [3.21](#eq-veg:phimaint) | @Thum:2019mm |
-| $\lambda^{\Phi}_{maint,NP}$ | Shape parameter for pull from reserve N\|P to labile N\|P pools | 3.0 | \- | [3.21](#eq-veg:phimaint) | @Thum:2019mm |
-| $\lambda^{\Phi}_{store}$ | Shape parameter for pull from labile to reserve pool | 2.0 | \- | [3.21](#eq-veg:phistore) | @Thum:2019mm |
-| $k^{\Phi}_{store}$ | Shape parameter for pull from labile to reserve pool | 3.0 |  | [3.21](#eq-veg:phistore) | @Thum:2019mm |
-| $\lambda^{\Phi}_{phen}$ | Shape parameter in storage response function to phenology | 1.3 | \- | [3.23](#eq-veg:phiphen) | @Thum:2019mm |
-| $k^{\Phi}_{phen}$ | Shape parameter in storage response function to phenology | 8.0 | \- | [3.23](#eq-veg:phiphen) | @Thum:2019mm |
-| $\lambda_{sinklim}^{ps}$ | Photosynthetic sink limitation with labile C accumulation | 0.1 | \- | [3.24](#eq-sinklim_c) | @Thum:2019mm |
-| $k_{sinklim}^{ps}$ | Photosynthetic sink limitation with labile C accumulation | 2.0 | \- | [3.24](#eq-sinklim_c) | @Thum:2019mm |
-| $k^{CNP}_{sinklim}$ | Photosynthetic sink limitation with nutrient limitation | 4.0 | \- | [3.25](#eq-sinklim_cnp) | @Thum:2019mm |
-| $\beta_{sinklim, min}^{ps}$ | Lower bound of photosynthetic sink limitation | 0.25 | \- | [3.24](#eq-sinklim_c) | @Thum:2019mm |
+| $LAI^{target}_{max}$ | Maximum LAI target for reserve use calculations | 5.0 | $\mathrm{\frac{m^2}{m^2}}$ | $\ref{eq-target-storage}$ | @Thum:2019mm |
+| $\lambda^{\Phi}_{maint, C}$ | Shape parameter for pull from reserve C to labile C pools | 4.0 | \- | $\ref{eq-veg-phimaint}$ | @Thum:2019mm |
+| $k^{\Phi}_{maint, C}$ | Shape parameter for pull from reserve C to labile C pools | 1.2 | \- | $\ref{eq-veg-phimaint}$ | @Thum:2019mm |
+| $k^{\Phi}_{maint,NP}$ | Shape parameter for pull from reserve N\|P to labile N\|P pools | 1.6 | \- | $\ref{eq-veg-phimaint}$ | @Thum:2019mm |
+| $\lambda^{\Phi}_{maint,NP}$ | Shape parameter for pull from reserve N\|P to labile N\|P pools | 3.0 | \- | $\ref{eq-veg-phimaint}$ | @Thum:2019mm |
+| $\lambda^{\Phi}_{store}$ | Shape parameter for pull from labile to reserve pool | 2.0 | \- | $\ref{eq-veg-phimaint_c}$ | @Thum:2019mm |
+| $k^{\Phi}_{store}$ | Shape parameter for pull from labile to reserve pool | 3.0 |  | $\ref{eq-veg-phimaint_c}$ | @Thum:2019mm |
+| $\lambda^{\Phi}_{phen}$ | Shape parameter in storage response function to phenology | 1.3 | \- | $\ref{eq-veg-phiphen}$ | @Thum:2019mm |
+| $k^{\Phi}_{phen}$ | Shape parameter in storage response function to phenology | 8.0 | \- | $\ref{eq-veg-phiphen}$ | @Thum:2019mm |
+| $\lambda_{sinklim}^{ps}$ | Photosynthetic sink limitation with labile C accumulation | 0.1 | \- | $\ref{eq-sinklim-c}$ | @Thum:2019mm |
+| $k_{sinklim}^{ps}$ | Photosynthetic sink limitation with labile C accumulation | 2.0 | \- | $\ref{eq-sinklim-c}$ | @Thum:2019mm |
+| $k^{CNP}_{sinklim}$ | Photosynthetic sink limitation with nutrient limitation | 4.0 | \- | $\ref{eq-sinklim-cnp}$ | @Thum:2019mm |
+| $\beta_{sinklim, min}^{ps}$ | Lower bound of photosynthetic sink limitation | 0.25 | \- | $\ref{eq-sinklim-c}$ | @Thum:2019mm |
 | $f_{store,max}^{leaf}$ | Maximum reserve storage in leaves relative to leaf mass | 0.02 | \- | Sect. | @Thum:2019mm |
 | $f_{store,max}^{root}$ | Maximum reserve storage in fine roots relative to fine root mass | 0.2 | \- | Sect. | @Thum:2019mm |
 | $f_{store,max}^{wood}$ | maximum reserve storage in sap wood relative to sap wood mass | 0.15 | \- | Sect. | @Thum:2019mm |
-| $k_{\Phi}^{inter}$ | threshold value of $\Phi^X_{maint}$ beyond which $\Phi^X_{store}$ is reduced | 0.75 | \- | [3.22](#eq-veg:phi_interact) | @Thum:2019mm |
+| $k_{\Phi}^{inter}$ | threshold value of $\Phi^X_{maint}$ beyond which $\Phi^X_{store}$ is reduced | 0.75 | \- | $\ref{eq-veg-phi-interact}$ | @Thum:2019mm |
 | **Phenology** |  |  |  |  |  |
 | $t_{air}^{GDD}$ | temperature threshold for the accumulation of growing degree days | $\mathrm{^\circ C}$ | 5 | \- | by convention |
-| $\tau_{soa}$ | time constant in calculation state of acclimation | 114 | $\mathrm{hours}$ | [3.27](#eq-veg:soa) | @Thum:2019mm |
-| $T_{min}^{soa}$ | min temp. in $\beta_{soa}$ calculation | -3 | $\mathrm{^\circ C}$ | [3.28](#eq-veg_beta_soa) | @Thum:2019mm |
-| $T_{max}^{soa}$ | max temp. in $\beta_{soa}$ calculation | 17 | $\mathrm{^\circ C}$ | [3.28](#eq-veg_beta_soa) | @Thum:2019mm |
+| $\tau_{soa}$ | time constant in calculation state of acclimation | 114 | $\mathrm{hours}$ | $\ref{eq:veg-soa}$ | @Thum:2019mm |
+| $T_{min}^{soa}$ | min temp. in $\beta_{soa}$ calculation | -3 | $\mathrm{^\circ C}$ | $\ref{eq-veg-beta-soa}$ | @Thum:2019mm |
+| $T_{max}^{soa}$ | max temp. in $\beta_{soa}$ calculation | 17 | $\mathrm{^\circ C}$ | $\ref{eq-veg-beta-soa}$ | @Thum:2019mm |
 | **Turnover** |  |  |  |  |  |
-| $\tau_{{nut}\_{recycle}}$ | time scale of foliar and fine root nutrient turnover | 10.0 | days | [3.29](#eq-veg:nut_recycling) | @Zaehle:2010cz |
-| $f_{shed,max}$ | maximum rate of leaf shedding | 0.05 | $\mathrm{days}$ | [3.30](#eq-veg:dec_leaf_turnover) | @Thum:2019mm |
-| $k_{resorb}^{leaf}$ | Fraction of nutrient resorption before leaf shedding | 0.5 | \- | [3.31](#eq-veg:resorb) | @Thum:2019mm |
-| $k_{resorb}^{wood}$ | Fraction of nutrient resorption before wood death | 0.2 | \- | [3.31](#eq-veg:resorb) | @Thum:2019mm |
+| $\tau_{{nut}\_{recycle}}$ | time scale of foliar and fine root nutrient turnover | 10.0 | days | $\ref{eq-veg-nut-recycling}$ | @Zaehle:2010cz |
+| $f_{shed,max}$ | maximum rate of leaf shedding | 0.05 | $\mathrm{days}$ | $\ref{eq-veg-dec-leaf-turnover}$ | @Thum:2019mm |
+| $k_{resorb}^{leaf}$ | Fraction of nutrient resorption before leaf shedding | 0.5 | \- | $\ref{eq-veg-resorb}$ | @Thum:2019mm |
+| $k_{resorb}^{wood}$ | Fraction of nutrient resorption before wood death | 0.2 | \- | $\ref{eq-veg-resorb}$ | @Thum:2019mm |
 | **Vegetation dynamics** |  |  |  |  |  |
-| $k_{CA}$ | Scaling parameter in crown area to diameter relationship | 100.0 | \- | [3.32](#eq-veg:crownarea) | @Sitch:2003wg |
-| $k_{rp}$ | Scaling exponent in crown area to diameter relationship | 1.6 | \- | [3.32](#eq-veg:crownarea) | @Sitch:2003wg |
-| $CA_{max}$ | Maximum crown area | 15.0 | $m^2$ | [3.32](#eq-veg:crownarea) | @Sitch:2003wg |
-| $k_{fpc}$ | light-extinction coefficient | 0.5 | \- | [3.33](#eq-veg:fpc) | [Sitch:2003wg |
+| $k_{CA}$ | Scaling parameter in crown area to diameter relationship | 100.0 | \- | $\ref{eq-veg-crownarea}$ | @Sitch:2003wg |
+| $k_{rp}$ | Scaling exponent in crown area to diameter relationship | 1.6 | \- | $\ref{eq-veg-crownarea}$ | @Sitch:2003wg |
+| $CA_{max}$ | Maximum crown area | 15.0 | $m^2$ | $\ref{eq-veg-crownarea}$ | @Sitch:2003wg |
+| $k_{fpc}$ | light-extinction coefficient | 0.5 | \- | $\ref{eq-veg-fpc}$ | [Sitch:2003wg |
 | $\lambda_{est}^{T}$ | shape parameter for temperature effect on establishment | 0.075 | \- | Sect. | @Thum:2019mm |
 | $k_{est}^{T}$ | shape parameter for temperature effect on establishment | 4.0 | \- | Sect. | @Thum:2019mm |
 | $\lambda_{est}^{\Theta_1}$ | shape parameter for moisture effect on establishment | 10.0 | \- | Sect. | @Thum:2019mm |
 | $k_{est}^{\Theta_1}$ | shape parameter for moisture effect on establishment | 2.0 | \- | Sect. | @Thum:2019mm |
-| $FPC_{max}$ | maximum foliage projective cover | 0.95 | \- | [3.35](#eq-veg:est_dens), [3.38](#eq-veg:mort_selfthining) | @Sitch:2003wg |
-| $k1_{mort\_greff}$ | Asymptotic growth efficiency mortality rate | 0.05 | $\mathrm{year^{-1}}$ | [3.37](#eq-veg:mort_greff) | @Sitch:2003wg |
-| $k2_{mort\_greff}$ | Scaling coefficient for growth efficiency mortality rate | 0.3 | $\mathrm{\frac{m^2 \hspace{0.2em} yr}{mol C}}$ | [3.37](#eq-veg:mort_greff) |@Sitch:2003wg |
+| $FPC_{max}$ | maximum foliage projective cover | 0.95 | \- | $\ref{eq-veg-est_dens}$, $\ref{eq-veg-mort-selfthining}$ | @Sitch:2003wg |
+| $k1_{mort\_greff}$ | Asymptotic growth efficiency mortality rate | 0.05 | $\mathrm{year^{-1}}$ | $\ref{eq-veg-mort-greff}$ | @Sitch:2003wg |
+| $k2_{mort\_greff}$ | Scaling coefficient for growth efficiency mortality rate | 0.3 | $\mathrm{\frac{m^2 \hspace{0.2em} yr}{mol C}}$ | $\ref{eq-veg-mort-greff}$ |@Sitch:2003wg |
 
 : Vegetation growth and dynamics parameters {#tbl-veg:param}
 
@@ -1267,8 +1261,7 @@ destabilisation and a first level of biochemical processing, which releases a co
 carbon (1 - $\eta_{C,wl \rightarrow met,str}$) to heterotrophic respiration. During this step, a
 fraction of the nutrients (1 - $\eta_{N}|\eta_{P}$) is leached to the mineral phase to account for
 inefficiencies of the microbiota in mineral processing decomposing wood. The remainder is assumed to
-enter the metabolic and structural litter ([Eq. 4.12](#eq-sb:simple_litterpartitioning_c) and [Eq.
-4.14](#eq-sb:simple_litterpartitioning_np)).
+enter the metabolic and structural litter ($\Eqref{eq-sb-simple-litterpartitioning-c}$ and $\Eqref{eq-sb-simple-litterpartitioning-np}$).
 
 ## SOM and litter turnover rates {#sec-sb-turnover}
 
@@ -1287,7 +1280,7 @@ $$
 
 ## SOM formation {#sec-sb-formation}
 
-Matter entering the fast and slow SOM pool ([Eq. 4.1](#eq-sb:simple_om_dynamics)) is required to
+Matter entering the fast and slow SOM pool ($\Eqref{eq-sb-dynamics}$) is required to
 fulfill the prescribed stoichiometry of the SOM pools ($\chi_{SOM}$). These are assumed constant
 with the exception of the fast SOM C:N ratio, which varies with available $\mathrm{NH_4}$ following
 CENTURY [@Parton:1993ud]:
@@ -1307,13 +1300,12 @@ $$
 \Phi^{*}_{l \rightarrow {fast}, NH_4} = \frac{\eta_{C,litter \rightarrow fast}}{\chi_{SOM_{fast}^{C:N}}} (\frac{C_{met}}{\tau^{*}_{met}} + \frac{C_{str}}{\tau^{*}_{str}}) - \eta_N (\frac{N_{met}}{\tau^{*}_{met}} + \frac{N_{str}}{\tau^{*}_{str}})
 $$
 
-where $\tau^{*}_i$ are the temperature and moisture constrained turnover times ([Eq.
-4.15](#eq-sb-simple-som-turnover)).
+where $\tau^{*}_i$ are the temperature and moisture constrained turnover times ($\Eqref{eq-sb-simple-som-turnover}$).
 
 The actual immobilisation rate ($\Phi_{l \rightarrow {fast}, NH_4}$) is limited to the amount of
 ammonium ($\mathrm{NH_4}$ available, subject to co-occurring potential N uptake from plants
-($U^{*}_{NH_4,plant}$, [Eq. 4.23](#eq-sb-simple-potential-uptake)), and nitrifiers ($U^{*}_{nit}$;
-[Eq. 4.26](#eq-sb-simple-dynamic-nitrification)). Note that, similar as for the plant uptake, the
+($U^{*}_{NH_4,plant}$, $\Eqref{eq-sb-simple-potential-uptake}$), and nitrifiers ($U^{*}_{nit}$;
+$\Eqref{eq-sb-simple-dynamic-nitrification}$). Note that, similar as for the plant uptake, the
 uptake of ammonium is limited with a Michaelis-Menten kinetic to account for reduced accessibility
 of N at very low values.
 
@@ -1330,9 +1322,7 @@ $$
 \tau_{met|str} = \tau^{*}_{met|str} \frac{\frac{\eta_{l \rightarrow {fast},C}}{\chi_{SOM_{fast}^{C:N}}} (\frac{C_{met}}{\tau^{*}_{met}} + \frac{C_{str}}{\tau^{*}_{str}}) - \eta_N (\frac{N_{met}}{\tau^{*}_{met}} + \frac{N_{str}}{\tau^{*}_{str}})}{\Phi_{l \rightarrow {fast},NH_4}}
 $$
 
-Should the available $\mathrm{NH_4}$ be insufficient to maintain the uptake rates of plants ([Eq.
-4.23](#eq-sb:simple_potential_uptake)) and nitrifiers ([Eq.
-4.26](#eq-sb:simple_dynamic_nitrification)), these fluxes are downregulated in proportion. Note that in the C-only mode of the model, \mathrm{F_{aBNF}} is assumed for each to be sufficiently large to avoid downregulation of litter decay, plant nitrogen uptake or nitrification.
+Should the available $\mathrm{NH_4}$ be insufficient to maintain the uptake rates of plants ($\Eqref{eq-sb-simple-potential-uptake}$) and nitrifiers ($\Eqref{eq-sb-simple-dynamic-nitrification}$), these fluxes are downregulated in proportion. Note that in the C-only mode of the model, \mathrm{F_{aBNF}} is assumed for each to be sufficiently large to avoid downregulation of litter decay, plant nitrogen uptake or nitrification.
 
 The potential immobilisation flux of phosphorus ($\Phi^{*}_{P,l \rightarrow {fast}}$) is defined in
 a similar manner as potential $NH_4$ immobilisation, but now considering the actual turnover time of
@@ -1390,8 +1380,9 @@ soil, and $k_{org}^{diff}$ is the diffusion coefficient for organic material due
 
 The potential uptake rates of plants for X= $\mathrm{NH_4}$, $\mathrm{NO_3}$, and $\mathrm{PO_4}$
 follow an extended Michaelis-Menten kinetics:
-#\label{eq-sb-simple-potential-uptake}
+
 $$
+\label{eq-sb-simple-potential-uptake}
 \begin{align}
 U^{*}_X &= \sum_{i=1}^{n} (\frac{v_{max,i,X}(T_{soil},\Psi) \times X}{K_{m,i,X}(T_{soil},\Theta) + X})  \times C_{fine\_root},\ where\\
 &v_{max,i,X}(T_{soil},\Psi) = v_{max,i,X} \frac{E_{d,uptake} \times e^{E_{a,uptake} \times T}}{E_{d,uptake} - E_{a,uptake} \times ( 1 - e^{E_{d,uptake} \times T})} \times \frac{\Psi_{fine\_root}}{\Psi_{leaf,min}},\ with\\
@@ -1403,7 +1394,7 @@ $$
 where $v_{max,i,X}$ is the PFT-specific temperature-sensitive maximum uptake rate per unit biomass,
 adjusted by the current root zone moisture potential ($\Psi_{fine_root}$) to account for limited
 transport of nutrients towards the roots in dry soils, $C_{fine\_root}$ is the biomass density of
-fine roots ($\mathrm{mol \ C \ m^{-3}}$, see [Eq. 1.4](#eq-veg:root_distribution)), $T_{soil}$ is
+fine roots ($\mathrm{mol \ C \ m^{-3}}$, see $\Eqref{eq:veg-root-distribution}$), $T_{soil}$ is
 the soil temperature and the $K_{m,i}$ parameters are nutrient sensitivities of the low and high
 affinity transporters. These affinities are assumed to be temperature sensitive and are adjusted to
 soil moisture to account for the difference between mass-based and soil solution concentrations
@@ -1431,6 +1422,7 @@ $$
 Asymbiotic N fixation, is a function of the potential immobilisation flux of litter decomposition ($\phi^*_{l\rightarrow fast,NH_4}$, eq. 67 in \citet{thum:2019gmd}) occurring during decomposition of typically N-pool litter to soil organic matter. For the QUINCY configurations without activated N cycle, asymbiotic N fixation is assumed to  instantaneously satisfy the N-demand during litter decomposition. For configurations with activated N cycle, the potential immobilisation flux $\phi^*_{l\rightarrow fast,NH_4}$ is modulated by scalars representing the effects of soil temperature, soil moisture and soil N availability, such that
 
 $$
+\label{eq-sb-asymb-bnf}
 \begin{align}
 F_{aBNF} &= v_{max,aBNF}(T_{soil},\Psi_{soil}) \times h(NH_4+NO_3) \times \phi^*_{l\rightarrow fast,NH_4}, where\\
 & h(NH_4+NO_3) = 1.0 - \frac{NH_4 + NO_3}{km_{anbf} + NH_4 + NO_3}
@@ -1473,16 +1465,16 @@ plant and microbial uptake (@sec-sb-formation and @sec-sb-simple-uptake), is par
 $\mathrm{NO_y}$, and $\mathrm{N_2O}$) according to
 
 $$
+\label{eq-sb-simple-dynamic-nitrification-prod}
 \begin{align}
 F_{nit,NO_3} &= (1 - f_{nit}^{NO_y} - f_{nit}^{N_2O}) \times U_{nit}\\
 F_{nit,NO_y} &= f_{nit}^{NO_y}  \times U_{nit}\\
 F_{nit,N_2O} &= f_{nit}^{N_2O}  \times U_{nit}
 \end{align}
-$${#eq-sb-simple-dynamic-nitrification-prod}
+$$
 
 where the $F_{nit,X}$ are the nitrification fluxes for $\mathrm{NO_3}$, $\mathrm{NO_y}$, and
-$\mathrm{N_2O}$, respectively ([Eq. 4.3](#eq-sb-simple-im-dynamics-b), [Eq.
-4.4](#eq-sb-simple-im-dynamics-c) and [Eq. 4.5](#eq-sb-simple-im-dynamics-d)).
+$\mathrm{N_2O}$, respectively ($\Eqref{eq-sb-simple-im-dynamics_b}$, $\Eqref{eq-sb-simple-im-dynamics_c}$ and $\Eqref{eq-sb-simple-im-dynamics_d}$).
 
 The potential rate of denitrification ($U^{*}_{denit}$) in the anaerobic fraction of the soil is
 modified by temperature:
@@ -1509,8 +1501,7 @@ F_{denit,N_2} &= (1 - f_{denit}^{NO_y} - f_{denit}^{NO_y}) \times U_{denit}
 $$
 
 where the $F_{denit,X}$ are the denitrification fluxes for $\mathrm{NO_y}$, $\mathrm{N_2O}$, and
-$\mathrm{N_2}$, respectively ([Eq. 4.3](#eq-sb:simple_im_dynamics_b), [Eq.
-4.4](#eq-sb:simple_im_dynamics_c) and [Eq. 4.5](#eq-sb:simple_im_dynamics_d)). 
+$\mathrm{N_2}$, respectively ($\Eqref{eq-sb-simple-im-dynamics_b}$, $\Eqref{eq-sb-simple-im-dynamics_c}$ and $\Eqref{eq-sb-simple-im-dynamics_d}$). 
 
 The model currently
 ignores the effect of ammonia volatilisation, which will be added in the future.
@@ -1548,8 +1539,7 @@ $$
 
 where $K_{m,biomin}^{root}$ and $K_{m,biomin}^{PO_4}$ are constants constraining the
 biomineralisation rate under low root biomass and high $PO_4$ concentration, respectively; the
-temperature and moisture responses are calculated as those in [Eq.
-4.15](#eq-sb:simple_som_turnover). The biomineralisation rate is further constrained so that it does
+temperature and moisture responses are calculated as those in $\Eqref{eq-sb-simple-som-turnover}$. The biomineralisation rate is further constrained so that it does
 not alter the stoichiometry of the fast pool.
 
 $$
@@ -1611,8 +1601,8 @@ sorption capacity of pure organic matter and pure fine soil, respectively. $K^{s
 $K^{sorb}_{m,mineral}$ are the half-saturation concentration coefficient of pure organic matter and
 pure fine soil, respectively.
 
-Based on [Eq. 4.6](#eq-sb-simple-im-dynamics-e) and [Eq. 4.7](#eq-sb-pi-dynamics-a), the equilibrium
-in [Eq. 4.35](#eq-sb-langmuir-b) could be solved.
+Based on $\Eqref{eq-sb-simple-im-dynamics_e}$ and $\Eqref{eq-sb-pi-dynamics_a}$, the equilibrium
+in $\Eqref{eq-sb-langmuir-b}$ could be solved.
 
 $$
 \begin{split}
@@ -1645,94 +1635,94 @@ f(T_{soil}) &= e^{-\frac{E_{a,diff}}{R} \times (\frac{1}{T_{soil}} - \frac{1}{T^
 \end{align}
 $$
 
-and $afps$ is the air-filled pore fraction of the soil (see [Eq. 4.25](#eq-sb-simple-anaerobic-vf).)
+and $afps$ is the air-filled pore fraction of the soil (see $\Eqref{eq-sb-simple-anaerobic-vf}$.)
 
 | Symbol | Description | Value | Unit | Equation | Citation |
 |:----------------|:----------------|:----------------|:----------------|:---------------:|:----------------|
 | **Litter partitioning** |  |  |  |  |  |
-| $f_{met,max,C}$ | maximum fraction of metabolic litter formation | 0.85 | \- | [4.12](#eq-sb:simple_litterpartitioning_c) | @Parton:1993ud |
-| $k_{met,C}$ | slope of metabolic fraction with lignin to N ratio | 0.018 | \- | [4.12](#eq-sb:simple_litterpartitioning_c) | @Parton:1993ud |
-| $LC_{fine\_root}$ | lignin content of fine root | 0.2565592 | $mol^{-1}$ | [4.12](#eq-sb:simple_litterpartitioning_c) | @White:2000vl |
-| $LC_{coarse\_root}$ | lignin content of coarse roots | 0.8163248 | $mol^{-1}$ | [4.12](#eq-sb:simple_litterpartitioning_c) | assuming woody values |
-| $LC_{woody\_litter}$ | lignin content of woody litter | 0.8163248 | $mol^{-1}$ | [4.12](#eq-sb:simple_litterpartitioning_c) | @White:2000vl |
-| $LC_{fruit}$ | lignin content of seed bed | 0.2565592 | $mol^{-1}$ | [4.12](#eq-sb:simple_litterpartitioning_c) | set to fine-roots |
-| $LC_{seed\_bed}$ | lignin content of fine root | 0.2565592 | $mol^{-1}$ | [4.12](#eq-sb:simple_litterpartitioning_c) | set to fine-roots |
-| $LC_{leaf,max}$ | maximum lignin content of leaves | 0.3440226 | $mol^{-1}$ | [4.13](#eq-sb:simple_leaf_lc) | @White:2000vl |
-| $k_{leaf2sla}$ | slope of lignin to $sla$ relationship | -0.4328854 | $m^{-2}$ | [4.13](#eq-sb:simple_leaf_lc) | @White:2000vl |
-| $k_{met,vp,N}$ | proportionality factor controlling C:N of metabolic vs. structural pool | 5.0 | \- | [4.14](#eq-sb:simple_litterpartitioning_np) | @Parton:1993ud |
-| $k_{met,vp,P}$ | proportionality factor controlling C:P of metabolic vs. structural pool | 5.0 | \- | [4.14](#eq-sb:simple_litterpartitioning_np) | @Parton:1993ud |
+| $f_{met,max,C}$ | maximum fraction of metabolic litter formation | 0.85 | \- | $\ref{eq-sb-simple-litterpartitioning-c}$ | @Parton:1993ud |
+| $k_{met,C}$ | slope of metabolic fraction with lignin to N ratio | 0.018 | \- | $\ref{eq-sb-simple-litterpartitioning-c}$ | @Parton:1993ud |
+| $LC_{fine\_root}$ | lignin content of fine root | 0.2565592 | $mol^{-1}$ | $\ref{eq-sb-simple-litterpartitioning-c}$ | @White:2000vl |
+| $LC_{coarse\_root}$ | lignin content of coarse roots | 0.8163248 | $mol^{-1}$ | $\ref{eq-sb-simple-litterpartitioning-c}$ | assuming woody values |
+| $LC_{woody\_litter}$ | lignin content of woody litter | 0.8163248 | $mol^{-1}$ | $\ref{eq-sb-simple-litterpartitioning-c}$ | @White:2000vl |
+| $LC_{fruit}$ | lignin content of seed bed | 0.2565592 | $mol^{-1}$ | $\ref{eq-sb-simple-litterpartitioning-c}$ | set to fine-roots |
+| $LC_{seed\_bed}$ | lignin content of fine root | 0.2565592 | $mol^{-1}$ | $\ref{eq-sb-simple-litterpartitioning-c}$ | set to fine-roots |
+| $LC_{leaf,max}$ | maximum lignin content of leaves | 0.3440226 | $mol^{-1}$ | $\ref{eq-sb-simple-leaf-lc}$ | @White:2000vl |
+| $k_{leaf2sla}$ | slope of lignin to $sla$ relationship | -0.4328854 | $m^{-2}$ | $\ref{eq-sb-simple-leaf-lc}$ | @White:2000vl |
+| $k_{met,vp,N}$ | proportionality factor controlling C:N of metabolic vs. structural pool | 5.0 | \- | $\ref{eq-sb-simple-litterpartitioning-np}$ | @Parton:1993ud |
+| $k_{met,vp,P}$ | proportionality factor controlling C:P of metabolic vs. structural pool | 5.0 | \- | $\ref{eq-sb-simple-litterpartitioning-np}$ | @Parton:1993ud |
 | $\eta_{C,wl \rightarrow met,str}$ | fraction of woody litter C transformed into metabolic or structural litter | 0.3 | \- | Sect. | following @Parton:1993ud |
 | **Turnover times and their rate modifiers** |  |  |  |  |  |
-| $\tau^{base}_{met}$ | turnover time of metabolic litter | 0.033 | years | [4.15](#eq-sb:simple_som_turnover) | @Parton:1993ud |
-| $\tau^{base}_{str}$ | turnover time of structural litter | 0.124 | years | [4.15](#eq-sb:simple_som_turnover) | @Parton:1993ud |
-| $\tau^{base}_{wl}$ | turnover time of woody litter | 2.5 | years | [4.15](#eq-sb:simple_som_turnover) | @Thum:2019mm |
-| $\tau^{base}_{fast}$ | turnover time of fast SOM pool | 2.0 | years | [4.15](#eq-sb:simple_som_turnover) | @Thum:2019mm |
-| $\tau^{base}_{slow}$ | turnover time of slow SOM pool | 100.0 | years | [4.15](#eq-sb:simple_som_turnover) | @Thum:2019mm |
-| $T_{opt,decomp}$ | temperature of peak decomposition rate | 313.15 | K | [4.15](#eq-sb:simple_som_turnover) | @Thum:2019mm |
-| $E_{a,decomp}$ | activation energy for decomposition | 53000.0 | $\mathrm{J mol^{-1}}$ | [4.15](#eq-sb:simple_som_turnover) | @Ahrens:2015ie |
-| $E_{d,decomp}$ | de-activation energy for decomposition | 100000.0 | $\mathrm{J mol^{-1}}$ | [4.15](#eq-sb:simple_som_turnover) | @Ahrens:2015ie |
-| $\Psi_{dec,min}$ | minimum water potential for decomposition | -2.0 | $\mathrm{MPa}$ | [4.15](#eq-sb:simple_som_turnover) | @Thum:2019mm |
+| $\tau^{base}_{met}$ | turnover time of metabolic litter | 0.033 | years | $\ref{eq-sb-simple-som-turnover}$ | @Parton:1993ud |
+| $\tau^{base}_{str}$ | turnover time of structural litter | 0.124 | years | $\ref{eq-sb-simple-som-turnover}$ | @Parton:1993ud |
+| $\tau^{base}_{wl}$ | turnover time of woody litter | 2.5 | years | $\ref{eq-sb-simple-som-turnover}$ | @Thum:2019mm |
+| $\tau^{base}_{fast}$ | turnover time of fast SOM pool | 2.0 | years | $\ref{eq-sb-simple-som-turnover}$ | @Thum:2019mm |
+| $\tau^{base}_{slow}$ | turnover time of slow SOM pool | 100.0 | years | $\ref{eq-sb-simple-som-turnover}$ | @Thum:2019mm |
+| $T_{opt,decomp}$ | temperature of peak decomposition rate | 313.15 | K | $\ref{eq-sb-simple-som-turnover}$ | @Thum:2019mm |
+| $E_{a,decomp}$ | activation energy for decomposition | 53000.0 | $\mathrm{J mol^{-1}}$ | $\ref{eq-sb-simple-som-turnover}$ | @Ahrens:2015ie |
+| $E_{d,decomp}$ | de-activation energy for decomposition | 100000.0 | $\mathrm{J mol^{-1}}$ | $\ref{eq-sb-simple-som-turnover}$ | @Ahrens:2015ie |
+| $\Psi_{dec,min}$ | minimum water potential for decomposition | -2.0 | $\mathrm{MPa}$ | $\ref{eq-sb-simple-som-turnover}$ | @Thum:2019mm |
 | **SOM dynamics** |  |  |  |  |  |
-| $\chi_{{SOM}_{fast,max}^{C:N}}$ | maximum C:N ratio of fast SOM | 15.27693 | $\frac{mol}{mol}$ | [4.16](#eq-sb:SOMCNfast) | @Manzoni:2008hw |
-| $\chi_{{SOM}_{fast,min}^{C:N}}$ | minimum C:N ratio of fast SOM | 5.830891 | $\frac{mol}{mol}$ | [4.16](#eq-sb:SOMCNfast) | @Manzoni:2008hw |
-| $f_{\chi}$ | slope of fast SOM C:N to mineral soil N | 51000.0 | $\mathrm{\frac{kg}{mol}}$ | [4.16](#eq-sb:SOMCNfast) | @Parton:1993ud |
-| $\chi_{{SOM}_{slow}^{C:N}}$ | C:N ratio of slow SOM pool | 10.4956 | $\frac{mol}{mol}$ | [4.21](#eq-sb:mineralization) | @Parton:1993ud |
-| $\chi_{{SOM}_{slow}^{N:P}}$ | N:P ratio of slow SOM pool | 30.98107 | $\frac{mol}{mol}$ | [4.21](#eq-sb:mineralization) | @Thum:2019mm |
-| $\chi_{{SOM}_{fast}^{N:P}}$ | N:P ratio of fast SOM pool | 30.98107 | $\frac{mol}{mol}$ | [4.20](#eq-sb:simple_pot_p_immobilisation) | @Thum:2019mm |
-| $\eta_{N}$ | microbial nitrogen use efficiency | 0.8 | $\frac{mol}{mol}$ | [4.17](#eq-sb:simple_pot_n_immobilisation) | @Manzoni:2008hw |
-| $\eta_{P}$ | microbial phosphorus use efficiency | 0.8 | $\frac{mol}{mol}$ | [4.20](#eq-sb:simple_pot_p_immobilisation) | @Manzoni:2008hw |
-| $\eta_{C,litter \rightarrow fast}$ | fraction of litter transformed into fast SOM | 0.45 | \- | [4.20](#eq-sb:simple_pot_p_immobilisation) | @Parton:1993ud |
-| $\eta_{C,fast \rightarrow slow}$ | fraction of fast SOM transformed into slow SOM | 0.15 | \- | [4.21](#eq-sb:mineralization) | @Parton:1993ud |
-| $\eta_{C,slow \rightarrow fast}$ | fraction of slow SOM transformed into fast SOM | 0.3 | \- | [4.21](#eq-sb:mineralization) | @Parton:1993ud |
-| $k_{org}^{diff}$ | diffusion velocity due to bioturbation | 0.15 | $\frac{m^2 \hspace{0.2em} kg}{m^3 \hspace{0.2em} yr}$ | [4.22](#eq-sb:bioturbation) | @Koven:2013da |
-| $\rho_{org}^{bulk}$ | bulk density of organic material | 150.3935 | $\mathrm{\frac{kg}{m^3}}$ | [4.22](#eq-sb:bioturbation) | @Ahrens:2015ie |
+| $\chi_{{SOM}_{fast,max}^{C:N}}$ | maximum C:N ratio of fast SOM | 15.27693 | $\frac{mol}{mol}$ | $\ref{eq-sb-SOMCNfast}$ | @Manzoni:2008hw |
+| $\chi_{{SOM}_{fast,min}^{C:N}}$ | minimum C:N ratio of fast SOM | 5.830891 | $\frac{mol}{mol}$ | $\ref{eq-sb-SOMCNfast}$ | @Manzoni:2008hw |
+| $f_{\chi}$ | slope of fast SOM C:N to mineral soil N | 51000.0 | $\mathrm{\frac{kg}{mol}}$ | $\ref{eq-sb-SOMCNfast}$ | @Parton:1993ud |
+| $\chi_{{SOM}_{slow}^{C:N}}$ | C:N ratio of slow SOM pool | 10.4956 | $\frac{mol}{mol}$ | $\ref{eq-sb-mineralization}$ | @Parton:1993ud |
+| $\chi_{{SOM}_{slow}^{N:P}}$ | N:P ratio of slow SOM pool | 30.98107 | $\frac{mol}{mol}$ | $\ref{eq-sb-mineralization}$ | @Thum:2019mm |
+| $\chi_{{SOM}_{fast}^{N:P}}$ | N:P ratio of fast SOM pool | 30.98107 | $\frac{mol}{mol}$ | $\ref{eq-sb-simple-pot-p-immobilisation}$ | @Thum:2019mm |
+| $\eta_{N}$ | microbial nitrogen use efficiency | 0.8 | $\frac{mol}{mol}$ | $\ref{eq-sb-simple-pot-n-immobilisation}$ | @Manzoni:2008hw |
+| $\eta_{P}$ | microbial phosphorus use efficiency | 0.8 | $\frac{mol}{mol}$ | $\ref{eq-sb-simple-pot-p-immobilisation}$ | @Manzoni:2008hw |
+| $\eta_{C,litter \rightarrow fast}$ | fraction of litter transformed into fast SOM | 0.45 | \- | $\ref{eq-sb-simple-pot-p-immobilisation}$ | @Parton:1993ud |
+| $\eta_{C,fast \rightarrow slow}$ | fraction of fast SOM transformed into slow SOM | 0.15 | \- | $\ref{eq-sb-mineralization}$ | @Parton:1993ud |
+| $\eta_{C,slow \rightarrow fast}$ | fraction of slow SOM transformed into fast SOM | 0.3 | \- | $\ref{eq-sb-mineralization}$ | @Parton:1993ud |
+| $k_{org}^{diff}$ | diffusion velocity due to bioturbation | 0.15 | $\frac{m^2 \hspace{0.2em} kg}{m^3 \hspace{0.2em} yr}$ | $\ref{eq-sb-bioturbation}$ | @Koven:2013da |
+| $\rho_{org}^{bulk}$ | bulk density of organic material | 150.3935 | $\mathrm{\frac{kg}{m^3}}$ | $\ref{eq-sb-bioturbation}$ | @Ahrens:2015ie |
 | **Nutrient uptake kinetics** |  |  |  |  |  |
-| $T_{opt,uptake}$ | temperature of peak uptake rate | 313.15 | K | [4.23](#eq-sb:simple_potential_uptake) | ?? |
-| $E_{a,uptake}$ | activation energy for uptake | 53000.0 | $\mathrm{J mol^{-1}}$ | [4.23](#eq-sb:simple_potential_uptake) | @Ahrens:2015ie |
-| $E_{d,uptake}$ | de-activation energy for uptake | 100000.0 | $\mathrm{J mol^{-1}}$ | [4.23](#eq-sb:simple_potential_uptake) | @Ahrens:2015ie |
-| $K_{m1,NH_4}$ | low-affinity $\mathrm{NH_4}$ uptake | 0.0416 | $\mathrm{\frac{m^3}{mol}}$ | [4.23](#eq-sb:simple_potential_uptake) | @Kronzucker:1996vc |
-| $K_{m1,NO_3}$ | low-affinity parameter for plant uptake | 0.0416 | $\mathrm{\frac{m^3}{mol}}$ | [4.23](#eq-sb:simple_potential_uptake) | @Kronzucker:1995tr |
-| $K_{m1,PO_4}$ | low-affinity parameter for plant uptake | 229.6667 | $\mathrm{\frac{L}{mol}}$ | [4.23](#eq-sb:simple_potential_uptake) | @Kavka:2016 |
-| $K_{m2,NH_4}$ | high-affinity parameter for plant uptake | 1.0 | $\mathrm{\frac{mol}{m^3}}$ | [4.23](#eq-sb:simple_potential_uptake) | @Kronzucker:1996vc |
-| $K_{m2,NO_3}$ | high-affinity parameter for plant uptake | 1.0 | $\mathrm{\frac{mol}{m^3}}$ | [4.23](#eq-sb:simple_potential_uptake) | @Kronzucker:1995tr |
-| $K_{m2,PO_4}$ | high-affinity parameter for plant uptake | 0.000022 | $\mathrm{\frac{mol}{L}}$ | [4.23](#eq-sb:simple_potential_uptake) | @Kavka:2016 |
-| $E_{a,hsc}$ | activation energy of half-saturation point | 30000.0 | $\frac{J}{mol}$ | [4.23](#eq-sb:simple_potential_uptake) | Ahrens p. com. 2016 |
-| $k_{hsc}$ | scaling factor for the sensitivity of half-saturation constant to moisture limitation | 0.001 | \- | [4.23](#eq-sb:simple_potential_uptake) | @Davidson:2012dk |
-| $K_{demand}^{half,N}$ | Fraction of target labile N at which uptake is reduced to 50% | 0.75 | \- | [4.23](#eq-sb:simple_potential_uptake) | @Thum:2019mm |
-| $K_{demand}^{half,P}$ | Fraction of target labile P at which uptake is reduced to 50% | 0.9 | \- | [4.23](#eq-sb:simple_potential_uptake) | @Thum:2019mm |
-| $k_{demand}$ | Nutrient uptake response function to labile nutrient concentration | 2.0 | \- | [4.23](#eq-sb:simple_potential_uptake) | @Thum:2019mm |
+| $T_{opt,uptake}$ | temperature of peak uptake rate | 313.15 | K | $\ref{eq-sb-simple-potential-uptake}$ | ?? |
+| $E_{a,uptake}$ | activation energy for uptake | 53000.0 | $\mathrm{J mol^{-1}}$ | $\ref{eq-sb-simple-potential-uptake}$ | @Ahrens:2015ie |
+| $E_{d,uptake}$ | de-activation energy for uptake | 100000.0 | $\mathrm{J mol^{-1}}$ | $\ref{eq-sb-simple-potential-uptake}$ | @Ahrens:2015ie |
+| $K_{m1,NH_4}$ | low-affinity $\mathrm{NH_4}$ uptake | 0.0416 | $\mathrm{\frac{m^3}{mol}}$ | $\ref{eq-sb-simple-potential-uptake}$ | @Kronzucker:1996vc |
+| $K_{m1,NO_3}$ | low-affinity parameter for plant uptake | 0.0416 | $\mathrm{\frac{m^3}{mol}}$ | $\ref{eq-sb-simple-potential-uptake}$ | @Kronzucker:1995tr |
+| $K_{m1,PO_4}$ | low-affinity parameter for plant uptake | 229.6667 | $\mathrm{\frac{L}{mol}}$ | $\ref{eq-sb-simple-potential-uptake}$ | @Kavka:2016 |
+| $K_{m2,NH_4}$ | high-affinity parameter for plant uptake | 1.0 | $\mathrm{\frac{mol}{m^3}}$ | $\ref{eq-sb-simple-potential-uptake}$ | @Kronzucker:1996vc |
+| $K_{m2,NO_3}$ | high-affinity parameter for plant uptake | 1.0 | $\mathrm{\frac{mol}{m^3}}$ | $\ref{eq-sb-simple-potential-uptake}$ | @Kronzucker:1995tr |
+| $K_{m2,PO_4}$ | high-affinity parameter for plant uptake | 0.000022 | $\mathrm{\frac{mol}{L}}$ | $\ref{eq-sb-simple-potential-uptake}$ | @Kavka:2016 |
+| $E_{a,hsc}$ | activation energy of half-saturation point | 30000.0 | $\frac{J}{mol}$ | $\ref{eq-sb-simple-potential-uptake}$ | Ahrens p. com. 2016 |
+| $k_{hsc}$ | scaling factor for the sensitivity of half-saturation constant to moisture limitation | 0.001 | \- | $\ref{eq-sb-simple-potential-uptake}$ | @Davidson:2012dk |
+| $K_{demand}^{half,N}$ | Fraction of target labile N at which uptake is reduced to 50% | 0.75 | \- | $\ref{eq-sb-simple-potential-uptake}$ | @Thum:2019mm |
+| $K_{demand}^{half,P}$ | Fraction of target labile P at which uptake is reduced to 50% | 0.9 | \- | $\ref{eq-sb-simple-potential-uptake}$ | @Thum:2019mm |
+| $k_{demand}$ | Nutrient uptake response function to labile nutrient concentration | 2.0 | \- | $\ref{eq-sb-simple-potential-uptake}$ | @Thum:2019mm |
 | $N_{limit}^{BNF}$ | maximum sum of $\mathrm{NH_4}$ and $\mathrm{NO_3}$ at which BNF occurs | 0.05 | $\mathrm{\frac{mol N}{m^2}}$ | Sect. | @Zaehle:2010cz |
-| $v_{max,BNF}$ | Maximum rate of BNF | 0.005 | $\mathrm{\frac{mol N}{m^2 \hspace{0.2em} s}}$ | [4.24](#eq-sb:asymb_bnf) | @Zaehle:2010cz |
+| $v_{max,BNF}$ | Maximum rate of BNF | 0.005 | $\mathrm{\frac{mol N}{m^2 \hspace{0.2em} s}}$ | $\ref{eq-sb-asymb-bnf}$ | @Zaehle:2010cz |
 | **Nitrification, denitrification, and BNF parameters** |  |  |  |  |  |
-| $\lambda_{anvf}$ | Weibull function to relate anaerobic volume fraction to soil moisture | 1.3 | \- | [4.25](#eq-sb:simple_anaerobic_vf) | @Zaehle:2010cz |
-| $k_{anvf}$ | Weibull function to relate anaerobic volume fraction to soil moisture | 3.0 | \- | [4.25](#eq-sb:simple_anaerobic_vf) | @Zaehle:2010cz |
-| $v_{max,nit}$ | maximum nitrification rate | 0.4 | $day^{-1}$ | [4.26](#eq-sb:simple_dynamic_nitrification) | @XURI:2008jq |
-| $E_{a,nit}$ | activation energy of nitrification | 80000 | $\frac{J}{mol}$ | [4.26](#eq-sb:simple_dynamic_nitrification) | @XURI:2008jq |
-| $E_{d,nit}$ | de-activation energy of nitrification | 200000 | $\frac{J}{mol}$ | [4.26](#eq-sb:simple_dynamic_nitrification) | @XURI:2008jq |
-| $T_{opt,nit}$ | optimum temperature for nitrification | 311.15 | K | [4.26](#eq-sb:simple_dynamic_nitrification) | @XURI:2008jq |
-| $f_{nit}^{NO_y}$ | fraction of nitrification lost to $\mathrm{NO_y}$ | 0.02 | \- | [4.27](#eq-sb:simple_dynamic_nitrification_prod) | @XURI:2008jq |
-| $f_{nit}^{N_2O}$ | fraction of nitrification lost to $\mathrm{N_2O}$ | 0.002 | \- | [4.27](#eq-sb:simple_dynamic_nitrification_prod) | @XURI:2008jq |
-| $E_{a,denit}$ | activation energy of denitrification | 47000 | $\frac{J}{mol}$ | [4.28](#eq-sb:simple_dynamic_denitrification) | @XURI:2008jq |
-| $v_{max,denit}$ | maximum denitrification rate | 0.1 | $day^{-1}$ | [4.28](#eq-sb:simple_dynamic_denitrification) | @XURI:2008jq |
-| $K_{m,denit}^{fast}$ | half-saturation constant C of denitrification | 20.0 | $\mathrm{\frac{mol}{m^3}}$ | [4.28](#eq-sb:simple_dynamic_denitrification) | @XURI:2008jq |
-| $K_{m,denit}^{NO_3}$ | half-saturation constant $\mathrm{NO_3}$ of denitrification | 1162.598 | $\mathrm{\frac{mol}{m^3}}$ | [4.28](#eq-sb:simple_dynamic_denitrification) | @XURI:2008jq |
-| $f_{denit}^{NO_y}$ | fraction of denitrification lost to $\mathrm{NO_y}$ | 0.002 | \- | [4.29](#eq-sb:simple_dynamic_denitrification_prod) | @XURI:2008jq |
-| $f_{denit}^{N_2O}$ | fraction of denitrification lost to $\mathrm{N_2O}$ | 0.02 | \- | [4.29](#eq-sb:simple_dynamic_denitrification_prod) | @XURI:2008jq |
-| $E_{a,diff}$ | activation energy of gas diffusion | 47000 | $\frac{J}{mol}$ | [4.39](#eq-sb:simple_ngasloss) | @XURI:2008jq |
+| $\lambda_{anvf}$ | Weibull function to relate anaerobic volume fraction to soil moisture | 1.3 | \- | $\ref{eq-sb-simple-anaerobic-vf}$ | @Zaehle:2010cz |
+| $k_{anvf}$ | Weibull function to relate anaerobic volume fraction to soil moisture | 3.0 | \- | $\ref{eq-sb-simple-anaerobic-vf}$ | @Zaehle:2010cz |
+| $v_{max,nit}$ | maximum nitrification rate | 0.4 | $day^{-1}$ | $\ref{eq-sb-simple-dynamic-nitrification}$ | @XURI:2008jq |
+| $E_{a,nit}$ | activation energy of nitrification | 80000 | $\frac{J}{mol}$ | $\ref{eq-sb-simple-dynamic-nitrification}$ | @XURI:2008jq |
+| $E_{d,nit}$ | de-activation energy of nitrification | 200000 | $\frac{J}{mol}$ | $\ref{eq-sb-simple-dynamic-nitrification}$ | @XURI:2008jq |
+| $T_{opt,nit}$ | optimum temperature for nitrification | 311.15 | K | $\ref{eq-sb-simple-dynamic-nitrification}$ | @XURI:2008jq |
+| $f_{nit}^{NO_y}$ | fraction of nitrification lost to $\mathrm{NO_y}$ | 0.02 | \- | $\ref{eq-sb-simple-dynamic-nitrification-prod}$ | @XURI:2008jq |
+| $f_{nit}^{N_2O}$ | fraction of nitrification lost to $\mathrm{N_2O}$ | 0.002 | \- | $\ref{eq-sb-simple-dynamic-nitrification-prod}$ | @XURI:2008jq |
+| $E_{a,denit}$ | activation energy of denitrification | 47000 | $\frac{J}{mol}$ | $\ref{eq-sb-simple-dynamic-denitrification}$ | @XURI:2008jq |
+| $v_{max,denit}$ | maximum denitrification rate | 0.1 | $day^{-1}$ | $\ref{eq-sb-simple-dynamic-denitrification}$ | @XURI:2008jq |
+| $K_{m,denit}^{fast}$ | half-saturation constant C of denitrification | 20.0 | $\mathrm{\frac{mol}{m^3}}$ | $\ref{eq-sb-simple-dynamic-denitrification}$ | @XURI:2008jq |
+| $K_{m,denit}^{NO_3}$ | half-saturation constant $\mathrm{NO_3}$ of denitrification | 1162.598 | $\mathrm{\frac{mol}{m^3}}$ | $\ref{eq-sb-simple-dynamic-denitrification}$ | @XURI:2008jq |
+| $f_{denit}^{NO_y}$ | fraction of denitrification lost to $\mathrm{NO_y}$ | 0.002 | \- | $\ref{eq-sb-simple-dynamic-denitrification-prod}$ | @XURI:2008jq |
+| $f_{denit}^{N_2O}$ | fraction of denitrification lost to $\mathrm{N_2O}$ | 0.02 | \- | $\ref{eq-sb-simple-dynamic-denitrification-prod}$ | @XURI:2008jq |
+| $E_{a,diff}$ | activation energy of gas diffusion | 47000 | $\frac{J}{mol}$ | $\ref{eq-sb-simple-ngasloss}$ | @XURI:2008jq |
 | **Soil Pi fluxes** |  |  |  |  |  |
 | $k_{ocl}$ | Occlusion coefficient of sorbed $\mathrm{PO_4}$ | 3.86 | $10^{-13} s^{-1}$ |  | @Yang:2014 |
-| $k_{weath}$ | Weathering rate constant of mineral soil | 8.16208 | $10^{-14}$ $\mathrm{\frac{mol P}{m^3 \hspace{0.2em} s}}$ | [4.30](#eq-sb:weathering) | @Wang:2010ba |
-| $K_{m,weath}^{root}$ | Half-saturation root biomass for $\mathrm{PO_4}$ weathering | 10.0 | $\mathrm{\frac{mol C}{m^3}}$ | [4.30](#eq-sb:weathering) | calibrated |
-| $K_{m,biomin}^{PO_4}$ | Half-saturation solute P concentration for $\mathrm{PO_4}$ biochemical mineralization | 0.001 | $\mathrm{\frac{mol P}{m^3}}$ | [4.31](#eq-sb:p_biomin) | estimated |
-| $K_{m,biomin}^{root}$ | Half-saturation root C biomass for $\mathrm{PO_4}$ biochemical mineralization | 20.0 | $\mathrm{\frac{mol C}{m^3}}$ | [4.31](#eq-sb:p_biomin) | calibrated |
-| $k_{abs}$ | $\mathrm{PO_4}$ (ab)sorption rate from $P_{lab}$ to $P_{sorb}$ | 651.8519 | $\frac{\mu mol}{kg \hspace{0.1em} soil \hspace{0.2em} s}$ | [4.33](#eq-sb:pi_desorp) | @Yang:2014 |
-| $E_{a,abs}$ | activation energy for sorption to mineral surfaces | 5000.0 | $\mathrm{\frac{J}{mol}}$ | [4.33](#eq-sb:pi_desorp) | Ahrens p. com. 2016 |
-| $k_{des}$ | $\mathrm{PO_4}$ desorption rate from $P_{sorb}$ to $P_{lab}$ | 0.000733 | $\frac{mol}{kg \hspace{0.1em} soil \hspace{0.2em} s}$ | [4.33](#eq-sb:pi_desorp) | @Yang:2014 |
-| $E_{a,des}$ | activation energy for desorption from mineral surfaces | 20000.0 | $\mathrm{\frac{J}{mol}}$ | [4.33](#eq-sb:pi_desorp) | Ahrens p. com. 2016 |
-| $S^{max}_{om}$ | $\mathrm{PO_4}$ sorption capacity of organic matter | 0.4 | $\frac{mmol P}{kg \hspace{0.1em} OM}$ | [4.36](#eq-sb:Psorbpar) | see SI |
-| $S^{max}_{mineral}$ | $\mathrm{PO_4}$ sorption capacity of mineral soil | 0.0387 | $\frac{mol P}{kg \hspace{0.1em} soil}$ | [4.36](#eq-sb:Psorbpar) | see SI |
-| $K^{sorb}_{m,om}$ | Half-saturation concentration for $\mathrm{PO_4}$ adsorption to OM | 0.045 | $\frac{mmol P}{kg \hspace{0.1em} OM}$ | [4.36](#eq-sb:Psorbpar) | see SI |
-| $K^{sorb}_{m,mineral}$ | Half-saturation concentration for $\mathrm{PO_4}$ adsorption to soil mineral | 0.00225 | $\frac{mmol P}{kg \hspace{0.1em} soil}$ | [4.36](#eq-sb:Psorbpar) | see SI |
+| $k_{weath}$ | Weathering rate constant of mineral soil | 8.16208 | $10^{-14}$ $\mathrm{\frac{mol P}{m^3 \hspace{0.2em} s}}$ | $\ref{eq-sb-weathering}$ | @Wang:2010ba |
+| $K_{m,weath}^{root}$ | Half-saturation root biomass for $\mathrm{PO_4}$ weathering | 10.0 | $\mathrm{\frac{mol C}{m^3}}$ | $\ref{eq-sb-weathering}$ | calibrated |
+| $K_{m,biomin}^{PO_4}$ | Half-saturation solute P concentration for $\mathrm{PO_4}$ biochemical mineralization | 0.001 | $\mathrm{\frac{mol P}{m^3}}$ | $\ref{eq-sb-p-biomin}$ | estimated |
+| $K_{m,biomin}^{root}$ | Half-saturation root C biomass for $\mathrm{PO_4}$ biochemical mineralization | 20.0 | $\mathrm{\frac{mol C}{m^3}}$ | $\ref{eq-sb-p-biomin}$ | calibrated |
+| $k_{abs}$ | $\mathrm{PO_4}$ (ab)sorption rate from $P_{lab}$ to $P_{sorb}$ | 651.8519 | $\frac{\mu mol}{kg \hspace{0.1em} soil \hspace{0.2em} s}$ | $\ref{eq-sb-pi-desorp}$ | @Yang:2014 |
+| $E_{a,abs}$ | activation energy for sorption to mineral surfaces | 5000.0 | $\mathrm{\frac{J}{mol}}$ | $\ref{eq-sb-pi-desorp}$ | Ahrens p. com. 2016 |
+| $k_{des}$ | $\mathrm{PO_4}$ desorption rate from $P_{sorb}$ to $P_{lab}$ | 0.000733 | $\frac{mol}{kg \hspace{0.1em} soil \hspace{0.2em} s}$ | $\ref{eq-sb-pi-desorp}$ | @Yang:2014 |
+| $E_{a,des}$ | activation energy for desorption from mineral surfaces | 20000.0 | $\mathrm{\frac{J}{mol}}$ | $\ref{eq-sb-pi-desorp}$ | Ahrens p. com. 2016 |
+| $S^{max}_{om}$ | $\mathrm{PO_4}$ sorption capacity of organic matter | 0.4 | $\frac{mmol P}{kg \hspace{0.1em} OM}$ | $\ref{eq-sb-Psorbpar}$ | see SI |
+| $S^{max}_{mineral}$ | $\mathrm{PO_4}$ sorption capacity of mineral soil | 0.0387 | $\frac{mol P}{kg \hspace{0.1em} soil}$ | $\ref{eq-sb-Psorbpar}$ | see SI |
+| $K^{sorb}_{m,om}$ | Half-saturation concentration for $\mathrm{PO_4}$ adsorption to OM | 0.045 | $\frac{mmol P}{kg \hspace{0.1em} OM}$ | $\ref{eq-sb-Psorbpar}$ | see SI |
+| $K^{sorb}_{m,mineral}$ | Half-saturation concentration for $\mathrm{PO_4}$ adsorption to soil mineral | 0.00225 | $\frac{mmol P}{kg \hspace{0.1em} soil}$ | $\ref{eq-sb-Psorbpar}$ | see SI |
 
 : Soil biogeochemistry parameters {#tbl-sb:param}
 
@@ -1755,6 +1745,7 @@ $$
 and by convention
 
 $$
+\label{eq-isotope-delta-notation}
 \delta_{13C} = ( \frac{R_{13C}}{ R_{ref,13C}} - 1 ) \times 1000
 $$
 
@@ -1770,6 +1761,7 @@ Biogeochemical processes discriminate against the heavier isotope, and this frac
 treated by calculating the mixing ratio of the isotope of the resulting flux as
 
 $$
+\label{eq-isotope-fractionation}
 R_{sink} = \frac{R_{source}}{\frac{\epsilon_{process}}{1000}+1}
 $$
 
@@ -1782,6 +1774,7 @@ Isotopic discrimination of $\mathrm{^{13}C}$ and $\mathrm{^{14}C}$ by photosynth
 according to the general equation derived by @Farquhar:1982ks; @Drake:2014dl, so that
 
 $$
+\label{eq-ps-discrimination}
 D_x = a_x + ( c_x + \phi_{C4} \times b_x - a_x )  \frac{c_i}{c_a}
 $$
 
@@ -1805,23 +1798,23 @@ where $f_{source}$ is the ratio of the source consumption to the source pool siz
 
 | Symbol | Description | Value | Unit | Equation | Citation |
 |:----------------|:----------------|:----------------|:----------------|:---------------:|:----------------|
-| $a_{13C}$ | Discrimination of $\mathrm{^{13}C}$ due to stomatal diffusion | 4.4 | $\textperthousand$ | [5.4](#eq-ps_discrimination) | @Drake:2014dl |
-| $b_{13C}$ | Discrimination of $\mathrm{^{13}C}$ due to Rubisco | 27.0 | $\textperthousand$ | [5.4](#eq-ps_discrimination) | @Drake:2014dl |
-| $c_{13C}$ | Discrimination of $\mathrm{^{13}C}$ due to PEP C | 5.7 | $\textperthousand$ | [5.4](#eq-ps_discrimination) | @Drake:2014dl |
-| $a_{14C}$ | Discrimination of $\mathrm{^{14}C}$ due to stomatal diffusion | 8.668 | $\textperthousand$ | [5.4](#eq-ps_discrimination) | @Drake:2014dl |
-| $b_{14C}$ | Discrimination of $\mathrm{^{14}C}$ due to Rubisco | 51.03 | $\textperthousand$ | [5.4](#eq-ps_discrimination) | @Drake:2014dl |
-| $c_{14C}$ | Discrimination of $\mathrm{^{14}C}$ due to PEP C | 10.773 | $\textperthousand$ | [5.4](#eq-ps_discrimination) | @Drake:2014dl |
-| $\phi_{C4}$ | Leakage rate of bundle sheath cells | 0.16 | \- | [5.4](#eq-ps_discrimination) | @Drake:2014dl |
-| $R_{ref,C13}$ | Reference isotopic mixing ratio of $\mathrm{^{13}C/^{12}C}$; PDB standard | 0.0112372 | $\frac{mol}{mol}$ | [5.2](#eq-isotope:delta_notation) | \- |
-| $R_{ref,N15}$ | Reference isotopic mixing ratio of $\mathrm{^{15}N/^{14}N}$ | 0.0036765 | $\frac{mol}{mol}$ | [5.2](#eq-isotope:delta_notation) | @Robinson2001-hy |
-| $\epsilon^{mic}_{uptake,NH_4}$ | Discrimination due to microbial $\mathrm{NH_4}$ uptake | 17.0 | $\textperthousand$ | [5.3](#eq-isotope:fractionation) | @Robinson2001-hy |
-| $\epsilon^{plant}_{uptake,NH_4}$ | Discrimination due to plant $\mathrm{NH_4}$ uptake | 13.5 | $\textperthousand$ | [5.3](#eq-isotope:fractionation) | @Robinson2001-hy |
-| $\epsilon^{plant}_{uptake,NO_3}$ | Discrimination due to plant $\mathrm{NO_3}$ uptake | 9.5 | $\textperthousand$ | [5.3](#eq-isotope:fractionation) | @Robinson2001-hy |
-| $\epsilon_{nit}$ | Discrimination due to nitrification | 47.5 | $\textperthousand$ | [5.3](#eq-isotope:fractionation) | @Robinson2001-hy |
-| $\epsilon_{nitrate,production}$ | Discrimination due to $\mathrm{NO_3}$ production | 25.0 | $\textperthousand$ | [5.3](#eq-isotope:fractionation) | @Robinson2001-hy |
-| $\epsilon_{denit}$ | Discrimination due to denitrification | 31.0 | $\textperthousand$ | [5.3](#eq-isotope:fractionation) | @Robinson2001-hy |
-| $\epsilon_{ammonification}$ | Discrimination due to $\mathrm{NH_4}$ production | 2.5 | $\textperthousand$ | [5.3](#eq-isotope:fractionation) | @Robinson2001-hy |
-| $\epsilon_{fixation}$ | Discrimination due to nitrogen fixation | 3.0 | $\textperthousand$ | [5.3](#eq-isotope:fractionation) | @Robinson2001-hy |
+| $a_{13C}$ | Discrimination of $\mathrm{^{13}C}$ due to stomatal diffusion | 4.4 | $\textperthousand$ | $\ref{eq-ps-discrimination}$ | @Drake:2014dl |
+| $b_{13C}$ | Discrimination of $\mathrm{^{13}C}$ due to Rubisco | 27.0 | $\textperthousand$ | $\ref{eq-ps-discrimination}$ | @Drake:2014dl |
+| $c_{13C}$ | Discrimination of $\mathrm{^{13}C}$ due to PEP C | 5.7 | $\textperthousand$ | $\ref{eq-ps-discrimination}$ | @Drake:2014dl |
+| $a_{14C}$ | Discrimination of $\mathrm{^{14}C}$ due to stomatal diffusion | 8.668 | $\textperthousand$ | $\ref{eq-ps-discrimination}$ | @Drake:2014dl |
+| $b_{14C}$ | Discrimination of $\mathrm{^{14}C}$ due to Rubisco | 51.03 | $\textperthousand$ | $\ref{eq-ps-discrimination}$ | @Drake:2014dl |
+| $c_{14C}$ | Discrimination of $\mathrm{^{14}C}$ due to PEP C | 10.773 | $\textperthousand$ | $\ref{eq-ps-discrimination}$ | @Drake:2014dl |
+| $\phi_{C4}$ | Leakage rate of bundle sheath cells | 0.16 | \- | $\ref{eq-ps-discrimination}$ | @Drake:2014dl |
+| $R_{ref,C13}$ | Reference isotopic mixing ratio of $\mathrm{^{13}C/^{12}C}$; PDB standard | 0.0112372 | $\frac{mol}{mol}$ | $\ref{eq-isotope-delta-notation}$ | \- |
+| $R_{ref,N15}$ | Reference isotopic mixing ratio of $\mathrm{^{15}N/^{14}N}$ | 0.0036765 | $\frac{mol}{mol}$ | $\ref{eq-isotope-delta-notation}$ | @Robinson2001-hy |
+| $\epsilon^{mic}_{uptake,NH_4}$ | Discrimination due to microbial $\mathrm{NH_4}$ uptake | 17.0 | $\textperthousand$ | $\ref{eq-isotope-fractionation}$ | @Robinson2001-hy |
+| $\epsilon^{plant}_{uptake,NH_4}$ | Discrimination due to plant $\mathrm{NH_4}$ uptake | 13.5 | $\textperthousand$ | $\ref{eq-isotope-fractionation}$ | @Robinson2001-hy |
+| $\epsilon^{plant}_{uptake,NO_3}$ | Discrimination due to plant $\mathrm{NO_3}$ uptake | 9.5 | $\textperthousand$ | $\ref{eq-isotope-fractionation}$ | @Robinson2001-hy |
+| $\epsilon_{nit}$ | Discrimination due to nitrification | 47.5 | $\textperthousand$ | $\ref{eq-isotope-fractionation}$ | @Robinson2001-hy |
+| $\epsilon_{nitrate,production}$ | Discrimination due to $\mathrm{NO_3}$ production | 25.0 | $\textperthousand$ | $\ref{eq-isotope-fractionation}$ | @Robinson2001-hy |
+| $\epsilon_{denit}$ | Discrimination due to denitrification | 31.0 | $\textperthousand$ | $\ref{eq-isotope-fractionation}$ | @Robinson2001-hy |
+| $\epsilon_{ammonification}$ | Discrimination due to $\mathrm{NH_4}$ production | 2.5 | $\textperthousand$ | $\ref{eq-isotope-fractionation}$ | @Robinson2001-hy |
+| $\epsilon_{fixation}$ | Discrimination due to nitrogen fixation | 3.0 | $\textperthousand$ | $\ref{eq-isotope-fractionation}$ | @Robinson2001-hy |
 
 : Parameters for the calculation of isotopic fractionation and mixing ratios calculation
 {#tbl-isotope:param}
@@ -1835,7 +1828,7 @@ The radiation interception by the canopy is calculated with a multi-layer scheme
 with radiation levels calculated at the mid-point of each canopy layer. The scheme uses up to 20
 (default 10) canopy layers, with exponentially increasing layer thickness as the canopy depth
 increases. The original scheme has been extended to diagnose canopy albedo, to account for clumping
-(see [Eq. 6.3](#eq-rad:omega)) and the presence of branches and stems, as well as to approximate the attenuation of the shortwave radiation
+(see $\Eqref{eq-rad-omega}$) and the presence of branches and stems, as well as to approximate the attenuation of the shortwave radiation
 back-scatter from the soil to allow for a consistent treatment of surface albedo of vegetated tiles, as well as a smooth transition of surface albedo from bare soil to
 vegetation cover with incrasing leaf coverage.
 
@@ -1946,7 +1939,7 @@ $$
 f_{sunlit} = e^{-k_{bl}\times LAI_c}
 $$
 
-following [Eq. 6.4](#eq-rad-idrdra). The sunlit part receives both diffuse and direct radiation,
+following $\Eqref{eq-rad-idrdra}$. The sunlit part receives both diffuse and direct radiation,
 whereas the shaded part only received diffuse radiation. Thus,
 
 $$
@@ -1997,7 +1990,7 @@ R_{net} = (1 - \alpha_s ) R_{sd} + R_{ld} - \epsilon \sigma {T_s}^4
 $$
 
 where the term $\alpha_s \times R\_{sd}$ is the net surface shortwave balance, denoted as $I_{net}$
-in [Eq. 6.12](#eq-rad:canopy_absorbed_radiation_components2), $R_{ld}$ the downwelling longwave
+in $\Eqref{eq-rad-canopy-absorbed-radiation-components2}$, $R_{ld}$ the downwelling longwave
 radiation, $\epsilon$ the surface emissivity, $\sigma$ the Stefan-Boltzmann constant, and $T_s$ is the surface temperature.
 
 The surface energy balance can then be written as
@@ -2020,8 +2013,7 @@ $$
 where $C_s$ is the volumetric heat capacity of the soil, $G$ is the thermal heat flux (positive
 downward), $\lambda_s=C_s \kappa_s$ is the thermal conductivity, $\kappa_s$ the thermal diffusivity,
 and $z$ the depth. This equation is solved down to a prescribed depth assuming zero flux conditions
-at the bottom and surface temperature $T_s$ at the top as obtained from [Eq.
-6.14](#eq-sse-surface-energy-balance).
+at the bottom and surface temperature $T_s$ at the top as obtained from $\Eqref{eq-sse-surface-energy-balance}$.
 
 The sensible heat flux $H$ is obtained from the temperature gradient according to
 
@@ -2055,7 +2047,9 @@ $$
 T
 o simplify the resulting expressions, we express the equation in terms of $\Delta T_{\text{sk}} = T_{\text{sk}} - T_{\text{sk,old}}$, the difference between the new temperature and the temperature at a previous time or iteration step.
 To linear order in $\Delta T_{\text{sk}}$ the individual terms read
+
 $$
+\label{eq-skin-terms}
 \begin{align}
     \mathrm{RAD}(T_{\text{sk}}) &= R_{\text{net,old}} - 4 \sigma \varepsilon T_{\text{sk,old}}^3 \Delta T_{\text{sk}}, \\
     \mathrm{SH}(T_{\text{sk}}) &= \nu c_p [(A_T - 1) T_{\text{sk,old}} + B_T] + \left\{ \nu c_p (A_T - 1) +\frac{d\nu}{dT} c_p [(A_T - 1) T_{\text{sk,old}} + B_T] \right\} \Delta T_{\text{sk}}, \\
@@ -2078,8 +2072,10 @@ $$
 $$
 
 With these ingredients, we solve for $\Delta T_{\text{sk}}$,
+
 $$
-\begin{align}
+\label{eq-skin-dtsk}
+\begin{aligned}
     & \biggl\{\Lambda_{\text{sk}} (1 - A_s) + 4 \sigma \varepsilon T_{\text{sk,old}}^3
        - \nu c_p (A_T - 1) - \frac{d\nu}{dT} c_p [(A_T - 1) T_{\text{sk,old}} + B_T]\\
       &  - \nu (L_a A_q - L_s) \frac{dq_{\text{sat}}}{dT} - \frac{d\nu}{dT} [L_a B_q + (L_a A_q - L_s) q_{\text{sat,old}}]\biggr\} \Delta T_{\text{sk}}
@@ -2087,8 +2083,8 @@ $$
      = R_{\text{net}}
        + \nu c_p [(A_T - 1) T_{\text{sk,old}} + B_T]
        + \nu [L_a B_q + (L_a A_q - L_s) q_{\text{sat,old}}]
-       - \Lambda_{\text{sk}} [(1 - A_s) T_{\text{sk,old}} - B_s]. 
-\end{align}
+       - \Lambda_{\text{sk}} [(1 - A_s) T_{\text{sk,old}} - B_s].
+\end{aligned}
 $$
 
 If water is freezing or ice is melting on the surface, the corresponding latent heat flux is added to $F_G$.
@@ -2101,8 +2097,8 @@ usually, there is negative feedback between the heat fluxes and the skin tempera
 In stable stratification, the transfer coefficient is tiny but increases rapidly with skin temperature so there is a region where warming causes larger instead of smaller heat fluxes.
 In this region the linearized equations predict a high skin temperature, jumping out of the unstable region, but the updated transfer coefficient is much smaller than expected from the size of $d\nu/dT$ and the temperature jump.
 So the next iteration predicts a small temperature change, lands back inside the unstable region, and the cycle repeats.
-To stabilize the iterative procedure, we limit the braced terms in \eqref{eq:skin:SH} and \eqref{eq:skin:LH} to be nonpositive when we determine $\Delta T_{\text{sk}}$.
-This ensures that no positive feedback enters the iteration and causes a more gradual change of the $\Delta T_{\text{sk}}$ iterates without changing the converged solution, which is where the right-hand side of \eqref{eq:skin:dTsk} becomes zero.
+To stabilize the iterative procedure, we limit the braced terms in $\Eqref{eq-skin-terms_b}$ and $\Eqref{eq-skin-terms_c}$ to be nonpositive when we determine $\Delta T_{\text{sk}}$.
+This ensures that no positive feedback enters the iteration and causes a more gradual change of the $\Delta T_{\text{sk}}$ iterates without changing the converged solution, which is where the right-hand side of $\Eqref{eq-skin-dtsk}$ becomes zero.
 
 The consequence of the very small heat capacity of the skin layer is a reduced delay in the response of the surface to changes in atmospheric forcings, leading to an improved representation of the diurnal-cycle amplitudes of near-surface temperature compared to the JSBACH parameterisation of @Reick:2021jsb, where the surface energy fluxes interact directly with the 6.5 cm deep top soil layer.
 
@@ -2136,7 +2132,7 @@ E_{v}=\rho_{air}\frac{q_{a}-q_{s}(T_{s},p_{s})}{r_{a}+r}
 $$
 
 where stomatal resistance $r$ of the canopy is the inverse of the stomatal conductance of the
-canopy (see [Eq. 2.18](#eq-stomatal-coupling)).
+canopy (see $\Eqref{eq:stomatal-coupling}$).
 
 The partitioning of the transpiration flux across soil layers $f_{trans,sl}$ is calculated based on
 the layered soil water potential ($\Psi_{soil,sl}$), the fractional root distribution
@@ -2179,41 +2175,41 @@ vertical flow of soluable biogeochemical pools.
 |:----------------|-----------------|-----------------|-----------------|-----------------|-----------------|
 | Symbol | Description | Value | Unit | Equation | Citation |
 | **Albedo and fAPAR** |  |  |  |  |  |
-| $\rho^{sbeta}$ | Scaling factor of solar angle in reflection calculation | 1.6 | \- | [6.1](#eq-rad:leaf_albedo) | [@Spitters:1986tv] |
-| $k_{bl,0}^{vis}$ | Extinction coefficient over black leaves (VIS range) | 0.5 | \- | [6.2](#eq-rad:extinction_coef) | [@Spitters:1986tv] |
-| $k_{df,0}^{vis}$ | Extinction coefficient for diffuse radiation (VIS range) | 0.8 | \- | [6.2](#eq-rad:extinction_coef) | [@Spitters:1986tv] |
-| $k_{bl,0}^{nir}$ | Extinction coefficient over black leaves (NIR range) | 0.5 | \- | [6.2](#eq-rad:extinction_coef) | [@Spitters:1986tv] |
-| $k_{df,0}^{nir}$ | Extinction coefficient for diffuse radiation (NIR range) | 0.8 | \- | [6.2](#eq-rad:extinction_coef) | [@Spitters:1986tv] |
-| $k_{csf}$ | Crown shape correction parameter | 2.2 | \- | [6.3](#eq-rad:omega) | [@Campbell:1998vb] |
-| $alb_{soil}^{vis}$ | Soil albedo (VIS range) | 0.15 | \- | [6.5](#eq-rad:soil_netbalance) | [@Bonan:2015] |
-| $alb_{soil}^{nir}$ | Soil albedo (NIR range) | 0.30 | \- | [6.5](#eq-rad:soil_netbalance) | [@Bonan:2015] |
+| $\rho^{sbeta}$ | Scaling factor of solar angle in reflection calculation | 1.6 | \- | $\ref{eq-rad-leaf-albedo}$ | [@Spitters:1986tv] |
+| $k_{bl,0}^{vis}$ | Extinction coefficient over black leaves (VIS range) | 0.5 | \- | $\ref{eq-rad-extinction-coef}$ | [@Spitters:1986tv] |
+| $k_{df,0}^{vis}$ | Extinction coefficient for diffuse radiation (VIS range) | 0.8 | \- | $\ref{eq-rad-extinction-coef}$ | [@Spitters:1986tv] |
+| $k_{bl,0}^{nir}$ | Extinction coefficient over black leaves (NIR range) | 0.5 | \- | $\ref{eq-rad-extinction-coef}$ | [@Spitters:1986tv] |
+| $k_{df,0}^{nir}$ | Extinction coefficient for diffuse radiation (NIR range) | 0.8 | \- | $\ref{eq-rad-extinction-coef}$ | [@Spitters:1986tv] |
+| $k_{csf}$ | Crown shape correction parameter | 2.2 | \- | $\ref{eq-rad-omega}$ | [@Campbell:1998vb] |
+| $alb_{soil}^{vis}$ | Soil albedo (VIS range) | 0.15 | \- | $\ref{eq-rad-soil-netbalance}$ | [@Bonan:2015] |
+| $alb_{soil}^{nir}$ | Soil albedo (NIR range) | 0.30 | \- | $\ref{eq-rad-soil-netbalance}$ | [@Bonan:2015] |
 | **Surface energy and water balance** |  |  |  |  |  |
-| $k_{eff,inter}$ | Efficiency of interception of precipitation as rain | 0.25 | \- | [6.20](#eq-sse_rain_interception) | [@Raddatz:2007] |
-| $w_{skin,max}$ | maximum water storage per unit LAI | 0.0002 | $\mathrm{m}$ | [6.20](#eq-sse_rain_interception) | [@Raddatz:2007] |
-| $k_{pref}$ | preferential flow fraction of infiltrating water | 0.01 | $\mathrm{m^{-1}}$ | [6.21](#eq-sse:surface_water_balance) | @Thum:2019mm |
-| $k_{pref,runoff}$ | infiltrating fraction of surface runoff | 0.95 | \- | [6.21](#eq-sse:surface_water_balance) | [@Krinner:2005wg] |
+| $k_{eff,inter}$ | Efficiency of interception of precipitation as rain | 0.25 | \- | $\ref{eq-sse-rain-interception}$ | [@Raddatz:2007] |
+| $w_{skin,max}$ | maximum water storage per unit LAI | 0.0002 | $\mathrm{m}$ | $\ref{eq-sse-rain-interception}$ | [@Raddatz:2007] |
+| $k_{pref}$ | preferential flow fraction of infiltrating water | 0.01 | $\mathrm{m^{-1}}$ | $\ref{eq-water-budget}$ | @Thum:2019mm |
+| $k_{pref,runoff}$ | infiltrating fraction of surface runoff | 0.95 | \- | $\ref{eq-water-budget}$ | [@Krinner:2005wg] |
 
 : Parameters for the albedo, fAPAR and surface energy and water calculation {#tbl-radsse:param}
 
 | Symbol | Description | Unit | Equation | Citation |
 |:------------------:|:-------------------|:-------------------|:------------------:|:------------------:|
-| $\sigma_{vis}$ | Single leaf scattering albedo (VIS range) | \- | [6.1](#eq-rad:leaf_albedo) | [@Otto2014-nm; @Spitters:1986tv] |
-| $\sigma_{nir}$ | Single leaf scattering albedo (NIR range) | \- | [6.1](#eq-rad:leaf_albedo) | [@Otto2014-nm; @Spitters:1986tv] |
-| $\Omega_{0}$ | Canopy clumping factor | \- | [6.3](#eq-rad:omega) | [@Campbell:1998vb] |
-| $\phi_{crown}$ | Crown shape factor | \- | [6.3](#eq-rad:omega) | [@Campbell:1998vb] |
+| $\sigma_{vis}$ | Single leaf scattering albedo (VIS range) | \- | $\ref{eq-rad-leaf-albedo}$ | [@Otto2014-nm; @Spitters:1986tv] |
+| $\sigma_{nir}$ | Single leaf scattering albedo (NIR range) | \- | $\ref{eq-rad-leaf-albedo}$ | [@Otto2014-nm; @Spitters:1986tv] |
+| $\Omega_{0}$ | Canopy clumping factor | \- | $\ref{eq-rad-omega}$ | [@Campbell:1998vb] |
+| $\phi_{crown}$ | Crown shape factor | \- | $\ref{eq-rad-omega}$ | [@Campbell:1998vb] |
 | $sla$ | Specific leaf area | $\mathrm{\frac{m^{-2}}{mol C}}$ | \- | [@Kattge:2011fc] |
 | $\chi_{leaf}^{C:N}$ | Default foliar C:N | $\mathrm{\frac{mol C}{mol N}}$ | Sect. | [@Kattge:2011fc] |
-| $\chi_{leaf, min}^{C:N}$ | Minimum foliar C:N | $\mathrm{\frac{mol C}{mol N}}$ | [3.18](#eq-veg:stoichem_dynamic) | [@Kattge:2011fc] |
-| $\chi_{leaf, max}^{C:N}$ | Maximum foliar C:N | $\mathrm{\frac{mol C}{mol N}}$ | [3.18](#eq-veg:stoichem_dynamic) | [@Kattge:2011fc] |
+| $\chi_{leaf, min}^{C:N}$ | Minimum foliar C:N | $\mathrm{\frac{mol C}{mol N}}$ | $\ref{eq-veg-stoichem-dynamic}$ | [@Kattge:2011fc] |
+| $\chi_{leaf, max}^{C:N}$ | Maximum foliar C:N | $\mathrm{\frac{mol C}{mol N}}$ | $\ref{eq-veg-stoichem-dynamic}$ | [@Kattge:2011fc] |
 | $\chi_{leaf}^{N:P}$ | Default foliar N:P | $\mathrm{\frac{mol N}{mol P}}$ | Sect. | [@Kattge:2011fc] |
-| $\chi_{leaf, min}^{N:P}$ | Minimum foliar N:P | $\mathrm{\frac{mol N}{mol P}}$ | [3.18](#eq-veg:stoichem_dynamic) | [@Kattge:2011fc] |
-| $\chi_{leaf,min}^{N:P}$ | Maximum foliar N:P | $\mathrm{\frac{mol N}{mol P}}$ | [3.18](#eq-veg:stoichem_dynamic) | [@Kattge:2011fc] |
-| $k^{struc}_0$ | Maximum fraction of structural foliar N | \- | [2.1](#eq-veg:struc_n) | [@Friend1997-pk; @Kattge:2011fc] |
-| $fN_{struc,cl}^{min}$ | Minimum fraction of structural foliar N | \- | [2.1](#eq-veg:struc_n) | @Thum:2019mm |
-| $T_{\Omega}$ | Shape parameter of $J_{max}$ temperature response | $\mathrm{K}$ | [2.6](#eq-tjmax) | [@Friend:2010je] |
-| $g_0$ | Intercept of the $A_n ~ g_s$ relationship | \- | [2.18](#eq-stomatal_coupling) | [@Lin:2015er] |
-| $g_1$ | Slope of the $A_n ~ g_s$ relationship | \- | [2.18](#eq-stomatal_coupling) | [@Lin:2015er] |
-| $g_{min}$ | Minimum stomatal conductance | $\mathrm{\frac{m}{s}}$ | [2.18](#eq-stomatal_coupling) | @Thum:2019mm |
+| $\chi_{leaf, min}^{N:P}$ | Minimum foliar N:P | $\mathrm{\frac{mol N}{mol P}}$ | $\ref{eq-veg-stoichem-dynamic}$ | [@Kattge:2011fc] |
+| $\chi_{leaf,min}^{N:P}$ | Maximum foliar N:P | $\mathrm{\frac{mol N}{mol P}}$ | $\ref{eq-veg-stoichem-dynamic}$ | [@Kattge:2011fc] |
+| $k^{struc}_0$ | Maximum fraction of structural foliar N | \- | $\ref{eq-veg:struc_n}$ | [@Friend1997-pk; @Kattge:2011fc] |
+| $fN_{struc,cl}^{min}$ | Minimum fraction of structural foliar N | \- | $\ref{eq-veg:struc_n}$ | @Thum:2019mm |
+| $T_{\Omega}$ | Shape parameter of $J_{max}$ temperature response | $\mathrm{K}$ | $\ref{eq:tjmax}$ | [@Friend:2010je] |
+| $g_0$ | Intercept of the $A_n ~ g_s$ relationship | \- | $\ref{eq:stomatal-coupling}$ | [@Lin:2015er] |
+| $g_1$ | Slope of the $A_n ~ g_s$ relationship | \- | $\ref{eq:stomatal-coupling}$ | [@Lin:2015er] |
+| $g_{min}$ | Minimum stomatal conductance | $\mathrm{\frac{m}{s}}$ | $\ref{eq:stomatal-coupling}$ | @Thum:2019mm |
 | $\tau_{leaf}$ | Turnover time of leaves | years | Sect. | [@Kattge:2011fc] |
 | $\tau_{{fine}\_{root}}$ | Turnover time of fine roots | years | Sect. | [@Ahrens:2014gi] |
 | $\tau_{{coarse}\_{root}}$ | Turnover time of coarse roots | years | Sect. | [@Ahrens:2014gi] |
@@ -2221,28 +2217,28 @@ vertical flow of soluable biogeochemical pools.
 | $\tau_{{sap}\_{wood}}$ | Turnover time of the sapwood | years | Sect. | [@Sitch:2003wg] |
 | $\tau_{fruit}$ | Turnover time of the fruit | years | Sect. | @Thum:2019mm |
 | $\tau_{{seed}\_{litter}}$ | Turnover time of the seed bed to litter | years |  | @Thum:2019mm |
-| $\tau_{seed, est}$ | Turnover time of the seed bed to establishment | years | [3.34](#eq-veg:flux_est) | @Thum:2019mm |
-| $v_{max,NH_4|NO_3}$ | Maximum plant N uptake rate | $\mathrm{\frac{{\mu}mol \hspace{0.1em} N}{mol \hspace{0.1em} C \hspace{0.2em} s}}$ | [4.23](#eq-sb:simple_potential_uptake) | [@Zaehle:2010a] |
-| $v_{max,PO_4}$ | Maximum plant P uptake rate | $\mathrm{\frac{{\mu}mol \hspace{0.1em} P}{mol \hspace{0.1em} C \hspace{0.2em} s}}$ | [4.23](#eq-sb:simple_potential_uptake) | [@Kavka:2016] |
-| $GDD_{req}^{max}$ | Maximum GDD requirement in the absence of chilling | $\mathrm{^\circ C \hspace{0.2em} days}$ | [3.26](#eq-phen:gdd) | @Thum:2019mm |
-| $k^{GDD}_{dormance}$ | Response of GDD to number of dormant days | days$^{-1}$ | [3.26](#eq-phen:gdd) | @Thum:2019mm |
+| $\tau_{seed, est}$ | Turnover time of the seed bed to establishment | years | $\ref{eq-veg-flux_est}$ | @Thum:2019mm |
+| $v_{max,NH_4|NO_3}$ | Maximum plant N uptake rate | $\mathrm{\frac{{\mu}mol \hspace{0.1em} N}{mol \hspace{0.1em} C \hspace{0.2em} s}}$ | $\ref{eq-sb-simple-potential-uptake}$ | [@Zaehle:2010a] |
+| $v_{max,PO_4}$ | Maximum plant P uptake rate | $\mathrm{\frac{{\mu}mol \hspace{0.1em} P}{mol \hspace{0.1em} C \hspace{0.2em} s}}$ | $\ref{eq-sb-simple-potential-uptake}$ | [@Kavka:2016] |
+| $GDD_{req}^{max}$ | Maximum GDD requirement in the absence of chilling | $\mathrm{^\circ C \hspace{0.2em} days}$ | $\ref{eq-phen-gdd}$ | @Thum:2019mm |
+| $k^{GDD}_{dormance}$ | Response of GDD to number of dormant days | days$^{-1}$ | $\ref{eq-phen-gdd}$ | @Thum:2019mm |
 | $\beta_{soil}^{flush}$ | Soil water level inducing leaf flushing | \- | Sect. | @Thum:2019mm |
 | $\beta_{soil}^{sen}$ | Soil water stress inducing leaf senescence | \- | Sect. | @Thum:2019mm |
 | $t_{air}^{sen}$ | Air temperature threshold inducing leaf senescence | $\mathrm{^\circ C}$ | Sect. | @Thum:2019mm |
 | $age^{leaf}_{min}$ | Minimum leaf age before senescence | $\mathrm{days}$ | Sect. | @Thum:2019mm |
 | $f_{sap\_wood}^{branch}$ | Fraction of sapwood in branches | \- | Sect. | @Thum:2019mm |
-| $\rho_{wood}$ | Wood density | $\mathrm{\frac{g \hspace{0.1em} C}{cm^3}}$ | [3.14](#eq-veg:latosa) | [@Chave2009-bl; @dryad_234] |
-| $k_{latosa}$ | Leaf area to sapwood area ratio | \- | [3.14](#eq-veg:latosa) | [@Zaehle:2010a] |
-| $k_{ctos}$ | Coarse root to sapwood mass ratio | \- | [3.16](#eq-coarse_root) | @Thum:2019mm |
-| $k_{rtos}$ | Trade-off parameter for hydraulic investment into sapwood or fine roots | \- | [3.11](#eq-veg:ltor) | @Thum:2019mm |
-| $k2^{fruit}_{alloc}$ | Maximum fraction of growth allocated to fruit | \- | [3.10](#eq-veg:falloc_fruit) | @Thum:2019mm |
-| $k1_{allom}$ | Parameter in height diameter relationship | \- | [3.15](#eq-veg:allometry) | [@Zaehle:2010a] |
-| $k2_{allom}$ | Parameter in height diameter relationship | \- | [3.15](#eq-veg:allometry) | [@Zaehle:2010a] |
-| $\Psi_{leaf}^{min}$ | Minimum leaf water potential | $\mathrm{MPa}$ | [2.19](#eq-veg:beta_soil_gs) | [@Hickler:2006uz] |
-| $k^{target}_{reserve}$ | Target size of the long-term reserve pool | \- | [3.20](#eq-target_storage) | @Thum:2019mm |
-| $k_{root\_dist}$ | Exponent describing the vertical root profile | \- | [1.4](#eq-veg:root_distribution) | [@Jackson:1996tr] |
-| $k_{seed}$ | Seed size | $\mathrm{molC}$ | [3.39](#eq-veg:dens_ind) | @Thum:2019mm |
-| $mort_{bg,PFT}$ | Background mortality rate | $\mathrm{year^{-1}}$ | [3.37](#eq-veg:mort_greff) | [@Sitch:2003wg] |
+| $\rho_{wood}$ | Wood density | $\mathrm{\frac{g \hspace{0.1em} C}{cm^3}}$ | $\ref{eq-veg-latosa}$ | [@Chave2009-bl; @dryad_234] |
+| $k_{latosa}$ | Leaf area to sapwood area ratio | \- | $\ref{eq-veg-latosa}$ | [@Zaehle:2010a] |
+| $k_{ctos}$ | Coarse root to sapwood mass ratio | \- | $\ref{eq-veg-coarse-root}$ | @Thum:2019mm |
+| $k_{rtos}$ | Trade-off parameter for hydraulic investment into sapwood or fine roots | \- | $\ref{eq-veg-ltor}$ | @Thum:2019mm |
+| $k2^{fruit}_{alloc}$ | Maximum fraction of growth allocated to fruit | \- | $\ref{eq-veg-falloc-fruit}$ | @Thum:2019mm |
+| $k1_{allom}$ | Parameter in height diameter relationship | \- | $\ref{eq-veg-allometry}$ | [@Zaehle:2010a] |
+| $k2_{allom}$ | Parameter in height diameter relationship | \- | $\ref{eq-veg-allometry}$ | [@Zaehle:2010a] |
+| $\Psi_{leaf}^{min}$ | Minimum leaf water potential | $\mathrm{MPa}$ | $\ref{eq-veg-beta-soil-gs}$ | [@Hickler:2006uz] |
+| $k^{target}_{reserve}$ | Target size of the long-term reserve pool | \- | $\ref{eq-target-storage}$ | @Thum:2019mm |
+| $k_{root\_dist}$ | Exponent describing the vertical root profile | \- | $\ref{eq:veg-root-distribution}$ | [@Jackson:1996tr] |
+| $k_{seed}$ | Seed size | $\mathrm{molC}$ | $\ref{eq-veg-dens-ind}$ | @Thum:2019mm |
+| $mort_{bg,PFT}$ | Background mortality rate | $\mathrm{year^{-1}}$ | $\ref{eq-veg-mort-greff}$ | [@Sitch:2003wg] |
 
 : PFT-specific parameters {#tbl-lctlib:param}
 

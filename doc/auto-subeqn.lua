@@ -48,8 +48,13 @@ function Math(el)
       elseif line:match("\\end{align}") then
         in_align = false
         table.insert(new_lines, line)
-      elseif in_align and line:match("&") and not line:match("\\label{") then
-        -- This is an equation line
+      elseif in_align and line:match("&") then
+        -- This is an equation line. Rows that already carry their own \label{}
+        -- count too: skipping them used to leave the row untagged, so MathJax's
+        -- ams numbering gave it a document-wide number like "(2)" in the middle
+        -- of a 6.8a/6.8b/6.8c group, and the remaining letters skipped a step.
+        -- The tag replacement below keeps an existing label and only fills in
+        -- the letter, so such a row now numbers in sequence with its siblings.
         letter_index = letter_index + 1
         table.insert(equation_line_indices, #new_lines + 1)  -- Remember where to add tag
         table.insert(new_lines, line)
