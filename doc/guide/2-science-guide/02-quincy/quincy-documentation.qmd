@@ -98,7 +98,7 @@ X_{root,sl} &= X_{root,sl=1} \times e^{-k_{rd} \times depth_{sl}}, where \\
 \end{align}
 $$
 
-where $k_{rd}$ is a PFT-specific parameter (see [Table 6.12](#tbl-lctlib:description),
+where $k_{rd}$ is a PFT-specific parameter (see @tbl-lctlib:param,
 @Jackson:1996tr), $depth_{sl}$ the depth of the soil layer's mid point, $depth_r$ the rooting depth,
 derived from site characteristics and $X_{root}$ the respective fine or coarse root mass. Root growth is inhibited in frozen soil layers. 
 
@@ -354,7 +354,7 @@ $$
 $$
 
 Here, $\beta_{sinklim, min}$, $\lambda_{sinklim}^{ps}$ and $k_{sinklim}^{ps}$ are parameters (see
-[Table 6.4](#tbl-veg:param)) and $C_{labile}^{target}$ is the target value for the labile pool ([Eq.
+@tbl-veg:param) and $C_{labile}^{target}$ is the target value for the labile pool ([Eq.
 3.19](#eq-target_labile)).
 
 In addition, if the C:N or N:P ratios of the labile pool exceed those of the target labile pool, the
@@ -723,7 +723,7 @@ Partitioning of nutrients in the labile pool to growth of leaf, fine root, stem 
 Following [@Meyerholt:2015hh], C:N:P stoichiometry for slow-overturning structural tissues (sap
 wood, coarse roots) as well as fruits, is assumed to be time-invariant and modelled as dependent on
 the PFT-specific mean foliar stoichiometry ($\chi^{C:N}_{leaf}$, and $\chi^{N:P}_{leaf}$) and set
-ratios (see [Table 6.4](#tbl-veg:param)). Heartwood stoichiometry differs from sapwood stoichiometry
+ratios (see @tbl-veg:param). Heartwood stoichiometry differs from sapwood stoichiometry
 because a fraction of the nutrients are retranslocated ($k^{wood}_{resorb}$) to the labile pool upon
 heartwood formation.
 
@@ -1784,7 +1784,7 @@ D_x = a_x + ( c_x + \phi_{C4} \times b_x - a_x )  \frac{c_i}{c_a}
 $$
 
 where $a_x$, and $b_x$ are isotope-specific constants ($\mathrm{^{13}C}$ and $\mathrm{^{14}C}$,
-respectively, see @tbl-assimi:param). $c_x$ and $\phi_{C4}$ account for the additional bundle-sheath
+respectively, see @tbl-isotope:param). $c_x$ and $\phi_{C4}$ account for the additional bundle-sheath
 processes in C4 plants. For C3 plants, these processes do not play a role and these parameters are 0
 and 1, respectively. In the model, currently only photosynthesis is assumed to result in C-isotope
 discrimination, ignoring the effect of the smaller and uncertain discrimination by tissue
