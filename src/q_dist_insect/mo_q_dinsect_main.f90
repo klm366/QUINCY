@@ -22,6 +22,7 @@ MODULE mo_q_dinsect_main
   USE mo_jsb_math_constants,      ONLY: one_day, one_year, eps8, eps4
   USE mo_jsb_time,                ONLY: is_newyear
   USE mo_lnd_bgcm_idx
+  USE mo_jsb_impl_constants,      ONLY: test_false_true
   USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_SEED_BED_POOL_ID, &
@@ -449,6 +450,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Use_config(VEG_)
   dsl4jsb_Use_memory(Q_DINSECT_)
   dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(Q_PHENO_)
   ! ----------------------------------------------------------------------------------------------------- !
   CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile       !< one tile with data structure for one lct
   TYPE(t_jsb_task_options),   INTENT(in)        :: options    !< model options
@@ -458,7 +460,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   LOGICAL                               :: is_growing_season(options%nc)
   TYPE(t_lctlib_element), POINTER       :: lctlib             !< land-cover-type library - parameter across pft's
 
-  INTEGER                               :: iblk, ics, ice, ic, nc, iy, ic
+  INTEGER                               :: iblk, ics, ice, ic, nc, iy
 
   INTEGER                               :: year, month, doy,  days_of_mon
 
@@ -489,6 +491,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Def_config(VEG_)
   dsl4jsb_Def_memory(Q_DINSECT_)
   dsl4jsb_Def_memory(VEG_)
+  dsl4jsb_Def_memory(Q_PHENO_)
   ! ----------------------------------------------------------------------------------------------------- !
   dsl4jsb_Real2D_onChunk      :: mortality_rate                ! global used mortality rate
   dsl4jsb_Real2D_onChunk      :: defoliator_effects_triggered   ! counter for accumulating the sum of timesteps
@@ -532,6 +535,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Get_config(VEG_)
   dsl4jsb_Get_memory(Q_DINSECT_)
   dsl4jsb_Get_memory(VEG_)
+  dsl4jsb_Get_memory(Q_PHENO_)
   ! ----------------------------------------------------------------------------------------------------- !
   bgcm_store => tile%bgcm_store
   dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -576,6 +580,17 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
       is_growing_season(ic) = .FALSE.
     END IF
   END DO
+
+#ifdef __QUINCY_STANDALONE__
+        year = forcing_options%forcing_year
+        doy = forcing_options%forcing_doy
+        hour = forcing_options%forcing_hour
+#else
+        year = get_year(options%current_datetime)
+        doy = INT(get_year_day(options%current_datetime))
+        hour = get_secs_of_day(options%current_datetime) / 3600._wp ! seconds to hours
+#endif
+
 
   ! ======================================================================================================= !
   !>
