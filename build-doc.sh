@@ -119,6 +119,17 @@ cd doc
 # The 'pages' profile (_quarto-pages.yml) rewrites absolute in-page URLs to carry
 # the /jsbach/page/ base path this site is published under. Plain 'quarto preview'
 # uses the default profile, which assumes the site is served at the host root.
-quarto render --profile pages --to html --output-dir html/page
+render_log=$(mktemp)
+quarto render --profile pages --to html --output-dir html/page 2>&1 | tee "$render_log"
+
+# doc/auto-subeqn.lua resolves equation references from records each page leaves in
+# doc/.eqrefs. On a cold build a page referring to an equation on a page that has not
+# been rendered yet cannot resolve it, and says so. One more render is then enough,
+# because by that point every page has left its record behind.
+if grep -q "unresolved equation reference" "$render_log"; then
+  echo "Re-rendering to resolve cross-page equation references ..."
+  quarto render --profile pages --to html --output-dir html/page
+fi
+rm -f "$render_log"
 cd ..
 

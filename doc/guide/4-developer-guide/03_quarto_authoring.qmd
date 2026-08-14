@@ -174,6 +174,42 @@ Two things to avoid:
 - Lowercase `\eqref` is MathJax's own macro. The filter does not rewrite it, and MathJax
   renders it as `(???)` when it cannot resolve it. Use `\Eqref`.
 
+### Equations across several files
+
+Unlike section and table references, equation references **do** reach other pages. The
+filter records what it numbered in `doc/.eqrefs`, one file per page, and every page reads
+the records the others left. Write the reference exactly as you would within a page:
+
+``` markdown
+as given by $\Eqref{eq-sb-simple-som-turnover}$
+```
+
+Two things follow from that.
+
+A page that carries a chapter of a larger document should say which chapter it is, so that
+its equations are numbered from there rather than from one:
+
+``` yaml
+---
+title: Soil biogeochemistry
+eq-chapter: 4
+---
+```
+
+Without it the chapters are counted inside the page, which is right for a document that is
+a single file, and wrong for one split across several.
+
+And on a cold build, a page referring forwards to a page that has not been rendered yet
+cannot resolve the reference. It says so, and `build-doc.sh` simply renders a second time,
+which is enough. Under `quarto preview` only the file you saved is re-rendered, so numbers
+on *other* pages can lag behind until a full build; the published output is always
+consistent.
+
+::: {.callout-note}
+`doc/.eqrefs` is generated and is in `.gitignore`. Do not commit it: a stale record produces
+a wrong number that still looks perfectly plausible, which is worse than a missing one.
+:::
+
 ### Groups of equations and sub-equations
 
 An `align` block with an outer label becomes a numbered group: the filter letters the rows

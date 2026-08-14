@@ -11,6 +11,65 @@ local current_section = 0
 local numbers = {}
 local anchors_for = {}
 
+-- Cross-file references ------------------------------------------------------
+--
+-- A filter only ever sees one document, so a reference to an equation on another
+-- page cannot be resolved from this render alone. Each render therefore leaves a
+-- record of what it numbered in EQREF_DIR, and every render reads the records
+-- left by the others. A page split across files resolves after both have been
+-- rendered once; a full build renders everything, so it is consistent from then on.
+--
+-- The directory holds generated data and belongs in .gitignore. A stale record
+-- committed to the repository would produce plausible but wrong numbers, which is
+-- worse than none at all.
+-- Anchored to the project directory, never to the working directory: Quarto renders
+-- each file with the working directory set to that file's own folder, so a relative
+-- path would scatter a records folder through the whole source tree.
+local EQREF_DIR = nil
+
+local source_file = nil   -- this document, as a path below the project directory
+local elsewhere = {}      -- label -> { number = "3.10", file = "guide/....qmd" }
+
+local function slug(path)
+  return (path:gsub("[^%w]", "_"))
+end
+
+local function read_records()
+  if not EQREF_DIR then return end
+  local listing = io.popen('ls "' .. EQREF_DIR .. '" 2>/dev/null')
+  if not listing then return end
+  for name in listing:lines() do
+    local handle = io.open(EQREF_DIR .. "/" .. name, "r")
+    if handle then
+      local file = nil
+      for line in handle:lines() do
+        local path = line:match("^#file\t(.+)$")
+        if path then
+          file = path
+        else
+          local label, number = line:match("^(.-)\t(.+)$")
+          if label and file then elsewhere[label] = { number = number, file = file } end
+        end
+      end
+      handle:close()
+    end
+  end
+  listing:close()
+end
+
+local function write_record()
+  if not source_file or not EQREF_DIR then return end
+  pandoc.system.make_directory(EQREF_DIR, true)
+  local handle = io.open(EQREF_DIR .. "/" .. slug(source_file), "w")
+  if not handle then return end
+  handle:write("#file\t" .. source_file .. "\n")
+  local sorted = {}
+  for label in pairs(numbers) do sorted[#sorted + 1] = label end
+  table.sort(sorted)
+  for _, label in ipairs(sorted) do handle:write(label .. "\t" .. numbers[label] .. "\n") end
+  handle:close()
+end
+
 -- Drop the group's own \label{} where its rows have been given labels of their own.
 -- The rows carry \label{outer_a}, \label{outer_b} and so on, so leaving the group label
 -- loose in the same align declares it twice and MathJax reports "Multiple \label".
@@ -74,6 +133,29 @@ function with_anchors(el)
     spans[#spans + 1] = string.format('<span id="eq:%s" class="eq-anchor"></span>', label)
   end
   return { pandoc.RawInline("html", table.concat(spans)), el }
+end
+
+-- Identify this document and pick up the records left by other pages. When the
+-- documentation is split across files, each file states which chapter it is with
+-- `eq-chapter` in its front matter, and its equations are numbered from there.
+-- Without it the chapters are counted within the document, as they always were.
+function Meta(meta)
+  if quarto and quarto.project and quarto.project.directory
+     and quarto.doc and quarto.doc.input_file then
+    local root = quarto.project.directory
+    EQREF_DIR = root .. "/.eqrefs"
+    source_file = quarto.doc.input_file:gsub("^" .. root:gsub("([^%w])", "%%%1") .. "/?", "")
+  end
+
+  local chapter = meta["eq-chapter"]
+  if chapter then
+    local n = tonumber(pandoc.utils.stringify(chapter))
+    -- the first level 1 heading takes it to exactly this number
+    if n then current_section = n - 1 end
+  end
+
+  read_records()
+  return meta
 end
 
 function Header(el)
@@ -329,25 +411,47 @@ local function resolve_reference(el)
   if not (kind == "Eqref" or kind == "ref") then return nil end
 
   local number = numbers[label]
+  local target = "#eq:" .. label
+
+  if not number then
+    -- Not in this document: try the records left by the other pages. The link is
+    -- written to the source file and Quarto rewrites it to the rendered page, so
+    -- the depth of either page does not matter here.
+    local other = elsewhere[label]
+    if other then
+      number = other.number
+      target = "/" .. other.file .. "#eq:" .. label
+    end
+  end
+
   if not number then
     -- Loud on purpose: an unresolved reference used to appear only as "(???)" in the
-    -- browser, with nothing in the build output to notice.
+    -- browser, with nothing in the build output to notice. On a split document this
+    -- also fires when the target page has not been rendered yet, which a second
+    -- render resolves.
     io.stderr:write("auto-subeqn.lua: unresolved equation reference '" .. label .. "'\n")
     return pandoc.Strong(pandoc.Str("[?" .. label .. "]"))
   end
 
   local text = (kind == "Eqref") and ("Eq.\u{00A0}" .. number) or number
-  return pandoc.RawInline("html", string.format(
-    '<a href="#eq:%s" class="quarto-eq-ref">%s</a>', label, text))
+  return pandoc.Link({pandoc.Str(text)}, target, "", pandoc.Attr("", {"quarto-eq-ref"}))
+end
+
+-- Leave this document's numbers where the other pages can find them.
+function Pandoc(doc)
+  write_record()
+  return doc
 end
 
 return {
   {
+    Meta = Meta,
     Header = Header,
     Math = Math,
     traverse = 'topdown'
   },
   {
-    Math = resolve_reference
+    Math = resolve_reference,
+    Pandoc = Pandoc
   }
 }
