@@ -7,17 +7,19 @@ bibliography:
 crossref:
   chapters: true
 language:
-  crossref-ch-prefix: Section
+  # Quarto reads the crossref prefixes from here. Do not move these to the top
+  # level of the front matter: keys such as section-cref-format are silently
+  # ignored there. That is why the prose used to spell the prefix out before
+  # each reference, which rendered as a doubled "Sect. Section 3.2". The prefix
+  # now comes from these keys alone, so references are written bare.
+  crossref-sec-prefix: "Sect."
+  crossref-ch-prefix: "Sect."
 eq-numstyle-1: arabic
 eq-numstyle-2: latin
 equation-cref-format: Eq. {num}
 equation-prefix: Eq.
 figure-prefix: Fig.
 number-theorems: false
-section-cref-format: Sect. {num}
-section-prefix: Section
-section-src-format-1: Section {num}
-section-src-format-2: Section {num}
 table-cref-format: Table {num}
 table-prefix: Table
 order: 11 
@@ -42,7 +44,7 @@ balance and soil hydrology.
 # General model structure and discretisation {#sec-structure}
 
 Each gridcell of the models is subdivided into nested tiles, each of which is occupied by one
-specific vegetation-type, representing a plant functional type (PFT, see Sect. @sec-pfts-cfts), or can be bare soil, permitting energy, water and soil biogeochemistry processes to occur in the absence of living vegetation. The number of tiles per
+specific vegetation-type, representing a plant functional type (PFT, see @sec-pfts-cfts), or can be bare soil, permitting energy, water and soil biogeochemistry processes to occur in the absence of living vegetation. The number of tiles per
 gridcell is flexible, making it is easy to implement more/different PFTs in the future. 
 
 Vegetation is represented by an average individual composed of a range of structural pools
@@ -142,7 +144,7 @@ respectively.
 ## Canopy nitrogen allocation {#sec-veg-foliar-N-fractions}
 
 The leaf area index ($LAI$) and canopy nitrogen content ($N_{leaf}$) are dynamic properties of the
-model, as described in Section , and are discretised to canopy layers given by
+model, as described in @sec-veg, and are discretised to canopy layers given by
 $\Eqref{eq:veg-root-distribution}$. $N_{leaf,cl}$ is partitioned into photosynthetic and
 non-photosynthetic, or structural, N. The fraction of structural N ($fN_{struc,cl}$) is calculated
 as a function of the total leaf N in the respective canopy layer:
@@ -187,7 +189,7 @@ where $T_{air}$ is the air temperature ($\mathrm{K}$), $R$ is the universal gas 
 @tbl-assimi:param.
 
 Photosynthesis and stomatal conductance are calculated for the mid-points of each canopy layer and
-light-quality class (sunlit and shaded; as defined in Sect. @sec-vertical-discretisation). For clarity, the subscript $_{cl}$ is
+light-quality class (sunlit and shaded; as defined in @sec-vertical-discretisation). For clarity, the subscript $_{cl}$ is
 omitted in this section.
 
 In light-saturated conditions, gross photosynthesis ($A_g$) in C3 plants is calculated as the
@@ -384,7 +386,7 @@ c_i &= c_1 \times c_a - c_2 \times A_n \times ( \frac{D_{air}^{wv2co2}}{g_s} + \
 $$
 
 where $f_{sunlit}$ is the fraction of sunlit leaves in a canopy layer (see [Eq.
-6.8](#eq-rad:fsunlit)), $R_l$ is the maintenance respiration of leaves (see Sect. @sec-veg-MaintResp), $g_0$ and $g_1$
+6.8](#eq-rad:fsunlit)), $R_l$ is the maintenance respiration of leaves (see @sec-veg-MaintResp), $g_0$ and $g_1$
 are PFT-specific parameters, $R$ is the molar gas constant, $T_{air}$ is air temperature (K), $p$
 air pressure (Pa), $c_1$ converts $\mathrm{CO_2}$ concentration from ppm to Pa, $c_2$ converts
 $\mathrm{\mu mol m^{-2} s^{-1}}$ to $\mathrm{mol m^{-2} s^{-1}}$, $g_a$ is the aerodynamic
@@ -416,7 +418,7 @@ $$
 
 where $F$ is the canopy-level equivalent of a leaf-level variable $F_{cl}$ (per unit leaf-area),
 such as gross photosynthesis ($A_g$), net photosynthesis ($A_n$), and leaf-level stomatal
-conductance ($g_s$), (see Sect. @sec-assimi-leaf-ps and @sec-assimi-stomatal-coupling) and $LAI_{cl}$ is the leaf area index of the canopy layer. The
+conductance ($g_s$), (see @sec-assimi-leaf-ps and @sec-assimi-stomatal-coupling) and $LAI_{cl}$ is the leaf area index of the canopy layer. The
 resulting canopy net assimilation $A_g$ is used as input to the vegetation model ([Eq.
 3.1](#eq-veg:labile_pool_dynamics)), the canopy conductance ($G_s$) is used for the calculation of
 ecosystem transpiration ([Eq. 6.14](#eq-sse_surface_energy_balance)).
@@ -476,8 +478,8 @@ $$
 \end{align}
 $$
 
-where $R_m$ is maintenance respiration, $R_r$ is resource uptake respiration (for both see Sect. @sec-veg-MaintResp),
-$\Delta S_X$ is the net exchange between the labile and reserve pool (Sect. @sec-veg-reserve), $f_{resp,growth}$ is
+where $R_m$ is maintenance respiration, $R_r$ is resource uptake respiration (for both see @sec-veg-MaintResp),
+$\Delta S_X$ is the net exchange between the labile and reserve pool (@sec-veg-reserve), $f_{resp,growth}$ is
 the constant fraction of respiration associated with growth, $G_X$ are the growth rates to build new
 tissues, $U_{root,X}$ are nutrient rates of root uptake, and $F_{sBNF}$ is the symbiontic N fixation rate.
 
@@ -520,7 +522,7 @@ $$
 
 where $i$ is either $\mathrm{NH_4}$ or $\mathrm{NO_3}$.
 
-Respiration associated with symbiotic fixation of is given by the specific costs of N fixation ($cost_{bnf,symb}$) and the actual rate of symbiotic N fixation (see Sect. @sec-veg-nfixation).
+Respiration associated with symbiotic fixation of is given by the specific costs of N fixation ($cost_{bnf,symb}$) and the actual rate of symbiotic N fixation (see @sec-veg-nfixation).
 
 $$
 \label{eq-veg-bnf-costs}
@@ -552,7 +554,7 @@ $$
 
 where $T_{air}$ is air temperature in degrees Celsius, $\Theta$ is the fractional soil moisture
 content ([Eq. 6.18](#eq-sse:theta)), and the $\lambda$ and $k$ are parameters. $k^{*}_{labile}$ is
-set to zero outside the growing season (see Sect. @sec-veg-phen).
+set to zero outside the growing season (see @sec-veg-phen).
 
 Respiration is assumed to have priority over growth. However, under severe C deficit, the meristem
 activity also down-regulates maintenance and resource uptake respiration. To ensure that carbon
@@ -572,8 +574,8 @@ $$
 req^{growth}_{XY} = \sum^{pools}_{i}{f^{i}_{alloc} \times \frac{X_i}{Y_i}}
 $$
 
-where $f^{i}_{alloc}$ are the allocation fractions (Sect. @sec-veg-allocation) to each pool $i$, and $\frac{X_i}{Y_i}$
-are the target stoichiometries of C:N:P (Sect. @sec-veg-stoichem) of the leaf, fine root, coarse root, sapwood, and
+where $f^{i}_{alloc}$ are the allocation fractions (@sec-veg-allocation) to each pool $i$, and $\frac{X_i}{Y_i}$
+are the target stoichiometries of C:N:P (@sec-veg-stoichem) of the leaf, fine root, coarse root, sapwood, and
 fruits pools. The actual growth rates can be calculated as
 
 $$
@@ -593,7 +595,7 @@ for nutrients than for carbon growth. The assumption behind this is that the tem
 moisture control of the meristem is already accounted for by $G_C$, and that the plant is able to
 mobilise the required nutrients from the labile pool to support this growth.
 
-Outside the growing season, all growth fluxes are set to zero (see Sect. @sec-veg-phen).
+Outside the growing season, all growth fluxes are set to zero (see @sec-veg-phen).
 
 ## Partitioning of growth to plant organs {#sec-veg-allocation}
 
@@ -604,7 +606,7 @@ The labile pool partitioned to growth is first split into reproductive (fruit po
 a functional balance relationship between the structural pools [@Zaehle:2010cz].
 
 The fraction of carbon growth allocated to fruit depends on the ability of the plant to build
-reserves ($\Delta S_C$, see Sect. @sec-veg-reserve), implying that fruit growth is suppressed during phases of rapid
+reserves ($\Delta S_C$, see @sec-veg-reserve), implying that fruit growth is suppressed during phases of rapid
 leaf growth (beginning of the growing season), as well as periods of C starvation (e.g. severe drought).
 
 $$
@@ -755,7 +757,7 @@ condition refers to the relationship between the nutrients available for growth 
 and the nutrients required for growth ([Eq. 3.8](#eq-veg-r0-growth)), averaged at the time-scale of
 $\tau_{mavg}^{\chi}$. The stoichiometric ratios of the fine roots vary proportionally to those of
 the leaves, whereas the stoichiometry of wood is assumed time-invariant [@Meyerholt:2015hh]. The
-stoichiometry of the labile and reserve pools are prognostic properties, as described in Sect. @sec-veg-stoichem.
+stoichiometry of the labile and reserve pools are prognostic properties, as described in @sec-veg-stoichem.
 
 ## Non-structural reserve pool dynamics {#sec-veg-reserve}
 
@@ -790,9 +792,9 @@ $$
 
 where $sla$ the PFT-specific specific leaf area, $\tau_{leaf}$ and
 $\tau_{fine\_root}$ are the PFT-specific turnover times of foliage and fine roots, and $R_{leaf:fine\_root}$ is the leaf to root ratio ([Eq. 3.12](#eq-veg:dynamic_alloc)) averaged over the lifetime of the fine roots ($\tau_{mavg}^{root}$). 
-$LAI^{target}$ is the target leaf area index, which is calculated differently for tree and herbaceous PFTs. For tree PFTs, $LAI^{target}$ is a function of the implied leaf area calculated from the actual sapwood area (see Sect. @sec-veg-allocation). For herbaceous PFTs, $LAI^{target}$ corresponds to the long-term average LAI. For both PFT types, $LAI^{target}$ is constrained to values between $LAI_{min}$ and $LAI^{target}_{max}$.
+$LAI^{target}$ is the target leaf area index, which is calculated differently for tree and herbaceous PFTs. For tree PFTs, $LAI^{target}$ is a function of the implied leaf area calculated from the actual sapwood area (see @sec-veg-allocation). For herbaceous PFTs, $LAI^{target}$ corresponds to the long-term average LAI. For both PFT types, $LAI^{target}$ is constrained to values between $LAI_{min}$ and $LAI^{target}_{max}$.
 The target reserve pool size is limited to a maximum storage capacity of leaves, fine roots and stems, with an assumed maximum fractional storage capacity for each tissue type ($f_{store,i}^{max}$). The N and P target pools are defined in an
-equivalent manner, respecting the current target stoichiometry of leaves and fine roots (Sect. @sec-veg-stoichem). 
+equivalent manner, respecting the current target stoichiometry of leaves and fine roots (@sec-veg-stoichem). 
 
 The net exchange between the labile and reserve pool is calculated as
 
@@ -870,11 +872,11 @@ PFT-specific threshold ($age^{leaf}_{min}$).
 The phenology of vegetation, describing the seasonal development of foliage biomass, is then simulated
 prognostically given the ability of the plant to grow new tissues, which depends on the size and
 turnover of the meristems ([Eq. 3.9](#eq-veg:growth_rate)), as well as the fractional allocation of
-growth to plant organs (see Sect. @sec-veg-allocation). Plant growth set to zero outside the growing season
+growth to plant organs (see @sec-veg-allocation). Plant growth set to zero outside the growing season
 ([Eq. 3.9](#eq-veg:growth_rate)). 
 
 While the beginning and ending mark the start and end of tissue production, only the turnover of the leaves is directly affected by phenological triggers. The turnover of all other
-tissues is assumed to be constant (see Sect. @sec-veg-turnover). A notable exception are herbaceaous PFTs, in which the growing season ends due to water stress. In these, root shedding occurs at the same rate as leaf shedding.
+tissues is assumed to be constant (see @sec-veg-turnover). A notable exception are herbaceaous PFTs, in which the growing season ends due to water stress. In these, root shedding occurs at the same rate as leaf shedding.
 
 ### Crop Functional Types
 
@@ -917,7 +919,7 @@ at the timescale of $\tau_{sap\_wood}$.
 
 In evergreen trees, foliar turnover to litter is assumed to
 be constant ($\tau_{leaves}$). For deciduous and herbaceous PFTs only minor turnover happens at
-$\tau_{leaves}$ during the growing season. At the end of the growing season (see Sect. @sec-veg-phen), foliar
+$\tau_{leaves}$ during the growing season. At the end of the growing season (see @sec-veg-phen), foliar
 turnover is set to a constant rate
 
 $$
@@ -951,7 +953,7 @@ $$
 where $X$ is either N or P, and $Y$ C or N, respectively. The flux from the labile pool is limited
 by the turnover rate and size of the labile pool to ascertain that the latter cannot be exhausted.
 
-Turnover of fruits replenishes the seed-bed pool, which - for natural PFTs - turns into litter according to a dedicated turnover time ($\tau_{seed\_bed}$), but which is also used to fuel establishement of new individuals (see Sect. @sec-veg-dynamics). 
+Turnover of fruits replenishes the seed-bed pool, which - for natural PFTs - turns into litter according to a dedicated turnover time ($\tau_{seed\_bed}$), but which is also used to fuel establishement of new individuals (see @sec-veg-dynamics). 
 
 For crop functional types, grain turnover is simulated to replenish the seed-bed pool used for initialisation of the crop labile pool in the next crop season (see @sec-veg-allocation). The seed-bed pool is assumed to be protected from turnover, until it reaches $f_{store,max}$ times the requirement for crop initialisation. Once the pool exceeds this amount, the seed-bed turns over to litter, as for natural PFTs.  
 
@@ -1179,13 +1181,13 @@ $$
 $$
 
 where $F_{L_{vp}}$ is the litterfall of the various plant tissue types, $f_{vp \rightarrow i}$ are
-the coefficients determining the partitioning of this litterfall to the litter pools (see Section @sec-sb-litter-partitioning),
+the coefficients determining the partitioning of this litterfall to the litter pools (see @sec-sb-litter-partitioning),
 $\tau_i$ are temperature and moisture adjusted, nitrogen-limited turnover times of the respective
 pools (X; i = met, str, wl, fast, slow), $\eta_{i \rightarrow j }$ are the mass
-transfer from pool $i$ to $j$ (see Sect. @sec-sb-litter-partitioning), the $\Phi_x$ are the net mineralisation terms for N
+transfer from pool $i$ to $j$ (see @sec-sb-litter-partitioning), the $\Phi_x$ are the net mineralisation terms for N
 and P, respectively, required to balance the carbon inflow to the fast and slow SOM pools and their
-respective C:N:P stoichiometry (see Sect. @sec-sb-formation) and $F_{aBNF} is - only in the case of nitrogen - the asymbiotic rate of N fixation (See Sect. @sec-sb-asymb-bnf). The transfer of soil organic matter through
-bioturbation is represented with a prescribed diffusion constant (see Sect. @sec-sb-bioturbation).
+respective C:N:P stoichiometry (see @sec-sb-formation) and $F_{aBNF} is - only in the case of nitrogen - the asymbiotic rate of N fixation (See @sec-sb-asymb-bnf). The transfer of soil organic matter through
+bioturbation is represented with a prescribed diffusion constant (see @sec-sb-bioturbation).
 
 The dynamics of the inorganic nitrogen pools are described as:
 
@@ -1206,7 +1208,7 @@ where $U$ are the uptake rates of plants, or (de-)nitrifying bacteria, respectiv
 $F_{denit,i}$ are the production of $\mathrm{NO_y}$, $\mathrm{N_2O}$ and $\mathrm{N_2}$ by
 nitrification and denitrification, respectively, and $\frac{\partial v_{x} X}{\partial z}$ the
 vertical transport loss term given by the product of ion concentration and water mass flow between
-soil layers (see Sect. ). Sorption of $\mathrm{NH_4}$ is modelled according to an Langmuir Isotherm, similar to the sorption of $\mathrm{PO_4}$ (see Sect. @sec-phosphorus-adsorption-and-absorption).
+soil layers (see @sec-sse-surface-hydrology). Sorption of $\mathrm{NH_4}$ is modelled according to an Langmuir Isotherm, similar to the sorption of $\mathrm{PO_4}$ (see @sec-phosphorus-adsorption-and-absorption).
 
 The dynamics of the inorganic phosphorus pools are described as:
 
@@ -1224,8 +1226,8 @@ $$
 where $P_{lab}$, $P_{sorb}$, $P_{ocl}$, and $P_{primary}$ are labile, absorbed, occluded, and
 primary P, respectively; the $F_{dep,PO_4}$, $F_{weath,PO_4}$, $F_{biomin,PO_4}$, $F_{adsorp,PO_4}$,
 and $F_{adsorp,PO_4}$ are the atmospheric deposition, weathering, fast adsorption, and phosphorus
-fluxes, respectively (see Section ). All pools except the primary phosphorus pool are assumed to be
-affected by bioturbation (see Sect. ).
+fluxes, respectively (see @sec-sb-p_flux and @sec-phosphorus-adsorption-and-absorption). All pools except the primary phosphorus pool are assumed to be
+affected by bioturbation (see @sec-sb-bioturbation).
 
 ## Partitioning of litterfall to litter pools {#sec-sb-litter-partitioning}
 
@@ -1320,7 +1322,7 @@ $$
 \Phi_{l \rightarrow {fast}, NH_4} = \frac{NH_4}{max(NH_4, \ U^{*}_{NH_4,plant} + U^{*}_{nit} + \Phi^{*}_{l \rightarrow {fast}, NH_4})} \times {\Phi^{*}_{l \rightarrow {fast}, NH_4}}
 $$
 
-In the case that $\Phi_{l \rightarrow {fast}, NH_4}$ and asymbiotic N fixation (\mathrm{F_{aBNF}}, see Sect. @sec-sb-asymb-bnf) is insufficient to ensure that the newly formed
+In the case that $\Phi_{l \rightarrow {fast}, NH_4}$ and asymbiotic N fixation (\mathrm{F_{aBNF}}, see @sec-sb-asymb-bnf) is insufficient to ensure that the newly formed
 fast SOM has a C:N ratio of $\chi_{SOM_{fast}^{C:N}}$, the turnover times of the metabolic and
 structural litter pool is increased to match the N available for immobilisation [@Parton:1993ud]:
 
@@ -1435,7 +1437,7 @@ F_{aBNF} &= v_{max,aBNF}(T_{soil},\Psi_{soil}) \times h(NH_4+NO_3) \times \phi^*
 \end{align}  
 $$
 
-where $v_{max,aBNF}$ is the maximum rate of asymbiotic N fixation per unit immobilisation flux, with a temperature sensitivity similar to symbotic N fixation (see Sect. @sec-veg-nfixation) and a moisture sensitivity $g(\Psi_{soil}) = 1- \frac{\Psi_{soil}}{{\Psi}_{pwp}}$, with $k^{\psi}_{abnf}$ corresponding to the permanent wilting point, and $h(NH_4+NO_3)$ is a function that limits asymbiotic N fixation in the presence of ammonium and nitrate with a half-saturation constant $km_{abnf}$. The emergent asymbiotic N fixation rate has been calibrated with a globally constant $v_{max,aBNF}$ to match the data presented by @Davies-Barnard:2020gb.
+where $v_{max,aBNF}$ is the maximum rate of asymbiotic N fixation per unit immobilisation flux, with a temperature sensitivity similar to symbotic N fixation (see @sec-veg-nfixation) and a moisture sensitivity $g(\Psi_{soil}) = 1- \frac{\Psi_{soil}}{{\Psi}_{pwp}}$, with $k^{\psi}_{abnf}$ corresponding to the permanent wilting point, and $h(NH_4+NO_3)$ is a function that limits asymbiotic N fixation in the presence of ammonium and nitrate with a half-saturation constant $km_{abnf}$. The emergent asymbiotic N fixation rate has been calibrated with a globally constant $v_{max,aBNF}$ to match the data presented by @Davies-Barnard:2020gb.
 
 ## Nitrification and denitrification {#sec-sb-nitrification-denitrification}
 
@@ -1451,7 +1453,7 @@ anvf &= e^{-(\lambda_{anvf} \times (1-afps))^{k_{anvf}}}, where\\
 $$
 
 where $\lambda_{anvf}$ and $k_{anvf}$ are parameters, $afps$ is the air filled pore space, and the
-$W_x$ are the soil moisture contents as defined in Sect. @sec-sse-surface-hydrology.
+$W_x$ are the soil moisture contents as defined in @sec-sse-surface-hydrology.
 
 The potential rate of nitrification ($U^{*}_{nit}$) in the aerobic fraction of the soil is modified
 by temperature and soil moisture according to:
@@ -1467,7 +1469,7 @@ U^{*}_{nit} &= v_{max,nit} \times f(T_{soil}) \times g(\Theta) \times NH_4, wher
 $$
 
 The actual rate of nitrification ($U_{nit}$), given the potential rate and competing demands from
-plant and microbial uptake (Sect. @sec-sb-formation and Sect. @sec-sb-simple-uptake), is partitioned into its products ($\mathrm{NO_3}$,
+plant and microbial uptake (@sec-sb-formation and @sec-sb-simple-uptake), is partitioned into its products ($\mathrm{NO_3}$,
 $\mathrm{NO_y}$, and $\mathrm{N_2O}$) according to
 
 $$
@@ -1494,7 +1496,7 @@ U^{*}_{denit} &= anvf \times v_{max,denit}(T_{soil}) \times \frac{C_{fast}}{K_{m
 $$
 
 The actual rate of denitrification ($U_{denit}$), given the potential rate and competing demands
-from plant uptake (Sect. , is partitioned into its products ($\mathrm{NO_y}$, $\mathrm{N_2O}$, and
+from plant uptake (@sec-sb-simple-uptake), is partitioned into its products ($\mathrm{NO_y}$, $\mathrm{N_2O}$, and
 $\mathrm{N_2}$) according to
 
 $$
@@ -1842,7 +1844,7 @@ where the parameterisation of the visible radiation is based on the assumption t
 interception and reflection is similar to that of the photosynthetically active range (i.e. 400-700
 nm). In the following, the subscripts for visible and near-infrared are omitted for readability.
 
-To represent the impact of the presence of branches and stems on light attenuation and reflection in the crown, the extinction and reflection coefficients for leaves and stems are weightd according to the contribution of leaf area index (LAI) and stem area index (SAI) to the plant area index. The stem area index ($SAI$) is calculated as a function of the PFT's current sapwood area (see Sect. @sec-veg-allocation)
+To represent the impact of the presence of branches and stems on light attenuation and reflection in the crown, the extinction and reflection coefficients for leaves and stems are weightd according to the contribution of leaf area index (LAI) and stem area index (SAI) to the plant area index. The stem area index ($SAI$) is calculated as a function of the PFT's current sapwood area (see @sec-veg-allocation)
 $$
 SAI = k_{sai2lai} \times k_{latosa} \times A_s  
 $$
@@ -1937,7 +1939,7 @@ $$
 \end{align}
 $$
 
-Based on the so-calculated light profile, the canopy is then split into a sunlit and a shaded part for the calculation of photosynthesis and stomatal conductance (see Sect. @sec-assimi), with the sunlit fraction defined as:
+Based on the so-calculated light profile, the canopy is then split into a sunlit and a shaded part for the calculation of photosynthesis and stomatal conductance (see @sec-assimi), with the sunlit fraction defined as:
 
 $$
 \label{eq-rad-fsunlit}
@@ -2007,7 +2009,7 @@ $$
 
 where $C_{s,l}$ is the heat capacity of the surface layer, $H$ is the sensible heat flux, $LE$ the
 latent heat flux, composed of interception loss $E_i$, soil evaporation $E_s$ and transpiration
-$E_v$, as described in Section . $G$ is the ground heat flux, which is obtained from the solution of
+$E_v$, as described in @sec-sse-surface-hydrology. $G$ is the ground heat flux, which is obtained from the solution of
 the thermal diffusion equation, which is used to diagnose the temperature profile within the soil
 
 $$
