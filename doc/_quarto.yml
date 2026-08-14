@@ -9,7 +9,13 @@ website:
   description: Guide to ICON-Land and JSBACH
   cookie-consent:
     type: express
-    policy-url: file:///privacy-policy.html
+    # Quarto emits this verbatim as the consent banner's link target: it is not
+    # resolved against site-url and not rewritten per page depth, and the banner
+    # shows on every page, so a bare relative path would break on nested pages.
+    # This default suits `quarto preview`, which serves the site at the host root.
+    # build-doc.sh renders with `--profile pages`, which overrides it with the
+    # published /jsbach/page/ base path. See _quarto-pages.yml.
+    policy-url: /privacy.html
   navbar:
     pinned: true
     left:

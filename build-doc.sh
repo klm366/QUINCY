@@ -116,6 +116,9 @@ if  [[ $pages_only == false ]]; then
 fi
 
 cd doc
-quarto render --to html --output-dir html/page
+# The 'pages' profile (_quarto-pages.yml) rewrites absolute in-page URLs to carry
+# the /jsbach/page/ base path this site is published under. Plain 'quarto preview'
+# uses the default profile, which assumes the site is served at the host root.
+quarto render --profile pages --to html --output-dir html/page
 cd ..
 

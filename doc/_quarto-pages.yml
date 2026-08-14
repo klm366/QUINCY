@@ -1,0 +1,12 @@
+# Overrides applied when the site is built for publication on GitLab Pages,
+# via `quarto render --profile pages` in build-doc.sh.
+#
+# build-doc.sh renders the Quarto site into doc/html/page, and .gitlab-ci.yml
+# publishes doc/html as the Pages root, so the site is served under
+# /jsbach/page/ rather than at the host root that `quarto preview` uses.
+#
+# Only settings that must carry that base path belong here. Everything else
+# stays in _quarto.yml so preview and published builds cannot drift apart.
+website:
+  cookie-consent:
+    policy-url: /jsbach/page/privacy.html
