@@ -415,14 +415,6 @@ CONTAINS
         CALL model%Queue_task(VEG_, "plant_characteristics")
       END IF
 
-      IF (model%config%qmodel_id == QLAND) THEN
-        IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
-          !CALL model%Queue_task(Q_DINSECT_, "update_dinsect_effects") ! LAND ONLY, temporary
-          CALL model%Queue_task(Q_DINSECT_, "update_dinsect_defoliator") ! LAND ONLY, new, decoupled from update_dinsect_effects
-          CALL model%Queue_task(Q_DINSECT_, "update_dinsect_barkbeetle") ! LAND ONLY, new, decoupled from update_dinsect_effects
-        ENDIF
-      ENDIF
-
       ! --------------- Any tasks that might change the land cover need to come first in the timestep
       !
       ! Note: PPLCC_ is automatically activated in mo_jsb_base.f90:jsbach_setup_models
@@ -464,6 +456,14 @@ CONTAINS
           CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND or PLANT; if Q_SYL_ or Q_AGR_ active
         END IF
       END IF
+
+      IF (model%config%qmodel_id == QLAND) THEN
+        IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
+          !CALL model%Queue_task(Q_DINSECT_, "update_dinsect_effects") ! LAND ONLY, temporary
+          CALL model%Queue_task(Q_DINSECT_, "update_dinsect_defoliator") ! LAND ONLY, new, decoupled from update_dinsect_effects
+          CALL model%Queue_task(Q_DINSECT_, "update_dinsect_barkbeetle") ! LAND ONLY, new, decoupled from update_dinsect_effects
+        ENDIF
+      ENDIF
 
       CALL model%Queue_task(RAD_,       "surface_radiation")
       CALL model%Queue_task(Q_PHENO_,   "q_phenology")
