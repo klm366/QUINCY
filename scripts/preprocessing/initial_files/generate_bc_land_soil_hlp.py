@@ -11,6 +11,7 @@ import cartopy.mpl.ticker as cticker
 from cartopy.util import add_cyclic_point
 from pathlib import Path
 import sys
+import os
 warnings.filterwarnings("ignore")
 
 # get two arguments, absolute path of input and putput directory
@@ -44,6 +45,7 @@ weighted_mean_BLDFIE=np.average(BLDFIE[0:5,:,:],weights=depth_sl,axis=0)
 
 # creating function creating NetCDF file
 def create_netcdf_file(file_path, lat_dim_size, lon_dim_size, variable_name, data, long_name, units, fill_value, lat_values, lon_values):
+    os.chdir(outDir)
     ncfile = Dataset(file_path, 'w', format="NETCDF4")
 
     lat_dim = ncfile.createDimension('lat', lat_dim_size)
@@ -78,6 +80,6 @@ def create_netcdf_file(file_path, lat_dim_size, lon_dim_size, variable_name, dat
 
 
 # Create a NetCDF file for result_matrix bulk density
-create_netcdf_file(Path(outDir)/'BLDFIE_3600_1800.tmp', 1800, 3600, 'BLDFIE', weighted_mean_BLDFIE,
+create_netcdf_file('BLDFIE_3600_1800.tmp', 1800, 3600, 'BLDFIE', weighted_mean_BLDFIE,
                    'Bulk density (fine earth) in kg / cubic-meter', 'kg / cubic-m', -9999, BLDFIE_lat, BLDFIE_lon)
 
