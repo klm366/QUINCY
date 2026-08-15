@@ -82,7 +82,7 @@ if [[ ${var_list} == *"soil_depth"* || ${var_list} == *"root_depth"* ]]; then
 fi
 
 # average input values
-python ${scripts_dir}/calculate_mean_layers_below_1m.py
+python ${scripts_dir}/generate_bc_land_soil_hlp.py
 cp ${scripts_dir}/calculate_mean_layers_below_1m.py path_bc/scripts/
 echo ">> calculations (weighted average, medians in grid cells etc) were successfully performed in python and may be used for further remapping"
 
