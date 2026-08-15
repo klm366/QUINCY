@@ -2,8 +2,7 @@
 #SBATCH --partition=shared     # Use compute node for R2B9 and higher
 # #SBATCH --partition=compute  # Use in case of too little memory (OOM error)
 # #SBATCH --mem=450G           #  ""
-# #SBATCH --account=mh0287
-#SBATCH --account=mj0143
+#SBATCH --account=mh0287
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8    # Use 128 for R2B9 and higher
 #SBATCH --output=create_icon-land_ini_files.o%j
@@ -20,6 +19,12 @@
 # See LICENSES/ for license information
 # SPDX-License-Identifier: BSD-3-Clause
 # ---------------------------------------
+
+#
+# options for running this script:
+#   './create_icon-land_ini_files.sh' interactively at a login node (works well & fast for r2b4)
+#   'sbatch create_icon-land_ini_files.sh' (you might need to modify the account number)
+#
 
 #-----------------------------------------------------------------------------
 # Master script to generate ICON-Land initial files
@@ -109,8 +114,8 @@ run_generate_hdpara_file=false         # Needed with internal HD model
 # --------------------------------------
 # Base directories for constructing work and output directories (see below)
 projectGroup="mj0143"                           # mh0287, mj0143
-work_dir_base=/work/${projectGroup}/${USER}     # levante
 accountType=b                                   # m, b
+work_dir_base=/work/${projectGroup}/${USER}     # levante
 scratch_dir_base=/scratch/${accountType}/$USER  # levante
 #scratch_dir_base=/work/mh0287/${USER}          # breeze4
 
@@ -148,12 +153,12 @@ fi
 
 # --------------------------------------
 # Output and working directories
-export revision=r0104      # ic/bc revision directory that will be generated (see e.g. /pool/data/ICON/grids/public/mpim/0049/land/)
+export revision=r0104      # ic/bc revision directory that will be generated (e.g. r0104, see /pool/data/ICON/grids/public/mpim/0049/land/)
 export work_dir=${scratch_dir_base}/ini_files/work/${grid_label}/${revision}  # temporary working directory
-export output_root_dir=${work_dir_base}/ini_files     # root directory for the new ic/bc files
-export bc_file_dir=${output_root_dir}/${grid_label}/land/${revision}
+export output_root_dir=${work_dir_base}/ini_files                             # root directory for the new ic/bc files
+export bc_file_dir=${output_root_dir}/${grid_label}/land/${revision}          # ...
 hd_rev=""                  # revision for external HD data; "" for no revision subdirectory
-export hd_file_dir=${output_root_dir}/${grid_label}/hd/${hd_rev} # directory for external HD data
+export hd_file_dir=${output_root_dir}/${grid_label}/hd/${hd_rev}              # directory for external HD data
 
 # --------------------------------------
 # List of years:
