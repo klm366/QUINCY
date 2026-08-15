@@ -76,6 +76,6 @@ def create_netcdf_file(file_path, lat_dim_size, lon_dim_size, variable_name, dat
 
 
 # Create a NetCDF file for result_matrix bulk density
-create_netcdf_file('/scratch/b/b301039/testdir/BLDFIE_3600_1800.nc', 1800, 3600, 'BLDFIE', weighted_mean_BLDFIE,
+create_netcdf_file('/scratch/b/b301039/testdir/BLDFIE_3600_1800.tmp', 1800, 3600, 'BLDFIE', weighted_mean_BLDFIE,
                    'Bulk density (fine earth) in kg / cubic-meter', 'kg / cubic-m', -9999, BLDFIE_lat, BLDFIE_lon)
 
