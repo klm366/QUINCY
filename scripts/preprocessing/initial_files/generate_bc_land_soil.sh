@@ -45,6 +45,8 @@ prog=$(basename $0)
 file_bc_soil=bc_land_soil
 clean_up=true  # Remove intermediate files
 
+quincyInputDataDir="/work/mj0143/icon_land_data_pool/preprocessing/bc_soil_quincy"
+
 cd ${work_dir}
 
 # ----------------------------------------------------------------------------
@@ -82,7 +84,7 @@ if [[ ${var_list} == *"soil_depth"* || ${var_list} == *"root_depth"* ]]; then
 fi
 
 # average input values
-python ${scripts_dir}/generate_bc_land_soil_hlp.py
+python ${scripts_dir}/generate_bc_land_soil_hlp.py ${quincyInputDataDir} ${work_dir}
 cp ${scripts_dir}/generate_bc_land_soil_hlp.py ${path_bc}/scripts/
 echo ">> calculations (weighted average, medians in grid cells etc) were successfully performed in python and may be used for further remapping"
 
@@ -211,21 +213,15 @@ for var in ${var_list}; do
     BLDFIE )
   # ----------------------
       # bulk density
+      # sse_init_vars%bulk_density -> bulk_dens_sl
       # set cdo command to be silent, create no history and use double precision
       cdoq="cdo -s --no_history -b 64"
-      # sse_init_vars%bulk_density -> bulk_dens_sl
-      #inputFileDir="/work/mj0143/icon_land_data_pool/preprocessing/bc_soil_quincy"
-
       # default value
       bdDefaultVal=1500
 
       # conversion of Bulk density (fine earth) in kg / cubic-meter
-      # ${cdoq} -setmisstoc,${bdDefaultVal} "${temp_file_dir}/${bd}.${soilgrid}" "${temp_file_dir}/${bd}_nomiss.nc"
-      # ${cdoq} -remapcon,"${icon_grid}" "${temp_file_dir}/${bd}_nomiss.nc" "${output_file_dir}/${bd}.soilgrid.${grid_res_id}.nc"
-      # the file BLDFIE_3600_1800.tmp was created above with generate_bc_land_soil_hlp.py
-      ${cdoq} -setmisstoc,${bdDefaultVal} /scratch/b/b301039/testdir/BLDFIE_3600_1800.tmp ${atmGridID}_${var}.tmp2
+      ${cdoq} -setmisstoc,${bdDefaultVal} BLDFIE_3600_1800.tmp ${atmGridID}_${var}.tmp2
       ${cdoq} -remapcon,${icon_grid} ${atmGridID}_${var}.tmp2 ${atmGridID}_${var}.nc
-
       ;;
   # ----------------------
     * )

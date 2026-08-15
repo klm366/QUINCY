@@ -13,7 +13,9 @@ from pathlib import Path
 import sys
 warnings.filterwarnings("ignore")
 
-inputDateDir=Path("/work/mj0143/icon_land_data_pool/preprocessing/bc_soil_quincy")
+# get two arguments, absolute path of input and putput directory
+inputDateDir=sys.argv[1]
+outDir=sys.argv[2]
 
 # Input files
 bulk_dens=inputDateDir/"BLDFIE.soilgrid.3600.1800.7.nc"
@@ -76,6 +78,6 @@ def create_netcdf_file(file_path, lat_dim_size, lon_dim_size, variable_name, dat
 
 
 # Create a NetCDF file for result_matrix bulk density
-create_netcdf_file('/scratch/b/b301039/testdir/BLDFIE_3600_1800.tmp', 1800, 3600, 'BLDFIE', weighted_mean_BLDFIE,
+create_netcdf_file(Path(outDir)/'BLDFIE_3600_1800.tmp', 1800, 3600, 'BLDFIE', weighted_mean_BLDFIE,
                    'Bulk density (fine earth) in kg / cubic-meter', 'kg / cubic-m', -9999, BLDFIE_lat, BLDFIE_lon)
 
