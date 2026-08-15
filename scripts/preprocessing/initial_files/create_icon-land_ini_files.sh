@@ -108,10 +108,11 @@ run_generate_hdpara_file=false         # Needed with internal HD model
 #
 # --------------------------------------
 # Base directories for constructing work and output directories (see below)
-projectGroup="mj0143"                # mh0287, mj0143
-work_dir_base=/work/${projectGroup}/${USER} # levante
-scratch_dir_base=/scratch/m/$USER           # levante
-#scratch_dir_base=/work/mh0287/${USER}       # breeze4
+projectGroup="mj0143"                           # mh0287, mj0143
+work_dir_base=/work/${projectGroup}/${USER}     # levante
+accountType=b                                   # m, b
+scratch_dir_base=/scratch/${accountType}/$USER  # levante
+#scratch_dir_base=/work/mh0287/${USER}          # breeze4
 
 # --------------------------------------
 # ICON grids used
