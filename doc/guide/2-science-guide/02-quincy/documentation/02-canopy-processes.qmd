@@ -35,7 +35,7 @@ where $k_0^{chl}$, $k_1^{chl}$ and $k^{chl}$ are empirical parameters, $a_{chl}^
 N content of chlorophyll.
 
 The values of $fN_{rub}$ and $fN_{et}$ are calculated assuming a fixed ratio of the $V_{cmax}$ and
-$J_{max}$ photosynthetic parameters at 25°C, $r_{J2V}$, given the calculated values of the
+$J_{max}$ photosynthetic parameters at $25\,\mathrm{^\circ C}$, $r_{J2V}$, given the calculated values of the
 structural and photosynthetic fractions. The PEP carboxylase fraction, $fN_{pep}$, is considered to be a constant.
 
 ## Leaf-level net photosynthesis {#sec-assimi-leaf-ps}

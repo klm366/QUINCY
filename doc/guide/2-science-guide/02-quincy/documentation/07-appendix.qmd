@@ -30,9 +30,9 @@ number-offset: [6]
 
 | Symbol | Description | Value | Unit | Equation | Citation |
 |:----------------|:----------------|:----------------|:----------------|:---------------:|:----------------|
-| $j_{max}^n$ | electron-transport limited carboxylation rate per unit N | 4.4 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \ensuremath{\mathrm{CO_2}}}{mmol \hspace{0.1em} N}}$ | $\ref{eq:jmax}$ | @Niinemets:1997ha |
-| $v_{cmax}^n$ | Rubisco limited carboxylation rate per unit N | 1.8 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \ensuremath{\mathrm{CO_2}}}{mmol \hspace{0.1em} N}}$ | $\ref{eq-vcmax}$ | @Niinemets:1997ha |
-| $v_{pepc}^n$ | PePC limited carboxylation rate per unit N | 98777.97 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \ensuremath{\mathrm{CO_2}}}{mmol \hspace{0.1em} N}}$ | $\ref{eq-pepc}$ | @Tazoe:2006hc |
+| $j_{max}^n$ | electron-transport limited carboxylation rate per unit N | 4.4 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \mathrm{CO_2}}{mmol \hspace{0.1em} N}}$ | $\ref{eq:jmax}$ | @Niinemets:1997ha |
+| $v_{cmax}^n$ | Rubisco limited carboxylation rate per unit N | 1.8 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \mathrm{CO_2}}{mmol \hspace{0.1em} N}}$ | $\ref{eq-vcmax}$ | @Niinemets:1997ha |
+| $v_{pepc}^n$ | PePC limited carboxylation rate per unit N | 98777.97 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \mathrm{CO_2}}{mmol \hspace{0.1em} N}}$ | $\ref{eq-pepc}$ | @Tazoe:2006hc |
 | $fN_{pep}$ | fraction of N in PEP and PPKD (C4 plants only) | 0.045 | \- | Sect. | @Makino2003-kc |
 | $r_{J2V}$ | ratio of Jmax25/Vcmax25 (C3/C4) plants | 1.97 / 1.4 | \- | Sect. | @Wullschleger1993-bk |
 | $a_{chl}^n$ | chlorophyll N content | 25.12 | $\mathrm{\frac{mol}{mmol}}$ | $\ref{eq:ps-lightharvesting}$ | @Evans:1989bg |
@@ -94,9 +94,9 @@ number-offset: [6]
 | $k_{htol}$ | Stem mass to leaf mass ratio of grasses | 0.05 | \- | $\ref{eq-l2s-grass}$ | @Zaehle:2010cz |
 | **Stoichiometry** |  |  |  |  |  |
 | $C_m$ | Carbon mass per unit dry weight of leaves | 0.48 | $\mathrm{\frac{g C}{g DW}}$ | \- | @Kattge:2011fc |
-| $\chi_{root}^{C:N}$ | Relative C:N of fine roots compared to leaves | 0.85 | \- | Sect.  | @Zaehle:2010cz |
-| $\chi_{wood}^{C:N}$ | Relative C:N of woody biomass compared to leaves | 0.145 | \- | Sect.  | @Zaehle:2010cz |
-| $\chi_{root}^{N:P}$ | Relative N:P of fine roots compared to leaves | 1.0 | \- | Sect.  | @Thum:2019mm |
+| $\chi_{root}^{C:N}$ | Relative C:N of fine roots compared to leaves | 0.85 | \- | Sect.  | @Zaehle:2010cz |
+| $\chi_{wood}^{C:N}$ | Relative C:N of woody biomass compared to leaves | 0.145 | \- | Sect.  | @Zaehle:2010cz |
+| $\chi_{root}^{N:P}$ | Relative N:P of fine roots compared to leaves | 1.0 | \- | Sect.  | @Thum:2019mm |
 | $\chi_{wood}^{N:P}$ | Relative N:P of woody biomass compared to leaves | 1.0 | \- | Sect. | @Thum:2019mm |
 | $\delta^{\chi}_{leaf}$ | Maximum rate of foliar stoichiometry change | 0.0048 | $\mathrm{day^{-1}}$ | $\ref{eq-veg-stoichem-dynamic}$ | @Zaehle:2010cz |
 | $\lambda^{\chi}_{leaf}$ | Shape parameter in leaf stoichiometry nutrient response | 2.0 | \- | $\ref{eq-veg-stoichem-dynamic}$ | @Zaehle:2010cz |

@@ -11,7 +11,11 @@
       tagSide: 'right',
       tagIndent: '0.8em',
       macros: {
-        Eqref: ['\\text{Eq.}\\,\\ref{#1}', 1]
+        Eqref: ['\\text{Eq.}\\,\\ref{#1}', 1],
+        // \textperthousand is a LaTeX text-mode symbol that MathJax does not know.
+        // The isotope parameters are given per mille, so it is defined here rather
+        // than putting the character itself into the sources.
+        textperthousand: '\\unicode{x2030}'
       }
     }
   };
