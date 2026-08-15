@@ -34,6 +34,7 @@ atmGridID=${atmGridID}
 path_bc=${bc_file_dir}
 work_dir=${work_dir}
 pool_prepare=${pool_prepare}
+scripts_dir=${scripts_dir}
 
 cdo=${cdo}
 rm=$rm
@@ -45,6 +46,7 @@ file_bc_soil=bc_land_soil
 clean_up=true  # Remove intermediate files
 
 cd ${work_dir}
+
 # ----------------------------------------------------------------------------
 #  Soil data file
 # -----------------------------
@@ -57,7 +59,7 @@ var_list="FR_SAND FR_SILT FR_CLAY SUB_FR_SAND SUB_FR_SILT SUB_FR_CLAY \
  heat_conductivity_mineral hyd_cond_sat hyd_cond_sat_mineral moisture_pot \
  moisture_pot_mineral pore_size_index pore_size_index_mineral soil_porosity \
  soil_porosity_mineral wilting_point wilting_point_mineral residual_water \
- residual_water_mineral fao"
+ residual_water_mineral fao BLDFIE"
 
 # Preparations that need to be done outside the parallel loop
 ${cdo} splitvar ${pool_prepare}/05/soil_parameter_05_apr2024.nc   05_
@@ -78,6 +80,11 @@ if [[ ${var_list} == *"soil_depth"* || ${var_list} == *"root_depth"* ]]; then
   # Copy for later usage in generate_ic_land_soil
   $cp ${atmGridID}_root_depth.nc ${atmGridID}_root_depth.keep
 fi
+
+# average input values
+python ${scripts_dir}/calculate_mean_layers_below_1m.py
+cp ${scripts_dir}/calculate_mean_layers_below_1m.py path_bc/scripts/
+echo ">> calculations (weighted average, medians in grid cells etc) were successfully performed in python and may be used for further remapping"
 
 # main loop over var_list (runs variable processing in parallel, see '&' after closing '}')
 for var in ${var_list}; do
@@ -199,6 +206,26 @@ for var in ${var_list}; do
           ${atmGridID}_fao.tmp
       ${cdo} setname,fao -setmisstoc,0 -ifthen non-glac-land-mask.nc ${atmGridID}_fao.tmp \
           ${atmGridID}_fao.nc
+      ;;
+  # ----------------------
+    BLDFIE )
+  # ----------------------
+      # bulk density
+      # set cdo command to be silent, create no history and use double precision
+      cdoq="cdo -s --no_history -b 64"
+      # sse_init_vars%bulk_density -> bulk_dens_sl
+      #inputFileDir="/work/mj0143/icon_land_data_pool/preprocessing/bc_soil_quincy"
+
+      # default value
+      bdDefaultVal=1500
+
+      # conversion of Bulk density (fine earth) in kg / cubic-meter
+      # ${cdoq} -setmisstoc,${bdDefaultVal} "${temp_file_dir}/${bd}.${soilgrid}" "${temp_file_dir}/${bd}_nomiss.nc"
+      # ${cdoq} -remapcon,"${icon_grid}" "${temp_file_dir}/${bd}_nomiss.nc" "${output_file_dir}/${bd}.soilgrid.${grid_res_id}.nc"
+      # the file BLDFIE_3600_1800.tmp was created above with generate_bc_land_soil_hlp.py
+      ${cdoq} -setmisstoc,${bdDefaultVal} /scratch/b/b301039/testdir/BLDFIE_3600_1800.tmp ${atmGridID}_${var}.tmp2
+      ${cdoq} -remapcon,${icon_grid} ${atmGridID}_${var}.tmp2 ${atmGridID}_${var}.nc
+
       ;;
   # ----------------------
     * )

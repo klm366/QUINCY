@@ -2,7 +2,8 @@
 #SBATCH --partition=shared     # Use compute node for R2B9 and higher
 # #SBATCH --partition=compute  # Use in case of too little memory (OOM error)
 # #SBATCH --mem=450G           #  ""
-#SBATCH --account=mh0287
+# #SBATCH --account=mh0287
+#SBATCH --account=mj0143
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8    # Use 128 for R2B9 and higher
 #SBATCH --output=create_icon-land_ini_files.o%j
@@ -83,9 +84,9 @@ set -e
 run_extpar4jsbach_mpim_icon=false     # Generally available in /pool/data/JSBACH/icon/extpar4jsbach/
 run_generate_fractional_mask=false    # Only needed for coupled setups with new grid combination
 run_create_iconland_ic_bc_files=true  # Create ICON-Land ic/bc files based on extpar and other sources
-run_adapt_nwp_extpar_file=true        # Only needed for configurations with NWP atmosphere
+run_adapt_nwp_extpar_file=false        # Only needed for configurations with NWP atmosphere
 run_calc_hd_receive_mask=false        # Only needed for coupled setups with external HD model
-run_generate_hdpara_file=true         # Needed with internal HD model
+run_generate_hdpara_file=false         # Needed with internal HD model
 
 #-----------------------------------------------------------------------------
 #
@@ -107,9 +108,10 @@ run_generate_hdpara_file=true         # Needed with internal HD model
 #
 # --------------------------------------
 # Base directories for constructing work and output directories (see below)
-work_dir_base=/work/mh0287/${USER}    # levante
-scratch_dir_base=/scratch/m/$USER     # levante
-#scratch_dir_base=/work/mh0287/${USER} # breeze4
+projectGroup="mj0143"                # mh0287, mj0143
+work_dir_base=/work/${projectGroup}/${USER} # levante
+scratch_dir_base=/scratch/m/$USER           # levante
+#scratch_dir_base=/work/mh0287/${USER}       # breeze4
 
 # --------------------------------------
 # ICON grids used
@@ -145,7 +147,7 @@ fi
 
 # --------------------------------------
 # Output and working directories
-export revision=r00xx      # ic/bc revision directory that will be generated
+export revision=r0104      # ic/bc revision directory that will be generated (see e.g. /pool/data/ICON/grids/public/mpim/0049/land/)
 export work_dir=${scratch_dir_base}/ini_files/work/${grid_label}/${revision}  # temporary working directory
 export output_root_dir=${work_dir_base}/ini_files     # root directory for the new ic/bc files
 export bc_file_dir=${output_root_dir}/${grid_label}/land/${revision}
