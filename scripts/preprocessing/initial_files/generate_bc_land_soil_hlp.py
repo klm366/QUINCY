@@ -19,7 +19,7 @@ inputDateDir=sys.argv[1]
 outDir=sys.argv[2]
 
 # Input files
-bulk_dens=inputDateDir/"BLDFIE.soilgrid.3600.1800.7.nc"
+bulk_dens=Path(inputDateDir)/'BLDFIE.soilgrid.3600.1800.7.nc'
 
 # Open NetCDF files
 bulk_dens_dataset=Dataset(bulk_dens,'r',format="NETCDF4")
@@ -41,7 +41,7 @@ depth_sl
 weighted_mean_BLDFIE=np.average(BLDFIE[0:5,:,:],weights=depth_sl,axis=0)
 
 
-##### Saving files #####
+##### Saving files into the 'work_dir' or the pre-processing scripts (var 'outDir') #####
 
 # creating function creating NetCDF file
 def create_netcdf_file(file_path, lat_dim_size, lon_dim_size, variable_name, data, long_name, units, fill_value, lat_values, lon_values):
