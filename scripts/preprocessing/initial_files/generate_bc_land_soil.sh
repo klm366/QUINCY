@@ -83,7 +83,7 @@ fi
 
 # average input values
 python ${scripts_dir}/generate_bc_land_soil_hlp.py
-cp ${scripts_dir}/calculate_mean_layers_below_1m.py path_bc/scripts/
+cp ${scripts_dir}/generate_bc_land_soil_hlp.py path_bc/scripts/
 echo ">> calculations (weighted average, medians in grid cells etc) were successfully performed in python and may be used for further remapping"
 
 # main loop over var_list (runs variable processing in parallel, see '&' after closing '}')
