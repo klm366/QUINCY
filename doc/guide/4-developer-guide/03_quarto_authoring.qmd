@@ -27,11 +27,16 @@ FORD run on top.
 ::: {.callout-warning}
 ## Do not run a full build while a preview is running
 
-`quarto preview` and `build-doc.sh` share the `doc/_site` and `doc/.quarto` state. Running a
-build underneath a live preview desynchronises the preview's incremental renderer: it keeps
-serving pages happily, reports "Watching files for changes", and yet silently stops picking
-up your edits. If the browser disagrees with the source, suspect this first. The cure is to
-stop the preview, delete `doc/_site` and `doc/.quarto`, and start it again.
+The two write their pages to different places - the preview to `doc/_site`, the build to
+`doc/html/page` - but they share `doc/.quarto`, the render state, and Quarto gives no way to
+separate that. A build underneath a live preview desynchronises the preview's incremental
+renderer: it keeps serving pages happily, reports "Watching files for changes", and yet
+silently stops picking up your edits. If the browser disagrees with the source, suspect this
+first.
+
+The cure is to stop the preview, delete `doc/_site`, and start it again. Delete only that:
+`doc/.quarto` holds the section and table numbers that cross-page references are resolved
+from, and removing it leaves those references unresolved until a full build has run again.
 :::
 
 ## Adding a page
@@ -62,22 +67,21 @@ Quarto resolves a reference from a label you attach to the target. Never type th
 yourself: hand-written numbers go stale the moment anything is inserted above them, and
 nothing warns you when they do.
 
-::: {.callout-important}
-## References work within a page only
+Quarto itself resolves a reference only within one page: `@sec-x` pointing at a label in
+another `.qmd` renders as the literal `?@sec-x`. Two filters in `doc/` lift that
+restriction, so **references to sections, tables and equations do reach other pages** and
+you write them the same way wherever the target lives.
 
-This is a `website` project, and Quarto cannot resolve a crossref that points into another
-`.qmd`. `@sec-x` referring to a label on a different page renders as the literal text
-`?@sec-x` and emits `WARNING ... Unable to resolve crossref`. To point at another page,
-write an ordinary link instead, and give it the target's title as the visible text so that
-it cannot silently go stale:
+To link to a *page* rather than to something numbered on it, use an ordinary link and give
+it the target's title as the visible text, so it cannot silently go stale:
 
 ``` markdown
 see [Documenting the Code with FORD](02_documentation.qmd)
 ```
 
-Root-relative paths such as `/guide/4-developer-guide/02_documentation.qmd` also work and
-survive being moved to a different depth.
-:::
+Link to the `.qmd`, not the `.html`: Quarto rewrites the extension and the relative depth.
+Root-relative paths such as `/guide/4-developer-guide/02_documentation.qmd` work too and
+survive the referring page being moved.
 
 ### Sections
 
@@ -174,42 +178,6 @@ Two things to avoid:
 - Lowercase `\eqref` is MathJax's own macro. The filter does not rewrite it, and MathJax
   renders it as `(???)` when it cannot resolve it. Use `\Eqref`.
 
-### Equations across several files
-
-Unlike section and table references, equation references **do** reach other pages. The
-filter records what it numbered in `doc/.eqrefs`, one file per page, and every page reads
-the records the others left. Write the reference exactly as you would within a page:
-
-``` markdown
-as given by $\Eqref{eq-sb-simple-som-turnover}$
-```
-
-Two things follow from that.
-
-A page that carries a chapter of a larger document should say which chapter it is, so that
-its equations are numbered from there rather than from one:
-
-``` yaml
----
-title: Soil biogeochemistry
-eq-chapter: 4
----
-```
-
-Without it the chapters are counted inside the page, which is right for a document that is
-a single file, and wrong for one split across several.
-
-And on a cold build, a page referring forwards to a page that has not been rendered yet
-cannot resolve the reference. It says so, and `build-doc.sh` simply renders a second time,
-which is enough. Under `quarto preview` only the file you saved is re-rendered, so numbers
-on *other* pages can lag behind until a full build; the published output is always
-consistent.
-
-::: {.callout-note}
-`doc/.eqrefs` is generated and is in `.gitignore`. Do not commit it: a stale record produces
-a wrong number that still looks perfectly plausible, which is worse than a missing one.
-:::
-
 ### Groups of equations and sub-equations
 
 An `align` block with an outer label becomes a numbered group: the filter letters the rows
@@ -238,6 +206,71 @@ number. With `align` every continuation line is treated as a row of its own and 
 reports `Multiple \tag`.
 :::
 
+## Splitting a long document into chapters
+
+A document of any size is better kept as one file per chapter. The QUINCY scientific
+documentation is arranged that way and is worth copying: a directory holding an
+`index.qmd`, a `_metadata.yml`, and one file per chapter.
+
+Put everything the chapters share in `_metadata.yml` next to them - bibliography, `crossref`
+settings, cross-reference prefixes - rather than repeating it in each file. Each chapter then
+needs very little:
+
+``` yaml
+---
+title: Soil biogeochemistry
+order: 15
+number-offset: [3]
+---
+```
+
+`number-offset` is what makes a split document number continuously. Without it every page
+starts again at 1, because Quarto numbers each page on its own; `number-offset: [3]` makes
+this page chapter 4. The equation filter reads the same setting, so equations here are
+numbered 4.1, 4.2 and so on. It is the only thing you have to keep in step with the order of
+the chapters.
+
+Since each chapter carries its number as its own level 1 heading, the automatic title block
+would print the title twice. `title-block-style: none` in `_metadata.yml` suppresses it while
+keeping the title for the sidebar.
+
+References need no special treatment across chapters. `@sec-`, `@tbl-` and `$\Eqref{}$` all
+resolve to other pages and are written exactly as they are within one.
+
+::: {.callout-note}
+## How this works, and its one wrinkle
+
+Each render leaves what it numbered in `doc/.eqrefs`, and Quarto records its own section and
+table numbers in `doc/.quarto/xref`. The filters read both, which is how a reference finds a
+number that lives on another page.
+
+Both are written *during* a render, so on a cold build a page referring to one that has not
+been rendered yet cannot resolve it. It says so, and `build-doc.sh` renders a second time,
+which is enough. Under `quarto preview` only the file you save is re-rendered, so numbers on
+*other* pages can lag until a full build - the published output is always consistent.
+
+Neither directory belongs in git; both are ignored. A stale record produces a wrong number
+that still looks perfectly plausible, which is worse than a missing one.
+:::
+
+::: {.callout-warning}
+## Run a full build once before previewing a fresh clone
+
+`quarto preview` renders each page once, so on a clone where nothing has been built yet
+there are no records to resolve against: a reference to another page shows as a literal
+`?@tbl-x`, or as `[?eq-x]` for an equation. Nothing is wrong with the source. Run
+
+```bash
+./build-doc.sh -p
+```
+
+once, and preview afterwards.
+
+For the same reason, do not delete `doc/.quarto` to clear a stuck preview - that is where
+Quarto keeps the section and table numbers, and removing it brings the unresolved
+references back. Deleting `doc/_site` is enough.
+:::
+
 ## Checking your work
 
 An equation reference that names a label which does not exist is reported by the build:
@@ -258,14 +291,18 @@ that clicking it lands on the right target. Two things that only show up on scre
   `align` block is not being numbered with its siblings.
 
 ::: {.callout-tip}
-## Why the maths appears as you scroll
+## Keep pages small rather than typesetting them lazily
 
-MathJax is configured for lazy typesetting, so equations are rendered as they come into
-view. The QUINCY documentation alone holds around 1500 expressions, and typesetting them all
-at once made the page slow to open. This is only safe because references are resolved at
-build time; if that ever changes, lazy typesetting has to go with it, or every reference to
-an equation further down the page will render as `(???)` until the reader scrolls past it.
+MathJax renders every expression on a page when the page opens, so a page heavy with maths
+is slow to appear. Splitting a long document is the remedy: the QUINCY documentation held
+around 1500 expressions in one file and took some twenty seconds of typesetting; no chapter
+of it now costs more than about five.
 
-MathJax is also pinned to a fixed version in `doc/_quarto.yml`, since the markup it produces
+MathJax's lazy typesetting, which defers each expression until it scrolls into view, was
+tried and removed. It renders content that is *inserted* into a page - the preview shown
+when hovering a cross-reference - as empty space, because such content never satisfies the
+visibility test. Splitting the document had already recovered most of the time it saved.
+
+MathJax is pinned to a fixed version in `doc/_quarto.yml`, since the markup it produces
 differs between releases. Change the pin deliberately.
 :::

@@ -1,0 +1,88 @@
+---
+title: General model structure and discretisation
+order: 12
+---
+
+# General model structure and discretisation {#sec-structure}
+
+Each gridcell of the models is subdivided into nested tiles, each of which is occupied by one
+specific vegetation-type, representing a plant functional type (PFT, see @sec-pfts-cfts), or can be bare soil, permitting energy, water and soil biogeochemistry processes to occur in the absence of living vegetation. The number of tiles per
+gridcell is flexible, making it is easy to implement more/different PFTs in the future. 
+
+Vegetation is represented by an average individual composed of a range of structural pools
+(leaves, sapwood, heartwood, coarse roots, fine roots, and fruit), a fast overturning, respiring
+non-structural pool (labile), as well as a seasonal, non-respiring, and non-structural storage pool
+(reserve). Tree vegetation types are furthermore characterised by their height (m), diameter (m),
+and stand density ($\mathrm{m^{-2}}$). Soil biogeochemistry is represented using five organic pools:
+metabolic (met), structural (str) and and woody (wl) litter, as well as fast (f) and slow (s)
+overturning soil organic matter. Each of these pools contains carbon (C), nitrogen (N) and
+phosphorus (P), as well as $\mathrm{^{13}C}$, $\mathrm{^{14}C}$, and $\mathrm{^{15}N}$. The unit of
+the pools is $\mathrm{mol \ X \ m^{-2}}$ for vegetation and $\mathrm{mol \ X \ m^{-3}}$ for soil
+biogeochemical pools, where $X$ represents any of these elements. In addition, the model represents
+the following soil biogeochemical pools ($\mathrm{NH_4}$, $\mathrm{NO_3}$, $\mathrm{NO_y}$,
+$\mathrm{N_2O}$, $\mathrm{N_2}$, and $\mathrm{PO_4}$), with equivalent units.
+
+
+## Plant and crop functional types {#sec-pfts-cfts}
+
+QUINCY distinguishes twelve plant functional types (PFTs) that each can occupy one of the tiles of a grid cell. Of these, there are eight natural PFTs (moist and dry evergreen broadleaved trees, moist and cold deciduous broadleaved trees, evergreen and deciduous coniferous trees, C3 and C4 herbaceous vegetation, see @Thum:2019mm), as well as four anthropogenic PFTs (C3 and C4 pasture, as well as C3 and C4 crops). 
+
+While pasture PFTs are simply herbacous PFTs exposed to higher grazing pressures and fertilisation, croplands in QUINCY are represented following the approach of AgroIBIS (@kucharik:2000gbc, @kucharik:2003jeq), as implemented in CLM5 (@Levis:2018cc, @clm5:2025git). As CLM5, QUINCY includes five actively managed C3 crop types (wheat, cotton, rice, temperate soybean, tropical soybean) and three actively managed C4 crop types (temperate corn, tropical corn, and sugarcane). As all ICON-Land tiles, crop tiles have their own vegetation and soil biogeochemical pools and are unaffected by processes (including disturbance) of neighbouring tiles. However, currently crop tiles still share soil moisture dynamics with natural tiles. As a result, ICON-Land currently does not include a representation of cropland irrigation. 
+
+## Vertical discretisation {#sec-vertical-discretisation}
+
+The canopy is discretised into 10 layers (denoted by subscript $cl$), with exponentially increasing
+layer depth ($LAI_{cl}$) to allow for a better resolution of canopy processes in areas of high light
+and nitrogen gradients. Total foliage N ($N_{leaf}$) is distributed to each canopy layer $cl$,
+following
+
+$$
+\label{eq-veg:canopy_n_distribution}
+\begin{align}
+N_{leaf,cl} &= N_{leaf,cl=1} \times e^{-k_n \times LAI_c}, where \\
+&N_{leaf,cl=1} = \frac{k_n}{1-e^{-k_n \times LAI}} N_{leaf}  
+\end{align}
+$$
+
+where $LAI_c$ is the cumulative leaf area above the centre-point of the canopy layer, and $LAI$ the
+total leaf area, such that less N is allocated to the lower, darker canopy layers, in accordance
+with observations of canopy N distribution [@Niinemets:1998].
+
+All soil state-variables (temperature, moisture, texture, soil biogeochemical pools) and fluxes are
+discretised into distinct soil layers (denoted by subscript $sl$), with a flexible number of layers depending on model configuration (typically either 5 for global applications and 15 for site-level applications). Layer thickness increases exponentially
+with increasing layer depth up to a total depth of 9.5 m, and with a minimum layer thickness for the
+top layer of 0.065 m. Fine roots and coarse roots are assumed to be distributed in exponentially
+decreasing density along the soil profile according to
+
+$$
+\label{eq:veg-root-distribution}
+\begin{align}
+X_{root,sl} &= X_{root,sl=1} \times e^{-k_{rd} \times depth_{sl}}, where \\
+&X_{root,sl=1} = \frac{k_{rd}}{1-e^{-k_{rd} \times depth_r}} X_{root}
+\end{align}
+$$
+
+where $k_{rd}$ is a PFT-specific parameter (see @tbl-lctlib:param,
+@Jackson:1996tr), $depth_{sl}$ the depth of the soil layer's mid point, $depth_r$ the rooting depth,
+derived from site characteristics and $X_{root}$ the respective fine or coarse root mass. Root growth is inhibited in frozen soil layers. 
+
+For clarity in the following, the subscript for canopy and soil layer is ignored if processes are
+treated similarly across layers.
+
+## Temporal Discretisation
+
+The model operates on a half-hourly time-scale (denoted as $dt$), when run offline, or at the step of the atmospheric model when run coupled. In order to account for the lagged response of some vegetation and soil biogeochemical processes and associated fluxes to these instantaneous conditions, these processes operate at the half-hourly timescale, but in response to a process-specific integration time
+($\tau_{mavg}^{process}$, see @tbl-processes:mavg_period), over which environmental conditions are averaged, thereby representing a form of memory for
+instance in the calculation of allocation or vegetation dynamic responses. Where appropriate, the
+fluxes or pool sizes are calculated as running means with a time-averaging filter as
+
+$$
+\begin{align}
+X_{mavg,new}^{process} &= X_{mavg,old}^{process} \times (1 - \omega) + X_{current} \times \omega, where\\
+&\omega = \frac{dt}{\tau_{mavg}^{process}}
+\end{align}
+$$
+
+where $X_{current}$ is the instantaneous state or flux of interest, and $X_{mavg,old}^{process}$, as
+well as $X_{mavg,new}^{process}$ are the averaged values of the previous and current time step,
+respectively.

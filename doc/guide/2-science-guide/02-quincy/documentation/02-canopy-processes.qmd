@@ -1,0 +1,284 @@
+---
+title: Canopy processes
+order: 13
+number-offset: [1]
+---
+
+# Canopy processes {#sec-assimi}
+
+## Canopy nitrogen allocation {#sec-veg-foliar-N-fractions}
+
+The leaf area index ($LAI$) and canopy nitrogen content ($N_{leaf}$) are dynamic properties of the
+model, as described in @sec-veg, and are discretised to canopy layers given by
+$\Eqref{eq:veg-root-distribution}$. $N_{leaf,cl}$ is partitioned into photosynthetic and
+non-photosynthetic, or structural, N. The fraction of structural N ($fN_{struc,cl}$) is calculated
+as a function of the total leaf N in the respective canopy layer:
+
+$$
+\label{eq-veg:struc_n}
+fN_{struc,cl}=k^{struc}_0-k^{struc}_1 N_{leaf,cl}
+$$
+
+where $k^{struc}_0$ and $k^{struc}_1$ are empirical parameters.
+
+The photosynthetic N is further separated into the fraction that is associated with Rubisco
+($fN_{rub}$), electron transport ($fN_{et}$), chlorophyll ($fN_{chl}$) and, in the case of C4 plants, PEP carboxylase ($fN_{pepc}$).
+
+The fraction of N in chlorophyll for each layer is calculated as decreasing with canopy depth:
+
+$$
+\label{eq-canopy_chl}
+fN_{chl}=\frac{k_0^{chl} - k_1^{chl} e^{-k_{fn}^{chl} LAI_c}} {a_{chl}^n},
+$$
+
+where $k_0^{chl}$, $k_1^{chl}$ and $k^{chl}$ are empirical parameters, $a_{chl}^n$ is the molecular
+N content of chlorophyll.
+
+The values of $fN_{rub}$ and $fN_{et}$ are calculated assuming a fixed ratio of the $V_{cmax}$ and
+$J_{max}$ photosynthetic parameters at 25°C, $r_{J2V}$, given the calculated values of the
+structural and photosynthetic fractions. The PEP carboxylase fraction, $fN_{pep}$, is considered to be a constant.
+
+## Leaf-level net photosynthesis {#sec-assimi-leaf-ps}
+
+The calculation of leaf-level photosynthesis is based on @Kull:1998cr, extended for C4
+photosynthesis according to @Friend:2009tf, and with the temperature response curves as described
+in @Bernacchi:2001wv. Unless stated otherwise, temperature sensitivities follow the form:
+
+$$
+\label{eq-ps_t_sensitivity}
+f_x(T_{air}) = e^{E_0^x - E_1^x/(R\times T_{air})}
+$$
+
+where $T_{air}$ is the air temperature ($\mathrm{K}$), $R$ is the universal gas constant
+($\mathrm{J mol^{-1} K^{-1}}$), and the process-wise $E_0^x$ and $E_1^x$ are given in
+@tbl-assimi:param.
+
+Photosynthesis and stomatal conductance are calculated for the mid-points of each canopy layer and
+light-quality class (sunlit and shaded; as defined in @sec-vertical-discretisation). For clarity, the subscript $_{cl}$ is
+omitted in this section.
+
+In light-saturated conditions, gross photosynthesis ($A_g$) in C3 plants is calculated as the
+minimum of two potential rates, The electron-transport capacity limited carboxylation ($A_j$) and
+the Rubisco-limited rate of photosynthesis ($A_v$). $A_j$ is given by
+
+$$
+\label{eq:jmax}
+\begin{align}
+A_j=& m_1 \times J_{max}, where \\
+&m_1=\frac{c_i}{c_i+2\times \Gamma^{*}}, \\
+&J_{max} = n_1 \times N_{leaf},  \\
+&n_1 = g_{jmax}(T) \times \beta_{soil}^{ps} \times \beta_{sinklim}^{ps} \times  \beta_{soa}^{ps} \times j_{max}^n \times fN_{et}
+\end{align}
+$$
+
+where $c_i$ is the intercellular partial pressure of $\mathrm{CO_2}$ ($\mathrm{Pa}$, $\Eqref{eq:stomatal-coupling}$), and $\Gamma^{*}$ is the $\mathrm{CO_2}$ compensation point in the
+absence of dark respiration. $\beta_{sinklim}^{ps}$ is a signal to reduce photosynthesis in the case
+of sink limitation ($\Eqref{eq-sinklim-c}$) and $\beta_{soa}^{ps}$ is accounting for the effect
+of low-temperature acclimation in the evergreen species ($\Eqref{eq:veg-soa}$). 
+
+Excessive soil moisture constraints (as discussed in @Rogers:2017np) are assumed to reduce light-saturated
+photosynthetic activity by:
+
+$$
+\beta_{soil}^{ps} = \sum_{i=1}^{nsoil} \times fract_{root,i} \times (1 - \frac{\Psi_{soil,i}}{\Psi_{leaf}^{min}}),
+$$
+
+where $fract_{root,i}$ is the fraction of fine roots in the $i^{th}$ soil layer, $\Psi_{soil,i}$ is the soil water potential in the $i^{th}$ soil layer (see @sec-sse-surface-hydrology), and $\Psi_{leaf}^{min}$ is the PFT-specific minimum leaf water
+potential. 
+
+The temperature sensitivity of electron transport is assumed to follow the bell-shaped
+form described by @June:2004kj, where $T_{jmax}^{opt}$ is the optimum temperature for $J_{max}$
+according to @Friend:2010je, as follows:
+
+$$
+\label{eq:tjmax}
+\begin{align}
+g_{jmax}(T_{air}) =& e^{-\left({\frac{T_{air}-\bar{T}_{jmax}^{opt}}{T_{\Omega}}}\right)^2},\\
+&T_{jmax}^{opt} = k0_{jmax}^{topt} + k1_{jmax}^{topt} \times T_{air}; T_{jmax,min}^{opt} < T_{jmax}^{opt} \le T_{jmax,max}^{opt},
+\end{align}
+$$
+
+where $T_{\Omega}$ is a PFT-specific parameter, $k0_{jmax}^{topt}$ and $k1_{jmax}^{topt}$ are
+parameters, $T_{air}$ is the air temperature, and $\bar{T}_{jmax}^{opt}$ in $\Eqref{eq:tjmax}$ is
+the mean of the daytime $T_{jmax}^{opt}$ over the past few days ($\tau_{mavg}^{jmax}$), thereby
+accounting for temperature acclimation of photosynthesis as in [@Friend:2010je].
+
+$A_v$ is given by
+
+$$
+\label{eq-vcmax}
+\begin{align}
+A_v=&  m_2 \times V_{cmax}, where \\
+&m_2 = \frac{c_i}{c_i + k_c (1+O_i/k_o)},\\
+&V_{cmax} = n_2 \times N_{leaf} \\
+&n_2 =  f_{vcmax}(T) \times \beta_{soil}^{ps} \times \beta_{sinklim}^{ps}\times \beta_{soa}^{ps} \times v_{cmax}^n \times fN_{rub}
+\end{align}
+$$
+
+where $O_i$ is the intercellular partial pressure of $\mathrm{O_2}$, and $k_c$ and $k_o$ are the
+Michaelis-Menten constants for $\mathrm{CO_2}$ and $\mathrm{O_2}$ respectively, derived $E^{kc}_0$,
+$E^{kc}_1$, or $E^{ko}_0$, $E^{ko}_0$ using $\Eqref{eq-ps_t_sensitivity}$.
+
+The N-specific light-saturated rate of C3 photosynthesis can then be calculated as:
+
+$$
+m_{sat} = min(n_1 \times m_1, n_2 \times m_2)
+$$
+
+@Friend:2009tf adjusted the scheme by @Kull:1998cr using the Collatz formulation of C4
+photosynthesis [@Collatz:1992us]. The simplified assumption is that $A_j$ and $A_v$ can be
+calculated as above, but at saturating $c_i$ ($c_{i,max}$). Bundle-sheath transport limitation
+($A_p$) is then further limiting C4 photosynthesis, given by
+
+$$
+\label{eq-pepc}
+\begin{align}
+A_p=& V_{pmax} \times m_3, where \\
+&V_{pmax} = n_3 \times N_{leaf} \\
+&n_3 =  g_{pepc}(T) \times v_{pepc}^n \times fN_{pepc}, \\
+&m_3 = \frac{c_i}{p},
+\end{align}
+$$
+
+where the temperature response is
+
+$$
+\label{eq-pepc-t-sensitivity}
+g_{pepc}(T) = 2^{(T - T_{ref}^{pepc})/ T_{base}^{pepc}}
+$$
+
+The N-specific light-saturated rate of C4 photosynthesis can be calculated as
+
+$$
+m_{sat} = min(n_1 \times m_1, n_2 \times m_2, n_3 \times m_3)
+$$
+
+The light-harvesting limited rate of photosynthesis ($A_h$) can be written as
+
+$$
+\label{eq:ps-lightharvesting}
+\begin{align}
+A_h =&  m_1 \times \alpha_i \times PPFD_a,\\
+&PPFD_a = PPFD_0 (1-e^{-k_a \times C_{chl}}), where\\
+&C_{chl} = a_{chl}^n \times fN_{chl} \times N_{leaf}
+\end{align}
+$$
+
+where $\alpha_i$ is the intrinsic quantum efficiency for $\mathrm{CO_2}$ uptake, $PPFD_0$ is the
+photosynthetic photon flux density (PPFD) penetrating sunlit or shaded foliage, converted from the
+adsorbed radiation of the canopy layer ($\Eqref{eq-rad-a-shadesunlit}$), and $k_a$ as well as
+$a_{chl}^n$ are parameters specified in @tbl-assimi:param.
+
+As @Kull:1998cr show, this system of equations ($\Eqref{eq:jmax}$ -
+$\Eqref{eq:ps-lightharvesting}$) can be solved to yield gross photosynthesis ($A _g$) for one canopy
+layer and light-class as:
+
+$$
+\begin{align}
+A _g = (1-\frac{\Gamma^{*}}{c_i}) &[m_{sat}N_{sat}+\alpha_i PPFD_a (e^{-k_a n_3 N_{sat}}-e^{-k_a n_3 N_{leaf}}), where\\
+N_{lim} &=  - \frac{ln(m_{sat}/[\alpha_i PPFD k_a n_3 m_1])}{k_a n_3}, and \\
+&N_{lim} < 0: N_{sat}=0\\
+&N_{lim} < N_{leaf}: N_{sat}=N_{lim}\\
+&N_{lim} \ge N_{leaf}: N_{sat}=N_{leaf}
+\end{align}
+$$
+
+## Thermal acclimation of photosynthesis
+
+For evergreen PFTs, recovery of photosynthesis in spring is delayed according to the state
+of acclimation ($S$) to air temperature, which reduces photosynthesis in spring until acclimation is
+reached [@Makela:2004]. $S$ is calculated as
+
+$$
+\label{eq:veg-soa}
+\frac{dS}{dt} = \frac{1}{\tau_{soa}}(T_{air}-S)
+$$
+
+where $\tau_{soa}$ is a time constant. The reduction factor for Rubisco- and electron transport
+limited photosynthesis ($\beta_{soa}$) is calculated as
+
+$$
+\label{eq-veg-beta-soa}
+\beta_{soa} = \frac{(S - T_{min}^{soa})}{(T_{max}^{soa}-T_{min}^{soa})}
+$$
+
+where $T_{min}^{soa}$ and $T_{max}^{soa}$ are parameters and $\beta_{soa}$ is constrained to the
+range 0.1 and 1.
+
+## Photosynthetic sink limitation {#sec-veg-sinklim}
+
+In the case that the labile carbon pool exceeds its target size substantially because growth is
+limited by temperature, moisture, or because sufficient nutrients are lacking to allow growth ($\Eqref{eq-veg-growth-rate}$), sink-limitation down-regulates photosynthetic activity so that:
+
+$$
+\label{eq-sinklim-c}
+\begin{align}
+    \beta_{sinklim}^{ps} &= \beta_{sinklim,min}^{ps} + (1 - \beta_{sinklim,min}^{ps}) \times e^{-(\lambda_{sinklim}^{ps} \times X)^{k_{sinklim}^{ps}}}, where \\
+    &X= \frac{C_{labile} - C_{labile}^{target}}{C_{labile}^{target}}
+\end{align}
+$$
+
+Here, $\beta_{sinklim, min}$, $\lambda_{sinklim}^{ps}$ and $k_{sinklim}^{ps}$ are parameters (see
+@tbl-veg:param) and $C_{labile}^{target}$ is the target value for the labile pool ($\Eqref{eq-target-labile}$).
+
+In addition, if the C:N or N:P ratios of the labile pool exceed those of the target labile pool, the
+sink limitation factor is further modified as a function of the stoichiometric ratio of the labile
+pool and that of the labile target as:
+
+$$
+\label{eq-sinklim-cnp}
+\beta_{sinklim}^{ps} = \beta_{sinklim}^{ps} \times min(1,\frac{\chi^{N:C}_{labile}}{k^{CNP}_{sinklim} \times \chi^{N:C}_{labile,target}}, \frac{\chi^{P:N}_{labile}}{k^{CNP}_{sinklim} \times \chi^{P:N}_{labile,target}})
+$$
+
+where $k^{CNP}_{sinklim}$ is a parameter.
+
+## Stomatal coupling {#sec-assimi-stomatal-coupling}
+
+The combination of leaf-level net photosynthesis ($A_{n,cl}$), stomatal conductance ($g_{s,cl}$),
+and leaf internal $\mathrm{CO_2}$ concentration ($c_{i,cl}$) satisfying
+$\Eqref{eq:stomatal-coupling}$ is sought iteratively for each canopy layer:
+
+$$
+\label{eq:stomatal-coupling}
+\begin{align}
+A_n &= (A_{g,sunlit} \times f_{sunlit} + A_{g,shaded} \times (1- f_{sunlit})) - R_l\\
+g_s &= max(g_0, D_{turb}^{wv2co2} \times (1 + g_1) \frac{A_n \beta_{air}\beta_{soil}^{gs}}{c_a}) \times R  \times T_{air} / p\\
+c_i &= c_1 \times c_a - c_2 \times A_n \times ( \frac{D_{air}^{wv2co2}}{g_s} + \frac{D_{turb}^{wv2co2}}{g_a} ) \times R \times T_{air} 
+\end{align}
+$$
+
+where $f_{sunlit}$ is the fraction of sunlit leaves in a canopy layer (see $\Eqref{eq-rad-fsunlit}$), $R_l$ is the maintenance respiration of leaves (see @sec-veg-MaintResp), $g_0$ and $g_1$
+are PFT-specific parameters, $R$ is the molar gas constant, $T_{air}$ is air temperature (K), $p$
+air pressure (Pa), $c_1$ converts $\mathrm{CO_2}$ concentration from ppm to Pa, $c_2$ converts
+$\mathrm{\mu mol m^{-2} s^{-1}}$ to $\mathrm{mol m^{-2} s^{-1}}$, $g_a$ is the aerodynamic
+conductance, and the $D$'s are the diffusion coefficient corrections for $\mathrm{CO_2}$ and water [@Bonan:2015].
+
+$\beta_{air}$ is the response of stomata to atmospheric dryness (@Medlyn:2011aa], @Knauer:2015dh)
+
+$$
+\beta_{air} = \frac{1}{\sqrt{VPD}},
+$$
+
+and $\beta_{soil}^{gs}$ is the stomatal response to soil moisture, described by:
+
+$$
+\label{eq-veg-beta-soil-gs}
+\beta_{soil}^{gs} = \sum_{i=1}^{nsoil} \times fract_{root,i} \times (1 - \frac{\Psi_{soil,i}}{\Psi_{leaf}^{min}}),
+$$
+
+where $fract_{root,i}$ is the fraction of fine roots in the $i^{th}$ soil layer, $\Psi_{soil,i}$ is the soil water potential in the $i^{th}$ soil layer (see @sec-sse-surface-hydrology), and $\Psi_{leaf}^{min}$ is the PFT-specific minimum leaf water potential. 
+
+## Canopy integration {#canopy-integration}
+
+Canopy-level fluxes are derived by summing the product of layer-level fluxes or state-variables and
+the depth of the layer
+
+$$
+F = \sum_{cl=1}^{ncanopy} F_{cl} \times LAI_{cl},
+$$
+
+where $F$ is the canopy-level equivalent of a leaf-level variable $F_{cl}$ (per unit leaf-area),
+such as gross photosynthesis ($A_g$), net photosynthesis ($A_n$), and leaf-level stomatal
+conductance ($g_s$), (see @sec-assimi-leaf-ps and @sec-assimi-stomatal-coupling) and $LAI_{cl}$ is the leaf area index of the canopy layer. The
+resulting canopy net assimilation $A_g$ is used as input to the vegetation model ($\Eqref{eq-veg-labile-pool-dynamics}$), the canopy conductance ($G_s$) is used for the calculation of
+ecosystem transpiration ($\Eqref{eq-sse-surface-energy-balance}$).

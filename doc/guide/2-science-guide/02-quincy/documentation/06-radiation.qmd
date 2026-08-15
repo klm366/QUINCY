@@ -1,0 +1,347 @@
+---
+title: Radiation, surface energy balance and soil hydrology
+order: 17
+number-offset: [5]
+---
+
+# Radiation, surface energy balance and soil hydrology {#sec-rad}
+
+## Canopy radiation budget {#sec-rad-canopy}
+
+The radiation interception by the canopy is calculated with a multi-layer scheme following @Spitters:1986tv,
+with radiation levels calculated at the mid-point of each canopy layer. The scheme uses up to 20
+(default 10) canopy layers, with exponentially increasing layer thickness as the canopy depth
+increases. The original scheme has been extended to diagnose canopy albedo, to account for clumping
+(see $\Eqref{eq-rad-omega}$) and the presence of branches and stems, as well as to approximate the attenuation of the shortwave radiation
+back-scatter from the soil to allow for a consistent treatment of surface albedo of vegetated tiles, as well as a smooth transition of surface albedo from bare soil to
+vegetation cover with incrasing leaf coverage.
+
+The scheme is applied separately to the visible ($vis$) and near-infrared ($nir$) radiation band,
+where the parameterisation of the visible radiation is based on the assumption that the radiation
+interception and reflection is similar to that of the photosynthetically active range (i.e. 400-700
+nm). In the following, the subscripts for visible and near-infrared are omitted for readability.
+
+To represent the impact of the presence of branches and stems on light attenuation and reflection in the crown, the extinction and reflection coefficients for leaves and stems are weightd according to the contribution of leaf area index (LAI) and stem area index (SAI) to the plant area index. The stem area index ($SAI$) is calculated as a function of the PFT's current sapwood area (see @sec-veg-allocation)
+$$
+SAI = k_{sai2lai} \times k_{latosa} \times A_s  
+$$
+
+where $k_{latosa}$ is the PFT-specific leaf-to-sapwood  area ratio, and $k_{sai2lai}$ an empirically determined coefficient. In the following, for the calculation of light reflection and attenuation within the canopy, the reflection and extinction coefficient refer to this area-weighted mean of leaf and stem properties. Note that for the calculation of the light absorbed by leaves per canopy layer used for photosynthesis, only the leaf level reflectance and extinctio is considered. 
+
+The reflection coefficient ($\rho_{rad}$) of the canopy is given by:
+
+$$
+\label{eq-rad-leaf-albedo}
+\rho_{rad} = \frac{1-\sqrt{1-\sigma}}{1+\sqrt{1-\sigma}}\times \frac{2}{1+ \rho^{sbeta} \times cos(\gamma^{*})},
+$$
+
+where the first term on the right hand side is the reflection of a horizontally oriented canopy, and
+the second term empirically adjusts the reflection to a spherical distribution. $\sigma$ is the
+PFT-specific single leaf scattering coefficient and $\rho^{sbeta}$ is a conversion constant. Because
+all equations for leaf reflection and absorption coefficients are only valid for high solar
+elevation, the true zenith angle ($\gamma$) is constrained to values larger than 10$^\circ$
+($\gamma^{*}$). Note that @Spitters:1986tv use the sine of the solar elevation angle.
+
+For a spherical leaf angle distribution with leaves distributed randomly within the canopy volume, the extinction coefficients of the diffuse flux ($k_{df}$) and that of the direct component of the direct flux ($k_{bl}$) are approximated, respectively, by:
+
+$$
+\label{eq-rad-extinction-coef}
+\begin{align}
+k_{df} &=  k_{df,0} \sqrt{1-\sigma} \times \Omega\\
+k_{bl} &= \frac{k_{bl,0} \times \Omega}{cos(\gamma^{*})}
+\end{align}
+$$
+
+where $\Omega$ is the clumping index according to @Campbell:1998vb, which is calculated as:
+
+$$
+\label{eq-rad-omega}
+\Omega = \Omega_{0} / (\Omega_{0} + (1 - \Omega_{0}) \times e^{-k_{csf} \times acos(\gamma^{*})^{\phi_{crown}}}),
+$$
+
+where $\Omega_{0}$ and $\phi_{crown}$ are the PFT-specific clumping factor at nadir and crown shape
+factor, respectively, and $k_{csf}$ is a correction factor.
+
+Light levels decrease exponentially in the canopy, such that the attenuation of direct ($dr$) and
+diffuse ($df$) top-of-the-canopy irradiance ($I_{dr\downarrow,0}$ and $I_{df\downarrow,0}$,
+respectively) at any cumulative leaf area index ($LAI_c$; from the top) is given by:
+
+$$
+\label{eq-rad-light-profile}
+\begin{align}
+&I_{df \downarrow} = (1-\rho_{rad}) \times I_{df \downarrow,0} \times e^{-k_{df}\times LAI_{c}}\\
+&I_{dr \downarrow} = (1-\rho_{rad}) \times I_{dr \downarrow,0} \times e^{-\sqrt{1-\sigma} \times k_{bl}\times LAI_{c}}\\
+&I_{dr,dr \downarrow} = I_{dr \downarrow,0} \times e^{- k_{bl}\times LAI_{c}}\label{eq-rad:idrdr}\\
+&I_{dr,df \downarrow} = I_{dr \downarrow} - I_{dr,dr \downarrow}\\
+\end{align}
+$$
+
+where $I_{dr,df \downarrow}$ is the diffuse part of the direct beam resulting from scattering of the
+direct beam and $I_{dr,dr \downarrow}$ is the direct beam remaining direct at the canopy depth
+$LAI_{c}$.
+
+Below the canopy ($bc$), i.e. at the soil surface, the downwelling energy flux ($I_{bc \downarrow}$)
+is divided into a part that is absorbed by the soil or snow pack ($I_{a,surface}$) and a part that is backscattered
+as diffuse radiation ($I_{bc \uparrow}$), depending on the surface albedo ($alb_{surface}$):
+
+$$
+\label{eq-rad-soil-netbalance}
+\begin{align}
+&I_{bc \downarrow} = (1-\rho_{rad}) \times ( I_{df \downarrow,0} \times e^{-k_{df}\times LAI} + I_{dr \downarrow,0} \times e^{-\sqrt{1-\sigma} \times k_{bl}\times LAI})\\
+&I_{a,surface} = (1-alb_{surface}) \times I_{bc \downarrow} \\
+&I_{bc \uparrow} = alb_{surface} \times I_{bc \downarrow}
+\end{align}
+$$
+
+The surface albedo ($alb_{surface}$) is calculated as the area-weighted mean of soil and snow albedo (i.e. depending on the fraction of the surface that is covered by snow), where both values are taken from the JSBACH parametersiation (see JSBACH documentation). 
+
+To first-order, the diffuse light profile of the canopy accounting for the backscatter of diffuse
+radiation from the soil can be approximated as
+
+$$
+\label{eq-rad-omega2}
+I_{df \downarrow \uparrow} = (1-\rho_{rad}) \times (I_{df \downarrow,0} \times e^{-k_{df}\times LAI_{c}} + \times I_{bc \uparrow} \times e^{-k_{df} \times (LAI-LAI_{c}))}
+$$
+
+Absorption ($A^{rad}$) is taken to be complementary to transmission, therefore the absorbed diffuse
+and direct energy flux at a cumulative leaf area $LAI_c$ can be written as:
+
+$$
+\label{eq-rad-canopy-absorbed-radiation-components}
+\begin{align}
+&A^{rad}_{df} = k_{df} \times I_{df \downarrow \uparrow}\\
+&A^{rad}_{dr} = (1-\sigma) \times k_{bl} \times I_{dr}\\
+&A^{rad}_{dr,dr} = (1-\sigma) \times k_{bl} \times I_{dr \downarrow,0} \times e^{-k_{bl}\times LAI_c}\label{eq-rad-idrdra}\\
+&A^{rad}_{dr,df} = A^{rad}_{dr} - A^{rad}_{dr,dr}
+\end{align}
+$$
+
+Based on the so-calculated light profile, the canopy is then split into a sunlit and a shaded part for the calculation of photosynthesis and stomatal conductance (see @sec-assimi), with the sunlit fraction defined as:
+
+$$
+\label{eq-rad-fsunlit}
+f_{sunlit} = e^{-k_{bl}\times LAI_c}
+$$
+
+following $\Eqref{eq-rad-idrdra}$. The sunlit part receives both diffuse and direct radiation,
+whereas the shaded part only received diffuse radiation. Thus,
+
+$$
+\label{eq-rad-a-shadesunlit}
+\begin{align}
+&A^{rad}_{shaded} = A^{rad}_{df} + A^{rad}_{dr,df}\\
+&A^{rad}_{sunlit} = A^{rad}_{shaded} + (1-\sigma) \times k_{bl} \times I_{dr \downarrow,0} 
+\end{align}
+$$
+
+The canopy albedo is diagnosed (rather than simply taken as $\rho_{rad}$) as:
+
+$$
+\label{eq-rad-canopy-albedo}
+alb_{can} = 1 - \frac{I_{bc \downarrow} +  (1-f_{sunlit}) \times A^{rad}_{shaded} + f_{sunlit} \times A^{rad}_{sunlit} }{I_{df\downarrow,0}+I_{dr \downarrow, 0}}
+$$
+
+In case of snow cover on the canopy, this calculation is corrected using the default canopy snow albedo parameterisation from JSBACH for the fraction of the canopy that is snow covered. The total shortwave upward flux is diffuse and calculated as the backscattered flux of the canopy
+plus the backscattered flux from the soil, which is transmitted diffusely through the canopy:
+
+$$
+\label{eq-rad-idfup}
+I_{df \uparrow} = alb_{can} \times (I_{df\downarrow,0}+I_{dr \downarrow, 0} - I_{bc \downarrow}) + (1 - \rho_{rad}) \times I_{bc \uparrow} \times e^{-k_{df}\times LAI}
+$$
+
+
+Based on this, the total surface albedo $alb_{surf}$ (i.e. the albedo derived from vegetation and
+soil radiation transfer, absorption, and reflection) and net shortwave flux $I_{net}$ can be
+calculated as:
+
+$$
+\label{eq-rad-canopy-absorbed-radiation-components2}
+\begin{align}
+&alb_{surf} =  \frac{I_{df \uparrow}}{I_{df\downarrow,0}+I_{dr \downarrow, 0}} \\
+&I_{net} = (1-alb_{surf}) \times (I_{df\downarrow,0}+I_{dr \downarrow, 0})
+\end{align}
+$$
+
+## Surface energy balance {#sec-surface-energy-balance}
+
+The representation of the surface energy balance including the turbulent momentum and heat
+exchanges, surface, and soil temperature calculations follows largely the scheme of JSBACH 3, as
+described by @Roeckner:2003wc. The net radiation ($R_{net}$) at the surface consists of the
+following components:
+
+$$
+R_{net} = (1 - \alpha_s ) R_{sd} + R_{ld} - \epsilon \sigma {T_s}^4
+$$
+
+where the term $\alpha_s \times R\_{sd}$ is the net surface shortwave balance, denoted as $I_{net}$
+in $\Eqref{eq-rad-canopy-absorbed-radiation-components2}$, $R_{ld}$ the downwelling longwave
+radiation, $\epsilon$ the surface emissivity, $\sigma$ the Stefan-Boltzmann constant, and $T_s$ is the surface temperature.
+
+The surface energy balance can then be written as
+
+$$
+\label{eq-sse-surface-energy-balance}
+C_{s,l} \frac{\partial T_s}{\partial t} = R_{net} + LE + H + G
+$$
+
+where $C_{s,l}$ is the heat capacity of the surface layer, $H$ is the sensible heat flux, $LE$ the
+latent heat flux, composed of interception loss $E_i$, soil evaporation $E_s$ and transpiration
+$E_v$, as described in @sec-sse-surface-hydrology. $G$ is the ground heat flux, which is obtained from the solution of
+the thermal diffusion equation, which is used to diagnose the temperature profile within the soil
+
+$$
+\label{eq-sse-ground-heat-flux}
+C_s\frac{\partial T}{\partial t}=-\frac{\partial G}{\partial z}=-\frac{\partial}{\partial z}\left(-\lambda_s\frac{\partial T}{\partial z}\right)
+$$
+
+where $C_s$ is the volumetric heat capacity of the soil, $G$ is the thermal heat flux (positive
+downward), $\lambda_s=C_s \kappa_s$ is the thermal conductivity, $\kappa_s$ the thermal diffusivity,
+and $z$ the depth. This equation is solved down to a prescribed depth assuming zero flux conditions
+at the bottom and surface temperature $T_s$ at the top as obtained from $\Eqref{eq-sse-surface-energy-balance}$.
+
+The sensible heat flux $H$ is obtained from the temperature gradient according to
+
+$$
+\label{eq-sensibleHeatFlux}
+H=\rho_{air} C_p\frac{T_{air}-T_s}{r_a}
+$$
+
+where $\rho_{air}$ and $C_p$ are density and heat capacity of the surface atmospheric layer, and
+$T_{air}$ and $T_s$ are air and surface temperature. $r_a$ is the aerodynamic resistance.
+
+$$
+\label{eq-aerodynResistance}
+r_{a}=(C_{h}\left|v_{h}\right|)^{-1}
+$$
+
+and depends on the transfer coefficient for heat $C_{h}$ [@Roeckner:2003wc]. and the absolute value
+of horizontal wind velocity $v_{h}$.
+
+Following @Schulz:2020atmos, a skin layer is added between soil and atmosphere that has a very small heat capacity.
+The temperature of this layer, the so-called skin temperature $T_{\text{sk}}$, is used in calculating surface fluxes for sensible and latent heat as well as long-wave radiation.
+It also enters into the determination of the turbulent surface transfer coefficients.
+The skin layer couples to the top soil layer through a location-dependent skin conductance $\Lambda_{\text{sk}}$.
+It can thus be regarded as a simple representation of thermal effects of a canopy, shielding the surface from the atmosphere.
+
+The fundamental equation is the balance between the surface energy fluxes and the flux towards the soil,
+$$
+    \Lambda_{\text{sk}} (T_{\text{sk}} - T_{\text{soil}}) =
+    \mathrm{RAD}(T_{\text{sk}}) + \mathrm{SH}(T_{\text{sk}}) + \mathrm{LH}(T_{\text{sk}}).
+$$
+T
+o simplify the resulting expressions, we express the equation in terms of $\Delta T_{\text{sk}} = T_{\text{sk}} - T_{\text{sk,old}}$, the difference between the new temperature and the temperature at a previous time or iteration step.
+To linear order in $\Delta T_{\text{sk}}$ the individual terms read
+
+$$
+\label{eq-skin-terms}
+\begin{align}
+    \mathrm{RAD}(T_{\text{sk}}) &= R_{\text{net,old}} - 4 \sigma \varepsilon T_{\text{sk,old}}^3 \Delta T_{\text{sk}}, \\
+    \mathrm{SH}(T_{\text{sk}}) &= \nu c_p [(A_T - 1) T_{\text{sk,old}} + B_T] + \left\{ \nu c_p (A_T - 1) +\frac{d\nu}{dT} c_p [(A_T - 1) T_{\text{sk,old}} + B_T] \right\} \Delta T_{\text{sk}}, \\
+    \mathrm{LH}(T_{\text{sk}}) &= \nu [L_a B_q + (L_a A_q - L_s) q_{\text{sat,old}}] + \left\{\nu (L_a A_q - L_s) \frac{dq_{\text{sat}}}{dT} + \frac{d\nu}{dT} [L_a B_q + (L_a A_q - L_s) q_{\text{sat,old}}]\right\} \Delta T_{\text{sk}}.
+\end{align}
+$$
+
+Here, $R_{\text{net,old}}$ is the net surface radiation flux, $\sigma$ and $\varepsilon$ are the Stefan--Boltzmann constant and surface emissivity, $\nu = \rho_a v_t$ is the surface transfer coefficient for heat with air density $\rho_a$ and transfer velocity $v_t$, $c_p$ is the specific heat capacity at constant pressure of air, and $q_{\text{sat}}$ is the surface specific water content at saturation.
+The coefficients $A_{T,q}$ and $B_{T,q}$ encode the response of the lowest atmospheric layer to changes at the surface, e.g., $T_a = A_T T_{\text{sk}} + B_T$.
+
+Finally, $L_a = f_{\text{snow}} L_s + (1 - f_{\text{snow}}) \mathcal{C}_{\text{air}} L_v$ and $L_s = f_{\text{snow}} L_s + (1 - f_{\text{snow}}) \mathcal{C}_{\text{sat}} L_v$ account for the latent heat associated with fluxes from snow-covered (with snow-cover fraction $f_{\text{snow}}$) and partially dry surfaces.
+See \citet[Section 2.4.1.2]{reick:2021jsb} for the definition of the constants $\mathcal{C}_{\text{air}}$ and $\mathcal{C}_{\text{sat}}$.
+
+The flux $F_G$ between the top and second soil layer is treated explicitly, so we can close the system of equations by solving for the top soil temperature $T_{\text{soil}}$ as a function of $T_{\text{sk}}$,
+
+$$
+\begin{equation}
+    T_{\text{soil}} = \frac{T_{\text{soil,old}} + \Delta t F_G / C_{\text{soil}}}{1 + \Delta t \Lambda_{\text{sk}} / C_{\text{soil}}} + \frac{\Delta t \Lambda_{\text{sk}} / C_{\text{soil}}}{1 + \Delta t \Lambda_{\text{sk}} / C_{\text{soil}}} T_{\text{sk}} =: B_s + A_s T_{\text{sk}}.
+\end{equation}
+$$
+
+With these ingredients, we solve for $\Delta T_{\text{sk}}$,
+
+$$
+\label{eq-skin-dtsk}
+\begin{aligned}
+    & \biggl\{\Lambda_{\text{sk}} (1 - A_s) + 4 \sigma \varepsilon T_{\text{sk,old}}^3
+       - \nu c_p (A_T - 1) - \frac{d\nu}{dT} c_p [(A_T - 1) T_{\text{sk,old}} + B_T]\\
+      &  - \nu (L_a A_q - L_s) \frac{dq_{\text{sat}}}{dT} - \frac{d\nu}{dT} [L_a B_q + (L_a A_q - L_s) q_{\text{sat,old}}]\biggr\} \Delta T_{\text{sk}}
+\\&
+     = R_{\text{net}}
+       + \nu c_p [(A_T - 1) T_{\text{sk,old}} + B_T]
+       + \nu [L_a B_q + (L_a A_q - L_s) q_{\text{sat,old}}]
+       - \Lambda_{\text{sk}} [(1 - A_s) T_{\text{sk,old}} - B_s].
+\end{aligned}
+$$
+
+If water is freezing or ice is melting on the surface, the corresponding latent heat flux is added to $F_G$.
+The latent flux consumes the available energy for warming or cooling of the soil, keeping the top soil layer at freezing temperature.
+
+Since the dependence especially of the transfer coefficient on $T_{\text{sk}}$ can be highly nonlinear, with explicit coupling to the atmosphere, the solution is iterated multiple times while updating the transfer coefficient for each new solution of the linearized equations shown above. In case of fully implicit coupling, this iterative procedure cannot currently be performed for technical reasons. However, the fully implicit solution is generally well behaved even without iteration.
+
+The nonlinearity of the transfer coefficient can cause an issue with the iterative solver when the stratification near the surface is stable:
+usually, there is negative feedback between the heat fluxes and the skin temperature such that the change of the temperature reduces the magnitude of the fluxes.
+In stable stratification, the transfer coefficient is tiny but increases rapidly with skin temperature so there is a region where warming causes larger instead of smaller heat fluxes.
+In this region the linearized equations predict a high skin temperature, jumping out of the unstable region, but the updated transfer coefficient is much smaller than expected from the size of $d\nu/dT$ and the temperature jump.
+So the next iteration predicts a small temperature change, lands back inside the unstable region, and the cycle repeats.
+To stabilize the iterative procedure, we limit the braced terms in $\Eqref{eq-skin-terms_b}$ and $\Eqref{eq-skin-terms_c}$ to be nonpositive when we determine $\Delta T_{\text{sk}}$.
+This ensures that no positive feedback enters the iteration and causes a more gradual change of the $\Delta T_{\text{sk}}$ iterates without changing the converged solution, which is where the right-hand side of $\Eqref{eq-skin-dtsk}$ becomes zero.
+
+The consequence of the very small heat capacity of the skin layer is a reduced delay in the response of the surface to changes in atmospheric forcings, leading to an improved representation of the diurnal-cycle amplitudes of near-surface temperature compared to the JSBACH parameterisation of @Reick:2021jsb, where the surface energy fluxes interact directly with the 6.5 cm deep top soil layer.
+
+## Surface and soil hydrology {#sec-sse-surface-hydrology}
+
+The surface and soil hydrology are fully adopted from JSBACH, as updated from @Reick:2021jsb (see [JSBACH description](../01-jsbach/index.html)). The model consideres interception of rain and snow by the canopy, offloading of the canopy, partitioning of liquid throughfall into infiltration into the surface and surface runoff, or addition of snow to the snow pack. The snow pack undergoes melting once temperatures are above zero, leading to percolation of water, which infiltrates into the soil. 
+
+In the soil, water can be present as liquid water, supercooled water and ice in the pore-volume of each soil layer. Only liquid water is assumed to be plant available. Within the soil, vertical movement of liquid water between soil layers occurs according to the Richard's equation, as well as vertical and deep drainage. Temperature driven freeze-thaw processes affect thermal as well as hydrological soil properties.  
+
+The soil model keeps track of water in terms of amount of water ($W_{skin|soil}$; m), which in the
+soil can be converted to the layers fractional water content ($\Theta$) as:
+
+$$
+\label{eq-sse-theta}
+\Theta_{soil,sl} = \frac{W_{soil,sl}}{dz_{sl}}
+$$
+
+with a soil water matrix potential ($\Psi_{soil,sl}$) derived from a configurable soil-water retention curve (default: van Genuchten), which is parameterised based on standard pedotransfer functions (REF).
+
+Precipitation ($Precip$) becomes partially intercepted by the canopy before reaching the soil:
+
+$$
+\label{eq-sse-rain-interception}
+F_{inter} = MIN( k_{eff,inter} \times Precip , \frac{w_{skin,max} \times LAI - W_{skin}}{dt})
+$$
+
+Transpiration from the dry vegetation surfaces is
+
+$$
+E_{v}=\rho_{air}\frac{q_{a}-q_{s}(T_{s},p_{s})}{r_{a}+r}
+$$
+
+where stomatal resistance $r$ of the canopy is the inverse of the stomatal conductance of the
+canopy (see $\Eqref{eq:stomatal-coupling}$).
+
+The partitioning of the transpiration flux across soil layers $f_{trans,sl}$ is calculated based on
+the layered soil water potential ($\Psi_{soil,sl}$), the fractional root distribution
+($f_{root,sl}$), as well as a PFT-specific minimum soil water potential,
+
+$$
+\label{eq-transpiration-partitioning}
+\begin{align}
+f_{trans,sl} &= \frac{f_{root,sl} \times \beta_{gs,soil,sl}}{ \sum\limits_{i=1}^n f_{root,i} \times \beta_{gs,soil,i}} , where \\
+\beta_{gs,soil,sl} &= 1.0 - \Psi_{soil,sl} / \Psi_{soil,min}
+\end{align}
+$$
+
+Based on these fluxes, the water budget can be described as follows
+
+$$
+\label{eq-water-budget}
+\begin{align}
+\frac{W_{skin}}{dt} &= F_{inter} - E_{i} \\
+\frac{W_{soil,sl=1}}{dt} &= F_{inf} - E_{a} - f_{frans,sl=1} E_{v} - F_{diff,sl=1 \rightarrow sl=2} \\
+\frac{W_{soil,sl=2,n}}{dt} &= (1 - \frac{k_{pref}}{dz_{sl}}) F_{pref,sl-1} - f_{frans,sl} F_{trans} + F_{diff,sl-1 \rightarrow sl} - F_{diff,sl \rightarrow sl+1} \\
+\end{align}
+$$
+
+Saturation of a soil layer leads to increased percolation to the next lower layer. The lower
+boundary layer in the soil is modelled as a zero gradient boundary, i.e. only percolation flow leads
+to drainage from the soil column. The net water transport between layers is used as input to the
+vertical flow of soluable biogeochemical pools.

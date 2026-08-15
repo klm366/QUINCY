@@ -34,13 +34,33 @@ main div {
   max-width: 100%;
 }
 
-/* Exception for citation popups - allow normal overflow */
+/* Exception for citation popups - allow normal overflow.
+   The preview container itself is excluded: it is a div inside .tippy-box, so it
+   was caught by this rule and forced to overflow: visible, which is what stopped
+   it from scrolling. */
 .tippy-content p,
 .tippy-content div,
 .tippy-box p,
-.tippy-box div {
+.tippy-box div:not(.tippy-content) {
   overflow-x: visible !important;
   overflow-y: visible !important;
+}
+
+/* Hover previews of a cross-reference have no height limit of their own, so a
+   preview of one of the parameter tables grows past the window and is simply cut
+   off, with nothing to scroll. Bound the preview and let it scroll instead.
+   The scrolling belongs on the preview itself: everything inside it is held at
+   overflow: visible by the rule above, so a table scrolls the whole preview
+   rather than producing a second scrollbar within it.
+
+   The !important is needed rather than decorative: the preview is rendered inside
+   #quarto-document-content, and the id selector in the scrolling rule near the top
+   of this file outranks any selector made only of classes. */
+.tippy-box .tippy-content {
+  max-height: 70vh;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
 }
 
 /* Style the scrollbars */

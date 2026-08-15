@@ -1,0 +1,75 @@
+---
+title: Isotopic composition and fractionation
+order: 16
+number-offset: [4]
+---
+
+# Isotopic composition and fractionation {#sec-isotopic-composition-and-fractionation}
+
+The carbon (C) and nitrogen (N) flows and pool tracked in the model are comprising all major
+isotopes (i.e. C = $\mathrm{^{12}C}$ + $\mathrm{^{13}C}$ + $\mathrm{^{14}C}$, and N =
+$\mathrm{^{14}N}$ + $\mathrm{^{15}N}$). The model explicitly tracks the mass flow of
+$\mathrm{^{13}C}$, $\mathrm{^{14}C}$ and $\mathrm{^{15}N}$ as separate entities for all
+biogeochemical pools and fluxes. The molar mixing ratio ($R_X$) of the isotope (e.g.
+$\mathrm{^{13}C)}$ to the main element (e.g. $\mathrm{^{12}C}$) of each biogeochemical pool can be
+calculated as
+
+$$
+R_{13C} = \frac{^{13}C}{^{12}C} = \frac{^{13}C}{C - ^{13}C}
+$$
+
+####{#eq-iso-ratio}
+
+and by convention
+
+$$
+\label{eq-isotope-delta-notation}
+\delta_{13C} = ( \frac{R_{13C}}{ R_{ref,13C}} - 1 ) \times 1000
+$$
+
+##{#eq-isotope-delta-notation}
+
+where $R_{ref,13C}$ is the reference isotopic molar mixing ratio. Similar
+calculations are done for the ratio of $\mathrm{^{15}N}$ to $\mathrm{^{14}N}$ and the reference
+value $R_{ref,15N}$. By convention, the delta notation of $\mathrm{^{14}C}$ is dependent on the
+$\mathrm{^{13}C}$ content, see @Levin:2010fu, and the molar mass of $\mathrm{^{14}C}$ is ignored
+in the calculations of $\mathrm{^{13}C}$ because of the extremely low concentrations.
+
+Biogeochemical processes discriminate against the heavier isotope, and this fractionation process is
+treated by calculating the mixing ratio of the isotope of the resulting flux as
+
+$$
+\label{eq-isotope-fractionation}
+R_{sink} = \frac{R_{source}}{\frac{\epsilon_{process}}{1000}+1}
+$$
+
+##%{#eq-isotope-fractionation}
+
+where $R_{source}$ is the molar mixing ratio of the source pool of the reaction, $R_{sink}$ is the
+molar mixing ratio of the resulting matter flux, and $\epsilon_{process}$ is a process- and isotope-specific discrimination rate.
+
+Isotopic discrimination of $\mathrm{^{13}C}$ and $\mathrm{^{14}C}$ by photosynthesis is modelled
+according to the general equation derived by @Farquhar:1982ks; @Drake:2014dl, so that
+
+$$
+\label{eq-ps-discrimination}
+D_x = a_x + ( c_x + \phi_{C4} \times b_x - a_x )  \frac{c_i}{c_a}
+$$
+
+where $a_x$, and $b_x$ are isotope-specific constants ($\mathrm{^{13}C}$ and $\mathrm{^{14}C}$,
+respectively, see @tbl-isotope:param). $c_x$ and $\phi_{C4}$ account for the additional bundle-sheath
+processes in C4 plants. For C3 plants, these processes do not play a role and these parameters are 0
+and 1, respectively. In the model, currently only photosynthesis is assumed to result in C-isotope
+discrimination, ignoring the effect of the smaller and uncertain discrimination by tissue
+construction, storage formation and respiration [@Bruggemann:2011co].
+
+Isotopic discrimination for various nitrogen cycle processes (e.g. biological nitrogen fixation,
+ammonification, plant and microbial N uptake, and processes associated with nitrification and
+denitrification) are taken from @Robinson2001-hy. According to @Robinson2001-hy, in case of
+near-complete consumption of the source pool, the discrimination is reduced as
+
+$$
+\epsilon_{process}^{corr} = \epsilon_{process} (f_{source}-1)log(\frac{1-f_{source}}{f_{source}})
+$$
+
+where $f_{source}$ is the ratio of the source consumption to the source pool size.

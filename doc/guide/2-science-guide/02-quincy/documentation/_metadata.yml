@@ -1,0 +1,18 @@
+# Settings shared by every chapter of the scientific documentation.
+author:
+  - QUINCY Team
+bibliography:
+  - ../slm.bib
+crossref:
+  chapters: true
+language:
+  # Quarto reads the crossref prefixes from here. Keys such as section-cref-format
+  # are silently ignored at the top level of the front matter.
+  crossref-sec-prefix: "Sect."
+  crossref-ch-prefix: "Sect."
+# Each chapter carries its number as a heading, so the automatic title block would
+# repeat it. The title itself is kept: it names the page in the sidebar.
+title-block-style: none
+editor:
+  markdown:
+    wrap: 100

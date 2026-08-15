@@ -123,8 +123,8 @@ function record_numbers(text)
 end
 
 -- Emit an anchor of our own for every label in the block. MathJax also creates anchors,
--- but only while typesetting, so with lazy typesetting they do not exist until the
--- reader has scrolled past the equation. These are in the HTML from the start.
+-- but only while typesetting, so they do not exist in the file that is served and cannot
+-- be reached from another page. These are in the HTML from the start.
 function with_anchors(el)
   local labels = anchors_for[el.text]
   if not labels or #labels == 0 then return el end
@@ -147,6 +147,20 @@ function Meta(meta)
     source_file = quarto.doc.input_file:gsub("^" .. root:gsub("([^%w])", "%%%1") .. "/?", "")
   end
 
+  -- Which chapter this page is. A split document already needs `number-offset` so
+  -- that Quarto numbers its headings continuously, and a page with
+  -- `number-offset: [3]` holds chapter 4, so that one key settles it and there is
+  -- nothing for an author to keep in step. It has to be read from the file itself:
+  -- Quarto consumes it as a writer option, and it never reaches a filter's metadata.
+  if quarto and quarto.doc and quarto.doc.input_file then
+    local handle = io.open(quarto.doc.input_file, "r")
+    if handle then
+      local front = handle:read(4096) or ""
+      handle:close()
+      local offset = front:match("\nnumber%-offset:%s*%[?%s*(%d+)")
+      if offset then current_section = tonumber(offset) end
+    end
+  end
   local chapter = meta["eq-chapter"]
   if chapter then
     local n = tonumber(pandoc.utils.stringify(chapter))
@@ -401,8 +415,8 @@ end
 -- Third pass: turn each reference into an ordinary link carrying the number as text.
 --
 -- \Eqref and \ref are MathJax macros resolved in the browser from labels registered while
--- typesetting. That ties a reference to its target having been typeset, which breaks under
--- lazy typesetting and can never reach another page. The numbers are known here, so the
+-- typesetting. That ties a reference to its target having been typeset, and can never reach
+-- another page. The numbers are known here, so the
 -- reference is written out as plain HTML instead: it needs no MathJax, it is present in
 -- the generated file where it can be checked, and it costs nothing to render.
 local function resolve_reference(el)

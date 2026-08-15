@@ -1,0 +1,18 @@
+---
+title: Scientific Documentation
+order: 11
+title-block-style: default
+---
+
+This page attempts to provide a complete overview over the scientific processes represented by QUINCY. As any model documentation, it will lag behind the actual implementation in the code, and interested users
+are advised to consult the inline documentation for potential updates. 
+
+### Table of Content 
+
+- @sec-structure summarises the general structure and vertical discretisation of vegetation and soil. 
+- @sec-assimi describes the canopy processes, such as photosynthesis and stomatal coupling. 
+- @sec-veg introduces vegetation growth, turnover and dynamics. 
+- @sec-soil-biogeochemistry provides an overview of the simple soil biogeochemistry implementation.
+- @sec-isotopic-composition-and-fractionation introduces the isotope processes of QUINCY.
+- @sec-rad describes the simplified QUINCY radiation scheme, surface energy
+balance and soil hydrology.

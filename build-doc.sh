@@ -122,12 +122,17 @@ cd doc
 render_log=$(mktemp)
 quarto render --profile pages --to html --output-dir html/page 2>&1 | tee "$render_log"
 
-# doc/auto-subeqn.lua resolves equation references from records each page leaves in
-# doc/.eqrefs. On a cold build a page referring to an equation on a page that has not
-# been rendered yet cannot resolve it, and says so. One more render is then enough,
-# because by that point every page has left its record behind.
-if grep -q "unresolved equation reference" "$render_log"; then
-  echo "Re-rendering to resolve cross-page equation references ..."
+# Cross-page references are resolved from records written during a render: equation
+# numbers in doc/.eqrefs, and section and table numbers in doc/.quarto/xref. On a cold
+# build a page referring to one that has not been rendered yet cannot resolve it, and
+# says so. One more render is then enough, because by that point every page has left
+# its record behind.
+#
+# Both messages have to be watched. The filter reports a missing equation itself, while
+# an unresolved section or table is reported by Quarto as "Unable to resolve crossref" -
+# and that one renders as a visible "?@tbl-x" in the page, so missing it ships a defect.
+if grep -qE "unresolved equation reference|Unable to resolve crossref" "$render_log"; then
+  echo "Re-rendering to resolve cross-page references ..."
   quarto render --profile pages --to html --output-dir html/page
 fi
 rm -f "$render_log"
