@@ -60,6 +60,7 @@ depth_sl = depth_end - depth_begin
 
 # Calculate weighted mean for 5 layers (below 1 meter)
 weighted_mean_BLDFIE=np.average(BLDFIE[0:5,:,:],weights=depth_sl,axis=0)
+weighted_mean_ph=np.average(PHIHOX[0:5,:,:],weights=depth_sl,axis=0)
 weighted_mean_AWCtS=np.average(AWCtS[0:5,:,:],weights=depth_sl,axis=0)
 weighted_mean_WWP=np.average(WWP[0:5,:,:],weights=depth_sl,axis=0)
 
