@@ -34,7 +34,7 @@ MODULE mo_q_dfire_sf_fuel_consump_class
                                       ix_dom_assoc, ix_dom, ix_residue, ix_residue_assoc
 
   USE mo_lnd_bgcm_idx,        ONLY: ixC
-  USE mo_q_dfire_sf_adaptor,  ONLY: sf_convert_units
+  USE mo_q_dfire_sf_adaptor_class,  ONLY: sf_convert_units
 
   !< Total number of spitfire live fuel pools
   USE mo_q_dfire_sf_constants,   ONLY: sf_fuel_live_fuel_nr

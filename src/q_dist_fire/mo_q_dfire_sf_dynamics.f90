@@ -76,7 +76,7 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_q_dfire_sf_frac_consump_class, ONLY: sf_calc_frac_consump
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption
 
-  USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
+  USE mo_q_dfire_sf_adaptor_class,    ONLY: sf_convert_units
   USE mo_q_dfire_sf_util,       ONLY: logical2real
   USE mo_quincy_stats,          ONLY: stats_average_weight
 

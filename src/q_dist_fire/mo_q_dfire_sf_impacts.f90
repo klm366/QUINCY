@@ -34,7 +34,7 @@ MODULE mo_q_dfire_sf_impacts
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
 
   USE mo_veg_constants,         ONLY: itree, igrass
-  USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
+  USE mo_q_dfire_sf_adaptor_class,    ONLY: sf_convert_units
   USE mo_jsb_grid,              ONLY: Get_grid
 
   USE mo_q_dfire_sf_constants,  ONLY: df_sf_spq_layer_top_sl

@@ -25,7 +25,7 @@ MODULE mo_q_dfire_sf_ros_ober_class
   USE mo_q_dfire_sf_constants,  ONLY: df_sf_oven_dry_part_dens, &
                                       df_sf_mineral_fract, df_sf_mineral_damp_coeff, &
                                       df_sf_fuel_heat_content
-  USE mo_q_dfire_sf_adaptor,    ONLY: sf_convert_units
+  USE mo_q_dfire_sf_adaptor_class,    ONLY: sf_convert_units
 
   USE mo_quincy_stats,          ONLY: stats_average_weight
   USE mo_jsb_math_constants,    ONLY: pi

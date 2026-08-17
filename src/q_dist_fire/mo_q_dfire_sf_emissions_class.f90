@@ -19,7 +19,7 @@ MODULE mo_q_dfire_sf_emissions_class
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
 
-  USE mo_q_dfire_sf_adaptor,  ONLY: sf_convert_units
+  USE mo_q_dfire_sf_adaptor_class,  ONLY: sf_convert_units
   USE mo_q_dfire_sf_constants, ONLY: df_sf_species_co2_idx, df_sf_species_co_idx, df_sf_species_ch4_idx
   USE mo_q_dfire_sf_constants, ONLY: df_sf_species_nh3_idx, df_sf_species_n2o_idx, df_sf_species_n2_idx
 
