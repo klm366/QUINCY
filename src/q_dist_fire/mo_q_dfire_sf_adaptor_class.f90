@@ -12,7 +12,7 @@
 !>
 !>#### Routine to conver units in between spitfire the the model
 !>
-MODULE mo_q_dfire_sf_adaptor
+MODULE mo_q_dfire_sf_adaptor_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                     ONLY: wp
@@ -31,7 +31,7 @@ MODULE mo_q_dfire_sf_adaptor
 
   PRIVATE
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_adaptor'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_adaptor_class'
 
   INTERFACE sf_convert_units
     MODULE PROCEDURE :: convert_units_real_wp_r1, convert_units_real_wp_r2, &
@@ -517,4 +517,4 @@ CONTAINS
   END FUNCTION sf_convert_units_mapped_wp_r2
 
 #endif
-END MODULE mo_q_dfire_sf_adaptor
+END MODULE mo_q_dfire_sf_adaptor_class
