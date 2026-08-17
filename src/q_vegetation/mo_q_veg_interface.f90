@@ -550,6 +550,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
 
+    ! aggregate-test mkwon
+    dsl4jsb_Aggregate_onChunk(VEG_, mortality_rate                                 , weighted_by_fract)
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_veg_dynamics
