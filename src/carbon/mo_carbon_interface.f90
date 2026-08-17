@@ -214,6 +214,8 @@ CONTAINS
     REAL(wp) :: WoodLit_coefV(5)  !< Array with woody litter coefficients
     REAL(wp) :: MiscPar(2)        !< Array with additional coefficients
 
+    REAL(wp), POINTER            :: tile_fract(:) !< Fraction of the tile (rel. to the grid cell) []
+
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(CARBON_)
@@ -977,6 +979,19 @@ CONTAINS
 
         END DO
       END IF
+
+      ! Reset humus accumulation diagnostics for too small tiles
+      tile_fract => tile%fract(ics:ice, iblk)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        IF (tile_fract(ic) < 1e-10_wp) THEN
+          c_decomp_humus_1_sum(ic) = 0._wp
+          c_decomp_humus_2_sum(ic) = 0._wp
+          c_into_humus_1_sum(ic)   = 0._wp
+          c_into_humus_2_sum(ic)   = 0._wp
+        END IF
+      END DO
+      !$ACC END PARALLEL LOOP
 
       !! ============== Include decay of crop harvest in soil respiration =============
       soil_respiration = soil_respiration + cflux_crop_harvest_2_atmos
