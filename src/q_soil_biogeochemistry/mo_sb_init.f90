@@ -1614,7 +1614,7 @@ CONTAINS
       & variable_name='TAXOUSDA_10km',  &
       & fill_array = sb_init_vars%usda_taxonomy_class)
     sb_init_vars%usda_taxonomy_class(:,:)     = MERGE(ptr_2D, 1.0_wp, ptr_2D > 1.0_wp)
-    sb_init_vars%usda_taxonomy_class_int(:,:) = INT(sb_init_vars%usda_taxonomy_class(:,:))
+    sb_init_vars%usda_taxonomy_class_int(:,:) = NINT(sb_init_vars%usda_taxonomy_class(:,:))
 
     !> NWRB taxonomy soil class
     !>
@@ -1622,7 +1622,7 @@ CONTAINS
       & variable_name='TAXNWRB',   &
       & fill_array = sb_init_vars%nwrb_taxonomy_class)
     sb_init_vars%nwrb_taxonomy_class(:,:)     = MERGE(ptr_2D, 1.0_wp, ptr_2D > 1.0_wp)
-    sb_init_vars%nwrb_taxonomy_class_int(:,:) = INT(sb_init_vars%nwrb_taxonomy_class(:,:))
+    sb_init_vars%nwrb_taxonomy_class_int(:,:) = NINT(sb_init_vars%nwrb_taxonomy_class(:,:))
 
     !> qmax organic fine particle
     !>
