@@ -35,7 +35,9 @@ MODULE mo_jsb_interface
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial
   USE mo_jsb_time,            ONLY: t_datetime, is_newyear, is_newmonth, is_newday, get_year, &
       &                             is_time_experiment_start, is_time_restart, execute_quincy_sb_accelerator_this_timestep, &
-      &                             executed_quincy_sb_accelerator_previous_timestep
+      &                             executed_quincy_sb_accelerator_previous_timestep, &
+      &                             execute_quincy_sb_analytical_accelerator_this_timestep, &
+      &                             executed_quincy_sb_analytical_accelerator_previous_timestep
   USE mo_jsb_physical_constants, ONLY: cvdifts
   USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
@@ -696,6 +698,30 @@ CONTAINS
             END IF
           END IF ! IF new year
         END IF ! IF running with SB_ slow-pool spinup-accelerator
+
+        ! Schedule analytical steady-state jumps in the same ICON timestep controller.
+        IF (model%config%flag_analytical_ss_spinup_accelerator) THEN
+          IF (execute_quincy_sb_analytical_accelerator_this_timestep) THEN
+            execute_quincy_sb_analytical_accelerator_this_timestep = .FALSE.
+            executed_quincy_sb_analytical_accelerator_previous_timestep = .TRUE.
+          ELSE
+            executed_quincy_sb_analytical_accelerator_previous_timestep = .FALSE.
+          END IF
+
+          IF (is_newyear(current_datetime, dtime) .AND. model%config%l_spinup) THEN
+            current_year = get_year(current_datetime)
+            IF (current_year >= model%config%analytical_ss_spinup_accelerator_start_year) THEN
+              nr_years_passed = current_year - model%config%analytical_ss_spinup_accelerator_start_year
+              IF (MOD(nr_years_passed, model%config%analytical_ss_spinup_accelerator_frequency) == 0) THEN
+                nr_of_executions = nr_years_passed / model%config%analytical_ss_spinup_accelerator_frequency
+                IF (nr_of_executions < model%config%analytical_ss_spinup_accelerator_max_executions) THEN
+                  execute_quincy_sb_analytical_accelerator_this_timestep = .TRUE.
+                  CALL message(TRIM(routine), 'Execute analytical steady-state SB_ spinup accelerator this timestep.')
+                END IF
+              END IF
+            END IF
+          END IF
+        END IF
       END IF ! IF QSOIL or QLAND mode
     END IF ! IF QUINCY MODEL
 

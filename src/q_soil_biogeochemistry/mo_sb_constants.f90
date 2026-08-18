@@ -128,6 +128,7 @@ MODULE mo_sb_constants
       vmax_depolymerisation_residue, &  !< maximum depolymerisation rate of residue
       vmax_depolymerisation_litter, &   !< maximum depolymerisation rate of polymeric litter
       enzyme_frac_total, &              !< enzyme fraction of the total microbial biomass
+      min_persistent_enzyme, &          !< minimum persistent depolymerisation-enzyme density [mol C/m3]
       fc_p_res2dom, &                   !< fraction of residue P retranslocated to dom
       fc_n_res2dom, &                   !< fraction of residue n retranslocated to dom
       k_p_recyc_corr, &                 !< correction coefficient for microbial P recycling exponential decline curve
@@ -436,7 +437,7 @@ CONTAINS
     fc_woody2polymeric            = 0.3_wp                                        ! Yu et al. 2020, GMD
     fc_soluable2dom               = 0.7_wp                                        ! Yu et al. 2020, GMD
     k_mort_microbial              = 7.48_wp * 1.e-8_wp                            ! COMISSION, Ahrens et al. 2015
-    min_mic_biomass               = 0.01_wp                                       ! Yu et al. 2020, GMD
+    min_mic_biomass               = 1.e-16_wp                                     ! temporary near-zero floor for analytical SS testing
     min_volume_min_surface_analytical_ss = 0.05_wp                                ! steady-state-only first-layer mineral volume floor
     min_volume_min_gradient_analytical_ss = 0.01_wp                               ! steady-state-only mineral volume floor gradient with depth [m-1]
     min_enzyme_fraction           = 0.01_wp                                       ! Yu et al. 2020, GMD
@@ -446,9 +447,10 @@ CONTAINS
                                     one_year / one_day * 1.e6_wp * 10._wp
     km_mic_uptake                 = 1.02404788_wp / molar_mass_C * 1000._wp       ! COMISSION, Ahrens et al. 2015
     vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day             ! calibrated, from Yu et al. 2020
-    vmax_depolymerisation_litter  = 0.3698_wp / one_year / one_day / 2._wp        ! calibrated, from Yu et al. 2020
-    km_depolymerisation           = 0.08876_wp / 2._wp / molar_mass_C * 10._wp    ! calibrated, from Yu et al. 2020
-    enzyme_frac_total             = 0.01_wp                                       ! tuned for analytical steady state spinup
+    vmax_depolymerisation_litter  = 0.1849_wp / one_year / one_day                ! calibrated, from Yu et al. 2020
+    km_depolymerisation           = 0.4438_wp / molar_mass_C                      ! calibrated, from Yu et al. 2020
+    enzyme_frac_total             = 0.05_wp
+    min_persistent_enzyme         = 5.e-7_wp                                      ! provisional extracellular-enzyme floor [mol C/m3]
     fc_p_res2dom                  = 0._wp                                         ! Yu et al. 2020, GMD
     fc_n_res2dom                  = 0.8_wp                                        ! Yu et al. 2020, GMD
     k_p_recyc_corr                = 0.3_wp                                        ! tuned [0,1], based on model-data comparison of 16 ecosystem traits (4 vegetation, 3 microbe, 9 soil) at 5 sites
@@ -600,8 +602,8 @@ CONTAINS
     frac_background_weath_mineral          = 0.1_wp                                        ! assumption based on expert knowledge
     eq_sorp_mineral_po4                    = 80._wp / molar_mass_P                         ! random guess based on init value of assoc_slow    [mol P m-3]
     k_occlude_po4                          = 1.0_wp / 1000000._wp / 30._wp / one_day       ! Yang et al. 2014            [s-1]
-    vmax_biochem_po4                       = 0.25_wp / one_day * 5._wp                     ! estimated from Bunemann et al. 2016, LUS site, based on 50 mol/m3 mic   [s-1]
-    km_mic_biochem_po4                     = 5._wp / molar_mass_C * 0.5_wp                 ! random number, equals to the usual microbe biomass (0.1 g C m-3)   [mol C m-3]
+    vmax_biochem_po4                       = 1.25_wp / one_day                             ! estimated from Bunemann et al. 2016, LUS site, based on 50 mol/m3 mic   [s-1]
+    km_mic_biochem_po4                     = 2.5_wp / molar_mass_C                         ! random number, equals to the usual microbe biomass (0.1 g C m-3)   [mol C m-3]
     km_dip_biochem_po4                     = 0.001_wp                                      ! estimated based on expert knowledge and model testing
     km_pc_biochem_po4                      = 0.01_wp                                       ! estimated based on expert knowledge and model testing
     km_rootc_biochem_po4                   = 20._wp                                        ! estimated based on expert knowledge and model testing

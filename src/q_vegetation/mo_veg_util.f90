@@ -1112,7 +1112,9 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: VEG_, SB_, HYDRO_, L2A_
-    USE mo_jsb_time,              ONLY: executed_quincy_sb_accelerator_previous_timestep
+    USE mo_jsb_time,              ONLY: executed_quincy_sb_accelerator_previous_timestep, &
+      & execute_quincy_sb_analytical_accelerator_this_timestep, &
+      & executed_quincy_sb_analytical_accelerator_previous_timestep
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(L2A_)
@@ -1193,9 +1195,12 @@ CONTAINS
             q_total_c_new(ic) = q_total_c_new(ic) + veg_products_total_c(ic)
           END IF
 
-          IF (model%config%flag_slow_sb_pool_spinup_accelerator .AND. executed_quincy_sb_accelerator_previous_timestep) THEN
-            ! The SB_ slow-pool spinup-accelerator does not conserve matter
-            ! therefore set conservation test to zero in the timestep after it ran
+          IF ((model%config%flag_slow_sb_pool_spinup_accelerator .AND. &
+            & executed_quincy_sb_accelerator_previous_timestep) .OR. &
+            & (model%config%flag_analytical_ss_spinup_accelerator .AND. &
+            & (execute_quincy_sb_analytical_accelerator_this_timestep .OR. &
+            & executed_quincy_sb_analytical_accelerator_previous_timestep))) THEN
+            ! Spin-up accelerators intentionally introduce a discontinuous pool change.
             q_c_conservation_test(ic) = 0.0_wp
           ELSE
             q_c_conservation_test(ic) = q_total_c_new(ic) - q_total_c(ic) - (net_biosphere_production(ic) * dtime / 1000000.0_wp)
@@ -1222,9 +1227,12 @@ CONTAINS
       END IF
     END DO
 
-    IF (model%config%flag_slow_sb_pool_spinup_accelerator .AND. executed_quincy_sb_accelerator_previous_timestep) THEN
-      WRITE(message_text,*) 'Set q_c_conservation_test to zero at the timestep after ', &
-          & 'the SB_ slow-pool spinup-accelerator was running, to avoid carbon-conservation test fail messages.'
+    IF ((model%config%flag_slow_sb_pool_spinup_accelerator .AND. &
+      & executed_quincy_sb_accelerator_previous_timestep) .OR. &
+      & (model%config%flag_analytical_ss_spinup_accelerator .AND. &
+      & (execute_quincy_sb_analytical_accelerator_this_timestep .OR. &
+      & executed_quincy_sb_analytical_accelerator_previous_timestep))) THEN
+      WRITE(message_text,*) 'Set q_c_conservation_test to zero for an intentional SB_ accelerator pool jump.'
       CALL message(TRIM(routine), message_text)
     END IF
     DEALLOCATE(q_total_c_new)

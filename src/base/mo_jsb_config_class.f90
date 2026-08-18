@@ -63,6 +63,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_tmx             !< Use turbulent mixing scheme
     LOGICAL                        :: use_lakes           !< Lakes are represented
     LOGICAL                        :: use_glacier         !< Glaciers are represented
+    LOGICAL                        :: l_read_quincy_soil_3d !< Read QUINCY soil input variables with a soil-layer dimension
     LOGICAL                        :: check_child_cf      !< Assert that cover fractions of children tiles sum up to the tile cf
     INTEGER                        :: enforce_water_budget!< How to deal with water balance errors?</br>
                                                           !< 'ignore' (0):  short, one-line warning,</br>
@@ -110,6 +111,14 @@ MODULE mo_jsb_config_class
     INTEGER ::  slow_sb_pool_spinup_accelerator_length         !< Number of time loops in spin-up accelerator
     INTEGER ::  slow_sb_pool_spinup_accelerator_start_year     !< Year of the first spin-up accelerator runs
     INTEGER ::  slow_sb_pool_spinup_accelerator_max_executions !< Maximum number of spin-up accelerator runs
+    LOGICAL ::  flag_analytical_ss_spinup_accelerator          !< Enable analytical steady-state jumps
+    INTEGER ::  analytical_ss_spinup_accelerator_frequency     !< Interval between analytical jumps [years]
+    INTEGER ::  analytical_ss_spinup_accelerator_start_year    !< First analytical jump year
+    INTEGER ::  analytical_ss_spinup_accelerator_max_executions !< Maximum number of analytical jumps
+    INTEGER ::  analytical_ss_spinup_accelerator_forcing_years !< Averaging window before each jump [years]
+    INTEGER ::  analytical_ss_transport_smoothing_years        !< Bioturbation target-smoothing period [years]
+    LOGICAL ::  flag_analytical_ss_bioturbation                !< Smooth analytical targets with bioturbation
+    LOGICAL ::  flag_spinup_debug                              !< Print analytical and forward SB accelerator diagnostics
 
     ! Initialization from ECMWF Integrated Forecast System (IFS) analysis data
     LOGICAL                        :: init_from_ifs            !< Initialize from IFS analysis
@@ -200,6 +209,7 @@ CONTAINS
     LOGICAL                       :: use_tmx                      !< Use turbulent mixing scheme
     LOGICAL                       :: use_lakes                    !< Represent lakes
     LOGICAL                       :: use_glacier                  !< Represent glaciers
+    LOGICAL                       :: l_read_quincy_soil_3d        !< Read layer-resolved QUINCY soil inputs
     LOGICAL                       :: check_child_cf               !< Assert that cover fractions of children tiles sum up to the tile cf
     CHARACTER(len=10)             :: enforce_water_budget         !< Consequence of water balance errors
     CHARACTER(len=10)             :: quincy_model                 !< Quincy model version: 'canopy', 'plant'
@@ -227,6 +237,14 @@ CONTAINS
     INTEGER :: slow_sb_pool_spinup_accelerator_start_year         !< Year in which spin-up accelerator is
                                                                   !< executed for the first time
     INTEGER :: slow_sb_pool_spinup_accelerator_max_executions     !< Maximum number of spin-up accelerator runs
+    LOGICAL :: flag_analytical_ss_spinup_accelerator
+    INTEGER :: analytical_ss_spinup_accelerator_frequency
+    INTEGER :: analytical_ss_spinup_accelerator_start_year
+    INTEGER :: analytical_ss_spinup_accelerator_max_executions
+    INTEGER :: analytical_ss_spinup_accelerator_forcing_years
+    INTEGER :: analytical_ss_transport_smoothing_years
+    LOGICAL :: flag_analytical_ss_bioturbation
+    LOGICAL :: flag_spinup_debug
     LOGICAL                       :: init_from_ifs                !< Initialize ICON-Land from IFS data
     CHARACTER(len=filename_max)   :: ifs_filename                 !< File containing IFS data
     LOGICAL                       :: is_single_site
@@ -240,6 +258,7 @@ CONTAINS
       use_tmx, &
       use_lakes, &
       use_glacier, &
+      l_read_quincy_soil_3d, &
       check_child_cf, &
       enforce_water_budget, &
       quincy_model, &
@@ -262,6 +281,14 @@ CONTAINS
       slow_sb_pool_spinup_accelerator_length, &
       slow_sb_pool_spinup_accelerator_start_year, &
       slow_sb_pool_spinup_accelerator_max_executions, &
+      flag_analytical_ss_spinup_accelerator, &
+      analytical_ss_spinup_accelerator_frequency, &
+      analytical_ss_spinup_accelerator_start_year, &
+      analytical_ss_spinup_accelerator_max_executions, &
+      analytical_ss_spinup_accelerator_forcing_years, &
+      analytical_ss_transport_smoothing_years, &
+      flag_analytical_ss_bioturbation, &
+      flag_spinup_debug, &
       init_from_ifs, &
       ifs_filename, &
       is_single_site, &
@@ -295,6 +322,7 @@ CONTAINS
     use_tmx                    = .FALSE.
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
+    l_read_quincy_soil_3d      = .FALSE.
     check_child_cf             = .FALSE.
     enforce_water_budget       = 'ignore'
     quincy_model               = 'land'
@@ -320,6 +348,14 @@ CONTAINS
     slow_sb_pool_spinup_accelerator_length = 1000
     slow_sb_pool_spinup_accelerator_start_year = 300
     slow_sb_pool_spinup_accelerator_max_executions = 4
+    flag_analytical_ss_spinup_accelerator = .FALSE.
+    analytical_ss_spinup_accelerator_frequency = 100
+    analytical_ss_spinup_accelerator_start_year = 300
+    analytical_ss_spinup_accelerator_max_executions = 5
+    analytical_ss_spinup_accelerator_forcing_years = 30
+    analytical_ss_transport_smoothing_years = 200
+    flag_analytical_ss_bioturbation = .FALSE.
+    flag_spinup_debug = .FALSE.
     init_from_ifs              = .FALSE.
     ifs_filename               = 'ifs2icon.nc'
     is_single_site             = .FALSE.
@@ -366,12 +402,16 @@ CONTAINS
     IF (model_config%model_scheme /= MODEL_JSBACH .AND. use_tmx) THEN
       CALL finish(routine, 'tmx currently only implemented for JSBACH.')
     END IF
+    IF (model_config%model_scheme /= MODEL_QUINCY .AND. l_read_quincy_soil_3d) THEN
+      CALL finish(routine, 'l_read_quincy_soil_3d currently only implemented for QUINCY.')
+    END IF
 
     model_config%relative_fractions_in_file = relative_fractions_in_file
     ! set other namelist options
     model_config%use_tmx                    = use_tmx
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
+    model_config%l_read_quincy_soil_3d      = l_read_quincy_soil_3d
     model_config%check_child_cf             = check_child_cf
     model_config%quincy_model               = TRIM(quincy_model)
     model_config%qmodel_id                  = qmodel_id
@@ -395,6 +435,41 @@ CONTAINS
     model_config%slow_sb_pool_spinup_accelerator_length = slow_sb_pool_spinup_accelerator_length
     model_config%slow_sb_pool_spinup_accelerator_start_year = slow_sb_pool_spinup_accelerator_start_year
     model_config%slow_sb_pool_spinup_accelerator_max_executions = slow_sb_pool_spinup_accelerator_max_executions
+    model_config%flag_analytical_ss_spinup_accelerator = flag_analytical_ss_spinup_accelerator
+    model_config%analytical_ss_spinup_accelerator_frequency = analytical_ss_spinup_accelerator_frequency
+    model_config%analytical_ss_spinup_accelerator_start_year = analytical_ss_spinup_accelerator_start_year
+    model_config%analytical_ss_spinup_accelerator_max_executions = analytical_ss_spinup_accelerator_max_executions
+    model_config%analytical_ss_spinup_accelerator_forcing_years = analytical_ss_spinup_accelerator_forcing_years
+    model_config%analytical_ss_transport_smoothing_years = analytical_ss_transport_smoothing_years
+    model_config%flag_analytical_ss_bioturbation = flag_analytical_ss_bioturbation
+    model_config%flag_spinup_debug = flag_spinup_debug
+
+    IF (flag_analytical_ss_spinup_accelerator .AND. flag_slow_sb_pool_spinup_accelerator) THEN
+      CALL finish(TRIM(routine), 'The analytical and slow-pool SB spin-up accelerators are mutually exclusive.')
+    END IF
+    IF (flag_analytical_ss_spinup_accelerator .AND. analytical_ss_spinup_accelerator_frequency <= 0) THEN
+      CALL finish(TRIM(routine), 'analytical_ss_spinup_accelerator_frequency must be greater than zero.')
+    END IF
+    IF (flag_analytical_ss_spinup_accelerator .AND. analytical_ss_spinup_accelerator_max_executions <= 0) THEN
+      CALL finish(TRIM(routine), 'analytical_ss_spinup_accelerator_max_executions must be greater than zero.')
+    END IF
+    IF (flag_analytical_ss_spinup_accelerator .AND. analytical_ss_spinup_accelerator_forcing_years <= 0) THEN
+      CALL finish(TRIM(routine), 'analytical_ss_spinup_accelerator_forcing_years must be greater than zero.')
+    END IF
+    IF (flag_analytical_ss_spinup_accelerator .AND. &
+        & analytical_ss_spinup_accelerator_forcing_years > analytical_ss_spinup_accelerator_frequency) THEN
+      CALL finish(TRIM(routine), 'The analytical steady-state forcing window cannot exceed the jump frequency.')
+    END IF
+    IF (flag_analytical_ss_spinup_accelerator .AND. &
+        & analytical_ss_spinup_accelerator_forcing_years >= analytical_ss_spinup_accelerator_start_year) THEN
+      CALL finish(TRIM(routine), 'The first analytical jump must follow a complete forcing window.')
+    END IF
+    IF (flag_analytical_ss_bioturbation .AND. .NOT. flag_analytical_ss_spinup_accelerator) THEN
+      CALL finish(TRIM(routine), 'Analytical bioturbation requires the analytical steady-state accelerator.')
+    END IF
+    IF (flag_analytical_ss_bioturbation .AND. analytical_ss_transport_smoothing_years <= 0) THEN
+      CALL finish(TRIM(routine), 'analytical_ss_transport_smoothing_years must be greater than zero.')
+    END IF
 
     !>
     !> @TODO To be deleted `relative_fractions_in_file` (clean up task).

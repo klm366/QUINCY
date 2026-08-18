@@ -970,7 +970,9 @@ CONTAINS
 
     !>8.0 co-metabolisation of polymeric litter & residues
     !>
-    arr_hlp1(:,:) = sb_pool_mt(ix_microbial, ixC, :, :) * enzyme_frac_total * (1._wp - enzyme_frac_AP(:,:))
+    ! Include persistent extracellular-enzyme capacity where microbial enzyme investment is very small.
+    arr_hlp1(:,:) = MAX(sb_pool_mt(ix_microbial, ixC, :, :) * enzyme_frac_total * &
+      &                  (1._wp - enzyme_frac_AP(:,:)), min_persistent_enzyme)
     CALL calc_depolymerisation_SESAM( &
       & nc, &                                 ! in
       & nsoil_w, &

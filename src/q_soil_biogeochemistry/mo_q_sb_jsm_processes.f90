@@ -1352,6 +1352,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_w)    :: depoly_p
     REAL(wp), DIMENSION(nc, nsoil_w)    :: hlp_depoly
     REAL(wp), DIMENSION(nc, nsoil_w)    :: enz_AP_direction
+    REAL(wp)                             :: enzyme_residue_local
     INTEGER                             :: ic, is
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_depolymerisation_SESAM'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1381,9 +1382,10 @@ CONTAINS
 
         !>2.0 calculate microbial residue depolymerisation rate
         !>
-        hlp1(ic,is) = 1._wp
-        hlp1(ic,is) = enzyme_depoly(ic,is) * enzyme_frac_residue(ic,is) &
-          &         / (km_depolymerisation * rtm_hsc(ic,is) * rmm_hsc(ic,is) + enzyme_depoly(ic,is) * enzyme_frac_residue(ic,is))
+        enzyme_residue_local = MAX(enzyme_depoly(ic,is) * enzyme_frac_residue(ic,is), &
+          &                        min_persistent_enzyme)
+        hlp1(ic,is) = enzyme_residue_local / &
+          &         (km_depolymerisation * rtm_hsc(ic,is) * rmm_hsc(ic,is) + enzyme_residue_local)
         hlp2(:,:) = vmax_depolymerisation_residue * rtm_depolymerisation(ic,is) &
           &         * rmm_depolymerisation(ic,is) * hlp1(ic,is) * dtime &
           &         * sb_pool_mt(ix_residue, ixC, ic, is)
@@ -1828,6 +1830,13 @@ CONTAINS
     REAL(wp)             :: alpha       !< partitioning coefficient for enzyme allocation [--]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)                    :: hlp1    !< b**2-4*a*c in the quadratic equation
+    REAL(wp)                    :: demand_scale
+    REAL(wp)                    :: concentration_scale
+    REAL(wp)                    :: dL_scaled
+    REAL(wp)                    :: dR_scaled
+    REAL(wp)                    :: km_scaled
+    REAL(wp)                    :: Cmic_scaled
+    REAL(wp)                    :: relative_tolerance
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_enzyme_allocation'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -1836,12 +1845,44 @@ CONTAINS
     ! Solution of the equation:
     !   dL/dR=alpha(km+alpha*Cmic)/((1-alpha)*(km+Cmic*(1-alpha)))
     !   only one of the solution fits in the range [0,1]
-    hlp1  = 4._wp * Cmic ** 2._wp * dL * dR &
-      &     + 8._wp * Cmic * km * dL * dR &
-      &     + km ** 2._wp * dL ** 2._wp &
-      &     + 2._wp * km ** 2._wp * dL * dR &
-      &     + km ** 2._wp * dR ** 2._wp
-    alpha = (dL * km + 2._wp * dL * Cmic + dR * km - SQRT(hlp1)) / (2._wp * Cmic * (dL - dR))
+    IF (dL <= 0._wp .AND. dR <= 0._wp) THEN
+      alpha = 0.5_wp
+      RETURN
+    ELSE IF (dL <= 0._wp) THEN
+      alpha = 0._wp
+      RETURN
+    ELSE IF (dR <= 0._wp) THEN
+      alpha = 1._wp
+      RETURN
+    END IF
+
+    ! The closed form is homogeneous in substrate demand and concentration.
+    ! Normalising both pairs avoids overflow without changing the solution.
+    demand_scale = MAX(ABS(dL), ABS(dR), TINY(1._wp))
+    concentration_scale = MAX(ABS(km), ABS(Cmic), TINY(1._wp))
+    dL_scaled = dL / demand_scale
+    dR_scaled = dR / demand_scale
+    km_scaled = MAX(0._wp, km) / concentration_scale
+    Cmic_scaled = MAX(0._wp, Cmic) / concentration_scale
+    relative_tolerance = SQRT(EPSILON(1._wp))
+
+    ! Limiting solutions avoid the singular denominator 2*Cmic*(dL-dR).
+    IF (Cmic_scaled <= relative_tolerance) THEN
+      alpha = dL_scaled / (dL_scaled + dR_scaled)
+    ELSE IF (ABS(dL_scaled - dR_scaled) <= relative_tolerance * &
+      & MAX(dL_scaled, dR_scaled)) THEN
+      alpha = 0.5_wp
+    ELSE
+      hlp1 = 4._wp * Cmic_scaled ** 2._wp * dL_scaled * dR_scaled &
+        &    + 8._wp * Cmic_scaled * km_scaled * dL_scaled * dR_scaled &
+        &    + km_scaled ** 2._wp * dL_scaled ** 2._wp &
+        &    + 2._wp * km_scaled ** 2._wp * dL_scaled * dR_scaled &
+        &    + km_scaled ** 2._wp * dR_scaled ** 2._wp
+      alpha = (dL_scaled * km_scaled + 2._wp * dL_scaled * Cmic_scaled + &
+        & dR_scaled * km_scaled - SQRT(MAX(0._wp, hlp1))) / &
+        & (2._wp * Cmic_scaled * (dL_scaled - dR_scaled))
+    END IF
+    alpha = MIN(1._wp, MAX(0._wp, alpha))
   END FUNCTION calc_enzyme_allocation
 
   ! ======================================================================================================= !

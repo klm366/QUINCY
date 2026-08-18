@@ -27,11 +27,13 @@ MODULE mo_q_sb_jsm_transport
 
   PRIVATE
   PUBLIC :: calc_particle_fluxrate, &
+    &       calc_particle_transport, &
     &       calc_bioturbation_rate, &
     &       calc_bioturbation_transport_wrapper_jsm, &
     &       calc_liquid_phase_transport_wrapper , &
     &       calc_particle_transport_wrapper, &
     &       calc_bioturbation_transport, &
+    &       calc_bioturbation_transport_rate, &
     &       calc_liquid_phase_transport
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_jsm_processes'
@@ -895,6 +897,37 @@ CONTAINS
       ENDDO
     ENDDO
   END FUNCTION calc_bioturbation_rate
+
+  ! ======================================================================================================= !
+  !> Calculate the instantaneous net bioturbation tendency without modifying model transport fluxes.
+  !> Positive values denote net import into a layer. The routine mirrors
+  !> calc_bioturbation_transport but returns rates in mol m-3 s-1.
+  SUBROUTINE calc_bioturbation_transport_rate( &
+    & nc, nsoil_w, num_sl_above_bedrock, k_bioturb, soil_depth_sl, pool, transport_rate)
+
+    INTEGER,                          INTENT(in)  :: nc, nsoil_w
+    REAL(wp), DIMENSION(nc),          INTENT(in)  :: num_sl_above_bedrock
+    REAL(wp), DIMENSION(nc,nsoil_w),  INTENT(in)  :: k_bioturb, soil_depth_sl, pool
+    REAL(wp), DIMENSION(nc,nsoil_w),  INTENT(out) :: transport_rate
+
+    REAL(wp) :: distance_midpoints, interface_flux
+    INTEGER  :: ic, is
+
+    transport_rate(:,:) = 0.0_wp
+    DO ic = 1, nc
+      DO is = 1, NINT(num_sl_above_bedrock(ic)) - 1
+        distance_midpoints = 0.5_wp * (soil_depth_sl(ic,is) + soil_depth_sl(ic,is + 1))
+        IF (distance_midpoints > eps8) THEN
+          interface_flux = k_bioturb(ic,is) * (pool(ic,is) - pool(ic,is + 1)) / distance_midpoints
+        ELSE
+          interface_flux = 0.0_wp
+        END IF
+        transport_rate(ic,is) = transport_rate(ic,is) - interface_flux / soil_depth_sl(ic,is)
+        transport_rate(ic,is + 1) = transport_rate(ic,is + 1) + interface_flux / soil_depth_sl(ic,is + 1)
+      END DO
+    END DO
+
+  END SUBROUTINE calc_bioturbation_transport_rate
 
   ! ======================================================================================================= !
   !>calculates matter transport by bioturbation

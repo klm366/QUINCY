@@ -269,6 +269,9 @@ MODULE mo_sb_memory_class
     !------------------------------------------------------------------------------------------------------ !
     !>3D JSM diagnostics (Jena Soil Model)
     !>
+    TYPE(t_jsb_var_real2d) :: &
+                            analy_ss_forcing_time                 !< elapsed time represented by analytical forcing means [s]
+
     TYPE(t_jsb_var_real3d)  :: &
                             qmax_org, &                           !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
                             surface_burial_frac, &               !< fraction of non-associated surface SOM buried into the first mineral soil layer [unitless]
@@ -309,7 +312,22 @@ MODULE mo_sb_memory_class
                             assoc_dom_c14_form_mavg_sl, &         !< time-averaged associated dom C formation rate [micro-mol m-3 s-1]
                             residue_som_c_loss_mavg_sl, &         !< time-averaged residual som C loss rate [micro-mol m-3 s-1]
                             residue_assoc_som_c_loss_mavg_sl, &   !< time-averaged residual associated som C loss rate [micro-mol m-3 s-1]
-                            assoc_dom_c_loss_mavg_sl              !< time-averaged associated dom C loss rate [micro-mol m-3 s-1]
+                            assoc_dom_c_loss_mavg_sl, &           !< time-averaged associated dom C loss rate [micro-mol m-3 s-1]
+                            analy_ss_input_sol_c_mean_sl, &       !< mean soluble-litter C input [mol C m-3 s-1]
+                            analy_ss_input_poly_c_mean_sl, &      !< mean polymeric-litter C input [mol C m-3 s-1]
+                            analy_ss_input_wood_c_mean_sl, &      !< mean woody-litter C input [mol C m-3 s-1]
+                            analy_ss_input_sol_c14_mean_sl, &     !< mean soluble-litter C14 input [micro-mol C14 m-3 s-1]
+                            analy_ss_input_poly_c14_mean_sl, &    !< mean polymeric-litter C14 input [micro-mol C14 m-3 s-1]
+                            analy_ss_input_wood_c14_mean_sl, &    !< mean woody-litter C14 input [micro-mol C14 m-3 s-1]
+                            analy_ss_doc_transp_mean_sl, &        !< mean downward DOC transport rate [s-1]
+                            analy_ss_depoly_mod_mean_sl, &        !< mean effective depolymerisation modifier [unitless]
+                            analy_ss_uptake_mod_mean_sl, &        !< mean effective microbial uptake modifier [unitless]
+                            analy_ss_sorption_mod_mean_sl, &      !< mean effective sorption modifier [unitless]
+                            analy_ss_desorption_mod_mean_sl, &    !< mean effective desorption modifier [unitless]
+                            analy_ss_hsc_mod_mean_sl, &           !< mean effective half-saturation modifier [unitless]
+                            analy_ss_enzyme_ap_mean_sl, &         !< mean phosphatase enzyme fraction [unitless]
+                            analy_ss_bioturb_numerator_mean_sl, &  !< mean density-weighted bioturbation coefficient [kg m-1 s-1]
+                            analy_ss_particle_fluxrate_mean_sl     !< deprecated restart field; no longer used by the accelerator
     !------------------------------------------------------------------------------------------------------ !
     !>3D JSM pools | microbe, mineral-associated organic matter (Jena Soil Model)
     !>
@@ -3089,6 +3107,188 @@ CONTAINS
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp, &
           & l_aggregate_all = .TRUE.)
+      END IF
+
+      IF (model%config%flag_analytical_ss_spinup_accelerator) THEN
+        CALL mem%Add_var('analy_ss_forcing_time', mem%analy_ss_forcing_time, &
+          & hgrid, surface, &
+          & t_cf('analy_ss_forcing_time', 's', 'elapsed time represented by analytical forcing means'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_input_sol_c_mean_sl', mem%analy_ss_input_sol_c_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_input_sol_c_mean_sl', 'mol C m-3 s-1', 'mean soluble-litter C input'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_input_poly_c_mean_sl', mem%analy_ss_input_poly_c_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_input_poly_c_mean_sl', 'mol C m-3 s-1', 'mean polymeric-litter C input'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_input_wood_c_mean_sl', mem%analy_ss_input_wood_c_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_input_wood_c_mean_sl', 'mol C m-3 s-1', 'mean woody-litter C input'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_input_sol_c14_mean_sl', mem%analy_ss_input_sol_c14_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_input_sol_c14_mean_sl', 'micro-mol C14 m-3 s-1', &
+          &      'mean soluble-litter C14 input'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, output_level = FULL, loutput = .FALSE., lrestart = .TRUE., &
+          & initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_input_poly_c14_mean_sl', mem%analy_ss_input_poly_c14_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_input_poly_c14_mean_sl', 'micro-mol C14 m-3 s-1', &
+          &      'mean polymeric-litter C14 input'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, output_level = FULL, loutput = .FALSE., lrestart = .TRUE., &
+          & initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_input_wood_c14_mean_sl', mem%analy_ss_input_wood_c14_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_input_wood_c14_mean_sl', 'micro-mol C14 m-3 s-1', &
+          &      'mean woody-litter C14 input'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, output_level = FULL, loutput = .FALSE., lrestart = .TRUE., &
+          & initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_doc_transp_mean_sl', mem%analy_ss_doc_transp_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_doc_transp_mean_sl', 's-1', 'mean downward DOC transport rate'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_depoly_mod_mean_sl', &
+          & mem%analy_ss_depoly_mod_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_depoly_mod_mean_sl', unitless, &
+          &      'mean effective depolymerisation modifier'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_uptake_mod_mean_sl', &
+          & mem%analy_ss_uptake_mod_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_uptake_mod_mean_sl', unitless, &
+          &      'mean effective microbial uptake modifier'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_sorption_mod_mean_sl', mem%analy_ss_sorption_mod_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_sorption_mod_mean_sl', unitless, 'mean effective sorption modifier'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_desorption_mod_mean_sl', mem%analy_ss_desorption_mod_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_desorption_mod_mean_sl', unitless, 'mean effective desorption modifier'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_hsc_mod_mean_sl', mem%analy_ss_hsc_mod_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_hsc_mod_mean_sl', unitless, 'mean effective half-saturation modifier'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_enzyme_ap_mean_sl', mem%analy_ss_enzyme_ap_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_enzyme_ap_mean_sl', unitless, 'mean phosphatase enzyme fraction'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & output_level = FULL, &
+          & loutput = .FALSE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_bioturb_numerator_mean_sl', mem%analy_ss_bioturb_numerator_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_bioturb_numerator_mean_sl', 'kg m-1 s-1', &
+          &      'mean density-weighted bioturbation coefficient'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+          & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
+        CALL mem%Add_var('analy_ss_particle_fluxrate_mean_sl', mem%analy_ss_particle_fluxrate_mean_sl, &
+          & hgrid, vgrid_soil_w, &
+          & t_cf('analy_ss_particle_fluxrate_mean_sl', 'm s-1', &
+          &      'deprecated analytical steady-state particle velocity'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+          & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, &
+          & l_aggregate_all = .TRUE.)
+
       END IF
 
       CALL mem%Add_var('ph_sl', mem%ph_sl, &

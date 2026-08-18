@@ -42,7 +42,7 @@ MODULE mo_sb_config_class
     !> options
     !!
     CHARACTER(15)         :: sb_model_scheme
-    CHARACTER(15)         :: sb_init_scheme
+    CHARACTER(15)         :: sb_init_scheme       !< deprecated compatibility member; initialization is always legacy
     CHARACTER(15)         :: sb_nloss_scheme
     CHARACTER(15)         :: bnf_scheme                 !< select scheme to simulate asymbiotic BNF (biological nitrogen fixation)
                                                         !! identical with the symbiotic N fixation in VEG_
@@ -87,7 +87,7 @@ MODULE mo_sb_config_class
     REAL(wp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
 
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename    !< IQ (QUINCY) soil input data
-    CHARACTER(len=filename_max) :: sb_analytical_init_filename !< IQ (QUINCY) gridded input data for analytical steady-state SB initialisation
+    CHARACTER(len=filename_max) :: sb_analytical_init_filename !< deprecated compatibility member; no longer read
     CHARACTER(len=filename_max) :: soilphysics_forcing_filename    !< IQ (QUINCY) forcing data for soil model
     CHARACTER(len=filename_max) :: veglitterfall_forcing_filename    !< IQ (QUINCY) forcing data for soil model
     CHARACTER(len=filename_max) :: deposition_filename_prefix !< IQ. Note: should NOT include an ending "_"
@@ -163,13 +163,11 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename
-    CHARACTER(len=filename_max) :: sb_analytical_init_filename
     CHARACTER(len=filename_max) :: soilphysics_forcing_filename
     CHARACTER(len=filename_max) :: veglitterfall_forcing_filename
     CHARACTER(len=filename_max) :: deposition_filename_prefix
     LOGICAL                     :: skip_forcing_isotopes_after_init
     CHARACTER(15)               :: sb_model_scheme
-    CHARACTER(15)               :: sb_init_scheme
     CHARACTER(15)               :: sb_nloss_scheme
     CHARACTER(15)               :: sb_bnf_scheme
     CHARACTER(15)               :: sb_adsorp_scheme
@@ -215,13 +213,11 @@ CONTAINS
                       ic_filename               , &
                       bc_filename               , &
                       bc_quincy_soil_filename   , &
-                      sb_analytical_init_filename, &
                       soilphysics_forcing_filename,   &
                       veglitterfall_forcing_filename, &
                       deposition_filename_prefix, &
                       skip_forcing_isotopes_after_init, &
                       sb_model_scheme           , &
-                      sb_init_scheme            , &
                       sb_nloss_scheme           , &
                       sb_bnf_scheme             , &
                       sb_adsorp_scheme          , &
@@ -274,13 +270,11 @@ CONTAINS
     ic_filename                 = 'ic_land_sb.nc'
     bc_filename                 = 'bc_land_srf.nc'
     bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
-    sb_analytical_init_filename = 'bc_land_sb_analytical_init.nc'
     soilphysics_forcing_filename   = 'bc_qsoil_physics.nc'
     veglitterfall_forcing_filename = 'bc_qsoil_litterfall.nc'
     deposition_filename_prefix  = 'bc_land_npdep_quincy'
     skip_forcing_isotopes_after_init = .TRUE.
     sb_model_scheme             = "simple_1d"       ! simple_1d jsm
-    sb_init_scheme              = "legacy"          ! legacy analytical_ss
     sb_nloss_scheme             = "dynamic"         ! none fixed dynamic
     sb_bnf_scheme               = "dynamic"         ! none dynamic unlimited (fixed == dynamic)
     sb_adsorp_scheme            = "eca_part"        ! eca_full; eca_part (only uptake, not for adsorption); eca_none
@@ -333,13 +327,13 @@ CONTAINS
     config%ic_filename                     = ic_filename
     config%bc_filename                     = bc_filename
     config%bc_quincy_soil_filename         = bc_quincy_soil_filename
-    config%sb_analytical_init_filename     = sb_analytical_init_filename
+    config%sb_analytical_init_filename     = ''
     config%soilphysics_forcing_filename    = soilphysics_forcing_filename
     config%veglitterfall_forcing_filename  = veglitterfall_forcing_filename
     config%deposition_filename_prefix      = deposition_filename_prefix
     config%skip_forcing_isotopes_after_init = skip_forcing_isotopes_after_init
     config%sb_model_scheme                 = TRIM(sb_model_scheme)
-    config%sb_init_scheme                  = TRIM(sb_init_scheme)
+    config%sb_init_scheme                  = 'legacy'
     config%sb_nloss_scheme                 = TRIM(sb_nloss_scheme)
     config%bnf_scheme                      = TRIM(sb_bnf_scheme)
     config%sb_adsorp_scheme                = TRIM(sb_adsorp_scheme)
@@ -386,16 +380,6 @@ CONTAINS
       CALL message(TRIM(routine), 'Running the soil model: JSM (Jena Soil Model)')
     CASE DEFAULT
       CALL finish(TRIM(routine),  'No such soil model available: '//TRIM(sb_model_scheme))
-    END SELECT
-
-    ! test sb_init_scheme
-    SELECT CASE(TRIM(sb_init_scheme))
-    CASE ("legacy")
-      CALL message(TRIM(routine), 'Running the SB initialisation scheme: legacy')
-    CASE ("analytical_ss")
-      CALL message(TRIM(routine), 'Running the SB initialisation scheme: analytical steady state')
-    CASE DEFAULT
-      CALL finish(TRIM(routine), 'No such SB initialisation scheme available: '//TRIM(sb_init_scheme))
     END SELECT
 
     IF (config%skip_forcing_isotopes_after_init) THEN

@@ -62,7 +62,8 @@ CONTAINS
     USE mo_jsb_process_class,      ONLY: A2L_, SEB_, TURB_, HYDRO_, HYDRO_, VEG_, SSE_, Q_ASSIMI_, Q_PHENO_, SB_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
-    USE mo_jsb_time,               ONLY: execute_quincy_sb_accelerator_this_timestep
+    USE mo_jsb_time,               ONLY: execute_quincy_sb_accelerator_this_timestep, &
+      & execute_quincy_sb_analytical_accelerator_this_timestep, get_year
     USE mo_jsb_math_constants,     ONLY: eps1, eps8
     USE mo_sb_constants
     USE mo_q_sb_jsm_processes,     ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_Psorption_parameter, &
@@ -71,6 +72,7 @@ CONTAINS
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
     USE mo_jsb_physical_constants, ONLY: ATM_STANDARD_N15
     USE mo_sb_util,                ONLY: calc_qmax_texture
+    USE mo_sb_analytical_accelerator, ONLY: apply_analytical_ss_jsm_accelerator
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
 
@@ -109,6 +111,10 @@ CONTAINS
     INTEGER                               :: nr_elements                    !< number of elements
     INTEGER                               :: nr_sb_parts                    !< number of sb compartments
     INTEGER                               :: nr_veg_parts                   !< number of veg compartments
+#ifdef __QUINCY_STANDALONE__
+    INTEGER                               :: analytical_jump_year, analytical_jump_count
+    CHARACTER(len=160)                    :: analytical_input_filename
+#endif
     REAL(wp), ALLOCATABLE                 :: sb_pool_prev_timestep_hlp_mt(:,:,:,:) !< dim: compartments, elements, nc, nsoil
     REAL(wp), ALLOCATABLE                 :: sb_particle_transport_hlp_mt(:,:,:,:) !< dim: compartments, elements, nc, nsoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
@@ -151,6 +157,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk :: soil_lay_depth_center_sl
+    dsl4jsb_Real3D_onChunk :: soil_lay_depth_ubound_sl
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk :: sand_sl
@@ -354,6 +362,27 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: volume_min_sl
     dsl4jsb_Real3D_onChunk :: dom_cn_mavg
     dsl4jsb_Real3D_onChunk :: dom_cp_mavg
+    dsl4jsb_Real2D_onChunk :: analy_ss_forcing_time
+    dsl4jsb_Real3D_onChunk :: analy_ss_input_sol_c_mean_sl
+    dsl4jsb_Real3D_onChunk :: analy_ss_input_poly_c_mean_sl
+    dsl4jsb_Real3D_onChunk :: analy_ss_input_wood_c_mean_sl
+    dsl4jsb_Real3D_onChunk :: analy_ss_input_sol_c14_mean_sl
+    dsl4jsb_Real3D_onChunk :: analy_ss_input_poly_c14_mean_sl
+    dsl4jsb_Real3D_onChunk :: analy_ss_input_wood_c14_mean_sl
+    dsl4jsb_Real3D_onChunk :: analy_ss_doc_transp_mean_sl
+    dsl4jsb_Real3D_onChunk :: analy_ss_depoly_mod_mean_sl
+    dsl4jsb_Real3D_onChunk :: analy_ss_uptake_mod_mean_sl
+    dsl4jsb_Real3D_onChunk :: analy_ss_sorption_mod_mean_sl
+    dsl4jsb_Real3D_onChunk :: analy_ss_desorption_mod_mean_sl
+    dsl4jsb_Real3D_onChunk :: analy_ss_hsc_mod_mean_sl
+    dsl4jsb_Real3D_onChunk :: analy_ss_enzyme_ap_mean_sl
+    dsl4jsb_Real3D_onChunk :: analy_ss_bioturb_numerator_mean_sl
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_poly
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_residue
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_poly_c
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_poly_n
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_poly_p
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_AP
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -439,6 +468,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,   num_sl_above_bedrock)         ! in
     ! HYDRO_ 3D
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)                ! in
+    IF (model%config%flag_analytical_ss_spinup_accelerator) THEN
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_lay_depth_center_sl)      ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_lay_depth_ubound_sl)      ! in
+    END IF
     ! SSE_ 3D
     dsl4jsb_Get_var3D_onChunk(SSE_,     bulk_dens_sl)                ! in
     dsl4jsb_Get_var3D_onChunk(SSE_,     sand_sl)                     ! in
@@ -638,6 +671,29 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_nh4_min_sl)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4_om_sl)              ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       volume_min_sl)               ! in
+    IF (model%config%flag_analytical_ss_spinup_accelerator) THEN
+      dsl4jsb_Get_var2D_onChunk(SB_, analy_ss_forcing_time)            ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_input_sol_c_mean_sl)     ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_input_poly_c_mean_sl)    ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_input_wood_c_mean_sl)    ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_input_sol_c14_mean_sl)   ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_input_poly_c14_mean_sl)  ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_input_wood_c14_mean_sl)  ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_doc_transp_mean_sl)      ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_depoly_mod_mean_sl)      ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_uptake_mod_mean_sl)      ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_sorption_mod_mean_sl)    ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_desorption_mod_mean_sl)  ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_hsc_mod_mean_sl)         ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_enzyme_ap_mean_sl)       ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, analy_ss_bioturb_numerator_mean_sl) ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, enzyme_frac_poly)                 ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, enzyme_frac_residue)              ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, enzyme_frac_poly_c)               ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, enzyme_frac_poly_n)               ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, enzyme_frac_poly_p)               ! inout
+      dsl4jsb_Get_var3D_onChunk(SB_, enzyme_frac_AP)                   ! inout
+    END IF
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
       dsl4jsb_Get_var3D_onChunk(SB_,       dom_cn_mavg)
       dsl4jsb_Get_var3D_onChunk(SB_,       dom_cp_mavg)
@@ -839,7 +895,75 @@ CONTAINS
       leaching_dom_nitrogen15(:)          = leaching_dom_nitrogen15(:)  * 1.e6_wp / dtime
     ENDIF
 
-    !>7.0 update of inorganic pools
+    !> 7.0 analytical steady-state spin-up accelerator
+    !>
+    IF (model%config%flag_analytical_ss_spinup_accelerator .AND. &
+      & execute_quincy_sb_analytical_accelerator_this_timestep) THEN
+      IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) /= 'jsm') THEN
+        CALL finish(TRIM(routine), 'The analytical steady-state accelerator is available only for JSM.')
+      END IF
+      IF (ANY(analy_ss_forcing_time(:) <= eps8)) THEN
+        CALL finish(TRIM(routine), 'Cannot execute analytical steady-state jump without accumulated forcing.')
+      END IF
+
+#ifdef __QUINCY_STANDALONE__
+      analytical_jump_year = get_year(options%current_datetime)
+      analytical_jump_count = (analytical_jump_year - &
+        & model%config%analytical_ss_spinup_accelerator_start_year) / &
+        & model%config%analytical_ss_spinup_accelerator_frequency + 1
+      WRITE(analytical_input_filename, &
+        & '("sb_analytical_init_vars_jump_year",I0,"_count",I0,"_block",I0,".txt")') &
+        & analytical_jump_year, analytical_jump_count, iblk
+      CALL dump_analytical_accelerator_inputs( &
+        & TRIM(analytical_input_filename), analytical_jump_year, analytical_jump_count, &
+        & model%config%analytical_ss_spinup_accelerator_forcing_years, &
+        & model%config%analytical_ss_transport_smoothing_years, &
+        & nc, nsoil_w, num_sl_above_bedrock, analy_ss_forcing_time, &
+        & soil_lay_depth_center_sl, soil_lay_depth_ubound_sl, &
+        & analy_ss_input_sol_c_mean_sl, analy_ss_input_poly_c_mean_sl, analy_ss_input_wood_c_mean_sl, &
+        & analy_ss_input_sol_c14_mean_sl, analy_ss_input_poly_c14_mean_sl, analy_ss_input_wood_c14_mean_sl, &
+        & analy_ss_doc_transp_mean_sl, analy_ss_enzyme_ap_mean_sl, bulk_dens_sl, bulk_carbon_max, &
+        & qmax_org_min_sl, analy_ss_depoly_mod_mean_sl, analy_ss_uptake_mod_mean_sl, &
+        & analy_ss_sorption_mod_mean_sl, analy_ss_desorption_mod_mean_sl, analy_ss_hsc_mod_mean_sl, &
+        & analy_ss_bioturb_numerator_mean_sl)
+#endif
+
+      CALL apply_analytical_ss_jsm_accelerator( &
+        & nc, nsoil_w, num_sl_above_bedrock, soil_depth_sl, &
+        & soil_lay_depth_center_sl, soil_lay_depth_ubound_sl, &
+        & analy_ss_input_sol_c_mean_sl, analy_ss_input_poly_c_mean_sl, analy_ss_input_wood_c_mean_sl, &
+        & analy_ss_input_sol_c14_mean_sl, analy_ss_input_poly_c14_mean_sl, analy_ss_input_wood_c14_mean_sl, &
+        & model%config%include_carbon14, &
+        & analy_ss_doc_transp_mean_sl, analy_ss_enzyme_ap_mean_sl, bulk_dens_sl, bulk_carbon_max, &
+        & qmax_org_min_sl, analy_ss_depoly_mod_mean_sl, analy_ss_uptake_mod_mean_sl, &
+        & analy_ss_sorption_mod_mean_sl, analy_ss_desorption_mod_mean_sl, analy_ss_hsc_mod_mean_sl, &
+        & model%config%flag_analytical_ss_bioturbation, &
+        & model%config%flag_spinup_debug, &
+        & model%config%analytical_ss_transport_smoothing_years, analy_ss_bioturb_numerator_mean_sl, &
+        & sb_pool_mt, qmax_org, surface_burial_frac, enzyme_frac_poly, enzyme_frac_residue, &
+        & enzyme_frac_poly_c, enzyme_frac_poly_n, enzyme_frac_poly_p, enzyme_frac_AP)
+
+      analy_ss_forcing_time(:) = 0.0_wp
+      analy_ss_input_sol_c_mean_sl(:,:) = 0.0_wp
+      analy_ss_input_poly_c_mean_sl(:,:) = 0.0_wp
+      analy_ss_input_wood_c_mean_sl(:,:) = 0.0_wp
+      analy_ss_input_sol_c14_mean_sl(:,:) = 0.0_wp
+      analy_ss_input_poly_c14_mean_sl(:,:) = 0.0_wp
+      analy_ss_input_wood_c14_mean_sl(:,:) = 0.0_wp
+      analy_ss_doc_transp_mean_sl(:,:) = 0.0_wp
+      analy_ss_depoly_mod_mean_sl(:,:) = 0.0_wp
+      analy_ss_uptake_mod_mean_sl(:,:) = 0.0_wp
+      analy_ss_sorption_mod_mean_sl(:,:) = 0.0_wp
+      analy_ss_desorption_mod_mean_sl(:,:) = 0.0_wp
+      analy_ss_hsc_mod_mean_sl(:,:) = 0.0_wp
+      analy_ss_enzyme_ap_mean_sl(:,:) = 0.0_wp
+      analy_ss_bioturb_numerator_mean_sl(:,:) = 0.0_wp
+
+      WRITE(message_text,*) 'Applied analytical steady-state SB_ spinup jump at block ', iblk
+      CALL message(TRIM(routine), message_text, all_print=.TRUE.)
+    END IF
+
+    !>8.0 update of inorganic pools
     !>
     !>  7.1 update of N pools
     !>
@@ -1701,6 +1825,65 @@ CONTAINS
     END IF
 
   END SUBROUTINE calc_accelerated_slow_soil_pool_spinup
+
+#ifdef __QUINCY_STANDALONE__
+  ! ======================================================================================================= !
+  !> Write the exact forcing means and physical inputs consumed by an analytical steady-state jump.
+  SUBROUTINE dump_analytical_accelerator_inputs( &
+    & filename, jump_year, jump_count, forcing_window_years, smoothing_years, &
+    & nc, nsoil_w, num_sl_above_bedrock, forcing_time, &
+    & soil_lay_depth_center_sl, soil_lay_depth_ubound_sl, input_sol_c, input_poly_c, input_wood_c, &
+    & input_sol_c14, input_poly_c14, input_wood_c14, doc_transport, enzyme_ap, bulk_dens_sl, &
+    & bulk_carbon_max, qmax_org_min_sl, depoly_mod, uptake_mod, sorption_mod, desorption_mod, hsc_mod, &
+    & bioturb_numerator)
+
+    CHARACTER(len=*), INTENT(in) :: filename
+    INTEGER,          INTENT(in) :: jump_year, jump_count, forcing_window_years, smoothing_years, nc, nsoil_w
+    REAL(wp),         INTENT(in) :: num_sl_above_bedrock(:), forcing_time(:)
+    REAL(wp),         INTENT(in) :: soil_lay_depth_center_sl(:,:), soil_lay_depth_ubound_sl(:,:)
+    REAL(wp),         INTENT(in) :: input_sol_c(:,:), input_poly_c(:,:), input_wood_c(:,:)
+    REAL(wp),         INTENT(in) :: input_sol_c14(:,:), input_poly_c14(:,:), input_wood_c14(:,:)
+    REAL(wp),         INTENT(in) :: doc_transport(:,:), enzyme_ap(:,:), bulk_dens_sl(:,:)
+    REAL(wp),         INTENT(in) :: bulk_carbon_max(:,:), qmax_org_min_sl(:,:)
+    REAL(wp),         INTENT(in) :: depoly_mod(:,:), uptake_mod(:,:), sorption_mod(:,:)
+    REAL(wp),         INTENT(in) :: desorption_mod(:,:), hsc_mod(:,:), bioturb_numerator(:,:)
+
+    INTEGER :: ic, is, output_unit, io_status
+
+    OPEN(NEWUNIT=output_unit, FILE=filename, STATUS='replace', ACTION='write', IOSTAT=io_status)
+    IF (io_status /= 0) THEN
+      CALL finish(TRIM(modname)//':dump_analytical_accelerator_inputs', &
+        & 'Could not open analytical accelerator input dump: '//TRIM(filename))
+    END IF
+
+    WRITE(output_unit,'(A,I0)') '# analytical_ss_jump_year = ', jump_year
+    WRITE(output_unit,'(A,I0)') '# analytical_ss_jump_count = ', jump_count
+    WRITE(output_unit,'(A,I0)') '# configured_forcing_window_years = ', forcing_window_years
+    WRITE(output_unit,'(A,I0)') '# bioturbation_smoothing_years = ', smoothing_years
+    WRITE(output_unit,'(A)') &
+      & '# C inputs: mol C m-3 s-1; C14 inputs: micro-mol C14 m-3 s-1; forcing_time: s'
+    WRITE(output_unit,'(A)') &
+      & 'cell layer forcing_time_s forcing_time_years depth_center_m depth_ubound_m input_sol_c input_poly_c input_wood_c '// &
+      & 'input_sol_c14 input_poly_c14 input_wood_c14 doc_transport_s-1 enzyme_ap bulk_dens_kg_m-3 '// &
+      & 'bulk_carbon_max_mol_m-3 qmax_org_min_kgC_kg-1 depoly_mod uptake_mod sorption_mod desorption_mod hsc_mod '// &
+      & 'bioturb_numerator_kg_m-1_s-1'
+
+    DO ic = 1, nc
+      DO is = 1, MIN(nsoil_w, NINT(num_sl_above_bedrock(ic)))
+        WRITE(output_unit,'(2(I0,1X),21(ES24.16E3,1X))') ic, is, forcing_time(ic), &
+          & forcing_time(ic) / (one_day * one_year), &
+          & soil_lay_depth_center_sl(ic,is), soil_lay_depth_ubound_sl(ic,is), &
+          & input_sol_c(ic,is), input_poly_c(ic,is), input_wood_c(ic,is), &
+          & input_sol_c14(ic,is), input_poly_c14(ic,is), input_wood_c14(ic,is), &
+          & doc_transport(ic,is), enzyme_ap(ic,is), bulk_dens_sl(ic,is), bulk_carbon_max(ic,is), &
+          & qmax_org_min_sl(ic,is), depoly_mod(ic,is), uptake_mod(ic,is), sorption_mod(ic,is), &
+          & desorption_mod(ic,is), hsc_mod(ic,is), bioturb_numerator(ic,is)
+      END DO
+    END DO
+    CLOSE(output_unit)
+
+  END SUBROUTINE dump_analytical_accelerator_inputs
+#endif
 
   ! ======================================================================================================= !
   !>
