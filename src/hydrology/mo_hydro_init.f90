@@ -617,7 +617,7 @@ CONTAINS
     root_depth(:,:)       = 0._wp
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1,NINT(num_sl_above_bedrock(ic, iblk))
           hlp1(ic, is, iblk) = soil_lay_width_sl(ic, is, iblk) &
             &                     * (theta_fc_sl(ic, is, iblk) - theta_pwp_sl(ic, is, iblk))
           soil_awc(ic, iblk)    = soil_awc(ic, iblk) + hlp1(ic, is, iblk)
@@ -669,7 +669,7 @@ CONTAINS
     wtr_soil_sat_sl(:,:,:)  = 0.0_wp
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1,NINT(num_sl_above_bedrock(ic, iblk))
           IF (soil_depth_sl(ic, is, iblk) > 0.0_wp) THEN
             wtr_soil_pwp_sl(ic, is, iblk) = theta_pwp_sl(ic, is, iblk) * soil_depth_sl(ic, is, iblk)
             wtr_soil_fc_sl(ic, is, iblk)  = theta_fc_sl(ic, is, iblk)  * soil_depth_sl(ic, is, iblk)
