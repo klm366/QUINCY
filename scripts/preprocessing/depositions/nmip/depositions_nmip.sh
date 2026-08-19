@@ -37,12 +37,20 @@ scriptName="depositions_nmip.sh"
 
 # path and name of the target output folder
 outdir=./YOUROUTPUTFOLDER
+input_data_freq="monthly" # monthly/yearly
 
 # path to the files
-input_data_n="/work/mj0143/icon_land_data_pool/trendy/2026/raw_data_20260804/"
-input_path_p="/work/mj0143/icon_land_data_pool/preprocessing/np_depositions/p_dep_files/"
-fraction_files="/work/mj0143/icon_land_data_pool/trendy/2026/preprocessesed-01/fraction_files/R2B5/0030/"
-states="/work/mj0143/icon_land_data_pool/trendy/2026/raw-data-20260702/luh2/states_LUH2_GCB2026.nc"
+quincy_pool="/work/mj0143/icon_land_data_pool"
+if [[ "$input_data_freq" == "monthly" ]]; then
+  input_data_n="${quincy_pool}/trendy/2026/raw_data_20260804/"
+elif [[ "$input_data_freq" == "yearly" ]]; then
+  input_data_n="${quincy_pool}/trendy/2026/raw-data-20260702/ndep/"
+else
+  echo "The input frequency is not specified"
+fi
+input_path_p="${quincy_pool}/preprocessing/np_depositions/p_dep_files/"
+fraction_files="${quincy_pool}/trendy/2026/preprocessesed-01/fraction_files/R2B5/0030/"
+states="${quincy_pool}/trendy/2026/raw-data-20260702/luh2/states_LUH2_GCB2026.nc"
 
 # grid
 target_grid="/pool/data/ICON/grids/public/edzw/icon_grid_0030_R02B05_G.nc"
@@ -102,11 +110,17 @@ fi
 
 # convert units:
 # gN m-2 land -> kg m-2 s-1
-# divide by 1000 by seconds per month
-# 60 * 60 * 24 * days per month
-
-${cdo} -mulc,0.001 -divc,86400 -divdpm "${outdir}/nhx_land.nc" "${outdir}/nhx_kg_s.nc"
-${cdo} -mulc,0.001 -divc,86400 -divdpm "${outdir}/noy_land.nc" "${outdir}/noy_kg_s.nc"
+if [[ "$input_data_freq" == "monthly" ]]; then
+  # divide by 1000 by seconds per month
+  # 60 * 60 * 24 * days per month
+  ${cdo} -mulc,0.001 -divc,86400 -divdpm "${outdir}/nhx_land.nc" "${outdir}/nhx_kg_s.nc"
+  ${cdo} -mulc,0.001 -divc,86400 -divdpm "${outdir}/noy_land.nc" "${outdir}/noy_kg_s.nc"
+else 
+  # divide by 1000 and by seconds per year
+  # sec_year=31536000 
+  ${cdo} mulc,3.170979e-11 "${outdir}/nhx_land.nc" "${outdir}/nhx_kg_s.nc"
+  ${cdo} mulc,3.170979e-11 "${outdir}/noy_land.nc" "${outdir}/noy_kg_s.nc"
+fi
 
 # change missing values to 0
 ${cdo} -O -setmissval,nan "${outdir}/nhx_kg_s.nc" "${temp_path}/nhx_kg_s_mvn.nc"
@@ -143,12 +157,23 @@ for year in $(seq ${start_year} ${n_dep_end_year}); do
   if [ "${year}" -eq 2025 ]; then
     last_year=2025
     ${cdo} -O settaxis,2025-01-01,00:00:00,1mon "${outdir}/bc_land_ndep_quincy_2024.nc" "${outdir}/bc_land_ndep_quincy_${last_year}.nc" 
-  else
-
-  # merge yearly files with NOy and NHx
-    ${cdo} merge "${temp_path}/nhx_${year}.nc" "${temp_path}/noy_${year}.nc" "${temp_path}/bc_land_ndep_quincy_${year}_0.25.nc"
-    ${cdo} --no_history -remapcon,${target_grid} "${temp_path}/bc_land_ndep_quincy_${year}_0.25.nc" "${outdir}/bc_land_ndep_quincy_${year}.nc"
   fi
+  if [[ "$input_data_freq" == "yearly" ]]; then
+    ${cdo} -O settaxis,${year}-01-01,00:00:00,1month -duplicate,12 \
+        "${temp_path}/nhx_${year}.nc" "${temp_path}/nhx_${year}_12months.nc"
+    ${cdo} -O settaxis,${year}-01-01,00:00:00,1month -duplicate,12 \
+    "${temp_path}/noy_${year}.nc" "${temp_path}/noy_${year}_12months.nc"
+    # merge yearly files with NOy and NHx
+    ${cdo} merge "${temp_path}/nhx_${year}_12months.nc" "${temp_path}/noy_${year}_12months.nc" \
+    "${temp_path}/bc_land_ndep_quincy_${year}_0.25.nc"
+  elif [[ "$input_data_freq" == "monthly" ]]; then
+    # merge yearly files with NOy and NHx
+    ${cdo} merge "${temp_path}/nhx_${year}.nc" "${temp_path}/noy_${year}.nc" "${temp_path}/bc_land_ndep_quincy_${year}_0.25.nc"
+  else 
+    echo "The input frequency is not specified"
+  fi
+  ${cdo} --no_history -remapcon,${target_grid} "${temp_path}/bc_land_ndep_quincy_${year}_0.25.nc" \
+  "${outdir}/bc_land_ndep_quincy_${year}.nc"
 done
 
 # loop through each year from start_year to end_year
