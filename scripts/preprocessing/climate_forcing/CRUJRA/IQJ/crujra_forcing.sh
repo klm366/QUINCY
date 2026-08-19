@@ -33,9 +33,12 @@
 #SBATCH --mail-type=FAIL       # Notify user by email in case of job failure
 #SBATCH --time=07:30:00
 
-
-
 module load cdo nco
+
+# set ncatted command to create no history
+ncatted="ncatted -h"
+# Set cdo command to be silent, create no history and use double precision
+cdo="cdo -s --no_history -b F64"
 
 DataPath="/work/mj0143/icon_land_data_pool/trendy/2026/raw-data-20260702/crujra3"
 # Grid
@@ -47,8 +50,7 @@ tmpdir="./tmp_crujra_climate"
 
 
 mkdir -p "$outdir" "$tmpdir"
-# Set cdo command to be silent, create no history and use double precision
-cdo="cdo -s --no_history -b F64"
+
 #
 # Process CRUJRA data 1901-2025
 for year in $(seq 2010 2025); do
@@ -129,39 +131,39 @@ for year in $(seq 2010 2025); do
   cp "${tmpdir}/wspeed_final_${year}.nc" "${tmpdir}/wspeed_r_${year}.nc"
   ${cdo} chname,spfh,qair       "${tmpdir}/qair_final_${year}.nc"     "${tmpdir}/qair_r_${year}.nc"
 
-  ncatted -O \
+  ${ncatted} -O \
     -a standard_name,longwave,o,c,"surface_downwelling_longwave_flux_in_air" \
     -a long_name,longwave,o,c,"Surface Downwelling Longwave Radiation" \
     -a units,longwave,o,c,"W m-2" \
     "${tmpdir}/lw_r_${year}.nc"
-  ncatted -O \
+  ${ncatted} -O \
     -a standard_name,shortwave,o,c,"surface_downwelling_shortwave_flux_in_air" \
     -a long_name,shortwave,o,c,"Surface Downwelling Shortwave Radiation" \
     -a units,shortwave,o,c,"W m-2" \
     -a _FillValue,shortwave,o,d,9.96920996838687e+36 \
     -a missing_value,shortwave,o,d,9.96920996838687e+36 \
     "${tmpdir}/sw_r_${year}.nc"
-  ncatted -O \
+  ${ncatted} -O \
     -a standard_name,tmax,o,c,"air_temperature" \
     -a long_name,tmax,o,c,"Daily Maximum Near-Surface Air Temperature" \
     -a units,tmax,o,c,"degC" \
     "${tmpdir}/tmax_r_${year}.nc"
-  ncatted -O \
+  ${ncatted} -O \
     -a standard_name,tmin,o,c,"air_temperature" \
     -a long_name,tmin,o,c,"Daily Minimum Near-Surface Air Temperature" \
     -a units,tmin,o,c,"degC" \
     "${tmpdir}/tmin_r_${year}.nc"
-  ncatted -O \
+  ${ncatted} -O \
     -a standard_name,precip,o,c,"precipitation_flux" \
     -a long_name,precip,o,c,"Precipitation" \
     -a units,precip,o,c,"kg m-2 s-1" \
     "${tmpdir}/precip_r_${year}.nc"
-  ncatted -O \
+  ${ncatted} -O \
     -a standard_name,wspeed,o,c,"wind_speed" \
     -a long_name,wspeed,o,c,"Near-Surface Wind Speed" \
     -a units,wspeed,o,c,"m s-1" \
     "${tmpdir}/wspeed_r_${year}.nc"
-  ncatted -O \
+  ${ncatted} -O \
     -a standard_name,qair,o,c,"specific_humidity" \
     -a long_name,qair,o,c,"Near-Surface Specific Humidity" \
     -a units,qair,o,c,"kg kg-1" \
@@ -186,15 +188,15 @@ for year in $(seq 2010 2025); do
 
   # 11. Remap to ICON grid
   for grid_tag in r2b4 r2b5; do
-    # if [[ "$grid_tag" == "r2b4" ]]; then
-    #   grid_def="$grid_def_r2b4"
-    #   grid_outdir="${outdir}/r2b4"
-    #   institute_tag="mpim"
-    # else
-    #   grid_def="$grid_def_r2b5"
-    #   grid_outdir="${outdir}/r2b5"
-    #   institute_tag="edzw"
-    # fi
+    if [[ "$grid_tag" == "r2b4" ]]; then
+      grid_def="$grid_def_r2b4"
+      grid_outdir="${outdir}/r2b4"
+      institute_tag="mpim"
+    else
+      grid_def="$grid_def_r2b5"
+      grid_outdir="${outdir}/r2b5"
+      institute_tag="edzw"
+    fi
     grid_def="$grid_def_r2b5"
     grid_outdir="${outdir}/r2b5"
     institute_tag="edzw"
@@ -222,7 +224,7 @@ for year in $(seq 2010 2025); do
     fi
 
     # Remove NCO-generated history attributes and overwrite the global contact attribute
-    ncatted -O -h \
+    ${ncatted} -O \
       -a history,global,d,, \
       -a history_of_appended_files,global,d,, \
       -a title,global,o,c,"Daily climate forcing based on CRUJRA v3.5" \
@@ -237,41 +239,4 @@ for year in $(seq 2010 2025); do
 
 done 
 
-# Fill 1850-1900 
-# #echo "Filling years 1850-1900."
-
-# #declare -A src_year=(
-#   [1900]=1921 [1899]=1919 [1898]=1918 [1897]=1917 [1896]=1916
-#   [1895]=1915 [1894]=1914 [1893]=1913 [1892]=1912 [1891]=1911
-#   [1890]=1910 [1889]=1909 [1888]=1908 [1887]=1907 [1886]=1906
-#   [1885]=1905 [1884]=1904 [1883]=1903 [1882]=1902 [1881]=1901
-#   [1880]=1920 [1879]=1919 [1878]=1918 [1877]=1917 [1876]=1916
-#   [1875]=1915 [1874]=1914 [1873]=1913 [1872]=1912 [1871]=1911
-#   [1870]=1910 [1869]=1909 [1868]=1908 [1867]=1907 [1866]=1906
-#   [1865]=1905 [1864]=1904 [1863]=1903 [1862]=1902 [1861]=1901
-#   [1860]=1920 [1859]=1919 [1858]=1918 [1857]=1917 [1856]=1916
-#   [1855]=1915 [1854]=1914 [1853]=1913 [1852]=1912 [1851]=1911
-#   [1850]=1910
-# )
-
-# #for grid_tag in r2b4 r2b5; do
-#   if [[ "$grid_tag" == "r2b4" ]]; then
-#     grid_outdir="${outdir}/r2b4"
-#     institute_tag="mpim"
-#   else
-#     grid_outdir="${outdir}/r2b5"
-#     institute_tag="edzw"
-#   fi
-
-#   for y in $(seq 1900 -1 1850); do
-#     src=${src_year[$y]}
-#     echo "Copying $src -> $y"
-#     ${cdo} setyear,${y} \
-#       "${grid_outdir}/climate_crujra_${grid_tag}_${institute_tag}_${src}.nc" \
-#       "${grid_outdir}/climate_crujra_${grid_tag}_${institute_tag}_${y}.nc"
-#   done
-
-# done
-
-# echo "All years processed."
 
