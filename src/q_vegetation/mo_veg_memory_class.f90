@@ -1,4 +1,4 @@
-!> vegetation process memory (QUINCY)
+!> QUINCY vegetation process memory
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### definition and init of (memory) variables for the vegetation process
 !>
 MODULE mo_veg_memory_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: finish, message
@@ -24,7 +24,8 @@ MODULE mo_veg_memory_class
 
   USE mo_jsb_process_class,      ONLY: VEG_, Q_SYL_, Q_AGR_, Q_ASSIMI_, ALCC_
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
-    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id
+    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id, &
+    &                                  t_lnd_bgcm
   USE mo_lnd_bgcm_store_class,   ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_SEED_BED_POOL_ID, VEG_BGCM_GROWTH_ID,                           &
     &                                  VEG_BGCM_SEED_BED_GROWTH_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID,      &
     &                                  VEG_BGCM_FRAC_ALLOC_ID,                                                                    &
@@ -34,7 +35,6 @@ MODULE mo_veg_memory_class
     &                                  VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_HARVEST_TO_PROD_ID, VEG_BGCM_HARVEST_LITTER_ID
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
-  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
   USE mo_jsb_cqt_class,          ONLY: IQ_2L2D_POOL_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE
 
@@ -379,7 +379,7 @@ MODULE mo_veg_memory_class
   !>
   !> Type definition for veg_bgc_material_elements
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_veg_bgcm_with_elements
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_veg_bgcm_with_elements
     TYPE(t_jsb_var_real2d), POINTER :: carbon
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen
     TYPE(t_jsb_var_real2d), POINTER :: phosphorus
@@ -395,7 +395,7 @@ MODULE mo_veg_memory_class
   !>
   !> Type definition for veg_bgc_material_components
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_veg_bgcm_with_components
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_veg_bgcm_with_components
     TYPE(t_veg_bgcm_with_elements),    POINTER :: leaf
     TYPE(t_veg_bgcm_with_elements),    POINTER :: fine_root
     TYPE(t_veg_bgcm_with_elements),    POINTER :: coarse_root
@@ -413,11 +413,11 @@ MODULE mo_veg_memory_class
   !>
   !> Type definition for veg_bgc_material_main
   !> the main bgc_material structure containing all VEG_ bgc_material structures
-  !> main structure, added directly into the "TYPE(t_jsb_memory) :: t_veg_memory" as "CLASS(t_jsb_pool) :: bgc_material"
+  !> main structure, added directly into the "TYPE(t_jsb_memory) :: t_veg_memory" as "CLASS(t_lnd_bgcm) :: bgc_material"
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_veg_bgcm_main
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_veg_bgcm_main
     !! pools
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbpool
+    TYPE(t_veg_bgcm_with_components),  POINTER :: veg_pool
     ! ... separate seed bed pool
     TYPE(t_veg_bgcm_with_elements),    POINTER :: seed_bed_pool
     ! ... and if with product pools
@@ -429,14 +429,14 @@ MODULE mo_veg_memory_class
     TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_pv
     TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_sawnwood
     !! fluxes
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbgrowth
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegblitterfall
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbfrac_alloc
+    TYPE(t_veg_bgcm_with_components),  POINTER :: veg_growth
+    TYPE(t_veg_bgcm_with_components),  POINTER :: veg_litterfall
+    TYPE(t_veg_bgcm_with_components),  POINTER :: veg_frac_alloc
     TYPE(t_veg_bgcm_with_elements),    POINTER :: seed_bed_growth
     TYPE(t_veg_bgcm_with_elements),    POINTER :: seed_bed_litterfall
-    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbexudation
-    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbestablishment
-    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbreserve_use
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_exudation
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_establishment
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_reserve_use
     ! ... if with sylviculture or agriculture
     TYPE(t_veg_bgcm_with_components),  POINTER :: harvest_litter
     ! ... if with product pools
@@ -465,7 +465,7 @@ CONTAINS
     USE mo_jsb_model_class,     ONLY: t_jsb_model
     USE mo_jsb_class,           ONLY: Get_model
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT
-    USE mo_quincy_output_class, ONLY: unitless, unit_veg_pool_flux
+    USE mo_quincy_output_class, ONLY: unitless, unit_veg_pool, unit_veg_flux
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(Q_AGR_)
@@ -484,8 +484,6 @@ CONTAINS
     TYPE(t_jsb_vgrid),  POINTER :: surface                    !< Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy_q_assimi      !< Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_soil_w               !< Vertical grid
-    CHARACTER(len=30)           :: unit_veg_pool              !< unit of element var
-    CHARACTER(len=30)           :: unit_veg_flux              !< unit of element var
     INTEGER                     :: elem_idx_map(LAST_ELEM_ID) !< element mapper ID -> IND
     INTEGER                     :: table                      !< ...
     TYPE(t_grib2)               :: grib2_desc                 !< used for lai settings
@@ -516,11 +514,6 @@ CONTAINS
     dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_config(Q_ASSIMI_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! init local variables
-    unit_veg_pool = "mol m-2"
-    unit_veg_flux = "mol m-2 timestep-1"
-
     ! ----------------------------------------------------------------------------------------------------- !
     ! Depending on other active processes, certain bgcms are required or not
     is_active_AGR_or_ALCC = .FALSE.
@@ -563,7 +556,6 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !>  1.0 bgc_material structures
       !>
-      !>  @TODO replace "b" in bgcm object names by "_" (vegbpool -> veg_pool) !!
       !>
       ! copy elements_index_map from config to local
       elem_idx_map(:) = model%config%elements_index_map(:)
@@ -587,22 +579,22 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !> create the bgc_material components structures
       !>
-      ! each component structure is created within the main bgcm pool structure together with required bookkeeping information
+      ! each component structure is created within the t_veg_bgcm_main together with required bookkeeping information
       ! "shortname" is used for model output names
       ! veg_pool
-      mem%veg_bgcm_main%vegbpool => Add_veg_bgc_material_with_components(mem%veg_bgcm_main, &
+      mem%veg_bgcm_main%veg_pool => Add_veg_bgc_material_with_components(mem%veg_bgcm_main, &
         & VEG_BGCM_POOL_ID, name = 'vegetation_bgcm_pool', shortname = 'veg_bgcm_pool',     &
         & unit = unit_veg_pool, elements_index_map = elem_idx_map(:))
       ! veg_growth
-      mem%veg_bgcm_main%vegbgrowth => Add_veg_bgc_material_with_components(mem%veg_bgcm_main, &
+      mem%veg_bgcm_main%veg_growth => Add_veg_bgc_material_with_components(mem%veg_bgcm_main, &
         & VEG_BGCM_GROWTH_ID, name = 'vegetation_bgcm_growth', shortname = 'veg_bgcm_growth', &
         & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
       ! veg_litterfall
-      mem%veg_bgcm_main%vegblitterfall => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,         &
+      mem%veg_bgcm_main%veg_litterfall => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,         &
         & VEG_BGCM_LITTERFALL_ID, name = 'vegetation_bgcm_litterfall', shortname = 'veg_bgcm_litterfall', &
         & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
       ! veg_frac_alloc
-      mem%veg_bgcm_main%vegbfrac_alloc => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,         &
+      mem%veg_bgcm_main%veg_frac_alloc => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,         &
         & VEG_BGCM_FRAC_ALLOC_ID, name = 'vegetation_bgcm_frac_alloc', shortname = 'veg_bgcm_frac_alloc', &
         & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
 
@@ -634,15 +626,15 @@ CONTAINS
         & name = 'vegetation_bgcm_seed_bed_litterfall', shortname = 'veg_bgcm_seed_bed_litterfall', &
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_SEED_BED_LITTERFALL_ID)
       ! veg_exudation
-      mem%veg_bgcm_main%vegbexudation => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
+      mem%veg_bgcm_main%veg_exudation => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
         & name = 'vegetation_bgcm_exudation', shortname = 'veg_bgcm_exudation',                       &
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_EXUDATION_ID)
       ! veg_establishment
-      mem%veg_bgcm_main%vegbestablishment => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
+      mem%veg_bgcm_main%veg_establishment => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
         & name = 'vegetation_bgcm_establishment', shortname = 'veg_bgcm_establishment',                   &
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_ESTABLISHMENT_ID)
       ! veg_reserve_use
-      mem%veg_bgcm_main%vegbreserve_use => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
+      mem%veg_bgcm_main%veg_reserve_use => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
         & name = 'vegetation_bgcm_reserve_use', shortname = 'veg_bgcm_reserve_use',                     &
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_RESERVE_USE_ID)
 
@@ -659,7 +651,7 @@ CONTAINS
         !       If the alcc flux would be required for diagnostical reasons, an additional bgcm would be needed.
         mem%veg_bgcm_main%harvest_to_prod => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,             &
           & name = 'vegetation_bgcm_flux_harvest_to_product_pools', shortname = 'veg_bgcm_harvest_to_prod',    &
-          & elements_index_map = elem_idx_map(:), unit = unit_veg_pool_flux, bgcm_id = VEG_BGCM_HARVEST_TO_PROD_ID)
+          & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_HARVEST_TO_PROD_ID)
 
         ! only create the crop product pool bgcm if running with agriculture or anthropogenic land cover change
         IF (is_active_AGR_or_ALCC) THEN
@@ -702,7 +694,7 @@ CONTAINS
       CALL mem%bgc_material%Set_paths()
 
       ! add variables to bgc_material
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbpool,                               &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_pool,                               &
         & hgrid, surface, vgrid_canopy_q_assimi,                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
@@ -720,7 +712,7 @@ CONTAINS
         & lrestart = .TRUE.,                                                                           &
         & cons_quan_type_id = IQ_1L2D_POOL_CQ_TYPE,                                                    &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbgrowth, &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_growth, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -736,7 +728,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegblitterfall, &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_litterfall, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -752,7 +744,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbfrac_alloc, &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_frac_alloc, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -760,7 +752,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbexudation, &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_exudation, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -768,7 +760,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbestablishment, &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_establishment, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -776,7 +768,7 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbreserve_use,                                              &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_reserve_use,                                              &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -2757,7 +2749,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = restart_veg_optimal_n_fractions, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('t_air_tfrac_mavg', mem%t_air_tfrac_mavg, &
@@ -3536,10 +3528,10 @@ CONTAINS
     &                                    l_elements, element_list, element_unit)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_veg_bgcm_with_elements),    INTENT(inout) :: this                   ! object of TYPE t_sb_elements_pool
-    CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! bgcm name
+    CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! bgcm short name
     INTEGER,                            INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,         INTENT(in)    :: element_list(:) ! @TODO remove | list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,         INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3593,10 +3585,10 @@ CONTAINS
   SUBROUTINE veg_bgcm_with_components_init(this, name, shortname, elements_index_map, &
     &                                      l_elements, element_list, element_unit)
     CLASS(t_veg_bgcm_with_components),    INTENT(inout) :: this                   ! object of TYPE t_sb_components_pool
-    CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! bgcm name
+    CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! bgcm short name
     INTEGER,                              INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,           INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,           INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3621,10 +3613,10 @@ CONTAINS
     &                           l_elements, element_list, element_unit)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_veg_bgcm_main),         INTENT(inout) :: this                   ! object of TYPE t_sb_components_pool
-    CHARACTER(LEN=*),               INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),               INTENT(in)    :: name                   ! bgcm name
+    CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! bgcm short name
     INTEGER,                        INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,     INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,     INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3640,10 +3632,10 @@ CONTAINS
   !>
   !> create, init and append a veg bgcm with components
   !>
-  FUNCTION Add_veg_bgc_material_with_components(pool, bgcm_id, name, shortname, unit, elements_index_map) &
+  FUNCTION Add_veg_bgc_material_with_components(bgcm, bgcm_id, name, shortname, unit, elements_index_map) &
       & RESULT(veg_bgcm_with_components)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool), TARGET,  INTENT(INOUT)  :: pool                  !< pool to which this pool with component should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT)  :: bgcm                  !< bgcm to which this bgcm with component should be added
     INTEGER,                    INTENT(in)     :: bgcm_id               !< id of this veg bgcm with components
     CHARACTER(LEN=*),           INTENT(in)     :: name                  !< name of this veg bgcm with components
     CHARACTER(LEN=*),           INTENT(in)     :: shortname             !< shortname of this veg bgcm with components
@@ -3686,7 +3678,7 @@ CONTAINS
       & name = 'fruit_bgcm', shortname = 'fruit', elements_index_map = elements_index_map(:), unit = unit)
 
     ! Add the bookkeepoing for this veg bgcm with components
-    CALL pool%Add_pool(veg_bgcm_with_components, bgcm_id)
+    CALL bgcm%Add_bgcm(veg_bgcm_with_components, bgcm_id)
 
   END FUNCTION Add_veg_bgc_material_with_components
 
@@ -3694,10 +3686,10 @@ CONTAINS
   !>
   !> create, init and append a veg bgcm with elements
   !>
-  FUNCTION Add_veg_bgc_material_with_elements(pool,  name, shortname, elements_index_map, unit, bgcm_id) &
+  FUNCTION Add_veg_bgc_material_with_elements(bgcm,  name, shortname, elements_index_map, unit, bgcm_id) &
       & RESULT(veg_bgcm_with_elements)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool), TARGET,  INTENT(INOUT) :: pool                   !< pool to which this pool with elements should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: bgcm                   !< bgcm to which this bgcm with elements should be added
     CHARACTER(LEN=*),           INTENT(in)    :: name                   !< name of this veg bgcm with elements
     CHARACTER(LEN=*),           INTENT(in)    :: shortname              !< shortname of this veg bgcm with elements
     INTEGER,                    INTENT(in)    :: elements_index_map(:)  !< mapping elements ID -> IND
@@ -3710,7 +3702,7 @@ CONTAINS
     ALLOCATE(veg_bgcm_with_elements)
     CALL veg_bgcm_with_elements%Init(name = name, shortname = shortname,  &
       & elements_index_map = elements_index_map(:), l_elements = .TRUE., element_unit = unit)
-    CALL pool%Add_pool(veg_bgcm_with_elements, bgcm_id)
+    CALL bgcm%Add_bgcm(veg_bgcm_with_elements, bgcm_id)
 
   END FUNCTION Add_veg_bgc_material_with_elements
 

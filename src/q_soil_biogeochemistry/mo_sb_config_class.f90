@@ -16,7 +16,7 @@
 !>#### define soil-biogeochemistry config structure, read soil-biogeochemistry namelist and init configuration parameters
 !>
 MODULE mo_sb_config_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_io_units,            ONLY: filename_max
@@ -62,6 +62,7 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_prescribe_po4  !< TRUE: solute PO4 is kept at a prescribed level
     LOGICAL               :: flag_sb_interactive_n  !< TRUE: N cycle state affects C,P processes via stoichiometry or allocation changes
     LOGICAL               :: flag_sb_interactive_p  !< TRUE: P cycle state affects C,N processes via stoichiometry or allocation changes
+    LOGICAL               :: l_exclude_weathering   !< TRUE: soil P pool weathering disabled (during model-spinup)
     ! mycorrhiza
     LOGICAL               :: flag_mycorrhiza
     LOGICAL               :: flag_mycorrhiza_org
@@ -142,7 +143,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_sb_config(config)
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_util_string,           ONLY: tolower
+    USE mo_util,                  ONLY: tolower
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,              ONLY: Register_vgrid
     USE mo_jsb_io,                ONLY: ZAXIS_GENERIC

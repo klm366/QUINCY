@@ -1,4 +1,4 @@
-!> vegetation variables init (QUINCY)
+!> QUINCY vegetation variables init
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### initialization of vegetation memory variables using, e.g., ic & bc input files
 !>
 MODULE mo_veg_init
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
   USE mo_exception,               ONLY: message, finish, message_text
@@ -518,7 +518,7 @@ CONTAINS
       root_fraction_sl(:, 1, :)          = 1.0_wp
       root_fraction_sl(:, 2:nsoil_w, :)  = 0.0_wp
     ELSE
-      !>     - fixed root fractions (no changes after init) depending on root_depth (SPQ variable)
+      !>     - fixed root fractions (no changes after init) depending on root_depth
       !>
       ! root fractions assuming an exponential distribution of roots \n
       !   Cr_l = Cr_0 * exp(-lctlib%k_root_dist*depth) \n
@@ -535,7 +535,7 @@ CONTAINS
               &                             / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
             ! soil layers 2 to x
             !
-            DO is = 2,INT(num_sl_above_bedrock(ic, iblk))
+            DO is = 2,NINT(num_sl_above_bedrock(ic, iblk))
               IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is-1, iblk)) THEN
                 IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is, iblk)) THEN
                   root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &

@@ -16,11 +16,11 @@
 !>#### multiple routines for the processes using with JSM (jena soil model), e.g., turnover, in- / organic matter fluxes
 !>
 MODULE mo_q_sb_jsm_processes
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish
-  USE mo_jsb_math_constants,  ONLY: one_day, eps8
+  USE mo_jsb_math_constants,  ONLY: one_day, eps4, eps8
   USE mo_lnd_bgcm_idx
 
   IMPLICIT NONE
@@ -834,16 +834,19 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_turnover'
     ! ----------------------------------------------------------------------------------------------------- !
 
-
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
+
         !>0.9 init local variables
         !>
         !>  Fractional of N and P in microbial necromass is recycled to DOM,
         !>    regulated by the microbial nutritional scalors following exponential decline curve
         !>
-        n_res2dom(ic,is) = fc_n_res2dom * MIN(1._wp, EXP(fact_n_status_mic_c_growth(ic,is) * (-1._wp)) ** k_n_recyc_corr)
-        p_res2dom(ic,is) = fc_p_res2dom * MIN(1._wp, EXP(fact_p_status_mic_c_growth(ic,is) * (-1._wp)) ** k_p_recyc_corr)
+        hlp2 = MIN(MAX(fact_n_status_mic_c_growth(ic,is), eps4), 1.0_wp)
+        hlp3 = MIN(MAX(fact_p_status_mic_c_growth(ic,is), eps4), 1.0_wp)
+
+        n_res2dom(ic,is) = fc_n_res2dom * MIN(1._wp, EXP(hlp2 * (-1._wp)) ** k_n_recyc_corr)
+        p_res2dom(ic,is) = fc_p_res2dom * MIN(1._wp, EXP(hlp3 * (-1._wp)) ** k_p_recyc_corr)
 
         !>1.0 calculate microbial mortality rate, limited to minimum microbial biomass density (-> dormant microbes)
         !>
@@ -1461,7 +1464,7 @@ CONTAINS
         !>
         !> following the algorithm described in Wutzler et al. 2025 (DOI:10.5194/gmd-15-8377-2022)
         !>
-        IF (poly_depolymerisation_rate(ic,is) > 0.0_wp .AND. residue_depolymerisation_rate(ic,is)> 0.0_wp) THEN
+        IF (poly_depolymerisation_rate(ic,is) > eps4 .AND. residue_depolymerisation_rate(ic,is) > eps4) THEN
           !! alpha_C, poly enzyme allocation coefficient based on carbon
           hlp1(ic,is)               = poly_depolymerisation_rate(ic,is) * sb_pool_mt(ix_polymeric_litter, ixC, ic, is)
           hlp2(ic,is)               = residue_depolymerisation_rate(ic,is) * sb_pool_mt(ix_residue, ixC, ic, is)
@@ -1909,7 +1912,7 @@ CONTAINS
     USE mo_sb_constants,   ONLY: qmax_po4_silt, qmax_po4_sand, qmax_po4_clay, qmax_po4_OM, qmax_po4_mineral, &
       & km_adsorpt_silt_po4, km_adsorpt_clay_po4, km_adsorpt_sand_po4, km_adsorpt_OM_po4, &
       & km_adsorpt_mineral_po4, km_po4_ph, min_fraction_default_sb
-    USE mo_spq_util,       ONLY: calc_qmax_texture
+    USE mo_sb_util,        ONLY: calc_qmax_texture
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL,      INTENT(in)    :: flag_sb_double_langmuir      !< conventional or double Langmuir
     REAL(wp),     INTENT(in)    :: clay_sl                      !< clay content of soil layer [-]
@@ -2007,7 +2010,7 @@ CONTAINS
         &                                    qmax_po4, &
         &                                    qmax_fast=qmax_fast_po4, &
         &                                    qmax_slow=qmax_slow_po4)
-      qmax_po4          = qmax_po4 * soil_water / 1000._wp ! corrected by water content
+
       CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl, volume_min_sl, bulk_dens_sl, &
         &                                    km_adsorpt_OM_po4, km_adsorpt_mineral_po4, &
         &                                    km_adsorpt_po4_sl, &

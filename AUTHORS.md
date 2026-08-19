@@ -20,6 +20,8 @@ title: Authors
 - Lin Yu
 - Marvin Heidkamp
 - Melanie Thurner
+- Mingyue Zhang
+- Moritz Waldmann
 - Philipp de Vrese
 - Pinhsin Hu
 - Rainer Schneck
@@ -30,6 +32,7 @@ title: Authors
 - Soenke Zaehle
 - Stefan Hagemann
 - Stiig Wilkenskjeld
+- Tamara Emmerichs
 - Tea Thum
 - Thomas Kleinen
 - Thomas Raddatz
