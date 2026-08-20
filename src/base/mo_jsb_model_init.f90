@@ -499,7 +499,7 @@ CONTAINS
         CALL model%Queue_task(SEB_,     "energy_balance")           ! 't' is used here, and 't' is updated in the 'asselin_filter'
       ELSE IF (model%config%qmodel_id == QSOIL) THEN
         !-- QSOIL
-        !! read soil forcing data
+        !! replay monthly soil forcing bookkept by a coupled QLAND run
         CALL model%Queue_task(SB_, "read_soil_forcing")
 
         !! init/reset fluxes (with/to zero)

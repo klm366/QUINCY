@@ -27,6 +27,7 @@ MODULE mo_sb_config_class
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_sb_config, get_number_of_sb_compartments, simple_1d_compartments
+  PUBLIC :: sb_spinup_accelerator_n_forcing_bins
   PUBLIC :: SB_PART_DOM_IDX , SB_PART_DOM_ASSOC_IDX, SB_PART_SOLUBLE_LITTER_IDX,                   &
     &       SB_PART_POLYMERIC_LITTER_IDX, SB_PART_WOODY_LITTER_IDX
   PUBLIC :: SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX, &
@@ -71,6 +72,7 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_jsm_transport
     LOGICAL               :: flag_sb_jsm_litter_input
     LOGICAL               :: flag_sb_jsm_OM_sorption
+    LOGICAL               :: flag_sb_model_spinup_accelerator !< collect monthly coupled forcing for SB replay and QSOIL
     ! P sorption
     LOGICAL               :: flag_sb_double_langmuir
     !> parameter
@@ -86,10 +88,7 @@ MODULE mo_sb_config_class
     REAL(wp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
 
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename    !< IQ (QUINCY) soil input data
-    CHARACTER(len=filename_max) :: soilphysics_forcing_filename    !< IQ (QUINCY) forcing data for soil model
-    CHARACTER(len=filename_max) :: veglitterfall_forcing_filename    !< IQ (QUINCY) forcing data for soil model
     CHARACTER(len=filename_max) :: deposition_filename_prefix !< IQ. Note: should NOT include an ending "_"
-    LOGICAL                     :: skip_forcing_isotopes_after_init !< IQ soil model shortcut: read 13C/14C/15N forcing only once
 
     ! parameter calibration
     LOGICAL          :: flag_apply_nml_parameters  !< replace values of sb_constants parameters by the values of the below nml_* variables
@@ -134,6 +133,7 @@ MODULE mo_sb_config_class
 
   INTEGER, PARAMETER :: simple_1d_compartments(6) = [ SB_PART_SOLUBLE_LITTER_IDX, SB_PART_POLYMERIC_LITTER_IDX, &
     & SB_PART_WOODY_LITTER_IDX, SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX ]
+  INTEGER, PARAMETER :: sb_spinup_accelerator_n_forcing_bins = 12
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_config_class'
 
@@ -148,8 +148,10 @@ CONTAINS
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_util,                  ONLY: tolower
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,              ONLY: Register_vgrid
+    USE mo_jsb_grid,              ONLY: Register_vgrid, Get_vgrid
     USE mo_jsb_io,                ONLY: ZAXIS_GENERIC
+    USE mo_veg_config_class,      ONLY: Get_number_of_veg_compartments
+    USE mo_lnd_bgcm_class,        ONLY: LAST_ELEM_ID
 
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_sb_config), INTENT(inout) :: config    !< config type for sb
@@ -161,10 +163,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename
-    CHARACTER(len=filename_max) :: soilphysics_forcing_filename
-    CHARACTER(len=filename_max) :: veglitterfall_forcing_filename
     CHARACTER(len=filename_max) :: deposition_filename_prefix
-    LOGICAL                     :: skip_forcing_isotopes_after_init
     CHARACTER(15)               :: sb_model_scheme
     CHARACTER(15)               :: sb_nloss_scheme
     CHARACTER(15)               :: sb_bnf_scheme
@@ -182,6 +181,7 @@ CONTAINS
     LOGICAL                     :: flag_sb_jsm_transport
     LOGICAL                     :: flag_sb_jsm_litter_input
     LOGICAL                     :: flag_sb_jsm_OM_sorption
+    LOGICAL                     :: flag_sb_model_spinup_accelerator
     LOGICAL                     :: flag_sb_double_langmuir
     INTEGER                     :: usda_taxonomy_class
     INTEGER                     :: nwrb_taxonomy_class
@@ -211,10 +211,7 @@ CONTAINS
                       ic_filename               , &
                       bc_filename               , &
                       bc_quincy_soil_filename   , &
-                      soilphysics_forcing_filename,   &
-                      veglitterfall_forcing_filename, &
                       deposition_filename_prefix, &
-                      skip_forcing_isotopes_after_init, &
                       sb_model_scheme           , &
                       sb_nloss_scheme           , &
                       sb_bnf_scheme             , &
@@ -232,6 +229,7 @@ CONTAINS
                       flag_sb_jsm_transport     , &
                       flag_sb_jsm_litter_input  , &
                       flag_sb_jsm_OM_sorption   , &
+                      flag_sb_model_spinup_accelerator, &
                       flag_sb_double_langmuir   , &
                       usda_taxonomy_class       , &
                       nwrb_taxonomy_class       , &
@@ -256,7 +254,12 @@ CONTAINS
       &   nml_ed_decomposition
 
     TYPE(t_jsb_vgrid), POINTER  :: time_months_vgrid
-    INTEGER :: i_month
+    TYPE(t_jsb_vgrid), POINTER  :: sb_spinup_accelerator_forcing_vgrid
+    TYPE(t_jsb_vgrid), POINTER  :: sb_spinup_accelerator_litter_vgrid
+    TYPE(t_jsb_vgrid), POINTER  :: sb_spinup_accelerator_profile_vgrid
+    TYPE(t_jsb_vgrid), POINTER  :: soil_water_vgrid
+    INTEGER :: i_month, i_entry
+    INTEGER :: n_litter_entries, n_profile_entries
     INTEGER :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_config'
 
@@ -268,10 +271,7 @@ CONTAINS
     ic_filename                 = 'ic_land_sb.nc'
     bc_filename                 = 'bc_land_srf.nc'
     bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
-    soilphysics_forcing_filename   = 'bc_qsoil_physics.nc'
-    veglitterfall_forcing_filename = 'bc_qsoil_litterfall.nc'
     deposition_filename_prefix  = 'bc_land_npdep_quincy'
-    skip_forcing_isotopes_after_init = .TRUE.
     sb_model_scheme             = "simple_1d"       ! simple_1d jsm
     sb_nloss_scheme             = "dynamic"         ! none fixed dynamic
     sb_bnf_scheme               = "dynamic"         ! none dynamic unlimited (fixed == dynamic)
@@ -289,6 +289,7 @@ CONTAINS
     flag_sb_jsm_transport       = .FALSE.
     flag_sb_jsm_litter_input    = .FALSE.
     flag_sb_jsm_OM_sorption     = .FALSE.
+    flag_sb_model_spinup_accelerator = .FALSE.
     flag_sb_double_langmuir     = .FALSE.
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
@@ -325,10 +326,7 @@ CONTAINS
     config%ic_filename                     = ic_filename
     config%bc_filename                     = bc_filename
     config%bc_quincy_soil_filename         = bc_quincy_soil_filename
-    config%soilphysics_forcing_filename    = soilphysics_forcing_filename
-    config%veglitterfall_forcing_filename  = veglitterfall_forcing_filename
     config%deposition_filename_prefix      = deposition_filename_prefix
-    config%skip_forcing_isotopes_after_init = skip_forcing_isotopes_after_init
     config%sb_model_scheme                 = TRIM(sb_model_scheme)
     config%sb_nloss_scheme                 = TRIM(sb_nloss_scheme)
     config%bnf_scheme                      = TRIM(sb_bnf_scheme)
@@ -345,6 +343,7 @@ CONTAINS
     config%flag_sb_jsm_transport           = flag_sb_jsm_transport
     config%flag_sb_jsm_litter_input        = flag_sb_jsm_litter_input
     config%flag_sb_jsm_OM_sorption         = flag_sb_jsm_OM_sorption
+    config%flag_sb_model_spinup_accelerator = flag_sb_model_spinup_accelerator
     config%flag_sb_double_langmuir         = flag_sb_double_langmuir
     config%usda_taxonomy_class             = usda_taxonomy_class
     config%nwrb_taxonomy_class             = nwrb_taxonomy_class
@@ -378,10 +377,6 @@ CONTAINS
       CALL finish(TRIM(routine),  'No such soil model available: '//TRIM(sb_model_scheme))
     END SELECT
 
-    IF (config%skip_forcing_isotopes_after_init) THEN
-      CALL message(TRIM(routine), 'skip_forcing_isotopes_after_init enabled: 13C/14C/15N forcing is only read on first cache load.')
-    END IF
-
     ! Set deposition scheme
     SELECT CASE (tolower(TRIM(deposition_scheme)))
     CASE ("constant")
@@ -402,6 +397,23 @@ CONTAINS
     time_months_vgrid => new_vgrid('time_months', ZAXIS_GENERIC, 12, &
       & levels=(/ (REAL(i_month, kind=wp), i_month = 1,12) /), units='')
     CALL register_vgrid(time_months_vgrid)
+
+    sb_spinup_accelerator_forcing_vgrid => new_vgrid('sb_accel_forcing', ZAXIS_GENERIC, &
+      & sb_spinup_accelerator_n_forcing_bins, &
+      & levels=(/ (REAL(i_entry, kind=wp), i_entry = 1, sb_spinup_accelerator_n_forcing_bins) /), units='')
+    CALL register_vgrid(sb_spinup_accelerator_forcing_vgrid)
+
+    n_litter_entries = sb_spinup_accelerator_n_forcing_bins * &
+      & (Get_number_of_veg_compartments() + 1) * LAST_ELEM_ID
+    sb_spinup_accelerator_litter_vgrid => new_vgrid('sb_accel_litter', ZAXIS_GENERIC, n_litter_entries, &
+      & levels=(/ (REAL(i_entry, kind=wp), i_entry = 1, n_litter_entries) /), units='')
+    CALL register_vgrid(sb_spinup_accelerator_litter_vgrid)
+
+    soil_water_vgrid => Get_vgrid('soil_depth_water')
+    n_profile_entries = sb_spinup_accelerator_n_forcing_bins * soil_water_vgrid%n_levels
+    sb_spinup_accelerator_profile_vgrid => new_vgrid('sb_accel_profile', ZAXIS_GENERIC, n_profile_entries, &
+      & levels=(/ (REAL(i_entry, kind=wp), i_entry = 1, n_profile_entries) /), units='')
+    CALL register_vgrid(sb_spinup_accelerator_profile_vgrid)
 
   END SUBROUTINE Init_sb_config
 

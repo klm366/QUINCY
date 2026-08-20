@@ -33,9 +33,8 @@ MODULE mo_q_sb_interface
   USE mo_q_sb_ssm_main,               ONLY: update_sb_simple_model_real => update_sb_simple_model
   USE mo_q_sb_jsm_main,               ONLY: update_sb_jsm_real => update_sb_jsm
   USE mo_q_sb_update_pools,           ONLY: update_sb_pools_real => update_sb_pools
-#ifndef  __QUINCY_STANDALONE__
-  USE mo_sb_iqj_soil_model,           ONLY: update_read_soil_forcing_real => update_read_soil_forcing
-#endif
+  USE mo_sb_spinup_accelerator,       ONLY: collect_sb_spinup_accelerator_forcing, &
+    &                                       update_read_soil_forcing_real => update_read_soil_forcing
 
   dsl4jsb_Use_processes SB_, VEG_, HYDRO_, SSE_, A2L_
   dsl4jsb_Use_config(SB_)
@@ -60,7 +59,7 @@ MODULE mo_q_sb_interface
   END TYPE tsk_reset_sb_fluxes
 #ifndef  __QUINCY_STANDALONE__
   ! ======================================================================================================= !
-  !>Type definition: read_soil_forcing task
+  !>Type definition: replay bookkept soil forcing task
   !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_read_soil_forcing
   CONTAINS
@@ -121,7 +120,7 @@ MODULE mo_q_sb_interface
   END INTERFACE tsk_reset_sb_fluxes
 
   ! ======================================================================================================= !
-  !>Constructor interface: read_soil_forcing task
+  !>Constructor interface: replay bookkept soil forcing task
   !>
 #ifndef  __QUINCY_STANDALONE__
   INTERFACE tsk_read_soil_forcing
@@ -199,7 +198,7 @@ CONTAINS
   END FUNCTION Create_task_reset_sb_fluxes
 #ifndef  __QUINCY_STANDALONE__
   ! ======================================================================================================= !
-  !>Constructor: read_soil_forcing task
+  !>Constructor: replay bookkept soil forcing task
   !>
   FUNCTION Create_task_read_soil_forcing(model_id) RESULT(return_ptr)
 
@@ -326,6 +325,7 @@ CONTAINS
       & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     CALL calculate_time_average_soilbiogeochemistry(tile, options)
+    CALL collect_sb_spinup_accelerator_forcing(tile, options)
 
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
 
