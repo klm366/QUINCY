@@ -1114,7 +1114,8 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: VEG_, SB_, HYDRO_, L2A_
     USE mo_jsb_time,              ONLY: executed_quincy_sb_accelerator_previous_timestep, &
       & execute_quincy_sb_analytical_accelerator_this_timestep, &
-      & executed_quincy_sb_analytical_accelerator_previous_timestep
+      & executed_quincy_sb_analytical_accelerator_previous_timestep, &
+      & executed_sb_model_spinup_accelerator_this_timestep
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(L2A_)
@@ -1199,7 +1200,8 @@ CONTAINS
             & executed_quincy_sb_accelerator_previous_timestep) .OR. &
             & (model%config%flag_analytical_ss_spinup_accelerator .AND. &
             & (execute_quincy_sb_analytical_accelerator_this_timestep .OR. &
-            & executed_quincy_sb_analytical_accelerator_previous_timestep))) THEN
+            & executed_quincy_sb_analytical_accelerator_previous_timestep)) .OR. &
+            & executed_sb_model_spinup_accelerator_this_timestep) THEN
             ! Spin-up accelerators intentionally introduce a discontinuous pool change.
             q_c_conservation_test(ic) = 0.0_wp
           ELSE
@@ -1231,7 +1233,8 @@ CONTAINS
       & executed_quincy_sb_accelerator_previous_timestep) .OR. &
       & (model%config%flag_analytical_ss_spinup_accelerator .AND. &
       & (execute_quincy_sb_analytical_accelerator_this_timestep .OR. &
-      & executed_quincy_sb_analytical_accelerator_previous_timestep))) THEN
+      & executed_quincy_sb_analytical_accelerator_previous_timestep)) .OR. &
+      & executed_sb_model_spinup_accelerator_this_timestep) THEN
       WRITE(message_text,*) 'Set q_c_conservation_test to zero for an intentional SB_ accelerator pool jump.'
       CALL message(TRIM(routine), message_text)
     END IF

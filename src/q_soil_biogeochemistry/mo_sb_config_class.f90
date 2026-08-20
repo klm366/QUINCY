@@ -32,6 +32,9 @@ MODULE mo_sb_config_class
   PUBLIC :: SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX, &
     &       SB_PART_RESIDUE_ASSOC_IDX
   PUBLIC :: CONST_DEP, REFYEAR_DEP, TRANS_DEP
+  PUBLIC :: sb_spinup_accelerator_max_forcing_bins
+
+  INTEGER, PARAMETER :: sb_spinup_accelerator_max_forcing_bins = 365
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the soil_biogeochemistry process, derived from t_jsb_config
@@ -72,6 +75,17 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_jsm_transport
     LOGICAL               :: flag_sb_jsm_litter_input
     LOGICAL               :: flag_sb_jsm_OM_sorption
+    ! forward soil-model spin-up accelerator (shared by JSM and simple_1d)
+    LOGICAL               :: flag_sb_model_spinup_accelerator
+    CHARACTER(len=10)     :: sb_model_spinup_accelerator_forcing_interval
+    INTEGER               :: sb_model_spinup_accelerator_frequency
+    INTEGER               :: sb_model_spinup_accelerator_start_year
+    INTEGER               :: sb_model_spinup_accelerator_max_executions
+    INTEGER               :: sb_model_spinup_accelerator_forcing_years
+    INTEGER               :: sb_model_spinup_accelerator_max_relaxation_years
+    REAL(wp)              :: sb_model_spinup_accelerator_timestep_days
+    REAL(wp)              :: sb_model_spinup_accelerator_convergence_rel_tol
+    INTEGER               :: sb_model_spinup_accelerator_convergence_years
     ! P sorption
     LOGICAL               :: flag_sb_double_langmuir
     !> parameter
@@ -150,8 +164,10 @@ CONTAINS
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_util,                  ONLY: tolower
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,              ONLY: Register_vgrid
+    USE mo_jsb_grid,              ONLY: Register_vgrid, Get_vgrid
     USE mo_jsb_io,                ONLY: ZAXIS_GENERIC
+    USE mo_veg_config_class,      ONLY: Get_number_of_veg_compartments
+    USE mo_lnd_bgcm_class,        ONLY: LAST_ELEM_ID
 
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_sb_config), INTENT(inout) :: config    !< config type for sb
@@ -184,6 +200,16 @@ CONTAINS
     LOGICAL                     :: flag_sb_jsm_transport
     LOGICAL                     :: flag_sb_jsm_litter_input
     LOGICAL                     :: flag_sb_jsm_OM_sorption
+    LOGICAL                     :: flag_sb_model_spinup_accelerator
+    CHARACTER(len=10)           :: sb_model_spinup_accelerator_forcing_interval
+    INTEGER                     :: sb_model_spinup_accelerator_frequency
+    INTEGER                     :: sb_model_spinup_accelerator_start_year
+    INTEGER                     :: sb_model_spinup_accelerator_max_executions
+    INTEGER                     :: sb_model_spinup_accelerator_forcing_years
+    INTEGER                     :: sb_model_spinup_accelerator_max_relaxation_years
+    REAL(wp)                    :: sb_model_spinup_accelerator_timestep_days
+    REAL(wp)                    :: sb_model_spinup_accelerator_convergence_rel_tol
+    INTEGER                     :: sb_model_spinup_accelerator_convergence_years
     LOGICAL                     :: flag_sb_double_langmuir
     INTEGER                     :: usda_taxonomy_class
     INTEGER                     :: nwrb_taxonomy_class
@@ -234,6 +260,16 @@ CONTAINS
                       flag_sb_jsm_transport     , &
                       flag_sb_jsm_litter_input  , &
                       flag_sb_jsm_OM_sorption   , &
+                      flag_sb_model_spinup_accelerator, &
+                      sb_model_spinup_accelerator_forcing_interval, &
+                      sb_model_spinup_accelerator_frequency, &
+                      sb_model_spinup_accelerator_start_year, &
+                      sb_model_spinup_accelerator_max_executions, &
+                      sb_model_spinup_accelerator_forcing_years, &
+                      sb_model_spinup_accelerator_max_relaxation_years, &
+                      sb_model_spinup_accelerator_timestep_days, &
+                      sb_model_spinup_accelerator_convergence_rel_tol, &
+                      sb_model_spinup_accelerator_convergence_years, &
                       flag_sb_double_langmuir   , &
                       usda_taxonomy_class       , &
                       nwrb_taxonomy_class       , &
@@ -258,7 +294,12 @@ CONTAINS
       &   nml_ed_decomposition
 
     TYPE(t_jsb_vgrid), POINTER  :: time_months_vgrid
-    INTEGER :: i_month
+    TYPE(t_jsb_vgrid), POINTER  :: sb_spinup_accelerator_forcing_vgrid
+    TYPE(t_jsb_vgrid), POINTER  :: sb_spinup_accelerator_litter_vgrid
+    TYPE(t_jsb_vgrid), POINTER  :: sb_spinup_accelerator_profile_vgrid
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_w
+    INTEGER :: i_month, i_forcing_bin, i_litter_entry, i_profile_entry
+    INTEGER :: n_forcing_bins, n_litter_entries, n_profile_entries
     INTEGER :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_config'
 
@@ -291,6 +332,16 @@ CONTAINS
     flag_sb_jsm_transport       = .FALSE.
     flag_sb_jsm_litter_input    = .FALSE.
     flag_sb_jsm_OM_sorption     = .FALSE.
+    flag_sb_model_spinup_accelerator = .FALSE.
+    sb_model_spinup_accelerator_forcing_interval = 'yearly'
+    sb_model_spinup_accelerator_frequency = 100
+    sb_model_spinup_accelerator_start_year = 300
+    sb_model_spinup_accelerator_max_executions = 5
+    sb_model_spinup_accelerator_forcing_years = 30
+    sb_model_spinup_accelerator_max_relaxation_years = 10000
+    sb_model_spinup_accelerator_timestep_days = 1.0_wp
+    sb_model_spinup_accelerator_convergence_rel_tol = 1.e-5_wp
+    sb_model_spinup_accelerator_convergence_years = 10
     flag_sb_double_langmuir     = .FALSE.
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
@@ -349,6 +400,16 @@ CONTAINS
     config%flag_sb_jsm_transport           = flag_sb_jsm_transport
     config%flag_sb_jsm_litter_input        = flag_sb_jsm_litter_input
     config%flag_sb_jsm_OM_sorption         = flag_sb_jsm_OM_sorption
+    config%flag_sb_model_spinup_accelerator = flag_sb_model_spinup_accelerator
+    config%sb_model_spinup_accelerator_forcing_interval = TRIM(sb_model_spinup_accelerator_forcing_interval)
+    config%sb_model_spinup_accelerator_frequency = sb_model_spinup_accelerator_frequency
+    config%sb_model_spinup_accelerator_start_year = sb_model_spinup_accelerator_start_year
+    config%sb_model_spinup_accelerator_max_executions = sb_model_spinup_accelerator_max_executions
+    config%sb_model_spinup_accelerator_forcing_years = sb_model_spinup_accelerator_forcing_years
+    config%sb_model_spinup_accelerator_max_relaxation_years = sb_model_spinup_accelerator_max_relaxation_years
+    config%sb_model_spinup_accelerator_timestep_days = sb_model_spinup_accelerator_timestep_days
+    config%sb_model_spinup_accelerator_convergence_rel_tol = sb_model_spinup_accelerator_convergence_rel_tol
+    config%sb_model_spinup_accelerator_convergence_years = sb_model_spinup_accelerator_convergence_years
     config%flag_sb_double_langmuir         = flag_sb_double_langmuir
     config%usda_taxonomy_class             = usda_taxonomy_class
     config%nwrb_taxonomy_class             = nwrb_taxonomy_class
@@ -382,6 +443,45 @@ CONTAINS
       CALL finish(TRIM(routine),  'No such soil model available: '//TRIM(sb_model_scheme))
     END SELECT
 
+    IF (flag_sb_model_spinup_accelerator) THEN
+      SELECT CASE (TRIM(sb_model_spinup_accelerator_forcing_interval))
+      CASE ('yearly', 'monthly', 'weekly', 'daily')
+      CASE DEFAULT
+        CALL finish(TRIM(routine), 'Unknown sb_model_spinup_accelerator_forcing_interval.')
+      END SELECT
+      IF (sb_model_spinup_accelerator_frequency <= 0 .OR. &
+          & sb_model_spinup_accelerator_start_year <= 0 .OR. &
+          & sb_model_spinup_accelerator_max_executions <= 0 .OR. &
+          & sb_model_spinup_accelerator_forcing_years <= 0 .OR. &
+          & sb_model_spinup_accelerator_max_relaxation_years <= 0 .OR. &
+          & sb_model_spinup_accelerator_timestep_days <= 0.0_wp .OR. &
+          & sb_model_spinup_accelerator_convergence_rel_tol <= 0.0_wp .OR. &
+          & sb_model_spinup_accelerator_convergence_years <= 0) THEN
+        CALL finish(TRIM(routine), 'Forward SB spin-up accelerator controls must be greater than zero.')
+      END IF
+      IF (sb_model_spinup_accelerator_forcing_years > sb_model_spinup_accelerator_frequency) THEN
+        CALL finish(TRIM(routine), 'The forward SB forcing window cannot exceed the accelerator frequency.')
+      END IF
+      IF (sb_model_spinup_accelerator_forcing_years >= sb_model_spinup_accelerator_start_year) THEN
+        CALL finish(TRIM(routine), 'The first forward SB accelerator event must follow a complete forcing window.')
+      END IF
+    END IF
+
+    IF (flag_sb_model_spinup_accelerator .AND. &
+        & config%model_config%flag_analytical_ss_spinup_accelerator) THEN
+      IF (sb_model_spinup_accelerator_frequency /= &
+          & config%model_config%analytical_ss_spinup_accelerator_frequency .OR. &
+          & sb_model_spinup_accelerator_start_year /= &
+          & config%model_config%analytical_ss_spinup_accelerator_start_year .OR. &
+          & sb_model_spinup_accelerator_max_executions /= &
+          & config%model_config%analytical_ss_spinup_accelerator_max_executions .OR. &
+          & sb_model_spinup_accelerator_forcing_years /= &
+          & config%model_config%analytical_ss_spinup_accelerator_forcing_years) THEN
+        CALL finish(TRIM(routine), &
+          & 'Analytical and forward SB spin-up accelerators must use the same event schedule.')
+      END IF
+    END IF
+
     IF (config%skip_forcing_isotopes_after_init) THEN
       CALL message(TRIM(routine), 'skip_forcing_isotopes_after_init enabled: 13C/14C/15N forcing is only read on first cache load.')
     END IF
@@ -406,6 +506,34 @@ CONTAINS
     time_months_vgrid => new_vgrid('time_months', ZAXIS_GENERIC, 12, &
       & levels=(/ (REAL(i_month, kind=wp), i_month = 1,12) /), units='')
     CALL register_vgrid(time_months_vgrid)
+
+    SELECT CASE (TRIM(config%sb_model_spinup_accelerator_forcing_interval))
+    CASE ('yearly')
+      n_forcing_bins = 1
+    CASE ('monthly')
+      n_forcing_bins = 12
+    CASE ('weekly')
+      n_forcing_bins = 52
+    CASE ('daily')
+      n_forcing_bins = sb_spinup_accelerator_max_forcing_bins
+    CASE DEFAULT
+      CALL finish(TRIM(routine), 'Unsupported forward SB accelerator forcing interval.')
+    END SELECT
+
+    sb_spinup_accelerator_forcing_vgrid => new_vgrid('sb_accel_forcing', ZAXIS_GENERIC, n_forcing_bins, &
+      & levels=(/ (REAL(i_forcing_bin, kind=wp), i_forcing_bin = 1, n_forcing_bins) /), units='')
+    CALL register_vgrid(sb_spinup_accelerator_forcing_vgrid)
+
+    n_litter_entries = n_forcing_bins * (Get_number_of_veg_compartments() + 1) * LAST_ELEM_ID
+    sb_spinup_accelerator_litter_vgrid => new_vgrid('sb_accel_litter', ZAXIS_GENERIC, n_litter_entries, &
+      & levels=(/ (REAL(i_litter_entry, kind=wp), i_litter_entry = 1, n_litter_entries) /), units='')
+    CALL register_vgrid(sb_spinup_accelerator_litter_vgrid)
+
+    vgrid_soil_w => Get_vgrid('soil_depth_water')
+    n_profile_entries = n_forcing_bins * vgrid_soil_w%n_levels
+    sb_spinup_accelerator_profile_vgrid => new_vgrid('sb_accel_profile', ZAXIS_GENERIC, n_profile_entries, &
+      & levels=(/ (REAL(i_profile_entry, kind=wp), i_profile_entry = 1, n_profile_entries) /), units='')
+    CALL register_vgrid(sb_spinup_accelerator_profile_vgrid)
 
   END SUBROUTINE Init_sb_config
 

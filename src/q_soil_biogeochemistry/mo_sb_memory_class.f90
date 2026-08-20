@@ -270,9 +270,19 @@ MODULE mo_sb_memory_class
     !>3D JSM diagnostics (Jena Soil Model)
     !>
     TYPE(t_jsb_var_real2d) :: &
-                            analy_ss_forcing_time                 !< elapsed time represented by analytical forcing means [s]
+                            analy_ss_forcing_time, &              !< elapsed time represented by analytical forcing means [s]
+                            sb_spinup_accelerator_execution_count !< number of completed forward accelerator events [-]
 
     TYPE(t_jsb_var_real3d)  :: &
+                            sb_spinup_accelerator_forcing_time, & !< elapsed sampling time in each forcing bin [s]
+                            sb_spinup_accelerator_litterfall_sum, & !< integrated litterfall by bin, source, and element
+                            sb_spinup_accelerator_root_fraction_sum, & !< time-weighted root fraction by bin and layer [s]
+                            sb_spinup_accelerator_wtr_down_sum, & !< time-weighted downward water-transfer fraction [s]
+                            sb_spinup_accelerator_wtr_lat_loss_sum, & !< time-weighted lateral water-loss fraction [s]
+                            sb_spinup_accelerator_t_soil_sum, & !< time-weighted soil temperature [K s]
+                            sb_spinup_accelerator_wtr_soil_sum, & !< time-weighted liquid soil water [m s]
+                            sb_spinup_accelerator_ice_soil_sum, & !< time-weighted soil ice [m s]
+                            sb_spinup_accelerator_wtr_pot_sum, & !< time-weighted soil water potential [MPa s]
                             qmax_org, &                           !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
                             surface_burial_frac, &               !< fraction of non-associated surface SOM buried into the first mineral soil layer [unitless]
                             bulk_carbon_max, &                   !< maximum allowed bulk carbon under the mineral-volume constraint [mol m-3]
@@ -503,6 +513,9 @@ CONTAINS
     TYPE(t_jsb_vgrid),               POINTER :: surface                     !< Vertical grid
     TYPE(t_jsb_vgrid),               POINTER :: vgrid_soil_w                !< Vertical grid
     TYPE(t_jsb_vgrid),               POINTER :: vgrid_month                 !< Vertical grid
+    TYPE(t_jsb_vgrid),               POINTER :: vgrid_sb_spinup_forcing     !< Accelerator forcing-bin grid
+    TYPE(t_jsb_vgrid),               POINTER :: vgrid_sb_spinup_litter      !< Flattened litter forcing grid
+    TYPE(t_jsb_vgrid),               POINTER :: vgrid_sb_spinup_profile     !< Flattened forcing-bin by soil-layer grid
     INTEGER                                  :: elem_idx_map(LAST_ELEM_ID)  !< element mapper ID -> IND
     INTEGER                                  :: table                       !< ...
     INTEGER                                  :: output_level_local          !< add var to BASIC output_level, model specific (ssm/jsm)
@@ -518,6 +531,9 @@ CONTAINS
     surface       => Get_vgrid('surface')
     vgrid_soil_w  => Get_vgrid('soil_depth_water')
     vgrid_month   => Get_vgrid('time_months')
+    vgrid_sb_spinup_forcing => Get_vgrid('sb_accel_forcing')
+    vgrid_sb_spinup_litter => Get_vgrid('sb_accel_litter')
+    vgrid_sb_spinup_profile => Get_vgrid('sb_accel_profile')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
 
@@ -564,6 +580,78 @@ CONTAINS
         & output_level = NONE, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
+    END IF
+
+    IF (dsl4jsb_Config(SB_)%flag_sb_model_spinup_accelerator) THEN
+      CALL mem%Add_var('sb_spinup_accelerator_execution_count', mem%sb_spinup_accelerator_execution_count, &
+        & hgrid, surface, &
+        & t_cf('sb_spinup_accelerator_execution_count', '1', &
+        &      'number of completed forward soil spin-up accelerator events'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_spinup_accelerator_forcing_time', mem%sb_spinup_accelerator_forcing_time, &
+        & hgrid, vgrid_sb_spinup_forcing, &
+        & t_cf('sb_spinup_accelerator_forcing_time', 's', &
+        &      'elapsed sampling time in each forward soil spin-up accelerator forcing bin'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_spinup_accelerator_litterfall_sum', mem%sb_spinup_accelerator_litterfall_sum, &
+        & hgrid, vgrid_sb_spinup_litter, &
+        & t_cf('sb_spinup_accelerator_litterfall_sum', 'mol m-2', &
+        &      'summed timestep litterfall by climatology bin, source compartment, and element'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_spinup_accelerator_root_fraction_sum', mem%sb_spinup_accelerator_root_fraction_sum, &
+        & hgrid, vgrid_sb_spinup_profile, &
+        & t_cf('sb_spinup_accelerator_root_fraction_sum', 's', &
+        &      'elapsed-time-weighted root fraction by climatology bin and soil layer'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_spinup_accelerator_wtr_down_sum', mem%sb_spinup_accelerator_wtr_down_sum, &
+        & hgrid, vgrid_sb_spinup_profile, &
+        & t_cf('sb_spinup_accelerator_wtr_down_sum', 's', &
+        &      'elapsed-time-weighted downward water-transfer fraction by climatology bin and soil layer'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_spinup_accelerator_wtr_lat_loss_sum', mem%sb_spinup_accelerator_wtr_lat_loss_sum, &
+        & hgrid, vgrid_sb_spinup_profile, &
+        & t_cf('sb_spinup_accelerator_wtr_lat_loss_sum', 's', &
+        &      'elapsed-time-weighted lateral water-loss fraction by climatology bin and soil layer'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_spinup_accelerator_t_soil_sum', mem%sb_spinup_accelerator_t_soil_sum, &
+        & hgrid, vgrid_sb_spinup_profile, &
+        & t_cf('sb_spinup_accelerator_t_soil_sum', 'K s', &
+        &      'elapsed-time-weighted soil temperature by climatology bin and soil layer'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_spinup_accelerator_wtr_soil_sum', mem%sb_spinup_accelerator_wtr_soil_sum, &
+        & hgrid, vgrid_sb_spinup_profile, &
+        & t_cf('sb_spinup_accelerator_wtr_soil_sum', 'm s', &
+        &      'elapsed-time-weighted liquid soil water by climatology bin and soil layer'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_spinup_accelerator_ice_soil_sum', mem%sb_spinup_accelerator_ice_soil_sum, &
+        & hgrid, vgrid_sb_spinup_profile, &
+        & t_cf('sb_spinup_accelerator_ice_soil_sum', 'm s', &
+        &      'elapsed-time-weighted soil ice by climatology bin and soil layer'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_spinup_accelerator_wtr_pot_sum', mem%sb_spinup_accelerator_wtr_pot_sum, &
+        & hgrid, vgrid_sb_spinup_profile, &
+        & t_cf('sb_spinup_accelerator_wtr_pot_sum', 'MPa s', &
+        &      'elapsed-time-weighted soil water potential by climatology bin and soil layer'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
     END IF
 
     ! ----------------------------------------------------------------------------------------------------- !

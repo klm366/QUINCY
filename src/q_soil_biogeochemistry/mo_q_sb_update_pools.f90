@@ -117,6 +117,7 @@ CONTAINS
 #endif
     REAL(wp), ALLOCATABLE                 :: sb_pool_prev_timestep_hlp_mt(:,:,:,:) !< dim: compartments, elements, nc, nsoil
     REAL(wp), ALLOCATABLE                 :: sb_particle_transport_hlp_mt(:,:,:,:) !< dim: compartments, elements, nc, nsoil
+    REAL(wp), ALLOCATABLE                 :: slow_pool_before(:,:,:,:) !< pre-acceleration SB pools [mol m-3]
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
@@ -1343,6 +1344,9 @@ CONTAINS
       ! only execute spin-up accelerator when running in LAND or SOIL mode
       CASE(QLAND, QSOIL)
         IF (execute_quincy_sb_accelerator_this_timestep) THEN
+          IF (model%config%flag_spinup_debug) THEN
+            ALLOCATE(slow_pool_before, SOURCE=sb_pool_mt)
+          END IF
           DO ic = 1,nc
             ! run SB_ slow-pool spinup-accelerator
             IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
@@ -1370,6 +1374,10 @@ CONTAINS
                 &       sb_pool_mt(ix_dom_assoc,:,ic,:))
             END IF ! simple soil or jsm
           END DO
+          IF (model%config%flag_spinup_debug) THEN
+            CALL write_slow_pool_spinup_debug(iblk, num_sl_above_bedrock, soil_depth_sl, &
+              & model%config%slow_sb_pool_spinup_accelerator_length, slow_pool_before, sb_pool_mt)
+          END IF
         END IF
       END SELECT
     END IF
@@ -1398,6 +1406,59 @@ CONTAINS
     DEALLOCATE(root_depth_avg)
 
   END SUBROUTINE update_sb_pools
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Report the total and layer-resolved soil C change caused by one legacy slow-pool acceleration event.
+  SUBROUTINE write_slow_pool_spinup_debug(iblk, num_sl_above_bedrock, soil_depth_sl, &
+      & represented_years, pool_before, pool_after)
+
+    INTEGER,  INTENT(in) :: iblk
+    REAL(wp), INTENT(in) :: num_sl_above_bedrock(:)
+    REAL(wp), INTENT(in) :: soil_depth_sl(:,:)
+    INTEGER,  INTENT(in) :: represented_years
+    REAL(wp), INTENT(in) :: pool_before(:,:,:,:)
+    REAL(wp), INTENT(in) :: pool_after(:,:,:,:)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':write_slow_pool_spinup_debug'
+    CHARACTER(len=2048) :: debug_message
+    INTEGER :: ic, is, n_active_layers
+    REAL(wp) :: layer_c_before, layer_c_after, total_c_before, total_c_after
+
+    IF (ANY(SHAPE(pool_before) /= SHAPE(pool_after))) THEN
+      CALL finish(TRIM(routine), 'Before and after SB pool dimensions differ.')
+    END IF
+
+    total_c_before = 0.0_wp
+    total_c_after = 0.0_wp
+    DO ic = 1, SIZE(pool_before, 3)
+      n_active_layers = MIN(SIZE(pool_before, 4), NINT(num_sl_above_bedrock(ic)))
+      DO is = 1, n_active_layers
+        total_c_before = total_c_before + SUM(pool_before(:,ixC,ic,is)) * soil_depth_sl(ic,is)
+        total_c_after = total_c_after + SUM(pool_after(:,ixC,ic,is)) * soil_depth_sl(ic,is)
+      END DO
+    END DO
+
+    WRITE(debug_message,*) 'DEBUG legacy slow-pool acceleration carbon totals block/represented_years = ', &
+      & iblk, represented_years, '; before/after/delta [mol C m-2] = ', &
+      & total_c_before, total_c_after, total_c_after - total_c_before
+    CALL message(TRIM(routine), TRIM(debug_message))
+
+    DO ic = 1, SIZE(pool_before, 3)
+      n_active_layers = MIN(SIZE(pool_before, 4), NINT(num_sl_above_bedrock(ic)))
+      DO is = 1, n_active_layers
+        layer_c_before = SUM(pool_before(:,ixC,ic,is))
+        layer_c_after = SUM(pool_after(:,ixC,ic,is))
+        WRITE(debug_message,*) 'DEBUG legacy slow-pool acceleration profile block/ic/is = ', &
+          & iblk, ic, is, '; total C before/after/delta [mol C m-3] = ', &
+          & layer_c_before, layer_c_after, layer_c_after - layer_c_before, &
+          & '; pool C before [mol C m-3] = ', pool_before(:,ixC,ic,is), &
+          & '; pool C after [mol C m-3] = ', pool_after(:,ixC,ic,is)
+        CALL message(TRIM(routine), TRIM(debug_message))
+      END DO
+    END DO
+
+  END SUBROUTINE write_slow_pool_spinup_debug
 
 
   !-----------------------------------------------------------------------------------------------------

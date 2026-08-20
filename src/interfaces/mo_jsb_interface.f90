@@ -37,7 +37,8 @@ MODULE mo_jsb_interface
       &                             is_time_experiment_start, is_time_restart, execute_quincy_sb_accelerator_this_timestep, &
       &                             executed_quincy_sb_accelerator_previous_timestep, &
       &                             execute_quincy_sb_analytical_accelerator_this_timestep, &
-      &                             executed_quincy_sb_analytical_accelerator_previous_timestep
+      &                             executed_quincy_sb_analytical_accelerator_previous_timestep, &
+      &                             executed_sb_model_spinup_accelerator_this_timestep
   USE mo_jsb_physical_constants, ONLY: cvdifts
   USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
@@ -639,6 +640,8 @@ CONTAINS
     model => Get_model(model_id)
 
     CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
+
+    executed_sb_model_spinup_accelerator_this_timestep = .FALSE.
 
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()

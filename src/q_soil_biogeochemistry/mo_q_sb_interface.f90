@@ -34,7 +34,7 @@ MODULE mo_q_sb_interface
   USE mo_q_sb_jsm_main,               ONLY: update_sb_jsm_real => update_sb_jsm
   USE mo_q_sb_update_pools,           ONLY: update_sb_pools_real => update_sb_pools
 #ifndef  __QUINCY_STANDALONE__
-  USE mo_sb_iqj_soil_model,           ONLY: update_read_soil_forcing_real => update_read_soil_forcing
+  USE mo_sb_spinup_qsoil_forcing,      ONLY: update_read_soil_forcing_real => update_read_soil_forcing
 #endif
 
   dsl4jsb_Use_processes SB_, VEG_, HYDRO_, SSE_, A2L_
@@ -313,6 +313,7 @@ CONTAINS
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,      ONLY: t_jsb_task_options
     USE mo_sb_util,             ONLY: calculate_time_average_soilbiogeochemistry
+    USE mo_sb_spinup_accelerator, ONLY: apply_sb_spinup_accelerator
     dsl4jsb_Use_processes SB_
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -326,6 +327,7 @@ CONTAINS
       & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     CALL calculate_time_average_soilbiogeochemistry(tile, options)
+    CALL apply_sb_spinup_accelerator(tile, options)
 
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
 
