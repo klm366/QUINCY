@@ -50,7 +50,7 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_sb_pools(tile, options)
+  SUBROUTINE update_sb_pools(tile, options, l_soil_model_forcing)
 
     USE mo_jsb_class,              ONLY: Get_model
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
@@ -86,6 +86,7 @@ CONTAINS
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    LOGICAL, OPTIONAL,          INTENT(in)        :: l_soil_model_forcing !< apply QSOIL plant-demand forcing
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model                !< the model
@@ -108,6 +109,7 @@ CONTAINS
                                              partition_coef
     REAL(wp)                              :: dtime                          !< timestep length
     INTEGER                               :: iblk, ics, ice, nc, ic, is     !< grid dimensions
+    LOGICAL                               :: l_apply_plant_demand_scaling   !< use prescribed plant N/P demand fractions
     INTEGER                               :: nr_elements                    !< number of elements
     INTEGER                               :: nr_sb_parts                    !< number of sb compartments
     INTEGER                               :: nr_veg_parts                   !< number of veg compartments
@@ -710,7 +712,11 @@ CONTAINS
 
     !> 1.0 correct the plant uptake of nh4, no3 and po4 for soil model
     !>
-    IF (model%config%qmodel_id == QSOIL) THEN
+    l_apply_plant_demand_scaling = model%config%qmodel_id == QSOIL
+    IF (PRESENT(l_soil_model_forcing)) THEN
+      l_apply_plant_demand_scaling = l_apply_plant_demand_scaling .OR. l_soil_model_forcing
+    END IF
+    IF (l_apply_plant_demand_scaling) THEN
       DO ic = 1,nc
         DO is = 1, NINT(num_sl_above_bedrock(ic))
           plant_uptake_nh4_sl(ic, is)     = plant_uptake_nh4_sl(ic, is)     * f_n_demand(ic)

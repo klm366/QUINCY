@@ -43,6 +43,15 @@ MODULE mo_sb_spinup_accelerator
     INTEGER :: n_soil_layers = 0
     REAL(wp), ALLOCATABLE :: forcing_time(:,:)     !< sampled time by cell and bin [s]
     REAL(wp), ALLOCATABLE :: litterfall_rate(:,:)  !< mean litterfall rate, flattened by bin/source/element [mol m-2 s-1]
+    REAL(wp), ALLOCATABLE :: fine_root_c(:,:)       !< mean fine-root carbon by cell and bin [mol C m-2]
+    REAL(wp), ALLOCATABLE :: f_n_demand(:,:)        !< mean plant nitrogen-demand fraction by cell and bin [-]
+    REAL(wp), ALLOCATABLE :: f_p_demand(:,:)        !< mean plant phosphorus-demand fraction by cell and bin [-]
+    REAL(wp), ALLOCATABLE :: nhx_deposition(:,:)    !< mean reduced-N deposition by cell and bin [micro-mol m-2 s-1]
+    REAL(wp), ALLOCATABLE :: noy_deposition(:,:)    !< mean oxidized-N deposition by cell and bin [micro-mol m-2 s-1]
+    REAL(wp), ALLOCATABLE :: nhx_n15_deposition(:,:) !< mean reduced-15N deposition [micro-mol m-2 s-1]
+    REAL(wp), ALLOCATABLE :: noy_n15_deposition(:,:) !< mean oxidized-15N deposition [micro-mol m-2 s-1]
+    REAL(wp), ALLOCATABLE :: p_deposition(:,:)      !< mean phosphorus deposition by cell and bin [micro-mol m-2 s-1]
+    REAL(wp), ALLOCATABLE :: growth_p_limit(:,:)    !< mean plant P limitation based on N demand by cell and bin [-]
     REAL(wp), ALLOCATABLE :: root_fraction(:,:)    !< mean root fraction, flattened by bin/layer [-]
     REAL(wp), ALLOCATABLE :: wtr_down(:,:)         !< mean downward water-transfer fraction, flattened by bin/layer [-]
     REAL(wp), ALLOCATABLE :: wtr_lat_loss(:,:)     !< mean lateral water-loss fraction, flattened by bin/layer [-]
@@ -56,6 +65,15 @@ MODULE mo_sb_spinup_accelerator
   TYPE :: t_sb_spinup_live_forcing
     REAL(wp), ALLOCATABLE :: litterfall(:,:,:) !< vegetation litterfall by source, element, and cell [mol m-2 timestep-1]
     REAL(wp), ALLOCATABLE :: seed_litterfall(:,:) !< seed-bed litterfall by element and cell [mol m-2 timestep-1]
+    REAL(wp), ALLOCATABLE :: fine_root_c(:)       !< fine-root carbon by cell [mol C m-2]
+    REAL(wp), ALLOCATABLE :: f_n_demand(:)        !< plant nitrogen-demand fraction by cell [-]
+    REAL(wp), ALLOCATABLE :: f_p_demand(:)        !< plant phosphorus-demand fraction by cell [-]
+    REAL(wp), ALLOCATABLE :: nhx_deposition(:)    !< reduced-N deposition by cell [micro-mol m-2 s-1]
+    REAL(wp), ALLOCATABLE :: noy_deposition(:)    !< oxidized-N deposition by cell [micro-mol m-2 s-1]
+    REAL(wp), ALLOCATABLE :: nhx_n15_deposition(:) !< reduced-15N deposition by cell [micro-mol m-2 s-1]
+    REAL(wp), ALLOCATABLE :: noy_n15_deposition(:) !< oxidized-15N deposition by cell [micro-mol m-2 s-1]
+    REAL(wp), ALLOCATABLE :: p_deposition(:)      !< phosphorus deposition by cell [micro-mol m-2 s-1]
+    REAL(wp), ALLOCATABLE :: growth_p_limit(:)    !< plant P limitation based on N demand by cell [-]
     REAL(wp), ALLOCATABLE :: root_fraction(:,:) !< root fraction by cell and soil layer [-]
     REAL(wp), ALLOCATABLE :: wtr_down(:,:)      !< downward water-transfer fraction by cell and layer [-]
     REAL(wp), ALLOCATABLE :: wtr_lat_loss(:,:)  !< lateral water-loss fraction by cell and layer [-]
@@ -168,14 +186,16 @@ CONTAINS
   !> Accumulate one normal-model timestep into the selected climatological forcing bin.
   SUBROUTINE collect_sb_spinup_accelerator_forcing(tile, options)
 
-    USE mo_jsb_process_class, ONLY: SB_, VEG_, HYDRO_, SSE_
+    USE mo_jsb_process_class, ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_
+    USE mo_lnd_bgcm_idx,       ONLY: ix_fine_root, ixC
     USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
-    USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
+    USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_memory(A2L_)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -185,6 +205,8 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
 
@@ -209,6 +231,15 @@ CONTAINS
     INTEGER :: nsoil
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_forcing_time
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_litterfall_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_fine_root_c_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_f_n_demand_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_f_p_demand_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_nhx_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_noy_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_nhx_n15_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_noy_n15_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_p_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_growth_p_limit_sum
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_root_fraction_sum
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_wtr_down_sum
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_wtr_lat_loss_sum
@@ -223,6 +254,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
+    dsl4jsb_Real2D_onChunk :: f_n_demand
+    dsl4jsb_Real2D_onChunk :: f_p_demand
+    dsl4jsb_Real2D_onChunk :: growth_p_limit_based_on_n_mavg
+    dsl4jsb_Real2D_onChunk :: nhx_deposition
+    dsl4jsb_Real2D_onChunk :: noy_deposition
+    dsl4jsb_Real2D_onChunk :: nhx_n15_deposition
+    dsl4jsb_Real2D_onChunk :: noy_n15_deposition
+    dsl4jsb_Real2D_onChunk :: p_deposition
 
     ics = options%ics
     ice = options%ice
@@ -240,8 +279,18 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_forcing_time)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_litterfall_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_fine_root_c_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_f_n_demand_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_f_p_demand_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_nhx_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_noy_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_nhx_n15_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_noy_n15_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_p_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_growth_p_limit_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_root_fraction_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_wtr_down_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_wtr_lat_loss_sum)
@@ -256,6 +305,15 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_p_limit_based_on_n_mavg)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, noy_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, p_deposition)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
 
@@ -266,6 +324,25 @@ CONTAINS
 
     sb_spinup_accelerator_forcing_time(:, forcing_bin) = &
       & sb_spinup_accelerator_forcing_time(:, forcing_bin) + options%dtime
+    sb_spinup_accelerator_fine_root_c_sum(:, forcing_bin) = &
+      & sb_spinup_accelerator_fine_root_c_sum(:, forcing_bin) + &
+      & veg_pool_mt(ix_fine_root, ixC, :) * options%dtime
+    sb_spinup_accelerator_f_n_demand_sum(:, forcing_bin) = &
+      & sb_spinup_accelerator_f_n_demand_sum(:, forcing_bin) + f_n_demand * options%dtime
+    sb_spinup_accelerator_f_p_demand_sum(:, forcing_bin) = &
+      & sb_spinup_accelerator_f_p_demand_sum(:, forcing_bin) + f_p_demand * options%dtime
+    sb_spinup_accelerator_nhx_deposition_sum(:, forcing_bin) = &
+      & sb_spinup_accelerator_nhx_deposition_sum(:, forcing_bin) + nhx_deposition * options%dtime
+    sb_spinup_accelerator_noy_deposition_sum(:, forcing_bin) = &
+      & sb_spinup_accelerator_noy_deposition_sum(:, forcing_bin) + noy_deposition * options%dtime
+    sb_spinup_accelerator_nhx_n15_deposition_sum(:, forcing_bin) = &
+      & sb_spinup_accelerator_nhx_n15_deposition_sum(:, forcing_bin) + nhx_n15_deposition * options%dtime
+    sb_spinup_accelerator_noy_n15_deposition_sum(:, forcing_bin) = &
+      & sb_spinup_accelerator_noy_n15_deposition_sum(:, forcing_bin) + noy_n15_deposition * options%dtime
+    sb_spinup_accelerator_p_deposition_sum(:, forcing_bin) = &
+      & sb_spinup_accelerator_p_deposition_sum(:, forcing_bin) + p_deposition * options%dtime
+    sb_spinup_accelerator_growth_p_limit_sum(:, forcing_bin) = &
+      & sb_spinup_accelerator_growth_p_limit_sum(:, forcing_bin) + growth_p_limit_based_on_n_mavg * options%dtime
 
     n_veg_sources = SIZE(veg_litterfall_mt, 1)
     n_elements = SIZE(veg_litterfall_mt, 2)
@@ -428,6 +505,15 @@ CONTAINS
     INTEGER :: iblk
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_forcing_time
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_litterfall_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_fine_root_c_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_f_n_demand_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_f_p_demand_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_nhx_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_noy_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_nhx_n15_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_noy_n15_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_p_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_growth_p_limit_sum
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_root_fraction_sum
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_wtr_down_sum
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_wtr_lat_loss_sum
@@ -443,6 +529,15 @@ CONTAINS
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_forcing_time)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_litterfall_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_fine_root_c_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_f_n_demand_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_f_p_demand_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_nhx_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_noy_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_nhx_n15_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_noy_n15_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_p_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_growth_p_limit_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_root_fraction_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_wtr_down_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_wtr_lat_loss_sum)
@@ -453,6 +548,15 @@ CONTAINS
 
     sb_spinup_accelerator_forcing_time(:,:) = 0.0_wp
     sb_spinup_accelerator_litterfall_sum(:,:) = 0.0_wp
+    sb_spinup_accelerator_fine_root_c_sum(:,:) = 0.0_wp
+    sb_spinup_accelerator_f_n_demand_sum(:,:) = 0.0_wp
+    sb_spinup_accelerator_f_p_demand_sum(:,:) = 0.0_wp
+    sb_spinup_accelerator_nhx_deposition_sum(:,:) = 0.0_wp
+    sb_spinup_accelerator_noy_deposition_sum(:,:) = 0.0_wp
+    sb_spinup_accelerator_nhx_n15_deposition_sum(:,:) = 0.0_wp
+    sb_spinup_accelerator_noy_n15_deposition_sum(:,:) = 0.0_wp
+    sb_spinup_accelerator_p_deposition_sum(:,:) = 0.0_wp
+    sb_spinup_accelerator_growth_p_limit_sum(:,:) = 0.0_wp
     sb_spinup_accelerator_root_fraction_sum(:,:) = 0.0_wp
     sb_spinup_accelerator_wtr_down_sum(:,:) = 0.0_wp
     sb_spinup_accelerator_wtr_lat_loss_sum(:,:) = 0.0_wp
@@ -585,13 +689,15 @@ CONTAINS
   !> Validate accumulated forcing and reconstruct the event-local climatology.
   SUBROUTINE prepare_sb_spinup_accelerator(tile, options, forcing, live_forcing)
 
-    USE mo_jsb_process_class, ONLY: SB_, VEG_, HYDRO_, SSE_
+    USE mo_jsb_process_class, ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_
+    USE mo_lnd_bgcm_idx,       ONLY: ix_fine_root, ixC
     USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
-    USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
+    USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_memory(A2L_)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -602,6 +708,8 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
 
@@ -616,6 +724,15 @@ CONTAINS
     INTEGER :: n_cells
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_forcing_time
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_litterfall_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_fine_root_c_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_f_n_demand_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_f_p_demand_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_nhx_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_noy_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_nhx_n15_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_noy_n15_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_p_deposition_sum
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_growth_p_limit_sum
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_root_fraction_sum
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_wtr_down_sum
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_wtr_lat_loss_sum
@@ -634,6 +751,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: net_biosphere_production_c13
     dsl4jsb_Real2D_onChunk :: net_biosphere_production_c14
     dsl4jsb_Real2D_onChunk :: biological_n_fixation
+    dsl4jsb_Real2D_onChunk :: f_n_demand
+    dsl4jsb_Real2D_onChunk :: f_p_demand
+    dsl4jsb_Real2D_onChunk :: growth_p_limit_based_on_n_mavg
+    dsl4jsb_Real2D_onChunk :: nhx_deposition
+    dsl4jsb_Real2D_onChunk :: noy_deposition
+    dsl4jsb_Real2D_onChunk :: nhx_n15_deposition
+    dsl4jsb_Real2D_onChunk :: noy_n15_deposition
+    dsl4jsb_Real2D_onChunk :: p_deposition
 
     ics = options%ics
     ice = options%ice
@@ -644,8 +769,18 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_forcing_time)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_litterfall_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_fine_root_c_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_f_n_demand_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_f_p_demand_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_nhx_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_noy_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_nhx_n15_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_noy_n15_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_p_deposition_sum)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_growth_p_limit_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_root_fraction_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_wtr_down_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_wtr_lat_loss_sum)
@@ -664,6 +799,15 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c13)
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c14)
     dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation)
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_p_limit_based_on_n_mavg)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, noy_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, p_deposition)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
 
@@ -681,6 +825,15 @@ CONTAINS
 
     ALLOCATE(forcing%forcing_time(n_cells, forcing%n_forcing_bins), &
       & forcing%litterfall_rate(n_cells, SIZE(sb_spinup_accelerator_litterfall_sum, 2)), &
+      & forcing%fine_root_c(n_cells, forcing%n_forcing_bins), &
+      & forcing%f_n_demand(n_cells, forcing%n_forcing_bins), &
+      & forcing%f_p_demand(n_cells, forcing%n_forcing_bins), &
+      & forcing%nhx_deposition(n_cells, forcing%n_forcing_bins), &
+      & forcing%noy_deposition(n_cells, forcing%n_forcing_bins), &
+      & forcing%nhx_n15_deposition(n_cells, forcing%n_forcing_bins), &
+      & forcing%noy_n15_deposition(n_cells, forcing%n_forcing_bins), &
+      & forcing%p_deposition(n_cells, forcing%n_forcing_bins), &
+      & forcing%growth_p_limit(n_cells, forcing%n_forcing_bins), &
       & forcing%root_fraction(n_cells, SIZE(sb_spinup_accelerator_root_fraction_sum, 2)), &
       & forcing%wtr_down(n_cells, SIZE(sb_spinup_accelerator_wtr_down_sum, 2)), &
       & forcing%wtr_lat_loss(n_cells, SIZE(sb_spinup_accelerator_wtr_lat_loss_sum, 2)), &
@@ -690,6 +843,15 @@ CONTAINS
       & forcing%wtr_pot(n_cells, SIZE(sb_spinup_accelerator_wtr_pot_sum, 2)))
 
     forcing%forcing_time = sb_spinup_accelerator_forcing_time
+    forcing%fine_root_c = sb_spinup_accelerator_fine_root_c_sum / forcing%forcing_time
+    forcing%f_n_demand = sb_spinup_accelerator_f_n_demand_sum / forcing%forcing_time
+    forcing%f_p_demand = sb_spinup_accelerator_f_p_demand_sum / forcing%forcing_time
+    forcing%nhx_deposition = sb_spinup_accelerator_nhx_deposition_sum / forcing%forcing_time
+    forcing%noy_deposition = sb_spinup_accelerator_noy_deposition_sum / forcing%forcing_time
+    forcing%nhx_n15_deposition = sb_spinup_accelerator_nhx_n15_deposition_sum / forcing%forcing_time
+    forcing%noy_n15_deposition = sb_spinup_accelerator_noy_n15_deposition_sum / forcing%forcing_time
+    forcing%p_deposition = sb_spinup_accelerator_p_deposition_sum / forcing%forcing_time
+    forcing%growth_p_limit = sb_spinup_accelerator_growth_p_limit_sum / forcing%forcing_time
     DO i_entry = 1, SIZE(forcing%litterfall_rate, 2)
       forcing_bin = MOD(i_entry - 1, forcing%n_forcing_bins) + 1
       forcing%litterfall_rate(:, i_entry) = sb_spinup_accelerator_litterfall_sum(:, i_entry) / &
@@ -716,6 +878,15 @@ CONTAINS
 
     ALLOCATE(live_forcing%litterfall, SOURCE=veg_litterfall_mt)
     ALLOCATE(live_forcing%seed_litterfall, SOURCE=seed_bed_litterfall_mt)
+    ALLOCATE(live_forcing%fine_root_c, SOURCE=veg_pool_mt(ix_fine_root, ixC, :))
+    ALLOCATE(live_forcing%f_n_demand, SOURCE=f_n_demand)
+    ALLOCATE(live_forcing%f_p_demand, SOURCE=f_p_demand)
+    ALLOCATE(live_forcing%nhx_deposition, SOURCE=nhx_deposition)
+    ALLOCATE(live_forcing%noy_deposition, SOURCE=noy_deposition)
+    ALLOCATE(live_forcing%nhx_n15_deposition, SOURCE=nhx_n15_deposition)
+    ALLOCATE(live_forcing%noy_n15_deposition, SOURCE=noy_n15_deposition)
+    ALLOCATE(live_forcing%p_deposition, SOURCE=p_deposition)
+    ALLOCATE(live_forcing%growth_p_limit, SOURCE=growth_p_limit_based_on_n_mavg)
     ALLOCATE(live_forcing%root_fraction, SOURCE=root_fraction_sl)
     ALLOCATE(live_forcing%wtr_down, SOURCE=frac_wtr_transp_down_sl)
     ALLOCATE(live_forcing%wtr_lat_loss, SOURCE=frac_w_lat_loss_sl)
@@ -862,7 +1033,7 @@ CONTAINS
           CALL finish(TRIM(routine), 'Unsupported soil-biogeochemistry model scheme.')
         END SELECT
 
-        CALL update_sb_pools(tile, replay_options)
+        CALL update_sb_pools(tile, replay_options, l_soil_model_forcing=.TRUE.)
         CALL calculate_time_average_soilbiogeochemistry(tile, replay_options)
       END DO
     END DO
@@ -873,12 +1044,14 @@ CONTAINS
   !> Load one annual, monthly, weekly, or daily climatological forcing bin into the replay forcing view.
   SUBROUTINE load_sb_spinup_forcing_bin(tile, options, forcing, forcing_bin)
 
-    USE mo_jsb_process_class, ONLY: VEG_, HYDRO_, SSE_
+    USE mo_jsb_process_class, ONLY: VEG_, HYDRO_, SSE_, A2L_
+    USE mo_lnd_bgcm_idx,       ONLY: ix_fine_root, ixC
     USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
-    USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
+    USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_memory(A2L_)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -888,6 +1061,8 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
 
@@ -911,6 +1086,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
+    dsl4jsb_Real2D_onChunk :: f_n_demand
+    dsl4jsb_Real2D_onChunk :: f_p_demand
+    dsl4jsb_Real2D_onChunk :: growth_p_limit_based_on_n_mavg
+    dsl4jsb_Real2D_onChunk :: nhx_deposition
+    dsl4jsb_Real2D_onChunk :: noy_deposition
+    dsl4jsb_Real2D_onChunk :: nhx_n15_deposition
+    dsl4jsb_Real2D_onChunk :: noy_n15_deposition
+    dsl4jsb_Real2D_onChunk :: p_deposition
 
     IF (forcing_bin < 1 .OR. forcing_bin > forcing%n_forcing_bins) THEN
       CALL finish(TRIM(routine), 'Requested forcing bin is outside the prepared climatology.')
@@ -924,6 +1107,7 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_transp_down_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)
@@ -931,8 +1115,27 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_p_limit_based_on_n_mavg)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, noy_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, p_deposition)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
+
+    veg_pool_mt(ix_fine_root, ixC, :) = forcing%fine_root_c(:, forcing_bin)
+    f_n_demand = forcing%f_n_demand(:, forcing_bin)
+    f_p_demand = forcing%f_p_demand(:, forcing_bin)
+    growth_p_limit_based_on_n_mavg = forcing%growth_p_limit(:, forcing_bin)
+    nhx_deposition = forcing%nhx_deposition(:, forcing_bin)
+    noy_deposition = forcing%noy_deposition(:, forcing_bin)
+    nhx_n15_deposition = forcing%nhx_n15_deposition(:, forcing_bin)
+    noy_n15_deposition = forcing%noy_n15_deposition(:, forcing_bin)
+    p_deposition = forcing%p_deposition(:, forcing_bin)
 
     n_sources = SIZE(veg_litterfall_mt, 1)
     n_elements = SIZE(veg_litterfall_mt, 2)
@@ -1144,12 +1347,14 @@ CONTAINS
   !> Commit the relaxed SB state, restore live forcing, and refresh derived soil properties.
   SUBROUTINE finalize_sb_spinup_accelerator(tile, options, live_forcing)
 
-    USE mo_jsb_process_class, ONLY: VEG_, HYDRO_, SSE_
+    USE mo_jsb_process_class, ONLY: VEG_, HYDRO_, SSE_, A2L_
+    USE mo_lnd_bgcm_idx,       ONLY: ix_fine_root, ixC
     USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
-    USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
+    USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_memory(A2L_)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1158,6 +1363,8 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
 
@@ -1177,6 +1384,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: net_biosphere_production_c13
     dsl4jsb_Real2D_onChunk :: net_biosphere_production_c14
     dsl4jsb_Real2D_onChunk :: biological_n_fixation
+    dsl4jsb_Real2D_onChunk :: f_n_demand
+    dsl4jsb_Real2D_onChunk :: f_p_demand
+    dsl4jsb_Real2D_onChunk :: growth_p_limit_based_on_n_mavg
+    dsl4jsb_Real2D_onChunk :: nhx_deposition
+    dsl4jsb_Real2D_onChunk :: noy_deposition
+    dsl4jsb_Real2D_onChunk :: nhx_n15_deposition
+    dsl4jsb_Real2D_onChunk :: noy_n15_deposition
+    dsl4jsb_Real2D_onChunk :: p_deposition
 
     ics = options%ics
     ice = options%ice
@@ -1186,6 +1401,7 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_transp_down_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_w_lat_loss_sl)
@@ -1197,11 +1413,29 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c13)
     dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production_c14)
     dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation)
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_p_limit_based_on_n_mavg)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, noy_n15_deposition)
+    dsl4jsb_Get_var2D_onChunk(A2L_, p_deposition)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
 
     veg_litterfall_mt = live_forcing%litterfall
     seed_bed_litterfall_mt = live_forcing%seed_litterfall
+    veg_pool_mt(ix_fine_root, ixC, :) = live_forcing%fine_root_c
+    f_n_demand = live_forcing%f_n_demand
+    f_p_demand = live_forcing%f_p_demand
+    growth_p_limit_based_on_n_mavg = live_forcing%growth_p_limit
+    nhx_deposition = live_forcing%nhx_deposition
+    noy_deposition = live_forcing%noy_deposition
+    nhx_n15_deposition = live_forcing%nhx_n15_deposition
+    noy_n15_deposition = live_forcing%noy_n15_deposition
+    p_deposition = live_forcing%p_deposition
     root_fraction_sl = live_forcing%root_fraction
     frac_wtr_transp_down_sl = live_forcing%wtr_down
     frac_w_lat_loss_sl = live_forcing%wtr_lat_loss
