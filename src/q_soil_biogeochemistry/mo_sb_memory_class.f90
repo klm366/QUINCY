@@ -592,135 +592,135 @@ CONTAINS
     END IF
 
     IF (dsl4jsb_Config(SB_)%flag_sb_model_spinup_accelerator) THEN
-      CALL mem%Add_var('sb_spinup_accelerator_execution_count', mem%sb_spinup_accelerator_execution_count, &
+      CALL mem%Add_var('sb_accel_execution_count', mem%sb_spinup_accelerator_execution_count, &
         & hgrid, surface, &
-        & t_cf('sb_spinup_accelerator_execution_count', '1', &
+        & t_cf('sb_accel_execution_count', '1', &
         &      'number of completed forward soil spin-up accelerator events'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_forcing_time', mem%sb_spinup_accelerator_forcing_time, &
+      CALL mem%Add_var('sb_accel_forcing_time', mem%sb_spinup_accelerator_forcing_time, &
         & hgrid, vgrid_sb_spinup_forcing, &
-        & t_cf('sb_spinup_accelerator_forcing_time', 's', &
+        & t_cf('sb_accel_forcing_time', 's', &
         &      'elapsed sampling time in each forward soil spin-up accelerator forcing bin'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_litterfall_sum', mem%sb_spinup_accelerator_litterfall_sum, &
+      CALL mem%Add_var('sb_accel_litterfall_sum', mem%sb_spinup_accelerator_litterfall_sum, &
         & hgrid, vgrid_sb_spinup_litter, &
-        & t_cf('sb_spinup_accelerator_litterfall_sum', 'mol m-2', &
+        & t_cf('sb_accel_litterfall_sum', 'mol m-2', &
         &      'summed timestep litterfall by climatology bin, source compartment, and element'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_fine_root_c_sum', mem%sb_spinup_accelerator_fine_root_c_sum, &
+      CALL mem%Add_var('sb_accel_fine_root_c_sum', mem%sb_spinup_accelerator_fine_root_c_sum, &
         & hgrid, vgrid_sb_spinup_forcing, &
-        & t_cf('sb_spinup_accelerator_fine_root_c_sum', 'mol C s m-2', &
+        & t_cf('sb_accel_fine_root_c_sum', 'mol C s m-2', &
         &      'elapsed-time-weighted fine-root carbon by climatology bin'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_f_n_demand_sum', mem%sb_spinup_accelerator_f_n_demand_sum, &
+      CALL mem%Add_var('sb_accel_f_n_demand_sum', mem%sb_spinup_accelerator_f_n_demand_sum, &
         & hgrid, vgrid_sb_spinup_forcing, &
-        & t_cf('sb_spinup_accelerator_f_n_demand_sum', 's', &
+        & t_cf('sb_accel_f_n_demand_sum', 's', &
         &      'elapsed-time-weighted plant nitrogen-demand fraction by climatology bin'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_f_p_demand_sum', mem%sb_spinup_accelerator_f_p_demand_sum, &
+      CALL mem%Add_var('sb_accel_f_p_demand_sum', mem%sb_spinup_accelerator_f_p_demand_sum, &
         & hgrid, vgrid_sb_spinup_forcing, &
-        & t_cf('sb_spinup_accelerator_f_p_demand_sum', 's', &
+        & t_cf('sb_accel_f_p_demand_sum', 's', &
         &      'elapsed-time-weighted plant phosphorus-demand fraction by climatology bin'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_nhx_deposition_sum', mem%sb_spinup_accelerator_nhx_deposition_sum, &
+      CALL mem%Add_var('sb_accel_nhx_dep_sum', mem%sb_spinup_accelerator_nhx_deposition_sum, &
         & hgrid, vgrid_sb_spinup_forcing, &
-        & t_cf('sb_spinup_accelerator_nhx_deposition_sum', 'micro-mol m-2', &
+        & t_cf('sb_accel_nhx_dep_sum', 'micro-mol m-2', &
         &      'time-integrated reduced nitrogen deposition by climatology bin'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_noy_deposition_sum', mem%sb_spinup_accelerator_noy_deposition_sum, &
+      CALL mem%Add_var('sb_accel_noy_dep_sum', mem%sb_spinup_accelerator_noy_deposition_sum, &
         & hgrid, vgrid_sb_spinup_forcing, &
-        & t_cf('sb_spinup_accelerator_noy_deposition_sum', 'micro-mol m-2', &
+        & t_cf('sb_accel_noy_dep_sum', 'micro-mol m-2', &
         &      'time-integrated oxidized nitrogen deposition by climatology bin'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_nhx_n15_deposition_sum', mem%sb_spinup_accelerator_nhx_n15_deposition_sum, &
+      CALL mem%Add_var('sb_accel_nhx_n15_dep_sum', mem%sb_spinup_accelerator_nhx_n15_deposition_sum, &
         & hgrid, vgrid_sb_spinup_forcing, &
-        & t_cf('sb_spinup_accelerator_nhx_n15_deposition_sum', 'micro-mol m-2', &
+        & t_cf('sb_accel_nhx_n15_dep_sum', 'micro-mol m-2', &
         &      'time-integrated reduced 15N deposition by climatology bin'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_noy_n15_deposition_sum', mem%sb_spinup_accelerator_noy_n15_deposition_sum, &
+      CALL mem%Add_var('sb_accel_noy_n15_dep_sum', mem%sb_spinup_accelerator_noy_n15_deposition_sum, &
         & hgrid, vgrid_sb_spinup_forcing, &
-        & t_cf('sb_spinup_accelerator_noy_n15_deposition_sum', 'micro-mol m-2', &
+        & t_cf('sb_accel_noy_n15_dep_sum', 'micro-mol m-2', &
         &      'time-integrated oxidized 15N deposition by climatology bin'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_p_deposition_sum', mem%sb_spinup_accelerator_p_deposition_sum, &
+      CALL mem%Add_var('sb_accel_p_dep_sum', mem%sb_spinup_accelerator_p_deposition_sum, &
         & hgrid, vgrid_sb_spinup_forcing, &
-        & t_cf('sb_spinup_accelerator_p_deposition_sum', 'micro-mol m-2', &
+        & t_cf('sb_accel_p_dep_sum', 'micro-mol m-2', &
         &      'time-integrated phosphorus deposition by climatology bin'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_growth_p_limit_sum', mem%sb_spinup_accelerator_growth_p_limit_sum, &
+      CALL mem%Add_var('sb_accel_growth_p_lim_sum', mem%sb_spinup_accelerator_growth_p_limit_sum, &
         & hgrid, vgrid_sb_spinup_forcing, &
-        & t_cf('sb_spinup_accelerator_growth_p_limit_sum', 's', &
+        & t_cf('sb_accel_growth_p_lim_sum', 's', &
         &      'elapsed-time-weighted plant phosphorus limitation by climatology bin'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_root_fraction_sum', mem%sb_spinup_accelerator_root_fraction_sum, &
+      CALL mem%Add_var('sb_accel_root_frac_sum', mem%sb_spinup_accelerator_root_fraction_sum, &
         & hgrid, vgrid_sb_spinup_profile, &
-        & t_cf('sb_spinup_accelerator_root_fraction_sum', 's', &
+        & t_cf('sb_accel_root_frac_sum', 's', &
         &      'elapsed-time-weighted root fraction by climatology bin and soil layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_wtr_down_sum', mem%sb_spinup_accelerator_wtr_down_sum, &
+      CALL mem%Add_var('sb_accel_wtr_down_sum', mem%sb_spinup_accelerator_wtr_down_sum, &
         & hgrid, vgrid_sb_spinup_profile, &
-        & t_cf('sb_spinup_accelerator_wtr_down_sum', 's', &
+        & t_cf('sb_accel_wtr_down_sum', 's', &
         &      'elapsed-time-weighted downward water-transfer fraction by climatology bin and soil layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_wtr_lat_loss_sum', mem%sb_spinup_accelerator_wtr_lat_loss_sum, &
+      CALL mem%Add_var('sb_accel_wtr_lat_loss_sum', mem%sb_spinup_accelerator_wtr_lat_loss_sum, &
         & hgrid, vgrid_sb_spinup_profile, &
-        & t_cf('sb_spinup_accelerator_wtr_lat_loss_sum', 's', &
+        & t_cf('sb_accel_wtr_lat_loss_sum', 's', &
         &      'elapsed-time-weighted lateral water-loss fraction by climatology bin and soil layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_t_soil_sum', mem%sb_spinup_accelerator_t_soil_sum, &
+      CALL mem%Add_var('sb_accel_t_soil_sum', mem%sb_spinup_accelerator_t_soil_sum, &
         & hgrid, vgrid_sb_spinup_profile, &
-        & t_cf('sb_spinup_accelerator_t_soil_sum', 'K s', &
+        & t_cf('sb_accel_t_soil_sum', 'K s', &
         &      'elapsed-time-weighted soil temperature by climatology bin and soil layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_wtr_soil_sum', mem%sb_spinup_accelerator_wtr_soil_sum, &
+      CALL mem%Add_var('sb_accel_wtr_soil_sum', mem%sb_spinup_accelerator_wtr_soil_sum, &
         & hgrid, vgrid_sb_spinup_profile, &
-        & t_cf('sb_spinup_accelerator_wtr_soil_sum', 'm s', &
+        & t_cf('sb_accel_wtr_soil_sum', 'm s', &
         &      'elapsed-time-weighted liquid soil water by climatology bin and soil layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_ice_soil_sum', mem%sb_spinup_accelerator_ice_soil_sum, &
+      CALL mem%Add_var('sb_accel_ice_soil_sum', mem%sb_spinup_accelerator_ice_soil_sum, &
         & hgrid, vgrid_sb_spinup_profile, &
-        & t_cf('sb_spinup_accelerator_ice_soil_sum', 'm s', &
+        & t_cf('sb_accel_ice_soil_sum', 'm s', &
         &      'elapsed-time-weighted soil ice by climatology bin and soil layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_spinup_accelerator_wtr_pot_sum', mem%sb_spinup_accelerator_wtr_pot_sum, &
+      CALL mem%Add_var('sb_accel_wtr_pot_sum', mem%sb_spinup_accelerator_wtr_pot_sum, &
         & hgrid, vgrid_sb_spinup_profile, &
-        & t_cf('sb_spinup_accelerator_wtr_pot_sum', 'MPa s', &
+        & t_cf('sb_accel_wtr_pot_sum', 'MPa s', &
         &      'elapsed-time-weighted soil water potential by climatology bin and soil layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_wp, l_aggregate_all = .TRUE.)
