@@ -18,7 +18,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_,        &
-    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, LICE_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -321,6 +321,10 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
       CALL model%Queue_task(HD_,     "hd_local_outflow")
 #endif
+      IF (model%processes(LICE_)%p%config%active) THEN
+        ! Diagnostics of fields received from external land ice model (EBFM) on glacier tile
+        CALL model%Queue_task(LICE_, "lice_diag")
+      END IF
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         ! Normally called before update_canopy_cond_unstressed and update_assimilation
         CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors")

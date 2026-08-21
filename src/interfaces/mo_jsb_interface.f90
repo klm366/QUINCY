@@ -40,7 +40,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_physical_constants, ONLY: cvdifts
   USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
-  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_, SEB_, HYDRO_, PHENO_, PPLCC_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_, SEB_, HYDRO_, PHENO_, PPLCC_, LICE_
 
   IMPLICIT NONE
   PRIVATE
@@ -612,6 +612,7 @@ CONTAINS
     USE mo_q_syl_init,          ONLY : read_harvest_fraction
     USE mo_q_agr_init,          ONLY : read_fertiliser_input
     USE mo_jsb_math_constants,  ONLY : eps1
+    USE mo_interface_lice_ebfm, ONLY : interface_lice_get
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -641,6 +642,11 @@ CONTAINS
     dtime_lp = REAL(dtime, KIND=lp)
 
     CALL model%Set_options(current_datetime=current_datetime, dtime=dtime_lp)
+
+    ! Receive fields from the external land ice model (EBFM) via YAC (lice process)
+    IF (model%processes(LICE_)%p%config%active) THEN
+      CALL interface_lice_get(model)
+    END IF
 
     ! For the ALCC process land use data has to be read once a year
     IF (is_newyear(current_datetime,dtime_lp) .AND. model%processes(ALCC_)%p%config%active) THEN
